@@ -1,0 +1,37 @@
+...F.....                                                                [100%]
+=================================== FAILURES ===================================
+__ test_native_and_direct_store_controls_authenticate_without_dataset_answers __
+
+tmp_path = PosixPath('/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-17/test_native_and_direct_store_c0')
+
+    async def test_native_and_direct_store_controls_authenticate_without_dataset_answers(tmp_path):
+        chunks = ['The telescope is blue.\n\n', 'The notebook is blue.']
+        native = await study.ingest(chunks, 'authored', 0, arm(), tmp_path / 'native', None, 'authored')
+        with study.worker.matched_admission(), study.worker.observed_features():
+            control = await study.ingest(chunks, 'authored', 0, arm('fresh_baseline', True), tmp_path / 'control', None, 'authored')
+            qa = arm('qa_pairing', True)
+            qa['config']['enable_qa_pairing'] = True
+            treatment = await study.ingest(chunks, 'authored', 0, qa, tmp_path / 'qa', None, 'authored')
+        assert native['inventory']['events'] == control['inventory']['events'] == treatment['inventory']['events'] == 2
+>       assert control['graph_identity'] == treatment['graph_identity']
+E       AssertionError: assert {'edges': '4f...c540d7019354'} == {'edges': '4f...c540d7019354'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Differing items:
+E         {'events': 'b4fe68bb60c239d43f5d75e0f72c0e3822beae90ee4ea79212d9d6ecdc973456'} != {'events': 'fe7ae739edcd63b3311c36755f146bb9d044e0de55b4b1859a300f1ec7ba7cb3'}
+E         Use -v to get more diff
+
+tests/test_opt_in_mab_matrix.py:49: AssertionError
+----------------------------- Captured stdout call -----------------------------
+2026-09-22 14:26:11 [info     ] write_queue.started
+2026-09-22 14:26:13 [info     ] ingestion.pipeline_shutdown
+2026-09-22 14:26:13 [info     ] write_queue.stopped
+2026-09-22 14:26:14 [info     ] write_queue.started
+2026-09-22 14:26:15 [info     ] ingestion.pipeline_shutdown
+2026-09-22 14:26:15 [info     ] write_queue.stopped
+2026-09-22 14:26:16 [info     ] write_queue.started
+2026-09-22 14:26:18 [info     ] ingestion.pipeline_shutdown
+2026-09-22 14:26:18 [info     ] write_queue.stopped
+=========================== short test summary info ============================
+FAILED tests/test_opt_in_mab_matrix.py::test_native_and_direct_store_controls_authenticate_without_dataset_answers
+1 failed, 8 passed in 16.55s

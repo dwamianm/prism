@@ -35,6 +35,9 @@ control, with matched research fixture IDs and admission clocks. Their cost
 includes every nonempty source turn. The [scheduling amendment](opt-in-successor-scheduling-amendment-v2.json)
 allows independent fresh packs to run concurrently; latency and ingestion wall
 times are measured under shared load, not as isolated serving performance.
+After the packing diagnostic completed, a [second retrieval lane](opt-in-successor-scheduling-amendment-v3.json)
+reused its available provider capacity for the already registered reranker,
+reformulation and temporal arms. No cases or scoring rules changed.
 
 ## Completed production control
 
@@ -108,7 +111,30 @@ contexts remain byte-identical repeats. All 500 questions are evaluated, whether
 the original answer was right or wrong. This diagnostic is not deployable
 retrieval, an achievable upper bound, or a member of the promotion matrix.
 Annotations and reference answers never enter PRME retrieval, temporal relation
-providers or Jev. Results are pending.
+providers or Jev.
+
+The [complete authenticated diagnostic](opt-in-packing-oracle-v1-result.json)
+scored **473/500 (94.6%)**, versus 437/500 for the primary baseline: 44 paired
+wins, eight losses, and a **+7.2-point difference (95% paired bootstrap interval
++4.4 to +10.0 points)**. All 1,000 reader/judge requests completed without a
+retry. Mean memory context was 3,959.22 tokens. This estimates a development
+diagnostic difference, not a deployable feature gain.
+
+| Input group | Baseline | Diagnostic | Wins / losses |
+|---|---:|---:|---:|
+| 67 changed contexts | 23/67 | 62/67 | 42 / 3 |
+| 433 byte-identical repeated contexts | 414/433 | 411/433 | 2 / 5 |
+
+Most of the gain is concentrated where the selector added missing evidence.
+The unchanged inputs demonstrate residual reader/judge variation even with
+temperature 0 and a fixed seed. The three changed-context losses show that
+annotated evidence priority is not universally beneficial. Category totals were
+user 70/70, assistant 56/56, preference 29/30, multi-session 119/133, temporal
+128/133 and knowledge-update 71/78; abstention remained 25/30. The two-answer
+knowledge-update decline must remain visible alongside the overall gain.
+The result supports developing label-free context selection while preserving
+source qualifiers and testing displacement losses. It does not authorize a
+default change or allow replacing the original baseline with a favorable repeat.
 
 The [secondary analysis plan](opt-in-successor-secondary-analysis-registration.json)
 also compares unchanged-input repeat arms and estimates the four registered

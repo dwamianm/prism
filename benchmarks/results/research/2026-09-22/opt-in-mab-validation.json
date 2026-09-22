@@ -1,0 +1,29 @@
+{
+  "recorded_at": "2026-09-22T19:34:05.885833+00:00",
+  "dataset_inference_calls": 0,
+  "attempts": [
+    {
+      "log": "mab-matrix-tests-v1.txt",
+      "sha256": "bc4e4c8d41078e94415ef32acde40d7204e153675c08e5b63c0c7afbf4767bea"
+    },
+    {
+      "log": "mab-matrix-tests-v2.txt",
+      "sha256": "4819248780504c1f63d76190b61db16227186fd31c8c2ce2b734f0d6b16f2dd5"
+    },
+    {
+      "log": "mab-matrix-tests-v3.txt",
+      "sha256": "268fc8835cfcbe06575d3555b9ec556d1db4f451e87e42f7f1832978642fa0f6"
+    },
+    {
+      "log": "mab-support-tests-v1.txt",
+      "sha256": "6a4d2cabb797b86ff157eba0deaf5101ba848fbc1707ba69346af18242f31d19"
+    }
+  ],
+  "final_result": "9 passed, zero skips",
+  "initial_failures": [
+    "Test helper used default relative paths; two authored events written only in isolated research checkout. Added explicit scratch paths and a production-harness private-path guard; retained original scratch artifact.",
+    "A separate Event.timestamp remained wall clock although source-node clocks matched. New MAB admission fixture also fixes that ingestion timestamp; nodes/events/edges now match across authored no-flag and inactive tool-role QA controls."
+  ],
+  "original_lme_boundary": "Running LME fixture/code unchanged: source node clocks and Event.created_at are matched, while separate immutable Event.timestamp retains real admission time. Graph-based retrieval does not consume that ingestion timestamp in the registered requests; all raw times and artifact checksums remain retained.",
+  "main_unchanged": true
+}

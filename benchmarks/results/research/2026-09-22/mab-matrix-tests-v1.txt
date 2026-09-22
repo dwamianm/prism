@@ -1,0 +1,195 @@
+..FFF...                                                                 [100%]
+=================================== FAILURES ===================================
+__ test_native_and_direct_store_controls_authenticate_without_dataset_answers __
+
+tmp_path = PosixPath('/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-16/test_native_and_direct_store_c0')
+
+    async def test_native_and_direct_store_controls_authenticate_without_dataset_answers(tmp_path):
+        chunks = ['The telescope is blue.\n\n', 'The notebook is blue.']
+>       native = await study.ingest(chunks, 'authored', 0, arm(), tmp_path / 'native', None, 'authored')
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_opt_in_mab_matrix.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+benchmarks/diagnostics/opt_in_mab_matrix.py:111: in ingest
+    'reference_time': reference_time.isoformat(), 'inventory': worker.inventory(pack),
+                                                               ^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+pack = PosixPath('/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-16/test_native_and_direct_store_c0/native/pack')
+
+    def inventory(pack):
+>       with duckdb.connect(str(pack / 'memory.duckdb'), read_only=True) as db:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       _duckdb.IOException: IO Error: Cannot open database "/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-16/test_native_and_direct_store_c0/native/pack/memory.duckdb" in read-only mode: database does not exist
+
+benchmarks/diagnostics/opt_in_arm_worker.py:132: IOException
+----------------------------- Captured stdout call -----------------------------
+2026-09-22 14:25:27 [info     ] write_queue.started
+2026-09-22 14:25:31 [info     ] ingestion.pipeline_shutdown
+2026-09-22 14:25:31 [info     ] write_queue.stopped
+_______ test_complete_arm_records_and_reverifies_native_reader_contract ________
+
+tmp_path = PosixPath('/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-16/test_complete_arm_records_and_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x13063fed0>
+
+    @pytest.mark.skipif(not study.support.UPSTREAM.exists(), reason='Pinned external MAB checkout required')
+    async def test_complete_arm_records_and_reverifies_native_reader_contract(tmp_path, monkeypatch):
+        prepared = {'chunks': [['The telescope is blue.']],
+            'query_groups': [[['What color is the telescope?', ['blue'], 'authored-1']]],
+            'dataset_config': {'sub_dataset': 'factconsolidation_authored', 'generation_max_length': 10},
+            'agent_config': {'reader_output_contract': 'answer-only-v1'},
+            'system_message': 'You are a helpful assistant.', 'metric': 'substring_exact_match'}
+        masters = tmp_path / 'masters'
+        masters.mkdir()
+>       await study.ingest(prepared['chunks'][0], prepared['dataset_config']['sub_dataset'], 0,
+                           arm(), masters / 'context-000', None, 'authored')
+
+tests/test_opt_in_mab_matrix.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+benchmarks/diagnostics/opt_in_mab_matrix.py:92: in ingest
+    event_ids = await engine.ingest_fast_many(items, user_id=USER,
+src/prme/storage/engine.py:1520: in ingest_fast_many
+    admission = await self._write_queue.submit(
+src/prme/storage/write_queue.py:110: in submit
+    return await future
+           ^^^^^^^^^^^^
+src/prme/storage/write_queue.py:120: in _consume
+    result = await job.coro_factory()
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+src/prme/storage/event_store.py:255: in append_many
+    return await run_to_completion(
+src/prme/storage/_threading.py:19: in run_to_completion
+    return await run_async_to_completion(asyncio.to_thread(function, *args, **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/prme/storage/_threading.py:30: in run_async_to_completion
+    return await asyncio.shield(worker)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../miniconda3/lib/python3.11/asyncio/threads.py:25: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../miniconda3/lib/python3.11/concurrent/futures/thread.py:58: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/prme/storage/event_store.py:275: in _append_many_sync
+    replayed = replay_fast_ingest(row, record)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+row = ('FAST_INGEST_BATCH', '{"record": "{\\"schema_version\\":1,\\"operation_id\\":\\"1914d378-74d9-5940-87dd-ec77b1e0de31\...\":\\"2026-09-22T19:25:27.941252Z\\"}", "sha256": "d943231c9624c226ae6833a93d6b89543c86786efc8e35bcc1856da6a9df23e2"}')
+expected = FastIngestBatchRecord(schema_version=1, operation_id=UUID('1914d378-74d9-5940-87dd-ec77b1e0de31'), request_id=UUID('ff...4f-bf06-6e0a1d6c2ab9'),), admitted_at=datetime.datetime(2026, 9, 22, 19, 25, 34, 811291, tzinfo=datetime.timezone.utc))
+
+    def replay_fast_ingest(
+        row: tuple[object, object] | None,
+        expected: FastIngestBatchRecord,
+    ) -> FastIngestAdmission | None:
+        if row is None:
+            return None
+        kind, payload = row
+        if kind != "FAST_INGEST_BATCH":
+            raise FastIngestConflict("request_id is already bound to another operation")
+        if not isinstance(payload, (str, dict)):
+            raise ValueError("Fast-ingest journal payload is invalid")
+        saved = read_fast_ingest_record(payload)
+        if (
+            saved.operation_id != expected.operation_id
+            or saved.request_id != expected.request_id
+            or saved.user_id != expected.user_id
+            or saved.input_sha256 != expected.input_sha256
+        ):
+>           raise FastIngestConflict(
+                "request_id is already bound to a different raw-source batch"
+            )
+E           prme.storage.fast_ingest.FastIngestConflict: request_id is already bound to a different raw-source batch
+
+src/prme/storage/fast_ingest.py:162: FastIngestConflict
+----------------------------- Captured stdout call -----------------------------
+2026-09-22 14:25:34 [info     ] write_queue.started
+2026-09-22 14:25:34 [error    ] write_queue.job_failed         error_type=FastIngestConflict label=ingest_fast_many.events:1
+2026-09-22 14:25:34 [info     ] ingestion.pipeline_shutdown
+2026-09-22 14:25:34 [info     ] write_queue.stopped
+____________ test_terminal_reader_failure_never_scores_partial_arm _____________
+
+tmp_path = PosixPath('/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-16/test_terminal_reader_failure_n0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1462fc350>
+
+    @pytest.mark.skipif(not study.support.UPSTREAM.exists(), reason='Pinned external MAB checkout required')
+    async def test_terminal_reader_failure_never_scores_partial_arm(tmp_path, monkeypatch):
+        prepared = {'chunks': [['The telescope is blue.']],
+            'query_groups': [[['What color?', ['blue'], 'a'], ['What color again?', ['blue'], 'b']]],
+            'dataset_config': {'sub_dataset': 'factconsolidation_authored', 'generation_max_length': 10},
+            'agent_config': {'reader_output_contract': 'answer-only-v1'},
+            'system_message': 'You are a helpful assistant.', 'metric': 'substring_exact_match'}
+        masters = tmp_path / 'masters'
+        masters.mkdir()
+>       await study.ingest(prepared['chunks'][0], prepared['dataset_config']['sub_dataset'], 0,
+                           arm(), masters / 'context-000', None, 'authored')
+
+tests/test_opt_in_mab_matrix.py:76: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+benchmarks/diagnostics/opt_in_mab_matrix.py:92: in ingest
+    event_ids = await engine.ingest_fast_many(items, user_id=USER,
+src/prme/storage/engine.py:1520: in ingest_fast_many
+    admission = await self._write_queue.submit(
+src/prme/storage/write_queue.py:110: in submit
+    return await future
+           ^^^^^^^^^^^^
+src/prme/storage/write_queue.py:120: in _consume
+    result = await job.coro_factory()
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+src/prme/storage/event_store.py:255: in append_many
+    return await run_to_completion(
+src/prme/storage/_threading.py:19: in run_to_completion
+    return await run_async_to_completion(asyncio.to_thread(function, *args, **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/prme/storage/_threading.py:30: in run_async_to_completion
+    return await asyncio.shield(worker)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../miniconda3/lib/python3.11/asyncio/threads.py:25: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../miniconda3/lib/python3.11/concurrent/futures/thread.py:58: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/prme/storage/event_store.py:275: in _append_many_sync
+    replayed = replay_fast_ingest(row, record)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+row = ('FAST_INGEST_BATCH', '{"record": "{\\"schema_version\\":1,\\"operation_id\\":\\"1914d378-74d9-5940-87dd-ec77b1e0de31\...\":\\"2026-09-22T19:25:27.941252Z\\"}", "sha256": "d943231c9624c226ae6833a93d6b89543c86786efc8e35bcc1856da6a9df23e2"}')
+expected = FastIngestBatchRecord(schema_version=1, operation_id=UUID('1914d378-74d9-5940-87dd-ec77b1e0de31'), request_id=UUID('ff...f8-8220-04ec75723c28'),), admitted_at=datetime.datetime(2026, 9, 22, 19, 25, 36, 496220, tzinfo=datetime.timezone.utc))
+
+    def replay_fast_ingest(
+        row: tuple[object, object] | None,
+        expected: FastIngestBatchRecord,
+    ) -> FastIngestAdmission | None:
+        if row is None:
+            return None
+        kind, payload = row
+        if kind != "FAST_INGEST_BATCH":
+            raise FastIngestConflict("request_id is already bound to another operation")
+        if not isinstance(payload, (str, dict)):
+            raise ValueError("Fast-ingest journal payload is invalid")
+        saved = read_fast_ingest_record(payload)
+        if (
+            saved.operation_id != expected.operation_id
+            or saved.request_id != expected.request_id
+            or saved.user_id != expected.user_id
+            or saved.input_sha256 != expected.input_sha256
+        ):
+>           raise FastIngestConflict(
+                "request_id is already bound to a different raw-source batch"
+            )
+E           prme.storage.fast_ingest.FastIngestConflict: request_id is already bound to a different raw-source batch
+
+src/prme/storage/fast_ingest.py:162: FastIngestConflict
+----------------------------- Captured stdout call -----------------------------
+2026-09-22 14:25:36 [info     ] write_queue.started
+2026-09-22 14:25:36 [error    ] write_queue.job_failed         error_type=FastIngestConflict label=ingest_fast_many.events:1
+2026-09-22 14:25:36 [info     ] ingestion.pipeline_shutdown
+2026-09-22 14:25:36 [info     ] write_queue.stopped
+=========================== short test summary info ============================
+FAILED tests/test_opt_in_mab_matrix.py::test_native_and_direct_store_controls_authenticate_without_dataset_answers
+FAILED tests/test_opt_in_mab_matrix.py::test_complete_arm_records_and_reverifies_native_reader_contract
+FAILED tests/test_opt_in_mab_matrix.py::test_terminal_reader_failure_never_scores_partial_arm
+3 failed, 5 passed in 28.34s

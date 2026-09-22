@@ -1,0 +1,100 @@
+{
+  "kind": "authored-provider-calibration-before-mab-inference",
+  "registered_at": "2026-09-22T19:19:10.807363+00:00",
+  "source_sha256": "ddd05d331791aae5dc7a5f81f0c5b1d4b78760391a80a66d354fa85040272dd9",
+  "fixtures": [
+    [
+      "banking",
+      "Question: I forgot my PIN.\nlabel: 4\nQuestion: My replacement card arrived.\nlabel: 8",
+      "Question: The new replacement card has arrived.\n\nlabel:",
+      [
+        "8"
+      ]
+    ],
+    [
+      "banking",
+      "Question: I forgot my PIN.\nlabel: 4\nQuestion: My replacement card arrived.\nlabel: 8",
+      "Question: I cannot remember my PIN.\n\nlabel:",
+      [
+        "4"
+      ]
+    ],
+    [
+      "eventqa",
+      "On Monday, Lena drove to York. On Tuesday, Lena drove to Bath.",
+      "Now Answer the Question: Where did Lena drive on Tuesday?",
+      [
+        "Bath"
+      ]
+    ],
+    [
+      "eventqa",
+      "On Monday, Lena drove to York. On Tuesday, Lena drove to Bath.",
+      "Now Answer the Question: Where did Lena drive on Monday?",
+      [
+        "York"
+      ]
+    ],
+    [
+      "conflict",
+      "Mara's favorite color is red. Update: Mara's favorite color is now blue.",
+      "What is Mara's current favorite color?",
+      [
+        "blue"
+      ]
+    ],
+    [
+      "conflict",
+      "Rowan lives in Lima. Update: Rowan now lives in Quito.",
+      "Where does Rowan currently live?",
+      [
+        "Quito"
+      ]
+    ],
+    [
+      "detective",
+      "Only Rowan had the key. The thief used the key.",
+      "Who was the thief?\nA. Iris\nB. Rowan\nC. Lena",
+      [
+        "B. Rowan"
+      ]
+    ],
+    [
+      "detective",
+      "Only Iris knew the safe code. The thief used the code.",
+      "Who was the thief?\nA. Iris\nB. Rowan\nC. Lena",
+      [
+        "A. Iris"
+      ]
+    ]
+  ],
+  "prepared_task_sha256": {
+    "banking": "f3409474fa80c9bb69e9e6f3140d4016d45f487ad9f09bc7f3b194d1566cecbf",
+    "eventqa": "25120fabd61051158af593b2fb4826799179cab63a7351af57152310ea3f1834",
+    "conflict": "dc042148eed8064c36e194de108891c96cb223e05742bcbcfaf1a71b6e8b1429",
+    "detective": "dce6d56048dfa6c3d55b389bdd1edd55c1cb10b0f3ac8341580e81224d36960e"
+  },
+  "max_output_tokens": {
+    "banking": 20,
+    "eventqa": 40,
+    "conflict": 10,
+    "detective": 2000
+  },
+  "model": "deepseek-v4.1-flash:cloud",
+  "digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+  "success_gate": "All eight authored responses complete and pass the task official primary metric. No dataset model inference or replacement of failed cases.",
+  "preprocessing": {
+    "datasets": {
+      "version": "5.0.1"
+    },
+    "nltk": {
+      "version": "3.9.4",
+      "punkt_tab_english_sha256": "7e53a7a883e1f2e25d63a47a70e49181f8498d6453919ff88d02c653f6408afc"
+    },
+    "tiktoken": {
+      "version": "0.12.0",
+      "encoding": "o200k_base",
+      "encoding_sha256": "c1a84aa080162342608052786b32d7cf320368b9fa0ba92bdd8a60454786b315"
+    }
+  }
+}

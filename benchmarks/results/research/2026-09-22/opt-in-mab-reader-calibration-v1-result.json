@@ -1,0 +1,170 @@
+{
+  "registration_sha256": "7fbc3a080a6514bcbee0ff72d9ed6879632f71b2dba7c9ff593b9aa89d841c02",
+  "passed": true,
+  "rows": [
+    {
+      "fixture": 0,
+      "task": "banking",
+      "status": "complete",
+      "correct": true,
+      "metrics": {
+        "exact_match": true,
+        "f1": 1.0,
+        "substring_exact_match": true,
+        "rougeL_f1": 1.0,
+        "rougeL_recall": 1.0,
+        "rougeLsum_f1": 1.0,
+        "rougeLsum_recall": 1.0
+      },
+      "details": {
+        "parsed_output": "8"
+      },
+      "output_tokens": 2,
+      "response_artifact_sha256": "4fbe49b67562008fd8899bed0093bc26d1213d1a896a938945c2b4b9874e300a"
+    },
+    {
+      "fixture": 1,
+      "task": "banking",
+      "status": "complete",
+      "correct": true,
+      "metrics": {
+        "exact_match": true,
+        "f1": 1.0,
+        "substring_exact_match": true,
+        "rougeL_f1": 1.0,
+        "rougeL_recall": 1.0,
+        "rougeLsum_f1": 1.0,
+        "rougeLsum_recall": 1.0
+      },
+      "details": {
+        "parsed_output": "4"
+      },
+      "output_tokens": 2,
+      "response_artifact_sha256": "e33a589b5bcb3d575b30792f1231dbebb84453ab95555bd83eb481808d1eb435"
+    },
+    {
+      "fixture": 2,
+      "task": "eventqa",
+      "status": "complete",
+      "correct": true,
+      "metrics": {
+        "exact_match": false,
+        "f1": 0.2857142857142857,
+        "substring_exact_match": true,
+        "rougeL_f1": 0.2857142857142857,
+        "rougeL_recall": 1.0,
+        "rougeLsum_f1": 0.2857142857142857,
+        "rougeLsum_recall": 1.0,
+        "eventqa_recall": 1
+      },
+      "details": {
+        "parsed_output": "Lena drove to Bath on Tuesday."
+      },
+      "output_tokens": 9,
+      "response_artifact_sha256": "43a3a57d3b19c883c745c70261ffff2465cdeec7c2cc9a6ba033434fd548ebbb"
+    },
+    {
+      "fixture": 3,
+      "task": "eventqa",
+      "status": "complete",
+      "correct": true,
+      "metrics": {
+        "exact_match": false,
+        "f1": 0.2857142857142857,
+        "substring_exact_match": true,
+        "rougeL_f1": 0.2857142857142857,
+        "rougeL_recall": 1.0,
+        "rougeLsum_f1": 0.2857142857142857,
+        "rougeLsum_recall": 1.0,
+        "eventqa_recall": 1
+      },
+      "details": {
+        "parsed_output": "On Monday, Lena drove to York."
+      },
+      "output_tokens": 9,
+      "response_artifact_sha256": "f834f2c592bf4f31f8bdfdcde0e4af3ce57ca12b5fe94e8ed273fa686d66c21c"
+    },
+    {
+      "fixture": 4,
+      "task": "conflict",
+      "status": "complete",
+      "correct": true,
+      "metrics": {
+        "exact_match": true,
+        "f1": 1.0,
+        "substring_exact_match": true,
+        "rougeL_f1": 1.0,
+        "rougeL_recall": 1.0,
+        "rougeLsum_f1": 1.0,
+        "rougeLsum_recall": 1.0
+      },
+      "details": {
+        "parsed_output": "Blue"
+      },
+      "output_tokens": 2,
+      "response_artifact_sha256": "4d1870c23aecf5d3cc3460b822561b1c034c68511d6fbede68fa2a4b73555b5f"
+    },
+    {
+      "fixture": 5,
+      "task": "conflict",
+      "status": "complete",
+      "correct": true,
+      "metrics": {
+        "exact_match": true,
+        "f1": 1.0,
+        "substring_exact_match": true,
+        "rougeL_f1": 1.0,
+        "rougeL_recall": 1.0,
+        "rougeLsum_f1": 1.0,
+        "rougeLsum_recall": 1.0
+      },
+      "details": {
+        "parsed_output": "Quito"
+      },
+      "output_tokens": 3,
+      "response_artifact_sha256": "92be80a70aae9615e56716fb6b4d4b3b21d54fee868f24ad4ad54f060d37d56b"
+    },
+    {
+      "fixture": 6,
+      "task": "detective",
+      "status": "complete",
+      "correct": true,
+      "metrics": {
+        "exact_match": true,
+        "f1": 1.0,
+        "substring_exact_match": true,
+        "rougeL_f1": 1.0,
+        "rougeL_recall": 1.0,
+        "rougeLsum_f1": 1.0,
+        "rougeLsum_recall": 1.0
+      },
+      "details": {
+        "parsed_output": "B. Rowan"
+      },
+      "output_tokens": 4,
+      "response_artifact_sha256": "27f9a35a3a904973e7e79a9cfc2717148fa6f054d0ad386fefc255595c1b82ef"
+    },
+    {
+      "fixture": 7,
+      "task": "detective",
+      "status": "complete",
+      "correct": true,
+      "metrics": {
+        "exact_match": true,
+        "f1": 1.0,
+        "substring_exact_match": true,
+        "rougeL_f1": 1.0,
+        "rougeL_recall": 1.0,
+        "rougeLsum_f1": 1.0,
+        "rougeLsum_recall": 1.0
+      },
+      "details": {
+        "parsed_output": "A. Iris"
+      },
+      "output_tokens": 4,
+      "response_artifact_sha256": "633fb2f09d37e13ce26130120c1d31b93c122a5008543c754dde49a997b969f3"
+    }
+  ],
+  "finished_at": "2026-09-22T19:19:19.380927+00:00",
+  "dataset_inference_calls": 0
+}
