@@ -11,7 +11,7 @@ Every row below represents an authenticated full 500-question arm. Intervals
 are registered paired 95% bootstrap intervals against the original baseline;
 unfinished arms have no quality score. Context and latency details, category
 scores, configuration hashes and artifact checksums are retained in the
-[eight-arm analysis](opt-in-successor-v2-analysis-08-complete.json).
+[nine-arm analysis](opt-in-successor-v2-analysis-09-complete.json).
 
 | Arm | Correct | Difference, percentage points | Interpretation |
 |---|---:|---:|---|
@@ -23,6 +23,7 @@ scores, configuration hashes and artifact checksums are retained in the
 | Evidence projection | 431/500 | −1.2 [−2.8, +0.2] | Inactive on all 500 packs; score variation is not a feature effect |
 | Episode + augmentation | 346/500 | −18.2 [−22.0, −14.6] | Same contexts as episode routing; augmentation inactive |
 | Reranker + reformulation | 288/500 | −29.8 [−34.2, −25.6] | Four changed inputs versus reranker; no changed-input answer gain |
+| Episode + projection | 348/500 | −17.8 [−21.6, −14.2] | Same inputs as episode routing; projection inactive |
 
 ![Complete paired comparisons and the separate nondeployable diagnostic](opt-in-completed-comparisons-v1.png)
 
@@ -37,8 +38,22 @@ selection, not a deployable algorithm. The label-free reranker repair has comple
 answer-follow-up gate. The marginal packing source trial is also complete;
 only its bounded episode bonus qualified. Both have frozen 500-case control
 repeats and candidate answer contexts. Neither has a completed answer-quality
-result yet. The figure above freezes the first six complete arms; the table
+result yet. The rank repair's new control repeat has failed closed, so its
+primary answer comparison is unavailable even if the candidate completes.
+The figure above freezes the first six complete arms; the table
 includes later completed interactions.
+
+The temporal-only arm also failed closed: 265 completed cases, one truncated
+reader response and 234 unstarted cases. It receives no answer score or
+confidence interval. The [failure audit](opt-in-temporal-reader-failure-v1.json)
+shows that the failed request was identical to the original successful control
+request; temporal validation had returned the unchanged control context.
+The reader exhausted all 8,192 output tokens while looping. The separate rank
+control repeat failed on this same request after 274 completed cases. Both
+failed runs and their costs remain in the
+[provider ledger](opt-in-finalized-provider-failures-v1.json), including the
+temporal arm's separately recovered HTTP 502. Neither failure is a negative
+answer-quality finding about a retrieval feature, and neither run is replaced.
 
 ## Question and repaired protocol
 
@@ -420,6 +435,19 @@ candidate answer result. Duplicate configurations are aliases, not new replicate
 The [secondary analysis plan](opt-in-successor-secondary-analysis-registration.json)
 also compares unchanged-input repeat arms and estimates the four registered
 factorial contrasts. Reader/judge variation never replaces the primary baseline.
+
+The [complete episode-input audit](opt-in-episode-repeat-inputs-v1.json) confirms
+that episode routing, episode + augmentation and episode + projection have
+identical reader requests for every question, with no evidence operation.
+Their 345, 346 and 348 correct answers therefore do not establish an evidence
+interaction. Across those three fixed repeats, 338 questions always passed,
+145 always failed and 17 changed outcome. The registered episode/projection
+factorial contrast is +1.8 points [−0.2,+3.8], reported descriptively in the
+[nine-arm secondary analysis](opt-in-successor-secondary-analysis-09-complete.json).
+The temporal factorial contrast is unavailable because one required arm failed.
+The best-two selection likewise cannot discard the failed temporal individual
+and select from a favorable subset; it waits for the remaining arms to settle
+and must retain the missing-comparison outcome.
 
 The [complete projection arm](opt-in-successor-v2-analysis-05-complete.json)
 scored **431/500**, with four wins and ten losses: **−1.2 points**, paired

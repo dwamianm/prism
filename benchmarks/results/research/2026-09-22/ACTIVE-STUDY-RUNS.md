@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 22:17 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 22:44 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -38,8 +38,8 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 
 | Job | Tool session | Log / behavior |
 |---|---:|---|
-| Historical coordinator | 71386 | `successor-v2-historical.log`; baseline, episode, augmentation, projection and episode+augmentation verified; episode+projection running. Expected ownership handoff/FileExistsError when it reaches the separately owned reranker directory; not an arm failure. |
-| Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker, query reformulation and reranker+reformulation verified; temporal running, then temporal+episode. Each has `successor-v2-ARM.log`. |
+| Historical coordinator | finished | `successor-v2-historical.log`; all six assigned arms verified. Exited at the expected ownership handoff/FileExistsError for the separately owned reranker directory; not an arm failure. Never restart. |
+| Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker, query reformulation and reranker+reformulation verified; temporal failed closed, temporal+episode running. Each has `successor-v2-ARM.log`. |
 | Fresh control | 22257 | `successor-v2-fresh.log`; actual sequential store for all source turns. Expected handoff/FileExistsError when it reaches independently owned supersedence. |
 | Store supersedence | 35057 | `successor-v2-store_supersedence.log` |
 | QA pairing | 85242 | `successor-v2-qa_pairing.log` |
@@ -49,12 +49,14 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
 | Marginal answer coordinator | 58561 | `marginal-answer-lane-v1.log`; all 500 source cases complete, bonus-only policy selected, both reader contexts/registrations frozen. Source process 90351/PID 48748 stopped only while idle after reauthentication; no cases interrupted. New coordinator waits for first historical lane release and rank-answer tail/process exit. Never relaunch source v1/v2. |
-| Rank-envelope answer coordinator | 4246 | Parent `data/opt-in-study/rank-answer-lane-v1.log`; new scheduling amendment uses the first historical lane only after all six assigned arms settle/authenticate and PID 20793 exits. Prior idle coordinator 52440/PID 85200 was stopped before any reader case. Source assay 44587/PID 92466 completed and was stopped only while idle. Outputs stay in the repair worktree. Never relaunch prior source/coordinator versions. |
+| Rank-envelope answer coordinator | 4246 | Parent `data/opt-in-study/rank-answer-lane-v1.log`; released first lane now running repair candidate. New control repeat failed closed (274 complete, one reader truncation, 225 unstarted), invalidating the primary comparison. Candidate versus original control is prespecified secondary evidence only if all 500 complete. Outputs stay in repair worktree. Never relaunch prior source/coordinator versions or failed control. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
 Only an arm with complete `execution.json` and authenticated `verification.json`
 receives metrics. A terminal failure prevents a partial score; preserve all
 artifacts and allow other independent prespecified arms to continue.
+Failure records are `result.json` with `status="failed"`, not `failure.json`.
+Repair reader case outputs are under `NAME/execution/QID/`.
 
 The repair worktree references the matrix's verified controls and official
 prompt checkout through symlinks. They are inputs only. All repair outputs use
@@ -97,6 +99,14 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
 * Reranker + reformulation: 288/500, −29.8 points [−34.2,−25.6]. Four
   changed inputs versus reranker; no changed-input score transition. Eight
   wins/four losses are unchanged-input variation. Factorial +1.4 [−0.4,+3.2].
+* Episode + projection: 348/500, −17.8 points [−21.6,−14.2]. Every reader
+  request matches episode routing and episode+augmentation; evidence flags
+  are inactive. Across these three repeats, 17 questions change outcome.
+* Temporal relations: failed closed, 265 complete/one failed/234 unstarted;
+  no answer score. The same baseline reader request exhausted 8,192 output
+  tokens here and in the new rank control repeat. Temporal validation had
+  returned the unchanged control context. Both failures are retained, not
+  replaced. Best-two selection cannot omit this failed required individual.
 * Marginal packing: all 500 source replays complete. Source coverage 403
   control, 300 session penalty, 407 episode bonus, 319 combined, out of 470.
   Bonus-only qualifies: six complete-source gains/two losses, +0.85 points

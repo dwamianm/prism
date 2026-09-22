@@ -1,0 +1,102 @@
+{
+  "kind": "finalized-failed-arms-provider-cost-audit",
+  "at": "2026-09-22T22:42:43.096504+00:00",
+  "arms": {
+    "temporal_relations": {
+      "execution_sha256": "6ba85335a3fc959e38fe223dc19e39d868ea37d537dcd6438825993700326546",
+      "status_counts": {
+        "complete": 265,
+        "failed": 1,
+        "not_started": 234
+      },
+      "provider_artifact_statuses": {
+        "judge_complete": 265,
+        "reader_complete": 265,
+        "reader_failed": 1
+      },
+      "token_usage": {
+        "judge_prompt_eval_count": 106416,
+        "judge_eval_count": 530,
+        "reader_prompt_eval_count": 1096655,
+        "reader_eval_count": 77746
+      },
+      "http_status_counts": {
+        "200": 531,
+        "502": 1
+      },
+      "non_200_attempts": [
+        {
+          "question_id": "4dfccbf7",
+          "kind": "reader",
+          "attempt": 1,
+          "http_status": 502,
+          "elapsed_seconds": 2.083699249997153,
+          "response_sha256": "8128514a9917b6dcdf20f7ee24d6b00a27b2a6aa0f971acb988f358f25ac4005"
+        }
+      ],
+      "terminal_failures": [
+        {
+          "question_id": "gpt4_7abb270c",
+          "kind": "reader",
+          "artifact_sha256": "6597a0176cb3508acbf732beda1dbdd84e8c1bc222c1eabdd9d19cf7e7ee400f",
+          "request_sha256": "3c27da9aff13f6593f7213b356f00e15807fcdb58e4285fbe6c041f9aaaf160b",
+          "same_request_as_original_control": true,
+          "response_metadata": {
+            "model": "deepseek-v4.1-flash",
+            "done": true,
+            "done_reason": "length",
+            "prompt_eval_count": 4127,
+            "eval_count": 8192
+          },
+          "judge_artifact_exists": false
+        }
+      ],
+      "answer_metrics": null
+    },
+    "rank_repair_control_repeat": {
+      "execution_sha256": "8ee00641d1a27d20dde07c3f95e576a013ec1366affe90bfb7c85579f6e58709",
+      "status_counts": {
+        "complete": 274,
+        "failed": 1,
+        "not_started": 225
+      },
+      "provider_artifact_statuses": {
+        "judge_complete": 274,
+        "reader_complete": 274,
+        "reader_failed": 1
+      },
+      "token_usage": {
+        "judge_prompt_eval_count": 111539,
+        "judge_eval_count": 548,
+        "reader_prompt_eval_count": 1134545,
+        "reader_eval_count": 81093
+      },
+      "http_status_counts": {
+        "200": 549
+      },
+      "non_200_attempts": [],
+      "terminal_failures": [
+        {
+          "question_id": "gpt4_7abb270c",
+          "kind": "reader",
+          "artifact_sha256": "cde2231b44938a2fe56844a2542f8d5375e5160eddc21a1ce912d44290bd71c0",
+          "request_sha256": "3c27da9aff13f6593f7213b356f00e15807fcdb58e4285fbe6c041f9aaaf160b",
+          "same_request_as_original_control": true,
+          "response_metadata": {
+            "model": "deepseek-v4.1-flash",
+            "done": true,
+            "done_reason": "length",
+            "prompt_eval_count": 4127,
+            "eval_count": 8192
+          },
+          "judge_artifact_exists": false
+        }
+      ],
+      "answer_metrics": null
+    }
+  },
+  "quality_metrics": null,
+  "failure_replacement": false,
+  "interpretation": "Cost and reliability accounting over retained failed arms only. No partial correctness is computed. The same registered reader request exhausted 8192 tokens in both arms after completing normally in the original control. Neither failed arm can be replaced or used as a complete paired comparison.",
+  "sha256": "2382dff10fa0174afb647906da98fe66e5617eff7491735f4f7c9333d918e849"
+}

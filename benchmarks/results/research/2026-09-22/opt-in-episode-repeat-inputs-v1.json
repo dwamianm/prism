@@ -1,0 +1,35 @@
+{
+  "kind": "post-hoc-complete-episode-input-repeat-audit",
+  "arms": [
+    "episode_routing",
+    "episode_augmentation",
+    "episode_projection"
+  ],
+  "questions": 500,
+  "verification_sha256": {
+    "episode_routing": "17ad2f9b04562717fffd19c2c23ee06087d545038b8f3692e146f4036d8ba805",
+    "episode_augmentation": "1c578f75ecca4f07f375d9b6ed5aa44aadfcfd8899b48e074b0deb9efb7f5ee5",
+    "episode_projection": "0f8817f60f900b7783550575ab669c50e1c545a5819b7877176ced27af7032de"
+  },
+  "changed_input_ids": [],
+  "evidence_operations": {},
+  "correct_per_arm": {
+    "episode_routing": 345,
+    "episode_augmentation": 346,
+    "episode_projection": 348
+  },
+  "success_count_histogram": {
+    "3": 338,
+    "0": 145,
+    "1": 9,
+    "2": 8
+  },
+  "pairwise_disagreements": {
+    "episode_routing__episode_augmentation": 9,
+    "episode_routing__episode_projection": 11,
+    "episode_augmentation__episode_projection": 14
+  },
+  "interpretation": "Descriptive repeat analysis after all three arms complete. An inactive evidence feature cannot explain score differences on identical reader requests. Original episode score remains fixed; no favorable repeat replaces any primary control.",
+  "new_model_calls": 0,
+  "sha256": "cc32f7048163cb4e734e9acf89f3a63162f1db1de59608cdd9f73ac4c0af4aae"
+}
