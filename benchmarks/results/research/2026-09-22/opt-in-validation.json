@@ -1,0 +1,31 @@
+{
+  "kind": "opt-in-local-validation",
+  "production_revision": "a66ee854325890c6bc28f6b515efeb6ed7df4deb",
+  "source_execution": "PYTHONPATH=src with original read-only .venv Python 3.11.6",
+  "suites": [
+    {
+      "suite": "focused",
+      "passed": 108,
+      "skipped": 23,
+      "log_sha256": "1222f924eeaf6150048c3419cfb5f6276de5292469fdd5fb6a788f9a2b276f38"
+    },
+    {
+      "suite": "supplemental",
+      "passed": 56,
+      "skipped": 3,
+      "log_sha256": "97364f8deed87c2cfe74db0c8dfa1eecd9a1c7a3de1ea63bb6b85709c8b478c1"
+    },
+    {
+      "suite": "research_fail_closed_gates",
+      "passed": 8,
+      "skipped": 0,
+      "test_file": "tests/test_opt_in_interactions_study.py",
+      "test_file_sha256": "e67fabc5606a3e71a348b3bb5d4cb572bd6fc1f79b906fa43a43d963ffed52ea"
+    }
+  ],
+  "unique_passed": 172,
+  "skipped": 26,
+  "live_postgres_exercised": false,
+  "installed_wheel_exercised": false,
+  "claim_boundary": "Focused local regressions and research gates, not answer-quality or complete release validation."
+}

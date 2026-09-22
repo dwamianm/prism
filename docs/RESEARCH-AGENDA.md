@@ -1,10 +1,44 @@
 # Research agenda: demonstrated memory quality and developer experience
 
-Updated 2026-09-18. This agenda supersedes the [v0.6 proposal](archive/RESEARCH-AGENDA-v0.6.md).
+Updated 2026-09-22. This agenda supersedes the [v0.6 proposal](archive/RESEARCH-AGENDA-v0.6.md).
 Its historical scores and projected “98%+” target do not establish today's
 performance. GSD completion states and RFC proposals are not acceptance evidence.
 The aim is a leading memory package whose advantages survive reproducible
 comparisons and whose ordinary APIs preserve user data and isolation.
+
+## Opt-in interaction study: baseline failed closed, 2026-09-22
+
+The [registered interaction study](../benchmarks/results/research/2026-09-22/OPT-IN-INTERACTIONS-REPORT.md)
+started from production `a66ee85` in an isolated research branch. After the
+original GPT-5.4 credential probes failed, the user explicitly selected Ollama
+DeepSeek v4.1 Flash for the reader and judge. Authored reader, judge and
+query-reformulation preflights passed, and all 500 historical LongMemEval-S
+packs authenticated. The baseline then stopped at its registered output gate:
+244 complete cases, one 1,024-token truncated reader completion, and 255 cases
+not started. No failed response was replaced and no partial answer score or
+confidence interval was published. All feature and interaction comparisons,
+later benchmark families, combined-arm selection and untouched confirmation
+remain unassessed. Keep current defaults; this is no quality evidence against
+or in favor of a particular feature.
+
+Positive operational evidence is separate: 245 retained captures and 490
+receipts independently authenticated, all 500 master packs remained unchanged,
+and a three-pair authored Jev workflow passed explicit accept/reject, inert
+publication, retained identities, retry, owner and restart checks. An
+answer-blind temporal resolver/gate probe also passed. Focused local validation
+passed 172 tests with 26 skips; live PostgreSQL and installed-wheel gates remain
+unperformed. These checks do not establish held-out answer or alignment quality.
+
+A future separately registered study must address the reader ceiling, correct
+the baseline fresh-ingestion/reuse inconsistency retained in the original
+registration, and supply fresh no-flag controls for ingestion effects. Preserve
+the missing historical transitive-lock limitation and verify treatment
+activation: raw-turn evidence policies can be inactive, and the native MAB
+bulk path bypasses the store-time hooks. The original failed run must remain
+visible, and the already examined LongMemEval-S cohort cannot be an untouched
+confirmation. Balanced-packing aliases are duplicate configurations, not
+independent interaction evidence; Jev remains a separate explicit pair-review
+workflow.
 
 ## What the evidence currently supports
 
