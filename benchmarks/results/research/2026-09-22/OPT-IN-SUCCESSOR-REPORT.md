@@ -118,6 +118,19 @@ reasoning over complete source sets, and preserving the distinction between the
 question's premise and the facts actually supported by memory. A retrieval win
 cannot by itself fix every reader error or annotation ambiguity.
 
+The complete [descriptive omission audit](opt-in-baseline-omission-audit-v1-result.json)
+narrows the first priority. Of 886 annotated turns, 94 were missing from packed
+context although all were returned. The 70 missing turns associated with
+incorrect answers had median final rank 75, versus rank six for annotated turns
+present in incorrect-answer contexts. Their median source length was only 66
+tokens, versus 64 for the present group; these are raw content lengths, not
+serialized entry costs. Sixty-seven of the 70 missing turns were user messages,
+and 37 had another record from the same session already packed. Thus blanket
+compression or broader session coverage would not directly address the main
+observed pattern. Better query-to-evidence ranking and selective recovery of
+related turns are more specific hypotheses. These are post hoc associations,
+not evidence that a particular ranking change will improve answers.
+
 ## Applicability and separate diagnostics
 
 The [source audit](opt-in-source-applicability-result.json) found 246,738 nodes
