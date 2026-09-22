@@ -473,6 +473,15 @@ variation that small candidate gains must survive. The secondary pooled score
 is 86.87%; the primary baseline remains the original 87.4%. No response is
 selected or replaced, and these repeated inputs cannot serve as feature wins.
 
+After the marginal control completed, a separate
+[four-control audit](opt-in-complete-control-repeats-v1.json) authenticated the
+same reader request for every question across all four complete controls.
+Scores were 437, 435, 431 and 433; 417 questions passed every time, 58 failed
+every time, and 25 varied. The additional failed rank-control repeat remains
+unscored in the audit. No pooled estimate or favorable repeat replaces any
+primary baseline. Question-bootstrap intervals do not capture all possible
+remote-provider drift.
+
 A complete-cohort [post hoc persistence audit](opt-in-stable-errors-v1-result.json)
 classifies the 58 consistently incorrect cases: 43 lack some annotated packed
 evidence, 11 contain the complete annotation set, and four are abstention
