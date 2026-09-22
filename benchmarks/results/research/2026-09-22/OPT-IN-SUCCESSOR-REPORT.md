@@ -91,6 +91,31 @@ matched-reader answer evidence. Inspection confirms that the packer reserves
 routed episode records ahead of the ordinary multi-path pool. Simply changing
 the inherited-score decay would not remove that priority tier.
 
+## Complete neural-reranker comparison
+
+The [authenticated reranker arm](opt-in-successor-v2-analysis-03-complete.json)
+scored **284/500 (56.8%)**, with nine wins and 162 losses against the fixed
+437-answer control: **−30.6 points**, paired 95% interval **−35.0 to −26.2**,
+and Holm-adjusted p-value `2.56e-36`. All 1,000 reader/judge calls completed
+without provider errors or retries. Complete annotated evidence fell from 403
+to 224 of 470 applicable cases, with 182 new complete-evidence losses.
+Multi-session answers fell by 51, temporal by 71, preference by 15, updates by
+eight, and user and assistant categories by four each; abstention improved by
+two. Cold retrieval p50/p95 was 7.748/15.077 seconds under shared load, and
+mean context use was 3,957.824 tokens.
+
+**Reject this current reranker composition as a default candidate.** This is
+not evidence against all neural ranking. Code inspection identifies a score
+scale mismatch: the top 100 candidates are blended with neural scores while
+the tail keeps original scores. Session expansion can then sort both groups
+together, and packing compares their scores again. A descriptive audit of all
+500 frozen captures found 8,025 of 10,901 packed records had no neural or
+inherited-neural adjustment; only four of those records were annotated turns.
+Among 860 annotated turns with a neural or inherited-neural adjustment, 432
+were omitted. These counts motivate an isolated score-scale repair, not a
+claim that the proposed repair has already improved answers. The failed arm
+and the existing interaction matrix remain unchanged.
+
 ## Development error review
 
 The representative review used the first four question IDs by SHA-256 ordering
