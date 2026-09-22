@@ -1,7 +1,7 @@
 # PRME goals and production handoff
 
 **Status:** active handoff, 2026-09-22  
-**Production baseline:** `main` at `7b52290` (the current branch is an
+**Production baseline:** `main` at `6446f06` (the current branch is an
 ancestor; the merged mainline also contains the later typed-value, profile,
 and temporal-parser work).  
 **Research record:** [research agenda](../docs/RESEARCH-AGENDA.md)
