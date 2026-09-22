@@ -1,0 +1,25 @@
+{
+  "kind": "authored-reranker-runtime-preflight",
+  "registered_at": "2026-09-22T18:53:42.847198+00:00",
+  "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "pairs": [
+    [
+      "What color does the user prefer?",
+      "The user prefers blue."
+    ],
+    [
+      "What color does the user prefer?",
+      "The bicycle has a broken pedal."
+    ],
+    [
+      "When did the user move?",
+      "The user moved in April 2024."
+    ]
+  ],
+  "repeats": 2,
+  "gates": [
+    "finite normalized score per pair",
+    "repeat scores equal within 1e-6"
+  ],
+  "dataset_questions": 0
+}
