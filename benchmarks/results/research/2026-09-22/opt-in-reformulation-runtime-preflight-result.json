@@ -1,0 +1,33 @@
+{
+  "registration_sha256": "21c3e86fd60ddbc3116911d66de55f31458643fc8b830eff3454611f4720794d",
+  "rows": [
+    {
+      "query": "Which city did the author move to last summer?",
+      "alternatives": [
+        "author moved city last summer",
+        "author's summer relocation destination"
+      ],
+      "seconds": 2.93316012500145
+    },
+    {
+      "query": "How many books did the author finish in April?",
+      "alternatives": [
+        "author books finished April",
+        "April book completion total by author"
+      ],
+      "seconds": 2.820735250003054
+    },
+    {
+      "query": "What did the author decide about the blue telescope?",
+      "alternatives": [
+        "blue telescope decision",
+        "author chose blue telescope"
+      ],
+      "seconds": 3.733880625004531
+    }
+  ],
+  "errors": [],
+  "passed": true,
+  "finished_at": "2026-09-22T19:13:27.028975+00:00",
+  "dataset_calls": 0
+}

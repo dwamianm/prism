@@ -1,0 +1,16 @@
+{
+  "kind": "authored-provider-operability-only",
+  "registered_at": "2026-09-22T19:13:17.519739+00:00",
+  "queries": [
+    "Which city did the author move to last summer?",
+    "How many books did the author finish in April?",
+    "What did the author decide about the blue telescope?"
+  ],
+  "provider": "ollama",
+  "model": "deepseek-v4.1-flash:cloud",
+  "count": 2,
+  "max_retries": 2,
+  "production_source_sha256": "47779998c0965ff6ac35ab3dee2894bea68146b18a2ddad80c02c8868f3c5a5c",
+  "dataset_calls": 0,
+  "success_gate": "Each nonempty authored query returns one or two nonempty alternatives without any logged exception. This is not semantic quality evidence."
+}
