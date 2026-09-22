@@ -165,6 +165,15 @@ source passages. Their arms remain scheduled, but an inactive flag cannot
 establish benefit or harm for the intended derived-claim workflow. A meaningful
 test of that workflow needs a separately matched derived-ingestion study.
 
+The [complete augmentation arm](opt-in-successor-v2-analysis-04-complete.json)
+scored 435/500, with four paired wins and six losses: −0.4 points and a paired
+95% interval of −1.6 to +0.8 points. All 500 contexts were byte-identical to
+the baseline and no evidence operation activated. All ten answer-score
+disagreements therefore occurred under unchanged reader inputs; they cannot
+be attributed to augmentation. This is an inapplicable feature test and a
+registered reader-variation observation, not evidence for or against the
+intended source-augmentation workflow.
+
 The [packing diagnostic registration](opt-in-packing-oracle-v1-registration.json)
 deliberately uses evidence annotations in an offline selector. It prioritizes
 whole annotated source turns already present among returned candidates, retains
