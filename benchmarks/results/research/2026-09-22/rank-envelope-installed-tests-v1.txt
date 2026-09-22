@@ -1,0 +1,12 @@
+{"imported_prme": "/Users/dwamianm/Sites/prism-reranker-repair-2026-09-22/data/opt-in-study/rank-envelope-wheel-v1/installed/prme/__init__.py", "source_files_identical": 163, "wheel_sha256": "c9a776043d564ab8664dfb07bf053055846ef3947e8d0ad96508875865235a2f", "dependencies_reused_without_modification": true}
+........................................................................ [ 73%]
+.......................s..                                               [100%]
+=============================== warnings summary ===============================
+../../../prism/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py:1303
+  /Users/dwamianm/Sites/prism/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py:1303: PytestAssertRewriteWarning: Module already imported so cannot be rewritten; anyio
+    self._mark_plugins_for_rewrite(hook, disable_autoload)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] ../../tests/test_relevance_records.py:293: Local process-exit recovery; PostgreSQL uses atomic insert/retry checks
+97 passed, 1 skipped, 1 warning in 77.38s (0:01:17)

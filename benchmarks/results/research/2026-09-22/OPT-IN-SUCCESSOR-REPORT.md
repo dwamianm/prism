@@ -151,6 +151,10 @@ range, preserves raw model scores and adds an explicit replayable assignment.
 There is no new public feature flag or default. All 97 relevant tests passed
 with one expected backend-specific skip, including live DuckDB/PostgreSQL
 receipt restart and old-byte compatibility. Its
+separate [installed-wheel validation](rank-envelope-installed-validation-v1.json)
+passed the same 97 tests with one expected skip and confirmed all 163 packaged
+Python files match the frozen repair sources. These are overlapping targeted
+checks, not 194 distinct tests or a complete release certification. Its
 [registration](opt-in-rank-envelope-v2-registration.json) fixes complete
 500-case baseline/legacy replay and a conditional paired answer trial. It is
 running its local source-replay phase; hosted answers wait for the original

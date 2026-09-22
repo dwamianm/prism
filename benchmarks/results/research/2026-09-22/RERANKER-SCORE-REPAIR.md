@@ -56,3 +56,10 @@ MemoryAgentBench stage continue in the parent worktree.
 Validation: 97 tests passed with one expected backend-specific skip, and Ruff's
 correctness checks passed. The source evaluator also passed an authored
 end-to-end exact control replay and deliberately failed on changed context.
+
+The [isolated installed-wheel validation](rank-envelope-installed-validation-v1.json)
+also passed the same 97 tests with one expected skip, including live PostgreSQL.
+All 163 installed Python files matched the frozen source files. The wheel was
+installed in a separate target directory without modifying the benchmark
+environment's dependencies. This closes the source-only packaging limitation
+for these targeted checks; it is not a full release gate or a quality result.
