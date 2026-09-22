@@ -91,6 +91,8 @@ def matched_admission():
 def observed_features():
     """Observe actual calls without changing returned values or retry policy."""
     import prme.retrieval.reformulation as reformulation
+    from prme.storage.vector_index import VectorIndex
+    vector_search = VectorIndex.search
     original = reformulation.reformulate_query
     supersedence = MemoryEngine._check_store_supersedence
     novelty = MemoryEngine._compute_novelty
@@ -110,9 +112,19 @@ def observed_features():
         if trace is not None:
             trace['novelty_calls'] = trace.get('novelty_calls', 0) + 1
         return await novelty(*args, **kwargs)
+    async def checked_vector_search(*args, **kwargs):
+        try:
+            return await vector_search(*args, **kwargs)
+        except Exception as exc:
+            errors = old.ERRORS.get()
+            if errors is not None:
+                errors.append({'logger':'research.vector_search_observer',
+                               'exception_type':type(exc).__name__})
+            raise
     with patch.object(reformulation, 'reformulate_query', reformulate), \
          patch.object(MemoryEngine, '_check_store_supersedence', supersede), \
-         patch.object(MemoryEngine, '_compute_novelty', surprise):
+         patch.object(MemoryEngine, '_compute_novelty', surprise), \
+         patch.object(VectorIndex, 'search', checked_vector_search):
         yield
 
 
@@ -385,7 +397,7 @@ async def run(args):
     output = PRIVATE/args.name
     output.mkdir(parents=True,exist_ok=True)
     selected = [a for a in reg['arms'] if a['id'] == args.arm]
-    amendment = json.loads((REPORTS / 'opt-in-successor-scheduling-amendment.json').read_text())
+    amendment = json.loads((REPORTS / 'opt-in-successor-scheduling-amendment-v2.json').read_text())
     if file_sha(Path(__file__)) != amendment['worker_sha256'] or len(selected) != 1:
         raise old.ResearchFailure('Arm worker identity or selection differs')
     key = os.environ.get('JEV_API_KEY') or dotenv_values(ORIGINAL/'.env').get('JEV_API_KEY')
