@@ -139,6 +139,26 @@ from that separate branch, not a merge of its package changes.
 
 ## Development error review
 
+The [complete query-reformulation arm](opt-in-successor-v2-analysis-06-complete.json)
+scored **434/500**, with four wins and seven losses: **−0.6 points**, paired
+95% interval **[−2.0, +0.6]**. It made 1,000 nonempty reformulation calls
+across first and repeated retrievals, yet changed only two reader contexts.
+All 11 answer disagreements were on unchanged contexts. Complete annotated
+evidence remained 403/470, with no new complete-evidence losses; no measured
+answer gain can be attributed to its two changed inputs. All reader/judge calls
+completed without errors or retries. Mean context use was 3,964.684 tokens.
+Cold retrieval p50/p95 was 6.569/12.519 seconds; the paired median latency
+increase was 5.533 seconds under shared load.
+
+**Reject the current reformulation policy as a default candidate on this
+cohort's cost/benefit evidence.** It remains opt-in for tasks where candidate
+discovery is incomplete. The implementation appends only previously unseen
+node IDs; it discards alternate-query scores and path evidence for existing
+candidates. The baseline already returned every annotated turn. A future
+ranking-fusion hypothesis would need to retain and validate alternate-query
+support for existing candidates, with auditable scoring and displacement
+checks. This trial does not establish that such a change will improve answers.
+
 The representative review used the first four question IDs by SHA-256 ordering
 within each of the three baseline error classes. It did not rescore examples or
 select a favorable evaluation subset. This is qualitative development analysis.
@@ -237,7 +257,7 @@ available in the private artifacts. These examples distinguish distractor,
 annotation and update-reasoning risks; they do not establish a single cause for
 every score transition.
 
-The follow-up [marginal packing assay](opt-in-marginal-packing-v1-registration.json)
+The follow-up [marginal packing assay](opt-in-marginal-packing-v2-registration.json)
 implements the previously proposed change in a research module: original
 candidate relevance, a bounded episode bonus, diminishing weight for additional
 same-session records, and the unchanged whole-source serializer/budget. It
@@ -247,6 +267,13 @@ with gains in both complete source sets and mean source fraction; all category
 and per-question losses remain reported. If one qualifies, a separately frozen
 500-case candidate answer trial and a new 500-case baseline-context repeat form
 the primary follow-up comparison. No production source or default is modified.
+
+The [version-2 scheduling amendment](opt-in-marginal-scheduling-amendment-v2.json)
+starts this local source assay before the remaining hosted historical arms
+finish. The version-1 waiter was stopped before any source case or answer call.
+Policies, evaluator, cohort and selection criteria are unchanged; the original
+historical-stage wait now occurs after any qualifying contexts are frozen and
+before hosted answer generation. This adds no hosted-provider concurrency.
 
 Prior negative work also constrains this follow-up. The earlier
 [session-marginal source grid](../2026-09-18/LONGMEMEVAL-S-SESSION-MARGINAL-V1.md)

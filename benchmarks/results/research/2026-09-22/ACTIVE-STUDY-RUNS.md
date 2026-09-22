@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 20:59 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 21:02 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -39,7 +39,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Job | Tool session | Log / behavior |
 |---|---:|---|
 | Historical coordinator | 71386 | `successor-v2-historical.log`; baseline, episode, augmentation and projection verified; episode+augmentation running, then episode+projection. Expected ownership handoff/FileExistsError when it reaches the separately owned reranker directory; not an arm failure. |
-| Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker verified, query reformulation running, then reranker+reformulation, temporal and temporal+episode. Each has `successor-v2-ARM.log`. |
+| Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker and query reformulation verified; reranker+reformulation running, then temporal and temporal+episode. Each has `successor-v2-ARM.log`. |
 | Fresh control | 22257 | `successor-v2-fresh.log`; actual sequential store for all source turns. Expected handoff/FileExistsError when it reaches independently owned supersedence. |
 | Store supersedence | 35057 | `successor-v2-store_supersedence.log` |
 | QA pairing | 85242 | `successor-v2-qa_pairing.log` |
@@ -48,7 +48,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Complete-arm analysis watcher | 5627 | `successor-bounded-analysis-watcher.log`; writes incrementally numbered `opt-in-successor-v2-analysis-NN-complete.json` after authentication. Memory-bounded wrapper has exact four-arm numerical parity with the original analyzer. The former idle PID 36062/session 11465 was stopped without interrupting any benchmark. |
 | Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
-| Marginal source assay | 68568 | `marginal-study-v1.log`; waits for all historical arms, then tests all three fixed policies on all 500 cases, with conditional full-cohort answer follow-up. |
+| Marginal source assay | 90351 | `marginal-study-v2.log`; now tests all three unchanged fixed policies on all 500 cases, with conditional full-cohort answer follow-up that still waits for historical arms. Scheduling-only v2 replaces idle PID 18350/session 68568 before any v1 source case. Never relaunch v1. |
 | Rank-envelope repair assay | 44587 | **Repair worktree** `data/opt-in-study/rank-envelope-study-v2.log`; local source replay now running under scheduling amendment v2. Verifies all 500 baseline and reranker replays, then runs one repair. Conditional hosted answers still wait for all historical arms. The v1 idle waiter PID 3539/session 32160 was stopped before any case or hosted call. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
@@ -78,6 +78,11 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
   three-repeat analysis confirms 422 always-pass, 58 always-fail and 20
   variable questions. Keep the original baseline; do not treat inactive arms
   as feature evidence or favorable replacement controls.
+* Query reformulation: 434/500, delta −0.6 points, CI [−2.0, +0.6].
+  Only two changed contexts; all 11 answer disagreements were unchanged-input
+  variation. Complete source sets remain 403/470. Added paired median 5.533
+  seconds with no demonstrated benefit; current code ignores alternate-query
+  signals for existing candidates. Not a default candidate on this evidence.
 * Annotation-assisted packing diagnostic: 473/500, +7.2 points, CI [+4.4,+10.0].
   Nondeployable, outside the feature matrix. Changed 67 contexts; 433 repeated
   inputs reveal residual reader/judge variation. Knowledge updates lost two.
