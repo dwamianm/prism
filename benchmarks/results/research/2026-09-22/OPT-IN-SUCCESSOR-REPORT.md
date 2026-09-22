@@ -290,6 +290,14 @@ variation that small candidate gains must survive. The secondary pooled score
 is 86.87%; the primary baseline remains the original 87.4%. No response is
 selected or replaced, and these repeated inputs cannot serve as feature wins.
 
+A complete-cohort [post hoc persistence audit](opt-in-stable-errors-v1-result.json)
+classifies the 58 consistently incorrect cases: 43 lack some annotated packed
+evidence, 11 contain the complete annotation set, and four are abstention
+questions without source annotations. Thirty-one are multi-session questions
+and 18 are temporal. This strengthens the priority of selective evidence
+retention across sessions and time. It does not isolate reader from judge
+errors, prove semantic sufficiency, or create a smaller evaluation cohort.
+
 Temporal relations retain the documented answer-blind Ollama/TypeSafe Jev
 protocol. Product alignment/Jev remains a separate caller-selected pair and
 explicit review workflow; its authored operational probe is not retrieval or
