@@ -1,0 +1,29 @@
+{
+  "kind": "observer-audit-resolution",
+  "at": "2026-09-22T22:30:34.713351+00:00",
+  "active_worker_audit_sha256": "a3f9f39f1cad1b8db1a0d7ea694fa13200ec59286883aa8eebf0e99bc7e570e2",
+  "finding": "Existing frozen independent worker already closes the vector-search observation gap for the active supersedence and full-feature arms and queued MAB. Initial probe exercised only the older coordinator path, whose flag-bearing arms are owned elsewhere. No active arm protocol limitation or observed backend fault follows from that probe.",
+  "draft_status": "Redundant observer draft withdrawn before any benchmark execution or registration; archived source and its seven passing unit checks are not counted as new product or benchmark validation.",
+  "archived_draft": [
+    {
+      "draft_source": "benchmarks/diagnostics/opt_in_strict_ingestion_observer.py",
+      "archived_path": "data/opt-in-study/withdrawn-observer-draft-v1/opt_in_strict_ingestion_observer.py.txt",
+      "sha256": "366dc18d4eefc922040bc174bd5dac8f8aca8e48555d349180976e3e96c2903c"
+    },
+    {
+      "draft_source": "tests/test_opt_in_strict_ingestion_observer.py",
+      "archived_path": "data/opt-in-study/withdrawn-observer-draft-v1/test_opt_in_strict_ingestion_observer.py.txt",
+      "sha256": "4f104ce3e49bb1292061c7d6d4a7ac3660f0e9a08f7615ee4fa068655c456104"
+    },
+    {
+      "draft_source": "data/opt-in-study/strict-ingestion-observer-tests-v1.log",
+      "archived_path": "data/opt-in-study/withdrawn-observer-draft-v1/strict-ingestion-observer-tests-v1.log.txt",
+      "sha256": "3d368ba43f0aad60365b9ab3dacfcdcd223774618d864a5e1377e1dd6be19bc8"
+    }
+  ],
+  "existing_worker_sha256": "6cf0681769878e4419a51b66cd208e448528082a9d0c484f93e7ff60cf8c29cd",
+  "running_jobs_changed": false,
+  "mab_launcher_changed": false,
+  "production_sources_changed": false,
+  "sha256": "a8a1026cd28f62f304ea9fc26299705161c0310f9910f9aa536f60e97192c8ea"
+}

@@ -501,3 +501,14 @@ source-node clocks and `Event.created_at`, while the separate immutable
 `Event.timestamp` records actual admission time. The registered graph retrieval
 does not use that field. The new MAB fixture matches both event clocks as well;
 the already running LongMemEval execution was not rewritten.
+
+
+An additional [authored fault check](opt-in-active-failure-observer-audit-v1.json)
+confirmed that the exact frozen independent worker observes a vector exception
+before store supersedence's internal catch. It appends the error to the case's
+existing fail-closed gate. Both active flag-bearing arms and queued MAB use
+this worker observer. An initial concern came from testing the older
+coordinator-only observer instead; the [audit resolution](opt-in-observer-audit-resolution-v1.json)
+records that correction and withdrawal of an unused duplicate observer draft.
+No benchmark failure was injected, no running job or registration changed,
+and no actual unobserved failure is inferred from the initial probe.

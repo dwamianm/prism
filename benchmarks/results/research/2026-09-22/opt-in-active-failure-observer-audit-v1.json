@@ -1,0 +1,21 @@
+{
+  "kind": "authored-active-worker-silent-fallback-observation-check",
+  "at": "2026-09-22T22:29:47.774401+00:00",
+  "fault_search_calls": 1,
+  "product_return": null,
+  "case_errors": [
+    {
+      "logger": "research.vector_search_observer",
+      "exception_type": "RuntimeError"
+    }
+  ],
+  "feature_trace": {
+    "supersedence_checks": 1
+  },
+  "worker_sha256": "6cf0681769878e4419a51b66cd208e448528082a9d0c484f93e7ff60cf8c29cd",
+  "benchmark_cases_used": 0,
+  "live_providers_used": false,
+  "active_worker_detects_fault": true,
+  "inspection_correction": "The initial coordinator-only probe did not use the independent opt_in_arm_worker observer. Both active supersedence-bearing arms and the queued MAB worker use the latter, which already observes VectorIndex.search exceptions before the product catch. The initial probe therefore does not demonstrate a blind spot in any active flagged benchmark arm. No running or registered execution was changed.",
+  "sha256": "e68458398e4933225a410b0e186ffec8234cc40e18796d9ed79627ca291cf59b"
+}
