@@ -5,6 +5,28 @@ complete comparisons from pending work. Production remains
 `a66ee854325890c6bc28f6b515efeb6ed7df4deb`, with no default changes, deployment,
 merge or push. Research branch: `research/opt-in-interactions-2026-09-22`.
 
+## Completed comparisons at a glance
+
+Every row below represents an authenticated full 500-question arm. Intervals
+are registered paired 95% bootstrap intervals against the original baseline;
+unfinished arms have no quality score. Context and latency details, category
+scores, configuration hashes and artifact checksums are retained in the
+[six-arm analysis](opt-in-successor-v2-analysis-06-complete.json).
+
+| Arm | Correct | Difference, percentage points | Interpretation |
+|---|---:|---:|---|
+| Production baseline | 437/500 | Reference | Fixed control; 403/470 complete annotated source sets |
+| Episode routing | 345/500 | −18.4 [−22.2, −14.8] | Reject current unconditional default candidate; evidence displacement |
+| Reranker | 284/500 | −30.6 [−35.0, −26.2] | Reject current composition; score-scale repair is under test |
+| Query reformulation | 434/500 | −0.6 [−2.0, +0.6] | Only two changed contexts; extra latency without demonstrated benefit |
+| Evidence augmentation | 435/500 | −0.4 [−1.6, +0.8] | Inactive on all 500 packs; score variation is not a feature effect |
+| Evidence projection | 431/500 | −1.2 [−2.8, +0.2] | Inactive on all 500 packs; score variation is not a feature effect |
+
+Separately, the annotation-assisted diagnostic reached 473/500 (+7.2 points,
+interval +4.4 to +10.0). It establishes a development opportunity for evidence
+selection, not a deployable algorithm. Two label-free repairs are undergoing
+complete source trials; neither has a completed quality result yet.
+
 ## Question and repaired protocol
 
 Which experimental features improve PRME's answers at a fixed memory budget,
