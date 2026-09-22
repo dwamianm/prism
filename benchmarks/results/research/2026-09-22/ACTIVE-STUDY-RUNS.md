@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 20:41 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 20:52 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -45,8 +45,8 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | QA pairing | 85242 | `successor-v2-qa_pairing.log` |
 | Surprise gating | 95333 | `successor-v2-surprise_gating.log` |
 | Full-feature exploratory | 89354 | `successor-v2-full_feature_exploratory.log`; started under scheduling amendment v4. The former idle launcher PID 75029/session 46843 was stopped before any child started. Do not launch it again. |
-| Complete-arm analysis watcher | 11465 | `successor-v2-analysis-watcher.log`; writes incrementally numbered `opt-in-successor-v2-analysis-NN-complete.json` after authentication. |
-| Exploratory top-two selector | 87252 | `successor-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. |
+| Complete-arm analysis watcher | 5627 | `successor-bounded-analysis-watcher.log`; writes incrementally numbered `opt-in-successor-v2-analysis-NN-complete.json` after authentication. Memory-bounded wrapper has exact four-arm numerical parity with the original analyzer. The former idle PID 36062/session 11465 was stopped without interrupting any benchmark. |
+| Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
 | Marginal source assay | 68568 | `marginal-study-v1.log`; waits for all historical arms, then tests all three fixed policies on all 500 cases, with conditional full-cohort answer follow-up. |
 | Rank-envelope repair assay | 44587 | **Repair worktree** `data/opt-in-study/rank-envelope-study-v2.log`; local source replay now running under scheduling amendment v2. Verifies all 500 baseline and reranker replays, then runs one repair. Conditional hosted answers still wait for all historical arms. The v1 idle waiter PID 3539/session 32160 was stopped before any case or hosted call. |

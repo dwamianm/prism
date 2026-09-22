@@ -280,6 +280,13 @@ held-out semantic-quality evidence.
 
 ## Validation and remaining work
 
+A [memory-bounded analysis wrapper](opt-in-analysis-memory-amendment-v1.json)
+retains the original authentication, metrics and selection functions while
+releasing unused capture details between arms. Its results matched every
+numerical output of the original four-arm analysis exactly. Only idle analysis
+and selection launchers were replaced; benchmark workers and their inputs were
+unchanged. The original outputs and parity artifacts remain available.
+
 The corrected ingestion harness passed 13 tests, and the source-priority
 diagnostic passed five tests. Authored reranker and reformulation provider
 preflights passed; these establish operability, not benchmark benefit. A separate
