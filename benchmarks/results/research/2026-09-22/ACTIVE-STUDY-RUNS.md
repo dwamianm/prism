@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 23:10 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 23:20 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -39,7 +39,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Job | Tool session | Log / behavior |
 |---|---:|---|
 | Historical coordinator | finished | `successor-v2-historical.log`; all six assigned arms verified. Exited at the expected ownership handoff/FileExistsError for the separately owned reranker directory; not an arm failure. Never restart. |
-| Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker, query reformulation and reranker+reformulation verified; temporal failed closed, temporal+episode running. Each has `successor-v2-ARM.log`. |
+| Second historical lane | finished | `successor-v2-retrieval-lane-launcher.log`; reranker, query reformulation, reranker+reformulation and temporal+episode verified; temporal-only failed closed. Ten historical arms are complete; one failed. Each has `successor-v2-ARM.log`. Never restart. |
 | Fresh control | 22257 | `successor-v2-fresh.log`; actual sequential store for all source turns. Expected handoff/FileExistsError when it reaches independently owned supersedence. |
 | Store supersedence | 35057 | `successor-v2-store_supersedence.log` |
 | QA pairing | 85242 | `successor-v2-qa_pairing.log` |
@@ -113,6 +113,14 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
   tokens here and in the new rank control repeat. Temporal validation had
   returned the unchanged control context. Both failures are retained, not
   replaced. Best-two selection cannot omit this failed required individual.
+* Temporal + episode: 343/500, −18.8 points [−22.6,−15.2] versus production,
+  seven wins/101 losses. Source completeness remains 283/470. Against episode
+  alone, −0.4 points [−1.4,+0.6], two wins/four losses, all on unchanged inputs.
+  The 32 accepted changed contexts have identical correctness in both arms
+  (28 pass/four fail); all four failures are reviewed separately. Cold statuses:
+  355 not invoked, 70 validation rejected, 29 unsupported, 14 gate rejected,
+  32 accepted. Resolver/Jev costs, alignment and cold/warm variation are in
+  `opt-in-temporal-episode-audit-v1.json`. No standalone/factorial replacement.
 * Marginal packing: all 500 source replays complete. Source coverage 403
   control, 300 session penalty, 407 episode bonus, 319 combined, out of 470.
   Bonus-only qualifies: six complete-source gains/two losses, +0.85 points

@@ -1,0 +1,68 @@
+{
+  "kind": "post-hoc-review-of-all-accepted-temporal-episode-errors",
+  "at": "2026-09-22T23:19:13.584396+00:00",
+  "complete_arm_questions": 500,
+  "changed_accepted_contexts": 32,
+  "correct_in_both_arms": 28,
+  "incorrect_in_both_arms": 4,
+  "all_four_reviews": [
+    {
+      "question_id": "gpt4_372c3eed",
+      "capture_sha256": "868edf2817a94fdd2ed19c6511e5b966d5148f59b3efd4a624e93c96fb13356c",
+      "reader_sha256": "6f21129c6a5101f1d0a0b4995be992c98e306b4e9403535f5a4d3357638b0696",
+      "judge_sha256": "61d95da8a3a162f102659d18292f5a67bf00a86ce130b3270e0363bd5e0158a0",
+      "operation": "duration_from_text",
+      "value": "4 years",
+      "evidence_ids": [
+        "3c8ac921-7990-4e8c-8664-bc57a4a524d9"
+      ],
+      "gate_minimum_probability": 0.88,
+      "review_note": "The accepted four-year duration covers the Bachelor degree only, while the question asks about high school through degree completion. Acceptance of locally supported arithmetic does not establish complete query coverage."
+    },
+    {
+      "question_id": "gpt4_59149c77",
+      "capture_sha256": "32fc352792cfce726609d64b1486abdc6ad3a624c0d999b8d7b998149c7bdccb",
+      "reader_sha256": "a179c51bace3c7d5dff9f8e7bfc0e98e373174e62e7d8ec89d784ace02abf12a",
+      "judge_sha256": "8b9105f63aaa39798138910a324ee6c2c6d664f6123983fcb214c0f54d6618b5",
+      "operation": "elapsed_between",
+      "value": "0 days",
+      "evidence_ids": [
+        "59af8777-db60-4e5d-9765-013de639f430",
+        "0478701e-784b-4f7d-8d3b-e3a7b9f4cd64"
+      ],
+      "gate_minimum_probability": 0.87,
+      "review_note": "The selected visit operands both resolve to January 15, yielding zero days versus the reference seven/eight days. Event-name/date binding requires review; the score alone does not establish which source or annotation is mistaken."
+    },
+    {
+      "question_id": "gpt4_18c2b244",
+      "capture_sha256": "cbfd2427d24579ed49829d122c9e43039a29a74a5f502cfb6b560925d8a06f2b",
+      "reader_sha256": "3399d1e80928edfc856261d9c601a1abae6f319dacd8d041b3402fbce40b0725",
+      "judge_sha256": "a78528a8c4f1e3538855453b609d213410b2cde46e4a4442278380d84efce232",
+      "operation": "order",
+      "value": "I used a Buy One Get One Free coupon on Luvs diapers at Walmart -> I redeemed $12 cashback for a $10 Amazon gift card from Ibotta",
+      "evidence_ids": [
+        "7e860e6a-dbdf-486f-8564-b6209931a484",
+        "ee246a17-c247-4051-8be6-222b0411402b"
+      ],
+      "gate_minimum_probability": 0.93,
+      "review_note": "The query explicitly requests an order of three named events, but accepted guidance orders only two. The reader correctly notes that the third is unavailable in its packed context; the benchmark answer remains incorrect."
+    },
+    {
+      "question_id": "370a8ff4",
+      "capture_sha256": "2ae2c489c1c28951f565e571b431feb280711d5164e17c1751aaa3515b25b0c7",
+      "reader_sha256": "91b6cf1c644726b6653c4b23ae1777ad004c17b3d6a1d3d374cdf5afa3abd76b",
+      "judge_sha256": "77e4fa5d0e00bb4e3104035f896b30155083d87891e5144aceb024641dd61512",
+      "operation": "elapsed_between",
+      "value": "81 days",
+      "evidence_ids": [
+        "7485ac4d-76d3-4368-9d18-83105ce25a6d",
+        "db7fd2e8-ac5c-4bad-9d5d-99fd1dc61282"
+      ],
+      "gate_minimum_probability": 0.88,
+      "review_note": "The selected January 19 and April 10 dates yield 81 days consistently, versus the reference 15 weeks. This leaves a source/date-selection or annotation discrepancy, not an arithmetic error; no label is changed."
+    }
+  ],
+  "parent_audit_sha256": "92c669e489e1ac0e1663958dcfc2a83d105b5141f85b63cf2dfee1592aafe11a",
+  "limits": "All accepted changed-context errors are included. These are diagnostic observations, not causal adjudications, new labels, a favorable subset trial, or an amendment to the frozen temporal protocol. Local operand validation and an 0.85 semantic gate do not prove complete query coverage or truth. No new provider calls.",
+  "sha256": "2e82e9959ff0ca5befd11185461a2761ad658b933cdf2c7ae9ca97af2d19351d"
+}

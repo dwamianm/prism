@@ -1,0 +1,15 @@
+{
+  "source_sha256": {
+    "opt-in-successor-v2-analysis-10-complete.json": "b8545fea2d0b3a6251600be47db00aca5130b0802b659ec511427e9f87299664",
+    "opt-in-rank-envelope-v2-reader-candidate-result.json": "b13cc44b79c30895e7f9773eb1c1ee9d5e392b4364ea87fc13a9e6f99c1f0cc2",
+    "opt-in-marginal-packing-v2-answer-result.json": "be9481454ee70cb0ab7b3a0e67db957ba91ad6a9500e59fdf4a33d31bf54bb50",
+    "opt-in-packing-oracle-v1-result.json": "d814b1a0eb2366a889ac87744963c77af99897855b2db270663348b855a2aa40",
+    "plot_opt_in_completed_v2.py": "c5caee8956bb5616d1da807f388557e38501b2f48ff4714d3e02684264872fda"
+  },
+  "output_sha256": {
+    "opt-in-completed-comparisons-v2.png": "bd0286b4d78416d4b09ef22119e9ad09852d3c5b0491e088db951cd53e192515",
+    "opt-in-completed-comparisons-v2.svg": "529f677998504a2c0dd2fef5b6e1a1467e3e60b13ee070dd3bd0f9665f65ad8d"
+  },
+  "new_model_calls": 0,
+  "original_and_primary_comparisons_unchanged": true
+}

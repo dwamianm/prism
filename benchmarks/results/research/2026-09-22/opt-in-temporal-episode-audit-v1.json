@@ -1,0 +1,177 @@
+{
+  "kind": "post-hoc-complete-temporal-effect-conditional-on-episode-routing",
+  "at": "2026-09-22T23:15:25.714582+00:00",
+  "arm_identities": {
+    "episode_routing": {
+      "verification_sha256": "17ad2f9b04562717fffd19c2c23ee06087d545038b8f3692e146f4036d8ba805",
+      "execution_sha256": "67f0238d41cc6468c8a70dd80ce7dcf92a17b382da565ba02e42160d8b41954e"
+    },
+    "temporal_episode": {
+      "verification_sha256": "7408ce9a961a92736e83d7a8d799861a5127fe850091d26c2a303bbebf2e82cc",
+      "execution_sha256": "c0bab96d6cf408815ff0c6e2e4cfc2bc733628d1927e532ea9492e41828d6325"
+    }
+  },
+  "cases": 500,
+  "conditional_paired": {
+    "difference": -0.004,
+    "wins": 2,
+    "losses": 4,
+    "ties": 494,
+    "question_ci95": [
+      -0.014,
+      0.006
+    ],
+    "full_history_cluster_ci95": [
+      -0.014,
+      0.006
+    ],
+    "clusters": 500
+  },
+  "input_groups": {
+    "unchanged_input": {
+      "total": 468,
+      "wins": 2,
+      "losses": 4,
+      "control_correct": 317,
+      "candidate_correct": 315
+    },
+    "changed_input": {
+      "total": 32,
+      "wins": 0,
+      "losses": 0,
+      "control_correct": 28,
+      "candidate_correct": 28
+    }
+  },
+  "changed_input_ids": [
+    "94f70d80",
+    "19b5f2b3",
+    "311778f1",
+    "faba32e5",
+    "b3c15d39",
+    "60bf93ed",
+    "gpt4_372c3eed",
+    "gpt4_59149c77",
+    "71017276",
+    "gpt4_fa19884c",
+    "gpt4_1d4ab0c9",
+    "gpt4_6dc9b45b",
+    "gpt4_18c2b244",
+    "gpt4_7a0daae1",
+    "gpt4_1e4a8aeb",
+    "370a8ff4",
+    "6e984301",
+    "8077ef71",
+    "gpt4_8e165409",
+    "gpt4_74aed68e",
+    "5e1b23de",
+    "gpt4_af6db32f",
+    "gpt4_a2d1d1f6",
+    "gpt4_e414231e",
+    "gpt4_7bc6cf22",
+    "0bb5a684",
+    "2a1811e2",
+    "bbf86515",
+    "f0853d11",
+    "gpt4_4edbafa2",
+    "dcfa8644",
+    "gpt4_1a1dc16d"
+  ],
+  "all_answer_transitions": [
+    {
+      "question_id": "c18a7dc8",
+      "changed_input": false,
+      "temporal_status": "unsupported",
+      "episode_correct": true,
+      "temporal_episode_correct": false
+    },
+    {
+      "question_id": "71017277",
+      "changed_input": false,
+      "temporal_status": "not_invoked",
+      "episode_correct": true,
+      "temporal_episode_correct": false
+    },
+    {
+      "question_id": "gpt4_2487a7cb",
+      "changed_input": false,
+      "temporal_status": "validation_rejected",
+      "episode_correct": true,
+      "temporal_episode_correct": false
+    },
+    {
+      "question_id": "gpt4_fe651585_abs",
+      "changed_input": false,
+      "temporal_status": "validation_rejected",
+      "episode_correct": false,
+      "temporal_episode_correct": true
+    },
+    {
+      "question_id": "59524333",
+      "changed_input": false,
+      "temporal_status": "not_invoked",
+      "episode_correct": true,
+      "temporal_episode_correct": false
+    },
+    {
+      "question_id": "561fabcd",
+      "changed_input": false,
+      "temporal_status": "not_invoked",
+      "episode_correct": false,
+      "temporal_episode_correct": true
+    }
+  ],
+  "temporal_status_by_retrieval_mode": {
+    "cold": {
+      "not_invoked": 355,
+      "validation_rejected": 70,
+      "unsupported": 29,
+      "accepted": 32,
+      "gate_rejected": 14
+    },
+    "warm": {
+      "not_invoked": 355,
+      "validation_rejected": 70,
+      "unsupported": 31,
+      "accepted": 33,
+      "gate_rejected": 11
+    }
+  },
+  "additional_provider_usage": {
+    "cold_resolver": {
+      "operations": 145,
+      "attempts": 150,
+      "input_tokens": 517603,
+      "output_tokens": 19096,
+      "elapsed_ms": 476512.0130000001
+    },
+    "warm_resolver": {
+      "operations": 145,
+      "attempts": 151,
+      "input_tokens": 517951,
+      "output_tokens": 18972,
+      "elapsed_ms": 431747.62299999996
+    },
+    "cold_gate": {
+      "operations": 46,
+      "attempts": 46,
+      "input_tokens": 24023,
+      "output_tokens": 1498,
+      "elapsed_ms": 106325.955
+    },
+    "warm_gate": {
+      "operations": 44,
+      "attempts": 44,
+      "input_tokens": 23011,
+      "output_tokens": 1436,
+      "elapsed_ms": 88010.994
+    }
+  },
+  "temporal_control_context_mismatches": [],
+  "cold_warm_context_changes": 12,
+  "full_factorial_status": "unavailable_failed_temporal_only_arm",
+  "new_model_calls": 0,
+  "primary_scores_changed": false,
+  "limits": "Post-hoc conditional contrast across all 500 cases. It cannot replace the failed temporal-only arm or establish the four-arm interaction. Unchanged-input answer disagreements are reader/judge variation. Token totals with missing-operation counts are reported sums, not complete financial costs.",
+  "sha256": "5139c36382308b47d1d7f347abf91166d838f0152c98548ddb3181df45b698f1"
+}

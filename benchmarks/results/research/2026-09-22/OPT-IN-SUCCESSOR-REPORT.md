@@ -11,7 +11,7 @@ Every row below represents an authenticated full 500-question arm. Intervals
 are registered paired 95% bootstrap intervals against the original baseline;
 unfinished arms have no quality score. Context and latency details, category
 scores, configuration hashes and artifact checksums are retained in the
-[nine-arm analysis](opt-in-successor-v2-analysis-09-complete.json).
+[ten-arm analysis](opt-in-successor-v2-analysis-10-complete.json).
 
 | Arm | Correct | Difference, percentage points | Interpretation |
 |---|---:|---:|---|
@@ -24,11 +24,12 @@ scores, configuration hashes and artifact checksums are retained in the
 | Episode + augmentation | 346/500 | −18.2 [−22.0, −14.6] | Same contexts as episode routing; augmentation inactive |
 | Reranker + reformulation | 288/500 | −29.8 [−34.2, −25.6] | Four changed inputs versus reranker; no changed-input answer gain |
 | Episode + projection | 348/500 | −17.8 [−21.6, −14.2] | Same inputs as episode routing; projection inactive |
+| Temporal + episode | 343/500 | −18.8 [−22.6, −15.2] | 32 temporal context changes, no changed-input answer transition versus episode alone |
 
-![Complete paired comparisons and the separate nondeployable diagnostic](opt-in-completed-comparisons-v1.png)
+![Complete paired comparisons, repair evidence and the separate nondeployable diagnostic](opt-in-completed-comparisons-v2.png)
 
-The [vector figure](opt-in-completed-comparisons-v1.svg) and its
-[input/output identities](opt-in-completed-comparisons-v1-identity.json)
+The [vector figure](opt-in-completed-comparisons-v2.svg) and its
+[input/output identities](opt-in-completed-comparisons-v2-identity.json)
 are available for export. Intervals are unadjusted; the machine analysis also
 retains the registered Holm-adjusted tests for the feature family.
 
@@ -45,8 +46,8 @@ regression but does not beat production. The marginal packing trial completed
 at **433/500 versus 433/500** in its primary paired comparison: 0.0 points
 [−1.8,+1.8], ten wins/ten losses. Its multi-session and preference gains were
 offset by knowledge-update and assistant losses.
-The figure above freezes the first six complete arms; the table
-includes later completed interactions.
+The figure distinguishes original-arm comparisons, secondary repaired-reranker
+evidence, the marginal trial's primary comparison and the nondeployable diagnostic.
 
 The temporal-only arm also failed closed: 265 completed cases, one truncated
 reader response and 234 unstarted cases. It receives no answer score or
@@ -494,6 +495,35 @@ Temporal relations retain the documented answer-blind Ollama/TypeSafe Jev
 protocol. Product alignment/Jev remains a separate caller-selected pair and
 explicit review workflow; its authored operational probe is not retrieval or
 held-out semantic-quality evidence.
+
+The completed temporal + episode arm scored **343/500**: seven wins/101 losses
+against production, −18.8 points [−22.6,−15.2], Holm-adjusted p `2.03e-21`.
+It retained 283/470 complete annotated source sets, averaged 3,955.554 context
+tokens and measured cold p50/p95 2.667/11.341 seconds under shared load. Its
+1,000 reader/judge calls had no HTTP errors or retries and used 2,243,428 input
+and 127,002 output tokens. The combination remains a rejected default candidate.
+
+The separate [conditional audit](opt-in-temporal-episode-audit-v1.json) compares
+it with the complete episode-only arm: two wins/four losses, −0.4 points
+[−1.4,+0.6]. All six score transitions occurred among 468 unchanged reader
+inputs. The 32 accepted changed contexts had 28 correct and four incorrect
+answers in both arms. Every temporal control-context hash matched episode
+routing. Cold status counts were 355 not invoked, 70 validation rejected,
+29 unsupported, 14 gate rejected and 32 accepted. All observed executions
+retained the documented protocol and 0.85 gate. The full four-arm factorial
+estimate remains unavailable because temporal-only failed.
+
+Across the cold and warm observations, the resolver ran 290 operations with
+301 attempts, and Jev ran 90 operations/attempts. Their recorded usage adds
+1,082,588 input and 41,002 output tokens to the reader/judge usage above;
+all token fields were available. These are study token counts, not dollar
+costs or isolated serving measurements. Twelve cold/warm contexts differed.
+The [review of all four accepted errors](opt-in-temporal-accepted-error-review-v1.json)
+includes incomplete question coverage (two of three requested events, and only
+one education duration) and date/reference discrepancies despite consistent
+arithmetic. Acceptance validates bounded operands and repacking; it is not a
+proof of complete query coverage or truth. No benchmark label or protocol was
+changed on this review.
 
 ## Validation and remaining work
 
