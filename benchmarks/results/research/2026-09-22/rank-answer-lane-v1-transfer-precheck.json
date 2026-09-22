@@ -1,0 +1,18 @@
+{
+  "kind": "rank",
+  "at": "2026-09-22T22:06:16.218414+00:00",
+  "pid": 85200,
+  "command": "/Users/dwamianm/Sites/prism/.venv/bin/python benchmarks/diagnostics/opt_in_answer_memory_handoff.py run --kind rank --handoff benchmarks/results/research/2026-09-22/rank-answer-memory-handoff-v1.json",
+  "children": [],
+  "prepared_identity": {
+    "source_result_sha256": "a70b8c6b4ee9491c44fab8549d4bd8f4598130ef0817fe52cf9147b7c529257a",
+    "source_registration_sha256": "1332a6ba0bbe0ac330bce3bbfb05225f58787f84d20ba4f94329a806e07be857",
+    "control_registration_sha256": "cf29b39ff5c68514acbe6c1f23fc38845107d7cba31c5d7b0f0fb1340f35bb87",
+    "control_contexts_sha256": "d5e4db4bc6465af7691891e587256a7d883929a2750afebdfceabaa5c22ddef3",
+    "candidate_registration_sha256": "9fa0746e7ceb416b5104c3c7b00450b828bfa7a2f2b61a94fa1599b3622bedbe",
+    "candidate_contexts_sha256": "3f60a648f486992f046effe96ee16a80c3e20ea103af300a1f235a889e694150"
+  },
+  "lane_plan_sha256": "5b72332ac349da5e3a691beb0731077c6241d0abd31df08de2ec02abce63822d",
+  "previous_source_handoff_sha256": "b8687f7662730ba0af02794ca91e0160ada355c3c4cf76b7b1ab4c6188aac974",
+  "reader_execution_started": false
+}
