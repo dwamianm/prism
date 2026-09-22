@@ -1,0 +1,173 @@
+{
+  "kind": "post-hoc-complete-source-versus-baseline-error-description",
+  "at": "2026-09-22T21:58:20.983364+00:00",
+  "source_result_sha256": "a70b8c6b4ee9491c44fab8549d4bd8f4598130ef0817fe52cf9147b7c529257a",
+  "baseline_analysis_sha256": "ef3842cef1ff445626134d8343a4152b4b56679eb5822bc29ac7bd05b73bcbe9",
+  "script_sha256": "4831657ffde8e8e0e08a3d07aadcf13e069b1e42230f72fd4a9a26bb85e0a79f",
+  "cases": 500,
+  "summaries": {
+    "baseline_correct": {
+      "total": 437,
+      "changed_context": 345,
+      "source_applicable": 412,
+      "complete_source_gain": 3,
+      "complete_source_loss": 3,
+      "more_source_turns": 3,
+      "fewer_source_turns": 3
+    },
+    "packing_omission": {
+      "total": 44,
+      "changed_context": 27,
+      "source_applicable": 44,
+      "complete_source_gain": 5,
+      "complete_source_loss": 0,
+      "more_source_turns": 6,
+      "fewer_source_turns": 1
+    },
+    "annotated_evidence_present_reader_or_annotation_issue": {
+      "total": 14,
+      "changed_context": 8,
+      "source_applicable": 14,
+      "complete_source_gain": 0,
+      "complete_source_loss": 1,
+      "more_source_turns": 0,
+      "fewer_source_turns": 1
+    },
+    "no_annotation": {
+      "total": 5,
+      "changed_context": 3
+    }
+  },
+  "all_source_turn_changes": [
+    {
+      "question_id": "c4a1ceb8",
+      "category": "multi-session",
+      "baseline_error_class": "packing_omission",
+      "annotated_turns": 4,
+      "baseline_source_turns": 3,
+      "repair_source_turns": 2,
+      "complete_source_delta": 0
+    },
+    {
+      "question_id": "80ec1f4f",
+      "category": "multi-session",
+      "baseline_error_class": "packing_omission",
+      "annotated_turns": 2,
+      "baseline_source_turns": 1,
+      "repair_source_turns": 2,
+      "complete_source_delta": 1
+    },
+    {
+      "question_id": "2788b940",
+      "category": "multi-session",
+      "baseline_error_class": "baseline_correct",
+      "annotated_turns": 5,
+      "baseline_source_turns": 4,
+      "repair_source_turns": 5,
+      "complete_source_delta": 1
+    },
+    {
+      "question_id": "gpt4_731e37d7",
+      "category": "multi-session",
+      "baseline_error_class": "annotated_evidence_present_reader_or_annotation_issue",
+      "annotated_turns": 4,
+      "baseline_source_turns": 4,
+      "repair_source_turns": 3,
+      "complete_source_delta": -1
+    },
+    {
+      "question_id": "e3038f8c",
+      "category": "multi-session",
+      "baseline_error_class": "packing_omission",
+      "annotated_turns": 4,
+      "baseline_source_turns": 3,
+      "repair_source_turns": 4,
+      "complete_source_delta": 1
+    },
+    {
+      "question_id": "27016adc",
+      "category": "multi-session",
+      "baseline_error_class": "packing_omission",
+      "annotated_turns": 2,
+      "baseline_source_turns": 1,
+      "repair_source_turns": 2,
+      "complete_source_delta": 1
+    },
+    {
+      "question_id": "92a0aa75",
+      "category": "multi-session",
+      "baseline_error_class": "packing_omission",
+      "annotated_turns": 2,
+      "baseline_source_turns": 1,
+      "repair_source_turns": 2,
+      "complete_source_delta": 1
+    },
+    {
+      "question_id": "8e91e7d9",
+      "category": "multi-session",
+      "baseline_error_class": "packing_omission",
+      "annotated_turns": 2,
+      "baseline_source_turns": 0,
+      "repair_source_turns": 1,
+      "complete_source_delta": 0
+    },
+    {
+      "question_id": "gpt4_d6585ce9",
+      "category": "temporal-reasoning",
+      "baseline_error_class": "baseline_correct",
+      "annotated_turns": 1,
+      "baseline_source_turns": 1,
+      "repair_source_turns": 0,
+      "complete_source_delta": -1
+    },
+    {
+      "question_id": "gpt4_65aabe59",
+      "category": "temporal-reasoning",
+      "baseline_error_class": "packing_omission",
+      "annotated_turns": 3,
+      "baseline_source_turns": 2,
+      "repair_source_turns": 3,
+      "complete_source_delta": 1
+    },
+    {
+      "question_id": "41698283",
+      "category": "knowledge-update",
+      "baseline_error_class": "baseline_correct",
+      "annotated_turns": 2,
+      "baseline_source_turns": 1,
+      "repair_source_turns": 2,
+      "complete_source_delta": 1
+    },
+    {
+      "question_id": "cf22b7bf",
+      "category": "knowledge-update",
+      "baseline_error_class": "baseline_correct",
+      "annotated_turns": 2,
+      "baseline_source_turns": 1,
+      "repair_source_turns": 2,
+      "complete_source_delta": 1
+    },
+    {
+      "question_id": "89527b6b",
+      "category": "single-session-assistant",
+      "baseline_error_class": "baseline_correct",
+      "annotated_turns": 1,
+      "baseline_source_turns": 1,
+      "repair_source_turns": 0,
+      "complete_source_delta": -1
+    },
+    {
+      "question_id": "70b3e69b",
+      "category": "single-session-assistant",
+      "baseline_error_class": "baseline_correct",
+      "annotated_turns": 1,
+      "baseline_source_turns": 1,
+      "repair_source_turns": 0,
+      "complete_source_delta": -1
+    }
+  ],
+  "limits": "Associations with the original fixed baseline answers, not repaired answer outcomes. Full source literals are neither necessary nor sufficient for answer correctness. No source selection, contexts, gates or scores changed; the frozen full-cohort answer trial remains required.",
+  "model_calls": 0,
+  "default_changes": false,
+  "analysis_sha256": "be7576d0157214a068cd61f57f3666d60d8a19ea176b8553700a4e65b4000b41"
+}

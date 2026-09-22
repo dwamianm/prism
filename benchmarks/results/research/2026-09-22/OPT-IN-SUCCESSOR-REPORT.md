@@ -204,6 +204,17 @@ also been withdrawn before any case under its scheduling-only amendment.
 The registration, results and validation files here are exact exports from
 the separate repair branch, not a merge of its package changes.
 
+The [full-cohort source/error cross-tabulation](opt-in-repair-source-error-bridge-v1.json)
+shows that five of the baseline's 44 packing-omission errors acquire complete
+source sets under the repair; one other gains some source turns. Three other
+complete-source gains occur in already-correct baseline cases. The repair also
+loses complete source in three already-correct cases and one baseline error that
+previously had complete annotations. It changes 345 already-correct and 38
+incorrect-answer contexts in total. These associations identify an opportunity
+and regression exposure; they are not repaired answer scores. Most baseline
+packing omissions remain, so fixing the integration defect alone does not yet
+establish a solution to the broader evidence-selection problem.
+
 ## Development error review
 
 The [complete query-reformulation arm](opt-in-successor-v2-analysis-06-complete.json)
