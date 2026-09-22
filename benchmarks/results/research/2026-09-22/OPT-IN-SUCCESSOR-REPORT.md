@@ -112,7 +112,8 @@ mean context use was 3,957.824 tokens.
 not evidence against all neural ranking. Code inspection identifies a score
 scale mismatch: the top 100 candidates are blended with neural scores while
 the tail keeps original scores. Session expansion can then sort both groups
-together, and packing compares their scores again. A descriptive audit of all
+together, and packing compares their scores again. A
+[descriptive audit](opt-in-reranker-score-scale-audit-v1-result.json) of all
 500 frozen captures found 8,025 of 10,901 packed records had no neural or
 inherited-neural adjustment; only four of those records were annotated turns.
 Among 860 annotated turns with a neural or inherited-neural adjustment, 432
