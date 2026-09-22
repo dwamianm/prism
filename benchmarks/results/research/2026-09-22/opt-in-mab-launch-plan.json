@@ -1,0 +1,16 @@
+{
+  "kind": "conditional-registration-completion-and-stage-scheduling",
+  "registered_at": "2026-09-22T19:43:10.691054+00:00",
+  "launcher_sha256": "ae88f05f0842e10ec19206bdfcfe03c3f634edaf2b38f364f36a845c5898b594",
+  "stage_gate": "All fixed LongMemEval arms finalized, all complete arms authenticated, and the prespecified observed-top-two combination resolved (complete, retained failure, alias, or unavailable). No MAB benchmark inference before this gate.",
+  "base_registration_sha256": "05c42bd742321b990b5079786cf86b3bfa0675317afda8afbe3935ca89976216",
+  "conditional_addition": "If the LongMemEval-selected combination has a genuinely new config, append that single exploratory config in a separate child MAB registration before any MAB inference. Otherwise retain the original matrix and record its alias/unavailable status. Never select from MAB outcomes.",
+  "task_order": [
+    "banking",
+    "eventqa",
+    "conflict",
+    "detective"
+  ],
+  "later_tasks": "BEAM and MemoryArena are not launched until earlier stages have completed and their own exact registrations and gates are ready.",
+  "default_changes": false
+}
