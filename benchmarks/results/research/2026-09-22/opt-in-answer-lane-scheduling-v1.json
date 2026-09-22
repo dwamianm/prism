@@ -1,0 +1,52 @@
+{
+  "kind": "prospective-released-historical-answer-lane-scheduling-amendment",
+  "registered_at": "2026-09-22T22:04:51.160959+00:00",
+  "parent_registration_sha256": "06ee04869582702694dfc359b9ba4e249e52282bb08332db35114008b0c2d8f3",
+  "coordinator_sha256": "bf821547d5e21ee73e67721fad20194c1f94cabafda27bd843d2e392bd4aa557",
+  "memory_helper_sha256": "906d7d7da325127ecad15b71874692260ad39018eb15a0bd40a544a55914f0de",
+  "memory_plan_sha256": "3bd952ad88a002e9627794c3f6537adf08c65e3cf106d5f7d9f5ca675f8ae627",
+  "test_source_sha256": "b5b9c238463f8e78e0a728f63481f9a2f3ffe5dfa425d48cfdcb03965501bec4",
+  "validation": {
+    "passed": 6,
+    "failed": 0,
+    "log_sha256": "d30f43b30e4ee86714579b3235615e663d885333af776d3a223739fed7b82458",
+    "ruff_F": "passed"
+  },
+  "released_lane_pid": 20793,
+  "released_lane_arms": [
+    "baseline",
+    "episode_routing",
+    "evidence_augmentation",
+    "evidence_projection",
+    "episode_augmentation",
+    "episode_projection"
+  ],
+  "matrix_root": "/Users/dwamianm/Sites/prism-opt-in-study-2026-09-22/data/opt-in-study/opt-in-successor-v2",
+  "public_root": "/Users/dwamianm/Sites/prism-opt-in-study-2026-09-22/benchmarks/results/research/2026-09-22",
+  "private_root": "/Users/dwamianm/Sites/prism-opt-in-study-2026-09-22/data/opt-in-study",
+  "queue": [
+    "rank",
+    "marginal_if_source_gate_qualifies"
+  ],
+  "change": "Replace the repair follow-up wait for all eleven original historical arms with waiting for all six first-lane arms to settle/authenticate and their coordinator to exit. Reuse that lane for one four-slot hosted reader stage at a time, rank before any eligible marginal study. The original second historical lane and all five fresh arms continue unchanged.",
+  "reason": "Use released provider capacity instead of leaving it idle during the temporal lane; no increase above the already registered five-fresh/two-historical provider-process ceiling. Exact repair contexts and child registrations were frozen before answer inference.",
+  "requirements": "Authenticate every source case and prepared context; source gate met; no child reader execution has begun; stop only its confirmed idle prior source/coordinator after prospectively recording this amendment and recheck ownership. Preserve all failed or refused attempts. Reauthenticate after waiting and take an OS-held exclusive lane lock.",
+  "failure_handling": "Any started or failed reader stage cannot transfer or restart. Execute the exact original answer function AST tail; preserve its subprocess exit and complete-arm failure handling. An operational terminal record does not create a quality score. Marginal waits for rank tail settlement and coordinator exit even if rank failed.",
+  "unchanged": [
+    "source policies and selection gates",
+    "all 500 cases per child",
+    "prepared contexts and ordering",
+    "readers and judges",
+    "prompts and dependency pins",
+    "8192/64 output limits",
+    "3996 memory tokens",
+    "four provider slots per reader process",
+    "original matrix scheduling and failures",
+    "original statistics and output paths",
+    "untouched-confirmation requirement"
+  ],
+  "timing_boundary": "Shared host/provider load. Timing does not become an isolated serving-latency estimate. This is a prospective scheduling amendment after source outcomes, before either repair answer outcome; no answer-dependent scheduling selection.",
+  "benchmark_runs_replaced": false,
+  "defaults_changed": false,
+  "amendment_sha256": "f758a4b520f0f2ddac7edb2e570ae7b4d340c35bb42d72a6c69e65e8104968bd"
+}
