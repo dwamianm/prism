@@ -55,6 +55,22 @@ content inspection. The existing answerer and judge are separate Ollama models;
 the user's replacement of the inaccessible LongMemEval GPT reader does not
 silently change these historical BEAM identities.
 
+The local artifact inventory did not find those former BEAM execution packs,
+the normalized dataset cache or the upstream checkout under this project's
+data directory or the prior temporary locations. Their published hashes and
+aggregate reports remain. Do not pretend a newly extracted pack is the old
+immutable artifact: retrieve the pinned dataset/upstream sources and register
+fresh matched controls if these files cannot be restored exactly. Historical
+aggregate scores cannot substitute for a newly matched control.
+
+The accepted extracted profile uses durable `ingest()`, while the documented
+raw adapter uses direct store admission. Store-time flags therefore require
+their own fresh raw/direct-store controls and measured activation. Merely
+enabling a store-time flag on an extracted replay does not exercise its hook.
+Any proposed composition spanning direct-store and derived-evidence workflows
+must specify the actual admission path before registration; duplicated source
+admission cannot be introduced as an unnoticed treatment.
+
 ## MemoryArena
 
 Preserve the registered interactive client, task grouping, exact-value scoring,
