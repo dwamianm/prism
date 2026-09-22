@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 21:55 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 22:07 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -49,7 +49,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
 | Marginal source assay | 90351 | `marginal-study-v2.log`; now tests all three unchanged fixed policies on all 500 cases, with conditional full-cohort answer follow-up that still waits for historical arms. Scheduling-only v2 replaces idle PID 18350/session 68568 before any v1 source case. Never relaunch v1. |
-| Rank-envelope answer coordinator | 52440 | Parent `data/opt-in-study/rank-answer-memory-coordinator-v2.log`, PID 85200; authenticated source/context identities, waiting for all eleven historical arms. Source assay 44587/PID 92466 completed 500 cases, prepared both child registrations, and was stopped only while idle under the memory-handoff amendment. Outputs stay in the repair worktree. Never relaunch source v1 or v2. |
+| Rank-envelope answer coordinator | 4246 | Parent `data/opt-in-study/rank-answer-lane-v1.log`; new scheduling amendment uses the first historical lane only after all six assigned arms settle/authenticate and PID 20793 exits. Prior idle coordinator 52440/PID 85200 was stopped before any reader case. Source assay 44587/PID 92466 completed and was stopped only while idle. Outputs stay in the repair worktree. Never relaunch prior source/coordinator versions. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
 Only an arm with complete `execution.json` and authenticated `verification.json`
@@ -122,7 +122,7 @@ The source-to-answer memory handoff is registered in
 `opt-in-answer-memory-amendment-v1.json` and passed seven authored tests. It is
 **now used for the rank repair only**. It authenticated all 500 source/context
 pairs and replaced only the completed idle source process with a low-memory
-coordinator under the unchanged historical-stage gate. Both source gates passed.
+coordinator under its then-unchanged historical-stage gate. Both source gates passed.
 The initial ownership check refused a passive Python resource tracker; the first
 coordinator attempt then failed for missing handoff, before any benchmark call.
 Both logs are retained. A prospective bookkeeping amendment permits only that
@@ -151,3 +151,19 @@ fresh matrix and MAB stage; update the canonical report and research agenda.
 BEAM and MemoryArena remain conditional on earlier complete runs and require
 their own exact protocol registrations. Jev/product alignment remains its
 separate explicit pair-selection/review workflow, never a retrieval flag.
+
+## Released-lane amendment (current answer scheduling)
+
+`opt-in-answer-lane-scheduling-v1.json` now prospectively supersedes only the
+repair answer wait for all eleven historical arms. All six first-lane arms
+must settle/authenticate and original coordinator PID 20793 must exit first.
+The freed four-slot provider lane runs rank control/candidate, then any eligible
+marginal control/candidate, sequentially. It adds no provider capacity and uses
+the exact original execution/statistics AST tails and all frozen contexts.
+Six authored ownership/gating tests and Ruff passed. Parent helper:
+`benchmarks/diagnostics/opt_in_answer_lane.py`. Rank transfer and its all-500
+reauthentication are recorded in `rank-answer-lane-v1-handoff.json`; source
+and prepared bytes are unchanged. The prior memory coordinator was confirmed
+idle with no children and no reader artifacts, then stopped. No case was
+interrupted. Marginal remains on its active source process until it finishes;
+if it qualifies, perform an equivalent idle transfer before queuing it here.

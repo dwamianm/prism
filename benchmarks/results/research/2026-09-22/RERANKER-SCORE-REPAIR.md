@@ -107,3 +107,13 @@ This is recorded orchestration failure, not a replaced benchmark run.
 The repair recovers a serious integration regression. Its small and uncertain
 source advantage over production, including assistant-memory losses, still
 requires the frozen matched answer trial before a quality claim.
+
+A subsequent [released-lane scheduling amendment](opt-in-answer-lane-scheduling-v1.json)
+now allows the frozen repair answers to start after the first historical lane's
+six arms settle/authenticate and its coordinator exits, while the second lane
+continues. It preserves the same provider-process ceiling and runs rank before
+any eligible marginal follow-up, one four-slot reader process at a time. Six
+ownership/gating tests passed. The previous waiting coordinator was transferred
+only while idle after all 500 contexts were reauthenticated; no answer case
+had started. This supersedes the original all-eleven-arm wait, with no change
+to source gates, contexts, readers, scoring or failure handling.

@@ -215,6 +215,17 @@ and regression exposure; they are not repaired answer scores. Most baseline
 packing omissions remain, so fixing the integration defect alone does not yet
 establish a solution to the broader evidence-selection problem.
 
+
+A subsequent [released-lane scheduling amendment](opt-in-answer-lane-scheduling-v1.json)
+now allows the frozen repair answers to start after the first historical lane's
+six arms settle/authenticate and its coordinator exits, while the second lane
+continues. It preserves the same provider-process ceiling and runs rank before
+any eligible marginal follow-up, one four-slot reader process at a time. Six
+ownership/gating tests passed. The previous waiting coordinator was transferred
+only while idle after all 500 contexts were reauthenticated; no answer case
+had started. This supersedes the original all-eleven-arm wait, with no change
+to source gates, contexts, readers, scoring or failure handling.
+
 ## Development error review
 
 The [complete query-reformulation arm](opt-in-successor-v2-analysis-06-complete.json)
