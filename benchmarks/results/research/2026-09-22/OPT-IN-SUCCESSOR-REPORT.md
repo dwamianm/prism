@@ -182,7 +182,7 @@ not evidence that a particular ranking change will improve answers.
 The [source audit](opt-in-source-applicability-result.json) found 246,738 nodes
 with event provenance but no graph-node evidence references in these raw-turn
 packs. Evidence projection and augmentation need graph-node references to route
-source passages. Their arms remain scheduled, but an inactive flag cannot
+source passages. Their individual arms are now complete, but an inactive flag cannot
 establish benefit or harm for the intended derived-claim workflow. A meaningful
 test of that workflow needs a separately matched derived-ingestion study.
 
@@ -272,6 +272,23 @@ candidate answer result. Duplicate configurations are aliases, not new replicate
 The [secondary analysis plan](opt-in-successor-secondary-analysis-registration.json)
 also compares unchanged-input repeat arms and estimates the four registered
 factorial contrasts. Reader/judge variation never replaces the primary baseline.
+
+The [complete projection arm](opt-in-successor-v2-analysis-05-complete.json)
+scored **431/500**, with four wins and ten losses: **−1.2 points**, paired
+95% interval **[−2.8, +0.2]**. All 500 contexts were unchanged and no evidence
+operation activated. Source completeness and context-token use were identical
+to baseline. Cold retrieval p50/p95 was 0.786/6.548 seconds under shared load;
+all 1,000 reader/judge requests completed with no errors or retries. This is
+inapplicability on these artifacts, not evidence of projection damage.
+
+The [registered repeated-input analysis](opt-in-successor-secondary-analysis-05-complete.json)
+confirmed identical reader requests across baseline, augmentation and
+projection. Their scores were 437, 435 and 431 out of 500. Of the 500 questions,
+422 passed all three times, 58 failed all three times, and 20 changed outcome.
+Pairwise disagreement counts were 10, 14 and 16. This quantifies the reader/judge
+variation that small candidate gains must survive. The secondary pooled score
+is 86.87%; the primary baseline remains the original 87.4%. No response is
+selected or replaced, and these repeated inputs cannot serve as feature wins.
 
 Temporal relations retain the documented answer-blind Ollama/TypeSafe Jev
 protocol. Product alignment/Jev remains a separate caller-selected pair and

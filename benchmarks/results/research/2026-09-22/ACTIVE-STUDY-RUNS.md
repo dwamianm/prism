@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 20:52 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 20:59 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -38,7 +38,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 
 | Job | Tool session | Log / behavior |
 |---|---:|---|
-| Historical coordinator | 71386 | `successor-v2-historical.log`; baseline, episode and augmentation verified; projection running, then episode+augmentation and episode+projection. Expected ownership handoff/FileExistsError when it reaches the separately owned reranker directory; not an arm failure. |
+| Historical coordinator | 71386 | `successor-v2-historical.log`; baseline, episode, augmentation and projection verified; episode+augmentation running, then episode+projection. Expected ownership handoff/FileExistsError when it reaches the separately owned reranker directory; not an arm failure. |
 | Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker verified, query reformulation running, then reranker+reformulation, temporal and temporal+episode. Each has `successor-v2-ARM.log`. |
 | Fresh control | 22257 | `successor-v2-fresh.log`; actual sequential store for all source turns. Expected handoff/FileExistsError when it reaches independently owned supersedence. |
 | Store supersedence | 35057 | `successor-v2-store_supersedence.log` |
@@ -73,6 +73,11 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
 * Evidence augmentation: 435/500, delta −0.4 points, CI [−1.6, +0.8].
   All 500 inputs unchanged; no activation. Four wins/six losses measure
   reader/judge variation, not augmentation benefit or harm.
+* Evidence projection: 431/500, delta −1.2 points, CI [−2.8, +0.2].
+  All 500 inputs unchanged; no activation. Four wins/ten losses. Registered
+  three-repeat analysis confirms 422 always-pass, 58 always-fail and 20
+  variable questions. Keep the original baseline; do not treat inactive arms
+  as feature evidence or favorable replacement controls.
 * Annotation-assisted packing diagnostic: 473/500, +7.2 points, CI [+4.4,+10.0].
   Nondeployable, outside the feature matrix. Changed 67 contexts; 433 repeated
   inputs reveal residual reader/judge variation. Knowledge updates lost two.
