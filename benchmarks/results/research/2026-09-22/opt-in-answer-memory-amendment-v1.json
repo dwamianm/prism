@@ -1,0 +1,45 @@
+{
+  "kind": "prospective-completed-source-memory-handoff",
+  "at": "2026-09-22T21:39:13.280431+00:00",
+  "helper_sha256": "906d7d7da325127ecad15b71874692260ad39018eb15a0bd40a544a55914f0de",
+  "test_source_sha256": "67304c941371836d4d49160dbb4e6d8e3d6c9dd034ff514480f036ff891ad7e6",
+  "validation": {
+    "passed": 7,
+    "failed": 0,
+    "seconds": 63.0,
+    "log_sha256": "642f3c326815526ce41446827ecb801bc6a110cbf7e8c3cae9e683c101dec51d",
+    "ruff_F": "passed after removing an unused test import"
+  },
+  "purpose": "Release completed source rows and model allocations while waiting for the already registered historical matrix gate; the score-repair case JSON alone approaches 2 GiB before parsing.",
+  "requirements": "Every source case complete and authenticated, original advancement gate met, both 500-context child registrations frozen, no child execution directory/log/result started, source worker confirmed idle with no child process and then stopped. No failed or active reader run can be handed off.",
+  "method": "Stream-authenticate every source artifact and both frozen reader contexts, retain only registration metadata, wait for the identical historical-stage gate, reauthenticate, then execute the exact AST tail of the frozen answer_followup function beginning at its existing child-execution loop. The original executor, order, statistics and result paths are unchanged.",
+  "unchanged": [
+    "source policies and gates",
+    "cohort and labels",
+    "prepared contexts",
+    "model identities and prompts",
+    "8192/64 output limits",
+    "3996 memory budget",
+    "provider concurrency",
+    "historical stage gate",
+    "reader execution and paired statistical implementation",
+    "all original result artifacts"
+  ],
+  "benchmark_runs_replaced": false,
+  "defaults_changed": false,
+  "studies": {
+    "rank": {
+      "root": "/Users/dwamianm/Sites/prism-reranker-repair-2026-09-22",
+      "module": "benchmarks.diagnostics.opt_in_rank_envelope_study_v2",
+      "source_sha256": "21af55d03bdbd0e980788c316aa0d8d7669a1c220f0831d5c45657d7c2fd0431",
+      "tail_ast_sha256": "7835f7b8877d897590104bac1874302f0b8f61225a6d58b36ff36741f9628029"
+    },
+    "marginal": {
+      "root": "/Users/dwamianm/Sites/prism-opt-in-study-2026-09-22",
+      "module": "benchmarks.diagnostics.opt_in_marginal_study_v2",
+      "source_sha256": "6c18f847e271fcdd533001db19f0c020caf12a12da4b37b5076178f404925b35",
+      "tail_ast_sha256": "b0c922633f220f21453bb12abe5ad91e221aed172162224cce343fc4c00e434c"
+    }
+  },
+  "amendment_sha256": "294150c91a679c86e68ffb69d8aba8e0e61bce19dd3fcaba41ddebe6aed5ab55"
+}
