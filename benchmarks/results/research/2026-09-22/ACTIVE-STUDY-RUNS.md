@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 21:02 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 21:43 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -104,6 +104,25 @@ Repair validation: 97 passing tests and one expected PostgreSQL skip of a
 local process-exit test; old bytes, score replay, actual balanced-packing
 regression, DuckDB/PostgreSQL restart and owner checks pass. No public flag
 or default changed. Its package change exists only in the separate branch.
+The same 97 tests also pass from an isolated installed wheel, with the same
+skip and all 163 packaged Python files byte-identical to frozen source.
+
+The source-to-answer memory handoff is registered in
+`opt-in-answer-memory-amendment-v1.json` and passed seven authored tests. It is
+**not yet used**. Once a source assay completes and freezes its eligible child
+registrations, the helper can stream-authenticate all 500 source/context pairs,
+then replace only the idle source process with a low-memory coordinator under
+the unchanged historical-stage gate. Never stop an active source or reader case;
+record exact prepared identities and process ownership before any transfer.
+The helper is `benchmarks/diagnostics/opt_in_answer_memory_handoff.py` in the
+parent worktree and handles both `rank` and `marginal`. Its `verify` action is
+read-only; `run` requires the explicit idle-process handoff artifact.
+
+Later-stage preparation restored BEAM upstream `4b61c5d` and the exact historical
+normalized 100K cache. No BEAM ingestion or answer call was made. See
+`LATER-STAGE-PROTOCOL-AUDIT.md` and `opt-in-beam-input-readiness-v1.json`.
+Available prior records identify only conversations 0 and 1. Keep 2–19 out of
+development inspection pending any prospective confirmation/exposure audit.
 
 The isolated test database `prme_optin_20260922` is on local PostgreSQL 16.11.
 Connection: `postgresql://dwamianm@localhost/prme_optin_20260922`.

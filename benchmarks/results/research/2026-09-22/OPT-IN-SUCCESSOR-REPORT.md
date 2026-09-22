@@ -372,6 +372,14 @@ numerical output of the original four-arm analysis exactly. Only idle analysis
 and selection launchers were replaced; benchmark workers and their inputs were
 unchanged. The original outputs and parity artifacts remain available.
 
+A separate [completed-source memory handoff](opt-in-answer-memory-amendment-v1.json)
+passed seven authored checks. It can release a completed source worker's large
+snapshot arrays while retaining the original historical-stage wait. It requires
+all 500 authenticated source cases, both frozen context registrations and zero
+started reader cases; it then uses the exact execution/analysis portion of the
+registered answer function. It changes no provider capacity, source selection,
+contexts or scoring. Any actual idle-process transfer is recorded separately.
+
 The corrected ingestion harness passed 13 tests, and the source-priority
 diagnostic passed five tests. Authored reranker and reformulation provider
 preflights passed; these establish operability, not benchmark benefit. A separate
