@@ -1,0 +1,26 @@
+{
+  "created_at": "2026-09-22T23:39:45.859738+00:00",
+  "authored_tests": {
+    "passed": 9,
+    "failed": 0
+  },
+  "duckdb_postgresql_tests": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  },
+  "initial_failure_retained": {
+    "passed": 8,
+    "failed": 1,
+    "cause": "The new research executor looked for top-level reformulation provider/model fields; the production engine takes both from config.extraction. Corrected before benchmark registration."
+  },
+  "ruff_F": "passed",
+  "artifacts": {
+    "reformulation-merge-initial-authored-failure.txt": "a92faa724a937153e91642139662cd58811bd479b3d90887d2a95aaafd32a9e1",
+    "reformulation-merge-authored-validation.txt": "7de5bb27a51a5acf5e31259301e1b90205fa62ea55d2ce747911f61f38eb2e77",
+    "reformulation-merge-backend-validation.txt": "d5b037dfd2223c17d5df3a2364ee791a35fb80bf18ff9712065bfc9964f84bea"
+  },
+  "production_sources_changed": false,
+  "quality_result": false,
+  "sha256": "be2fef363743d656f2e5b0ed15d101af17b5fd8824dfd3c516bc50ccd0013c1c"
+}

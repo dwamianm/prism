@@ -468,6 +468,16 @@ The best-two selection likewise cannot discard the failed temporal individual
 and select from a favorable subset; it waits for the remaining arms to settle
 and must retain the missing-comparison outcome.
 
+A separate [registered reformulation repair](REFORMULATION-MERGE-STUDY.md)
+now tests the discarded-signal limitation. It merges distinct backend paths and
+maximum retrieval signals for existing IDs before normal scoring, with exact
+source snapshots and no new public flag. It will reuse the recorded cold
+reformulations and require all 500 original controls to replay before source
+results are reported. A fixed positive source gate precedes any new paired
+answer trial. Nine authored and two live-backend checks passed; one earlier
+authored executor mistake was repaired and retained. The study waits for the
+current anchor trial's capacity and has no benchmark-quality result yet.
+
 The [complete projection arm](opt-in-successor-v2-analysis-05-complete.json)
 scored **431/500**, with four wins and ten losses: **−1.2 points**, paired
 95% interval **[−2.8, +0.2]**. All 500 contexts were unchanged and no evidence

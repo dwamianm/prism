@@ -1,0 +1,32 @@
+........F                                                                [100%]
+=================================== FAILURES ===================================
+___________ test_complete_authored_assay_and_frozen_input_rejection ____________
+
+tmp_path = PosixPath('/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-30/test_complete_authored_assay_a0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fb65190>
+
+    async def test_complete_authored_assay_and_frozen_input_rejection(tmp_path, monkeypatch):
+        from benchmarks.diagnostics import opt_in_reformulation_merge_study as assay
+        from benchmarks.diagnostics.register_opt_in_interactions import clean_config, file_sha
+        case = {'question_id': 'authored', 'question': 'Which telescope color do I prefer?',
+            'question_date': '2024/01/02 (Tue) 12:00', 'question_type': 'single-session-user',
+            'haystack_session_ids': ['authored-session'], 'haystack_dates': ['2024/01/01 (Mon) 12:00'],
+            'haystack_sessions': [[{'role': 'user', 'content': 'I prefer blue telescopes, not red ones.', 'has_answer': True}]],
+            'answer_session_ids': ['authored-session']}
+        config = clean_config()
+        config.update(db_path='{pack}/memory.duckdb', vector_path='{pack}/vectors.usearch',
+            lexical_path='{pack}/lexical_index', duckdb_threads=1,
+            organizer={**config['organizer'], 'opportunistic_enabled': False})
+        reform = {**config, 'enable_query_reformulation': True}
+        monkeypatch.setattr(assay, 'BASE', tmp_path / 'original')
+        monkeypatch.setattr('prme.retrieval.reformulation.reformulate_query', assay.cached_reformulation)
+        record = {'query': case['question'], 'alternatives': ['blue telescope', 'color preference'],
+>           'options': {'provider': reform['query_reformulation_provider'], 'model': reform['query_reformulation_model'],
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        'count': reform['query_reformulation_count']}, 'calls': 0}
+E       KeyError: 'query_reformulation_provider'
+
+tests/test_opt_in_reformulation_merge.py:105: KeyError
+=========================== short test summary info ============================
+FAILED tests/test_opt_in_reformulation_merge.py::test_complete_authored_assay_and_frozen_input_rejection
+1 failed, 8 passed in 1.46s

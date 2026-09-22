@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 23:30 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 23:40 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -50,7 +50,8 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
 | Marginal answer coordinator | finished | `marginal-answer-lane-v1.log`; both 500-case arms completed: 433 versus 433, ten wins/ten losses, difference 0.0 points [−1.8,+1.8]. All failures from other trials stay retained. Never relaunch source v1/v2 or this completed trial. |
 | Rank-envelope answer coordinator | finished | Parent `data/opt-in-study/rank-answer-lane-v1.log`; candidate completed 428/500. New control repeat failed closed (274 complete, one reader truncation, 225 unstarted), invalidating the primary comparison. Complete candidate versus original control is prespecified secondary evidence: −1.8 points [−3.8,0.0]. Outputs stay in repair worktree and public results are exported to parent. Never relaunch prior source/coordinator versions or failed control. |
-| Original-anchor follow-up | 27649 | Repair worktree `data/opt-in-study/anchored-rank-v1.log`, PID 18445. New fixed policy and new registration, not a replacement. Five local source tasks, no new model calls; all 500 baseline/prior-repair replays required. Only a stricter positive source gate advances to new paired readers in the released lane after the marginal exit, under the same lock. |
+| Original-anchor follow-up | 27649 | Repair worktree `data/opt-in-study/anchored-rank-v1.log`, PID 18445. New fixed policy and new registration, not a replacement. Five local source tasks, cached cross-encoder scores and no new hosted calls; ordinary local query embeddings/search execute again. All 500 baseline/prior-repair replays are required. Only a stricter positive source gate advances to new paired readers in the released lane after the marginal exit, under the same lock. |
+| Reformulation signal-merge follow-up | 34521 | Parent `data/opt-in-study/reformulation-merge-v1.log`. New fixed research policy, registered at `f69cc9edac64ef1102dc7d2a9537278696b8770bf0b3fd2ad73d389deb0e7993`. Waits for anchor PID 18445 to exit, then runs five local source tasks, reusing the exact recorded cold reformulations. Source embeddings/search run again; no new hosted reformulation/cross-encoder calls. Both original controls must replay exactly for all 500. Only the positive whole-cohort source gate permits new control/candidate answers in the same locked lane. Nine authored and two live-backend checks passed; initial authored config-field failure retained. Do not edit its frozen modules/tests/source dependencies. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
 Only an arm with complete `execution.json` and authenticated `verification.json`
