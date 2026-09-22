@@ -37,9 +37,11 @@ interval +4.4 to +10.0). It establishes a development opportunity for evidence
 selection, not a deployable algorithm. The label-free reranker repair has completed its source trial and passed its
 answer-follow-up gate. The marginal packing source trial is also complete;
 only its bounded episode bonus qualified. Both have frozen 500-case control
-repeats and candidate answer contexts. Neither has a completed answer-quality
-result yet. The rank repair's new control repeat has failed closed, so its
-primary answer comparison is unavailable even if the candidate completes.
+repeats and candidate answer contexts. The reranker repair candidate completed
+at **428/500**; its fresh control repeat failed, so its primary comparison is
+unavailable. Its prespecified secondary comparison is −1.8 points [−3.8,0.0]
+against the original baseline. It recovers much of the broken reranker's
+regression but does not beat production. The marginal answer trial is running.
 The figure above freezes the first six complete arms; the table
 includes later completed interactions.
 
@@ -540,3 +542,14 @@ coordinator-only observer instead; the [audit resolution](opt-in-observer-audit-
 records that correction and withdrawal of an unused duplicate observer draft.
 No benchmark failure was injected, no running job or registration changed,
 and no actual unobserved failure is inferred from the initial probe.
+
+The [completed reranker repair report](RERANKER-SCORE-REPAIR.md) retains the
+failed primary comparison and the complete 428/500 candidate separately.
+Source gains produced three answer wins, but source losses produced three
+answer losses; complete-source coverage alone did not predict a net quality
+gain. The repair's changed contexts had five wins/nine losses, and unchanged
+contexts had two wins/seven losses. This motivates protecting required details
+and investigating ranking/reader behavior, rather than promoting the repair
+from its recovery over the broken reranker. All categories and provider costs
+are in the complete child artifact; no failed control or unfavorable case was
+replaced.

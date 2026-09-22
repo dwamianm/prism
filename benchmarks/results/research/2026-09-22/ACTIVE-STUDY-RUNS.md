@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 22:44 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 22:49 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -48,8 +48,8 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Complete-arm analysis watcher | 5627 | `successor-bounded-analysis-watcher.log`; writes incrementally numbered `opt-in-successor-v2-analysis-NN-complete.json` after authentication. Memory-bounded wrapper has exact four-arm numerical parity with the original analyzer. The former idle PID 36062/session 11465 was stopped without interrupting any benchmark. |
 | Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
-| Marginal answer coordinator | 58561 | `marginal-answer-lane-v1.log`; all 500 source cases complete, bonus-only policy selected, both reader contexts/registrations frozen. Source process 90351/PID 48748 stopped only while idle after reauthentication; no cases interrupted. New coordinator waits for first historical lane release and rank-answer tail/process exit. Never relaunch source v1/v2. |
-| Rank-envelope answer coordinator | 4246 | Parent `data/opt-in-study/rank-answer-lane-v1.log`; released first lane now running repair candidate. New control repeat failed closed (274 complete, one reader truncation, 225 unstarted), invalidating the primary comparison. Candidate versus original control is prespecified secondary evidence only if all 500 complete. Outputs stay in repair worktree. Never relaunch prior source/coordinator versions or failed control. |
+| Marginal answer coordinator | 58561 | `marginal-answer-lane-v1.log`; all 500 source cases complete, bonus-only policy selected, both reader contexts/registrations frozen. Control answers now running after rank coordinator exited; candidate follows. Source process 90351/PID 48748 stopped only while idle after reauthentication; no cases interrupted. Never relaunch source v1/v2. |
+| Rank-envelope answer coordinator | finished | Parent `data/opt-in-study/rank-answer-lane-v1.log`; candidate completed 428/500. New control repeat failed closed (274 complete, one reader truncation, 225 unstarted), invalidating the primary comparison. Complete candidate versus original control is prespecified secondary evidence: −1.8 points [−3.8,0.0]. Outputs stay in repair worktree and public results are exported to parent. Never relaunch prior source/coordinator versions or failed control. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
 Only an arm with complete `execution.json` and authenticated `verification.json`
@@ -71,7 +71,8 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
   default candidate on this cohort.
 * Reranker: 284/500; delta −30.6 points, 95% CI [−35.0, −26.2].
   Source completeness 224/470. The score-scale audit identifies a concrete
-  integration defect. The isolated repair has completed source replay; answers pending.
+  integration defect. The isolated repair completed at 428/500; its new primary
+  control failed. It recovers most of the defect but does not beat production.
 * Evidence augmentation: 435/500, delta −0.4 points, CI [−1.6, +0.8].
   All 500 inputs unchanged; no activation. Four wins/six losses measure
   reader/judge variation, not augmentation benefit or harm.
@@ -95,7 +96,11 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
   eight gains/four losses; +4 multi-session, +2 update, −2 assistant categories.
   Both source gates passed; 500+500 answer contexts/registrations frozen.
   The source metric differs from original node presence for one metadata-only
-  assistant representation. No answer win or confirmation claim yet.
+  assistant representation. The complete candidate has 7 wins/16 losses versus
+  original baseline, secondary −1.8 points [−3.8,0.0]. Changed contexts have
+  5 wins/9 losses, exact repeats 2 wins/7 losses. Eight complete-source gains
+  produced 3 answer gains, four complete-source losses produced 3 answer losses.
+  The failed new control prevents the primary comparison. No confirmation.
 * Reranker + reformulation: 288/500, −29.8 points [−34.2,−25.6]. Four
   changed inputs versus reranker; no changed-input score transition. Eight
   wins/four losses are unchanged-input variation. Factorial +1.4 [−0.4,+3.2].

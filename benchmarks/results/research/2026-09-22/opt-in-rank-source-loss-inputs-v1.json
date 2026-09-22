@@ -1,0 +1,125 @@
+{
+  "kind": "post-hoc-all-complete-source-loss-reranker-input-audit",
+  "at": "2026-09-22T22:49:38.503900+00:00",
+  "source_cases_reviewed": 500,
+  "complete_source_loss_cases": 4,
+  "tokenizer_snapshot": "233902d25c440f23af6f7d6e94d2946bac0bee0a",
+  "tokenizer_files": {
+    "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+    "tokenizer_config.json": "a5c2e5a7b1a29a0702cd28c08a399b5ecc110c263009d17f7e3b415f25905fd8",
+    "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+    "config.json": "380e02c93f431831be65d99a4e7e5f67c133985bf2e77d9d4eba46847190bacc"
+  },
+  "registered_assets_sha256": "6cc3cff95cbfa4ad2e7bad3261e84f3d34db212b5a0fd10425e96b89a77399bc",
+  "tokenizer_max_length": 512,
+  "rows": [
+    {
+      "question_id": "gpt4_731e37d7",
+      "category": "multi-session",
+      "source_case_sha256": "2f1e95d672867c28acecf57c8214ce1c5c23172947cf04b211fa2f9289e7f195",
+      "lost_annotated_sources": [
+        {
+          "node_id": "07662fb3-8067-4d1c-8cac-27fb5e9b0411",
+          "source_role": "user",
+          "source_characters": 959,
+          "source_sha256": "1857574ff345d33dbd018b42f18a7602ca07c788148464e5a9aa2644a3ff82b8",
+          "neural_scored": true,
+          "original_rank": 6,
+          "original_score": 0.6294117798,
+          "neural_score": 0.0391724668443203,
+          "blended_rank": 8,
+          "assigned_score": 0.6163716446,
+          "input_tokens": 215,
+          "retained_tokens": 215,
+          "document_characters": 959,
+          "retained_document_characters": 959,
+          "full_source_present_in_document": true,
+          "reference_literal_in_full_document": false,
+          "reference_literal_in_retained_document": false
+        }
+      ]
+    },
+    {
+      "question_id": "gpt4_d6585ce9",
+      "category": "temporal-reasoning",
+      "source_case_sha256": "1f77672d958229d682c4f2e321d2d35abbcb9225ca7db116d6135427f4facdd2",
+      "lost_annotated_sources": [
+        {
+          "node_id": "a5995601-3a74-45de-9b1f-f98ad01da848",
+          "source_role": "user",
+          "source_characters": 281,
+          "source_sha256": "14a523d6b56213f629218d5b4c7d57a28b8a540a2f6361fcdd0dae40e597bf07",
+          "neural_scored": true,
+          "original_rank": 35,
+          "original_score": 0.5259354749,
+          "neural_score": 0.0002679821045603603,
+          "blended_rank": 38,
+          "assigned_score": 0.5245689938,
+          "input_tokens": 77,
+          "retained_tokens": 77,
+          "document_characters": 281,
+          "retained_document_characters": 281,
+          "full_source_present_in_document": true,
+          "reference_literal_in_full_document": true,
+          "reference_literal_in_retained_document": true
+        }
+      ]
+    },
+    {
+      "question_id": "89527b6b",
+      "category": "single-session-assistant",
+      "source_case_sha256": "c945e9b08dcf8697c8b036728f61e2e84599a422447be7e771e98188f4ef8fc9",
+      "lost_annotated_sources": [
+        {
+          "node_id": "c1dc3014-309c-4b13-95d4-4ea05935c7e2",
+          "source_role": "assistant",
+          "source_characters": 2473,
+          "source_sha256": "9541fafd1bb887834d59f9803548dc83165c431adfc7443aba09c3e16ea32408",
+          "neural_scored": true,
+          "original_rank": 1,
+          "original_score": 0.6501324003,
+          "neural_score": 0.020841745659708977,
+          "blended_rank": 2,
+          "assigned_score": 0.6299041638,
+          "input_tokens": 615,
+          "retained_tokens": 512,
+          "document_characters": 2473,
+          "retained_document_characters": 1973,
+          "full_source_present_in_document": true,
+          "reference_literal_in_full_document": false,
+          "reference_literal_in_retained_document": false
+        }
+      ]
+    },
+    {
+      "question_id": "70b3e69b",
+      "category": "single-session-assistant",
+      "source_case_sha256": "b3ac9b8bd582909510cde994c3d0c3db5d50070a041ad0b0164c7edbf9d3380f",
+      "lost_annotated_sources": [
+        {
+          "node_id": "7024a511-567c-4eac-87ce-a95944f82e30",
+          "source_role": "assistant",
+          "source_characters": 1700,
+          "source_sha256": "5c8e904b6b42fc561f83ff9f87f5adff722a75cdc0f38fcff87acf42903a3a52",
+          "neural_scored": true,
+          "original_rank": 1,
+          "original_score": 0.678828878,
+          "neural_score": 0.6112319231033325,
+          "blended_rank": 8,
+          "assigned_score": 0.5804894094,
+          "input_tokens": 377,
+          "retained_tokens": 377,
+          "document_characters": 1700,
+          "retained_document_characters": 1700,
+          "full_source_present_in_document": true,
+          "reference_literal_in_full_document": false,
+          "reference_literal_in_retained_document": false
+        }
+      ]
+    }
+  ],
+  "model_inference_calls": 0,
+  "answer_scores_changed": false,
+  "limits": "Examines every complete-source loss from the finished 500-case repair. Exact reference-string visibility is a narrow text diagnostic, not semantic sufficiency or an algorithm input. Tokenizer truncation alone does not establish cause.",
+  "sha256": "4a02aff4095cfcd7cb58e7025167aed3a7518475926279b1d0ad3ff700db05e3"
+}

@@ -1,0 +1,8 @@
+{
+  "at": "2026-09-22T22:44:17.053702+00:00",
+  "coordinator_pid": 40176,
+  "execution_tail_settled": true,
+  "exception_type": null,
+  "quality_complete": null,
+  "note": "Operational exit only; authenticate the original complete child results for quality. No failed run is retried or replaced."
+}

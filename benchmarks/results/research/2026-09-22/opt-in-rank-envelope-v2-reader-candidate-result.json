@@ -1,0 +1,78 @@
+{
+  "complete": true,
+  "verified_cases": 500,
+  "total": 500,
+  "correct": 428,
+  "categories": {
+    "single-session-user": {
+      "total": 70,
+      "correct": 69
+    },
+    "abstention": {
+      "total": 30,
+      "correct": 26
+    },
+    "multi-session": {
+      "total": 133,
+      "correct": 97
+    },
+    "single-session-preference": {
+      "total": 30,
+      "correct": 27
+    },
+    "temporal-reasoning": {
+      "total": 133,
+      "correct": 111
+    },
+    "knowledge-update": {
+      "total": 78,
+      "correct": 74
+    },
+    "single-session-assistant": {
+      "total": 56,
+      "correct": 50
+    }
+  },
+  "paired": {
+    "difference": -0.018,
+    "wins": 7,
+    "losses": 16,
+    "ties": 477,
+    "question_ci95": [
+      -0.038,
+      0.0
+    ],
+    "full_history_cluster_ci95": [
+      -0.038,
+      0.0
+    ],
+    "clusters": 500
+  },
+  "input_groups": {
+    "unchanged_input_repeat": {
+      "total": 117,
+      "control_correct": 92,
+      "candidate_correct": 87,
+      "wins": 2,
+      "losses": 7
+    },
+    "changed_input": {
+      "total": 383,
+      "control_correct": 345,
+      "candidate_correct": 341,
+      "wins": 5,
+      "losses": 9
+    }
+  },
+  "provider_usage": {
+    "calls": 1000,
+    "input_tokens": 2274593,
+    "output_tokens": 139705,
+    "http_attempts": 1000
+  },
+  "context_tokens_total": 1981290,
+  "registration_sha256": "fab5cdbdff9067c1cb53d1d5167a8790d9e13294d5e0ddcc26f14b2f24f8e877",
+  "execution_sha256": "8428ac98adb4b2004a6ebc2263b1783c7f195f1ff8865e8dbdc04219e3411fa6",
+  "classification": "Label-free score-scale repair, development only. Child output audits the original baseline; primary follow-up contrast uses the new complete control repeat.",
+  "primary_baseline_replaced": false
+}
