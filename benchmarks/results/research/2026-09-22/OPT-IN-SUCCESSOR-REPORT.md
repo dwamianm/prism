@@ -22,6 +22,13 @@ scores, configuration hashes and artifact checksums are retained in the
 | Evidence augmentation | 435/500 | −0.4 [−1.6, +0.8] | Inactive on all 500 packs; score variation is not a feature effect |
 | Evidence projection | 431/500 | −1.2 [−2.8, +0.2] | Inactive on all 500 packs; score variation is not a feature effect |
 
+![Complete paired comparisons and the separate nondeployable diagnostic](opt-in-completed-comparisons-v1.png)
+
+The [vector figure](opt-in-completed-comparisons-v1.svg) and its
+[input/output identities](opt-in-completed-comparisons-v1-identity.json)
+are available for export. Intervals are unadjusted; the machine analysis also
+retains the registered Holm-adjusted tests for the feature family.
+
 Separately, the annotation-assisted diagnostic reached 473/500 (+7.2 points,
 interval +4.4 to +10.0). It establishes a development opportunity for evidence
 selection, not a deployable algorithm. Two label-free repairs are undergoing
