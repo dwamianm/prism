@@ -18,8 +18,10 @@ packs authenticated. The baseline then stopped at its registered output gate:
 not started. No failed response was replaced and no partial answer score or
 confidence interval was published. All feature and interaction comparisons,
 later benchmark families, combined-arm selection and untouched confirmation
-remain unassessed. Keep current defaults; this is no quality evidence against
-or in favor of a particular feature.
+remain unassessed. This incomplete study supports no recommendation for or
+against a default change. Production remains unchanged under the user's
+separate-review constraint; the failed run does not validate existing defaults
+or reject any feature. This corrects the earlier report's recommendation.
 
 Positive operational evidence is separate: 245 retained captures and 490
 receipts independently authenticated, all 500 master packs remained unchanged,

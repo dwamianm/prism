@@ -1,8 +1,9 @@
 # PRME opt-in interaction study — 2026-09-22
 
 **Status: failed closed during the baseline; feature comparisons are unassessed.**
-Keep current production defaults. This study supplies no new answer-quality
-evidence for promoting or rejecting any individual feature or combination.
+No recommendation about production defaults can be made from this incomplete
+study. It supplies no new answer-quality evidence for promoting or rejecting any
+individual feature or combination.
 
 Production source was `main` at `a66ee854325890c6bc28f6b515efeb6ed7df4deb`.
 The isolated branch is `research/opt-in-interactions-2026-09-22`, with registration
@@ -51,26 +52,26 @@ selected answer-score subset.
 
 ## Results by arm
 
-| Arm | Execution | Decision |
+| Arm | Execution | Research conclusion |
 |---|---|---|
-| Production baseline | 244 complete, 1 failed, 255 not started | Retain existing defaults; no new score |
-| Store supersedence | Not started | Opt-in only; unassessed |
-| QA pairing | Not started | Opt-in only; unassessed |
-| Surprise gating | Not started | Opt-in only; unassessed |
-| Reranker | Not started | Opt-in only; unassessed |
-| Query reformulation | Preflight only; dataset arm not started | Opt-in only; unassessed |
-| Temporal relations | Provider preflight only; dataset arm not started | Opt-in only; unassessed |
-| Episode routing, top-k 2 | Not started | Opt-in only; unassessed |
-| Evidence augmentation, top-k 10 | Not started | Opt-in only; unassessed |
-| Episode + augmentation | Not started | Opt-in only; unassessed |
-| Episode + projection, top-k 50 | Not started | Opt-in only; unassessed |
-| Reranker + reformulation | Not started | Opt-in only; unassessed |
-| Temporal relations + episode | Not started | Opt-in only; unassessed |
+| Production baseline | 244 complete, 1 failed, 255 not started | Unassessed; no valid baseline score |
+| Store supersedence | Not started | Unassessed; no conclusion |
+| QA pairing | Not started | Unassessed; no conclusion |
+| Surprise gating | Not started | Unassessed; no conclusion |
+| Reranker | Not started | Unassessed; no conclusion |
+| Query reformulation | Preflight only; dataset arm not started | Unassessed; no conclusion |
+| Temporal relations | Provider preflight only; dataset arm not started | Unassessed; no conclusion |
+| Episode routing, top-k 2 | Not started | Unassessed; no conclusion |
+| Evidence augmentation, top-k 10 | Not started | Unassessed; no conclusion |
+| Episode + augmentation | Not started | Unassessed; no conclusion |
+| Episode + projection, top-k 50 | Not started | Unassessed; no conclusion |
+| Reranker + reformulation | Not started | Unassessed; no conclusion |
+| Temporal relations + episode | Not started | Unassessed; no conclusion |
 | Supersedence + balanced | Alias of its individual arm | No independent observation |
 | QA pairing + balanced | Alias of its individual arm | No independent observation |
 | Surprise gating + balanced | Alias of its individual arm | No independent observation |
 | Best individuals combined | No eligible selection was computed | Unassessed |
-| Full-feature exploratory | Not started; projection excluded because mutually exclusive with augmentation | Exploratory only |
+| Full-feature exploratory | Not started; projection excluded because mutually exclusive with augmentation | Unassessed; exploratory design |
 
 The [per-arm result file](opt-in-interactions-results.json) records configuration
 checksums, artifact availability and explicit nulls for unmeasured metrics.
@@ -145,7 +146,12 @@ MemoryArena, best-arm selection and untouched confirmation also did not start.
 Their task-specific manifests remain future registration work. The inspected
 500-question LongMemEval-S cohort cannot itself become an untouched holdout.
 
-**Recommendation: promote no new combination and preserve current defaults.**
+**Conclusion: study incomplete; no recommendation for or against any default change.**
+Production remains unchanged under the user's separate-review constraint. That
+release constraint is not an experimental finding or validation of the existing
+defaults. The earlier report at `d6d2ac7` conflated these two points; this
+correction changes only the interpretation, retaining all failed-run evidence.
+
 Further evaluation requires a separate preregistered protocol that resolves the
 reader ceiling and registration/control issues while retaining this failed run.
 No automatic replacement study was launched.

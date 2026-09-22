@@ -75,9 +75,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "retain_existing_baseline",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "store_supersedence",
@@ -107,9 +108,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "qa_pairing",
@@ -139,9 +141,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "surprise_gating",
@@ -171,9 +174,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "reranker",
@@ -203,9 +207,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "query_reformulation",
@@ -235,9 +240,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "temporal_relations",
@@ -267,9 +273,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "episode_routing",
@@ -299,9 +306,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "evidence_augmentation",
@@ -331,9 +339,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "episode_augmentation",
@@ -363,9 +372,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "episode_projection",
@@ -395,9 +405,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "reranker_reformulation",
@@ -427,9 +438,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "temporal_episode",
@@ -459,9 +471,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "supersedence_balanced",
@@ -491,9 +504,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "qa_balanced",
@@ -523,9 +537,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "surprise_balanced",
@@ -555,9 +570,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "full_feature_exploratory",
@@ -587,9 +603,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     },
     {
       "arm": "best_individuals_combined",
@@ -619,9 +636,10 @@
       "paired_difference": null,
       "confidence_interval_95": null,
       "metrics_status": "Withheld: incomplete registered matrix, not zero or an empty sample estimate.",
-      "promotion_decision": "opt_in_only_unassessed",
-      "safe_to_promote": false,
-      "rejected_for_answer_quality": false
+      "promotion_decision": null,
+      "safe_to_promote": null,
+      "rejected_for_answer_quality": null,
+      "assessment_status": "unassessed"
     }
   ],
   "later_stages": {
@@ -648,5 +666,14 @@
     "Historical LongMemEval-S transitive dependency lock was not recorded. Available historical embedding identity matches; full historical environment equality is unknown.",
     "Later task/confirmation manifests remain unbound, and dynamic best-arm selection was never reached."
   ],
-  "recommendation": "Keep current production defaults. No arm has new comparative quality or untouched-confirmation evidence."
+  "recommendation": null,
+  "conclusion": "Study incomplete; no recommendation for or against a default change is supported.",
+  "production_disposition": "Unchanged under the user's separate-review constraint; not an experimental finding or validation of existing defaults.",
+  "interpretation_correction": {
+    "corrected_at": "2026-09-22T18:21:59.481692+00:00",
+    "supersedes_interpretation_at_commit": "d6d2ac7",
+    "reason": "The previous report conflated a release constraint with a scientific conclusion. No feature comparison ran.",
+    "measurement_artifacts_changed": false,
+    "null_decision_semantics": "Unassessed; neither promotion safety nor rejection for answer quality was established."
+  }
 }
