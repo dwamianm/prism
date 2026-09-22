@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 21:43 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 21:55 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -38,7 +38,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 
 | Job | Tool session | Log / behavior |
 |---|---:|---|
-| Historical coordinator | 71386 | `successor-v2-historical.log`; baseline, episode, augmentation and projection verified; episode+augmentation running, then episode+projection. Expected ownership handoff/FileExistsError when it reaches the separately owned reranker directory; not an arm failure. |
+| Historical coordinator | 71386 | `successor-v2-historical.log`; baseline, episode, augmentation, projection and episode+augmentation verified; episode+projection running. Expected ownership handoff/FileExistsError when it reaches the separately owned reranker directory; not an arm failure. |
 | Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker and query reformulation verified; reranker+reformulation running, then temporal and temporal+episode. Each has `successor-v2-ARM.log`. |
 | Fresh control | 22257 | `successor-v2-fresh.log`; actual sequential store for all source turns. Expected handoff/FileExistsError when it reaches independently owned supersedence. |
 | Store supersedence | 35057 | `successor-v2-store_supersedence.log` |
@@ -49,7 +49,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
 | Marginal source assay | 90351 | `marginal-study-v2.log`; now tests all three unchanged fixed policies on all 500 cases, with conditional full-cohort answer follow-up that still waits for historical arms. Scheduling-only v2 replaces idle PID 18350/session 68568 before any v1 source case. Never relaunch v1. |
-| Rank-envelope repair assay | 44587 | **Repair worktree** `data/opt-in-study/rank-envelope-study-v2.log`; local source replay now running under scheduling amendment v2. Verifies all 500 baseline and reranker replays, then runs one repair. Conditional hosted answers still wait for all historical arms. The v1 idle waiter PID 3539/session 32160 was stopped before any case or hosted call. |
+| Rank-envelope answer coordinator | 52440 | Parent `data/opt-in-study/rank-answer-memory-coordinator-v2.log`, PID 85200; authenticated source/context identities, waiting for all eleven historical arms. Source assay 44587/PID 92466 completed 500 cases, prepared both child registrations, and was stopped only while idle under the memory-handoff amendment. Outputs stay in the repair worktree. Never relaunch source v1 or v2. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
 Only an arm with complete `execution.json` and authenticated `verification.json`
@@ -69,7 +69,7 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
   default candidate on this cohort.
 * Reranker: 284/500; delta −30.6 points, 95% CI [−35.0, −26.2].
   Source completeness 224/470. The score-scale audit identifies a concrete
-  integration defect. The isolated repair remains unmeasured on benchmark data.
+  integration defect. The isolated repair has completed source replay; answers pending.
 * Evidence augmentation: 435/500, delta −0.4 points, CI [−1.6, +0.8].
   All 500 inputs unchanged; no activation. Four wins/six losses measure
   reader/judge variation, not augmentation benefit or harm.
@@ -83,6 +83,17 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
   variation. Complete source sets remain 403/470. Added paired median 5.533
   seconds with no demonstrated benefit; current code ignores alternate-query
   signals for existing candidates. Not a default candidate on this evidence.
+* Episode + augmentation: 346/500, delta −18.2 points, CI [−22.0, −14.6].
+  Every reader input matches episode routing; five wins/four losses are
+  variation, with no augmentation activation. Factorial contrast +0.6 points
+  [−1.2,+2.4] cannot establish synergy for an inactive mechanism.
+* Reranker repair source trial: 407/470 complete verbatim annotated source sets
+  versus baseline 403 and original reranker 223. All 500 source cases and
+  control replays authenticated. Baseline gain +0.85 points [−0.64,+2.34],
+  eight gains/four losses; +4 multi-session, +2 update, −2 assistant categories.
+  Both source gates passed; 500+500 answer contexts/registrations frozen.
+  The source metric differs from original node presence for one metadata-only
+  assistant representation. No answer win or confirmation claim yet.
 * Annotation-assisted packing diagnostic: 473/500, +7.2 points, CI [+4.4,+10.0].
   Nondeployable, outside the feature matrix. Changed 67 contexts; 433 repeated
   inputs reveal residual reader/judge variation. Knowledge updates lost two.
@@ -109,10 +120,14 @@ skip and all 163 packaged Python files byte-identical to frozen source.
 
 The source-to-answer memory handoff is registered in
 `opt-in-answer-memory-amendment-v1.json` and passed seven authored tests. It is
-**not yet used**. Once a source assay completes and freezes its eligible child
-registrations, the helper can stream-authenticate all 500 source/context pairs,
-then replace only the idle source process with a low-memory coordinator under
-the unchanged historical-stage gate. Never stop an active source or reader case;
+**now used for the rank repair only**. It authenticated all 500 source/context
+pairs and replaced only the completed idle source process with a low-memory
+coordinator under the unchanged historical-stage gate. Both source gates passed.
+The initial ownership check refused a passive Python resource tracker; the first
+coordinator attempt then failed for missing handoff, before any benchmark call.
+Both logs are retained. A prospective bookkeeping amendment permits only that
+passive child type; the actual transfer is recorded in
+`rank-answer-memory-handoff-v1.json`. Never stop an active source or reader case;
 record exact prepared identities and process ownership before any transfer.
 The helper is `benchmarks/diagnostics/opt_in_answer_memory_handoff.py` in the
 parent worktree and handles both `rank` and `marginal`. Its `verify` action is

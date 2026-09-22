@@ -1,0 +1,25 @@
+{
+  "kind": "rank",
+  "at": "2026-09-22T21:48:45.306003+00:00",
+  "plan_sha256": "3bd952ad88a002e9627794c3f6537adf08c65e3cf106d5f7d9f5ca675f8ae627",
+  "bookkeeping_amendment_sha256": "96452b5bdff37031ebbf4233d9cbac45e62921e60c0fee3f4750b5afbd733db2",
+  "prepared_identity": {
+    "source_result_sha256": "a70b8c6b4ee9491c44fab8549d4bd8f4598130ef0817fe52cf9147b7c529257a",
+    "source_registration_sha256": "1332a6ba0bbe0ac330bce3bbfb05225f58787f84d20ba4f94329a806e07be857",
+    "control_registration_sha256": "cf29b39ff5c68514acbe6c1f23fc38845107d7cba31c5d7b0f0fb1340f35bb87",
+    "control_contexts_sha256": "d5e4db4bc6465af7691891e587256a7d883929a2750afebdfceabaa5c22ddef3",
+    "candidate_registration_sha256": "9fa0746e7ceb416b5104c3c7b00450b828bfa7a2f2b61a94fa1599b3622bedbe",
+    "candidate_contexts_sha256": "3f60a648f486992f046effe96ee16a80c3e20ea103af300a1f235a889e694150"
+  },
+  "idle_source_process_stopped": true,
+  "stopped_pid": 92466,
+  "stopped_command": "/Users/dwamianm/Sites/prism/.venv/bin/python -m benchmarks.diagnostics.opt_in_rank_envelope_study_v2 run",
+  "committed_registration_verified_at": "06a464d",
+  "source_cases_complete": 500,
+  "source_gate_passed": true,
+  "hosted_children_started": 0,
+  "active_benchmark_cases_interrupted": 0,
+  "historical_gate_unchanged": true,
+  "provider_capacity_added": 0,
+  "reason": "Release complete source arrays/model allocations while retaining the original answer-stage wait."
+}

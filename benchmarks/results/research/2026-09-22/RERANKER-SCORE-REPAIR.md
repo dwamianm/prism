@@ -26,7 +26,7 @@ Receipts with assignments require schema 13 and an execution descriptor.
 Ordinary execution still emits schema 12, and old receipt fields, canonical
 bytes and checksums remain unchanged. No source claim or provenance is rewritten.
 
-The complete source assay will first reproduce all 500 original baseline and
+The complete source assay was registered to reproduce all 500 original baseline and
 reranker contexts, returned IDs and scores from private copies of the verified
 packs. The repair reuses each case's exact original neural inference for
 identical query/document pairs; no annotation or answer enters ranking.
@@ -63,3 +63,47 @@ All 163 installed Python files matched the frozen source files. The wheel was
 installed in a separate target directory without modifying the benchmark
 environment's dependencies. This closes the source-only packaging limitation
 for these targeted checks; it is not a full release gate or a quality result.
+
+## Complete source result and frozen answer follow-up
+
+The [complete registered source assay](opt-in-rank-envelope-v2-source-result.json)
+authenticated all 500 baseline and original-reranker replays and all 500 repair
+contexts, without hosted answer calls. Complete verbatim annotated source sets
+were retained in **403/470 baseline, 223/470 original reranker, and 407/470 repair**
+cases. Mean source fractions were 0.914645, 0.566170 and 0.915248 respectively.
+The original answer matrix's node-presence metric was 224/470 for the reranker;
+a [one-case representation audit](opt-in-reranker-source-metric-discrepancy-v1.json)
+explains the difference: one assistant node was serialized as an ID/type/confidence
+fallback without its source text. Neither metric nor any answer score is replaced.
+
+Against baseline, the repair gains eight complete source sets and loses four:
+**+0.85 percentage points**, post hoc paired 95% interval **[−0.64, +2.34]**.
+Against the broken reranker, it gains 187 and loses three: **+39.15 points**,
+interval **[+34.68, +43.62]**. These [source intervals](opt-in-rank-envelope-source-intervals-v1.json)
+use all 470 applicable cases and 10,000 seed-20260922 question-bootstrap draws;
+they are unadjusted descriptive intervals, not answer-quality or confirmation
+results. Baseline category changes in complete source retention are +4
+multi-session, +2 knowledge-update, −2 assistant, and zero elsewhere. Source
+fraction's baseline difference is only +0.000603, interval [−0.009328, +0.009362].
+The repair changes 383/500 contexts, averaging 3,962.58 memory tokens.
+Treatment retrieval reuses neural outputs and is not an uncached latency result.
+
+Both source gates passed. The exact 500 baseline-repeat and 500 repair contexts
+and [control](opt-in-rank-envelope-v2-reader-control-registration.json)/
+[candidate](opt-in-rank-envelope-v2-reader-candidate-registration.json)
+registrations are frozen before inference. Answer generation still waits for
+all eleven original historical arms to settle. A registered, tested memory
+handoff released the completed source process only while idle after preparation;
+a low-memory coordinator reauthenticates every source case and prepared context
+and executes the unchanged original answer/statistics code under the same gate.
+
+The first ownership check refused a passive multiprocessing resource tracker;
+its attempted coordinator then failed for lack of a handoff record, before any
+benchmark call. Both logs remain. A prospective bookkeeping amendment permits
+only that passive child type; the subsequent authenticated transfer stopped
+no source or reader case and changed no model, cohort, score or retry rule.
+This is recorded orchestration failure, not a replaced benchmark run.
+
+The repair recovers a serious integration regression. Its small and uncertain
+source advantage over production, including assistant-memory losses, still
+requires the frozen matched answer trial before a quality claim.

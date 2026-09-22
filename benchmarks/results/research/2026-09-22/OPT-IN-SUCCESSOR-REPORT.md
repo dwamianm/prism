@@ -11,7 +11,7 @@ Every row below represents an authenticated full 500-question arm. Intervals
 are registered paired 95% bootstrap intervals against the original baseline;
 unfinished arms have no quality score. Context and latency details, category
 scores, configuration hashes and artifact checksums are retained in the
-[six-arm analysis](opt-in-successor-v2-analysis-06-complete.json).
+[seven-arm analysis](opt-in-successor-v2-analysis-07-complete.json).
 
 | Arm | Correct | Difference, percentage points | Interpretation |
 |---|---:|---:|---|
@@ -21,6 +21,7 @@ scores, configuration hashes and artifact checksums are retained in the
 | Query reformulation | 434/500 | −0.6 [−2.0, +0.6] | Only two changed contexts; extra latency without demonstrated benefit |
 | Evidence augmentation | 435/500 | −0.4 [−1.6, +0.8] | Inactive on all 500 packs; score variation is not a feature effect |
 | Evidence projection | 431/500 | −1.2 [−2.8, +0.2] | Inactive on all 500 packs; score variation is not a feature effect |
+| Episode + augmentation | 346/500 | −18.2 [−22.0, −14.6] | Same contexts as episode routing; augmentation inactive |
 
 ![Complete paired comparisons and the separate nondeployable diagnostic](opt-in-completed-comparisons-v1.png)
 
@@ -31,8 +32,9 @@ retains the registered Holm-adjusted tests for the feature family.
 
 Separately, the annotation-assisted diagnostic reached 473/500 (+7.2 points,
 interval +4.4 to +10.0). It establishes a development opportunity for evidence
-selection, not a deployable algorithm. Two label-free repairs are undergoing
-complete source trials; neither has a completed quality result yet.
+selection, not a deployable algorithm. The label-free reranker repair has completed its source trial and passed its
+answer-follow-up gate; the marginal packing source trial continues. Neither
+repair has a completed answer-quality result yet.
 
 ## Question and repaired protocol
 
@@ -124,6 +126,25 @@ matched-reader answer evidence. Inspection confirms that the packer reserves
 routed episode records ahead of the ordinary multi-path pool. Simply changing
 the inherited-score decay would not remove that priority tier.
 
+## Complete episode-plus-augmentation interaction
+
+The [complete interaction arm](opt-in-successor-v2-analysis-07-complete.json)
+scored **346/500**, ten wins and 101 losses versus production: **−18.2 points**,
+paired 95% interval **[−22.0, −14.6]**, Holm-adjusted p-value `4.84e-19`.
+Complete source-node coverage remains 283/470, with 131 new complete-evidence
+losses. Mean context use is 3,960.268 tokens; cold retrieval p50/p95 is
+2.628/12.037 seconds under shared load. All 1,000 reader/judge calls completed
+with zero recorded errors or retries.
+
+The [input applicability audit](opt-in-episode-augmentation-applicability-v1.json)
+found all 500 contexts and reader requests byte-identical to episode routing,
+with zero evidence operations. Its five wins and four losses against the episode
+arm therefore measure reader/judge variation. The registered secondary factorial
+contrast is +0.6 points, interval [−1.2, +2.4], but inactive augmentation prevents
+interpreting this as evidence of feature synergy. The routing regression persists;
+this combination is rejected as a default candidate on this cohort, and the
+intended augmentation mechanism remains untested on these raw-turn packs.
+
 ## Complete neural-reranker comparison
 
 The [authenticated reranker arm](opt-in-successor-v2-analysis-03-complete.json)
@@ -163,12 +184,25 @@ passed the same 97 tests with one expected skip and confirmed all 163 packaged
 Python files match the frozen repair sources. These are overlapping targeted
 checks, not 194 distinct tests or a complete release certification. Its
 [registration](opt-in-rank-envelope-v2-registration.json) fixes complete
-500-case baseline/legacy replay and a conditional paired answer trial. It is
-running its local source-replay phase; hosted answers wait for the original
-historical matrix. The initial version-1 waiter was withdrawn before any case
-under a recorded scheduling-only amendment. No repaired complete benchmark
-result is available yet. The registration and validation files here are exact exports
-from that separate branch, not a merge of its package changes.
+500-case baseline/legacy replay and a conditional paired answer trial. Its [complete source trial](opt-in-rank-envelope-v2-source-result.json)
+reproduced all 500 original controls and found complete verbatim source sets in
+407/470 repair cases, versus 403 baseline and 223 original reranker. The baseline
+paired gain is +0.85 points, descriptive 95% interval [−0.64, +2.34]; against
+the broken reranker it is +39.15 [34.68, 43.62]. Baseline category retention
+improves by four multi-session and two update cases but loses two assistant
+cases. The small baseline advantage is uncertain and is not an answer win.
+The original reranker node-presence count of 224 includes one metadata-only
+representation without source text; both metrics remain reported.
+
+Both source gates passed and the two full 500-context reader registrations are
+frozen. Hosted answers still wait for the original historical matrix. A tested,
+registered handoff stopped only the completed idle source process to release
+retained JSON; the replacement coordinator reauthenticates the contexts and
+uses the unchanged answer code and gate. Initial orchestration refusals are
+retained and involved no benchmark calls. The initial version-1 waiter had
+also been withdrawn before any case under its scheduling-only amendment.
+The registration, results and validation files here are exact exports from
+the separate repair branch, not a merge of its package changes.
 
 ## Development error review
 
