@@ -1,0 +1,11 @@
+{
+  "complete": false,
+  "source_registration_sha256": "c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2",
+  "child_results": {
+    "control": "opt-in-rank-envelope-v2-reader-control",
+    "candidate": "opt-in-rank-envelope-v2-reader-candidate"
+  },
+  "classification": "Development only; untouched confirmation required",
+  "default_changes": false,
+  "answer_metrics": null
+}

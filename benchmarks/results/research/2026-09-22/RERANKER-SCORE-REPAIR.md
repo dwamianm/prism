@@ -117,3 +117,41 @@ ownership/gating tests passed. The previous waiting coordinator was transferred
 only while idle after all 500 contexts were reauthenticated; no answer case
 had started. This supersedes the original all-eleven-arm wait, with no change
 to source gates, contexts, readers, scoring or failure handling.
+
+## Completed candidate answers; failed primary control
+
+The [candidate](opt-in-rank-envelope-v2-reader-candidate-result.json) completed
+and authenticated all 500 answers: **428/500 (85.6%)**. The new control repeat
+failed closed after 274 completed cases, one reader truncation and 225 unstarted
+cases. The [primary comparison](opt-in-rank-envelope-v2-answer-result.json)
+therefore has no answer metrics. Its failure is retained, not replaced by the
+original control. The failed request is the same one that truncated in the
+temporal arm; it had previously completed normally in the original baseline.
+See the [provider ledger](opt-in-finalized-provider-failures-v1.json).
+
+The prespecified secondary comparison against the original 437/500 baseline
+has seven wins and 16 losses: **−1.8 points**, paired 95% interval **[−3.8,0.0]**.
+Among 383 changed contexts, there were five wins/nine losses; among 117 exact
+context repeats, two wins/seven losses. The original baseline stays fixed.
+The candidate used 1,000 successful reader/judge calls without retries,
+2,274,593 input tokens and 139,705 output tokens.
+
+| Category | Candidate | Change from original baseline |
+|---|---:|---:|
+| Single-session user | 69/70 | 0 |
+| Single-session assistant | 50/56 | −3 |
+| Single-session preference | 27/30 | 0 |
+| Multi-session | 97/133 | −3 |
+| Temporal reasoning | 111/133 | −4 |
+| Knowledge update | 74/78 | +1 |
+| Abstention, overlapping | 26/30 | +1 |
+
+The all-case [post-hoc mechanism audit](opt-in-rank-answer-diagnostics-v1.json)
+finds three answer gains among eight complete-source gains, and three answer
+losses among four complete-source losses. It also retains every other source
+and answer transition. Compared with the complete broken reranker arm, the
+repair has 153 wins/nine losses: +28.8 points [24.4,33.2], a post-hoc comparison.
+This is substantial recovery of an integration regression, **not an improvement
+over production**. The fixed primary trial failed, the secondary production
+comparison is negative, and no untouched confirmation has occurred. Keep this
+implementation research-only; do not enable reranking by default.

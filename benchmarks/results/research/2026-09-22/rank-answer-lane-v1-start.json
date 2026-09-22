@@ -1,0 +1,17 @@
+{
+  "at": "2026-09-22T22:31:55.772465+00:00",
+  "coordinator_pid": 40176,
+  "plan_sha256": "5b72332ac349da5e3a691beb0731077c6241d0abd31df08de2ec02abce63822d",
+  "handoff_sha256": "8a847cec05c7002f8844595f0b34e22e0dcb546721c42d1194a8e1374873501e",
+  "prepared_identity": {
+    "source_result_sha256": "a70b8c6b4ee9491c44fab8549d4bd8f4598130ef0817fe52cf9147b7c529257a",
+    "source_registration_sha256": "1332a6ba0bbe0ac330bce3bbfb05225f58787f84d20ba4f94329a806e07be857",
+    "control_registration_sha256": "cf29b39ff5c68514acbe6c1f23fc38845107d7cba31c5d7b0f0fb1340f35bb87",
+    "control_contexts_sha256": "d5e4db4bc6465af7691891e587256a7d883929a2750afebdfceabaa5c22ddef3",
+    "candidate_registration_sha256": "9fa0746e7ceb416b5104c3c7b00450b828bfa7a2f2b61a94fa1599b3622bedbe",
+    "candidate_contexts_sha256": "3f60a648f486992f046effe96ee16a80c3e20ea103af300a1f235a889e694150"
+  },
+  "provider_slots": 4,
+  "all_original_historical_arms_required": false,
+  "original_answer_execution_ast_sha256": "7835f7b8877d897590104bac1874302f0b8f61225a6d58b36ff36741f9628029"
+}

@@ -1,0 +1,10 @@
+{
+  "complete": false,
+  "answer_metrics": null,
+  "counts": {
+    "complete": 274,
+    "failed": 1,
+    "not_started": 225
+  },
+  "registration_sha256": "b6c6dccd65b241c2cff5aa823f397913eec45d8e721884875d61d4a32e5e3e43"
+}
