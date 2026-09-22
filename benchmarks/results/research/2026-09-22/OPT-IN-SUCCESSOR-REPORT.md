@@ -66,6 +66,31 @@ checked that whole original source text, rather than just a node ID or reference
 was present; it confirmed these counts. An annotation match does not establish
 semantic sufficiency or prove that the reader alone caused a miss.
 
+## Complete episode-routing comparison
+
+The [complete episode arm](opt-in-successor-v2-analysis-02-complete.json), with
+two episodes and eight local records per episode, scored **345/500 (69.0%)**:
+eight paired wins, 100 losses, **−18.4 points**, and a paired 95% bootstrap
+interval of **−22.2 to −14.8 points**. Its Holm-adjusted discordant-pair p-value
+is `3.06e-20` in the full registered family, retaining the slots of unfinished
+comparisons. There were no provider failures or retries.
+
+Complete annotated evidence fell from 403 to 283 of 470 applicable cases, with
+131 new complete-evidence losses. Multi-session answers fell by 45, temporal
+answers by 32, preferences by nine, knowledge updates by seven and user facts
+by one; assistant answers improved by two and abstention stayed tied. Memory
+use averaged 3,960.27 tokens, so the regression did not arise from a smaller
+configured budget. Cold retrieval p50/p95 was 1.398/8.138 seconds under shared
+load; this is not a controlled serving-speed comparison.
+
+**Reject this unconditional episode policy as a production-default candidate
+on this cohort.** This does not reject caller-scoped episode routing in every
+task. The [earlier source-only grid](../2026-09-18/LONGMEMEVAL-S-EPISODE-COMPOSITION-V1.md)
+already found the same 403→283 coverage transition; the present trial adds
+matched-reader answer evidence. Inspection confirms that the packer reserves
+routed episode records ahead of the ordinary multi-path pool. Simply changing
+the inherited-score decay would not remove that priority tier.
+
 ## Development error review
 
 The representative review used the first four question IDs by SHA-256 ordering
@@ -136,6 +161,34 @@ The result supports developing label-free context selection while preserving
 source qualifiers and testing displacement losses. It does not authorize a
 default change or allow replacing the original baseline with a favorable repeat.
 
+All three changed-context answer losses were reviewed: `gpt4_2f8be40d` counted
+an additional sister's wedding, `bf659f65` declined to infer a purchase from a
+signed vinyl record, and `59524333` preferred an older explicit 7 pm gym schedule
+over a newer explicit 6 pm schedule. The added/removed source records remain
+available in the private artifacts. These examples distinguish distractor,
+annotation and update-reasoning risks; they do not establish a single cause for
+every score transition.
+
+The follow-up [marginal packing assay](opt-in-marginal-packing-v1-registration.json)
+implements the previously proposed change in a research module: original
+candidate relevance, a bounded episode bonus, diminishing weight for additional
+same-session records, and the unchanged whole-source serializer/budget. It
+preserves instruction/pin priorities and the baseline's leading multi-path
+anchor. Three fixed policies face all 500 source cases. A policy advances only
+with gains in both complete source sets and mean source fraction; all category
+and per-question losses remain reported. If one qualifies, a separately frozen
+500-case candidate answer trial and a new 500-case baseline-context repeat form
+the primary follow-up comparison. No production source or default is modified.
+
+The [additional combination plan](opt-in-exploratory-combination-plan.json)
+separates experimentation from promotion. It preserves the original strict
+gated selection, while adding an exploratory combination of the two best
+observed active individuals after all eight have valid matched comparisons.
+Negative differences remain eligible for that explicit exploratory test; failed
+arms cannot simply be omitted and inactive unchanged-input flags cannot win on
+reader noise. The rule was frozen before inspecting any completed individual
+candidate answer result. Duplicate configurations are aliases, not new replicates.
+
 The [secondary analysis plan](opt-in-successor-secondary-analysis-registration.json)
 also compares unchanged-input repeat arms and estimates the four registered
 factorial contrasts. Reader/judge variation never replaces the primary baseline.
@@ -154,16 +207,29 @@ local PostgreSQL 16.11 test database ran 59 backend tests with no skips. The
 feature/recovery suite then ran 152 tests with three backend-specific skips.
 These are source-checkout checks, not a completed installed-package release gate.
 
-The fixed feature matrix and fresh-ingestion arms are still running. Paired
+The remaining fixed feature matrix and fresh-ingestion arms are still running. Paired
 10,000-draw question/source-cluster intervals, category regressions, evidence
 losses and Holm-adjusted discordant-pair tests will be reported for complete
 matched comparisons. Best-arm combination selection waits for every individual
 arm and its matched control; the full-feature arm is exploratory. No arm is
-currently recommended for promotion on this unfinished evidence.
+currently recommended for promotion on this unfinished evidence. The tested
+unconditional episode policy has a completed negative finding.
 
 MemoryAgentBench Banking, EventQA, Conflict and Detective inputs have been
-prepared with the prior registered preprocessing pins. Their inference stage
-follows LongMemEval. BEAM and MemoryArena remain later stages. None of the 500
+prepared with the prior registered preprocessing pins. The [MAB matrix](opt-in-mab-matrix-v1-registration.json)
+binds 100 Banking, 500 EventQA, 100 Conflict and 71 Detective questions. All
+eight authored reader checks and nine harness checks passed; initial harness
+test failures and repairs are retained in the [validation record](opt-in-mab-validation.json).
+The [stage launcher](opt-in-mab-launch-plan.json) waits for LongMemEval and its
+combination to finalize. If the selected combination has a new configuration,
+a child registration adds it before any MAB inference. BEAM and MemoryArena
+remain later stages. None of the 500
 LongMemEval histories qualifies as untouched confirmation; promotion requires a
 separately audited unused source cohort and relevant release/backend regressions.
 No production-default decision is authorized by this study alone.
+
+One fixture detail is explicit in the validation record: LongMemEval matches
+source-node clocks and `Event.created_at`, while the separate immutable
+`Event.timestamp` records actual admission time. The registered graph retrieval
+does not use that field. The new MAB fixture matches both event clocks as well;
+the already running LongMemEval execution was not rewritten.
