@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 23:20 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 23:30 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -46,7 +46,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Surprise gating | 95333 | `successor-v2-surprise_gating.log` |
 | Full-feature exploratory | 89354 | `successor-v2-full_feature_exploratory.log`; started under scheduling amendment v4. The former idle launcher PID 75029/session 46843 was stopped before any child started. Do not launch it again. |
 | Complete-arm analysis watcher | 5627 | `successor-bounded-analysis-watcher.log`; writes incrementally numbered `opt-in-successor-v2-analysis-NN-complete.json` after authentication. Memory-bounded wrapper has exact four-arm numerical parity with the original analyzer. The former idle PID 36062/session 11465 was stopped without interrupting any benchmark. |
-| Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
+| Exploratory top-two selector | 81746 | `successor-bounded-top-two-v2-launcher.log`, PID 95566. Waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. The v2 wrapper routes the exact analyzer subprocess into the validated bounded process; v1 had not propagated that safeguard to its child. Former idle PID 15714/session 24082 was authenticated childless and stopped before any selection or analysis output. Earlier PID 56489/session 87252 also remains stopped. Never relaunch either. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
 | Marginal answer coordinator | finished | `marginal-answer-lane-v1.log`; both 500-case arms completed: 433 versus 433, ten wins/ten losses, difference 0.0 points [−1.8,+1.8]. All failures from other trials stay retained. Never relaunch source v1/v2 or this completed trial. |
 | Rank-envelope answer coordinator | finished | Parent `data/opt-in-study/rank-answer-lane-v1.log`; candidate completed 428/500. New control repeat failed closed (274 complete, one reader truncation, 225 unstarted), invalidating the primary comparison. Complete candidate versus original control is prespecified secondary evidence: −1.8 points [−3.8,0.0]. Outputs stay in repair worktree and public results are exported to parent. Never relaunch prior source/coordinator versions or failed control. |
@@ -158,6 +158,15 @@ Its registration hash is `4fa9746794f628615cf2b7177322543d3488ed93a18a6eba859827
 Do not edit its registered files while it runs. Its full source gate requires
 both source metrics strictly above the prior repair and production, with no
 category complete-source regression versus production. See ANCHORED-RANK-STUDY.md.
+
+The selector subprocess-memory repair passed nine routing/selection tests and
+Ruff. Original selector, analyzer, statistical parity evidence, failure gates,
+and selection plan remain byte-identical. Amendment
+`opt-in-selection-subprocess-memory-amendment-v2.json` and its handoff record
+authenticate the change before selection. The original analysis watcher still
+waits for 16 verified arms; because temporal-only failed it will not exit by
+itself. After every fixed arm settles, create a uniquely named final bounded
+analysis even if the last event is a failure, then stop only the idle watcher.
 
 The source-to-answer memory handoff is registered in
 `opt-in-answer-memory-amendment-v1.json` and passed seven authored tests. It is

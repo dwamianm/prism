@@ -98,14 +98,25 @@ The [fourth scheduling amendment](opt-in-successor-scheduling-amendment-v4.json)
 starts the already fixed full-feature ingestion independently, raising the fresh
 process cap from four to five after a host-capacity check. Only its idle waiting
 launcher was stopped; no benchmark case or worker was interrupted.
+The [selector memory amendment](opt-in-selection-subprocess-memory-amendment-v2.json)
+corrects a bookkeeping gap before selection: its analyzer child would otherwise
+bypass the validated bounded capture retention. Nine routing/selection checks
+passed, and only the authenticated childless waiter was replaced. Statistical
+calculations, complete-coverage requirements and failure handling are unchanged.
 
 ## Completed production control
 
 The [authenticated baseline](opt-in-successor-v2-analysis-01-complete.json)
 scored **437/500 (87.4%)** with zero terminal provider failures. Context use
 averaged 3,964.75 tokens (p50 3,976; p95 3,996). Cold retrieval p50/p95 was
-0.621/2.346 seconds; immediate warm p50/p95 was 0.590/2.769 seconds. Historical
-ingestion cost is reused and explicitly distinguished from fresh ingestion.
+0.621/2.346 seconds; immediate warm p50/p95 was 0.590/2.769 seconds. The
+[authenticated shared ingestion ledger](opt-in-shared-historical-ingestion-cost-v1.json)
+records 246,738 stored turns and 73,944.443 summed question-wall seconds from
+the original 500 ingestions (median 146.554; p95 169.725 seconds). This is one
+historical cost shared by retrieval-only arms, not new ingestion for every arm
+or total elapsed study time. Copies, integrity checks, retrieval and model calls
+are separate expenses. Fresh arms retain their own measured ingestion costs
+against their fresh control; dollar costs are unavailable.
 
 | Category | Correct / total |
 |---|---:|

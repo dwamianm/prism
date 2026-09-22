@@ -1,0 +1,9 @@
+{
+  "at": "2026-09-22T23:29:11.906190+00:00",
+  "stopped_pid": 15714,
+  "command": "/Users/dwamianm/Sites/prism/.venv/bin/python -m benchmarks.diagnostics.opt_in_bounded_analysis select --wait",
+  "no_children": true,
+  "no_selection_output": true,
+  "no_benchmark_interrupted": true,
+  "amendment_sha256": "69b0816c5b4047839324606f50bdf9b60529e6ebbd3277f87cb7adfe8a565b7a"
+}
