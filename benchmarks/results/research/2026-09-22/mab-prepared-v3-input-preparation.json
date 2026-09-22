@@ -1,0 +1,221 @@
+{
+  "kind": "outcome-free-input-preparation-not-execution-registration",
+  "preprocessing": {
+    "datasets": {
+      "version": "5.0.1"
+    },
+    "nltk": {
+      "version": "3.9.4",
+      "punkt_tab_english_sha256": "7e53a7a883e1f2e25d63a47a70e49181f8498d6453919ff88d02c653f6408afc"
+    },
+    "tiktoken": {
+      "version": "0.12.0",
+      "encoding": "o200k_base",
+      "encoding_sha256": "c1a84aa080162342608052786b32d7cf320368b9fa0ba92bdd8a60454786b315"
+    }
+  },
+  "tasks": {
+    "banking": {
+      "prepared_sha256": "f3409474fa80c9bb69e9e6f3140d4016d45f487ad9f09bc7f3b194d1566cecbf",
+      "contexts": 1,
+      "questions_per_context": [
+        100
+      ],
+      "development_questions": 20,
+      "prior_development_task": {
+        "contexts": 1,
+        "dataset": "Test_Time_Learning",
+        "queries": 20,
+        "source_chunks": 26,
+        "stored_nodes": 5897,
+        "sub_dataset": "icl_banking77_5900shot_balance"
+      },
+      "development_input_identity_sha256": "eed44b38ed744528399f9b83ee307deb949a78331229e771a0a7f26bb92ef6d7",
+      "source_family_sha256": [
+        "33ee87b911e54baf55130df53d69cb37d78a8bd54d3f229f741f36481259632a"
+      ],
+      "context_source_chunks": [
+        26
+      ],
+      "metric": "exact_match",
+      "output_contract": "numeric-label-v1",
+      "dataset_config": {
+        "dataset": "Test_Time_Learning",
+        "chunk_size": 4096,
+        "debug": false,
+        "seed": 42,
+        "context_max_length": 131072,
+        "sub_dataset": "icl_banking77_5900shot_balance",
+        "generation_max_length": 20,
+        "test_files": "",
+        "demo_files": "",
+        "use_chat_template": false,
+        "max_test_samples": 100,
+        "shots": 0,
+        "stop_new_line": true,
+        "tag": null
+      }
+    },
+    "eventqa": {
+      "prepared_sha256": "25120fabd61051158af593b2fb4826799179cab63a7351af57152310ea3f1834",
+      "contexts": 5,
+      "questions_per_context": [
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "development_questions": 20,
+      "prior_development_task": {
+        "contexts": 1,
+        "dataset": "Accurate_Retrieval",
+        "queries": 20,
+        "source_chunks": 17,
+        "stored_nodes": 381,
+        "sub_dataset": "eventqa_65536"
+      },
+      "development_input_identity_sha256": "243ae851184db9d24297185dc19fb5b0c90a9c0c5a15cafbb85b6fb50c25d20a",
+      "source_family_sha256": [
+        "2f6143fe5459c3c7a87415eabe2910efe16ec5a32dc349848e9f8b5cacfcc3b9",
+        "8beb1976bdc16d2a3ccd5ab6918d0d10b69a590dc2fc87c70b741765fd5aa3c5",
+        "788e7a248a8f8814e0c27f77373214a8e34f30672886ef1d33c31d8e6152663d",
+        "d12c927d3d0abdfd5fdf702ab05562312c0706c12c449843cb0378af6e7b2c31",
+        "fc93357385b347f09e7b42d3963946188532abae998ee5f0ae0e55164075b077"
+      ],
+      "context_source_chunks": [
+        17,
+        17,
+        17,
+        17,
+        17
+      ],
+      "metric": "substring_exact_match",
+      "output_contract": "upstream",
+      "dataset_config": {
+        "dataset": "Accurate_Retrieval",
+        "chunk_size": 4096,
+        "debug": false,
+        "seed": 42,
+        "context_max_length": 65536,
+        "sub_dataset": "eventqa_65536",
+        "generation_max_length": 40,
+        "test_files": ",",
+        "demo_files": ",",
+        "use_chat_template": true,
+        "max_test_samples": 5,
+        "shots": 0,
+        "tag": null
+      }
+    },
+    "conflict": {
+      "prepared_sha256": "dc042148eed8064c36e194de108891c96cb223e05742bcbcfaf1a71b6e8b1429",
+      "contexts": 1,
+      "questions_per_context": [
+        100
+      ],
+      "development_questions": 20,
+      "prior_development_task": {
+        "contexts": 1,
+        "dataset": "Conflict_Resolution",
+        "queries": 20,
+        "source_chunks": 2,
+        "stored_nodes": 454,
+        "sub_dataset": "factconsolidation_mh_6k"
+      },
+      "development_input_identity_sha256": "1c95a7c57128465ed6019dbddd7dadc75814ef2253a915c6fed54b384997eb63",
+      "source_family_sha256": [
+        "102f2a431444eec9641900a572ed28da357c4cc9045c5c5e45b19c66d28cf11c"
+      ],
+      "context_source_chunks": [
+        2
+      ],
+      "metric": "substring_exact_match",
+      "output_contract": "answer-only-v1",
+      "dataset_config": {
+        "dataset": "Conflict_Resolution",
+        "chunk_size": 4096,
+        "debug": false,
+        "seed": 42,
+        "context_max_length": 6000,
+        "sub_dataset": "factconsolidation_mh_6k",
+        "generation_max_length": 10,
+        "test_files": "",
+        "demo_files": "",
+        "use_chat_template": true,
+        "max_test_samples": 1,
+        "shots": 0,
+        "tag": null
+      }
+    },
+    "detective": {
+      "prepared_sha256": "dce6d56048dfa6c3d55b389bdd1edd55c1cb10b0f3ac8341580e81224d36960e",
+      "contexts": 10,
+      "questions_per_context": [
+        6,
+        6,
+        8,
+        6,
+        8,
+        10,
+        6,
+        6,
+        9,
+        6
+      ],
+      "development_questions": 20,
+      "prior_development_task": {
+        "contexts": 3,
+        "dataset": "Long_Range_Understanding",
+        "queries": 20,
+        "source_chunks": 75,
+        "stored_nodes": 1620,
+        "sub_dataset": "detective_qa"
+      },
+      "development_input_identity_sha256": "ca812e904beb9885a1bc6dd1caf1c912ae3e53b09f9d08f97697e1a1fcf0e2e5",
+      "source_family_sha256": [
+        "824411afff082d87288ea1f988d720081eb618c8ea192de4b2cbfe1f4ce8b6a7",
+        "479861c6945f9e57bc262b891408026b58159c200235cd9bd1ede8894e65d113",
+        "7fb43547d2179fd7c0569b4d4cb14bd0de3afff2dc3cd454f3597f3fdd2c5752",
+        "6b67cd72df813a46d4086fbbb2e31d4f18cdb4c0cf8641be5b961630e0ab7c80",
+        "9db09298297878b03ede9592a8053e3e09d30eb78900c3684cd65e21bcfc2b29",
+        "1e4702da72895446b55f77cb65db58edce9073f37addd5620b630218c1733ac9",
+        "b5d0e61c2bf1338a9f895630d88dff844390855e76a039b7fd2ce21d1b0c2319",
+        "cdf0330dbe75df74dc4aca14c3a9650adfd79e59ae03a4c3ba15b77047064f9a",
+        "1e542a8c09eb539bf5ed732b6c2e45e6af6b046b8d7fd1e9a4ff67a34b407a24",
+        "7863c41a449118ceb2b94bdfd3cc743f77e057bed483f169db602cc7f9fd0a95"
+      ],
+      "context_source_chunks": [
+        25,
+        25,
+        25,
+        29,
+        29,
+        27,
+        30,
+        41,
+        50,
+        35
+      ],
+      "metric": "exact_match",
+      "output_contract": "choice-only-v1",
+      "dataset_config": {
+        "dataset": "Long_Range_Understanding",
+        "chunk_size": 4096,
+        "debug": false,
+        "seed": 42,
+        "context_max_length": 200000,
+        "sub_dataset": "detective_qa",
+        "generation_max_length": 2000,
+        "test_files": ",",
+        "demo_files": ",",
+        "use_chat_template": true,
+        "max_test_samples": 10,
+        "tag": null
+      }
+    }
+  },
+  "source_sha256": "b468f9351da035aba32964114bd6ace50bc3a1fccd2e1e58b525c884c24e9a11",
+  "inference_calls": 0,
+  "confirmation_eligibility": "Requires separate prior-exposure audit; no unused status inferred here."
+}
