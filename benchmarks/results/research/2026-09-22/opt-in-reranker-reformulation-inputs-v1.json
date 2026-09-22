@@ -1,0 +1,66 @@
+{
+  "kind": "complete-reformulation-interaction-input-audit",
+  "arms": [
+    "reranker",
+    "reranker_reformulation"
+  ],
+  "questions": 500,
+  "verification_sha256": {
+    "reranker": "9ef31c7f060b0cd682f8421fde87ed86a2d262496e526c7b7a642482a64dda25",
+    "reranker_reformulation": "ac00724a518922ab28b980ddb6e555e582f68e69b5cc1ca7c2fec4cb7b58724b"
+  },
+  "changed_context_ids": [
+    "e47becba",
+    "gpt4_7f6b06db",
+    "gpt4_483dd43c",
+    "gpt4_93159ced_abs"
+  ],
+  "changed_reader_request_ids": [
+    "e47becba",
+    "gpt4_7f6b06db",
+    "gpt4_483dd43c",
+    "gpt4_93159ced_abs"
+  ],
+  "wins_over_reranker": [
+    "0edc2aef",
+    "95228167",
+    "gpt4_8279ba02",
+    "gpt4_98f46fc6",
+    "gpt4_a2d1d1f6",
+    "gpt4_85da3956",
+    "f9e8c073",
+    "41698283"
+  ],
+  "losses_over_reranker": [
+    "51a45a95",
+    "9ee3ecd6",
+    "gpt4_2312f94c",
+    "a2f3aa27"
+  ],
+  "changed_input_outcomes": [
+    {
+      "question_id": "e47becba",
+      "reranker_correct": true,
+      "interaction_correct": true
+    },
+    {
+      "question_id": "gpt4_7f6b06db",
+      "reranker_correct": false,
+      "interaction_correct": false
+    },
+    {
+      "question_id": "gpt4_483dd43c",
+      "reranker_correct": true,
+      "interaction_correct": true
+    },
+    {
+      "question_id": "gpt4_93159ced_abs",
+      "reranker_correct": true,
+      "interaction_correct": true
+    }
+  ],
+  "unchanged_input_disagreements": 12,
+  "no_score_replacement": true,
+  "model_calls": 0,
+  "sha256": "df2f2a659b5c9e6235c821fdee1cd34d5f4302a09a7fed04ed1592eeaabebddf"
+}

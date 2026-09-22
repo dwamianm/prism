@@ -11,7 +11,7 @@ Every row below represents an authenticated full 500-question arm. Intervals
 are registered paired 95% bootstrap intervals against the original baseline;
 unfinished arms have no quality score. Context and latency details, category
 scores, configuration hashes and artifact checksums are retained in the
-[seven-arm analysis](opt-in-successor-v2-analysis-07-complete.json).
+[eight-arm analysis](opt-in-successor-v2-analysis-08-complete.json).
 
 | Arm | Correct | Difference, percentage points | Interpretation |
 |---|---:|---:|---|
@@ -22,6 +22,7 @@ scores, configuration hashes and artifact checksums are retained in the
 | Evidence augmentation | 435/500 | −0.4 [−1.6, +0.8] | Inactive on all 500 packs; score variation is not a feature effect |
 | Evidence projection | 431/500 | −1.2 [−2.8, +0.2] | Inactive on all 500 packs; score variation is not a feature effect |
 | Episode + augmentation | 346/500 | −18.2 [−22.0, −14.6] | Same contexts as episode routing; augmentation inactive |
+| Reranker + reformulation | 288/500 | −29.8 [−34.2, −25.6] | Four changed inputs versus reranker; no changed-input answer gain |
 
 ![Complete paired comparisons and the separate nondeployable diagnostic](opt-in-completed-comparisons-v1.png)
 
@@ -33,8 +34,11 @@ retains the registered Holm-adjusted tests for the feature family.
 Separately, the annotation-assisted diagnostic reached 473/500 (+7.2 points,
 interval +4.4 to +10.0). It establishes a development opportunity for evidence
 selection, not a deployable algorithm. The label-free reranker repair has completed its source trial and passed its
-answer-follow-up gate; the marginal packing source trial continues. Neither
-repair has a completed answer-quality result yet.
+answer-follow-up gate. The marginal packing source trial is also complete;
+only its bounded episode bonus qualified. Both have frozen 500-case control
+repeats and candidate answer contexts. Neither has a completed answer-quality
+result yet. The figure above freezes the first six complete arms; the table
+includes later completed interactions.
 
 ## Question and repaired protocol
 
@@ -248,6 +252,22 @@ ranking-fusion hypothesis would need to retain and validate alternate-query
 support for existing candidates, with auditable scoring and displacement
 checks. This trial does not establish that such a change will improve answers.
 
+The [complete reranker-plus-reformulation arm](opt-in-successor-v2-analysis-08-complete.json)
+scored **288/500**, seven wins and 156 losses against production: **−29.8 points**,
+paired 95% interval **[−34.2, −25.6]**, Holm-adjusted p-value `1.24e-36`.
+Complete source-node coverage remains 224/470, with 182 new complete-evidence
+losses versus baseline. Mean context use is 3,957.808 tokens; cold retrieval
+p50/p95 is 13.630/27.657 seconds under shared load. All 1,000 reader/judge calls
+finished without errors or retries, alongside 1,000 nonempty reformulation calls.
+
+Its [paired input audit](opt-in-reranker-reformulation-inputs-v1.json) found
+only four changed contexts relative to reranking alone. All four retain their
+answer scores; eight wins and four losses occur entirely under unchanged inputs.
+The registered factorial contrast is +1.4 points, interval [−0.4, +3.2], but it
+does not establish a useful interaction. Reformulation does not repair the
+current reranker's evidence displacement. Reject this composition as a default
+candidate on this cohort; the separate score-scale repair remains under test.
+
 The representative review used the first four question IDs by SHA-256 ordering
 within each of the three baseline error classes. It did not rescore examples or
 select a favorable evaluation subset. This is qualitative development analysis.
@@ -375,6 +395,18 @@ prior reports were reviewed in detail after the new registration but before
 its waiting launcher had evaluated any cases. They do not change its frozen
 selection or reporting rules. A negative full-cohort source result ends this
 follow-up without another parameter search or an answer trial.
+
+The [complete marginal source trial](MARGINAL-PACKING-STUDY.md) now finds
+403/470 complete source sets for control, 300 for the session penalty, 407 for
+the bounded episode bonus, and 319 for both. The two session-penalty policies
+fail the fixed gate and receive no answer trial. The bonus-only policy gains
+six complete sets and loses two: +0.85 points, descriptive interval [−0.21,+2.13].
+It improves three baseline packing-omission errors, changes 495/500 contexts
+and averages 3,961.962 memory tokens. Every category and source loss is retained.
+The small, uncertain source gain is not an answer win. Its new full 500-case
+control repeat and candidate are frozen and queued after the reranker repair
+under the released-lane amendment. The completed source process was transferred
+only while idle, without interrupting any case or increasing provider capacity.
 
 The [additional combination plan](opt-in-exploratory-combination-plan.json)
 separates experimentation from promotion. It preserves the original strict

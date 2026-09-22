@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 22:07 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 22:17 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -39,7 +39,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Job | Tool session | Log / behavior |
 |---|---:|---|
 | Historical coordinator | 71386 | `successor-v2-historical.log`; baseline, episode, augmentation, projection and episode+augmentation verified; episode+projection running. Expected ownership handoff/FileExistsError when it reaches the separately owned reranker directory; not an arm failure. |
-| Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker and query reformulation verified; reranker+reformulation running, then temporal and temporal+episode. Each has `successor-v2-ARM.log`. |
+| Second historical lane | 14157 | `successor-v2-retrieval-lane-launcher.log`; reranker, query reformulation and reranker+reformulation verified; temporal running, then temporal+episode. Each has `successor-v2-ARM.log`. |
 | Fresh control | 22257 | `successor-v2-fresh.log`; actual sequential store for all source turns. Expected handoff/FileExistsError when it reaches independently owned supersedence. |
 | Store supersedence | 35057 | `successor-v2-store_supersedence.log` |
 | QA pairing | 85242 | `successor-v2-qa_pairing.log` |
@@ -48,7 +48,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Complete-arm analysis watcher | 5627 | `successor-bounded-analysis-watcher.log`; writes incrementally numbered `opt-in-successor-v2-analysis-NN-complete.json` after authentication. Memory-bounded wrapper has exact four-arm numerical parity with the original analyzer. The former idle PID 36062/session 11465 was stopped without interrupting any benchmark. |
 | Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
-| Marginal source assay | 90351 | `marginal-study-v2.log`; now tests all three unchanged fixed policies on all 500 cases, with conditional full-cohort answer follow-up that still waits for historical arms. Scheduling-only v2 replaces idle PID 18350/session 68568 before any v1 source case. Never relaunch v1. |
+| Marginal answer coordinator | 58561 | `marginal-answer-lane-v1.log`; all 500 source cases complete, bonus-only policy selected, both reader contexts/registrations frozen. Source process 90351/PID 48748 stopped only while idle after reauthentication; no cases interrupted. New coordinator waits for first historical lane release and rank-answer tail/process exit. Never relaunch source v1/v2. |
 | Rank-envelope answer coordinator | 4246 | Parent `data/opt-in-study/rank-answer-lane-v1.log`; new scheduling amendment uses the first historical lane only after all six assigned arms settle/authenticate and PID 20793 exits. Prior idle coordinator 52440/PID 85200 was stopped before any reader case. Source assay 44587/PID 92466 completed and was stopped only while idle. Outputs stay in the repair worktree. Never relaunch prior source/coordinator versions. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
@@ -94,6 +94,14 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
   Both source gates passed; 500+500 answer contexts/registrations frozen.
   The source metric differs from original node presence for one metadata-only
   assistant representation. No answer win or confirmation claim yet.
+* Reranker + reformulation: 288/500, −29.8 points [−34.2,−25.6]. Four
+  changed inputs versus reranker; no changed-input score transition. Eight
+  wins/four losses are unchanged-input variation. Factorial +1.4 [−0.4,+3.2].
+* Marginal packing: all 500 source replays complete. Source coverage 403
+  control, 300 session penalty, 407 episode bonus, 319 combined, out of 470.
+  Bonus-only qualifies: six complete-source gains/two losses, +0.85 points
+  [−0.21,+2.13]; three gains in baseline packing errors. Both source-failing
+  policies retained and rejected at gate; selected 500+500 answer trial queued.
 * Annotation-assisted packing diagnostic: 473/500, +7.2 points, CI [+4.4,+10.0].
   Nondeployable, outside the feature matrix. Changed 67 contexts; 433 repeated
   inputs reveal residual reader/judge variation. Knowledge updates lost two.
@@ -165,5 +173,7 @@ Six authored ownership/gating tests and Ruff passed. Parent helper:
 reauthentication are recorded in `rank-answer-lane-v1-handoff.json`; source
 and prepared bytes are unchanged. The prior memory coordinator was confirmed
 idle with no children and no reader artifacts, then stopped. No case was
-interrupted. Marginal remains on its active source process until it finishes;
-if it qualifies, perform an equivalent idle transfer before queuing it here.
+interrupted. Marginal has now completed, qualified and undergone its own equivalent
+idle transfer, recorded in `marginal-answer-lane-v1-handoff.json`. Its low-memory
+coordinator is queued behind the rank repair. Both new coordinator logs confirm
+the frozen prepared identities and waiting status.
