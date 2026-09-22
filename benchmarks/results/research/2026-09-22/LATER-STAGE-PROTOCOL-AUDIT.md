@@ -71,6 +71,14 @@ Any proposed composition spanning direct-store and derived-evidence workflows
 must specify the actual admission path before registration; duplicated source
 admission cannot be introduced as an unnoticed treatment.
 
+The [input restoration record](opt-in-beam-input-readiness-v1.json) subsequently
+recovered the pinned upstream checkout and reproduced the normalized dataset's
+historical bytes exactly. It also found 27 available BEAM records identifying
+only source indices 0 and 1. Indices 2–19 are reserved from development
+inspection as potential confirmation sources, subject to a full exposure and
+source-overlap audit before any later use. Restoring or programmatically
+normalizing the cache did not display their content or generate answers.
+
 ## MemoryArena
 
 Preserve the registered interactive client, task grouping, exact-value scoring,

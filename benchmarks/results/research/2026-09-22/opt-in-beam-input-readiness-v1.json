@@ -1,0 +1,240 @@
+{
+  "kind": "later-stage-pinned-input-restoration-and-exposure-inventory",
+  "at": "2026-09-22T21:15:19.024100+00:00",
+  "upstream_revision": "4b61c5d31b9c668a12b4f5e78064248a02c82d2b",
+  "upstream_source_sha256": {
+    "benchmarks/beam/run.py": "c13ed8464d28f0b09c1f6f3d1b703cb2be92dbc51dbdb3e91834e355ad5aad0c",
+    "benchmarks/common/mem0_client.py": "a3047e4113978c3b04c2635d53e85e0ac5e7a5d43aef530beccedf591df29b99",
+    "benchmarks/common/utils.py": "c49e85a0d0f846c7963261e7396995203ad9f0732fe8a64b2aea1decadeabdc4",
+    "requirements.txt": "14cb7961cff56ba10fd9d1cbb18c7842c6a2377565f18ad538d2b439402fd007"
+  },
+  "dataset_revision": "3205395e897e7318c7b094ef4e6047b9b82dbb03",
+  "source_parquet_sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+  "normalized_cache_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+  "historical_cache_exact_match": true,
+  "cache_bytes": 13661638,
+  "preprocessing": "Exact pinned upstream field selection and probing-question literal/JSON parsing reproduced with PyArrow; resulting normalized bytes match the old registration exactly.",
+  "prior_execution_packs_recovered": false,
+  "prior_recorded_source_indices": [
+    0,
+    1
+  ],
+  "exposure_records": [
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-source-projection-ablation-v2-results.json",
+      "sha256": "a22d8fdbea4218adbe179dd8d0600d99f5b63d7cca29f89e4d97fc5017793fb0",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev5-results.json",
+      "sha256": "0f6c98ba8bd7a9ba86e008dccd8685e3a5fed6a2dd6e94dd6d2c78382796fde9",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev5-registration.json",
+      "sha256": "8016fed543e63e468ee3cbdc1855cd6dc9969d8d06177bd7b6a6dbab60dd216a",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-raw-deepseekv41-gptoss120b-dev3-registration.json",
+      "sha256": "1f669f00023703fd229af6bdca7119d0ae8bcbae9e5d1144b2a2b10ed8aeeb68",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-non-entity-augmentation-diagnostic-conv1-registration.json",
+      "sha256": "41b769568679cb4bc0e9a4b17c55f90c06d60dfa62c0e61606b596720b6259da",
+      "source_indices": [
+        1
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev4-registration.json",
+      "sha256": "c90097c8c7e469f5cf8703661ce97e8668a2a1875d1fc0ce58283dcf9f93675f",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev3-results.json",
+      "sha256": "692fcc6a94b12124a8532cfa390933aef49213039bb36dc4632a871f32f62224",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev1-registration.json",
+      "sha256": "c3a8e2f10666046086f8f0030514c3d7d2f777cf718df829346d0f906a55f811",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-non-entity-augmentation-diagnostic-conv0-registration.json",
+      "sha256": "203b4a1d3e8952df4a0fff51b0a504aed1b280782c7f001a3154e33e6406b95b",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-raw-deepseekv41-qwen9b-dev2-registration.json",
+      "sha256": "0052f73921ba04ee6c8e4e4bcd9f4b8de1522d9880717aa7f3bcee73c2aa6106",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-evidence-augmentation-confirmation-v1-candidate-registration.json",
+      "sha256": "c5d6a32c17f9476e7dddd24dba74681255bea0707f9dc1ed571b8c8723510887",
+      "source_indices": [
+        1
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev2-registration.json",
+      "sha256": "84da0887ad2c62ddf28cc8641758564a2cb99ad6666b609dd5caf1ad53924d96",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-evidence-augmentation-confirmation-v1-results.json",
+      "sha256": "4ef7d5d3ebfe5fb74c6267d5c576ce42b13c75a3f192afc3f9ab79072c66123d",
+      "source_indices": [
+        1
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-evidence-augmentation-ablation-v3-registration.json",
+      "sha256": "ad5b16c2265556f8837a4ab1e573b6989a3c4956799fbfa5a3bebcf63933ec96",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-extracted-deepseekv41-mistral675b-gptoss120b-dev3-registration.json",
+      "sha256": "02f5c9de6e80d53a065aa0d3872d7fed10a6087e8988ace18b61254677e2cda1",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-raw-mistral675b-gptoss120b-dev4-registration.json",
+      "sha256": "a21bb14648e768aa8e93269ab03e3c35451eab06b17aad4aa135537e2eda39a4",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-source-projection-ablation-v2-registration.json",
+      "sha256": "9965575f7b679f84012e5ba3060376797533cf445ed73950144cbaa1e56beafd",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-raw-mistral675b-gptoss120b-dev4-results.json",
+      "sha256": "0738f403eb13e6d8f25b1122d04e0b043815e5a4dbbc35c31341d7778aaef988",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-evidence-diversity-ablation-v1-results.json",
+      "sha256": "423304d5053993d401d9af6df6d04c13162f9ce9bd9896bf71caca7342d2c5f9",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-evidence-augmentation-ablation-v3-results.json",
+      "sha256": "dc7ff49c78264ab5b993d577bebf67073d7ea0aa6b50b49b379f1cef088c8f45",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-evidence-augmentation-confirmation-v1-registration.json",
+      "sha256": "ca2da701d5055ba7fdce299adc777b72b7e791d1bef81acc227d449bc431678a",
+      "source_indices": [
+        1
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-raw-qwen35b-gemma31b-dev1-registration.json",
+      "sha256": "122a26597f9cce884ed090ba7f82fda57a3fba390e4a2019e15a8d3858890bb6",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-15/beam-100k-evidence-diversity-ablation-v1-registration.json",
+      "sha256": "15f95138c61c2e6b810dd4ab80ed68e923eb18712f238875108cd9c39d832739",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-14/beam-100k-raw-v1-results.json",
+      "sha256": "3d244e19e8a7c9f0b3ec9d478cf6b81a7b409141664b8b84fef7bc43d4b64441",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-14/beam-100k-raw-v1-registration.json",
+      "sha256": "e903720877ac01cf4362c3de6562d28eae32014b348f3c06afd940fe286383ad",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-16/beam-100k-q19-answer-stability-v1-results.json",
+      "sha256": "42489eecf195cbb3167e321f991a6957fcae83cb4a14265961b60c17ceb1d79c",
+      "source_indices": [
+        0
+      ]
+    },
+    {
+      "path": "benchmarks/results/research/2026-09-16/beam-100k-q19-answer-stability-v1-registration.json",
+      "sha256": "cb015397eee0585889de6c13ba600c1fb47eceebe66696910a2443ac32eccf91",
+      "source_indices": [
+        0
+      ]
+    }
+  ],
+  "reserved_potential_confirmation_source_indices": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "reservation": "Do not inspect these source contents, questions or labels in development. A later prospective confirmation must freeze the candidate and complete the exposure/source-overlap audit before use. No present claim that all external human or unretained exposure is excluded.",
+  "source_content_displayed_to_agent": false,
+  "new_ingestion_calls": 0,
+  "new_reader_calls": 0,
+  "new_judge_calls": 0,
+  "stage_gate": "No BEAM execution before earlier registered LongMemEval and MemoryAgentBench stages finish. This artifact restores inputs only; it is not a quality result or execution registration.",
+  "artifact_sha256": "f16e0393b52746c1853bb9fdfd06832546ffa4c1cb6b94ee30118446914176ce"
+}
