@@ -1,0 +1,21 @@
+{
+  "kind": "prospective-scheduling-only-repair-amendment",
+  "at": "2026-09-22T20:39:32.551466+00:00",
+  "predecessor": "opt-in-rank-envelope-v1",
+  "successor": "opt-in-rank-envelope-v2",
+  "predecessor_executed_cases": 0,
+  "predecessor_answer_calls": 0,
+  "idle_pid": 3539,
+  "old_executor_sha256": "28638c3cb0b3594df27eaaed3c49316be355d3901167e72045dad5c8df2e316a",
+  "new_executor_sha256": "21af55d03bdbd0e980788c316aa0d8d7669a1c220f0831d5c45657d7c2fd0431",
+  "identical_ast_definitions": [
+    "ObservedReranker",
+    "evaluate",
+    "summarize",
+    "main"
+  ],
+  "changes": "Start local source replay after its two controls authenticate; retain original all-historical completion gate before hosted answer calls. Both source and answer failure/selection rules unchanged. The recorded reranker and production baseline are never replaced.",
+  "capacity": "18 CPUs/48 GiB host, 76% memory free observed; one added local source process, no additional hosted reader slots while the original historical stage runs.",
+  "default_changes": false,
+  "amendment_sha256": "353474638c5f8701d7fe13b0694fd0891f79ccb2c7d420d426492244396a3185"
+}
