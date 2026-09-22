@@ -180,6 +180,18 @@ and per-question losses remain reported. If one qualifies, a separately frozen
 500-case candidate answer trial and a new 500-case baseline-context repeat form
 the primary follow-up comparison. No production source or default is modified.
 
+Prior negative work also constrains this follow-up. The earlier
+[session-marginal source grid](../2026-09-18/LONGMEMEVAL-S-SESSION-MARGINAL-V1.md)
+found that broadening session coverage displaced necessary turns, and its mild
+arm's [answer diagnostic](../2026-09-18/LONGMEMEVAL-S-SESSION-MARGINAL-ANSWER-V1.md)
+tied 25/31. The present three-policy assay is an incremental development test,
+including a query-dependent bounded local-relevance bonus and whole-source
+selection; session diversity itself is not a new or established remedy. These
+prior reports were reviewed in detail after the new registration but before
+its waiting launcher had evaluated any cases. They do not change its frozen
+selection or reporting rules. A negative full-cohort source result ends this
+follow-up without another parameter search or an answer trial.
+
 The [additional combination plan](opt-in-exploratory-combination-plan.json)
 separates experimentation from promotion. It preserves the original strict
 gated selection, while adding an exploratory combination of the two best
