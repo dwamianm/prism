@@ -1,0 +1,29 @@
+{
+  "kind": "execution-scheduling-only-amendment",
+  "registered_at": "2026-09-22T18:56:16.784385+00:00",
+  "registration_sha256": "06ee04869582702694dfc359b9ba4e249e52282bb08332db35114008b0c2d8f3",
+  "user_authorization": "Implement the fixes and continue until meaningful experimental results.",
+  "reason": "Observed fresh-ingestion cost projects approximately 20 hours if five fresh arms run sequentially; parallel independent packs without changing any comparison.",
+  "original_executor_sha256": "d18789847809dc5184d9f8a6370b59d84510e73b383927e171c2fb26b21e73d9",
+  "worker_sha256": "a8225b989ad0883803fbb7809814650d78b385bc9889504da1491497b9734248",
+  "worker_difference": "Exact original executor except explicit single-arm selection and worker checksum verification; original source retained unchanged.",
+  "start_now": [
+    "store_supersedence",
+    "qa_pairing",
+    "surprise_gating"
+  ],
+  "already_running": [
+    "historical matrix coordinator",
+    "fresh_baseline"
+  ],
+  "start_after_fresh_control_finishes": [
+    "full_feature_exploratory"
+  ],
+  "concurrency": "At most four fresh arm processes, each five memory tasks/four reader-judge slots, alongside one historical matrix process.",
+  "handover": "The original fresh coordinator completes and verifies fresh_baseline. Its existing exclusive directory gate then prevents it from duplicating the independently owned supersedence arm. Record that expected coordinator FileExistsError separately from case/arm failure; no failed or incomplete case is replaced.",
+  "case_cohorts_configs_provider_limits_prompts_scoring_unchanged": true,
+  "timing_boundary": "Shared host/provider load. Report summed task wall times and workload latency, not isolated serving speedups.",
+  "unstarted_arms_verified_before_launch": true,
+  "partial_answer_metrics_inspected": false,
+  "default_changes": false
+}
