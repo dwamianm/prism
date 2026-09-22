@@ -1,0 +1,52 @@
+{
+  "kind": "opt-in-interactions-deepseek-preflight-result",
+  "registration_sha256": "d2ccbeff24c370745017ec0b55f96bc5dbd59d5ee2f58526c969f72cdea62f02",
+  "started_at": "2026-09-22T17:52:59.515347+00:00",
+  "rows": [
+    {
+      "role": "reader",
+      "http_status": 200,
+      "elapsed_seconds": 0.8942231670080218,
+      "request_sha256": "6572b25ecbbff21ebc5e4a0d9dfd51c5258e614a6190490346fd4a90a55dc971",
+      "response": {
+        "model": "deepseek-v4.1-flash",
+        "created_at": "2026-09-22T17:53:00.482598753Z",
+        "message": {
+          "role": "assistant",
+          "content": "The user\u2019s preferred color is blue."
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 811163270,
+        "prompt_eval_count": 31,
+        "prompt_eval_cached_count": 0,
+        "eval_count": 10
+      }
+    },
+    {
+      "role": "judge",
+      "http_status": 200,
+      "elapsed_seconds": 0.7530445000011241,
+      "request_sha256": "81a46492fd97807f8606cf725eff12a96714f5e8600ea6c23c8c287da38a0a07",
+      "response": {
+        "model": "deepseek-v4.1-flash",
+        "created_at": "2026-09-22T17:53:01.240509311Z",
+        "message": {
+          "role": "assistant",
+          "content": "yes"
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 625138010,
+        "prompt_eval_count": 27,
+        "prompt_eval_cached_count": 0,
+        "eval_count": 2
+      }
+    }
+  ],
+  "dataset_calls": 0,
+  "digest_before": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+  "digest_after": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+  "status": "passed",
+  "elapsed_seconds": 1.7155809579999186
+}

@@ -1,0 +1,36 @@
+{
+  "kind": "opt-in-interactions-deepseek-preflight-registration",
+  "registered_at": "2026-09-22T17:52:59.069202+00:00",
+  "user_authorized_amendment": "Use the ollama deepseek4.1 flash instead",
+  "base_url": "http://127.0.0.1:11434",
+  "model": "deepseek-v4.1-flash:cloud",
+  "expected_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+  "calls": [
+    {
+      "role": "reader",
+      "prompt": "History Chats:\nThe user said: My preferred color is blue.\nQuestion: What is the user\u2019s preferred color?\nAnswer:",
+      "max_output_tokens": 1024
+    },
+    {
+      "role": "judge",
+      "prompt": "A reference answer is blue. A candidate answer is blue. Are they equivalent? Reply with exactly yes or no.",
+      "max_output_tokens": 64
+    }
+  ],
+  "options": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 65536
+  },
+  "think": false,
+  "stream": false,
+  "timeout_seconds": 60,
+  "attempts_per_call": 1,
+  "gates": [
+    "Exact digest before and after calls",
+    "HTTP success and done=true, no length truncation",
+    "Reader includes blue; judge returns yes"
+  ],
+  "dataset_calls": 0,
+  "failure_policy": "Retain every failure; do not replace with another model or dataset subset."
+}

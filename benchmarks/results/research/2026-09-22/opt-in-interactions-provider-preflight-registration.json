@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "kind": "opt-in-interactions-provider-preflight-registration",
+  "registered_at": "2026-09-22T17:48:42.639665+00:00",
+  "production_revision": "a66ee854325890c6bc28f6b515efeb6ed7df4deb",
+  "purpose": "Authored availability probe before dataset calls; never substitute a reader after failure.",
+  "request": {
+    "model": "gpt-5.4-2026-03-05",
+    "input": "Reply with exactly READY.",
+    "reasoning": {
+      "effort": "medium"
+    },
+    "max_output_tokens": 1024,
+    "store": false
+  },
+  "endpoint": "https://api.openai.com/v1/responses",
+  "timeout_seconds": 60,
+  "sdk_retries": 0,
+  "logical_attempts": 1,
+  "credential_source": "OPENAI_API_KEY environment, otherwise original project .env",
+  "failure_rule": "Preserve failure. No dataset answer runs until exact reader/judge is available; no alternate model, partial score, or replacement run."
+}

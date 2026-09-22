@@ -1,0 +1,13 @@
+{
+  "kind": "opt-in-interactions-reformulation-preflight-result",
+  "registration_sha256": "0edd187731312608206249584beada270fd3a991f88e3d8aee63910240e087ed",
+  "started_at": "2026-09-22T17:54:14.229828+00:00",
+  "dataset_calls": 0,
+  "queries": [
+    "user previous location before moving",
+    "origin city before relocation"
+  ],
+  "status": "passed",
+  "elapsed_seconds": 2.6272030840045772,
+  "errors": []
+}

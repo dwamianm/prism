@@ -1,0 +1,846 @@
+{
+  "kind": "opt-in-explicit-workflow-preflight-result",
+  "registration_sha256": "59fbbc9396dcc51a89237f7cf1f337de4e2d224367cfd8ea3b420bce61a1f6c2",
+  "dataset_calls": 0,
+  "rows": [
+    {
+      "id": "accept",
+      "status": "passed",
+      "config_sha256": "946336f48c7d9aa3154d49b99c44d3dd286b50c5ab56a4410dae956cf0f47603",
+      "proposal": {
+        "assessment": {
+          "schema_version": 1,
+          "protocol": "jev_product_alignment_v1",
+          "provider": "typesafe_jev",
+          "model": "jev-1.13.0",
+          "questions_sha256": "39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905",
+          "configuration_sha256": "c8a65d2b9553d4e2cb47ab023f97ee1c161b2b02256ce5a2b142efbd0c4c2fe2",
+          "left_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+          "right_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+          "request_sha256": "404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f",
+          "score": 2.0,
+          "confidence": 1.0,
+          "probabilities": {
+            "different": 0.0,
+            "related_or_ambiguous": 0.0,
+            "same": 1.0
+          },
+          "same_name_probability": 0.99,
+          "same_manufacturer_probability": 0.99,
+          "compatible_price_probability": 0.96,
+          "proposal_threshold": 1.5,
+          "proposal_recommended": true,
+          "automatic_merge_authorized": false,
+          "input_tokens": 501,
+          "output_tokens": 71,
+          "attempts": 1,
+          "elapsed_seconds": 0.436315,
+          "assessment_sha256": "aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128"
+        },
+        "proposal_published": true,
+        "proposal_applied": true,
+        "proposal_operation_id": "77439271-e9de-599d-9e95-0d44099cd868",
+        "proposal_edge_id": "56311b66-2c9a-567c-93c3-7889bbcf5b59",
+        "automatic_merge_authorized": false
+      },
+      "inert_before_review": true,
+      "review": {
+        "operation_id": "c5b8ddcb-8f57-596c-b9c9-c88e47ef5b54",
+        "proposal_operation_id": "77439271-e9de-599d-9e95-0d44099cd868",
+        "decision": "accepted",
+        "applied": true,
+        "verified_edge_id": "4a70aa30-5416-561e-a271-7e017e734494"
+      },
+      "inbox_after_restart": [
+        {
+          "status": "accepted",
+          "proposal": {
+            "version": 2,
+            "policy": "unverified_alias_proposals_v2",
+            "operation_id": "77439271-e9de-599d-9e95-0d44099cd868",
+            "alias_type": "semantic",
+            "score": 1.0,
+            "left_before": {
+              "id": "06fd0272-f0a6-4d83-a81e-7fa31dbd5eb7",
+              "user_id": "accept",
+              "session_id": null,
+              "scope": "personal",
+              "created_at": "2026-09-22T17:56:52.557286Z",
+              "updated_at": "2026-09-22T17:56:52.557286Z",
+              "node_type": "entity",
+              "content": "Adobe Acrobat Standard 7.0 Windows",
+              "metadata": {
+                "entity_type": "product"
+              },
+              "confidence": 0.800000011920929,
+              "salience": 0.5,
+              "epistemic_type": "asserted",
+              "source_type": "user_stated",
+              "lifecycle_state": "tentative",
+              "event_time": null,
+              "valid_from": "2026-09-22T17:56:52.557289Z",
+              "valid_to": null,
+              "superseded_by": null,
+              "evidence_refs": [
+                "1c55a3fc-d503-4ea9-82d0-06cf83556ca9"
+              ],
+              "decay_profile": "medium",
+              "last_reinforced_at": "2026-09-22T17:56:52.557308Z",
+              "reinforcement_boost": 0.0,
+              "salience_base": 0.5,
+              "confidence_base": 0.800000011920929,
+              "pinned": false,
+              "ttl_days": null
+            },
+            "right_before": {
+              "id": "5e078857-071e-4104-854d-ff5d3f0616f1",
+              "user_id": "accept",
+              "session_id": null,
+              "scope": "personal",
+              "created_at": "2026-09-22T17:56:53.053319Z",
+              "updated_at": "2026-09-22T17:56:53.053319Z",
+              "node_type": "entity",
+              "content": "Adobe Acrobat Standard 7.0 Windows",
+              "metadata": {
+                "entity_type": "product"
+              },
+              "confidence": 0.800000011920929,
+              "salience": 0.5,
+              "epistemic_type": "asserted",
+              "source_type": "user_stated",
+              "lifecycle_state": "tentative",
+              "event_time": null,
+              "valid_from": "2026-09-22T17:56:53.053326Z",
+              "valid_to": null,
+              "superseded_by": null,
+              "evidence_refs": [
+                "b5ca02e2-7fc2-4293-9208-3cd334a3a67c"
+              ],
+              "decay_profile": "medium",
+              "last_reinforced_at": "2026-09-22T17:56:53.053327Z",
+              "reinforcement_boost": 0.0,
+              "salience_base": 0.5,
+              "confidence_base": 0.800000011920929,
+              "pinned": false,
+              "ttl_days": null
+            },
+            "evidence": {
+              "version": 1,
+              "kind": "typesafe_jev_product_alignment_v1",
+              "provider": "typesafe_jev",
+              "protocol": "jev_product_alignment_v1",
+              "model": "jev-1.13.0",
+              "request_sha256": "404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f",
+              "assessment_sha256": "aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128",
+              "left_node_sha256": "b9596bd507c05d8154fb2f4a4a083309228da3d188c8c3f56b6b90bed1365e6b",
+              "right_node_sha256": "1f53677c862f5c13ff50064d0b4ac38aa16ee9f5797422578fd74ca58f936b5d",
+              "payload_sha256": "3d62ad11f9ee1c594c1f840e144bdb89d4625c7fb8f98524c007f1f017db158c",
+              "payload": {
+                "node_bindings": [
+                  {
+                    "node_id": "06fd0272-f0a6-4d83-a81e-7fa31dbd5eb7",
+                    "product": {
+                      "name": "Adobe Acrobat Standard 7.0 Windows",
+                      "manufacturer": "Adobe",
+                      "price": "299.00"
+                    }
+                  },
+                  {
+                    "node_id": "5e078857-071e-4104-854d-ff5d3f0616f1",
+                    "product": {
+                      "name": "Adobe Acrobat Standard 7.0 Windows",
+                      "manufacturer": "Adobe",
+                      "price": "299.00"
+                    }
+                  }
+                ],
+                "assessment": {
+                  "schema_version": 1,
+                  "protocol": "jev_product_alignment_v1",
+                  "provider": "typesafe_jev",
+                  "model": "jev-1.13.0",
+                  "questions_sha256": "39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905",
+                  "configuration_sha256": "c8a65d2b9553d4e2cb47ab023f97ee1c161b2b02256ce5a2b142efbd0c4c2fe2",
+                  "left_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+                  "right_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+                  "request_sha256": "404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f",
+                  "score": 2.0,
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "different": 0.0,
+                    "related_or_ambiguous": 0.0,
+                    "same": 1.0
+                  },
+                  "same_name_probability": 0.99,
+                  "same_manufacturer_probability": 0.99,
+                  "compatible_price_probability": 0.96,
+                  "proposal_threshold": 1.5,
+                  "proposal_recommended": true,
+                  "automatic_merge_authorized": false,
+                  "input_tokens": 501,
+                  "output_tokens": 71,
+                  "attempts": 1,
+                  "elapsed_seconds": 0.436315,
+                  "assessment_sha256": "aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128"
+                }
+              }
+            },
+            "edge": {
+              "id": "56311b66-2c9a-567c-93c3-7889bbcf5b59",
+              "source_id": "06fd0272-f0a6-4d83-a81e-7fa31dbd5eb7",
+              "target_id": "5e078857-071e-4104-854d-ff5d3f0616f1",
+              "edge_type": "relates_to",
+              "user_id": "accept",
+              "confidence": 1.0,
+              "valid_from": "2026-09-22T17:56:53.568148Z",
+              "valid_to": null,
+              "provenance_event_id": null,
+              "metadata": {
+                "relation": "alias",
+                "alias_type": "semantic",
+                "identity_verified": false,
+                "alias_operation_id": "77439271-e9de-599d-9e95-0d44099cd868",
+                "proposal_evidence": {
+                  "kind": "typesafe_jev_product_alignment_v1",
+                  "provider": "typesafe_jev",
+                  "protocol": "jev_product_alignment_v1",
+                  "model": "jev-1.13.0",
+                  "request_sha256": "404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f",
+                  "assessment_sha256": "aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128",
+                  "payload_sha256": "3d62ad11f9ee1c594c1f840e144bdb89d4625c7fb8f98524c007f1f017db158c"
+                }
+              },
+              "created_at": "2026-09-22T17:56:53.568148Z"
+            }
+          },
+          "review": {
+            "version": 1,
+            "policy": "explicit_alias_proposal_review_v1",
+            "operation_id": "c5b8ddcb-8f57-596c-b9c9-c88e47ef5b54",
+            "proposal_operation_id": "77439271-e9de-599d-9e95-0d44099cd868",
+            "proposal_payload_sha256": "d1b8bfd9b8509f168ab5b28387946ebcf3af52ca0ef10d19249be99c2c6549ee",
+            "proposal_payload": "{\"record\":\"{\\\"version\\\": 2, \\\"policy\\\": \\\"unverified_alias_proposals_v2\\\", \\\"operation_id\\\": \\\"77439271-e9de-599d-9e95-0d44099cd868\\\", \\\"alias_type\\\": \\\"semantic\\\", \\\"score\\\": 1.0, \\\"left_before\\\": {\\\"id\\\": \\\"06fd0272-f0a6-4d83-a81e-7fa31dbd5eb7\\\", \\\"user_id\\\": \\\"accept\\\", \\\"session_id\\\": null, \\\"scope\\\": \\\"personal\\\", \\\"created_at\\\": \\\"2026-09-22T17:56:52.557286+00:00\\\", \\\"updated_at\\\": \\\"2026-09-22T17:56:52.557286+00:00\\\", \\\"node_type\\\": \\\"entity\\\", \\\"content\\\": \\\"Adobe Acrobat Standard 7.0 Windows\\\", \\\"metadata\\\": {\\\"entity_type\\\": \\\"product\\\"}, \\\"confidence\\\": 0.800000011920929, \\\"salience\\\": 0.5, \\\"epistemic_type\\\": \\\"asserted\\\", \\\"source_type\\\": \\\"user_stated\\\", \\\"lifecycle_state\\\": \\\"tentative\\\", \\\"event_time\\\": null, \\\"valid_from\\\": \\\"2026-09-22T17:56:52.557289+00:00\\\", \\\"valid_to\\\": null, \\\"superseded_by\\\": null, \\\"evidence_refs\\\": [\\\"1c55a3fc-d503-4ea9-82d0-06cf83556ca9\\\"], \\\"decay_profile\\\": \\\"medium\\\", \\\"last_reinforced_at\\\": \\\"2026-09-22T17:56:52.557308+00:00\\\", \\\"reinforcement_boost\\\": 0.0, \\\"salience_base\\\": 0.5, \\\"confidence_base\\\": 0.800000011920929, \\\"pinned\\\": false, \\\"ttl_days\\\": null}, \\\"right_before\\\": {\\\"id\\\": \\\"5e078857-071e-4104-854d-ff5d3f0616f1\\\", \\\"user_id\\\": \\\"accept\\\", \\\"session_id\\\": null, \\\"scope\\\": \\\"personal\\\", \\\"created_at\\\": \\\"2026-09-22T17:56:53.053319+00:00\\\", \\\"updated_at\\\": \\\"2026-09-22T17:56:53.053319+00:00\\\", \\\"node_type\\\": \\\"entity\\\", \\\"content\\\": \\\"Adobe Acrobat Standard 7.0 Windows\\\", \\\"metadata\\\": {\\\"entity_type\\\": \\\"product\\\"}, \\\"confidence\\\": 0.800000011920929, \\\"salience\\\": 0.5, \\\"epistemic_type\\\": \\\"asserted\\\", \\\"source_type\\\": \\\"user_stated\\\", \\\"lifecycle_state\\\": \\\"tentative\\\", \\\"event_time\\\": null, \\\"valid_from\\\": \\\"2026-09-22T17:56:53.053326+00:00\\\", \\\"valid_to\\\": null, \\\"superseded_by\\\": null, \\\"evidence_refs\\\": [\\\"b5ca02e2-7fc2-4293-9208-3cd334a3a67c\\\"], \\\"decay_profile\\\": \\\"medium\\\", \\\"last_reinforced_at\\\": \\\"2026-09-22T17:56:53.053327+00:00\\\", \\\"reinforcement_boost\\\": 0.0, \\\"salience_base\\\": 0.5, \\\"confidence_base\\\": 0.800000011920929, \\\"pinned\\\": false, \\\"ttl_days\\\": null}, \\\"evidence\\\": {\\\"version\\\": 1, \\\"kind\\\": \\\"typesafe_jev_product_alignment_v1\\\", \\\"provider\\\": \\\"typesafe_jev\\\", \\\"protocol\\\": \\\"jev_product_alignment_v1\\\", \\\"model\\\": \\\"jev-1.13.0\\\", \\\"request_sha256\\\": \\\"404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f\\\", \\\"assessment_sha256\\\": \\\"aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128\\\", \\\"left_node_sha256\\\": \\\"b9596bd507c05d8154fb2f4a4a083309228da3d188c8c3f56b6b90bed1365e6b\\\", \\\"right_node_sha256\\\": \\\"1f53677c862f5c13ff50064d0b4ac38aa16ee9f5797422578fd74ca58f936b5d\\\", \\\"payload_sha256\\\": \\\"3d62ad11f9ee1c594c1f840e144bdb89d4625c7fb8f98524c007f1f017db158c\\\", \\\"payload\\\": {\\\"node_bindings\\\": [{\\\"node_id\\\": \\\"06fd0272-f0a6-4d83-a81e-7fa31dbd5eb7\\\", \\\"product\\\": {\\\"name\\\": \\\"Adobe Acrobat Standard 7.0 Windows\\\", \\\"manufacturer\\\": \\\"Adobe\\\", \\\"price\\\": \\\"299.00\\\"}}, {\\\"node_id\\\": \\\"5e078857-071e-4104-854d-ff5d3f0616f1\\\", \\\"product\\\": {\\\"name\\\": \\\"Adobe Acrobat Standard 7.0 Windows\\\", \\\"manufacturer\\\": \\\"Adobe\\\", \\\"price\\\": \\\"299.00\\\"}}], \\\"assessment\\\": {\\\"schema_version\\\": 1, \\\"protocol\\\": \\\"jev_product_alignment_v1\\\", \\\"provider\\\": \\\"typesafe_jev\\\", \\\"model\\\": \\\"jev-1.13.0\\\", \\\"questions_sha256\\\": \\\"39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905\\\", \\\"configuration_sha256\\\": \\\"c8a65d2b9553d4e2cb47ab023f97ee1c161b2b02256ce5a2b142efbd0c4c2fe2\\\", \\\"left_sha256\\\": \\\"05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4\\\", \\\"right_sha256\\\": \\\"05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4\\\", \\\"request_sha256\\\": \\\"404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f\\\", \\\"score\\\": 2.0, \\\"confidence\\\": 1.0, \\\"probabilities\\\": {\\\"different\\\": 0.0, \\\"related_or_ambiguous\\\": 0.0, \\\"same\\\": 1.0}, \\\"same_name_probability\\\": 0.99, \\\"same_manufacturer_probability\\\": 0.99, \\\"compatible_price_probability\\\": 0.96, \\\"proposal_threshold\\\": 1.5, \\\"proposal_recommended\\\": true, \\\"automatic_merge_authorized\\\": false, \\\"input_tokens\\\": 501, \\\"output_tokens\\\": 71, \\\"attempts\\\": 1, \\\"elapsed_seconds\\\": 0.436315, \\\"assessment_sha256\\\": \\\"aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128\\\"}}}, \\\"edge\\\": {\\\"id\\\": \\\"56311b66-2c9a-567c-93c3-7889bbcf5b59\\\", \\\"source_id\\\": \\\"06fd0272-f0a6-4d83-a81e-7fa31dbd5eb7\\\", \\\"target_id\\\": \\\"5e078857-071e-4104-854d-ff5d3f0616f1\\\", \\\"edge_type\\\": \\\"relates_to\\\", \\\"user_id\\\": \\\"accept\\\", \\\"confidence\\\": 1.0, \\\"valid_from\\\": \\\"2026-09-22T17:56:53.568148+00:00\\\", \\\"valid_to\\\": null, \\\"provenance_event_id\\\": null, \\\"metadata\\\": {\\\"relation\\\": \\\"alias\\\", \\\"alias_type\\\": \\\"semantic\\\", \\\"identity_verified\\\": false, \\\"alias_operation_id\\\": \\\"77439271-e9de-599d-9e95-0d44099cd868\\\", \\\"proposal_evidence\\\": {\\\"kind\\\": \\\"typesafe_jev_product_alignment_v1\\\", \\\"provider\\\": \\\"typesafe_jev\\\", \\\"protocol\\\": \\\"jev_product_alignment_v1\\\", \\\"model\\\": \\\"jev-1.13.0\\\", \\\"request_sha256\\\": \\\"404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f\\\", \\\"assessment_sha256\\\": \\\"aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128\\\", \\\"payload_sha256\\\": \\\"3d62ad11f9ee1c594c1f840e144bdb89d4625c7fb8f98524c007f1f017db158c\\\"}}, \\\"created_at\\\": \\\"2026-09-22T17:56:53.568148+00:00\\\"}}\",\"sha256\":\"4f897bd63ddfc81c2721a08e30d0db3bb1c4c743bf5cf6b7b28f08671d87d2c7\"}",
+            "user_id": "accept",
+            "scope": "personal",
+            "decision": "accepted",
+            "reviewer_id": "benchmark:authored-source-review",
+            "reason": "Exact authored fields agree.",
+            "decided_at": "2026-09-22T17:56:53.574525Z",
+            "verified_edge": {
+              "id": "4a70aa30-5416-561e-a271-7e017e734494",
+              "source_id": "06fd0272-f0a6-4d83-a81e-7fa31dbd5eb7",
+              "target_id": "5e078857-071e-4104-854d-ff5d3f0616f1",
+              "edge_type": "relates_to",
+              "user_id": "accept",
+              "confidence": 1.0,
+              "valid_from": "2026-09-22T17:56:53.574525Z",
+              "valid_to": null,
+              "provenance_event_id": null,
+              "metadata": {
+                "relation": "alias",
+                "alias_type": "semantic",
+                "identity_verified": true,
+                "proposal_operation_id": "77439271-e9de-599d-9e95-0d44099cd868",
+                "review_operation_id": "c5b8ddcb-8f57-596c-b9c9-c88e47ef5b54",
+                "reviewer_id": "benchmark:authored-source-review"
+              },
+              "created_at": "2026-09-22T17:56:53.574525Z"
+            }
+          }
+        }
+      ],
+      "both_entities_retained": true,
+      "restart_verified": true,
+      "elapsed_seconds": 1.8140405000012834,
+      "pack": {
+        "files": [
+          {
+            "path": "lexical_index/.managed.json",
+            "bytes": 502,
+            "sha256": "acb262ac007eb72890ad1f2dd855246e3f2d52b4caa8e7598fa896bbf008b14f"
+          },
+          {
+            "path": "lexical_index/bcf792b423f9422dafa6dc369e1a8467.fast",
+            "bytes": 146,
+            "sha256": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae"
+          },
+          {
+            "path": "lexical_index/bcf792b423f9422dafa6dc369e1a8467.fieldnorm",
+            "bytes": 133,
+            "sha256": "507fe846df1f15e0589a6be707b8d69fdcd4074b4736e17378a76d3bb33cecef"
+          },
+          {
+            "path": "lexical_index/bcf792b423f9422dafa6dc369e1a8467.idx",
+            "bytes": 188,
+            "sha256": "33c80c1d6fec428181fe7602fa363fb0a203dd0cceed9d667d39ca6bd18c959d"
+          },
+          {
+            "path": "lexical_index/bcf792b423f9422dafa6dc369e1a8467.pos",
+            "bytes": 148,
+            "sha256": "9f5e1f3db733b39663ef75cefbad123e299499a0e005c1ad31781dff4cf25a67"
+          },
+          {
+            "path": "lexical_index/bcf792b423f9422dafa6dc369e1a8467.store",
+            "bytes": 263,
+            "sha256": "4495d583c78cf5e756fe62273eaf14014539376ed974eba7b502f5e0dec5d305"
+          },
+          {
+            "path": "lexical_index/bcf792b423f9422dafa6dc369e1a8467.term",
+            "bytes": 772,
+            "sha256": "0f791b148ec3fa2a61c2e60a7f83fea83eb479c39444a8eb6cce524b32bd54a3"
+          },
+          {
+            "path": "lexical_index/dfecc801a8d04dada674727dd7ba3108.fast",
+            "bytes": 146,
+            "sha256": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae"
+          },
+          {
+            "path": "lexical_index/dfecc801a8d04dada674727dd7ba3108.fieldnorm",
+            "bytes": 133,
+            "sha256": "507fe846df1f15e0589a6be707b8d69fdcd4074b4736e17378a76d3bb33cecef"
+          },
+          {
+            "path": "lexical_index/dfecc801a8d04dada674727dd7ba3108.idx",
+            "bytes": 188,
+            "sha256": "33c80c1d6fec428181fe7602fa363fb0a203dd0cceed9d667d39ca6bd18c959d"
+          },
+          {
+            "path": "lexical_index/dfecc801a8d04dada674727dd7ba3108.pos",
+            "bytes": 148,
+            "sha256": "9f5e1f3db733b39663ef75cefbad123e299499a0e005c1ad31781dff4cf25a67"
+          },
+          {
+            "path": "lexical_index/dfecc801a8d04dada674727dd7ba3108.store",
+            "bytes": 263,
+            "sha256": "2980972589654f7179cd76fb3a484994b0239977b6307a42cb858e5760d57da6"
+          },
+          {
+            "path": "lexical_index/dfecc801a8d04dada674727dd7ba3108.term",
+            "bytes": 773,
+            "sha256": "e7f1f6053f92a8ba73b1dacec3c9301107a22e3d5a1112c04595a4dc7ad72548"
+          },
+          {
+            "path": "lexical_index/meta.json",
+            "bytes": 1670,
+            "sha256": "06c9aecbe549ca13da91c35f2416fe56f7c7f0dd7f255fb10917fe2e0c161774"
+          },
+          {
+            "path": "memory.duckdb",
+            "bytes": 9973760,
+            "sha256": "75c215185161ffee0849f4216e7b70f912da4ead714303cbd8d6b368b3548aae"
+          },
+          {
+            "path": "vectors.usearch",
+            "bytes": 3472,
+            "sha256": "32f1d4e7fece006c48ee17b0fec6cb2e295bf948e4620028992156d0b10e5f6d"
+          }
+        ],
+        "tree_sha256": "f024d97c6b2bb9fcf8a3630003859633d369195095e716b6b9b3ec4e79f325e9",
+        "bytes": 9982705
+      }
+    },
+    {
+      "id": "reject",
+      "status": "passed",
+      "config_sha256": "f43207f1920b050d3eb65cd190caa6b82c0f57cf08a77ec885c7bbf4d9c302b8",
+      "proposal": {
+        "assessment": {
+          "schema_version": 1,
+          "protocol": "jev_product_alignment_v1",
+          "provider": "typesafe_jev",
+          "model": "jev-1.13.0",
+          "questions_sha256": "39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905",
+          "configuration_sha256": "c8a65d2b9553d4e2cb47ab023f97ee1c161b2b02256ce5a2b142efbd0c4c2fe2",
+          "left_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+          "right_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+          "request_sha256": "404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f",
+          "score": 2.0,
+          "confidence": 1.0,
+          "probabilities": {
+            "different": 0.0,
+            "related_or_ambiguous": 0.0,
+            "same": 1.0
+          },
+          "same_name_probability": 0.99,
+          "same_manufacturer_probability": 0.99,
+          "compatible_price_probability": 0.96,
+          "proposal_threshold": 1.5,
+          "proposal_recommended": true,
+          "automatic_merge_authorized": false,
+          "input_tokens": 501,
+          "output_tokens": 71,
+          "attempts": 1,
+          "elapsed_seconds": 0.306255,
+          "assessment_sha256": "aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128"
+        },
+        "proposal_published": true,
+        "proposal_applied": true,
+        "proposal_operation_id": "d00dee8c-5921-5ab7-ab62-85c71bcd4d8b",
+        "proposal_edge_id": "eafa4956-2e89-59a5-a5ad-eef791f3be15",
+        "automatic_merge_authorized": false
+      },
+      "inert_before_review": true,
+      "review": {
+        "operation_id": "cbd0d8c6-e73a-52e3-bf8f-bbb390fb92b4",
+        "proposal_operation_id": "d00dee8c-5921-5ab7-ab62-85c71bcd4d8b",
+        "decision": "rejected",
+        "applied": true,
+        "verified_edge_id": null
+      },
+      "inbox_after_restart": [
+        {
+          "status": "rejected",
+          "proposal": {
+            "version": 2,
+            "policy": "unverified_alias_proposals_v2",
+            "operation_id": "d00dee8c-5921-5ab7-ab62-85c71bcd4d8b",
+            "alias_type": "semantic",
+            "score": 1.0,
+            "left_before": {
+              "id": "821314df-a640-46b5-9f27-cb7e2e97fa01",
+              "user_id": "reject",
+              "session_id": null,
+              "scope": "personal",
+              "created_at": "2026-09-22T17:56:53.673916Z",
+              "updated_at": "2026-09-22T17:56:53.673917Z",
+              "node_type": "entity",
+              "content": "Adobe Acrobat Standard 7.0 Windows",
+              "metadata": {
+                "entity_type": "product"
+              },
+              "confidence": 0.800000011920929,
+              "salience": 0.5,
+              "epistemic_type": "asserted",
+              "source_type": "user_stated",
+              "lifecycle_state": "tentative",
+              "event_time": null,
+              "valid_from": "2026-09-22T17:56:53.673919Z",
+              "valid_to": null,
+              "superseded_by": null,
+              "evidence_refs": [
+                "48c68e73-1630-4c00-989f-360bc608f1c1"
+              ],
+              "decay_profile": "medium",
+              "last_reinforced_at": "2026-09-22T17:56:53.673921Z",
+              "reinforcement_boost": 0.0,
+              "salience_base": 0.5,
+              "confidence_base": 0.800000011920929,
+              "pinned": false,
+              "ttl_days": null
+            },
+            "right_before": {
+              "id": "ad330a4e-ecf9-4dc7-b93b-6033bd4da585",
+              "user_id": "reject",
+              "session_id": null,
+              "scope": "personal",
+              "created_at": "2026-09-22T17:56:53.813551Z",
+              "updated_at": "2026-09-22T17:56:53.813551Z",
+              "node_type": "entity",
+              "content": "Adobe Acrobat Standard 7.0 Windows",
+              "metadata": {
+                "entity_type": "product"
+              },
+              "confidence": 0.800000011920929,
+              "salience": 0.5,
+              "epistemic_type": "asserted",
+              "source_type": "user_stated",
+              "lifecycle_state": "tentative",
+              "event_time": null,
+              "valid_from": "2026-09-22T17:56:53.813552Z",
+              "valid_to": null,
+              "superseded_by": null,
+              "evidence_refs": [
+                "9e2395c3-03cf-4bf3-8b3d-df368cbeefa9"
+              ],
+              "decay_profile": "medium",
+              "last_reinforced_at": "2026-09-22T17:56:53.813553Z",
+              "reinforcement_boost": 0.0,
+              "salience_base": 0.5,
+              "confidence_base": 0.800000011920929,
+              "pinned": false,
+              "ttl_days": null
+            },
+            "evidence": {
+              "version": 1,
+              "kind": "typesafe_jev_product_alignment_v1",
+              "provider": "typesafe_jev",
+              "protocol": "jev_product_alignment_v1",
+              "model": "jev-1.13.0",
+              "request_sha256": "404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f",
+              "assessment_sha256": "aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128",
+              "left_node_sha256": "aeea7b52b563d1c78cd5d49fbfbaf3716946ba2241e42a00b2b1d609c65dbad2",
+              "right_node_sha256": "263b0cc300fc520799a8a2cca2e99ebd32c3a03922a987d7a329b15468da9a69",
+              "payload_sha256": "1a44f46849887a20b8d8341b8259b97139a4b5fa204439c118e55bf45474ffa7",
+              "payload": {
+                "node_bindings": [
+                  {
+                    "node_id": "821314df-a640-46b5-9f27-cb7e2e97fa01",
+                    "product": {
+                      "name": "Adobe Acrobat Standard 7.0 Windows",
+                      "manufacturer": "Adobe",
+                      "price": "299.00"
+                    }
+                  },
+                  {
+                    "node_id": "ad330a4e-ecf9-4dc7-b93b-6033bd4da585",
+                    "product": {
+                      "name": "Adobe Acrobat Standard 7.0 Windows",
+                      "manufacturer": "Adobe",
+                      "price": "299.00"
+                    }
+                  }
+                ],
+                "assessment": {
+                  "schema_version": 1,
+                  "protocol": "jev_product_alignment_v1",
+                  "provider": "typesafe_jev",
+                  "model": "jev-1.13.0",
+                  "questions_sha256": "39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905",
+                  "configuration_sha256": "c8a65d2b9553d4e2cb47ab023f97ee1c161b2b02256ce5a2b142efbd0c4c2fe2",
+                  "left_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+                  "right_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+                  "request_sha256": "404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f",
+                  "score": 2.0,
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "different": 0.0,
+                    "related_or_ambiguous": 0.0,
+                    "same": 1.0
+                  },
+                  "same_name_probability": 0.99,
+                  "same_manufacturer_probability": 0.99,
+                  "compatible_price_probability": 0.96,
+                  "proposal_threshold": 1.5,
+                  "proposal_recommended": true,
+                  "automatic_merge_authorized": false,
+                  "input_tokens": 501,
+                  "output_tokens": 71,
+                  "attempts": 1,
+                  "elapsed_seconds": 0.306255,
+                  "assessment_sha256": "aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128"
+                }
+              }
+            },
+            "edge": {
+              "id": "eafa4956-2e89-59a5-a5ad-eef791f3be15",
+              "source_id": "821314df-a640-46b5-9f27-cb7e2e97fa01",
+              "target_id": "ad330a4e-ecf9-4dc7-b93b-6033bd4da585",
+              "edge_type": "relates_to",
+              "user_id": "reject",
+              "confidence": 1.0,
+              "valid_from": "2026-09-22T17:56:54.190015Z",
+              "valid_to": null,
+              "provenance_event_id": null,
+              "metadata": {
+                "relation": "alias",
+                "alias_type": "semantic",
+                "identity_verified": false,
+                "alias_operation_id": "d00dee8c-5921-5ab7-ab62-85c71bcd4d8b",
+                "proposal_evidence": {
+                  "kind": "typesafe_jev_product_alignment_v1",
+                  "provider": "typesafe_jev",
+                  "protocol": "jev_product_alignment_v1",
+                  "model": "jev-1.13.0",
+                  "request_sha256": "404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f",
+                  "assessment_sha256": "aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128",
+                  "payload_sha256": "1a44f46849887a20b8d8341b8259b97139a4b5fa204439c118e55bf45474ffa7"
+                }
+              },
+              "created_at": "2026-09-22T17:56:54.190015Z"
+            }
+          },
+          "review": {
+            "version": 1,
+            "policy": "explicit_alias_proposal_review_v1",
+            "operation_id": "cbd0d8c6-e73a-52e3-bf8f-bbb390fb92b4",
+            "proposal_operation_id": "d00dee8c-5921-5ab7-ab62-85c71bcd4d8b",
+            "proposal_payload_sha256": "ab81f7f3272006102cb8836a621b1911293bf808126bc5dcd25d9ef85fc8b845",
+            "proposal_payload": "{\"record\":\"{\\\"version\\\": 2, \\\"policy\\\": \\\"unverified_alias_proposals_v2\\\", \\\"operation_id\\\": \\\"d00dee8c-5921-5ab7-ab62-85c71bcd4d8b\\\", \\\"alias_type\\\": \\\"semantic\\\", \\\"score\\\": 1.0, \\\"left_before\\\": {\\\"id\\\": \\\"821314df-a640-46b5-9f27-cb7e2e97fa01\\\", \\\"user_id\\\": \\\"reject\\\", \\\"session_id\\\": null, \\\"scope\\\": \\\"personal\\\", \\\"created_at\\\": \\\"2026-09-22T17:56:53.673916+00:00\\\", \\\"updated_at\\\": \\\"2026-09-22T17:56:53.673917+00:00\\\", \\\"node_type\\\": \\\"entity\\\", \\\"content\\\": \\\"Adobe Acrobat Standard 7.0 Windows\\\", \\\"metadata\\\": {\\\"entity_type\\\": \\\"product\\\"}, \\\"confidence\\\": 0.800000011920929, \\\"salience\\\": 0.5, \\\"epistemic_type\\\": \\\"asserted\\\", \\\"source_type\\\": \\\"user_stated\\\", \\\"lifecycle_state\\\": \\\"tentative\\\", \\\"event_time\\\": null, \\\"valid_from\\\": \\\"2026-09-22T17:56:53.673919+00:00\\\", \\\"valid_to\\\": null, \\\"superseded_by\\\": null, \\\"evidence_refs\\\": [\\\"48c68e73-1630-4c00-989f-360bc608f1c1\\\"], \\\"decay_profile\\\": \\\"medium\\\", \\\"last_reinforced_at\\\": \\\"2026-09-22T17:56:53.673921+00:00\\\", \\\"reinforcement_boost\\\": 0.0, \\\"salience_base\\\": 0.5, \\\"confidence_base\\\": 0.800000011920929, \\\"pinned\\\": false, \\\"ttl_days\\\": null}, \\\"right_before\\\": {\\\"id\\\": \\\"ad330a4e-ecf9-4dc7-b93b-6033bd4da585\\\", \\\"user_id\\\": \\\"reject\\\", \\\"session_id\\\": null, \\\"scope\\\": \\\"personal\\\", \\\"created_at\\\": \\\"2026-09-22T17:56:53.813551+00:00\\\", \\\"updated_at\\\": \\\"2026-09-22T17:56:53.813551+00:00\\\", \\\"node_type\\\": \\\"entity\\\", \\\"content\\\": \\\"Adobe Acrobat Standard 7.0 Windows\\\", \\\"metadata\\\": {\\\"entity_type\\\": \\\"product\\\"}, \\\"confidence\\\": 0.800000011920929, \\\"salience\\\": 0.5, \\\"epistemic_type\\\": \\\"asserted\\\", \\\"source_type\\\": \\\"user_stated\\\", \\\"lifecycle_state\\\": \\\"tentative\\\", \\\"event_time\\\": null, \\\"valid_from\\\": \\\"2026-09-22T17:56:53.813552+00:00\\\", \\\"valid_to\\\": null, \\\"superseded_by\\\": null, \\\"evidence_refs\\\": [\\\"9e2395c3-03cf-4bf3-8b3d-df368cbeefa9\\\"], \\\"decay_profile\\\": \\\"medium\\\", \\\"last_reinforced_at\\\": \\\"2026-09-22T17:56:53.813553+00:00\\\", \\\"reinforcement_boost\\\": 0.0, \\\"salience_base\\\": 0.5, \\\"confidence_base\\\": 0.800000011920929, \\\"pinned\\\": false, \\\"ttl_days\\\": null}, \\\"evidence\\\": {\\\"version\\\": 1, \\\"kind\\\": \\\"typesafe_jev_product_alignment_v1\\\", \\\"provider\\\": \\\"typesafe_jev\\\", \\\"protocol\\\": \\\"jev_product_alignment_v1\\\", \\\"model\\\": \\\"jev-1.13.0\\\", \\\"request_sha256\\\": \\\"404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f\\\", \\\"assessment_sha256\\\": \\\"aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128\\\", \\\"left_node_sha256\\\": \\\"aeea7b52b563d1c78cd5d49fbfbaf3716946ba2241e42a00b2b1d609c65dbad2\\\", \\\"right_node_sha256\\\": \\\"263b0cc300fc520799a8a2cca2e99ebd32c3a03922a987d7a329b15468da9a69\\\", \\\"payload_sha256\\\": \\\"1a44f46849887a20b8d8341b8259b97139a4b5fa204439c118e55bf45474ffa7\\\", \\\"payload\\\": {\\\"node_bindings\\\": [{\\\"node_id\\\": \\\"821314df-a640-46b5-9f27-cb7e2e97fa01\\\", \\\"product\\\": {\\\"name\\\": \\\"Adobe Acrobat Standard 7.0 Windows\\\", \\\"manufacturer\\\": \\\"Adobe\\\", \\\"price\\\": \\\"299.00\\\"}}, {\\\"node_id\\\": \\\"ad330a4e-ecf9-4dc7-b93b-6033bd4da585\\\", \\\"product\\\": {\\\"name\\\": \\\"Adobe Acrobat Standard 7.0 Windows\\\", \\\"manufacturer\\\": \\\"Adobe\\\", \\\"price\\\": \\\"299.00\\\"}}], \\\"assessment\\\": {\\\"schema_version\\\": 1, \\\"protocol\\\": \\\"jev_product_alignment_v1\\\", \\\"provider\\\": \\\"typesafe_jev\\\", \\\"model\\\": \\\"jev-1.13.0\\\", \\\"questions_sha256\\\": \\\"39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905\\\", \\\"configuration_sha256\\\": \\\"c8a65d2b9553d4e2cb47ab023f97ee1c161b2b02256ce5a2b142efbd0c4c2fe2\\\", \\\"left_sha256\\\": \\\"05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4\\\", \\\"right_sha256\\\": \\\"05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4\\\", \\\"request_sha256\\\": \\\"404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f\\\", \\\"score\\\": 2.0, \\\"confidence\\\": 1.0, \\\"probabilities\\\": {\\\"different\\\": 0.0, \\\"related_or_ambiguous\\\": 0.0, \\\"same\\\": 1.0}, \\\"same_name_probability\\\": 0.99, \\\"same_manufacturer_probability\\\": 0.99, \\\"compatible_price_probability\\\": 0.96, \\\"proposal_threshold\\\": 1.5, \\\"proposal_recommended\\\": true, \\\"automatic_merge_authorized\\\": false, \\\"input_tokens\\\": 501, \\\"output_tokens\\\": 71, \\\"attempts\\\": 1, \\\"elapsed_seconds\\\": 0.306255, \\\"assessment_sha256\\\": \\\"aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128\\\"}}}, \\\"edge\\\": {\\\"id\\\": \\\"eafa4956-2e89-59a5-a5ad-eef791f3be15\\\", \\\"source_id\\\": \\\"821314df-a640-46b5-9f27-cb7e2e97fa01\\\", \\\"target_id\\\": \\\"ad330a4e-ecf9-4dc7-b93b-6033bd4da585\\\", \\\"edge_type\\\": \\\"relates_to\\\", \\\"user_id\\\": \\\"reject\\\", \\\"confidence\\\": 1.0, \\\"valid_from\\\": \\\"2026-09-22T17:56:54.190015+00:00\\\", \\\"valid_to\\\": null, \\\"provenance_event_id\\\": null, \\\"metadata\\\": {\\\"relation\\\": \\\"alias\\\", \\\"alias_type\\\": \\\"semantic\\\", \\\"identity_verified\\\": false, \\\"alias_operation_id\\\": \\\"d00dee8c-5921-5ab7-ab62-85c71bcd4d8b\\\", \\\"proposal_evidence\\\": {\\\"kind\\\": \\\"typesafe_jev_product_alignment_v1\\\", \\\"provider\\\": \\\"typesafe_jev\\\", \\\"protocol\\\": \\\"jev_product_alignment_v1\\\", \\\"model\\\": \\\"jev-1.13.0\\\", \\\"request_sha256\\\": \\\"404b29686c289d6d8408dce8417f7396c3665359d8696a70f77ca844ba9a1d9f\\\", \\\"assessment_sha256\\\": \\\"aee4d9713dbe07fe72be5846b48d625a2930f082533b8ff8f183fb29b423d128\\\", \\\"payload_sha256\\\": \\\"1a44f46849887a20b8d8341b8259b97139a4b5fa204439c118e55bf45474ffa7\\\"}}, \\\"created_at\\\": \\\"2026-09-22T17:56:54.190015+00:00\\\"}}\",\"sha256\":\"8c77fc7404d494d2ae61f979510e8e91d4d053bc085724f65b6b51c175687f9c\"}",
+            "user_id": "reject",
+            "scope": "personal",
+            "decision": "rejected",
+            "reviewer_id": "benchmark:authored-source-review",
+            "reason": "Authored rejection-path control; retain separate identities.",
+            "decided_at": "2026-09-22T17:56:54.193772Z",
+            "verified_edge": null
+          }
+        }
+      ],
+      "both_entities_retained": true,
+      "restart_verified": true,
+      "elapsed_seconds": 0.6214705000020331,
+      "pack": {
+        "files": [
+          {
+            "path": "lexical_index/.managed.json",
+            "bytes": 502,
+            "sha256": "c6d6ab45508e00aa3eb6a43642c053bd3d3f4e8f135716aef0462bc59dcdd3ae"
+          },
+          {
+            "path": "lexical_index/1351c42be5234019b26ab6dcd3764469.fast",
+            "bytes": 146,
+            "sha256": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae"
+          },
+          {
+            "path": "lexical_index/1351c42be5234019b26ab6dcd3764469.fieldnorm",
+            "bytes": 133,
+            "sha256": "507fe846df1f15e0589a6be707b8d69fdcd4074b4736e17378a76d3bb33cecef"
+          },
+          {
+            "path": "lexical_index/1351c42be5234019b26ab6dcd3764469.idx",
+            "bytes": 188,
+            "sha256": "33c80c1d6fec428181fe7602fa363fb0a203dd0cceed9d667d39ca6bd18c959d"
+          },
+          {
+            "path": "lexical_index/1351c42be5234019b26ab6dcd3764469.pos",
+            "bytes": 148,
+            "sha256": "9f5e1f3db733b39663ef75cefbad123e299499a0e005c1ad31781dff4cf25a67"
+          },
+          {
+            "path": "lexical_index/1351c42be5234019b26ab6dcd3764469.store",
+            "bytes": 263,
+            "sha256": "89c1b9182193bbf3d800929f9e2047d8062194209e3e68c5639996067b745940"
+          },
+          {
+            "path": "lexical_index/1351c42be5234019b26ab6dcd3764469.term",
+            "bytes": 773,
+            "sha256": "4bf21a6f497767c842087e78af0bca56b02105b6639c522b19120ff111a87077"
+          },
+          {
+            "path": "lexical_index/9f7e148049c64fe494abb8db1d422955.fast",
+            "bytes": 146,
+            "sha256": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae"
+          },
+          {
+            "path": "lexical_index/9f7e148049c64fe494abb8db1d422955.fieldnorm",
+            "bytes": 133,
+            "sha256": "507fe846df1f15e0589a6be707b8d69fdcd4074b4736e17378a76d3bb33cecef"
+          },
+          {
+            "path": "lexical_index/9f7e148049c64fe494abb8db1d422955.idx",
+            "bytes": 188,
+            "sha256": "33c80c1d6fec428181fe7602fa363fb0a203dd0cceed9d667d39ca6bd18c959d"
+          },
+          {
+            "path": "lexical_index/9f7e148049c64fe494abb8db1d422955.pos",
+            "bytes": 148,
+            "sha256": "9f5e1f3db733b39663ef75cefbad123e299499a0e005c1ad31781dff4cf25a67"
+          },
+          {
+            "path": "lexical_index/9f7e148049c64fe494abb8db1d422955.store",
+            "bytes": 262,
+            "sha256": "71ff751c9f8e64c565029b0bfc94c046dc504b184d26e866b03aac0c52a18aa8"
+          },
+          {
+            "path": "lexical_index/9f7e148049c64fe494abb8db1d422955.term",
+            "bytes": 773,
+            "sha256": "ee323db2cc897d2387a5784cc95809c8ecf9901f5f6b5e3dc19baadbf145a839"
+          },
+          {
+            "path": "lexical_index/meta.json",
+            "bytes": 1670,
+            "sha256": "891f5ee1f3e0a5d451a0e3e0928593f92a0851496f9cebc106d2b1c4060c675d"
+          },
+          {
+            "path": "memory.duckdb",
+            "bytes": 9973760,
+            "sha256": "54a7bb1dfd7980d92abf58b66e094a915cca7aaa38e0b0b502f72e36fe14d2ba"
+          },
+          {
+            "path": "vectors.usearch",
+            "bytes": 3472,
+            "sha256": "32f1d4e7fece006c48ee17b0fec6cb2e295bf948e4620028992156d0b10e5f6d"
+          }
+        ],
+        "tree_sha256": "973f833253ecbb776df4e8cb7f3f7a7adafa6a61f4245e393ef7334199341df9",
+        "bytes": 9982705
+      }
+    },
+    {
+      "id": "different",
+      "status": "passed",
+      "config_sha256": "1b09e03064a779c9a71326e0154959c632f5288152c06d1aa8e23c79ce66a516",
+      "proposal": {
+        "assessment": {
+          "schema_version": 1,
+          "protocol": "jev_product_alignment_v1",
+          "provider": "typesafe_jev",
+          "model": "jev-1.13.0",
+          "questions_sha256": "39db006e0543f4342935925ab3418ebca9df007d6a14f743506c3af0a8c85905",
+          "configuration_sha256": "c8a65d2b9553d4e2cb47ab023f97ee1c161b2b02256ce5a2b142efbd0c4c2fe2",
+          "left_sha256": "05473939dbfac25aa6dd96f444cd66a99003152ee149325124789788f1d972f4",
+          "right_sha256": "ba538a790fd314c2c6d12c1cffd528f0eb2172a4c25429a0433a474a3a2a5046",
+          "request_sha256": "11e9b884b505c1d7521cb94de4fa8685654e7057e808b9896cf9457c07237d13",
+          "score": 0.0,
+          "confidence": 1.0,
+          "probabilities": {
+            "different": 1.0,
+            "related_or_ambiguous": 0.0,
+            "same": 0.0
+          },
+          "same_name_probability": 0.01,
+          "same_manufacturer_probability": 0.01,
+          "compatible_price_probability": 0.04,
+          "proposal_threshold": 1.5,
+          "proposal_recommended": false,
+          "automatic_merge_authorized": false,
+          "input_tokens": 499,
+          "output_tokens": 71,
+          "attempts": 1,
+          "elapsed_seconds": 0.311417,
+          "assessment_sha256": "4bfddc17bef1b57d75e395a04f61c4434372e008927e8a487b8603621965a6c9"
+        },
+        "proposal_published": false,
+        "proposal_applied": false,
+        "proposal_operation_id": null,
+        "proposal_edge_id": null,
+        "automatic_merge_authorized": false
+      },
+      "inert_before_review": true,
+      "inbox_after_restart": [],
+      "both_entities_retained": true,
+      "restart_verified": true,
+      "elapsed_seconds": 0.6482079580018762,
+      "pack": {
+        "files": [
+          {
+            "path": "lexical_index/.managed.json",
+            "bytes": 502,
+            "sha256": "e568dfd2f99dc6836599a17fdbddb1a57aaff7681a4be0e99832aeed67513181"
+          },
+          {
+            "path": "lexical_index/0baf60aa61d2443db467cfc22630c328.fast",
+            "bytes": 146,
+            "sha256": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae"
+          },
+          {
+            "path": "lexical_index/0baf60aa61d2443db467cfc22630c328.fieldnorm",
+            "bytes": 134,
+            "sha256": "be39e7949951eb7244ec7ac1dff92d15f58ad220c616faa0bc45adf8c0dbaf43"
+          },
+          {
+            "path": "lexical_index/0baf60aa61d2443db467cfc22630c328.idx",
+            "bytes": 184,
+            "sha256": "95d7af2fa0c01aa002b911542be55b39d3a29cd6035e0d54e60c0c19b8a64445"
+          },
+          {
+            "path": "lexical_index/0baf60aa61d2443db467cfc22630c328.pos",
+            "bytes": 145,
+            "sha256": "2658723d271bbb24677d1e84698b96db625b4f851486fdb4ee1de8d2812f6657"
+          },
+          {
+            "path": "lexical_index/0baf60aa61d2443db467cfc22630c328.store",
+            "bytes": 258,
+            "sha256": "4e1250cf608571b9952d95dceaade526663031018e14d17e7cfa41773f516b77"
+          },
+          {
+            "path": "lexical_index/0baf60aa61d2443db467cfc22630c328.term",
+            "bytes": 761,
+            "sha256": "64dd52371a4758856ccab528cff0551f1388c722fd9e4f8f3adcc2403d92450b"
+          },
+          {
+            "path": "lexical_index/cae6c6cfb49d4782833696d49a3f82a8.fast",
+            "bytes": 146,
+            "sha256": "200bba058650490211d4035fa11011d3be0346fff6405fb8d782e824a62c54ae"
+          },
+          {
+            "path": "lexical_index/cae6c6cfb49d4782833696d49a3f82a8.fieldnorm",
+            "bytes": 133,
+            "sha256": "507fe846df1f15e0589a6be707b8d69fdcd4074b4736e17378a76d3bb33cecef"
+          },
+          {
+            "path": "lexical_index/cae6c6cfb49d4782833696d49a3f82a8.idx",
+            "bytes": 188,
+            "sha256": "33c80c1d6fec428181fe7602fa363fb0a203dd0cceed9d667d39ca6bd18c959d"
+          },
+          {
+            "path": "lexical_index/cae6c6cfb49d4782833696d49a3f82a8.pos",
+            "bytes": 148,
+            "sha256": "9f5e1f3db733b39663ef75cefbad123e299499a0e005c1ad31781dff4cf25a67"
+          },
+          {
+            "path": "lexical_index/cae6c6cfb49d4782833696d49a3f82a8.store",
+            "bytes": 268,
+            "sha256": "b5aeef5acd2ca90929855f56ff2e7c27a9c4548e5c1a1772e93a71fe618b7eaf"
+          },
+          {
+            "path": "lexical_index/cae6c6cfb49d4782833696d49a3f82a8.term",
+            "bytes": 775,
+            "sha256": "6d01c0656fbd4e27ba3f182950f7efb94ba92d2dc77669a7d36f5a6ea73d8c14"
+          },
+          {
+            "path": "lexical_index/meta.json",
+            "bytes": 1670,
+            "sha256": "bb525cd45405ead7d5b8e369e895343ff81bcbac5f3f006f9f620fa439b7fa1a"
+          },
+          {
+            "path": "memory.duckdb",
+            "bytes": 7876608,
+            "sha256": "fef2d4771fd06e3cdd1f241d5c8f7298e516a9863328790b7c2af867d915dd55"
+          },
+          {
+            "path": "vectors.usearch",
+            "bytes": 3472,
+            "sha256": "bd2b045d8547df2407e04fc07db080035a457a94558afdcc209e0e0076b2b6a1"
+          }
+        ],
+        "tree_sha256": "36a137ef8bde1c866cced2410d731395ed495c82aa2bd26aa5fa9d0f720cba00",
+        "bytes": 7885538
+      }
+    }
+  ],
+  "temporal": {
+    "status": "passed",
+    "resolver": {
+      "resolution": {
+        "operation": "elapsed_between",
+        "operands": [
+          {
+            "name": "start",
+            "evidence_id": "00000000-0000-0000-0000-000000000001",
+            "quote": "I started the frame on January 1, 2026.",
+            "time_expression": "January 1, 2026",
+            "time_basis": "text_expression"
+          },
+          {
+            "name": "finish",
+            "evidence_id": "00000000-0000-0000-0000-000000000002",
+            "quote": "I finished the frame on January 5, 2026.",
+            "time_expression": "January 5, 2026",
+            "time_basis": "text_expression"
+          }
+        ]
+      },
+      "audit": {
+        "provider": "ollama",
+        "model": "deepseek-v4.1-flash:cloud",
+        "model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+        "provider_version": "0.34.2",
+        "request_sha256": "53b4c9542d863c23aa63d60d8703b326e10903d4d8f4e741f418d371a76d8150",
+        "response_sha256": "d7a694438f5f6bcf8374fd7c964b2c662a96579fe7ffec3677d03fd2ed412c86",
+        "attempts": 1,
+        "schema_repairs": 0,
+        "input_tokens": 393,
+        "output_tokens": 180,
+        "elapsed_ms": 2663.329
+      }
+    },
+    "gate": {
+      "provider": "typesafe_jev",
+      "model": "jev-1.13.0",
+      "request_sha256": "f89137215264856f136c894b9885abe6abb3b80435d2d8a407fa308c74ac0477",
+      "response_sha256": "833d160ae787545b1b20a69c671afe631a3551601e6badb4c036201af3f71029",
+      "probabilities": [
+        0.97,
+        0.97
+      ],
+      "minimum_probability": 0.97,
+      "attempts": 1,
+      "input_tokens": 572,
+      "output_tokens": 40,
+      "elapsed_ms": 334.001
+    }
+  },
+  "complete": true,
+  "passed": true
+}

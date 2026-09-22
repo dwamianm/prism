@@ -1,0 +1,14 @@
+{
+  "kind": "opt-in-interactions-reformulation-preflight-registration",
+  "registered_at": "2026-09-22T17:54:13.135365+00:00",
+  "production_source_sha256": "47779998c0965ff6ac35ab3dee2894bea68146b18a2ddad80c02c8868f3c5a5c",
+  "query": "Where did the user move from?",
+  "provider": "ollama",
+  "model": "deepseek-v4.1-flash:cloud",
+  "count": 2,
+  "max_retries": 2,
+  "whole_probe_timeout_seconds": 90,
+  "implementation": "Unmodified prme.retrieval.reformulation.reformulate_query; no replacement client or prompt.",
+  "fail_closed": "Any recorded provider exception, timeout, or empty reformulations fails readiness; retain fallback instead of treating it as an active arm.",
+  "dataset_calls": 0
+}
