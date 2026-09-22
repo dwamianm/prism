@@ -122,16 +122,19 @@ claim that the proposed repair has already improved answers. The failed arm
 and the existing interaction matrix remain unchanged.
 
 The [repair study](RERANKER-SCORE-REPAIR.md) is isolated on
-`research/reranker-score-repair-2026-09-22` at `6f98acd`. Its private research
+`research/reranker-score-repair-2026-09-22`, implemented at `6f98acd` with the
+scheduling derivative at `06a464d`. Its private research
 class places the neural-ranked prefix back on the original prefix's score
 range, preserves raw model scores and adds an explicit replayable assignment.
 There is no new public feature flag or default. All 97 relevant tests passed
 with one expected backend-specific skip, including live DuckDB/PostgreSQL
 receipt restart and old-byte compatibility. Its
-[registration](opt-in-rank-envelope-v1-registration.json) fixes complete
+[registration](opt-in-rank-envelope-v2-registration.json) fixes complete
 500-case baseline/legacy replay and a conditional paired answer trial. It is
-queued after the original historical matrix; no repaired benchmark result is
-available yet. The registration and validation files here are exact exports
+running its local source-replay phase; hosted answers wait for the original
+historical matrix. The initial version-1 waiter was withdrawn before any case
+under a recorded scheduling-only amendment. No repaired complete benchmark
+result is available yet. The registration and validation files here are exact exports
 from that separate branch, not a merge of its package changes.
 
 ## Development error review

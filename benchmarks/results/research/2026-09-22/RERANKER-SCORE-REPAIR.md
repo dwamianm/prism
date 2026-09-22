@@ -43,6 +43,16 @@ reranker alone does not justify promotion. Both control and candidate must finis
 and authenticate, every category/loss remains reported, and a production proposal
 would still need an untouched cohort and release review.
 
-The assay waits for the original fixed historical matrix to finish, preserving
-its source hashes and execution. The original fresh-ingestion arms and queued
+The [scheduling amendment](opt-in-rank-envelope-scheduling-amendment-v2.json)
+starts local source replay earlier using spare host capacity. Version 1 was
+withdrawn before any source case or answer call; its idle waiter alone was
+stopped. The [version 2 registration](opt-in-rank-envelope-v2-registration.json)
+retains identical evaluation and source-summary functions, algorithm, models,
+cohort, budgets and selection gates. Hosted answers still wait for the original
+historical matrix to finish. Source and answer work never alter that matrix's
+source hashes or its results. Fresh-ingestion arms and the queued
 MemoryAgentBench stage continue in the parent worktree.
+
+Validation: 97 tests passed with one expected backend-specific skip, and Ruff's
+correctness checks passed. The source evaluator also passed an authored
+end-to-end exact control replay and deliberately failed on changed context.

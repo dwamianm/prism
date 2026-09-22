@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 20:34 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 20:41 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -9,7 +9,8 @@ Production: `/Users/dwamianm/Sites/prism`, clean at `a66ee85`.
 Matrix: `/Users/dwamianm/Sites/prism-opt-in-study-2026-09-22`, branch
 `research/opt-in-interactions-2026-09-22`.
 Repair: `/Users/dwamianm/Sites/prism-reranker-repair-2026-09-22`, branch
-`research/reranker-score-repair-2026-09-22`, frozen repair at `6f98acd`.
+`research/reranker-score-repair-2026-09-22`, frozen repair at `6f98acd`,
+scheduling derivative at `06a464d`.
 Use `/Users/dwamianm/Sites/prism/.venv/bin/python`, with `PYTHONPATH=src`.
 MAB requires `PYTHONPATH=data/opt-in-study/mab-preprocessing:src`.
 
@@ -48,7 +49,7 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Exploratory top-two selector | 87252 | `successor-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
 | Marginal source assay | 68568 | `marginal-study-v1.log`; waits for all historical arms, then tests all three fixed policies on all 500 cases, with conditional full-cohort answer follow-up. |
-| Rank-envelope repair assay | 32160 | **Repair worktree** `data/opt-in-study/rank-envelope-study-v1.log`; waits for all historical arms, verifies 500 baseline and reranker replays, then runs one repair and conditional full-cohort answer follow-up. |
+| Rank-envelope repair assay | 44587 | **Repair worktree** `data/opt-in-study/rank-envelope-study-v2.log`; local source replay now running under scheduling amendment v2. Verifies all 500 baseline and reranker replays, then runs one repair. Conditional hosted answers still wait for all historical arms. The v1 idle waiter PID 3539/session 32160 was stopped before any case or hosted call. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
 Only an arm with complete `execution.json` and authenticated `verification.json`
@@ -57,8 +58,8 @@ artifacts and allow other independent prespecified arms to continue.
 
 The repair worktree references the matrix's verified controls and official
 prompt checkout through symlinks. They are inputs only. All repair outputs use
-its distinct `opt-in-rank-envelope-v1*` directories. Its source registration
-hash is `e2cdcaa1e7cb20919db7c539d2424f819ed7b826d3f2ccb0f949517cc8e88de1`.
+its distinct `opt-in-rank-envelope-v2*` directories. Its source registration
+hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
 
 ## Completed evidence
 
