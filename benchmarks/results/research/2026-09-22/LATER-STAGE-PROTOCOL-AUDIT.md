@@ -87,3 +87,22 @@ runner cannot substitute for its interactive task metric. Previously examined
 development and confirmation groups remain exposed; a new promotion cohort
 requires source-level separation. The reported failures of guidance and
 qualified-value restoration remain constraints on any proposed follow-up.
+
+## Reserved-source overlap check
+
+The [source-only exposure audit](opt-in-beam-source-exposure-v1.json) compares
+all source strings in reserved BEAM conversations 2–19 against examined BEAM
+0–1 and all 500 LongMemEval-S histories. It found zero shared exact or
+whitespace-normalized source strings, zero shared source strings between any
+reserved pair, and no duplicate full seed or full profile objects across the
+20 BEAM conversations. All 18 remain reserved; none was selected or excluded
+by an answer outcome. The code emits only identities, hashes and counts, and
+does not access the reserved probing-question/reference fields after decoding.
+No model call was made.
+
+This supports source separation within the available artifacts. It does not
+prove absence of semantic near-duplicates, model-training exposure, or human
+inspection outside the available project record. A prospective confirmation
+protocol must still fix the reader interface, candidate, entire cohort and
+scoring before inspecting probes or running inference. The native top-50
+protocol and a budgeted packed-bundle protocol remain distinct comparisons.
