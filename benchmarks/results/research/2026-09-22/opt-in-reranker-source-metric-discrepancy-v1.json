@@ -1,0 +1,46 @@
+{
+  "kind": "post-hoc-node-presence-versus-whole-source-discrepancy",
+  "question_id": "078150f1",
+  "capture_sha256": "ec9c75cab827e0ba781f4a19b604c0249ce4eed5fa8ed9aa956912ac4b9a2558",
+  "details": [
+    {
+      "session_position": 0,
+      "turn_index": 8,
+      "role": "user",
+      "node_id": "5b244912-20de-4fa9-86e8-b66fdf6039ce",
+      "source_characters": 531,
+      "rendered_characters": 531,
+      "node_present": true,
+      "full_source_present": true,
+      "source_prefix_present": true,
+      "ending": "ll thinking about signing up for that triathlon in June. Do you think it's a good idea to start training for it now, or should I wait until closer to the event?"
+    },
+    {
+      "session_position": 34,
+      "turn_index": 0,
+      "role": "user",
+      "node_id": "a5323acb-c9e1-42f1-a342-182f46d78396",
+      "source_characters": 231,
+      "rendered_characters": 231,
+      "node_present": true,
+      "full_source_present": true,
+      "source_prefix_present": true,
+      "ending": "in a charity cycling event and raised $250 in donations, which was a great experience. Do you have any advice on how to properly tune my bike after a long ride?"
+    },
+    {
+      "session_position": 34,
+      "turn_index": 1,
+      "role": "assistant",
+      "node_id": "5600f76f-eb40-47aa-8462-98860054f813",
+      "source_characters": 2735,
+      "rendered_characters": 84,
+      "node_present": true,
+      "full_source_present": false,
+      "source_prefix_present": false,
+      "ending": "id: 5600f76f-eb40-47aa-8462-98860054f813, type: fact, confidence: 0.6000000238418579"
+    }
+  ],
+  "interpretation": "Node-presence recall and complete verbatim source retention measure different representations. No primary score or source-assay gate is changed. Full-source retention is not semantic sufficiency.",
+  "model_calls": 0,
+  "sha256": "ca19c026da4bac0cb60a394acfb9daf6c485947df6ffc42ba0802a289a1fd6a3"
+}
