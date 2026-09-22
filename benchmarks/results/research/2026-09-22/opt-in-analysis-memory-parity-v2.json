@@ -1,0 +1,20 @@
+{
+  "kind": "exact-real-cohort-analysis-parity",
+  "passed": true,
+  "original_sha256": "4e32266f78294bffa2220b2eb3b11f36383f222fd0558d099da2264548250870",
+  "bounded_output_sha256": "452ac6145e7867822b3f3efacd975bd2a56471a75b69c8d7ea88aed8b36ac2de",
+  "ignored_fields": [
+    "analyzed_at",
+    "analysis_sha256"
+  ],
+  "compared_cases_per_arm": 500,
+  "compared_complete_arms": [
+    "baseline",
+    "episode_routing",
+    "evidence_augmentation",
+    "reranker"
+  ],
+  "wrapper_sha256": "6de5ba9e378700c6cf1e390126d6e9bf6a435d3ab832097847be40e7e1db1816",
+  "complete_artifact_checks_unchanged": true,
+  "selector_context_field_retained": true
+}
