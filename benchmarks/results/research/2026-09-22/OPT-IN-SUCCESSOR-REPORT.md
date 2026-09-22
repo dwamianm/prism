@@ -38,6 +38,10 @@ times are measured under shared load, not as isolated serving performance.
 After the packing diagnostic completed, a [second retrieval lane](opt-in-successor-scheduling-amendment-v3.json)
 reused its available provider capacity for the already registered reranker,
 reformulation and temporal arms. No cases or scoring rules changed.
+The [fourth scheduling amendment](opt-in-successor-scheduling-amendment-v4.json)
+starts the already fixed full-feature ingestion independently, raising the fresh
+process cap from four to five after a host-capacity check. Only its idle waiting
+launcher was stopped; no benchmark case or worker was interrupted.
 
 ## Completed production control
 
@@ -115,6 +119,19 @@ Among 860 annotated turns with a neural or inherited-neural adjustment, 432
 were omitted. These counts motivate an isolated score-scale repair, not a
 claim that the proposed repair has already improved answers. The failed arm
 and the existing interaction matrix remain unchanged.
+
+The [repair study](RERANKER-SCORE-REPAIR.md) is isolated on
+`research/reranker-score-repair-2026-09-22` at `6f98acd`. Its private research
+class places the neural-ranked prefix back on the original prefix's score
+range, preserves raw model scores and adds an explicit replayable assignment.
+There is no new public feature flag or default. All 97 relevant tests passed
+with one expected backend-specific skip, including live DuckDB/PostgreSQL
+receipt restart and old-byte compatibility. Its
+[registration](opt-in-rank-envelope-v1-registration.json) fixes complete
+500-case baseline/legacy replay and a conditional paired answer trial. It is
+queued after the original historical matrix; no repaired benchmark result is
+available yet. The registration and validation files here are exact exports
+from that separate branch, not a merge of its package changes.
 
 ## Development error review
 
