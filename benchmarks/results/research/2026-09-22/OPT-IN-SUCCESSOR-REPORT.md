@@ -41,7 +41,10 @@ repeats and candidate answer contexts. The reranker repair candidate completed
 at **428/500**; its fresh control repeat failed, so its primary comparison is
 unavailable. Its prespecified secondary comparison is −1.8 points [−3.8,0.0]
 against the original baseline. It recovers much of the broken reranker's
-regression but does not beat production. The marginal answer trial is running.
+regression but does not beat production. The marginal packing trial completed
+at **433/500 versus 433/500** in its primary paired comparison: 0.0 points
+[−1.8,+1.8], ten wins/ten losses. Its multi-session and preference gains were
+offset by knowledge-update and assistant losses.
 The figure above freezes the first six complete arms; the table
 includes later completed interactions.
 
@@ -420,9 +423,11 @@ fail the fixed gate and receive no answer trial. The bonus-only policy gains
 six complete sets and loses two: +0.85 points, descriptive interval [−0.21,+2.13].
 It improves three baseline packing-omission errors, changes 495/500 contexts
 and averages 3,961.962 memory tokens. Every category and source loss is retained.
-The small, uncertain source gain is not an answer win. Its new full 500-case
-control repeat and candidate are frozen and queued after the reranker repair
-under the released-lane amendment. The completed source process was transferred
+Its full 500-case control repeat and candidate subsequently tied 433/500,
+with ten wins/ten losses and a primary interval of [−1.8,+1.8] points. The
+small source gain did not become an overall answer gain; the complete
+[marginal report](MARGINAL-PACKING-STUDY.md) retains all category regressions
+and provider costs. The completed source process was transferred
 only while idle, without interrupting any case or increasing provider capacity.
 
 The [additional combination plan](opt-in-exploratory-combination-plan.json)
@@ -553,3 +558,16 @@ and investigating ranking/reader behavior, rather than promoting the repair
 from its recovery over the broken reranker. All categories and provider costs
 are in the complete child artifact; no failed control or unfavorable case was
 replaced.
+
+A separately registered [original-anchor refinement](opt-in-anchored-rank-v1-registration.json)
+now tests one further development policy across all 500 source cases. It puts
+the original balanced-packing anchor first when assigning the neural prefix's
+existing score values; other candidates retain neural order and UUID ties.
+This addresses the observed loss of two leading assistant sources without
+using annotations in ranking. Nine authored checks passed, including actual
+packing/receipt replay and an end-to-end source executor that rejects drift.
+It uses cached identical neural inputs and adds no source inference. It
+advances only if both source metrics beat production and the previous repair,
+with no category source-count regression versus production. Any qualifying
+answers use a new complete paired trial in the released lane. This new variant
+does not replace either completed repair trial or its failures.

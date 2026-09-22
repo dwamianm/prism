@@ -70,5 +70,48 @@ six original arms settle and its coordinator exits. The completed source
 worker was stopped only while idle after all contexts were reauthenticated,
 as recorded in the [handoff](marginal-answer-lane-v1-handoff.json). No source or
 reader case was interrupted; provider capacity, contexts, selection and scoring
-are unchanged. Answer-quality results are pending. The small source advantage
-does not authorize a default change.
+are unchanged.
+
+## Complete paired answer result
+
+Both full arms completed and authenticated. The registered
+[primary comparison](opt-in-marginal-packing-v2-answer-result.json) is
+**433/500 control versus 433/500 candidate**: ten wins, ten losses, and
+**0.0 percentage points**, paired 95% bootstrap interval **[−1.8,+1.8]**.
+The small source-retention gain did not produce an overall answer gain.
+
+| Category | New control | Candidate | Difference in correct answers |
+|---|---:|---:|---:|
+| Single-session user | 68/70 | 68/70 | 0 |
+| Single-session assistant | 54/56 | 53/56 | −1 |
+| Single-session preference | 27/30 | 28/30 | +1 |
+| Multi-session | 99/133 | 102/133 | +3 |
+| Temporal reasoning | 112/133 | 112/133 | 0 |
+| Knowledge update | 73/78 | 70/78 | −3 |
+| Abstention, overlapping | 26/30 | 26/30 | 0 |
+
+Each arm used 1,000 successful reader/judge calls without retries. Control
+used 2,273,237 input and 137,149 output tokens; candidate used 2,270,328 input
+and 136,352 output tokens. Exact context/request/execution identities are in
+the [control](opt-in-marginal-packing-v2-reader-control-result.json) and
+[candidate](opt-in-marginal-packing-v2-reader-candidate-result.json) artifacts.
+The prespecified secondary candidate comparison against the original 437/500
+baseline is −0.8 points [−2.6,+1.0], nine wins/13 losses. The new identical-input
+control itself differs from the original by five wins/nine losses; neither
+repeat replaces the original baseline.
+
+**Reject this policy as a production-default candidate on this trial.** It
+remains research-only: no overall gain, knowledge-update and assistant losses,
+and no untouched confirmation. The full case list and all negative source
+policies are retained. No further marginal-policy parameter search is started.
+
+The [all-case source/answer audit](opt-in-marginal-answer-diagnostics-v1.json)
+finds three answer gains among the six complete-source gains. Both questions
+that lost complete-source status remained correct. Among cases with incomplete
+source sets in both arms, two answers were lost; among complete sets in both,
+there were six wins/seven losses. Changed contexts account for ten wins/nine
+losses, while five unchanged contexts include one loss. This distinguishes
+source-retention changes from reader/judge variation without assigning every
+transition a cause or changing any label. Several knowledge-update losses
+explicitly mention the newer claim but choose an older or more detailed one;
+source presence alone cannot establish correct claim-state reasoning.

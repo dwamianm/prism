@@ -1,0 +1,27 @@
+{
+  "kind": "anchored-rank-targeted-validation",
+  "authored_tests": {
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0
+  },
+  "backend_tests": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "backends": [
+      "DuckDB",
+      "live PostgreSQL"
+    ]
+  },
+  "log_sha256": {
+    "authored": "9ea7ea41643c32210035d9e94d4d958bcfd42147d368e0318ced245b1be319c8",
+    "backends": "ca89506e919ef4139f16c1bb1bbf4d3a1dd4febe812db0045852c8f25cc0ee55"
+  },
+  "test_source_sha256": {
+    "test_opt_in_anchored_rank.py": "6d75823d336210675ff4585dfb240663c950b6c0e4326a75483d2300745ea827",
+    "test_opt_in_anchored_rank_backends.py": "1e64ef5b2369d0003ddb93141badcf7cf837a88287c9bf48c3ae80f3a2d18f49"
+  },
+  "ruff_F": "passed",
+  "limits": "Authored correctness, source executor drift rejection and receipt/restart/owner checks. Not answer-quality evidence or full release validation. No new production package change beyond the previously tested version-13 score-assignment support."
+}

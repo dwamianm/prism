@@ -1,0 +1,61 @@
+{
+  "complete": true,
+  "selected_policy": "marginal_episode_010",
+  "source_registration_sha256": "512a13aab8b98ce5cce51465d6ba1edb95d0037700ec6ee7923213d320b65c8a",
+  "child_results": {
+    "control": "opt-in-marginal-packing-v2-reader-control",
+    "candidate": "opt-in-marginal-packing-v2-reader-candidate"
+  },
+  "classification": "Exploratory development; requires untouched confirmation",
+  "default_changes": false,
+  "control_correct": 433,
+  "candidate_correct": 433,
+  "paired": {
+    "difference": 0.0,
+    "wins": 10,
+    "losses": 10,
+    "ties": 480,
+    "question_ci95": [
+      -0.018,
+      0.018
+    ],
+    "full_history_cluster_ci95": [
+      -0.018,
+      0.018
+    ],
+    "clusters": 500
+  },
+  "category_correct_deltas": {
+    "single-session-user": 0,
+    "abstention": 0,
+    "multi-session": 3,
+    "single-session-preference": 1,
+    "temporal-reasoning": 0,
+    "knowledge-update": -3,
+    "single-session-assistant": -1
+  },
+  "losses_detail": [
+    "6e984301",
+    "gpt4_e414231f",
+    "a3838d2b",
+    "gpt4_2c50253f",
+    "830ce83f",
+    "852ce960",
+    "dad224aa",
+    "ba61f0b9",
+    "0ddfec37_abs",
+    "58470ed2"
+  ],
+  "wins_detail": [
+    "e3038f8c",
+    "38146c39",
+    "27016adc",
+    "09ba9854",
+    "4dfccbf7",
+    "gpt4_65aabe59",
+    "gpt4_9a159967",
+    "gpt4_70e84552_abs",
+    "9ea5eabc",
+    "3ba21379"
+  ]
+}

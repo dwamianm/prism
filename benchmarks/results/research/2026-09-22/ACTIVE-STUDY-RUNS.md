@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-22 22:49 UTC. This is an operational handoff, not a final result.
+Updated 2026-09-22 23:10 UTC. This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -48,8 +48,9 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | Complete-arm analysis watcher | 5627 | `successor-bounded-analysis-watcher.log`; writes incrementally numbered `opt-in-successor-v2-analysis-NN-complete.json` after authentication. Memory-bounded wrapper has exact four-arm numerical parity with the original analyzer. The former idle PID 36062/session 11465 was stopped without interrupting any benchmark. |
 | Exploratory top-two selector | 24082 | `successor-bounded-top-two-launcher.log`; waits for all eight individual comparisons, excludes inactive flags, preserves the original stricter selection separately. No favorable successful subset if a required arm fails. Same frozen selector through the validated memory wrapper; former idle PID 56489/session 87252 was stopped before selection. |
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
-| Marginal answer coordinator | 58561 | `marginal-answer-lane-v1.log`; all 500 source cases complete, bonus-only policy selected, both reader contexts/registrations frozen. Control answers now running after rank coordinator exited; candidate follows. Source process 90351/PID 48748 stopped only while idle after reauthentication; no cases interrupted. Never relaunch source v1/v2. |
+| Marginal answer coordinator | finished | `marginal-answer-lane-v1.log`; both 500-case arms completed: 433 versus 433, ten wins/ten losses, difference 0.0 points [−1.8,+1.8]. All failures from other trials stay retained. Never relaunch source v1/v2 or this completed trial. |
 | Rank-envelope answer coordinator | finished | Parent `data/opt-in-study/rank-answer-lane-v1.log`; candidate completed 428/500. New control repeat failed closed (274 complete, one reader truncation, 225 unstarted), invalidating the primary comparison. Complete candidate versus original control is prespecified secondary evidence: −1.8 points [−3.8,0.0]. Outputs stay in repair worktree and public results are exported to parent. Never relaunch prior source/coordinator versions or failed control. |
+| Original-anchor follow-up | 27649 | Repair worktree `data/opt-in-study/anchored-rank-v1.log`, PID 18445. New fixed policy and new registration, not a replacement. Five local source tasks, no new model calls; all 500 baseline/prior-repair replays required. Only a stricter positive source gate advances to new paired readers in the released lane after the marginal exit, under the same lock. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
 Only an arm with complete `execution.json` and authenticated `verification.json`
@@ -116,7 +117,10 @@ hash is `c8a06ecef2db225f672c2de2d1f3543032f41a18ad5368aa80d41cf521390ef2`.
   control, 300 session penalty, 407 episode bonus, 319 combined, out of 470.
   Bonus-only qualifies: six complete-source gains/two losses, +0.85 points
   [−0.21,+2.13]; three gains in baseline packing errors. Both source-failing
-  policies retained and rejected at gate; selected 500+500 answer trial queued.
+  policies retained and rejected at gate. The selected full 500+500 primary
+  answer trial tied 433/500, ten wins/ten losses, 0.0 points [−1.8,+1.8]. Category
+  changes: +3 multi-session, +1 preference, −3 update, −1 assistant; others tie.
+  Each arm had 1,000 successful calls without retries. Reject as default candidate.
 * Annotation-assisted packing diagnostic: 473/500, +7.2 points, CI [+4.4,+10.0].
   Nondeployable, outside the feature matrix. Changed 67 contexts; 433 repeated
   inputs reveal residual reader/judge variation. Knowledge updates lost two.
@@ -140,6 +144,12 @@ regression, DuckDB/PostgreSQL restart and owner checks pass. No public flag
 or default changed. Its package change exists only in the separate branch.
 The same 97 tests also pass from an isolated installed wheel, with the same
 skip and all 163 packaged Python files byte-identical to frozen source.
+The new original-anchor variant changes research files only and passed nine
+authored tests plus two DuckDB/live-PostgreSQL restart/owner/receipt checks.
+Its registration hash is `4fa9746794f628615cf2b7177322543d3488ed93a18a6eba859827166d4c009d`.
+Do not edit its registered files while it runs. Its full source gate requires
+both source metrics strictly above the prior repair and production, with no
+category complete-source regression versus production. See ANCHORED-RANK-STUDY.md.
 
 The source-to-answer memory handoff is registered in
 `opt-in-answer-memory-amendment-v1.json` and passed seven authored tests. It is
