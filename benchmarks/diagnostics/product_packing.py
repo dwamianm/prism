@@ -12,16 +12,19 @@ renderer actually produced: records, memory text, annotated evidence and its
 rank. Like the saved run's diagnostics, it counts evidence packed in any
 representation, and it also reports evidence packed with its text. It makes no
 reader, judge or paid API calls. Its projected accuracy is a planning estimate,
-not an answer score.
+not an answer score. ``gate --plain`` measures a plain RAG reference over the
+same stored turns instead of ``retrieve()``, and
+``benchmarks.integrations.gpt54_baselines`` prepares those contexts for the
+GPT-5.4 baseline arms.
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import inspect
 import itertools
@@ -40,7 +43,8 @@ from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
 from benchmarks.compare_evidence import paired_statistics
-from prme import MemoryEngine, PRMEConfig
+from benchmarks.evidence import reciprocal_rank_fusion
+from prme import MemoryEngine, NodeType, PRMEConfig
 from prme.config import OrganizerConfig
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import RetrievalCandidate
@@ -525,13 +529,47 @@ def _in_context(text: str, context: str) -> bool:
         reader_text(text)[1:-1]))
 
 
-def _write_capture(capture_dir: Path, case: GateCase, context: str, receipt) -> str:
-    raw = json.dumps({"question_id": case.question_id, "context": context,
-                      "receipt": receipt.model_dump(mode="json")}).encode()
+def _write_capture(capture_dir: Path, case: GateCase, context: str, record: dict) -> str:
+    raw = json.dumps({"question_id": case.question_id, "context": context, **record}).encode()
     path = capture_dir / case.benchmark / f"{case.question_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(raw)
     return hashlib.sha256(raw).hexdigest()
+
+
+def _first_ranks(benchmark: str, ranked_metadata: Iterable[dict | None]) -> dict[str, int]:
+    """The best rank at which each source turn appears."""
+    first_rank: dict[str, int] = {}
+    for rank, metadata in enumerate(ranked_metadata, start=1):
+        source = _source_key(benchmark, metadata or {})
+        if source is not None:
+            first_rank.setdefault(source, rank)
+    return first_rank
+
+
+def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens: int, packed_sources: set[str],
+              text_sources: set[str], first_rank: dict[str, int], records: int, records_without_text: int,
+              representations: dict[str, int], candidates: int, seconds: float) -> dict:
+    """One question's measurements; PRME and plain replays share it so their reports compare."""
+    evidence = None
+    if case.evidence is not None:
+        evidence = {
+            "annotated": len(case.evidence), "unresolved": list(case.unresolved),
+            "packed": len(case.evidence & packed_sources),
+            "packed_with_text": len(case.evidence & text_sources),
+            "all_packed": case.evidence <= packed_sources,
+            "all_packed_with_text": case.evidence <= text_sources,
+            "ranks": {key: first_rank.get(key) for key in sorted(case.evidence.difference(case.unresolved))},
+        }
+    context_sha256 = hashlib.sha256(context.encode()).hexdigest()
+    return {
+        "benchmark": case.benchmark, "question_id": case.question_id, "category": case.category,
+        "context_sha256": context_sha256, "context_matches_saved": context_sha256 == case.saved_context_sha256,
+        "context_tokens": context_tokens, "memory_text_tokens": text_tokens, "records": records,
+        "records_without_text": records_without_text, "representations": representations,
+        "candidates": candidates, "retrieval_seconds": seconds, "evidence": evidence,
+        "projected_correct": projected_correct(case.benchmark, case.category, evidence),
+    }
 
 
 async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_dir: Path | None) -> dict:
@@ -559,33 +597,133 @@ async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_d
             packed_sources.add(source)
             if has_text[candidate.node.id]:
                 text_sources.add(source)
-    first_rank: dict[str, int] = {}
-    for rank, result in enumerate(response.results, start=1):
-        source = _source_key(case.benchmark, result.node.metadata or {})
-        if source is not None:
-            first_rank.setdefault(source, rank)
-    evidence = None
-    if case.evidence is not None:
-        evidence = {
-            "annotated": len(case.evidence), "unresolved": list(case.unresolved),
-            "packed": len(case.evidence & packed_sources),
-            "packed_with_text": len(case.evidence & text_sources),
-            "all_packed": case.evidence <= packed_sources,
-            "all_packed_with_text": case.evidence <= text_sources,
-            "ranks": {key: first_rank.get(key) for key in sorted(case.evidence.difference(case.unresolved))},
-        }
-    row = {
-        "benchmark": case.benchmark, "question_id": case.question_id, "category": case.category,
-        "context_sha256": context_sha256, "context_matches_saved": context_sha256 == case.saved_context_sha256,
-        "context_tokens": response.bundle.tokens_used, "memory_text_tokens": text_tokens,
-        "records": len(packed),
-        "records_without_text": sum(not has_text[candidate.node.id] for candidate in packed),
-        "representations": dict(Counter(candidate.representation.value for candidate in packed)),
-        "candidates": len(response.results), "retrieval_seconds": seconds, "evidence": evidence,
-        "projected_correct": projected_correct(case.benchmark, case.category, evidence),
-    }
+    row = _gate_row(
+        case, context=context, context_tokens=response.bundle.tokens_used, text_tokens=text_tokens,
+        packed_sources=packed_sources, text_sources=text_sources,
+        first_rank=_first_ranks(case.benchmark, (result.node.metadata for result in response.results)),
+        records=len(packed), records_without_text=sum(not has_text[candidate.node.id] for candidate in packed),
+        representations=dict(Counter(candidate.representation.value for candidate in packed)),
+        candidates=len(response.results), seconds=seconds)
     if capture_dir is not None:
-        row["capture_sha256"] = _write_capture(capture_dir, case, context, receipt)
+        row["capture_sha256"] = _write_capture(capture_dir, case, context,
+                                               {"receipt": receipt.model_dump(mode="json")})
+    return row
+
+
+# Plain RAG reference --------------------------------------------------------
+
+PLAIN_METHODS = ("vector", "bm25", "rrf")
+PLAIN_RRF_K = 60
+_PLAIN_SEPARATOR = "\n"
+# A plain baseline reads only the context budget. The tokenizer stays fixed so
+# its reports remain comparable with PRME's.
+_PLAIN_OVERRIDES = frozenset({"token_budget", "overhead_tokens"})
+
+
+def check_plain(method: str, overrides: dict | None) -> None:
+    if method not in PLAIN_METHODS:
+        raise ValueError(f"Choose a plain method from: {', '.join(PLAIN_METHODS)}")
+    overrides = overrides or {}
+    packing = overrides.get("packing", {})
+    if set(overrides) - {"packing"} or not isinstance(packing, dict) or set(packing) - _PLAIN_OVERRIDES:
+        raise ValueError("A plain baseline accepts only packing.token_budget and packing.overhead_tokens")
+
+
+def context_limit(packing: PackingConfig) -> int:
+    """Tokens the rendered context may use: the budget less the caller's reserved overhead."""
+    return max(0, packing.token_budget - packing.overhead_tokens)
+
+
+async def plain_ranking(engine, method: str, question: str, user_id: str) -> list:
+    """The user's stored turns ranked by one index, or by RRF (k=60) of both; best first.
+
+    The vector ranking must cover every stored turn. BM25 ranks only turns
+    that share a term with the question. Anything else an index returns is an
+    error, never silently dropped.
+    """
+    if method not in PLAIN_METHODS:
+        raise ValueError(f"Choose a plain method from: {', '.join(PLAIN_METHODS)}")
+    stored = await engine.count_nodes(user_id=user_id)
+    nodes = {str(node.id): node for node in await engine.query_nodes(
+        user_id=user_id, node_type=NodeType.FACT, limit=max(stored, 1))}
+    if len(nodes) != stored:
+        raise ValueError(f"User {user_id} has {stored} stored records, of which {len(nodes)} are turns")
+    if not nodes:
+        return []
+    rankings = {}
+    if method in {"vector", "rrf"}:
+        hits = await engine._vector_index.search(question, user_id, k=len(nodes))
+        rankings["vector"] = [hit["node_id"] for hit in hits]
+        if sorted(rankings["vector"]) != sorted(nodes):
+            raise ValueError(f"The vector index ranks {len(rankings['vector'])} records for {len(nodes)} stored turns")
+    if method in {"bm25", "rrf"}:
+        hits = await engine._lexical_index.search(question, user_id, limit=len(nodes))
+        rankings["bm25"] = list(dict.fromkeys(hit["node_id"] for hit in hits))
+        if not set(rankings["bm25"]) <= nodes.keys():
+            raise ValueError("The BM25 index returned records that are not stored turns")
+    order = (reciprocal_rank_fusion([rankings["bm25"], rankings["vector"]], constant=PLAIN_RRF_K)
+             if method == "rrf" else rankings[method])
+    return [nodes[node_id] for node_id in order]
+
+
+def plain_record(benchmark: str, node) -> str:
+    """One stored turn as ``(date) speaker: text``, with the speaker and date the dataset gives."""
+    if benchmark == "locomo":
+        # The registered LoCoMo source text already reads "(date) Speaker: text".
+        return node.content
+    role = (node.metadata or {}).get("source_role")
+    if node.event_time is None or role not in {"user", "assistant"}:
+        raise ValueError(f"LongMemEval-S turn {node.id} has no session date or role")
+    # The dataset's own date format, which the reader prompt's "Current Date" also uses.
+    return f"({node.event_time.astimezone(timezone.utc):%Y/%m/%d (%a) %H:%M}) {role}: {node.content}"
+
+
+def pack_records(records: Sequence[str], limit: int, tokenizer: str) -> tuple[str, list[int], int]:
+    """Fill the budget in rank order, skipping any record that does not fit.
+
+    A record is tried when its own tokens plus a separator fit in the budget
+    left. The whole context is then counted exactly, and the record is dropped
+    again if that count exceeds ``limit``, so the result never does. Unlike
+    ``benchmarks.evidence.pack_sources``, a record that cannot fit is rejected
+    without counting the whole context again, which matters over hundreds of
+    turns per question.
+    """
+    separator = count_tokens(_PLAIN_SEPARATOR, tokenizer)
+    packed: list[int] = []
+    used = 0
+    for index, record in enumerate(records):
+        if used + count_tokens(record, tokenizer) + (separator if packed else 0) > limit:
+            continue
+        packed.append(index)
+        exact = count_tokens(_PLAIN_SEPARATOR.join(records[i] for i in packed), tokenizer)
+        if exact > limit:
+            packed.pop()
+        else:
+            used = exact
+    return _PLAIN_SEPARATOR.join(records[i] for i in packed), packed, used
+
+
+async def _replay_plain_case(engine, packing: PackingConfig, case: GateCase, method: str,
+                             capture_dir: Path | None) -> dict:
+    """The same measurements for a plain RAG baseline: one index's ranking of the stored turns, plain lines."""
+    started = time.perf_counter()
+    ranked = await plain_ranking(engine, method, case.question, case.user_id)
+    records = [plain_record(case.benchmark, node) for node in ranked]
+    context, indexes, tokens = pack_records(records, context_limit(packing), packing.tokenizer)
+    seconds = time.perf_counter() - started
+    packed = [ranked[index] for index in indexes]
+    sources = {source for node in packed
+               if (source := _source_key(case.benchmark, node.metadata or {})) is not None}
+    row = _gate_row(
+        case, context=context, context_tokens=tokens,
+        text_tokens=sum(count_tokens(node.content, packing.tokenizer) for node in packed),
+        packed_sources=sources, text_sources=sources,
+        first_rank=_first_ranks(case.benchmark, (node.metadata for node in ranked)),
+        records=len(packed), records_without_text=0, representations={"plain": len(packed)},
+        candidates=len(ranked), seconds=seconds)
+    if capture_dir is not None:
+        row["capture_sha256"] = _write_capture(capture_dir, case, context, {"plain": {
+            "method": method, "context_tokens": tokens, "packed_node_ids": [str(node.id) for node in packed]}})
     return row
 
 
@@ -598,10 +736,17 @@ def _verify_copy(copy: Path, expected_sha256: str) -> None:
 
 
 async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict | None = None,
-                      capture_dir: Path | None = None,
+                      capture_dir: Path | None = None, plain: str | None = None,
                       progress: Callable[[int], None] | None = None) -> list[dict]:
-    """Replay each question on a verified scratch copy of its pack; saved packs are never opened."""
+    """Replay each question on a verified scratch copy of its pack; saved packs are never opened.
+
+    With ``plain`` set to a plain RAG method, the stored turns are ranked by
+    that method and packed as plain lines instead of through ``retrieve()``.
+    """
     from benchmarks.diagnostics.longmemeval_s_compact import _clone_pack
+
+    if plain is not None:
+        check_plain(plain, overrides)
 
     # Retrieval persists receipts, so questions sharing a pack replay together in saved order.
     groups = [(key, list(group))
@@ -619,7 +764,10 @@ async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict |
             config = gate_config(copy, overrides)
             async with MemoryEngine.open(config) as engine:
                 for case in group:
-                    rows.append(await _replay_case(engine, config.packing, case, capture_dir))
+                    if plain is None:
+                        rows.append(await _replay_case(engine, config.packing, case, capture_dir))
+                    else:
+                        rows.append(await _replay_plain_case(engine, config.packing, case, plain, capture_dir))
         finally:
             shutil.rmtree(copy, ignore_errors=True)
         if progress is not None:
@@ -700,13 +848,15 @@ def gate_report(rows: list[dict], *, provenance: dict) -> dict:
 
 
 async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path | None = None,
-                   overrides: dict | None = None, capture_dir: Path | None = None,
+                   overrides: dict | None = None, capture_dir: Path | None = None, plain: str | None = None,
                    progress: Callable[[int], None] | None = None) -> dict:
     from benchmarks.retrieval_eval import provenance
 
     requested = {benchmarks} if isinstance(benchmarks, str) else set(benchmarks)
     if not requested or not requested <= set(GATE_BENCHMARKS):
         raise ValueError(f"Choose benchmarks from: {', '.join(GATE_BENCHMARKS)}")
+    if plain is not None:
+        check_plain(plain, overrides)
     selected = [name for name in GATE_BENCHMARKS if name in requested]
     gpt54 = _harness()
     archive = archive or default_archive()
@@ -721,10 +871,11 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
         capture_dir.mkdir(parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory(prefix="prme-evidence-gate-") as scratch:
         rows = await replay_gate(cases, scratch=Path(scratch), overrides=overrides,
-                                 capture_dir=capture_dir, progress=progress)
+                                 capture_dir=capture_dir, plain=plain, progress=progress)
     datasets = {"locomo": gpt54.LOCOMO_SHA, "longmemeval": gpt54.lme.DATASET_SHA256}
     report = gate_report(rows, provenance={
         **run_provenance, "overrides": overrides or {},
+        **({"plain": plain, "plain_rrf_k": PLAIN_RRF_K} if plain is not None else {}),
         "archive": {"path": str(archive),
                     "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}},
         "datasets": {name: datasets[name] for name in selected},
@@ -839,6 +990,9 @@ def _run_label(provenance: dict) -> str:
         commit += " with uncommitted changes"
     overrides = provenance.get("overrides")
     setting = f"overrides `{json.dumps(overrides, sort_keys=True)}`" if overrides else "current defaults"
+    if provenance.get("plain"):
+        return f"{commit}, plain {provenance['plain']} baseline (no PRME retrieval), " + (
+            setting if overrides else "default budget")
     return f"{commit}, {setting}"
 
 
@@ -860,9 +1014,15 @@ def _baseline_line(baseline: dict, bench: dict) -> str:
 
 def gate_markdown(report: dict) -> str:
     lines = ["# Offline evidence gate", "", f"Run: {_run_label(report['provenance'])}."]
+    plain = report["provenance"].get("plain")
     changed = sum(bench["summary"]["questions"] - bench["summary"]["contexts_matching_saved"]
                   for bench in report["benchmarks"].values())
-    if report["provenance"].get("overrides") and not changed:
+    if plain:
+        ranking = {"vector": "vector similarity", "bm25": "BM25",
+                   "rrf": f"reciprocal rank fusion (k={report['provenance'].get('plain_rrf_k')}) of both"}[plain]
+        lines += ["", f"**Plain RAG reference, not PRME.** Stored turns are ranked by {ranking} and packed in "
+                  "rank order as plain lines, so no context is expected to match the saved PRME run."]
+    elif report["provenance"].get("overrides") and not changed:
         lines += ["", "**Every context matches the saved run, so these overrides changed nothing the reader "
                   "sees.** Check the setting names. Changes that act when memories are stored need new packs."]
     lines += ["", "| Benchmark | Questions | Saved contexts reproduced | Records per context | Memory text share "
@@ -889,7 +1049,7 @@ def gate_markdown(report: dict) -> str:
                 f"| {_rank(summary['evidence_ranks']['median'])} | {_pct(summary['evidence_ranks']['top_25_share'])} "
                 f"| {_pct(summary['projected_accuracy'])} |")
         mismatches = bench["context_mismatches"]
-        if mismatches:
+        if mismatches and not plain:
             shown = ", ".join(mismatches[:20]) + (", ..." if len(mismatches) > 20 else "")
             lines += ["", f"Contexts that differ from the saved run: {len(mismatches)} ({shown}). "
                       "The JSON report lists every one."]
@@ -964,10 +1124,15 @@ def gate_main(argv: list[str]) -> None:
                         help="Saved 2026-09-23 run archive (default: the main checkout's data/gpt54-comparison-v1)")
     parser.add_argument("--capture-dir", type=Path,
                         help="New directory for every rendered context and receipt (contains benchmark text)")
+    parser.add_argument("--plain", choices=PLAIN_METHODS,
+                        help="Measure a plain RAG baseline instead of retrieve(): stored turns ranked by this "
+                             "method alone and packed as plain lines")
     args = parser.parse_args(argv)
     try:
         overrides = parse_overrides(args.overrides)
         gate_config(Path("{pack}"), overrides)
+        if args.plain:
+            check_plain(args.plain, overrides)
     except ValueError as exc:
         parser.error(str(exc))
     _quiet_offline_cli()
@@ -980,7 +1145,7 @@ def gate_main(argv: list[str]) -> None:
         last_done = done
 
     report = asyncio.run(run_gate(args.benchmark or GATE_BENCHMARKS, archive=args.archive, overrides=overrides,
-                                  capture_dir=args.capture_dir, progress=progress))
+                                  capture_dir=args.capture_dir, plain=args.plain, progress=progress))
     markdown = gate_markdown(report)
     _write_report(args.output, report, markdown)
     print(markdown)

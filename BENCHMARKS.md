@@ -128,6 +128,100 @@ receipts.
 `--capture-dir` keeps every rendered context and receipt. These contain
 benchmark text, so keep them out of published results.
 
+`--plain vector`, `--plain bm25` or `--plain rrf` measures a plain RAG reference
+instead of `retrieve()`: the same stored turns, ranked by that index alone (or by
+reciprocal rank fusion of both, k=60) and packed in rank order as plain lines.
+It accepts only `packing.token_budget` and `packing.overhead_tokens` overrides,
+and its reports compare with PRME reports through `gate-compare`.
+
+## Baselines for the GPT-5.4 comparison
+
+The 2026-09-23 comparison has no reference points, so it cannot show how much of
+the gap belongs to the memory system. `benchmarks.integrations.gpt54_baselines`
+adds baseline arms. Each one reuses the registered reader, judge, prompts, model
+settings and questions, and checks them against the
+[registration](benchmarks/results/research/2026-09-23/gpt54-comparison-v1-registration.json)
+before it makes any call. The frozen harness itself is unchanged.
+
+| Arm | Benchmarks | Context the reader sees |
+|---|---|---|
+| `full-context` | LoCoMo | The whole conversation: a date header per session, one `Speaker: text` line per turn, image captions kept. 12,612 to 24,081 tokens per conversation, 20,619 on average. |
+| `plain-vector`, `plain-bm25`, `plain-rrf` | LoCoMo, LongMemEval-S | The saved packs' raw turns, ranked by one index or by RRF (k=60) of both, packed in rank order as `(date) speaker: text` lines up to 3,996 tokens. No PRME scoring, expansion, filters or renderer. |
+
+The plain arms use the same stored text, embedding model and indexes as PRME, so
+they isolate PRME's retrieval and rendering rather than reproduce a published
+RAG system. LoCoMo turns are stored with their date and speaker in the text,
+which mainly affects BM25.
+
+On the evidence gate at 3,996 tokens, RRF is the best plain method, so
+`plain-rrf` is the arm to run on both benchmarks. The reader-format row uses
+`--set 'packing.context_format="reader"' --set 'packing.multipath_ordering="score"'`.
+
+| Run | LoCoMo all evidence packed | LoCoMo multi-hop | LoCoMo projected | LongMemEval-S all evidence packed | LongMemEval-S projected |
+|---|---:|---:|---:|---:|---:|
+| PRME defaults (JSON, balanced) | 983/1,536 (64.0%) | 45/282 (16.0%) | 64.0% | 403/470 (85.7%) | 86.0% |
+| PRME reader format, score order | 1,202/1,536 (78.3%) | 103/282 (36.5%) | 73.7% | 396/470 (84.3%) | 85.1% |
+| Plain vector | 1,232/1,536 (80.2%) | 149/282 (52.8%) | 74.8% | 403/470 (85.7%) | 86.0% |
+| Plain BM25 | 1,112/1,536 (72.4%) | 101/282 (35.8%) | 69.7% | 357/470 (76.0%) | 80.1% |
+| Plain RRF | 1,283/1,536 (83.5%) | 153/282 (54.3%) | 77.3% | 403/470 (85.7%) | 86.0% |
+
+Paired question by question, plain RRF packs all LoCoMo evidence for more
+questions than PRME defaults (+19.5 pp, 95% interval +17.3 to +21.7), the PRME
+reader format (+5.3 pp, +3.6 to +7.0), plain vector (+3.3 pp, +1.8 to +4.9) and
+plain BM25 (+11.1 pp, +9.4 to +12.8). On LongMemEval-S it ties PRME defaults and
+plain vector (403/470 each, with 20 and 29 questions won and lost each way) and
+beats plain BM25 (+9.8 pp, +7.2 to +12.8). The projected accuracies are planning
+estimates from the gate, not answer scores.
+
+```sh
+# No model calls. prepare needs a clean, committed tree.
+uv run python -m benchmarks.integrations.gpt54_baselines prepare full-context
+uv run python -m benchmarks.integrations.gpt54_baselines prepare plain-rrf --benchmark locomo
+uv run python -m benchmarks.integrations.gpt54_baselines estimate plain-rrf --benchmark locomo
+# Paid reader and judge calls: the owner runs this after approving the spend.
+uv run python -m benchmarks.integrations.gpt54_baselines run plain-rrf --benchmark locomo \
+  --max-usd <approved cap>
+```
+
+`prepare` writes under the main checkout's `data/gpt54-baselines-v1/`, shared by
+every worktree, and never overwrites a prepared arm. For a plain arm it runs the
+evidence gate with the same ranking, so the gate report next to the contexts
+describes exactly what the reader will see. An arm that has made paid calls
+cannot be prepared again.
+
+`estimate` scales each question's recorded 2026-09-23 reader and judge usage to
+the arm's context. The ledger reserves each request's worst case before sending
+it, so the cap also needs room for the requests in flight:
+
+| Arm | Estimated cost | Minimum cap |
+|---|---:|---:|
+| LoCoMo full context | $44.92 ($8.72 if every later question in a conversation reads the shared prefix from the provider's cache, which is not guaranteed) | $46.98 |
+| LoCoMo plain RRF | $12.11 | $13.28 |
+| LongMemEval-S plain RRF | $4.46 | $5.69 |
+
+`run` asks for confirmation at an interactive terminal and refuses to start
+without one, so no unattended process can spend. `--max-usd` is the arm's
+approved cap, which its ledger enforces across runs; a later run may raise it,
+and the ledger records the change, but never lower it. `run` also needs the
+saved run's reader and judge calibration in the archive, `OPENAI_API_KEY` in the
+main checkout's `.env`, and, for LongMemEval-S, the official judge in the
+2026-09-22 study checkout.
+
+The first failure stops new questions and keeps its record. A later run asks a
+question again only when it received no answer or verdict (a budget stop, a
+provider HTTP error, an ambiguous transport failure or an interrupted process).
+Truncated or malformed responses and invalid verdicts are final and leave the
+arm incomplete, as the registration's retry policy requires. A complete arm is
+written to `benchmarks/results/research/<date>/` with its accuracy, categories,
+replaced failures, cost, provider tokens and context budget, and is never rerun.
+None of these arms has been run yet:
+
+| Arm | LongMemEval-S | LoCoMo | Context |
+|---|---:|---:|---|
+| PRME defaults (2026-09-23) | 430/500 (86.0%) | 985/1,540 (64.0%) | 3,996-token ceiling |
+| Full context | not in scope | not run yet | whole conversation |
+| Plain RRF | not run yet | not run yet | 3,996-token ceiling |
+
 ## Earlier registered memory-utility comparison
 
 The first registered held-out current-product answer comparison is complete.

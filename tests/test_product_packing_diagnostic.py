@@ -1,7 +1,7 @@
 """Product evidence credit requires source text, not merely an included UUID."""
 import asyncio
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import inspect
 import json
@@ -10,12 +10,14 @@ import shutil
 
 import pytest
 
+from benchmarks.diagnostics import product_packing
 from benchmarks.diagnostics.product_packing import (
     GATE_CONDITIONAL_ACCURACY, GATE_MEASURED_ACCURACY, GATE_UNSCORED_ACCURACY, GateCase, _locomo_cases,
-    _longmemeval_cases, _source_key, compare, compare_gates, comparison_markdown, gate_config, gate_markdown,
-    gate_report, main, measure, pack_identity, parse_overrides, projected_correct, replay_gate, run_gate,
-    summarize_gate,
+    _longmemeval_cases, _source_key, compare, compare_gates, comparison_markdown, gate_config, gate_main,
+    gate_markdown, gate_report, main, measure, pack_identity, pack_records, parse_overrides, plain_ranking,
+    plain_record, projected_correct, replay_gate, run_gate, summarize_gate,
 )
+from benchmarks.evidence import reciprocal_rank_fusion
 from prme import MemoryEngine, NodeType
 from prme.config import OrganizerConfig
 from prme.models import MemoryNode
@@ -602,3 +604,121 @@ def test_loaders_verify_the_archive_and_resolve_annotations(tmp_path, monkeypatc
                                        "source_turn_index": 0}) == "s-b#1#0"
     assert _source_key("longmemeval", {"source_session_id": "s-b"}) is None
     assert _source_key("locomo", {"source_dialog_id": "D1:1"}) == "D1:1"
+
+
+# Plain RAG reference ----------------------------------------------------------
+
+def test_pack_records_fills_the_budget_in_rank_order_and_skips_records_that_do_not_fit():
+    records = ["alpha beta gamma", "one two three four five six seven eight nine ten eleven twelve", "delta",
+               "epsilon zeta"]
+    limit = count_tokens("alpha beta gamma\ndelta\nepsilon zeta")
+    context, packed, tokens = pack_records(records, limit, "cl100k_base")
+    assert packed == [0, 2, 3] and context == "alpha beta gamma\ndelta\nepsilon zeta"
+    assert tokens == count_tokens(context) <= limit
+    assert pack_records(records, 0, "cl100k_base") == ("", [], 0)
+    assert pack_records([], 100, "cl100k_base") == ("", [], 0)
+
+
+def test_pack_records_drops_a_record_when_the_exact_count_overshoots(monkeypatch):
+    # Joined text costs more than its parts here, so the estimate admits a record the exact count rejects.
+    monkeypatch.setattr(product_packing, "count_tokens", lambda text, _: len(text.split()) + 3 * text.count("\n"))
+    context, packed, tokens = pack_records(["a b", "c d", "e"], 6, "any")
+    assert packed == [0, 2] and context == "a b\ne" and tokens == 6
+
+
+def test_plain_record_uses_the_dataset_date_speaker_and_stored_text():
+    node = MemoryNode(user_id="u", node_type=NodeType.FACT, content="Line one.\nLine two.",
+                      metadata={"source_role": "assistant"},
+                      event_time=datetime(2023, 5, 20, 2, 21, tzinfo=timezone.utc))
+    assert plain_record("longmemeval", node) == "(2023/05/20 (Sat) 02:21) assistant: Line one.\nLine two."
+    chicago = node.event_time.astimezone(timezone(timedelta(hours=-5)))
+    assert plain_record("longmemeval", node.model_copy(update={"event_time": chicago})) == plain_record(
+        "longmemeval", node)
+    locomo = node.model_copy(update={"content": "(1:56 pm on 8 May, 2023) Caroline: Hi."})
+    assert plain_record("locomo", locomo) == "(1:56 pm on 8 May, 2023) Caroline: Hi."
+    for broken in (node.model_copy(update={"event_time": None}), node.model_copy(update={"metadata": {}})):
+        with pytest.raises(ValueError, match="no session date or role"):
+            plain_record("longmemeval", broken)
+
+
+async def test_plain_ranking_ranks_every_stored_turn_of_the_user_and_fuses_with_rrf(tmp_path, mock_embeddings):
+    pack = tmp_path / "pack"
+    await make_gate_pack(pack)
+    async with MemoryEngine.open(gate_config(pack)) as engine:
+        await engine.store("(1:56 pm on 8 May, 2023) Other: I painted a horse too.", user_id="conv-2",
+                           node_type=NodeType.FACT, metadata={"source_dialog_id": "D1:1"})
+        await engine.process_pending(user_id="conv-2", budget_ms=0)
+        question = "What has Caroline painted?"
+        vector = await plain_ranking(engine, "vector", question, "conv-1")
+        bm25 = await plain_ranking(engine, "bm25", question, "conv-1")
+        rrf = await plain_ranking(engine, "rrf", question, "conv-1")
+        assert await plain_ranking(engine, "vector", question, "nobody") == []
+        with pytest.raises(ValueError, match="plain method"):
+            await plain_ranking(engine, "graph", question, "conv-1")
+        # A record that is not a turn, or a turn the vector index lacks, fails loudly.
+        await engine.store("A note.", user_id="conv-2", node_type=NodeType.NOTE)
+        await engine.process_pending(user_id="conv-2", budget_ms=0)
+        with pytest.raises(ValueError, match="of which 1 are turns"):
+            await plain_ranking(engine, "bm25", question, "conv-2")
+        missing = await engine._vector_index.search("anything", "conv-1", k=1)
+        await engine._vector_index.delete_by_node_id(missing[0]["node_id"])
+        with pytest.raises(ValueError, match="vector index ranks 3 records for 4 stored turns"):
+            await plain_ranking(engine, "vector", question, "conv-1")
+    texts = {text for _, text in GATE_TURNS}
+    assert {node.content for node in vector} == texts and len(vector) == len(texts)
+    assert {node.user_id for node in vector + bm25 + rrf} == {"conv-1"}
+    assert 0 < len(bm25) < len(texts) and "painted" in bm25[0].content
+    assert [str(node.id) for node in rrf] == reciprocal_rank_fusion(
+        [[str(node.id) for node in bm25], [str(node.id) for node in vector]], constant=60)
+
+
+async def test_gate_measures_a_plain_baseline_on_a_verified_copy(tmp_path, mock_embeddings):
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    [row] = await replay_gate([gate_case(pack, identity)], scratch=scratch, plain="rrf",
+                              capture_dir=tmp_path / "captures")
+    assert pack_identity(pack) == identity and not any(scratch.iterdir())
+    assert row["context_matches_saved"] is False
+    assert row["records"] == row["representations"]["plain"] == len(GATE_TURNS)
+    assert row["records_without_text"] == 0 and row["candidates"] == len(GATE_TURNS)
+    assert row["memory_text_tokens"] == sum(count_tokens(text) for _, text in GATE_TURNS)
+    assert row["context_tokens"] <= 3996
+    assert row["evidence"]["all_packed"] is True and set(row["evidence"]["ranks"]) == {"D1:1", "D1:3"}
+    capture = (tmp_path / "captures" / "locomo" / "conv-1-q0000.json").read_bytes()
+    assert hashlib.sha256(capture).hexdigest() == row["capture_sha256"]
+    saved = json.loads(capture)
+    assert hashlib.sha256(saved["context"].encode()).hexdigest() == row["context_sha256"]
+    assert count_tokens(saved["context"]) == row["context_tokens"] == saved["plain"]["context_tokens"]
+    assert saved["plain"]["method"] == "rrf" and len(saved["plain"]["packed_node_ids"]) == len(GATE_TURNS)
+    assert set(saved["context"].split("\n")) == {text for _, text in GATE_TURNS}
+
+    [small] = await replay_gate([gate_case(pack, identity)], scratch=scratch, plain="vector",
+                                overrides=parse_overrides(["packing.token_budget=130"]))
+    assert small["context_tokens"] <= 30 and 0 < small["records"] < len(GATE_TURNS)
+    for override in ("packing.context_format=\"reader\"", "scoring.relevance_floor=0.3", "packing.tokenizer=x"):
+        with pytest.raises(ValueError, match="accepts only packing.token_budget"):
+            await replay_gate([gate_case(pack, identity)], scratch=scratch, plain="bm25",
+                              overrides=parse_overrides([override]))
+
+
+def test_gate_reports_label_plain_baselines_and_compare_them_with_prme():
+    prme = gate_fixture([gate_row("q1", "multi-hop", all_packed=False), gate_row("q2", "single-hop", all_packed=True)])
+    assert "plain" not in prme["provenance"]
+    plain = gate_fixture([gate_row("q1", "multi-hop", all_packed=True, matches=False),
+                          gate_row("q2", "single-hop", all_packed=True, matches=False)])
+    plain["provenance"].update(plain="rrf", plain_rrf_k=60)
+    markdown = gate_markdown(plain)
+    assert "plain rrf baseline (no PRME retrieval)" in markdown
+    assert "reciprocal rank fusion (k=60) of both" in markdown
+    assert "Contexts that differ from the saved run" not in markdown
+    comparison = compare_gates(prme, plain, samples=200)
+    assert comparison["benchmarks"]["locomo"]["gained_all_evidence"] == ["q1"]
+    assert "plain rrf baseline" in comparison_markdown(comparison)
+
+
+def test_gate_cli_refuses_settings_a_plain_baseline_would_ignore(tmp_path):
+    for argv in (["--plain", "rrf", "--set", "scoring.relevance_floor=0.3"], ["--plain", "graph"]):
+        with pytest.raises(SystemExit):
+            gate_main(["--output", str(tmp_path / "gate.json"), *argv])
