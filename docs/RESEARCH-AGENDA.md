@@ -414,3 +414,48 @@ then require a positive complete answer trial and independently audited untouche
 confirmation before any default proposal. No tested combination currently meets
 that promotion standard. Competitive leadership still requires a named matched
 competitor and disclosed cost/latency constraints on fresh source families.
+
+## 2026-09-23 completed GPT-5.4 default benchmarks
+
+The [complete audited comparison](../benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md)
+finished every registered case: **LongMemEval-S 430/500 (86.0%)** and **LoCoMo
+985/1,540 (64.0%)**. All 4,080 benchmark reader/judge calls succeeded on their
+first attempt. Observed API cost, including retained authored controls and
+funded access probes, was $16.4576, with no unresolved charge reservations.
+Both reader and judge used `gpt-5.4-2026-03-05`, medium reasoning, with default
+retrieval and a 3,996-token effective context ceiling. LoCoMo freshly stored
+5,882 turns; LongMemEval reused all unchanged production-control contexts.
+The failed authored CLI import and its registered exact-prompt loader amendment
+remain visible. No failed benchmark run was replaced or favorable subset selected.
+
+Zep's published references are 451/500 (90.2%) and 1,459/1,540 (94.7%), respectively.
+PRME is below both headline values. These are vendor references, not paired live
+arms: prompts, source preparation and context budgets differ, the vendor's exact
+cohort checksum is unavailable, and its LoCoMo category totals do not reconcile.
+Our LoCoMo score is registered semantic yes/no accuracy, not official token-F1.
+The older DeepSeek 437/500 result remains separate; changing reader and judge
+does not measure a library-code improvement or regression.
+
+Positive evidence includes LongMemEval single-session-user accuracy of 69/70
+(98.57%) and complete retrieval of all 886 annotated evidence instances into the
+returned candidate pool. The [post-hoc retention audit](../benchmarks/results/research/2026-09-23/GPT54-EVIDENCE-DIAGNOSTICS.md)
+also makes the negative findings concrete: 94 of those instances were omitted
+from packed LongMemEval context, and 46 of 70 wrong answers lacked some annotated
+evidence. LoCoMo returned 2,343 of 2,354 annotated instances but packed only
+1,354; 989 returned instances were omitted during packing. Missing resolvable
+annotations accompany 443 of its 555 wrong answers. Its weakest category,
+multi-hop, scored 80/282 (28.37%), with annotation omissions on 191 of 202 misses.
+LoCoMo has nine questions with unresolved annotation identities and four with
+no annotations; these remain separately reported. Retention is diagnostic,
+not proof of semantic sufficiency or a counterfactual improvement estimate.
+
+The next registered candidate should target answer-blind complementary evidence
+selection under the fixed budget while preserving the strongest anchor. Measure
+source retention and complete answer quality together; separately audit errors
+whose annotated evidence was retained, especially updates and temporal claims.
+Do not revive failed unconditional episode routing or broad session penalties
+without new evidence. No tested combination gains a default recommendation from
+these baseline runs. Require a complete positive paired development comparison,
+relevant backend/regression tests and independently prepared untouched source
+histories/questions before promotion. These completed canonical cohorts are
+examined development data, and no production default changed.

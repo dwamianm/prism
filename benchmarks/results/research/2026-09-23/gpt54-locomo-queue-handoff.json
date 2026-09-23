@@ -1,0 +1,12 @@
+{
+  "started_at": "2026-09-23T02:51:23.334602+00:00",
+  "queue_plan_sha256": "2db0172c9d5cc7cf6407c4ab6c328bab2ec2004b7a43c1d0d0fae9be5875864c",
+  "prepared_sha256": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+  "longmemeval_result_sha256": "6c3fff3c039d40db9693dce347f1b46484cfe0c41be3fc6124f0637be2958499",
+  "command": [
+    "/tmp/prme-v0.12.0-release-venv/bin/python",
+    "-m",
+    "benchmarks.integrations.gpt54_official_prompt_loader",
+    "locomo"
+  ]
+}

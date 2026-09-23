@@ -1,0 +1,8 @@
+{
+  "complete": true,
+  "conversations": 10,
+  "questions": 1540,
+  "prepared_sha256": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+  "original_coordinator_exit": "expected pre-ingestion ownership handoff; no failed benchmark case",
+  "finished_at": "2026-09-23T02:51:19.936223+00:00"
+}

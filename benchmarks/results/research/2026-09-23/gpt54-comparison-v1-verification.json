@@ -1,0 +1,55 @@
+{
+  "complete": true,
+  "verified_at": "2026-09-23T03:40:04.585011+00:00",
+  "registration_sha256": "b62256d8c461feece94ae76a096132e58db1b7ca4483f24783226b352b8c96c6",
+  "analysis_source_sha256": "65429edcad7135bc470dfc7ba627bf75b4b5b89695bd2594cbf976607d6caa8a",
+  "benchmarks": {
+    "longmemeval": {
+      "complete": true,
+      "questions": 500,
+      "result_sha256": "6c3fff3c039d40db9693dce347f1b46484cfe0c41be3fc6124f0637be2958499",
+      "prepared_sha256": "685284d70d36c2865e0942c4d2a1066d6a4403b2647077dcf7f06228c9cdc742",
+      "usage": {
+        "input_tokens": 2173565,
+        "cached_input_tokens": 0,
+        "output_tokens": 231040,
+        "reasoning_tokens": 134786,
+        "successful_calls": 1000,
+        "http_attempts": 1000,
+        "http_status_counts": {
+          "200": 1000
+        },
+        "observed_nanodollars": 4449756250
+      }
+    },
+    "locomo": {
+      "complete": true,
+      "questions": 1540,
+      "result_sha256": "77998c51b78f763f8eeec57f30332dd79e73dbc8710927ed6a3837c7ee0122fc",
+      "prepared_sha256": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+      "usage": {
+        "input_tokens": 6545347,
+        "cached_input_tokens": 38528,
+        "output_tokens": 514666,
+        "reasoning_tokens": 359721,
+        "successful_calls": 3080,
+        "http_attempts": 3080,
+        "http_status_counts": {
+          "200": 3080
+        },
+        "observed_nanodollars": 11998334750,
+        "ingestion_seconds_sum": 7445.980896416004,
+        "stored_turns": 5882
+      }
+    }
+  },
+  "amendment_sha256": {
+    "gpt54-official-loader-amendment.json": "411983ef81ab08e54de46249ad771c83132ac4935038868a011254cb1f659aac",
+    "gpt54-locomo-source-scheduling.json": "258b8dc506056db77fcb1fd723f77ecb8faccfc47350ea579ee2d9a4f517946c",
+    "gpt54-locomo-queue-plan.json": "2db0172c9d5cc7cf6407c4ab6c328bab2ec2004b7a43c1d0d0fae9be5875864c"
+  },
+  "settled_observed_usd": 16.45756725,
+  "unresolved_reserved_upper_usd": 0.0,
+  "preflight_usd": 0.00042375,
+  "ledger_sha256": "d387e496f8c6dd7c26b3e6b336c264fa02b4257d20903c6e8d31b290f6adaa3d"
+}

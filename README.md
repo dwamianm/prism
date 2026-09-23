@@ -10,6 +10,30 @@ PRME gives AI agents and chatbots stable long-term memory by combining an append
 
 ## Retrieval quality and evaluation
 
+### Default retrieval with GPT-5.4 (2026-09-23)
+
+Both complete cohorts used `gpt-5.4-2026-03-05` with medium reasoning as reader
+and judge, default PRME retrieval over stored conversation turns, and a
+**3,996-token memory-context ceiling**. All experimental features stayed off.
+
+| Benchmark | PRME | Zep published reference |
+|---|---:|---:|
+| LongMemEval-S | **430/500 (86.0%)** | 451/500 (90.2%) |
+| LoCoMo, non-adversarial questions | **985/1,540 (64.0%)** | 1,459/1,540 (94.7%) |
+
+All **2,040 questions completed**, with no terminal provider failures. Zep's
+[published figures](https://www.getzep.com/research/) use different retrieval,
+prompts and context sizes; this is a model-aligned reference comparison, not
+a matched live experiment. LoCoMo uses the registered semantic yes/no judge,
+not the dataset's token-F1 metric. LongMemEval reuses the unchanged production
+control contexts from September 22; LoCoMo freshly stores all 5,882 source turns.
+
+The [complete report](benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md)
+records category scores, confidence intervals, latency, costs and authenticated
+artifacts. These results establish the current baseline; they do not show a
+library-code improvement or justify a new default. The earlier DeepSeek result
+below remains a separate evaluation.
+
 ### Registered LongMemEval-S development results (2026-09-22)
 
 The completed production-control arm scored **437/500 (87.4%)** using Ollama
