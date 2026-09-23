@@ -25,19 +25,40 @@ def summarize(rows):
         categories[row['question_type']][key] += 1
     return {'questions':len(rows), 'coverage_by_answer':dict(counts),
             'categories':{key:dict(value) for key,value in sorted(categories.items())},
+            'annotation_totals':{key:sum(row.get(key,0) for row in rows)
+                                 for key in ['required_turns','annotated_turns_returned',
+                                             'annotated_turns_packed','missing_at_packing']},
             'rows':rows}
 
 
 def longmem_rows(result):
     rows = []
+    questions = {q['question_id']:q for q in s.question_rows('longmemeval')}
     for row in result['rows']:
         capture = json.loads((s.PRIVATE/'longmemeval/contexts'/(row['question_id']+'.json')).read_text())
         evidence = capture['evidence']
         state = 'abstention'
+        metrics = {}
         if evidence['applicable']:
             state = 'all_annotated_turns_packed' if evidence['complete_turn_recall'] else 'annotated_turns_missing'
+            question = questions[row['question_id']]
+            wanted = {(sid,pos,index)
+                      for pos,(sid,session) in enumerate(zip(question['haystack_session_ids'],
+                                                             question['haystack_sessions'],strict=True))
+                      for index,turn in enumerate(session) if turn.get('has_answer') is True}
+            historical = json.loads(Path(capture['source_capture']).read_text())['retrievals'][0]
+            def identity(item):
+                return (item['source_session_id'],item['source_session_position'],item['source_turn_index'])
+            returned = {identity(item) for item in historical['returned']}
+            packed = {identity(item) for item in historical['packed']}
+            if (len(wanted) != evidence['required_turns']
+                or len(wanted & packed) != evidence['retrieved_required_turns']):
+                raise ValueError('Historical annotation metrics differ')
+            metrics = {'required_turns':len(wanted), 'annotated_turns_returned':len(wanted & returned),
+                       'annotated_turns_packed':len(wanted & packed),
+                       'missing_at_packing':len((wanted & returned)-packed)}
         rows.append({key:row[key] for key in ['question_id','question_type','correct']} |
-                    {'coverage':state,'annotation_metrics':evidence})
+                    {'coverage':state,'annotation_metrics':evidence,**metrics})
     return rows
 
 
@@ -98,6 +119,35 @@ def main():
         result = json.loads(path.read_text())
         output['benchmarks'][benchmark] = summarize(analyze(result))
     write_new(s.PUBLIC/'gpt54-posthoc-evidence-diagnostics.json',output)
+    lines = ['# GPT-5.4 post-hoc evidence-retention diagnostics', '',
+             'These diagnostics use completed, authenticated runs. Dataset evidence annotations '
+             'were used only after execution and did not influence ingestion, retrieval or judging. '
+             'Retention is not a semantic answerability test: equivalent evidence can exist elsewhere, '
+             'and retained evidence can still be misinterpreted.', '',
+             '| Benchmark | Annotated turns | In returned candidates | In packed context | Lost at packing |',
+             '|---|---:|---:|---:|---:|']
+    for benchmark, summary in output['benchmarks'].items():
+        totals = summary['annotation_totals']
+        lines.append(f'| {benchmark} | {totals["required_turns"]} | '
+                     f'{totals["annotated_turns_returned"]} | {totals["annotated_turns_packed"]} | '
+                     f'{totals["missing_at_packing"]} |')
+    for benchmark, summary in output['benchmarks'].items():
+        lines += ['', f'## {benchmark}', '', '| Evidence state | Correct | Incorrect |', '|---|---:|---:|']
+        counts = summary['coverage_by_answer']
+        states = sorted({row['coverage'] for row in summary['rows']})
+        for state in states:
+            lines.append(f'| {state.replace("_", " ")} | {counts.get(state+"_correct",0)} | '
+                         f'{counts.get(state+"_incorrect",0)} |')
+    lines += ['', 'Counts are question/annotation incidences, so the same source turn can occur '
+              'in several questions. Unresolved LoCoMo annotation identities are reported separately '
+              'and never silently treated as missing retrieved evidence.', '',
+              'Next experiments should distinguish candidate discovery from packing loss, then test '
+              'answer-blind evidence selection on complete registered cohorts. Errors with retained '
+              'annotations need a separate interpretation/conflict/temporal audit. These diagnostics '
+              'do not authorize default changes or establish that a particular fix will work.', '',
+              '[Full diagnostics and per-question records](gpt54-posthoc-evidence-diagnostics.json).', '']
+    with (s.PUBLIC/'GPT54-EVIDENCE-DIAGNOSTICS.md').open('x') as handle:
+        handle.write('\n'.join(lines))
     print(json.dumps({key:{k:v for k,v in value.items() if k!='rows'}
                       for key,value in output['benchmarks'].items()},indent=2))
 

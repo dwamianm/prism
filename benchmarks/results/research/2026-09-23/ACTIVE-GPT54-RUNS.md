@@ -39,17 +39,25 @@ The shell key is stale and must not override the funded project key.
   The two tiny funded access/Flex probes are separate public records, not in
   that shared ledger. Include them in final total cost.
 
-## Live processes (observed 2026-09-23 about02:05UTC)
+## Live processes (updated 2026-09-23 about02:21UTC)
 
 | Responsibility | Session/PID | Log |
 |---|---|---|
-| LongMemEval500 GPT answer/judge | session14129, PID64510 | `longmemeval-run.log` |
-| Original LoCoMo source coordinator, owns only conv-26 | session52051, PID55428 | `locomo-prepare.log` |
+| LongMemEval500 GPT answer/judge, completed | session14129 closed, exit0 | `longmemeval-run.log` |
+| Original LoCoMo source coordinator, expected ownership handoff complete | session52051, PID55428 exited | `locomo-prepare.log` |
 | Three-worker source scheduling coordinator | session74851 | `locomo-source-scheduling.log` |
 | LoCoMo answer queue | session95985, PID68780 | `locomo-queue.log` |
 
-LongMemEval last observed125/500, no terminal failure. Check counts only while
-in progress, not partial accuracy. Complete results go to
+LongMemEval completed all500: **430/500 (86.0%)**, zero terminal failures;
+1,000 successful reader/judge calls, 1,000 HTTP attempts, $4.44975625 in arm
+usage. The independent analyzer authenticated every request/context/result and
+recomputed category totals and intervals. The shared ledger including authored
+controls is $4.45880875, with no unresolved reservations; small separate access
+probes still need adding to the final report.
+
+LoCoMo source conversations26,30,42 are complete. Conversations41,43,44 are
+active, and47,48,49,50 remain queued under the same scheduler. No LoCoMo answers
+have started. Check counts only while in progress, not partial accuracy. Complete results go to
 `gpt54-longmemeval-v1-result.json` and `gpt54-locomo-v1-result.json` publicly.
 
 The LoCoMo queue automatically starts the original registered full answer arm
@@ -76,7 +84,7 @@ PYTHONPATH=src /tmp/prme-v0.12.0-release-venv/bin/python \
   -m benchmarks.integrations.gpt54_official_prompt_loader longmemeval
 ```
 
-The above command is ALREADY RUNNING; do not run it again.
+The above LongMemEval command is COMPLETE; do not run it again.
 
 ## Source scheduling amendment
 
@@ -120,3 +128,21 @@ its LoCoMo category totals do not reconcile. Match disclosed model/reasoning and
 scope, but never claim exact one-to-one reproduction or paired significance.
 Use a short two-row table in the final answer. No automatic new release or main
 merge is authorized by this new benchmark request.
+
+The result authentication tool is `benchmarks.integrations.analyze_gpt54_comparison`.
+Run it only when both full arms are complete. It verifies source/dependency and
+amendment hashes, every request/response/context/result, exact cohort coverage,
+recomputed statistics, and closed LoCoMo pack file hashes. It creates the final
+comparison report and verification JSON exclusively. Its tamper-rejection test
+passes, and its changed files pass Ruff. It has already verified LongMemEval
+individually without publishing the two-arm report.
+
+Then run `benchmarks.integrations.analyze_gpt54_evidence` for explicitly post-hoc
+annotation retention diagnostics. It reads closed DuckDB packs read-only; no
+labels influenced execution. LongMemEval's70 misses currently divide into46
+with some annotated turns absent,18 with all annotated turns retained, and6
+abstention failures. This is diagnostic evidence, not a causal or semantic
+entailment test. The tool requires both arms' final verification before writing.
+
+Convenience monitoring: `python3 /tmp/prme-gpt54-status.py` prints completion,
+source progress, terminal failures and cost without partial answer scores.
