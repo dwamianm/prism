@@ -1,9 +1,9 @@
 {
   "baseBranch": "main",
-  "includeLabels": [],
-  "excludeLabels": ["research", "question", "wontfix", "duplicate", "needs-human", "blocked"],
+  "includeLabels": ["audit-2026-09"],
+  "excludeLabels": ["epic", "question", "wontfix", "duplicate", "needs-human", "blocked"],
   "assignedOnly": false,
   "testCommand": "uv run pytest -q",
-  "intervalMinutes": 5,
-  "maxIterations": 20
+  "intervalMinutes": 15,
+  "maxIterations": 40
 }

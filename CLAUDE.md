@@ -82,3 +82,13 @@ Core workflow:
 ## Github
 
 - Do not make any claude attributions to git commits
+
+## Epic #77 work rules (label `audit-2026-09`)
+
+These rules apply to every issue in epic #77, including unattended ticket-loop runs. They exist because pull requests in this repository can merge automatically once CI passes. The evidence behind the epic is `memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md`.
+
+- Keep production defaults unchanged. Put new behavior behind an explicit configuration option. A default changes only after the owner approves and records the paid paired answer run that the issue names.
+- Never start a paid benchmark, reader, judge or extraction run, and never spend API credit. Local tests and the offline evidence gate are fine.
+- Once the evidence gate from #78 exists, run it for retrieval, packing and representation changes, and put its before and after numbers in the pull request.
+- If any acceptance criterion still needs a paid run or an owner decision, write `Part of #N` instead of `Fixes #N` in the pull request, and list the remaining criteria there, so the issue stays open.
+- Keep receipts replayable and determinism tests passing.
