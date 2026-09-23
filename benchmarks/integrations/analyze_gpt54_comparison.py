@@ -73,10 +73,22 @@ def verify_call(path, prompt, limit):
         raise ValueError('Provider response binding differs')
     if value['response']['service_tier'] != 'flex':
         raise ValueError('Provider tier changed')
-    final = json.loads(path.with_suffix(f".attempt-{value['attempts']}.json").read_text())
-    if (final.get('http_status') != 200 or final['response'] != value['response']
+    if not 1 <= value['attempts'] <= 4:
+        raise ValueError('Attempt limit differs')
+    attempts = [json.loads(path.with_suffix(f'.attempt-{n}.json').read_text())
+                for n in range(1,value['attempts']+1)]
+    for attempt in attempts:
+        if attempt.get('request_sha256') != sha(expected):
+            raise ValueError('Provider attempt request differs')
+    for attempt in attempts[:-1]:
+        if (attempt.get('http_status') not in {429,500,502,503,504,529}
+            or attempt['response'].get('error',{}).get('code') in {'credit_balance_exhausted','insufficient_quota'}):
+            raise ValueError('Retry outside registered policy')
+    final = attempts[-1]
+    if (not 200 <= final.get('http_status',0) < 300 or final['response'] != value['response']
         or final['request_sha256'] != sha(expected)):
         raise ValueError('Provider attempt ledger differs')
+    value['verified_http_statuses'] = [str(attempt['http_status']) for attempt in attempts]
     return value
 
 
@@ -98,7 +110,7 @@ def verify_benchmark(benchmark):
         raise ValueError('Preparation or execution coverage differs')
     manifest = {r['question_id']:r['sha256'] for r in prepared['contexts']}
     usage = {'input_tokens':0,'cached_input_tokens':0,'output_tokens':0,'reasoning_tokens':0,
-             'successful_calls':0,'http_attempts':0,'observed_nanodollars':0}
+             'successful_calls':0,'http_attempts':0,'http_status_counts':{},'observed_nanodollars':0}
     for q, row in zip(cases,result['rows'],strict=True):
         qid = q['question_id']
         path = folder/'contexts'/(qid+'.json')
@@ -137,6 +149,8 @@ def verify_benchmark(benchmark):
             usage['reasoning_tokens'] += u.get('output_tokens_details',{}).get('reasoning_tokens',0)
             usage['successful_calls'] += 1
             usage['http_attempts'] += call['attempts']
+            for status in call['verified_http_statuses']:
+                usage['http_status_counts'][status] = usage['http_status_counts'].get(status,0)+1
             usage['observed_nanodollars'] += usage_cost(call['response'])
     verify_statistics(result)
     if benchmark == 'locomo':
@@ -222,6 +236,7 @@ def main():
                   f'- Retrieval p50/p95: {r["retrieval_seconds"]["p50"]:.3f}/{r["retrieval_seconds"]["p95"]:.3f} seconds. '
                   + r['retrieval_seconds']['note'],
                   f'- Successful reader/judge calls: {u["successful_calls"]}; HTTP attempts: {u["http_attempts"]}. '
+                  f'HTTP status counts: {json.dumps(u["http_status_counts"],sort_keys=True)}; terminal failures: 0. '
                   f'Reported input/output tokens: {u["input_tokens"]:,}/{u["output_tokens"]:,}, including '
                   f'{u["reasoning_tokens"]:,} output reasoning tokens. Observed successful-call cost: '
                   f'${u["observed_nanodollars"]/1e9:.4f}.', '',
