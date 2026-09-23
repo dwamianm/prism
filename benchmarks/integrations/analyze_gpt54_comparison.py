@@ -195,9 +195,10 @@ def main():
         lines.append(f'| {label} | **{r["correct"]}/{r["total"]} ({r["accuracy"]*100:.2f}%)** | {ref*100:.2f}% | {(r["accuracy"]-ref)*100:+.2f} points |')
     lines += ['', 'Zep values are [vendor-reported](https://www.getzep.com/research/). Both PRME arms use '
               '`gpt-5.4-2026-03-05` with medium reasoning as reader and judge. This matches the disclosed '
-              'model family/reasoning and benchmark scope, but is not an exact reproduction or a live '
+              'reader model family/reasoning and benchmark scope, but is not an exact reproduction or a live '
               'paired comparison. Zep does not provide its exact prompts, dataset checksum and current '
-              'execution artifacts. Its published LoCoMo category counts do not reconcile with its headline.',
+              'execution artifacts or specify a judge reasoning-effort setting. Its published LoCoMo '
+              'category counts do not reconcile with its headline.',
               '', 'All experimental flags remained off. No production defaults were changed. LongMemEval '
               'reuses all 500 authenticated production-control contexts from September 22; this is a '
               'new GPT reader/judge evaluation of those unchanged contexts. LoCoMo freshly materializes '

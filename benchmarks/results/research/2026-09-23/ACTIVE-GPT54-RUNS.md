@@ -39,13 +39,13 @@ The shell key is stale and must not override the funded project key.
   The two tiny funded access/Flex probes are separate public records, not in
   that shared ledger. Include them in final total cost.
 
-## Live processes (updated 2026-09-23 about02:21UTC)
+## Live processes (updated 2026-09-23 about03:24UTC)
 
 | Responsibility | Session/PID | Log |
 |---|---|---|
 | LongMemEval500 GPT answer/judge, completed | session14129 closed, exit0 | `longmemeval-run.log` |
 | Original LoCoMo source coordinator, expected ownership handoff complete | session52051, PID55428 exited | `locomo-prepare.log` |
-| Three-worker source scheduling coordinator | session74851 | `locomo-source-scheduling.log` |
+| Three-worker source scheduling coordinator, completed | session74851 closed, exit0 | `locomo-source-scheduling.log` |
 | LoCoMo answer queue | session95985, PID68780 | `locomo-queue.log` |
 
 LongMemEval completed all500: **430/500 (86.0%)**, zero terminal failures;
@@ -55,9 +55,13 @@ recomputed category totals and intervals. The shared ledger including authored
 controls is $4.45880875, with no unresolved reservations; small separate access
 probes still need adding to the final report.
 
-LoCoMo source conversations26,30,42 are complete. Conversations41,43,44 are
-active, and47,48,49,50 remain queued under the same scheduler. No LoCoMo answers
-have started. Check counts only while in progress, not partial accuracy. Complete results go to
+LoCoMo source preparation is complete: all10 conversations, 5,882 stored turns,
+and all1,540 unique contexts authenticated. Summed ingestion-worker time is
+7,445.980896416004 seconds. The source coordinator exited0 after its registered
+ownership handoff. The queued reader/judge run started02:51:23UTC and is active:
+last observed1,122/1,540 complete, no terminal failure, shared settled cost
+$13.2104525. Session95985 is the only remaining live execution owner.
+Check counts only while in progress, not partial accuracy. Complete results go to
 `gpt54-longmemeval-v1-result.json` and `gpt54-locomo-v1-result.json` publicly.
 
 The LoCoMo queue automatically starts the original registered full answer arm

@@ -1,0 +1,56 @@
+{
+  "observed_at": "2026-09-23T02:58:17.965314+00:00",
+  "url": "https://www.getzep.com/research/",
+  "type": "vendor-reported reference, not a matched live arm",
+  "reader": {
+    "model": "gpt-5.4",
+    "reasoning_effort": "medium"
+  },
+  "judge": {
+    "model": "gpt-5.4",
+    "grading": "chain-of-thought",
+    "reasoning_effort": "not disclosed"
+  },
+  "longmemeval": {
+    "correct": 451,
+    "total": 500,
+    "percent": 90.2,
+    "retrieval_p50_ms": 104,
+    "retrieval_p95_ms": 162,
+    "median_context_tokens": 4408
+  },
+  "locomo": {
+    "correct": 1459,
+    "total": 1540,
+    "percent": 94.7,
+    "retrieval_p50_ms": 87,
+    "retrieval_p95_ms": 155,
+    "median_context_tokens": 5760,
+    "published_categories": {
+      "single-hop": {
+        "correct": 646,
+        "total": 670
+      },
+      "temporal": {
+        "correct": 311,
+        "total": 325
+      },
+      "multi-hop": {
+        "correct": 304,
+        "total": 323
+      },
+      "open-domain": {
+        "correct": 175,
+        "total": 221
+      }
+    },
+    "category_totals_warning": "Published categories total 1436/1539 and do not reconcile with headline 1459/1540."
+  },
+  "locomo_auto_search": {
+    "percent": 86.5,
+    "retrieval_p50_ms": 115,
+    "retrieval_p95_ms": 173,
+    "median_context_tokens": 2680
+  },
+  "limits": "Exact prompts, cohort checksum, model snapshot, ingestion recipe and execution artifacts are not disclosed on this page."
+}
