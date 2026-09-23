@@ -49,6 +49,15 @@ offset by knowledge-update and assistant losses.
 The figure distinguishes original-arm comparisons, secondary repaired-reranker
 evidence, the marginal trial's primary comparison and the nondeployable diagnostic.
 
+The subsequent [original-anchor repair](ANCHORED-RANK-STUDY.md) has now completed
+all 500 source cases and passed its frozen source gate. Complete annotated source
+sets improve from 403 to **409/470**, with seven gains and one loss: +1.277
+percentage points, descriptive paired interval [+0.213,+2.553]. Every category
+ties or improves versus production. It also improves both source measures over
+the earlier repair, while retaining one new source loss relative to that repair.
+This is a concrete source-retention improvement; the new 500+500 primary answer
+trial is running and has no complete quality result yet.
+
 The temporal-only arm also failed closed: 265 completed cases, one truncated
 reader response and 234 unstarted cases. It receives no answer score or
 confidence interval. The [failure audit](opt-in-temporal-reader-failure-v1.json)
