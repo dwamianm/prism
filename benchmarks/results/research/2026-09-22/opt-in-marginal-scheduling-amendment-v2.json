@@ -1,0 +1,32 @@
+{
+  "kind": "prospective-marginal-source-scheduling-only-amendment",
+  "at": "2026-09-22T21:00:49.730496+00:00",
+  "predecessor_registration_sha256": "3346b39a6c30ee202006d1e6a565c0595b23a34a7723c1d303628ff668b53429",
+  "successor_registration_sha256": "512a13aab8b98ce5cce51465d6ba1edb95d0037700ec6ee7923213d320b65c8a",
+  "idle_predecessor_pid": 18350,
+  "predecessor_started_source_cases": 0,
+  "predecessor_hosted_calls": 0,
+  "unchanged_fields": [
+    "policies",
+    "hypothesis",
+    "method",
+    "failure_unit",
+    "source_selection",
+    "answer_followup",
+    "ordered_question_ids",
+    "dataset_sha256"
+  ],
+  "validation": "Evaluator, source summary and main ASTs are identical. Answer function is identical after removing the inserted original historical-stage wait. Registration field equality asserted. No dataset outcome or criterion change.",
+  "capacity": {
+    "logical_cpus": 18,
+    "observed_memory_free_percent": 52,
+    "additional_local_source_processes": 1,
+    "additional_hosted_provider_slots_before_historical_completion": 0
+  },
+  "scheduling": "Start local full-cohort source replay now; freeze any selected answer contexts then retain original historical-stage wait before any hosted answers. Five local source tasks, unchanged.",
+  "source_sha256": "6c18f847e271fcdd533001db19f0c020caf12a12da4b37b5076178f404925b35",
+  "original_registration_retained": true,
+  "failed_runs_replaced": false,
+  "defaults_changed": false,
+  "amendment_sha256": "e065ba69de843262fda5f86eea7adda6c4709d5503d947a7f8c7ee1dda4e92d0"
+}

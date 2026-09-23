@@ -1,0 +1,26 @@
+{
+  "kind": "additional-retrieval-lane-scheduling-amendment",
+  "registered_at": "2026-09-22T19:17:38.650373+00:00",
+  "registration_sha256": "06ee04869582702694dfc359b9ba4e249e52282bb08332db35114008b0c2d8f3",
+  "reason": "The complete packing diagnostic has released its four provider slots. Run two fixed retrieval lanes to shorten matrix elapsed time without changing cases, requests, configurations, scoring or failure handling. No partial candidate answer metrics inspected.",
+  "second_retrieval_lane": [
+    "reranker",
+    "query_reformulation",
+    "reranker_reformulation",
+    "temporal_relations",
+    "temporal_episode"
+  ],
+  "launcher_sha256": "7f27ed03174fa568ee87d1b2262574b47837f8fa1cea07491436acb5e7cba0cf",
+  "worker_sha256": "6cf0681769878e4419a51b66cd208e448528082a9d0c484f93e7ff60cf8c29cd",
+  "unchanged_first_lane": [
+    "episode_routing",
+    "evidence_augmentation",
+    "evidence_projection",
+    "episode_augmentation",
+    "episode_projection"
+  ],
+  "handover": "Original historical coordinator finishes episode_projection, then its exclusive mkdir fails on the independently owned reranker directory. That expected coordinator exit is scheduling, not an arm failure.",
+  "concurrency": "At most two historical retrieval processes, each five memory/four provider tasks, alongside at most four fresh processes from amendment-v2. Oracle provider stage is already complete.",
+  "timing_boundary": "Shared host and provider load; timings remain workload descriptions, not isolated speed claims.",
+  "default_changes": false
+}

@@ -1,0 +1,71 @@
+{
+  "complete": true,
+  "verified_cases": 500,
+  "total": 500,
+  "correct": 433,
+  "categories": {
+    "single-session-user": {
+      "total": 70,
+      "correct": 68
+    },
+    "abstention": {
+      "total": 30,
+      "correct": 26
+    },
+    "multi-session": {
+      "total": 133,
+      "correct": 99
+    },
+    "single-session-preference": {
+      "total": 30,
+      "correct": 27
+    },
+    "temporal-reasoning": {
+      "total": 133,
+      "correct": 112
+    },
+    "knowledge-update": {
+      "total": 78,
+      "correct": 73
+    },
+    "single-session-assistant": {
+      "total": 56,
+      "correct": 54
+    }
+  },
+  "paired": {
+    "difference": -0.008,
+    "wins": 5,
+    "losses": 9,
+    "ties": 486,
+    "question_ci95": [
+      -0.024,
+      0.006
+    ],
+    "full_history_cluster_ci95": [
+      -0.024,
+      0.006
+    ],
+    "clusters": 500
+  },
+  "input_groups": {
+    "unchanged_input_repeat": {
+      "total": 500,
+      "control_correct": 437,
+      "candidate_correct": 433,
+      "wins": 5,
+      "losses": 9
+    }
+  },
+  "provider_usage": {
+    "calls": 1000,
+    "input_tokens": 2273237,
+    "output_tokens": 137149,
+    "http_attempts": 1000
+  },
+  "context_tokens_total": 1982375,
+  "registration_sha256": "a5d6d518ee88226d6106e6bd76dd977e9d14807f77f878c0f71a1c05a58040ab",
+  "execution_sha256": "eb8eb6d8b5fc2ba8535905fa9d7f3e1e21cc92c24c8852212c7d5f7446d79cb7",
+  "classification": "Label-free marginal packing; development-selected policy. This child executor compares against the historical control for auditing; the prespecified primary paired answer comparison is candidate versus contemporaneous control repeat.",
+  "primary_baseline_replaced": false
+}

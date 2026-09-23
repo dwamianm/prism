@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "registration_sha256": "066afe3025e3f4fb07e0245cca7490f474cc03ad6256d8a4326bd8efd0757158",
+  "started_at": "2026-09-22T17:48:55.376804+00:00",
+  "dataset_calls": 0,
+  "attempts": 1,
+  "status": "failed",
+  "exception_type": "AuthenticationError",
+  "http_status": 401,
+  "error_code": "invalid_api_key",
+  "error_type": "invalid_request_error",
+  "elapsed_seconds": 0.5242026670021005
+}

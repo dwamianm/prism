@@ -1,0 +1,14 @@
+{
+  "kind": "idle-source-bookkeeping-child-clarification",
+  "at": "2026-09-22T21:48:44.881166+00:00",
+  "original_plan_sha256": "3bd952ad88a002e9627794c3f6537adf08c65e3cf106d5f7d9f5ca675f8ae627",
+  "exception": "A passive Python multiprocessing.resource_tracker child is not a reader or source worker. It may close with its idle completed parent. Every other child type still prevents handoff.",
+  "observed_child_pid": 93017,
+  "observed_child_command": "/Users/dwamianm/Sites/prism/.venv/bin/python -c from multiprocessing.resource_tracker import main;main(17)",
+  "hosted_children_started": 0,
+  "initial_ownership_check": "Refused transfer because this passive child existed; no process was stopped.",
+  "initial_coordinator_attempt": "Refused before any child execution because no handoff artifact existed. The failed coordinator log is retained; no benchmark call or result was produced or replaced.",
+  "retained_coordinator_log_sha256": "f8c929935f1f044cd2d2ba6c628854b2fbe40967c090861696e0c95f5666a112",
+  "changes_to_benchmark_protocol": false,
+  "amendment_sha256": "19dcff2a8bad8956d37c68e20efb4a40a15ebb209e84d11062999515817ab4d1"
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "marginal",
+  "at": "2026-09-22T22:14:45.664968+00:00",
+  "pid": 48748,
+  "command": "/Users/dwamianm/Sites/prism/.venv/bin/python -m benchmarks.diagnostics.opt_in_marginal_study_v2 run",
+  "children": [],
+  "prepared_identity": {
+    "source_result_sha256": "a8b44e94d8f9455d03f04fb8e595f64178700f6be4ef9ec5ee20e0765e6be54d",
+    "source_registration_sha256": "fcbf09e695966662ac06f7794917a780230a12ddd9fffb3899b13ae2f3c3a7a5",
+    "control_registration_sha256": "72bc0d3c341c0e4cfdd5282147f901dc3056ebbfe72210bc485d2eb258d24283",
+    "control_contexts_sha256": "d5e4db4bc6465af7691891e587256a7d883929a2750afebdfceabaa5c22ddef3",
+    "candidate_registration_sha256": "46779874dbdc157b3f562e354ce67ba6d1a734cd857792d80c84ca4833a767c8",
+    "candidate_contexts_sha256": "748ad96a7c17e45733eabb0a4affc8be3fee1fc6c7ac8a3d8dd1d6646212578f"
+  },
+  "lane_plan_sha256": "5b72332ac349da5e3a691beb0731077c6241d0abd31df08de2ec02abce63822d",
+  "reader_execution_started": false,
+  "source_complete": true,
+  "selected_policy": "marginal_episode_010",
+  "stopped_pid": 48748,
+  "idle_process_stopped": true,
+  "zero_reader_cases_started": true,
+  "stopped_at": "2026-09-22T22:14:45.896590+00:00",
+  "source_log_sha256": "9e31325f90bbc5cc63d537ac44fd549c8b7896d656092b910f51f9ad0a31f2bc",
+  "full_pretransfer_verification_sha256": "9942d73cbc9d8e94fa07dba5257adcdc52b6715d8c45f96771829b1833d186aa"
+}

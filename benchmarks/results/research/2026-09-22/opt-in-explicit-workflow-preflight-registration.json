@@ -1,0 +1,93 @@
+{
+  "kind": "opt-in-explicit-workflow-preflight-registration",
+  "registered_at": "2026-09-22T17:56:50.555885+00:00",
+  "runner_sha256": "f624781669b8febb920614f4dedab63493c8b7bb889944bb1c7ffbb837884e5b",
+  "production_revision": "a66ee854325890c6bc28f6b515efeb6ed7df4deb",
+  "claim_boundary": "Three authored caller-selected software-product pairs and one authored temporal provider case. Operational checks only, no held-out accuracy or precision claim.",
+  "pairs": [
+    {
+      "id": "accept",
+      "left": {
+        "name": "Adobe Acrobat Standard 7.0 Windows",
+        "manufacturer": "Adobe",
+        "price": "299.00"
+      },
+      "right": {
+        "name": "Adobe Acrobat Standard 7.0 Windows",
+        "manufacturer": "Adobe",
+        "price": "299.00"
+      },
+      "review": "accepted",
+      "expected_proposal": true
+    },
+    {
+      "id": "reject",
+      "left": {
+        "name": "Adobe Acrobat Standard 7.0 Windows",
+        "manufacturer": "Adobe",
+        "price": "299.00"
+      },
+      "right": {
+        "name": "Adobe Acrobat Standard 7.0 Windows",
+        "manufacturer": "Adobe",
+        "price": "299.00"
+      },
+      "review": "rejected",
+      "expected_proposal": true
+    },
+    {
+      "id": "different",
+      "left": {
+        "name": "Adobe Acrobat Standard 7.0 Windows",
+        "manufacturer": "Adobe",
+        "price": "299.00"
+      },
+      "right": {
+        "name": "Microsoft Windows 11 Home",
+        "manufacturer": "Microsoft",
+        "price": "139.00"
+      },
+      "review": null,
+      "expected_proposal": false
+    }
+  ],
+  "pair_selection": "Explicit fixed pairs above; no candidate enumeration, bulk proposals, or auto merge.",
+  "reviewer": "benchmark:authored-source-review",
+  "review_policy": "Accept exact duplicate product fields in accept fixture only; deliberately reject the second duplicate to exercise rejection. Never pretend this is a human review or held-out semantic judgment.",
+  "temporal": {
+    "query": "How many days passed between starting and finishing the frame?",
+    "question_time": "2026-01-10T00:00:00+00:00",
+    "records": [
+      {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "event_time": "2026-01-01T00:00:00+00:00",
+        "text": "I started the frame on January 1, 2026."
+      },
+      {
+        "id": "00000000-0000-0000-0000-000000000002",
+        "event_time": "2026-01-05T00:00:00+00:00",
+        "text": "I finished the frame on January 5, 2026."
+      }
+    ],
+    "config": {
+      "enabled": true,
+      "resolver_provider": "ollama",
+      "resolver_model": "deepseek-v4.1-flash:cloud",
+      "resolver_base_url": "http://127.0.0.1:11434",
+      "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+      "resolver_timeout_seconds": 90.0,
+      "resolver_max_attempts": 3,
+      "maximum_schema_repairs": 1,
+      "gate_provider": "typesafe_jev",
+      "gate_model": "jev-1.13.0",
+      "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+      "gate_threshold": 0.85,
+      "gate_timeout_seconds": 60.0,
+      "gate_max_attempts": 3,
+      "gate_api_key": null,
+      "failure_policy": "fallback"
+    },
+    "gate_inputs": "Fixed authored event/date operands; no benchmark question, reference answer or calculated value sent to the gate."
+  },
+  "failure_policy": "Keep all attempts and complete the fixed independent preflight cases; no retries outside the product's configured limits, no substitutions, no dataset execution if any prerequisite fails."
+}

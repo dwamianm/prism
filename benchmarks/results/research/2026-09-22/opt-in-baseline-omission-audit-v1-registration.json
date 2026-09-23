@@ -1,0 +1,12 @@
+{
+  "kind": "post-hoc-baseline-source-mechanism-audit",
+  "registered_at": "2026-09-22T20:03:00.907649+00:00",
+  "baseline_already_inspected": true,
+  "cases": 500,
+  "source_sha256": "add59b7404eda921ca4a9f0e82fbafd54c36b94f9a02688458b94f8f922f20df",
+  "dataset_sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+  "baseline_verification_sha256": "f513729ebe29bebc1b605a078fb6b8ec83f37ce46cb84e1f560e76c9e21e46b7",
+  "question": "Are annotated omitted turns low in final rank, long, weak on lexical/semantic scores, or absent from all returned sources?",
+  "method": "All 500 authenticated baseline captures. Source annotations label required turns only after retrieval. Record full-source presence, final returned rank, content tokens (not serialized cost), original roles, score components and same-session packed-record counts. Summarize all required turns and all incorrect annotated cases separately. No provider calls, candidate modification, rescore, significance test or promotion claim.",
+  "registration_sha256": "2f1bfe5161cf6f6665aa4b7ff8940bcbaf72ec7680a9bc11999d006d2bd6477a"
+}

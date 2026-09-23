@@ -1,0 +1,12 @@
+{
+  "source_sha256": {
+    "opt-in-successor-v2-analysis-06-complete.json": "ae7510a619fead4474e6bf54012a6b2daca6af3c006411cc6e7dc41f4ff7b0d7",
+    "opt-in-packing-oracle-v1-result.json": "d814b1a0eb2366a889ac87744963c77af99897855b2db270663348b855a2aa40",
+    "plot_opt_in_completed_v1.py": "7fd7773ef0bd37b021fc301d07f9e53ddb039cf3112bc7af87b8cc43091e6494"
+  },
+  "output_sha256": {
+    "opt-in-completed-comparisons-v1.svg": "0342f8ea310ae316da22043baebdbf06c6c396923fa27d88d27ae065cb963c66",
+    "opt-in-completed-comparisons-v1.png": "6090cb2d6aaf9f973b6e616849c452efb13ca3bdbcc32f17a4b7f9dc78d99888"
+  },
+  "new_analysis_or_model_calls": false
+}

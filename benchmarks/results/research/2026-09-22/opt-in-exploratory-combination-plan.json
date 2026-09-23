@@ -1,0 +1,27 @@
+{
+  "kind": "prospective-additional-development-combination",
+  "registered_at": "2026-09-22T19:34:50.297088+00:00",
+  "source_registration_sha256": "06ee04869582702694dfc359b9ba4e249e52282bb08332db35114008b0c2d8f3",
+  "reason": "The user requested the best-performing individuals combined. Eligibility for an exploratory combination must be separate from the stricter nomination gates for default promotion. Preserve the original gated selection and add an explicitly exploratory observed-top-two comparison.",
+  "timing": "Baseline and packing-oracle results have been examined. No completed individual candidate answer result has been inspected; fixed individual inference is already under way. This amendment governs a new combination before its selection or inference, not a retroactive change to existing comparisons.",
+  "individuals": [
+    "store_supersedence",
+    "qa_pairing",
+    "surprise_gating",
+    "reranker",
+    "query_reformulation",
+    "temporal_relations",
+    "episode_routing",
+    "evidence_augmentation"
+  ],
+  "coverage_gate": "All eight individuals and their registered matched controls must have complete authenticated 500-case comparisons. If any is unavailable, report combination unavailable rather than select from the successful subset.",
+  "active_gate": "At least one changed reader context relative to its matched control; an entirely unchanged-input flag is not a treatment to combine.",
+  "selection": "Among active individuals, order by descending paired correct-answer difference against the matched control, then ascending cold retrieval p95, then arm ID; take two regardless of the sign of their differences. Preserve every negative/category result.",
+  "alias_rule": "Zero active individuals aliases baseline. One aliases that individual. If the combined exact config matches an already registered arm, reuse that entire verified arm as an alias, not an extra replicate.",
+  "new_run_rule": "Otherwise freeze exact combined config and hash in a new child registration. Run all 500 on the original immutable historical masters for retrieval-only changes, or ingest all sources afresh if any ingestion-time flag is enabled. Compare against the original complete baseline/fresh_baseline as appropriate. Never repair or replace a failed case.",
+  "analysis": "Paired question/source-cluster 95% bootstrap intervals and all wins, losses, categories, source omissions, latency, costs and provider failures. Intervals are exploratory and selection-affected; do not reinterpret the original Holm family or use this result to promote defaults.",
+  "original_gated_selection_unchanged": true,
+  "production_promotion": "Requires a separately frozen untouched confirmation and relevant release/backend tests plus explicit review.",
+  "default_changes": false,
+  "plan_sha256": "5d7b7d0060a00a93bc4953cb7d008dd526c10d0c565acc7aed8bf531914b3636"
+}

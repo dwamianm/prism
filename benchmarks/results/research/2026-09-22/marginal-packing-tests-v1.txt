@@ -1,0 +1,21 @@
+.F...                                                                    [100%]
+=================================== FAILURES ===================================
+_____ test_extra_session_members_compete_without_reserved_episode_priority _____
+
+    def test_extra_session_members_compete_without_reserved_episode_priority():
+        a = candidate(1, 'a', .9, 'launch approval record ' * 30)
+        weak = candidate(2, 'a', .01, 'launch approval minor record ' * 30)
+        b = candidate(3, 'b', .8, 'The launch approval was given by Maya. ' * 20)
+        config = PackingConfig(token_budget=750, overhead_tokens=0, min_fidelity='full')
+        bundle = pack([a, weak, b], 'launch approval', config, Policy(.25, .1))
+        assert a.node.id in ids(bundle) and b.node.id in ids(bundle)
+>       assert weak.node.id not in ids(bundle)
+E       AssertionError: assert UUID('00000000-0000-0000-0000-000000000002') not in [UUID('00000000-0000-0000-0000-000000000001'), UUID('00000000-0000-0000-0000-000000000003'), UUID('00000000-0000-0000-0000-000000000002')]
+E        +  where UUID('00000000-0000-0000-0000-000000000002') = MemoryNode(id=UUID('00000000-0000-0000-0000-000000000002'), user_id='authored', session_id='a', scope=<Scope.PERSONAL:...o=datetime.timezone.utc), reinforcement_boost=0.0, salience_base=0.5, confidence_base=0.5, pinned=False, ttl_days=None).id
+E        +    where MemoryNode(id=UUID('00000000-0000-0000-0000-000000000002'), user_id='authored', session_id='a', scope=<Scope.PERSONAL:...o=datetime.timezone.utc), reinforcement_boost=0.0, salience_base=0.5, confidence_base=0.5, pinned=False, ttl_days=None) = RetrievalCandidate(node=MemoryNode(id=UUID('00000000-0000-0000-0000-000000000002'), user_id='authored', session_id='a'...score_provenance=None, representation=None, token_cost=0, rendered_text=None, conflict_flag=False, contradicts_id=None).node
+E        +  and   [UUID('00000000-0000-0000-0000-000000000001'), UUID('00000000-0000-0000-0000-000000000003'), UUID('00000000-0000-0000-0000-000000000002')] = ids(MemoryBundle(sections={'stable_facts': [RetrievalCandidate(node=MemoryNode(id=UUID('00000000-0000-0000-0000-0000000000...okenizer='cl100k_base', coverage_notice=None, context_guidance=None, context_format='auditable', context_references={}))
+
+tests/test_opt_in_marginal_packing.py:45: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_opt_in_marginal_packing.py::test_extra_session_members_compete_without_reserved_episode_priority
+1 failed, 4 passed in 0.51s

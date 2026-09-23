@@ -1,0 +1,46 @@
+{
+  "kind": "pre-outcome-secondary-interaction-and-reader-variation-plan",
+  "registered_at": "2026-09-22T18:50:33.061703+00:00",
+  "primary_protocol_unchanged": true,
+  "primary_scores_inspected": false,
+  "interactions": {
+    "episode_augmentation": [
+      "baseline",
+      "episode_routing",
+      "evidence_augmentation",
+      "episode_augmentation"
+    ],
+    "episode_projection": [
+      "baseline",
+      "episode_routing",
+      "evidence_projection",
+      "episode_projection"
+    ],
+    "reranker_reformulation": [
+      "baseline",
+      "reranker",
+      "query_reformulation",
+      "reranker_reformulation"
+    ],
+    "temporal_episode": [
+      "baseline",
+      "temporal_relations",
+      "episode_routing",
+      "temporal_episode"
+    ]
+  },
+  "contrast": "per-question combined - first - second + baseline; 10000 paired bootstrap draws, seed 20260922, 95% percentile intervals; exploratory interaction estimates, no additional promotion test",
+  "reader_variation": {
+    "candidate_repeat_arms": [
+      "baseline",
+      "evidence_augmentation",
+      "evidence_projection"
+    ],
+    "eligibility": "All 500 cases complete/authenticated, all contexts and reader requests byte-identical, zero evidence policy score operations. If this gate fails, do not pool.",
+    "analysis": "Report all pairwise disagreements, score range, and per-question success count 0..3; report pooled control accuracy only as a secondary repeated-reader diagnostic, never replace primary baseline.",
+    "purpose": "Quantify hosted reader/judge variation on unchanged inputs; no favorable response selection."
+  },
+  "failed_arms": "No partial scores or interaction estimates; retain missing status.",
+  "new_inference_calls": 0,
+  "default_changes": false
+}

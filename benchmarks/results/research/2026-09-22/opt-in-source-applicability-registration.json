@@ -1,0 +1,7 @@
+{
+  "kind": "source-only-evidence-feature-applicability-audit",
+  "registered_at": "2026-09-22T18:48:09.593975+00:00",
+  "inputs": "All 500 historical master packs, read-only",
+  "method": "For every node, count evidence_refs that equal an existing node ID; separately count those resolving only to immutable events. No questions, reference answers or model outputs are loaded.",
+  "comparison": "Projection/augmentation source eligibility requires a source node whose ID is cited."
+}

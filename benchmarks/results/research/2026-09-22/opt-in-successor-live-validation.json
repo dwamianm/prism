@@ -1,0 +1,33 @@
+{
+  "recorded_at": "2026-09-22T19:15:57.140511+00:00",
+  "production_sources_changed": false,
+  "postgres": "16.11",
+  "pgvector": "0.8.1",
+  "isolated_database": "prme_optin_20260922",
+  "results": [
+    {
+      "log": "successor-live-pg-tests-v1.txt",
+      "sha256": "0c5a391d1d1eab34649184b2c719450809d505e8286f9cbeb4fef369943b9f40",
+      "passed": 59,
+      "skipped": 0
+    },
+    {
+      "log": "successor-feature-backend-tests-v1.txt",
+      "sha256": "0504fd2e75b558e7bf156186646f69c55383e44b336f83e1d41d8ad32e44c5e0",
+      "passed": 152,
+      "skipped": 3
+    },
+    {
+      "log": "packing-oracle-tests.txt",
+      "sha256": "70fbf717ae74e25557bc55be610c442463bfc9effda9d8003363a6620e41f665",
+      "passed": 5,
+      "skipped": 0
+    }
+  ],
+  "backend_specific_skips": [
+    "DuckDB-only transaction fault injection on PostgreSQL",
+    "Local-process crash recovery on PostgreSQL",
+    "Independent PostgreSQL worker test on DuckDB"
+  ],
+  "release_gate": "Source checkout only; no installed wheel or untouched quality confirmation claimed."
+}

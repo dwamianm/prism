@@ -1,0 +1,27 @@
+{
+  "kind": "isolated-installed-wheel-repair-validation",
+  "at": "2026-09-22T21:11:34.960409+00:00",
+  "revision": "d13f3cedea7d4640584ab22dc512f12ce8179c77",
+  "wheel_sha256": "c9a776043d564ab8664dfb07bf053055846ef3947e8d0ad96508875865235a2f",
+  "wheel_metadata": "Wheel-Version: 1.0\nGenerator: uv 0.9.17\nRoot-Is-Purelib: true\nTag: py3-none-any",
+  "import_proof": {
+    "imported_prme": "/Users/dwamianm/Sites/prism-reranker-repair-2026-09-22/data/opt-in-study/rank-envelope-wheel-v1/installed/prme/__init__.py",
+    "source_files_identical": 163,
+    "wheel_sha256": "c9a776043d564ab8664dfb07bf053055846ef3947e8d0ad96508875865235a2f",
+    "dependencies_reused_without_modification": true
+  },
+  "tests_passed": 97,
+  "tests_skipped": 1,
+  "skip_reason": "Local process-exit recovery variant does not apply to PostgreSQL; live PostgreSQL atomic insert/retry tests ran.",
+  "warnings": 1,
+  "warning_detail": "PytestAssertRewriteWarning for preimported anyio; no test failure.",
+  "seconds": 77.38,
+  "test_log_sha256": "3d0fed370c5cf89394bf8c8562458e379347c2c4d3be171fa27a13bfe11c97d7",
+  "build_log_sha256": "e8aa45df51a859c33c4044ed506d598a7f8bb963707ff55f78f2274ef7acb3f1",
+  "install_log_sha256": "f4cd44f925834a20bb1d8eb03ca3a07e5167cdcfe9743505290bfaa2f13c0402",
+  "scope": "Same targeted suite through an isolated installed wheel, live DuckDB/PostgreSQL. These overlap the 97 source tests and are not 194 distinct tests. No full release or quality confirmation claim.",
+  "source_environment_modified": false,
+  "benchmark_workers_interrupted": false,
+  "defaults_changed": false,
+  "validation_sha256": "fd35308747d9b20a54588a5ccf23eafdf6afbf0e4e6766df2061574be90b65dc"
+}

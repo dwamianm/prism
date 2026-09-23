@@ -1,0 +1,80 @@
+{
+  "kind": "complete-failed-arm-provider-audit",
+  "at": "2026-09-22T22:36:52.998447+00:00",
+  "arm": "temporal_relations",
+  "question_id": "gpt4_7abb270c",
+  "arm_execution_sha256": "6ba85335a3fc959e38fe223dc19e39d868ea37d537dcd6438825993700326546",
+  "status_counts": {
+    "complete": 265,
+    "failed": 1,
+    "not_started": 234
+  },
+  "failure_reader_sha256": "6597a0176cb3508acbf732beda1dbdd84e8c1bc222c1eabdd9d19cf7e7ee400f",
+  "control_reader_sha256": "c3e738bc15dac3accbe825b8d7dcab0be6bef0ad31c3644d1e15ecdeeca60a9d",
+  "reader_request_byte_structure_identical_to_baseline": true,
+  "context_byte_identical_to_baseline": true,
+  "request_sha256": "3c27da9aff13f6593f7213b356f00e15807fcdb58e4285fbe6c041f9aaaf160b",
+  "provider": {
+    "model": "deepseek-v4.1-flash",
+    "done": true,
+    "done_reason": "length",
+    "eval_count": 8192,
+    "prompt_eval_count": 4127
+  },
+  "response_characters": 37547,
+  "first_http_status": 200,
+  "failed_reader_judged": false,
+  "temporal_outcome": {
+    "schema_version": 1,
+    "protocol": "temporal_relation_v1",
+    "status": "validation_rejected",
+    "confirmation_protocol_aligned": true,
+    "configuration_sha256": "022f0d5df6b1929d709ac3013fb281d7e30792b8bd8175f309d7e8699bfa2bbd",
+    "operation": null,
+    "value": null,
+    "evidence_ids": [],
+    "validation_errors": [
+      "operand[1] text date lacks day precision",
+      "operand[2] text date lacks day precision",
+      "operand[3] text date lacks day precision"
+    ],
+    "resolver": {
+      "provider": "ollama",
+      "model": "deepseek-v4.1-flash:cloud",
+      "model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+      "provider_version": "0.34.2",
+      "request_sha256": "1971f078dfdddfc93fbc3af3a5d6b748df224f41f3ff78f6ac5dad05171bdca6",
+      "response_sha256": "d8cf7f6ce77277e63def8af5dfbe82d5e9bd8289f86f893082c081f0433596a8",
+      "attempts": 1,
+      "schema_repairs": 0,
+      "input_tokens": 2652,
+      "output_tokens": 359,
+      "elapsed_ms": 5448.094
+    },
+    "gate": null,
+    "gate_threshold": 0.85,
+    "control_context_sha256": "f8776420fd4ba923d4def56d1797bcabfd6b5c360c5a54da990dd9c8f9bf789d",
+    "result_context_sha256": "f8776420fd4ba923d4def56d1797bcabfd6b5c360c5a54da990dd9c8f9bf789d",
+    "guidance_sha256": null,
+    "dropped_record_ids": [],
+    "error_stage": null,
+    "error_type": null,
+    "elapsed_ms": 5449.473
+  },
+  "actual_partial_execution_provider_calls": {
+    "reader_complete": 265,
+    "http_attempts": 532,
+    "judge_complete": 265,
+    "reader_failed": 1
+  },
+  "actual_partial_execution_token_usage": {
+    "reader_prompt_eval_count": 1096655,
+    "reader_eval_count": 77746,
+    "judge_prompt_eval_count": 106416,
+    "judge_eval_count": 530
+  },
+  "answer_metrics": null,
+  "interpretation": "Reader exhausted the fixed 8192-token output allowance while repeatedly revisiting an unsupported six-museum premise. Temporal validation rejected imprecise source dates and returned the byte-identical control bundle; its provider/protocol did not fail in this case. Identical reader requests previously stopped normally. This records hosted-reader instability, not temporal-feature answer harm. Whole arm remains failed closed, unscored and unreplaced; partial usage is cost accounting only.",
+  "defaults_changed": false,
+  "audit_sha256": "f929764c669c4725a5abffe096111347dea27fa093a3d882e4348afd6449e7da"
+}

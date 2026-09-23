@@ -1,0 +1,451 @@
+{
+  "registration_sha256": "512a13aab8b98ce5cce51465d6ba1edb95d0037700ec6ee7923213d320b65c8a",
+  "complete": true,
+  "source_metrics": {
+    "control": {
+      "complete_source_questions": 403,
+      "mean_source_fraction": 0.914645390070922,
+      "categories": {
+        "single-session-user": {
+          "total": 64,
+          "complete": 62
+        },
+        "multi-session": {
+          "total": 121,
+          "complete": 90
+        },
+        "single-session-preference": {
+          "total": 30,
+          "complete": 26
+        },
+        "temporal-reasoning": {
+          "total": 127,
+          "complete": 109
+        },
+        "knowledge-update": {
+          "total": 72,
+          "complete": 67
+        },
+        "single-session-assistant": {
+          "total": 56,
+          "complete": 49
+        }
+      },
+      "source_losses": [],
+      "source_gains": [],
+      "context_tokens": {
+        "mean": 3964.75,
+        "p50": 3976.0,
+        "p95": 3996.0
+      },
+      "packing_seconds": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0
+      },
+      "changed_contexts": 0
+    },
+    "marginal_session_025": {
+      "complete_source_questions": 300,
+      "mean_source_fraction": 0.7500709219858157,
+      "categories": {
+        "single-session-user": {
+          "total": 64,
+          "complete": 56
+        },
+        "multi-session": {
+          "total": 121,
+          "complete": 55
+        },
+        "single-session-preference": {
+          "total": 30,
+          "complete": 15
+        },
+        "temporal-reasoning": {
+          "total": 127,
+          "complete": 84
+        },
+        "knowledge-update": {
+          "total": 72,
+          "complete": 55
+        },
+        "single-session-assistant": {
+          "total": 56,
+          "complete": 35
+        }
+      },
+      "source_losses": [
+        "58bf7951",
+        "6ade9755",
+        "58ef2f1c",
+        "25e5aa4f",
+        "86f00804",
+        "8e9d538c",
+        "0a995998",
+        "gpt4_59c863d7",
+        "3a704032",
+        "gpt4_d84a3211",
+        "dd2973ad",
+        "c4a1ceb8",
+        "gpt4_a56e767c",
+        "46a3abf7",
+        "36b9f61e",
+        "28dc39ac",
+        "2e6d26dc",
+        "gpt4_15e38248",
+        "88432d0a",
+        "80ec1f4f",
+        "d23cf73b",
+        "gpt4_7fce9456",
+        "7024f17c",
+        "gpt4_5501fe77",
+        "gpt4_2ba83207",
+        "00ca467f",
+        "gpt4_31ff4165",
+        "eeda8a6d",
+        "2788b940",
+        "60bf93ed",
+        "9d25d4e0",
+        "gpt4_194be4b3",
+        "a9f6b44c",
+        "gpt4_ab202e7f",
+        "gpt4_731e37d7",
+        "edced276",
+        "e3038f8c",
+        "2b8f3739",
+        "bf659f65",
+        "06878be2",
+        "35a27287",
+        "32260d93",
+        "195a1a1b",
+        "afdc33df",
+        "caf03d32",
+        "1a1907b4",
+        "95228167",
+        "1da05512",
+        "1d4e3b97",
+        "07b6f563",
+        "1c0ddc50",
+        "0a34ad58",
+        "a11281a2",
+        "85fa3a3f",
+        "1f2b8d4f",
+        "a4996e51",
+        "60036106",
+        "4bc144e2",
+        "ef66a6e5",
+        "5025383b",
+        "91b15a6e",
+        "27016adc",
+        "77eafa52",
+        "60159905",
+        "73d42213",
+        "bc149d6b",
+        "099778bb",
+        "d6062bb9",
+        "157a136e",
+        "55241a1f",
+        "8cf4d046",
+        "87f22b4a",
+        "71017276",
+        "0bc8ad92",
+        "gpt4_8279ba02",
+        "gpt4_18c2b244",
+        "gpt4_a1b77f9c",
+        "gpt4_468eb063",
+        "gpt4_45189cb4",
+        "gpt4_d6585ce8",
+        "gpt4_ec93e27f",
+        "6e984301",
+        "gpt4_f420262c",
+        "gpt4_98f46fc6",
+        "b46e15ee",
+        "gpt4_d6585ce9",
+        "gpt4_f420262d",
+        "gpt4_59149c78",
+        "gpt4_e414231f",
+        "gpt4_4929293b",
+        "gpt4_fa19884d",
+        "gpt4_b5700ca0",
+        "gpt4_76048e76",
+        "2c63a862",
+        "gpt4_0b2f1d21",
+        "f0853d11",
+        "gpt4_93159ced",
+        "gpt4_b4a80587",
+        "gpt4_8c8961ae",
+        "d01c6aa8",
+        "gpt4_2f584639",
+        "gpt4_213fd887",
+        "89941a93",
+        "07741c44",
+        "0f05491a",
+        "e61a7584",
+        "1cea1afa",
+        "8fb83627",
+        "dfde3500",
+        "c7dc5443",
+        "3ba21379",
+        "9bbe84a2",
+        "10e09553",
+        "c6853660",
+        "07741c45",
+        "4c36ccef",
+        "1903aded",
+        "fea54f57",
+        "cc539528",
+        "dc439ea3",
+        "8cf51dda",
+        "71a3fd6b",
+        "3249768e",
+        "1568498a",
+        "e3fc4d6e",
+        "a40e080f",
+        "561fabcd",
+        "e48988bc",
+        "778164c6"
+      ],
+      "source_gains": [
+        "2ce6a0f2",
+        "09d032c9",
+        "c18a7dc8",
+        "8e91e7d9",
+        "0db4c65d",
+        "gpt4_7f6b06db",
+        "2ebe6c92",
+        "59524333"
+      ],
+      "context_tokens": {
+        "mean": 3959.474,
+        "p50": 3969.0,
+        "p95": 3995.0
+      },
+      "packing_seconds": {
+        "mean": 1.1125760487516818,
+        "p50": 0.6505676039960235,
+        "p95": 3.4245799649033843
+      },
+      "changed_contexts": 500
+    },
+    "marginal_episode_010": {
+      "complete_source_questions": 407,
+      "mean_source_fraction": 0.916241134751773,
+      "categories": {
+        "single-session-user": {
+          "total": 64,
+          "complete": 62
+        },
+        "multi-session": {
+          "total": 121,
+          "complete": 92
+        },
+        "single-session-preference": {
+          "total": 30,
+          "complete": 26
+        },
+        "temporal-reasoning": {
+          "total": 127,
+          "complete": 110
+        },
+        "knowledge-update": {
+          "total": 72,
+          "complete": 68
+        },
+        "single-session-assistant": {
+          "total": 56,
+          "complete": 49
+        }
+      },
+      "source_losses": [
+        "80ec1f4f",
+        "gpt4_2ba83207",
+        "gpt4_194be4b3",
+        "06878be2",
+        "b46e15ed"
+      ],
+      "source_gains": [
+        "2788b940",
+        "e3038f8c",
+        "0a34ad58",
+        "27016adc",
+        "gpt4_65aabe59",
+        "cf22b7bf"
+      ],
+      "context_tokens": {
+        "mean": 3961.962,
+        "p50": 3971.0,
+        "p95": 3995.0
+      },
+      "packing_seconds": {
+        "mean": 0.893357836909854,
+        "p50": 0.6182748540013563,
+        "p95": 2.40316059229589
+      },
+      "changed_contexts": 495
+    },
+    "marginal_session_episode": {
+      "complete_source_questions": 319,
+      "mean_source_fraction": 0.7798581560283688,
+      "categories": {
+        "single-session-user": {
+          "total": 64,
+          "complete": 57
+        },
+        "multi-session": {
+          "total": 121,
+          "complete": 63
+        },
+        "single-session-preference": {
+          "total": 30,
+          "complete": 16
+        },
+        "temporal-reasoning": {
+          "total": 127,
+          "complete": 89
+        },
+        "knowledge-update": {
+          "total": 72,
+          "complete": 59
+        },
+        "single-session-assistant": {
+          "total": 56,
+          "complete": 35
+        }
+      },
+      "source_losses": [
+        "58bf7951",
+        "6ade9755",
+        "58ef2f1c",
+        "25e5aa4f",
+        "8e9d538c",
+        "0a995998",
+        "gpt4_59c863d7",
+        "3a704032",
+        "gpt4_d84a3211",
+        "c4a1ceb8",
+        "gpt4_a56e767c",
+        "46a3abf7",
+        "36b9f61e",
+        "28dc39ac",
+        "2e6d26dc",
+        "gpt4_15e38248",
+        "88432d0a",
+        "80ec1f4f",
+        "d23cf73b",
+        "gpt4_7fce9456",
+        "7024f17c",
+        "gpt4_5501fe77",
+        "gpt4_2ba83207",
+        "gpt4_31ff4165",
+        "eeda8a6d",
+        "2788b940",
+        "9d25d4e0",
+        "gpt4_194be4b3",
+        "a9f6b44c",
+        "d851d5ba",
+        "gpt4_ab202e7f",
+        "gpt4_731e37d7",
+        "edced276",
+        "e3038f8c",
+        "2b8f3739",
+        "bf659f65",
+        "06878be2",
+        "35a27287",
+        "32260d93",
+        "195a1a1b",
+        "afdc33df",
+        "1a1907b4",
+        "95228167",
+        "1da05512",
+        "1d4e3b97",
+        "07b6f563",
+        "1c0ddc50",
+        "0a34ad58",
+        "85fa3a3f",
+        "1f2b8d4f",
+        "a4996e51",
+        "ef66a6e5",
+        "5025383b",
+        "91b15a6e",
+        "77eafa52",
+        "60159905",
+        "bc149d6b",
+        "099778bb",
+        "157a136e",
+        "8cf4d046",
+        "gpt4_18c2b244",
+        "gpt4_a1b77f9c",
+        "gpt4_468eb063",
+        "gpt4_45189cb4",
+        "gpt4_d6585ce8",
+        "gpt4_ec93e27f",
+        "gpt4_f420262c",
+        "gpt4_98f46fc6",
+        "gpt4_e414231e",
+        "b46e15ee",
+        "gpt4_d6585ce9",
+        "gpt4_f420262d",
+        "gpt4_59149c78",
+        "gpt4_4929293b",
+        "gpt4_b5700ca0",
+        "gpt4_76048e76",
+        "2c63a862",
+        "gpt4_0b2f1d21",
+        "f0853d11",
+        "gpt4_93159ced",
+        "gpt4_b4a80587",
+        "gpt4_8c8961ae",
+        "d01c6aa8",
+        "gpt4_213fd887",
+        "830ce83f",
+        "945e3d21",
+        "07741c44",
+        "e61a7584",
+        "1cea1afa",
+        "dfde3500",
+        "3ba21379",
+        "9bbe84a2",
+        "07741c45",
+        "4c36ccef",
+        "1903aded",
+        "fea54f57",
+        "cc539528",
+        "dc439ea3",
+        "8cf51dda",
+        "71a3fd6b",
+        "3249768e",
+        "1568498a",
+        "e3fc4d6e",
+        "a40e080f",
+        "561fabcd",
+        "e48988bc",
+        "778164c6"
+      ],
+      "source_gains": [
+        "2ce6a0f2",
+        "09d032c9",
+        "c18a7dc8",
+        "8e91e7d9",
+        "0db4c65d",
+        "gpt4_7f6b06db",
+        "2ebe6c92",
+        "59524333"
+      ],
+      "context_tokens": {
+        "mean": 3958.82,
+        "p50": 3967.0,
+        "p95": 3996.0
+      },
+      "packing_seconds": {
+        "mean": 0.9411909199778457,
+        "p50": 0.647185146000993,
+        "p95": 2.601133633958665
+      },
+      "changed_contexts": 500
+    }
+  },
+  "selected_policy": "marginal_episode_010",
+  "execution_sha256": "808031822f877eb21f2c3878ac2e41468350f2af0418fb13661eebcdd0192f4e",
+  "verified_cases": 500,
+  "answer_calls_during_source_assay": 0
+}

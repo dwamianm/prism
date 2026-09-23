@@ -1,0 +1,32 @@
+{
+  "kind": "prospective-selector-subprocess-memory-repair",
+  "registered_at": "2026-09-22T23:28:57.339648+00:00",
+  "source_sha256": {
+    "benchmarks/diagnostics/opt_in_bounded_selection_v2.py": "d6fdc8ad408ed27166fd0931c7188496f1803ed185703928c9b3c79fd443818e",
+    "tests/test_opt_in_bounded_selection_v2.py": "0da194cc83734243ca1eb709dda538636986bab415038ec84a37c9339cde8662",
+    "benchmarks/diagnostics/opt_in_bounded_analysis.py": "6de5ba9e378700c6cf1e390126d6e9bf6a435d3ab832097847be40e7e1db1816",
+    "benchmarks/diagnostics/opt_in_select_combination.py": "405ab0c1d0115c20ff44c3f646a5ea0214bd6b55ef74a7466c566e76ae73c560",
+    "benchmarks/diagnostics/analyze_opt_in_successor.py": "e20c0b25fd4e73f1317eefedfe8f819ef6a384129d0de668352c8ad976bccb2d",
+    "benchmarks/results/research/2026-09-22/opt-in-exploratory-combination-plan.json": "1bb5ef5dccb30ecb48acdabd23d27b03e2e0aecbf73de0bb6ea8c1afaff02609"
+  },
+  "predecessor_plan_content_sha256": "cd243ae76718e83c215a8b06027bd1b550b9c4a7b264ce3f988499c616a68c50",
+  "method": "Keep the frozen selector and exact original analyzer. Route only its exact registered analysis subprocess command to the same analyzer in the process with validated bounded capture retention installed. All other subprocess calls, source checks, failure gates, family, selection rules, statistics and frozen outputs are unchanged. Exceptions propagate without retry. This repairs a memory safeguard before selection has executed; no benchmark failure is replaced.",
+  "validation": {
+    "tests_passed": 9,
+    "tests_failed": 0,
+    "test_log_sha256": "1a3f8a79be63597919e5ff891d45c062bf98b964e50a7576206ec66c0883d7e6",
+    "initial_ruff": "One unused pathlib import was reported and removed; subsequent F checks pass.",
+    "existing_four_arm_statistical_parity_sha256": "9e4cdfb628da54a44adcf3af9ca070588ce6261dfc6455f8704ca07c6caf4d3b"
+  },
+  "handoff_precondition": {
+    "pid": 15714,
+    "command": "/Users/dwamianm/Sites/prism/.venv/bin/python -m benchmarks.diagnostics.opt_in_bounded_analysis select --wait",
+    "children": [],
+    "no_selection_or_analysis_output": true,
+    "required_fresh_arms_pending": true
+  },
+  "selection_rule_changed": false,
+  "inference_changed": false,
+  "default_changes": false,
+  "amendment_sha256": "bf2a29fc6cabefca19affe507d289ba569a3656c633543d15eb208488d6c18fe"
+}

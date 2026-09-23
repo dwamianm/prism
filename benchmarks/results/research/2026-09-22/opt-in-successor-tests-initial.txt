@@ -1,0 +1,65 @@
+.........F...                                                            [100%]
+=================================== FAILURES ===================================
+___ test_fresh_control_and_qa_execute_store_hooks_with_same_source_identity ____
+
+tmp_path = PosixPath('/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-12/test_fresh_control_and_qa_exec0')
+
+    async def test_fresh_control_and_qa_execute_store_hooks_with_same_source_identity(tmp_path):
+        case=dict(question_id='authored-only',haystack_session_ids=['session'],haystack_dates=['2024/01/01 (Mon) 12:00'],
+            haystack_sessions=[[dict(role='user',content='Which color do I prefer?'),dict(role='assistant',content='You prefer blue.')]])
+        configs=[]
+        for enabled in (False,True):
+            folder=tmp_path/str(enabled)
+            (folder/'pack').mkdir(parents=True)
+            config=clean_config()
+            config.update(db_path='{pack}/memory.duckdb',vector_path='{pack}/vectors.usearch',lexical_path='{pack}/lexical_index',enable_qa_pairing=enabled)
+            configs.append((folder,config_for({'config':config},folder/'pack',None)))
+        with study.matched_admission():
+>           results=await asyncio.gather(*(study.fresh_ingest(deepcopy(case),cfg,folder) for folder,cfg in configs))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_opt_in_successor.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+case = {'haystack_dates': ['2024/01/01 (Mon) 12:00'], 'haystack_session_ids': ['session'], 'haystack_sessions': [[{'content':...do I prefer?', 'role': 'user'}, {'content': 'You prefer blue.', 'role': 'assistant'}]], 'question_id': 'authored-only'}
+config = PRMEConfig(database_url=None, namespace_id=None, db_path='/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pyt...ed': 0.5}, unverified_confidence_threshold=0.3, confidence_overrides={}, encryption_enabled=False, encryption_key=None)
+folder = PosixPath('/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-12/test_fresh_control_and_qa_exec0/False')
+
+    async def fresh_ingest(case, config, folder):
+        start = time.perf_counter()
+        count = empty = 0
+        # Only these source fields cross the ingestion boundary.
+        histories = list(zip(case['haystack_session_ids'], case['haystack_dates'], case['haystack_sessions']))
+        async with MemoryEngine.open(config) as engine:
+            for position, (session_id, date, session) in enumerate(histories):
+                for index, turn in enumerate(session):
+                    if not turn['content'].strip():
+                        empty += 1
+                        continue
+                    token = FRESH_TURN.set(dict(question_id=case['question_id'], position=position,
+                                               index=index, ordinal=count))
+                    try:
+                        await engine.store(turn['content'], user_id=base.USER_ID,
+                            session_id=f'{position:05d}:{session_id}', role=turn['role'],
+                            node_type=NodeType.FACT, scope=Scope.PERSONAL,
+                            metadata={'benchmark': 'longmemeval-s', 'source_session_id': session_id,
+                                      'source_session_position': position, 'source_turn_index': index,
+                                      'source_role': turn['role']}, event_time=base._parse_date(date))
+                    finally:
+                        FRESH_TURN.reset(token)
+                    count += 1
+>           status = await engine.processing_status(user_id=base.USER_ID)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: MemoryEngine.processing_status() missing 1 required positional argument: 'event_id'
+
+benchmarks/diagnostics/opt_in_successor.py:158: TypeError
+----------------------------- Captured stdout call -----------------------------
+2026-09-22 13:39:19 [info     ] write_queue.started
+2026-09-22 13:39:19 [info     ] write_queue.started
+2026-09-22 13:39:20 [info     ] ingestion.pipeline_shutdown
+2026-09-22 13:39:20 [info     ] write_queue.stopped
+--------------------------- Captured stdout teardown ---------------------------
+2026-09-22 13:39:20 [info     ] ingestion.pipeline_shutdown
+=========================== short test summary info ============================
+FAILED tests/test_opt_in_successor.py::test_fresh_control_and_qa_execute_store_hooks_with_same_source_identity
+1 failed, 12 passed in 1.89s

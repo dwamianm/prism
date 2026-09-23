@@ -1,0 +1,31 @@
+{
+  "kind": "complete-interaction-input-applicability-audit",
+  "arms": [
+    "episode_routing",
+    "episode_augmentation"
+  ],
+  "questions": 500,
+  "verification_sha256": {
+    "episode_routing": "17ad2f9b04562717fffd19c2c23ee06087d545038b8f3692e146f4036d8ba805",
+    "episode_augmentation": "1c578f75ecca4f07f375d9b6ed5aa44aadfcfd8899b48e074b0deb9efb7f5ee5"
+  },
+  "changed_context_ids": [],
+  "changed_reader_request_ids": [],
+  "evidence_operations": {},
+  "wins_over_episode": [
+    "9ee3ecd6",
+    "gpt4_21adecb5",
+    "gpt4_70e84552_abs",
+    "gpt4_fe651585_abs",
+    "41698283"
+  ],
+  "losses_over_episode": [
+    "gpt4_5501fe77",
+    "57f827a0",
+    "71017277",
+    "f685340e"
+  ],
+  "no_score_replacement": true,
+  "model_calls": 0,
+  "sha256": "e32012a13fa29706efaeb29efa2e4f2f95f2724b85b9cd7ffa3d6969453e8411"
+}

@@ -1,0 +1,78 @@
+{
+  "complete": true,
+  "verified_cases": 500,
+  "total": 500,
+  "correct": 473,
+  "categories": {
+    "single-session-user": {
+      "total": 70,
+      "correct": 70
+    },
+    "abstention": {
+      "total": 30,
+      "correct": 25
+    },
+    "multi-session": {
+      "total": 133,
+      "correct": 119
+    },
+    "single-session-preference": {
+      "total": 30,
+      "correct": 29
+    },
+    "temporal-reasoning": {
+      "total": 133,
+      "correct": 128
+    },
+    "knowledge-update": {
+      "total": 78,
+      "correct": 71
+    },
+    "single-session-assistant": {
+      "total": 56,
+      "correct": 56
+    }
+  },
+  "paired": {
+    "difference": 0.072,
+    "wins": 44,
+    "losses": 8,
+    "ties": 448,
+    "question_ci95": [
+      0.044,
+      0.1
+    ],
+    "full_history_cluster_ci95": [
+      0.044,
+      0.1
+    ],
+    "clusters": 500
+  },
+  "input_groups": {
+    "changed_input": {
+      "total": 67,
+      "control_correct": 23,
+      "candidate_correct": 62,
+      "wins": 42,
+      "losses": 3
+    },
+    "unchanged_input_repeat": {
+      "total": 433,
+      "control_correct": 414,
+      "candidate_correct": 411,
+      "wins": 2,
+      "losses": 5
+    }
+  },
+  "provider_usage": {
+    "calls": 1000,
+    "input_tokens": 2268568,
+    "output_tokens": 135356,
+    "http_attempts": 1000
+  },
+  "context_tokens_total": 1979609,
+  "registration_sha256": "5a092862366cd20905a800e9b1125105a2a86f719e66234f4bb3b0e3a85aaca8",
+  "execution_sha256": "1cbfae182ed0a60491aa1e9e2cb8f028159a0cfc2c5ca7619b659b124cebaac9",
+  "classification": "Non-deployable annotation-assisted diagnostic; not an achievable upper bound or feature-arm result.",
+  "primary_baseline_replaced": false
+}

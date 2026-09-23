@@ -1,0 +1,22 @@
+{
+  "kind": "prospective-scheduling-only-amendment",
+  "registered_at": "2026-09-22T20:24:49.495555+00:00",
+  "parent_registration_sha256": "06ee04869582702694dfc359b9ba4e249e52282bb08332db35114008b0c2d8f3",
+  "supersedes": "Only the full-feature start delay in v2/v3; all prior artifacts retained",
+  "reason": "Fresh ingestion is materially slower than historical retrieval. Observed host has 18 logical CPUs, 48 GiB memory and 76% system-wide memory free reported by memory_pressure. Five independent fresh processes fit available capacity; starting the fixed full-feature arm early avoids an unnecessary serial delay. No answer outcomes selected or altered.",
+  "schedule": {
+    "fresh_process_cap": 5,
+    "historical_process_cap": 2,
+    "memory_tasks_per_process": 5,
+    "provider_slots_per_process": 4,
+    "full_feature_exploratory": "Start independently after stopping only the idle no-child launcher; do not interrupt any benchmark worker."
+  },
+  "latency_interpretation": "Shared load, with additional overlap starting at this amendment. Report measured wall times and percentiles; not an isolated serving comparison.",
+  "worker_sha256": "6cf0681769878e4419a51b66cd208e448528082a9d0c484f93e7ff60cf8c29cd",
+  "worker_changed": false,
+  "cases_config_prompts_scoring_changed": false,
+  "defaults_changed": false,
+  "idle_launcher_pid": 75029,
+  "full_arm_output_precondition": "Absent before handoff",
+  "amendment_sha256": "99f62e76d4006c50aa552f52e4167b4a0cfb6df205cd9b81acf4573b717f8df7"
+}

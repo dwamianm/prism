@@ -1,0 +1,78 @@
+{
+  "complete": true,
+  "verified_cases": 500,
+  "total": 500,
+  "correct": 430,
+  "categories": {
+    "single-session-user": {
+      "total": 70,
+      "correct": 69
+    },
+    "abstention": {
+      "total": 30,
+      "correct": 24
+    },
+    "multi-session": {
+      "total": 133,
+      "correct": 100
+    },
+    "single-session-preference": {
+      "total": 30,
+      "correct": 27
+    },
+    "temporal-reasoning": {
+      "total": 133,
+      "correct": 108
+    },
+    "knowledge-update": {
+      "total": 78,
+      "correct": 74
+    },
+    "single-session-assistant": {
+      "total": 56,
+      "correct": 52
+    }
+  },
+  "paired": {
+    "difference": -0.014,
+    "wins": 9,
+    "losses": 16,
+    "ties": 475,
+    "question_ci95": [
+      -0.034,
+      0.006
+    ],
+    "full_history_cluster_ci95": [
+      -0.034,
+      0.006
+    ],
+    "clusters": 500
+  },
+  "input_groups": {
+    "unchanged_input_repeat": {
+      "total": 133,
+      "control_correct": 107,
+      "candidate_correct": 104,
+      "wins": 1,
+      "losses": 4
+    },
+    "changed_input": {
+      "total": 367,
+      "control_correct": 330,
+      "candidate_correct": 326,
+      "wins": 8,
+      "losses": 12
+    }
+  },
+  "provider_usage": {
+    "calls": 1000,
+    "input_tokens": 2271603,
+    "output_tokens": 136268,
+    "http_attempts": 1000
+  },
+  "context_tokens_total": 1981623,
+  "registration_sha256": "d44ff957f2fe5b28c8dfabb39ba44981694dbffc521f3e63ea72cf363126f731",
+  "execution_sha256": "039cd64e7a0d5669bef91b5e7dd9d6eb27fb01093ee4e4a5bfa42c8e94409a41",
+  "classification": "New label-free original-anchor development variant. Original-baseline child contrast is secondary; primary requires both new control and candidate complete. Does not replace the failed prior repair trial.",
+  "primary_baseline_replaced": false
+}

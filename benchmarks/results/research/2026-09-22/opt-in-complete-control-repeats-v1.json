@@ -1,0 +1,45 @@
+{
+  "kind": "post-hoc-complete-identical-control-repeat-description",
+  "at": "2026-09-22T23:10:56.385364+00:00",
+  "execution_sha256": {
+    "baseline": "57fd6aef327e82dd6f1b202a8a5cc04ce56e078bc12c2d3c12501d4b873e5542",
+    "evidence_augmentation": "547a15693470769ddb95eb1f72e6c07c93cce88385591f750e144a2725fdf4c4",
+    "evidence_projection": "a1d93e34c467bffe79ee35505352a43bb3b6cc5e3f087b2f414969941cddd6de",
+    "marginal_control_repeat": "eb8eb6d8b5fc2ba8535905fa9d7f3e1e21cc92c24c8852212c7d5f7446d79cb7"
+  },
+  "full_questions": 500,
+  "correct_per_complete_arm": {
+    "baseline": 437,
+    "evidence_augmentation": 435,
+    "evidence_projection": 431,
+    "marginal_control_repeat": 433
+  },
+  "request_identity_gate": true,
+  "differing_requests": [],
+  "success_count_histogram": {
+    "4": 417,
+    "1": 1,
+    "0": 58,
+    "3": 19,
+    "2": 5
+  },
+  "pairwise_disagreements": {
+    "baseline__evidence_augmentation": 10,
+    "baseline__evidence_projection": 14,
+    "baseline__marginal_control_repeat": 14,
+    "evidence_augmentation__evidence_projection": 16,
+    "evidence_augmentation__marginal_control_repeat": 10,
+    "evidence_projection__marginal_control_repeat": 16
+  },
+  "additional_failed_control_repeat": {
+    "result_sha256": "5baa14ad5fc1005b75ce12f46e6ff667765b94bd7601774af34c596f774ed14e",
+    "counts": {
+      "complete": 274,
+      "failed": 1,
+      "not_started": 225
+    },
+    "answer_metrics": null
+  },
+  "limits": "Four complete controls are descriptive, not replacement baselines or independent held-out feature wins. A fifth planned control failed and is retained unscored. No selection of favorable answers, no relabeling, no pooled primary estimate, and no new model calls. Question-bootstrap intervals from individual trials do not capture every source of remote-provider drift.",
+  "sha256": "9061248f8a44de30f8da370cf0ee3ad02ebbfff69d526b01e51cee9c486848ac"
+}

@@ -1,0 +1,797 @@
+{
+  "kind": "reserved-beam-source-identity-and-overlap-audit",
+  "at": "2026-09-22T22:10:26.419808+00:00",
+  "dataset_sha256": "6cc7d1e3b68f9d425db836a0343cca567fcabf197cb8adfe4891ba130c1430d3",
+  "comparison_dataset_sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+  "script_sha256": "6df6bac9c137700d868410b5323402d96315d5d2dca7cf29f662337eb839ac46",
+  "reserved_indices": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "examined_beam_indices": [
+    0,
+    1
+  ],
+  "conversations": [
+    {
+      "conversation_index": 2,
+      "conversation_identity_sha256": "a4aab3f1f08004e907d2357fafe74cab56359bcb32e23f52e7eb1d3a9c0a2ad3",
+      "chat_sha256": "d02d01b0132125944cfd19beaa81c8dd4d666b4dc44b349fbd7c8b79eb0b957b",
+      "source_turns": 194,
+      "unique_source_strings": {
+        "exact": 194,
+        "whitespace_normalized": 194
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 3,
+      "conversation_identity_sha256": "2bf175f9655e7bb7357b9f0a7c6051465a5ae701104ffe741b98e852c0e4d460",
+      "chat_sha256": "0356a6a10de35c5f5676a2bf59912f59c324dc9a6371b8b86f991cbdbf06ff33",
+      "source_turns": 212,
+      "unique_source_strings": {
+        "exact": 212,
+        "whitespace_normalized": 212
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 4,
+      "conversation_identity_sha256": "d10a4bc9e0c1fa4e8f3d7ce2512b8756e47ca5fa451f373c39a1431bb88db49f",
+      "chat_sha256": "5a648adbfe6249e24c68fa6b5960fc990c127a40163869ee3e20369b8cba8941",
+      "source_turns": 238,
+      "unique_source_strings": {
+        "exact": 236,
+        "whitespace_normalized": 236
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 5,
+      "conversation_identity_sha256": "92e9e7e5922d26e17e48f0869ab25cc99499fdab722c065de8e0965c96c68e86",
+      "chat_sha256": "5557dc82967998a15d480cb3f40dc7ae47367ddb89c2bd63bd8628afc6de7d43",
+      "source_turns": 258,
+      "unique_source_strings": {
+        "exact": 258,
+        "whitespace_normalized": 258
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 6,
+      "conversation_identity_sha256": "266aa5886067fbbc1a3a39fe432fc5bbf561abc90e4b8a322215ac17df6ce012",
+      "chat_sha256": "9914cc3b80e349653bdecd4eabe645b6028cf1f1f9cde09aa59842c1dbfbbed9",
+      "source_turns": 260,
+      "unique_source_strings": {
+        "exact": 260,
+        "whitespace_normalized": 260
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 7,
+      "conversation_identity_sha256": "ade1a1c2a61af0f279a4978dfddcdb6acd33f5a8b61e62c5fd881e8a88a387bc",
+      "chat_sha256": "139078db3541e6b8e78fa3b424e269d3119392be3f2145a60f520e47deeb76a0",
+      "source_turns": 268,
+      "unique_source_strings": {
+        "exact": 268,
+        "whitespace_normalized": 268
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 8,
+      "conversation_identity_sha256": "986b79d4b69dffb1d19836f47b27073d95bf55201b3385aceb7e0687a21d8667",
+      "chat_sha256": "13c0d5b677655d577e6c6d6836b531de2dde92f11e1bfd78b877ff9b57ed0f57",
+      "source_turns": 270,
+      "unique_source_strings": {
+        "exact": 270,
+        "whitespace_normalized": 270
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 9,
+      "conversation_identity_sha256": "536549599ec6c3b859cd3970025779a13d061783c73e663fea7f963e98379aa8",
+      "chat_sha256": "cfacbaaefc9be8a3e2be6625501c23694db19b389435645c15a97620d35c0429",
+      "source_turns": 344,
+      "unique_source_strings": {
+        "exact": 344,
+        "whitespace_normalized": 344
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 10,
+      "conversation_identity_sha256": "f326bd84707ed76597becb832280595d1a5aaceb0905dc40e3553ebb861bde80",
+      "chat_sha256": "2219937fc338cbdf6f2fb9e2bb66ab5ef3655c5ff265e87bd5ca870238361c6b",
+      "source_turns": 388,
+      "unique_source_strings": {
+        "exact": 387,
+        "whitespace_normalized": 387
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 11,
+      "conversation_identity_sha256": "f9cacf3cb91a12e03bc4546834f95a50a4c5fe02276ac260148ea9296c442d39",
+      "chat_sha256": "80ff70758b4d81555584aadd935056f08ad461b1a03ccffb560b78da34828744",
+      "source_turns": 392,
+      "unique_source_strings": {
+        "exact": 388,
+        "whitespace_normalized": 388
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 12,
+      "conversation_identity_sha256": "e23f8f39182c82127c1bef3cbfd9b54e30e1df4916da81dcfc2a801c23f3bf01",
+      "chat_sha256": "f9c2b0d13174b8a586d643995f1ec32dc78ac4324d7bad8b8999d9ee6e31e634",
+      "source_turns": 310,
+      "unique_source_strings": {
+        "exact": 310,
+        "whitespace_normalized": 310
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 13,
+      "conversation_identity_sha256": "789d9e7dc67f986660d9b28f5946cce995f9b145e4c2ef61828679cee07bb316",
+      "chat_sha256": "828f7b4abb665f3eb82620d33a731bf7d88534bd2fbbd4fe8d35e7335880eca2",
+      "source_turns": 268,
+      "unique_source_strings": {
+        "exact": 268,
+        "whitespace_normalized": 268
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 14,
+      "conversation_identity_sha256": "47cea6234e51694af3ba37750e249b15a6cd79dce68ac582e3075bb28393b5ea",
+      "chat_sha256": "845730ea10efc763af65b2cc0212386b6690ecd4650ee1f53b1f58f51e5285bb",
+      "source_turns": 272,
+      "unique_source_strings": {
+        "exact": 272,
+        "whitespace_normalized": 272
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 15,
+      "conversation_identity_sha256": "17eed2c0e7c9788d0b46fafdf328b3e955aa0a22132c16cde72aa4f32dcd5282",
+      "chat_sha256": "9a5be702eb1a3bac21e2c9468946e1618d2ed8731edc6dd2f13b5a00bdccc327",
+      "source_turns": 322,
+      "unique_source_strings": {
+        "exact": 322,
+        "whitespace_normalized": 322
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 16,
+      "conversation_identity_sha256": "e4bb04eec661be0b6c4cde1d3e6dca3fff3c9bdbb8c1244061f85bab274505e9",
+      "chat_sha256": "5c9b578d7bd92f17a761e18b985060ac70a996c4802cb4155f64b2e6b04fb601",
+      "source_turns": 286,
+      "unique_source_strings": {
+        "exact": 286,
+        "whitespace_normalized": 286
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 17,
+      "conversation_identity_sha256": "0234a350f4d56ae45c5ece57b08c54496f372bc570bd83a465fb6d2d85531479",
+      "chat_sha256": "9846cc9f9ced0055223539269de3ea606b35384a75aba18ca0180bf8dda105f2",
+      "source_turns": 362,
+      "unique_source_strings": {
+        "exact": 361,
+        "whitespace_normalized": 361
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 18,
+      "conversation_identity_sha256": "49f65dc5d4333e3ed1ba4c9bbea03134a985509541efa8a4955542d50dea45f0",
+      "chat_sha256": "3d86f07f879807a0315269ee197d9c71035ed0b82979adb7ff257e11233db601",
+      "source_turns": 328,
+      "unique_source_strings": {
+        "exact": 328,
+        "whitespace_normalized": 328
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    },
+    {
+      "conversation_index": 19,
+      "conversation_identity_sha256": "046419ca5ecebeb34fdfe9dde8106ccee5ce39f8e4dd115e8ef20b869f8bed82",
+      "chat_sha256": "bb84770cb200a36a9bee09de8c127fe31f2dde096220e9a8b36ad366e85ab969",
+      "source_turns": 372,
+      "unique_source_strings": {
+        "exact": 370,
+        "whitespace_normalized": 370
+      },
+      "overlap_with_examined_beam_0_1": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      },
+      "overlap_with_examined_longmemeval_s": {
+        "exact": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        },
+        "whitespace_normalized": {
+          "unique_shared_source_strings": 0,
+          "at_least_80_characters": 0,
+          "at_least_200_characters": 0,
+          "maximum_shared_characters": 0,
+          "shared_source_hashes": []
+        }
+      }
+    }
+  ],
+  "shared_full_seed_groups": [],
+  "shared_full_profile_groups": [],
+  "reserved_pair_overlaps": [],
+  "new_model_calls": 0,
+  "probe_or_reference_content_inspected": false,
+  "cohort_selected_by_outcome": false,
+  "limits": "Exact and whitespace-normalized source-string/profile/seed identity only, not semantic near-duplicate detection or proof of all human/provider exposure. The 80/200-character buckets are descriptive, not an eligibility rule. No source is excluded here. A later prospective confirmation protocol must declare its cohort and scoring before probe inspection or inference.",
+  "audit_sha256": "8d795dabd8b803ada520e136d9110776f65a809dffb069238917efc8da025304"
+}

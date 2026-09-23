@@ -1,0 +1,14 @@
+{
+  "kind": "opt-in-artifact-integrity-registration",
+  "registered_at": "2026-09-22T17:59:30.094820+00:00",
+  "source_root": "/Users/dwamianm/Sites/prism/data/benchmarks/longmemeval-s-prme-baseline-v1",
+  "identity": {
+    "dataset_sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "questions": 500,
+    "registration_sha256": "e84e514b14db44d6cccd705a3babbafff4d1c1aec36f0286c60039242620288a"
+  },
+  "expected_dataset_sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+  "questions": 500,
+  "ordered_ids_sha256": "a4849b8afda6b6ed31ead4fc28d00784d2d5fef945be87642f5ce3ab710b21c4",
+  "policy": "Validate all 500 capture hashes, case identities and pack trees before any reuse; no writes to master packs."
+}

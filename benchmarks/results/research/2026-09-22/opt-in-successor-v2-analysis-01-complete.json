@@ -1,0 +1,1848 @@
+{
+  "kind": "opt-in-successor-complete-arm-analysis",
+  "analyzed_at": "2026-09-22T18:58:08.056156+00:00",
+  "registration_sha256": "06ee04869582702694dfc359b9ba4e249e52282bb08332db35114008b0c2d8f3",
+  "arms": {
+    "baseline": {
+      "total": 500,
+      "correct": 437,
+      "accuracy": 0.874,
+      "categories": {
+        "single-session-user": {
+          "total": 70,
+          "correct": 69
+        },
+        "abstention": {
+          "total": 30,
+          "correct": 25
+        },
+        "multi-session": {
+          "total": 133,
+          "correct": 100
+        },
+        "single-session-preference": {
+          "total": 30,
+          "correct": 27
+        },
+        "temporal-reasoning": {
+          "total": 133,
+          "correct": 115
+        },
+        "knowledge-update": {
+          "total": 78,
+          "correct": 73
+        },
+        "single-session-assistant": {
+          "total": 56,
+          "correct": 53
+        }
+      },
+      "latency_seconds": {
+        "cold": {
+          "mean": 0.9964785247422114,
+          "p50": 0.6206302289938321,
+          "p95": 2.3461240294927834
+        },
+        "warm": {
+          "mean": 0.9939968843696697,
+          "p50": 0.5895659999951022,
+          "p95": 2.7687622312543643
+        }
+      },
+      "ingestion_summed_seconds": null,
+      "monetary_cost": null,
+      "context_tokens": {
+        "mean": 3964.75,
+        "p50": 3976.0,
+        "p95": 3996.0
+      },
+      "inventory": {},
+      "feature_activation": {
+        "supersedence_checks": 0,
+        "novelty_calls": 0,
+        "reformulation_calls": 0,
+        "nonempty_reformulations": 0,
+        "score_operation_session_decay": 14152,
+        "score_operation_current_update": 11
+      },
+      "evidence": {
+        "context_conflict_flags": 0,
+        "applicable_cases": 470,
+        "complete_turn_recall": 403,
+        "any_turn_recall": 451,
+        "complete_session_recall": 437,
+        "any_session_recall": 467
+      },
+      "reader_judge_usage": {
+        "reader_calls": 500,
+        "http_attempts": 1000,
+        "transient_http_errors": 0,
+        "input_tokens": 2273661,
+        "output_tokens": 137576,
+        "judge_calls": 500
+      },
+      "error_categories": {
+        "packing_omission": 44,
+        "annotated_evidence_present_reader_or_annotation_issue": 14,
+        "no_annotation": 5
+      },
+      "errors": [
+        {
+          "question_id": "75499fd8",
+          "category": "single-session-user",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3983
+        },
+        {
+          "question_id": "0a995998",
+          "category": "multi-session",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3924
+        },
+        {
+          "question_id": "6d550036",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 4,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3986
+        },
+        {
+          "question_id": "gpt4_d84a3211",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3959
+        },
+        {
+          "question_id": "gpt4_f2262a51",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 5,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 5,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3918
+        },
+        {
+          "question_id": "c4a1ceb8",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3996
+        },
+        {
+          "question_id": "gpt4_15e38248",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 5,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 5,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3996
+        },
+        {
+          "question_id": "88432d0a",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3991
+        },
+        {
+          "question_id": "80ec1f4f",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3996
+        },
+        {
+          "question_id": "gpt4_7fce9456",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 6,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 6,
+            "retrieved_required_turns": 6,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3943
+        },
+        {
+          "question_id": "d682f1a2",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3925
+        },
+        {
+          "question_id": "7024f17c",
+          "category": "multi-session",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3994
+        },
+        {
+          "question_id": "2ce6a0f2",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 4,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3983
+        },
+        {
+          "question_id": "gpt4_31ff4165",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 6,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 6,
+            "retrieved_required_turns": 6,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3983
+        },
+        {
+          "question_id": "gpt4_194be4b3",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 4,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3989
+        },
+        {
+          "question_id": "gpt4_ab202e7f",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 5,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3910
+        },
+        {
+          "question_id": "gpt4_731e37d7",
+          "category": "multi-session",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3891
+        },
+        {
+          "question_id": "edced276",
+          "category": "multi-session",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3992
+        },
+        {
+          "question_id": "e3038f8c",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 4,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3897
+        },
+        {
+          "question_id": "1a8a66a6",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3991
+        },
+        {
+          "question_id": "gpt4_372c3eed",
+          "category": "multi-session",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3993
+        },
+        {
+          "question_id": "09d032c9",
+          "category": "single-session-preference",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 0,
+            "any_session_recall": false,
+            "complete_session_recall": false,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3959
+        },
+        {
+          "question_id": "38146c39",
+          "category": "single-session-preference",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3980
+        },
+        {
+          "question_id": "d6233ab6",
+          "category": "single-session-preference",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3993
+        },
+        {
+          "question_id": "a1cc6108",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3976
+        },
+        {
+          "question_id": "9ee3ecd6",
+          "category": "multi-session",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3977
+        },
+        {
+          "question_id": "27016adc",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3995
+        },
+        {
+          "question_id": "92a0aa75",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3991
+        },
+        {
+          "question_id": "67e0d0f2",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3988
+        },
+        {
+          "question_id": "ba358f49",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3946
+        },
+        {
+          "question_id": "bc149d6b",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3991
+        },
+        {
+          "question_id": "157a136e",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 3,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3993
+        },
+        {
+          "question_id": "c18a7dc8",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 0,
+            "any_session_recall": false,
+            "complete_session_recall": false,
+            "required_turns": 2,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3985
+        },
+        {
+          "question_id": "37f165cf",
+          "category": "multi-session",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3986
+        },
+        {
+          "question_id": "8e91e7d9",
+          "category": "multi-session",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 2,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3995
+        },
+        {
+          "question_id": "a96c20ee_abs",
+          "category": "multi-session",
+          "diagnostic": "no_annotation",
+          "packed_evidence": {
+            "applicable": false
+          },
+          "returned_evidence": {
+            "applicable": false
+          },
+          "context_tokens": 3960
+        },
+        {
+          "question_id": "09ba9854_abs",
+          "category": "multi-session",
+          "diagnostic": "no_annotation",
+          "packed_evidence": {
+            "applicable": false
+          },
+          "returned_evidence": {
+            "applicable": false
+          },
+          "context_tokens": 3979
+        },
+        {
+          "question_id": "b46e15ed",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 5,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 4,
+            "retrieved_required_sessions": 4,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 5,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3981
+        },
+        {
+          "question_id": "0db4c65d",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 2,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3989
+        },
+        {
+          "question_id": "gpt4_7f6b06db",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 3,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3982
+        },
+        {
+          "question_id": "gpt4_7abb270c",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 6,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 6,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 6,
+            "retrieved_required_sessions": 6,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 6,
+            "retrieved_required_turns": 6,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3970
+        },
+        {
+          "question_id": "gpt4_e061b84f",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 3,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3990
+        },
+        {
+          "question_id": "370a8ff4",
+          "category": "temporal-reasoning",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3991
+        },
+        {
+          "question_id": "gpt4_d6585ce8",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 5,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3989
+        },
+        {
+          "question_id": "gpt4_f420262c",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 4,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 5,
+            "retrieved_required_sessions": 5,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 5,
+            "retrieved_required_turns": 5,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3968
+        },
+        {
+          "question_id": "gpt4_1e4a8aec",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3992
+        },
+        {
+          "question_id": "gpt4_59149c78",
+          "category": "temporal-reasoning",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3988
+        },
+        {
+          "question_id": "9a707b82",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3944
+        },
+        {
+          "question_id": "eac54add",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 0,
+            "any_session_recall": false,
+            "complete_session_recall": false,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3996
+        },
+        {
+          "question_id": "6e984302",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3958
+        },
+        {
+          "question_id": "gpt4_8279ba03",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3963
+        },
+        {
+          "question_id": "gpt4_65aabe59",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3959
+        },
+        {
+          "question_id": "982b5123",
+          "category": "temporal-reasoning",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3958
+        },
+        {
+          "question_id": "gpt4_2f56ae70",
+          "category": "temporal-reasoning",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": false,
+            "required_turns": 3,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 3,
+            "retrieved_required_sessions": 3,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 3,
+            "retrieved_required_turns": 3,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3979
+        },
+        {
+          "question_id": "gpt4_70e84552_abs",
+          "category": "temporal-reasoning",
+          "diagnostic": "no_annotation",
+          "packed_evidence": {
+            "applicable": false
+          },
+          "returned_evidence": {
+            "applicable": false
+          },
+          "context_tokens": 3963
+        },
+        {
+          "question_id": "0f05491a",
+          "category": "knowledge-update",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3993
+        },
+        {
+          "question_id": "a2f3aa27",
+          "category": "knowledge-update",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3968
+        },
+        {
+          "question_id": "031748ae_abs",
+          "category": "knowledge-update",
+          "diagnostic": "no_annotation",
+          "packed_evidence": {
+            "applicable": false
+          },
+          "returned_evidence": {
+            "applicable": false
+          },
+          "context_tokens": 3915
+        },
+        {
+          "question_id": "0ddfec37_abs",
+          "category": "knowledge-update",
+          "diagnostic": "no_annotation",
+          "packed_evidence": {
+            "applicable": false
+          },
+          "returned_evidence": {
+            "applicable": false
+          },
+          "context_tokens": 3995
+        },
+        {
+          "question_id": "07741c45",
+          "category": "knowledge-update",
+          "diagnostic": "annotated_evidence_present_reader_or_annotation_issue",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 2,
+            "retrieved_required_sessions": 2,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 2,
+            "retrieved_required_turns": 2,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3926
+        },
+        {
+          "question_id": "8752c811",
+          "category": "single-session-assistant",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3980
+        },
+        {
+          "question_id": "e8a79c70",
+          "category": "single-session-assistant",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3913
+        },
+        {
+          "question_id": "eaca4986",
+          "category": "single-session-assistant",
+          "diagnostic": "packing_omission",
+          "packed_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 0,
+            "any_turn_recall": false,
+            "complete_turn_recall": false
+          },
+          "returned_evidence": {
+            "applicable": true,
+            "required_sessions": 1,
+            "retrieved_required_sessions": 1,
+            "any_session_recall": true,
+            "complete_session_recall": true,
+            "required_turns": 1,
+            "retrieved_required_turns": 1,
+            "any_turn_recall": true,
+            "complete_turn_recall": true
+          },
+          "context_tokens": 3897
+        }
+      ],
+      "status": "complete_verified",
+      "configuration_sha256": "4c5b1b31d6058786afafe0383b5ea08963a8060f3a5e43eeb81f5d04437ee6cc",
+      "artifact_manifest_sha256": "daa353a5e442fabe16907ace728ba7aa0aff64f3331b92c3e95a06b108d00039"
+    },
+    "episode_routing": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "evidence_augmentation": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "evidence_projection": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "episode_augmentation": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "episode_projection": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "reranker": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "query_reformulation": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "reranker_reformulation": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "temporal_relations": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "temporal_episode": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "fresh_baseline": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "store_supersedence": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "qa_pairing": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "surprise_gating": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    },
+    "full_feature_exploratory": {
+      "status": "not_complete_or_not_started",
+      "answer_metrics": null
+    }
+  },
+  "comparisons": {},
+  "all_fixed_arms_complete": false,
+  "classification": "development; no untouched confirmation",
+  "default_changes": false,
+  "promotion_recommendation": null,
+  "all_individuals_comparable": false,
+  "best_combination_selection": null,
+  "analysis_sha256": "4e3e7127e3dbb5ca1a4416c3e4bd9ced615f056724b43c88b4491e80cf7120eb"
+}

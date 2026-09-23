@@ -1,0 +1,71 @@
+{
+  "kind": "secondary-opt-in-analysis",
+  "primary_estimates_unchanged": true,
+  "plan_sha256": "eab7c8bc4701a6864c08e1a4c03f842be3b9504a046e16ff6ef468cc9a35cf77",
+  "registration_sha256": "06ee04869582702694dfc359b9ba4e249e52282bb08332db35114008b0c2d8f3",
+  "interactions": {
+    "episode_augmentation": {
+      "status": "complete",
+      "contrast": 0.006,
+      "ci95": [
+        -0.012,
+        0.024
+      ],
+      "questions": 500,
+      "classification": "exploratory interaction estimate"
+    },
+    "episode_projection": {
+      "status": "complete",
+      "contrast": 0.018,
+      "ci95": [
+        -0.002,
+        0.038
+      ],
+      "questions": 500,
+      "classification": "exploratory interaction estimate"
+    },
+    "reranker_reformulation": {
+      "status": "complete",
+      "contrast": 0.014,
+      "ci95": [
+        -0.004,
+        0.032
+      ],
+      "questions": 500,
+      "classification": "exploratory interaction estimate"
+    },
+    "temporal_episode": {
+      "status": "unavailable_incomplete_arms"
+    }
+  },
+  "reader_variation": {
+    "input_gate_passed": true,
+    "differing_request_questions": [],
+    "evidence_operations": {},
+    "arms": [
+      "baseline",
+      "evidence_augmentation",
+      "evidence_projection"
+    ],
+    "questions": 500,
+    "correct_per_arm": {
+      "baseline": 437,
+      "evidence_augmentation": 435,
+      "evidence_projection": 431
+    },
+    "pooled_secondary_accuracy": 0.8686666666666667,
+    "success_count_histogram": {
+      "0": 58,
+      "1": 3,
+      "2": 17,
+      "3": 422
+    },
+    "pairwise_disagreements": {
+      "baseline__evidence_augmentation": 10,
+      "baseline__evidence_projection": 14,
+      "evidence_augmentation__evidence_projection": 16
+    },
+    "primary_baseline_replaced": false
+  },
+  "analysis_sha256": "8be65784d62a6a486f4bb490589eae3b01626e06588a5a09d5bcf701395b14a3"
+}

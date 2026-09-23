@@ -1,0 +1,21 @@
+{
+  "kind": "exact-statistics-analysis-memory-amendment",
+  "at": "2026-09-22T20:48:08.459831+00:00",
+  "wrapper_sha256": "6de5ba9e378700c6cf1e390126d6e9bf6a435d3ab832097847be40e7e1db1816",
+  "original_analyzer_sha256": "e20c0b25fd4e73f1317eefedfe8f819ef6a384129d0de668352c8ad976bccb2d",
+  "original_selector_sha256": "405ab0c1d0115c20ff44c3f646a5ea0214bd6b55ef74a7466c566e76ae73c560",
+  "original_selection_plan_sha256": "1bb5ef5dccb30ecb48acdabd23d27b03e2e0aecbf73de0bb6ea8c1afaff02609",
+  "parity_artifact": "opt-in-analysis-memory-parity-v2.json",
+  "parity_sha256": "9e4cdfb628da54a44adcf3af9ca070588ce6261dfc6455f8704ca07c6caf4d3b",
+  "method": "Run the frozen summarize implementation with all original complete-artifact checks, then retain only cold context/text hash, tokens, latency and evidence for cross-arm paired analysis. Original full captures remain on disk. The original analyzer and original selection function execute unchanged; only cross-arm in-memory retention is bounded.",
+  "parity": "All reported fields across four complete 500-case arms exactly match the original result, excluding only analysis timestamp and self-hash. Context text is retained for the original combination-report contract. Initial successful parity artifact is retained; the second adds that selector field before any replacement process started.",
+  "pending_process_handoff": {
+    "analysis_watcher_pid": 36062,
+    "combination_waiter_pid": 56489,
+    "condition": "Both idle with no children; no selection output or benchmark worker interrupted."
+  },
+  "selection_rule_changed": false,
+  "inference_changed": false,
+  "default_changes": false,
+  "amendment_sha256": "53380e5664f6afd8bba50ad72e4db983c64ee2a7eb7808421e21273b8b4eb061"
+}

@@ -1,0 +1,7 @@
+{
+  "at": "2026-09-22T20:24:52.469213+00:00",
+  "stopped_idle_launcher_pid": 75029,
+  "children_before_handoff": [],
+  "existing_benchmark_worker_interrupted": false,
+  "full_arm_preexisting": false
+}
