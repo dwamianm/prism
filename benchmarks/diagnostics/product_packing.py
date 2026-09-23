@@ -4,18 +4,44 @@ This offline diagnostic changes only the multi-path tier's comparator. It never
 runs retrieval concurrently with its temporary comparator substitution. Source
 labels are used solely after packing, and pointer-only records earn no evidence
 credit. No production defaults are changed.
+
+The ``gate`` and ``gate-compare`` subcommands are the offline evidence gate. The
+gate replays the public ``retrieve()`` over copies of the saved 2026-09-23
+LoCoMo and LongMemEval-S memory packs and measures the context the product
+renderer actually produced: records, memory text, annotated evidence and its
+rank. Like the saved run's diagnostics, it counts evidence packed in any
+representation, and it also reports evidence packed with its text. It makes no
+reader, judge or paid API calls. Its projected accuracy is a planning estimate,
+not an answer score.
 """
 from __future__ import annotations
 
 import argparse
+import asyncio
+from collections import Counter
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from datetime import datetime
 import hashlib
 import inspect
+import itertools
 import json
+import logging
+import os
 from pathlib import Path
+import shutil
+import statistics
+import sys
+import tempfile
+import time
 from unittest.mock import patch
 
+from pydantic import BaseModel
+from pydantic_settings import BaseSettings
+
 from benchmarks.compare_evidence import paired_statistics
+from prme import MemoryEngine, PRMEConfig
+from prme.config import OrganizerConfig
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import pack_context
@@ -190,13 +216,803 @@ def compare(report: dict, snapshots: Path, *, samples: int = 2000, confirmation:
     return result
 
 
-def main():
+# Offline evidence gate ------------------------------------------------------
+
+GATE_KIND = "offline-evidence-gate"
+GATE_SCHEMA_VERSION = 1
+GATE_BENCHMARKS = ("locomo", "longmemeval")
+# Correct answers / questions in the saved GPT-5.4 run, split by whether every
+# annotated evidence turn was packed. Source: benchmarks/results/research/
+# 2026-09-23/gpt54-posthoc-evidence-diagnostics.json; a test keeps them equal.
+# LongMemEval-S uses its pooled rates, as issue #78 specifies: several of its
+# categories have fewer than ten questions with evidence missing.
+GATE_CONDITIONAL_ACCURACY = {
+    "locomo": {
+        "single-hop": {"all_packed": (600, 657), "missing": (30, 183)},
+        "temporal": {"all_packed": (216, 252), "missing": (10, 68)},
+        "multi-hop": {"all_packed": (37, 45), "missing": (42, 233)},
+        "open-domain": {"all_packed": (22, 29), "missing": (19, 60)},
+    },
+    "longmemeval": {"*": {"all_packed": (385, 403), "missing": (21, 67)}},
+}
+# Questions that retrieval cannot move keep their category's measured rate:
+# LoCoMo questions without an annotation or with one that names no stored turn,
+# and LongMemEval-S abstention questions.
+GATE_UNSCORED_ACCURACY = {
+    "locomo": {"multi-hop": (1, 4), "open-domain": (7, 7), "single-hop": (0, 1), "temporal": (1, 1)},
+    "longmemeval": {"knowledge-update": (4, 6), "multi-session": (9, 12), "single-session-user": (6, 6),
+                    "temporal-reasoning": (5, 6)},
+}
+GATE_MEASURED_ACCURACY = {"locomo": (985, 1540), "longmemeval": (430, 500)}
+GATE_BASELINE = {
+    "locomo": {"records_per_context": 25.2, "memory_text_share": 0.29,
+               "all_evidence_packed": {"category": "multi-hop", "questions": 45, "annotated": 282}},
+    "longmemeval": {"records_per_context": 23.9, "memory_text_share": 0.32,
+                    "all_evidence_packed": {"category": None, "questions": 403, "annotated": 470}},
+}
+GATE_PROJECTION = {
+    "label": "Planning estimate, not an answer score.",
+    "method": ("Each question takes the saved GPT-5.4 run's accuracy on questions whose annotated evidence was "
+               "all packed, or partly missing: per category for LoCoMo, pooled for LongMemEval-S. Questions "
+               "that retrieval cannot move (no resolvable annotation, or abstention) keep their category's "
+               "measured rate."),
+    "calibration": ("At the saved run's evidence states the projection reproduces 985/1,540 and 430/500 by "
+                    "construction; LongMemEval-S category values are pooled estimates. The audit's re-pack "
+                    "simulator, using the same LoCoMo rates, reproduced the real packed sets with mean Jaccard "
+                    "0.83 and projected 63.3% against 64.0% measured "
+                    "(memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md, section 1)."),
+    "limits": [
+        "It ignores distractor effects: added or reordered context can change answers without "
+        "changing evidence coverage.",
+        "It relies on the datasets' evidence annotations, which have gaps; equivalent evidence can "
+        "exist elsewhere.",
+        "Its conditional accuracies come from one reader and one strict judge (GPT-5.4).",
+        "All 2,040 questions have already been examined, so this is a development gate. Publication "
+        "claims need fresh or held-out data.",
+    ],
+}
+# The gate replays saved packs with local query embedding only. Maintenance is
+# off because it promotes records by wall-clock age between questions, which
+# would make a replay depend on its date; the saved run's records were minutes
+# old, so maintenance changed nothing there.
+GATE_FIXED_SETTINGS = frozenset({
+    "db_path", "vector_path", "lexical_path", "database_url", "namespace_id", "encryption_enabled",
+    "encryption_key", "embedding", "extraction", "temporal_relation", "enable_query_reformulation",
+    "organizer", "api", "mcp",
+})
+# The LoCoMo capture wrote this file after recording each pack's tree identity.
+_PACK_IDENTITY_EXCLUDED = frozenset({"capture-manifest.json"})
+
+
+@dataclass(frozen=True)
+class GateCase:
+    """One saved benchmark question and the pack its saved context came from."""
+
+    benchmark: str
+    question_id: str
+    category: str
+    question: str
+    user_id: str
+    reference_time: datetime
+    pack: Path
+    pack_sha256: str  # tree identity the saved run recorded for the pack
+    saved_context_sha256: str
+    evidence: frozenset[str] | None  # None when the question has no evidence annotation
+    unresolved: tuple[str, ...] = ()  # annotations that name no stored turn
+
+
+def _harness():
+    """The GPT-5.4 harness also holds provider clients, so load it only when the gate runs."""
+    from benchmarks.integrations import run_gpt54_comparison
+
+    return run_gpt54_comparison
+
+
+def default_archive() -> Path:
+    # The datasets are read from the main checkout, so worktrees use its archive too.
+    return _harness().ORIGINAL / "data" / "gpt54-comparison-v1"
+
+
+def pack_identity(pack: Path) -> str:
+    """Tree digest of a memory pack, as the saved run recorded it."""
+    lme = _harness().lme
+    files = [item for item in lme._tree_identity(pack)["files"] if item["path"] not in _PACK_IDENTITY_EXCLUDED]
+    return lme._sha256(lme._canonical(files))
+
+
+def _turn_key(session_id, position, index) -> str:
+    return f"{session_id}#{position}#{index}"
+
+
+def _source_key(benchmark: str, metadata: dict) -> str | None:
+    """Evidence identity of a stored turn, in the form the dataset annotations use."""
+    if benchmark == "locomo":
+        return metadata.get("source_dialog_id")
+    parts = (metadata.get("source_session_id"), metadata.get("source_session_position"),
+             metadata.get("source_turn_index"))
+    return None if None in parts else _turn_key(*parts)
+
+
+def _prepared(folder: Path, questions: int) -> tuple[dict, dict[str, str]]:
+    """The saved run's manifest, and the digest it recorded for each context file."""
+    path = folder / "prepared.json"
+    if not path.is_file():
+        raise ValueError(f"No saved run at {folder}; pass --archive with the main checkout's "
+                         "data/gpt54-comparison-v1")
+    prepared = json.loads(path.read_text())
+    if not prepared.get("complete") or len(prepared["contexts"]) != questions:
+        raise ValueError(f"The saved run at {folder} is incomplete")
+    return prepared, {row["question_id"]: row["sha256"] for row in prepared["contexts"]}
+
+
+def _saved_context(folder: Path, question_id: str, manifest: dict[str, str]) -> dict:
+    raw = (folder / "contexts" / f"{question_id}.json").read_bytes()
+    if hashlib.sha256(raw).hexdigest() != manifest[question_id]:
+        raise ValueError(f"Saved context {question_id} differs from the archive manifest")
+    return json.loads(raw)
+
+
+def _pack_dir(path: Path) -> Path:
+    if not (path / "memory.duckdb").is_file():
+        raise ValueError(f"Saved memory pack not found: {path}")
+    return path
+
+
+def _locomo_cases(archive: Path) -> list[GateCase]:
+    gpt54 = _harness()
+    if gpt54.digest(gpt54.LOCOMO) != gpt54.LOCOMO_SHA:
+        raise ValueError("The LoCoMo dataset differs from the saved run")
+    folder = archive / "locomo"
+    questions = gpt54.question_rows("locomo")
+    prepared, manifest = _prepared(folder, len(questions))
+    packs = {record["conversation_id"]: (_pack_dir(Path(record["config"]["db_path"]).parent),
+                                         record["final_artifact"]["tree_sha256"])
+             for record in prepared["packs"]}
+    stored = {sample["sample_id"]: {turn["metadata"]["source_dialog_id"]
+                                    for turn in gpt54.source_turns(sample["conversation"])}
+              for sample in json.loads(gpt54.LOCOMO.read_text())}
+    cases = []
+    for question in questions:
+        saved = _saved_context(folder, question["question_id"], manifest)
+        pack, pack_sha256 = packs[question["conversation_id"]]
+        wanted = frozenset(question.get("evidence", []))
+        cases.append(GateCase(
+            benchmark="locomo", question_id=question["question_id"], category=question["question_type"],
+            question=question["question"], user_id=saved["receipt"]["user_id"],
+            reference_time=datetime.fromisoformat(saved["receipt"]["reference_time"]),
+            pack=pack, pack_sha256=pack_sha256,
+            saved_context_sha256=hashlib.sha256(saved["context"].encode()).hexdigest(),
+            evidence=wanted or None,
+            unresolved=tuple(sorted(wanted - stored[question["conversation_id"]])),
+        ))
+    return cases
+
+
+def _longmemeval_cases(archive: Path) -> list[GateCase]:
+    gpt54 = _harness()
+    if gpt54.digest(gpt54.LONGMEM) != gpt54.lme.DATASET_SHA256:
+        raise ValueError("The LongMemEval-S dataset differs from the saved run")
+    folder = archive / "longmemeval"
+    questions = gpt54.question_rows("longmemeval")
+    _, manifest = _prepared(folder, len(questions))
+    cases = []
+    for question in questions:
+        saved = _saved_context(folder, question["question_id"], manifest)
+        # The saved context points at its 2026-09-22 control capture, which holds
+        # the receipt and sits next to the pack that produced the context.
+        capture = Path(saved["source_capture"])
+        raw = capture.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != saved["source_capture_sha256"]:
+            raise ValueError(f"The control capture for {question['question_id']} differs from the archive")
+        receipt = json.loads(raw)["retrievals"][0]["receipt"]
+        turns = {_turn_key(session_id, position, index): turn
+                 for position, (session_id, session) in enumerate(
+                     zip(question["haystack_session_ids"], question["haystack_sessions"], strict=True))
+                 for index, turn in enumerate(session)}
+        # Abstention questions have no evidence to find. Blank answer turns were
+        # never stored; the current dataset has none.
+        abstention = question["question_id"].endswith("_abs")
+        wanted = frozenset() if abstention else frozenset(
+            key for key, turn in turns.items() if turn.get("has_answer") is True)
+        cases.append(GateCase(
+            benchmark="longmemeval", question_id=question["question_id"], category=question["question_type"],
+            question=question["question"], user_id=receipt["user_id"],
+            reference_time=datetime.fromisoformat(receipt["reference_time"]),
+            pack=_pack_dir(capture.parent / "pack"), pack_sha256=saved["artifact_checksum"],
+            saved_context_sha256=saved["context_sha256"], evidence=wanted or None,
+            unresolved=tuple(sorted(key for key in wanted if not turns[key]["content"].strip())),
+        ))
+    return cases
+
+
+def parse_overrides(items: list[str]) -> dict:
+    """Turn ``packing.token_budget=8192`` style arguments into nested config values."""
+    overrides: dict = {}
+    for item in items:
+        key, separator, raw = item.partition("=")
+        if not separator or not key:
+            raise ValueError(f"Expected KEY=VALUE, got {item!r}")
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError:
+            value = raw
+        *parents, leaf = key.split(".")
+        node = overrides
+        for part in parents:
+            node = node.setdefault(part, {})
+            if not isinstance(node, dict):
+                raise ValueError(f"{key} conflicts with another override")
+        if leaf in node:
+            raise ValueError(f"{key} is set twice")
+        node[leaf] = value
+    return overrides
+
+
+def _check_override_keys(model: type[BaseModel], values: dict, prefix: str = "") -> None:
+    # Nested models ignore unknown fields, so a misspelled key would otherwise do nothing.
+    for key, value in values.items():
+        field = model.model_fields.get(key)
+        if field is None:
+            raise ValueError(f"Unknown configuration key: {prefix}{key}")
+        nested = field.annotation
+        if isinstance(value, dict) and isinstance(nested, type) and issubclass(nested, BaseModel):
+            _check_override_keys(nested, value, f"{prefix}{key}.")
+
+
+def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
+    """Current defaults over a pack copy, isolated from environment variables and .env files."""
+    overrides = overrides or {}
+    fixed = sorted(GATE_FIXED_SETTINGS.intersection(overrides))
+    if fixed:
+        raise ValueError(f"The evidence gate cannot override {', '.join(fixed)}")
+    _check_override_keys(PRMEConfig, overrides)
+    with patch.dict(os.environ, {}, clear=True):
+        # Nested settings read .env by themselves, so build each one without it.
+        settings = {name: field.annotation(_env_file=None) for name, field in PRMEConfig.model_fields.items()
+                    if isinstance(field.annotation, type) and issubclass(field.annotation, BaseSettings)}
+        settings["organizer"] = OrganizerConfig(_env_file=None, opportunistic_enabled=False)
+        config = PRMEConfig(_env_file=None, **overrides, **settings, db_path=str(pack / "memory.duckdb"),
+                            vector_path=str(pack / "vectors.usearch"), lexical_path=str(pack / "lexical_index"))
+    if config.enable_query_reformulation or config.temporal_relation.enabled:
+        raise ValueError("The evidence gate does not run model-backed query features")
+    return config
+
+
+def projected_correct(benchmark: str, category: str, evidence: dict | None) -> float:
+    """Planning estimate of this question's accuracy from its evidence state."""
+    if evidence is None or evidence["unresolved"]:
+        rates = GATE_UNSCORED_ACCURACY[benchmark].get(category)
+        if rates is None:
+            raise ValueError(f"The saved run has no measured rate for unscored {benchmark} {category} questions")
+        correct, total = rates
+    else:
+        table = GATE_CONDITIONAL_ACCURACY[benchmark]
+        rates = table[category] if category in table else table["*"]
+        correct, total = rates["all_packed" if evidence["all_packed"] else "missing"]
+    return correct / total
+
+
+def _check_replay(case: GateCase, packing: PackingConfig, response, receipt, context: str,
+                  context_sha256: str, packed: list) -> None:
+    """The receipt must describe exactly the context the reader would see."""
+    label = f"{case.benchmark} {case.question_id}"
+    if response.metadata.backend_failures:
+        raise ValueError(f"{label}: retrieval backends failed: {response.metadata.backend_failures}")
+    if receipt is None or not response.metadata.receipt_persisted:
+        raise ValueError(f"{label}: the retrieval receipt was not persisted")
+    if receipt.context_sha256 != context_sha256:
+        raise ValueError(f"{label}: receipt context {receipt.context_sha256} differs from rendered {context_sha256}")
+    if receipt.replay_ranking() != tuple(result.node.id for result in response.results):
+        raise ValueError(f"{label}: the receipt ranking differs from the response")
+    tokens = count_tokens(context, packing.tokenizer)
+    limit = max(0, packing.token_budget - packing.overhead_tokens)
+    if tokens != response.bundle.tokens_used or tokens > limit:
+        raise ValueError(f"{label}: the context has {tokens} tokens; the bundle reports "
+                         f"{response.bundle.tokens_used} and the limit is {limit}")
+    if ({candidate.node_id for candidate in receipt.candidates if candidate.in_context}
+            != {candidate.node.id for candidate in packed}):
+        raise ValueError(f"{label}: the receipt's in-context records differ from the packed bundle")
+
+
+def _in_context(text: str, context: str) -> bool:
+    """Whether the text appears in the context verbatim or as a JSON string body."""
+    return any(form in context for form in (
+        text, json.dumps(text)[1:-1], json.dumps(text, ensure_ascii=False)[1:-1]))
+
+
+def _write_capture(capture_dir: Path, case: GateCase, context: str, receipt) -> str:
+    raw = json.dumps({"question_id": case.question_id, "context": context,
+                      "receipt": receipt.model_dump(mode="json")}).encode()
+    path = capture_dir / case.benchmark / f"{case.question_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(raw)
+    return hashlib.sha256(raw).hexdigest()
+
+
+async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_dir: Path | None) -> dict:
+    started = time.perf_counter()
+    response = await engine.retrieve(case.question, user_id=case.user_id, reference_time=case.reference_time)
+    seconds = time.perf_counter() - started
+    receipt = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=case.user_id)
+    context = response.bundle.render()
+    context_sha256 = hashlib.sha256(context.encode()).hexdigest()
+    packed = [candidate for group in response.bundle.sections.values() for candidate in group]
+    _check_replay(case, packing, response, receipt, context, context_sha256, packed)
+    # Receipt flags, not the rendered format, decide what counts as memory text,
+    # and that text must actually appear in the context.
+    has_text = {candidate.node_id: candidate.has_content for candidate in receipt.candidates}
+    packed_sources, text_sources, text_tokens = set(), set(), 0
+    for candidate in packed:
+        source = _source_key(case.benchmark, candidate.node.metadata or {})
+        if has_text[candidate.node.id]:
+            text = candidate.rendered_text or ""
+            if not _in_context(text, context):
+                raise ValueError(f"{case.benchmark} {case.question_id}: packed memory text is missing "
+                                 "from the rendered context")
+            text_tokens += count_tokens(text, packing.tokenizer)
+        if source is not None:
+            packed_sources.add(source)
+            if has_text[candidate.node.id]:
+                text_sources.add(source)
+    first_rank: dict[str, int] = {}
+    for rank, result in enumerate(response.results, start=1):
+        source = _source_key(case.benchmark, result.node.metadata or {})
+        if source is not None:
+            first_rank.setdefault(source, rank)
+    evidence = None
+    if case.evidence is not None:
+        evidence = {
+            "annotated": len(case.evidence), "unresolved": list(case.unresolved),
+            "packed": len(case.evidence & packed_sources),
+            "packed_with_text": len(case.evidence & text_sources),
+            "all_packed": case.evidence <= packed_sources,
+            "all_packed_with_text": case.evidence <= text_sources,
+            "ranks": {key: first_rank.get(key) for key in sorted(case.evidence.difference(case.unresolved))},
+        }
+    row = {
+        "benchmark": case.benchmark, "question_id": case.question_id, "category": case.category,
+        "context_sha256": context_sha256, "context_matches_saved": context_sha256 == case.saved_context_sha256,
+        "context_tokens": response.bundle.tokens_used, "memory_text_tokens": text_tokens,
+        "records": len(packed),
+        "records_without_text": sum(not has_text[candidate.node.id] for candidate in packed),
+        "representations": dict(Counter(candidate.representation.value for candidate in packed)),
+        "candidates": len(response.results), "retrieval_seconds": seconds, "evidence": evidence,
+        "projected_correct": projected_correct(case.benchmark, case.category, evidence),
+    }
+    if capture_dir is not None:
+        row["capture_sha256"] = _write_capture(capture_dir, case, context, receipt)
+    return row
+
+
+def _verify_copy(copy: Path, expected_sha256: str) -> None:
+    # A symlink in the copy would let retrieval write receipts into the saved archive.
+    if copy.is_symlink() or any(path.is_symlink() for path in copy.rglob("*")):
+        raise ValueError(f"The saved pack copied to {copy} contains a symlink")
+    if pack_identity(copy) != expected_sha256:
+        raise ValueError(f"The pack copied to {copy} differs from the identity the saved run recorded")
+
+
+async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict | None = None,
+                      capture_dir: Path | None = None,
+                      progress: Callable[[int], None] | None = None) -> list[dict]:
+    """Replay each question on a verified scratch copy of its pack; saved packs are never opened."""
+    from benchmarks.diagnostics.longmemeval_s_compact import _clone_pack
+
+    # Retrieval persists receipts, so questions sharing a pack replay together in saved order.
+    groups = [(key, list(group))
+              for key, group in itertools.groupby(cases, key=lambda case: (case.benchmark, case.pack))]
+    if len({key for key, _ in groups}) != len(groups):
+        raise ValueError("Questions that share a pack must be contiguous so they replay in saved order")
+    rows: list[dict] = []
+    for number, ((_, pack), group) in enumerate(groups, start=1):
+        copy = scratch / f"pack-{number:05d}"
+        if copy.exists():
+            raise ValueError(f"Scratch path already exists: {copy}")
+        try:
+            _clone_pack(pack, copy)
+            _verify_copy(copy, group[0].pack_sha256)
+            config = gate_config(copy, overrides)
+            async with MemoryEngine.open(config) as engine:
+                for case in group:
+                    rows.append(await _replay_case(engine, config.packing, case, capture_dir))
+        finally:
+            shutil.rmtree(copy, ignore_errors=True)
+        if progress is not None:
+            progress(len(rows))
+    return rows
+
+
+def _share(numerator: float, denominator: float) -> float | None:
+    return numerator / denominator if denominator else None
+
+
+def _all_within(evidence: dict, limit: int) -> bool:
+    """Every annotated turn resolves and ranks inside ``limit``."""
+    return not evidence["unresolved"] and all(rank is not None and rank <= limit
+                                              for rank in evidence["ranks"].values())
+
+
+def summarize_gate(rows: list[dict]) -> dict:
+    """Per-context and evidence metrics for one benchmark or category."""
+    if not rows:
+        raise ValueError("Cannot summarize an empty set of questions")
+    annotated = [row["evidence"] for row in rows if row["evidence"] is not None]
+    ranks = [rank for evidence in annotated for rank in evidence["ranks"].values()]
+    returned = [rank for rank in ranks if rank is not None]
+    context_tokens = sum(row["context_tokens"] for row in rows)
+    all_packed = sum(evidence["all_packed"] for evidence in annotated)
+    with_text = sum(evidence["all_packed_with_text"] for evidence in annotated)
+    projected = sum(row["projected_correct"] for row in rows)
+    representations = Counter()
+    for row in rows:
+        representations.update(row["representations"])
+    return {
+        "questions": len(rows),
+        "contexts_matching_saved": sum(row["context_matches_saved"] for row in rows),
+        "candidates_mean": statistics.fmean(row["candidates"] for row in rows),
+        "records_per_context": statistics.fmean(row["records"] for row in rows),
+        "context_tokens_mean": context_tokens / len(rows),
+        "memory_text_share": _share(sum(row["memory_text_tokens"] for row in rows), context_tokens),
+        "records_without_text": sum(row["records_without_text"] for row in rows),
+        "representations": dict(sorted(representations.items())),
+        "annotated_questions": len(annotated),
+        "all_evidence_packed": all_packed,
+        "all_evidence_packed_share": _share(all_packed, len(annotated)),
+        "all_evidence_packed_with_text": with_text,
+        "all_evidence_packed_with_text_share": _share(with_text, len(annotated)),
+        "evidence_ranks": {
+            "annotated_turns": len(ranks), "not_returned": len(ranks) - len(returned),
+            "median": statistics.median(returned) if returned else None,
+            "top_25_share": _share(sum(rank <= 25 for rank in returned), len(returned)),
+            "beyond_150_share": _share(sum(rank > 150 for rank in returned), len(returned)),
+            "all_within_top_25_share": _share(sum(_all_within(e, 25) for e in annotated), len(annotated)),
+            "all_within_top_75_share": _share(sum(_all_within(e, 75) for e in annotated), len(annotated)),
+        },
+        "projected_correct": projected,
+        "projected_accuracy": projected / len(rows),
+    }
+
+
+def gate_report(rows: list[dict], *, provenance: dict) -> dict:
+    if not rows:
+        raise ValueError("An evidence gate report needs at least one question")
+    benchmarks = {}
+    for name in dict.fromkeys(row["benchmark"] for row in rows):
+        items = [row for row in rows if row["benchmark"] == name]
+        benchmarks[name] = {
+            "summary": summarize_gate(items),
+            "categories": {category: summarize_gate([row for row in items if row["category"] == category])
+                           for category in sorted({row["category"] for row in items})},
+            "context_mismatches": [row["question_id"] for row in items if not row["context_matches_saved"]],
+        }
+    return {
+        "kind": GATE_KIND, "schema_version": GATE_SCHEMA_VERSION, "complete": True, "provenance": provenance,
+        "projection": {**GATE_PROJECTION, "conditional_accuracy": GATE_CONDITIONAL_ACCURACY,
+                       "unscored_accuracy": GATE_UNSCORED_ACCURACY,
+                       "measured_accuracy": GATE_MEASURED_ACCURACY},
+        "baseline": GATE_BASELINE, "benchmarks": benchmarks, "rows": rows,
+    }
+
+
+async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path | None = None,
+                   overrides: dict | None = None, capture_dir: Path | None = None,
+                   progress: Callable[[int], None] | None = None) -> dict:
+    from benchmarks.retrieval_eval import provenance
+
+    requested = {benchmarks} if isinstance(benchmarks, str) else set(benchmarks)
+    if not requested or not requested <= set(GATE_BENCHMARKS):
+        raise ValueError(f"Choose benchmarks from: {', '.join(GATE_BENCHMARKS)}")
+    selected = [name for name in GATE_BENCHMARKS if name in requested]
+    gpt54 = _harness()
+    archive = archive or default_archive()
+    # Record the code that runs before replaying; this also rejects bad overrides.
+    run_provenance = provenance(gate_config(Path("{pack}"), overrides))
+    if run_provenance["commit"] is None:
+        raise ValueError("Run the gate from a git checkout so the report names its commit")
+    loaders = {"locomo": _locomo_cases, "longmemeval": _longmemeval_cases}
+    started_at, started = gpt54.utc(), time.perf_counter()
+    cases = [case for name in selected for case in loaders[name](archive)]
+    if capture_dir is not None:
+        capture_dir.mkdir(parents=True, exist_ok=False)
+    with tempfile.TemporaryDirectory(prefix="prme-evidence-gate-") as scratch:
+        rows = await replay_gate(cases, scratch=Path(scratch), overrides=overrides,
+                                 capture_dir=capture_dir, progress=progress)
+    datasets = {"locomo": gpt54.LOCOMO_SHA, "longmemeval": gpt54.lme.DATASET_SHA256}
+    report = gate_report(rows, provenance={
+        **run_provenance, "overrides": overrides or {},
+        "archive": {"path": str(archive),
+                    "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}},
+        "datasets": {name: datasets[name] for name in selected},
+    })
+    report.update(started_at=started_at, seconds=time.perf_counter() - started)
+    return report
+
+
+def _gate_rows(report: dict, side: str) -> dict:
+    if (report.get("kind") != GATE_KIND or report.get("schema_version") != GATE_SCHEMA_VERSION
+            or not report.get("complete")):
+        raise ValueError(f"The {side} report is not a complete evidence gate report")
+    rows = {(row["benchmark"], row["question_id"]): row for row in report["rows"]}
+    if len(rows) != len(report["rows"]):
+        raise ValueError(f"The {side} report repeats a question")
+    return rows
+
+
+def _labels(row: dict) -> tuple:
+    evidence = row["evidence"]
+    return row["category"], None if evidence is None else (
+        evidence["annotated"], tuple(evidence["unresolved"]), tuple(evidence["ranks"]))
+
+
+def _all_packed(row: dict) -> bool:
+    return row["evidence"]["all_packed"]
+
+
+def _all_packed_with_text(row: dict) -> bool:
+    return row["evidence"]["all_packed_with_text"]
+
+
+def _evidence_recall(row: dict) -> float:
+    return row["evidence"]["packed"] / row["evidence"]["annotated"]
+
+
+def _projected(row: dict) -> float:
+    return row["projected_correct"]
+
+
+# Both reports must share these inputs, or their question pairs mean different things.
+_COMPARED_INPUTS = {
+    "datasets": lambda report: report["provenance"]["datasets"],
+    "archives": lambda report: report["provenance"]["archive"]["prepared_sha256"],
+    "tokenizers": lambda report: report["provenance"]["engine_config"]["packing"]["tokenizer"],
+    "projection constants": lambda report: report["projection"],
+    "baselines": lambda report: report["baseline"],
+}
+
+
+def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
+    """Pair two gate reports question by question; their questions and inputs must be identical."""
+    old, new = _gate_rows(before, "before"), _gate_rows(after, "after")
+    if old.keys() != new.keys():
+        only_before, only_after = sorted(old.keys() - new.keys()), sorted(new.keys() - old.keys())
+        raise ValueError(f"Question sets differ: {len(only_before)} only before {only_before[:5]}, "
+                         f"{len(only_after)} only after {only_after[:5]}")
+    for label, value in _COMPARED_INPUTS.items():
+        if value(before) != value(after):
+            raise ValueError(f"The reports use different {label}")
+    for key, row in old.items():
+        if _labels(row) != _labels(new[key]):
+            raise ValueError(f"{key[1]}: category or evidence annotation differs between reports")
+
+    def paired(keys, metric):
+        return paired_statistics([(float(metric(old[key])), float(metric(new[key]))) for key in keys],
+                                 samples=samples)
+
+    benchmarks = {}
+    for name in dict.fromkeys(benchmark for benchmark, _ in old):
+        keys = [key for key in old if key[0] == name]
+        annotated = [key for key in keys if old[key]["evidence"] is not None]
+        benchmarks[name] = {
+            "all_evidence_packed": paired(annotated, _all_packed),
+            "all_evidence_packed_with_text": paired(annotated, _all_packed_with_text),
+            "evidence_recall": paired(annotated, _evidence_recall),
+            "projected_accuracy": paired(keys, _projected),
+            "gained_all_evidence": [key[1] for key in annotated
+                                    if not _all_packed(old[key]) and _all_packed(new[key])],
+            "lost_all_evidence": [key[1] for key in annotated if _all_packed(old[key]) and not _all_packed(new[key])],
+            "all_evidence_packed_by_category": {
+                category: paired([key for key in annotated if old[key]["category"] == category], _all_packed)
+                for category in sorted({old[key]["category"] for key in keys})},
+            "context": {side: {field: report["benchmarks"][name]["summary"][field]
+                               for field in ("questions", "contexts_matching_saved", "records_per_context",
+                                             "memory_text_share", "records_without_text")}
+                        for side, report in (("before", before), ("after", after))},
+        }
+    return {
+        "kind": f"{GATE_KIND}-comparison", "complete": True, "bootstrap_samples": samples, "bootstrap_seed": 42,
+        "interval_note": ("Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, "
+                          "so they are narrower than conversation-level intervals."),
+        "before": {"provenance": before["provenance"], "started_at": before.get("started_at")},
+        "after": {"provenance": after["provenance"], "started_at": after.get("started_at")},
+        "projection": before["projection"], "benchmarks": benchmarks,
+    }
+
+
+def _pct(value: float | None, signed: bool = False) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value * 100:+.1f} pp" if signed else f"{value:.1%}"
+
+
+def _rank(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:g}"
+
+
+def _run_label(provenance: dict) -> str:
+    commit = f"commit `{provenance.get('commit')}`"
+    if provenance.get("dirty"):
+        commit += " with uncommitted changes"
+    overrides = provenance.get("overrides")
+    setting = f"overrides `{json.dumps(overrides, sort_keys=True)}`" if overrides else "current defaults"
+    return f"{commit}, {setting}"
+
+
+def _projection_note(projection: dict) -> list[str]:
+    return ["", f"**Projected accuracy is a planning estimate, not an answer score.** {projection['method']} "
+            f"{projection['calibration']}", "", *[f"- {limit}" for limit in projection["limits"]], ""]
+
+
+def _baseline_line(baseline: dict, bench: dict) -> str:
+    target = baseline["all_evidence_packed"]
+    now = bench["categories"].get(target["category"]) if target["category"] else bench["summary"]
+    packed_now = f"{now['all_evidence_packed']}/{now['annotated_questions']}" if now else "n/a"
+    return (f"2026-09-23 baseline: {baseline['records_per_context']} records per context, "
+            f"{baseline['memory_text_share']:.0%} memory text, all evidence packed for "
+            f"{target['questions']}/{target['annotated']} {target['category'] or 'annotated'} questions. "
+            f"This run: {bench['summary']['records_per_context']:.1f}, "
+            f"{_pct(bench['summary']['memory_text_share'])}, {packed_now}.")
+
+
+def gate_markdown(report: dict) -> str:
+    lines = ["# Offline evidence gate", "", f"Run: {_run_label(report['provenance'])}."]
+    changed = sum(bench["summary"]["questions"] - bench["summary"]["contexts_matching_saved"]
+                  for bench in report["benchmarks"].values())
+    if report["provenance"].get("overrides") and not changed:
+        lines += ["", "**Every context matches the saved run, so these overrides changed nothing the reader "
+                  "sees.** Check the setting names. Changes that act when memories are stored need new packs."]
+    lines += ["", "| Benchmark | Questions | Saved contexts reproduced | Records per context | Memory text share "
+              "| Records without text | All evidence packed | Median evidence rank | Projected accuracy |",
+              "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for name, bench in report["benchmarks"].items():
+        summary = bench["summary"]
+        lines.append(
+            f"| {name} | {summary['questions']} | {summary['contexts_matching_saved']}/{summary['questions']} "
+            f"| {summary['records_per_context']:.1f} | {_pct(summary['memory_text_share'])} "
+            f"| {summary['records_without_text']} | {summary['all_evidence_packed']}/"
+            f"{summary['annotated_questions']} ({_pct(summary['all_evidence_packed_share'])}) "
+            f"| {_rank(summary['evidence_ranks']['median'])} | {_pct(summary['projected_accuracy'])} |")
+    for name, bench in report["benchmarks"].items():
+        lines += ["", f"## {name}", "", _baseline_line(report["baseline"][name], bench), "",
+                  "| Category | Questions | All evidence packed | Packed with memory text | Median rank "
+                  "| Evidence in top 25 | Projected accuracy |",
+                  "|---|---:|---:|---:|---:|---:|---:|"]
+        for category, summary in bench["categories"].items():
+            lines.append(
+                f"| {category} | {summary['questions']} | {summary['all_evidence_packed']}/"
+                f"{summary['annotated_questions']} ({_pct(summary['all_evidence_packed_share'])}) "
+                f"| {_pct(summary['all_evidence_packed_with_text_share'])} "
+                f"| {_rank(summary['evidence_ranks']['median'])} | {_pct(summary['evidence_ranks']['top_25_share'])} "
+                f"| {_pct(summary['projected_accuracy'])} |")
+        mismatches = bench["context_mismatches"]
+        if mismatches:
+            shown = ", ".join(mismatches[:20]) + (", ..." if len(mismatches) > 20 else "")
+            lines += ["", f"Contexts that differ from the saved run: {len(mismatches)} ({shown}). "
+                      "The JSON report lists every one."]
+    return "\n".join(lines + _projection_note(report["projection"]))
+
+
+def comparison_markdown(result: dict) -> str:
+    lines = ["# Offline evidence gate comparison", "",
+             f"Before: {_run_label(result['before']['provenance'])}.",
+             f"After: {_run_label(result['after']['provenance'])}.", "",
+             "| Benchmark | Metric | Before | After | Change | 95% interval | Wins | Losses | Ties |",
+             "|---|---|---:|---:|---:|---|---:|---:|---:|"]
+    for name, bench in result["benchmarks"].items():
+        metrics = [("All evidence packed", bench["all_evidence_packed"]),
+                   ("All evidence packed with memory text", bench["all_evidence_packed_with_text"]),
+                   ("Evidence recall", bench["evidence_recall"]),
+                   ("Projected accuracy", bench["projected_accuracy"]),
+                   *[(f"All evidence packed, {category}", stats)
+                     for category, stats in bench["all_evidence_packed_by_category"].items()]]
+        for label, stats in metrics:
+            interval = stats["interval_95"]
+            shown = f"{_pct(interval[0], True)} to {_pct(interval[1], True)}" if interval else "n/a"
+            lines.append(f"| {name} | {label} | {_pct(stats['before'])} | {_pct(stats['after'])} "
+                         f"| {_pct(stats['delta'], True)} | {shown} | {stats.get('wins', 0)} "
+                         f"| {stats.get('losses', 0)} | {stats.get('ties', 0)} |")
+    lines += ["", "| Benchmark | Saved contexts reproduced | Records per context | Memory text share "
+              "| Records without text |", "|---|---|---|---|---|"]
+    for name, bench in result["benchmarks"].items():
+        old, new = bench["context"]["before"], bench["context"]["after"]
+        lines.append(f"| {name} | {old['contexts_matching_saved']}/{old['questions']} to "
+                     f"{new['contexts_matching_saved']}/{new['questions']} "
+                     f"| {old['records_per_context']:.1f} to {new['records_per_context']:.1f} "
+                     f"| {_pct(old['memory_text_share'])} to {_pct(new['memory_text_share'])} "
+                     f"| {old['records_without_text']} to {new['records_without_text']} |")
+    lines += ["", result["interval_note"]]
+    return "\n".join(lines + _projection_note(result["projection"]))
+
+
+def _write_report(path: Path, data: dict, markdown: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")
+    path.with_suffix(".md").write_text(markdown)
+
+
+def _json_output(value: str) -> Path:
+    path = Path(value)
+    if path.suffix != ".json":
+        raise argparse.ArgumentTypeError("the output must be a .json path; the Markdown summary goes beside it")
+    return path
+
+
+def _quiet_offline_cli() -> None:
+    # Local model assets only: a missing model fails instead of downloading.
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+    import structlog
+
+    structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(logging.WARNING),
+                        logger_factory=structlog.PrintLoggerFactory(file=sys.stderr))
+
+
+def gate_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        prog="python -m benchmarks.diagnostics.product_packing gate",
+        description="Replay retrieve() over the saved LoCoMo and LongMemEval-S packs and measure the reader's context.")
+    parser.add_argument("--output", type=_json_output, required=True,
+                        help="JSON report; a Markdown summary is written beside it")
+    parser.add_argument("--benchmark", choices=GATE_BENCHMARKS, action="append", help="Repeatable; both by default")
+    parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
+                        help="Configuration override: a dotted key and a JSON value, e.g. packing.token_budget=8192")
+    parser.add_argument("--archive", type=Path,
+                        help="Saved 2026-09-23 run archive (default: the main checkout's data/gpt54-comparison-v1)")
+    parser.add_argument("--capture-dir", type=Path,
+                        help="New directory for every rendered context and receipt (contains benchmark text)")
+    args = parser.parse_args(argv)
+    try:
+        overrides = parse_overrides(args.overrides)
+        gate_config(Path("{pack}"), overrides)
+    except ValueError as exc:
+        parser.error(str(exc))
+    _quiet_offline_cli()
+    last_done = 0
+
+    def progress(done: int) -> None:
+        nonlocal last_done
+        if done // 100 > last_done // 100:
+            print(f"{done} questions replayed", file=sys.stderr, flush=True)
+        last_done = done
+
+    report = asyncio.run(run_gate(args.benchmark or GATE_BENCHMARKS, archive=args.archive, overrides=overrides,
+                                  capture_dir=args.capture_dir, progress=progress))
+    markdown = gate_markdown(report)
+    _write_report(args.output, report, markdown)
+    print(markdown)
+
+
+def gate_compare_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="python -m benchmarks.diagnostics.product_packing gate-compare",
+                                     description="Compare two evidence gate reports question by question.")
+    parser.add_argument("before", type=Path)
+    parser.add_argument("after", type=Path)
+    parser.add_argument("--output", type=_json_output, required=True,
+                        help="JSON comparison; a Markdown summary is written beside it")
+    parser.add_argument("--samples", type=int, default=2000, help="Paired bootstrap samples")
+    args = parser.parse_args(argv)
+    if args.output.resolve() in {args.before.resolve(), args.after.resolve()}:
+        parser.error("the output would overwrite an input report")
+    before, after = args.before.read_bytes(), args.after.read_bytes()
+    result = compare_gates(json.loads(before), json.loads(after), samples=args.samples)
+    result["inputs"] = {"before_sha256": hashlib.sha256(before).hexdigest(),
+                        "after_sha256": hashlib.sha256(after).hexdigest()}
+    markdown = comparison_markdown(result)
+    _write_report(args.output, result, markdown)
+    print(markdown)
+
+
+def main(argv: list[str] | None = None):
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["gate"]:
+        return gate_main(argv[1:])
+    if argv[:1] == ["gate-compare"]:
+        return gate_compare_main(argv[1:])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--snapshots", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--confirmation", type=Path, help="Prospectively registered frozen test-split plan")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     raw = args.input.read_bytes()
     confirmation = json.loads(args.confirmation.read_bytes()) if args.confirmation else None
     result = compare(json.loads(raw), args.snapshots, confirmation=confirmation)
