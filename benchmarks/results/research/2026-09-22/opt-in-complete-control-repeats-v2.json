@@ -1,0 +1,101 @@
+{
+  "kind": "five-complete-identical-control-repeat-description",
+  "at": "2026-09-23T00:07:20.669111+00:00",
+  "previous_four_control_report_sha256": "2c259b096dae9d1c6074df889853da0bb098b7e08690ed5eff535e60409fd656",
+  "anchor_control_result_sha256": "ab5a04aba203a500aecda0d644903da0d74ecfd8871ad9b1f750d03ab45eb46f",
+  "execution_sha256": {
+    "baseline": "57fd6aef327e82dd6f1b202a8a5cc04ce56e078bc12c2d3c12501d4b873e5542",
+    "evidence_augmentation": "547a15693470769ddb95eb1f72e6c07c93cce88385591f750e144a2725fdf4c4",
+    "evidence_projection": "a1d93e34c467bffe79ee35505352a43bb3b6cc5e3f087b2f414969941cddd6de",
+    "marginal_control_repeat": "eb8eb6d8b5fc2ba8535905fa9d7f3e1e21cc92c24c8852212c7d5f7446d79cb7",
+    "anchor_control_repeat": "47472fd965baca5d9deef19d17d73a4858fcdf4d1fce8cba29aa42dbcf1b14ab"
+  },
+  "full_questions": 500,
+  "request_identity_gate": true,
+  "differing_requests": [],
+  "correct_per_complete_arm": {
+    "baseline": 437,
+    "evidence_augmentation": 435,
+    "evidence_projection": 431,
+    "marginal_control_repeat": 433,
+    "anchor_control_repeat": 429
+  },
+  "success_count_histogram": {
+    "5": 415,
+    "1": 2,
+    "0": 57,
+    "4": 13,
+    "2": 3,
+    "3": 10
+  },
+  "variable_question_ids": [
+    "51a45a95",
+    "3a704032",
+    "gpt4_2f8be40d",
+    "d23cf73b",
+    "7024f17c",
+    "gpt4_2ba83207",
+    "bf659f65",
+    "gpt4_372c3eed",
+    "09ba9854",
+    "4dfccbf7",
+    "6e984301",
+    "gpt4_e414231f",
+    "0bc8ad93",
+    "gpt4_65aabe59",
+    "gpt4_2c50253f",
+    "gpt4_9a159967",
+    "gpt4_fe651585",
+    "gpt4_93159ced_abs",
+    "gpt4_fe651585_abs",
+    "9ea5eabc",
+    "0f05491a",
+    "3ba21379",
+    "dad224aa",
+    "0ddfec37_abs",
+    "58470ed2",
+    "e8a79c70",
+    "561fabcd",
+    "778164c6"
+  ],
+  "pairwise_disagreements": {
+    "baseline__evidence_augmentation": 10,
+    "baseline__evidence_projection": 14,
+    "baseline__marginal_control_repeat": 14,
+    "baseline__anchor_control_repeat": 16,
+    "evidence_augmentation__evidence_projection": 16,
+    "evidence_augmentation__marginal_control_repeat": 10,
+    "evidence_augmentation__anchor_control_repeat": 16,
+    "evidence_projection__marginal_control_repeat": 16,
+    "evidence_projection__anchor_control_repeat": 12,
+    "marginal_control_repeat__anchor_control_repeat": 14
+  },
+  "anchor_control_vs_original": {
+    "difference": -0.016,
+    "wins": 4,
+    "losses": 12,
+    "ties": 484,
+    "question_ci95": [
+      -0.032,
+      0.0
+    ],
+    "full_history_cluster_ci95": [
+      -0.032,
+      0.0
+    ],
+    "clusters": 500
+  },
+  "additional_failed_control_repeat": {
+    "result_sha256": "5baa14ad5fc1005b75ce12f46e6ff667765b94bd7601774af34c596f774ed14e",
+    "counts": {
+      "complete": 274,
+      "failed": 1,
+      "not_started": 225
+    },
+    "answer_metrics": null
+  },
+  "limits": "Five complete controls with exact reader requests. Descriptive variation, not new feature comparisons, independent holdouts, replacement baselines or a pooled primary score. The earlier failed rank control stays unscored. The registered anchor candidate still uses its own prospectively fixed new control for its primary comparison, and the original baseline only as secondary. This audit changes no pending policy or threshold. Paired question-bootstrap intervals do not capture every source of hosted-provider drift.",
+  "new_model_calls": 0,
+  "default_changes": false,
+  "sha256": "cb65d376b551d9dad26839f6024b16d05a2b12ac79a9944d4acbe37ac3e19fcb"
+}

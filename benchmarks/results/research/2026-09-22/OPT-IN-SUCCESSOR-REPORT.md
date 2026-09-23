@@ -513,6 +513,17 @@ unscored in the audit. No pooled estimate or favorable repeat replaces any
 primary baseline. Question-bootstrap intervals do not capture all possible
 remote-provider drift.
 
+The anchor trial's new control then completed at **429/500**, with 1,000 calls
+and 1,000 successful attempts. A [five-control audit](opt-in-complete-control-repeats-v2.json)
+reauthenticated every reader/judge record and identical reader requests across
+all five complete controls. Their scores are 437, 435, 431, 433 and 429;
+415 questions always pass, 57 always fail and 28 vary. The newest control has
+four wins/twelve losses versus the original, −1.6 points [−3.2,0.0], entirely
+without an input change. This is descriptive reader/judge variation, not a
+retrieval regression. The anchor trial still uses its prospectively fixed new
+control for its primary comparison, retains the original as secondary, and
+does not replace any failed or less favorable run.
+
 A complete-cohort [post hoc persistence audit](opt-in-stable-errors-v1-result.json)
 classifies the 58 consistently incorrect cases: 43 lack some annotated packed
 evidence, 11 contain the complete annotation set, and four are abstention
