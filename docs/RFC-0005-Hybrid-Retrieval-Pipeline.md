@@ -381,6 +381,60 @@ the adjusted scorer returned it first in 100%. This single synthetic diagnostic
 does not establish the multiplier as universally optimal; retained workloads
 must evaluate it directly.
 
+### 7.2 Opt-in rank fusion (score formula version 2)
+
+`ScoringWeights.fusion="rrf"` (`PRME_SCORING__FUSION=rrf`) replaces the
+weighted sum with reciprocal rank fusion. The default remains `"weighted"`.
+
+```
+score(obj) =
+  (1/(k + semantic_rank) + 1/(k + lexical_rank)) × (k + 1) / 2
+  × epistemic_factor × node_type_factor × temporal_factor
+```
+
+- Ranks are competition ranks (tied scores share the better rank) within the
+  scored candidate pool. A candidate is on the semantic channel when the vector
+  backend returned it or it carries a semantic score, and on the lexical
+  channel likewise; a channel it is not on contributes nothing. A candidate on
+  neither channel, such as one reached only through the graph or a pin, scores 0.
+  A candidate ranked first on both channels scores 1.0.
+- `k` is `ScoringWeights.rrf_k`, default 60 `[HYPOTHESIS]`, the conventional
+  constant; it has not been tuned for PRME. It must be between 1 and 10,000.
+  Weighted scoring ignores a supplied `rrf_k` with a warning.
+- Each factor is the candidate's epistemic weight, node-type boost, or
+  `1 + temporal_boost × temporal_affinity` divided by the largest value among
+  candidates that are on at least one channel, and capped at 1.0. A factor that
+  every ranked candidate shares is therefore 1.0. Temporal affinity applies
+  only to TEMPORAL intent, as in formula version 1. Negative epistemic weights
+  or node-type boosts are rejected.
+- Graph proximity, recency, salience and confidence are not used. In the
+  2026-09-23 benchmark archive they were constant or carried no relevance
+  information. Graph proximity can become a fused channel once ingestion
+  populates the graph. The query-specific weight shifts for current-state,
+  episodic and relational questions do not apply. Non-neutral ranking
+  multipliers are rejected before retrieval runs (HTTP 422), weighted ranking
+  profiles are reported as inapplicable (`rank_fusion_scoring`), learning skips
+  rank-fused receipts, and the `feedback_apply` job reports `not_applicable`.
+- The current-update multiplier (Section 7.1) still applies after fusion. A
+  candidate below the relevance floor gets no update boost; its score is not
+  capped at its similarity, because a fused score is not on that scale.
+- Session, episode and evidence-context inheritance, reranking and packing
+  operate on the fused score unchanged. `min_score` compares against the fused
+  score, which measures rank within the pool rather than similarity, so an
+  unrelated memory can score near 1.0 when nothing better exists. Cross-scope
+  hints are fused within their own pool.
+
+The score trace keeps the raw semantic and lexical scores, graph proximity,
+epistemic weight, node-type boost and temporal affinity. Its recency, salience
+and confidence are 0 because formula version 2 does not compute them. Score
+provenance records `formula_version: 2` and a `rank_fusion` object with both
+ranks and the three applied factors, so replay needs no other candidate.
+Retrieval receipts that use rank fusion are schema version 15 and must state
+`rrf_k`. Weighted receipts keep their version and bytes: a weighted
+`ScoringWeights` omits `fusion` and `rrf_k` when serialized, and formula
+version 1 provenance omits `rank_fusion`. A missing `fusion` therefore always
+means weighted.
+
 ---
 
 ## 8. Stage 6: Context Packing
@@ -489,7 +543,8 @@ Non-determinism that MUST be guarded against:
 
 - All four candidate generation paths MUST be implemented.
 - Epistemic filtering MUST occur before scoring, not after.
-- The composite score formula MUST include all eight inputs.
+- The composite score formula (version 1) MUST include all eight inputs. The
+  opt-in rank fusion formula (version 2, Section 7.2) is exempt.
 - Weights MUST sum to 1.0 (excluding epistemic multiplier and path tiebreaker).
 - Embedding version mismatch MUST be detected and handled.
 - Every retrieval request MUST generate a retrieval log record.

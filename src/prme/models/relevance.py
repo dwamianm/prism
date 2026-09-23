@@ -42,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -70,6 +70,16 @@ class RetrievalReceipt(BaseModel):
 
             scoring = value.get("scoring")
             provenance = value.get("score_provenance")
+            if version >= 15:
+                # Without its constant, rank-fused scoring would take the
+                # current default instead of the one the receipt was scored with.
+                settings = [scoring]
+                if isinstance(provenance, dict):
+                    settings.extend(item.get("weights") for item in provenance.values()
+                                    if isinstance(item, dict))
+                if any(isinstance(item, dict) and item.get("fusion") == "rrf" and "rrf_k" not in item
+                       for item in settings):
+                    raise ValueError("Versions 15 and later require an explicit rank fusion constant")
             if version < 9:
                 if isinstance(scoring, dict) and "current_update_multiplier" not in scoring:
                     updates_to_value["scoring"] = {
@@ -306,6 +316,18 @@ class RetrievalReceipt(BaseModel):
             self.packing.context_format == "reader" or self.packing.context_citations
         ):
             raise ValueError("Reader context requires a version 14 receipt")
+        rank_fused = self.scoring.fusion == "rrf" or any(
+            provenance.formula_version == 2
+            for provenance in (self.score_provenance or {}).values()
+        )
+        if self.schema_version < 15 and rank_fused:
+            raise ValueError("Rank fusion scoring requires a version 15 receipt")
+        if self.schema_version == 15 and not (
+            self.scoring.fusion == "rrf"
+            and all(provenance.formula_version == 2
+                    for provenance in (self.score_provenance or {}).values())
+        ):
+            raise ValueError("Version 15 receipts record rank fusion scoring only")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -471,6 +493,8 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         raise ValueError("Evidence projection receipts require an execution descriptor")
     if packing.evidence_augmentation_top_k > 0 and execution is None:
         raise ValueError("Evidence augmentation receipts require an execution descriptor")
+    if scoring.fusion == "rrf" and execution is None:
+        raise ValueError("Rank fusion receipts require an execution descriptor")
     # Pre-guidance receipts mean guidance was off. Direct callers that omit an
     # execution descriptor retain that historical schema and exact semantics.
     receipt_packing = packing if execution is not None else packing.model_copy(
@@ -486,9 +510,12 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     )
     if has_rank_assignment and execution is None:
         raise ValueError("Neural rank assignment requires an execution descriptor")
-    version: Literal[2, 12, 13, 14]
+    version: Literal[2, 12, 13, 14, 15]
     if execution is None:
         version = 2
+    elif scoring.fusion == "rrf":
+        # Version 15 also admits every version 13 and 14 feature.
+        version = 15
     elif packing.context_format == "reader":
         # Version 14 also admits the version 13 rank-assignment operation.
         version = 14

@@ -211,7 +211,11 @@ ordering, context guidance, context format, episode-routing settings, and the
 configured current-update multiplier. Reader-format retrievals
 (`context_format="reader"`) use version 14, which also records
 `context_citations`; the bundle's `context_references` maps any `m3` style
-references to node IDs. Version 9 score provenance records any
+references to node IDs. Retrievals with opt-in rank fusion
+(`PRME_SCORING__FUSION=rrf`) use version 15, which records `fusion` and `rrf_k`
+and formula version 2 score provenance. Under rank fusion, `POST /v1/retrieve`
+returns 422 for non-neutral `ranking_multipliers`, and `min_score` compares
+against the rank-based fused score. Version 9 score provenance records any
 applied `current_update` operation and its exact coefficient. Version 10 retains
 the evidence-projection policy and replayable `evidence_projection` operations;
 versions 1–9 mean projection was disabled.

@@ -95,6 +95,7 @@ from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
 from prme.retrieval.scope import ScopeInput, normalize_scope
+from prme.retrieval.scoring import validate_rank_fusion_request
 from prme.retrieval.selection import validate_selection
 from prme.types import (
     ACTIVE_LIFECYCLE_STATES,
@@ -1826,6 +1827,8 @@ class MemoryEngine:
         scope = normalize_scope(scope)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
+        # Reject before any candidate generation; the pipeline checks again.
+        validate_rank_fusion_request(weights or self._config.scoring, ranking_multipliers)
         if self._retrieval_pipeline is None:
             raise NotImplementedError(
                 "RetrievalPipeline not configured. Use MemoryEngine.create() "
@@ -2963,6 +2966,9 @@ class MemoryEngine:
             current_features, sort_keys=True, separators=(",", ":"),
             ensure_ascii=False, allow_nan=False,
         ).encode()).hexdigest()
+        if base_scoring.fusion != "weighted":
+            # Profiles adjust the weighted formula's additive weights.
+            return "rank_fusion_scoring"
         if expected_feature_hash != current_feature_hash:
             return "feature_identity_mismatch"
         expected_scoring = (

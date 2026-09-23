@@ -77,10 +77,7 @@ class WeightTuner:
 
         # Start from current weights as mutable dict.
         weights = {f: getattr(self.current_weights, f) for f in _ADDITIVE_FIELDS}
-        # Also preserve non-additive weights.
         w_epistemic = self.current_weights.w_epistemic
-        w_paths = self.current_weights.w_paths
-        recency_lambda = self.current_weights.recency_lambda
 
         for signal in feedback_signals:
             weights, w_epistemic = self._apply_signal(
@@ -93,21 +90,13 @@ class WeightTuner:
         # Clamp epistemic weight (multiplicative, not part of additive sum).
         w_epistemic = max(_MIN_WEIGHT, min(_MAX_WEIGHT, w_epistemic))
 
-        new_weights = ScoringWeights(
-            w_semantic=weights["w_semantic"],
-            w_lexical=weights["w_lexical"],
-            w_graph=weights["w_graph"],
-            w_recency=weights["w_recency"],
-            w_salience=weights["w_salience"],
-            w_confidence=weights["w_confidence"],
-            w_epistemic=w_epistemic,
-            w_paths=w_paths,
-            recency_lambda=recency_lambda,
-            temporal_boost=self.current_weights.temporal_boost,
-            node_type_boost=self.current_weights.node_type_boost,
-            relevance_floor=self.current_weights.relevance_floor,
-            current_update_multiplier=self.current_weights.current_update_multiplier,
-        )
+        # Start from every current setting so the tuner changes only the
+        # weights it tunes; fusion and any later settings carry over.
+        new_weights = ScoringWeights.model_validate({
+            **self.current_weights.model_dump(),
+            **weights,
+            "w_epistemic": w_epistemic,
+        })
 
         self.current_weights = new_weights
         return new_weights

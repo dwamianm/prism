@@ -183,6 +183,13 @@ and records `ranking_profile_status="request_override"`. If the current runtime
 feature identity or base scoring no longer matches, PRME uses base scoring and
 records `ranking_profile_status="inapplicable"` plus the reason.
 
+Ranking multipliers reweight the weighted formula's additive weights, so they
+do not apply to opt-in rank fusion (`ScoringWeights.fusion="rrf"`). Under rank
+fusion a profile is inapplicable with reason `rank_fusion_scoring`, a request
+with non-neutral `ranking_multipliers` is rejected before retrieval (HTTP 422),
+and learning evaluation counts rank-fused receipts under
+`rank_fusion_receipt_records` instead of fitting them.
+
 ## HTTP and MCP
 
 The HTTP API exposes:

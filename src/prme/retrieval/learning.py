@@ -22,6 +22,10 @@ from prme.types import Scope
 
 def proposed_score(provenance: ScoreProvenance, multipliers: RankingMultipliers) -> float:
     """Rescore frozen features, preserving caps, rounding and score operations."""
+    if provenance.formula_version != 1:
+        # Multipliers reweight the weighted sum; a rank-fused score has no
+        # additive weights to adjust, so every proposal would replay unchanged.
+        raise ValueError("Ranking multipliers can be learned only from weighted-formula receipts")
     # This copy is an experimental score computation, not a newly validated
     # historical trace: its saved composite_score still describes the baseline.
     proposed = provenance.model_copy(update={"weights": adjusted_weights(provenance.weights, multipliers)})
@@ -184,6 +188,9 @@ def evaluate_learning(receipts: Sequence[RetrievalReceipt], records: Sequence[Re
             excluded["other_scope_records"] += 1
         elif receipt.schema_version < 2:
             excluded["legacy_receipt_records"] += 1
+        elif receipt.scoring.fusion != "weighted":
+            # Multipliers reweight the weighted sum, which rank fusion does not use.
+            excluded["rank_fusion_receipt_records"] += 1
         else:
             for nid, label in record.labels.items():
                 labels[record.request_id][nid].add(label)

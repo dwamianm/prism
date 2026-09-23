@@ -475,6 +475,9 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
                             vector_path=str(pack / "vectors.usearch"), lexical_path=str(pack / "lexical_index"))
     if config.enable_query_reformulation or config.temporal_relation.enabled:
         raise ValueError("The evidence gate does not run model-backed query features")
+    if "rrf_k" in overrides.get("scoring", {}) and config.scoring.fusion != "rrf":
+        # Weighted scoring ignores the rank constant, so this run would change nothing.
+        raise ValueError("scoring.rrf_k applies only with scoring.fusion=\"rrf\"")
     return config
 
 

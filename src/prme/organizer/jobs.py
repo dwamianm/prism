@@ -372,6 +372,19 @@ async def _job_feedback_apply(
             },
         )
 
+    if engine._config.scoring.fusion != "weighted":
+        # Rank fusion ignores the additive weights; keep the signals for a
+        # later weighted configuration instead of reporting a change that
+        # cannot affect ranking.
+        return JobResult(
+            job=job_name,
+            details={
+                "status": "not_applicable",
+                "note": "Rank fusion scoring does not use the tuned weights",
+                "scope": "global",
+            },
+        )
+
     # Run weight tuner
     tuner = engine._weight_tuner
     old_version = tuner.current_weights.version_id

@@ -977,7 +977,9 @@ schema-declared JSON arrays and bundle-local references; `auditable` remains the
 default. Set `PRME_PACKING__CONTEXT_FORMAT=reader` for one plain line per record
 (date, state tags, text) with the audit envelope kept in the bundle and receipt,
 and `PRME_PACKING__CONTEXT_CITATIONS=true` to add `[m3]` references; reader
-receipts use schema version 14. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+receipts use schema version 14. Set `PRME_SCORING__FUSION=rrf` to rank by
+reciprocal rank fusion of semantic and lexical ranks instead of the weighted sum
+(RFC-0005 Section 7.2); those receipts use schema version 15. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
 their original canonical JSON and feedback checksums and always mean auditable
 rendering. Versions 1–5 also mean context guidance was off. For source blocks or
 bounded dialogue episodes stored under meaningful session IDs, set

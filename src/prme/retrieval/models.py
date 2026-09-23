@@ -162,25 +162,69 @@ class ScoreAdjustment(BaseModel):
         return self
 
 
+class RankFusion(BaseModel):
+    """Saved inputs of a rank-fused score (score formula version 2).
+
+    Ranks are competition ranks within the scored candidate pool (tied
+    channel scores share the better rank); ``None`` means the candidate is not
+    on that channel. Each factor is the candidate's adjustment divided by the
+    largest one in the pool, so it lies in [0, 1] and is exactly 1.0 when every
+    candidate shares a positive value.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    semantic_rank: int | None = Field(default=None, ge=1)
+    lexical_rank: int | None = Field(default=None, ge=1)
+    epistemic_factor: float = Field(ge=0, le=1, allow_inf_nan=False)
+    node_type_factor: float = Field(ge=0, le=1, allow_inf_nan=False)
+    temporal_factor: float = Field(ge=0, le=1, allow_inf_nan=False)
+
+    def score(self, k: int) -> float:
+        """The fused score, scaled so first place on both channels is 1.0."""
+        fused = sum(1 / (k + rank) for rank in (self.semantic_rank, self.lexical_rank)
+                    if rank is not None)
+        return round(fused * (k + 1) / 2
+                     * self.epistemic_factor * self.node_type_factor * self.temporal_factor, 10)
+
+
 class ScoreProvenance(BaseModel):
     """Replay a score using saved features, without mutable graph state.
 
     Version 1 fixes the composite formula, including ten-decimal rounding,
     the relevance cap, and the order of subsequent score operations. Applied
-    weights can differ from the request's configured weights.
+    weights can differ from the request's configured weights. Version 2 is
+    reciprocal rank fusion (``ScoringWeights.fusion == "rrf"``): its saved
+    ranks and pool-relative factors are in ``rank_fusion``, and the
+    subsequent score operations are the same.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
-    formula_version: Literal[1] = 1
+    formula_version: Literal[1, 2] = 1
     base_node_id: UUID
     trace: ScoreTrace
     weights: ScoringWeights
     adjustments: tuple[ScoreAdjustment, ...] = ()
+    # Omitted from version 1 provenance, which keeps the bytes it had before
+    # version 2 existed.
+    rank_fusion: RankFusion | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def validate_components(self) -> ScoreProvenance:
+        expected_version = 2 if self.weights.fusion == "rrf" else 1
+        if self.formula_version != expected_version:
+            raise ValueError(
+                f"Fusion '{self.weights.fusion}' requires score formula version {expected_version}"
+            )
+        if self.formula_version == 2 and self.rank_fusion is None:
+            raise ValueError("Score formula version 2 requires rank fusion inputs")
+        if self.formula_version == 1 and self.rank_fusion is not None:
+            raise ValueError("Rank fusion inputs require score formula version 2")
         values = list(self.trace.model_dump().values())
-        values.extend(v for k, v in self.weights.model_dump().items() if k != "node_type_boost")
+        # Numeric settings only: node-type boosts follow, and fusion is a label.
+        values.extend(
+            value for value in (getattr(self.weights, name) for name in type(self.weights).model_fields)
+            if isinstance(value, (int, float))
+        )
         values.extend(self.weights.node_type_boost.values())
         if not all(math.isfinite(v) for v in values):
             raise ValueError("Score provenance components must be finite")
@@ -190,6 +234,10 @@ class ScoreProvenance(BaseModel):
 
     def replay_base_score(self) -> float:
         """Recompute the recorded base score, including its relevance cap."""
+        if self.rank_fusion is not None:
+            if self.weights.rrf_k is None:
+                raise ValueError("Rank fusion replay requires rrf_k")
+            return self.rank_fusion.score(self.weights.rrf_k)
         t, w = self.trace, self.weights
         additive = (w.w_semantic * t.semantic_similarity
                     + w.w_lexical * t.lexical_relevance
@@ -509,7 +557,8 @@ class RetrievalMetadata(BaseModel):
         "none", "applied", "inapplicable", "request_override"
     ] = "none"
     ranking_profile_reason: Literal[
-        "feature_identity_mismatch", "base_scoring_mismatch", "explicit_multipliers"
+        "feature_identity_mismatch", "base_scoring_mismatch", "explicit_multipliers",
+        "rank_fusion_scoring",
     ] | None = None
     timing_ms: float = Field(
         default=0.0, description="Pipeline time including receipt logging; excludes engine startup and queue draining"

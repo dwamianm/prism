@@ -320,6 +320,14 @@ def test_gate_config_isolates_environment_and_dotenv_and_refuses_unsafe_override
             parse_overrides(malformed)
 
 
+def test_gate_config_selects_rank_fusion_and_refuses_a_rank_constant_without_it(tmp_path):
+    fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', "scoring.rrf_k=30"]))
+    assert (fused.scoring.fusion, fused.scoring.rrf_k) == ("rrf", 30)
+    assert gate_config(tmp_path, parse_overrides(["scoring.fusion=rrf"])).scoring.rrf_k == 60
+    with pytest.warns(UserWarning), pytest.raises(ValueError, match="applies only with"):
+        gate_config(tmp_path, parse_overrides(["scoring.rrf_k=30"]))
+
+
 def gate_row(question_id, category, *, all_packed=None, unresolved=(), ranks=None, records=25,
              text=300, tokens=1000, without_text=0, benchmark="locomo", matches=True):
     evidence = None
