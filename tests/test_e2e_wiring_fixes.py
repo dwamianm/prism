@@ -491,15 +491,16 @@ async def test_e2e_scope_isolation(backends):
 # ---------------------------------------------------------------------------
 
 
-def test_milestone_all_v1_requirements_satisfied():
-    """Milestone gate: all 29 v1.0 Phase 1-3.5 requirements are satisfied.
+def test_archived_v1_milestone_checklist_preserved():
+    """Preserve the 29 historical checkmarks after archiving the legacy plan.
 
-    Reads REQUIREMENTS.md and verifies every requirement that should be
-    satisfied by the end of Phase 3.5 is checked off. This is a one-time
-    gate test -- if this passes, the v1.0 audit has no remaining gaps.
+    This is an archive-integrity check, not evidence that current production
+    meets every historical RFC claim. Current acceptance lives in GOALS.md.
     """
-    req_path = Path(__file__).parent.parent / ".planning" / "REQUIREMENTS.md"
-    content = req_path.read_text()
+    planning = Path(__file__).parent.parent / ".planning"
+    relative_archive = "archive/v1.0-legacy/REQUIREMENTS.md"
+    assert relative_archive in (planning / "REQUIREMENTS.md").read_text()
+    content = (planning / relative_archive).read_text()
 
     # All requirements that must be [x] for the Phase 1-3.5 milestone
     required_satisfied = [

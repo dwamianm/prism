@@ -407,7 +407,7 @@ interactions. A failed required individual makes the best-arm combination
 unavailable under the frozen selection rule; do not substitute a favorable
 successful subset.
 
-The implementation adds no new defaults and is not merged. Relevant authored,
+The implementation is included in v0.12.0 with no new defaults. Relevant authored,
 DuckDB/PostgreSQL, receipt, profile and installed-package validation is recorded
 with the proposed code. Finish the registered fresh-ingestion and MAB matrix,
 then require a positive complete answer trial and independently audited untouched

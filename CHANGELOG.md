@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-22
+
+### Experimental retrieval and evaluation
+
+- Add explicit reranker `score_envelope` and `anchored_score_envelope` policies
+  to preserve the scored prefix's original score scale during downstream packing.
+  Add opt-in alternate-query `max_signals` merging for existing candidates, with
+  exact source-snapshot checks and atomic failure behavior. Both storage engines
+  receive these through `PRMEConfig`; ordinary defaults remain unchanged.
+- Record neural ordinal assignments in receipt schema 13, with exact score replay
+  and distinct execution identities for ranking-profile compatibility. Stored
+  schemas 1–12 keep their canonical bytes; older readers cannot read schema 13.
+- Retain complete registered LongMemEval-S development results, including negative
+  interactions, inactive features, provider failures and failed primary controls.
+  Production scored 437/500. The anchor-preserving trial scored 430/500 versus
+  its new control's 429/500 (+0.2 points, 95% CI [−1.6,+2.0]); better source
+  retention did not establish an answer gain. Ongoing ingestion/reformulation
+  trials remain explicitly unfinished, with no partial-arm score or new default.
+- Update the archived milestone-checklist test to its moved source path, fixing
+  the existing mainline CI failure without weakening its 29 historical assertions.
+
+
 ### Fixed
 
 - Grounded fact objects with one exact currency or bounded measurement unit no
@@ -1021,7 +1043,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/dwamianm/prism/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/dwamianm/prism/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/dwamianm/prism/compare/v0.9.0...v0.10.0
 [0.4.0]: https://github.com/dwamianm/prism/compare/v0.3.0...v0.4.0

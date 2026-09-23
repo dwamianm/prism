@@ -10,6 +10,40 @@ PRME gives AI agents and chatbots stable long-term memory by combining an append
 
 ## Retrieval quality and evaluation
 
+### Registered LongMemEval-S development results (2026-09-22)
+
+The completed production-control arm scored **437/500 (87.4%)** using Ollama
+`deepseek-v4.1-flash:cloud` as reader and judge, the official LongMemEval prompts
+and scoring rule, and **3,996 effective memory-context tokens**. This is an
+examined development cohort with a registered protocol, not an untouched
+confirmation or a comparison against another memory product.
+
+| Complete comparison | Correct answers | Paired difference, percentage points (95% CI) |
+|---|---:|---:|
+| Production control | 437/500 | Reference |
+| Existing opt-in reranker vs production | 284/500 | −30.6 [−35.0, −26.2] |
+| Unconditional episode routing vs production | 345/500 | −18.4 [−22.2, −14.8] |
+| Anchor-preserving reranker vs its newly registered control | 430/500 vs 429/500 | +0.2 [−1.6, +2.0] |
+| Marginal episode-bonus packing vs its newly registered control | 433/500 vs 433/500 | 0.0 [−1.8, +1.8] |
+
+The anchor-preserving repair improved complete annotated source retention from
+**403/470 to 409/470**, but did not establish an answer-quality gain. It is
+available through an explicit experimental policy; the ordinary defaults remain
+unchanged. Evidence augmentation and projection were inactive on these direct-turn
+artifacts, so their answer fluctuations are not feature effects. Five complete
+controls with identical reader inputs scored 429–437/500; registered controls
+were never replaced by more favorable repeats.
+
+The [study report](benchmarks/results/research/2026-09-22/OPT-IN-SUCCESSOR-REPORT.md)
+retains all complete arms, negative findings, category scores, paired intervals,
+latency, token usage and artifact/configuration checksums. Temporal-only and the
+first repair's new control failed closed on reader truncation and receive no
+partial quality score. Fresh-ingestion arms, the alternate-query signal-merge
+trial and the queued MemoryAgentBench stage were **unfinished at the release
+snapshot**. No new default or competitive leadership claim follows from this study.
+
+### Other registered evaluations
+
 PRME includes synthetic regression scenarios and pinned LongMemEval-V2 and
 MemoryAgentBench adapters. In the first registered held-out current-product
 answer comparison, PRME scored 80/149 (53.69%) versus 10/149 (6.71%) for the
@@ -166,6 +200,29 @@ earlier information available when circumstances change. PRME combines:
 - **Self-organizing memory** — organizer jobs handle promotion, decay, deduplication, summarization, consolidation, and archival
 - **Dual-stream ingestion** — durable fast path with deferred graph materialization and indexing
 - **Local-first** — everything lives in a single directory (DuckDB + usearch + Tantivy). No cloud dependency. Optional PostgreSQL backend for production.
+
+## New in v0.12.0
+
+- **Durable, scoped memory operations:** restartable ingestion and profile
+  publication, atomic lifecycle/correction records, tenant-bound APIs, and
+  identity-checked DuckDB/PostgreSQL workspaces.
+- **Structured evidence operations:** exact assertion timelines and decimal
+  quantity aggregation, source-backed typed value bindings, and auditable
+  retrieval receipts with explicit relevance feedback and gated ranking profiles.
+- **Experimental retrieval repairs:** `reranker_policy="score_envelope"` or
+  `"anchored_score_envelope"` when `enable_reranker=True`, and
+  `query_reformulation_merge_policy="max_signals"` when
+  `enable_query_reformulation=True`. Existing flag defaults and the `"legacy"` /
+  `"new_only"` policies remain unchanged. Neural assignments use receipt schema
+  13; stored versions 1–12 retain their canonical bytes.
+
+See [experimental policy semantics](docs/EXPERIMENTAL-RETRIEVAL-POLICIES.md),
+[implementation evidence](benchmarks/results/research/2026-09-22/RETRIEVAL-POLICY-IMPLEMENTATION.md)
+and the [changelog](CHANGELOG.md). The isolated policy implementation passed
+221 distinct checks, repeated from its installed wheel, with one expected
+backend-specific skip. The complete release CI is separate from that targeted
+validation. Jev/product alignment remains an explicit caller-selected pair and
+review workflow, separate from the retrieval interaction matrix.
 
 ## Installation
 
@@ -1293,13 +1350,13 @@ Detailed technical documentation lives in [`docs/`](docs/):
 - [Decay and Forgetting](docs/RFC-0007-Decay-and-Forgetting.md)
 - [Confidence Evolution](docs/RFC-0008-Confidence-Evolution.md)
 - [Integration Guide](docs/INTEGRATION.md)
-- [Full RFC Index](docs/INDEX.md) (15 RFCs)
+- [Full RFC Index](docs/INDEX.md)
 
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for the full development plan.
 
-**Current (v0.11.0)** — hybrid retrieval, synchronous and async clients, MCP/REST, framework adapters, deterministic vector search, and index rebuilds.
+**Current (v0.12.0)** — hybrid retrieval, durable ingestion and lifecycle records, scoped DuckDB/PostgreSQL workspaces, synchronous and async clients, MCP/REST, framework adapters, structured evidence operations, and explicit experimental retrieval policies.
 
 **Next** — a trustworthy comparative retrieval baseline, broader temporal state
 operations, and measured improvements to context packing. See the roadmap for

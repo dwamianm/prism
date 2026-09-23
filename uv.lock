@@ -2420,7 +2420,7 @@ wheels = [
 
 [[package]]
 name = "prme"
-version = "0.11.0"
+version = "0.12.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -2476,6 +2476,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
+    { name = "scipy" },
 ]
 
 [package.metadata]
@@ -2516,6 +2517,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
+    { name = "scipy", specifier = "==1.17.1" },
 ]
 
 [[package]]
