@@ -968,8 +968,8 @@ is ignored. The equivalent environment setting is
 `PRME_PACKING__MULTIPATH_ORDERING=density`.
 Temporal context guidance is enabled by default; disable it with
 `PRME_PACKING__CONTEXT_GUIDANCE_MODE=off`. `all` additionally enables
-experimental current-state and personalization prompts. Every current retrieval
-receipt uses schema version 12 and retains ordering, guidance, context format,
+experimental current-state and personalization prompts. Ordinary retrieval
+receipts use schema version 12 and retains ordering, guidance, context format,
 episode and evidence-projection settings in `receipt.packing`, and the
 current-update multiplier in `receipt.scoring`. Set
 `PRME_PACKING__CONTEXT_FORMAT=compact` to use
@@ -1706,3 +1706,19 @@ Tests are automatically skipped when `PRME_TEST_DATABASE_URL` is not set. All ex
 | Tier 4 | + any of 0010-0014 | Advanced capabilities (each independently optional) |
 
 PRME's current implementation covers **Tiers 0-2** fully, with partial Tier 1 epistemic support (confidence matrix, epistemic filtering, supersedence detection).
+
+
+### Experimental retrieval composition policies
+
+Two explicit policies are available for controlled trials through `PRMEConfig`:
+`reranker_policy="anchored_score_envelope"` with `enable_reranker=True`, and
+`query_reformulation_merge_policy="max_signals"` with
+`enable_query_reformulation=True`. The unanchored `"score_envelope"` reranker is
+also available. Default flags and the existing `"legacy"` / `"new_only"` policies
+are unchanged. Both local and PostgreSQL engines use these settings.
+
+See [experimental retrieval policies](EXPERIMENTAL-RETRIEVAL-POLICIES.md) for
+failure semantics, receipt versions, quality evidence and configuration examples.
+These options have not passed an untouched answer confirmation and are not
+recommended production defaults. Product alignment/Jev remains a separate
+explicit pair-selection and review workflow.

@@ -528,6 +528,16 @@ class PRMEConfig(_ProjectSettings):
         description="Number of top candidates to rerank (controls latency vs quality).",
     )
 
+    reranker_policy: Literal["legacy", "score_envelope", "anchored_score_envelope"] = Field(
+        default="legacy",
+        description=(
+            "Experimental neural ordering policy, used only with enable_reranker. "
+            "Envelope policies retain the original scored prefix's score scale; "
+            "anchored_score_envelope first prioritizes its original ordinary "
+            "multi-path anchor. These are rankings, not relevance probabilities."
+        ),
+    )
+
     # Multi-query reformulation (issue #43)
     enable_query_reformulation: bool = Field(
         default=False,
@@ -539,6 +549,15 @@ class PRMEConfig(_ProjectSettings):
             "at the cost of one LLM call plus N extra retrievals per query. "
             "Uses the extraction provider/model. Default False; with this off, "
             "retrieve() makes no LLM calls (RFC-0005 S3)."
+        ),
+    )
+    query_reformulation_merge_policy: Literal["new_only", "max_signals"] = Field(
+        default="new_only",
+        description=(
+            "Experimental alternate-query merge policy, used only with "
+            "enable_query_reformulation. max_signals unions distinct backend paths "
+            "and takes maximum component signals for identical source snapshots. "
+            "Alternate-query backend failures abort that retrieval under this policy."
         ),
     )
     query_reformulation_count: int = Field(

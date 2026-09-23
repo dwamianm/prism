@@ -139,6 +139,7 @@ class ScoreAdjustment(BaseModel):
         "evidence_projection",
         "evidence_augmentation",
         "current_update",
+        "neural_rank_assignment",
     ]
     coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
@@ -152,6 +153,8 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("Neural prior weight must be between zero and one")
         if self.kind == "current_update" and not 1 <= self.coefficient <= 2:
             raise ValueError("Current-update multiplier must be between one and two")
+        if self.kind == "neural_rank_assignment" and self.coefficient < 0:
+            raise ValueError("Assigned ranking score must be nonnegative")
         if self.kind in {"evidence_projection", "evidence_augmentation"} and not (
             0 < self.coefficient <= 1
         ):
@@ -211,6 +214,11 @@ class ScoreProvenance(BaseModel):
                 assert operation.neural_score is not None
                 score = ((1 - operation.coefficient) * operation.neural_score
                          + operation.coefficient * score)
+            elif operation.kind == "neural_rank_assignment":
+                # Explicit opt-in ordinal remapping. The preceding neural blend
+                # retains the raw model score; this is an assigned ranking
+                # score on the original prefix's scale, not a probability.
+                score = operation.coefficient
             else:
                 score *= operation.coefficient
         return score

@@ -34,8 +34,12 @@ def _reported(value: Any) -> JsonValue:
 
 
 def reranker_identity(reranker: Any) -> dict[str, JsonValue]:
-    return {"enabled": reranker is not None, "provider": _name(reranker),
-            "model": _reported(getattr(reranker, "_model_name", None))}
+    identity = {"enabled": reranker is not None, "provider": _name(reranker),
+                "model": _reported(getattr(reranker, "_model_name", None))}
+    policy = getattr(reranker, "_policy", "legacy")
+    if policy != "legacy":
+        identity["policy"] = policy
+    return identity
 
 
 def feature_identity(
