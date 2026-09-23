@@ -1,0 +1,12 @@
+{
+  "registered_at": "2026-09-23T01:59:32.645136+00:00",
+  "registration_sha256": "b62256d8c461feece94ae76a096132e58db1b7ca4483f24783226b352b8c96c6",
+  "loader_sha256": "808cbc000d3e42f6f85e5c966d0a2518691bcc87b5f10dfb6b4a837730cfb9bd",
+  "official_source_sha256": "ecce9c4c79dc89d99534ac17b383a5cbb5b9f0c69ee98adaf0684742e3d95251",
+  "reason": "Authored calibration imported unused backoff from official CLI. Load the exact undecorated get_anscheck_prompt AST alone; no prompt changes or new dependencies.",
+  "benchmark_reader_cases_started": 0,
+  "retained_authored_failure_log_sha256": "66dcea60d07250131f71bfd1eddf10364d98c327ab63514286a8738c9de6637a",
+  "calibration_policy": "Retain first failed authored preflight and its charges. Run all authored controls anew in loader-calibration-v2 with unique request identities and the original shared ledger. Publish an explicit gate referencing the complete second calibration.",
+  "changes": "Only official function loading and authored preflight isolation; all original registration hashes, sources, contexts, model settings, question selection and score rules remain fixed.",
+  "validation": "Two authored loader tests passed; previous eleven harness tests passed."
+}

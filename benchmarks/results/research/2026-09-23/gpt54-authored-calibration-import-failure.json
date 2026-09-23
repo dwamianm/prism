@@ -1,0 +1,9 @@
+{
+  "complete": false,
+  "dataset_calls": 0,
+  "stage": "authored calibration",
+  "exception_type": "ModuleNotFoundError",
+  "missing_module": "backoff",
+  "log_sha256": "66dcea60d07250131f71bfd1eddf10364d98c327ab63514286a8738c9de6637a",
+  "amendment": "gpt54-official-loader-amendment.json"
+}
