@@ -189,7 +189,11 @@ def main():
               'new GPT reader/judge evaluation of those unchanged contexts. LoCoMo freshly materializes '
               'all ten conversations with public default APIs, including short turns and supplied image '
               'captions, without dataset observations/summaries or answer labels. It evaluates all '
-              '1,540 non-adversarial questions. These examined cohorts are development evidence.', '',
+              '1,540 non-adversarial questions. These examined cohorts are development evidence. '
+              'The descriptive bootstrap groups LoCoMo by its ten conversations and LongMemEval '
+              'by exact whole-history hash; partially overlapping histories are not merged into one '
+              'cluster. Zep reports median contexts of 4,408 tokens for LongMemEval and 5,760 for '
+              'LoCoMo, so its context usage is also different from this fixed PRME budget.', '',
               '## Complete-arm measurements', '']
     for b in ['longmemeval','locomo']:
         r,u = results[b],verified[b]['usage']
