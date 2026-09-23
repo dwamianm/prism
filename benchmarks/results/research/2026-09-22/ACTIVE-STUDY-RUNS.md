@@ -250,3 +250,16 @@ Latest observed fresh counts: control 193, supersedence 139, QA 139,
 surprise 159, full exploratory 79 complete; no terminal failure recorded.
 These are progress counts, not partial scores. Signal-merge source replay active,
 85 source cases saved at the latest observation. No quality score until its complete gate settles.
+
+
+Implementation code committed at `9e1f882` on the isolated fix branch. There
+are 221 distinct passing checks (39 authored + 182 existing) with one expected
+PostgreSQL skip of a local-process recovery test. The installed wheel repeats
+all 221 passes with the same skip and one pytest plugin warning; 163 packaged
+Python files match source. Wheel SHA-256:
+`43aab64956b8f230f7ef06656ad55abbb99bce2d7ad3d2f4cc9d967607ef3da6`.
+Validation environment/provenance is in `implementation-validation-v1.json`.
+The actual agenda update is committed in this new branch. The implementation
+report is `RETRIEVAL-POLICY-IMPLEMENTATION.md`; the full running study's canonical
+report remains in this matrix worktree. Neither research worktree's frozen
+production source changed. Main remains clean at `a66ee85`.
