@@ -104,7 +104,9 @@ adds `localized_assessments` and binds the schema version into new evaluation
 identities; schemas 1 and 2 remain readable.
 
 `verify_bundle()` sees only packed candidates whose references occur in the exact
-rendered context. It uses `candidate.rendered_text`, so it does not verify against
+rendered context. A reader-format bundle has references only when packed with
+`PackingConfig.context_citations=True`; without them `verify_bundle()` raises
+`ValueError`. It uses `candidate.rendered_text`, so it does not verify against
 hidden full text after packing selected a lower-fidelity representation. Each
 `ClaimEvidence` also retains source type, epistemic type, lifecycle, event time,
 and validity. NLI currently scores the exact text; applications can inspect the

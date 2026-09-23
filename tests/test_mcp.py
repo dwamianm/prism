@@ -300,6 +300,28 @@ class TestRetrieve:
         assert data["count"] > 0
         assert data["results"][0]["content"] == "The Earth orbits the Sun"
 
+    @pytest.fixture()
+    def reader_citations(self, monkeypatch):
+        monkeypatch.setenv("PRME_PACKING__CONTEXT_FORMAT", "reader")
+        monkeypatch.setenv("PRME_PACKING__CONTEXT_CITATIONS", "true")
+
+    async def test_retrieve_returns_reader_citation_references(self, reader_citations, session):
+        stored = json.loads((await session.call_tool("memory_store", {
+            "content": "The Earth orbits the Sun",
+            "user_id": "reader-citations",
+        })).content[0].text)
+        result = await session.call_tool("memory_retrieve", {
+            "query": "What does the Earth orbit?",
+            "user_id": "reader-citations",
+            "include_context": True,
+        })
+        data = json.loads(result.content[0].text)
+        references = data["context_references"]
+        assert stored["node_id"] in references.values()
+        for reference in references:
+            assert f"- [{reference}] " in data["context"]
+        assert stored["node_id"] not in data["context"]
+
     async def test_retrieve_invalid_scope(self, session):
         result = await session.call_tool("memory_retrieve", {
             "query": "test",

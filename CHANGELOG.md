@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add an opt-in reader context format (`PackingConfig.context_format="reader"`,
+  or `PRME_PACKING__CONTEXT_FORMAT=reader`) that renders each packed record as
+  one line: its event time or caller-supplied validity range, tags for
+  non-default epistemic and lifecycle states, and the complete text as a JSON
+  string. The renderer adds no node IDs, source type, `created_at` or
+  admission-time `valid_from`, and it excludes records that fit only as a
+  fallback without their own text. The full record stays in
+  `MemoryBundle.sections` and the retrieval receipt. `context_citations=True`
+  adds `[m3]` references and fills `context_references`, which MCP now returns
+  with `include_context`. Reader receipts use schema version 14; versions 1 to
+  13 keep their canonical bytes. The default remains `auditable`.
+
+### Fixed
+
+- Context ablation now keeps a compact or reader bundle's format and references
+  instead of re-rendering the counterfactual as auditable JSON.
+
+### Changed
+
+- Receipt versions from 4, 6 and 8 on must state their ordering, guidance and
+  episode settings instead of taking the current defaults. Stored receipts
+  always include them.
+
 ## [0.12.0] - 2026-09-22
 
 ### Experimental retrieval and evaluation

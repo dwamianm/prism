@@ -901,6 +901,7 @@ class RetrievalPipeline:
                 query_analysis=analysis,
                 reference_time=scoring_now,
                 mode=effective_packing_config.context_guidance_mode,
+                context_format=effective_packing_config.context_format,
             ),
         )
 

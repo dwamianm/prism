@@ -80,6 +80,8 @@ These control the hybrid retrieval scoring formula. They should sum to approxima
 | `PRME_PACKING__TOKEN_BUDGET` | `4096` | Max tokens in packed context |
 | `PRME_PACKING__OVERHEAD_TOKENS` | `100` | Reserved for formatting overhead |
 | `PRME_PACKING__CHARS_PER_TOKEN` | `4.2` | Estimated chars per token |
+| `PRME_PACKING__CONTEXT_FORMAT` | `auditable` | `auditable`, `compact`, or `reader` (one plain line per record) |
+| `PRME_PACKING__CONTEXT_CITATIONS` | `false` | Reader format only: add `[m3]` references and fill `context_references` |
 | `PRME_PACKING__VECTOR_K` | `250` | Vector search candidates |
 | `PRME_PACKING__LEXICAL_K` | `250` | Lexical search candidates |
 | `PRME_PACKING__GRAPH_MAX_CANDIDATES` | `150` | Graph search candidates |

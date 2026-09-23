@@ -302,6 +302,7 @@ def _public_assessment(
     context_references: dict[str, UUID],
     config: AnswerabilityConfig,
     model_called: bool,
+    bracketed_refs: bool = False,
 ) -> AnswerabilityAssessment:
     requirements: list[AnswerabilityRequirement] = []
     citation_errors: list[str] = []
@@ -312,6 +313,9 @@ def _public_assessment(
         seen_ids: set[UUID] = set()
         for raw_ref in item.evidence_refs:
             ref = raw_ref.strip()
+            if bracketed_refs and ref.startswith("[") and ref.endswith("]"):
+                # Reader records print references as [m3].
+                ref = ref[1:-1].strip()
             if not ref or ref in seen:
                 continue
             seen.add(ref)
@@ -463,7 +467,9 @@ class AnswerabilityEvaluator:
         provider call. Nonempty bundles are evaluated as a set. The model's
         citations are resolved through ``bundle.context_references``; unknown or
         missing citations downgrade claimed support instead of being trusted.
-        Provider and schema failures raise :class:`AnswerabilityError`.
+        Provider and schema failures raise :class:`AnswerabilityError`. A
+        reader-format bundle packed without ``context_citations`` raises
+        ``ValueError``, because none of its records can be cited.
         """
         normalized_query = query.strip()
         if not normalized_query:
@@ -471,6 +477,7 @@ class AnswerabilityEvaluator:
         if answer is not None and not answer.strip():
             raise ValueError("answer must be nonempty when provided")
 
+        bundle.ensure_citable()
         context = bundle.render().strip()
         references = _bundle_references(bundle, context)
         if not context or not references:
@@ -539,6 +546,7 @@ class AnswerabilityEvaluator:
             context_references=references,
             config=self.config,
             model_called=True,
+            bracketed_refs=bundle.context_format == "reader",
         )
 
 

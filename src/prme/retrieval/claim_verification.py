@@ -956,6 +956,7 @@ class ClaimVerifier:
     @staticmethod
     def bundle_evidence(bundle: MemoryBundle) -> tuple[ClaimEvidence, ...]:
         """Extract exact rendered passages and typed provenance from a bundle."""
+        bundle.ensure_citable()
         context = bundle.render()
         reference_by_id = {
             memory_id: reference

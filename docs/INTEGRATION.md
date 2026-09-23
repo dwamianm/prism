@@ -974,7 +974,10 @@ episode and evidence-projection settings in `receipt.packing`, and the
 current-update multiplier in `receipt.scoring`. Set
 `PRME_PACKING__CONTEXT_FORMAT=compact` to use
 schema-declared JSON arrays and bundle-local references; `auditable` remains the
-default. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+default. Set `PRME_PACKING__CONTEXT_FORMAT=reader` for one plain line per record
+(date, state tags, text) with the audit envelope kept in the bundle and receipt,
+and `PRME_PACKING__CONTEXT_CITATIONS=true` to add `[m3]` references; reader
+receipts use schema version 14. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
 their original canonical JSON and feedback checksums and always mean auditable
 rendering. Versions 1–5 also mean context guidance was off. For source blocks or
 bounded dialogue episodes stored under meaningful session IDs, set
@@ -1005,7 +1008,8 @@ PackingConfig(
     token_budget=4096,               # Context budget in tokens
     min_fidelity=RepresentationLevel.REFERENCE,  # Minimum fidelity
     overhead_tokens=100,             # Additional caller reserve beyond measured context
-    context_format="auditable",      # Or "compact" for schema-declared arrays
+    context_format="auditable",      # Or "compact" for schema-declared arrays, "reader" for plain lines
+    context_citations=False,         # Reader only: add [m3] references and context_references
     episode_context_top_k=0,         # Opt-in session-scoped episode routing
     episode_context_local_k=8,       # Records reserved per selected episode
     episode_context_score_decay=0.95,# Inherited episode-evidence score

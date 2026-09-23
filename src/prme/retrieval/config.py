@@ -177,14 +177,27 @@ class PackingConfig(BaseModel):
             "is omitted when it cannot fit without displacing a memory record."
         ),
     )
-    context_format: Literal["auditable", "compact"] = Field(
+    context_format: Literal["auditable", "compact", "reader"] = Field(
         default="auditable",
         description=(
-            "Render packed records as self-describing JSON objects ('auditable') "
-            "or schema-declared JSON arrays with short bundle-local references "
-            "('compact'). Both formats retain type, scope, epistemic state, "
-            "lifecycle, source provenance, temporal fields, and the complete "
-            "selected representation text."
+            "Render packed records as self-describing JSON objects ('auditable'), "
+            "schema-declared JSON arrays with short bundle-local references "
+            "('compact'), or one reader-facing line per record ('reader'). "
+            "Auditable and compact retain type, scope, epistemic state, "
+            "lifecycle, source provenance and temporal fields in the context. "
+            "Reader shows only the event date or explicit validity window, tags "
+            "for non-default epistemic and lifecycle states, and the text; the "
+            "complete record stays in the bundle sections and the receipt. All "
+            "three formats keep the complete selected representation text."
+        ),
+    )
+    context_citations: bool = Field(
+        default=False,
+        description=(
+            "Prefix each reader-format record with a short bundle-local "
+            "reference such as [m3] and fill MemoryBundle.context_references. "
+            "Applies only to context_format='reader': compact records always "
+            "carry references and auditable records carry full node IDs."
         ),
     )
     token_budget: int = Field(
@@ -397,6 +410,16 @@ class PackingConfig(BaseModel):
         ):
             raise ValueError(
                 "Evidence projection and augmentation cannot both be enabled"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def citations_require_reader_format(self) -> PackingConfig:
+        if self.context_citations and self.context_format != "reader":
+            raise ValueError(
+                "context_citations applies only to context_format='reader'; "
+                "compact records always carry references and auditable records "
+                "carry full node IDs"
             )
         return self
 
