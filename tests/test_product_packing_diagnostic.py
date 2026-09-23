@@ -1,16 +1,28 @@
 """Product evidence credit requires source text, not merely an included UUID."""
+import asyncio
 from copy import deepcopy
+from datetime import datetime, timezone
 import hashlib
 import inspect
 import json
+from pathlib import Path
+import shutil
 
 import pytest
 
-from benchmarks.diagnostics.product_packing import compare, measure
+from benchmarks.diagnostics.product_packing import (
+    GATE_CONDITIONAL_ACCURACY, GATE_MEASURED_ACCURACY, GATE_UNSCORED_ACCURACY, GateCase, _locomo_cases,
+    _longmemeval_cases, _source_key, compare, compare_gates, comparison_markdown, gate_config, gate_markdown,
+    gate_report, main, measure, pack_identity, parse_overrides, projected_correct, replay_gate, run_gate,
+    summarize_gate,
+)
+from prme import MemoryEngine, NodeType
+from prme.config import OrganizerConfig
 from prme.models import MemoryNode
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import compute_str, pack_context
+from prme.retrieval.tokenization import count_tokens
 
 
 def make_candidate(sid, text, score):
@@ -180,3 +192,405 @@ def test_confirmation_rejects_changed_method_or_retroactive_plan(tmp_path, field
     plan[field] = value
     with pytest.raises(ValueError):
         compare(report, tmp_path, samples=20, confirmation=plan)
+
+
+# Offline evidence gate -----------------------------------------------------
+
+GATE_TURNS = [
+    ("D1:1", "(1:56 pm on 8 May, 2023) Caroline: I painted a sunset over the lake last spring."),
+    ("D1:2", "(1:56 pm on 8 May, 2023) Melanie: That sounds lovely. Which colors did you use?"),
+    ("D1:3", "(1:56 pm on 8 May, 2023) Caroline: Mostly orange and purple. I also painted a horse."),
+    ("D1:4", "(1:56 pm on 8 May, 2023) Melanie: I adopted a puppy named Oscar this week."),
+]
+DIAGNOSTICS = Path(__file__).parents[1] / "benchmarks/results/research/2026-09-23/gpt54-posthoc-evidence-diagnostics.json"
+
+
+@pytest.fixture
+def mock_embeddings(monkeypatch):
+    from tests.test_durable_ingestion import MockEmbeddingProvider
+
+    monkeypatch.setattr("prme.storage.engine.create_embedding_provider", lambda _: MockEmbeddingProvider())
+
+
+async def make_gate_pack(path):
+    async with MemoryEngine.open(gate_config(path)) as engine:
+        for minute, (dialog_id, text) in enumerate(GATE_TURNS):
+            await engine.store(text, user_id="conv-1", session_id="s001", node_type=NodeType.FACT,
+                               metadata={"source_dialog_id": dialog_id},
+                               event_time=datetime(2023, 5, 8, 13, minute, tzinfo=timezone.utc))
+        status = await engine.process_pending(user_id="conv-1", budget_ms=0)
+        assert not status.pending and not status.failed
+    return pack_identity(path)
+
+
+def gate_case(pack, pack_sha256, *, evidence=("D1:1", "D1:3"), unresolved=(), saved="0" * 64):
+    return GateCase(benchmark="locomo", question_id="conv-1-q0000", category="multi-hop",
+                    question="What has Caroline painted?", user_id="conv-1",
+                    reference_time=datetime(2023, 6, 1, tzinfo=timezone.utc), pack=pack, pack_sha256=pack_sha256,
+                    saved_context_sha256=saved, evidence=frozenset(evidence) or None, unresolved=unresolved)
+
+
+async def test_gate_replays_public_retrieval_on_a_verified_copy_and_measures_reader_context(
+        tmp_path, mock_embeddings):
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    [row] = await replay_gate([gate_case(pack, identity, evidence=("D1:1", "D1:3", "D9:9"), unresolved=("D9:9",))],
+                              scratch=scratch, capture_dir=tmp_path / "captures")
+    assert pack_identity(pack) == identity and not any(scratch.iterdir())
+    assert row["context_matches_saved"] is False
+    assert row["records"] == len(GATE_TURNS) and row["records_without_text"] == 0
+    assert row["memory_text_tokens"] == sum(count_tokens(text) for _, text in GATE_TURNS)
+    assert row["memory_text_tokens"] < row["context_tokens"]
+    evidence = row["evidence"]
+    assert (evidence["annotated"], evidence["packed"], evidence["unresolved"]) == (3, 2, ["D9:9"])
+    assert evidence["all_packed"] is False and set(evidence["ranks"]) == {"D1:1", "D1:3"}
+    assert all(isinstance(rank, int) for rank in evidence["ranks"].values())
+    assert row["projected_correct"] == pytest.approx(1 / 4)  # Unscored multi-hop rate.
+    capture = (tmp_path / "captures" / "locomo" / "conv-1-q0000.json").read_bytes()
+    assert hashlib.sha256(capture).hexdigest() == row["capture_sha256"]
+    saved = json.loads(capture)
+    assert hashlib.sha256(saved["context"].encode()).hexdigest() == row["context_sha256"]
+    assert saved["receipt"]["context_sha256"] == row["context_sha256"]
+
+    # A fresh copy reproduces the context byte for byte, and resolved evidence is fully packed.
+    [again] = await replay_gate([gate_case(pack, identity, saved=row["context_sha256"])], scratch=scratch)
+    assert again["context_matches_saved"] is True and again["evidence"]["all_packed"] is True
+    assert again["projected_correct"] == pytest.approx(37 / 45)
+
+    # Overrides change the replayed configuration, never the saved pack.
+    [small] = await replay_gate([gate_case(pack, identity)], scratch=scratch,
+                                overrides=parse_overrides(["packing.token_budget=160"]))
+    assert small["context_tokens"] <= 60 and small["records"] < row["records"]
+    assert pack_identity(pack) == identity
+
+
+async def test_gate_rejects_changed_packs_unordered_questions_and_missing_receipts(
+        tmp_path, mock_embeddings, monkeypatch):
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    other = tmp_path / "other"
+    shutil.copytree(pack, other)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    with pytest.raises(ValueError, match="differs from the identity"):
+        await replay_gate([gate_case(pack, "0" * 64)], scratch=scratch)
+    with pytest.raises(ValueError, match="contiguous"):
+        await replay_gate([gate_case(pack, identity), gate_case(other, identity), gate_case(pack, identity)],
+                          scratch=scratch)
+
+    async def no_receipt(self, request_id, *, user_id):
+        return None
+
+    monkeypatch.setattr(MemoryEngine, "get_retrieval_receipt", no_receipt)
+    with pytest.raises(ValueError, match="receipt was not persisted"):
+        await replay_gate([gate_case(pack, identity)], scratch=scratch)
+    assert not any(scratch.iterdir()) and pack_identity(pack) == identity
+
+
+def test_gate_config_isolates_environment_and_dotenv_and_refuses_unsafe_overrides(tmp_path, monkeypatch):
+    from prme.config import EmbeddingConfig, ExtractionConfig
+
+    monkeypatch.setenv("PRME_ENABLE_RERANKER", "true")
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("PRME_EMBEDDING_MODEL_NAME=BAAI/bge-base-en-v1.5\n"
+                                   "PRME_ORGANIZER_OPPORTUNISTIC_COOLDOWN=5\n"
+                                   "PRME_EXTRACTION_BASE_URL=http://user:secret@example.com\n")
+    config = gate_config(tmp_path, parse_overrides(["packing.token_budget=8192", "scoring.relevance_floor=0.3"]))
+    assert config.enable_reranker is False
+    assert config.embedding.model_name == EmbeddingConfig.model_fields["model_name"].default
+    assert config.extraction.base_url == ExtractionConfig.model_fields["base_url"].default
+    assert config.organizer.opportunistic_enabled is False
+    assert config.organizer.opportunistic_cooldown == OrganizerConfig.model_fields["opportunistic_cooldown"].default
+    assert config.packing.token_budget == 8192 and config.scoring.relevance_floor == .3
+    assert config.db_path == str(tmp_path / "memory.duckdb")
+    assert parse_overrides(["packing.context_format=compact"]) == {"packing": {"context_format": "compact"}}
+    for unsafe in ("embedding.model_name=other", "db_path=/tmp/other.duckdb", "enable_query_reformulation=true",
+                   "temporal_relation.enabled=true", "extraction.provider=openai",
+                   "organizer.opportunistic_enabled=true", "api.api_key=secret"):
+        with pytest.raises(ValueError, match="cannot override"):
+            gate_config(tmp_path, parse_overrides([unsafe]))
+    for unknown in ("packing.tokn_budget=8192", "enable_rerankr=true"):
+        with pytest.raises(ValueError, match="Unknown configuration key"):
+            gate_config(tmp_path, parse_overrides([unknown]))
+    for malformed in (["no-separator"], ["=1"], ["packing=1", "packing.token_budget=2"],
+                      ["packing.token_budget=1", "packing.token_budget=2"]):
+        with pytest.raises(ValueError):
+            parse_overrides(malformed)
+
+
+def gate_row(question_id, category, *, all_packed=None, unresolved=(), ranks=None, records=25,
+             text=300, tokens=1000, without_text=0, benchmark="locomo", matches=True):
+    evidence = None
+    if all_packed is not None:
+        ranks = {"a": 1, "b": 2 if all_packed else None} if ranks is None else ranks
+        evidence = {"annotated": 2, "unresolved": list(unresolved), "packed": 2 if all_packed else 1,
+                    "packed_with_text": 2 if all_packed else 1, "all_packed": all_packed,
+                    "all_packed_with_text": all_packed, "ranks": ranks}
+    return {"benchmark": benchmark, "question_id": question_id, "category": category,
+            "context_sha256": "0" * 64, "context_matches_saved": matches, "context_tokens": tokens,
+            "memory_text_tokens": text, "records": records, "records_without_text": without_text,
+            "representations": {"full": records - without_text, "reference": without_text},
+            "candidates": 500, "retrieval_seconds": .1, "evidence": evidence,
+            "projected_correct": projected_correct(benchmark, category, evidence)}
+
+
+def gate_fixture(rows, *, datasets=None, archive="prepared", overrides=None):
+    return gate_report(rows, provenance={
+        "commit": "abc123", "dirty": False, "overrides": overrides or {},
+        "engine_config": {"packing": {"tokenizer": "cl100k_base"}},
+        "archive": {"path": "/archive", "prepared_sha256": {"locomo": archive}},
+        "datasets": datasets or {"locomo": "dataset"}})
+
+
+def test_projection_reproduces_the_saved_run_for_each_benchmark_and_locomo_category():
+    rows = [gate_row(f"{category}-{state}-{n}", category, all_packed=state == "all_packed")
+            for category, rates in GATE_CONDITIONAL_ACCURACY["locomo"].items()
+            for state in ("all_packed", "missing") for n in range(rates[state][1])]
+    rows += [gate_row(f"{category}-unscored-{n}", category)
+             for category, (_, total) in GATE_UNSCORED_ACCURACY["locomo"].items() for n in range(total)]
+    summary = summarize_gate(rows)
+    assert summary["questions"] == 1540 and summary["projected_correct"] == pytest.approx(985)
+    for category, rates in GATE_CONDITIONAL_ACCURACY["locomo"].items():
+        measured = rates["all_packed"][0] + rates["missing"][0] + GATE_UNSCORED_ACCURACY["locomo"][category][0]
+        assert summarize_gate([row for row in rows if row["category"] == category])["projected_correct"] == (
+            pytest.approx(measured))
+    rows = ([gate_row(f"a{n}", "multi-session", all_packed=True, benchmark="longmemeval") for n in range(403)]
+            + [gate_row(f"m{n}", "temporal-reasoning", all_packed=False, benchmark="longmemeval") for n in range(67)]
+            + [gate_row(f"{category}-{n}_abs", category, benchmark="longmemeval")
+               for category, (_, total) in GATE_UNSCORED_ACCURACY["longmemeval"].items() for n in range(total)])
+    assert summarize_gate(rows)["projected_correct"] == pytest.approx(430)
+    assert projected_correct("locomo", "single-hop", {"unresolved": ["D9:9"], "all_packed": False}) == 0
+    with pytest.raises(ValueError, match="no measured rate"):
+        projected_correct("longmemeval", "single-session-assistant", None)
+
+
+def test_projection_tables_match_the_saved_run_diagnostics():
+    saved = json.loads(DIAGNOSTICS.read_text())["benchmarks"]
+
+    def rate(counts, *states):
+        correct = sum(counts.get(f"{state}_correct", 0) for state in states)
+        return correct, correct + sum(counts.get(f"{state}_incorrect", 0) for state in states)
+
+    locomo, longmemeval = saved["locomo"]["categories"], saved["longmemeval"]["categories"]
+    assert GATE_CONDITIONAL_ACCURACY["locomo"] == {
+        category: {"all_packed": rate(counts, "all_annotated_turns_packed"),
+                   "missing": rate(counts, "annotated_turns_missing")} for category, counts in locomo.items()}
+    assert GATE_UNSCORED_ACCURACY["locomo"] == {
+        category: rate(counts, "no_annotations", "unresolved_annotations") for category, counts in locomo.items()}
+    pooled = {state: tuple(map(sum, zip(*(rate(counts, state) for counts in longmemeval.values()))))
+              for state in ("all_annotated_turns_packed", "annotated_turns_missing")}
+    assert GATE_CONDITIONAL_ACCURACY["longmemeval"] == {"*": {
+        "all_packed": pooled["all_annotated_turns_packed"], "missing": pooled["annotated_turns_missing"]}}
+    assert GATE_UNSCORED_ACCURACY["longmemeval"] == {
+        category: rate(counts, "abstention") for category, counts in longmemeval.items()
+        if rate(counts, "abstention")[1]}
+    assert GATE_MEASURED_ACCURACY == {
+        name: (sum(row["correct"] for row in value["rows"]), len(value["rows"])) for name, value in saved.items()}
+
+
+def test_summary_reports_text_share_evidence_and_rank_distribution():
+    summary = summarize_gate([
+        gate_row("q1", "multi-hop", all_packed=True, ranks={"a": 1, "b": 30}, records=20, text=250, without_text=1),
+        gate_row("q2", "multi-hop", all_packed=False, ranks={"a": 3, "b": None}, records=30, text=250),
+        gate_row("q3", "multi-hop", all_packed=False, unresolved=["z"], ranks={"a": 200}),
+        gate_row("q4", "open-domain"),
+    ])
+    assert summary["records_per_context"] == 25 and summary["memory_text_share"] == pytest.approx(1100 / 4000)
+    assert summary["records_without_text"] == 1 and summary["representations"]["reference"] == 1
+    assert (summary["annotated_questions"], summary["all_evidence_packed"]) == (3, 1)
+    assert summary["all_evidence_packed_share"] == pytest.approx(1 / 3) and summary["candidates_mean"] == 500
+    ranks = summary["evidence_ranks"]
+    assert (ranks["annotated_turns"], ranks["not_returned"], ranks["median"]) == (5, 1, 16.5)
+    assert (ranks["top_25_share"], ranks["beyond_150_share"]) == (.5, .25)
+    assert ranks["all_within_top_25_share"] == 0 and ranks["all_within_top_75_share"] == pytest.approx(1 / 3)
+    with pytest.raises(ValueError):
+        summarize_gate([])
+    with pytest.raises(ValueError):
+        gate_fixture([])
+
+
+def test_gate_markdown_labels_the_projection_and_flags_mismatches_and_ineffective_overrides():
+    report = gate_fixture([gate_row("q1", "multi-hop", all_packed=True),
+                           gate_row("q2", "single-hop", all_packed=False, matches=False)])
+    assert report["benchmarks"]["locomo"]["context_mismatches"] == ["q2"]
+    markdown = gate_markdown(report)
+    assert "planning estimate, not an answer score" in markdown
+    assert "Jaccard 0.83" in markdown and "63.3% against 64.0%" in markdown and "985/1,540" in markdown
+    assert "distractor" in markdown and "held-out" in markdown
+    assert "Contexts that differ from the saved run: 1 (q2)" in markdown
+    assert "all evidence packed for 45/282 multi-hop questions. This run: 25.0, 30.0%, 1/1." in markdown
+    assert "changed nothing" not in markdown
+    unchanged = gate_markdown(gate_fixture([gate_row("q1", "multi-hop", all_packed=True)],
+                                           overrides={"enable_qa_pairing": True}))
+    assert "overrides changed nothing the reader sees" in unchanged and '"enable_qa_pairing": true' in unchanged
+    longmemeval = gate_markdown(gate_fixture([gate_row("q1", "multi-session", all_packed=True,
+                                                       benchmark="longmemeval")]))
+    assert "all evidence packed for 403/470 annotated questions. This run: 25.0, 30.0%, 1/1." in longmemeval
+
+
+def test_comparison_pairs_questions_and_rejects_mismatched_inputs(tmp_path, capsys):
+    before_rows = [gate_row("q1", "multi-hop", all_packed=False), gate_row("q2", "multi-hop", all_packed=True),
+                   gate_row("q3", "single-hop", all_packed=True), gate_row("q4", "open-domain")]
+    after_rows = [gate_row("q1", "multi-hop", all_packed=True), gate_row("q2", "multi-hop", all_packed=False),
+                  gate_row("q3", "single-hop", all_packed=True), gate_row("q4", "open-domain", matches=False)]
+    before, after = gate_fixture(before_rows), gate_fixture(after_rows)
+    result = compare_gates(before, after, samples=50)
+    bench = result["benchmarks"]["locomo"]
+    assert bench["gained_all_evidence"] == ["q1"] and bench["lost_all_evidence"] == ["q2"]
+    stats = bench["all_evidence_packed"]
+    assert (stats["queries"], stats["wins"], stats["losses"], stats["ties"]) == (3, 1, 1, 1)
+    assert bench["all_evidence_packed_with_text"]["queries"] == 3
+    by_category = bench["all_evidence_packed_by_category"]
+    assert by_category["multi-hop"]["queries"] == 2 and by_category["open-domain"]["queries"] == 0
+    assert bench["projected_accuracy"]["queries"] == 4
+    assert bench["context"]["after"]["contexts_matching_saved"] == 3
+    markdown = comparison_markdown(result)
+    assert "All evidence packed, multi-hop" in markdown and "All evidence packed with memory text" in markdown
+    assert "4/4 to 3/4" in markdown and "10 conversations" in markdown
+
+    mismatched = {
+        "Question sets differ": gate_fixture(after_rows[:3]),
+        "different datasets": gate_fixture(after_rows, datasets={"locomo": "other"}),
+        "different archives": gate_fixture(after_rows, archive="other"),
+        "different projection constants": {**after, "projection": {**after["projection"], "method": "other"}},
+        "repeats": gate_fixture(after_rows + after_rows[:1]),
+        "annotation differs": gate_fixture([gate_row("q1", "temporal", all_packed=True), *after_rows[1:]]),
+        "not a complete evidence gate": {**after, "complete": False},
+    }
+    for message, report in mismatched.items():
+        with pytest.raises(ValueError, match=message):
+            compare_gates(before, report)
+    tokenizer = deepcopy(after)
+    tokenizer["provenance"]["engine_config"]["packing"]["tokenizer"] = "o200k_base"
+    with pytest.raises(ValueError, match="different tokenizers"):
+        compare_gates(before, tokenizer)
+
+    paths = [tmp_path / "before.json", tmp_path / "after.json"]
+    for path, report in zip(paths, (before, after)):
+        path.write_text(json.dumps(report))
+    main(["gate-compare", *map(str, paths), "--output", str(tmp_path / "out" / "comparison.json"), "--samples", "20"])
+    written = json.loads((tmp_path / "out" / "comparison.json").read_text())
+    assert written["kind"] == "offline-evidence-gate-comparison"
+    assert written["inputs"]["before_sha256"] == hashlib.sha256(paths[0].read_bytes()).hexdigest()
+    assert (tmp_path / "out" / "comparison.md").read_text() in capsys.readouterr().out
+    for output in (str(paths[1]), str(tmp_path / "comparison.md")):
+        with pytest.raises(SystemExit):
+            main(["gate-compare", *map(str, paths), "--output", output])
+
+
+async def test_gate_cli_writes_json_and_markdown_for_a_replayed_run(tmp_path, mock_embeddings, monkeypatch, capsys):
+    import benchmarks.diagnostics.product_packing as diagnostic
+
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    archive = tmp_path / "archive"
+    (archive / "locomo").mkdir(parents=True)
+    (archive / "locomo" / "prepared.json").write_text("{}")
+    monkeypatch.setattr(diagnostic, "_locomo_cases", lambda _: [gate_case(pack, identity)])
+    monkeypatch.setattr(diagnostic, "_quiet_offline_cli", lambda: None)
+    output = tmp_path / "out" / "gate.json"
+    await asyncio.to_thread(main, ["gate", "--benchmark", "locomo", "--archive", str(archive),
+                                   "--set", "packing.token_budget=3000", "--output", str(output)])
+    report = json.loads(output.read_text())
+    assert report["complete"] and [row["question_id"] for row in report["rows"]] == ["conv-1-q0000"]
+    provenance = report["provenance"]
+    assert provenance["overrides"] == {"packing": {"token_budget": 3000}} and provenance["commit"]
+    assert provenance["engine_config"]["packing"]["token_budget"] == 3000
+    assert provenance["engine_config"]["organizer"]["opportunistic_enabled"] is False
+    assert set(provenance["datasets"]) == {"locomo"} and set(provenance["archive"]["prepared_sha256"]) == {"locomo"}
+    assert output.with_suffix(".md").read_text() in capsys.readouterr().out
+    for arguments in (["--output", str(tmp_path / "gate.md")],
+                      ["--output", str(output), "--set", "packing.tokn_budget=1"],
+                      ["--output", str(output), "--set", "embedding.model_name=other"]):
+        with pytest.raises(SystemExit):
+            main(["gate", *arguments])
+    for benchmarks in ([], ["LoCoMo"], "locmo"):
+        with pytest.raises(ValueError, match="Choose benchmarks"):
+            await run_gate(benchmarks, archive=archive)
+
+
+def test_loaders_verify_the_archive_and_resolve_annotations(tmp_path, monkeypatch):
+    from benchmarks.integrations import run_gpt54_comparison as gpt54
+    from benchmarks.integrations.gpt54_budget import digest
+
+    def write_run(folder, contexts, extra):
+        (folder / "contexts").mkdir(parents=True)
+        manifest = []
+        for question_id, saved in contexts.items():
+            path = folder / "contexts" / f"{question_id}.json"
+            path.write_text(json.dumps(saved))
+            manifest.append({"question_id": question_id, "sha256": digest(path)})
+        (folder / "prepared.json").write_text(json.dumps({"complete": True, "contexts": manifest, **extra}))
+
+    locomo = tmp_path / "locomo10.json"
+    locomo.write_text(json.dumps([{"sample_id": "conv-1", "conversation": {
+        "session_1_date_time": "1:56 pm on 8 May, 2023",
+        "session_1": [{"speaker": "Caroline", "dia_id": "D1:1", "text": "I paint."},
+                      {"speaker": "Melanie", "dia_id": "D1:2", "text": "Nice."}]},
+        "qa": [{"question": "What does Caroline do?", "answer": "Paints", "evidence": ["D1:1", "D7:7"], "category": 1},
+               {"question": "Who is kind?", "answer": "Melanie", "evidence": [], "category": 3}]}]))
+    monkeypatch.setattr(gpt54, "LOCOMO", locomo)
+    monkeypatch.setattr(gpt54, "LOCOMO_SHA", digest(locomo))
+    archive = tmp_path / "archive"
+    with pytest.raises(ValueError, match="No saved run"):
+        _locomo_cases(archive)
+    pack = tmp_path / "packs" / "conv-1"
+    write_run(archive / "locomo", {
+        f"conv-1-q000{n}": {"context": f"context {n}",
+                            "receipt": {"user_id": "conv-1", "reference_time": "2023-05-08T13:56:00Z"}}
+        for n in range(2)}, {"packs": [{"conversation_id": "conv-1", "config": {"db_path": str(pack / "memory.duckdb")},
+                                        "final_artifact": {"tree_sha256": "p" * 64}}]})
+    with pytest.raises(ValueError, match="pack not found"):
+        _locomo_cases(archive)
+    pack.mkdir(parents=True)
+    (pack / "memory.duckdb").write_bytes(b"")
+    first, second = _locomo_cases(archive)
+    assert (first.category, first.user_id, first.pack, first.pack_sha256) == ("multi-hop", "conv-1", pack, "p" * 64)
+    assert first.evidence == {"D1:1", "D7:7"} and first.unresolved == ("D7:7",)
+    assert first.reference_time == datetime(2023, 5, 8, 13, 56, tzinfo=timezone.utc)
+    assert first.saved_context_sha256 == hashlib.sha256(b"context 0").hexdigest()
+    assert second.evidence is None and second.category == "open-domain"
+    (archive / "locomo" / "contexts" / "conv-1-q0001.json").write_text("{}")
+    with pytest.raises(ValueError, match="differs from the archive manifest"):
+        _locomo_cases(archive)
+    monkeypatch.setattr(gpt54, "LOCOMO_SHA", "0" * 64)
+    with pytest.raises(ValueError, match="dataset differs from the saved run"):
+        _locomo_cases(archive)
+
+    longmemeval = tmp_path / "longmemeval_s.json"
+    longmemeval.write_text(json.dumps([
+        {"question_id": "q1", "question_type": "multi-session", "question": "How long did I wait?",
+         "haystack_session_ids": ["s-a", "s-b"],
+         "haystack_sessions": [[{"role": "user", "content": "Hello."}],
+                               [{"role": "user", "content": "It took a year.", "has_answer": True},
+                                {"role": "assistant", "content": " ", "has_answer": True}]]},
+        {"question_id": "q2_abs", "question_type": "temporal-reasoning", "question": "When?",
+         "haystack_session_ids": ["s-c"], "haystack_sessions": [[{"role": "user", "content": "x", "has_answer": True}]]},
+    ]))
+    monkeypatch.setattr(gpt54, "LONGMEM", longmemeval)
+    monkeypatch.setattr(gpt54.lme, "DATASET_SHA256", digest(longmemeval))
+    saved = {}
+    for question_id in ("q1", "q2_abs"):
+        capture = tmp_path / "control" / question_id / "capture.json"
+        (capture.parent / "pack").mkdir(parents=True)
+        (capture.parent / "pack" / "memory.duckdb").write_bytes(b"")
+        capture.write_text(json.dumps({"retrievals": [{"receipt": {
+            "user_id": "longmemeval-s-baseline", "reference_time": "2023-05-30T10:18:00Z"}}]}))
+        saved[question_id] = {"context_sha256": "a" * 64, "source_capture": str(capture),
+                              "source_capture_sha256": digest(capture), "artifact_checksum": "b" * 64}
+    write_run(archive / "longmemeval", saved, {})
+    answered, abstention = _longmemeval_cases(archive)
+    assert answered.evidence == {"s-b#1#0", "s-b#1#1"} and answered.unresolved == ("s-b#1#1",)
+    assert answered.pack == tmp_path / "control" / "q1" / "pack" and answered.pack_sha256 == "b" * 64
+    assert answered.user_id == "longmemeval-s-baseline"
+    assert answered.reference_time == datetime(2023, 5, 30, 10, 18, tzinfo=timezone.utc)
+    assert abstention.evidence is None and abstention.unresolved == ()
+    (tmp_path / "control" / "q1" / "capture.json").write_text("{}")
+    with pytest.raises(ValueError, match="control capture for q1 differs"):
+        _longmemeval_cases(archive)
+    assert _source_key("longmemeval", {"source_session_id": "s-b", "source_session_position": 1,
+                                       "source_turn_index": 0}) == "s-b#1#0"
+    assert _source_key("longmemeval", {"source_session_id": "s-b"}) is None
+    assert _source_key("locomo", {"source_dialog_id": "D1:1"}) == "D1:1"

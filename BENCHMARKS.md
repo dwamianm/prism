@@ -24,6 +24,110 @@ All source/answer records are retained locally under `data/gpt54-comparison-v1/`
 public reports contain their checksums. The completed run must not be rerun or
 overwritten as part of verification.
 
+## Offline evidence gate: the first gate for retrieval changes
+
+Run this gate on every retrieval, packing or representation change before any
+paid answer run. Spend reader and judge money only on changes that move it, and
+put its before and after numbers in the pull request.
+
+The gate replays the public `retrieve()` for all 1,540 LoCoMo and 500
+LongMemEval-S questions over copies of the saved 2026-09-23 memory packs, at
+each question's recorded reference time. It then measures the context that the
+product renderer actually produced. It makes no reader, judge or paid API calls;
+only the local query embedding runs, from locally cached model files. A full run
+takes about 10 minutes on a laptop.
+
+```sh
+# Current code and defaults
+uv run python -m benchmarks.diagnostics.product_packing gate --output /tmp/gate-before.json
+# The change, switched on through its configuration option
+uv run python -m benchmarks.diagnostics.product_packing gate \
+  --set packing.token_budget=8192 --output /tmp/gate-after.json
+uv run python -m benchmarks.diagnostics.product_packing gate-compare \
+  /tmp/gate-before.json /tmp/gate-after.json --output /tmp/gate-comparison.json
+```
+
+Each command writes the JSON file named by `--output` and a Markdown summary
+beside it (same name, `.md`). For each benchmark and category, the report gives:
+
+- records per context;
+- the memory-text share of context tokens;
+- packed records without memory text (REFERENCE and KEY_VALUE fallbacks);
+- the share of questions with all annotated evidence in the context, and with
+  its text;
+- the rank distribution of annotated evidence;
+- a projected accuracy.
+
+The comparison pairs the two runs question by question. It reports wins, losses
+and ties with a paired bootstrap interval. It rejects reports whose questions,
+datasets, archive, tokenizer or projection constants differ. Its intervals
+resample questions, and LoCoMo's questions come from only 10 conversations, so
+treat them as narrow.
+
+With current defaults the gate reproduces every saved context (same
+`context_sha256`; the report lists any mismatch) and these baselines:
+
+| | LoCoMo | LongMemEval-S |
+|---|---:|---:|
+| Records per context | 25.2 | 23.9 |
+| Memory-text share of context tokens | 29% | 32% |
+| All annotated evidence packed | 45/282 multi-hop (16.0%) | 403/470 (85.7%) |
+
+**The projected accuracy is a planning estimate, not an answer score.** Each
+question takes the saved GPT-5.4 run's accuracy on questions whose annotated
+evidence was all packed, or partly missing (section 1 of the
+[2026-09-23 audit](memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md)). LoCoMo uses
+its per-category rates. LongMemEval-S uses its pooled rates, because several of
+its categories have only a handful of questions with evidence missing, so its
+category projections are pooled estimates. Questions that retrieval cannot move
+(no resolvable annotation, or abstention) keep their category's measured rate.
+At the saved run's evidence states the projection gives 985/1,540 and 430/500 by
+construction. The audit's re-pack simulator, using the same LoCoMo rates,
+reproduced the real packed sets with mean Jaccard 0.83 and projected 63.3%
+against 64.0% measured. The projection ignores distractor effects and gaps in
+the annotations. All 2,040 questions have already been examined, so this is a
+development gate: publication claims still need fresh or held-out data.
+
+### What the gate can and cannot measure
+
+The gate replays saved packs, so it measures changes to retrieval, ranking,
+packing and rendering. A change that acts when memories are stored (extraction,
+speaker handling, write-time facts or cards) needs new packs before this gate
+can see it. When `--set` overrides leave every context identical to the saved
+run, the summary says so; check the setting names before concluding that a
+change does nothing.
+
+`--set` takes dotted configuration keys with JSON values, and it rejects unknown
+keys. It cannot change storage paths, the embedding model, extraction, query
+reformulation, temporal relations, the organizer, or the API and MCP settings.
+Environment variables and `.env` files are ignored. The organizer's opportunistic
+maintenance is off during replay: it promotes records by wall-clock age, which
+would make a replay depend on the day it runs. In the saved run the records were
+minutes old, so maintenance changed nothing there.
+
+### Inputs
+
+All inputs are local and gitignored. Keep every one of them:
+
+- the archive `data/gpt54-comparison-v1/` in the main checkout
+  (`/Users/dwamianm/Sites/prism`); `--archive` points elsewhere, and worktrees
+  use the main checkout's archive by default;
+- the LoCoMo packs that `locomo/prepared.json` names, in
+  `/Users/dwamianm/Sites/prism-locomo-baseline-2026-09-22/data/`;
+- the 2026-09-22 LongMemEval-S control captures and packs, in
+  `/Users/dwamianm/Sites/prism-opt-in-study-2026-09-22/data/opt-in-study/opt-in-successor-v2/baseline/`;
+- both datasets under the main checkout's `data/benchmarks/`.
+
+Removing either of those two checkouts deletes the gate's baseline, and the
+packs cannot be rebuilt byte for byte. Before replaying, the gate checks the
+dataset checksums, the archive's manifest of saved contexts, each LongMemEval-S
+capture, and each pack's tree identity. Saved packs are never opened in place:
+each is copied to a temporary directory first, because retrieval writes
+receipts.
+
+`--capture-dir` keeps every rendered context and receipt. These contain
+benchmark text, so keep them out of published results.
+
 ## Earlier registered memory-utility comparison
 
 The first registered held-out current-product answer comparison is complete.
@@ -313,6 +417,10 @@ and identity-based context deduplication. Paired local-reader counterexamples
 are authored development diagnostics, not independent accuracy measurements.
 
 ## Product packing replay
+
+This replay reorders frozen candidates, so it cannot see ranking or
+candidate-generation changes. Use the [offline evidence gate](#offline-evidence-gate-the-first-gate-for-retrieval-changes)
+first for those.
 
 Capture the actual public retrieval response while running a development
 source-evidence evaluation, then replay those candidates offline:
