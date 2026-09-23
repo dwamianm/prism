@@ -215,7 +215,7 @@ class ScoreProvenance(BaseModel):
                 score = ((1 - operation.coefficient) * operation.neural_score
                          + operation.coefficient * score)
             elif operation.kind == "neural_rank_assignment":
-                # Research-only ordinal remapping. The preceding neural blend
+                # Explicit opt-in ordinal remapping. The preceding neural blend
                 # retains the raw model score; this is an assigned ranking
                 # score on the original prefix's scale, not a probability.
                 score = operation.coefficient

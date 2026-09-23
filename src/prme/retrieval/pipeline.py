@@ -175,6 +175,8 @@ class RetrievalPipeline:
         temporal_languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
         temporal_relation_config: TemporalRelationConfig | None = None,
         temporal_relation_enricher: TemporalRelationEnricher | None = None,
+        reranker_policy: Literal["legacy", "score_envelope", "anchored_score_envelope"] = "legacy",
+        query_reformulation_merge_policy: Literal["new_only", "max_signals"] = "new_only",
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -191,6 +193,11 @@ class RetrievalPipeline:
         self._query_reformulation_count = query_reformulation_count
         self._query_reformulation_provider = query_reformulation_provider
         self._query_reformulation_model = query_reformulation_model
+        if reranker_policy not in {"legacy", "score_envelope", "anchored_score_envelope"}:
+            raise ValueError("Unknown reranker policy")
+        if query_reformulation_merge_policy not in {"new_only", "max_signals"}:
+            raise ValueError("Unknown query reformulation merge policy")
+        self._query_reformulation_merge_policy = query_reformulation_merge_policy
         self._temporal_languages = temporal_languages
         self._temporal_relation_config = (
             temporal_relation_config or TemporalRelationConfig()
@@ -220,7 +227,7 @@ class RetrievalPipeline:
         if enable_reranker:
             from prme.retrieval.reranker import CrossEncoderReranker
 
-            self._reranker = CrossEncoderReranker(model_name=reranker_model)
+            self._reranker = CrossEncoderReranker(model_name=reranker_model, policy=reranker_policy)
 
         self._feature_identity = feature_identity(vector_index, lexical_index, self._reranker)
         self._feature_identity["temporal_relation"] = {
@@ -239,7 +246,13 @@ class RetrievalPipeline:
 
     def execution_features(self) -> dict:
         """Return the exact feature identity used for a new receipt."""
-        return {**self._feature_identity, "reranker": reranker_identity(self._reranker)}
+        features = {**self._feature_identity, "reranker": reranker_identity(self._reranker)}
+        if self._enable_query_reformulation and self._query_reformulation_merge_policy != "new_only":
+            features["query_reformulation_merge"] = {
+                "policy": self._query_reformulation_merge_policy,
+                "version": 1,
+            }
+        return features
 
     async def retrieve(
         self,
@@ -973,7 +986,9 @@ class RetrievalPipeline:
                 "reranker_top_k": self._reranker_top_k,
                 "query_reformulation": {"enabled": self._enable_query_reformulation,
                     "count": self._query_reformulation_count, "provider": self._query_reformulation_provider,
-                    "model": self._query_reformulation_model},
+                    "model": self._query_reformulation_model,
+                    **({"merge_policy": self._query_reformulation_merge_policy}
+                       if self._query_reformulation_merge_policy != "new_only" else {})},
             })
             receipt = make_receipt(request_id=analysis.request_id, user_id=user_id, query=query,
                                    reference_time=scoring_now, scopes=normalized_scope,
@@ -1122,6 +1137,12 @@ class RetrievalPipeline:
         on total failure no candidates are added and the original query's
         results stand.
 
+        The experimental ``max_signals`` policy instead merges distinct backend
+        paths and component maxima for identical source snapshots. Every
+        alternate pass must succeed before the candidate list changes. Backend
+        errors, embedding mismatches and conflicting snapshots propagate;
+        provider failure retains the existing empty-reformulation fallback.
+
         Returns:
             The number of new candidates appended across all alternate queries.
         """
@@ -1133,7 +1154,8 @@ class RetrievalPipeline:
             model=self._query_reformulation_model,
             count=self._query_reformulation_count,
         )
-        if not alt_queries:
+        merge_signals_enabled = self._query_reformulation_merge_policy == "max_signals"
+        if not alt_queries and not merge_signals_enabled:
             return 0
 
         # Fan out the alternate-query passes concurrently (matching the
@@ -1147,6 +1169,7 @@ class RetrievalPipeline:
                 languages=self._temporal_languages,
                 reference_time=reference_time,
             )
+            diagnostics = CandidateDiagnostics() if merge_signals_enabled else None
             alt_candidates, _ = await generate_candidates(
                 alt_analysis,
                 graph_store=self._graph_store,
@@ -1157,13 +1180,27 @@ class RetrievalPipeline:
                 time_from=time_from,
                 time_to=time_to,
                 config=config,
+                **({"diagnostics": diagnostics} if diagnostics is not None else {}),
             )
+            if diagnostics is not None and (
+                diagnostics.backend_failures or diagnostics.embedding_mismatch
+            ):
+                raise RuntimeError("Alternate-query backend failed")
             return alt_candidates
 
         results = await asyncio.gather(
             *[_gen(alt_q) for alt_q in alt_queries],
             return_exceptions=True,
         )
+        if merge_signals_enabled:
+            # Settle all passes before propagating failure, so none outlive
+            # their owning retrieval/backend lease after an early exception.
+            for result in results:
+                if isinstance(result, BaseException):
+                    raise result
+            merged, observation = merge_reformulation_signals(candidates, results)
+            candidates[:] = merged
+            return len(observation["added_ids"])
 
         existing_ids = {str(c.node.id) for c in candidates}
         added = 0
@@ -1183,3 +1220,41 @@ class RetrievalPipeline:
                 candidates.append(c)
                 added += 1
         return added
+
+
+_REFORMULATION_SIGNALS = ('semantic_score', 'lexical_score', 'graph_proximity')
+
+
+def merge_reformulation_signals(
+    candidates: list[RetrievalCandidate],
+    alternatives: list[list[RetrievalCandidate]],
+) -> tuple[list[RetrievalCandidate], dict[str, list[str]]]:
+    """Union backend paths and take maxima, without treating queries as backends."""
+    import math
+
+    merged = {c.node.id: c.model_copy(deep=True) for c in candidates}
+    if len(merged) != len(candidates):
+        raise ValueError('Duplicate original candidate identity')
+    changed = set()
+    added = set()
+    for group in [candidates, *alternatives]:
+        for candidate in group:
+            if any(not math.isfinite(getattr(candidate, key)) for key in _REFORMULATION_SIGNALS):
+                raise ValueError('Non-finite retrieval signal')
+            nid = candidate.node.id
+            if nid not in merged:
+                merged[nid] = candidate.model_copy(deep=True)
+                added.add(nid)
+            target = merged[nid]
+            if target.node.model_dump(mode='json') != candidate.node.model_dump(mode='json'):
+                raise ValueError('Same identity has different source snapshots')
+            before = (tuple(target.paths), *(getattr(target, key) for key in _REFORMULATION_SIGNALS))
+            target.paths = sorted(set(target.paths) | set(candidate.paths))
+            target.path_count = len(target.paths)
+            for key in _REFORMULATION_SIGNALS:
+                setattr(target, key, max(getattr(target, key), getattr(candidate, key)))
+            after = (tuple(target.paths), *(getattr(target, key) for key in _REFORMULATION_SIGNALS))
+            if before != after:
+                changed.add(nid)
+    return list(merged.values()), {'added_ids': sorted(map(str, added)),
+                                  'changed_existing_ids': sorted(str(i) for i in changed - added)}

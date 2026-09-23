@@ -154,7 +154,7 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Current retrievals produce version 12 receipts with explicit ordering,
+Ordinary retrievals produce version 12 receipts with explicit ordering,
 context-guidance, context-format, and episode-routing policies and the same
 score-replay and execution requirements. Version 9 records the explicit
 current-update scoring policy, version 10 records evidence projection, and
@@ -170,6 +170,14 @@ version 12 support cannot consume
 new receipts. Score replay reproduces the returned
 candidate ranking; it is not a reconstruction of packing or unseen candidates.
 Relevance feedback remains linked to the saved context exposure.
+
+Explicit [reranker envelope policies](EXPERIMENTAL-RETRIEVAL-POLICIES.md) emit
+version 13 when neural rank assignments occur. Each assignment follows the raw
+neural blend and retains the original prefix score scale for downstream packing
+and session expansion. Versions 1–12 reject that operation; their stored
+canonical JSON and checksums remain unchanged. Version 13 does not change the
+packer or make score assignments into probabilities. Older readers without
+version 13 support cannot consume these opt-in receipts.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

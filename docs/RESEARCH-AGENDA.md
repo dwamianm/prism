@@ -351,3 +351,66 @@ source and extraction costs visible, distinguish public product behavior from
 adapter-added behavior, and make comparisons runnable from an installed package.
 The current local studies advance that evidence; they do not establish that PRME
 is the best memory system available.
+
+
+## 2026-09-22 opt-in study and implementation findings
+
+The current [dated implementation report](../benchmarks/results/research/2026-09-22/RETRIEVAL-POLICY-IMPLEMENTATION.md)
+records complete DeepSeek LongMemEval-S development trials, including negative
+outcomes and failed primary comparisons. This is a progress update: five
+fresh-ingestion arms and the registered MemoryAgentBench stage remain pending.
+The benchmark branches retain their frozen agenda checksum while they execute;
+this implementation branch carries the evidence update and proposed code.
+
+Production control scored 437/500. Unconditional episode routing scored 345/500
+and the existing enabled reranker 284/500, with large losses of packed source
+coverage. Their completed requested interactions did not reverse those losses.
+Evidence augmentation/projection were inactive on the direct-turn artifacts;
+identical-input answer variation is not evidence for either feature. Original
+query reformulation changed only two contexts and added median paired retrieval
+latency of 5.533 seconds. The current merge drops alternate-query signals for
+already-found candidates, so an explicit signal-merge policy is implemented and
+under its separate frozen source/answer gate; its quality result is pending.
+
+The reranker score-scale defect now has explicit package-level envelope options,
+with unchanged default behavior and replayable version-13 assignments. The first
+repair candidate completed at 428/500 but its new primary control failed on a
+truncated reader response. That primary comparison remains unavailable. The
+anchor-preserving follow-up completed both new arms: 430/500 versus 429/500,
+11 wins/10 losses, +0.2 percentage points [−1.6,+2.0]. Its complete annotated
+source sets increased from 403/470 to 409/470, +1.277 points [+0.213,+2.553].
+Source improvement did not establish an answer-quality advantage. Keep these
+policies experimental; there is no untouched confirmation.
+
+The completed marginal-packing trial tied at 433/500 in each new arm, with ten
+wins/ten losses. Three multi-session and one preference gains were offset by
+three update and one assistant losses. Broad session penalties sharply reduced
+source coverage and should not be promoted. The label-assisted diagnostic
+scored 473/500 but is nondeployable. All 886 annotated turns had reached the
+returned pool while 94 were omitted from packed context. This identifies an
+answer-blind selection opportunity, not a deployable oracle or leadership claim.
+
+Five full controls with identical reader requests scored 437, 435, 431, 433 and
+429; 415 questions always passed, 57 always failed, and 28 varied. Preserve
+registered controls and whole-arm failure gates rather than choosing favorable
+repeats. All ten paired losses in the anchor trial have been reviewed: several
+ignored retained evidence, three had identical inputs, and one passing control
+supplied an answer outside the context. Source completeness alone does not
+establish correct temporal interpretation, conflict handling or reader use.
+
+Temporal-only failed closed and stays unscored. Temporal plus episode completed
+at 343/500; all six differences versus episode-only occurred on unchanged inputs.
+Its 32 accepted temporal changes produced no score transition. Keep the confirmed
+answer-blind Ollama/Jev settings unchanged. Product alignment/Jev remains a
+separate explicit caller-selected pair and review workflow, outside retrieval
+interactions. A failed required individual makes the best-arm combination
+unavailable under the frozen selection rule; do not substitute a favorable
+successful subset.
+
+The implementation adds no new defaults and is not merged. Relevant authored,
+DuckDB/PostgreSQL, receipt, profile and installed-package validation is recorded
+with the proposed code. Finish the registered fresh-ingestion and MAB matrix,
+then require a positive complete answer trial and independently audited untouched
+confirmation before any default proposal. No tested combination currently meets
+that promotion standard. Competitive leadership still requires a named matched
+competitor and disclosed cost/latency constraints on fresh source families.

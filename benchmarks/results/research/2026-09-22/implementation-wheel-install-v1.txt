@@ -1,0 +1,5 @@
+Using CPython 3.11.6 interpreter at: /Users/dwamianm/Sites/prism/.venv/bin/python
+Resolved 1 package in 17ms
+Prepared 1 package in 507ms
+Installed 1 package in 622ms
+ + prme==0.11.0 (from file:///tmp/prme-retrieval-policies-20260922-dist/prme-0.11.0-py3-none-any.whl)

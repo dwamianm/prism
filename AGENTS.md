@@ -270,7 +270,7 @@ ordering. The default `multipath_ordering="balanced"` reserves the highest-score
 ordinary multi-path candidate, then uses score / full-entry-tokens**0.25.
 It emits version 5 receipts with explicit ordering and execution; versions 1–4
 cannot claim balanced and retain their canonical bytes. See `docs/PACKING.md`.
-Current pipeline receipts use version 12. Version 6 introduced context guidance,
+Ordinary pipeline receipts use version 12. Explicit reranker score-envelope policies use version 13 when they assign scores; versions 1–12 cannot contain those assignments and retain their canonical bytes. Version 6 introduced context guidance,
 version 7 introduced auditable/compact context format, and version 8 records the
 optional deterministic episode-routing policy. Version 9 records the configured
 current-update multiplier and replayable applied operations; versions 1–8 mean
@@ -339,6 +339,21 @@ approximate search and its recall tradeoff. New receipts report the configured
 mode in `execution.features.vector_search.exact`; old receipt bytes remain unchanged.
 
 Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retrieval/config.py` (loaded from `PRME_`-prefixed env vars, `.env`, or direct args). The surface is large (roughly 100 fields across both files). Several parameter defaults are explicitly tagged `[HYPOTHESIS]` in their descriptions — these are reasoned but not yet benchmark-validated and may change. Treat `[HYPOTHESIS]` knobs as provisional and prefer not to depend on their exact values. Notable defaults to be aware of: `enable_store_supersedence=False`, `enable_surprise_gating=False`, `enable_qa_pairing=False`, and `enable_reranker=False` (the cross-encoder reranker has not improved benchmark scores in practice). QA pairing is an in-process, unreplayed heuristic without registered quality evidence; do not enable it by default until it has source-complete provenance, atomic publication, restart recovery and matched evaluation.
+
+Explicit `reranker_policy="score_envelope"` and `"anchored_score_envelope"`
+require `enable_reranker=True`; `"legacy"` remains the default policy. They keep
+the original reranked prefix score multiset, preserve the untouched tail and
+record replayable assignments. The anchor variant prioritizes the original
+ordinary multi-path anchor within that prefix. Neither is a calibrated
+probability or guaranteed retention policy. The complete development answer
+trial scored 430/500 versus its new control's 429/500 (95% paired difference
+interval −1.6 to +2.0 percentage points), insufficient for default promotion.
+`query_reformulation_merge_policy="max_signals"` is another explicit experiment:
+union distinct backend paths and take component maxima only for identical source
+snapshots. Backend failures abort that retrieval before candidate mutation;
+provider failures retain the existing empty-reformulation fallback. Its registered
+quality trial remains separate. Ordinary `"new_only"` behavior is unchanged.
+See `docs/EXPERIMENTAL-RETRIEVAL-POLICIES.md`.
 
 ## Storage Backends
 
