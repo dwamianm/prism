@@ -1,0 +1,139 @@
+{
+  "kind": "complete-anchored-source-descriptive-analysis",
+  "at": "2026-09-22T23:59:15.736108+00:00",
+  "complete": true,
+  "source_registration_sha256": "4fa9746794f628615cf2b7177322543d3488ed93a18a6eba859827166d4c009d",
+  "source_result_sha256": "699b3e33cd7699970a9889e578434ff3894570357c0ae4731cfb4f6eacbc5b2d",
+  "execution_sha256": "a502220c05e747eee811f54f9215e0a257f65096434d1310ff3212a2713f4c16",
+  "compared": {
+    "baseline": {
+      "annotated_cases": 470,
+      "metrics": {
+        "complete_source": {
+          "difference": 0.01276595744680851,
+          "ci95": [
+            0.002127659574468085,
+            0.02553191489361702
+          ]
+        },
+        "mean_source_fraction": {
+          "difference": 0.007411347517730497,
+          "ci95": [
+            0.002446808510638298,
+            0.013334219858156018
+          ]
+        }
+      },
+      "complete_source_gains": [
+        "80ec1f4f",
+        "2788b940",
+        "27016adc",
+        "92a0aa75",
+        "gpt4_65aabe59",
+        "41698283",
+        "cf22b7bf"
+      ],
+      "complete_source_losses": [
+        "gpt4_731e37d7"
+      ],
+      "categories": {
+        "single-session-user": {
+          "total": 64,
+          "control_complete": 62,
+          "candidate_complete": 62
+        },
+        "multi-session": {
+          "total": 121,
+          "control_complete": 90,
+          "candidate_complete": 93
+        },
+        "single-session-preference": {
+          "total": 30,
+          "control_complete": 26,
+          "candidate_complete": 26
+        },
+        "temporal-reasoning": {
+          "total": 127,
+          "control_complete": 109,
+          "candidate_complete": 110
+        },
+        "knowledge-update": {
+          "total": 72,
+          "control_complete": 67,
+          "candidate_complete": 69
+        },
+        "single-session-assistant": {
+          "total": 56,
+          "control_complete": 49,
+          "candidate_complete": 49
+        }
+      },
+      "changed_contexts": 367
+    },
+    "rank_envelope": {
+      "annotated_cases": 470,
+      "metrics": {
+        "complete_source": {
+          "difference": 0.00425531914893617,
+          "ci95": [
+            -0.00425531914893617,
+            0.01276595744680851
+          ]
+        },
+        "mean_source_fraction": {
+          "difference": 0.006808510638297873,
+          "ci95": [
+            0.0004255319148936172,
+            0.015425531914893617
+          ]
+        }
+      },
+      "complete_source_gains": [
+        "gpt4_d6585ce9",
+        "89527b6b",
+        "70b3e69b"
+      ],
+      "complete_source_losses": [
+        "e3038f8c"
+      ],
+      "categories": {
+        "single-session-user": {
+          "total": 64,
+          "control_complete": 62,
+          "candidate_complete": 62
+        },
+        "multi-session": {
+          "total": 121,
+          "control_complete": 94,
+          "candidate_complete": 93
+        },
+        "single-session-preference": {
+          "total": 30,
+          "control_complete": 26,
+          "candidate_complete": 26
+        },
+        "temporal-reasoning": {
+          "total": 127,
+          "control_complete": 109,
+          "candidate_complete": 110
+        },
+        "knowledge-update": {
+          "total": 72,
+          "control_complete": 69,
+          "candidate_complete": 69
+        },
+        "single-session-assistant": {
+          "total": 56,
+          "control_complete": 47,
+          "candidate_complete": 49
+        }
+      },
+      "changed_contexts": 144
+    }
+  },
+  "advance_to_answers": true,
+  "method": "All 500 case hashes and all three literal-coverage evaluations authenticated. Intervals use all 470 annotated cases, 10000 paired seed-20260922 bootstrap draws, and are descriptive additions to the unchanged fixed source gate. No model calls, source selection, arm selection or promotion rule changes.",
+  "new_hosted_or_cross_encoder_calls": 0,
+  "default_changes": false,
+  "sha256": "f5e6089af2644a7e2ac46ff209c20c1a532d8b663430e730044a6817216531df"
+}
