@@ -140,15 +140,29 @@ def verify_benchmark(benchmark):
             usage['observed_nanodollars'] += usage_cost(call['response'])
     verify_statistics(result)
     if benchmark == 'locomo':
-        if len(prepared['packs']) != 10:
+        if (len(prepared['packs']) != 10 or
+            {p['conversation_id'] for p in prepared['packs']} != {q['conversation_id'] for q in cases}):
             raise ValueError('Missing conversation pack')
+        scheduling = json.loads((s.PUBLIC/'gpt54-locomo-source-scheduling-result.json').read_text())
+        handoff = json.loads((s.PUBLIC/'gpt54-locomo-queue-handoff.json').read_text())
+        if (not scheduling['complete'] or scheduling['prepared_sha256'] != digest(folder/'prepared.json')
+            or handoff['prepared_sha256'] != digest(folder/'prepared.json')):
+            raise ValueError('Source completion or queue handoff identity differs')
+        defaults = json.loads(s.REG.read_text())['defaults']
         for record in prepared['packs']:
+            expected = dict(defaults)
+            for key in ['db_path','vector_path','lexical_path']:
+                expected[key] = record['config'][key]
+            if record['config'] != expected:
+                raise ValueError('Conversation does not use registered product defaults')
             pack = Path(record['config']['db_path']).parent
             for entry in record['final_artifact']['files']:
                 if digest(pack/entry['path']) != entry['sha256']:
                     raise ValueError('Memory artifact changed after capture')
         usage['ingestion_seconds_sum'] = sum(p['ingestion_seconds'] for p in prepared['packs'])
         usage['stored_turns'] = sum(p['turns'] for p in prepared['packs'])
+    elif prepared['historical_verification_sha256'] != digest(s.HISTORICAL/'verification.json'):
+        raise ValueError('Historical verification identity differs')
     return {'complete':True,'questions':len(cases),'result_sha256':digest(result_path),
             'prepared_sha256':digest(folder/'prepared.json'),'usage':usage},result
 
