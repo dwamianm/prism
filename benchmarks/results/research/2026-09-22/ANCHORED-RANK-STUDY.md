@@ -84,3 +84,11 @@ reranker/hosted calls, not to absence of local embedding computation.
 
 The new control/candidate primary answer comparison remains pending. No partial
 answer score is reported, and all earlier failed controls remain failed.
+
+
+Completed answer outcome: the new candidate scored 430/500 versus its registered
+new control's 429/500. Eleven wins/ten losses; +0.2 percentage points
+[−1.6,+2.0]. Both executions are complete. The source improvement did not
+establish an answer-quality gain, and no untouched confirmation was run.
+See `opt-in-anchored-rank-v1-answer-result.json`; the parent study also retains
+`opt-in-anchored-answer-audit-v1.json` and `ANCHORED-RANK-LOSS-REVIEW.md`.

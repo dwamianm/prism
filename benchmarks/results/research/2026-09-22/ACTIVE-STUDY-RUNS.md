@@ -1,6 +1,6 @@
 # Active opt-in study execution
 
-Updated 2026-09-23 00:00 UTC (2026-09-22 locally). This is an operational handoff, not a final result.
+Updated 2026-09-23 00:22 UTC (2026-09-22 locally). This is an operational handoff, not a final result.
 The user asked to implement fixes and continue until meaningful experimental
 results explain how to improve PRME. Continue the registered matrix; do not
 replace failed attempts or publish partial-arm answer scores.
@@ -50,8 +50,8 @@ All logs below are under the matrix `data/opt-in-study/` unless stated otherwise
 | MAB stage launcher | 70019 | `mab-stage-launcher.log`; waits for all fixed LME arms and combination finalization. Runs Banking, EventQA, Conflict, Detective; registers an added combination before inference if needed. |
 | Marginal answer coordinator | finished | `marginal-answer-lane-v1.log`; both 500-case arms completed: 433 versus 433, ten wins/ten losses, difference 0.0 points [−1.8,+1.8]. All failures from other trials stay retained. Never relaunch source v1/v2 or this completed trial. |
 | Rank-envelope answer coordinator | finished | Parent `data/opt-in-study/rank-answer-lane-v1.log`; candidate completed 428/500. New control repeat failed closed (274 complete, one reader truncation, 225 unstarted), invalidating the primary comparison. Complete candidate versus original control is prespecified secondary evidence: −1.8 points [−3.8,0.0]. Outputs stay in repair worktree and public results are exported to parent. Never relaunch prior source/coordinator versions or failed control. |
-| Original-anchor follow-up | 27649 | Repair worktree `data/opt-in-study/anchored-rank-v1.log`, PID 18445. All 500 source replays passed; 409/470 complete source sets versus production 403 and prior repair 407. Seven gains/one loss versus production, +1.277 points [+0.213,+2.553]; all category source counts tie or improve. Source gate passed. Its newly frozen control reader is active, candidate follows in the same locked lane. Child names `opt-in-anchored-rank-v1-reader-{control,candidate}`, each uses `execution/QID/result.json`. No partial answer score. |
-| Reformulation signal-merge follow-up | 34521 | Parent `data/opt-in-study/reformulation-merge-v1.log`, PID 98200. New fixed research policy, registered at `f69cc9edac64ef1102dc7d2a9537278696b8770bf0b3fd2ad73d389deb0e7993`. Waits for anchor PID 18445 to exit, then runs five local source tasks, reusing the exact recorded cold reformulations. Source embeddings/search run again; no new hosted reformulation/cross-encoder calls. Both original controls must replay exactly for all 500. Only the positive whole-cohort source gate permits new control/candidate answers in the same locked lane. Nine authored and two live-backend checks passed; initial authored config-field failure retained. Do not edit its frozen modules/tests/source dependencies. |
+| Original-anchor follow-up | 27649 | Repair worktree `data/opt-in-study/anchored-rank-v1.log`, PID 18445. All 500 source replays passed; 409/470 complete source sets versus production 403 and prior repair 407. Seven gains/one loss versus production, +1.277 points [+0.213,+2.553]; all category source counts tie or improve. Source gate passed. Both new readers completed: control 429/500, candidate 430/500; primary +0.2 points [−1.6,+2.0], 11 wins/10 losses. This process is finished; never restart. Child names `opt-in-anchored-rank-v1-reader-{control,candidate}`, each uses `execution/QID/result.json`. No partial answer score. |
+| Reformulation signal-merge follow-up | 34521 | Parent `data/opt-in-study/reformulation-merge-v1.log`, PID 98200. New fixed research policy, registered at `f69cc9edac64ef1102dc7d2a9537278696b8770bf0b3fd2ad73d389deb0e7993`. Anchor PID 18445 exited after completing both answer arms; this trial now runs five local source tasks, reusing the exact recorded cold reformulations. Source embeddings/search run again; no new hosted reformulation/cross-encoder calls. Both original controls must replay exactly for all 500. Only the positive whole-cohort source gate permits new control/candidate answers in the same locked lane. Nine authored and two live-backend checks passed; initial authored config-field failure retained. Do not edit its frozen modules/tests/source dependencies. |
 
 Private fixed-arm artifacts: `data/opt-in-study/opt-in-successor-v2/ARM/QID/`.
 Only an arm with complete `execution.json` and authenticated `verification.json`
@@ -220,3 +220,33 @@ interrupted. Marginal has now completed, qualified and undergone its own equival
 idle transfer, recorded in `marginal-answer-lane-v1-handoff.json`. Its low-memory
 coordinator is queued behind the rank repair. Both new coordinator logs confirm
 the frozen prepared identities and waiting status.
+
+
+## Implementation phase after usage-allowance clarification
+
+The user clarified that their 60%-remaining threshold refers to the Codex usage
+allowance. That meter is not exposed to this session. We switched to implementation
+immediately, with no new research directions or arm registrations after that
+clarification. The already registered signal-merge and original matrix continue.
+
+New worktree: `/Users/dwamianm/Sites/prism-retrieval-implementation-2026-09-22`,
+branch `fix/opt-in-retrieval-policies-2026-09-22`, based on current main `a66ee85`.
+This avoids touching any frozen running source. Explicit config exposes score
+envelope / anchored score envelope and alternate-query max-signal merging.
+Defaults remain unchanged. The new branch carries the actual research-agenda
+update; the matrix's frozen agenda stays unchanged until its final validations.
+Its implementation report and targeted/regression/installed validation are under
+`benchmarks/results/research/2026-09-22/` in that worktree.
+
+Original-anchor final primary: 430/500 versus 429/500, 11 wins/10 losses,
++0.2 points [−1.6,+2.0]. All 500 source and both answer executions authenticated.
+367 changed reader inputs: eight wins/seven losses. 133 identical inputs:
+three wins/three losses. Seven complete-source gains yield three answer wins;
+the sole complete-source loss is wrong in both new arms. All ten losses reviewed
+in `ANCHORED-RANK-LOSS-REVIEW.md`; no source/answer relabeling or control replacement.
+The trial does not support default promotion.
+
+Latest observed fresh counts: control 193, supersedence 139, QA 139,
+surprise 159, full exploratory 79 complete; no terminal failure recorded.
+These are progress counts, not partial scores. Signal-merge source replay active,
+85 source cases saved at the latest observation. No quality score until its complete gate settles.

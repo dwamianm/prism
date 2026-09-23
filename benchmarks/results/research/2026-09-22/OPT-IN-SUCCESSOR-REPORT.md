@@ -17,7 +17,7 @@ scores, configuration hashes and artifact checksums are retained in the
 |---|---:|---:|---|
 | Production baseline | 437/500 | Reference | Fixed control; 403/470 complete annotated source sets |
 | Episode routing | 345/500 | −18.4 [−22.2, −14.8] | Reject current unconditional default candidate; evidence displacement |
-| Reranker | 284/500 | −30.6 [−35.0, −26.2] | Reject current composition; score-scale repair is under test |
+| Reranker | 284/500 | −30.6 [−35.0, −26.2] | Reject current composition; repairs completed without confirmed answer gain |
 | Query reformulation | 434/500 | −0.6 [−2.0, +0.6] | Only two changed contexts; extra latency without demonstrated benefit |
 | Evidence augmentation | 435/500 | −0.4 [−1.6, +0.8] | Inactive on all 500 packs; score variation is not a feature effect |
 | Evidence projection | 431/500 | −1.2 [−2.8, +0.2] | Inactive on all 500 packs; score variation is not a feature effect |
@@ -55,8 +55,10 @@ sets improve from 403 to **409/470**, with seven gains and one loss: +1.277
 percentage points, descriptive paired interval [+0.213,+2.553]. Every category
 ties or improves versus production. It also improves both source measures over
 the earlier repair, while retaining one new source loss relative to that repair.
-This is a concrete source-retention improvement; the new 500+500 primary answer
-trial is running and has no complete quality result yet.
+This is a concrete source-retention improvement. The new 500+500 primary answer
+trial is complete: **430/500 versus 429/500**, 11 wins/10 losses, **+0.2 points
+[−1.6,+2.0]**. That result does not establish an answer-quality gain. All ten
+losses and the source-to-answer relationship are reviewed below.
 
 The temporal-only arm also failed closed: 265 completed cases, one truncated
 reader response and 234 unstarted cases. It receives no answer score or
@@ -307,7 +309,7 @@ answer scores; eight wins and four losses occur entirely under unchanged inputs.
 The registered factorial contrast is +1.4 points, interval [−0.4, +3.2], but it
 does not establish a useful interaction. Reformulation does not repair the
 current reranker's evidence displacement. Reject this composition as a default
-candidate on this cohort; the separate score-scale repair remains under test.
+candidate on this cohort; the separate score-scale repairs have not established an answer advantage.
 
 The representative review used the first four question IDs by SHA-256 ordering
 within each of the three baseline error classes. It did not rescore examples or
@@ -484,8 +486,9 @@ source snapshots and no new public flag. It will reuse the recorded cold
 reformulations and require all 500 original controls to replay before source
 results are reported. A fixed positive source gate precedes any new paired
 answer trial. Nine authored and two live-backend checks passed; one earlier
-authored executor mistake was repaired and retained. The study waits for the
-current anchor trial's capacity and has no benchmark-quality result yet.
+authored executor mistake was repaired and retained. The source study is now active after the
+anchor trial completed and has no benchmark-quality result yet. Its package
+entry point exists only on the separate implementation branch.
 
 The [complete projection arm](opt-in-successor-v2-analysis-05-complete.json)
 scored **431/500**, with four wins and ten losses: **−1.2 points**, paired
@@ -640,14 +643,54 @@ are in the complete child artifact; no failed control or unfavorable case was
 replaced.
 
 A separately registered [original-anchor refinement](opt-in-anchored-rank-v1-registration.json)
-now tests one further development policy across all 500 source cases. It puts
+tested one further development policy across all 500 source cases. It puts
 the original balanced-packing anchor first when assigning the neural prefix's
 existing score values; other candidates retain neural order and UUID ties.
 This addresses the observed loss of two leading assistant sources without
 using annotations in ranking. Nine authored checks passed, including actual
 packing/receipt replay and an end-to-end source executor that rejects drift.
-It uses cached identical neural inputs and adds no source inference. It
-advances only if both source metrics beat production and the previous repair,
-with no category source-count regression versus production. Any qualifying
-answers use a new complete paired trial in the released lane. This new variant
+It used cached identical neural inputs while reexecuting local query search.
+Both source metrics beat production and the previous repair, with no category
+source-count regression versus production. Its qualifying new complete paired
+answer trial finished at 430 versus 429 correct, as detailed below. This variant
 does not replace either completed repair trial or its failures.
+
+
+## Completed original-anchor primary answer comparison
+
+Both newly registered 500-question arms completed and authenticated:
+**430/500 candidate versus 429/500 control**, 11 wins, 10 losses and 479 ties.
+The registered paired difference is **+0.2 percentage points, 95% CI
+[−1.6,+2.0]**. The [primary result](opt-in-anchored-rank-v1-answer-result.json)
+retains the frozen new control; the original 437 control remains only the
+prespecified secondary comparison (−1.4 points [−3.4,+0.6], nine wins/16 losses).
+This complete result supports no answer-quality promotion. It does not replace
+the failed preceding rank-envelope control.
+
+Category correct counts (control → candidate): user 68→69, assistant 52→52,
+preference 27→27, multi-session 100→100, temporal 109→108, update 73→74;
+abstention 24→24. Each arm made 1,000 successful reader/judge attempts with no
+retry or provider error. Control used 2,273,010 input and 136,923 output tokens;
+candidate used 2,271,603 input and 136,268 output tokens. Total packed-context
+tokens were 1,982,375 and 1,981,623. Historical ingestion is shared and unchanged;
+source-replay timing is not uncached serving latency. Dollar cost is unobserved.
+
+The [all-500 mechanism audit](opt-in-anchored-answer-audit-v1.json) authenticated
+all source cases, both executions and every reader/judge record, and reproduced
+the primary paired statistics. Of 367 changed reader inputs, eight won and seven
+lost; of 133 identical inputs, three won and three lost. All seven complete-source
+gains were answered correctly by the candidate, including three paired wins.
+The one complete-source loss was already incorrect in the new control.
+All ten losses are reviewed in [the loss review](ANCHORED-RANK-LOSS-REVIEW.md),
+including retained-but-ignored evidence, interpretation changes, unsupported
+premise substitution and a control answer relying on knowledge outside context.
+
+A separate implementation branch, `fix/opt-in-retrieval-policies-2026-09-22`,
+is based on the same current main. It exposes the exact tested score-envelope
+and original-anchor algorithms through explicit config policies, preserving
+ordinary behavior and replayable receipt schema 13. It also exposes the already
+registered alternate-query signal merge through an opt-in policy. Backend
+configuration/restart/owner/profile checks pass; full regression/package
+validation is recorded in that branch. The original study executors, sources,
+registrations and default settings remain frozen. The signal-merge source trial
+has started; the five fresh-ingestion arms and later MAB sequence remain pending.
