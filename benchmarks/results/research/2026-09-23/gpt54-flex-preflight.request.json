@@ -1,0 +1,1 @@
+{"model": "gpt-5.4-2026-03-05", "input": "Reply with exactly READY.", "reasoning": {"effort": "medium"}, "max_output_tokens": 1024, "store": false, "service_tier": "flex"}

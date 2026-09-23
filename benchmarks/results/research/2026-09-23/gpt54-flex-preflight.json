@@ -1,0 +1,19 @@
+{
+  "model": "gpt-5.4-2026-03-05",
+  "status": "completed",
+  "service_tier": "flex",
+  "usage": {
+    "input_tokens": 11,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 17,
+    "output_tokens_details": {
+      "reasoning_tokens": 10
+    },
+    "total_tokens": 28
+  },
+  "http_status": 200,
+  "elapsed_seconds": 1.6803368749970105
+}
