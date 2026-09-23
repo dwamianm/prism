@@ -31,6 +31,7 @@ from prme.models.learning import (
     RankingMultipliers,
 )
 from prme.models.processing import FastIngestItem
+from prme.retrieval.scoring import validate_rank_fusion_request
 from prme.models.value_bindings import MemoryValueBinding
 from prme.storage.fast_ingest import FastIngestConflict
 from prme.types import (
@@ -392,6 +393,7 @@ async def memory_retrieve(
                 kwargs[name] = TypeAdapter(AwareDatetime).validate_python(value)
         if ranking_multipliers is not None:
             kwargs["ranking_multipliers"] = RankingMultipliers.model_validate(ranking_multipliers)
+            validate_rank_fusion_request(engine._config.scoring, kwargs["ranking_multipliers"])
         kwargs["include_cross_scope"] = TypeAdapter(StrictBool).validate_python(include_cross_scope)
         include_context = TypeAdapter(StrictBool).validate_python(include_context)
         if min_fidelity is not None:

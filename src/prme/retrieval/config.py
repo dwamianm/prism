@@ -16,6 +16,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from prme.types import RepresentationLevel
 
+# Rank constant for fusion="rrf" when none is given.
+DEFAULT_RRF_K = 60
+
 
 class ScoringWeights(BaseModel):
     """Versioned scoring weights for the composite score formula (RFC-0005).
@@ -26,6 +29,13 @@ class ScoringWeights(BaseModel):
     The six additive weights (semantic, lexical, graph, recency, salience,
     confidence) must sum to 1.0. Epistemic weight is multiplicative and
     paths weight is a tiebreaker -- neither is included in the sum.
+
+    ``fusion="rrf"`` replaces the weighted sum with reciprocal rank fusion of
+    each candidate's semantic and lexical ranks (score formula version 2).
+    The additive weights are then unused, but they are still validated and
+    recorded. A weighted configuration leaves ``fusion`` and ``rrf_k`` out of
+    its serialized form, so receipts, ranking profiles and evaluations written
+    before they existed keep their exact bytes and checksums.
     """
 
     model_config = ConfigDict(frozen=True, allow_inf_nan=False)
@@ -101,14 +111,73 @@ class ScoringWeights(BaseModel):
             "floor and is recorded in score provenance. Set to 1.0 to disable."
         ),
     )
+    # Stored receipts, ranking profiles and evaluations omit a weighted
+    # fusion, so a missing value must always mean "weighted". To make rank
+    # fusion a product default, change PRMEConfig.scoring's default instead of
+    # this field's default.
+    fusion: Literal["weighted", "rrf"] = Field(
+        default="weighted",
+        exclude_if=lambda value: value == "weighted",
+        description=(
+            "How candidate signals are combined. 'weighted' is the default "
+            "weighted sum above (score formula version 1). 'rrf' is opt-in "
+            "reciprocal rank fusion of each candidate's semantic and lexical "
+            "ranks within the candidate pool (formula version 2), scaled so a "
+            "candidate ranked first on both scores 1.0. Epistemic, node-type "
+            "and temporal adjustments then apply as multipliers relative to "
+            "the pool's largest value, so an adjustment every candidate shares "
+            "is 1.0. Graph proximity, recency, salience and confidence are not "
+            "used, nor are the query-specific weight shifts or learned ranking "
+            "multipliers. Scores are rank-based, so min_score compares against "
+            "the fused score rather than a similarity."
+        ),
+    )
+    rrf_k: int | None = Field(
+        default=None,
+        ge=1,
+        le=10_000,
+        exclude_if=lambda value: value is None,
+        description=(
+            "[HYPOTHESIS] Rank constant k in 1 / (k + rank) for fusion='rrf'; "
+            f"{DEFAULT_RRF_K} when unset. Larger values flatten the difference "
+            "between top ranks. Unset for weighted fusion, which ignores a "
+            "supplied value with a warning."
+        ),
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def rank_constant_only_for_rank_fusion(cls, value: Any) -> Any:
+        """Give rank fusion its default constant and drop it from weighted scoring.
+
+        Dropping a stray constant keeps one serialized form per configuration
+        and lets an operator turn rank fusion off by removing only the fusion
+        setting.
+        """
+        if not isinstance(value, dict):
+            return value
+        rank_fused = value.get("fusion", "weighted") == "rrf"
+        if rank_fused and value.get("rrf_k") is None:
+            return {**value, "rrf_k": DEFAULT_RRF_K}
+        if not rank_fused and value.get("rrf_k") is not None:
+            warnings.warn(
+                "ScoringWeights rrf_k applies only when fusion is 'rrf' and is ignored.",
+                UserWarning,
+                stacklevel=2,
+            )
+            return {key: item for key, item in value.items() if key != "rrf_k"}
+        return value
 
     @model_validator(mode="after")
     def validate_weights(self) -> ScoringWeights:
         """Verify additive weights sum to 1.0 (within tolerance).
 
         Epistemic (multiplicative) and paths (tiebreaker) are excluded
-        from the sum constraint.
+        from the sum constraint. ``rrf_k`` is set exactly when fusion is
+        ``"rrf"``.
         """
+        if (self.fusion == "rrf") != (self.rrf_k is not None):
+            raise ValueError("rrf_k is set exactly when fusion is 'rrf'")
         additive_sum = (
             self.w_semantic
             + self.w_lexical
@@ -144,6 +213,10 @@ class ScoringWeights(BaseModel):
             f"{self.temporal_boost}:{self.relevance_floor}:"
             f"{self.current_update_multiplier}:{ntb_sorted}"
         )
+        if self.fusion != "weighted":
+            # Weighted configurations keep the version they had before
+            # rank fusion existed.
+            payload += f":{self.fusion}:{self.rrf_k}"
         return hashlib.sha256(payload.encode()).hexdigest()[:12]
 
 

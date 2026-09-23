@@ -648,11 +648,11 @@ def test_versions_seven_to_eleven_cannot_claim_the_reader_format(version):
     ("context_guidance_mode", "explicit context guidance mode"),
     ("episode_context_top_k", "episode context settings"),
 ])
-@pytest.mark.parametrize("version", [13, 14])
+@pytest.mark.parametrize("version", [13, 14, 15])
 def test_later_versions_do_not_take_current_packing_defaults(version, field, message):
     payload = version_twelve_payload()
     payload["schema_version"] = version
-    if version == 14:
+    if version >= 14:
         payload["packing"].update(context_format="reader", context_citations=False)
     payload["packing"].pop(field)
     with pytest.raises(ValidationError, match=message):

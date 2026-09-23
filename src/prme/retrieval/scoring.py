@@ -14,6 +14,11 @@ score (up to temporal_boost weight).
 Supersedence-aware scoring: when queries ask about current state and
 candidates contain temporal update language, recency scores are boosted
 to prefer newer knowledge updates over older original facts.
+
+Rank fusion (opt-in, ``ScoringWeights.fusion == "rrf"``, score formula
+version 2): candidates are ranked within the pool on the semantic and lexical
+channels and scored by reciprocal rank fusion, then by epistemic, node-type
+and temporal factors relative to the pool's largest value.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from prme.retrieval.ranking_adjustments import adjusted_weights
 from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
 from prme.retrieval.models import (
     QueryAnalysis,
+    RankFusion,
     RetrievalCandidate,
     ScoreAdjustment,
     ScoreProvenance,
@@ -318,6 +324,26 @@ def _compute_effective_scores(node: MemoryNode, now: datetime) -> tuple[float, f
     return max(0.0, min(1.0, effective_salience)), max(0.0, min(1.0, effective_confidence))
 
 
+def _epistemic_weight(node: MemoryNode, epistemic_weights: dict[str, float] | None) -> float:
+    """Epistemic multiplier for a node, from the config override or the defaults."""
+    # A condition's current state determines its effective epistemic treatment
+    # without erasing the durable fact that the claim is conditional.
+    effective_epistemic_type = node.epistemic_type
+    if node.epistemic_type == EpistemicType.CONDITIONAL:
+        condition_state = (node.metadata or {}).get("condition_state", "unknown")
+        effective_epistemic_type = {
+            "true": EpistemicType.ASSERTED,
+            "unknown": EpistemicType.HYPOTHETICAL,
+            "false": EpistemicType.DEPRECATED,
+            "expired": EpistemicType.DEPRECATED,
+        }.get(condition_state, EpistemicType.CONDITIONAL)
+
+    # Epistemic weight: config override dict (str keys) or module-level default (Enum keys).
+    if epistemic_weights is not None:
+        return epistemic_weights.get(effective_epistemic_type.value, 0.7)
+    return EPISTEMIC_WEIGHTS.get(effective_epistemic_type, 0.7)
+
+
 def compute_composite_score(
     candidate: RetrievalCandidate,
     weights: ScoringWeights,
@@ -368,6 +394,11 @@ def compute_composite_score(
     Returns:
         ScoreTrace with all 8 component values and the composite score.
     """
+    if weights.fusion != "weighted":
+        raise ValueError(
+            "compute_composite_score computes the weighted formula; rank fusion "
+            "needs the whole candidate pool, so use score_and_rank"
+        )
     node = candidate.node
     if now is None:
         now = datetime.now(timezone.utc)
@@ -390,23 +421,7 @@ def compute_composite_score(
     days_since_update = max(0.0, (recency_anchor - reference_time).total_seconds() / 86400.0)
     recency = min(1.0, math.exp(-weights.recency_lambda * days_since_update) * recency_multiplier)
 
-    # A condition's current state determines its effective epistemic treatment
-    # without erasing the durable fact that the claim is conditional.
-    effective_epistemic_type = node.epistemic_type
-    if node.epistemic_type == EpistemicType.CONDITIONAL:
-        condition_state = (node.metadata or {}).get("condition_state", "unknown")
-        effective_epistemic_type = {
-            "true": EpistemicType.ASSERTED,
-            "unknown": EpistemicType.HYPOTHETICAL,
-            "false": EpistemicType.DEPRECATED,
-            "expired": EpistemicType.DEPRECATED,
-        }.get(condition_state, EpistemicType.CONDITIONAL)
-
-    # Epistemic weight: config override dict (str keys) or module-level default (Enum keys).
-    if epistemic_weights is not None:
-        epistemic_weight = epistemic_weights.get(effective_epistemic_type.value, 0.7)
-    else:
-        epistemic_weight = EPISTEMIC_WEIGHTS.get(effective_epistemic_type, 0.7)
+    epistemic_weight = _epistemic_weight(node, epistemic_weights)
 
     # Path score: multi-path corroboration (tiebreaker only).
     path_score = min(candidate.path_count / 3.0, 1.0)
@@ -428,11 +443,7 @@ def compute_composite_score(
     # This is NOT part of the additive sum-to-1.0 constraint -- it's an
     # extra signal that only activates for temporal queries.
     temporal_affinity = 0.0
-    if (
-        query_analysis is not None
-        and query_analysis.intent == QueryIntent.TEMPORAL
-        and weights.temporal_boost > 0.0
-    ):
+    if query_analysis is not None and _temporal_affinity_applies(weights, query_analysis):
         temporal_affinity = _compute_temporal_affinity(candidate, query_analysis)
         composite += weights.temporal_boost * temporal_affinity
 
@@ -466,65 +477,114 @@ def compute_composite_score(
     )
 
 
-def score_and_rank(
-    candidates: list[RetrievalCandidate],
-    weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
-    epistemic_weights: dict[str, float] | None = None,
-    now: datetime | None = None,
-    query_analysis: QueryAnalysis | None = None,
-    ranking_multipliers: RankingMultipliers | None = None,
-) -> tuple[list[RetrievalCandidate], list[ScoreTrace]]:
-    """Score all candidates and return them in deterministic ranked order.
+def _competition_ranks(scores: list[float | None]) -> list[int | None]:
+    """Rank the present scores in descending order; equal scores share a rank.
 
-    For each candidate, computes the composite score, sets it on the
-    candidate object, then sorts by (-composite_score, -path_score,
-    str(node.id)) for fully deterministic ordering.
-
-    Supersedence-aware scoring: when ``query_analysis`` indicates a
-    current-state query and candidates contain update language, the
-    effective recency weight is increased to 0.25 (redistributed from
-    semantic and lexical), recency_lambda is increased to 0.05 for
-    steeper decay, and update-language candidates get 2.0x recency
-    boost (capped at 1.0).
-
-    Args:
-        candidates: Candidates to score.
-        weights: Scoring weight configuration (default: DEFAULT_SCORING_WEIGHTS).
-        epistemic_weights: Optional dict of epistemic type string values to
-            float multipliers. Passed through to compute_composite_score.
-        now: Reference timestamp for decay computation.  Passed through to
-            compute_composite_score for consistent scoring within a batch.
-        query_analysis: Optional query analysis for temporal boost and
-            supersedence-aware scoring. When provided:
-            - TEMPORAL intent activates temporal affinity scoring
-            - Current-state queries boost candidates with update language
-
-    Returns:
-        Tuple of (sorted candidates, corresponding score traces).
+    Ties share the better rank (1, 2, 2, 4), so a channel's order never
+    depends on node IDs or on the order candidates arrived in.
     """
-    # Explicit current-state wording keeps the established recency behavior.
-    # For merely present-tense questions, require an update in the candidate
-    # set; otherwise unrelated newer memories can outrank an older stable fact.
-    implicit_current = bool(
+    first_position: dict[float, int] = {}
+    for position, value in enumerate(
+        sorted((score for score in scores if score is not None), reverse=True), start=1,
+    ):
+        first_position.setdefault(value, position)
+    return [None if score is None else first_position[score] for score in scores]
+
+
+def _pool_relative(values: list[float], ranked: list[bool]) -> list[float]:
+    """Divide by the largest value among ranked candidates, capped at 1.0.
+
+    A value every ranked candidate shares becomes 1.0. Candidates on neither
+    channel score 0 whatever their factors, so they do not set the maximum.
+    """
+    top = max((value for value, on_channel in zip(values, ranked) if on_channel), default=0.0)
+    return [min(value / top, 1.0) if top > 0 else 0.0 for value in values]
+
+
+def _temporal_affinity_applies(weights: ScoringWeights, query_analysis: QueryAnalysis | None) -> bool:
+    """Temporal affinity scores only TEMPORAL questions, and only with a positive boost."""
+    return (
         query_analysis is not None
-        and _IMPLICIT_CURRENT_STATE_QUERY_RE.search(query_analysis.query)
-    )
-    has_update_evidence = bool(
-        query_analysis is not None
-        and any(
-            _has_update_language(candidate.node.content)
-            for candidate in candidates
-        )
-    )
-    is_current_query = bool(
-        query_analysis is not None
-        and _is_current_state_query(query_analysis)
-        and (
-            not implicit_current
-            or has_update_evidence
-        )
+        and query_analysis.intent == QueryIntent.TEMPORAL
+        and weights.temporal_boost > 0.0
     )
 
+
+def _rank_fused_scores(
+    candidates: list[RetrievalCandidate],
+    weights: ScoringWeights,
+    epistemic_weights: dict[str, float] | None,
+    query_analysis: QueryAnalysis | None,
+) -> list[tuple[ScoreTrace, RankFusion]]:
+    """Score formula version 2: reciprocal rank fusion of semantic and lexical ranks.
+
+    A candidate is on a channel when that backend returned it (its path) or
+    it carries that channel's score. Min-max normalization gives the weakest
+    lexical hit a score of 0.0, so the path matters. Epistemic, node-type and
+    temporal adjustments apply after fusion relative to the pool's largest
+    value. Graph proximity, recency, salience and confidence are not used.
+    """
+    semantic = [
+        candidate.semantic_score
+        if "VECTOR" in candidate.paths or candidate.semantic_score > 0 else None
+        for candidate in candidates
+    ]
+    lexical = [
+        candidate.lexical_score
+        if "LEXICAL" in candidate.paths or candidate.lexical_score > 0 else None
+        for candidate in candidates
+    ]
+    if any(value is not None and not math.isfinite(value) for value in (*semantic, *lexical)):
+        raise ValueError("Rank fusion requires finite semantic and lexical scores")
+    semantic_ranks = _competition_ranks(semantic)
+    lexical_ranks = _competition_ranks(lexical)
+
+    epistemic = [_epistemic_weight(candidate.node, epistemic_weights) for candidate in candidates]
+    node_type = [weights.node_type_boost.get(candidate.node.node_type.value, 1.0)
+                 for candidate in candidates]
+    if any(value < 0 for value in (*epistemic, *node_type)):
+        raise ValueError("Rank fusion requires nonnegative epistemic weights and node-type boosts")
+    if query_analysis is not None and _temporal_affinity_applies(weights, query_analysis):
+        affinity = [_compute_temporal_affinity(candidate, query_analysis) for candidate in candidates]
+    else:
+        affinity = [0.0] * len(candidates)
+    ranked = [s is not None or lex is not None for s, lex in zip(semantic_ranks, lexical_ranks)]
+    epistemic_factors = _pool_relative(epistemic, ranked)
+    node_type_factors = _pool_relative(node_type, ranked)
+    temporal_factors = _pool_relative([1.0 + weights.temporal_boost * value for value in affinity], ranked)
+
+    scored: list[tuple[ScoreTrace, RankFusion]] = []
+    for index, candidate in enumerate(candidates):
+        fusion = RankFusion(
+            semantic_rank=semantic_ranks[index],
+            lexical_rank=lexical_ranks[index],
+            epistemic_factor=epistemic_factors[index],
+            node_type_factor=node_type_factors[index],
+            temporal_factor=temporal_factors[index],
+        )
+        scored.append((ScoreTrace(
+            semantic_similarity=candidate.semantic_score,
+            lexical_relevance=candidate.lexical_score,
+            graph_proximity=candidate.graph_proximity,
+            epistemic_weight=epistemic[index],
+            path_score=min(candidate.path_count / 3.0, 1.0),
+            temporal_affinity=affinity[index],
+            node_type_boost=node_type[index],
+            composite_score=fusion.score(weights.rrf_k),
+        ), fusion))
+    return scored
+
+
+def _query_adjusted_weights(
+    weights: ScoringWeights,
+    query_analysis: QueryAnalysis | None,
+    *,
+    implicit_current: bool,
+    has_update_evidence: bool,
+    is_current_query: bool,
+    ranking_multipliers: RankingMultipliers | None,
+) -> ScoringWeights:
+    """Weighted formula only: query-specific weight shifts, then learned multipliers."""
     # If current-state query, compute adjusted weights: increase recency
     # from its configured value to 0.25 and use a steeper recency_lambda
     # (0.05 vs default 0.01) so that older sessions are more strongly
@@ -560,21 +620,13 @@ def score_and_rank(
                 recency_increase = min(recency_increase, sem_lex_total)
                 sem_reduction = recency_increase * (weights.w_semantic / sem_lex_total)
                 lex_reduction = recency_increase * (weights.w_lexical / sem_lex_total)
-                effective_weights = ScoringWeights(
-                    w_semantic=max(0.0, weights.w_semantic - sem_reduction),
-                    w_lexical=max(0.0, weights.w_lexical - lex_reduction),
-                    w_graph=weights.w_graph,
-                    w_recency=weights.w_recency + recency_increase,
-                    w_salience=weights.w_salience,
-                    w_confidence=weights.w_confidence,
-                    w_epistemic=weights.w_epistemic,
-                    w_paths=weights.w_paths,
-                    recency_lambda=target_lambda,
-                    temporal_boost=weights.temporal_boost,
-                    node_type_boost=weights.node_type_boost,
-                    relevance_floor=weights.relevance_floor,
-                    current_update_multiplier=weights.current_update_multiplier,
-                )
+                effective_weights = ScoringWeights.model_validate({
+                    **weights.model_dump(),
+                    "w_semantic": max(0.0, weights.w_semantic - sem_reduction),
+                    "w_lexical": max(0.0, weights.w_lexical - lex_reduction),
+                    "w_recency": weights.w_recency + recency_increase,
+                    "recency_lambda": target_lambda,
+                })
 
     # Episodic recency boost: when query is about recent interactions,
     # boost recency weight per PRIME finding that simple recency often
@@ -593,24 +645,117 @@ def score_and_rank(
                 recency_increase = min(recency_increase, sem_lex_total)
                 sem_reduction = recency_increase * (effective_weights.w_semantic / sem_lex_total)
                 lex_reduction = recency_increase * (effective_weights.w_lexical / sem_lex_total)
-                effective_weights = ScoringWeights(
-                    w_semantic=max(0.0, effective_weights.w_semantic - sem_reduction),
-                    w_lexical=max(0.0, effective_weights.w_lexical - lex_reduction),
-                    w_graph=effective_weights.w_graph,
-                    w_recency=effective_weights.w_recency + recency_increase,
-                    w_salience=effective_weights.w_salience,
-                    w_confidence=effective_weights.w_confidence,
-                    w_epistemic=effective_weights.w_epistemic,
-                    w_paths=effective_weights.w_paths,
-                    recency_lambda=effective_weights.recency_lambda,
-                    temporal_boost=effective_weights.temporal_boost,
-                    node_type_boost=effective_weights.node_type_boost,
-                    relevance_floor=effective_weights.relevance_floor,
-                    current_update_multiplier=effective_weights.current_update_multiplier,
-                )
+                effective_weights = ScoringWeights.model_validate({
+                    **effective_weights.model_dump(),
+                    "w_semantic": max(0.0, effective_weights.w_semantic - sem_reduction),
+                    "w_lexical": max(0.0, effective_weights.w_lexical - lex_reduction),
+                    "w_recency": effective_weights.w_recency + recency_increase,
+                })
 
     if ranking_multipliers is not None:
         effective_weights = adjusted_weights(effective_weights, ranking_multipliers)
+    return effective_weights
+
+
+def validate_rank_fusion_request(
+    weights: ScoringWeights, ranking_multipliers: RankingMultipliers | None,
+) -> None:
+    """Reject rank-fusion requests that the fused score cannot honor.
+
+    Learned ranking multipliers reweight the weighted sum, which rank fusion
+    does not use, so non-neutral multipliers would silently change nothing.
+    """
+    if weights.fusion != "rrf":
+        return
+    if weights.rrf_k is None:
+        raise ValueError("fusion='rrf' requires rrf_k")
+    if ranking_multipliers not in (None, RankingMultipliers()):
+        raise ValueError(
+            "Ranking multipliers adjust the weighted formula and do not apply to fusion='rrf'"
+        )
+
+
+def score_and_rank(
+    candidates: list[RetrievalCandidate],
+    weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
+    epistemic_weights: dict[str, float] | None = None,
+    now: datetime | None = None,
+    query_analysis: QueryAnalysis | None = None,
+    ranking_multipliers: RankingMultipliers | None = None,
+) -> tuple[list[RetrievalCandidate], list[ScoreTrace]]:
+    """Score all candidates and return them in deterministic ranked order.
+
+    For each candidate, computes the composite score, sets it on the
+    candidate object, then sorts by (-composite_score, -path_score,
+    str(node.id)) for fully deterministic ordering.
+
+    Supersedence-aware scoring: when ``query_analysis`` indicates a
+    current-state query and candidates contain update language, the
+    effective recency weight is increased to 0.25 (redistributed from
+    semantic and lexical), recency_lambda is increased to 0.05 for
+    steeper decay, and update-language candidates get 2.0x recency
+    boost (capped at 1.0).
+
+    With ``weights.fusion == "rrf"`` the base score is formula version 2
+    (see ``_rank_fused_scores``). The query-specific weight shifts do not
+    apply, non-neutral ranking multipliers are rejected, and the current-update
+    multiplier is withheld from candidates below the relevance floor instead
+    of capping their score.
+
+    Args:
+        candidates: Candidates to score.
+        weights: Scoring weight configuration (default: DEFAULT_SCORING_WEIGHTS).
+        epistemic_weights: Optional dict of epistemic type string values to
+            float multipliers. Passed through to compute_composite_score.
+        now: Reference timestamp for decay computation.  Passed through to
+            compute_composite_score for consistent scoring within a batch.
+        query_analysis: Optional query analysis for temporal boost and
+            supersedence-aware scoring. When provided:
+            - TEMPORAL intent activates temporal affinity scoring
+            - Current-state queries boost candidates with update language
+        ranking_multipliers: Learned adjustment of the weighted formula's
+            additive weights, applied after the query-specific shifts.
+
+    Returns:
+        Tuple of (sorted candidates, corresponding score traces).
+
+    Raises:
+        ValueError: Rank fusion with non-neutral ranking multipliers, or with
+            non-finite channel scores or negative adjustments.
+    """
+    validate_rank_fusion_request(weights, ranking_multipliers)
+    rank_fused = weights.fusion == "rrf"
+
+    # Explicit current-state wording keeps the established recency behavior.
+    # For merely present-tense questions, require an update in the candidate
+    # set; otherwise unrelated newer memories can outrank an older stable fact.
+    implicit_current = bool(
+        query_analysis is not None
+        and _IMPLICIT_CURRENT_STATE_QUERY_RE.search(query_analysis.query)
+    )
+    has_update_evidence = bool(
+        query_analysis is not None
+        and any(
+            _has_update_language(candidate.node.content)
+            for candidate in candidates
+        )
+    )
+    is_current_query = bool(
+        query_analysis is not None
+        and _is_current_state_query(query_analysis)
+        and (
+            not implicit_current
+            or has_update_evidence
+        )
+    )
+
+    effective_weights = weights if rank_fused else _query_adjusted_weights(
+        weights, query_analysis,
+        implicit_current=implicit_current,
+        has_update_evidence=has_update_evidence,
+        is_current_query=is_current_query,
+        ranking_multipliers=ranking_multipliers,
+    )
 
     # Compute relative recency reference: use the newest event_time (or
     # updated_at/created_at) among all candidates. This makes the recency
@@ -631,20 +776,33 @@ def score_and_rank(
         recency_ref = max(_ref_time(candidate) for candidate in candidates)
 
     traces: list[ScoreTrace] = []
+    fused = (
+        _rank_fused_scores(candidates, effective_weights, epistemic_weights, query_analysis)
+        if rank_fused else None
+    )
 
-    for candidate in candidates:
-        trace = compute_composite_score(
-            candidate, effective_weights, epistemic_weights, now=now,
-            query_analysis=query_analysis,
-            recency_reference=recency_ref,
-            recency_multiplier=2.0 if is_current_query and _has_update_language(candidate.node.content) else 1.0,
-        )
-
-        provenance = ScoreProvenance(
-            base_node_id=candidate.node.id,
-            trace=trace,
-            weights=effective_weights,
-        )
+    for index, candidate in enumerate(candidates):
+        if fused is not None:
+            trace, rank_fusion = fused[index]
+            provenance = ScoreProvenance(
+                formula_version=2,
+                base_node_id=candidate.node.id,
+                trace=trace,
+                weights=effective_weights,
+                rank_fusion=rank_fusion,
+            )
+        else:
+            trace = compute_composite_score(
+                candidate, effective_weights, epistemic_weights, now=now,
+                query_analysis=query_analysis,
+                recency_reference=recency_ref,
+                recency_multiplier=2.0 if is_current_query and _has_update_language(candidate.node.content) else 1.0,
+            )
+            provenance = ScoreProvenance(
+                base_node_id=candidate.node.id,
+                trace=trace,
+                weights=effective_weights,
+            )
         if (
             is_current_query
             and recency_ref is not None
@@ -661,7 +819,12 @@ def score_and_rank(
                 effective_weights.relevance_floor > 0
                 and relevance < effective_weights.relevance_floor
             ):
-                adjusted_score = min(adjusted_score, relevance)
+                # A rank-fused score is not on the similarity scale, so a
+                # weakly relevant update gets no boost instead of a cap.
+                adjusted_score = (
+                    trace.composite_score if rank_fused
+                    else min(adjusted_score, relevance)
+                )
             if adjusted_score > trace.composite_score:
                 provenance = provenance.model_copy(update={
                     "adjustments": provenance.adjustments + (

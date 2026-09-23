@@ -52,6 +52,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "scoring.current_update_multiplier > 1.0",
         lambda value: value > 1.0,
     ),
+    "scoring.rrf_k": (
+        "scoring.fusion",
+        "scoring.fusion == 'rrf'",
+        lambda value: value == "rrf",
+    ),
     "packing.cross_scope_top_n": (
         "packing.cross_scope_top_n",
         "packing.cross_scope_top_n > 0",

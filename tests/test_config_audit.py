@@ -10,11 +10,12 @@ from pydantic import BaseModel, Field, SecretStr
 
 from prme import PRMEConfig, audit_hypotheses
 from prme.cli import build_parser, cmd_config_audit
-from prme.retrieval.config import PackingConfig
+from prme.retrieval.config import PackingConfig, ScoringWeights
 
 
 EXPECTED_HYPOTHESES = {
     "scoring.current_update_multiplier",
+    "scoring.rrf_k",
     "packing.cross_scope_top_n",
     "packing.episode_context_top_k",
     "packing.episode_context_local_k",
@@ -58,6 +59,7 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     assert report.effective_count == 12
     assert report.customized_count == 0
     assert settings["scoring.current_update_multiplier"].effective is True
+    assert settings["scoring.rrf_k"].effective is False
     assert settings["packing.episode_context_top_k"].effective is False
     assert settings["packing.episode_context_local_k"].effective is False
     assert settings["enable_qa_pairing"].effective is False
@@ -93,6 +95,11 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
         PRMEConfig(packing=PackingConfig(evidence_augmentation_top_k=1))
     )
     assert augmentation["packing.evidence_augmentation_anchor_policy"].effective is True
+
+    _, rank_fused = _by_path(PRMEConfig(scoring=ScoringWeights(fusion="rrf")))
+    assert rank_fused["scoring.rrf_k"].effective is True
+    assert rank_fused["scoring.rrf_k"].value == 60
+    assert rank_fused["scoring.rrf_k"].activation_condition == "scoring.fusion == 'rrf'"
 
 
 def test_hypothesis_audit_redacts_future_secret_fields():

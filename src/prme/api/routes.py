@@ -89,6 +89,7 @@ from prme.api.models import (
     StoreResponse,
     SupersedenceRequest,
 )
+from prme.retrieval.scoring import validate_rank_fusion_request
 from prme.types import LifecycleState, NodeType, Scope
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
@@ -436,6 +437,11 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
         kwargs["retrieval_mode"] = body.mode
     if body.filters is not None:
         kwargs.update(body.filters.model_dump(exclude_none=True))
+
+    try:
+        validate_rank_fusion_request(engine._config.scoring, body.ranking_multipliers)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     response = await engine.retrieve(**kwargs)
 

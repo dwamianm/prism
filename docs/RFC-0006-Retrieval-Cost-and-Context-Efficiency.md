@@ -422,6 +422,7 @@ boundaries and stops stored text from forging a tag, a record or a section
 header. Temporal guidance names the bracketed date instead of `event_time`. Token accounting covers the header line and
 every complete line. Reader receipts use version 14, which records
 `packing.context_citations`; versions 1–13 keep their canonical bytes, cannot
-claim the reader format, and mean citations were off. The default remains
+claim the reader format, and mean citations were off. A retrieval scored with
+opt-in rank fusion (RFC-0005 Section 7.2) writes version 15 in any format. The default remains
 `"auditable"` until the reader format passes the evidence gate and a paired
 answer run (epic #77).

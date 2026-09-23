@@ -72,6 +72,8 @@ These control the hybrid retrieval scoring formula. They should sum to approxima
 | `PRME_SCORING__W_PATHS` | `0.00` | Path count tiebreaker |
 | `PRME_SCORING__RECENCY_LAMBDA` | `0.02` | Decay rate for recency |
 | `PRME_SCORING__TEMPORAL_BOOST` | `0.15` | Bonus for temporal queries |
+| `PRME_SCORING__FUSION` | `weighted` | `weighted` (the sum above) or `rrf`: opt-in reciprocal rank fusion of semantic and lexical ranks, which ignores the additive weights (RFC-0005 Section 7.2) |
+| `PRME_SCORING__RRF_K` | `60` | Rank constant for `rrf`; set it only with `PRME_SCORING__FUSION=rrf` |
 
 ## Context Packing
 
