@@ -1,0 +1,15 @@
+{
+  "registered_at": "2026-09-23T02:01:51.766880+00:00",
+  "registration_sha256": "b62256d8c461feece94ae76a096132e58db1b7ca4483f24783226b352b8c96c6",
+  "queue_sha256": "6acf153328c25a5a20154e1c8f8d55d3fecf74a73046c2d791bca5f2af8164d4",
+  "loader": "/Users/dwamianm/Sites/prism-locomo-baseline-2026-09-22/benchmarks/integrations/gpt54_official_prompt_loader.py",
+  "loader_sha256": "808cbc000d3e42f6f85e5c966d0a2518691bcc87b5f10dfb6b4a837730cfb9bd",
+  "command": [
+    "/tmp/prme-v0.12.0-release-venv/bin/python",
+    "-m",
+    "benchmarks.integrations.gpt54_official_prompt_loader",
+    "locomo"
+  ],
+  "prerequisites": "All 500 LongMemEval answers and all 1540 LoCoMo default contexts complete; no existing LoCoMo execution directory.",
+  "scope": "Only scheduling; no changed configurations, providers, prompts, data, budgets or scoring; four provider requests maximum."
+}

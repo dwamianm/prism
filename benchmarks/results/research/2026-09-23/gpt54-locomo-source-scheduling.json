@@ -1,0 +1,24 @@
+{
+  "registered_at": "2026-09-23T02:05:10.365138+00:00",
+  "registration_sha256": "b62256d8c461feece94ae76a096132e58db1b7ca4483f24783226b352b8c96c6",
+  "coordinator_sha256": "4eefd457c5685fc379df241465c5e134caebecf1e5f40b3dfad211794b6cf9dd",
+  "parent_pid": 55428,
+  "parent_conversation": "conv-26",
+  "child_conversations": [
+    "conv-30",
+    "conv-41",
+    "conv-42",
+    "conv-43",
+    "conv-44",
+    "conv-47",
+    "conv-48",
+    "conv-49",
+    "conv-50"
+  ],
+  "child_workers": 3,
+  "locomo_answers_started": 0,
+  "scope": "Only partition source preparation by independent conversation; same registered prepare_locomo AST except final child questions-count literal. Every store/retrieve/config call remains exact. All 1540 cases required by final authentication.",
+  "ownership_handoff": "Claim empty next-conversation directory before parent reaches it. Original parent finishes conv-26 and stops at existing-directory guard before any conv-30 ingestion. Preserve that log as expected ownership handoff.",
+  "failure_policy": "Child failure is retained and prevents aggregate readiness; no retries or replacement source runs.",
+  "validation": "Two source-projection/AST-locality tests passed; existing frozen source and dependency checks run before every child."
+}
