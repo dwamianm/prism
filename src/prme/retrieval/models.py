@@ -324,21 +324,42 @@ class MemoryBundle(BaseModel):
             "the selected memory records"
         ),
     )
-    context_format: Literal["auditable", "compact"] = Field(
+    context_format: Literal["auditable", "compact", "reader"] = Field(
         default="auditable",
         description="Serialization format used by rendered_context",
     )
     context_references: dict[str, UUID] = Field(
         default_factory=dict,
-        description="Bundle-local compact references mapped to full memory node IDs",
+        description=(
+            "Bundle-local references (compact format, or reader format with "
+            "citations) mapped to full memory node IDs"
+        ),
     )
 
     def render(self) -> str:
         """Return the already-budgeted context; do not reconstruct full nodes."""
         return self.rendered_context
 
+    def ensure_citable(self) -> None:
+        """Raise when packed reader-format records carry no citation references.
+
+        Answerability and claim verification cite records through the tokens in
+        the rendered context. Reader records have such tokens only when packed
+        with ``context_citations=True``; failing loudly avoids a silent
+        abstention.
+        """
+        if (
+            self.context_format == "reader"
+            and not self.context_references
+            and any(self.sections.values())
+        ):
+            raise ValueError(
+                "This reader-format bundle has no citation references; pack it "
+                "with PackingConfig(context_format='reader', context_citations=True)"
+            )
+
     def resolve_context_ref(self, reference: str) -> UUID:
-        """Resolve a compact context reference such as ``m3`` to a node ID."""
+        """Resolve a bundle-local context reference such as ``m3`` to a node ID."""
         try:
             return self.context_references[reference]
         except KeyError as exc:

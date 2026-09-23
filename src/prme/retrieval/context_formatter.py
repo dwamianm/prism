@@ -270,13 +270,16 @@ def build_context_guidance(
     query_analysis: QueryAnalysis | None = None,
     reference_time: datetime | None = None,
     mode: Literal["off", "temporal", "all"] = "temporal",
+    context_format: Literal["auditable", "compact", "reader"] = "auditable",
 ) -> str | None:
     """Build compact, token-countable reasoning guidance for packed records.
 
     The text contains no query or memory content. It clarifies timestamp fields
     for temporal questions. ``mode="all"`` additionally enables experimental
     current-state and personalization guidance. Callers must count the result
-    inside the same context budget as memory records.
+    inside the same context budget as memory records. Reader-format records
+    have no ``event_time`` field, so their temporal guidance names the record's
+    bracketed date instead.
     """
     if reference_time is not None and reference_time.utcoffset() is None:
         raise ValueError("reference_time must be timezone-aware")
@@ -288,7 +291,9 @@ def build_context_guidance(
     reference = as_utc(reference_time) if reference_time is not None else None
     if context_type == "temporal":
         lines = [
-            "TEMPORAL TASK: For note text, resolve relative dates from that note's event_time. Subtract dates explicitly; answer relative to QUESTION TIME.",
+            "TEMPORAL TASK: For record text, resolve relative dates from that record's bracketed date, or the date its text begins with. Subtract dates explicitly; answer relative to QUESTION TIME."
+            if context_format == "reader"
+            else "TEMPORAL TASK: For note text, resolve relative dates from that note's event_time. Subtract dates explicitly; answer relative to QUESTION TIME.",
         ]
         if reference is not None:
             lines.insert(0, f"QUESTION TIME: {reference.isoformat()}")

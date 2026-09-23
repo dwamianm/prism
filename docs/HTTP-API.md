@@ -208,7 +208,10 @@ and excluded candidates use reason `evidence_limit`.
 
 Current pipeline receipts use schema version 12 and explicitly retain packing
 ordering, context guidance, context format, episode-routing settings, and the
-configured current-update multiplier. Version 9 score provenance records any
+configured current-update multiplier. Reader-format retrievals
+(`context_format="reader"`) use version 14, which also records
+`context_citations`; the bundle's `context_references` maps any `m3` style
+references to node IDs. Version 9 score provenance records any
 applied `current_update` operation and its exact coefficient. Version 10 retains
 the evidence-projection policy and replayable `evidence_projection` operations;
 versions 1–9 mean projection was disabled.

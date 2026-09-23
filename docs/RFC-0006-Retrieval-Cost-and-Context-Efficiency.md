@@ -388,3 +388,40 @@ version 9 current-update scoring policy, version 10 evidence projection, and
 version 11 evidence augmentation, and the version 12 augmentation anchor policy.
 Versions 1–6 retain their canonical bytes and always mean
 `"auditable"`; versions 1–7 always mean episode routing was disabled.
+
+## Reader rendering extension (2026-09-23)
+
+`PackingConfig.context_format="reader"` is an opt-in serialization that spends
+the context budget on memory text instead of record metadata. The 2026-09-23
+benchmark gap audit found that the auditable envelope was about 71% of a 4K
+LoCoMo context (`memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md`, section 1).
+Each packed record becomes one line: an optional bracketed time, optional state
+tags, and the complete selected representation text as a JSON string.
+
+- The time is `event_time`, omitted when the text already begins with that date.
+  A validity range is shown only for a closed window a caller supplied through
+  `store()`: `valid_from` defaults to the admission clock and PRME does not
+  record whether a caller set it, and windows closed by write-time supersedence
+  (which sets `superseded_by`) can take admission times as bounds. `created_at`
+  is never shown.
+- Tags mark every state except the defaults (lifecycle `tentative` and `stable`,
+  epistemic `asserted` and `observed`); a conditional record also shows its
+  condition state.
+- The renderer prints no node IDs, type, scope, source type or representation.
+  They remain in `MemoryBundle.sections` and the retrieval receipt.
+- Only the `full` text (or the identical `prose` text) is packed. A record that
+  fits only as `structured`, `key_value` or `reference`, or whose text is blank,
+  is excluded.
+- `PackingConfig.context_citations=True` prefixes each line with the same
+  deterministic bundle-local reference the compact format uses and fills
+  `MemoryBundle.context_references`. It is valid only with the reader format.
+  Answerability and claim verification raise for a reader bundle without it.
+
+JSON string encoding, with U+0085, U+2028 and U+2029 also escaped, keeps record
+boundaries and stops stored text from forging a tag, a record or a section
+header. Temporal guidance names the bracketed date instead of `event_time`. Token accounting covers the header line and
+every complete line. Reader receipts use version 14, which records
+`packing.context_citations`; versions 1–13 keep their canonical bytes, cannot
+claim the reader format, and mean citations were off. The default remains
+`"auditable"` until the reader format passes the evidence gate and a paired
+answer run (epic #77).

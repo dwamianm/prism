@@ -347,7 +347,9 @@ async def memory_retrieve(
         include_cross_scope: Allow supplementary hints from other scopes.
         min_fidelity: Minimum packed representation level.
         mode: Epistemic filtering mode within generated candidates.
-        include_context: Include the rendered, token-budgeted context in the response.
+        include_context: Include the rendered, token-budgeted context in the response,
+            with context_references mapping any bundle-local references such as
+            m3 to node IDs.
         knowledge_at: Optional timezone-aware ISO datetime used as an ingestion
             cutoff over current indexes. Returned historical_coverage states
             why this is not an exact prior-state replay.
@@ -432,6 +434,11 @@ async def memory_retrieve(
         }
         if include_context:
             payload["context"] = response.bundle.render()
+            if response.bundle.context_references:
+                payload["context_references"] = {
+                    reference: str(node_id)
+                    for reference, node_id in response.bundle.context_references.items()
+                }
             payload["value_bindings"] = [
                 item.model_dump(mode="json")
                 for item in response.bundle.value_bindings()

@@ -56,6 +56,62 @@ objects and full node IDs in the model context. Exact token accounting applies t
 both formats. Evaluate answer quality before changing a production workload.
 The equivalent environment setting is `PRME_PACKING__CONTEXT_FORMAT=compact`.
 
+To give the answering model the memory text instead of the audit envelope, opt
+into the reader format:
+
+```python
+config = config.model_copy(update={
+    "packing": PackingConfig(token_budget=4096, context_format="reader")
+})
+```
+
+A header line explains the layout, section labels such as `[stable_facts]`
+stay, and each record becomes one line starting with `- `:
+
+```text
+- [2023-05-28 18:12] "I've been looking at apartments on Zillow."
+- "(7:55 pm on 9 June, 2023) Caroline: I went to the support group yesterday."
+- [valid 2020-01-01 to 2021-01-01] [hypothetical] "Alice may live in Boston."
+```
+
+- The bracketed time is the record's `event_time` in UTC, with the time of day
+  when it is not midnight. It is left out when the text already begins with that
+  date, as in the second line. `ingest()` uses the ingestion time as the event
+  time of extracted facts when the source has none, and that time is shown.
+- A validity range appears only for a closed window a caller supplied through
+  `store()`. `valid_from` defaults to the time PRME admitted the record, and PRME
+  does not record whether a caller set it, so an open-ended `valid_from` is never
+  shown. Windows closed by write-time supersedence are not shown either, because
+  their bounds can fall back to admission times. `created_at` is never shown.
+- Tags appear for every state except the defaults: lifecycle `tentative` and
+  `stable`, epistemic `asserted` and `observed`. That covers `contested`,
+  `superseded`, `deprecated`, `archived`, `inferred`, `hypothetical`,
+  `unverified`, and `conditional` with its condition state. Default retrieval
+  already excludes most superseded, hypothetical and unconfirmed conditional
+  records.
+- The text is the complete stored text as a JSON string, so newlines, quotes
+  and Unicode line separators stay escaped and a record cannot span lines or
+  pose as a tag. The renderer prints no node IDs, type, scope, source type or
+  representation; text written by other components, such as organizer summaries,
+  is printed as stored.
+- Only the `full` (or equal `prose`) text is packed. A record that fits only as
+  a `structured`, `key_value` or `reference` fallback, or whose text is blank,
+  is excluded instead.
+
+Set `context_citations=True` (`PRME_PACKING__CONTEXT_CITATIONS=true`) to prefix
+each line with a bundle-local reference such as `[m3]` and fill
+`response.bundle.context_references` (MCP returns it with `include_context`).
+Answerability checks and `verify_bundle()` cite through these references, so
+they raise `ValueError` for a reader bundle packed without them. The setting is
+rejected with the other formats, because compact records always carry
+references and auditable records carry full node IDs. Context ablation keeps
+the bundle's format and references.
+
+The complete record, including its ID and every metadata field, stays in
+`response.bundle.sections` and in the retrieval receipt. `auditable` remains
+the default and `compact` remains available. The equivalent environment setting
+is `PRME_PACKING__CONTEXT_FORMAT=reader`.
+
 For workloads that store a source block or bounded dialogue episode under one
 `session_id`, opt into deterministic two-stage episode routing:
 
@@ -178,6 +234,16 @@ and session expansion. Versions 1–12 reject that operation; their stored
 canonical JSON and checksums remain unchanged. Version 13 does not change the
 packer or make score assignments into probabilities. Older readers without
 version 13 support cannot consume these opt-in receipts.
+
+Reader-format retrievals emit version 14, which records
+`packing.context_citations` explicitly and also admits the version 13 rank
+assignments. Versions 1–13 cannot claim the reader format, omit the citation
+setting from their canonical JSON, and mean it was off, so their stored bytes
+and checksums remain unchanged. Every version must state each packing setting
+it introduced: ordering from version 4, guidance from 6, format from 7 and
+episode routing from 8, instead of taking a later default. Other formats keep
+emitting versions 12 and 13. Older readers without
+version 14 support cannot consume reader receipts.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

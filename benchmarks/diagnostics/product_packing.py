@@ -44,7 +44,7 @@ from prme import MemoryEngine, PRMEConfig
 from prme.config import OrganizerConfig
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import RetrievalCandidate
-from prme.retrieval.packing import pack_context
+from prme.retrieval.packing import pack_context, reader_text
 from prme.retrieval.tokenization import count_tokens
 
 
@@ -515,9 +515,11 @@ def _check_replay(case: GateCase, packing: PackingConfig, response, receipt, con
 
 
 def _in_context(text: str, context: str) -> bool:
-    """Whether the text appears in the context verbatim or as a JSON string body."""
+    """Whether the text appears in the context verbatim, as a JSON string body, or
+    in the reader format's encoding."""
     return any(form in context for form in (
-        text, json.dumps(text)[1:-1], json.dumps(text, ensure_ascii=False)[1:-1]))
+        text, json.dumps(text)[1:-1], json.dumps(text, ensure_ascii=False)[1:-1],
+        reader_text(text)[1:-1]))
 
 
 def _write_capture(capture_dir: Path, case: GateCase, context: str, receipt) -> str:
