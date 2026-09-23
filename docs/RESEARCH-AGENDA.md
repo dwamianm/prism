@@ -1,10 +1,15 @@
 # Research agenda: demonstrated memory quality and developer experience
 
-Updated 2026-09-22. This agenda supersedes the [v0.6 proposal](archive/RESEARCH-AGENDA-v0.6.md).
+Updated 2026-09-23. This agenda supersedes the [v0.6 proposal](archive/RESEARCH-AGENDA-v0.6.md).
 Its historical scores and projected “98%+” target do not establish today's
 performance. GSD completion states and RFC proposals are not acceptance evidence.
 The aim is a leading memory package whose advantages survive reproducible
 comparisons and whose ordinary APIs preserve user data and isolation.
+
+The latest completed baseline is the [GPT-5.4 comparison](#2026-09-23-completed-gpt-54-default-benchmarks):
+86.0% LongMemEval-S and 64.0% LoCoMo. Its full evidence and next-step diagnostics
+are integrated into `main`; the earlier failed registrations below remain
+historical failure records.
 
 ## Opt-in interaction study: baseline failed closed, 2026-09-22
 

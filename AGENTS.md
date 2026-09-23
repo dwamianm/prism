@@ -330,6 +330,22 @@ or feature/base-scoring incompatibility. See `docs/LEARNING.md` and RFC-0017.
 These evaluations are retrieval evidence, not answer-quality or universal
 superiority evidence.
 
+## Current benchmark evidence
+
+The completed GPT-5.4 default-retrieval baselines are LongMemEval-S **430/500
+(86.0%)** and LoCoMo **985/1,540 (64.0%)**, using medium reader/judge reasoning
+and a 3,996-token memory-context ceiling. These are scoped raw-turn storage
+evaluations; the separate DeepSeek 87.4% result is not replaced. Zep's published
+values are external references, not matched live comparisons. See the
+[complete report](benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md)
+and `memory_bank/GOALS.md` before making benchmark claims or planning improvements.
+The post-hoc audit found 94 LongMemEval and 989 LoCoMo returned annotation
+instances omitted during packing. Prioritize answer-blind complementary evidence
+selection, while preserving the negative evidence for blanket episode routing
+and broad session penalties. Retention alone does not prove an answer gain.
+Both cohorts are examined development data; require new untouched confirmation
+and relevant backend/regression checks before any default change.
+
 ## Configuration Surface
 
 `vector_exact_search=True` applies to both storage backends. PostgreSQL must keep

@@ -1,0 +1,18 @@
+{
+  "complete": true,
+  "transferred_at": "2026-09-23T03:49:52.691302+00:00",
+  "source_research_commit": "2854a19e",
+  "source_root": "/Users/dwamianm/Sites/prism-locomo-baseline-2026-09-22",
+  "main_root": "/Users/dwamianm/Sites/prism",
+  "raw_archive": "data/gpt54-comparison-v1",
+  "raw_files": 18093,
+  "raw_bytes": 6101971077,
+  "dependency_archive": "data/gpt54-comparison-dependencies",
+  "dependency_files": 504,
+  "dependency_bytes": 1368216375,
+  "manifest": "data/gpt54-comparison-transfer-manifest.json",
+  "manifest_sha256": "cb3868ee31822fde8a10146430feed1ea441bcfaaf10c17eb1ace085fe383fe0",
+  "verification": "Every raw-run file and copied historical dependency matched source SHA-256.",
+  "path_policy": "Original metadata paths and all benchmark bytes are preserved. The local manifest maps historical captures to archived copies; original worktrees and full historical packs remain retained.",
+  "publication": "Only this summary, tools, tests and public research records are versioned. Raw archives are gitignored."
+}

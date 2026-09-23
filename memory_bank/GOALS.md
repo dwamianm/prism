@@ -1,9 +1,11 @@
 # PRME goals and production handoff
 
-**Status:** active handoff, 2026-09-22  
-**Production baseline:** `main` at `6446f06` (the current branch is an
-ancestor; the merged mainline also contains the later typed-value, profile,
-and temporal-parser work).  
+**Status:** active handoff, 2026-09-23
+
+**Production baseline:** released v0.12.0 at `aaa2e4e`; the subsequent GPT-5.4
+benchmark evidence is integrated into `main` without product-code or default
+changes.
+
 **Research record:** [research agenda](../docs/RESEARCH-AGENDA.md)
 
 ## Product goal
@@ -56,6 +58,9 @@ because they resemble competitor techniques:
 
 ## Evidence we can currently defend
 
+- complete GPT-5.4 default-retrieval benchmarks: **LongMemEval-S 430/500
+  (86.0%)** and **LoCoMo 985/1,540 (64.0%)**, with a 3,996-token effective
+  context ceiling, medium reader/judge reasoning and zero terminal failures;
 - balanced packing: 83/119 development and 250/381 confirmation answers versus
   67/119 and 185/381 for density, using the registered local reader/judge;
 - LongMemEval-V2 web-small: 80/149 with memory versus 10/149 without memory;
@@ -71,6 +76,34 @@ evidence remains: MemoryArena travel failed non-inferiority, EventQA trailed
 BM25, BEAM remains 13/20, and claim-verification candidates have not passed
 the required precision/recall gates.
 
+## Current benchmark learning
+
+The [audited GPT-5.4 report](../benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md)
+and [post-hoc evidence audit](../benchmarks/results/research/2026-09-23/GPT54-EVIDENCE-DIAGNOSTICS.md)
+are the current baseline for this reader and raw-turn storage protocol. All
+2,040 questions completed; 4,080 benchmark provider calls succeeded on their
+first attempt. Total observed API cost including controls was $16.4576.
+LongMemEval reuses the frozen production-control contexts; LoCoMo freshly stores
+5,882 source turns. The older DeepSeek 437/500 (87.4%) run stays separate.
+
+PRME trails Zep's published 90.2% and 94.7% references, but this is not a live
+matched comparison: source preparation, prompts and context budgets differ.
+LoCoMo uses registered semantic yes/no accuracy, not official token-F1.
+Historical audit numbers do not supersede these scoped current results.
+
+**Prioritize context selection.** LongMemEval returned all 886 annotated
+evidence instances but omitted 94 during packing. LoCoMo omitted 989 returned
+instances; 443 of its 555 incorrect answers lacked some resolvable annotated
+evidence. Multi-hop scored only 80/282 (28.37%). Annotation retention is a
+diagnostic, not proof that an answer will improve. Separately audit errors with
+retained evidence for temporal interpretation, updates and conflict handling.
+
+Test answer-blind complementary evidence selection while retaining the strongest
+anchor. Preserve the negative results for unconditional episode routing, broad
+session penalties and existing reranking. No new default is supported by these
+baseline measurements. Both canonical cohorts are examined development data;
+confirmation must use independently prepared untouched histories/questions.
+
 ## Next goals and gates
 
 1. **Production safety:** keep full installed, DuckDB, PostgreSQL, HTTP/MCP,
@@ -79,6 +112,8 @@ the required precision/recall gates.
    against Zep or another live alternative with identical history, reader/judge,
    context budget, ingestion accounting, latency accounting, and an untouched
    holdout. See the [Zep methodology review](../benchmarks/results/research/2026-09-17/ZEP-BENCHMARK-METHODOLOGY-REVIEW.md).
+   The completed GPT-5.4 reference comparison supplies PRME baseline numbers;
+   it does not close the matched-live-competitor gate.
 3. **Interactive quality:** repair conflict resolution, temporal/value
    rendering, and source-cited episodic reconstruction on fresh cohorts; do
    not promote prompt-only fixes from inspected development splits.

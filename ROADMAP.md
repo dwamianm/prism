@@ -1,6 +1,6 @@
 # PRME roadmap
 
-Updated 2026-09-12. Current package: v0.11.0. Product priority: **reliable, measurable AI memory with an excellent developer experience**.
+Updated 2026-09-23. Current package: v0.12.0. Product priority: **reliable, measurable AI memory with an excellent developer experience**.
 
 ## Direction
 
@@ -8,9 +8,29 @@ Find the right evidence, preserve changing facts, and fit useful context into an
 
 The foundation already includes local DuckDB/USearch/Tantivy storage, optional PostgreSQL, hybrid and temporal retrieval, ingestion and organizer pipelines, context packing, index rebuilds, MCP/REST, MemoryClient, and LangChain/LlamaIndex adapters. Additional frameworks and federation are deferred while retrieval quality is established.
 
-## Current evidence-led delivery
+## Current retrieval-quality priority
 
-Historical milestones below provide context, not acceptance criteria. Current
+The completed [GPT-5.4 default benchmarks](benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md)
+score **86.0% LongMemEval-S** and **64.0% LoCoMo**. The
+[evidence audit](benchmarks/results/research/2026-09-23/GPT54-EVIDENCE-DIAGNOSTICS.md)
+identifies context packing as the main measured opportunity: 94 and 989 returned
+annotation instances, respectively, were omitted from packed context. LoCoMo
+multi-hop accuracy is 28.37%; annotation omissions accompany 191 of its 202
+incorrect multi-hop answers.
+
+Prioritize an answer-blind complementary-evidence packing candidate that
+preserves the strongest anchor under the same token budget. Require complete
+paired answer results as well as source retention, then relevant regression and
+backend checks and a new untouched confirmation cohort. Separately investigate
+errors with retained evidence, especially updates, conflict handling and temporal
+reasoning. Do not infer a deployable gain from annotation coverage alone, revive
+failed blanket episode routing, or change defaults based on these baseline runs.
+See [project goals](memory_bank/GOALS.md) and the [research agenda](docs/RESEARCH-AGENDA.md)
+for current evidence and promotion gates.
+
+## Earlier evidence-led delivery
+
+Historical milestones below provide context, not current acceptance criteria. This
 work on `feat/memory-reliability-quality` has delivered durable fast ingestion and
 processing status; replayable retrieval time; faithful token-bounded context;
 coverage-checked consolidation; source-cited extraction; named replacement rules;
@@ -111,6 +131,9 @@ is available, while a reliable default acceptance policy remains a quality gap.
 Adaptive vector search repairs recall but does not implement RFC-0004 index-level namespace partitioning. Highly selective searches may scan the full index; measure latency before scaling this approach.
 
 ## Prioritized work
+
+The retrieval-quality priority above is current. The issue table below records
+the September 12 backlog review; it is not a fresh issue-status audit.
 
 Effort: S = 1–2 focused days, M = 3–5 days, L = more than a week. Estimates are provisional; research experiments may stop after a negative result.
 

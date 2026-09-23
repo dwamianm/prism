@@ -1,5 +1,31 @@
 # Measuring retrieval quality
 
+## Latest complete GPT-5.4 defaults (2026-09-23)
+
+| Benchmark | Complete result | Effective context ceiling |
+|---|---:|---:|
+| LongMemEval-S | **430/500 (86.0%)** | 3,996 tokens |
+| LoCoMo, categories 1–4 | **985/1,540 (64.0%)** | 3,996 tokens |
+
+Both use `gpt-5.4-2026-03-05`, medium reasoning for reader and judge, and default
+retrieval over stored conversation turns. All 2,040 questions completed; all
+4,080 benchmark model calls succeeded on their first attempt. The full
+LongMemEval cohort includes preference and abstention questions. LoCoMo excludes
+all 446 adversarial questions prospectively and uses a disclosed semantic yes/no
+judge, not upstream token-F1. These scoped registrations differ from the older
+adapter defaults documented below.
+
+See the [registered protocol](benchmarks/results/research/2026-09-23/GPT54-COMPARISON-PROTOCOL.md),
+[complete results and verification](benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md),
+and [evidence-retention diagnostics](benchmarks/results/research/2026-09-23/GPT54-EVIDENCE-DIAGNOSTICS.md).
+Zep's published figures are external references with different methods, not a
+paired live arm. The earlier DeepSeek 87.4% LongMemEval result remains separate.
+All source/answer records are retained locally under `data/gpt54-comparison-v1/`;
+public reports contain their checksums. The completed run must not be rerun or
+overwritten as part of verification.
+
+## Earlier registered memory-utility comparison
+
 The first registered held-out current-product answer comparison is complete.
 On 149 deterministically scored LongMemEval-V2 web-small questions, PRME scored
 80/149 (53.69%) versus 10/149 (6.71%) for the same local Qwen 9B reader without

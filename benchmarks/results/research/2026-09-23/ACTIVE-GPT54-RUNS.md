@@ -13,7 +13,27 @@ remains active. Do not rerun or replace these executions.**
 The worktree is `/Users/dwamianm/Sites/prism-locomo-baseline-2026-09-22`, branch
 `research/locomo-release-baseline-2026-09-22`, based on released v0.12.0
 `aaa2e4e6320d9a75d47362e555e659c72baf38a8`. Production source, defaults and
-pins are unchanged. No automatic merge, push or new release was performed.
+pins are unchanged. At benchmark completion, no automatic merge, push or new
+release was performed.
+
+## Main project integration
+
+The user subsequently requested that all learning move into the main project.
+The complete research history is now integrated into `main`, including the
+tools, tests, registrations, retained failures, complete results and diagnostics.
+README, BENCHMARKS.md, the research agenda, roadmap, project goals and AGENTS.md
+carry the current findings and the next experiment's acceptance gates.
+
+The main checkout retains a byte-identical raw-run archive at
+`data/gpt54-comparison-v1/`, plus the 500 historical LongMemEval source captures,
+their execution/verification records and pinned official judge source under
+`data/gpt54-comparison-dependencies/`. The
+[transfer record](gpt54-main-project-transfer.json) binds the complete local
+checksum manifest. These raw archives stay outside Git. Original path strings
+and benchmark bytes were preserved; the local manifest maps archived historical
+dependencies. Original worktrees and full historical source packs are retained.
+This integration changes no production code, defaults or dependency pins and
+does not create a new release.
 
 ## Authoritative artifacts
 
