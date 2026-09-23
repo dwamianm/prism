@@ -133,3 +133,14 @@ history only. Treat `main` as production; do not merge a research branch
 wholesale just to recover benchmark artifacts. Check current branch ancestry
 and run the relevant installed-package tests before any release or default
 change.
+
+### Jev with a GPT-5.4 temporal resolver (2026-09-23)
+
+The [70-failure diagnostic](../benchmarks/results/research/2026-09-23/JEV-GPT54-FAILURES-REPORT.md)
+completed with zero provider failures: fresh control 6/70, candidate 7/70.
+All score differences occurred on unchanged contexts; the only added temporal
+relation did not repair its answer. No Jev answer gain is demonstrated. The
+variant remains research-only and the default baseline stays 430/500 (86.0%).
+Prioritize source coverage and separately test temporal precision/operand
+limitations; retain the flagged possible reference inconsistency without
+changing official scores. Do not infer overall accuracy from selected failures.

@@ -1,0 +1,91 @@
+{
+  "complete": true,
+  "registration_sha256": "1038e33f709259ee1aef18418db09a6d263a0b9c2610e14380813499fc498980",
+  "raw_result_sha256": "501092e3c62b7b29027e4335873da330874e6472a57f3cbee040fde738917eff",
+  "authored_control": {
+    "complete": true,
+    "resolver": {
+      "resolution": {
+        "operation": "elapsed_between",
+        "operands": [
+          {
+            "name": "finishing the frame",
+            "evidence_id": "00000000-0000-0000-0000-000000000001",
+            "quote": "I finished the frame today.",
+            "time_expression": "event_time",
+            "time_basis": "event_time"
+          },
+          {
+            "name": "hanging the frame",
+            "evidence_id": "00000000-0000-0000-0000-000000000002",
+            "quote": "I hung the frame today.",
+            "time_expression": "event_time",
+            "time_basis": "event_time"
+          }
+        ]
+      },
+      "audit": {
+        "provider": "openai",
+        "model": "gpt-5.4-2026-03-05",
+        "model_digest": null,
+        "provider_version": null,
+        "request_sha256": "25211ecd499ee27a519c3fed30e33acf9dc318137302f561bd0942f26f2f8f48",
+        "response_sha256": "61fe199610c2f3465400137a3bc682a3f63a0e196062cf81179e6b345bcab595",
+        "attempts": 1,
+        "schema_repairs": 0,
+        "input_tokens": 368,
+        "output_tokens": 240,
+        "elapsed_ms": 5283.356
+      }
+    },
+    "gate": {
+      "provider": "typesafe_jev",
+      "model": "jev-1.13.0",
+      "request_sha256": "3bcc57973e7c355e3a119cc62f7037fcabf52fe5c83f0929dcd2693d6fd54683",
+      "response_sha256": "4e9663d867f5e95205e8934d9d8d6b46d9669f73d3a54352766dea7e41a1b451",
+      "probabilities": [
+        0.93,
+        0.93
+      ],
+      "minimum_probability": 0.93,
+      "attempts": 1,
+      "input_tokens": 553,
+      "output_tokens": 40,
+      "elapsed_ms": 340.353
+    },
+    "relation": {
+      "operation": "elapsed_between",
+      "operands": [
+        {
+          "name": "finishing the frame",
+          "evidence_id": "00000000-0000-0000-0000-000000000001",
+          "quote": "I finished the frame today.",
+          "time_expression": "event_time",
+          "time_basis": "event_time",
+          "resolved_time": "2026-08-01T09:00:00Z",
+          "duration_value": null,
+          "duration_unit": null
+        },
+        {
+          "name": "hanging the frame",
+          "evidence_id": "00000000-0000-0000-0000-000000000002",
+          "quote": "I hung the frame today.",
+          "time_expression": "event_time",
+          "time_basis": "event_time",
+          "resolved_time": "2026-08-08T09:00:00Z",
+          "duration_value": null,
+          "duration_unit": null
+        }
+      ],
+      "value": "7 days",
+      "guidance": "TEMPORAL RELATION (deterministically computed from model-aligned citations; inferred, not stored truth):\n- finishing the frame: 2026-08-01 [evidence_id=00000000-0000-0000-0000-000000000001]\n- hanging the frame: 2026-08-08 [evidence_id=00000000-0000-0000-0000-000000000002]\n- Deterministic calendar-date difference: 7 days.\nVerify event interpretation against the cited records."
+    }
+  },
+  "verification": {
+    "focused_tests_passed": 80,
+    "focused_tests_skipped": 9,
+    "skip_reason": "PRME_TEST_DATABASE_URL not set",
+    "additional_ordinary_query_test": "passed for DuckDB; PostgreSQL skipped"
+  },
+  "verifier_source_sha256": "490a12fdea160ce65550ab9c112a75fee65252983b142de4ed5f5d3e53118daf"
+}

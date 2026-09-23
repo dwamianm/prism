@@ -1,0 +1,175 @@
+{
+  "kind": "posthoc-explanatory-audit",
+  "recorded_at": "2026-09-23T04:30:00.637609+00:00",
+  "answer_run_complete_before_audit": true,
+  "result_sha256": "acd1f08736717ad8312829dcf685358744a2815a28a62e4f1701a71b644ba1b2",
+  "routed_retrieval_seconds": {
+    "p50": 8.161167083497276,
+    "p95": 46.21472096873913
+  },
+  "provider_requests": {
+    "openai": 19,
+    "jev": 2
+  },
+  "resolver_schema_repairs": 3,
+  "rows": [
+    {
+      "question_id": "7405e8b1",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 4.142039958998794,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "92a0aa75",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 10.07385924999835,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "ba358f49",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 5.82310779200634,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "c18a7dc8",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 8.036025292007253,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "b46e15ed",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 7.358346166001866,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "0db4c65d",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 7.24389437501668,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "gpt4_7f6b06db",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 10.365188000025228,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "gpt4_7abb270c",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 8.286308874987299,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "gpt4_e061b84f",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 5.4370464159874246,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "370a8ff4",
+      "status": "accepted",
+      "errors": [],
+      "minimum_probability": 0.89,
+      "retrieval_seconds": 6.243506833008723,
+      "dropped_uncited_records": 1
+    },
+    {
+      "question_id": "gpt4_d6585ce8",
+      "status": "validation_rejected",
+      "errors": [
+        "operand[3] text date lacks day precision"
+      ],
+      "minimum_probability": null,
+      "retrieval_seconds": 38.90624354101601,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "gpt4_f420262c",
+      "status": "gate_rejected",
+      "errors": [],
+      "minimum_probability": 0.78,
+      "retrieval_seconds": 53.3849586249853,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "gpt4_483dd43c",
+      "status": "validation_rejected",
+      "errors": [
+        "operand[0] text date lacks day precision",
+        "operand[1] text date lacks day precision"
+      ],
+      "minimum_probability": null,
+      "retrieval_seconds": 19.09635387500748,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "gpt4_2f56ae70",
+      "status": "validation_rejected",
+      "errors": [
+        "operand[0] duration is unsupported",
+        "operand[1] repeats a record",
+        "operand[2] repeats a record",
+        "operand[3] duration is unsupported"
+      ],
+      "minimum_probability": null,
+      "retrieval_seconds": 43.824641749990406,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "gpt4_93159ced_abs",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 4.574241583002731,
+      "dropped_uncited_records": 0
+    },
+    {
+      "question_id": "2133c1b5",
+      "status": "unsupported",
+      "errors": [],
+      "minimum_probability": null,
+      "retrieval_seconds": 22.522200333012734,
+      "dropped_uncited_records": 0
+    }
+  ],
+  "possible_reference_inconsistency": {
+    "question_id": "370a8ff4",
+    "reference_answer": "15",
+    "reference_unit": "weeks",
+    "annotated_user_source_dates": [
+      "2023/01/19 (Thu) 10:47",
+      "2023/04/10 (Mon) 20:58"
+    ],
+    "source_meaning": [
+      "recovered from the flu today",
+      "went on my 10th jog outdoors today"
+    ],
+    "calendar_day_difference": 81,
+    "both_readers_answer": "11 weeks and 4 days",
+    "official_score_preserved": {
+      "control_correct": false,
+      "candidate_correct": false
+    },
+    "assessment": "Possible inconsistency in this frozen dataset/reference. Not adjudicated upstream, not relabeled or excluded; evidence supplied only to this post-hoc audit."
+  }
+}

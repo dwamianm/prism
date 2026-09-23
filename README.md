@@ -34,6 +34,11 @@ artifacts. These results establish the current baseline; they do not show a
 library-code improvement or justify a new default. The earlier DeepSeek result
 below remains a separate evaluation.
 
+A subsequent [GPT-5.4 + Jev diagnostic](benchmarks/results/research/2026-09-23/JEV-GPT54-FAILURES-REPORT.md)
+tested all 70 previous LongMemEval misses and found no demonstrated answer gain
+from the added temporal guidance. It is a failure-cohort experiment, not a new
+full-benchmark score.
+
 ### Registered LongMemEval-S development results (2026-09-22)
 
 The completed production-control arm scored **437/500 (87.4%)** using Ollama

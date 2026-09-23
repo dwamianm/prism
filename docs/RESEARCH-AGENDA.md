@@ -464,3 +464,43 @@ these baseline runs. Require a complete positive paired development comparison,
 relevant backend/regression tests and independently prepared untouched source
 histories/questions before promotion. These completed canonical cohorts are
 examined development data, and no production default changed.
+
+## 2026-09-23: GPT-5.4 + Jev on the 70 LongMemEval failures
+
+The [complete registered diagnostic](../benchmarks/results/research/2026-09-23/JEV-GPT54-FAILURES-REPORT.md)
+compared fresh controls with the existing temporal feature using a new explicit
+GPT-5.4 resolver and the unchanged Jev 0.85 gate. All 70 pairs completed with no
+provider failures. Control scored 6/70 and candidate 7/70; the paired difference
+was +1.43 points (95% interval −4.29 to +7.14). **All three wins and two losses
+occurred on identical contexts.** The feature changed only one context, and
+both arms still failed that question. There is no demonstrated answer gain from
+Jev in this run; the default full-cohort result remains 430/500 (86.0%).
+
+Operational positives: all 140 receipt rankings replayed, all 70 controls
+matched their historical contexts, cited representations survived repacking,
+master packs remained unchanged, and the new provider correctly reported
+`confirmation_protocol_aligned=false`. The OpenAI adapter and tests remain on
+`research/jev-gpt54-failures-2026-09-23`; this experiment does not automatically
+merge that implementation or change production flags. Existing default
+configuration checksums remain unchanged.
+
+Negative findings: only 16/70 queries routed; 11 were unsupported, three failed
+local evidence/date checks, one failed Jev and one was accepted. Candidate
+retrieval p95 rose from 0.568 to 20.981 seconds (46.215 seconds on routed queries).
+Both arms omitted 72 annotated turn instances across 46 questions. OpenAI token
+cost including preflight was approximately $1.457309; Jev usage is recorded but
+its dollar price is unknown. PostgreSQL-specific tests remained skipped locally.
+
+A post-hoc audit of the only changed case found a possible reference
+inconsistency: two annotated source dates imply 81 days, while the reference
+says 15 weeks. Both official failures are retained; no relabeling or exclusion
+is justified by this diagnostic. Record reference concerns separately from
+registered scores.
+
+Keep this variant experimental. Next hypotheses are complementary source
+selection, precision-aware temporal operations, and distinct operands from one
+source record. Do not weaken validation or broaden routing merely to force
+activation. Any candidate needs separate registration, full-cohort regression
+and untouched confirmation before default promotion. These examined failures
+cannot serve as confirmation, and recovered answers cannot simply be added to
+430. The earlier Ollama confirmation remains a separate protocol and finding.
