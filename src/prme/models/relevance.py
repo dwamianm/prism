@@ -42,7 +42,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -322,6 +322,12 @@ class RetrievalReceipt(BaseModel):
                 for adjustment in provenance.adjustments
             ):
                 raise ValueError("Evidence augmentation requires a version 11 receipt")
+            if self.schema_version < 13 and any(
+                adjustment.kind == "neural_rank_assignment"
+                for provenance in self.score_provenance.values()
+                for adjustment in provenance.adjustments
+            ):
+                raise ValueError("Neural rank assignment requires a version 13 receipt")
         return self
 
     def replay_ranking(self) -> tuple[UUID, ...]:
@@ -450,7 +456,13 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     receipt_packing = packing if execution is not None else packing.model_copy(
         update={"context_guidance_mode": "off", "context_format": "auditable"}
     )
-    version: Literal[2, 12] = 12 if execution is not None else 2
+    has_rank_assignment = any(
+        operation.kind == "neural_rank_assignment"
+        for item in provenance.values() for operation in item.adjustments
+    )
+    if has_rank_assignment and execution is None:
+        raise ValueError("Neural rank assignment requires an execution descriptor")
+    version: Literal[2, 12, 13] = (13 if has_rank_assignment else 12) if execution is not None else 2
     return RetrievalReceipt(schema_version=version, execution=execution,
                             request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,
