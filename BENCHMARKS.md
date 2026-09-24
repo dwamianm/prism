@@ -249,16 +249,26 @@ with another DeepSeek score from the same model identity and settings:
    the one whose own answer run completed most recently for that benchmark
    (#127). The two runs are answered in one session,
    interleaved question by question, and `compare` pairs a variant only with
-   the defaults run answered alongside it (#129). The current baseline's
-   contexts match the saved 2026-09-23 run exactly, so when a variant is prepared at a
-   later commit, run the evidence gate on the defaults at that commit first.
-   If it no longer reproduces every saved context, the pairing also measures
-   other code changes. A later baseline, recorded after a default changed, no
-   longer matches the saved run, so prepare its variants at the baseline's own
-   commit where possible. `compare` reports how many questions the variant
-   asked on different context text from the baseline (#125). That count covers
-   both the variant's settings and any other code change between the two
-   commits, so it does not replace the gate run on the defaults.
+   the defaults run answered alongside it (#129). The baseline was prepared
+   at its own commit, so a variant prepared at a later commit, or on a branch,
+   could also pick up any code change between the two commits. `prepare`
+   therefore replays the defaults at the variant's commit through the
+   evidence gate as well, without captures, keeps that report as
+   `defaults-gate.json` next to the variant's own, and records the hash of the
+   defaults' text on every question (#139). `run-pair` checks those hashes
+   against that report, and refuses a variant whose defaults at its commit
+   read different text from the baseline on any question; `compare` refuses
+   such a pair. When that happens because a
+   change merged to `main` altered the defaults, record a new baseline at a
+   commit that includes it (`prme@<commit>` below) and prepare the variant
+   again from a commit that descends from it. When the variant's own branch
+   alters the defaults, put that change behind its settings. A variant
+   prepared before #139, or by a checkout without it, records no such
+   hashes, so `run-pair` answers no further pair of it, and `compare`
+   refuses its pairs that started after #139 (below). While the variant
+   still needs its first pair or its confirmation, prepare it again from a
+   checkout with #139, under a new name with the same settings, which keep
+   it the same variant.
 3. A default changes only when the default-change rule in the epic #77 work
    rules in `CLAUDE.md` is met. That rule includes a confirmation run: run
    `run-pair` again for the same variant, which starts a new pair with a fresh
@@ -423,6 +433,9 @@ Safeguards:
   run. The two A/A pairs of 2026-09-24 were added with `record-aa-check`.
 - The `prme` arm prepares the shipped defaults, so `prepare` refuses it unless
   the checked-out commit is on `main`. A variant can be prepared from a branch.
+  A variant's preparation replays the evidence gate twice, once with its
+  settings and once with the defaults at the same commit (#139), so it takes
+  about twice as long as the defaults'.
 - Each commit has at most one defaults baseline. The first is the `prme` arm.
   Once it has a complete run, `prepare prme` at another commit on `main` files
   a new baseline as `prme@<commit>`, where `<commit>` is the first 8 characters
@@ -595,9 +608,23 @@ share one, and `context_text_sha256` covers the context text alone.
 different context text (`differing`) and what shows it (`shown_by`): the rows'
 text hashes, or, for results published before them, both results reading one
 preparation or both reproducing every saved context. Both are `null`, with a
-warning, when nothing shows it. The warning about contexts prepared from
-different commits gives that count, and is left out when every context text is
-the same. `compare` reports the paired accuracy difference with a 95% interval, per
+warning, when nothing shows it. A variant's rows also carry
+`defaults_text_sha256`, the hash of the defaults' text replayed at the
+variant's commit (#139), and the `contexts` block's `changed_by_other_code`
+counts the questions on which those defaults read other text than the before
+side: what changed between the two preparations, such as code on `main` or on
+the variant's branch, the dependencies or the saved run. `compare` refuses a
+variant's pair with any, since the pair would credit that change to the
+variant, so at 0 every question in `differing` differs by the variant's
+settings alone. The count is `null` for any other arm. It is also `null` for
+the `prme-reader-rrf` pairs, which started before #139 at a commit whose
+defaults read the baseline's text, and `compare` accepts those with a warning;
+it refuses any variant pair without the count that started at or after
+2026-09-24 18:00 UTC, which came from a preparation or checkout without #139.
+The warning about contexts prepared from different commits gives the
+`differing` count, and is left out when every context text is the same or when
+the defaults at the variant's commit read the before side's text on every
+question. `compare` reports the paired accuracy difference with a 95% interval, per
 category as well, and the questions gained and lost. LoCoMo intervals resample
 its 10 conversations, keeping each conversation's questions together;
 LongMemEval-S intervals resample questions, because each question has its own
