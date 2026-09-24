@@ -61,7 +61,8 @@ partial result. All alternate passes settle before a backend error propagates.
 The existing provider helper still returns no alternatives on provider failure;
 this option does not turn that compatibility behavior into provider success.
 Benchmark observers must continue to count provider failures separately. The
-provider and model come from `config.extraction`, as in ordinary reformulation.
+provider, model, endpoint, credential and timeout come from `config.extraction`,
+as in ordinary reformulation.
 The merge policy is reported in execution parameters and, when enabled, feature
 identity. It requires no new receipt schema because final scoring inputs already
 have provenance. Neither option mutates the stored memory artifact.

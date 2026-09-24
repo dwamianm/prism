@@ -78,3 +78,31 @@ async def test_config_backend_property():
 
     config_pg = PRMEConfig(database_url="postgresql://localhost/test")
     assert config_pg.backend == "postgres"
+
+
+async def test_reformulation_receives_the_extraction_connection_settings():
+    """The PostgreSQL engine hands reformulation the extraction endpoint and credential."""
+    from pydantic import SecretStr
+
+    from prme.config import ExtractionConfig
+
+    config = PRMEConfig(
+        database_url=os.environ["PRME_TEST_DATABASE_URL"],
+        extraction=ExtractionConfig(
+            provider="openai",
+            model="example-model",
+            api_key=SecretStr("configured-key"),
+            base_url="https://gateway.invalid/v1",
+            timeout=7.5,
+        ),
+    )
+    engine = await MemoryEngine.create(config)
+    try:
+        pipeline = engine._retrieval_pipeline
+        assert pipeline._query_reformulation_provider == "openai"
+        assert pipeline._query_reformulation_model == "example-model"
+        assert pipeline._query_reformulation_api_key.get_secret_value() == "configured-key"
+        assert pipeline._query_reformulation_base_url == "https://gateway.invalid/v1"
+        assert pipeline._query_reformulation_timeout == 7.5
+    finally:
+        await engine.close()

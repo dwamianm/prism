@@ -88,6 +88,8 @@ from prme.types import (
 )
 
 if TYPE_CHECKING:
+    from pydantic import SecretStr
+
     from prme.models.relevance import RankingPolicy
     from prme.storage.graph_store import GraphStore
     from prme.storage.lexical_index import LexicalIndex
@@ -189,6 +191,9 @@ class RetrievalPipeline:
         temporal_relation_enricher: TemporalRelationEnricher | None = None,
         reranker_policy: Literal["legacy", "score_envelope", "anchored_score_envelope"] = "legacy",
         query_reformulation_merge_policy: Literal["new_only", "max_signals"] = "new_only",
+        query_reformulation_api_key: SecretStr | None = None,
+        query_reformulation_base_url: str | None = None,
+        query_reformulation_timeout: float | None = None,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -205,6 +210,11 @@ class RetrievalPipeline:
         self._query_reformulation_count = query_reformulation_count
         self._query_reformulation_provider = query_reformulation_provider
         self._query_reformulation_model = query_reformulation_model
+        self._query_reformulation_api_key = query_reformulation_api_key
+        self._query_reformulation_base_url = query_reformulation_base_url
+        self._query_reformulation_timeout = query_reformulation_timeout
+        # Reformulation clients live as long as this pipeline, on its event loop.
+        self._query_reformulation_clients: dict = {}
         if reranker_policy not in {"legacy", "score_envelope", "anchored_score_envelope"}:
             raise ValueError("Unknown reranker policy")
         if query_reformulation_merge_policy not in {"new_only", "max_signals"}:
@@ -1189,6 +1199,10 @@ class RetrievalPipeline:
             provider=self._query_reformulation_provider,
             model=self._query_reformulation_model,
             count=self._query_reformulation_count,
+            api_key=self._query_reformulation_api_key,
+            base_url=self._query_reformulation_base_url,
+            timeout=self._query_reformulation_timeout,
+            client_cache=self._query_reformulation_clients,
         )
         merge_signals_enabled = self._query_reformulation_merge_policy == "max_signals"
         if not alt_queries and not merge_signals_enabled:

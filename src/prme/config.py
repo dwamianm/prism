@@ -52,7 +52,9 @@ class ExtractionConfig(_ProjectSettings):
     )
     timeout: float = Field(
         default=30.0,
-        description="Seconds per extraction call",
+        gt=0,
+        allow_inf_nan=False,
+        description="Seconds per extraction call, and per opt-in query reformulation call",
     )
     temperature: float = Field(
         default=0.0,
@@ -78,10 +80,18 @@ class ExtractionConfig(_ProjectSettings):
         description="Durable extraction lease; active workers renew it and commit rechecks ownership",
     )
     api_key: SecretStr | None = Field(
-        default=None, description="Optional extraction credential; overrides provider environment variables",
+        default=None,
+        description=(
+            "Optional extraction credential; overrides provider environment variables. "
+            "Opt-in query reformulation uses it too"
+        ),
     )
     base_url: str | None = Field(
-        default=None, description="Optional extraction endpoint; overrides provider environment variables",
+        default=None,
+        description=(
+            "Optional extraction endpoint; overrides provider environment variables. "
+            "Opt-in query reformulation uses it too"
+        ),
     )
 
     @model_validator(mode="after")
@@ -547,7 +557,8 @@ class PRMEConfig(_ProjectSettings):
             "the results (deduplicated by node id) with the original query's "
             "results. Improves recall on tangential/keyword-mismatched facts "
             "at the cost of one LLM call plus N extra retrievals per query. "
-            "Uses the extraction provider/model. Default False; with this off, "
+            "Uses the extraction provider, model, endpoint, credential and "
+            "timeout. Default False; with this off, "
             "retrieve() makes no LLM calls (RFC-0005 S3)."
         ),
     )

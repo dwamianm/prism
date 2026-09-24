@@ -60,6 +60,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Query reformulation (`enable_query_reformulation=True`) now uses the
+  extraction endpoint, credential and timeout as well as its provider and
+  model. It used to build its own client from the provider and model alone, so
+  its requests went to the provider's default endpoint (for OpenAI,
+  `api.openai.com` with `OPENAI_API_KEY` from the process environment) even when
+  extraction was pointed at another endpoint or credential. It also ignored
+  provider settings in `.env`, used Instructor's tool mode with Ollama models
+  that list tool support, and had no time limit of its own. It now reaches the
+  extraction `base_url` with the extraction `api_key` (or the provider's own
+  settings from the environment or `.env`, as extraction does), and returns no
+  alternate queries when a call takes longer than the extraction `timeout` (30
+  seconds by default). With Ollama it uses JSON mode and a reasoning effort of
+  `"none"`, as extraction does, and it passes the model on each call, which
+  Bedrock requires. Its other sampling is unchanged: the provider's default
+  temperature and two schema-validation retries. Each engine keeps its own
+  reformulation clients, so they are not reused on another event loop.
+- Extraction, answerability and reformulation now build their Instructor
+  clients in one place, `prme.model_runtime`. An Anthropic endpoint
+  (`base_url` or `ANTHROPIC_BASE_URL`) now works: Instructor 1.14 built
+  Anthropic clients without it and passed it to every call, which failed.
+- `ExtractionConfig.timeout` must now be a positive, finite number. Zero or a
+  negative value made every extraction time out.
 - Context ablation now keeps a compact or reader bundle's format and references
   instead of re-rendering the counterfactual as auditable JSON.
 - A text-bearing `PackingConfig.min_fidelity` (`full`, `prose` or
