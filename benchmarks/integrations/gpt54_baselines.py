@@ -50,7 +50,11 @@ question by question, so drift and the time of day reach both sides equally
 (#129). ``compare`` pairs a variant only with the defaults run answered
 alongside it. ``run-pair`` with the ``prme`` arm and no variant answers the
 baseline against itself: the A/A check of the paired test. A plain or
-full-context arm can be paired with the defaults the same way.
+full-context arm can be paired with the defaults the same way. The
+default-change rule reads only the 4K budget, so ``run-pair`` and ``compare``
+refuse the defaults or a variant prepared at any other budget or tokenizer, and
+``compare`` reports how many questions the two sides asked on different context
+text, from the hash of each row's context text (#125).
 
 The Ollama track answers under an amendment to the registered failure policy
 (#132, recorded in ``FAILURE_AMENDMENT``), so one looping reader answer or
@@ -183,6 +187,12 @@ BOOTSTRAP_SEED = 42
 # LoCoMo's questions come from 10 conversations, so its intervals resample conversations. Each LongMemEval-S
 # question has its own history, so its intervals resample questions.
 CONVERSATION_INTERVALS = frozenset({"locomo"})
+# The 4K budget the default-change rule in CLAUDE.md reads, as the registered run packed it: 4,096 tokens less the
+# 100 reserved, counted by its tokenizer. compare and run-pair refuse PRME's arms prepared any other way (#125).
+RULE_BUDGET = 3996
+RULE_TOKENIZER = "cl100k_base"
+# Reference points rather than PRME settings, which are paired with the defaults at any budget.
+REFERENCE_ARMS = frozenset(ARMS) - {"prme"}
 
 
 # Contexts ------------------------------------------------------------------
@@ -1229,6 +1239,9 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     # The A/A check reads one prepared arm on both sides, so it is loaded and checked once.
     prepared_arms = {arm: load_prepared(arm, benchmark, questions, data=data) for arm in dict.fromkeys(arms.values())}
     loaded = {side: prepared_arms[arm] for side, arm in arms.items()}
+    for side, (_, prepared, _) in loaded.items():
+        # compare would refuse the pair, so it is never answered (#125).
+        _check_rule_budget(f"The {side} arm", arms[side], prepared["context_budget"], prepared["tokenizer"])
     if sample is not None:
         questions = sample_questions(questions, sample)
     prepared_sha256 = {side: digest(folder / "prepared.json") for side, (folder, _, _) in loaded.items()}
@@ -1421,7 +1434,7 @@ def _prepared_summary(prepared: dict) -> dict:
     provenance = prepared.get("provenance") or {}
     return {"commit": provenance.get("commit"), "dirty": provenance.get("dirty"),
             "worktree_sha256": provenance.get("worktree_sha256"), "overrides": provenance.get("overrides", {}),
-            "context_rule": prepared["context_rule"],
+            "tokenizer": prepared.get("tokenizer"), "context_rule": prepared["context_rule"],
             "contexts_matching_saved_run": prepared.get("contexts_matching_saved_run")}
 
 
@@ -1429,19 +1442,70 @@ def _server_version(result: dict) -> str | None:
     return _version_of(result["answer_model"])
 
 
+def _check_rule_budget(label: str, arm: str, budget: int | None, tokenizer: str | None) -> None:
+    """Refuse an arm prepared outside the default-change rule's 4K budget, unless it is a reference arm (#125).
+
+    The rule in CLAUDE.md reads paired runs only at the 4K budget:
+    ``RULE_BUDGET`` tokens counted by ``RULE_TOKENIZER``, as the registered run
+    packed them. Only the plain and full-context reference arms, which are not
+    PRME settings, are paired with the defaults at any budget; PRME's defaults
+    and variants, and any arm name the harness does not make, are not. A
+    result published before its summary recorded the tokenizer (#125) names
+    none, and every such result used the registered one.
+    """
+    if arm in REFERENCE_ARMS:
+        return
+    if budget != RULE_BUDGET:
+        packed = "no context budget" if budget is None else f"a context budget of {budget!r} tokens"
+    elif tokenizer not in (None, RULE_TOKENIZER):
+        packed = f"its budget counted by the {tokenizer!r} tokenizer"
+    else:
+        return
+    raise ValueError(f"{label}, {arm}, was prepared with {packed}. The default-change rule in CLAUDE.md reads PRME's "
+                     f"arms only at the 4K budget ({RULE_BUDGET:,} {RULE_TOKENIZER} tokens), so compare refuses any "
+                     "other: prepare the variant without changing packing.token_budget, packing.overhead_tokens or "
+                     "packing.tokenizer (#125).")
+
+
+def _context_changes(before: dict, after: dict) -> dict:
+    """How many questions the two results asked on different context text (``differing``), and what shows it.
+
+    Each row's ``context_sha256`` covers the whole capture file, which
+    includes a random receipt id, so two preparations never share one. Rows
+    reported since #125 also carry ``context_text_sha256``, the hash of the
+    text alone, and when every row on both sides does, ``shown_by`` is
+    ``text hashes``. For results published before, the text is shown to be the
+    same only when both read ``one preparation``, or both preparations
+    reproduce the ``saved run``'s 2026-09-23 context on every question, which
+    holds only while the defaults still do; otherwise both values are None.
+    Both results must list the same questions in order, once each.
+    """
+    rows = [result["rows"] for result in (before, after)]
+    hashed = [[isinstance(row.get("context_text_sha256"), str) and bool(row["context_text_sha256"]) for row in side]
+              for side in rows]
+    if any(any(side) and not all(side) for side in hashed):
+        raise ValueError("A result has context text hashes on some of its rows only")
+    if all(map(all, hashed)):
+        return {"differing": sum(old["context_text_sha256"] != new["context_text_sha256"]
+                                 for old, new in zip(*rows, strict=True)), "shown_by": "text hashes"}
+    if before.get("prepared_sha256") is not None and before["prepared_sha256"] == after.get("prepared_sha256"):
+        return {"differing": 0, "shown_by": "one preparation"}
+    if all((result.get("prepared") or {}).get("contexts_matching_saved_run") == len(result["rows"])
+           for result in (before, after)):
+        return {"differing": 0, "shown_by": "saved run"}
+    return {"differing": None, "shown_by": None}
+
+
 def _same_inputs(before: dict, after: dict) -> bool:
     """Whether two results sent the reader and judge the same inputs: context text, budget, code and server.
 
-    A row's context hash covers the whole capture file, which includes a random
-    receipt id, so two preparations never share one (#125). The text is shown
-    to be the same when both preparations reproduce the saved 2026-09-23 run's
-    context on every question, which holds only while the defaults still do.
-    The modules that send, check and judge the calls must match too; this
-    module's own digest changes with every edit to it, so it is left out.
+    The context text must be shown to be the same on every question
+    (``_context_changes``). The modules that send, check and judge the calls
+    must match too; this module's own digest changes with every edit to it,
+    so it is left out.
     """
     return (before.get("context_budget") == after.get("context_budget")
-            and all((result.get("prepared") or {}).get("contexts_matching_saved_run") == len(result["rows"])
-                    for result in (before, after))
+            and _context_changes(before, after)["differing"] == 0
             and all(before.get("modules", {}).get(path) is not None
                     and before["modules"][path] == after.get("modules", {}).get(path) for path in ANSWER_MODULES)
             and _server_version(before) == _server_version(after))
@@ -1518,7 +1582,12 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
     Both results must have been answered under the same failure policy, and
     under the amended one (#132) neither may have more than
     ``UNSCORED_PERCENT`` of its questions truncated or without an accepted
-    verdict: such a pair is invalid.
+    verdict: such a pair is invalid. A result of PRME's arms, the defaults or
+    a variant, must have been prepared at the default-change rule's 4K budget
+    (``_check_rule_budget``); the plain and full-context reference arms
+    compare at any budget (#125). ``contexts`` reports how many questions the
+    two sides asked on different context text, and what shows it
+    (``_context_changes``).
     """
     for side, result in (("before", before), ("after", after)):
         if not result.get("complete") or "sample" in result or result.get("kind", "").endswith("-sample"):
@@ -1526,6 +1595,9 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
     for field in ("kind", "benchmark", "model", "registration_sha256"):
         if before.get(field) != after.get(field):
             raise ValueError(f"The results differ in {field}")
+    for side, result in (("before", before), ("after", after)):
+        _check_rule_budget(f"The {side} result", result["arm"], result.get("context_budget"),
+                           (result.get("prepared") or {}).get("tokenizer"))
     before_policy, after_policy = (_policy_of(result.get("answer_model") or {}) for result in (before, after))
     if before_policy != after_policy:
         raise ValueError(f"The results were answered under different failure policies ({before_policy or 'registered'}"
@@ -1554,6 +1626,8 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
         raise ValueError("The results were answered by different readers and judges, settings or model identities. "
                          "Pair a run only with a defaults run answered by the same model identity and settings.")
     old, new = ({row["question_id"]: row for row in result["rows"]} for result in (before, after))
+    if len(old) != len(before["rows"]) or len(new) != len(after["rows"]):
+        raise ValueError("A result lists a question more than once")
     if list(old) != list(new):
         raise ValueError("The results answer different questions")
     if before["rows"] == after["rows"]:
@@ -1582,15 +1656,24 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
 
     categories = sorted({row["question_type"] for row in old.values()})
     prepared = {side: result.get("prepared") or {} for side, result in (("before", before), ("after", after))}
-    same_contexts = pair is not None and before.get("prepared_sha256") == after.get("prepared_sha256")
+    contexts = _context_changes(before, after)
+    same_contexts = pair is not None and contexts["differing"] == 0
     repeat = both_baselines and (same_contexts or _same_inputs(before, after))
     if pair is None and before["kind"] == "ollama-answer-result" and not repeat:
         raise ValueError(unpaired)
     warnings = [f"The {side} contexts were prepared from a tree with uncommitted changes"
                 for side, value in prepared.items() if value.get("dirty")]
-    if prepared["before"].get("commit") != prepared["after"].get("commit") and not repeat:
+    if contexts["differing"] is None:
+        warnings.append("Nothing shows which questions the two sides asked on different context text: a result was "
+                        "published before rows carried text hashes (#125)")
+    # With the same text on every question, the code that built it changed nothing the reader saw.
+    if prepared["before"].get("commit") != prepared["after"].get("commit") and not repeat \
+            and contexts["differing"] != 0:
+        counted = "" if contexts["differing"] is None else (
+            f": {contexts['differing']} of {len(old)} questions read different context text, from the after side's "
+            "settings and from any other change between the commits")
         warnings.append("The contexts were prepared from different commits, so code changes are part of the "
-                        "difference")
+                        f"difference{counted}")
     if known and None in versions:
         warnings.append("The Ollama server version was not recorded at every start of these runs")
     if both_baselines and not repeat:
@@ -1615,6 +1698,12 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
         "failure_policy": None if outcomes is None else {
             "id": before_policy, "sha256": before["failure_policy"]["sha256"], **outcomes},
         "prepared": prepared, "warnings": warnings,
+        "contexts": {"questions": len(old), **contexts,
+                     "note": "differing counts the questions the two sides asked on different context text. "
+                             "shown_by names what shows it: each row's context_text_sha256 (text hashes), or, for "
+                             "results published before rows carried it (#125), both results reading one "
+                             "preparation or both reproducing every saved 2026-09-23 context (saved run). Both are "
+                             "None when nothing shows it."},
         "accuracy": accuracy,
         "categories": {category: paired([key for key, row in old.items() if row["question_type"] == category])
                        for category in categories},
@@ -1770,21 +1859,30 @@ def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepar
     return result
 
 
-def _row(question: dict, entry: dict, scored: dict) -> dict:
-    """A question's result row: the question, the context it was asked on, and how its answer was scored."""
+def _row(question: dict, entry: dict, scored: dict, *, reported: bool = False) -> dict:
+    """A question's result row: the question, the context it was asked on, and how its answer was scored.
+
+    ``context_sha256`` is the capture file's hash, which covers the retrieval
+    receipt's random request id. A ``reported`` row also carries
+    ``context_text_sha256``, the hash of the text alone (#125); the attempt's
+    own record does not, so answers recorded before it still verify.
+    """
+    text = {"context_text_sha256": entry["text_sha256"]} if reported else {}
     # "correct" stays where rows have always had it; the scoring's own fields follow.
     return {"question_id": question["question_id"], "question_type": question["question_type"],
             "cluster": question.get("conversation_id") or sha(question["haystack_sessions"]),
-            "correct": scored["correct"], "context_sha256": entry["sha256"], "context_tokens": entry["context_tokens"],
-            "retrieval_seconds": entry["retrieval_seconds"], **scored}
+            "correct": scored["correct"], "context_sha256": entry["sha256"], **text,
+            "context_tokens": entry["context_tokens"], "retrieval_seconds": entry["retrieval_seconds"], **scored}
 
 
 def _verified_row(verify, tally, benchmark: str, question: dict, folder: Path, prepared: dict, entry: dict,
                   attempt: Path, usage: dict, *, amended: bool = False) -> dict:
-    """The attempt's result row, after checking it against its context, calls and verdict.
+    """The attempt's result row, after checking it against its context, calls and verdict, as reported.
 
     With ``amended``, every call the amended failure policy made is checked,
     retries and truncated answers included, and so is the order they came in.
+    The reported row adds the context text's hash, which ``_context`` has
+    just checked (#125), so answers recorded before it gain it too.
     """
     qid = question["question_id"]
     row = json.loads((attempt / "result.json").read_text())
@@ -1812,7 +1910,7 @@ def _verified_row(verify, tally, benchmark: str, question: dict, folder: Path, p
         usage["successful_calls"] += 1
         usage["http_attempts"] += value["attempts"]
         usage["http_status_counts"].update(value["verified_http_statuses"])
-    return row
+    return _row(question, entry, scored, reported=True)
 
 
 def _tally_gpt54(usage: dict, response: dict) -> None:
@@ -1953,7 +2051,8 @@ def main(argv: list[str] | None = None) -> None:
                         help="Saved 2026-09-23 run archive (default: the main checkout's data/gpt54-comparison-v1)")
     parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
                         help="prepare only: packing.token_budget or packing.overhead_tokens for a plain arm, or "
-                             "the settings a prme variant changes (any the evidence gate accepts)")
+                             "the settings a prme variant changes (any the evidence gate accepts). run-pair and "
+                             "compare refuse a prme variant that changes the 4K budget or its tokenizer (#125).")
     parser.add_argument("--max-usd", type=float,
                         help="run on the openai provider only: the owner-approved spending cap for this arm")
     parser.add_argument("--sample", type=int, metavar="N",

@@ -627,7 +627,7 @@ async def test_ollama_run_never_builds_a_paid_client_and_records_the_reader_and_
     provenance = json.loads((arm_folder(harness) / "prepared.json").read_text())["provenance"]
     assert result["prepared"] == {"commit": provenance["commit"], "dirty": provenance["dirty"],
                                   "worktree_sha256": provenance["worktree_sha256"], "overrides": {},
-                                  "context_rule": "The whole conversation; no budget.",
+                                  "tokenizer": "cl100k_base", "context_rule": "The whole conversation; no budget.",
                                   "contexts_matching_saved_run": None}
     tokens = result["provider_tokens"]
     assert (tokens["input_tokens"], tokens["cached_input_tokens"], tokens["output_tokens"],
@@ -851,36 +851,67 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     assert variant["provenance"]["overrides"] == budget
     context = baselines._context(folder, prepared["contexts"][0])
     assert count_tokens(context) == prepared["contexts"][0]["context_tokens"] <= 3996
+    # A variant that keeps the 4K budget, which the default-change rule reads (#125).
+    fusion = gate.parse_overrides(['scoring.fusion="rrf"'])
+    kept = await asyncio.to_thread(baselines.prepare, "prme-rrf", "locomo", data=harness["data"],
+                                   archive=harness["archive"], overrides=fusion)
+    assert kept["context_budget"] == baselines.RULE_BUDGET and kept["tokenizer"] == baselines.RULE_TOKENIZER
     requests = ollama_provider(monkeypatch)
     await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
     requests.clear()
     # A variant is never answered on its own: only alongside a fresh run of the defaults.
     with pytest.raises(ValueError, match="use run-pair"):
-        await run_ollama(harness, "prme-small")
+        await run_ollama(harness, "prme-rrf")
     with pytest.raises(ValueError, match="use run-pair"):
-        await run_ollama(harness, "prme-small", sample=1)
+        await run_ollama(harness, "prme-rrf", sample=1)
     assert requests == []
     # A baseline is recorded by its own answer run before any pair uses it.
     with pytest.raises(ValueError, match="no complete answer run of its own"):
-        await run_pair(harness, "prme", "prme-small")
+        await run_pair(harness, "prme", "prme-rrf")
     await run_ollama(harness, "prme")
     requests.clear()
-    paired = await run_pair(harness, "prme", "prme-small")
+    # compare would refuse a variant that changes the budget, so it is never answered, and no pair is opened.
+    with pytest.raises(ValueError, match=r"The after arm, prme-small, was prepared with a context budget of 1948 "
+                                         r"tokens\. The default-change rule in CLAUDE\.md reads PRME's arms only at "
+                                         r"the 4K budget \(3,996 cl100k_base tokens\)"):
+        await run_pair(harness, "prme", "prme-small")
+    assert requests == [] and not (harness["data"] / "pairs" / "prme" / "prme-small").exists()
+    paired = await run_pair(harness, "prme", "prme-rrf")
     before, after = paired["before"], paired["after"]
     # The first request is the variant's reader, on the variant's own context.
     assert before["complete"] and after["complete"] and requests[0][1]["messages"][0]["content"] == \
         study.reader_prompt("locomo", study.question_rows("locomo")[0],
-                            baselines._context(arm_folder(harness, "prme-small"), variant["contexts"][0]))
-    assert pair_published(harness, "prme", "prme-small")
+                            baselines._context(arm_folder(harness, "prme-rrf"), kept["contexts"][0]))
+    [published_before, published_after] = pair_published(harness, "prme", "prme-rrf")
+    # Each gate replay's capture holds a new receipt id, so no capture hash is shared. Every row, private and
+    # published, also carries the hash of the context text alone, next to the capture's (#125).
+    for result, entries in ((before, prepared["contexts"]), (after, kept["contexts"])):
+        assert [row["context_text_sha256"] for row in result["rows"]] == [entry["text_sha256"] for entry in entries]
+        assert list(result["rows"][0])[4:7] == ["context_sha256", "context_text_sha256", "context_tokens"]
+    assert published_before["rows"] == before["rows"] and published_after["rows"] == after["rows"]
+    assert all(old["context_sha256"] != new["context_sha256"] for old, new in zip(before["rows"], after["rows"]))
+    differing = sum(old["text_sha256"] != new["text_sha256"]
+                    for old, new in zip(prepared["contexts"], kept["contexts"]))
     # Whether this test's own tree is committed does not matter here.
     before, after = ({**result, "prepared": {**result["prepared"], "dirty": False}} for result in (before, after))
     comparison = baselines.compare(before, after)
-    assert comparison["arms"] == {"before": "prme", "after": "prme-small"} and comparison["warnings"] == []
+    assert comparison["arms"] == {"before": "prme", "after": "prme-rrf"} and comparison["warnings"] == []
     assert comparison["pair"]["number"] == 1 and comparison["repeat"] is None
+    assert {key: value for key, value in comparison["contexts"].items() if key != "note"} == {
+        "questions": 2, "differing": differing, "shown_by": "text hashes"}
+    assert comparison["prepared"]["after"]["tokenizer"] == baselines.RULE_TOKENIZER
+    # Another commit's contexts are flagged only when some context text differs, and the flag counts them.
     moved = {**after, "prepared": {**after["prepared"], "commit": "0" * 40, "dirty": True}}
-    assert len(baselines.compare(before, moved)["warnings"]) == 2
+    warnings = baselines.compare(before, moved)["warnings"]
+    assert any("uncommitted changes" in warning for warning in warnings)
+    assert any("different commits" in warning for warning in warnings) is (differing > 0)
     assert comparison["accuracy"]["delta"] == 0 and comparison["gained"] == comparison["lost"] == []
-    assert comparison["prepared"]["after"]["overrides"] == budget
+    assert comparison["prepared"]["after"]["overrides"] == fusion
+    # A result relabeled with another budget or tokenizer is refused too.
+    with pytest.raises(ValueError, match=r"after result, prme-rrf, was prepared with a context budget of 1948"):
+        baselines.compare(before, {**after, "context_budget": 1948})
+    with pytest.raises(ValueError, match=r"prepared with its budget counted by the 'o200k_base' tokenizer"):
+        baselines.compare(before, {**after, "prepared": {**after["prepared"], "tokenizer": "o200k_base"}})
     with pytest.raises(ValueError, match="different readers and judges"):
         baselines.compare(before, {**after, "answer_model": {**after["answer_model"], "seed": 1}})
     with pytest.raises(ValueError, match="different questions"):
@@ -943,10 +974,18 @@ async def test_a_later_defaults_baseline_is_filed_under_its_commit_and_leaves_th
     assert ollama_published(harness, arm) and ollama_published(harness, "prme")
     # The first baseline's record is untouched, and a variant pairs with the later baseline as usual.
     assert digest(first_log) == recorded and "new_baseline" not in before["run_log"]
-    # These test cases name no saved context, so nothing shows the two baselines read the same text, and two
-    # baselines answered on their own are compared only as a repeat.
+    # These test cases name no saved context, so matching the saved run shows nothing, but the rows' text hashes
+    # show both baselines read the same text, so two baselines answered on their own compare as a repeat (#125).
+    assert before["prepared"]["contexts_matching_saved_run"] == after["prepared"]["contexts_matching_saved_run"] == 0
+    repeat = baselines.compare(before, after)
+    assert repeat["repeat"] is not None and repeat["contexts"]["shown_by"] == "text hashes"
+    assert repeat["contexts"]["differing"] == 0
+    assert [row["context_sha256"] for row in before["rows"]] != [row["context_sha256"] for row in after["rows"]]
+    # Without the text hashes, as in results published before them, nothing shows it and they are refused.
+    legacy = [{**result, "rows": [{key: value for key, value in row.items() if key != "context_text_sha256"}
+                                  for row in result["rows"]]} for result in (before, after)]
     with pytest.raises(ValueError, match="alongside it in one pair"):
-        baselines.compare(before, after)
+        baselines.compare(*legacy)
     # Neither baseline is prepared again, so each commit keeps one baseline.
     for name in ("prme", arm):
         shutil.rmtree(arm_folder(harness, name))
@@ -1186,15 +1225,21 @@ def test_cli_calibrate_and_compare(monkeypatch, tmp_path, capsys):
 
 
 def answer_result(arm: str, verdicts: list[bool], *, commit: str = "a" * 40, matching: int | None = None,
-                  budget: int = 3996, identity: dict | None = None, modules: dict | None = None) -> dict:
-    """A complete Ollama answer result with one row per verdict, as compare() reads it."""
+                  budget: int | None = baselines.RULE_BUDGET, identity: dict | None = None, modules: dict | None = None,
+                  texts: list[str] | None = None) -> dict:
+    """A complete Ollama answer result with one row per verdict, as compare() reads it.
+
+    ``texts`` gives each row's context text hash; without it the rows have none, as before #125.
+    """
     rows = [{"question_id": f"q{number}", "question_type": "single-hop", "cluster": f"conv-{number % 2}",
              "correct": verdict, "reader_sha256": f"{arm}-{number}"} for number, verdict in enumerate(verdicts)]
+    for row, text in (zip(rows, texts, strict=True) if texts is not None else ()):
+        row["context_text_sha256"] = text
     return {"kind": "ollama-answer-result", "arm": arm, "benchmark": "locomo", "model": OLLAMA_MODEL.model,
             "registration_sha256": "r" * 64, "complete": True, "context_budget": budget,
             "answer_model": {**OLLAMA_MODEL.settings(), "identity": IDENTITY if identity is None else identity},
             "modules": {path: "m" * 64 for path in baselines.ANSWER_MODULES} if modules is None else modules,
-            "rows": rows, "prepared": {"commit": commit, "dirty": False, "overrides": {},
+            "rows": rows, "prepared": {"commit": commit, "dirty": False, "overrides": {}, "tokenizer": "cl100k_base",
                                        "contexts_matching_saved_run": len(rows) if matching is None else matching}}
 
 
@@ -1219,7 +1264,6 @@ def test_two_baselines_answered_on_their_own_are_compared_only_as_a_repeat_with_
     modules = {path: "m" * 64 for path in baselines.ANSWER_MODULES}
     moved_code = {**modules, "benchmarks/integrations/ollama_answers.py": "n" * 64}
     for after in (answer_result("prme@0123abcd", [False, False], commit="b" * 40, matching=1),
-                  answer_result("prme@0123abcd", [False, False], commit="b" * 40, budget=2048),
                   answer_result("prme@0123abcd", [False, False], commit="b" * 40, modules=moved_code),
                   answer_result("prme@0123abcd", [False, False], commit="b" * 40, modules={})):
         with pytest.raises(ValueError, match="alongside it in one pair"):
@@ -1227,6 +1271,122 @@ def test_two_baselines_answered_on_their_own_are_compared_only_as_a_repeat_with_
     # A variant answered on its own is never paired with the defaults (#129).
     with pytest.raises(ValueError, match="alongside it in one pair"):
         baselines.compare(first, answer_result("prme-rrf", [False, False]))
+
+
+def one_pair(before: dict, after: dict) -> tuple[dict, dict]:
+    """Two results marked as the sides of one run-pair pair."""
+    mark = {"id": "p", "number": 1, "before": before["arm"], "after": after["arm"], "sha256": "s"}
+    return {**before, "pair": {**mark, "side": "before"}}, {**after, "pair": {**mark, "side": "after"}}
+
+
+def test_the_rules_budget_is_the_registered_runs_context_ceiling():
+    # The 4K budget of the default-change rule: the registered run's 4,096 tokens less the 100 reserved.
+    packing = json.loads(study.REG.read_text())["defaults"]["packing"]
+    assert packing["token_budget"] - packing["overhead_tokens"] == baselines.RULE_BUDGET
+    assert packing["tokenizer"] == baselines.RULE_TOKENIZER
+    assert baselines.REFERENCE_ARMS == {"full-context", "plain-vector", "plain-bm25", "plain-rrf"}
+
+
+def test_compare_reads_the_defaults_and_their_variants_only_at_the_rules_4k_budget():
+    # A variant pair at the 4K budget is compared.
+    assert baselines.compare(*one_pair(answer_result("prme", [True, False]),
+                                       answer_result("prme-rrf", [True, True])))["arms"]["after"] == "prme-rrf"
+    # A variant that changes the budget, on either side of a pair, is refused, and so is a repeat outside it (#125).
+    for before, after, side, arm, packed in (
+            (answer_result("prme", [True, False]), answer_result("prme-wide", [True, True], budget=8092),
+             "after", "prme-wide", "a context budget of 8092 tokens"),
+            (answer_result("prme", [True, False], budget=1948), answer_result("prme-rrf", [True, True]),
+             "before", "prme", "a context budget of 1948 tokens"),
+            (answer_result("prme", [True, False]), answer_result("prme-none", [True, True], budget=None),
+             "after", "prme-none", "no context budget")):
+        with pytest.raises(ValueError, match=rf"The {side} result, {arm}, was prepared with {packed}\. The "
+                                             r"default-change rule in CLAUDE\.md reads PRME's arms only at the 4K "
+                                             r"budget \(3,996 cl100k_base tokens\)"):
+            baselines.compare(*one_pair(before, after))
+    with pytest.raises(ValueError, match="prme@0123abcd, was prepared with a context budget of 2048 tokens"):
+        baselines.compare(answer_result("prme", [True, False]),
+                          answer_result("prme@0123abcd", [False, False], commit="b" * 40, budget=2048))
+    # The same budget counted by another tokenizer is another budget. A result published before its summary named
+    # the tokenizer used the registered one.
+    other = answer_result("prme-rrf", [True, True])
+    other["prepared"]["tokenizer"] = "o200k_base"
+    with pytest.raises(ValueError, match="The after result, prme-rrf, was prepared with its budget counted by the "
+                                         "'o200k_base' tokenizer"):
+        baselines.compare(*one_pair(answer_result("prme", [True, False]), other))
+    other["prepared"]["tokenizer"] = baselines.RULE_TOKENIZER
+    assert baselines.compare(*one_pair(answer_result("prme", [True, False]), other))["contexts"]["differing"] == 0
+    # The plain and full-context arms are reference points, not defaults, and are paired with the defaults at any
+    # budget; an arm name the harness never makes is not one of them.
+    for reference, budget in (("full-context", None), ("plain-rrf", 8092)):
+        comparison = baselines.compare(*one_pair(answer_result("prme", [True, False]),
+                                                 answer_result(reference, [True, True], budget=budget)))
+        assert comparison["arms"] == {"before": "prme", "after": reference}
+    for unknown in ("prme_wide", "PRME-wide", "wide"):
+        with pytest.raises(ValueError, match=f"The after result, {unknown}, was prepared with a context budget"):
+            baselines.compare(*one_pair(answer_result("prme", [True, False]),
+                                        answer_result(unknown, [True, True], budget=8092)))
+
+
+def test_compare_reports_how_many_questions_each_side_asked_on_different_context_text():
+    texts = ["t0", "t1", "t2", "t3"]
+    before = answer_result("prme", [True, True, False, False], texts=texts)
+    after = answer_result("prme-rrf", [True, False, True, False], texts=["t0", "x1", "t2", "x3"])
+    comparison = baselines.compare(*one_pair(before, after))
+    assert {key: value for key, value in comparison["contexts"].items() if key != "note"} == {
+        "questions": 4, "differing": 2, "shown_by": "text hashes"}
+    assert comparison["warnings"] == []
+    # Contexts from another commit are flagged with how many questions read different text.
+    moved = {**after, "prepared": {**after["prepared"], "commit": "b" * 40}}
+    assert baselines.compare(*one_pair(before, moved))["warnings"] == [
+        "The contexts were prepared from different commits, so code changes are part of the difference: 2 of 4 "
+        "questions read different context text, from the after side's settings and from any other change between "
+        "the commits"]
+    # With the same text on every question, the commits that built it changed nothing the reader saw.
+    same = answer_result("prme-rrf", [True, False, True, False], commit="b" * 40, texts=texts)
+    assert baselines.compare(*one_pair(before, same))["warnings"] == []
+    # Results published before the text hashes (#125), on either side, show the same text only when both read one
+    # preparation or both reproduce every saved context; otherwise nothing shows it, and compare says so.
+    legacy = answer_result("prme-rrf", [True, False, True, False], matching=3)
+    unknown = baselines.compare(*one_pair(before, legacy))
+    assert (unknown["contexts"]["differing"], unknown["contexts"]["shown_by"]) == (None, None)
+    assert unknown["warnings"] == ["Nothing shows which questions the two sides asked on different context text: a "
+                                   "result was published before rows carried text hashes (#125)"]
+    moved = {**legacy, "prepared": {**legacy["prepared"], "commit": "b" * 40}}
+    assert baselines.compare(*one_pair(before, moved))["warnings"][1] == (
+        "The contexts were prepared from different commits, so code changes are part of the difference")
+    shared = {**legacy, "prepared_sha256": "p" * 64}
+    assert baselines.compare(*one_pair({**before, "prepared_sha256": "p" * 64}, shared))["contexts"] == {
+        **comparison["contexts"], "differing": 0, "shown_by": "one preparation"}
+    reproduced = answer_result("prme-rrf", [True, False, True, False])
+    assert baselines.compare(*one_pair(before, reproduced))["contexts"]["shown_by"] == "saved run"
+    # Hashes that are missing or empty on every row show nothing; on some rows only, the result is refused.
+    for blank in (None, ""):
+        empty = answer_result("prme-rrf", [True, False, True, False], matching=3, texts=[blank] * 4)
+        assert baselines.compare(*one_pair(answer_result("prme", [True, True, False, False], matching=3,
+                                                         texts=[blank] * 4), empty))["contexts"]["differing"] is None
+    partly = answer_result("prme-rrf", [True, False, True, False], texts=[*texts[:3], None])
+    with pytest.raises(ValueError, match="context text hashes on some of its rows only"):
+        baselines.compare(*one_pair(before, partly))
+    # A question listed twice would pair the wrong rows.
+    doubled = {**after, "rows": [after["rows"][0], *after["rows"]]}
+    doubled["rows"][1] = {**doubled["rows"][1], "reader_sha256": "other"}
+    with pytest.raises(ValueError, match="lists a question more than once"):
+        baselines.compare(*one_pair({**before, "rows": [before["rows"][0], *before["rows"]]}, doubled))
+
+
+def test_two_baselines_that_no_longer_reproduce_the_saved_run_are_a_repeat_when_their_texts_match():
+    # After a default changes, no preparation reproduces the saved run, and the text hashes show the same inputs.
+    texts = ["t0", "t1", "t2", "t3"]
+    first = answer_result("prme", [True, True, False, False], matching=0, texts=texts)
+    again = answer_result("prme@0123abcd", [True, False, True, False], commit="b" * 40, matching=0, texts=texts)
+    comparison = baselines.compare(first, again)
+    assert comparison["repeat"] is not None and comparison["warnings"] == []
+    assert (comparison["contexts"]["differing"], comparison["contexts"]["shown_by"]) == (0, "text hashes")
+    # One question asked on other text is not a repeat, and two baselines answered on their own are then refused.
+    moved = answer_result("prme@0123abcd", [True, False, True, False], commit="b" * 40, matching=0,
+                          texts=[*texts[:3], "x3"])
+    with pytest.raises(ValueError, match="alongside it in one pair"):
+        baselines.compare(first, moved)
 
 
 def test_compare_refuses_the_same_answer_run_on_both_sides():
@@ -1305,6 +1465,9 @@ def test_the_published_repeat_of_the_defaults_is_the_run_to_run_floor_in_benchma
     comparison = baselines.compare(first, again)
     assert comparison["warnings"] == [] and comparison["repeat"] is not None
     assert comparison["repeat"]["interleaved"] is False and comparison["server_versions"] == ["0.34.3"]
+    # Published before the rows carried text hashes (#125), so the saved-run match is what shows the same text.
+    assert "context_text_sha256" not in first["rows"][0]
+    assert (comparison["contexts"]["differing"], comparison["contexts"]["shown_by"]) == (0, "saved run")
     # BENCHMARKS.md quotes these intervals: LoCoMo's 10 conversations, and LongMemEval-S's questions.
     accuracy = comparison["accuracy"]
     if benchmark == "locomo":
@@ -1372,6 +1535,7 @@ def test_the_published_interleaved_aa_pairs_hold_the_check_in_benchmarks_md(
     comparison = baselines.compare(before, after)
     assert comparison["warnings"] == [] and comparison["server_versions"] == ["0.34.3"]
     assert comparison["repeat"]["interleaved"] is True
+    assert (comparison["contexts"]["differing"], comparison["contexts"]["shown_by"]) == (0, "one preparation")
     # compare() counts each side's retries and unscored questions again from its rows.
     assert comparison["failure_policy"]["before"] == comparison["failure_policy"]["after"] == NOTHING_UNSCORED
     # BENCHMARKS.md and CLAUDE.md quote these intervals: LoCoMo's 10 conversations, and LongMemEval-S's questions.
@@ -1502,7 +1666,7 @@ async def test_a_pair_answers_the_variant_and_a_fresh_defaults_run_interleaved_i
     baselines.prepare("full-context", "locomo", data=harness["data"])
     alone = await run_ollama(harness)
     with pytest.raises(ValueError, match="Only one of these results"):
-        baselines.compare({**alone, "arm": "prme"}, after)
+        baselines.compare({**alone, "arm": "prme", "context_budget": baselines.RULE_BUDGET}, after)
 
 
 async def test_run_pair_resumes_an_unfinished_pair_and_starts_the_next_after_a_complete_one(harness, monkeypatch):
@@ -1723,8 +1887,7 @@ def test_locomo_intervals_resample_conversations_and_longmemeval_intervals_resam
     for result in (before, after):
         for number, row in enumerate(result["rows"]):
             row["cluster"] = f"conv-{number // 4}"
-    after["pair"] = {"id": "p", "number": 1, "before": "prme", "after": "prme", "sha256": "s", "side": "after"}
-    before["pair"] = {**after["pair"], "side": "before"}
+    before, after = one_pair(before, after)
     locomo = baselines.compare(before, after)
     assert locomo["interval_unit"] == "conversations and questions" and locomo["accuracy"]["groups"] == 3
     assert locomo["accuracy"]["interval_95_questions"][0] > 0 and locomo["accuracy"]["interval_95_conversations"][0] == 0
@@ -1818,8 +1981,7 @@ def test_a_locomo_difference_excludes_zero_only_when_both_its_intervals_do():
     for result in (before, after):
         for number, row in enumerate(result["rows"]):
             row["cluster"] = f"conv-{number // 4}"
-    after["pair"] = {"id": "p", "number": 1, "before": "prme", "after": "prme", "sha256": "s", "side": "after"}
-    before["pair"] = {**after["pair"], "side": "before"}
+    before, after = one_pair(before, after)
     accuracy = baselines.compare(before, after)["accuracy"]
     assert accuracy["interval_95_conversations"][0] > 0 and accuracy["interval_95_questions"][0] > 0
     assert accuracy["interval_95"] == [min(accuracy["interval_95_conversations"][0], accuracy["interval_95_questions"][0]),
@@ -2098,8 +2260,10 @@ async def test_answers_given_before_the_amendment_keep_the_registered_rules(harn
     replayed = baselines.report("full-context", "locomo", folder, questions, prepared, entries, None,
                                 model=OLLAMA_MODEL)
     assert replayed["completed"] == 1 and "failure_policy" not in replayed
-    assert set(replayed["rows"][0]) == {"question_id", "question_type", "cluster", "correct", "context_sha256",
-                                        "context_tokens", "retrieval_seconds", "reader_sha256", "judge_sha256"}
+    # The reported row adds the context text's hash next to the capture's; the attempt's record does not (#125).
+    assert list(replayed["rows"][0]) == ["question_id", "question_type", "cluster", "correct", "context_sha256",
+                                         "context_text_sha256", "context_tokens", "retrieval_seconds",
+                                         "reader_sha256", "judge_sha256"]
     # Answering the rest under the amendment would mix two policies in one arm.
     with pytest.raises(ValueError, match="answered under another failure policy"):
         await run_ollama(harness)

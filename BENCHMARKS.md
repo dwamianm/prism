@@ -254,7 +254,10 @@ with another DeepSeek score from the same model identity and settings:
    If it no longer reproduces every saved context, the pairing also measures
    other code changes. A later baseline, recorded after a default changed, no
    longer matches the saved run, so prepare its variants at the baseline's own
-   commit where possible (#125).
+   commit where possible. `compare` reports how many questions the variant
+   asked on different context text from the baseline (#125). That count covers
+   both the variant's settings and any other code change between the two
+   commits, so it does not replace the gate run on the defaults.
 3. A default changes only when the default-change rule in the epic #77 work
    rules in `CLAUDE.md` is met. That rule includes a confirmation run: run
    `run-pair` again for the same variant, which starts a new pair with a fresh
@@ -467,7 +470,22 @@ registered, which only a checkout without #132 produces (#132). Its
 also refuses any pairing other than the
 two sides of one `run-pair` pair, with the defaults as `--before`, or a repeat
 (below), and it refuses results whose recorded Ollama server versions differ
-(#129). It reports the paired accuracy difference with a 95% interval, per
+(#129). The default-change rule reads only the 4K budget, so `run-pair` and
+`compare` refuse the defaults or a variant prepared with any context budget
+other than 3,996 tokens, counted by the registered `cl100k_base` tokenizer; the
+plain and full-context reference arms are paired with the defaults at any
+budget (#125). A variant that changes the budget can still be prepared, so the
+evidence gate can measure it. Each row published since #125 carries two
+hashes: `context_sha256` covers the whole capture file, including the retrieval
+receipt's random request id, so two preparations of the same contexts never
+share one, and `context_text_sha256` covers the context text alone.
+`compare`'s `contexts` block reports how many questions the two sides asked on
+different context text (`differing`) and what shows it (`shown_by`): the rows'
+text hashes, or, for results published before them, both results reading one
+preparation or both reproducing every saved context. Both are `null`, with a
+warning, when nothing shows it. The warning about contexts prepared from
+different commits gives that count, and is left out when every context text is
+the same. `compare` reports the paired accuracy difference with a 95% interval, per
 category as well, and the questions gained and lost. LoCoMo intervals resample
 its 10 conversations, keeping each conversation's questions together;
 LongMemEval-S intervals resample questions, because each question has its own
@@ -484,13 +502,13 @@ baselines of the defaults with the same inputs,
 interval excludes zero, and whether the two were answered as one interleaved
 pair. The two sides of an A/A pair read the same prepared contexts. Two
 baselines answered on their own have the same inputs when they have the same
-budget, both preparations reproduce the saved 2026-09-23 context on every
-question (so the context text is the same), and they used the same code for
-sending, checking and judging the calls and the same Ollama server version;
-that sequential repeat is still accepted so the #118 measurement can be
-checked. The saved-run check works only while the defaults reproduce the saved
-run; after a default changes, a repeat needs per-question text hashes in the
-results (#125).
+budget, the same context text on every question, and they used the same code
+for sending, checking and judging the calls and the same Ollama server
+version; that sequential repeat is still accepted so the #118 measurement can
+be checked. The rows' text hashes show the same text. Results published before
+rows carried them (#125), such as the #118 repeat, show it only when both
+preparations reproduce the saved 2026-09-23 context on every question, which
+holds only while the defaults still do.
 
 | DeepSeek run | LongMemEval-S | LoCoMo | Context |
 |---|---:|---:|---|
