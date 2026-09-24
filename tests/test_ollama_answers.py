@@ -159,6 +159,71 @@ async def test_a_truncated_answer_is_final_and_not_retried(tmp_path):
     assert len(requests) == 1
 
 
+async def test_a_truncated_answer_is_recorded_as_truncated_only_for_a_caller_that_takes_it(tmp_path):
+    client, requests = mock_client(httpx.Response(503, json={"error": "busy"}),
+                                   httpx.Response(200, json=completion("Step 1. Step 1.", finish="length")))
+    path = tmp_path / "reader.json"
+    async with client:
+        result = await ollama.call(client, asyncio.Semaphore(1), MODEL, "Question?", READER_LIMIT, path,
+                                   truncated_ok=True)
+    # A truncated response is still one request: HTTP attempts are retried only for transient statuses.
+    assert len(requests) == 2 and result["attempts"] == 2
+    assert result["truncated"] is True and result["text"] == "Step 1. Step 1."
+    assert json.loads(path.read_text()) == result
+    verified = ollama.verify_call(path, "Question?", READER_LIMIT, model=MODEL, truncated_ok=True)
+    assert verified["verified_http_statuses"] == ["503", "200"]
+    # A verifier that does not take truncated answers refuses the record.
+    with pytest.raises(ValueError, match="Incomplete"):
+        ollama.verify_call(path, "Question?", READER_LIMIT, model=MODEL)
+    # The truncated mark must be what the response gives: a whole answer is never recorded as truncated, and a
+    # truncated one never passes as whole.
+    value = json.loads(path.read_text())
+    for tampered in ({key: item for key, item in value.items() if key != "truncated"}, {**value, "truncated": 1}):
+        path.write_text(json.dumps(tampered))
+        with pytest.raises(ValueError, match="binding differs"):
+            ollama.verify_call(path, "Question?", READER_LIMIT, model=MODEL, truncated_ok=True)
+    client, _ = mock_client(httpx.Response(200, json=completion("yes")))
+    whole = tmp_path / "judge.json"
+    async with client:
+        answer = await ollama.call(client, asyncio.Semaphore(1), MODEL, "Correct?", JUDGE_LIMIT, whole,
+                                   truncated_ok=True)
+    assert "truncated" not in answer and answer["text"] == "yes"
+    for mark in (True, 1, False):
+        whole.write_text(json.dumps({**answer, "truncated": mark}))
+        with pytest.raises(ValueError, match="binding differs"):
+            ollama.verify_call(whole, "Correct?", JUDGE_LIMIT, model=MODEL, truncated_ok=True)
+
+
+async def test_an_empty_answer_is_recorded_only_for_a_caller_that_takes_it(tmp_path):
+    client, _ = mock_client(httpx.Response(200, json=completion("  ")), httpx.Response(200, json=completion(None)))
+    async with client:
+        with pytest.raises(ValueError, match="Missing answer text"):
+            await ollama.call(client, asyncio.Semaphore(1), MODEL, "Correct?", JUDGE_LIMIT, tmp_path / "judge.json")
+        empty = await ollama.call(client, asyncio.Semaphore(1), MODEL, "Correct?", JUDGE_LIMIT,
+                                  tmp_path / "judge-retry.json", empty_ok=True)
+    assert empty["text"] == "" and "truncated" not in empty
+    assert ollama.verify_call(tmp_path / "judge-retry.json", "Correct?", JUDGE_LIMIT, model=MODEL,
+                              empty_ok=True)["text"] == ""
+    with pytest.raises(ValueError, match="Missing answer text"):
+        ollama.verify_call(tmp_path / "judge-retry.json", "Correct?", JUDGE_LIMIT, model=MODEL)
+
+
+def test_answer_record_is_what_a_response_answered():
+    assert ollama.answer_record(completion("  Step 1.\n", finish="length"), MODEL, truncated_ok=True) == {
+        "text": "Step 1.", "truncated": True}
+    # A response cut off before any text still ended early, with nothing said.
+    assert ollama.answer_record(completion(None, finish="length"), MODEL, truncated_ok=True) == {
+        "text": "", "truncated": True}
+    assert ollama.answer_record(completion(" yes "), MODEL, truncated_ok=True, empty_ok=True) == {"text": "yes"}
+    for body in (completion(model="qwen3.5:9b", finish="length"), completion(finish="length", usage={"prompt_tokens": 1}),
+                 completion(finish=None), completion(["a", "list"], finish="length")):
+        with pytest.raises(ValueError):
+            ollama.answer_record(body, MODEL, truncated_ok=True, empty_ok=True)
+    # A response without a finish reason is malformed, not truncated.
+    with pytest.raises(ValueError, match="Incomplete"):
+        ollama.response_text(completion(finish=None), MODEL)
+
+
 def _edit(path, change):
     value = json.loads(path.read_text())
     change(value)

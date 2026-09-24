@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import fcntl
+from functools import partial
 import hashlib
 import json
 from pathlib import Path
@@ -92,8 +93,19 @@ def harness(tmp_path, monkeypatch):
     (archive / "authored-calibration").mkdir(parents=True)
     (archive / "authored-calibration/result.json").write_text(
         json.dumps({"complete": True, "registration_sha256": digest(reg)}))
+    monkeypatch.setattr(baselines, "FAILURE_AMENDMENT", public / "ollama-failure-policy-amendment.json")
+    amend_registration(reg)
     return {"root": tmp_path, "registration": registration, "reg": reg, "data": tmp_path / "data",
             "results": tmp_path / "results", "archive": archive}
+
+
+RECORDED_AMENDMENT = baselines.FAILURE_AMENDMENT
+
+
+def amend_registration(reg: Path) -> None:
+    """The recorded failure policy amendment (#132), made against the harness's registration."""
+    baselines.FAILURE_AMENDMENT.write_text(json.dumps({**json.loads(RECORDED_AMENDMENT.read_text()),
+                                                       "registration_sha256": digest(reg)}))
 
 
 def run(harness, arm="full-context", benchmark="locomo", *, max_usd=5):
@@ -467,31 +479,59 @@ IDENTITY = {"provider": "ollama_cloud", "model": OLLAMA_MODEL.model, "resolved_m
             "manifest_digest_sha256": "e" * 64, "remote_host": "https://ollama.com",
             "remote_model": "deepseek-v4.1-flash", "remote_weights_pinned": False, "server_version": "0.34.3"}
 OLLAMA_USAGE = {"prompt_tokens": 100, "completion_tokens": 10, "prompt_tokens_details": {"cached_tokens": 30}}
+# What an Ollama answer binding and result record: the model's settings and identity, and the failure policy.
+ANSWER_MODEL = {**OLLAMA_MODEL.settings(), "identity": IDENTITY, "failure_policy": baselines.FAILURE_POLICY}
+NOTHING_UNSCORED = {"reader_retries": 0, "judge_retries": 0, "verdicts_normalized": 0, "truncated": 0,
+                    "verdict_unresolved": 0, "unscored": 0, "unscored_limit_percent": 1, "within_limit": True}
 TWO_LME = [LONGMEM[0], {**LONGMEM[0], "question_id": "q2", "question": "Where do I live?", "answer": "Porto"}]
 
 
+LOOP = "The answer. " * 3
+
+
 def ollama_provider(monkeypatch, *, verdict: str = "yes", fail: str | None = None, identities=None,
-                    wrong_when: str | None = None):
+                    wrong_when: str | None = None, verdicts: list | None = None,
+                    truncated: dict[str, int] | None = None, empty_when: str | None = None,
+                    fail_requests: set[int] | None = None):
     """Replace the Ollama server; any attempt to build or use the paid OpenAI path fails the test.
 
     ``identities`` is the sequence of identities the server reports, one per lookup; the last one repeats. A
-    reader prompt containing ``wrong_when`` gets the authored wrong answer, which the judge rejects.
+    reader prompt containing ``wrong_when`` gets the authored wrong answer, which the judge rejects. ``verdicts``
+    is the sequence of the judge's replies (the last one repeats) in place of ``verdict``; a reply given as
+    ``(text, finish_reason)`` ends for that reason. A reader prompt
+    containing a key of ``truncated`` gets that many answers cut off at the token limit before a whole one. A
+    reader prompt containing ``empty_when`` gets an empty answer, which is a final failure. The requests at the
+    1-based positions in ``fail_requests`` get HTTP 404, as do prompts containing ``fail``.
     """
     requests = []
     reported = list(identities or [IDENTITY])
+    loops = dict(truncated or {})
+    replies = list(verdicts or [verdict])
 
     def handler(request):
         body = json.loads(request.content)
         prompt = body["messages"][0]["content"]
         requests.append((str(request.url), body, request.headers.get("authorization")))
-        if fail is not None and fail in prompt:
+        if (fail is not None and fail in prompt) or len(requests) in (fail_requests or ()):
             return httpx.Response(404, json={"error": "model not found"})
         judge = prompt.startswith(("Evaluate the response", "OFFICIAL JUDGE"))
-        text = ("no" if baselines.AUTHORED_WRONG_ANSWER in prompt else verdict) if judge else (
-            baselines.AUTHORED_WRONG_ANSWER if wrong_when is not None and wrong_when in prompt else "The answer.")
+        finish = "stop"
+        if judge:
+            text = "no" if baselines.AUTHORED_WRONG_ANSWER in prompt else (
+                replies.pop(0) if len(replies) > 1 else replies[0])
+            if isinstance(text, tuple):
+                text, finish = text
+        else:
+            text = baselines.AUTHORED_WRONG_ANSWER if wrong_when is not None and wrong_when in prompt else "The answer."
+            looping = next((key for key, left in loops.items() if left and key in prompt), None)
+            if looping is not None:
+                loops[looping] -= 1
+                text, finish = LOOP, "length"
+            elif empty_when is not None and empty_when in prompt:
+                text = ""
         return httpx.Response(200, json={
             "object": "chat.completion", "model": "deepseek-v4.1-flash", "usage": OLLAMA_USAGE,
-            "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}]})
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": finish}]})
 
     def paid(*args, **kwargs):
         pytest.fail("built or used the paid OpenAI path")
@@ -537,6 +577,7 @@ def use_longmemeval(harness, rows):
     harness["reg"].write_text(json.dumps(registration))
     amendment = study.PUBLIC / "gpt54-official-loader-amendment.json"
     amendment.write_text(json.dumps({**json.loads(amendment.read_text()), "registration_sha256": digest(harness["reg"])}))
+    amend_registration(harness["reg"])
     (harness["archive"] / "authored-calibration/result.json").write_text(
         json.dumps({"complete": True, "registration_sha256": digest(harness["reg"])}))
 
@@ -574,8 +615,12 @@ async def test_ollama_run_never_builds_a_paid_client_and_records_the_reader_and_
                for _, body, _ in requests)
     assert result["complete"] and (result["correct"], result["accuracy"]) == (2, 1.0)
     assert result["kind"] == "ollama-answer-result" and result["model"] == OLLAMA_MODEL.model
-    assert result["answer_model"] == {**OLLAMA_MODEL.settings(), "identity": IDENTITY}
+    assert result["answer_model"] == ANSWER_MODEL
     assert result["answer_model"]["provider"] == "ollama" and result["answer_model"]["seed"] == 20260923
+    # The track's amended failure policy (#132), which asked nothing again here.
+    assert result["retry_policy"] == baselines.OLLAMA_RETRY_POLICY
+    assert result["failure_policy"] == {**baselines.failure_amendment(), **NOTHING_UNSCORED}
+    assert {row["outcome"] for row in result["rows"]} == {"judged"}
     assert result["calibration"] == {"attempt": "attempt-1", "attempts": 1, "attempts_before_pass": 0,
                                      "sha256": digest(harness["data"] / "authored-calibration/attempt-1/result.json")}
     assert result["cost"]["usd"] == 0 and "max_usd" not in result
@@ -719,7 +764,7 @@ async def test_preparing_again_stays_on_record_and_never_follows_a_complete_run(
     baselines.prepare("full-context", "locomo", data=harness["data"])
     ollama_provider(monkeypatch)
     await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
-    ollama_provider(monkeypatch, verdict="maybe")  # A malformed verdict is final: the arm can never finish.
+    ollama_provider(monkeypatch, empty_when="Caroline")  # An empty answer is final: the arm can never finish.
     with pytest.raises(RuntimeError, match="final failures"):
         await run_ollama(harness)
     with pytest.raises(RuntimeError, match="final failures"):
@@ -940,7 +985,7 @@ async def test_an_unfinished_later_baseline_is_finished_or_given_up_on_record(ha
     await prepare(arm)
     ollama_provider(monkeypatch)
     await baselines.calibrate(OLLAMA_MODEL, data=data)
-    ollama_provider(monkeypatch, verdict="maybe")  # A malformed verdict is final: the arm can never finish.
+    ollama_provider(monkeypatch, empty_when="Caroline")  # An empty answer is final: the arm can never finish.
     with pytest.raises(RuntimeError, match="final failures"):
         await run_ollama(harness, arm)
     shutil.rmtree(arm_folder(harness, arm))
@@ -1240,6 +1285,9 @@ def test_the_published_deepseek_baseline_is_complete_and_matches_the_current_ans
     # change to the answer settings needs a new baseline.
     assert {key: value for key, value in result["answer_model"].items() if key != "identity"} == \
         OLLAMA_MODEL.settings()
+    # It was answered under the registered failure policy, before the amendment (#132), and compares only with
+    # results answered under that policy too.
+    assert result["retry_policy"] == baselines.RETRY_POLICY and "failure_policy" not in result
 
 
 @pytest.mark.parametrize(("benchmark", "gained", "lost", "excludes_zero"), [
@@ -1294,6 +1342,7 @@ def one_request_at_a_time(harness) -> None:
     harness["reg"].write_text(json.dumps(registration))
     amendment = study.PUBLIC / "gpt54-official-loader-amendment.json"
     amendment.write_text(json.dumps({**json.loads(amendment.read_text()), "registration_sha256": digest(harness["reg"])}))
+    amend_registration(harness["reg"])
 
 
 def pair_folder(harness, before="prme", after="prme", benchmark="locomo", number=1) -> Path:
@@ -1334,7 +1383,8 @@ async def test_a_pair_answers_the_variant_and_a_fresh_defaults_run_interleaved_i
     assert paired["pair"] == mark and before["pair"] == {**mark, "side": "before"}
     assert after["pair"] == {**mark, "side": "after"}
     assert before["server_versions"] == after["server_versions"] == ["0.34.3"]
-    assert before["answer_model"] == after["answer_model"] == {**OLLAMA_MODEL.settings(), "identity": IDENTITY}
+    assert before["answer_model"] == after["answer_model"] == ANSWER_MODEL
+    assert before["retry_policy"] == after["retry_policy"] == baselines.OLLAMA_RETRY_POLICY
     assert before["run_log"] == {"sha256": digest(harness["data"] / "runs/pairs/prme/prme-marked-locomo.jsonl"),
                                  "runs_started": 1, "arm": {"sha256": digest(harness["data"] / "runs/prme-locomo.jsonl"),
                                                             "runs_started": 0, "prepared_again": 0}}
@@ -1412,7 +1462,7 @@ async def test_a_pair_that_can_never_finish_stays_on_record_and_the_next_one_sta
     pair_arms(harness)
     ollama_provider(monkeypatch)
     await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
-    ollama_provider(monkeypatch, verdict="maybe")  # A malformed verdict is final: the pair can never finish.
+    ollama_provider(monkeypatch, empty_when="Caroline")  # An empty answer is final: the pair can never finish.
     with pytest.raises(RuntimeError, match="final failures"):
         await run_pair(harness, "prme", "prme-marked")
     ollama_provider(monkeypatch)
@@ -1665,7 +1715,7 @@ async def test_a_standalone_run_reports_the_server_versions_of_its_current_prepa
     baselines.prepare("full-context", "locomo", data=harness["data"])
     ollama_provider(monkeypatch)
     await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
-    ollama_provider(monkeypatch, verdict="maybe")  # A malformed verdict is final: the arm can never finish.
+    ollama_provider(monkeypatch, empty_when="Caroline")  # An empty answer is final: the arm can never finish.
     with pytest.raises(RuntimeError, match="final failures"):
         await run_ollama(harness)
     shutil.rmtree(arm_folder(harness))
@@ -1717,3 +1767,361 @@ def test_pair_logs_find_each_arm_on_either_side_of_its_own_pairs_only(tmp_path):
              for arm in ("prme-x", "prme")}
     assert found == {"prme-x": ["prme/prme-x-locomo.jsonl", "prme@0123abcd/prme-x-locomo.jsonl"],
                      "prme": ["prme/prme-locomo.jsonl", "prme/prme-x-2-locomo.jsonl", "prme/prme-x-locomo.jsonl"]}
+
+
+# Amended failure policy (#132) --------------------------------------------------------
+
+def attempt_calls(folder: Path, qid: str, attempt: int = 1) -> list[str]:
+    """The reader and judge records one question attempt holds, by name."""
+    return sorted(path.name for path in (folder / "execution" / qid / f"attempt-{attempt}").glob("*.json")
+                  if path.name.count(".") == 1 and path.name not in {"result.json", "failure.json"})
+
+
+def test_the_recorded_amendment_states_the_failure_policy_this_module_applies(monkeypatch, tmp_path):
+    amendment = json.loads(RECORDED_AMENDMENT.read_text())
+    assert (amendment["id"], amendment["issue"]) == (baselines.FAILURE_POLICY, 132)
+    assert amendment["decided_at"].startswith("2026-09-24") and amendment["defaults_changed"] is False
+    # It amends the registered comparison, whose frozen sources stay as registered.
+    registration = json.loads(study.REG.read_text())
+    assert amendment["registration_sha256"] == digest(study.REG)
+    assert all(digest(study.ROOT / path) == registration["sources"][path] for path in baselines.FROZEN_SOURCES)
+    assert amendment["retry_policy"] == baselines.OLLAMA_RETRY_POLICY
+    # The values that score answers are pinned as well as the text: one retry per call and a 1% limit.
+    assert amendment["parameters"] == baselines.policy_parameters() == {
+        "verdict_pattern": "[^A-Za-z]*(yes|no)[^A-Za-z]*", "verdict_flags": 274,
+        "reader_calls": ["reader.json", "reader-retry.json"], "judge_calls": ["judge.json", "judge-retry.json"],
+        "unscored_outcomes": ["truncated", "verdict_unresolved"], "unscored_limit_percent": 1}
+    assert baselines.failure_amendment() == {"id": baselines.FAILURE_POLICY, "issue": 132,
+                                             "registered_at": amendment["registered_at"],
+                                             "sha256": digest(RECORDED_AMENDMENT)}
+    # A record that states other rules, or amends another registration, is refused before any question is asked.
+    changed = tmp_path / "amendment.json"
+    monkeypatch.setattr(baselines, "FAILURE_AMENDMENT", changed)
+    for edit in ({"id": "other"}, {"parameters": {**amendment["parameters"], "unscored_limit_percent": 2}},
+                 {"registration_sha256": "0" * 64},
+                 {"kind": "other"}, {"issue": "132"}, {"retry_policy": "Other rules."}):
+        changed.write_text(json.dumps({**amendment, **edit}))
+        with pytest.raises(ValueError, match="does not state the failure policy"):
+            baselines.failure_amendment()
+    changed.write_text(json.dumps(amendment))
+    policy = baselines.OLLAMA_RETRY_POLICY
+    monkeypatch.setattr(baselines, "OLLAMA_RETRY_POLICY", policy + " Changed.")
+    with pytest.raises(ValueError, match="does not state the failure policy"):
+        baselines.failure_amendment()
+    # A wider verdict rule under the same policy id is refused too.
+    monkeypatch.setattr(baselines, "OLLAMA_RETRY_POLICY", policy)
+    monkeypatch.setattr(baselines, "_VERDICT", baselines.re.compile(r"\W*(yes|no)\W*", baselines.re.IGNORECASE))
+    with pytest.raises(ValueError, match="does not state the failure policy"):
+        baselines.failure_amendment()
+
+
+@pytest.mark.parametrize(("text", "expected"), [
+    ("yes", True), ("No", False), (" Yes.\n", True), ("姫Yes", True), ('"no"', False), ("**YES**", True),
+    ("yes and no", None), ("Yes, it matches.", None), ("maybe", None), ("", None), ("noo", None),
+    # The two garbled LoCoMo verdicts of 2026-09-24 are not repaired: the judge is asked once more instead.
+    ("姘斿€欙紵\n\n<answer>no</answer>", None), ("姉\nA. yes\nB. no\n\n<answer>B</answer>", None)])
+def test_a_verdict_is_accepted_once_stray_characters_around_it_are_removed(text, expected):
+    assert baselines.normalized_verdict(text) is expected
+
+
+def test_verdict_normalization_takes_linear_time_and_folds_only_a_to_z():
+    import time
+
+    started = time.perf_counter()
+    assert baselines.normalized_verdict("." * 50_000 + "x") is None
+    assert time.perf_counter() - started < 1
+    # Unicode case folding would read the long s and the Kelvin sign as s and k.
+    assert baselines.normalized_verdict("ye\u017f") is None and baselines.normalized_verdict("YE\u212a") is None
+
+
+def test_only_the_calls_the_amended_policy_makes_are_scored(tmp_path):
+    for name in (*baselines.READER_CALLS, *baselines.JUDGE_CALLS):
+        (tmp_path / name).write_text(json.dumps(name))
+    whole, cut = {"text": "The answer."}, {"text": "The answer. The", "truncated": True}
+    yes, garbled, cut_verdict = {"text": "yes"}, {"text": "maybe"}, {"text": "ye", "truncated": True}
+    scored = baselines._scored(tmp_path, [cut, whole], [garbled, yes])
+    assert scored == {"correct": True, "outcome": "judged", "reader_sha256": digest(tmp_path / "reader.json"),
+                      "judge_sha256": digest(tmp_path / "judge.json"),
+                      "reader_retry_sha256": digest(tmp_path / "reader-retry.json"),
+                      "judge_retry_sha256": digest(tmp_path / "judge-retry.json"), "verdict_normalized": False}
+    assert baselines._scored(tmp_path, [cut, cut], []) == {
+        "correct": False, "outcome": "truncated", "reader_sha256": digest(tmp_path / "reader.json"),
+        "judge_sha256": None, "reader_retry_sha256": digest(tmp_path / "reader-retry.json"),
+        "judge_retry_sha256": None, "verdict_normalized": False}
+    unresolved = baselines._scored(tmp_path, [whole], [cut_verdict, {"text": ""}])
+    assert (unresolved["outcome"], unresolved["correct"]) == ("verdict_unresolved", False)
+    assert baselines._scored(tmp_path, [whole], [{"text": "No!"}])["verdict_normalized"] is True
+    # Only a flag that is exactly true marks a call as truncated.
+    assert baselines._scored(tmp_path, [{**whole, "truncated": 1}], [yes])["outcome"] == "judged"
+    for readers, judges, detail in (
+            ([], [], "no reader call"), ([whole, whole], [yes], "a reader retry without"),
+            ([cut], [], "a truncated answer that was not asked again"),
+            ([cut, cut], [yes], "a judge call after an answer that stayed truncated"),
+            ([whole], [], "an answer that was never judged"), ([whole], [yes, yes], "a judge retry after"),
+            ([whole], [garbled], "a verdict that was not accepted and not judged again"), ([cut, cut, whole], [yes], "a reader retry"),
+            ([whole], [garbled, garbled, yes], "a judge retry after")):
+        with pytest.raises(ValueError, match=f"do not follow the amended failure policy: {detail}"):
+            baselines._scored(tmp_path, readers, judges)
+    # A retry is never recorded without the call it repeats.
+    (tmp_path / "reader.json").unlink()
+    with pytest.raises(ValueError, match="a retry recorded without the call it repeats"):
+        baselines._recorded_calls(tmp_path, baselines.READER_CALLS)
+
+
+async def test_a_truncated_reader_answer_is_asked_once_more_then_scored_as_truncated(harness, monkeypatch, capsys):
+    baselines.prepare("full-context", "locomo", data=harness["data"])
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    requests = ollama_provider(monkeypatch, truncated={"What did Caroline paint?": 1, "What is the puppy called?": 2})
+    result = await run_ollama(harness)
+    # The first question's answer loops once and then completes; the second loops twice and is never judged.
+    assert len(requests) == 3 + 2
+    judged = [body["messages"][0]["content"] for _, body, _ in requests
+              if body["messages"][0]["content"].startswith("Evaluate the response")]
+    # The judge sees the whole answer of the retry, never the looping one.
+    assert len(judged) == 1 and "What did Caroline paint?" in judged[0] and LOOP not in judged[0]
+    assert result["complete"] and (result["completed"], result["correct"]) == (2, 1)
+    first, second = result["rows"]
+    assert (first["outcome"], first["correct"], second["outcome"], second["correct"]) == (
+        "judged", True, "truncated", False)
+    folder = arm_folder(harness)
+    assert attempt_calls(folder, "conv-1-q0000") == ["judge.json", "reader-retry.json", "reader.json"]
+    assert attempt_calls(folder, "conv-1-q0001") == ["reader-retry.json", "reader.json"]
+    assert second["judge_sha256"] is None and second["reader_retry_sha256"] == digest(
+        folder / "execution/conv-1-q0001/attempt-1/reader-retry.json")
+    assert result["failure_policy"] == {**baselines.failure_amendment(), **NOTHING_UNSCORED, "reader_retries": 2,
+                                        "truncated": 1, "unscored": 1, "within_limit": False}
+    # Every call counts, the truncated ones included.
+    assert result["provider_tokens"]["successful_calls"] == 5 and not result["failures"]
+    # The run is complete and published, but one question in two is far past the 1% compare allows.
+    [path] = ollama_published(harness)
+    assert json.loads(path.read_text())["failure_policy"]["truncated"] == 1
+    log = [json.loads(line) for line in (harness["data"] / "runs/full-context-locomo.jsonl").read_text().splitlines()]
+    assert log[0]["failure_policy"] == baselines.FAILURE_POLICY
+    assert log[1]["unscored"] == {"full-context": 1} and log[1]["invalid"] == (
+        "more than 1% of the questions were truncated or left without a verdict (full-context 1 of 2)")
+    assert "is complete but invalid" in capsys.readouterr().err
+    # The records replay, and a truncated answer that was never asked again is refused.
+    questions = study.question_rows("locomo")
+    _, prepared, entries = baselines.load_prepared("full-context", "locomo", questions, data=harness["data"])
+    assert baselines.report("full-context", "locomo", folder, questions, prepared, entries, None,
+                            model=OLLAMA_MODEL)["rows"] == result["rows"]
+    for path in (folder / "execution/conv-1-q0001/attempt-1").glob("reader-retry.*"):
+        path.unlink()
+    with pytest.raises(ValueError, match="a truncated answer that was not asked again"):
+        baselines.report("full-context", "locomo", folder, questions, prepared, entries, None, model=OLLAMA_MODEL)
+
+
+async def test_a_garbled_verdict_is_repaired_or_judged_once_more(harness, monkeypatch):
+    one_request_at_a_time(harness)
+    baselines.prepare("full-context", "locomo", data=harness["data"])
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # The first verdict has a stray character in front; the second is no verdict, and the judge's retry is.
+    requests = ollama_provider(monkeypatch, verdicts=["姫Yes", "maybe", "No"])
+    result = await run_ollama(harness)
+    assert len(requests) == 2 + 3
+    first, second = result["rows"]
+    assert (first["outcome"], first["correct"], first["verdict_normalized"], first["judge_retry_sha256"]) == (
+        "judged", True, True, None)
+    assert (second["outcome"], second["correct"], second["verdict_normalized"]) == ("judged", False, False)
+    assert attempt_calls(arm_folder(harness), "conv-1-q0001") == ["judge-retry.json", "judge.json", "reader.json"]
+    assert result["failure_policy"] == {**baselines.failure_amendment(), **NOTHING_UNSCORED, "judge_retries": 1,
+                                        "verdicts_normalized": 1}
+
+
+async def test_a_retry_that_gets_no_answer_asks_the_question_again_on_a_later_run(harness, monkeypatch):
+    one_request_at_a_time(harness)
+    baselines.prepare("full-context", "locomo", data=harness["data"])
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # The first answer loops, and the server fails the request that retries it.
+    ollama_provider(monkeypatch, truncated={"What did Caroline paint?": 1}, fail_requests={2})
+    with pytest.raises(RuntimeError, match="0/2 answered, 0 final failures"):
+        await run_ollama(harness)
+    folder = arm_folder(harness)
+    assert attempt_calls(folder, "conv-1-q0000") == ["reader.json"]
+    # No answer came back, so a later run asks the question again in a new attempt, and the first stays on record.
+    ollama_provider(monkeypatch)
+    result = await run_ollama(harness)
+    assert result["complete"] and result["failure_policy"]["reader_retries"] == 0
+    [failure] = result["failures"]
+    assert (failure["attempt"], failure["retryable"], failure["replaced"]) == ("attempt-1", True, True)
+
+
+async def test_a_pair_survives_a_looping_answer_and_an_unresolved_verdict_on_either_side(harness, monkeypatch):
+    one_request_at_a_time(harness)
+    pair_arms(harness)
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # The variant's first answer loops twice; the defaults' first verdict is garbled twice.
+    requests = ollama_provider(monkeypatch, truncated={"VARIANT": 2}, verdicts=["maybe", "maybe", "yes"])
+    paired = await run_pair(harness, "prme", "prme-marked")
+    # q0: variant reader and its retry; defaults reader, judge and its retry. q1: a reader and a judge per side.
+    assert len(requests) == 2 + 3 + 4
+    before, after = paired["before"], paired["after"]
+    assert before["complete"] and after["complete"]
+    published_sides = pair_published(harness, after="prme-marked")
+    assert [side["failure_policy"]["unscored"] for side in published_sides] == [1, 1]
+    assert [row["outcome"] for row in after["rows"]] == ["truncated", "judged"]
+    assert [row["outcome"] for row in before["rows"]] == ["verdict_unresolved", "judged"]
+    assert (after["failure_policy"]["truncated"], before["failure_policy"]["verdict_unresolved"]) == (1, 1)
+    assert before["answer_model"] == after["answer_model"] == ANSWER_MODEL
+    log = pair_log(harness, after="prme-marked")
+    assert log[0]["failure_policy"] == baselines.FAILURE_POLICY
+    # One question in two is unscored on each side: the pair is complete, invalid and refused by compare.
+    finished = log[-1]
+    assert finished["complete"] is True and finished["unscored"] == {"before": 1, "after": 1}
+    assert finished["invalid"] == ("more than 1% of the questions were truncated or left without a verdict "
+                                   "(before 1, after 1 of 2)")
+    with pytest.raises(ValueError, match=r"1 of the before result's 2 questions .* the pair is invalid"):
+        baselines.compare(before, after)
+    # The next pair is a fresh one, and it lists this one as complete but invalid.
+    ollama_provider(monkeypatch)
+    later = await run_pair(harness, "prme", "prme-marked")
+    assert later["pair"]["number"] == 2 and later["pair"]["earlier_pairs"][0]["state"].startswith(
+        "complete but invalid: more than 1%")
+    assert baselines.compare(later["before"], later["after"])["failure_policy"] == {
+        "id": baselines.FAILURE_POLICY, "sha256": digest(baselines.FAILURE_AMENDMENT), "before": NOTHING_UNSCORED,
+        "after": NOTHING_UNSCORED}
+
+
+async def test_a_pair_started_under_the_registered_policy_is_given_up_even_after_it_was_moved_aside(
+        harness, monkeypatch):
+    pair_arms(harness)
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # Pair 1 was started and stopped before the amendment, so its start names no failure policy, and its folder
+    # was moved aside with the other discarded attempts.
+    log = harness["data"] / "runs/pairs/prme/prme-marked-locomo.jsonl"
+    for event in ({"event": "started", "pair": 1, "sample": None, "server_version": "0.34.3"},
+                  {"event": "finished", "pair": 1, "sample": None, "complete": False, "server_version": "0.34.3"}):
+        baselines._append_event(log, event)
+    paired = await run_pair(harness, "prme", "prme-marked")
+    assert paired["pair"]["number"] == 2 and paired["pair"]["earlier_pairs"] == [
+        {"number": 1, "state": "abandoned: it was started under another failure policy"}]
+    assert json.loads((pair_folder(harness, after="prme-marked", number=2) / "pair.json").read_text())[
+        "failure_policy"] == baselines.FAILURE_POLICY
+    assert [event["event"] for event in pair_log(harness, after="prme-marked")] == [
+        "started", "finished", "abandoned", "started", "finished"]
+
+
+async def test_answers_given_before_the_amendment_keep_the_registered_rules(harness, monkeypatch):
+    baselines.prepare("full-context", "locomo", data=harness["data"])
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # An arm answered before the amendment: bound without a failure policy, with the registered rows.
+    folder = arm_folder(harness)
+    registered = {**OLLAMA_MODEL.settings(), "identity": IDENTITY}
+    baselines._bind_answer_model(folder, registered)
+    questions = study.question_rows("locomo")
+    _, prepared, entries = baselines.load_prepared("full-context", "locomo", questions, data=harness["data"])
+    async with OLLAMA.client_for(OLLAMA_MODEL) as client:
+        await baselines._answer("before #132", "locomo", [baselines._Side(folder, folder, entries)], questions[:1],
+                                1, client, partial(OLLAMA.call, model=OLLAMA_MODEL), None)
+    replayed = baselines.report("full-context", "locomo", folder, questions, prepared, entries, None,
+                                model=OLLAMA_MODEL)
+    assert replayed["completed"] == 1 and "failure_policy" not in replayed
+    assert set(replayed["rows"][0]) == {"question_id", "question_type", "cluster", "correct", "context_sha256",
+                                        "context_tokens", "retrieval_seconds", "reader_sha256", "judge_sha256"}
+    # Answering the rest under the amendment would mix two policies in one arm.
+    with pytest.raises(ValueError, match="answered under another failure policy"):
+        await run_ollama(harness)
+
+
+def amended_result(arm: str, verdicts: list[bool], *, unscored: int = 0, commit: str = "a" * 40) -> dict:
+    """A complete Ollama answer result under the amended policy, with its first ``unscored`` questions truncated."""
+    result = answer_result(arm, verdicts, commit=commit)
+    result["answer_model"] = {**result["answer_model"], "failure_policy": baselines.FAILURE_POLICY}
+    result["failure_policy"] = {"id": baselines.FAILURE_POLICY, "sha256": "a" * 64}
+    for number, row in enumerate(result["rows"]):
+        cut = number < unscored
+        row.update(correct=row["correct"] and not cut, outcome="truncated" if cut else "judged",
+                   reader_retry_sha256="r" * 64 if cut else None, judge_retry_sha256=None, verdict_normalized=False)
+    return result
+
+
+def test_compare_refuses_mixed_failure_policies_and_a_result_with_more_than_one_percent_unscored():
+    # One unscored question in 100 is within the limit; the counts are reported for each side.
+    first = amended_result("prme", [True] * 100, unscored=1)
+    again = amended_result("prme@0123abcd", [True] * 100, commit="b" * 40)
+    comparison = baselines.compare(first, again)
+    assert comparison["repeat"] is not None and comparison["failure_policy"] == {
+        "id": baselines.FAILURE_POLICY, "sha256": "a" * 64,
+        "before": {**NOTHING_UNSCORED, "reader_retries": 1, "truncated": 1, "unscored": 1}, "after": NOTHING_UNSCORED}
+    with pytest.raises(ValueError, match=r"2 of the after result's 100 questions were truncated or left without a "
+                                         r"verdict, more than the 1%"):
+        baselines.compare(first, amended_result("prme@0123abcd", [True] * 100, unscored=2, commit="b" * 40))
+    with pytest.raises(ValueError, match=r"different failure policies \(ollama-failure-policy-2026-09-24 and "
+                                         r"registered\)"):
+        baselines.compare(first, answer_result("prme@0123abcd", [True] * 100, commit="b" * 40))
+    # Both sides must record the same amendment, name a known policy and carry the rows it counts.
+    with pytest.raises(ValueError, match="same failure policy amendment"):
+        baselines.compare(first, {**again, "failure_policy": {"sha256": "b" * 64}})
+    with pytest.raises(ValueError, match="Unknown failure policy"):
+        baselines.compare(first, {**again, "answer_model": {**again["answer_model"], "failure_policy": "other"}})
+    stripped = json.loads(json.dumps(again))
+    del stripped["rows"][0]["outcome"]
+    with pytest.raises(ValueError, match="rows without their outcome and retries"):
+        baselines.compare(first, stripped)
+    # Results answered under the registered rules after the amendment came from a checkout without it.
+    registered_at = json.loads(RECORDED_AMENDMENT.read_text())["registered_at"]
+    earlier = {**answer_result("prme", [True, False]), "started_at": "2026-09-24T05:16:22.351836+00:00"}
+    later = {**answer_result("prme@0123abcd", [True, True], commit="b" * 40), "started_at": registered_at}
+    with pytest.raises(ValueError, match="after result was answered under the registered failure policy after"):
+        baselines.compare(earlier, later)
+    # Results from before the amendment still compare with each other, with nothing to count.
+    assert baselines.compare(answer_result("prme", [True, False]),
+                             answer_result("prme@0123abcd", [True, True], commit="b" * 40))["failure_policy"] is None
+    assert [baselines._within_limit(count, total) for count, total in ((5, 500), (6, 500), (15, 1540), (16, 1540))] == [
+        True, False, True, False]
+
+
+async def test_an_empty_or_cut_off_verdict_is_judged_once_more(harness, monkeypatch):
+    one_request_at_a_time(harness)
+    baselines.prepare("full-context", "locomo", data=harness["data"])
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # The first question's verdict is empty and then accepted; the second's is cut off and then empty.
+    requests = ollama_provider(monkeypatch, verdicts=["", "yes", ("ye", "length"), ""])
+    result = await run_ollama(harness)
+    assert len(requests) == 3 + 3
+    assert [(row["outcome"], row["correct"]) for row in result["rows"]] == [
+        ("judged", True), ("verdict_unresolved", False)]
+    assert result["failure_policy"]["judge_retries"] == 2 and result["failure_policy"]["verdict_unresolved"] == 1
+    folder = arm_folder(harness)
+    records = [json.loads((folder / "execution/conv-1-q0001/attempt-1" / name).read_text())
+               for name in baselines.JUDGE_CALLS]
+    assert [(record["text"], record.get("truncated")) for record in records] == [("ye", True), ("", None)]
+    questions = study.question_rows("locomo")
+    _, prepared, entries = baselines.load_prepared("full-context", "locomo", questions, data=harness["data"])
+    assert baselines.report("full-context", "locomo", folder, questions, prepared, entries, None,
+                            model=OLLAMA_MODEL)["rows"] == result["rows"]
+
+
+async def test_an_arm_is_never_moved_to_another_failure_policy_once_a_question_was_asked(harness, monkeypatch):
+    baselines.prepare("full-context", "locomo", data=harness["data"])
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # Bound under the registered policy, with only a failed attempt: its failure stands under those rules.
+    folder = arm_folder(harness)
+    baselines._bind_answer_model(folder, {**OLLAMA_MODEL.settings(), "identity": IDENTITY})
+    attempt = baselines._next_attempt(folder / "execution" / "conv-1-q0000")
+    (attempt / "failure.json").write_text(json.dumps({"retryable": False, "message": "Incomplete response"}))
+    requests = ollama_provider(monkeypatch)
+    with pytest.raises(ValueError, match="answered under another failure policy"):
+        await run_ollama(harness)
+    assert requests == []
+    # A binding with nothing asked yet follows the amended policy.
+    shutil.rmtree(folder / "execution")
+    assert (await run_ollama(harness))["answer_model"] == ANSWER_MODEL
+
+
+def test_a_binding_names_a_known_failure_policy(tmp_path):
+    (tmp_path / "answer-model.json").write_text(json.dumps({**ANSWER_MODEL, "failure_policy": "other"}))
+    with pytest.raises(ValueError, match="Unknown failure policy 'other'"):
+        baselines._bound_policy(tmp_path)
+    with pytest.raises(ValueError, match="No answer model is bound"):
+        baselines._bound_policy(tmp_path / "missing")
+    (tmp_path / "answer-model.json").write_text(json.dumps({**OLLAMA_MODEL.settings(), "identity": IDENTITY}))
+    assert baselines._bound_policy(tmp_path) is None

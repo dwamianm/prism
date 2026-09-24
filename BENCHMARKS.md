@@ -289,10 +289,12 @@ What the track sends and records:
   The reader prompts already ask for the evidence to be explained before the
   answer.
 - Every result, private and published: an `answer_model` block with the provider,
-  API, endpoint, model, sampling settings, retry settings and the Ollama server's
-  model identity (manifest digest, remote host and remote model); the
-  calibration it passed and how many attempts that took; the commit and settings
-  that prepared the contexts; the provider token counts; and a cost of $0.
+  API, endpoint, model, sampling settings, retry settings, the Ollama server's
+  model identity (manifest digest, remote host and remote model) and the
+  failure policy its answers were given under; the calibration it passed and
+  how many attempts that took; the commit and settings that prepared the
+  contexts; the provider token counts; a `failure_policy` block that counts
+  retries and unscored questions (below); and a cost of $0.
 - Each call's request, every HTTP attempt and the answer are written once, so
   the result can be verified again from them, as on the GPT-5.4 track.
 
@@ -337,12 +339,20 @@ Safeguards:
   concurrent requests. `run-pair` resumes the latest pair while it can still
   finish. It starts the next pair instead after a complete pair, a final
   failure, a new preparation of either arm, an answer model or settings change,
-  or a different Ollama server version from the one the pair started under. An
+  a different Ollama server version from the one the pair started under, or a
+  pair started under another failure policy (read from its run log, so the
+  reason is the same for a pair folder moved aside). Run `run-pair` only from
+  a checkout that includes #132: the private data is shared by every
+  worktree, and older code gives up a pair started under the amendment and
+  answers the next one under the registered rules. An
   unfinished pair it gives up gets an `abandoned` event with the reason, and
   every pair stays on record: each result lists every earlier pair of that
   baseline and arm and how it ended (`earlier_pairs`). A server version that
   changes while a pair is answered is caught at its finish, and the pair is
-  kept but not published. A `--sample` after a complete pair opens the next
+  kept but not published. A complete pair with a side that `compare` will
+  refuse under the 1% limit is published, and its `finished` event and every
+  later pair's `earlier_pairs` mark it as complete but invalid. A `--sample`
+  after a complete pair opens the next
   pair, whose full run reuses the sample's answers. Each side is published as its own result,
   named
   `ollama-deepseek-v4.1-flash-cloud-<baseline>-vs-<arm>-<benchmark>-pair-<N>-<side>-result.json`,
@@ -366,18 +376,55 @@ Safeguards:
 - A commit that already has a complete baseline cannot get another. If the
   model identity changes while the newest baseline is at the checked-out
   commit, record the new baseline at the next commit on `main`.
-- The registered retry and failure rules apply, as described for the GPT-5.4
-  arms above. `run` and `run-pair` need no spending cap or terminal
-  confirmation. They use the registration's four concurrent requests (a pair's
-  two sides share them); if the Ollama account's usage limit stops a run with
-  HTTP 429, run it again later and it asks only the questions that got no
-  answer.
-- A final failure (a malformed verdict or a truncated answer) leaves the arm
-  incomplete, and it publishes nothing. To start that arm over, move its folder
-  aside (or remove it) and prepare it again. The run log outside the folder keeps every
-  earlier run, and the result reports how many runs and preparations there
-  were. An arm with a complete run, alone or in a pair, is never prepared
-  again.
+- `run` and `run-pair` need no spending cap or terminal confirmation. They use
+  the registration's four concurrent requests (a pair's two sides share them);
+  if the Ollama account's usage limit stops a run with HTTP 429, run it again
+  later and it asks only the questions that got no answer.
+- Answers follow the registered retry rules described for the GPT-5.4 arms
+  above, as amended for this track on 2026-09-24 (#132). The amendment is
+  recorded in
+  `benchmarks/results/research/2026-09-24/ollama-failure-policy-amendment.json`,
+  which `run` and `run-pair` check against the registration before asking
+  anything. It pins the policy text and the values that score under it (the
+  verdict pattern, the retry file names and the 1% limit), so changing either
+  needs a new amendment. It applies to standalone runs and to both sides of
+  every pair alike, and the GPT-5.4 track keeps the registered rules:
+  - A reader answer that ends for any reason other than `stop` (in practice, a
+    looping answer that reaches the 8,192-token limit) is sent once more as the
+    same request. If the second answer also ends early, the question is scored
+    incorrect without calling the judge and recorded as `truncated`.
+  - A verdict is accepted when what is left after removing leading and
+    trailing characters other than the letters A to Z reads `yes` or `no`, in
+    any case, so `姫Yes` counts as yes. Otherwise (an empty verdict included),
+    or when the judge's response ends early, the judge is called once more,
+    and if that verdict is not accepted either, the question is scored
+    incorrect and recorded as `verdict_unresolved`. "Letters" means A to Z,
+    because the stray characters seen so far were CJK characters, which
+    Unicode counts as letters.
+  - At most one retry per reader call and one per judge call. Each retry is
+    kept next to the call it repeats (`reader-retry.json`, `judge-retry.json`),
+    and each result row records its `outcome` (`judged`, `truncated` or
+    `verdict_unresolved`), the retries' digests and whether the verdict was
+    accepted only after stray characters were removed.
+  - Every result's `failure_policy` block names the amendment and counts the
+    reader and judge retries, the verdicts accepted after removing stray
+    characters, and the `truncated` and `verdict_unresolved` questions.
+    `compare` refuses a result in which more than 1% of the questions are
+    `truncated` or `verdict_unresolved`, so a pair with such a side is invalid.
+    Every `finished` event on the track records the unscored count, and a
+    complete result over the limit is still published but marked `invalid`
+    there, with a warning.
+  - The authored calibration is not amended: it still needs every answer to
+    end normally and every verdict to read exactly `yes` or `no`.
+- Any other final failure (for example an empty answer or a response from
+  another model) leaves the arm incomplete, and it publishes nothing. To start
+  that arm over, move its folder aside (or remove it) and prepare it again. The
+  run log outside the folder keeps every earlier run, and the result reports
+  how many runs and preparations there were. An arm with a complete run, alone
+  or in a pair, is never prepared again. An arm that already has answers under
+  the registered rules is never answered under the amendment; prepare it again
+  instead, so no arm mixes two policies. Its recorded answers still verify
+  under the rules they were given under.
 
 ```sh
 # No model calls. prepare needs a clean, committed tree.
@@ -411,7 +458,13 @@ same pair, for `run-pair`) reuses its answers.
 `compare` refuses results that are incomplete, are samples, cover different
 questions, are the same answer run, or were answered by different model
 identities or settings (an Ollama server upgrade alone does not change the
-identity). On the DeepSeek track it also refuses any pairing other than the
+identity). It also refuses results answered under different failure policies,
+a result in which more than 1% of the questions are `truncated` or
+`verdict_unresolved`, results that record different amendments, and a
+DeepSeek result answered under the registered rules after the amendment was
+registered, which only a checkout without #132 produces (#132). Its
+`failure_policy` block reports both sides' counts. On the DeepSeek track it
+also refuses any pairing other than the
 two sides of one `run-pair` pair, with the defaults as `--before`, or a repeat
 (below), and it refuses results whose recorded Ollama server versions differ
 (#129). It reports the paired accuracy difference with a 95% interval, per
@@ -580,9 +633,25 @@ registered retry policy never asks again, so none published a result:
 including the first #118 run (#124), and verdicts with stray characters
 appeared 3 times in these 2,470 judge calls but never in the 4,080 of the two
 published runs of the defaults. A pair has twice as many answers for one final
-failure to stop, so until the DeepSeek track handles these differently (#132),
-a pair rarely completes. Every stopped pair stays on record: the next
-`run-pair` gives it up with the reason and lists it in `earlier_pairs`.
+failure to stop, so under the registered policy a pair rarely completes.
+
+The DeepSeek track's failure policy was amended for this (#132, see the
+safeguards above). None of the six answers would stop a pair under the
+amendment. The looping reader answers of LongMemEval-S pairs 1 to 3 would be
+sent once more, and scored as `truncated` if the retry looped too. The verdict
+with a stray `姫` in front (pair 4) would count as yes. The two LoCoMo
+verdicts, in a tagged or multiple-choice layout, are not repaired, so the
+judge would be called once more, and the question scored as
+`verdict_unresolved` if that verdict failed too. The six pairs were given
+up on record and their folders moved aside to
+`data/ollama-answers-v1/discarded-attempts/ollama-deepseek-v4.1-flash-cloud/pairs/`,
+with the same layout below it. Their run logs stay in place, so the next
+`run-pair` of each benchmark gives up the last of them (LongMemEval-S pair 4
+and LoCoMo pair 2, which have no `abandoned` event yet) as started under
+another failure policy and starts a fresh pair (LongMemEval-S pair 5, LoCoMo
+pair 3). The amendment records the digests of both pair run logs as they
+stood when it was registered. No pair mixes the two policies, and the A/A
+check is answered from fresh pairs under the amendment.
 
 The attempts do answer one question about the design. The two sides of an A/A
 pair send identical requests back to back, which could have made them agree

@@ -3,11 +3,15 @@
 The GPT-5.4 comparison sends its reader and judge to OpenAI's Responses API
 through ``gpt54_budget``, whose source the registration pins, so this track has
 its own client rather than a switch inside that module. It keeps the same
-records and retry policy: the request, every HTTP attempt and the answer are
-each written once and never overwritten; a transient 429 or 5xx is retried up
-to four identical attempts; a truncated or malformed response and an ambiguous
-transport failure are never retried. Failure messages match ``gpt54_budget.call``
-so the baseline arms classify them the same way.
+records and HTTP retry policy: the request, every HTTP attempt and the answer
+are each written once and never overwritten; a transient 429 or 5xx is retried
+up to four identical attempts; a malformed response and an ambiguous transport
+failure are never retried. A truncated response, or a judge's empty one, is not
+an answer either, unless the caller asks for it (``truncated_ok``,
+``empty_ok``): the track's amended failure policy (#132, in ``gpt54_baselines``)
+then records it as it is and decides whether to send the request once more.
+Failure messages match ``gpt54_budget.call`` so the baseline arms classify them
+the same way.
 
 Calls go to Ollama's OpenAI-compatible chat completions endpoint. The endpoint
 must be a loopback address and no credentials are sent, so this path cannot
@@ -92,7 +96,10 @@ class AnswerModel:
                 "reasoning_effort": self.reasoning_effort, "stream": False}
 
     def settings(self) -> dict:
-        """What every result records about the reader and judge, including the retry policy."""
+        """What every result records about the reader and judge, including the HTTP retry settings.
+
+        ``gpt54_baselines`` adds the failure policy the answers are scored under.
+        """
         return {"provider": PROVIDER, "api": "chat.completions", "endpoint": self.endpoint, "model": self.model,
                 "temperature": self.temperature, "seed": self.seed, "reasoning_effort": self.reasoning_effort,
                 "stream": False, "reader_limit": READER_LIMIT, "judge_limit": JUDGE_LIMIT, "attempts": ATTEMPTS,
@@ -135,12 +142,12 @@ def client_for(model: AnswerModel) -> httpx.AsyncClient:
                              trust_env=False)
 
 
-def response_text(body: dict, model: AnswerModel) -> str:
-    """The answer of a complete chat completion from the requested model; anything else is not an answer."""
+def _completion(body: dict, model: AnswerModel) -> tuple[str, str]:
+    """The text and finish reason of one chat completion from the requested model, with valid token accounting."""
     choices = body.get("choices")
     if (body.get("object") != "chat.completion" or not matches_response_model(model.model, body.get("model"))
             or not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict)
-            or choices[0].get("finish_reason") != "stop"):
+            or not isinstance(choices[0].get("finish_reason"), str)):
         raise ValueError("Incomplete response or changed model")
     counts = body.get("usage")
     if not isinstance(counts, dict) or any(type(counts.get(name)) is not int or counts[name] < 0
@@ -150,9 +157,31 @@ def response_text(body: dict, model: AnswerModel) -> str:
     if type(cached) is not int or not 0 <= cached <= counts["prompt_tokens"]:
         raise ValueError("Invalid cached token count")
     text = (choices[0].get("message") or {}).get("content")
-    if not isinstance(text, str) or not text.strip():
+    if text is not None and not isinstance(text, str):
         raise ValueError("Missing answer text")
-    return text.strip()
+    return (text or "").strip(), choices[0]["finish_reason"]
+
+
+def response_text(body: dict, model: AnswerModel) -> str:
+    """The answer of a complete chat completion from the requested model; anything else is not an answer."""
+    return answer_record(body, model)["text"]
+
+
+def answer_record(body: dict, model: AnswerModel, *, truncated_ok: bool = False, empty_ok: bool = False) -> dict:
+    """What a response answered: its text, and ``truncated`` when it ended early.
+
+    A response that ended for any reason other than ``stop`` counts only with
+    ``truncated_ok``, and one that ended normally with no text only with
+    ``empty_ok``; anything else that is not a whole answer raises.
+    """
+    text, finish = _completion(body, model)
+    if finish != "stop":
+        if truncated_ok:
+            return {"text": text, "truncated": True}
+        raise ValueError("Incomplete response or changed model")
+    if not text and not empty_ok:
+        raise ValueError("Missing answer text")
+    return {"text": text}
 
 
 def usage(body: dict) -> dict:
@@ -164,8 +193,15 @@ def usage(body: dict) -> dict:
 
 
 async def call(client: httpx.AsyncClient, semaphore: asyncio.Semaphore, model: AnswerModel, prompt: str,
-               limit: int, path: Path) -> dict:
-    """One reader or judge request, with every attempt kept. Returns the answer record written to ``path``."""
+               limit: int, path: Path, *, truncated_ok: bool = False, empty_ok: bool = False) -> dict:
+    """One reader or judge request, with every attempt kept. Returns the answer record written to ``path``.
+
+    A response that ended for any reason other than ``stop`` is not an answer.
+    With ``truncated_ok`` it is still recorded and returned, marked
+    ``truncated``, with whatever text it had; otherwise it fails like any
+    other incomplete response. With ``empty_ok``, a response that ended
+    normally with no text is recorded with empty text (``answer_record``).
+    """
     path = Path(path)
     body = model.body(prompt, limit)
     request_sha256 = sha(body)
@@ -196,25 +232,34 @@ async def call(client: httpx.AsyncClient, semaphore: asyncio.Semaphore, model: A
                     continue
                 raise RuntimeError(f"Provider HTTP {response.status_code}; attempt retained")
             if not isinstance(value, dict):
-                # A response arrived and was not an answer: final, like a truncated one.
+                # A response arrived and was not an answer: final.
                 raise ValueError("Malformed provider response")
-            result = {"text": response_text(value, model), "response": value, "attempts": attempt,
-                      "seconds": time.perf_counter() - started, "request_sha256": request_sha256,
-                      "endpoint": model.endpoint}
+            answer = answer_record(value, model, truncated_ok=truncated_ok, empty_ok=empty_ok)
+            result = {**answer, "response": value, "attempts": attempt, "seconds": time.perf_counter() - started,
+                      "request_sha256": request_sha256, "endpoint": model.endpoint}
             write_new(path, result)
             return result
     # Unreachable, as in gpt54_budget.call: the last attempt returns or raises.
     raise RuntimeError("Provider attempts exhausted")
 
 
-def verify_call(path: Path, prompt: str, limit: int, *, model: AnswerModel) -> dict:
-    """The recorded call, after checking it against the request this prompt makes and the retry policy."""
+def verify_call(path: Path, prompt: str, limit: int, *, model: AnswerModel, truncated_ok: bool = False,
+                empty_ok: bool = False) -> dict:
+    """The recorded call, after checking it against the request this prompt makes and the retry policy.
+
+    The recorded text, and whether the call is marked truncated, must be what
+    its response gives (``answer_record``), so a truncated or empty call is
+    accepted only with ``truncated_ok`` or ``empty_ok``.
+    """
     value = json.loads(path.read_text())
     expected = model.body(prompt, limit)
     if json.loads(path.with_suffix(".request.json").read_text()) != expected:
         raise ValueError("Provider request differs from the prompt and settings")
+    answer = answer_record(value["response"], model, truncated_ok=truncated_ok, empty_ok=empty_ok)
+    recorded = {key: value[key] for key in ("text", "truncated") if key in value}
+    # Compared with types too, since 1 == True: only a real true marks a call as truncated.
     if (value.get("request_sha256") != sha(expected) or value.get("endpoint") != model.endpoint
-            or response_text(value["response"], model) != value["text"]):
+            or recorded != answer or any(type(recorded[key]) is not type(answer[key]) for key in answer)):
         raise ValueError("Provider response binding differs")
     if not 1 <= value["attempts"] <= ATTEMPTS:
         raise ValueError("Attempt limit differs")

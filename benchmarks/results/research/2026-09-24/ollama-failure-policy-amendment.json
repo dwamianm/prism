@@ -1,0 +1,45 @@
+{
+  "kind": "ollama-failure-policy-amendment",
+  "id": "ollama-failure-policy-2026-09-24",
+  "issue": 132,
+  "decided_at": "2026-09-24T08:03:34Z",
+  "decision": "https://github.com/dwamianm/prism/issues/132#issuecomment-5810272285",
+  "registered_at": "2026-09-24T08:33:43.616250+00:00",
+  "registration_sha256": "b62256d8c461feece94ae76a096132e58db1b7ca4483f24783226b352b8c96c6",
+  "applies_to": "The DeepSeek answer track through the local Ollama server (--provider ollama) only: standalone answer runs and both sides of every pair, under the same rules. The GPT-5.4 track, its frozen sources and its saved results are unchanged, and the authored calibration still requires a complete answer and a verdict that reads exactly yes or no.",
+  "replaces": "For the Ollama track only, the registered rule that truncated responses and invalid verdicts are final and leave the arm incomplete.",
+  "retry_policy": "The registered policy as amended for the Ollama track on 2026-09-24 (#132). Within a run: at most four identical HTTP attempts for transient 429/5xx. A reader answer that ends for any reason other than stop is sent once more as the same request; if that answer also ends early, the question is scored incorrect without calling the judge and recorded as truncated. A verdict is accepted when what is left after removing leading and trailing characters other than the letters A to Z reads yes or no, in any case. Otherwise, or when the judge's response ends early, the judge is called once more, and if that verdict is not accepted either, the question is scored incorrect and recorded as verdict_unresolved. At most one retry per reader call and one per judge call. Any other invalid or ambiguous response is final, and the first failure stops new questions. A later run asks a question again, in a new attempt, only when no answer or verdict was received: a provider HTTP error, an ambiguous transport failure or an interrupted process. compare refuses a result in which more than 1% of the questions are truncated or verdict_unresolved. Every attempt is kept.",
+  "parameters": {
+    "verdict_pattern": "[^A-Za-z]*(yes|no)[^A-Za-z]*",
+    "verdict_flags": 274,
+    "reader_calls": [
+      "reader.json",
+      "reader-retry.json"
+    ],
+    "judge_calls": [
+      "judge.json",
+      "judge-retry.json"
+    ],
+    "unscored_outcomes": [
+      "truncated",
+      "verdict_unresolved"
+    ],
+    "unscored_limit_percent": 1
+  },
+  "rules": {
+    "truncated_reader_answer": "If a reader answer ends for any reason other than stop, the same request is sent once more. If the second answer also ends early, the question is scored incorrect without calling the judge and recorded as truncated.",
+    "malformed_verdict": "A verdict is normalized first: whitespace and leading and trailing characters other than the letters A to Z are removed, and the rest is compared without regard to case. It is accepted only if exactly yes or no is left. Otherwise (an empty verdict included), or when the judge's response ends early, the judge is called once more. If that verdict is not accepted either, the question is scored incorrect and recorded as verdict_unresolved.",
+    "limits": "At most one retry per reader call and one per judge call, on both sides of a pair alike. Any other invalid or ambiguous response stays final.",
+    "invalid_results": "If more than 1% of the questions in either result are truncated or verdict_unresolved, the result is invalid and compare refuses it, so a pair with such a side is invalid.",
+    "records": "Every answer binding, pair record, run log start and result names this policy. Every result counts the reader and judge retries, the verdicts accepted only after normalization, and the truncated and verdict_unresolved questions, and every finished event on the track records the unscored count and marks complete results that compare will refuse as invalid."
+  },
+  "letters": "Letters are A to Z in either case. The stray characters seen before verdicts on 2026-09-24 were CJK characters, which Unicode counts as letters, so a Unicode reading of the rule would keep them.",
+  "stopped_pairs": "The six interleaved A/A pairs of prme@46647825 started on 2026-09-24 under the registered policy (LongMemEval-S pairs 1 to 4, LoCoMo pairs 1 and 2) are given up on record and moved aside with the other discarded attempts. Fresh pairs are answered under this amendment, so no pair mixes two policies.",
+  "stopped_pair_logs_sha256": {
+    "runs/pairs/prme@46647825/prme@46647825-locomo.jsonl": "b1e23aa54b07088919067db5c1fc1d6e9d0f8f4465f8e7d7248d40976e49df3f",
+    "runs/pairs/prme@46647825/prme@46647825-longmemeval.jsonl": "78bbe958060b49e3ff4f364c57e07e175241e1bc8480ba1d4ee9c87d47c27088"
+  },
+  "defaults_changed": false,
+  "changes": "Only how the Ollama track's answers are retried, scored and compared. The registration, its frozen sources, prompts, question sets, model settings, calibration and the published GPT-5.4 and DeepSeek results are unchanged; answers given before this amendment still verify under the registered rules.",
+  "validation": "tests/test_gpt54_baselines.py and tests/test_ollama_answers.py (175 tests) pass, and the full suite passes (4,188 passed, 853 skipped). No answer run was made under the amendment when it was registered."
+}

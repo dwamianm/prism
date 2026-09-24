@@ -51,6 +51,16 @@ question by question, so drift and the time of day reach both sides equally
 alongside it. ``run-pair`` with the ``prme`` arm and no variant answers the
 baseline against itself: the A/A check of the paired test. A plain or
 full-context arm can be paired with the defaults the same way.
+
+The Ollama track answers under an amendment to the registered failure policy
+(#132, recorded in ``FAILURE_AMENDMENT``), so one looping reader answer or
+garbled verdict no longer stops a run or a pair: a truncated reader answer is
+asked once more and then scored incorrect as ``truncated``, and a verdict that
+does not read yes or no after the stray characters around it are removed is
+judged once more and then scored incorrect as ``verdict_unresolved``. Every
+result counts its retries and those outcomes, and ``compare`` refuses a result
+with more than 1% of its questions scored that way. The GPT-5.4 track keeps
+the registered policy unchanged.
 """
 from __future__ import annotations
 
@@ -60,6 +70,7 @@ from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
+from datetime import datetime
 import fcntl
 from functools import partial
 import hashlib
@@ -118,6 +129,34 @@ RETRY_POLICY = (
     "a provider HTTP error, an ambiguous transport failure or an interrupted process. Truncated or malformed "
     "responses and invalid verdicts are final and leave the arm incomplete. Every attempt is kept."
 )
+# The Ollama track's amendment to RETRY_POLICY (#132, 2026-09-24). It applies to that track's standalone runs and
+# to both sides of every pair alike; the GPT-5.4 track keeps RETRY_POLICY. Every binding and result on the Ollama
+# track names the policy its answers were given under (answer_model.failure_policy), so none mixes two.
+FAILURE_POLICY = "ollama-failure-policy-2026-09-24"
+FAILURE_AMENDMENT = RESULTS / "2026-09-24" / "ollama-failure-policy-amendment.json"
+OLLAMA_RETRY_POLICY = (
+    "The registered policy as amended for the Ollama track on 2026-09-24 (#132). Within a run: at most four "
+    "identical HTTP attempts for transient 429/5xx. A reader answer that ends for any reason other than stop is "
+    "sent once more as the same request; if that answer also ends early, the question is scored incorrect without "
+    "calling the judge and recorded as truncated. A verdict is accepted when what is left after removing leading "
+    "and trailing characters other than the letters A to Z reads yes or no, in any case. Otherwise, or when the "
+    "judge's response ends early, the judge is called once more, and if that verdict is not accepted either, the "
+    "question is scored incorrect and recorded as verdict_unresolved. At most one retry per reader call and one per "
+    "judge call. Any other invalid or ambiguous response is final, and the first failure stops new questions. A "
+    "later run asks a question again, in a new attempt, only when no answer or verdict was received: a provider "
+    "HTTP error, an ambiguous transport failure or an interrupted process. compare refuses a result in which more "
+    "than 1% of the questions are truncated or verdict_unresolved. Every attempt is kept."
+)
+UNSCORED_PERCENT = 1
+# The calls of one question attempt under the amended policy, in order: the call, then its one retry.
+READER_CALLS = ("reader.json", "reader-retry.json")
+JUDGE_CALLS = ("judge.json", "judge-retry.json")
+# Outcomes scored incorrect without an accepted verdict; compare refuses a result with more than UNSCORED_PERCENT.
+UNSCORED = ("truncated", "verdict_unresolved")
+# A verdict under the amended policy: yes or no, in any case, with only characters other than the letters A to Z
+# around it. The stray characters seen before verdicts so far were CJK characters, which Unicode counts as
+# letters, so "letters" means the ones a yes or no is written in; ASCII matching keeps case folding to A to Z.
+_VERDICT = re.compile(r"[^A-Za-z]*(yes|no)[^A-Za-z]*", re.IGNORECASE | re.ASCII | re.DOTALL)
 # Besides this module, the code that sends, checks and judges the reader and judge calls. A repeat of the
 # defaults must have answered with the same versions (compare).
 ANSWER_MODULES = ("benchmarks/integrations/ollama_answers.py", "benchmarks/diagnostics/reader_judge.py",
@@ -817,29 +856,229 @@ async def _calibration_case(client, model: ollama_answers.AnswerModel, attempt: 
 
 
 def _ollama_answer_model(model: ollama_answers.AnswerModel, data: Path) -> tuple[dict, dict]:
-    """The model's settings and identity, and the calibration it passed with exactly these."""
+    """The model's settings and identity under the amended failure policy, and the calibration it passed.
+
+    The calibration is matched on the model's own settings: the failure policy
+    decides how answers are scored, not what the reader and judge are sent.
+    """
+    failure_amendment()
     settings = ollama_answers.describe(model)
     calibration = _passed_calibration(data, settings)
     if calibration is None:
         raise ValueError(f"{model.model} has not passed calibration with these settings and this Ollama model "
                          f"identity ({_calibration_folder(data)}); run calibrate first")
-    return settings, calibration
+    return _under_policy(settings), calibration
+
+
+def _under_policy(settings: dict) -> dict:
+    """An Ollama model's settings with the failure policy its answers are given under (#132)."""
+    return {**settings, "failure_policy": FAILURE_POLICY}
 
 
 def _bind_answer_model(folder: Path, settings: dict) -> dict:
     """The arm's reader and judge. Once an answer exists, answers from another model are never mixed in.
 
-    Returns the bound settings, which answered every question in the arm.
+    Returns the bound settings, which answered every question in the arm. An
+    arm is never moved to another failure policy once any question was asked,
+    since an earlier attempt's final failure would then stand under rules that
+    would have asked it again (#132).
     """
     path = folder / "answer-model.json"
     if path.exists():
         bound = json.loads(path.read_text())
         if ollama_answers.same_model(bound, settings):
             return bound
+        if _policy_of(bound) != _policy_of(settings) and any((folder / "execution").glob("*/attempt-*")):
+            raise ValueError(f"This arm was answered under another failure policy ({path}), and no arm mixes two "
+                             "policies (#132). An incomplete arm can be moved aside and prepared again.")
         if any((folder / "execution").glob("*/attempt-*/result.json")):
             raise ValueError(f"This arm was answered by another reader and judge or other settings ({path})")
     _write_json(path, settings)
     return settings
+
+
+# Amended failure policy (#132) ---------------------------------------------------
+
+def policy_parameters() -> dict:
+    """The values that decide how the amended policy scores, which its recorded amendment pins."""
+    return {"verdict_pattern": _VERDICT.pattern, "verdict_flags": int(_VERDICT.flags),
+            "reader_calls": list(READER_CALLS), "judge_calls": list(JUDGE_CALLS), "unscored_outcomes": list(UNSCORED),
+            "unscored_limit_percent": UNSCORED_PERCENT}
+
+
+def failure_amendment() -> dict:
+    """The recorded amendment behind ``FAILURE_POLICY``, after checking it amends this registration with these rules.
+
+    The rules are pinned twice: as the policy text, and as the values that
+    score answers under it (``policy_parameters``), so a change to either
+    needs a new amendment.
+    """
+    value = json.loads(FAILURE_AMENDMENT.read_text())
+    if (value.get("kind") != "ollama-failure-policy-amendment" or value.get("id") != FAILURE_POLICY
+            or value.get("registration_sha256") != digest(study.REG)
+            or value.get("retry_policy") != OLLAMA_RETRY_POLICY or value.get("parameters") != policy_parameters()
+            or not isinstance(value.get("issue"), int) or not isinstance(value.get("registered_at"), str)):
+        raise ValueError(f"{FAILURE_AMENDMENT} does not state the failure policy this module applies to this "
+                         "registration")
+    return {"id": FAILURE_POLICY, "issue": value["issue"], "registered_at": value["registered_at"],
+            "sha256": digest(FAILURE_AMENDMENT)}
+
+
+def _policy_of(answer_model: dict) -> str | None:
+    """The failure policy an answer model names: ``FAILURE_POLICY``, or None for the registered one."""
+    policy = answer_model.get("failure_policy")
+    if policy not in (None, FAILURE_POLICY):
+        raise ValueError(f"Unknown failure policy {policy!r}")
+    return policy
+
+
+def normalized_verdict(text: str) -> bool | None:
+    """Yes or no, in any case, once every character but A to Z is removed from both ends; otherwise None."""
+    match = _VERDICT.fullmatch(text)
+    return None if match is None else match.group(1).lower() == "yes"
+
+
+def _judge_verdict(judge: dict) -> bool | None:
+    """A judge call's verdict under the amended policy, or None when the call was truncated or is not accepted."""
+    return None if judge.get("truncated") is True else normalized_verdict(judge["text"])
+
+
+def _registered_verdict(text: str) -> bool | None:
+    """The registered verdict rule's reading of ``text``, or None where it has none."""
+    try:
+        return study.verdict(text)
+    except ValueError:
+        return None
+
+
+def _registered_scored(attempt: Path, judge: dict) -> dict:
+    """A question's scoring under the registered policy: one reader call and one judge call, both final."""
+    return {"correct": study.verdict(judge["text"]), "reader_sha256": digest(attempt / READER_CALLS[0]),
+            "judge_sha256": digest(attempt / JUDGE_CALLS[0])}
+
+
+def _outside_policy(detail: str) -> ValueError:
+    return ValueError(f"The recorded calls do not follow the amended failure policy: {detail}")
+
+
+def _scored(attempt: Path, readers: list[dict], judges: list[dict]) -> dict:
+    """A question's scoring under the amended policy, from its reader and judge calls in the order they were made.
+
+    Refuses calls the policy does not make: a retry after an answer that was
+    not truncated or after an accepted verdict, a judge call after a reader
+    answer that stayed truncated, or a missing retry.
+    """
+    truncated = [reader.get("truncated") is True for reader in readers]
+    verdicts = [_judge_verdict(judge) for judge in judges]
+    if not readers:
+        raise _outside_policy("no reader call")
+    if len(readers) > len(READER_CALLS) or not all(truncated[:-1]):
+        raise _outside_policy("a reader retry without a truncated answer before it")
+    if truncated[-1] and len(readers) < len(READER_CALLS):
+        raise _outside_policy("a truncated answer that was not asked again")
+    if truncated[-1] and judges:
+        raise _outside_policy("a judge call after an answer that stayed truncated")
+    if not truncated[-1] and not judges:
+        raise _outside_policy("an answer that was never judged")
+    if len(judges) > len(JUDGE_CALLS) or any(verdict is not None for verdict in verdicts[:-1]):
+        raise _outside_policy("a judge retry after an accepted verdict")
+    if judges and verdicts[-1] is None and len(judges) < len(JUDGE_CALLS):
+        raise _outside_policy("a verdict that was not accepted and not judged again")
+    outcome = "truncated" if truncated[-1] else "judged" if verdicts[-1] is not None else "verdict_unresolved"
+    return {"correct": verdicts[-1] if outcome == "judged" else False, "outcome": outcome,
+            "reader_sha256": digest(attempt / READER_CALLS[0]),
+            "judge_sha256": digest(attempt / JUDGE_CALLS[0]) if judges else None,
+            "reader_retry_sha256": digest(attempt / READER_CALLS[1]) if len(readers) > 1 else None,
+            "judge_retry_sha256": digest(attempt / JUDGE_CALLS[1]) if len(judges) > 1 else None,
+            # Accepted only because stray characters were removed around it.
+            "verdict_normalized": outcome == "judged" and _registered_verdict(judges[-1]["text"]) is None}
+
+
+async def _ask_amended(ask, client, semaphore, benchmark: str, question: dict, context: str, attempt: Path) -> dict:
+    """Ask and judge one question under the amended policy: each reader and judge call is sent at most twice."""
+    prompt = study.reader_prompt(benchmark, question, context)
+    readers: list[dict] = []
+    for name in READER_CALLS:
+        readers.append(await ask(client, semaphore, prompt=prompt, limit=READER_LIMIT, path=attempt / name,
+                                 truncated_ok=True))
+        if readers[-1].get("truncated") is not True:
+            break
+    judges: list[dict] = []
+    if readers[-1].get("truncated") is not True:
+        prompt = study.judge_prompt(benchmark, question, readers[-1]["text"])
+        for name in JUDGE_CALLS:
+            # An empty verdict is a verdict the policy does not accept, so the judge is asked again.
+            judges.append(await ask(client, semaphore, prompt=prompt, limit=JUDGE_LIMIT, path=attempt / name,
+                                    truncated_ok=True, empty_ok=True))
+            if _judge_verdict(judges[-1]) is not None:
+                break
+    return _scored(attempt, readers, judges)
+
+
+def _recorded_calls(attempt: Path, names: tuple[str, ...]) -> list[Path]:
+    """The recorded calls among ``names``, which must be the first of them in order: a retry never stands alone."""
+    present = [name for name in names if (attempt / name).exists()]
+    if present != list(names[:len(present)]):
+        raise _outside_policy("a retry recorded without the call it repeats")
+    return [attempt / name for name in present]
+
+
+def _within_limit(unscored: int, total: int) -> bool:
+    return unscored * 100 <= UNSCORED_PERCENT * total
+
+
+def _outcome_counts(rows: list[dict], total: int) -> dict:
+    """How many questions the amended policy asked again, accepted after removing stray characters, or left unscored."""
+    keys = ("outcome", "reader_retry_sha256", "judge_retry_sha256", "verdict_normalized")
+    if any(key not in row for row in rows for key in keys):
+        raise ValueError("A result under the amended failure policy has rows without their outcome and retries")
+    counts = {outcome: sum(row["outcome"] == outcome for row in rows) for outcome in UNSCORED}
+    return {"reader_retries": sum(row["reader_retry_sha256"] is not None for row in rows),
+            "judge_retries": sum(row["judge_retry_sha256"] is not None for row in rows),
+            "verdicts_normalized": sum(row["verdict_normalized"] for row in rows), **counts,
+            "unscored": sum(counts.values()), "unscored_limit_percent": UNSCORED_PERCENT,
+            "within_limit": _within_limit(sum(counts.values()), total)}
+
+
+def _invalid_reason(results: dict[str, dict], total: int) -> str | None:
+    """Why complete results under the amended policy are ones compare will refuse, or None when they are not."""
+    over = {name: result["failure_policy"]["unscored"] for name, result in results.items()
+            if not result["failure_policy"]["within_limit"]}
+    if not over:
+        return None
+    counts = ", ".join(f"{name} {count}" for name, count in over.items())
+    return (f"more than {UNSCORED_PERCENT}% of the questions were truncated or left without a verdict ({counts} of "
+            f"{total})")
+
+
+def _invalid(label: str, results: dict[str, dict], total: int, complete: bool) -> dict:
+    """What a finished event records about unscored questions, with a warning when compare will refuse the results.
+
+    Results answered under the registered policy have nothing to record.
+    """
+    if any("failure_policy" not in result for result in results.values()):
+        return {}
+    fields: dict = {"unscored": {name: result["failure_policy"]["unscored"] for name, result in results.items()}}
+    reason = _invalid_reason(results, total) if complete else None
+    if reason:
+        fields["invalid"] = reason
+        print(f"{label} is complete but invalid: {reason}. It is published and stays on record, and compare refuses "
+              "it (#132).", file=sys.stderr, flush=True)
+    return fields
+
+
+def _bound_policy(folder: Path) -> str | None:
+    """The failure policy an Ollama arm or pair side is bound to: ``FAILURE_POLICY``, or None for the registered one.
+
+    Answers given before the amendment keep the registered rules, so their records still verify as they were.
+    """
+    path = folder / "answer-model.json"
+    if not path.is_file():
+        raise ValueError(f"No answer model is bound at {path}")
+    try:
+        return _policy_of(json.loads(path.read_text()))
+    except ValueError as exc:
+        raise ValueError(f"{exc} ({path})") from None
 
 
 async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
@@ -849,7 +1088,8 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
 
     ``RETRY_POLICY`` says which failures a later run asks again. The arm is
     complete only when every question has an authenticated answer and verdict.
-    With ``model``, the Ollama track answers instead of GPT-5.4: no API key,
+    With ``model``, the Ollama track answers instead of GPT-5.4, under
+    ``OLLAMA_RETRY_POLICY`` (#132): no API key,
     ledger or cap. Only that track runs the ``prme`` arms and ``sample``, which
     asks only ``sample_questions`` as a smoke check, not a score; a later full
     run reuses its answers. A named variant of the defaults is answered only by
@@ -895,13 +1135,15 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
             extra = {"calibration": calibration}
             _log_run(data, arm, benchmark, {"event": "started", "sample": sample,
                                             "answer_model_sha256": sha(answer_model),
-                                            "server_version": _version_of(settings)})
+                                            "server_version": _version_of(settings),
+                                            "failure_policy": _policy_of(answer_model)})
+        amended = _policy_of(answer_model) is not None
         async with opened as client:
             await _answer(run_name, benchmark, [_Side(folder, folder, entries)], questions,
-                          registration["provider_concurrency"], client, ask, ledger)
+                          registration["provider_concurrency"], client, ask, ledger, amended=amended)
         end_version = None
         if model is not None:
-            ended = ollama_answers.describe(model)
+            ended = _under_policy(ollama_answers.describe(model))
             end_version = _version_of(ended)
             if not ollama_answers.same_model(answer_model, ended):
                 _log_run(data, arm, benchmark, {"event": "model-changed", "sample": sample,
@@ -911,17 +1153,19 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
             events = _current_preparation(_run_events(_run_log_path(data, arm, benchmark)))
             extra["server_versions"] = _server_versions(answer_model, events, end_version)
         result = report(arm, benchmark, folder, questions, prepared, entries, ledger, model=model)
-        result.update(started_at=started, finished_at=study.utc(), retry_policy=RETRY_POLICY,
+        result.update(started_at=started, finished_at=study.utc(),
+                      retry_policy=OLLAMA_RETRY_POLICY if amended else RETRY_POLICY,
                       provenance=_provenance(), modules=_module_identity(), answer_model=answer_model, **extra,
                       prepared=_prepared_summary(prepared))
         if sample is not None:
             _label_sample(result, sample, questions)
         _write_json(private, result)
         if model is not None:
+            invalid = _invalid(run_name, {arm: result}, len(questions), result["complete"] and sample is None)
             _log_run(data, arm, benchmark, {"event": "finished", "sample": sample, "complete": result["complete"],
                                             "completed": result["completed"], "total": result["total"],
                                             "prepared_commit": result["prepared"]["commit"],
-                                            "server_version": end_version})
+                                            "server_version": end_version, **invalid})
             result["run_log"] = _run_history(data, arm, benchmark)
         if not result["complete"]:
             raise RuntimeError(
@@ -967,8 +1211,9 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     (``PAIR_ORDER``), so drift and the time of day reach both sides equally,
     and each side is reported as its own result, marked with the pair.
     ``compare`` pairs a variant only with the defaults run answered in the same
-    pair. A call resumes the latest pair of these arms while it can still
-    finish (``_pair_can_finish``), and otherwise starts the next one, which is
+    pair. Both sides answer under ``OLLAMA_RETRY_POLICY`` (#132). A call resumes
+    the latest pair of these arms while it can still finish
+    (``_pair_blocker``), and otherwise starts the next one, which is
     how a confirmation redraws both sides; every pair stays on record.
     ``sample`` works as in ``run``. Returns the pair's mark and both results.
     """
@@ -1007,15 +1252,15 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
         bound = {side: _bind_answer_model(folder / side, settings) for side in PAIR_SIDES}
         _append_event(log, {"event": "started", "pair": number, "sample": sample,
                             "answer_model_sha256": {side: sha(value) for side, value in bound.items()},
-                            "server_version": _version_of(settings)})
+                            "server_version": _version_of(settings), "failure_policy": _policy_of(settings)})
         sides = []
         for side in _ANSWER_ORDER:
             prepared_folder, _, entries = loaded[side]
             sides.append(_Side(prepared_folder, folder / side, entries))
         async with ollama_answers.client_for(model) as client:
             await _answer(run_name, benchmark, sides, questions, registration["provider_concurrency"], client,
-                          partial(ollama_answers.call, model=model), None)
-        ended = ollama_answers.describe(model)
+                          partial(ollama_answers.call, model=model), None, amended=_policy_of(settings) is not None)
+        ended = _under_policy(ollama_answers.describe(model))
         end_version = _version_of(ended)
         if not all(ollama_answers.same_model(value, ended) for value in bound.values()):
             _append_event(log, {"event": "model-changed", "pair": number, "sample": sample,
@@ -1026,7 +1271,7 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
         mark = {**{key: record[key] for key in _PAIR_KEYS if key != "sha256"}, "sha256": digest(folder / "pair.json"),
                 "order": PAIR_ORDER, "pairs_started": len(_pair_numbers(root, log)),
                 "earlier_pairs": _earlier_pairs(log, number)}
-        shared = {"started_at": started, "finished_at": study.utc(), "retry_policy": RETRY_POLICY,
+        shared = {"started_at": started, "finished_at": study.utc(), "retry_policy": OLLAMA_RETRY_POLICY,
                   "provenance": _provenance(), "modules": _module_identity(), "calibration": calibration}
         outcome = {}
         for side in PAIR_SIDES:
@@ -1047,12 +1292,13 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
         # compare refuses a pair whose server version changed, so such a pair is never published as complete.
         changed = f"the Ollama server version changed ({', '.join(versions)})" if len(versions) > 1 else None
         complete = changed is None and all(result["complete"] for result in outcome.values())
+        invalid = _invalid(run_name, outcome, len(questions), complete and sample is None)
         _append_event(log, {"event": "finished", "pair": number, "sample": sample, "complete": complete,
                             "completed": {side: result["completed"] for side, result in outcome.items()},
                             "total": len(questions), "server_version": end_version,
                             "prepared_commit": {side: result["prepared"]["commit"]
                                                 for side, result in outcome.items()},
-                            **({"reason": changed} if changed else {})})
+                            **({"reason": changed} if changed else {}), **invalid})
         for side, result in outcome.items():
             # This pair's own starts, and the history of the arm whose contexts the side read.
             result["run_log"] = {"sha256": digest(log),
@@ -1113,7 +1359,7 @@ def _open_pair(root: Path, log: Path, arms: dict[str, str], benchmark: str, prep
     folder.mkdir()
     record = {"kind": "ollama-answer-pair", "id": uuid.uuid4().hex, "number": number, **arms,
               "benchmark": benchmark, "prepared_sha256": prepared_sha256, "order": PAIR_ORDER,
-              "created_at": study.utc()}
+              "failure_policy": _policy_of(settings), "created_at": study.utc()}
     _write_json(folder / "pair.json", record)
     return folder, record
 
@@ -1121,14 +1367,18 @@ def _open_pair(root: Path, log: Path, arms: dict[str, str], benchmark: str, prep
 def _pair_blocker(folder: Path, events: list[dict], prepared_sha256: dict[str, str], settings: dict) -> str | None:
     """Why a pair cannot be finished as one session of these arms, under this model and server version, or None.
 
-    It cannot when both sides are complete, its record is missing, the arms'
-    contexts were prepared again, a question failed finally, a side was
-    answered by another model or settings, or the pair recorded another Ollama
-    server version (``compare`` refuses such a pair). The next pair starts
-    instead, and this one stays on record.
+    It cannot when both sides are complete, it was started under another
+    failure policy (#132), its record is missing, the arms' contexts were
+    prepared again, a question failed finally, a side was answered by another
+    model or settings, or the pair recorded another Ollama server version
+    (``compare`` refuses such a pair). The next pair starts instead, and this
+    one stays on record. The failure policy is read from the run log, so it
+    is found even when the pair's folder was moved aside.
     """
     if all(_complete_result(folder / side / "result.json") for side in PAIR_SIDES):
         return "complete"
+    if any(event["event"] == "started" and event.get("failure_policy") != _policy_of(settings) for event in events):
+        return "it was started under another failure policy"
     path = folder / "pair.json"
     if not path.is_file():
         return "its pair.json record is missing"
@@ -1156,7 +1406,7 @@ def _earlier_pairs(log: Path, number: int) -> list[dict]:
         if pair is None or pair >= number:
             continue
         if event["event"] == "finished" and event.get("sample") is None and event.get("complete"):
-            states[pair] = "complete"
+            states[pair] = f"complete but invalid: {event['invalid']}" if event.get("invalid") else "complete"
         elif event["event"] == "abandoned":
             states[pair] = f"abandoned: {event['reason']}"
         elif event["event"] == "finished" and event.get("reason"):
@@ -1265,6 +1515,10 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
     are baselines of the defaults with the same inputs, the pairing is a
     repeat: its difference is run-to-run variation alone, and ``repeat``
     reports how many verdicts changed and whether the interval excludes zero.
+    Both results must have been answered under the same failure policy, and
+    under the amended one (#132) neither may have more than
+    ``UNSCORED_PERCENT`` of its questions truncated or without an accepted
+    verdict: such a pair is invalid.
     """
     for side, result in (("before", before), ("after", after)):
         if not result.get("complete") or "sample" in result or result.get("kind", "").endswith("-sample"):
@@ -1272,6 +1526,30 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
     for field in ("kind", "benchmark", "model", "registration_sha256"):
         if before.get(field) != after.get(field):
             raise ValueError(f"The results differ in {field}")
+    before_policy, after_policy = (_policy_of(result.get("answer_model") or {}) for result in (before, after))
+    if before_policy != after_policy:
+        raise ValueError(f"The results were answered under different failure policies ({before_policy or 'registered'}"
+                         f" and {after_policy or 'registered'}). Pair only runs answered under one policy (#132).")
+    if before_policy is None and before["kind"] == "ollama-answer-result":
+        # Only a checkout from before #132 answers under the registered rules once the amendment exists.
+        amended_at = datetime.fromisoformat(failure_amendment()["registered_at"])
+        for side, result in (("before", before), ("after", after)):
+            if result.get("started_at") and datetime.fromisoformat(result["started_at"]) >= amended_at:
+                raise ValueError(f"The {side} result was answered under the registered failure policy after the "
+                                 "Ollama track's amendment was registered, so it came from a checkout without #132. "
+                                 "Answer it again under the amendment.")
+    outcomes = None
+    if before_policy is not None:
+        amendments = {(result.get("failure_policy") or {}).get("sha256") for result in (before, after)}
+        if len(amendments) != 1 or None in amendments:
+            raise ValueError("The results do not record the same failure policy amendment")
+        outcomes = {}
+        for side, result in (("before", before), ("after", after)):
+            outcomes[side] = counts = _outcome_counts(result["rows"], len(result["rows"]))
+            if not counts["within_limit"]:
+                raise ValueError(f"{counts['unscored']} of the {side} result's {len(result['rows'])} questions were "
+                                 f"truncated or left without a verdict, more than the {UNSCORED_PERCENT}% the failure "
+                                 "policy allows, so the pair is invalid (#132)")
     if not ollama_answers.same_model(before["answer_model"], after["answer_model"]):
         raise ValueError("The results were answered by different readers and judges, settings or model identities. "
                          "Pair a run only with a defaults run answered by the same model identity and settings.")
@@ -1333,6 +1611,9 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
                           "questions, since each question has its own history."),
         "arms": {"before": before["arm"], "after": after["arm"]}, "pair": pair,
         "server_versions": _sorted_versions(versions),
+        # Each side's retries and unscored questions under the amended policy; None under the registered one.
+        "failure_policy": None if outcomes is None else {
+            "id": before_policy, "sha256": before["failure_policy"]["sha256"], **outcomes},
         "prepared": prepared, "warnings": warnings,
         "accuracy": accuracy,
         "categories": {category: paired([key for key, row in old.items() if row["question_type"] == category])
@@ -1361,11 +1642,13 @@ class _Side:
 
 
 async def _answer(label: str, benchmark: str, sides: list[_Side], questions: list[dict], concurrency: int,
-                  client, ask, ledger: Ledger | None) -> None:
+                  client, ask, ledger: Ledger | None, *, amended: bool = False) -> None:
     """Ask every pending question of every side through ``ask``, the provider's call with its ledger or model bound.
 
     The sides share one queue, interleaved question by question in the order
     given, so a pair's two answer runs move through the questions together.
+    With ``amended`` (the Ollama track), each question is asked and judged
+    under ``OLLAMA_RETRY_POLICY``; otherwise under the registered policy.
     """
     jobs = iter([(side, question) for question in questions for side in sides
                  if _status(side.answers / "execution" / question["question_id"]) == "pending"])
@@ -1385,17 +1668,16 @@ async def _answer(label: str, benchmark: str, sides: list[_Side], questions: lis
             try:
                 attempt = _next_attempt(side.answers / "execution" / qid)
                 context = _context(side.prepared, entry)
-                reader = await ask(client, semaphore, prompt=study.reader_prompt(benchmark, question, context),
-                                   limit=READER_LIMIT, path=attempt / "reader.json")
-                judged = await ask(client, semaphore, prompt=study.judge_prompt(benchmark, question, reader["text"]),
-                                   limit=JUDGE_LIMIT, path=attempt / "judge.json")
-                _write_json(attempt / "result.json", {
-                    "question_id": qid, "question_type": question["question_type"],
-                    "cluster": question.get("conversation_id") or sha(question["haystack_sessions"]),
-                    "correct": study.verdict(judged["text"]), "context_sha256": entry["sha256"],
-                    "context_tokens": entry["context_tokens"], "retrieval_seconds": entry["retrieval_seconds"],
-                    "reader_sha256": digest(attempt / "reader.json"),
-                    "judge_sha256": digest(attempt / "judge.json")})
+                if amended:
+                    scored = await _ask_amended(ask, client, semaphore, benchmark, question, context, attempt)
+                else:
+                    reader = await ask(client, semaphore, prompt=study.reader_prompt(benchmark, question, context),
+                                       limit=READER_LIMIT, path=attempt / READER_CALLS[0])
+                    judged = await ask(client, semaphore,
+                                       prompt=study.judge_prompt(benchmark, question, reader["text"]),
+                                       limit=JUDGE_LIMIT, path=attempt / JUDGE_CALLS[0])
+                    scored = _registered_scored(attempt, judged)
+                _write_json(attempt / "result.json", _row(question, entry, scored))
                 answered += 1
                 if answered % 25 == 0:
                     cost = "" if ledger is None else "; arm cost ${:.3f}".format(
@@ -1422,12 +1704,15 @@ def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepar
 
     Without ``model`` the calls are GPT-5.4 calls checked against ``ledger``;
     with it they are that Ollama model's calls, which cost nothing. The answers
-    are in the arm's folder, or in ``answers`` for one side of a pair.
+    are in the arm's folder, or in ``answers`` for one side of a pair. Ollama
+    answers are checked under the failure policy they are bound to, and under
+    the amended one the result counts its retries and unscored questions.
     """
     from benchmarks.integrations.analyze_gpt54_comparison import verify_call
 
     verify = verify_call if model is None else partial(ollama_answers.verify_call, model=model)
     tally = _tally_gpt54 if model is None else _tally_ollama
+    policy = None if model is None else _bound_policy(answers or folder)
     rows, failures = [], []
     usage = {"input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0, "successful_calls": 0,
              "http_attempts": 0, "http_status_counts": Counter()}
@@ -1442,7 +1727,7 @@ def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepar
                      for _, record in records if record["kind"] == "failure"]
         if answer is not None:
             rows.append(_verified_row(verify, tally, benchmark, question, folder, prepared, entries[qid], answer,
-                                      usage))
+                                      usage, amended=policy is not None))
     if model is None:
         charges = list(ledger.update()["entries"].values())
         if sum(entry["charge"] for entry in charges) < usage["observed_nanodollars"]:
@@ -1466,6 +1751,8 @@ def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepar
         "final_failures": sum(not failure["retryable"] and not failure["replaced"] for failure in failures),
         "unreplaced_failures": sum(not failure["replaced"] for failure in failures),
         "failures": failures,
+        **({} if policy is None else {"failure_policy": {**failure_amendment(),
+                                                         **_outcome_counts(rows, len(questions))}}),
         "cost": cost,
         "provider_tokens": {**usage, "http_status_counts": dict(usage["http_status_counts"]),
                             "note": "Successful reader and judge calls of answered questions."},
@@ -1483,24 +1770,44 @@ def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepar
     return result
 
 
+def _row(question: dict, entry: dict, scored: dict) -> dict:
+    """A question's result row: the question, the context it was asked on, and how its answer was scored."""
+    # "correct" stays where rows have always had it; the scoring's own fields follow.
+    return {"question_id": question["question_id"], "question_type": question["question_type"],
+            "cluster": question.get("conversation_id") or sha(question["haystack_sessions"]),
+            "correct": scored["correct"], "context_sha256": entry["sha256"], "context_tokens": entry["context_tokens"],
+            "retrieval_seconds": entry["retrieval_seconds"], **scored}
+
+
 def _verified_row(verify, tally, benchmark: str, question: dict, folder: Path, prepared: dict, entry: dict,
-                  attempt: Path, usage: dict) -> dict:
-    """The attempt's result row, after checking it against its context, calls and verdict."""
+                  attempt: Path, usage: dict, *, amended: bool = False) -> dict:
+    """The attempt's result row, after checking it against its context, calls and verdict.
+
+    With ``amended``, every call the amended failure policy made is checked,
+    retries and truncated answers included, and so is the order they came in.
+    """
     qid = question["question_id"]
     row = json.loads((attempt / "result.json").read_text())
     context = _context(folder, entry)
     tokens = count_tokens(context, prepared["tokenizer"])
     budget = prepared["context_budget"]
-    reader = verify(attempt / "reader.json", study.reader_prompt(benchmark, question, context), READER_LIMIT)
-    judge = verify(attempt / "judge.json", study.judge_prompt(benchmark, question, reader["text"]), JUDGE_LIMIT)
-    expected = {"question_id": qid, "question_type": question["question_type"],
-                "cluster": question.get("conversation_id") or sha(question["haystack_sessions"]),
-                "correct": study.verdict(judge["text"]), "context_sha256": entry["sha256"],
-                "context_tokens": entry["context_tokens"], "retrieval_seconds": entry["retrieval_seconds"],
-                "reader_sha256": digest(attempt / "reader.json"), "judge_sha256": digest(attempt / "judge.json")}
-    if row != expected or tokens != entry["context_tokens"] or (budget is not None and tokens > budget):
+    prompt = study.reader_prompt(benchmark, question, context)
+    if amended:
+        readers = [verify(path, prompt, READER_LIMIT, truncated_ok=True)
+                   for path in _recorded_calls(attempt, READER_CALLS)]
+        if not readers:
+            raise ValueError(f"The recorded result for {qid} has no reader call")
+        judges = [verify(path, study.judge_prompt(benchmark, question, readers[-1]["text"]), JUDGE_LIMIT,
+                         truncated_ok=True, empty_ok=True) for path in _recorded_calls(attempt, JUDGE_CALLS)]
+        scored, calls = _scored(attempt, readers, judges), readers + judges
+    else:
+        reader = verify(attempt / READER_CALLS[0], prompt, READER_LIMIT)
+        judge = verify(attempt / JUDGE_CALLS[0], study.judge_prompt(benchmark, question, reader["text"]), JUDGE_LIMIT)
+        scored, calls = _registered_scored(attempt, judge), [reader, judge]
+    if row != _row(question, entry, scored) or tokens != entry["context_tokens"] or (
+            budget is not None and tokens > budget):
         raise ValueError(f"The recorded result for {qid} does not match its context, calls or verdict")
-    for value in (reader, judge):
+    for value in calls:
         tally(usage, value["response"])
         usage["successful_calls"] += 1
         usage["http_attempts"] += value["attempts"]
