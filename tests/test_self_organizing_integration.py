@@ -404,6 +404,9 @@ class TestOpportunisticMaintenance:
             lexical_path=str(Path(tmp_dir) / "lexical_index"),
             organizer=OrganizerConfig(
                 opportunistic_cooldown=0,
+                # This verifies triggering/promotion, not a 200 ms latency SLO.
+                # A slow runner can spend a short pass before promotion runs.
+                opportunistic_budget_ms=5000,
                 promotion_age_days=1.0,
                 promotion_evidence_count=1,
             ),
@@ -452,6 +455,11 @@ class TestOpportunisticMaintenance:
             lexical_path=str(Path(tmp_dir) / "lexical_index"),
             organizer=OrganizerConfig(
                 opportunistic_cooldown=0,
+                # This verifies triggering/archival, not a 200 ms latency SLO.
+                # The aged node is promoted first, and the pass stops before
+                # archival once the budget is spent, which a slow runner can
+                # do with the default budget and leave the node STABLE.
+                opportunistic_budget_ms=5000,
                 force_archive_salience_threshold=0.05,
             ),
         )
