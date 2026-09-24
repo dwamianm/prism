@@ -19,6 +19,9 @@ of its gap belongs to the memory system. These arms add them:
   ``prme`` has a complete answer run, the defaults at another commit on main
   are a new baseline, ``prme@<commit>`` (the commit's first 8 characters),
   which ``prepare prme`` and ``run prme`` choose from the checked-out commit.
+  A later baseline also answers the defaults a second time: paired with an
+  earlier baseline that read the same context text, ``compare`` reports the
+  two as a repeat, which measures run-to-run variation (#118).
 
 Every arm reuses the registered reader, judge, prompts, model settings and
 question sets of ``run_gpt54_comparison``, and leaves that frozen module
@@ -105,6 +108,11 @@ RETRY_POLICY = (
     "a provider HTTP error, an ambiguous transport failure or an interrupted process. Truncated or malformed "
     "responses and invalid verdicts are final and leave the arm incomplete. Every attempt is kept."
 )
+# Besides this module, the code that sends, checks and judges the reader and judge calls. A repeat of the
+# defaults must have answered with the same versions (compare).
+ANSWER_MODULES = ("benchmarks/integrations/ollama_answers.py", "benchmarks/diagnostics/reader_judge.py",
+                  "benchmarks/integrations/gpt54_official_prompt_loader.py",
+                  "benchmarks/integrations/run_longmemeval_v2.py", *FROZEN_SOURCES)
 # Messages from gpt54_budget.call and ollama_answers.call for failures that returned no answer text.
 _NO_ANSWER_FAILURES = ("Provider HTTP ", "Ambiguous provider failure", "Provider attempts exhausted")
 _ATTEMPT = re.compile(r"attempt-(\d+)")
@@ -299,7 +307,8 @@ def baseline_arm(benchmark: str, commit: str | None, *, data: Path) -> str:
 
     The first baseline is the ``prme`` arm. Once it has a complete answer run,
     the defaults at any other commit (after a default or the model identity
-    changes) are a new baseline in their own arm, ``prme@`` and the commit's
+    changes, or to answer the defaults again for #118) are a new baseline in
+    their own arm, ``prme@`` and the commit's
     first ``SHORT_COMMIT`` characters, with their own contexts, answers and run
     log. No earlier baseline or its record is touched, and each commit has at
     most one baseline. While another later baseline is prepared and not
@@ -847,11 +856,37 @@ def _prepared_summary(prepared: dict) -> dict:
             "contexts_matching_saved_run": prepared.get("contexts_matching_saved_run")}
 
 
+def _server_version(result: dict) -> str | None:
+    return (result["answer_model"].get("identity") or {}).get("server_version")
+
+
+def _same_inputs(before: dict, after: dict) -> bool:
+    """Whether two results sent the reader and judge the same inputs: context text, budget, code and server.
+
+    A row's context hash covers the whole capture file, which includes a random
+    receipt id, so two preparations never share one (#125). The text is shown
+    to be the same when both preparations reproduce the saved 2026-09-23 run's
+    context on every question, which holds only while the defaults still do.
+    The modules that send, check and judge the calls must match too; this
+    module's own digest changes with every edit to it, so it is left out.
+    """
+    return (before.get("context_budget") == after.get("context_budget")
+            and all((result.get("prepared") or {}).get("contexts_matching_saved_run") == len(result["rows"])
+                    for result in (before, after))
+            and all(before.get("modules", {}).get(path) is not None
+                    and before["modules"][path] == after.get("modules", {}).get(path) for path in ANSWER_MODULES)
+            and _server_version(before) == _server_version(after))
+
+
 def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
     """Pair two complete answer results on the same questions, answered by the same reader and judge.
 
     ``before`` is the baseline. The difference and its 95% interval resample
-    questions, as the evidence gate's comparisons do.
+    questions, as the evidence gate's comparisons do. When both results are
+    baselines of the defaults with the same inputs (``_same_inputs``), the
+    pairing is a repeat: its difference is run-to-run variation alone, and
+    ``repeat`` reports how many verdicts changed and whether the interval
+    excludes zero.
     """
     from benchmarks.compare_evidence import paired_statistics
 
@@ -862,10 +897,14 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
         if before.get(field) != after.get(field):
             raise ValueError(f"The results differ in {field}")
     if not ollama_answers.same_model(before["answer_model"], after["answer_model"]):
-        raise ValueError("The results were answered by different readers and judges or settings")
+        raise ValueError("The results were answered by different readers and judges, settings or model identities. "
+                         "Pair a run only with a baseline answered by the same model identity and settings; when "
+                         "either changes, record a new baseline first.")
     old, new = ({row["question_id"]: row for row in result["rows"]} for result in (before, after))
     if list(old) != list(new):
         raise ValueError("The results answer different questions")
+    if before["rows"] == after["rows"]:
+        raise ValueError("The before and after results are the same answer run")
 
     def paired(keys: list[str]) -> dict:
         return paired_statistics([(float(old[key]["correct"]), float(new[key]["correct"])) for key in keys],
@@ -873,11 +912,23 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
 
     categories = sorted({row["question_type"] for row in old.values()})
     prepared = {side: result.get("prepared") or {} for side, result in (("before", before), ("after", after))}
+    both_baselines = all(is_baseline(result["arm"]) for result in (before, after))
+    repeat = both_baselines and _same_inputs(before, after)
     warnings = [f"The {side} contexts were prepared from a tree with uncommitted changes"
                 for side, value in prepared.items() if value.get("dirty")]
-    if prepared["before"].get("commit") != prepared["after"].get("commit"):
+    if prepared["before"].get("commit") != prepared["after"].get("commit") and not repeat:
         warnings.append("The contexts were prepared from different commits, so code changes are part of the "
                         "difference")
+    if _server_version(before) != _server_version(after):
+        # The model identity leaves the server version out, so an Ollama upgrade alone is not refused.
+        warnings.append(f"The Ollama server version changed ({_server_version(before)} to "
+                        f"{_server_version(after)}), so a change in how it serves the model is part of the "
+                        "difference")
+    if both_baselines and not repeat:
+        warnings.append("Both results are baselines of the defaults, but they are not shown to have sent the same "
+                        "context text, budget, answering code and server version, so this is not a repeat")
+    accuracy = paired(list(old))
+    low, high = accuracy["interval_95"]
     return {
         "kind": "answer-comparison", "benchmark": before["benchmark"], "model": before["model"],
         "answer_model": before["answer_model"], "bootstrap_samples": samples, "bootstrap_seed": 42,
@@ -885,11 +936,18 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
                           "they are narrower than conversation-level intervals."),
         "arms": {"before": before["arm"], "after": after["arm"]},
         "prepared": prepared, "warnings": warnings,
-        "accuracy": paired(list(old)),
+        "accuracy": accuracy,
         "categories": {category: paired([key for key, row in old.items() if row["question_type"] == category])
                        for category in categories},
         "gained": [key for key in old if not old[key]["correct"] and new[key]["correct"]],
         "lost": [key for key in old if old[key]["correct"] and not new[key]["correct"]],
+        "repeat": None if not repeat else {
+            "changed_verdicts": accuracy["wins"] + accuracy["losses"],
+            "interval_excludes_zero": low > 0 or high < 0,
+            "note": ("Two answer runs of the defaults with the same inputs and the same model identity and "
+                     "settings, so the difference is run-to-run variation alone. If the interval excludes zero, "
+                     "the paired test is not trustworthy as it stands (#118)."),
+        },
     }
 
 
@@ -1164,7 +1222,8 @@ def main(argv: list[str] | None = None) -> None:
                         help="run on the ollama provider only: a smoke check of the first N questions of each "
                              "category")
     parser.add_argument("--before", type=Path, help="compare only: the baseline's result file")
-    parser.add_argument("--after", type=Path, help="compare only: the variant's result file")
+    parser.add_argument("--after", type=Path,
+                        help="compare only: the variant's result file, or a later baseline's for a repeat")
     args = parser.parse_args(argv)
     model = ollama_answers.AnswerModel() if args.provider == "ollama" else None
     arm, benchmark, overrides = _check_args(parser, args, model)

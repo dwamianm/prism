@@ -871,6 +871,8 @@ async def test_a_later_defaults_baseline_is_filed_under_its_commit_and_leaves_th
     comparison = baselines.compare(before, after)
     assert comparison["arms"] == {"before": "prme", "after": arm}
     assert any("different commits" in warning for warning in comparison["warnings"])
+    # These test cases name no saved context, so nothing shows the two baselines read the same text.
+    assert comparison["repeat"] is None and any("not a repeat" in warning for warning in comparison["warnings"])
     # Neither baseline is prepared again, so each commit keeps one baseline.
     for name in ("prme", arm):
         shutil.rmtree(arm_folder(harness, name))
@@ -1090,16 +1092,92 @@ def test_cli_calibrate_and_compare(monkeypatch, tmp_path, capsys):
     with pytest.raises(SystemExit):
         baselines.main(["compare", "--before", str(before), "--after", str(after)])
     assert "not a complete answer run" in capsys.readouterr().err
+    before.write_text(json.dumps(answer_result("prme", [True, False])))
+    after.write_text(json.dumps(answer_result("prme@0123abcd", [False, False], commit="b" * 40)))
+    baselines.main(["compare", "--before", str(before), "--after", str(after), "--provider", "ollama"])
+    assert json.loads(capsys.readouterr().out)["repeat"]["changed_verdicts"] == 1
+
+
+def answer_result(arm: str, verdicts: list[bool], *, commit: str = "a" * 40, matching: int | None = None,
+                  budget: int = 3996, identity: dict | None = None, modules: dict | None = None) -> dict:
+    """A complete Ollama answer result with one row per verdict, as compare() reads it."""
+    rows = [{"question_id": f"q{number}", "question_type": "single-hop", "correct": verdict,
+             "reader_sha256": f"{arm}-{number}"} for number, verdict in enumerate(verdicts)]
+    return {"kind": "ollama-answer-result", "arm": arm, "benchmark": "locomo", "model": OLLAMA_MODEL.model,
+            "registration_sha256": "r" * 64, "complete": True, "context_budget": budget,
+            "answer_model": {**OLLAMA_MODEL.settings(), "identity": IDENTITY if identity is None else identity},
+            "modules": {path: "m" * 64 for path in baselines.ANSWER_MODULES} if modules is None else modules,
+            "rows": rows, "prepared": {"commit": commit, "dirty": False, "overrides": {},
+                                       "contexts_matching_saved_run": len(rows) if matching is None else matching}}
+
+
+def test_two_runs_of_the_defaults_with_the_same_inputs_compare_as_a_repeat():
+    first = answer_result("prme", [True, True, False, False])
+    again = answer_result("prme@0123abcd", [True, False, True, False], commit="b" * 40)
+    comparison = baselines.compare(first, again)
+    # Both preparations reproduce every saved context, so the commits that prepared them change nothing.
+    assert comparison["warnings"] == []
+    assert comparison["accuracy"]["delta"] == 0 and comparison["gained"] == ["q2"] and comparison["lost"] == ["q1"]
+    assert {key: value for key, value in comparison["repeat"].items() if key != "note"} == {
+        "changed_verdicts": 2, "interval_excludes_zero": False}
+    # Every verdict moving the same way, in either direction, is more than run-to-run variation should give.
+    for before, after in (([False] * 4, [True] * 4), ([True] * 4, [False] * 4)):
+        drift = baselines.compare(answer_result("prme", before),
+                                  answer_result("prme@0123abcd", after, commit="b" * 40))
+        assert drift["repeat"] == {**drift["repeat"], "changed_verdicts": 4, "interval_excludes_zero": True}
+
+
+def test_a_repeat_needs_two_baselines_with_the_same_inputs():
+    first = answer_result("prme", [True, False])
+    modules = {path: "m" * 64 for path in baselines.ANSWER_MODULES}
+    moved_code = {**modules, "benchmarks/integrations/ollama_answers.py": "n" * 64}
+    for after in (answer_result("prme@0123abcd", [False, False], commit="b" * 40, matching=1),
+                  answer_result("prme@0123abcd", [False, False], commit="b" * 40, budget=2048),
+                  answer_result("prme@0123abcd", [False, False], commit="b" * 40, modules=moved_code),
+                  answer_result("prme@0123abcd", [False, False], commit="b" * 40, modules={})):
+        comparison = baselines.compare(first, after)
+        assert comparison["repeat"] is None and len(comparison["warnings"]) == 2
+        assert any("different commits" in warning for warning in comparison["warnings"])
+        assert any("not a repeat" in warning for warning in comparison["warnings"])
+    # A variant is compared with the defaults as before.
+    variant = baselines.compare(first, answer_result("prme-rrf", [False, False]))
+    assert variant["repeat"] is None and variant["warnings"] == []
+
+
+def test_compare_refuses_the_same_answer_run_on_both_sides():
+    first = answer_result("prme", [True, False])
+    with pytest.raises(ValueError, match="same answer run"):
+        baselines.compare(first, json.loads(json.dumps(first)))
+
+
+def test_compare_refuses_another_model_identity_and_flags_another_server_version():
+    first = answer_result("prme", [True, False])
+    moved = answer_result("prme@0123abcd", [True, True], identity={**IDENTITY, "manifest_digest_sha256": "f" * 64})
+    with pytest.raises(ValueError, match="model identities.*record a new baseline first"):
+        baselines.compare(first, moved)
+    # An Ollama upgrade keeps the model identity, so the pair is compared, but not as a repeat.
+    upgraded = baselines.compare(first, answer_result("prme@0123abcd", [True, True],
+                                                      identity={**IDENTITY, "server_version": "0.35.0"}))
+    assert upgraded["repeat"] is None
+    assert any("server version changed (0.34.3 to 0.35.0)" in warning for warning in upgraded["warnings"])
+    assert any("not a repeat" in warning for warning in upgraded["warnings"])
 
 
 PUBLISHED = Path(__file__).parents[1] / "benchmarks/results/research"
+# The first DeepSeek baseline of the defaults, and the repeat that answered them again (#118).
+REPEAT = "prme@46647825"
 
 
+def published_deepseek(arm: str, benchmark: str) -> dict:
+    return json.loads((PUBLISHED / "2026-09-24" / f"{OLLAMA_MODEL.track}-{arm}-{benchmark}-result.json").read_text())
+
+
+@pytest.mark.parametrize("arm", ["prme", REPEAT])
 @pytest.mark.parametrize("benchmark", ["locomo", "longmemeval"])
-def test_the_published_deepseek_baseline_is_complete_and_matches_the_current_answer_settings(benchmark):
-    result = json.loads((PUBLISHED / "2026-09-24" / f"{OLLAMA_MODEL.track}-prme-{benchmark}-result.json").read_text())
+def test_the_published_deepseek_baseline_is_complete_and_matches_the_current_answer_settings(arm, benchmark):
+    result = published_deepseek(arm, benchmark)
     rows = result["rows"]
-    assert (result["kind"], result["arm"], result["benchmark"]) == ("ollama-answer-result", "prme", benchmark)
+    assert (result["kind"], result["arm"], result["benchmark"]) == ("ollama-answer-result", arm, benchmark)
     assert result["registration_sha256"] == digest(study.REG)
     assert [row["question_id"] for row in rows] == json.loads(study.REG.read_text())["cohort_ids"][benchmark]
     assert result["complete"] and result["total"] == result["completed"] == len(rows)
@@ -1116,3 +1194,18 @@ def test_the_published_deepseek_baseline_is_complete_and_matches_the_current_ans
     # change to the answer settings needs a new baseline.
     assert {key: value for key, value in result["answer_model"].items() if key != "identity"} == \
         OLLAMA_MODEL.settings()
+
+
+@pytest.mark.parametrize(("benchmark", "gained", "lost", "excludes_zero"), [
+    ("locomo", 27, 34, False), ("longmemeval", 17, 6, True)])
+def test_the_published_repeat_of_the_defaults_is_the_run_to_run_floor_in_benchmarks_md(
+        benchmark, gained, lost, excludes_zero):
+    first, again = published_deepseek("prme", benchmark), published_deepseek(REPEAT, benchmark)
+    # Both preparations reproduce every saved context, which is what makes the pair a repeat.
+    assert all(result["prepared"]["contexts_matching_saved_run"] == result["total"] for result in (first, again))
+    comparison = baselines.compare(first, again)
+    assert comparison["warnings"] == [] and comparison["repeat"] is not None
+    assert (len(comparison["gained"]), len(comparison["lost"])) == (gained, lost)
+    assert comparison["repeat"]["changed_verdicts"] == gained + lost
+    # BENCHMARKS.md reports the floor, and the default-change rule in CLAUDE.md depends on this flag.
+    assert comparison["repeat"]["interval_excludes_zero"] is excludes_zero
