@@ -15,7 +15,10 @@ of its gap belongs to the memory system. These arms add them:
   the saved packs by the offline evidence gate, rendered as the product renders
   it, at the same budget. ``prme-<name>`` is a named variant: the same replay
   with the settings ``--set`` changes, so a variant can be answered next to the
-  defaults and compared with them question by question (``compare``).
+  defaults and compared with them question by question (``compare``). Once
+  ``prme`` has a complete answer run, the defaults at another commit on main
+  are a new baseline, ``prme@<commit>`` (the commit's first 8 characters),
+  which ``prepare prme`` and ``run prme`` choose from the checked-out commit.
 
 Every arm reuses the registered reader, judge, prompts, model settings and
 question sets of ``run_gpt54_comparison``, and leaves that frozen module
@@ -75,6 +78,9 @@ DATA = study.ORIGINAL / "data" / "gpt54-baselines-v1"
 OLLAMA_DATA = study.ORIGINAL / "data" / "ollama-answers-v1"
 RESULTS = study.ROOT / "benchmarks" / "results" / "research"
 _VARIANT = re.compile(r"[a-z0-9][a-z0-9-]{0,39}")
+# A defaults baseline recorded after the first one: prme@ and the first 8 characters of its commit.
+SHORT_COMMIT = 8
+_BASELINE = re.compile(rf"prme@([0-9a-f]{{{SHORT_COMMIT}}})")
 ARMS = {"prme": gate.GATE_BENCHMARKS, "full-context": ("locomo",),
         **{f"plain-{method}": gate.GATE_BENCHMARKS for method in gate.PLAIN_METHODS}}
 # What gpt54_budget.call and client_for send for the registered GPT-5.4 track.
@@ -171,9 +177,14 @@ def arm_name(arm: str, variant: str | None = None) -> str:
     return f"prme-{variant}"
 
 
+def is_baseline(arm: str) -> bool:
+    """The current defaults: the first baseline (``prme``) or a later one filed under its commit (``prme@...``)."""
+    return arm == "prme" or bool(_BASELINE.fullmatch(arm))
+
+
 def is_prme(arm: str) -> bool:
-    """PRME's own retrieval: the current defaults (``prme``) or a named variant of them."""
-    return arm == "prme" or (arm.startswith("prme-") and bool(_VARIANT.fullmatch(arm.removeprefix("prme-"))))
+    """PRME's own retrieval: the current defaults (``is_baseline``) or a named variant of them."""
+    return is_baseline(arm) or (arm.startswith("prme-") and bool(_VARIANT.fullmatch(arm.removeprefix("prme-"))))
 
 
 def _check_arm(arm: str, benchmark: str) -> None:
@@ -188,10 +199,10 @@ def _check_overrides(arm: str, overrides: dict | None) -> None:
     """What each arm may change: nothing for full-context and the defaults, anything for a named variant."""
     if arm == "full-context" and overrides:
         raise ValueError("The full-context arm has no budget to override")
-    if arm == "prme" and overrides:
-        raise ValueError("The prme arm prepares the current defaults; name a variant with --variant to change "
+    if is_baseline(arm) and overrides:
+        raise ValueError(f"The {arm} arm prepares the current defaults; name a variant with --variant to change "
                          "settings")
-    if is_prme(arm) and arm != "prme" and not overrides:
+    if is_prme(arm) and not is_baseline(arm) and not overrides:
         raise ValueError(f"The {arm} variant needs the settings it changes, as --set KEY=VALUE")
     if arm.startswith("plain-") and overrides:
         gate.check_plain(arm.removeprefix("plain-"), overrides)
@@ -243,12 +254,16 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
         raise ValueError(f"{arm} {benchmark} has already made paid calls ({ledger}); its contexts cannot be "
                          "prepared again")
     log = _run_log_path(data, arm, benchmark)
-    if any(event["event"] == "finished" and event.get("complete") and event.get("sample") is None
-           for event in _run_events(log)):
+    events = _run_events(log)
+    if any(_complete_run(event) for event in events):
         raise ValueError(f"{arm} {benchmark} has a complete answer run ({log}); its contexts are never prepared "
                          "again")
     _check_overrides(arm, overrides)
-    if log.exists():
+    later = _BASELINE.fullmatch(arm) is not None
+    if later:
+        # The CLI names a later baseline after the checked-out commit; check a direct call before any work.
+        _check_baseline_name(arm, benchmark, _provenance()["commit"], data)
+    if any(event["event"] == "started" for event in events):
         # Earlier runs ended without a score. Preparing again is allowed, and stays on record.
         _log_run(data, arm, benchmark, {"event": "prepared-again"})
     if arm == "full-context":
@@ -257,6 +272,9 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
         entries, extra = _prepare_replay(folder, arm, benchmark, archive, overrides, progress)
     if [entry["question_id"] for entry in entries] != [question["question_id"] for question in questions]:
         raise ValueError("Prepared contexts do not cover the registered questions in order")
+    commit = extra["provenance"].get("commit")
+    if later:
+        _check_baseline_name(arm, benchmark, commit, data)
     prepared = {
         "kind": "gpt54-baseline-contexts", "complete": True, "arm": arm, "benchmark": benchmark,
         "questions": len(entries), "registration_sha256": digest(study.REG),
@@ -264,7 +282,59 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
         "modules": _module_identity(), "contexts": entries,
     }
     write_new(folder / "prepared.json", prepared)
+    if later and not any(event["event"] == "new-baseline" for event in events):
+        # Any other later baseline without a complete run was given up (baseline_arm refuses while one is still
+        # prepared), so the new baseline's record names it.
+        abandoned = [{"arm": name, "runs_started": sum(event["event"] == "started" for event in history)}
+                     for name, history in _later_baselines(data, benchmark).items()
+                     if name != arm and history and not any(_complete_run(event) for event in history)]
+        _log_run(data, arm, benchmark, {
+            "event": "new-baseline", "prepared_commit": commit,
+            "first_baseline_commit": _complete_run_commit(data, "prme", benchmark), "abandoned": abandoned})
     return prepared
+
+
+def baseline_arm(benchmark: str, commit: str | None, *, data: Path) -> str:
+    """The arm that records the current defaults' baseline at ``commit``.
+
+    The first baseline is the ``prme`` arm. Once it has a complete answer run,
+    the defaults at any other commit (after a default or the model identity
+    changes) are a new baseline in their own arm, ``prme@`` and the commit's
+    first ``SHORT_COMMIT`` characters, with their own contexts, answers and run
+    log. No earlier baseline or its record is touched, and each commit has at
+    most one baseline. While another later baseline is prepared and not
+    complete, there is none: answer that one from its commit, or move its
+    folder aside to give it up, which the next baseline's run log records.
+    """
+    first = _complete_run_commit(data, "prme", benchmark)
+    if first is None or first == commit:
+        return "prme"
+    arm = f"prme@{(commit or '')[:SHORT_COMMIT]}"
+    if not _BASELINE.fullmatch(arm):
+        raise ValueError(f"The prme {benchmark} baseline is complete, and the checked-out commit ({commit}) cannot "
+                         "name a new one; run from a git checkout")
+    for name, history in _later_baselines(data, benchmark).items():
+        folder = data / name / benchmark
+        if name != arm and (folder / "prepared.json").is_file() and not any(map(_complete_run, history)):
+            raise ValueError(f"{name} {benchmark} is a baseline that is prepared and not complete. Check out commit "
+                             f"{name.removeprefix('prme@')} to answer it, or move {folder} aside to give it up.")
+    return arm
+
+
+def _check_baseline_name(arm: str, benchmark: str, commit: str | None, data: Path) -> None:
+    """A later baseline must be the one ``baseline_arm`` names for the commit that prepares it."""
+    expected = baseline_arm(benchmark, commit, data=data)
+    if expected != arm:
+        raise ValueError(f"The defaults at {commit} are the {expected} {benchmark} baseline, not {arm}")
+
+
+def _later_baselines(data: Path, benchmark: str) -> dict[str, list[dict]]:
+    """Every later baseline of the defaults with a folder or a run log for this benchmark, with its run log."""
+    names = {path.name for path in data.glob("prme@*") if (path / benchmark).is_dir()}
+    logs = (data / "runs").glob(f"prme@*-{benchmark}.jsonl")
+    names |= {path.name.removesuffix(f"-{benchmark}.jsonl") for path in logs}
+    return {name: _run_events(_run_log_path(data, name, benchmark)) for name in sorted(names)
+            if _BASELINE.fullmatch(name)}
 
 
 def _prepare_full_context(folder: Path, benchmark: str, questions: list[dict]) -> tuple[list[dict], dict]:
@@ -528,12 +598,38 @@ def _run_events(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
 
+def _complete_run(event: dict) -> bool:
+    return event["event"] == "finished" and bool(event.get("complete")) and event.get("sample") is None
+
+
+def _complete_run_commit(data: Path, arm: str, benchmark: str) -> str | None:
+    """The commit that prepared the contexts of the arm's complete answer run, or None before it has one."""
+    finished = [event for event in _run_events(_run_log_path(data, arm, benchmark)) if _complete_run(event)]
+    if not finished:
+        return None
+    commit = finished[-1].get("prepared_commit")
+    manifest = data / arm / benchmark / "prepared.json"
+    if commit is None and manifest.is_file():
+        # Run logs written before the finished event recorded the commit: a complete arm keeps its manifest.
+        commit = (json.loads(manifest.read_text()).get("provenance") or {}).get("commit")
+    if not commit:
+        raise ValueError(f"{arm} {benchmark} has a complete answer run, but neither its run log nor {manifest} "
+                         "records the commit that prepared it")
+    return commit
+
+
 def _run_history(data: Path, arm: str, benchmark: str) -> dict:
     """What the arm's run log holds, so a result shows every earlier run and preparation."""
     path = _run_log_path(data, arm, benchmark)
     events = _run_events(path)
-    return {"sha256": digest(path), "runs_started": sum(event["event"] == "started" for event in events),
-            "prepared_again": sum(event["event"] == "prepared-again" for event in events)}
+    history = {"sha256": digest(path), "runs_started": sum(event["event"] == "started" for event in events),
+               "prepared_again": sum(event["event"] == "prepared-again" for event in events)}
+    for event in events:
+        if event["event"] == "new-baseline":
+            # A later baseline of the defaults: its commit, the first baseline's, and any it replaced unfinished.
+            history["new_baseline"] = {key: event.get(key) for key in (
+                "at", "prepared_commit", "first_baseline_commit", "abandoned")}
+    return history
 
 
 def _log_run(data: Path, arm: str, benchmark: str, event: dict) -> None:
@@ -725,7 +821,8 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
         _write_json(private, result)
         if model is not None:
             _log_run(data, arm, benchmark, {"event": "finished", "sample": sample, "complete": result["complete"],
-                                            "completed": result["completed"], "total": result["total"]})
+                                            "completed": result["completed"], "total": result["total"],
+                                            "prepared_commit": result["prepared"]["commit"]})
             result["run_log"] = _run_history(data, arm, benchmark)
         if not result["complete"]:
             raise RuntimeError(
@@ -979,6 +1076,18 @@ def _on_main() -> bool:
                           capture_output=True).returncode == 0
 
 
+def _checked_out_baseline(parser: argparse.ArgumentParser, benchmark: str, commit: str | None, data: Path) -> str:
+    """The defaults' baseline arm for the checked-out commit, which prepare fills and run answers."""
+    try:
+        arm = baseline_arm(benchmark, commit, data=data)
+    except ValueError as exc:
+        parser.error(str(exc))
+    if arm != "prme":
+        print(f"prme {benchmark} has a complete answer run from another commit, so the defaults at this commit are "
+              f"the baseline {arm}", file=sys.stderr, flush=True)
+    return arm
+
+
 def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
                 model: ollama_answers.AnswerModel | None) -> tuple[str, str, dict]:
     """The arm's name, its benchmark and its overrides, after refusing any combination that does not apply."""
@@ -1069,11 +1178,14 @@ def main(argv: list[str] | None = None) -> None:
             parser.error(str(exc))
         print(json.dumps(result, indent=2))
     elif args.command == "prepare":
-        if _provenance()["dirty"]:
+        provenance = _provenance()
+        if provenance["dirty"]:
             parser.error("prepare records the code that builds the contexts; commit your changes first")
-        if arm == "prme" and not _on_main():
-            parser.error("the prme arm prepares the shipped defaults; prepare it from a commit on main, or name a "
-                         "variant")
+        if arm == "prme":
+            if not _on_main():
+                parser.error("the prme arm prepares the shipped defaults; prepare it from a commit on main, or name "
+                             "a variant")
+            arm = _checked_out_baseline(parser, benchmark, provenance.get("commit"), data)
         gate._quiet_offline_cli()
         reported = 0
 
@@ -1094,6 +1206,8 @@ def main(argv: list[str] | None = None) -> None:
         result = asyncio.run(run(arm, benchmark, max_usd=args.max_usd, archive=args.archive))
         print(json.dumps({key: value for key, value in result.items() if key not in {"rows", "failures"}}))
     else:
+        if arm == "prme":
+            arm = _checked_out_baseline(parser, benchmark, _provenance().get("commit"), data)
         print(f"Reader and judge: {model.model} through {model.endpoint}. A :cloud model sends the prompts to "
               "Ollama's hosted service and uses the account's usage limits.", file=sys.stderr, flush=True)
         result = asyncio.run(run(arm, benchmark, model=model, sample=args.sample))

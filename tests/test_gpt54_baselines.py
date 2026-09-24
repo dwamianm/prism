@@ -51,6 +51,13 @@ def get_anscheck_prompt(task, question, answer, response, abstention=False):
 LOADER = "benchmarks/integrations/gpt54_official_prompt_loader.py"
 
 
+@pytest.fixture(autouse=True)
+def private_data(tmp_path, monkeypatch):
+    """No test reads or writes the main checkout's private contexts, answers or run logs."""
+    monkeypatch.setattr(baselines, "DATA", tmp_path / "gpt54-baselines")
+    monkeypatch.setattr(baselines, "OLLAMA_DATA", tmp_path / "ollama-answers")
+
+
 @pytest.fixture
 def harness(tmp_path, monkeypatch):
     """A registered comparison over tiny datasets; every file it reads or writes is under tmp_path."""
@@ -143,6 +150,17 @@ def fabricate_plain(data: Path, benchmark: str, contexts: dict[str, str]) -> Non
         "context_budget": 3996, "context_rule": "Stored turns ranked by RRF.", "contexts": entries}))
 
 
+async def gate_cases(harness, monkeypatch) -> None:
+    """Two LoCoMo questions over one saved pack, which prepare replays through the evidence gate."""
+    pack = harness["root"] / "pack"
+    identity = await make_gate_pack(pack)
+    cases = [dataclasses.replace(gate_case(pack, identity), question_id=qid)
+             for qid in ("conv-1-q0000", "conv-1-q0001")]
+    monkeypatch.setattr(gate, "_locomo_cases", lambda archive: cases)
+    (harness["archive"] / "locomo").mkdir()
+    (harness["archive"] / "locomo" / "prepared.json").write_text("{}")
+
+
 def test_full_context_has_every_session_in_order_under_its_date_and_only_source_text():
     context = baselines.full_context(CONVERSATION)
     assert context == ("Session 1 (1:56 pm on 8 May, 2023)\n"
@@ -217,13 +235,7 @@ def test_prepared_context_paths_cannot_leave_the_arm_folder(harness):
 
 @pytest.mark.usefixtures("mock_embeddings")
 async def test_plain_arm_prepares_through_the_gate_and_answers_its_contexts(harness, monkeypatch):
-    pack = harness["root"] / "pack"
-    identity = await make_gate_pack(pack)
-    cases = [dataclasses.replace(gate_case(pack, identity), question_id=qid)
-             for qid in ("conv-1-q0000", "conv-1-q0001")]
-    monkeypatch.setattr(gate, "_locomo_cases", lambda archive: cases)
-    (harness["archive"] / "locomo").mkdir()
-    (harness["archive"] / "locomo" / "prepared.json").write_text("{}")
+    await gate_cases(harness, monkeypatch)
     # prepare runs the gate in its own event loop, as the CLI does.
     prepared = await asyncio.to_thread(baselines.prepare, "plain-rrf", "locomo", data=harness["data"],
                                        archive=harness["archive"])
@@ -566,6 +578,7 @@ async def test_ollama_run_never_builds_a_paid_client_and_records_the_reader_and_
     assert json.loads(path.read_text())["answer_model"]["endpoint"] == "http://127.0.0.1:11434/v1"
     log = [json.loads(line) for line in (harness["data"] / "runs" / "full-context-locomo.jsonl").read_text().splitlines()]
     assert [event["event"] for event in log] == ["started", "finished"] and log[1]["complete"] is True
+    assert log[1]["prepared_commit"] == provenance["commit"]
     # The receipts replay: every call is verified again against its prompt and settings.
     questions = study.question_rows("locomo")
     folder, prepared, entries = baselines.load_prepared("full-context", "locomo", questions, data=harness["data"])
@@ -711,7 +724,7 @@ async def test_ollama_run_refuses_a_spending_cap_or_api_key_and_gpt54_refuses_it
         await run_ollama(harness, max_usd=5)
     with pytest.raises(ValueError, match="no paid calls"):
         await run_ollama(harness, api_key="sk-test")
-    for arm, kwargs in (("prme", {}), ("prme-rrf", {}), ("full-context", {"sample": 1})):
+    for arm, kwargs in (("prme", {}), ("prme@0123abcd", {}), ("prme-rrf", {}), ("full-context", {"sample": 1})):
         with pytest.raises(ValueError, match="Ollama track only"):
             await baselines.run(arm, "locomo", max_usd=5, data=harness["data"], api_key="test", **kwargs)
 
@@ -756,13 +769,7 @@ async def test_a_sample_run_is_a_labelled_smoke_check_that_the_full_run_reuses(h
 
 @pytest.mark.usefixtures("mock_embeddings")
 async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gate(harness, monkeypatch):
-    pack = harness["root"] / "pack"
-    identity = await make_gate_pack(pack)
-    cases = [dataclasses.replace(gate_case(pack, identity), question_id=qid)
-             for qid in ("conv-1-q0000", "conv-1-q0001")]
-    monkeypatch.setattr(gate, "_locomo_cases", lambda archive: cases)
-    (harness["archive"] / "locomo").mkdir()
-    (harness["archive"] / "locomo" / "prepared.json").write_text("{}")
+    await gate_cases(harness, monkeypatch)
     budget = gate.parse_overrides(["packing.token_budget=2048"])
     with pytest.raises(ValueError, match="name a variant"):
         baselines.prepare("prme", "locomo", data=harness["data"], archive=harness["archive"], overrides=budget)
@@ -805,12 +812,128 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
         baselines.compare(before, {**after, "rows": after["rows"][::-1]})
 
 
-def test_variant_names_are_checked():
+@pytest.mark.usefixtures("mock_embeddings")
+async def test_a_later_defaults_baseline_is_filed_under_its_commit_and_leaves_the_first_alone(harness, monkeypatch):
+    await gate_cases(harness, monkeypatch)
+    data = harness["data"]
+
+    def prepare(arm, **kwargs):
+        return asyncio.to_thread(baselines.prepare, arm, "locomo", data=data, archive=harness["archive"], **kwargs)
+
+    first = await prepare("prme")
+    head = first["provenance"]["commit"]
+    arm = f"prme@{head[:8]}"
+    # A later baseline needs a complete first one; the refusal comes before any work.
+    with pytest.raises(ValueError, match=f"are the prme locomo baseline, not {arm}"):
+        await prepare(arm)
+    assert not arm_folder(harness, arm).exists()
+    # The first baseline came from an earlier commit on main, before a default changed.
+    earlier = "0" * 40
+    (arm_folder(harness, "prme") / "prepared.json").write_text(
+        json.dumps({**first, "provenance": {**first["provenance"], "commit": earlier}}))
+    requests = ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=data)
+    before = await run_ollama(harness, "prme")
+    first_log = data / "runs" / "prme-locomo.jsonl"
+    recorded = digest(first_log)
+    assert before["complete"] and before["prepared"]["commit"] == earlier
+    assert baselines.baseline_arm("locomo", earlier, data=data) == "prme"
+    assert baselines.baseline_arm("locomo", head, data=data) == arm
+    with pytest.raises(ValueError, match="name a variant"):
+        await prepare(arm, overrides=gate.parse_overrides(["packing.token_budget=2048"]))
+    # A name other than the checked-out commit's is refused before any work, and again against the commit the
+    # gate records, so a later baseline's name always matches the commit that prepared its contexts.
+    wrong_commit = f"{(int(head[:8], 16) + 1) % 16 ** 8:08x}{head[8:]}"
+    wrong = f"prme@{wrong_commit[:8]}"
+    with pytest.raises(ValueError, match=f"are the {arm} locomo baseline, not {wrong}"):
+        await prepare(wrong)
+    assert not arm_folder(harness, wrong).exists()
+    with monkeypatch.context() as checked_out:
+        checked_out.setattr(baselines, "_provenance", lambda: {"commit": wrong_commit})
+        with pytest.raises(ValueError, match=f"The defaults at {head} are the {arm} locomo baseline, not {wrong}"):
+            await prepare(wrong)
+    assert not (arm_folder(harness, wrong) / "prepared.json").exists()
+    assert not (data / "runs" / f"{wrong}-locomo.jsonl").exists()
+    later = await prepare(arm)
+    assert later["arm"] == arm and later["provenance"]["commit"] == head
+    assert (later["context_budget"], later["context_rule"]) == (first["context_budget"], first["context_rule"])
+    [event] = [json.loads(line) for line in (data / "runs" / f"{arm}-locomo.jsonl").read_text().splitlines()]
+    assert event == {"at": event["at"], "event": "new-baseline", "prepared_commit": head,
+                     "first_baseline_commit": earlier, "abandoned": []}
+    requests.clear()
+    after = await run_ollama(harness, arm)
+    assert after["complete"] and after["arm"] == arm and len(requests) == 4
+    assert after["run_log"]["new_baseline"] == {key: value for key, value in event.items() if key != "event"}
+    assert (after["run_log"]["runs_started"], after["run_log"]["prepared_again"]) == (1, 0)
+    assert ollama_published(harness, arm) and ollama_published(harness, "prme")
+    # The first baseline's record is untouched, and a variant pairs with the later baseline as usual.
+    assert digest(first_log) == recorded and "new_baseline" not in before["run_log"]
+    comparison = baselines.compare(before, after)
+    assert comparison["arms"] == {"before": "prme", "after": arm}
+    assert any("different commits" in warning for warning in comparison["warnings"])
+    # Neither baseline is prepared again, so each commit keeps one baseline.
+    for name in ("prme", arm):
+        shutil.rmtree(arm_folder(harness, name))
+        with pytest.raises(ValueError, match="complete answer run"):
+            await prepare(name)
+    assert baselines.baseline_arm("locomo", head, data=data) == arm
+
+
+@pytest.mark.usefixtures("mock_embeddings")
+async def test_an_unfinished_later_baseline_is_finished_or_given_up_on_record(harness, monkeypatch):
+    await gate_cases(harness, monkeypatch)
+    data = harness["data"]
+
+    def prepare(arm):
+        return asyncio.to_thread(baselines.prepare, arm, "locomo", data=data, archive=harness["archive"])
+
+    head = baselines._provenance()["commit"]
+    arm = f"prme@{head[:8]}"
+    answered(data, "locomo", "0" * 40)
+    # Another later baseline, prepared at an earlier commit, stopped before it finished.
+    stopped = "prme@11111111" if not head.startswith("11111111") else "prme@22222222"
+    (data / stopped / "locomo").mkdir(parents=True)
+    (data / stopped / "locomo" / "prepared.json").write_text("{}")
+    for event in ({"event": "new-baseline"}, {"event": "started", "sample": None},
+                  {"event": "finished", "sample": None, "complete": False}):
+        baselines._log_run(data, stopped, "locomo", event)
+    # Restarting after main moved on does not quietly start a second baseline.
+    with pytest.raises(ValueError, match=f"{stopped} locomo is a baseline that is prepared and not complete"):
+        await prepare(arm)
+    assert not arm_folder(harness, arm).exists()
+    # Giving it up means moving its folder aside, and the next baseline's run log records it.
+    shutil.rmtree(data / stopped)
+    await prepare(arm)
+    # Preparing again before any run is neither a restart nor another new baseline.
+    shutil.rmtree(arm_folder(harness, arm))
+    await prepare(arm)
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=data)
+    ollama_provider(monkeypatch, verdict="maybe")  # A malformed verdict is final: the arm can never finish.
+    with pytest.raises(RuntimeError, match="final failures"):
+        await run_ollama(harness, arm)
+    shutil.rmtree(arm_folder(harness, arm))
+    await prepare(arm)
+    ollama_provider(monkeypatch)
+    result = await run_ollama(harness, arm)
+    log = [json.loads(line) for line in (data / "runs" / f"{arm}-locomo.jsonl").read_text().splitlines()]
+    assert [event["event"] for event in log] == [
+        "new-baseline", "started", "finished", "prepared-again", "started", "finished"]
+    assert result["complete"] and result["run_log"]["new_baseline"]["abandoned"] == [
+        {"arm": stopped, "runs_started": 1}]
+    assert (result["run_log"]["runs_started"], result["run_log"]["prepared_again"]) == (2, 1)
+
+
+def test_arm_names_are_checked():
     assert baselines.arm_name("prme", "rrf-k30") == "prme-rrf-k30" and baselines.is_prme("prme-rrf-k30")
     for arm, variant in (("prme", "RRF"), ("prme", "../x"), ("plain-rrf", "x"), ("prme", "")):
         with pytest.raises(ValueError, match="--variant"):
             baselines.arm_name(arm, variant)
     assert not baselines.is_prme("prme-../x")
+    assert baselines.is_baseline("prme") and baselines.is_baseline("prme@0123abcd")
+    assert baselines.is_prme("prme@0123abcd") and not baselines.is_baseline("prme-rrf")
+    for arm in ("prme@0123ABCD", "prme@0123abc", "prme@0123abcde", "prme@", "prme@../x"):
+        assert not baselines.is_baseline(arm) and not baselines.is_prme(arm)
 
 
 @pytest.mark.parametrize("argv", [
@@ -844,7 +967,7 @@ def test_cli_refuses_invalid_ollama_prme_and_compare_arguments(argv, monkeypatch
 
 def test_cli_prepares_the_defaults_only_from_main_and_variants_anywhere(monkeypatch):
     seen = []
-    monkeypatch.setattr(baselines, "_provenance", lambda: {"dirty": False})
+    monkeypatch.setattr(baselines, "_provenance", lambda: {"dirty": False, "commit": "1" * 40})
     monkeypatch.setattr(baselines.gate, "_quiet_offline_cli", lambda: None)
     monkeypatch.setattr(baselines, "prepare", lambda arm, benchmark, **kwargs: seen.append((arm, kwargs)) or {
         "arm": arm, "benchmark": benchmark, "questions": 0, "context_budget": 3996})
@@ -858,6 +981,82 @@ def test_cli_prepares_the_defaults_only_from_main_and_variants_anywhere(monkeypa
     assert [(arm, kwargs["data"], kwargs["overrides"]) for arm, kwargs in seen] == [
         ("prme-rrf", baselines.data_root(OLLAMA_MODEL), {"scoring": {"fusion": "rrf"}}),
         ("prme", baselines.data_root(OLLAMA_MODEL), None)]
+
+
+def answered(data: Path, benchmark: str, commit: str | None, arm: str = "prme") -> None:
+    """A complete answer run in the arm's run log; ``commit`` None writes an older finished event, without it."""
+    baselines._log_run(data, arm, benchmark, {"event": "finished", "sample": None, "complete": True, "completed": 1,
+                                              "total": 1, **({} if commit is None else {"prepared_commit": commit})})
+
+
+def test_the_defaults_at_another_commit_are_a_new_baseline_once_prme_is_answered(tmp_path):
+    first, later = "a" * 40, "0123abcd" + "9" * 32
+    assert baselines.baseline_arm("locomo", later, data=tmp_path) == "prme"
+    # A sample, an incomplete run or the other benchmark's complete run leaves the prme arm open.
+    for event in ({"sample": 2, "complete": True}, {"sample": None, "complete": False}):
+        baselines._log_run(tmp_path, "prme", "locomo", {"event": "finished", "prepared_commit": first, **event})
+    answered(tmp_path, "longmemeval", first)
+    assert baselines.baseline_arm("locomo", later, data=tmp_path) == "prme"
+    answered(tmp_path, "locomo", first)
+    # At the first baseline's own commit the arm stays prme, which prepare and run refuse once complete.
+    assert baselines.baseline_arm("locomo", first, data=tmp_path) == "prme"
+    assert baselines.baseline_arm("locomo", later, data=tmp_path) == "prme@0123abcd"
+    for commit in (None, "", "0123", "0123ABCD" + "9" * 32):
+        with pytest.raises(ValueError, match="cannot name a new one"):
+            baselines.baseline_arm("locomo", commit, data=tmp_path)
+    # A prepared later baseline without a complete run holds every other commit until it finishes or is moved.
+    (tmp_path / "prme@0123abcd" / "locomo").mkdir(parents=True)
+    (tmp_path / "prme@0123abcd" / "locomo" / "prepared.json").write_text("{}")
+    assert baselines.baseline_arm("locomo", later, data=tmp_path) == "prme@0123abcd"
+    with pytest.raises(ValueError, match="Check out commit 0123abcd to answer it"):
+        baselines.baseline_arm("locomo", "4567cdef" + "9" * 32, data=tmp_path)
+    assert baselines.baseline_arm("longmemeval", "4567cdef" + "9" * 32, data=tmp_path) == "prme@4567cdef"
+    answered(tmp_path, "locomo", later, arm="prme@0123abcd")
+    assert baselines.baseline_arm("locomo", "4567cdef" + "9" * 32, data=tmp_path) == "prme@4567cdef"
+    # Run logs written before the finished event recorded the commit: the complete arm's manifest has it.
+    legacy = tmp_path / "legacy"
+    answered(legacy, "locomo", None)
+    with pytest.raises(ValueError, match="records the commit"):
+        baselines.baseline_arm("locomo", later, data=legacy)
+    (legacy / "prme" / "locomo").mkdir(parents=True)
+    (legacy / "prme" / "locomo" / "prepared.json").write_text(json.dumps({"provenance": {"commit": first}}))
+    assert baselines.baseline_arm("locomo", first, data=legacy) == "prme"
+    assert baselines.baseline_arm("locomo", later, data=legacy) == "prme@0123abcd"
+
+
+def test_cli_prepares_and_runs_the_baseline_of_the_checked_out_commit(monkeypatch, capsys):
+    seen = []
+    monkeypatch.setattr(baselines, "_on_main", lambda: True)
+    monkeypatch.setattr(baselines.gate, "_quiet_offline_cli", lambda: None)
+    monkeypatch.setattr(baselines, "prepare", lambda arm, benchmark, **kwargs: seen.append(arm) or {
+        "arm": arm, "benchmark": benchmark, "questions": 0, "context_budget": 3996})
+
+    async def fake_run(arm, benchmark, **kwargs):
+        seen.append(arm)
+        return {"complete": True, "rows": [], "failures": []}
+
+    monkeypatch.setattr(baselines, "run", fake_run)
+
+    def checked_out(commit):
+        monkeypatch.setattr(baselines, "_provenance", lambda: {"dirty": False, "commit": commit})
+
+    answered(baselines.data_root(OLLAMA_MODEL), "locomo", "a" * 40)
+    checked_out("0123abcd" + "9" * 32)
+    for argv in (["prepare", "prme", "--benchmark", "locomo"], ["run", "prme", "--benchmark", "locomo"],
+                 ["prepare", "prme", "--benchmark", "longmemeval"],
+                 ["run", "prme", "--benchmark", "locomo", "--variant", "rrf"]):
+        baselines.main([*argv, "--provider", "ollama"])
+    assert seen == ["prme@0123abcd", "prme@0123abcd", "prme", "prme-rrf"]
+    output = capsys.readouterr()
+    assert output.err.count("are the baseline prme@0123abcd") == 2 and '"arm": "prme@0123abcd"' in output.out
+    checked_out("a" * 40)
+    baselines.main(["prepare", "prme", "--benchmark", "locomo", "--provider", "ollama"])
+    assert seen[-1] == "prme"
+    checked_out(None)
+    for command in ("prepare", "run"):
+        with pytest.raises(SystemExit):
+            baselines.main([command, "prme", "--benchmark", "locomo", "--provider", "ollama"])
+    assert len(seen) == 5 and "cannot name a new one" in capsys.readouterr().err
 
 
 def test_cli_ollama_run_needs_no_terminal_confirmation_or_cap(monkeypatch, capsys):
