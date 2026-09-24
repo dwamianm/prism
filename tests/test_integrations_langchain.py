@@ -11,8 +11,10 @@ pytest.importorskip("langchain_core", reason="langchain-core not installed")
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
+from prme.client import config_from_directory
 from prme.integrations._chat_history import CHAT_CONTROL_METADATA_KEY
 from prme.integrations.langchain import PRMEChatMessageHistory, PRMERetriever
+from prme.retrieval.config import ScoringWeights
 from prme.types import Scope, SourceType
 
 
@@ -89,6 +91,25 @@ class TestPRMERetriever:
             assert "created_at" in meta
         finally:
             retriever.close()
+
+
+    def test_rank_fusion_reports_semantic_relevance(self, tmpdir: str):
+        for fusion in ("rrf", "weighted"):
+            config = config_from_directory(tmpdir).model_copy(
+                update={"scoring": ScoringWeights(fusion=fusion)}
+            )
+            retriever = PRMERetriever(directory=tmpdir, user_id="test-user", config=config)
+            try:
+                if fusion == "rrf":
+                    retriever._client.store("Bob likes hiking", user_id="test-user")
+                docs = retriever.invoke("hiking")
+                assert docs
+                if fusion == "rrf":
+                    assert all(0 <= doc.metadata["semantic_relevance"] <= 1 for doc in docs)
+                else:
+                    assert all("semantic_relevance" not in doc.metadata for doc in docs)
+            finally:
+                retriever.close()
 
 
 class TestPRMEChatMessageHistory:

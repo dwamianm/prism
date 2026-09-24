@@ -212,10 +212,19 @@ configured current-update multiplier. Reader-format retrievals
 (`context_format="reader"`) use version 14, which also records
 `context_citations`; the bundle's `context_references` maps any `m3` style
 references to node IDs. Retrievals with opt-in rank fusion
-(`PRME_SCORING__FUSION=rrf`) use version 15, which records `fusion` and `rrf_k`
-and formula version 2 score provenance. Under rank fusion, `POST /v1/retrieve`
-returns 422 for non-neutral `ranking_multipliers`, and `min_score` compares
-against the rank-based fused score. Version 9 score provenance records any
+(`PRME_SCORING__FUSION=rrf`) use version 16, which records `fusion` and `rrf_k`,
+formula version 2 score provenance, and each candidate's `semantic_relevance`.
+Version 15 rank fusion receipts saved before `semantic_relevance` existed stay
+valid. Under rank fusion, `POST /v1/retrieve` returns 422 for non-neutral
+`ranking_multipliers`. A result's `score` is then the rank-based fused score,
+which says where the result ranks among the candidates rather than how relevant
+it is, so `min_score` compares against each result's `semantic_relevance` instead:
+the semantic cosine similarity of the memory behind it (for added session,
+episode or evidence context, the memory that pulled it in). Each result carries
+that value; weighted scoring omits it. A floor tuned on weighted scores does not
+carry over, and when a floor is set, a result with a low cosine is filtered out
+even if it is an exact keyword match. `min_score=0` keeps everything in both
+modes. Version 9 score provenance records any
 applied `current_update` operation and its exact coefficient. Version 10 retains
 the evidence-projection policy and replayable `evidence_projection` operations;
 versions 1–9 mean projection was disabled.

@@ -419,21 +419,48 @@ score(obj) =
   candidate below the relevance floor gets no update boost; its score is not
   capped at its similarity, because a fused score is not on that scale.
 - Session, episode and evidence-context inheritance, reranking and packing
-  operate on the fused score unchanged. `min_score` compares against the fused
-  score, which measures rank within the pool rather than similarity, so an
-  unrelated memory can score near 1.0 when nothing better exists. Cross-scope
-  hints are fused within their own pool.
+  operate on the fused score unchanged. Cross-scope hints are fused within
+  their own pool.
+- The fused score measures rank within the pool rather than similarity, so an
+  unrelated memory can score near 1.0 when nothing better exists. `min_score`
+  (for results and cross-scope hints) therefore compares against each result's
+  `semantic_relevance` instead: the semantic cosine similarity of the memory
+  behind it, floored at 0. Session, episode and evidence context that another
+  memory adds or promotes take that memory's relevance (for evidence context,
+  the largest in the evidence group), whether or not its score replaced their
+  own, or their own cosine when that is larger. The lexical score is not used
+  because it is min-max normalized per query, so the top keyword hit always
+  scores 1.0. The fused ranking and the fused score stay as they are.
+  `semantic_relevance` is recorded on every result, cross-scope hint and
+  selection exclusion, and is omitted under weighted scoring.
+- Consequences for callers of a `min_score` floor under rank fusion:
+  - The floor is a cosine similarity. A floor tuned on weighted scores does not
+    carry over, and cosine ranges depend on the embedding model: with the
+    default local model, unrelated text can still score around 0.3 to 0.5.
+    Choose a floor for the model in use.
+  - A result with a low cosine, such as an exact keyword match, is filtered
+    out. So is one the vector search did not return, which has no cosine and
+    counts as 0. Cross-scope hints are more exposed to this, because their
+    vector pass keeps only `2 × cross_scope_top_n` hits before memories in the
+    requested scopes are removed.
+  - When vector search fails or detects an embedding model mismatch
+    (`backend_failures` or `embedding_mismatch` in the response metadata), no
+    candidate has a cosine, so any positive floor returns nothing.
+  - `min_score=0` keeps everything, as under weighted scoring.
 
 The score trace keeps the raw semantic and lexical scores, graph proximity,
 epistemic weight, node-type boost and temporal affinity. Its recency, salience
 and confidence are 0 because formula version 2 does not compute them. Score
 provenance records `formula_version: 2` and a `rank_fusion` object with both
 ranks and the three applied factors, so replay needs no other candidate.
-Retrieval receipts that use rank fusion are schema version 15 and must state
-`rrf_k`. Weighted receipts keep their version and bytes: a weighted
-`ScoringWeights` omits `fusion` and `rrf_k` when serialized, and formula
-version 1 provenance omits `rank_fusion`. A missing `fusion` therefore always
-means weighted.
+Retrieval receipts that use rank fusion are schema version 16 and must state
+`rrf_k`. Version 16 also records each candidate's `semantic_relevance`, and every
+recorded value is at least the receipt's `min_score`. Version 15 receipts,
+written before the relevance gate existed, stay valid and omit it; their
+`min_score` was compared against the fused score. Weighted receipts keep their
+version and bytes: a weighted `ScoringWeights` omits `fusion` and `rrf_k` when
+serialized, and formula version 1 provenance omits `rank_fusion`. A missing
+`fusion` therefore always means weighted.
 
 ---
 
@@ -705,6 +732,8 @@ to the floor, then retains at most `limit` primary candidates in ranked order.
 Pinned nodes, instructions and active tasks do not override an explicit caller
 bound. Packing sees only selected candidates. An empty selection stays empty.
 Cross-scope hints apply the same floor and retain their independent count cap.
+Under opt-in rank fusion the floor compares against semantic cosine similarity
+(`semantic_relevance`) instead of the rank-based score (Section 7.2).
 Responses expose epistemic/selection exclusions with reasons and scores; the
 operation log records the floor, limit and selection exclusions. Token-budget
 exclusions remain in the bundle. Request options do not mutate shared config.

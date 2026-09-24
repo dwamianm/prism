@@ -129,7 +129,10 @@ class ScoringWeights(BaseModel):
             "is 1.0. Graph proximity, recency, salience and confidence are not "
             "used, nor are the query-specific weight shifts or learned ranking "
             "multipliers. Scores are rank-based, so min_score compares against "
-            "the fused score rather than a similarity."
+            "each result's semantic_relevance, the semantic cosine similarity of "
+            "the memory behind it, instead of the fused score. A floor tuned on "
+            "weighted scores does not carry over, and a low-cosine exact keyword "
+            "match is filtered out when a floor is set."
         ),
     )
     rrf_k: int | None = Field(

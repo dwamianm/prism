@@ -145,6 +145,10 @@ class PRMERetriever(BaseRetriever):
                 metadata["epistemic_type"] = node.epistemic_type.value
             if candidate.paths:
                 metadata["retrieval_paths"] = candidate.paths
+            if candidate.semantic_relevance is not None:
+                # Rank fusion: the score is rank-based, so this cosine is the
+                # value to threshold on (RFC-0005 Section 7.2).
+                metadata["semantic_relevance"] = candidate.semantic_relevance
 
             docs.append(
                 Document(

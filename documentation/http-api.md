@@ -138,6 +138,16 @@ Run hybrid retrieval.
 }
 ```
 
+An optional `min_score` in the request drops results below an inclusive floor.
+With the default weighted scoring it compares against `score`. With opt-in rank
+fusion (`PRME_SCORING__FUSION=rrf`), `score` says where a result ranks among
+the candidates, not how relevant it is, so the floor compares against
+`semantic_relevance` instead. Each result then carries `semantic_relevance`: the
+semantic cosine similarity of the memory behind it. A floor tuned on weighted
+scores does not carry over, and when a floor is set, a result with a low cosine
+is filtered out even if it is an exact keyword match. `min_score: 0` keeps
+everything in both modes.
+
 ### POST /v1/organize
 
 Run organizer jobs.

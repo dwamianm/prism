@@ -300,6 +300,22 @@ class RetrievalCandidate(BaseModel):
     composite_score: float = Field(
         default=0.0, description="Final composite score after scoring stage"
     )
+    # Omitted under weighted scoring, so results and bundles keep the bytes
+    # they had before rank fusion recorded it.
+    semantic_relevance: float | None = Field(
+        default=None, ge=0, allow_inf_nan=False,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Rank fusion only: the semantic cosine similarity that min_score "
+            "compares against instead of the rank-based composite_score (see "
+            "rank_fusion_relevance). Unlike ScoringWeights.relevance_floor, it "
+            "does not include the lexical score"
+        ),
+    )
+    # Working state for rank_fusion_relevance, never serialized: the largest
+    # relevance among the memories that added this candidate as session,
+    # episode or evidence context, whether or not their score replaced its own.
+    context_relevance: float = Field(default=0.0, ge=0, allow_inf_nan=False, exclude=True)
     reranker_score: float | None = Field(
         default=None, ge=0, le=1,
         description="Normalized neural score when reranked; not a calibrated relevance probability",
@@ -327,6 +343,26 @@ class RetrievalCandidate(BaseModel):
         default=None,
         description="ID of the contradicting node, if this node is CONTESTED",
     )
+
+
+def rank_fusion_relevance(candidate: RetrievalCandidate) -> float:
+    """Return the semantic cosine that ``min_score`` gates under rank fusion.
+
+    A rank-fused score says where a candidate ranks in its pool, so the best
+    of an unrelated pool still scores near 1.0 (issue #110). The cosine is the
+    only absolute signal, because lexical scores are min-max normalized per
+    query. Session, episode and evidence context count the relevance of the
+    memory that pulled them in: through ``context_relevance``, and through the
+    score provenance they inherit, whose trace holds that memory's cosine. The
+    largest of these and the candidate's own cosine counts. A candidate that
+    the vector search did not return has no cosine of its own. The value is
+    never below 0, so a zero floor keeps everything.
+    """
+    inherited = (
+        candidate.score_provenance.trace.semantic_similarity
+        if candidate.score_provenance is not None else 0.0
+    )
+    return max(0.0, candidate.semantic_score, inherited, candidate.context_relevance)
 
 
 class MemoryBundle(BaseModel):
@@ -626,6 +662,12 @@ class ExcludedCandidate(BaseModel):
     composite_score: float | None = Field(
         default=None,
         description="Composite score at time of exclusion (if scored)",
+    )
+    # Omitted under weighted scoring, which keeps its serialized exclusions.
+    semantic_relevance: float | None = Field(
+        default=None, ge=0, allow_inf_nan=False,
+        exclude_if=lambda value: value is None,
+        description="Rank fusion only: the semantic cosine that min_score compares against",
     )
 
 
