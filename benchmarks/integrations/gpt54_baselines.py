@@ -40,9 +40,17 @@ CLI asks for confirmation in an interactive terminal, and the approved
 and questions, with ``deepseek-v4.1-flash:cloud`` as reader and judge through
 the local Ollama server (``ollama_answers``). It never builds an OpenAI client
 or reads an API key, keeps its contexts and answers apart from the GPT-5.4
-track, and needs its own ``calibrate`` before ``run``. The ``prme`` arms and
+track, and needs its own ``calibrate`` before ``run`` or ``run-pair``. The ``prme`` arms and
 ``--sample`` smoke checks run on this track only. Its scores are not comparable
 with GPT-5.4 scores; compare DeepSeek runs only with each other.
+
+On this track a variant is answered only by ``run-pair``, together with a fresh
+answer run of a prepared defaults baseline, in one session and interleaved
+question by question, so drift and the time of day reach both sides equally
+(#129). ``compare`` pairs a variant only with the defaults run answered
+alongside it. ``run-pair`` with the ``prme`` arm and no variant answers the
+baseline against itself: the A/A check of the paired test. A plain or
+full-context arm can be paired with the defaults the same way.
 """
 from __future__ import annotations
 
@@ -51,6 +59,7 @@ import asyncio
 from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 import fcntl
 from functools import partial
 import hashlib
@@ -62,6 +71,7 @@ import re
 import statistics
 import sys
 from unittest.mock import patch
+import uuid
 
 from benchmarks.diagnostics import product_packing as gate
 from benchmarks.integrations import ollama_answers
@@ -118,6 +128,22 @@ _NO_ANSWER_FAILURES = ("Provider HTTP ", "Ambiguous provider failure", "Provider
 _ATTEMPT = re.compile(r"attempt-(\d+)")
 # A judge prompt holds the question, the reference and a reader answer of at most READER_LIMIT tokens.
 _JUDGE_BYTES = 4 * READER_LIMIT + 4096
+# The two answer runs of a pair (#129): the defaults baseline, and the arm answered alongside it.
+PAIR_SIDES = ("before", "after")
+PAIR_ORDER = ("Interleaved question by question in registered order: each question's after side, then its before "
+              "side, from one queue that the registration's concurrent requests share.")
+# The order PAIR_ORDER describes: variant, defaults, variant, defaults.
+_ANSWER_ORDER = ("after", "before")
+# What both sides of one pair record identically, so compare can tell they were answered together.
+_PAIR_KEYS = ("id", "number", "before", "after", "sha256")
+_PAIR = re.compile(r"pair-(\d+)")
+# Run log events that record the live Ollama server version.
+_VERSION_EVENTS = frozenset({"started", "finished", "model-changed"})
+# compare's paired bootstrap, as the evidence gate's comparisons draw it.
+BOOTSTRAP_SEED = 42
+# LoCoMo's questions come from 10 conversations, so its intervals resample conversations. Each LongMemEval-S
+# question has its own history, so its intervals resample questions.
+CONVERSATION_INTERVALS = frozenset({"locomo"})
 
 
 # Contexts ------------------------------------------------------------------
@@ -222,7 +248,8 @@ def _module_identity() -> dict:
         "benchmarks/integrations/gpt54_official_prompt_loader.py",
         "benchmarks/integrations/analyze_gpt54_comparison.py", "benchmarks/integrations/ollama_answers.py",
         "benchmarks/integrations/run_longmemeval_v2.py", "benchmarks/diagnostics/reader_judge.py",
-        "benchmarks/compare_evidence.py", "benchmarks/evidence.py", *FROZEN_SOURCES)}
+        "benchmarks/compare_evidence.py", "benchmarks/diagnostics/compare_public_captures.py",
+        "benchmarks/evidence.py", *FROZEN_SOURCES)}
 
 
 def _provenance() -> dict:
@@ -266,13 +293,18 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
     if any(_complete_run(event) for event in events):
         raise ValueError(f"{arm} {benchmark} has a complete answer run ({log}); its contexts are never prepared "
                          "again")
+    paired = {path: _run_events(path) for path in _pair_logs(data, arm, benchmark)}
+    for path, history in paired.items():
+        if any(map(_complete_run, history)):
+            raise ValueError(f"{arm} {benchmark} has a complete answer run in a pair ({path}); its contexts are "
+                             "never prepared again")
     _check_overrides(arm, overrides)
     later = _BASELINE.fullmatch(arm) is not None
     if later:
         # The CLI names a later baseline after the checked-out commit; check a direct call before any work.
         _check_baseline_name(arm, benchmark, _provenance()["commit"], data)
-    if any(event["event"] == "started" for event in events):
-        # Earlier runs ended without a score. Preparing again is allowed, and stays on record.
+    if any(event["event"] == "started" for history in (events, *paired.values()) for event in history):
+        # Earlier runs, alone or in a pair, ended without a score. Preparing again is allowed, and stays on record.
         _log_run(data, arm, benchmark, {"event": "prepared-again"})
     if arm == "full-context":
         entries, extra = _prepare_full_context(folder, benchmark, questions)
@@ -484,10 +516,14 @@ def _reservation(prompt_bytes: int, limit: int) -> int:
 
 # Paid run -------------------------------------------------------------------
 
+def _numbered(folder: Path, pattern: re.Pattern) -> list[tuple[int, Path]]:
+    """The folders whose names match ``pattern``, with the number it captures, in numeric order."""
+    return sorted((int(match.group(1)), path) for path in folder.glob("*")
+                  if path.is_dir() and (match := pattern.fullmatch(path.name)))
+
+
 def _attempts(folder: Path) -> list[Path]:
-    found = [(int(match.group(1)), path) for path in folder.glob("attempt-*")
-             if path.is_dir() and (match := _ATTEMPT.fullmatch(path.name))]
-    return [path for _, path in sorted(found)]
+    return [path for _, path in _numbered(folder, _ATTEMPT)]
 
 
 def _next_attempt(folder: Path) -> Path:
@@ -562,12 +598,12 @@ def _ledger(path: Path, max_usd: float) -> Ledger:
 
 
 @contextmanager
-def _run_lock(folder: Path) -> Iterator[None]:
+def _run_lock(folder: Path, name: str | None = None) -> Iterator[None]:
     with (folder / "run.lock").open("a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise ValueError(f"Another run of {folder.parent.name} {folder.name} is in progress") from None
+            raise ValueError(f"Another run of {name or f'{folder.parent.name} {folder.name}'} is in progress") from None
         yield
 
 
@@ -631,7 +667,9 @@ def _run_history(data: Path, arm: str, benchmark: str) -> dict:
     """What the arm's run log holds, so a result shows every earlier run and preparation."""
     path = _run_log_path(data, arm, benchmark)
     events = _run_events(path)
-    history = {"sha256": digest(path), "runs_started": sum(event["event"] == "started" for event in events),
+    # An arm answered only in pairs has no run log of its own until it is prepared again.
+    history = {"sha256": digest(path) if path.exists() else None,
+               "runs_started": sum(event["event"] == "started" for event in events),
                "prepared_again": sum(event["event"] == "prepared-again" for event in events)}
     for event in events:
         if event["event"] == "new-baseline":
@@ -643,10 +681,55 @@ def _run_history(data: Path, arm: str, benchmark: str) -> dict:
 
 def _log_run(data: Path, arm: str, benchmark: str, event: dict) -> None:
     """Append one event to the arm's run log, which is never rewritten."""
-    path = _run_log_path(data, arm, benchmark)
+    _append_event(_run_log_path(data, arm, benchmark), event)
+
+
+def _append_event(path: Path, event: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a") as handle:
         handle.write(json.dumps({"at": study.utc(), **event}, sort_keys=True) + "\n")
+
+
+def _pair_root(data: Path, before: str, after: str, benchmark: str) -> Path:
+    """Where the pairs of a baseline and the arm answered alongside it keep their answers, one folder per pair."""
+    return data / "pairs" / before / after / benchmark
+
+
+def _pair_log_path(data: Path, before: str, after: str, benchmark: str) -> Path:
+    # Outside the pair folders, like the arms' run logs, so removing a pair never erases that it was started.
+    return data / "runs" / "pairs" / before / f"{after}-{benchmark}.jsonl"
+
+
+def _pair_logs(data: Path, arm: str, benchmark: str) -> list[Path]:
+    """The run logs of every pair with the arm on either side, for this benchmark."""
+    patterns = (_pair_log_path(data, arm, "*", benchmark), _pair_log_path(data, "*", arm, benchmark))
+    return sorted({path for pattern in patterns for path in data.glob(str(pattern.relative_to(data)))})
+
+
+def _version_of(settings: dict) -> str | None:
+    """The Ollama server version in an answer model's settings: its identity at the lookup that recorded them."""
+    return (settings.get("identity") or {}).get("server_version")
+
+
+def _sorted_versions(versions) -> list[str | None]:
+    return sorted(set(versions), key=lambda version: (version is None, version or ""))
+
+
+def _server_versions(bound: dict, events: list[dict], end: str | None) -> list[str | None]:
+    """Every Ollama server version the answers were given under: at binding, at each start and at the end.
+
+    ``events`` are the run log events of the answer runs whose answers the
+    result reports. A start or finish logged before server versions were
+    recorded counts as unknown (None).
+    """
+    return _sorted_versions([_version_of(bound), end, *(event.get("server_version") for event in events
+                                                          if event["event"] in _VERSION_EVENTS)])
+
+
+def _current_preparation(events: list[dict]) -> list[dict]:
+    """The events since the arm was last prepared again; earlier runs answered contexts that were removed."""
+    marks = [number for number, event in enumerate(events) if event["event"] == "prepared-again"]
+    return events[marks[-1] + 1:] if marks else events
 
 
 # Ollama calibration ------------------------------------------------------------
@@ -769,7 +852,8 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
     With ``model``, the Ollama track answers instead of GPT-5.4: no API key,
     ledger or cap. Only that track runs the ``prme`` arms and ``sample``, which
     asks only ``sample_questions`` as a smoke check, not a score; a later full
-    run reuses its answers.
+    run reuses its answers. A named variant of the defaults is answered only by
+    ``run_pair``, alongside a fresh run of the defaults (#129).
     """
     if model is None:
         if not (max_usd is not None and math.isfinite(max_usd) and max_usd > 0):
@@ -778,6 +862,9 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
             raise ValueError("The prme arms and samples run on the Ollama track only")
     elif max_usd is not None or api_key is not None:
         raise ValueError("An Ollama run makes no paid calls; it takes no spending cap or API key")
+    elif is_prme(arm) and not is_baseline(arm):
+        raise ValueError(f"{arm} is a variant of the defaults, which is answered only alongside a fresh run of the "
+                         "defaults: use run-pair with a prepared baseline (#129)")
     data = data or data_root(model)
     registration, questions = registered_protocol(benchmark)
     folder, prepared, entries = load_prepared(arm, benchmark, questions, data=data)
@@ -792,7 +879,7 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
         api_key = api_key or _api_key()
     started = study.utc()
     with _run_lock(folder), _registered_judge(registration, benchmark):
-        if private.exists() and json.loads(private.read_text()).get("complete"):
+        if _complete_result(private):
             raise ValueError(f"{run_name} is already complete; a finished arm or sample is never rerun")
         if model is None:
             ledger = _ledger(_ledger_path(data, arm, benchmark), max_usd)
@@ -807,31 +894,34 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
             opened = ollama_answers.client_for(model)
             extra = {"calibration": calibration}
             _log_run(data, arm, benchmark, {"event": "started", "sample": sample,
-                                            "answer_model_sha256": sha(answer_model)})
+                                            "answer_model_sha256": sha(answer_model),
+                                            "server_version": _version_of(settings)})
         async with opened as client:
-            await _answer(arm, benchmark, folder, questions, entries, registration["provider_concurrency"],
-                          client, ask, ledger)
-        if model is not None and not ollama_answers.same_model(answer_model, ollama_answers.describe(model)):
-            _log_run(data, arm, benchmark, {"event": "model-changed", "sample": sample})
-            raise RuntimeError(f"The Ollama model identity changed during {run_name}; nothing is reported. Its "
-                               "answers stay in the arm, which refuses another model.")
+            await _answer(run_name, benchmark, [_Side(folder, folder, entries)], questions,
+                          registration["provider_concurrency"], client, ask, ledger)
+        end_version = None
+        if model is not None:
+            ended = ollama_answers.describe(model)
+            end_version = _version_of(ended)
+            if not ollama_answers.same_model(answer_model, ended):
+                _log_run(data, arm, benchmark, {"event": "model-changed", "sample": sample,
+                                                "server_version": end_version})
+                raise RuntimeError(f"The Ollama model identity changed during {run_name}; nothing is reported. Its "
+                                   "answers stay in the arm, which refuses another model.")
+            events = _current_preparation(_run_events(_run_log_path(data, arm, benchmark)))
+            extra["server_versions"] = _server_versions(answer_model, events, end_version)
         result = report(arm, benchmark, folder, questions, prepared, entries, ledger, model=model)
         result.update(started_at=started, finished_at=study.utc(), retry_policy=RETRY_POLICY,
                       provenance=_provenance(), modules=_module_identity(), answer_model=answer_model, **extra,
                       prepared=_prepared_summary(prepared))
         if sample is not None:
-            # A smoke check only: the count of accepted answers, with no accuracy or intervals to cite.
-            for key in ("accuracy", "ci95_questions", "ci95_source_clusters", "categories"):
-                result.pop(key, None)
-            result.update(kind=result["kind"] + "-sample", sample={
-                "per_category": sample, "question_ids": [row["question_id"] for row in questions],
-                "note": "A fixed smoke sample: the first questions of each category in registered order. "
-                        "Not a benchmark score."})
+            _label_sample(result, sample, questions)
         _write_json(private, result)
         if model is not None:
             _log_run(data, arm, benchmark, {"event": "finished", "sample": sample, "complete": result["complete"],
                                             "completed": result["completed"], "total": result["total"],
-                                            "prepared_commit": result["prepared"]["commit"]})
+                                            "prepared_commit": result["prepared"]["commit"],
+                                            "server_version": end_version})
             result["run_log"] = _run_history(data, arm, benchmark)
         if not result["complete"]:
             raise RuntimeError(
@@ -840,11 +930,240 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
                 "is reported.")
         prefix = "gpt54-baseline" if model is None else model.track
         suffix = "" if sample is None else f"-sample-{sample}"
-        published = results / started[:10] / f"{prefix}-{arm}-{benchmark}{suffix}-result.json"
-        # Failure messages can name local paths; the private copy keeps them.
-        write_new(published, {**result, "failures": [
-            {key: value for key, value in failure.items() if key != "message"} for failure in result["failures"]]})
+        _publish(results / started[:10] / f"{prefix}-{arm}-{benchmark}{suffix}-result.json", result)
     return result
+
+
+def _complete_result(path: Path) -> bool:
+    return path.is_file() and bool(json.loads(path.read_text()).get("complete"))
+
+
+def _label_sample(result: dict, sample: int, questions: list[dict]) -> None:
+    """A smoke check only: the count of accepted answers, with no accuracy or intervals to cite."""
+    for key in ("accuracy", "ci95_questions", "ci95_source_clusters", "categories"):
+        result.pop(key, None)
+    result.update(kind=result["kind"] + "-sample", sample={
+        "per_category": sample, "question_ids": [row["question_id"] for row in questions],
+        "note": "A fixed smoke sample: the first questions of each category in registered order. "
+                "Not a benchmark score."})
+
+
+def _publish(path: Path, result: dict) -> None:
+    # Failure messages can name local paths; the private copy keeps them.
+    write_new(path, {**result, "failures": [
+        {key: value for key, value in failure.items() if key != "message"} for failure in result["failures"]]})
+
+
+# Interleaved pairs (#129) -------------------------------------------------------
+
+async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_answers.AnswerModel,
+                   data: Path | None = None, results: Path = RESULTS, sample: int | None = None) -> dict:
+    """Answer ``after`` together with a fresh run of the defaults baseline ``before``, in one session.
+
+    Both arms must be prepared, and ``before`` must have a complete answer run
+    of its own (``run``), which records the baseline. ``after`` is a variant of
+    the defaults, another arm, or ``before`` itself for the A/A check. The two
+    answer runs share one queue, interleaved question by question
+    (``PAIR_ORDER``), so drift and the time of day reach both sides equally,
+    and each side is reported as its own result, marked with the pair.
+    ``compare`` pairs a variant only with the defaults run answered in the same
+    pair. A call resumes the latest pair of these arms while it can still
+    finish (``_pair_can_finish``), and otherwise starts the next one, which is
+    how a confirmation redraws both sides; every pair stays on record.
+    ``sample`` works as in ``run``. Returns the pair's mark and both results.
+    """
+    if not isinstance(model, ollama_answers.AnswerModel):
+        raise ValueError("Pairs are answered on the Ollama track only")
+    _check_pair_baseline(before)
+    data = data or data_root(model)
+    if _complete_run_commit(data, before, benchmark) is None:
+        raise ValueError(f"The {before} {benchmark} baseline has no complete answer run of its own; answer it with "
+                         "run first, which records the baseline")
+    registration, questions = registered_protocol(benchmark)
+    arms = {"before": before, "after": after}
+    # The A/A check reads one prepared arm on both sides, so it is loaded and checked once.
+    prepared_arms = {arm: load_prepared(arm, benchmark, questions, data=data) for arm in dict.fromkeys(arms.values())}
+    loaded = {side: prepared_arms[arm] for side, arm in arms.items()}
+    if sample is not None:
+        questions = sample_questions(questions, sample)
+    prepared_sha256 = {side: digest(folder / "prepared.json") for side, (folder, _, _) in loaded.items()}
+    root = _pair_root(data, before, after, benchmark)
+    root.mkdir(parents=True, exist_ok=True)
+    log = _pair_log_path(data, before, after, benchmark)
+    started = study.utc()
+    with _run_lock(root, f"the {before} and {after} {benchmark} pairs"), _registered_judge(registration, benchmark):
+        # Checked before a pair is opened, so a failed check leaves no pair on record.
+        settings, calibration = _ollama_answer_model(model, data)
+        folder, record = _open_pair(root, log, arms, benchmark, prepared_sha256, settings)
+        number = record["number"]
+        run_name = f"{before} and {after} {benchmark} pair {number}" + (
+            "" if sample is None else f" sample of {sample}")
+        private = "result.json" if sample is None else f"sample-{sample}-result.json"
+        # A complete pair is never opened again, so only a sample of the open pair can already be complete.
+        if sample is not None and all(_complete_result(folder / side / private) for side in PAIR_SIDES):
+            raise ValueError(f"{run_name} is already complete; a finished sample is never rerun")
+        for side in PAIR_SIDES:
+            (folder / side).mkdir(exist_ok=True)
+        bound = {side: _bind_answer_model(folder / side, settings) for side in PAIR_SIDES}
+        _append_event(log, {"event": "started", "pair": number, "sample": sample,
+                            "answer_model_sha256": {side: sha(value) for side, value in bound.items()},
+                            "server_version": _version_of(settings)})
+        sides = []
+        for side in _ANSWER_ORDER:
+            prepared_folder, _, entries = loaded[side]
+            sides.append(_Side(prepared_folder, folder / side, entries))
+        async with ollama_answers.client_for(model) as client:
+            await _answer(run_name, benchmark, sides, questions, registration["provider_concurrency"], client,
+                          partial(ollama_answers.call, model=model), None)
+        ended = ollama_answers.describe(model)
+        end_version = _version_of(ended)
+        if not all(ollama_answers.same_model(value, ended) for value in bound.values()):
+            _append_event(log, {"event": "model-changed", "pair": number, "sample": sample,
+                                "server_version": end_version})
+            raise RuntimeError(f"The Ollama model identity changed during {run_name}; nothing is reported. Its "
+                               "answers stay in the pair, and the next run starts a new pair.")
+        events = _pair_events(log, number)
+        mark = {**{key: record[key] for key in _PAIR_KEYS if key != "sha256"}, "sha256": digest(folder / "pair.json"),
+                "order": PAIR_ORDER, "pairs_started": len(_pair_numbers(root, log)),
+                "earlier_pairs": _earlier_pairs(log, number)}
+        shared = {"started_at": started, "finished_at": study.utc(), "retry_policy": RETRY_POLICY,
+                  "provenance": _provenance(), "modules": _module_identity(), "calibration": calibration}
+        outcome = {}
+        for side in PAIR_SIDES:
+            prepared_folder, prepared, entries = loaded[side]
+            result = report(arms[side], benchmark, prepared_folder, questions, prepared, entries, None, model=model,
+                            answers=folder / side)
+            result.update(**shared, answer_model=bound[side],
+                          server_versions=_server_versions(bound[side], events, end_version),
+                          prepared=_prepared_summary(prepared), pair={**mark, "side": side})
+            if sample is not None:
+                _label_sample(result, sample, questions)
+            outcome[side] = result
+        # Both sides are verified before either is written, so a failed check leaves neither side's result.
+        for side, result in outcome.items():
+            _write_json(folder / side / private, result)
+        versions = [version for version in _sorted_versions(
+            version for result in outcome.values() for version in result["server_versions"]) if version]
+        # compare refuses a pair whose server version changed, so such a pair is never published as complete.
+        changed = f"the Ollama server version changed ({', '.join(versions)})" if len(versions) > 1 else None
+        complete = changed is None and all(result["complete"] for result in outcome.values())
+        _append_event(log, {"event": "finished", "pair": number, "sample": sample, "complete": complete,
+                            "completed": {side: result["completed"] for side, result in outcome.items()},
+                            "total": len(questions), "server_version": end_version,
+                            "prepared_commit": {side: result["prepared"]["commit"]
+                                                for side, result in outcome.items()},
+                            **({"reason": changed} if changed else {})})
+        for side, result in outcome.items():
+            # This pair's own starts, and the history of the arm whose contexts the side read.
+            result["run_log"] = {"sha256": digest(log),
+                                 "runs_started": sum(event["event"] == "started" for event in events),
+                                 "arm": _run_history(data, arms[side], benchmark)}
+        if changed:
+            raise RuntimeError(f"{run_name}: {changed} while it was answered, so nothing is published. Its answers "
+                               "stay on record, and the next run starts a new pair.")
+        if not complete:
+            counts = "; ".join(f"{side} {result['completed']}/{result['total']} answered, "
+                               f"{result['final_failures']} final failures" for side, result in outcome.items())
+            raise RuntimeError(f"{run_name} is incomplete: {counts}. Run it again: it asks the questions that got no "
+                               "answer, or starts the next pair if a final failure means this one can never finish. "
+                               "No partial score is reported.")
+        suffix = "" if sample is None else f"-sample-{sample}"
+        for side, result in outcome.items():
+            _publish(results / started[:10] / f"{model.track}-{before}-vs-{after}-{benchmark}-pair-{number}-{side}"
+                                              f"{suffix}-result.json", result)
+    return {"pair": mark, **outcome}
+
+
+def _check_pair_baseline(arm: str) -> None:
+    if not is_baseline(arm):
+        raise ValueError(f"The before side of a pair is a baseline of the defaults (prme or prme@<commit>), not {arm}")
+
+
+def _pair_events(log: Path, number: int) -> list[dict]:
+    return [event for event in _run_events(log) if event.get("pair") == number]
+
+
+def _pair_numbers(root: Path, log: Path) -> list[int]:
+    """Every pair of these arms on record: each folder, and each pair its run log names."""
+    return sorted({number for number, _ in _numbered(root, _PAIR)}
+                  | {event["pair"] for event in _run_events(log) if "pair" in event})
+
+
+def _open_pair(root: Path, log: Path, arms: dict[str, str], benchmark: str, prepared_sha256: dict[str, str],
+               settings: dict) -> tuple[Path, dict]:
+    """The pair to answer: the latest one while it can still finish, otherwise a new one after every other.
+
+    An unfinished pair that cannot be finished is given up on record: its run
+    log gets an ``abandoned`` event with the reason, and its folder stays.
+    """
+    numbers = _pair_numbers(root, log)
+    if numbers:
+        latest = root / f"pair-{numbers[-1]}"
+        events = _pair_events(log, numbers[-1])
+        reason = _pair_blocker(latest, events, prepared_sha256, settings)
+        if reason is None:
+            return latest, json.loads((latest / "pair.json").read_text())
+        if reason != "complete" and not any(event["event"] == "abandoned" for event in events):
+            _append_event(log, {"event": "abandoned", "pair": numbers[-1], "reason": reason})
+            print(f"Pair {numbers[-1]} cannot be finished ({reason}). It stays on record, and pair "
+                  f"{numbers[-1] + 1} starts.", file=sys.stderr, flush=True)
+    number = numbers[-1] + 1 if numbers else 1
+    folder = root / f"pair-{number}"
+    # A new folder claims the number; the record is then written whole.
+    folder.mkdir()
+    record = {"kind": "ollama-answer-pair", "id": uuid.uuid4().hex, "number": number, **arms,
+              "benchmark": benchmark, "prepared_sha256": prepared_sha256, "order": PAIR_ORDER,
+              "created_at": study.utc()}
+    _write_json(folder / "pair.json", record)
+    return folder, record
+
+
+def _pair_blocker(folder: Path, events: list[dict], prepared_sha256: dict[str, str], settings: dict) -> str | None:
+    """Why a pair cannot be finished as one session of these arms, under this model and server version, or None.
+
+    It cannot when both sides are complete, its record is missing, the arms'
+    contexts were prepared again, a question failed finally, a side was
+    answered by another model or settings, or the pair recorded another Ollama
+    server version (``compare`` refuses such a pair). The next pair starts
+    instead, and this one stays on record.
+    """
+    if all(_complete_result(folder / side / "result.json") for side in PAIR_SIDES):
+        return "complete"
+    path = folder / "pair.json"
+    if not path.is_file():
+        return "its pair.json record is missing"
+    if json.loads(path.read_text()).get("prepared_sha256") != prepared_sha256:
+        return "an arm was prepared again"
+    if any(_status(question) == "final" for side in PAIR_SIDES
+           for question in (folder / side / "execution").glob("*") if question.is_dir()):
+        return "a question failed finally"
+    bindings = [folder / side / "answer-model.json" for side in PAIR_SIDES]
+    bound = [json.loads(binding.read_text()) for binding in bindings if binding.is_file()]
+    if not all(ollama_answers.same_model(value, settings) for value in bound):
+        return "it was answered by another model identity or settings"
+    recorded = {_version_of(value) for value in bound} | {
+        event.get("server_version") for event in events if event["event"] in _VERSION_EVENTS}
+    if not recorded <= {_version_of(settings)}:
+        return "it was answered under another Ollama server version"
+    return None
+
+
+def _earlier_pairs(log: Path, number: int) -> list[dict]:
+    """Every earlier pair of these arms and how it ended, so a result shows the pairs it was not."""
+    states = {}
+    for event in _run_events(log):
+        pair = event.get("pair")
+        if pair is None or pair >= number:
+            continue
+        if event["event"] == "finished" and event.get("sample") is None and event.get("complete"):
+            states[pair] = "complete"
+        elif event["event"] == "abandoned":
+            states[pair] = f"abandoned: {event['reason']}"
+        elif event["event"] == "finished" and event.get("reason"):
+            states[pair] = f"not published: {event['reason']}"
+        else:
+            states.setdefault(pair, "unfinished")
+    return [{"number": pair, "state": states[pair]} for pair in sorted(states)]
 
 
 def _prepared_summary(prepared: dict) -> dict:
@@ -857,7 +1176,7 @@ def _prepared_summary(prepared: dict) -> dict:
 
 
 def _server_version(result: dict) -> str | None:
-    return (result["answer_model"].get("identity") or {}).get("server_version")
+    return _version_of(result["answer_model"])
 
 
 def _same_inputs(before: dict, after: dict) -> bool:
@@ -878,18 +1197,75 @@ def _same_inputs(before: dict, after: dict) -> bool:
             and _server_version(before) == _server_version(after))
 
 
-def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
-    """Pair two complete answer results on the same questions, answered by the same reader and judge.
+def _recorded_versions(result: dict) -> list[str | None]:
+    """The Ollama server versions a result recorded; results from before #129 recorded only the one at binding."""
+    return result.get("server_versions") or [_server_version(result)]
 
-    ``before`` is the baseline. The difference and its 95% interval resample
-    questions, as the evidence gate's comparisons do. When both results are
-    baselines of the defaults with the same inputs (``_same_inputs``), the
-    pairing is a repeat: its difference is run-to-run variation alone, and
-    ``repeat`` reports how many verdicts changed and whether the interval
-    excludes zero.
+
+def _pair_of(before: dict, after: dict) -> dict | None:
+    """The pair both results were answered in, or None when each was answered on its own."""
+    first, second = before.get("pair"), after.get("pair")
+    if first is None and second is None:
+        return None
+    rule = "A variant is compared only with the defaults run answered alongside it in one pair (run-pair)."
+    if first is None or second is None:
+        raise ValueError(f"Only one of these results was answered in a pair. {rule}")
+    if (first.get("side"), second.get("side")) != PAIR_SIDES:
+        raise ValueError(f"Pass the pair's before side (the defaults) as before and its after side as after. {rule}")
+    if any(first.get(key) is None or first.get(key) != second.get(key) for key in _PAIR_KEYS):
+        raise ValueError(f"These results come from different pairs. {rule}")
+    if (first["before"], first["after"]) != (before.get("arm"), after.get("arm")) or not is_baseline(first["before"]):
+        raise ValueError(f"The results' arms are not the pair's, with a defaults baseline as its before side. {rule}")
+    return {key: value for key, value in first.items() if key != "side"}
+
+
+def _paired(pairs: list[tuple[str | None, float, float]], *, samples: int, clustered: bool) -> dict:
+    """The paired difference and its 95% interval, resampling questions or, with ``clustered``, conversations too.
+
+    Each pair is (conversation, before, after). The conversation bootstrap is
+    the one the public-capture comparisons use: a draw keeps all of each
+    chosen conversation's questions, and with fewer than two conversations
+    there is no interval. A percentile bootstrap over only LoCoMo's 10
+    conversations covers less than it claims (for a variant with no effect it
+    excluded zero about 9% of the time instead of 5%), and it came out narrower
+    than the question-level interval for the #118 repeat. So with
+    ``clustered``, ``interval_95``, the interval the default-change rule reads,
+    spans both: a difference excludes zero only when the conversation-level and
+    the question-level intervals both do.
     """
     from benchmarks.compare_evidence import paired_statistics
 
+    stats = paired_statistics([(before, after) for _, before, after in pairs], samples=samples, seed=BOOTSTRAP_SEED)
+    if not clustered or not pairs:
+        return stats
+    # It draws with seed 42, BOOTSTRAP_SEED.
+    from benchmarks.diagnostics.compare_public_captures import cluster_statistics
+
+    conversations = cluster_statistics([(before, after) for _, before, after in pairs],
+                                       [cluster for cluster, _, _ in pairs], samples=samples)["interval_95"]
+    questions = stats["interval_95"]
+    spanned = None if conversations is None else [min(conversations[0], questions[0]),
+                                                  max(conversations[1], questions[1])]
+    return {**stats, "groups": len({cluster for cluster, _, _ in pairs}), "interval_95": spanned,
+            "interval_95_conversations": conversations, "interval_95_questions": questions}
+
+
+def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
+    """Pair two complete answer results on the same questions, answered by the same reader and judge.
+
+    ``before`` is the baseline. On the Ollama track the two results must be the
+    sides of one ``run_pair`` pair (#129). The one exception is a repeat: two
+    answer runs of the defaults, each answered on its own, that sent the reader
+    and judge the same inputs (``_same_inputs``), which keeps the #118
+    measurement checkable. Every Ollama server version the two results recorded
+    must be the same; a pair must record one at every start, and a repeat that
+    did not gets a warning. The difference's 95% interval resamples LoCoMo's
+    conversations, keeping each conversation's questions together, and
+    LongMemEval-S's questions (``CONVERSATION_INTERVALS``). When both results
+    are baselines of the defaults with the same inputs, the pairing is a
+    repeat: its difference is run-to-run variation alone, and ``repeat``
+    reports how many verdicts changed and whether the interval excludes zero.
+    """
     for side, result in (("before", before), ("after", after)):
         if not result.get("complete") or "sample" in result or result.get("kind", "").endswith("-sample"):
             raise ValueError(f"The {side} result is not a complete answer run")
@@ -898,43 +1274,65 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
             raise ValueError(f"The results differ in {field}")
     if not ollama_answers.same_model(before["answer_model"], after["answer_model"]):
         raise ValueError("The results were answered by different readers and judges, settings or model identities. "
-                         "Pair a run only with a baseline answered by the same model identity and settings; when "
-                         "either changes, record a new baseline first.")
+                         "Pair a run only with a defaults run answered by the same model identity and settings.")
     old, new = ({row["question_id"]: row for row in result["rows"]} for result in (before, after))
     if list(old) != list(new):
         raise ValueError("The results answer different questions")
     if before["rows"] == after["rows"]:
         raise ValueError("The before and after results are the same answer run")
+    pair = _pair_of(before, after)
+    both_baselines = all(is_baseline(result["arm"]) for result in (before, after))
+    unpaired = ("On the Ollama track a result is compared only with the run answered alongside it in one pair "
+                "(run-pair), or, for two answer runs of the defaults with the same inputs, as a repeat (#129)")
+    if pair is None and before["kind"] == "ollama-answer-result" and not both_baselines:
+        raise ValueError(unpaired)
+    versions = set(_recorded_versions(before)) | set(_recorded_versions(after))
+    known = sorted(version for version in versions if version is not None)
+    if len(known) > 1:
+        raise ValueError(f"The Ollama server version changed during or between these runs ({', '.join(known)}). "
+                         "Pair only runs answered under one server version.")
+    if pair is not None and None in versions:
+        raise ValueError("A pair's results must record the Ollama server version at every start")
+    clustered = before["benchmark"] in CONVERSATION_INTERVALS
+    if clustered and any(not old[key].get("cluster") or old[key]["cluster"] != new[key].get("cluster")
+                         for key in old):
+        raise ValueError("Every LoCoMo row must name its conversation, the same one on both sides")
 
     def paired(keys: list[str]) -> dict:
-        return paired_statistics([(float(old[key]["correct"]), float(new[key]["correct"])) for key in keys],
-                                 samples=samples, seed=42)
+        return _paired([(old[key].get("cluster"), float(old[key]["correct"]), float(new[key]["correct"]))
+                        for key in keys], samples=samples, clustered=clustered)
 
     categories = sorted({row["question_type"] for row in old.values()})
     prepared = {side: result.get("prepared") or {} for side, result in (("before", before), ("after", after))}
-    both_baselines = all(is_baseline(result["arm"]) for result in (before, after))
-    repeat = both_baselines and _same_inputs(before, after)
+    same_contexts = pair is not None and before.get("prepared_sha256") == after.get("prepared_sha256")
+    repeat = both_baselines and (same_contexts or _same_inputs(before, after))
+    if pair is None and before["kind"] == "ollama-answer-result" and not repeat:
+        raise ValueError(unpaired)
     warnings = [f"The {side} contexts were prepared from a tree with uncommitted changes"
                 for side, value in prepared.items() if value.get("dirty")]
     if prepared["before"].get("commit") != prepared["after"].get("commit") and not repeat:
         warnings.append("The contexts were prepared from different commits, so code changes are part of the "
                         "difference")
-    if _server_version(before) != _server_version(after):
-        # The model identity leaves the server version out, so an Ollama upgrade alone is not refused.
-        warnings.append(f"The Ollama server version changed ({_server_version(before)} to "
-                        f"{_server_version(after)}), so a change in how it serves the model is part of the "
-                        "difference")
+    if known and None in versions:
+        warnings.append("The Ollama server version was not recorded at every start of these runs")
     if both_baselines and not repeat:
         warnings.append("Both results are baselines of the defaults, but they are not shown to have sent the same "
                         "context text, budget, answering code and server version, so this is not a repeat")
     accuracy = paired(list(old))
-    low, high = accuracy["interval_95"]
+    # None with fewer than two LoCoMo conversations, where no conversation-level interval exists.
+    interval = accuracy["interval_95"]
+    how = ("answered together as one interleaved pair (#129)" if pair is not None
+           else "each answered on its own, one after the other (#118)")
     return {
         "kind": "answer-comparison", "benchmark": before["benchmark"], "model": before["model"],
-        "answer_model": before["answer_model"], "bootstrap_samples": samples, "bootstrap_seed": 42,
-        "interval_note": ("Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, so "
-                          "they are narrower than conversation-level intervals."),
-        "arms": {"before": before["arm"], "after": after["arm"]},
+        "answer_model": before["answer_model"], "bootstrap_samples": samples, "bootstrap_seed": BOOTSTRAP_SEED,
+        "interval_unit": "conversations and questions" if clustered else "questions",
+        "interval_note": ("LoCoMo intervals resample its conversations, keeping each conversation's questions "
+                          "together, and its interval_95 spans that interval and the question-level one, because "
+                          "a bootstrap over 10 conversations covers less than 95%. LongMemEval-S intervals resample "
+                          "questions, since each question has its own history."),
+        "arms": {"before": before["arm"], "after": after["arm"]}, "pair": pair,
+        "server_versions": _sorted_versions(versions),
         "prepared": prepared, "warnings": warnings,
         "accuracy": accuracy,
         "categories": {category: paired([key for key, row in old.items() if row["question_type"] == category])
@@ -943,34 +1341,50 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
         "lost": [key for key in old if old[key]["correct"] and not new[key]["correct"]],
         "repeat": None if not repeat else {
             "changed_verdicts": accuracy["wins"] + accuracy["losses"],
-            "interval_excludes_zero": low > 0 or high < 0,
-            "note": ("Two answer runs of the defaults with the same inputs and the same model identity and "
-                     "settings, so the difference is run-to-run variation alone. If the interval excludes zero, "
-                     "the paired test is not trustworthy as it stands (#118)."),
+            "interval_excludes_zero": None if interval is None else interval[0] > 0 or interval[1] < 0,
+            "interleaved": pair is not None,
+            "note": (f"Two answer runs of the defaults with the same inputs and the same model identity and settings, "
+                     f"{how}, so the difference is run-to-run variation alone. If an interleaved A/A interval "
+                     "excludes zero, a variant's gain must also be larger than the largest A/A difference measured "
+                     "so far (the default-change rule in CLAUDE.md)."),
         },
     }
 
 
-async def _answer(arm: str, benchmark: str, folder: Path, questions: list[dict], entries: dict[str, dict],
-                  concurrency: int, client, ask, ledger: Ledger | None) -> None:
-    """Ask every pending question through ``ask``, the provider's call with its ledger or model bound."""
-    execution = folder / "execution"
-    pending = iter([question for question in questions
-                    if _status(execution / question["question_id"]) == "pending"])
+@dataclass(frozen=True)
+class _Side:
+    """One answer run: the arm folder whose prepared contexts it reads, their entries, and where answers go."""
+
+    prepared: Path
+    answers: Path
+    entries: dict[str, dict]
+
+
+async def _answer(label: str, benchmark: str, sides: list[_Side], questions: list[dict], concurrency: int,
+                  client, ask, ledger: Ledger | None) -> None:
+    """Ask every pending question of every side through ``ask``, the provider's call with its ledger or model bound.
+
+    The sides share one queue, interleaved question by question in the order
+    given, so a pair's two answer runs move through the questions together.
+    """
+    jobs = iter([(side, question) for question in questions for side in sides
+                 if _status(side.answers / "execution" / question["question_id"]) == "pending"])
     errors: list[dict] = []
     answered = 0
 
     async def worker(semaphore):
         nonlocal answered
         while not errors:
-            question = next(pending, None)
-            if question is None:
+            job = next(jobs, None)
+            if job is None:
                 return
+            side, question = job
             qid = question["question_id"]
+            entry = side.entries[qid]
             attempt = None
             try:
-                attempt = _next_attempt(execution / qid)
-                context = _context(folder, entries[qid])
+                attempt = _next_attempt(side.answers / "execution" / qid)
+                context = _context(side.prepared, entry)
                 reader = await ask(client, semaphore, prompt=study.reader_prompt(benchmark, question, context),
                                    limit=READER_LIMIT, path=attempt / "reader.json")
                 judged = await ask(client, semaphore, prompt=study.judge_prompt(benchmark, question, reader["text"]),
@@ -978,16 +1392,15 @@ async def _answer(arm: str, benchmark: str, folder: Path, questions: list[dict],
                 _write_json(attempt / "result.json", {
                     "question_id": qid, "question_type": question["question_type"],
                     "cluster": question.get("conversation_id") or sha(question["haystack_sessions"]),
-                    "correct": study.verdict(judged["text"]), "context_sha256": entries[qid]["sha256"],
-                    "context_tokens": entries[qid]["context_tokens"],
-                    "retrieval_seconds": entries[qid]["retrieval_seconds"],
+                    "correct": study.verdict(judged["text"]), "context_sha256": entry["sha256"],
+                    "context_tokens": entry["context_tokens"], "retrieval_seconds": entry["retrieval_seconds"],
                     "reader_sha256": digest(attempt / "reader.json"),
                     "judge_sha256": digest(attempt / "judge.json")})
                 answered += 1
                 if answered % 25 == 0:
                     cost = "" if ledger is None else "; arm cost ${:.3f}".format(
-                        sum(entry["charge"] for entry in ledger.update()["entries"].values()) / 1e9)
-                    print(f"{arm} {benchmark}: {answered} answered this run{cost}", file=sys.stderr, flush=True)
+                        sum(charge["charge"] for charge in ledger.update()["entries"].values()) / 1e9)
+                    print(f"{label}: {answered} answered this run{cost}", file=sys.stderr, flush=True)
             except Exception as exc:
                 error = {"question_id": qid, "attempt": attempt.name if attempt else None,
                          "exception_type": type(exc).__name__, "message": str(exc)[:500],
@@ -1003,11 +1416,13 @@ async def _answer(arm: str, benchmark: str, folder: Path, questions: list[dict],
 
 
 def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepared: dict,
-           entries: dict[str, dict], ledger: Ledger | None, *, model: ollama_answers.AnswerModel | None = None) -> dict:
+           entries: dict[str, dict], ledger: Ledger | None, *, model: ollama_answers.AnswerModel | None = None,
+           answers: Path | None = None) -> dict:
     """Authenticate every answered question and summarize the arm with its cost, tokens and budget.
 
     Without ``model`` the calls are GPT-5.4 calls checked against ``ledger``;
-    with it they are that Ollama model's calls, which cost nothing.
+    with it they are that Ollama model's calls, which cost nothing. The answers
+    are in the arm's folder, or in ``answers`` for one side of a pair.
     """
     from benchmarks.integrations.analyze_gpt54_comparison import verify_call
 
@@ -1018,9 +1433,10 @@ def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepar
              "http_attempts": 0, "http_status_counts": Counter()}
     if model is None:
         usage.update(reasoning_tokens=0, observed_nanodollars=0)
+    execution = (answers or folder) / "execution"
     for question in questions:
         qid = question["question_id"]
-        records = [(attempt, _attempt_record(attempt)) for attempt in _attempts(folder / "execution" / qid)]
+        records = [(attempt, _attempt_record(attempt)) for attempt in _attempts(execution / qid)]
         answer = next((attempt for attempt, record in records if record["kind"] == "result"), None)
         failures += [{key: value for key, value in record.items() if key != "kind"} | {"replaced": answer is not None}
                      for _, record in records if record["kind"] == "failure"]
@@ -1152,16 +1568,21 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
     command = args.command
     if command == "calibrate" and model is None:
         parser.error("calibrate is for the ollama provider; the GPT-5.4 track reuses the saved calibration")
+    if command == "run-pair" and model is None:
+        parser.error("run-pair is for the ollama provider; the GPT-5.4 track has no defaults arm to pair with")
     if command in {"calibrate", "compare"}:
         given = [flag for flag, value in (("arm", args.arm), ("--benchmark", args.benchmark),
                                           ("--set", args.overrides), ("--variant", args.variant),
                                           ("--max-usd", args.max_usd), ("--sample", args.sample),
-                                          ("--archive", args.archive)) if value]
+                                          ("--archive", args.archive), ("--baseline", args.baseline)) if value]
         if given:
             parser.error(f"{command} takes none of: {', '.join(given)}")
     if (command == "compare") != (args.before is not None and args.after is not None) or (
             command != "compare" and (args.before or args.after)):
         parser.error("compare takes --before and --after, the result files to pair; nothing else does")
+    if (command == "run-pair") != (args.baseline is not None):
+        parser.error("run-pair takes --baseline, the prepared defaults baseline to answer alongside the arm; nothing "
+                     "else does")
     if command in {"calibrate", "compare"}:
         return "", "", {}
     if args.arm is None:
@@ -1170,7 +1591,7 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
     if benchmark is None:
         parser.error("plain and prme arms need --benchmark")
     if command != "prepare" and args.overrides:
-        parser.error("--set applies to prepare only; run and estimate find a variant by --variant")
+        parser.error("--set applies to prepare only; run-pair and estimate find a variant by --variant")
     if model is None:
         if args.arm == "prme" or args.sample is not None:
             parser.error("the prme arms and --sample run on --provider ollama only")
@@ -1181,16 +1602,22 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
     else:
         if args.max_usd is not None or command == "estimate":
             parser.error("the ollama provider makes no paid calls; --max-usd and estimate apply to openai only")
-        if command == "run" and args.archive is not None:
+        if command in {"run", "run-pair"} and args.archive is not None:
             parser.error("--archive applies to prepare only on the ollama provider")
-    if args.sample is not None and (command != "run" or args.sample < 1):
-        parser.error("--sample applies to run only and needs a positive count")
+        if command == "run" and args.variant is not None:
+            parser.error("a prme variant is answered only alongside a fresh run of the defaults: use run-pair with "
+                         "--baseline")
+    if args.sample is not None and (command not in {"run", "run-pair"} or args.sample < 1):
+        parser.error("--sample applies to run and run-pair only and needs a positive count")
     try:
         arm = arm_name(args.arm, args.variant)
         overrides = gate.parse_overrides(args.overrides)
         _check_arm(arm, benchmark)
         if command == "prepare":
             _check_overrides(arm, overrides)
+        if command == "run-pair":
+            _check_pair_baseline(args.baseline)
+            _check_arm(args.baseline, benchmark)
     except ValueError as exc:
         parser.error(str(exc))
     return arm, benchmark, overrides
@@ -1199,7 +1626,7 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m benchmarks.integrations.gpt54_baselines",
                                      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["prepare", "estimate", "calibrate", "run", "compare"])
+    parser.add_argument("command", choices=["prepare", "estimate", "calibrate", "run", "run-pair", "compare"])
     parser.add_argument("arm", nargs="?", choices=list(ARMS),
                         help="Every command but calibrate and compare needs an arm")
     parser.add_argument("--benchmark", choices=gate.GATE_BENCHMARKS,
@@ -1210,7 +1637,11 @@ def main(argv: list[str] | None = None) -> None:
                              "API cost)")
     parser.add_argument("--variant", metavar="NAME",
                         help="prme arm on the ollama provider: a named variant of the defaults, prepared with --set "
-                             "and answered as the arm prme-NAME")
+                             "and answered with run-pair as the arm prme-NAME")
+    parser.add_argument("--baseline", metavar="ARM",
+                        help="run-pair only: the prepared baseline of the defaults (prme or prme@<commit>) answered "
+                             "again alongside the arm. With the prme arm and no --variant, the baseline is paired "
+                             "with itself: the A/A check.")
     parser.add_argument("--archive", type=Path,
                         help="Saved 2026-09-23 run archive (default: the main checkout's data/gpt54-comparison-v1)")
     parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
@@ -1219,11 +1650,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--max-usd", type=float,
                         help="run on the openai provider only: the owner-approved spending cap for this arm")
     parser.add_argument("--sample", type=int, metavar="N",
-                        help="run on the ollama provider only: a smoke check of the first N questions of each "
-                             "category")
-    parser.add_argument("--before", type=Path, help="compare only: the baseline's result file")
+                        help="run and run-pair on the ollama provider only: a smoke check of the first N questions "
+                             "of each category")
+    parser.add_argument("--before", type=Path, help="compare only: the defaults side's result file")
     parser.add_argument("--after", type=Path,
-                        help="compare only: the variant's result file, or a later baseline's for a repeat")
+                        help="compare only: the other side's result file from the same pair, or a later "
+                             "baseline's for a repeat")
     args = parser.parse_args(argv)
     model = ollama_answers.AnswerModel() if args.provider == "ollama" else None
     arm, benchmark, overrides = _check_args(parser, args, model)
@@ -1260,17 +1692,32 @@ def main(argv: list[str] | None = None) -> None:
                                                          "contexts_matching_saved_run") if key in prepared}))
     elif args.command == "estimate":
         print(json.dumps(estimate(arm, benchmark, data=data, archive=args.archive), indent=2))
-    elif model is None:
+    elif args.command == "run" and model is None:
         _confirm_spend(parser, arm, benchmark, args.max_usd)
         result = asyncio.run(run(arm, benchmark, max_usd=args.max_usd, archive=args.archive))
-        print(json.dumps({key: value for key, value in result.items() if key not in {"rows", "failures"}}))
+        print(json.dumps(_summary(result)))
+    elif args.command == "run-pair":
+        _announce(model)
+        # The prme arm without a variant is the defaults, so the baseline is answered against itself.
+        after = args.baseline if arm == "prme" else arm
+        outcome = asyncio.run(run_pair(args.baseline, after, benchmark, model=model, sample=args.sample))
+        print(json.dumps({"pair": outcome["pair"], **{side: _summary(outcome[side]) for side in PAIR_SIDES}}))
     else:
+        _announce(model)
         if arm == "prme":
             arm = _checked_out_baseline(parser, benchmark, _provenance().get("commit"), data)
-        print(f"Reader and judge: {model.model} through {model.endpoint}. A :cloud model sends the prompts to "
-              "Ollama's hosted service and uses the account's usage limits.", file=sys.stderr, flush=True)
         result = asyncio.run(run(arm, benchmark, model=model, sample=args.sample))
-        print(json.dumps({key: value for key, value in result.items() if key not in {"rows", "failures"}}))
+        print(json.dumps(_summary(result)))
+
+
+def _announce(model: ollama_answers.AnswerModel) -> None:
+    print(f"Reader and judge: {model.model} through {model.endpoint}. A :cloud model sends the prompts to "
+          "Ollama's hosted service and uses the account's usage limits.", file=sys.stderr, flush=True)
+
+
+def _summary(result: dict) -> dict:
+    """A result without its rows and failures, for the terminal."""
+    return {key: value for key, value in result.items() if key not in {"rows", "failures"}}
 
 
 if __name__ == "__main__":
