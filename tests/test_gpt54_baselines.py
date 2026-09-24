@@ -873,27 +873,35 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     fused = {"scoring.fusion": "rrf", "scoring.rrf_k": 60}
     assert (variant["variant_settings"], kept["variant_settings"]) == ({"packing.token_budget": 2048}, fused)
     assert "variant_settings" not in prepared
-    # Variants are also one variant when they send the reader the same text on every question, whatever their
-    # settings, as these two may over the test pack's two short contexts; prepare says so.
+    # Variants that send the reader the same text on every question count together whatever their settings, as
+    # these two may over the test pack's two short contexts, though only a pair with the first pair's settings can
+    # confirm it (#143); prepare says so.
     same_text = contexts_sha256(harness, "prme-small") == contexts_sha256(harness, "prme-rrf")
-    assert ("prme-small locomo was prepared with the same settings or context text, so prme-rrf is the same variant"
-            in capsys.readouterr().err) is same_text
+    assert ("prme-small locomo was prepared on the same context text under other settings, so prme-rrf's pairs "
+            "count with theirs" in capsys.readouterr().err) is same_text
     [event] = [json.loads(line) for line in (harness["data"] / "runs/prme-rrf-locomo.jsonl").read_text().splitlines()]
     assert event == {"at": event["at"], "event": "prepared", "variant_settings": fused,
                      "contexts_sha256": contexts_sha256(harness, "prme-rrf"),
                      "prepared_commit": kept["provenance"]["commit"],
                      "prepared_sha256": digest(arm_folder(harness, "prme-rrf") / "prepared.json")}
     assert not (harness["data"] / "runs/prme-locomo.jsonl").exists()
-    # The same settings under another name, spelled another way, are the same variant, and prepare says so.
+    # The same settings under another name, spelled another way, read the same text at this commit, so they are the
+    # same variant, and prepare says so.
     spelled = gate.parse_overrides(['packing.token_budget="2048"'])
     again = await asyncio.to_thread(baselines.prepare, "prme-small-again", "locomo", data=harness["data"],
                                     archive=harness["archive"], overrides=spelled)
     assert again["variant_settings"] == variant["variant_settings"] and again["provenance"]["overrides"] == spelled
-    replaying, notice = [line for line in capsys.readouterr().err.splitlines()
-                         if line.startswith(("Replaying the defaults", "prme-"))]
+    replaying, *notices = [line for line in capsys.readouterr().err.splitlines()
+                           if line.startswith(("Replaying the defaults", "prme-"))]
     assert replaying.startswith("Replaying the defaults at this commit as well")
-    assert "prepared with the same settings or context text, so prme-small-again is the same variant" in notice
-    assert notice.startswith("prme-rrf, prme-small locomo were" if same_text else "prme-small locomo was")
+    assert notices[0] == ("prme-small locomo was prepared with the same settings and context text, so "
+                          "prme-small-again is the same variant: alongside one baseline, its pairs and theirs count "
+                          "together, and compare reads only the first pair and the confirmation among them (#130, "
+                          "#143).")
+    assert notices[1:] == (["prme-rrf locomo was prepared on the same context text under other settings, so "
+                            "prme-small-again's pairs count with theirs: alongside one baseline, whichever completes "
+                            "first is the first pair, and only a pair with its settings can confirm it (#143)."]
+                           if same_text else [])
     # Each variant's preparation also replays the defaults at its commit, without captures, and records their text
     # on every question, which is the defaults' own preparation at this commit, question by question (#139). The
     # test pack's contexts may read the same under every setting, so what is recorded where is checked separately.
@@ -1512,6 +1520,22 @@ def one_pair(before: dict, after: dict) -> tuple[dict, dict]:
     return {**before, "pair": {**mark, "side": "before"}}, {**after, "pair": {**mark, "side": "after"}}
 
 
+# The one-question contexts whose hash a logged variant pair records with its settings, unless it names another,
+# and that the prme-old manifest below holds.
+LOGGED_CONTEXTS = [{"question_id": "q0", "text_sha256": "t"}]
+LOGGED_TEXT = baselines._contexts_sha256(LOGGED_CONTEXTS)
+
+
+def logged_at(hour: int, minute: int = 0) -> str:
+    """A time on the day the logged pairs ran, with its time zone."""
+    return f"2026-09-24T{hour:02d}:{minute:02d}:00+00:00"
+
+
+def logged_results(arm: str) -> tuple[dict, dict]:
+    """Both sides of pair 1 of prme and ``arm``, marked as one pair, as compare reads the results of a logged pair."""
+    return one_pair(answer_result("prme", [True, False]), answer_result(arm, [True, True]))
+
+
 def logged_pair(before: str = "prme", after: str = "prme-rrf", *, settings: dict | None = None,
                 contexts: str | None = None, pair_id: str | None = None, started: str | None = None,
                 abandoned: str | None = None, **finished) -> None:
@@ -1519,8 +1543,11 @@ def logged_pair(before: str = "prme", after: str = "prme-rrf", *, settings: dict
     ``abandoned`` for that reason.
 
     Its start records the pair id and the variant identity given, as a variant's pair start does since #130, at
-    ``started``; ``finished`` can set when it finished (``at``).
+    ``started``; ``finished`` can set when it finished (``at``). A start that records settings records a context
+    text hash too, as every start does, ``LOGGED_TEXT`` unless ``contexts`` names another.
     """
+    if settings is not None and contexts is None:
+        contexts = LOGGED_TEXT
     log = baselines._pair_log_path(baselines.data_root(OLLAMA_MODEL), before, after, "locomo")
     recorded = {"id": pair_id, "variant_settings": settings, "contexts_sha256": contexts, "at": started}
     baselines._append_event(log, {"event": "started", "pair": 1, "sample": None,
@@ -2641,7 +2668,7 @@ def test_variant_settings_are_what_the_overrides_change_from_the_defaults():
         baselines.variant_settings({"nope": 1})
 
 
-async def test_compare_reads_only_a_variants_first_pair_and_confirmation_under_any_arm_name_and_baseline(
+async def test_compare_reads_only_a_variants_first_pair_and_confirmation_and_counts_again_at_a_new_baseline(
         harness, monkeypatch):
     pair_arms(harness)
     ollama_provider(monkeypatch)
@@ -2674,15 +2701,16 @@ async def test_compare_reads_only_a_variants_first_pair_and_confirmation_under_a
     assert [(entry["number"], entry["state"]) for entry in record["arms"][0]["pairs"]] == [
         (1, "complete"), (2, "abandoned: a question failed finally"), (3, "complete")]
     assert comparison["warnings"] == []
-    # Another arm with the variant's settings, or with its context text under other settings, is the same variant.
-    # Its first pair and confirmation are complete, so no later pair is answered under any of its names.
+    # Another arm with the variant's context text is the same variant, under other settings too. Its first pair and
+    # confirmation alongside this baseline are complete, so no later pair is answered under any of its names. An arm
+    # with the variant's settings on other context text is another variant (#143), answered in the next test.
     fabricate_variant(harness, "prme-marked-again", marker="AGAIN")
     fabricate_variant(harness, "prme-renamed", {"duckdb_threads": 2})
     requests = ollama_provider(monkeypatch)
-    for later in ("prme-marked", "prme-marked-again", "prme-renamed"):
+    for later in ("prme-marked", "prme-renamed"):
         with pytest.raises(ValueError, match=rf"The {later} locomo variant already has its first pair \(pair 1 of prme "
                                              r"and prme-marked\) and its confirmation \(pair 3 of prme and "
-                                             r"prme-marked\)"):
+                                             r"prme-marked\) alongside prme"):
             await run_pair(harness, "prme", later)
     assert requests == [] and not (harness["data"] / "pairs/prme/prme-renamed").exists()
     assert [event["pair"] for event in pair_log(harness, after="prme-marked")][-1] == 3
@@ -2695,21 +2723,39 @@ async def test_compare_reads_only_a_variants_first_pair_and_confirmation_under_a
         nudged, "first", ["prme-nudged"])
     assert [(group["variant_settings"], [(arm["arm"], len(arm["pairs"])) for arm in group["arms"]])
             for group in record["related"]] == [(MARKED, [("prme-marked", 3), ("prme-marked-again", 0)])]
-    assert comparison["warnings"] == [
-        "Other variants that change some of the same settings have complete pairs: pair 1 of prme and prme-marked, "
-        "pair 3 of prme and prme-marked. Each is a variant of its own, with its own first pair and confirmation "
-        "(#130)"]
-    # A new baseline numbers the arm's pairs from 1 again, and its earlier pairs stay with it. A confirmation
-    # answered alongside another baseline than the first pair is flagged, since it did not repeat the same test.
+    related = ("Other variants that change some of the same settings have complete pairs: pair 1 of prme and "
+               "prme-marked, pair 3 of prme and prme-marked. Each is a variant of its own, with its own first pair and "
+               "confirmation (#130)")
+    assert comparison["warnings"] == [related]
+    # A new baseline numbers the arm's pairs from 1 again and starts every variant's count again (#143). The pair
+    # alongside it is the variant's first pair there, not a confirmation of the pair alongside the earlier baseline,
+    # which stays listed without counting. Here the new baseline prepared the same defaults' text as the earlier one,
+    # so compare also says the earlier pair ran the same test.
     newer = "prme@0123abcd"
     recorded_baseline(harness, "locomo", DEFAULTS_TEXT, arm=newer, commit="0123abcd" + "9" * 32)
     again, comparison = await compared(newer, "prme-nudged")
     assert (again["pair"]["number"], again["pair"]["pairs_started"]) == (1, 2)
     assert again["pair"]["earlier_pairs"] == [{"baseline": "prme", "number": 1, "state": "complete"}]
-    assert comparison["variant"]["role"] == "confirmation"
-    assert comparison["warnings"][0] == ("The first pair and the confirmation were answered alongside different "
-                                         f"baselines (prme and {newer}), so the confirmation did not repeat the same "
-                                         "test (#130)")
+    record = comparison["variant"]
+    assert (record["role"], record["first"]["baseline"], record["confirmation"]) == ("first", newer, None)
+    assert [(pair["baseline"], pair["number"]) for pair in record["arms"][0]["pairs"]] == [("prme", 1), (newer, 1)]
+    assert (record["dropped"], record["other_identities"]) == ([], [])
+    assert [(pair["baseline"], pair["number"], pair["same_defaults_text"]) for pair in record["other_baselines"]] == [
+        ("prme", 1, True)]
+    assert comparison["warnings"] == [
+        "Complete pairs with this variant's settings or its context text were answered alongside other baselines: "
+        "pair 1 of prme and prme-nudged. Each baseline counts from zero, so they do not count toward this decision "
+        "(#143)",
+        f"prme prepared the same defaults' context text as {newer}, so the defaults did not change between them, and "
+        "this variant's pairs alongside it ran the same test as this one. Weigh their results with this one before the "
+        "default flips (#143)", related]
+    _, comparison = await compared(newer, "prme-nudged")
+    assert (comparison["variant"]["role"], comparison["variant"]["first"]["baseline"],
+            comparison["variant"]["confirmation"]["baseline"]) == ("confirmation", newer, newer)
+    # A variant whose first pair and confirmation alongside the earlier baseline are complete is answered again
+    # alongside the new one, where its count starts from zero.
+    _, comparison = await compared(newer)
+    assert (comparison["variant"]["role"], comparison["variant"]["first"]["baseline"]) == ("first", newer)
 
 
 def test_a_variants_pairs_count_in_the_order_they_completed_and_any_later_pair_is_refused():
@@ -2717,53 +2763,47 @@ def test_a_variants_pairs_count_in_the_order_they_completed_and_any_later_pair_i
     answered(data, "locomo", "a" * 40)
     aa_checked(answer_result("prme", [True, False]))
 
-    def results(arm: str) -> tuple[dict, dict]:
-        return one_pair(answer_result("prme", [True, False]), answer_result(arm, [True, True]))
-
-    def at(hour: int, minute: int = 0) -> str:
-        return f"2026-09-24T{hour:02d}:{minute:02d}:00+00:00"
-
     # A pair that is not on record, not complete, not the one the results were answered in, or with no identity
     # recorded, is refused.
     with pytest.raises(ValueError, match="Pair 1 of prme and prme-rrf is not in the track's pair run logs"):
-        baselines.compare(*results("prme-rrf"))
+        baselines.compare(*logged_results("prme-rrf"))
     for arm, logged, message in (
             ("prme-open", {"complete": False}, "is on record as unfinished, not complete"),
             ("prme-other", {"pair_id": "other"}, "has another pair id than these results"),
             ("prme-blank", {}, "Nothing records the settings or the contexts pair 1 of prme and prme-blank")):
         logged_pair(after=arm, **{"settings": MARKED if arm != "prme-blank" else None, **logged},
-                    started=at(9), at=at(9, 30))
+                    started=logged_at(9), at=logged_at(9, 30))
         with pytest.raises(ValueError, match=message):
-            baselines.compare(*results(arm))
+            baselines.compare(*logged_results(arm))
     # The first pair: a complete pair invalid under the 1% limit counts as neither, even though it completed first,
     # and an arm prepared before preparations were logged gives its pairs the settings its manifest reads as.
-    logged_pair(after="prme-bad", settings=MARKED, started=at(0, 30), at=at(1), invalid="more than 1%")
+    logged_pair(after="prme-bad", settings=MARKED, started=logged_at(0, 30), at=logged_at(1), invalid="more than 1%")
     old = data / "prme-old" / "locomo" / "prepared.json"
     old.parent.mkdir(parents=True)
-    old.write_text(json.dumps({"complete": True, "arm": "prme-old", "contexts": [{"question_id": "q0",
-                                                                                  "text_sha256": "t"}],
+    old.write_text(json.dumps({"complete": True, "arm": "prme-old", "contexts": LOGGED_CONTEXTS,
                                "provenance": {"commit": "c" * 40, "overrides": {"scoring": {"fusion": "rrf"}}}}))
-    logged_pair(after="prme-old", started=at(1, 30), at=at(2))
+    logged_pair(after="prme-old", started=logged_at(1, 30), at=logged_at(2))
     # A pair that records no identity might be an earlier pair of the variant.
-    logged_pair(after="prme-lost", started=at(0), at=at(0, 10))
+    logged_pair(after="prme-lost", started=logged_at(0), at=logged_at(0, 10))
     # A pair that started before the first pair completed is not a fresh confirmation, even if it completes next.
-    logged_pair(after="prme-early", settings=MARKED, started=at(1, 45), at=at(2, 30))
+    logged_pair(after="prme-early", settings=MARKED, started=logged_at(1, 45), at=logged_at(2, 30))
     # This pair is the confirmation. One of the variant's pairs was given up by hand while it ran.
-    logged_pair(after="prme-rrf", settings=MARKED, pair_id="p", started=at(2, 45), at=at(3))
-    logged_pair(after="prme-stopped", settings=MARKED, started=at(2, 50), abandoned="an arm was prepared again")
+    logged_pair(after="prme-rrf", settings=MARKED, pair_id="p", started=logged_at(2, 45), at=logged_at(3))
+    logged_pair(after="prme-stopped", settings=MARKED, started=logged_at(2, 50), abandoned="an arm was prepared again")
     # A pair that completes after the confirmation is a later pair. Once complete, a pair stays as it completed, even
     # when older code gives it up after its folder was moved aside, or its results are written again.
-    logged_pair(after="prme-late", settings=MARKED, started=at(3, 30), at=at(4))
+    logged_pair(after="prme-late", settings=MARKED, started=logged_at(3, 30), at=logged_at(4))
     late = baselines._pair_log_path(data, "prme", "prme-late", "locomo")
     baselines._append_event(late, {"event": "abandoned", "pair": 1, "reason": "its pair.json record is missing"})
-    baselines._append_event(late, {"event": "finished", "pair": 1, "sample": None, "complete": True, "at": at(8)})
+    baselines._append_event(late, {"event": "finished", "pair": 1, "sample": None, "complete": True,
+                                   "at": logged_at(8)})
     # Pairs whose arm has no identity on record, or more than one, record none either: a pair folder its run log
     # never names, and a pair of an arm prepared twice with other settings.
     (data / "pairs" / "prme" / "prme-ghost" / "locomo" / "pair-1").mkdir(parents=True)
     for settings in (MARKED, {"duckdb_threads": 2}):
         baselines._log_run(data, "prme-twice", "locomo", {"event": "prepared", "variant_settings": settings})
-    logged_pair(after="prme-twice", started=at(6), at=at(6, 30))
-    comparison = baselines.compare(*results("prme-rrf"))
+    logged_pair(after="prme-twice", started=logged_at(6), at=logged_at(6, 30))
+    comparison = baselines.compare(*logged_results("prme-rrf"))
     record = comparison["variant"]
     assert (record["role"], record["first"]["arm"], record["confirmation"]["arm"]) == (
         "confirmation", "prme-old", "prme-rrf")
@@ -2774,29 +2814,183 @@ def test_a_variants_pairs_count_in_the_order_they_completed_and_any_later_pair_i
         ("prme-late", [], ["complete"]), ("prme-old", ["c" * 40], ["complete"]), ("prme-open", [], ["unfinished"]),
         ("prme-other", [], ["complete"]), ("prme-rrf", [], ["complete"]),
         ("prme-stopped", [], ["abandoned: an arm was prepared again"]), ("prme-twice", [None], [])]
-    assert record["arms"][2]["pairs"][0]["finished_at"] == at(4)
+    assert record["arms"][2]["pairs"][0]["finished_at"] == logged_at(4)
     assert [(entry["arm"], entry["state"]) for entry in record["unknown"]] == [
         ("prme-blank", "complete"), ("prme-ghost", "unfinished"), ("prme-lost", "complete"), ("prme-twice", "complete")]
     assert [entry["arm"] for entry in record["dropped"]] == ["prme-stopped"]
     assert comparison["warnings"] == [
-        "Pairs of this variant that started before this one finished never completed, for a reason other than a "
-        "final failure: pair 1 of prme and prme-stopped (abandoned: an arm was prepared again). A pair left "
-        "unfinished or given up by hand can hide a result (#130)",
+        "Pairs with this variant's settings or its context text started before this one finished and never "
+        "completed, for a reason other than a final failure: pair 1 of prme and prme-stopped (abandoned: an arm was "
+        "prepared again). A pair left unfinished or given up by hand, or one whose baseline stopped being current "
+        "while it was answered, can hide a result (#130, #143)",
         "Variant pairs that completed before this one record neither settings nor contexts, so any of them may be an "
         "earlier pair of this variant: pair 1 of prme and prme-lost (complete) (#130)"]
-    for later in ("prme-early", "prme-late"):
-        with pytest.raises(ValueError, match="neither the variant's first pair nor its confirmation: the first is "
-                                             "pair 1 of prme and prme-old and the confirmation is pair 1 of prme and "
-                                             "prme-rrf, and a confirmation must start after the first pair "
-                                             "completed"):
-            baselines.compare(*results(later))
+    for later, why in (("prme-early", "a confirmation must start after the first pair completed"),
+                       ("prme-late", "the confirmation is already complete, and the rule reads no later pair")):
+        with pytest.raises(ValueError, match="neither the variant's first pair nor its confirmation alongside prme "
+                                             "on its context text: the first is pair 1 of prme and prme-old and the "
+                                             f"confirmation is pair 1 of prme and prme-rrf, and {why}"):
+            baselines.compare(*logged_results(later))
+    # prme-old's settings are read from its manifest's overrides by this checkout, not recorded, so they decide
+    # nothing: after a default change reads them otherwise, its confirmation still counts on the same context text
+    # (#143).
+    with pytest.MonkeyPatch.context() as patched:
+        patched.setattr(baselines, "variant_settings", lambda overrides: {"packing.context_format": "reader"})
+        again = baselines.compare(*logged_results("prme-rrf"))["variant"]
+    assert (again["role"], again["first"]["arm"], again["other_identities"]) == ("confirmation", "prme-old", [])
     # A manifest from before #130 whose overrides this checkout no longer accepts records no settings.
     assert baselines._prepared_identity({"provenance": {"overrides": {"nope": 1}}, "contexts": []})[
         "variant_settings"] is None
     # The order is the order the pairs completed, which needs a time zone to read.
-    logged_pair(after="prme-naive", settings=MARKED, started=at(5), at="2026-09-24T05:30:00")
+    logged_pair(after="prme-naive", settings=MARKED, started=logged_at(5), at="2026-09-24T05:30:00")
     with pytest.raises(ValueError, match="does not record when pair 1 finished, with a time zone"):
-        baselines.compare(*results("prme-rrf"))
+        baselines.compare(*logged_results("prme-rrf"))
+
+
+# One baseline, one context text (#143) ----------------------------------------------
+
+def test_a_confirmation_repeats_the_first_pairs_baseline_settings_and_context_text():
+    data = baselines.data_root(OLLAMA_MODEL)
+    answered(data, "locomo", "a" * 40)
+    aa_checked(answer_result("prme", [True, False]))
+    renamed = {"duckdb_threads": 2}
+    fixed = baselines._contexts_sha256([{"question_id": "q0", "text_sha256": "fixed"}])
+    newer = "prme@0123abcd"
+    # The first pair, then fresh pairs that cannot confirm it: one alongside another baseline, and one on the same
+    # context text under other settings.
+    logged_pair(after="prme-rrf", settings=MARKED, started=logged_at(1), at=logged_at(2))
+    logged_pair(before=newer, after="prme-rrf", settings=MARKED, started=logged_at(2, 10), at=logged_at(2, 20))
+    logged_pair(after="prme-renamed", settings=renamed, started=logged_at(2, 30), at=logged_at(2, 40))
+    # The variant's settings on other context text, as after a code change that alters its contexts.
+    logged_pair(after="prme-fixed", settings=MARKED, contexts=fixed, started=logged_at(2, 50), at=logged_at(3))
+    # The confirmation: the first fresh pair to complete alongside the same baseline, on the same context text and
+    # with the same settings, under any arm name.
+    logged_pair(after="prme-again", settings=MARKED, pair_id="p", started=logged_at(3, 10), at=logged_at(3, 30))
+    # Pairs alongside another baseline stay flagged, since they can hide a result of the same variant: one given up
+    # while this one ran, and one that records no identity and completed before it (#130).
+    logged_pair(before=newer, after="prme-gone", settings=MARKED, started=logged_at(3, 15),
+                abandoned="an arm was prepared again")
+    logged_pair(before=newer, after="prme-lost", started=logged_at(2, 55), at=logged_at(3, 5))
+    # The two baselines prepared different defaults' text, as after a default flip.
+    for name, text in (("prme", "t"), (newer, "flipped")):
+        manifest = data / name / "locomo" / "prepared.json"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(json.dumps({"contexts": [{"question_id": "q0", "text_sha256": text}]}))
+    comparison = baselines.compare(*logged_results("prme-again"))
+    record = comparison["variant"]
+    assert (record["role"], record["first"]["arm"], record["confirmation"]["arm"]) == (
+        "confirmation", "prme-rrf", "prme-again")
+    assert record["first"]["baseline"] == record["confirmation"]["baseline"] == "prme"
+    # Every pair with the variant's settings or its context text stays listed, alongside any baseline.
+    assert [(arm["arm"], [(pair["baseline"], pair["state"]) for pair in arm["pairs"]]) for arm in record["arms"]] == [
+        ("prme-again", [("prme", "complete")]), ("prme-fixed", [("prme", "complete")]),
+        ("prme-gone", [(newer, "abandoned: an arm was prepared again")]), ("prme-renamed", [("prme", "complete")]),
+        ("prme-rrf", [("prme", "complete"), (newer, "complete")])]
+    assert ([pair["arm"] for pair in record["dropped"]], [pair["arm"] for pair in record["unknown"]]) == (
+        ["prme-gone"], ["prme-lost"])
+    assert [(pair["arm"], pair["differs"]) for pair in record["other_identities"]] == [
+        ("prme-fixed", ["context text"]), ("prme-renamed", ["settings"])]
+    assert [(pair["arm"], pair["baseline"], pair["same_defaults_text"]) for pair in record["other_baselines"]] == [
+        ("prme-rrf", newer, False)]
+    assert comparison["warnings"] == [
+        "Pairs with this variant's settings or its context text started before this one finished and never "
+        f"completed, for a reason other than a final failure: pair 1 of {newer} and prme-gone (abandoned: an arm was "
+        "prepared again). A pair left unfinished or given up by hand, or one whose baseline stopped being current "
+        "while it was answered, can hide a result (#130, #143)",
+        "Variant pairs that completed before this one record neither settings nor contexts, so any of them may be an "
+        f"earlier pair of this variant: pair 1 of {newer} and prme-lost (complete) (#130)",
+        "Complete pairs with this variant's settings or its context text were answered alongside other baselines: "
+        f"pair 1 of {newer} and prme-rrf. Each baseline counts from zero, so they do not count toward this decision "
+        "(#143)",
+        "Complete pairs alongside prme have this variant's settings or its context text but differ in the other, so "
+        "they do not count with this pair: pair 1 of prme and prme-fixed (differs in context text), pair 1 of prme "
+        "and prme-renamed (differs in settings). One on other context text is a variant of its own, with its own first "
+        "pair and confirmation, and one on this context text under other settings counts as neither (#143)"]
+    # The pair under other settings is refused, as neither the first pair nor a confirmation of its context text.
+    with pytest.raises(ValueError, match=r"Pair 1 of prme and prme-renamed is neither the variant's first pair nor its "
+                                         r"confirmation alongside prme on its context text: the first is pair 1 of "
+                                         r"prme and prme-rrf and the confirmation is pair 1 of prme and prme-again, "
+                                         r"and a confirmation must repeat the first pair's settings \(duckdb_threads=2 "
+                                         r"here; the first pair's are scoring.fusion=rrf, scoring.rrf_k=60\)"):
+        baselines.compare(*logged_results("prme-renamed"))
+    # Other context text is a new variant with its own first pair, and the earlier attempts are listed beside it.
+    fixed_record = baselines.compare(*logged_results("prme-fixed"))["variant"]
+    assert (fixed_record["role"], fixed_record["first"]["arm"], fixed_record["confirmation"]) == (
+        "first", "prme-fixed", None)
+    assert [(pair["arm"], pair["differs"]) for pair in fixed_record["other_identities"]] == [
+        ("prme-again", ["context text"]), ("prme-rrf", ["context text"])]
+    # Alongside another baseline the count starts again: the pair there is that baseline's first pair. compare
+    # would refuse it before reading the count, since that baseline is not current (#127).
+    elsewhere = baselines._variant_record(data, "locomo", {"after": "prme-rrf", "before": newer, "number": 1,
+                                                           "id": None})
+    assert (elsewhere["role"], elsewhere["first"]["baseline"], elsewhere["confirmation"]) == ("first", newer, None)
+    # A pair started before #130 whose manifest's overrides this checkout no longer reads has no settings on record:
+    # its context text decides alone, so it is not an other identity of itself and a pair on its text confirms it.
+    legacy = [{"question_id": "q0", "text_sha256": "legacy"}]
+    manifest = data / "prme-legacy" / "locomo" / "prepared.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"complete": True, "arm": "prme-legacy", "contexts": legacy,
+                                    "provenance": {"commit": "c" * 40, "overrides": {"nope": 1}}}))
+    logged_pair(after="prme-legacy", started=logged_at(5), at=logged_at(5, 30))
+    logged_pair(after="prme-legacy-again", settings=MARKED, contexts=baselines._contexts_sha256(legacy),
+                started=logged_at(5, 45), at=logged_at(6))
+    first = baselines.compare(*logged_results("prme-legacy"))
+    assert (first["variant"]["role"], first["variant"]["variant_settings"], first["variant"]["other_identities"]) == (
+        "first", None, [])
+    assert baselines.compare(*logged_results("prme-legacy-again"))["variant"]["role"] == "confirmation"
+    # A pair that records its settings but no context text cannot be placed in any count.
+    log = baselines._pair_log_path(data, "prme", "prme-textless", "locomo")
+    baselines._append_event(log, {"event": "started", "pair": 1, "sample": None, "variant_settings": MARKED,
+                                  "at": logged_at(7)})
+    baselines._append_event(log, {"event": "finished", "pair": 1, "sample": None, "complete": True,
+                                  "at": logged_at(7, 30)})
+    with pytest.raises(ValueError, match="Nothing records the context text pair 1 of prme and prme-textless was "
+                                         "answered on, so nothing shows which pairs it counts with"):
+        baselines.compare(*logged_results("prme-textless"))
+
+
+async def test_run_pair_answers_other_context_text_as_a_new_variant_and_no_other_settings_on_a_first_pairs_text(
+        harness, monkeypatch, capsys):
+    pair_arms(harness)
+    ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+
+    async def compared(after: str) -> dict:
+        paired = await run_pair(harness, "prme", after)
+        return baselines.compare(paired["before"], paired["after"], data=harness["data"])["variant"]
+
+    assert (await compared("prme-marked"))["role"] == "first"
+    # An arm on the first pair's context text under other settings could confirm nothing, so it is never answered.
+    capsys.readouterr()
+    fabricate_variant(harness, "prme-renamed", {"duckdb_threads": 2})
+    assert ("prme-marked locomo was prepared on the same context text under other settings, so prme-renamed's pairs "
+            "count with theirs" in capsys.readouterr().err)
+    requests = ollama_provider(monkeypatch)
+    with pytest.raises(ValueError, match=r"The prme-renamed locomo variant reads the context text of pair 1 of prme "
+                                         r"and prme-marked, its first pair alongside prme, under other settings "
+                                         r"\(duckdb_threads=2; the first pair's are scoring.fusion=rrf, "
+                                         r"scoring.rrf_k=60\)\. A confirmation must repeat the first pair's settings, "
+                                         r"so no pair of these settings on that text could count, and none is "
+                                         r"answered\. Answer the confirmation under prme-marked"):
+        await run_pair(harness, "prme", "prme-renamed")
+    assert requests == [] and not (harness["data"] / "pairs/prme/prme-renamed").exists()
+    # The variant's settings on other context text, as after a code change that alters its contexts, are a new
+    # variant with its own first pair and confirmation; prepare says so, and compare lists the earlier attempt.
+    fabricate_variant(harness, "prme-fixed", marker="FIXED")
+    assert ("prme-marked locomo was prepared with the same settings on other context text, so their pairs count "
+            "apart from prme-fixed's" in capsys.readouterr().err)
+    fixed = await compared("prme-fixed")
+    assert (fixed["role"], fixed["first"]["arm"], [arm["arm"] for arm in fixed["arms"]]) == (
+        "first", "prme-fixed", ["prme-fixed", "prme-marked"])
+    assert [(pair["arm"], pair["number"], pair["differs"]) for pair in fixed["other_identities"]] == [
+        ("prme-marked", 1, ["context text"])]
+    # Each confirms only its own first pair.
+    marked = await compared("prme-marked")
+    assert (marked["role"], marked["first"]["arm"], marked["confirmation"]["arm"]) == (
+        "confirmation", "prme-marked", "prme-marked")
+    assert [(pair["arm"], pair["number"]) for pair in marked["other_identities"]] == [("prme-fixed", 1)]
+    fixed = await compared("prme-fixed")
+    assert (fixed["role"], fixed["first"]["arm"], fixed["confirmation"]["number"]) == ("confirmation", "prme-fixed", 2)
 
 
 # A/A record (#137) ----------------------------------------------------------------
