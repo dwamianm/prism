@@ -72,16 +72,22 @@ counts. A variant pair without that count is refused too, unless it started
 before #139, as the ``prme-reader-rrf`` pairs did.
 
 A variant is identified by what it changes, not by its arm name (#130): the
-settings whose values differ from the defaults (``variant_settings``), or its
-context text on every question. ``prepare`` logs every variant preparation
-with that identity and refuses a variant that changes nothing, and each start
-of a variant's pair records it. Its first pair is the first of its pairs to
-complete, under any arm name and alongside any baseline, and its confirmation
-the next to complete that started after the first completed. ``compare``
-reports which of the two a pair is, lists every arm and pair of the variant,
-and refuses any later pair, which the default-change rule never reads;
-``run-pair`` answers none. A pair's ``earlier_pairs`` lists the arm's pairs
-alongside every baseline.
+settings whose values differ from the defaults (``variant_settings``) and its
+context text on every question (``contexts_sha256``). ``prepare`` logs every
+variant preparation with that identity and refuses a variant that changes
+nothing, and each start of a variant's pair records it. A variant's pairs
+count together under any arm name, but only alongside one baseline and on one
+context text (#143): its first pair is the first of those to complete, and
+its confirmation the next to complete that started after the first completed
+and repeats the first pair's settings. A new baseline starts the count again,
+and a code change that alters the variant's context text makes a new variant,
+with its own first pair and confirmation. Other settings on the same context
+text stay in the count, so they cannot buy another first pair. ``compare``
+reports which of the two a pair is, lists every arm and pair with the
+variant's settings or context text alongside any baseline, and refuses any
+other pair, which the default-change rule never reads; ``run-pair`` answers
+none. A pair's ``earlier_pairs`` lists the arm's pairs alongside every
+baseline.
 
 The Ollama track answers under an amendment to the registered failure policy
 (#132, recorded in ``FAILURE_AMENDMENT``), so one looping reader answer or
@@ -227,8 +233,9 @@ _PAIR = re.compile(r"pair-(\d+)")
 # Why run_pair gives up a pair stopped by a final failure, which the default-change rule counts as neither a pass
 # nor a fail.
 _FINAL_FAILURE = "a question failed finally"
-# What identifies a named variant's pairs across arm names and baselines (#130): the settings it changes
-# (variant_settings) and the hash of its context text on every question (_contexts_sha256).
+# What identifies a named variant's pairs across arm names (#130): the settings it changes (variant_settings) and
+# the hash of its context text on every question (_contexts_sha256). Alongside one baseline, a first pair and its
+# confirmation must record the same of both (#143).
 _VARIANT_KEYS = ("variant_settings", "contexts_sha256")
 # Run log events that record the live Ollama server version.
 _VERSION_EVENTS = frozenset({"started", "finished", "model-changed"})
@@ -458,22 +465,42 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
 
 
 def _log_prepared_variant(data: Path, arm: str, benchmark: str, prepared: dict, prepared_sha256: str) -> None:
-    """Record a variant's preparation and its identity in its run log, and name any other arm of the same variant.
+    """Record a variant's preparation and its identity in its run log, and name the other arms it shares them with.
 
     The run log lives outside the arm's folder, so every arm prepared with
     these settings or this context text stays on record for ``compare`` to
-    list, even once its folder is moved aside (#130).
+    list, even once its folder is moved aside (#130). Alongside one baseline,
+    an arm with the same context text counts with this one, and only one with
+    the first pair's settings can confirm it; an arm with the same settings on
+    other context text is another variant, whose pairs ``compare`` lists
+    (#143).
     """
     identity = _prepared_identity(prepared)
-    others = [name for name, found in _variant_preparations(data, benchmark).items()
-              if name != arm and any(_same_variant(entry, identity) for entry in found)]
+    this = {**identity, "settings_recorded": prepared.get("variant_settings") is not None}
+    groups: dict[tuple[str, ...], list[str]] = {}
+    for name, found in _variant_preparations(data, benchmark).items():
+        differences = [_identity_differences(entry, this) for entry in found if _shares_identity(entry, identity)]
+        if name != arm and differences:
+            groups.setdefault(tuple(min(differences, key=len)), []).append(name)
     commit = (prepared.get("provenance") or {}).get("commit")
     _log_run(data, arm, benchmark, {"event": "prepared", **identity, "prepared_commit": commit,
                                     "prepared_sha256": prepared_sha256})
-    if others:
-        print(f"{', '.join(others)} {benchmark} {'was' if len(others) == 1 else 'were'} prepared with the same "
-              f"settings or context text, so {arm} is the same variant: its pairs and theirs count together, and "
-              "compare reads only the first pair and the confirmation among them (#130).", file=sys.stderr, flush=True)
+    notices = {
+        (): (f"with the same settings and context text, so {arm} is the same variant: alongside one baseline, its "
+             "pairs and theirs count together, and compare reads only the first pair and the confirmation among them "
+             "(#130, #143)."),
+        ("settings",): (f"on the same context text under other settings, so {arm}'s pairs count with theirs: "
+                        "alongside one baseline, whichever completes first is the first pair, and only a pair with "
+                        "its settings can confirm it (#143)."),
+        ("context text",): (f"with the same settings on other context text, so their pairs count apart from {arm}'s: "
+                            "other context text makes another variant, with its own first pair and confirmation, and "
+                            f"compare lists their pairs beside {arm}'s (#143)."),
+    }
+    for differs, notice in notices.items():
+        names = groups.get(differs, [])
+        if names:
+            print(f"{', '.join(names)} {benchmark} {'was' if len(names) == 1 else 'were'} prepared {notice}",
+                  file=sys.stderr, flush=True)
 
 
 def baseline_arm(benchmark: str, commit: str | None, *, data: Path) -> str:
@@ -1492,9 +1519,9 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     Each result lists every other pair of ``after`` on record, alongside this
     baseline or an earlier one (``earlier_pairs``). Each start of a variant's
     pair records the pair's id and the variant's identity, so ``compare`` can
-    tell a first pair from its confirmation across arm names and baselines,
-    and no pair of a variant whose first pair and confirmation are complete
-    is answered (``_check_uncounted``, #130). Each start records the pair's
+    tell a first pair from its confirmation across arm names, and no pair
+    alongside this baseline that could count as neither is answered
+    (``_check_uncounted``, #130, #143). Each start records the pair's
     id, and an A/A pair's published results are added to the track's A/A
     record (``record_aa_check``, #137). A full pair starts only when the
     record could take its results or cover them (``_check_aa_ready``): an
@@ -1525,11 +1552,11 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     if sample is not None:
         questions = sample_questions(questions, sample)
     prepared_sha256 = {side: digest(folder / "prepared.json") for side, (folder, _, _) in loaded.items()}
-    # A variant's pairs count together across arm names and baselines (#130): each start records the variant's
-    # identity, and a pair the default-change rule would never read is never answered.
+    # Each start of a variant's pair records the variant's identity, and a pair the default-change rule would never
+    # read is never answered (#130, #143).
     identity = _prepared_identity(loaded["after"][1]) if is_variant(after) else None
     if identity is not None:
-        _check_uncounted(data, after, benchmark, identity)
+        _check_uncounted(data, before, after, benchmark, loaded["after"][1])
         # compare would refuse the pair, so it is never answered (#139).
         _check_defaults_replayed(loaded["before"][1], *loaded["after"][:2])
     root = _pair_root(data, before, after, benchmark)
@@ -1640,19 +1667,32 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     return {"pair": mark, **outcome}
 
 
-def _check_uncounted(data: Path, arm: str, benchmark: str, identity: dict) -> None:
-    """Refuse a pair of a variant whose first pair and confirmation are already complete (#130).
+def _check_uncounted(data: Path, before: str, arm: str, benchmark: str, prepared: dict) -> None:
+    """Refuse a variant's pair alongside ``before`` whose count is already decided as neither (#130, #143).
 
-    ``compare`` refuses any later pair, since the default-change rule never
-    reads one, so none is answered, under this arm name or any other of the
-    same variant.
+    ``prepared`` is the variant's manifest. ``compare`` refuses a pair that
+    is neither the first pair nor the confirmation, since the default-change
+    rule never reads one, so none is answered that could only be neither,
+    under this arm name or any other: a pair of a variant whose first pair
+    and confirmation alongside this baseline are complete (#130), or a pair
+    on the context text of a first pair that was answered under other
+    settings, which it could not confirm (#143).
     """
+    identity = {**_prepared_identity(prepared), "settings_recorded": prepared.get("variant_settings") is not None}
     pairs = _variant_pairs(data, benchmark, _variant_preparations(data, benchmark))
-    counted = _counted([pair for pair in pairs if _same_variant(pair, identity)])
+    counted = _counted(_counting(pairs, before, identity["contexts_sha256"]))
     if len(counted) > 1:
         raise ValueError(f"The {arm} {benchmark} variant already has its first pair ({_named(counted[0])}) and its "
-                         f"confirmation ({_named(counted[1])}), counting every arm with its settings or context text. "
-                         "The default-change rule reads no later pair, so none is answered (#130).")
+                         f"confirmation ({_named(counted[1])}) alongside {before}, counting every arm that read its "
+                         "context text. The default-change rule reads no later pair, so none is answered (#130, #143).")
+    if counted and not _same_test(identity, counted[0]):
+        first = counted[0]
+        raise ValueError(f"The {arm} {benchmark} variant reads the context text of {_named(first)}, its first pair "
+                         f"alongside {before}, under other settings ({_shown_settings(identity['variant_settings'])}; "
+                         f"the first pair's are {_shown_settings(first['variant_settings'])}). A confirmation must "
+                         "repeat the first pair's settings, so no pair of these settings on that text could count, "
+                         f"and none is answered. Answer the confirmation under {first['arm']}, or another arm "
+                         "prepared with its settings (#143).")
 
 
 def _check_defaults_replayed(baseline: dict, folder: Path, variant: dict) -> None:
@@ -1672,7 +1712,9 @@ def _check_defaults_replayed(baseline: dict, folder: Path, variant: dict) -> Non
         raise ValueError(f"The {name} preparation does not record the defaults' context text at its commit, which "
                          "prepare records since #139, so nothing would show which of its contexts other code changed. "
                          "Prepare the variant again from a checkout with #139, under a new name with the same "
-                         "settings, which keep it the same variant (#130), and answer that arm.")
+                         "settings, and answer that arm. With the same context text it stays the same variant (#130); "
+                         "if newer code changed its text, it is a new variant with its own first pair and "
+                         "confirmation (#143).")
     report_path = folder / "defaults-gate.json"
     report = json.loads(report_path.read_text()) if report_path.is_file() else {}
     provenance = report.get("provenance") or {}
@@ -1892,8 +1934,13 @@ def _prepared_identity(prepared: dict) -> dict:
     return {"variant_settings": settings, "contexts_sha256": _contexts_sha256(prepared["contexts"])}
 
 
-def _same_variant(found: dict, identity: dict) -> bool:
-    """Whether a pair or preparation records the same settings or the same context text as ``identity``."""
+def _shares_identity(found: dict, identity: dict) -> bool:
+    """Whether a pair or preparation records the same settings or the same context text as ``identity``.
+
+    ``compare`` lists every such arm and pair with a variant (#130), but only
+    those alongside one baseline on one context text count together
+    (``_counting``, #143).
+    """
     return any(found[key] is not None and found[key] == identity[key] for key in _VARIANT_KEYS)
 
 
@@ -1903,6 +1950,8 @@ def _variant_preparations(data: Path, benchmark: str) -> dict[str, list[dict]]:
     Each comes from a ``prepared`` event in the arm's run log, which stays
     when the arm's folder is moved aside, or, for an arm prepared before
     those events were logged (#130), from its complete manifest.
+    ``settings_recorded`` says whether the settings were recorded when it
+    was prepared, rather than read now from its overrides (#143).
     """
     logs = data.glob(str(_run_log_path(data, "prme-*", benchmark).relative_to(data)))
     names = {path.name.removesuffix(f"-{benchmark}.jsonl") for path in logs}
@@ -1911,7 +1960,8 @@ def _variant_preparations(data: Path, benchmark: str) -> dict[str, list[dict]]:
     for name in sorted(filter(is_variant, names)):
         events = [event for event in _run_events(_run_log_path(data, name, benchmark)) if event["event"] == "prepared"]
         found[name] = [{"at": event["at"], "commit": event.get("prepared_commit"),
-                        **{key: event.get(key) for key in _VARIANT_KEYS}} for event in events]
+                        **{key: event.get(key) for key in _VARIANT_KEYS},
+                        "settings_recorded": event.get("variant_settings") is not None} for event in events]
         manifest = data / name / benchmark / "prepared.json"
         if manifest.is_file() and digest(manifest) not in {event.get("prepared_sha256") for event in events}:
             try:
@@ -1920,7 +1970,8 @@ def _variant_preparations(data: Path, benchmark: str) -> dict[str, list[dict]]:
                 continue  # A manifest that was never written whole was never answered.
             if prepared.get("complete") and prepared.get("arm") == name:
                 found[name].append({"at": None, "commit": (prepared.get("provenance") or {}).get("commit"),
-                                    **_prepared_identity(prepared)})
+                                    **_prepared_identity(prepared),
+                                    "settings_recorded": prepared.get("variant_settings") is not None})
     return found
 
 
@@ -1930,35 +1981,89 @@ def _variant_pairs(data: Path, benchmark: str, preparations: dict[str, list[dict
     A pair's identity is what its start recorded (#130). A pair started
     before starts recorded it takes its arm's, when every preparation of the
     arm on record has the same identity, and otherwise has none.
+    ``settings_recorded`` says whether its settings were recorded, by its
+    start or by that preparation (#143).
     """
     pairs = []
     for (baseline, arm), numbered in _pairs_on_record(data, "prme-*", benchmark).items():
         if not is_variant(arm):
             continue
         known = {sha([entry[key] for key in _VARIANT_KEYS]): entry for entry in preparations.get(arm, [])}
-        fallback = next(iter(known.values())) if len(known) == 1 else dict.fromkeys(_VARIANT_KEYS)
+        fallback = (next(iter(known.values())) if len(known) == 1
+                    else {**dict.fromkeys(_VARIANT_KEYS), "settings_recorded": False})
         for number, state in numbered.items():
-            unrecorded = all(state[key] is None for key in _VARIANT_KEYS)
-            pairs.append({**state, **({key: fallback[key] for key in _VARIANT_KEYS} if unrecorded else {}),
-                          "arm": arm, "baseline": baseline, "number": number})
+            if all(state[key] is None for key in _VARIANT_KEYS):
+                identity = {key: fallback[key] for key in (*_VARIANT_KEYS, "settings_recorded")}
+            else:
+                identity = {"settings_recorded": state["variant_settings"] is not None}
+            pairs.append({**state, **identity, "arm": arm, "baseline": baseline, "number": number})
     return pairs
+
+
+def _counting(pairs: list[dict], baseline: str, contexts_sha256: str | None) -> list[dict]:
+    """The pairs that count together: those alongside ``baseline`` that read the context text ``contexts_sha256``.
+
+    A new baseline starts every variant's count again, and a change to a
+    variant's context text makes a new variant, with its own first pair and
+    confirmation (#143). Pairs with the same context text under other settings
+    stay in the count, as #130 made them, so a setting that retrieval never
+    reads does not buy the variant another first pair.
+    """
+    return [pair for pair in pairs if pair["baseline"] == baseline
+            and contexts_sha256 is not None and pair["contexts_sha256"] == contexts_sha256]
+
+
+def _identity_differences(found: dict, pair: dict) -> list[str]:
+    """What ``found`` does not repeat of ``pair``'s context text and settings, which a confirmation must (#143).
+
+    Both are pairs or preparations alongside one baseline. The context text
+    differs unless both record the same hash. Settings are compared only when
+    both recorded them (``settings_recorded``): a pair started before #130
+    recorded none, and its arm's manifest gives them only as this checkout's
+    configuration reads its overrides, which a later default change alters,
+    so its context text decides alone.
+    """
+    differs = []
+    if found["contexts_sha256"] is None or found["contexts_sha256"] != pair["contexts_sha256"]:
+        differs.append("context text")
+    recorded = found["settings_recorded"] and pair["settings_recorded"]
+    if recorded and found["variant_settings"] != pair["variant_settings"]:
+        differs.append("settings")
+    return differs
+
+
+def _same_test(found: dict, pair: dict) -> bool:
+    """Whether ``found`` repeats ``pair``'s test alongside the same baseline (``_identity_differences``, #143)."""
+    return not _identity_differences(found, pair)
+
+
+def _shown_settings(settings: dict | None) -> str:
+    """A variant's settings as ``--set`` names them, for messages."""
+    if settings is None:
+        return "settings not recorded"
+    return ", ".join(f"{key}={value if isinstance(value, str) else json.dumps(value)}"
+                     for key, value in settings.items())
 
 
 def _counted(pairs: list[dict]) -> list[dict]:
     """Of one variant's pairs, the ones the default-change rule reads: its first pair, then its confirmation.
 
-    The first pair is the first to complete. The confirmation is the next to
-    complete that started after the first completed, so it is a fresh pair.
-    A complete pair that is invalid under the 1% limit, and a pair given up,
-    not published or unfinished, count as neither.
+    ``pairs`` are the pairs that count together (``_counting``). The first
+    pair is the first to complete. The confirmation is the next to complete
+    that started after the first completed, so it is a fresh pair, and that
+    repeats the first pair's settings (``_same_test``, #143). A complete pair
+    that is invalid under the 1% limit, and a pair given up, not published
+    or unfinished, count as neither.
     """
     complete = sorted((pair for pair in pairs if pair["state"] == "complete"),
                       key=lambda pair: (_pair_time(pair, "finished_at"), pair["baseline"], pair["arm"], pair["number"]))
     if not complete:
         return []
-    first_ended = _pair_time(complete[0], "finished_at")
-    fresh = [pair for pair in complete[1:] if pair["started_at"] and _pair_time(pair, "started_at") > first_ended]
-    return complete[:1] + fresh[:1]
+    first = complete[0]
+    first_ended = _pair_time(first, "finished_at")
+    fresh = [pair for pair in complete[1:] if _same_test(pair, first)
+             and pair["started_at"] and _pair_time(pair, "started_at") > first_ended]
+    return [first, *fresh[:1]]
 
 
 def _pair_time(pair: dict, key: str) -> datetime:
@@ -1989,26 +2094,33 @@ def _arms_of(pairs: list[dict], preparations: dict[str, list[dict]], wanted) -> 
 
 
 def _variant_record(data: Path, benchmark: str, mark: dict) -> dict:
-    """Where a variant's pair stands among every pair of the same variant in the track's records under ``data``.
+    """Where a variant's pair stands among every pair with its settings or its context text under ``data``.
 
     The default-change rule in CLAUDE.md reads a variant's first pair and its
-    confirmation (``_counted``). Pairs of one variant can sit under another
-    arm name, or alongside an earlier baseline, where a new baseline numbers
-    the arm's pairs from 1 again, so this reads every variant preparation and
-    pair on record for the benchmark (#130). Pairs belong to the variant when
-    they record its settings (``variant_settings``) or its context text on
-    every question (``_contexts_sha256``).
+    confirmation (``_counted``). Pairs that count together can sit under
+    another arm name, so this reads every variant preparation and pair on
+    record for the benchmark (#130), and lists each that records the
+    variant's settings (``variant_settings``) or its context text on every
+    question (``_contexts_sha256``), alongside any baseline. Only those
+    alongside this pair's baseline that read its context text count together,
+    and a confirmation must also repeat the first pair's settings
+    (``_counting``, #143).
 
     The pair ``mark`` names must be on record as complete, with the pair id
     and identity its start recorded, and must be the first pair or the
-    confirmation: a later pair is refused, since the rule never reads it.
+    confirmation: any other pair is refused, since the rule never reads it.
     Returns its ``role``, the ``first`` pair and the ``confirmation``, every
-    arm of the variant with each of its preparations and pairs (``arms``),
-    the settings of the other variants that change any of the same settings
-    (``related``), every variant pair that records no identity
-    (``unknown``), and the variant's pairs that started before this one
-    finished and never completed for a reason other than a final failure
-    (``dropped``).
+    arm with the variant's settings or its context text, with each of its
+    preparations and pairs (``arms``), the settings of the other variants
+    that change any of the same settings (``related``), every variant pair
+    that records no identity (``unknown``), the pairs with its settings or
+    its context text that started before this one finished and never
+    completed for a reason other than a final failure (``dropped``), the
+    complete pairs alongside this baseline with its settings or its context
+    text that differ in the other, with what differs (``other_identities``),
+    and the complete pairs with its settings or its context text alongside
+    other baselines, with whether each of those baselines prepared the same
+    defaults' context text as this one (``other_baselines``, #143).
     """
     preparations = _variant_preparations(data, benchmark)
     pairs = _variant_pairs(data, benchmark, preparations)
@@ -2027,41 +2139,78 @@ def _variant_record(data: Path, benchmark: str, mark: dict) -> dict:
     if all(this[key] is None for key in _VARIANT_KEYS):
         raise ValueError(f"Nothing records the settings or the contexts {named[0].lower()}{named[1:]} was answered "
                          "with, so nothing shows which variant it belongs to (#130)")
+    if this["contexts_sha256"] is None:
+        raise ValueError(f"Nothing records the context text {named[0].lower()}{named[1:]} was answered on, so nothing "
+                         "shows which pairs it counts with: a variant's pairs count together alongside one baseline "
+                         "on one context text (#143)")
     identity = {key: this[key] for key in _VARIANT_KEYS}
-    same = [pair for pair in pairs if _same_variant(pair, identity)]
-    counted = _counted(same)
+    same = [pair for pair in pairs if _shares_identity(pair, identity)]
+    counted = _counted(_counting(pairs, this["baseline"], this["contexts_sha256"]))
     role = next((("first", "confirmation")[place] for place, pair in enumerate(counted) if pair is this), None)
     if role is None:
         which = " and ".join(f"{name} is {_named(pair)}" for name, pair in zip(("the first", "the confirmation"),
                                                                              counted))
-        raise ValueError(f"{named} is neither the variant's first pair nor its confirmation: {which}, and a "
-                         "confirmation must start after the first pair completed. The default-change rule reads only "
-                         "those two, so compare pairs no later one. Every pair stays on record, and compare lists it "
-                         "with the two that count (#130).")
+        first_ended = _pair_time(counted[0], "finished_at")
+        if not _same_test(this, counted[0]):
+            why = (f"a confirmation must repeat the first pair's settings "
+                   f"({_shown_settings(identity['variant_settings'])} here; the first pair's are "
+                   f"{_shown_settings(counted[0]['variant_settings'])})")
+        elif len(counted) > 1 and this["started_at"] and _pair_time(this, "started_at") > first_ended:
+            why = "the confirmation is already complete, and the rule reads no later pair"
+        else:
+            why = "a confirmation must start after the first pair completed"
+        raise ValueError(f"{named} is neither the variant's first pair nor its confirmation alongside "
+                         f"{this['baseline']} on its context text: {which}, and {why}. The default-change rule reads "
+                         "only those two, so compare pairs no other one. Every pair stays on record, and compare "
+                         "lists it with the two that count (#130, #143).")
     changed = set(this["variant_settings"] or ())
     related: dict[str, dict] = {}
     for found in [*pairs, *(entry for entries in preparations.values() for entry in entries)]:
         settings = found["variant_settings"]
-        if settings and changed & set(settings) and not _same_variant(found, identity):
+        if settings and changed & set(settings) and not _shares_identity(found, identity):
             related.setdefault(sha(settings), settings)
     ended = _pair_time(this, "finished_at")
+    # Pairs with the variant's settings or its context text alongside this baseline, other than this one (#143).
+    others = [pair for pair in same if pair is not this]
+    differing = [(pair, _identity_differences(pair, this)) for pair in others
+                 if pair["baseline"] == this["baseline"] and pair["state"] == "complete"]
+    elsewhere = [pair for pair in others if pair["baseline"] != this["baseline"] and pair["state"] == "complete"]
+    texts = {name: _baseline_text(data, benchmark, name) for name in {pair["baseline"] for pair in elsewhere}}
+    current = _baseline_text(data, benchmark, this["baseline"]) if texts else None
+    # Whether each other baseline read this one's defaults' text, None where either is unknown (#143).
+    unchanged = {name: None if None in (text, current) else text == current for name, text in texts.items()}
     return {
         **identity, "role": role, "first": _listed(counted[0]),
         "confirmation": _listed(counted[1]) if len(counted) > 1 else None,
-        "arms": _arms_of(same, preparations, partial(_same_variant, identity=identity)),
+        "arms": _arms_of(same, preparations, partial(_shares_identity, identity=identity)),
         "related": [{"variant_settings": settings,
                      "arms": _arms_of(pairs, preparations, lambda found, settings=settings: (
-                         found["variant_settings"] == settings and not _same_variant(found, identity)))}
+                         found["variant_settings"] == settings and not _shares_identity(found, identity)))}
                     for _, settings in sorted(related.items())],
         "unknown": [_listed(pair) for pair in pairs if all(pair[key] is None for key in _VARIANT_KEYS)],
-        "dropped": [_listed(pair) for pair in same if pair is not this and pair["finished_at"] is None
+        "dropped": [_listed(pair) for pair in others if pair["finished_at"] is None
                     and pair["state"] != f"abandoned: {_FINAL_FAILURE}"
                     and (pair["started_at"] is None or _pair_time(pair, "started_at") < ended)],
+        "other_identities": [{**_listed(pair), "differs": differs} for pair, differs in differing if differs],
+        "other_baselines": [{**_listed(pair), "same_defaults_text": unchanged[pair["baseline"]]}
+                            for pair in elsewhere],
     }
 
 
+def _baseline_text(data: Path, benchmark: str, baseline: str) -> str | None:
+    """The hash of a baseline's prepared context text on every question (``_contexts_sha256``), or None if unknown.
+
+    Two baselines with the same hash sent the reader the same defaults' text, so the defaults did not change
+    between them for this benchmark (#143).
+    """
+    with suppress(OSError, ValueError, KeyError, TypeError):
+        return _contexts_sha256(json.loads((data / baseline / benchmark / "prepared.json").read_text())["contexts"])
+    return None
+
+
 def _variant_warnings(variant: dict) -> list[str]:
-    """What compare warns about in a variant's ``_variant_record``: pairs that could hide the result that counts."""
+    """What compare warns about in a variant's ``_variant_record``: pairs that could hide the result that counts,
+    and pairs with the variant's settings or its context text that count apart from it (#130, #143)."""
     this = variant["first"] if variant["role"] == "first" else variant["confirmation"]
     ended = _pair_time(this, "finished_at")
 
@@ -2070,21 +2219,32 @@ def _variant_warnings(variant: dict) -> list[str]:
 
     warnings = []
     if variant["dropped"]:
-        warnings.append(f"Pairs of this variant that started before this one finished never completed, for a reason "
-                        f"other than a final failure: {names(variant['dropped'])}. A pair left unfinished or given up "
-                        "by hand can hide a result (#130)")
+        warnings.append(f"Pairs with this variant's settings or its context text started before this one finished and "
+                        f"never completed, for a reason other than a final failure: {names(variant['dropped'])}. A "
+                        "pair left unfinished or given up by hand, or one whose baseline stopped being current while "
+                        "it was answered, can hide a result (#130, #143)")
     unknown = [pair for pair in variant["unknown"]
                if pair["state"] == "complete" and _pair_time(pair, "finished_at") < ended]
     if unknown:
         warnings.append(f"Variant pairs that completed before this one record neither settings nor contexts, so any of "
                         f"them may be an earlier pair of this variant: {names(unknown)} (#130)")
-    first, confirmation = variant["first"], variant["confirmation"]
-    if confirmation is not None:
-        for key, what in (("baseline", "were answered alongside different baselines"),
-                          ("commit", "read contexts prepared at different commits")):
-            if first[key] != confirmation[key]:
-                warnings.append(f"The first pair and the confirmation {what} ({first[key]} and "
-                                f"{confirmation[key]}), so the confirmation did not repeat the same test (#130)")
+    if variant["other_baselines"]:
+        warnings.append(f"Complete pairs with this variant's settings or its context text were answered alongside "
+                        f"other baselines: {', '.join(_named(pair) for pair in variant['other_baselines'])}. Each "
+                        "baseline counts from zero, so they do not count toward this decision (#143)")
+    unchanged = sorted({pair["baseline"] for pair in variant["other_baselines"] if pair["same_defaults_text"]})
+    if unchanged:
+        warnings.append(f"{', '.join(unchanged)} prepared the same defaults' context text as {this['baseline']}, so "
+                        "the defaults did not change between them, and this variant's pairs alongside "
+                        f"{'it' if len(unchanged) == 1 else 'them'} ran the same test as this one. Weigh their results "
+                        "with this one before the default flips (#143)")
+    if variant["other_identities"]:
+        differing = ", ".join(f"{_named(pair)} (differs in {' and '.join(pair['differs'])})"
+                              for pair in variant["other_identities"])
+        warnings.append(f"Complete pairs alongside {this['baseline']} have this variant's settings or its context "
+                        f"text but differ in the other, so they do not count with this pair: {differing}. One on other "
+                        "context text is a variant of its own, with its own first pair and confirmation, and one on "
+                        "this context text under other settings counts as neither (#143)")
     related = [f"pair {pair['number']} of {pair['baseline']} and {arm['arm']}" for group in variant["related"]
                for arm in group["arms"] for pair in arm["pairs"] if pair["state"] == "complete"]
     if related:
@@ -2547,9 +2707,9 @@ def _other_code_refusal(changed: int, total: int, before: str, before_commit: st
         f"{before_commit or 'an unrecorded commit'}.{also} That difference comes from what changed between the two "
         "preparations, such as code on main or on the variant's branch, the dependencies or the saved run, and the "
         "pair would credit it to the variant. If main changed the defaults, record a new baseline at a commit on "
-        "main that includes the change. Then prepare the variant again, under a new name with the same settings, "
-        "which keep it the same variant (#130), from a commit that descends from the current baseline's commit. If "
-        "the variant's own branch changes the defaults, put that change behind its settings (#139).")
+        "main that includes the change, and prepare the variant again, under a new name with the same settings, "
+        "from a commit that descends from it; alongside that baseline its pairs count from zero (#143). If the "
+        "variant's own branch changes the defaults, put that change behind its settings (#139).")
 
 
 def _check_other_code(before: dict, after: dict, changed: int | None, prepared: dict[str, dict]) -> None:
@@ -2676,10 +2836,12 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     logs under ``data`` (by default the before result's track) when compare
     runs, so a pair answered before a newer baseline completed no longer
     counts (#127). ``baseline`` reports every complete baseline and which is
-    current. A variant's pair must be its first pair or its confirmation,
-    on record as complete in the same run logs, and ``variant`` lists every
-    arm and pair of the variant (``_variant_record``, #130), with warnings for
-    pairs that could hide a result (``_variant_warnings``). A variant's pair
+    current. A variant's pair must be its first pair or its confirmation
+    alongside its baseline on its context text, a confirmation with the
+    first pair's settings too, on record as complete in the same run logs,
+    and ``variant`` lists every arm and pair of the variant
+    (``_variant_record``, #130, #143), with warnings for pairs that could
+    hide a result or count apart from it (``_variant_warnings``). A variant's pair
     must also have been answered under the model identity, answer settings,
     failure policy, Ollama server version and context budget of an A/A check
     in the track's A/A record under ``results`` (by default this checkout's),
@@ -2840,16 +3002,28 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
                     "again only while its baseline is current; a repeat of the defaults may pair any two (#127)."},
         "variant": None if variant is None else {
             **variant,
-            "note": "Every arm and pair of this variant: every preparation and pair on the track's run logs when "
-                    "compare ran with the same settings (variant_settings) or the same context text on every question "
-                    "(contexts_sha256), under any arm name and alongside any baseline. The first pair is the first to "
-                    "complete, and the confirmation the next to complete that started after it; the default-change "
-                    "rule in CLAUDE.md reads only those two, compare refuses any later pair, and a failed first pair "
-                    "or confirmation fails the variant. A complete pair that is invalid under the 1% limit, and a pair "
-                    "given up, not published or unfinished, count as neither. dropped lists this variant's pairs that "
-                    "started before this one finished and never completed, other than for a final failure; related "
-                    "lists the other variants that change any of the same settings, each with its own first pair and "
-                    "confirmation; unknown lists the variant pairs that record neither settings nor contexts (#130)."},
+            "note": "Every arm and pair with this variant's settings (variant_settings) or its context text on "
+                    "every question (contexts_sha256): every such preparation and pair on the track's run logs when "
+                    "compare ran, under any arm name and alongside any baseline. Only the pairs alongside this pair's "
+                    "baseline that read its context text count together (#143): a new baseline starts every count "
+                    "again, and other context text, such as after a code change, makes a new variant with its own "
+                    "first pair and confirmation. The first pair is the first of them to complete, and the "
+                    "confirmation the next to complete that started after it and repeats the first pair's settings; "
+                    "the default-change rule in CLAUDE.md reads only those two, compare refuses any other pair, and a "
+                    "failed first pair or confirmation fails the variant. A complete pair that is invalid under the 1% "
+                    "limit, and a pair given up, not published or unfinished, count as neither. Settings recorded "
+                    "only as this checkout reads an arm's overrides, for pairs started before #130, are not compared. "
+                    "dropped lists the pairs with the variant's settings or its context text, alongside any baseline, "
+                    "that started before this one finished and never completed, other than for a final failure; "
+                    "other_identities lists the complete pairs alongside this baseline with the variant's settings or "
+                    "its context text that differ in the other, and what differs, which never count with this pair; "
+                    "other_baselines lists the complete pairs with the variant's settings or its context text "
+                    "alongside other baselines, and whether each of those baselines prepared the same defaults' "
+                    "context text as this one (same_defaults_text, None when unknown): where it did, the defaults did "
+                    "not change, and those pairs ran the same test; "
+                    "related lists the other variants that change any of the same settings, each with its own first "
+                    "pair and confirmation; unknown lists the variant pairs that record neither settings nor contexts "
+                    "(#130, #143)."},
         "aa_check": None if aa_check is None else {
             **aa_check,
             "note": "The A/A check this pair relies on, on each benchmark: the first A/A pair in the track's A/A "
