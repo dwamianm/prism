@@ -1263,10 +1263,8 @@ def published_deepseek(arm: str, benchmark: str) -> dict:
     return json.loads((PUBLISHED / "2026-09-24" / f"{OLLAMA_MODEL.track}-{arm}-{benchmark}-result.json").read_text())
 
 
-@pytest.mark.parametrize("arm", ["prme", REPEAT])
-@pytest.mark.parametrize("benchmark", ["locomo", "longmemeval"])
-def test_the_published_deepseek_baseline_is_complete_and_matches_the_current_answer_settings(arm, benchmark):
-    result = published_deepseek(arm, benchmark)
+def check_published_defaults_run(result: dict, arm: str, benchmark: str) -> None:
+    """A published DeepSeek answer run of the defaults is complete, adds up from its rows, and read unchanged contexts."""
     rows = result["rows"]
     assert (result["kind"], result["arm"], result["benchmark"]) == ("ollama-answer-result", arm, benchmark)
     assert result["registration_sha256"] == digest(study.REG)
@@ -1281,6 +1279,13 @@ def test_the_published_deepseek_baseline_is_complete_and_matches_the_current_ans
         for category in sorted({row["question_type"] for row in rows})}
     assert result["prepared"]["overrides"] == {} and result["prepared"]["dirty"] is False
     assert result["cost"]["usd"] == 0
+
+
+@pytest.mark.parametrize("arm", ["prme", REPEAT])
+@pytest.mark.parametrize("benchmark", ["locomo", "longmemeval"])
+def test_the_published_deepseek_baseline_is_complete_and_matches_the_current_answer_settings(arm, benchmark):
+    result = published_deepseek(arm, benchmark)
+    check_published_defaults_run(result, arm, benchmark)
     # compare() pairs a variant with this baseline only when both were answered with the same settings, so a
     # change to the answer settings needs a new baseline.
     assert {key: value for key, value in result["answer_model"].items() if key != "identity"} == \
@@ -1314,6 +1319,77 @@ def test_the_published_repeat_of_the_defaults_is_the_run_to_run_floor_in_benchma
     assert comparison["repeat"]["changed_verdicts"] == gained + lost
     # BENCHMARKS.md reports the floor, and the default-change rule in CLAUDE.md depends on this flag.
     assert comparison["repeat"]["interval_excludes_zero"] is excludes_zero
+
+
+# The interleaved A/A check of the revised test: the repeat answered against itself as one pair on each benchmark,
+# under the amended failure policy (#129, #132). Each is the first pair of its benchmark to complete, and every earlier
+# one was given up: under the registered policy at a final failure, and the last as started under that policy.
+AA_PAIRS = {"locomo": 3, "longmemeval": 5}
+FAILED = "abandoned: a question failed finally"
+OTHER_POLICY = "abandoned: it was started under another failure policy"
+
+
+def published_deepseek_pair(before: str, after: str, benchmark: str, number: int) -> list[dict]:
+    """Both sides of a published DeepSeek pair, before side first."""
+    stem = f"{OLLAMA_MODEL.track}-{before}-vs-{after}-{benchmark}-pair-{number}"
+    return [json.loads((PUBLISHED / "2026-09-24" / f"{stem}-{side}-result.json").read_text())
+            for side in baselines.PAIR_SIDES]
+
+
+@pytest.mark.parametrize("benchmark", ["locomo", "longmemeval"])
+def test_the_published_aa_pair_is_complete_and_matches_the_current_answer_settings(benchmark):
+    number = AA_PAIRS[benchmark]
+    sides = published_deepseek_pair(REPEAT, REPEAT, benchmark, number)
+    for side, result in zip(baselines.PAIR_SIDES, sides):
+        check_published_defaults_run(result, REPEAT, benchmark)
+        assert result["provenance"]["dirty"] is False
+        # Both sides read the repeat's own prepared contexts, which reproduce every saved context.
+        assert result["prepared_sha256"] == published_deepseek(REPEAT, benchmark)["prepared_sha256"]
+        assert result["prepared"]["contexts_matching_saved_run"] == result["total"]
+        # The model identity and server version the check was measured with, as BENCHMARKS.md and CLAUDE.md record
+        # them, and the current answer settings under the amendment.
+        assert result["answer_model"]["identity"]["manifest_digest_sha256"].startswith("e04da138")
+        assert result["server_versions"] == ["0.34.3"]
+        assert {key: value for key, value in result["answer_model"].items() if key != "identity"} == \
+            {**OLLAMA_MODEL.settings(), "failure_policy": baselines.FAILURE_POLICY}
+        # Nothing was asked again, repaired or left unscored on either side.
+        assert result["retry_policy"] == baselines.OLLAMA_RETRY_POLICY
+        assert result["failure_policy"] == {**baselines.failure_amendment(), **NOTHING_UNSCORED}
+        assert {row["outcome"] for row in result["rows"]} == {"judged"}
+        assert (result["pair"]["side"], result["pair"]["number"]) == (side, number)
+        assert result["pair"]["earlier_pairs"] == [{"number": earlier, "state": FAILED if earlier < number - 1
+                                                     else OTHER_POLICY} for earlier in range(1, number)]
+    assert {key: value for key, value in sides[0]["pair"].items() if key != "side"} == \
+        {key: value for key, value in sides[1]["pair"].items() if key != "side"}
+
+
+@pytest.mark.parametrize(("benchmark", "correct", "gained", "lost", "interval"), [
+    ("locomo", (1018, 1012), 22, 28, [-0.0130, 0.0052]), ("longmemeval", (432, 431), 4, 5, [-0.014, 0.010])])
+def test_the_published_interleaved_aa_pairs_hold_the_check_in_benchmarks_md(
+        benchmark, correct, gained, lost, interval):
+    before, after = published_deepseek_pair(REPEAT, REPEAT, benchmark, AA_PAIRS[benchmark])
+    assert (before["correct"], after["correct"]) == correct
+    comparison = baselines.compare(before, after)
+    assert comparison["warnings"] == [] and comparison["server_versions"] == ["0.34.3"]
+    assert comparison["repeat"]["interleaved"] is True
+    # compare() counts each side's retries and unscored questions again from its rows.
+    assert comparison["failure_policy"]["before"] == comparison["failure_policy"]["after"] == NOTHING_UNSCORED
+    # BENCHMARKS.md and CLAUDE.md quote these intervals: LoCoMo's 10 conversations, and LongMemEval-S's questions.
+    accuracy = comparison["accuracy"]
+    if benchmark == "locomo":
+        assert comparison["interval_unit"] == "conversations and questions" and accuracy["groups"] == 10
+        assert accuracy["interval_95_conversations"] == pytest.approx([-0.0093, 0.0019], abs=5e-5)
+        assert accuracy["interval_95"] == accuracy["interval_95_questions"]
+    else:
+        assert comparison["interval_unit"] == "questions"
+    assert accuracy["interval_95"] == pytest.approx(interval, abs=5e-5)
+    assert (len(comparison["gained"]), len(comparison["lost"])) == (gained, lost)
+    assert comparison["repeat"]["changed_verdicts"] == gained + lost
+    # No category's interval excludes zero either, as BENCHMARKS.md says.
+    assert all(value["interval_95"][0] <= 0 <= value["interval_95"][1] for value in comparison["categories"].values())
+    # Both intervals include zero, so under the default-change rule in CLAUDE.md the revised test applies without
+    # the extra margin taken from the largest A/A difference.
+    assert comparison["repeat"]["interval_excludes_zero"] is False
 
 
 # Interleaved pairs (#129) ---------------------------------------------------------

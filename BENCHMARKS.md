@@ -569,17 +569,16 @@ over the kept records reproduces both results exactly.
 the default-change rule in `CLAUDE.md` the paired test was not trustworthy as it
 stood. #129 revised it: each variant is now answered alongside its own fresh
 run of the defaults, LoCoMo intervals resample conversations, and server
-versions are recorded and checked. No default changes until the
-[interleaved A/A check](#interleaved-aa-check) has been answered and
-recorded. A variant paired
+versions are recorded and checked. Under the old test, a variant paired
 with the first LongMemEval-S baseline would have shown a 2.2-point gain whose
 interval excludes zero without changing anything. The data cannot tell chance
 (a 95% interval excludes zero about 1 time in 20 when nothing changes) from the
-hosted model changing behind the same identity. Either way, every variant is
-paired with one baseline run, and that run's own draw moves every comparison
+hosted model changing behind the same identity. Either way, every variant was
+paired with one baseline run, and that run's own draw moved every comparison
 made against it: on the 292 LongMemEval-S questions that three runs answered
 (the stopped first run, the first baseline and the repeat), the judge accepted
-243, 239 and 248.
+243, 239 and 248. The [interleaved A/A check](#interleaved-aa-check) of the
+revised test has since been answered, and it holds on both benchmarks.
 
 By category, the LongMemEval-S repeat gained on `knowledge-update` (7 gained,
 1 lost) and `multi-session` (8 gained, none lost) and lost on
@@ -614,11 +613,50 @@ zero, a variant's gain must also be larger than the largest absolute A/A
 difference measured so far on that benchmark, the #118 repeat included (2.2
 points on LongMemEval-S and 0.45 points on LoCoMo so far).
 
-**It has not completed yet.** On 2026-09-24, four LongMemEval-S pairs and two
-LoCoMo pairs of `prme@46647825` against itself were started, with the same
-model identity (manifest digest `e04da138`), Ollama server version (0.34.3)
-and settings as the #118 runs. Each one stopped at a final failure, which the
-registered retry policy never asks again, so none published a result:
+**It holds.** On 2026-09-24, one interleaved pair of `prme@46647825` against
+itself completed on each benchmark under the DeepSeek track's amended failure
+policy (#132), with the same model identity (manifest digest `e04da138`),
+Ollama server version (0.34.3) and settings as the #118 runs, from a clean
+tree at `5f89121c`. The two pairs were answered at the same time: LongMemEval-S
+pair 5 took 14 minutes and LoCoMo pair 3 took 31.
+
+| Benchmark | Before side | After side | Paired difference, 95% interval | Changed verdicts |
+|---|---:|---:|---:|---:|
+| LongMemEval-S, pair 5 ([before](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-longmemeval-pair-5-before-result.json), [after](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-longmemeval-pair-5-after-result.json)) | 432/500 (86.4%) | 431/500 (86.2%) | -0.2 points, -1.4 to +1.0 | 9 of 500 (4 gained, 5 lost) |
+| LoCoMo, pair 3 ([before](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-locomo-pair-3-before-result.json), [after](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-locomo-pair-3-after-result.json)) | 1,018/1,540 (66.1%) | 1,012/1,540 (65.7%) | -0.39 points, -1.30 to +0.52 (spanning -0.93 to +0.19 resampling conversations and -1.30 to +0.52 resampling questions) | 50 of 1,540 (22 gained, 28 lost) |
+
+Both intervals include zero, so the default-change rule in `CLAUDE.md` allows
+the revised test without the extra margin, for model identity `e04da138`,
+Ollama server version 0.34.3, the current answer settings and the amended
+failure policy. It does not carry over to anything else: when any of these
+changes, answer a new A/A pair before relying on a variant pair (the Ollama app
+updates itself, so check the `server_versions` of every variant pair). No
+category's interval excludes zero on either benchmark.
+
+All 8,160 reader and judge calls of the two pairs returned HTTP 200 on their
+first attempt. Neither side of either pair needed a reader retry, a judge retry
+or a repaired verdict, so no question was scored `truncated` or
+`verdict_unresolved`, and `compare` accepts both pairs with no warnings.
+`gpt4_7abb270c`, which had run to the token limit in 4 of its 11 earlier reader
+answers, ended normally on both sides. The two sides of an interleaved pair
+disagreed less than the two sequential #118 runs did: 9 of 500 LongMemEval-S
+verdicts (1.8%) against 23 (4.6%), and 50 of 1,540 LoCoMo verdicts (3.2%)
+against 61 (4.0%). One pair per benchmark cannot show whether that comes from
+the interleaving or from chance. The answers themselves still differed: in the
+private answer records, the reader text was identical on only 9 of 500
+LongMemEval-S questions and 195 of 1,540 LoCoMo questions.
+
+To check the numbers, pair the two published sides of each pair with `compare`
+(the `before` result as `--before`). Two tests pin both sides' counts, answer
+settings, model identity, server version and failure-policy counts, the
+given-up earlier pairs, the intervals (per category too) and the changed
+verdicts.
+
+Earlier that day, four LongMemEval-S pairs and two LoCoMo pairs of
+`prme@46647825` against itself were started under the registered retry policy,
+with the same model identity, server version and settings. Each one stopped at
+a final failure, which the registered retry policy never asks again, so none
+published a result:
 
 | Pair | Answered by both sides | What stopped it |
 |---|---:|---|
@@ -629,11 +667,11 @@ registered retry policy never asks again, so none published a result:
 | LoCoMo 1 | 61 of 1,540 | The before side's verdict on `conv-26-q0060` had stray characters before `<answer>no</answer>` |
 | LoCoMo 2 | 62 of 1,540 | The after side's verdict on `conv-26-q0062` had a stray character and a multiple-choice layout |
 
-`gpt4_7abb270c` has now run to the limit in 4 of its 11 reader answers,
+By then `gpt4_7abb270c` had run to the limit in 4 of its 11 reader answers,
 including the first #118 run (#124), and verdicts with stray characters
 appeared 3 times in these 2,470 judge calls but never in the 4,080 of the two
 published runs of the defaults. A pair has twice as many answers for one final
-failure to stop, so under the registered policy a pair rarely completes.
+failure to stop, so under the registered policy a pair rarely completed.
 
 The DeepSeek track's failure policy was amended for this (#132, see the
 safeguards above). None of the six answers would stop a pair under the
@@ -645,20 +683,20 @@ judge would be called once more, and the question scored as
 `verdict_unresolved` if that verdict failed too. The six pairs were given
 up on record and their folders moved aside to
 `data/ollama-answers-v1/discarded-attempts/ollama-deepseek-v4.1-flash-cloud/pairs/`,
-with the same layout below it. Their run logs stay in place, so the next
-`run-pair` of each benchmark gives up the last of them (LongMemEval-S pair 4
-and LoCoMo pair 2, which have no `abandoned` event yet) as started under
-another failure policy and starts a fresh pair (LongMemEval-S pair 5, LoCoMo
-pair 3). The amendment records the digests of both pair run logs as they
-stood when it was registered. No pair mixes the two policies, and the A/A
-check is answered from fresh pairs under the amendment.
+with the same layout below it. Their run logs stayed in place, so the next
+`run-pair` of each benchmark gave up the last of them (LongMemEval-S pair 4
+and LoCoMo pair 2) as started under another failure policy and started the
+fresh pairs above (LongMemEval-S pair 5, LoCoMo pair 3), whose results list
+every earlier pair as given up (`earlier_pairs`). The amendment records the
+digests of both pair run logs as they stood when it was registered. No pair
+mixes the two policies.
 
-The attempts do answer one question about the design. The two sides of an A/A
-pair send identical requests back to back, which could have made them agree
-more than two runs hours apart would. They did not: on the 1,229 questions both
-sides answered, the reader text was identical on 46 (3.7%) and the verdicts
-differed on 30 (2.4%). The two #118 runs, two hours apart, differed on 23 of
-500 LongMemEval-S verdicts (4.6%) and 61 of 1,540 LoCoMo verdicts (4.0%).
+The stopped attempts had already answered one question about the design. The
+two sides of an A/A pair send identical requests back to back, which could have
+made them agree more than two runs hours apart would. Their answers did not
+repeat: on the 1,229 questions both sides answered, the reader text was
+identical on 46 (3.7%) and the verdicts differed on 30 (2.4%), against 4.6% and
+4.0% of verdicts for the two #118 runs, two hours apart.
 
 ## Earlier registered memory-utility comparison
 
