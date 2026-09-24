@@ -253,10 +253,17 @@ with another DeepSeek score from the same model identity and settings:
    matches the saved run, so prepare its variants at the baseline's own commit
    where possible (#125).
 3. A default changes only when the default-change rule in the epic #77 work
-   rules in `CLAUDE.md` is met. After a default changes, or when the model
-   identity changes, record a new baseline with `prepare prme` and `run prme`
-   at a newer commit on `main` (see `prme@<commit>` below). The current
-   baseline is the most recent complete one; pair later variants with it.
+   rules in `CLAUDE.md` is met. That rule includes a confirmation run: prepare
+   the variant again under a new name with the same settings (for example
+   `prme-<name>-2`), answer it, and pair it with the same baseline; it must
+   pass the test a second time. It also needs the
+   [run-to-run floor](#run-to-run-floor) to hold, meaning that two runs of the
+   defaults differ by an interval that includes zero on both benchmarks. **It
+   does not hold today** (#129), so no default changes until the paired test
+   is revised. After a default changes, or when the model identity changes,
+   record a new baseline with `prepare prme` and `run prme` at a newer commit
+   on `main` (see `prme@<commit>` below). The current baseline is the most
+   recent complete one; pair later variants with it.
 
 `:cloud` models are served by Ollama's hosted service, not by this machine. The
 prompts leave the machine and count against the Ollama account's usage limits.
@@ -356,6 +363,9 @@ uv run python -m benchmarks.integrations.gpt54_baselines run prme --benchmark lo
 # No model calls: the paired difference and its 95% interval.
 uv run python -m benchmarks.integrations.gpt54_baselines compare \
   --before <baseline result> --after <variant result>
+# A repeat: an earlier baseline and a later one that read the same contexts.
+uv run python -m benchmarks.integrations.gpt54_baselines compare \
+  --before <earlier baseline result> --after <later baseline result>
 ```
 
 `--sample N` asks only the first N questions of each category, in registered
@@ -364,18 +374,32 @@ many answers the judge accepted, with no accuracy or interval, and is published
 with a `-sample-N` suffix. A later full run reuses its answers.
 
 `compare` refuses results that are incomplete, are samples, cover different
-questions, or were answered by different model identities or settings. It
-reports the paired accuracy difference with a 95% interval that resamples
-questions, per category as well, and the questions gained and lost.
+questions, are the same answer run, or were answered by different model
+identities or settings (an Ollama server upgrade alone does not change the
+identity). It reports the paired accuracy difference with a 95% interval that
+resamples questions, per category as well, and the questions gained and lost.
+When both results are baselines of the defaults, and they sent the reader and
+judge the same inputs, `compare` reports them as a repeat: how many verdicts
+changed, and whether the interval excludes zero. The same inputs means the same
+budget, both preparations reproducing the saved 2026-09-23 context on every
+question (so the context text is the same), the same code for sending,
+checking and judging the calls, and the same Ollama server version. Two
+baselines without that evidence get a warning instead. The saved-run check
+works only while the defaults reproduce the saved run; after a default
+changes, a repeat needs per-question text hashes in the results (#125). A
+different server version is a warning on any pair.
 
 | DeepSeek run | LongMemEval-S | LoCoMo | Context |
 |---|---:|---:|---|
 | Baseline, `prme` defaults at `97c9402f` (2026-09-24) ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-locomo-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-longmemeval-result.json)) | **423/500 (84.6%)**, 95% interval 81.4% to 87.6% | **1,014/1,540 (65.8%)**, 95% interval 63.4% to 68.2% | 3,996-token ceiling |
+| Repeat of the defaults, `prme@46647825` (2026-09-24) ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-locomo-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-longmemeval-result.json)) | **434/500 (86.8%)**, 95% interval 83.8% to 89.6% | **1,007/1,540 (65.4%)**, 95% interval 63.0% to 67.7% | 3,996-token ceiling |
 | Smoke check, first 2 per category ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-locomo-sample-2-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-longmemeval-sample-2-result.json)) | 12 answered, 9 accepted (not a score) | 8 answered, 8 accepted (not a score) | 3,996-token ceiling |
 
-The baseline is the reference for DeepSeek paired runs until a default or the
-model identity changes: `compare` refuses results answered by another model
-identity or other settings. Both arms were prepared from `main` at `97c9402f`,
+The first baseline was the reference for DeepSeek paired runs until its
+repeat, `prme@46647825`, completed; the repeat is now the most recent complete
+baseline, so later variants pair with it (step 3). `compare` refuses results
+answered by another model identity or other settings. Both first-baseline arms
+were prepared from `main` at `97c9402f`,
 and every context matches the saved 2026-09-23 run (all 1,540 LoCoMo and 500
 LongMemEval-S questions). The smoke checks used separate local folders, so the
 baseline reused none of their answers. The model passed calibration on its
@@ -412,12 +436,53 @@ which the judge rejected. The result's run log counts both runs and the second
 preparation. The first run's records are kept locally under
 `data/ollama-answers-v1/discarded-attempts/`. On the 292 questions both runs
 answered, 8 verdicts differed (6 accepted only in the first run, 2 only in the
-second). That is an incidental observation, not the noise-floor measurement
-#118 asks for.
+second). That was an incidental observation; the
+[run-to-run floor](#run-to-run-floor) below is the measurement.
 
 The same smoke sample, answered twice on identical contexts, gave differently
 worded answers for 18 of 20 questions and one flipped verdict, so seeded runs of
 the hosted model do not repeat exactly (#118).
+
+### Run-to-run floor
+
+Two answer runs of the same defaults with the same inputs show how far the
+paired test moves when nothing changes (#118). The repeat, `prme@46647825`,
+was prepared from `main` at `46647825` and answered about two hours after the
+first baseline, with the same model identity (manifest digest `e04da138`), the
+same Ollama server version (0.34.3) and the same settings. No `src/` file
+changed between the two commits, both preparations reproduce every saved
+2026-09-23 context, and the code that sends and judges the calls is the same,
+so `compare` reports the pair as a repeat with no warnings. The repeat used the
+same passed calibration as the first baseline, all 4,080 of its reader and
+judge calls returned HTTP 200 on the first attempt, and repeating the row checks
+over the kept records reproduces both results exactly.
+
+| Benchmark | First baseline (`prme`) | Repeat (`prme@46647825`) | Paired difference, 95% interval | Changed verdicts |
+|---|---:|---:|---:|---:|
+| LongMemEval-S | 423/500 (84.6%) | 434/500 (86.8%) | **+2.2 points, +0.4 to +4.2** | 23 of 500 (17 gained, 6 lost) |
+| LoCoMo | 1,014/1,540 (65.8%) | 1,007/1,540 (65.4%) | -0.45 points, -1.43 to +0.52 | 61 of 1,540 (27 gained, 34 lost) |
+
+**The floor does not hold.** The LongMemEval-S interval excludes zero, so under
+the default-change rule in `CLAUDE.md` the paired test is not trustworthy as it
+stands, and no default changes until it is revised (#129). A variant paired
+with the first LongMemEval-S baseline would have shown a 2.2-point gain whose
+interval excludes zero without changing anything. The data cannot tell chance
+(a 95% interval excludes zero about 1 time in 20 when nothing changes) from the
+hosted model changing behind the same identity. Either way, every variant is
+paired with one baseline run, and that run's own draw moves every comparison
+made against it: on the 292 LongMemEval-S questions that three runs answered
+(the stopped first run, the first baseline and the repeat), the judge accepted
+243, 239 and 248.
+
+By category, the LongMemEval-S repeat gained on `knowledge-update` (7 gained,
+1 lost) and `multi-session` (8 gained, none lost) and lost on
+`temporal-reasoning` (4 lost, none gained). No LoCoMo category's interval
+excludes zero. LoCoMo's conversation-level interval for the repeat is 63.5% to
+67.5%.
+
+To check the numbers, pair the two published results of each benchmark with
+`compare` (the first baseline as `--before`, the repeat as `--after`). A test
+pins the changed verdicts and whether each interval excludes zero.
 
 ## Earlier registered memory-utility comparison
 
