@@ -81,6 +81,21 @@ judged once more and then scored incorrect as ``verdict_unresolved``. Every
 result counts its retries and those outcomes, and ``compare`` refuses a result
 with more than 1% of its questions scored that way. The GPT-5.4 track keeps
 the registered policy unchanged.
+
+Each A/A pair ``run-pair`` publishes is added to the track's tracked A/A
+record (``record_aa_check``, #137): the conditions it was answered under
+(model identity, answer settings, failure policy, Ollama server version and
+context budget), its interval, and whether it is the first A/A pair under
+those conditions that ``compare`` accepted, which is the A/A check the
+default-change rule reads for them. ``compare`` refuses a variant's pair
+unless an A/A check under the same conditions is recorded on both
+benchmarks, so an Ollama update needs a new A/A pair on both before any
+further variant pair counts, and ``run-pair`` answers no variant pair it
+would refuse. It names the check it relied on and every other A/A pair under
+those conditions. The record must list exactly the A/A pairs the track's run
+logs show complete, each line matching its published results.
+``record-aa-check`` adds an A/A pair published before the record existed, or
+one ``run-pair`` could not add.
 """
 from __future__ import annotations
 
@@ -217,6 +232,8 @@ RULE_BUDGET = 3996
 RULE_TOKENIZER = "cl100k_base"
 # Reference points rather than PRME settings, which are paired with the defaults at any budget.
 REFERENCE_ARMS = frozenset(ARMS) - {"prme"}
+# What an A/A check measured, which a variant's pair must share for the check to cover it (#137).
+AA_CONDITIONS = ("model identity", "answer settings", "failure policy", "Ollama server version", "context budget")
 
 
 # Contexts ------------------------------------------------------------------
@@ -1279,8 +1296,9 @@ def _bound_policy(folder: Path) -> str | None:
 
 
 async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
-              model: ollama_answers.AnswerModel | None = None, data: Path | None = None, results: Path = RESULTS,
-              archive: Path | None = None, api_key: str | None = None, sample: int | None = None) -> dict:
+              model: ollama_answers.AnswerModel | None = None, data: Path | None = None,
+              results: Path | None = None, archive: Path | None = None, api_key: str | None = None,
+              sample: int | None = None) -> dict:
     """Answer and judge every question that has no result yet, then report the whole arm.
 
     ``RETRY_POLICY`` says which failures a later run asks again. The arm is
@@ -1303,6 +1321,7 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
         raise ValueError(f"{arm} is a variant of the defaults, which is answered only alongside a fresh run of the "
                          "defaults: use run-pair with a prepared baseline (#129)")
     data = data or data_root(model)
+    results = results or RESULTS
     registration, questions = registered_protocol(benchmark)
     folder, prepared, entries = load_prepared(arm, benchmark, questions, data=data)
     if sample is not None:
@@ -1402,7 +1421,7 @@ def _publish(path: Path, result: dict) -> None:
 # Interleaved pairs (#129) -------------------------------------------------------
 
 async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_answers.AnswerModel,
-                   data: Path | None = None, results: Path = RESULTS, sample: int | None = None) -> dict:
+                   data: Path | None = None, results: Path | None = None, sample: int | None = None) -> dict:
     """Answer ``after`` together with a fresh run of the defaults baseline ``before``, in one session.
 
     Both arms must be prepared, and ``before`` must have a complete answer run
@@ -1423,13 +1442,20 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     pair records the pair's id and the variant's identity, so ``compare`` can
     tell a first pair from its confirmation across arm names and baselines,
     and no pair of a variant whose first pair and confirmation are complete
-    is answered (``_check_uncounted``, #130).
+    is answered (``_check_uncounted``, #130). Each start records the pair's
+    id, and an A/A pair's published results are added to the track's A/A
+    record (``record_aa_check``, #137). A full pair starts only when the
+    record could take its results or cover them (``_check_aa_ready``): an
+    A/A pair needs the record to list every complete A/A pair on its
+    benchmark, and a variant's pair a recorded A/A check under the current
+    conditions on both benchmarks.
     ``sample`` works as in ``run``. Returns the pair's mark and both results.
     """
     if not isinstance(model, ollama_answers.AnswerModel):
         raise ValueError("Pairs are answered on the Ollama track only")
     _check_pair_baseline(before)
     data = data or data_root(model)
+    results = results or RESULTS
     if _complete_run_commit(data, before, benchmark) is None:
         raise ValueError(f"The {before} {benchmark} baseline has no complete answer run of its own; answer it with "
                          "run first, which records the baseline")
@@ -1457,6 +1483,8 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     with _run_lock(root, f"the {before} and {after} {benchmark} pairs"), _registered_judge(registration, benchmark):
         # Checked before a pair is opened, so a failed check leaves no pair on record.
         settings, calibration = _ollama_answer_model(model, data)
+        if sample is None:
+            _check_aa_ready(data, results, model, benchmark, before, after, settings, loaded["after"][1])
         folder, record = _open_pair(root, log, arms, benchmark, prepared_sha256, settings)
         number = record["number"]
         run_name = f"{before} and {after} {benchmark} pair {number}" + (
@@ -1468,10 +1496,12 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
         for side in PAIR_SIDES:
             (folder / side).mkdir(exist_ok=True)
         bound = {side: _bind_answer_model(folder / side, settings) for side in PAIR_SIDES}
+        # The pair id binds the run log to the pair's results: a variant's pair for compare (#130), and an A/A pair
+        # for the A/A record (#137).
         _append_event(log, {"event": "started", "pair": number, "sample": sample,
                             "answer_model_sha256": {side: sha(value) for side, value in bound.items()},
                             "server_version": _version_of(settings), "failure_policy": _policy_of(settings),
-                            **({} if identity is None else {"id": record["id"], **identity})})
+                            "id": record["id"], **({} if identity is None else identity)})
         sides = []
         for side in _ANSWER_ORDER:
             prepared_folder, _, entries = loaded[side]
@@ -1539,9 +1569,18 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
                                "answer, or starts the next pair if a final failure means this one can never finish. "
                                "No partial score is reported.")
         suffix = "" if sample is None else f"-sample-{sample}"
+        published = {side: results / started[:10] / f"{model.track}-{before}-vs-{after}-{benchmark}-pair-{number}-"
+                                                    f"{side}{suffix}-result.json" for side in PAIR_SIDES}
         for side, result in outcome.items():
-            _publish(results / started[:10] / f"{model.track}-{before}-vs-{after}-{benchmark}-pair-{number}-{side}"
-                                              f"{suffix}-result.json", result)
+            _publish(published[side], result)
+        if before == after and sample is None:
+            # An A/A pair: compare reads the A/A record for every variant's pair (#137).
+            try:
+                record_aa_check(published["before"], published["after"], data=data, results=results)
+            except (OSError, ValueError) as exc:
+                raise RuntimeError(f"{run_name} is complete and published, but it was not added to the A/A record: "
+                                   f"{exc} Once that is resolved, add it with record-aa-check --before "
+                                   f"{published['before']} --after {published['after']} (#137).") from None
     return {"pair": mark, **outcome}
 
 
@@ -1965,6 +2004,344 @@ def _variant_warnings(variant: dict) -> list[str]:
     return warnings
 
 
+# A/A checks (#137) ----------------------------------------------------------------
+
+def _aa_record_path(results: Path, model: str) -> Path:
+    """The A/A record under ``results`` of the Ollama model named ``model``: one line per complete A/A pair.
+
+    Each benchmark's lines are in the order its pairs finished. The record is
+    tracked, so it is committed with the A/A pairs' published results.
+    """
+    return results / f"{ollama_answers.AnswerModel(model=model).track}-aa-checks.jsonl"
+
+
+def _aa_named(baseline: str, number: int, benchmark: str | None = None) -> str:
+    return f"A/A pair {number} of {baseline}" + ("" if benchmark is None else f" on {benchmark}")
+
+
+def _pair_conditions(before: dict, after: dict) -> dict:
+    """What a pair's two sides were answered under, as the A/A record keeps it and compare matches it (#137).
+
+    ``run_pair`` binds both sides of a pair to one answer model, and
+    ``compare`` refuses a pair whose sides differ, so the after side's values
+    stand for both. A result that names no tokenizer was packed with the
+    registered one (#125).
+    """
+    return {"answer_model": after["answer_model"],
+            "server_versions": _sorted_versions([*_recorded_versions(before), *_recorded_versions(after)]),
+            "failure_policy": {"id": _policy_of(after["answer_model"]),
+                               "sha256": (after.get("failure_policy") or {}).get("sha256")},
+            "context_budget": after.get("context_budget"),
+            "tokenizer": (after.get("prepared") or {}).get("tokenizer") or RULE_TOKENIZER}
+
+
+def _condition_differences(recorded: dict, current: dict) -> list[str]:
+    """Which of ``AA_CONDITIONS`` differ between two sets of pair conditions (``_pair_conditions``); none when equal.
+
+    The model identity is compared as ``ollama_answers.same_model`` compares
+    it, and the answer settings are every other field of the answer model but
+    its failure policy, which is compared with the amendment it names.
+    """
+    def settings(conditions: dict) -> dict:
+        return {key: value for key, value in conditions["answer_model"].items()
+                if key not in ("identity", "failure_policy")}
+
+    differs = {
+        "model identity": not ollama_answers.same_model({"identity": recorded["answer_model"].get("identity")},
+                                                        {"identity": current["answer_model"].get("identity")}),
+        "answer settings": settings(recorded) != settings(current),
+        "failure policy": recorded["failure_policy"] != current["failure_policy"],
+        "Ollama server version": recorded["server_versions"] != current["server_versions"],
+        "context budget": [recorded["context_budget"], recorded["tokenizer"]]
+                          != [current["context_budget"], current["tokenizer"]],
+    }
+    return [name for name in AA_CONDITIONS if differs[name]]
+
+
+def _complete_aa_pairs(data: Path, benchmark: str) -> dict[tuple[str, int], dict]:
+    """Every A/A pair the track's run logs record as complete, valid or not, by baseline and number (``_pair_states``)."""
+    return {(before, number): state for (before, arm), numbered in _pairs_on_record(data, "prme*", benchmark).items()
+            if before == arm and is_baseline(arm) for number, state in numbered.items()
+            if state["state"].startswith("complete")}
+
+
+def _finished(state: dict, named: str) -> datetime:
+    """When a pair or a record line says the pair finished, which must name its time zone."""
+    return _recorded_time(state.get("finished_at"), f"Nothing records when {named} finished, with a time zone (#137)")
+
+
+def _published_aa_pair(before: Path, after: Path, results: Path) -> tuple[dict[str, dict], dict, dict[str, dict]]:
+    """Both sides of one published A/A pair, its pair mark, and where each side is published under ``results``."""
+    sides = {side: json.loads(path.read_text()) for side, path in zip(PAIR_SIDES, (before, after))}
+    for side, result in sides.items():
+        if result.get("kind") != "ollama-answer-result" or not result.get("complete"):
+            raise ValueError(f"The {side} result is not a complete answer run on the Ollama track (#137)")
+    pair = _pair_of(sides["before"], sides["after"])
+    if pair is None or pair["after"] != pair["before"]:
+        raise ValueError("An A/A check is the two sides of one pair of a baseline of the defaults with itself "
+                         "(run-pair prme --baseline <baseline>) (#137)")
+    benchmark = sides["before"].get("benchmark")
+    if benchmark not in gate.GATE_BENCHMARKS or sides["after"].get("benchmark") != benchmark:
+        raise ValueError(f"The results name an unknown benchmark, {benchmark!r}")
+    paths = {}
+    for side, path in zip(PAIR_SIDES, (before, after)):
+        try:
+            paths[side] = {"path": str(path.resolve().relative_to(results.resolve())), "sha256": digest(path)}
+        except ValueError:
+            raise ValueError(f"The {side} result is not published under {results}. Copy the pair's published "
+                             "results into this checkout's results, where they are committed with the record "
+                             "(#137).") from None
+    return sides, pair, paths
+
+
+def record_aa_check(before: Path, after: Path, *, data: Path | None = None, results: Path | None = None) -> dict:
+    """Add a published A/A pair to the track's A/A record, which compare reads for every variant's pair (#137).
+
+    ``before`` and ``after`` are the two sides of one A/A pair (a baseline of
+    the defaults answered against itself by ``run_pair``), published under
+    ``results``. The track's run logs under ``data`` must record the pair as
+    complete, with the same pair id when its start recorded one. The record
+    must already list every complete A/A pair on the benchmark that finished
+    before this one, and none that finished after it, so it keeps them in the
+    order they finished and ``first`` is decided against all of them.
+    ``first`` marks the first accepted A/A pair on the benchmark under its
+    conditions (``_pair_conditions``): the A/A check the default-change rule
+    reads for them, which a later pair never replaces. The pair is accepted
+    when ``compare`` accepts it as a repeat, which gives its interval; a pair
+    its run log records complete but invalid (#132) is recorded as refused.
+    Any other refusal by ``compare`` records nothing and is raised, so a
+    passing problem elsewhere never turns into a permanent refusal.
+    ``run_pair`` records every A/A pair it publishes; this also records one
+    published before the record existed, or one ``run_pair`` could not.
+    Returns the line it appended.
+    """
+    results = results or RESULTS
+    sides, pair, paths = _published_aa_pair(before, after, results)
+    benchmark, baseline, number = sides["before"]["benchmark"], pair["before"], pair["number"]
+    named = _aa_named(baseline, number, benchmark)
+    data = _track_data(sides["before"], data)
+    conditions = _pair_conditions(sides["before"], sides["after"])
+    record = _aa_record_path(results, sides["before"]["model"])
+    record.parent.mkdir(parents=True, exist_ok=True)
+    # The record's own file is locked, rather than a lock file next to it, so nothing untracked is left beside it.
+    with record.open("a+") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        # Read under the lock, so a pair recorded at the same moment on this benchmark is seen.
+        on_record = _complete_aa_pairs(data, benchmark)
+        state = on_record.pop((baseline, number), None)
+        if state is None:
+            raise ValueError(f"{named} is not on record as complete in the track's run logs. Record an A/A pair on "
+                             "the machine that answered it (#137).")
+        if state["id"] is not None and state["id"] != pair["id"]:
+            raise ValueError(f"{named} on record has another pair id than these results (#137)")
+        finished = _finished(state, named)
+        handle.seek(0)
+        listed = [entry for entry in map(json.loads, handle.read().splitlines()) if entry.get("benchmark") == benchmark]
+        if any(entry["pair"]["id"] == pair["id"] or (entry["baseline"], entry["pair"]["number"]) == (baseline, number)
+               for entry in listed):
+            raise ValueError(f"{named} is already in the A/A record ({record.name}) (#137)")
+        later = [entry for entry in listed if _finish_time(entry) > finished]
+        if later:
+            raise ValueError(f"{named} finished before {_aa_named(later[0]['baseline'], later[0]['pair']['number'])}, "
+                             f"which the A/A record ({record.name}) already lists; it keeps the A/A pairs of a "
+                             "benchmark in the order they finished (#137)")
+        _check_aa_record(record, benchmark, listed, {key: value for key, value in on_record.items()
+                                                     if _finished(value, _aa_named(*key)) <= finished})
+        try:
+            comparison = compare(sides["before"], sides["after"], data=data, results=results)
+        except ValueError as exc:
+            if state["state"] == "complete":
+                raise ValueError(f"compare refuses {named}, which its run log records complete, so nothing was "
+                                 f"recorded: {exc}") from None
+            comparison = None
+        if comparison is not None and comparison["repeat"] is None:
+            raise ValueError(f"compare does not show the two sides of {named} as a repeat of the defaults, so nothing "
+                             "was recorded (#137)")
+        accepted = comparison is not None and state["state"] == "complete"
+        accuracy = comparison["accuracy"] if accepted else {}
+        entry = {
+            "kind": "ollama-aa-check", "benchmark": benchmark, "baseline": baseline,
+            "pair": {key: pair[key] for key in ("id", "number", "sha256")}, "finished_at": state["finished_at"],
+            "recorded_at": study.utc(), "results": paths, "conditions": conditions, "accepted": accepted,
+            # Only the run log's own reason is kept: compare's messages can name local paths.
+            "refused": None if accepted else f"its run log records it {state['state']}",
+            "first": accepted and not any(earlier["accepted"]
+                                          and not _condition_differences(earlier["conditions"], conditions)
+                                          for earlier in listed),
+            "questions": len(sides["before"]["rows"]),
+            "correct": {side: result.get("correct") for side, result in sides.items()},
+            "difference": accuracy.get("delta"), "interval_95": accuracy.get("interval_95"),
+            **{key: accuracy[key] for key in ("interval_95_conversations", "interval_95_questions") if key in accuracy},
+            "interval_excludes_zero": comparison["repeat"]["interval_excludes_zero"] if accepted else None,
+            "changed_verdicts": comparison["repeat"]["changed_verdicts"] if accepted else None,
+            "warnings": comparison["warnings"] if accepted else [],
+        }
+        handle.write(json.dumps(entry, sort_keys=True, allow_nan=False) + "\n")
+    return entry
+
+
+def _finish_time(entry: dict) -> datetime:
+    return _finished(entry, _aa_named(entry["baseline"], entry["pair"]["number"]))
+
+
+def _aa_lines(path: Path, benchmark: str) -> list[dict]:
+    return [entry for entry in _run_events(path) if entry.get("benchmark") == benchmark]
+
+
+def _check_aa_record(path: Path, benchmark: str, listed: list[dict], on_record: dict[tuple[str, int], dict]) -> None:
+    """The A/A record must list exactly the A/A pairs ``on_record`` shows complete on the benchmark, in finish order.
+
+    ``on_record`` is ``_complete_aa_pairs`` for the benchmark, from the track's
+    run logs. So no A/A pair can be left out of the record, redrawn out of
+    sight, or taken from another machine's run logs (#137).
+    """
+    keys = [(entry["baseline"], entry["pair"]["number"]) for entry in listed]
+    for key, state in on_record.items():
+        if key not in keys:
+            raise ValueError(f"{_aa_named(*key, benchmark)} is on record in the track's run logs as {state['state']}, "
+                             f"but the A/A record ({path.name}) does not list it. run-pair adds every A/A pair it "
+                             "publishes: add one it could not, or one published before the record existed, with "
+                             "record-aa-check, or use a checkout whose A/A record lists it (#137).")
+    for key, count in Counter(keys).items():
+        if count > 1:
+            raise ValueError(f"The A/A record ({path.name}) lists {_aa_named(*key, benchmark)} {count} times (#137)")
+    for entry, key in zip(listed, keys):
+        state = on_record.get(key)
+        if (state is None or entry["finished_at"] != state["finished_at"]
+                or (state["id"] is not None and state["id"] != entry["pair"]["id"])):
+            raise ValueError(f"The A/A record ({path.name}) lists {_aa_named(*key, benchmark)}, which the track's run "
+                             "logs do not show complete with that pair id and finish time. Use the machine that "
+                             "answered the pairs, whose run logs record them (#137).")
+    times = list(map(_finish_time, listed))
+    if times != sorted(times):
+        raise ValueError(f"The A/A record ({path.name}) does not list the A/A pairs on {benchmark} in the order they "
+                         "finished (#137)")
+
+
+def _check_aa_results(results: Path, entry: dict) -> None:
+    """A record line must name the pair's published results with their digests, and the conditions they record.
+
+    So an edited line cannot move an A/A check to conditions it was not
+    answered under, or hide a pair under others (#137).
+    """
+    named = _aa_named(entry["baseline"], entry["pair"]["number"], entry["benchmark"])
+    sides = {}
+    for side in PAIR_SIDES:
+        found = entry["results"][side]
+        path = (results / found["path"]).resolve()
+        if not path.is_relative_to(results.resolve()) or not path.is_file() or digest(path) != found["sha256"]:
+            raise ValueError(f"The A/A record names {found['path']} as the {side} result of {named}, which is not "
+                             "published in this checkout with the recorded digest (#137)")
+        sides[side] = json.loads(path.read_text())
+    if (any((result.get("pair") or {}).get("id") != entry["pair"]["id"] for result in sides.values())
+            or _pair_conditions(sides["before"], sides["after"]) != entry["conditions"]):
+        raise ValueError(f"The A/A record's line for {named} does not match the pair and conditions its published "
+                         "results record (#137)")
+
+
+def _aa_listed(entry: dict) -> dict:
+    return {"baseline": entry["baseline"], "number": entry["pair"]["number"], "pair_id": entry["pair"]["id"],
+            **{key: entry[key] for key in ("finished_at", "accepted", "refused", "difference", "interval_95",
+                                           "interval_excludes_zero", "changed_verdicts", "results")}}
+
+
+def _aa_coverage(data: Path, results: Path, model: str, conditions: dict) -> dict:
+    """The A/A check that covers ``conditions`` on each benchmark, or a refusal when one does not (#137).
+
+    The default-change rule in CLAUDE.md relies on a variant's pair only under
+    the conditions of a recorded A/A check (``AA_CONDITIONS``) on both
+    benchmarks, so after an Ollama update a new A/A pair is needed on both
+    before any further variant pair counts. On each benchmark the check is the
+    first A/A pair under those conditions that completed and that compare
+    accepted; ``other_pairs`` lists every other A/A pair under them, in the
+    order they finished. The A/A record under ``results`` must list exactly
+    the A/A pairs the track's run logs under ``data`` show complete
+    (``_check_aa_record``), and each line must match its published results
+    (``_check_aa_results``).
+    """
+    path = _aa_record_path(results, model)
+    checks = {}
+    for benchmark in gate.GATE_BENCHMARKS:
+        on_record = _complete_aa_pairs(data, benchmark)
+        listed = _aa_lines(path, benchmark)
+        _check_aa_record(path, benchmark, listed, on_record)
+        for entry in listed:
+            _check_aa_results(results, entry)
+        covering = [entry for entry in listed if not _condition_differences(entry["conditions"], conditions)]
+        accepted = [entry for entry in covering if entry["accepted"]
+                    and on_record[(entry["baseline"], entry["pair"]["number"])]["state"] == "complete"]
+        if not accepted:
+            found = []
+            for entry in listed:
+                differs = _condition_differences(entry["conditions"], conditions)
+                why = f"differs in {', '.join(differs)}" if differs else "refused"
+                found.append(f"{_aa_named(entry['baseline'], entry['pair']['number'])} ({why})")
+            raise ValueError(f"No A/A check on {benchmark} was answered under the conditions of this pair (model "
+                             "identity, answer settings, failure policy, Ollama server version "
+                             f"{', '.join(map(str, conditions['server_versions']))} and context budget), so the "
+                             f"default-change rule cannot rely on it. A/A pairs recorded on {benchmark}: "
+                             f"{'; '.join(found) or 'none'}. Answer an A/A pair under these conditions on both "
+                             "benchmarks first (run-pair prme --baseline <current baseline>) (#137).")
+        check = accepted[0]
+        if [entry for entry in covering if entry["first"]] != [check]:
+            raise ValueError(f"The A/A record ({path.name}) must mark "
+                             f"{_aa_named(check['baseline'], check['pair']['number'], benchmark)}, the first A/A pair "
+                             "under its conditions that compare accepted, and no other, as the first A/A check under "
+                             "them (#137)")
+        checks[benchmark] = {"check": _aa_listed(check),
+                             "other_pairs": [_aa_listed(entry) for entry in covering if entry is not check]}
+    return {"conditions": {"manifest_digest_sha256": (conditions["answer_model"].get("identity") or {}).get(
+                               "manifest_digest_sha256"),
+                           **{key: conditions[key] for key in ("server_versions", "failure_policy", "context_budget",
+                                                               "tokenizer")}},
+            "record": {"path": path.name, "sha256": digest(path)}, "checks": checks}
+
+
+def _aa_warnings(coverage: dict) -> list[str]:
+    """What compare warns about in ``_aa_coverage``: other A/A pairs under the same conditions, and any that exclude
+    zero, which brings in the default-change rule's extra margin."""
+    warnings = []
+    for benchmark, found in coverage["checks"].items():
+        check = found["check"]
+        if found["other_pairs"]:
+            warnings.append(f"Other A/A pairs on {benchmark} were answered under the conditions of this pair: "
+                            + ", ".join(f"{_aa_named(entry['baseline'], entry['number'])} ("
+                                        + ("accepted" if entry["accepted"] else "refused") + ")"
+                                        for entry in found["other_pairs"])
+                            + f". The A/A check is the first that compare accepted, "
+                              f"{_aa_named(check['baseline'], check['number'])}, and a later pair never replaces it "
+                              "(#137)")
+        excluding = [_aa_named(entry["baseline"], entry["number"]) for entry in (check, *found["other_pairs"])
+                     if entry["interval_excludes_zero"]]
+        if excluding:
+            warnings.append(f"On {benchmark}, {', '.join(excluding)} under the conditions of this pair "
+                            f"{'excludes' if len(excluding) == 1 else 'exclude'} zero, so under the default-change "
+                            "rule in CLAUDE.md a variant's gain there must also be larger than the largest absolute "
+                            "A/A difference measured so far on that benchmark, the #118 repeat included (#137)")
+    return warnings
+
+
+def _check_aa_ready(data: Path, results: Path, model: ollama_answers.AnswerModel, benchmark: str, before: str,
+                    after: str, settings: dict, prepared: dict) -> None:
+    """Refuse to start a pair whose results the A/A record could not take or cover (#137).
+
+    An A/A pair is added to the record once published, so the record must
+    already list every complete A/A pair on its benchmark. A variant's pair
+    needs a recorded A/A check under the model, settings, failure policy,
+    Ollama server version and budget it is about to be answered under, on both
+    benchmarks: compare would refuse it otherwise, and it would still count
+    as the variant's first pair or confirmation (#130).
+    """
+    if before == after:
+        record = _aa_record_path(results, model.model)
+        _check_aa_record(record, benchmark, _aa_lines(record, benchmark), _complete_aa_pairs(data, benchmark))
+    elif is_variant(after):
+        now = {"answer_model": settings, "server_versions": [_version_of(settings)],
+               "failure_policy": {"sha256": failure_amendment()["sha256"]} if _policy_of(settings) else None,
+               "context_budget": prepared["context_budget"], "prepared": {"tokenizer": prepared.get("tokenizer")}}
+        _aa_coverage(data, results, model.model, _pair_conditions(now, now))
+
+
 def _prepared_summary(prepared: dict) -> dict:
     """What built the contexts: the commit, whether the tree was clean, and the settings a variant changed."""
     provenance = prepared.get("provenance") or {}
@@ -2121,7 +2498,8 @@ def _paired(pairs: list[tuple[str | None, float, float]], *, samples: int, clust
             "interval_95_conversations": conversations, "interval_95_questions": questions}
 
 
-def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None = None) -> dict:
+def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None = None,
+            results: Path | None = None) -> dict:
     """Pair two complete answer results on the same questions, answered by the same reader and judge.
 
     ``before`` is the baseline. On the Ollama track the two results must be the
@@ -2137,7 +2515,12 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     current. A variant's pair must be its first pair or its confirmation,
     on record as complete in the same run logs, and ``variant`` lists every
     arm and pair of the variant (``_variant_record``, #130), with warnings for
-    pairs that could hide a result (``_variant_warnings``). Every Ollama
+    pairs that could hide a result (``_variant_warnings``). A variant's pair
+    must also have been answered under the model identity, answer settings,
+    failure policy, Ollama server version and context budget of an A/A check
+    in the track's A/A record under ``results`` (by default this checkout's),
+    on both benchmarks, and ``aa_check`` names that check and every other A/A
+    pair under those conditions (``_aa_coverage``, #137). Every Ollama
     server version the two results recorded
     must be the same; a pair must record one at every start, and a repeat that
     did not gets a warning. The difference's 95% interval resamples LoCoMo's
@@ -2232,13 +2615,15 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     # A repeat measures two runs of the defaults, so it may pair an earlier baseline with a later one.
     if recorded is not None and not repeat:
         _check_current_baseline(before["arm"], before["benchmark"], recorded, prepared["before"].get("commit"))
-    variant = None
+    variant = aa_check = None
     if recorded is not None and pair is not None and is_variant(after["arm"]):
-        variant = _variant_record(_track_data(before, data), before["benchmark"], pair)
+        track = _track_data(before, data)
+        variant = _variant_record(track, before["benchmark"], pair)
+        aa_check = _aa_coverage(track, results or RESULTS, before["model"], _pair_conditions(before, after))
     warnings = [f"The {side} contexts were prepared from a tree with uncommitted changes"
                 for side, value in prepared.items() if value.get("dirty")]
     if variant is not None:
-        warnings += _variant_warnings(variant)
+        warnings += _variant_warnings(variant) + _aa_warnings(aa_check)
     if contexts["differing"] is None:
         warnings.append("Nothing shows which questions the two sides asked on different context text: a result was "
                         "published before rows carried text hashes (#125)")
@@ -2287,6 +2672,17 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
                     "started before this one finished and never completed, other than for a final failure; related "
                     "lists the other variants that change any of the same settings, each with its own first pair and "
                     "confirmation; unknown lists the variant pairs that record neither settings nor contexts (#130)."},
+        "aa_check": None if aa_check is None else {
+            **aa_check,
+            "note": "The A/A check this pair relies on, on each benchmark: the first A/A pair in the track's A/A "
+                    "record that was answered under the same model identity, answer settings, failure policy, Ollama "
+                    "server version and context budget as this pair and that compare accepted. The default-change "
+                    "rule in CLAUDE.md reads a variant's pair only under the conditions of an A/A check on both "
+                    "benchmarks, so compare refuses any other, and a later A/A pair never replaces the check. "
+                    "other_pairs lists every other A/A pair recorded under these conditions, accepted or refused, in "
+                    "the order they finished. If any A/A pair under them excludes zero, a variant's gain on that "
+                    "benchmark must also be larger than the largest absolute A/A difference measured so far there "
+                    "(#137)."},
         "server_versions": _sorted_versions(versions),
         # Each side's retries and unscored questions under the amended policy; None under the registered one.
         "failure_policy": None if outcomes is None else {
@@ -2569,20 +2965,24 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
         parser.error("calibrate is for the ollama provider; the GPT-5.4 track reuses the saved calibration")
     if command == "run-pair" and model is None:
         parser.error("run-pair is for the ollama provider; the GPT-5.4 track has no defaults arm to pair with")
-    if command in {"calibrate", "compare"}:
+    # Commands that read or record results rather than answering an arm.
+    reading = {"calibrate", "compare", "record-aa-check"}
+    if command in reading:
         given = [flag for flag, value in (("arm", args.arm), ("--benchmark", args.benchmark),
                                           ("--set", args.overrides), ("--variant", args.variant),
                                           ("--max-usd", args.max_usd), ("--sample", args.sample),
                                           ("--archive", args.archive), ("--baseline", args.baseline)) if value]
         if given:
             parser.error(f"{command} takes none of: {', '.join(given)}")
-    if (command == "compare") != (args.before is not None and args.after is not None) or (
-            command != "compare" and (args.before or args.after)):
-        parser.error("compare takes --before and --after, the result files to pair; nothing else does")
+    paired = command in {"compare", "record-aa-check"}
+    if paired != (args.before is not None and args.after is not None) or (
+            not paired and (args.before or args.after)):
+        parser.error("compare takes --before and --after, the result files to pair, and record-aa-check the two "
+                     "sides of a published A/A pair; nothing else does")
     if (command == "run-pair") != (args.baseline is not None):
         parser.error("run-pair takes --baseline, the current baseline of the defaults to answer alongside the arm; "
                      "nothing else does")
-    if command in {"calibrate", "compare"}:
+    if command in reading:
         return "", "", {}
     if args.arm is None:
         parser.error(f"{command} needs an arm")
@@ -2625,9 +3025,10 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m benchmarks.integrations.gpt54_baselines",
                                      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["prepare", "estimate", "calibrate", "run", "run-pair", "compare"])
+    parser.add_argument("command", choices=["prepare", "estimate", "calibrate", "run", "run-pair", "compare",
+                                            "record-aa-check"])
     parser.add_argument("arm", nargs="?", choices=list(ARMS),
-                        help="Every command but calibrate and compare needs an arm")
+                        help="Every command but calibrate, compare and record-aa-check needs an arm")
     parser.add_argument("--benchmark", choices=gate.GATE_BENCHMARKS,
                         help="Required for plain and prme arms; full-context covers LoCoMo only")
     parser.add_argument("--provider", choices=["openai", "ollama"], default="openai",
@@ -2652,10 +3053,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--sample", type=int, metavar="N",
                         help="run and run-pair on the ollama provider only: a smoke check of the first N questions "
                              "of each category")
-    parser.add_argument("--before", type=Path, help="compare only: the defaults side's result file")
+    parser.add_argument("--before", type=Path,
+                        help="compare and record-aa-check only: the defaults side's result file")
     parser.add_argument("--after", type=Path,
-                        help="compare only: the other side's result file from the same pair, or a later "
-                             "baseline's for a repeat")
+                        help="compare and record-aa-check only: the other side's result file from the same pair, "
+                             "or a later baseline's for a repeat. record-aa-check adds a published A/A pair to the "
+                             "track's A/A record (#137).")
     args = parser.parse_args(argv)
     model = ollama_answers.AnswerModel() if args.provider == "ollama" else None
     arm, benchmark, overrides = _check_args(parser, args, model)
@@ -2668,6 +3071,12 @@ def main(argv: list[str] | None = None) -> None:
         except (OSError, ValueError) as exc:
             parser.error(str(exc))
         print(json.dumps(result, indent=2))
+    elif args.command == "record-aa-check":
+        try:
+            entry = record_aa_check(args.before, args.after)
+        except (OSError, ValueError) as exc:
+            parser.error(str(exc))
+        print(json.dumps(entry, indent=2))
     elif args.command == "prepare":
         provenance = _provenance()
         if provenance["dirty"]:

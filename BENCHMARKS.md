@@ -289,6 +289,9 @@ Before running it:
   `calibrate` uses both benchmarks' prompts, so it needs them even for a LoCoMo
   run.
 - For `prepare prme`, a current `origin/main` (run `git fetch` first).
+- Where possible, turn off the Ollama app's automatic updates while variant
+  pairs are in progress. A new server version needs a new A/A pair on both
+  benchmarks before any further variant pair counts (#137, below).
 
 What the track sends and records:
 
@@ -387,6 +390,37 @@ Safeguards:
   `ollama-deepseek-v4.1-flash-cloud-<baseline>-vs-<arm>-<benchmark>-pair-<N>-<side>-result.json`,
   and carries a `pair` block that `compare` checks. Its `run_log` summarizes
   the pair's run log and the run log of the arm whose contexts it read.
+- Every A/A pair `run-pair` publishes is added to the track's A/A record,
+  `benchmarks/results/research/ollama-deepseek-v4.1-flash-cloud-aa-checks.jsonl`,
+  one line per pair in the order they finished (#137). Each line records the
+  conditions the pair was answered under (the answer model with its identity
+  and settings, the Ollama server versions, the failure policy and its
+  amendment, and the context budget and tokenizer), the paths and digests of
+  its published results, whether `compare` accepted it and its interval, and
+  whether it is the first accepted A/A pair on its benchmark under those
+  conditions (`first`), which is the A/A check the default-change rule reads
+  for them. Every start of a pair records its id, which ties the record to
+  the pair's run log. A pair whose run log records it complete but invalid
+  (#132) is recorded as refused; any other refusal by `compare` records
+  nothing and is reported. `run-pair` starts an A/A pair only when the record
+  already lists every complete A/A pair on its benchmark, and a variant's
+  pair only when the record holds an A/A check under the current model
+  identity, answer settings, failure policy, Ollama server version and
+  budget on both benchmarks, since `compare` would refuse the pair otherwise
+  and it would still count as the variant's first pair or confirmation.
+  `record-aa-check` adds an A/A pair published before the record existed, or
+  one `run-pair` published but could not add (it then says why and prints the
+  command). It refuses a pair the run logs do not show complete or record
+  under another pair id, one already recorded, one whose results are not
+  published under this checkout's `benchmarks/results/research/`, one that
+  finished before a pair the record already lists on its benchmark, and any
+  pair while the record leaves out a complete A/A pair that finished before
+  it. The record belongs to the checkout, while the run logs are shared by
+  every worktree, so answer A/A pairs from the checkout that keeps the
+  record, or copy a pair's published results into it before recording the
+  pair. Commit each new line with the pair's published results: the record
+  is tracked, so until then the tree is not clean and `prepare` refuses to
+  run. The two A/A pairs of 2026-09-24 were added with `record-aa-check`.
 - The `prme` arm prepares the shipped defaults, so `prepare` refuses it unless
   the checked-out commit is on `main`. A variant can be prepared from a branch.
 - Each commit has at most one defaults baseline. The first is the `prme` arm.
@@ -480,6 +514,9 @@ uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchma
 # No model calls: the paired difference and its 95% interval.
 uv run python -m benchmarks.integrations.gpt54_baselines compare \
   --before <pair's before result> --after <same pair's after result>
+# No model calls: add an A/A pair published before the A/A record existed (run-pair adds the others).
+uv run python -m benchmarks.integrations.gpt54_baselines record-aa-check \
+  --before <A/A pair's before result> --after <same pair's after result>
 # A repeat: an earlier baseline and a later one that read the same contexts.
 uv run python -m benchmarks.integrations.gpt54_baselines compare \
   --before <earlier baseline result> --after <later baseline result>
@@ -535,7 +572,22 @@ budget, so `run-pair` and `compare` refuse the defaults or a variant prepared
 with any context budget other than 3,996 tokens, counted by the registered
 `cl100k_base` tokenizer; the plain and full-context reference arms are paired
 with the defaults at any budget (#125). A variant that changes the budget can still be prepared, so the
-evidence gate can measure it. Each row published since #125 carries two
+evidence gate can measure it. A variant's pair must also have been answered
+under the model identity, answer settings, failure policy, Ollama server
+version and context budget of an A/A check in the track's A/A record, on both
+benchmarks, so after an Ollama update `compare` refuses every variant pair
+answered under the new version until an A/A pair under it has been answered
+and accepted on both (#137). The A/A check is the first A/A pair under those
+conditions that completed and that `compare` accepted; a later one never
+replaces it. `compare` reads the A/A record in the checkout it runs from and
+checks it against the track's run logs and the published results: the record
+must list every A/A pair the run logs show complete, and nothing else, and
+each line must name its pair's published results with their digests and the
+conditions they record. Its `aa_check` block names the
+check on each benchmark and lists every other A/A pair under the same
+conditions (`other_pairs`), with a warning when there are any, and another
+when any of them excludes zero, since the rule's extra margin then applies.
+The plain and full-context reference arms need no A/A check. Each row published since #125 carries two
 hashes: `context_sha256` covers the whole capture file, including the retrieval
 receipt's random request id, so two preparations of the same contexts never
 share one, and `context_text_sha256` covers the context text alone.
@@ -713,8 +765,9 @@ Both intervals include zero, so the default-change rule in `CLAUDE.md` allows
 the revised test without the extra margin, for model identity `e04da138`,
 Ollama server version 0.34.3, the current answer settings and the amended
 failure policy. It does not carry over to anything else: when any of these
-changes, answer a new A/A pair before relying on a variant pair (the Ollama app
-updates itself, so check the `server_versions` of every variant pair). No
+changes, a new A/A pair is needed on both benchmarks before a variant pair
+counts. Both pairs are in the A/A record, and `compare` refuses a variant pair
+answered under any other conditions (#137). No
 category's interval excludes zero on either benchmark.
 
 All 8,160 reader and judge calls of the two pairs returned HTTP 200 on their

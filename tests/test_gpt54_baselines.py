@@ -57,6 +57,8 @@ def private_data(tmp_path, monkeypatch):
     """No test reads or writes the main checkout's private contexts, answers or run logs."""
     monkeypatch.setattr(baselines, "DATA", tmp_path / "gpt54-baselines")
     monkeypatch.setattr(baselines, "OLLAMA_DATA", tmp_path / "ollama-answers")
+    # compare and record_aa_check read and write the A/A record here, where the harness publishes (#137).
+    monkeypatch.setattr(baselines, "RESULTS", tmp_path / "results")
 
 
 @pytest.fixture
@@ -561,11 +563,15 @@ def run_pair(harness, before="prme", after="prme", benchmark="locomo", **kwargs)
                               results=harness["results"], **kwargs)
 
 
+def published_paths(harness, before="prme", after="prme", benchmark="locomo", number=1, suffix="") -> list[Path]:
+    """Both sides' published result files of one pair, before side first; empty when nothing was published."""
+    return [path for side in baselines.PAIR_SIDES for path in harness["results"].glob(
+        f"*/{OLLAMA_MODEL.track}-{before}-vs-{after}-{benchmark}-pair-{number}-{side}{suffix}-result.json")]
+
+
 def pair_published(harness, before="prme", after="prme", benchmark="locomo", number=1, suffix=""):
     """Both sides' published results of one pair, before side first; empty when nothing was published."""
-    found = [list(harness["results"].glob(f"*/{OLLAMA_MODEL.track}-{before}-vs-{after}-{benchmark}-pair-{number}-"
-                                          f"{side}{suffix}-result.json")) for side in baselines.PAIR_SIDES]
-    return [json.loads(path.read_text()) for paths in found for path in paths]
+    return [json.loads(path.read_text()) for path in published_paths(harness, before, after, benchmark, number, suffix)]
 
 
 def use_longmemeval(harness, rows):
@@ -907,6 +913,8 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
                                          r"the 4K budget \(3,996 cl100k_base tokens\)"):
         await run_pair(harness, "prme", "prme-small")
     assert requests == [] and not (harness["data"] / "pairs" / "prme" / "prme-small").exists()
+    # A variant's pair is answered only under a recorded A/A check (#137).
+    harness_aa_checked(harness)
     paired = await run_pair(harness, "prme", "prme-rrf")
     before, after = paired["before"], paired["after"]
     # The first request is the variant's reader, on the variant's own context.
@@ -1488,6 +1496,66 @@ def logged_pair(before: str = "prme", after: str = "prme-rrf", *, settings: dict
         baselines._append_event(log, {"event": "abandoned", "pair": 1, "reason": abandoned})
 
 
+AA_FINISHED = "2026-09-24T09:00:00+00:00"
+LATER_AA = "2026-09-24T10:00:00+00:00"
+
+
+def aa_published(like: dict, benchmark: str, *, baseline: str = "prme@00aa00aa", number: int = 1,
+                 excludes_zero: bool = False, **changes) -> list[Path]:
+    """Both sides of an A/A pair of ``baseline`` under the conditions of the result ``like``, published under
+    ``RESULTS`` as run-pair publishes them, before side first.
+
+    Both sides give ``like``'s verdicts, or with ``excludes_zero`` the after side gets every question right and
+    the before side none. ``changes`` replace fields of both sides.
+    """
+    mark = {"id": f"aa-{baseline}-{benchmark}-{number}", "number": number, "before": baseline, "after": baseline,
+            "sha256": "s"}
+    paths = []
+    for side in baselines.PAIR_SIDES:
+        rows = [{**row, "reader_sha256": f"{side}-{index}",
+                 "correct": side == "after" if excludes_zero else row["correct"],
+                 **({"outcome": "judged", "reader_retry_sha256": None, "judge_retry_sha256": None,
+                     "verdict_normalized": False} if "outcome" in row else {})}
+                for index, row in enumerate(like["rows"])]
+        result = {**like, "arm": baseline, "benchmark": benchmark, "prepared_sha256": "p" * 64, "rows": rows,
+                  "pair": {**mark, "side": side}, **changes}
+        path = (baselines.RESULTS / "2026-09-24" / f"{OLLAMA_MODEL.track}-{baseline}-vs-{baseline}-{benchmark}-"
+                                                   f"pair-{number}-{side}-result.json")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result))
+        paths.append(path)
+    return paths
+
+
+def aa_logged(data: Path, benchmark: str, *, baseline: str = "prme@00aa00aa", number: int = 1,
+              finished: str = AA_FINISHED, pair_id: str | None = None, **fields) -> None:
+    """The A/A pair's start and complete finish in the track's pair run log; ``fields`` join the finish."""
+    log = baselines._pair_log_path(data, baseline, baseline, benchmark)
+    baselines._append_event(log, {"event": "started", "pair": number, "sample": None,
+                                  "id": pair_id or f"aa-{baseline}-{benchmark}-{number}"})
+    baselines._append_event(log, {"event": "finished", "pair": number, "sample": None, "complete": True,
+                                  "at": finished, **fields})
+
+
+def aa_checked(like: dict, data: Path | None = None, *, baseline: str = "prme@00aa00aa", number: int = 1,
+               benchmarks=gate.GATE_BENCHMARKS, finished: str = AA_FINISHED, excludes_zero: bool = False,
+               invalid: str | None = None, **changes) -> list[dict]:
+    """An A/A pair on each benchmark under the conditions of ``like``, as run-pair records one (#137): published
+    (``aa_published``), complete in the track's run logs under ``data``, and added to the A/A record.
+
+    ``invalid`` marks the pair complete but invalid in its run log. Returns the lines added to the record.
+    """
+    data = data or baselines.data_root(OLLAMA_MODEL)
+    added = []
+    for benchmark in benchmarks:
+        paths = aa_published(like, benchmark, baseline=baseline, number=number, excludes_zero=excludes_zero,
+                             **changes)
+        aa_logged(data, benchmark, baseline=baseline, number=number, finished=finished,
+                  **({} if invalid is None else {"invalid": invalid}))
+        added.append(baselines.record_aa_check(*paths, data=data))
+    return added
+
+
 def test_the_rules_budget_is_the_registered_runs_context_ceiling():
     # The 4K budget of the default-change rule: the registered run's 4,096 tokens less the 100 reserved.
     packing = json.loads(study.REG.read_text())["defaults"]["packing"]
@@ -1499,6 +1567,7 @@ def test_the_rules_budget_is_the_registered_runs_context_ceiling():
 def test_compare_reads_the_defaults_and_their_variants_only_at_the_rules_4k_budget():
     answered(baselines.data_root(OLLAMA_MODEL), "locomo", "a" * 40)
     logged_pair(settings=MARKED)
+    aa_checked(answer_result("prme", [True, False]))
     # A variant pair at the 4K budget is compared.
     assert baselines.compare(*one_pair(answer_result("prme", [True, False]),
                                        answer_result("prme-rrf", [True, True])))["arms"]["after"] == "prme-rrf"
@@ -1541,6 +1610,7 @@ def test_compare_reads_the_defaults_and_their_variants_only_at_the_rules_4k_budg
 def test_compare_reports_how_many_questions_each_side_asked_on_different_context_text():
     answered(baselines.data_root(OLLAMA_MODEL), "locomo", "a" * 40)
     logged_pair(settings=MARKED)
+    aa_checked(answer_result("prme", [True, False]))
     texts = ["t0", "t1", "t2", "t3"]
     before = answer_result("prme", [True, True, False, False], texts=texts)
     after = answer_result("prme-rrf", [True, False, True, False], texts=["t0", "x1", "t2", "x3"])
@@ -1804,10 +1874,24 @@ def contexts_sha256(harness, arm: str) -> str:
 
 
 def pair_arms(harness, *, marked: bool = True) -> None:
-    """A recorded defaults baseline and a variant whose contexts carry a marker, for the two LoCoMo questions."""
+    """A recorded defaults baseline and a variant whose contexts carry a marker, for the two LoCoMo questions, with
+    the A/A check that a variant's pair needs under the harness's conditions (#137)."""
     recorded_baseline(harness, "locomo", DEFAULTS_TEXT)
     if marked:
         fabricate_variant(harness)
+    harness_aa_checked(harness)
+
+
+def harness_conditions() -> dict:
+    """A result answered under the conditions the harness answers pairs under: the model's settings and identity at
+    Ollama 0.34.3, the harness's amended failure policy and the 4K budget (#137)."""
+    return {**amended_result("prme", [True, False]), "answer_model": ANSWER_MODEL, "server_versions": ["0.34.3"],
+            "failure_policy": {"id": baselines.FAILURE_POLICY, "sha256": digest(baselines.FAILURE_AMENDMENT)}}
+
+
+def harness_aa_checked(harness, **changes) -> list[dict]:
+    """An accepted A/A check on both benchmarks under the harness's conditions (``harness_conditions``)."""
+    return aa_checked(harness_conditions(), harness["data"], **changes)
 
 
 def one_request_at_a_time(harness) -> None:
@@ -1991,6 +2075,8 @@ async def test_an_unfinished_pair_is_never_finished_on_other_contexts_or_under_a
     changed = {**IDENTITY, "manifest_digest_sha256": "f" * 64}
     requests = ollama_provider(monkeypatch, identities=[changed])
     await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # The new model identity needs its own A/A check before a variant's pair is answered under it (#137).
+    harness_aa_checked(harness, number=2, finished=LATER_AA, answer_model={**ANSWER_MODEL, "identity": changed})
     requests.clear()
     paired = await run_pair(harness, "prme", "prme-marked")
     assert paired["pair"]["number"] == 3 and len(requests) == 8
@@ -2011,6 +2097,7 @@ async def test_a_model_change_during_a_pair_publishes_nothing_and_the_next_pair_
     assert (event["event"], event["pair"], event["server_version"]) == ("model-changed", 1, "0.34.3")
     ollama_provider(monkeypatch, identities=[changed])
     await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    harness_aa_checked(harness, number=2, finished=LATER_AA, answer_model={**ANSWER_MODEL, "identity": changed})
     assert (await run_pair(harness, "prme", "prme-marked"))["pair"]["number"] == 2
 
 
@@ -2069,6 +2156,8 @@ async def test_server_versions_are_recorded_at_every_start_and_finish_and_a_chan
     # The server is upgraded before the pair is resumed; the model identity is unchanged, but the unfinished pair
     # is left as it is and the next one starts under the new version.
     upgraded = {**IDENTITY, "server_version": "0.35.0"}
+    # Each server version needs its own A/A check before a variant's pair is answered under it (#137).
+    harness_aa_checked(harness, number=2, finished=LATER_AA, server_versions=["0.35.0"])
     requests = ollama_provider(monkeypatch, identities=[upgraded])
     paired = await run_pair(harness, "prme", "prme-marked")
     assert paired["pair"]["number"] == 2 and len(requests) == 8
@@ -2091,6 +2180,7 @@ async def test_server_versions_are_recorded_at_every_start_and_finish_and_a_chan
     with pytest.raises(ValueError, match=r"server version changed during or between these runs \(0.35.0, 0.36.0\)"):
         baselines.compare(*kept)
     ollama_provider(monkeypatch, identities=[{**IDENTITY, "server_version": "0.36.0"}])
+    harness_aa_checked(harness, number=3, finished="2026-09-24T11:00:00+00:00", server_versions=["0.36.0"])
     later = await run_pair(harness, "prme", "prme-marked")
     assert later["pair"]["number"] == 4 and [pair["state"] for pair in later["pair"]["earlier_pairs"]] == [
         "abandoned: it was answered under another Ollama server version", "complete",
@@ -2416,6 +2506,7 @@ async def test_compare_reads_only_a_variants_first_pair_and_confirmation_under_a
 def test_a_variants_pairs_count_in_the_order_they_completed_and_any_later_pair_is_refused():
     data = baselines.data_root(OLLAMA_MODEL)
     answered(data, "locomo", "a" * 40)
+    aa_checked(answer_result("prme", [True, False]))
 
     def results(arm: str) -> tuple[dict, dict]:
         return one_pair(answer_result("prme", [True, False]), answer_result(arm, [True, True]))
@@ -2497,6 +2588,416 @@ def test_a_variants_pairs_count_in_the_order_they_completed_and_any_later_pair_i
     logged_pair(after="prme-naive", settings=MARKED, started=at(5), at="2026-09-24T05:30:00")
     with pytest.raises(ValueError, match="does not record when pair 1 finished, with a time zone"):
         baselines.compare(*results("prme-rrf"))
+
+
+# A/A record (#137) ----------------------------------------------------------------
+
+def aa_record(results: Path | None = None) -> list[dict]:
+    return baselines._run_events(baselines._aa_record_path(results or baselines.RESULTS, OLLAMA_MODEL.model))
+
+
+def variant_results(identity: dict | None = None, **changes) -> tuple[dict, dict]:
+    """Both sides of pair 1 of prme and prme-rrf, logged complete as the variant's first pair by logged_pair()."""
+    return one_pair(*({**answer_result(arm, verdicts, identity=identity), **changes}
+                      for arm, verdicts in (("prme", [True, False]), ("prme-rrf", [True, True]))))
+
+
+async def test_run_pair_records_each_published_aa_pair_and_answers_a_variant_only_under_a_recorded_check(
+        harness, monkeypatch):
+    use_longmemeval(harness, TWO_LME)
+    recorded_baseline(harness, "longmemeval", {"q1": LME_CONTEXT, "q2": "(2023/05/21) user: I live in Porto."})
+    recorded_baseline(harness, "locomo", DEFAULTS_TEXT)
+    fabricate_variant(harness)
+    requests = ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    requests.clear()
+    # compare would refuse a variant's pair that no recorded A/A check covers, and it would still count as the
+    # variant's first pair, so it is never answered and no pair is opened.
+    with pytest.raises(ValueError, match=r"No A/A check on locomo .* A/A pairs recorded on locomo: none\."):
+        await run_pair(harness, "prme", "prme-marked")
+    assert requests == [] and not pair_folder(harness, after="prme-marked").exists()
+    # A sample is a smoke check, not an A/A check, so nothing is recorded until the full pair is published.
+    await run_pair(harness, benchmark="longmemeval", sample=1)
+    assert aa_record() == []
+    paired = await run_pair(harness, benchmark="longmemeval")
+    [entry] = aa_record()
+    log = pair_log(harness, benchmark="longmemeval")
+    # Every start of the pair records its id, which binds the run log to the record.
+    assert {event["id"] for event in log if event["event"] == "started"} == {paired["pair"]["id"]}
+    assert entry == {**entry, "kind": "ollama-aa-check", "benchmark": "longmemeval", "baseline": "prme",
+                     "pair": {key: paired["pair"][key] for key in ("id", "number", "sha256")},
+                     "finished_at": log[-1]["at"], "accepted": True, "refused": None, "first": True,
+                     "questions": 2, "correct": {"before": 2, "after": 2}, "difference": 0.0,
+                     "interval_95": [0.0, 0.0], "interval_excludes_zero": False, "changed_verdicts": 0,
+                     "warnings": []}
+    assert entry["conditions"] == {
+        "answer_model": ANSWER_MODEL, "server_versions": ["0.34.3"], "context_budget": baselines.RULE_BUDGET,
+        "failure_policy": {"id": baselines.FAILURE_POLICY, "sha256": digest(baselines.FAILURE_AMENDMENT)},
+        "tokenizer": baselines.RULE_TOKENIZER}
+    assert entry["results"] == {side: {"path": str(path.relative_to(harness["results"])), "sha256": digest(path)}
+                                for side, path in zip(baselines.PAIR_SIDES,
+                                                      published_paths(harness, benchmark="longmemeval"))}
+    # The rule reads both benchmarks, so a check on LongMemEval-S alone is not enough.
+    with pytest.raises(ValueError, match=r"No A/A check on locomo .* A/A pairs recorded on locomo: none\."):
+        await run_pair(harness, "prme", "prme-marked")
+    await run_pair(harness)
+    variant = await run_pair(harness, "prme", "prme-marked")
+    comparison = baselines.compare(variant["before"], variant["after"], data=harness["data"])
+    checks = comparison["aa_check"]["checks"]
+    assert {benchmark: (found["check"]["baseline"], found["check"]["number"], found["other_pairs"])
+            for benchmark, found in checks.items()} == {"locomo": ("prme", 1, []), "longmemeval": ("prme", 1, [])}
+    assert checks["longmemeval"]["check"] == {
+        "baseline": "prme", "number": 1, "pair_id": entry["pair"]["id"],
+        **{key: entry[key] for key in ("finished_at", "accepted", "refused", "difference", "interval_95",
+                                       "interval_excludes_zero", "changed_verdicts", "results")}}
+    assert comparison["aa_check"]["conditions"] == {
+        "manifest_digest_sha256": "e" * 64, "server_versions": ["0.34.3"], "context_budget": baselines.RULE_BUDGET,
+        "failure_policy": entry["conditions"]["failure_policy"], "tokenizer": baselines.RULE_TOKENIZER}
+    record = baselines._aa_record_path(harness["results"], OLLAMA_MODEL.model)
+    assert comparison["aa_check"]["record"] == {"path": record.name, "sha256": digest(record)}
+    assert comparison["warnings"] == []
+    # A later A/A pair under the same conditions never replaces the check, and compare shows it.
+    await run_pair(harness)
+    assert [(entry["benchmark"], entry["pair"]["number"], entry["first"]) for entry in aa_record()] == [
+        ("longmemeval", 1, True), ("locomo", 1, True), ("locomo", 2, False)]
+    again = baselines.compare(variant["before"], variant["after"], data=harness["data"])
+    assert again["aa_check"]["checks"]["locomo"]["check"]["number"] == 1
+    assert [pair["number"] for pair in again["aa_check"]["checks"]["locomo"]["other_pairs"]] == [2]
+    assert again["warnings"] == [
+        "Other A/A pairs on locomo were answered under the conditions of this pair: A/A pair 2 of prme (accepted). "
+        "The A/A check is the first that compare accepted, A/A pair 1 of prme, and a later pair never replaces it "
+        "(#137)"]
+    # After an Ollama update, no variant pair is answered until a new A/A pair has been recorded on both benchmarks.
+    upgraded = {**IDENTITY, "server_version": "0.34.4"}
+    ollama_provider(monkeypatch, identities=[upgraded])
+    with pytest.raises(ValueError, match=r"Ollama server version 0\.34\.4 and context budget\).* A/A pairs recorded on "
+                                         r"locomo: A/A pair 1 of prme \(differs in Ollama server version\); A/A pair 2 "
+                                         r"of prme \(differs in Ollama server version\)\."):
+        await run_pair(harness, "prme", "prme-marked")
+    await run_pair(harness)
+    with pytest.raises(ValueError, match="No A/A check on longmemeval"):
+        await run_pair(harness, "prme", "prme-marked")
+    await run_pair(harness, benchmark="longmemeval")
+    confirmation = await run_pair(harness, "prme", "prme-marked")
+    assert (confirmation["pair"]["number"], confirmation["after"]["server_versions"]) == (2, ["0.34.4"])
+    confirmed = baselines.compare(confirmation["before"], confirmation["after"], data=harness["data"])
+    assert confirmed["variant"]["role"] == "confirmation"
+    assert {benchmark: found["check"]["number"] for benchmark, found in confirmed["aa_check"]["checks"].items()} == {
+        "locomo": 3, "longmemeval": 2}
+    # The first pair still relies on the check measured under its own server version.
+    assert baselines.compare(variant["before"], variant["after"], data=harness["data"])["aa_check"]["checks"][
+        "locomo"]["check"]["number"] == 1
+
+
+async def test_an_aa_pair_starts_only_when_the_record_lists_every_complete_one_and_is_recorded_after_them(
+        harness, monkeypatch):
+    recorded_baseline(harness, "locomo", DEFAULTS_TEXT)
+    requests = ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    # An A/A pair published in another checkout, or before the record existed, is on record in the run logs only.
+    # The record could not decide which pair is first without it, so no A/A pair is answered until it is added.
+    other = "prme@0c0c0c0c"
+    elsewhere = aa_published(harness_conditions(), "locomo", baseline=other)
+    aa_logged(harness["data"], "locomo", baseline=other)
+    requests.clear()
+    with pytest.raises(ValueError, match=f"A/A pair 1 of {other} on locomo is on record in the track's run logs as "
+                                         "complete, but the A/A record .* does not list it"):
+        await run_pair(harness)
+    assert requests == [] and not pair_folder(harness).exists()
+    baselines.record_aa_check(*elsewhere, data=harness["data"])
+    await run_pair(harness)
+    assert [(entry["baseline"], entry["first"]) for entry in aa_record()] == [(other, True), ("prme", False)]
+    # A pair that is published but cannot be added to the record says so, and how to add it once that is resolved.
+
+    def unrecorded(*args, **kwargs):
+        raise ValueError("The record is out of reach.")
+
+    monkeypatch.setattr(baselines, "record_aa_check", unrecorded)
+    with pytest.raises(RuntimeError, match=r"prme and prme locomo pair 2 is complete and published, but it was not "
+                                           r"added to the A/A record: The record is out of reach\. Once that is "
+                                           r"resolved, add it with record-aa-check --before .*pair-2-before-result\.json "
+                                           r"--after .*pair-2-after-result\.json \(#137\)"):
+        await run_pair(harness)
+    assert len(pair_published(harness, number=2)) == 2
+
+
+def test_an_aa_check_covers_only_its_own_model_identity_settings_policy_server_and_budget():
+    before, after = variant_results()
+    conditions = baselines._pair_conditions(before, after)
+    assert baselines._condition_differences(conditions, conditions) == []
+    # An Ollama update alone does not change the model identity (same_model), but it is another condition.
+    for changed, differs in (
+            ({"answer_model": {**after["answer_model"], "identity": {**IDENTITY, "manifest_digest_sha256": "f" * 64}}},
+             ["model identity"]),
+            ({"answer_model": {**after["answer_model"], "seed": 1}}, ["answer settings"]),
+            ({"answer_model": {**after["answer_model"], "failure_policy": baselines.FAILURE_POLICY},
+              "failure_policy": {"sha256": "a" * 64}}, ["failure policy"]),
+            ({"failure_policy": {"sha256": "b" * 64}}, ["failure policy"]),
+            ({"server_versions": ["0.34.4"]}, ["Ollama server version"]),
+            ({"context_budget": 2048}, ["context budget"]),
+            ({"prepared": {**after["prepared"], "tokenizer": "o200k_base"}}, ["context budget"]),
+            ({"answer_model": {**after["answer_model"], "identity": {**IDENTITY, "server_version": "0.34.4"}}},
+             ["Ollama server version"])):
+        moved = baselines._pair_conditions({**before, **changed}, {**after, **changed})
+        assert baselines._condition_differences(conditions, moved) == differs, changed
+    # A result published before #125 names no tokenizer and was packed with the registered one.
+    unnamed = {**after, "prepared": {**after["prepared"], "tokenizer": None}}
+    assert baselines._condition_differences(conditions, baselines._pair_conditions(before, unnamed)) == []
+
+
+def test_compare_refuses_a_variants_pair_outside_every_recorded_aa_check():
+    answered(baselines.data_root(OLLAMA_MODEL), "locomo", "a" * 40)
+    logged_pair(settings=MARKED)
+    with pytest.raises(ValueError, match=r"No A/A check on locomo .* A/A pairs recorded on locomo: none\. Answer an "
+                                         r"A/A pair under these conditions on both benchmarks first"):
+        baselines.compare(*variant_results())
+    # The rule reads both benchmarks, so an A/A check on one of them is not enough.
+    aa_checked(answer_result("prme", [True, False]), benchmarks=("locomo",))
+    with pytest.raises(ValueError, match="No A/A check on longmemeval"):
+        baselines.compare(*variant_results())
+    aa_checked(answer_result("prme", [True, False]), benchmarks=("longmemeval",))
+    assert baselines.compare(*variant_results())["aa_check"]["checks"]["locomo"]["check"]["baseline"] == \
+        "prme@00aa00aa"
+    # compare reads the record of the checkout whose results it is given, which must list every complete A/A pair.
+    with pytest.raises(ValueError, match="A/A pair 1 of prme@00aa00aa on locomo is on record in the track's run logs "
+                                         "as complete, but the A/A record .* does not list it"):
+        baselines.compare(*variant_results(), results=baselines.RESULTS / "elsewhere")
+    # The pair was answered under another model identity, other settings or another server version.
+    for identity, changes, differs in (
+            ({**IDENTITY, "manifest_digest_sha256": "f" * 64}, {}, "model identity"),
+            (None, {"answer_model": {**OLLAMA_MODEL.settings(), "identity": IDENTITY, "seed": 1}}, "answer settings"),
+            ({**IDENTITY, "server_version": "0.34.4"}, {}, "Ollama server version")):
+        with pytest.raises(ValueError, match=rf"A/A pair 1 of prme@00aa00aa \(differs in {differs}\)"):
+            baselines.compare(*variant_results(identity, **changes))
+    # A reference arm paired with the defaults is not a default change, so it needs no A/A check.
+    plain = one_pair(answer_result("prme", [True, False], identity={**IDENTITY, "server_version": "0.34.4"}),
+                     answer_result("plain-rrf", [True, True], identity={**IDENTITY, "server_version": "0.34.4"}))
+    assert baselines.compare(*plain)["aa_check"] is None
+
+
+def test_the_aa_record_must_list_exactly_the_complete_aa_pairs_in_the_run_logs_and_match_their_results():
+    data = baselines.data_root(OLLAMA_MODEL)
+    answered(data, "locomo", "a" * 40)
+    logged_pair(settings=MARKED)
+    like = answer_result("prme", [True, False])
+    aa_checked(like)
+    record = baselines._aa_record_path(baselines.RESULTS, OLLAMA_MODEL.model)
+    kept = record.read_text()
+    # A complete A/A pair that the record leaves out, valid or not, could hide a result that did not hold.
+    for invalid in ({}, {"invalid": "more than 1%"}):
+        log = baselines._pair_log_path(data, "prme@0b0b0b0b", "prme@0b0b0b0b", "longmemeval")
+        log.unlink(missing_ok=True)
+        aa_logged(data, "longmemeval", baseline="prme@0b0b0b0b", number=4, **invalid)
+        with pytest.raises(ValueError, match=r"A/A pair 4 of prme@0b0b0b0b on longmemeval is on record in the track's "
+                                             r"run logs as complete.*, but the A/A record .* does not list it"):
+            baselines.compare(*variant_results())
+    log.unlink()
+    assert baselines.compare(*variant_results())["aa_check"] is not None
+    # A listed pair the run logs do not show complete, with its id and finish time, is refused too, and so is a pair
+    # taken from another machine's record, which these run logs never saw, and a pair listed twice.
+    entries = [json.loads(line) for line in kept.splitlines()]
+    stranger = {**entries[0], "pair": {**entries[0]["pair"], "id": "x", "number": 7}}
+    for lines, message in (
+            ([{**entries[0], "pair": {**entries[0]["pair"], "id": "other"}}, *entries[1:]],
+             "lists A/A pair 1 of prme@00aa00aa on locomo, which the track's run logs do not show complete with that "
+             "pair id and finish time"),
+            ([{**entries[0], "finished_at": "2026-09-24T08:00:00+00:00"}, *entries[1:]], "do not show complete"),
+            ([*entries, stranger], "lists A/A pair 7 of prme@00aa00aa on locomo, which the track's run logs do not"),
+            ([*entries, entries[0]], "lists A/A pair 1 of prme@00aa00aa on locomo 2 times")):
+        record.write_text("".join(json.dumps(entry) + "\n" for entry in lines))
+        with pytest.raises(ValueError, match=message):
+            baselines.compare(*variant_results())
+    # A line must match the published results it names, so an edited line cannot move the check to other
+    # conditions, and a result edited or moved after it was recorded is refused.
+    moved = {**entries[0], "conditions": {**entries[0]["conditions"], "server_versions": ["0.34.4"]}}
+    record.write_text("".join(json.dumps(entry) + "\n" for entry in (moved, *entries[1:])))
+    with pytest.raises(ValueError, match="line for A/A pair 1 of prme@00aa00aa on locomo does not match the pair and "
+                                         "conditions its published results record"):
+        baselines.compare(*variant_results(identity={**IDENTITY, "server_version": "0.34.4"}))
+    for path in ("../outside.json", entries[0]["results"]["after"]["path"] + ".moved"):
+        away = {**entries[0], "results": {**entries[0]["results"], "after": {**entries[0]["results"]["after"],
+                                                                              "path": path}}}
+        record.write_text("".join(json.dumps(entry) + "\n" for entry in (away, *entries[1:])))
+        with pytest.raises(ValueError, match="which is not published in this checkout with the recorded digest"):
+            baselines.compare(*variant_results())
+    record.write_text(kept)
+    published = baselines.RESULTS / entries[0]["results"]["after"]["path"]
+    original = published.read_text()
+    published.write_text(original.replace('"arm"', '"arm" ', 1))
+    with pytest.raises(ValueError, match="with the recorded digest"):
+        baselines.compare(*variant_results())
+    published.write_text(original)
+    # The check is the first accepted pair, which the record must mark as first, and no other.
+    record.write_text("".join(json.dumps({**entry, "first": False}) + "\n" for entry in entries))
+    with pytest.raises(ValueError, match="must mark A/A pair 1 of prme@00aa00aa on locomo, the first A/A pair under its "
+                                         "conditions that compare accepted, and no other"):
+        baselines.compare(*variant_results())
+    record.write_text(kept)
+    aa_checked(like, number=2, finished=LATER_AA, benchmarks=("locomo",))
+    lines = record.read_text().splitlines()
+    assert [json.loads(line)["first"] for line in lines] == [True, True, False]
+    record.write_text("".join(line + "\n" for line in (*lines[:2], json.dumps({**json.loads(lines[2]), "first": True}))))
+    with pytest.raises(ValueError, match="and no other, as the first A/A check under them"):
+        baselines.compare(*variant_results())
+    # Pairs must be listed in the order they finished.
+    record.write_text("".join(line + "\n" for line in (lines[2], *lines[:2])))
+    with pytest.raises(ValueError, match="does not list the A/A pairs on locomo in the order they finished"):
+        baselines.compare(*variant_results())
+
+
+def test_a_refused_aa_pair_never_counts_and_one_that_excludes_zero_brings_the_rules_margin():
+    answered(baselines.data_root(OLLAMA_MODEL), "locomo", "a" * 40)
+    logged_pair(settings=MARKED)
+    like = answer_result("prme", [True, False, True, False])
+    # An A/A pair its run log records complete but invalid is recorded as refused, and it never becomes the check.
+    [invalid] = aa_checked(like, benchmarks=("locomo",), invalid="more than 1%")
+    assert (invalid["accepted"], invalid["first"], invalid["interval_95"]) == (False, False, None)
+    assert invalid["refused"] == "its run log records it complete but invalid: more than 1%"
+    with pytest.raises(ValueError, match=r"A/A pair 1 of prme@00aa00aa \(refused\)"):
+        baselines.compare(*variant_results())
+    aa_checked(like, number=2, finished=LATER_AA, excludes_zero=True)
+    comparison = baselines.compare(*variant_results())
+    locomo = comparison["aa_check"]["checks"]["locomo"]
+    assert (locomo["check"]["number"], locomo["check"]["interval_excludes_zero"]) == (2, True)
+    assert [(pair["number"], pair["accepted"]) for pair in locomo["other_pairs"]] == [(1, False)]
+    margin = ("A/A pair 2 of prme@00aa00aa under the conditions of this pair excludes zero, so under the "
+              "default-change rule in CLAUDE.md a variant's gain there must also be larger than the largest absolute "
+              "A/A difference measured so far on that benchmark, the #118 repeat included (#137)")
+    assert comparison["warnings"] == [
+        "Other A/A pairs on locomo were answered under the conditions of this pair: A/A pair 1 of prme@00aa00aa "
+        "(refused). The A/A check is the first that compare accepted, A/A pair 2 of prme@00aa00aa, and a later pair "
+        "never replaces it (#137)", f"On locomo, {margin}", f"On longmemeval, {margin}"]
+
+
+def test_record_aa_check_takes_a_published_aa_pair_on_record_as_complete_once_in_finish_order(tmp_path):
+    data = baselines.data_root(OLLAMA_MODEL)
+    like = answer_result("prme", [True, False])
+    [entry] = aa_checked(like, benchmarks=("locomo",))
+    paths = [baselines.RESULTS / entry["results"][side]["path"] for side in baselines.PAIR_SIDES]
+    with pytest.raises(ValueError, match="A/A pair 1 of prme@00aa00aa on locomo is already in the A/A record"):
+        baselines.record_aa_check(*paths, data=data)
+    # Only a pair of a baseline with itself is an A/A check, and only a complete answer run of one.
+    elsewhere = [tmp_path / f"{side}.json" for side in baselines.PAIR_SIDES]
+    for path, result in zip(elsewhere, variant_results()):
+        path.write_text(json.dumps(result))
+    with pytest.raises(ValueError, match="An A/A check is the two sides of one pair of a baseline"):
+        baselines.record_aa_check(*elsewhere, data=data)
+    for path, source in zip(elsewhere, paths):
+        result = json.loads(source.read_text())
+        path.write_text(json.dumps({**result, "kind": result["kind"] + "-sample"}))
+    with pytest.raises(ValueError, match="The before result is not a complete answer run on the Ollama track"):
+        baselines.record_aa_check(*elsewhere, data=data)
+    for path, source in zip(elsewhere, paths):
+        path.write_text(json.dumps({**json.loads(source.read_text()), "benchmark": "../x"}))
+    with pytest.raises(ValueError, match="unknown benchmark, '../x'"):
+        baselines.record_aa_check(*elsewhere, data=data)
+    # A pair its run logs do not show complete, with the same id, is refused before anything is written.
+    other, early = "prme@0c0c0c0c", "prme@0d0d0d0d"
+    second = aa_published(like, "locomo", baseline=other, number=2)
+    with pytest.raises(ValueError, match=f"A/A pair 2 of {other} on locomo is not on record as complete"):
+        baselines.record_aa_check(*second, data=data)
+    aa_logged(data, "locomo", baseline=other, number=2, pair_id="other", finished=LATER_AA)
+    with pytest.raises(ValueError, match="on record has another pair id than these results"):
+        baselines.record_aa_check(*second, data=data)
+    baselines._pair_log_path(data, other, other, "locomo").unlink()
+    # Only a published result is recorded, and only in the order the pairs finished.
+    third = aa_published(like, "locomo", baseline=early, number=3)
+    aa_logged(data, "locomo", baseline=early, number=3, finished="2026-09-24T08:00:00+00:00")
+    for path, source in zip(elsewhere, third):
+        path.write_text(source.read_text())
+    with pytest.raises(ValueError, match="The before result is not published under"):
+        baselines.record_aa_check(*elsewhere, data=data)
+    with pytest.raises(ValueError, match=f"A/A pair 3 of {early} on locomo finished before A/A pair 1 of "
+                                         "prme@00aa00aa, which the A/A record .* already lists"):
+        baselines.record_aa_check(*third, data=data)
+    baselines._pair_log_path(data, early, early, "locomo").unlink()
+    # A record that leaves out an earlier complete A/A pair takes no later one, so first is never decided without
+    # it. Two pairs left out are added in the order they finished, whichever is tried first.
+    aa_logged(data, "locomo", baseline=other, number=2, finished=LATER_AA)
+    fourth = aa_published(like, "locomo", number=4)
+    aa_logged(data, "locomo", number=4, finished="2026-09-24T11:00:00+00:00")
+    with pytest.raises(ValueError, match=f"A/A pair 2 of {other} on locomo is on record in the track's run logs as "
+                                         "complete, but the A/A record .* does not list it"):
+        baselines.record_aa_check(*fourth, data=data)
+    baselines.record_aa_check(*second, data=data)
+    baselines.record_aa_check(*fourth, data=data)
+    assert [(line["baseline"], line["pair"]["number"], line["first"]) for line in aa_record()] == [
+        ("prme@00aa00aa", 1, True), (other, 2, False), ("prme@00aa00aa", 4, False)]
+    # Any other refusal by compare records nothing: a passing problem never becomes a permanent refusal.
+    same = aa_published(like, "locomo", number=5, rows=like["rows"])
+    aa_logged(data, "locomo", number=5, finished="2026-09-24T12:00:00+00:00")
+    with pytest.raises(ValueError, match="compare refuses A/A pair 5 of prme@00aa00aa on locomo, which its run log "
+                                         "records complete, so nothing was recorded: The before and after results "
+                                         "are the same answer run"):
+        baselines.record_aa_check(*same, data=data)
+    assert len(aa_record()) == 3
+
+
+def test_cli_record_aa_check_adds_a_published_aa_pair(monkeypatch, tmp_path, capsys):
+    recorded = baselines.record_aa_check
+    seen = []
+    monkeypatch.setattr(baselines, "record_aa_check",
+                        lambda before, after: seen.append((before, after)) or {"kind": "ollama-aa-check"})
+    baselines.main(["record-aa-check", "--before", "b.json", "--after", "a.json"])
+    assert seen == [(Path("b.json"), Path("a.json"))]
+    assert json.loads(capsys.readouterr().out) == {"kind": "ollama-aa-check"}
+    for argv in (["record-aa-check", "--before", "b.json"],
+                 ["record-aa-check", "prme", "--before", "b.json", "--after", "a.json"],
+                 ["record-aa-check", "--benchmark", "locomo", "--before", "b.json", "--after", "a.json"],
+                 ["run-pair", "prme", "--benchmark", "locomo", "--provider", "ollama", "--baseline", "prme",
+                  "--before", "b.json", "--after", "a.json"]):
+        with pytest.raises(SystemExit):
+            baselines.main(argv)
+    assert len(seen) == 1
+    # A file it cannot read, or a result it refuses, is a usage error rather than a traceback.
+    monkeypatch.setattr(baselines, "record_aa_check", recorded)
+    with pytest.raises(SystemExit):
+        baselines.main(["record-aa-check", "--before", str(tmp_path / "missing.json"), "--after", "a.json"])
+    for side in ("before", "after"):
+        (tmp_path / f"{side}.json").write_text(json.dumps({"kind": "ollama-answer-result", "complete": False}))
+    with pytest.raises(SystemExit):
+        baselines.main(["record-aa-check", "--before", str(tmp_path / "before.json"),
+                        "--after", str(tmp_path / "after.json")])
+    assert "not a complete answer run on the Ollama track" in capsys.readouterr().err
+
+
+def test_every_line_of_the_tracked_aa_record_matches_its_published_aa_pair():
+    entries = aa_record(PUBLISHED)
+    # The A/A checks of 2026-09-24 that CLAUDE.md and BENCHMARKS.md cite come first, under the conditions they
+    # name: model identity e04da138, Ollama 0.34.3, the amended failure policy, the answer settings and the 4K budget.
+    assert [(entry["benchmark"], entry["baseline"], entry["pair"]["number"], entry["accepted"], entry["first"])
+            for entry in entries[:2]] == [("longmemeval", REPEAT, AA_PAIRS["longmemeval"], True, True),
+                                          ("locomo", REPEAT, AA_PAIRS["locomo"], True, True)]
+    for entry in entries[:2]:
+        conditions = entry["conditions"]
+        assert conditions["answer_model"]["identity"]["manifest_digest_sha256"].startswith("e04da138")
+        assert (conditions["server_versions"], conditions["context_budget"], conditions["tokenizer"]) == (
+            ["0.34.3"], baselines.RULE_BUDGET, baselines.RULE_TOKENIZER)
+        assert {key: value for key, value in conditions["answer_model"].items() if key != "identity"} == \
+            {**OLLAMA_MODEL.settings(), "failure_policy": baselines.FAILURE_POLICY}
+    # Every line, including any added later, names its published results with their digests and conditions, keeps
+    # its benchmark's finish order and first flags, and gives compare's own numbers.
+    for benchmark in gate.GATE_BENCHMARKS:
+        listed = [entry for entry in entries if entry["benchmark"] == benchmark]
+        assert [baselines._finish_time(entry) for entry in listed] == sorted(map(baselines._finish_time, listed))
+        for number, entry in enumerate(listed):
+            assert entry["first"] == (entry["accepted"] and not any(
+                earlier["accepted"] and not baselines._condition_differences(earlier["conditions"],
+                                                                             entry["conditions"])
+                for earlier in listed[:number]))
+    for entry in entries:
+        baselines._check_aa_results(PUBLISHED, entry)
+        before, after = (json.loads((PUBLISHED / entry["results"][side]["path"]).read_text())
+                         for side in baselines.PAIR_SIDES)
+        assert entry["pair"] == {key: before["pair"][key] for key in ("id", "number", "sha256")}
+        assert entry["finished_at"] > after["finished_at"]
+        if entry["accepted"]:
+            comparison = baselines.compare(before, after)
+            assert (entry["difference"], entry["interval_95"]) == (comparison["accuracy"]["delta"],
+                                                                   comparison["accuracy"]["interval_95"])
+            assert (entry["changed_verdicts"], entry["interval_excludes_zero"]) == (
+                comparison["repeat"]["changed_verdicts"], comparison["repeat"]["interval_excludes_zero"])
+            assert (entry["refused"], entry["warnings"]) == (None, comparison["warnings"])
 
 
 # Amended failure policy (#132) --------------------------------------------------------
