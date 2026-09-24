@@ -23,6 +23,7 @@ from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import Scope
 from tests import test_durable_ingestion
+from tests.test_http_write_fidelity import app_for, client_for
 from tests.test_rank_fusion import EXECUTION, NOW, RRF, candidate
 
 config = test_durable_ingestion.config
@@ -130,7 +131,12 @@ async def _neighbor_retrieval(config, user, **kwargs):
         await engine.store("Anna plays tennis.", user_id=user, scope=Scope.PROJECT, session_id="s2")
         response = await engine.retrieve("telescope", user_id=user, scope=Scope.PROJECT, min_score=0,
                                          include_cross_scope=False, reference_time=NOW, **kwargs)
-        saved = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
+        request_id = str(response.metadata.request_id)
+        saved = await engine.get_retrieval_receipt(request_id, user_id=user)
+        async with client_for(app_for(config, engine, user)) as client:
+            served = await client.get(f"/v1/retrievals/{request_id}")
+    assert served.status_code == 200, served.text
+    assert served.json() == json.loads(saved.model_dump_json())
     decays = {decay for item in response.results for decay in _session_decays(item)}
     return decays, saved, response
 
