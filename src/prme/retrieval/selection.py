@@ -64,6 +64,29 @@ def with_rank_fusion_relevance(candidates: list[RetrievalCandidate]) -> list[Ret
     ]
 
 
+def rank_fusion_skips_min_score(
+    candidates: list[RetrievalCandidate],
+    *,
+    min_score: float | None,
+    backend_failures: dict[str, str],
+) -> bool:
+    """Return whether a rank fusion request must skip its ``min_score`` floor.
+
+    Call it on candidates from ``with_rank_fusion_relevance``. Only the vector
+    path gives a cosine, so when it failed or detected an embedding mismatch,
+    and no candidate has one from any other pass, a positive floor would return
+    nothing. The request then fails open and reports it (issue #150). A healthy
+    vector path that returned nothing keeps the floor. An empty pool counts as
+    having no cosine: the floor could not be evaluated.
+    """
+    return (
+        min_score is not None
+        and min_score > 0
+        and "VECTOR" in backend_failures
+        and not any((candidate.semantic_relevance or 0) > 0 for candidate in candidates)
+    )
+
+
 def select_candidates(
     candidates: list[RetrievalCandidate],
     *,

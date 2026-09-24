@@ -76,6 +76,17 @@ session ID `"default"`. `set_messages`, `delete_messages`, `delete_message`, and
 written through the current adapter instance because PRME does not expose a
 cross-owner key enumeration operation.
 
+## Retriever score floor
+
+Both retrievers accept an optional `min_score`, the same inclusive floor as
+`MemoryEngine.retrieve()` (for example `PRMERetriever(..., min_score=0.5)`).
+With the default weighted scoring it applies to the composite score. Under
+opt-in rank fusion (`PRME_SCORING__FUSION=rrf`) it applies to each result's
+`semantic_relevance`, which is in the result metadata. If vector search fails or
+the embedding model changed without a rebuild, no result has a cosine, so the
+floor is skipped instead of returning nothing, and every result's metadata then
+carries `min_score_skipped: True` (RFC-0005 Section 7.2).
+
 ## Append-only clear and delete
 
 Clear, replacement, and deletion append versioned control events. The adapters

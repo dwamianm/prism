@@ -282,7 +282,10 @@ class RetrieveRequest(BaseModel):
             "Inclusive ranking score floor, not a probability. Under rank fusion "
             "(PRME_SCORING__FUSION=rrf) it is a floor on each result's "
             "semantic_relevance, the semantic cosine similarity, instead of the "
-            "rank-based score, so a floor tuned on weighted scores does not carry over"
+            "rank-based score, so a floor tuned on weighted scores does not carry over. "
+            "If the vector path failed or detected an embedding mismatch and no "
+            "result has a cosine, the floor is skipped and metrics.min_score_skipped "
+            "is true"
         ),
     )
     mode: RetrievalMode | None = Field(default=None, description="Epistemic filtering mode within generated candidates")

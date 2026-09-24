@@ -992,7 +992,13 @@ reciprocal rank fusion of semantic and lexical ranks instead of the weighted sum
 (RFC-0005 Section 7.2); those receipts use schema version 16. Rank-fused scores
 are rank-based, so `min_score` then compares against each result's
 `semantic_relevance`, its semantic cosine similarity, and a floor tuned on weighted
-scores does not carry over. Fused scores are compressed, so session neighbors
+scores does not carry over. When vector search fails or detects an embedding
+model mismatch and no result has a cosine, the floor is skipped instead of
+returning nothing, `metadata.min_score_skipped` is set, and the receipt uses
+version 18. The LangChain and LlamaIndex retrievers accept an optional
+`min_score`, and add `min_score_skipped: True` to every result's metadata when
+the floor was skipped.
+Fused scores are compressed, so session neighbors
 at the default decay of 0.85 can crowd primary evidence out of the context; set
 `PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` (0.6 on the offline
 evidence gate) to give rank-fused triggers their own decay, which version 17
@@ -1208,6 +1214,7 @@ class RetrievalMetadata(BaseModel):
     backends_used: list[str]
     embedding_mismatch: bool
     backend_failures: dict[str, str]
+    min_score_skipped: bool                  # Rank fusion floor skipped: no cosine
     aggregation_coverage: AggregationCoverage | None
 ```
 

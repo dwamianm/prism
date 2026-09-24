@@ -68,6 +68,7 @@ from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_qu
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.scope import ScopeInput, normalize_scope
 from prme.retrieval.selection import (
+    rank_fusion_skips_min_score,
     select_candidates,
     validate_selection,
     with_rank_fusion_relevance,
@@ -333,7 +334,9 @@ class RetrievalPipeline:
             token_budget: Override default token budget for this request.
             min_score: Inclusive ranking score floor; not a probability.
                 Under rank fusion it is compared with each result's
-                semantic_relevance (semantic cosine) instead of the fused score.
+                semantic_relevance (semantic cosine) instead of the fused score,
+                and skipped (metadata.min_score_skipped) when the vector path
+                failed and no result has a cosine.
             limit: Maximum primary results before context packing. Zero returns none.
             max_per_source: Optional maximum results with the same exact source
                 passage and evidence set.
@@ -900,24 +903,39 @@ class RetrievalPipeline:
 
         aggregation_candidate_count = len(scored) if analysis.is_aggregation else 0
 
+        min_score_skipped = False
+        hint_floor = min_score
         if effective_weights.fusion == "rrf":
             # A fused score ranks within the pool, so an unrelated memory can
             # score near 1.0; min_score gates semantic cosine instead (issue
             # #110). The fused ranking and scores stay as they are.
             scored = with_rank_fusion_relevance(scored)
             cross_scope_hints = with_rank_fusion_relevance(cross_scope_hints)
+            # Without the vector path no result has a cosine, so a positive
+            # floor would return nothing: skip it and report it (issue #150).
+            # Hints come from their own vector search, so they skip it too
+            # only when none of them has a cosine either.
+            min_score_skipped = rank_fusion_skips_min_score(
+                scored, min_score=min_score,
+                backend_failures=candidate_diagnostics.backend_failures,
+            )
+            if min_score_skipped and not any(
+                (hint.semantic_relevance or 0) > 0 for hint in cross_scope_hints
+            ):
+                hint_floor = None
+        selection_floor = None if min_score_skipped else min_score
 
         # Apply selection to results and the bundle together. Explicit count
         # and score bounds apply to pinned/tasks and adjacent context as well.
         scored, selection_excluded = select_candidates(
             scored,
-            min_score=min_score,
+            min_score=selection_floor,
             limit=limit,
             max_per_source=max_per_source,
             max_per_evidence=max_per_evidence,
         )
         excluded.extend(selection_excluded)
-        cross_scope_hints, _ = select_candidates(cross_scope_hints, min_score=min_score, limit=None)
+        cross_scope_hints, _ = select_candidates(cross_scope_hints, min_score=hint_floor, limit=None)
         traces = [c.score_trace for c in scored if c.score_trace is not None]
 
         # --- Stage 6: Context Packing ---
@@ -1041,7 +1059,8 @@ class RetrievalPipeline:
                                    scoring=effective_weights, packing=effective_packing_config,
                                    candidates=scored, bundle=bundle, min_score=min_score, result_limit=limit,
                                    retrieval_mode=retrieval_mode, time_from=effective_time_from,
-                                   time_to=effective_time_to, ranking_policy=ranking_policy, execution=execution)
+                                   time_to=effective_time_to, ranking_policy=ranking_policy, execution=execution,
+                                   min_score_skipped=min_score_skipped)
             op_id = str(uuid.uuid4())
             payload = json.dumps({
                 "request_id": str(analysis.request_id),
@@ -1065,6 +1084,9 @@ class RetrievalPipeline:
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
                 "backend_failures": candidate_diagnostics.backend_failures,
+                # Always present, like the two keys above; true only under
+                # rank fusion (issue #150).
+                "min_score_skipped": min_score_skipped,
                 "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
                     if aggregation_coverage is not None else None,
                 "historical_coverage": historical_coverage.model_dump(mode="json")
@@ -1131,6 +1153,7 @@ class RetrievalPipeline:
             backends_used=list(candidate_counts.keys()),
             embedding_mismatch=embedding_mismatch,
             backend_failures=candidate_diagnostics.backend_failures,
+            min_score_skipped=min_score_skipped,
             aggregation_coverage=aggregation_coverage,
             historical_coverage=historical_coverage,
             temporal_relation=temporal_relation_metadata,

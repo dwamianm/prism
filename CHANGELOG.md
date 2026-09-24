@@ -58,6 +58,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rank fusion; the offline evidence gate favored 0.6. Unset (the default),
   nothing changes. Receipts that record it use schema version 17.
 
+- Add a fail-open for a rank fusion `min_score` floor, which used to empty
+  every retrieval while vector search was failing or had detected an embedding
+  model mismatch. No result has a semantic cosine then, so the floor is skipped
+  for that request: results keep their fused order, and
+  `RetrievalMetadata.min_score_skipped` (in the HTTP and MCP `metrics`) is set
+  next to the `backend_failures` entry for the vector path. Cross-scope hints
+  skip it too unless one of them has a cosine. The floor still applies
+  whenever a result has a cosine, and weighted scoring is unchanged.
+  Receipts of these retrievals use schema version 18, which records
+  `min_score_skipped`. The LangChain and LlamaIndex retrievers accept an
+  optional `min_score` and add `min_score_skipped: True` to each result's
+  metadata when the floor was skipped.
+
 ### Fixed
 
 - Query reformulation (`enable_query_reformulation=True`) now uses the

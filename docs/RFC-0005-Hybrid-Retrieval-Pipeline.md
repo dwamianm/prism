@@ -465,8 +465,21 @@ score(obj) =
     vector pass keeps only `2 × cross_scope_top_n` hits before memories in the
     requested scopes are removed.
   - When vector search fails or detects an embedding model mismatch
-    (`backend_failures` or `embedding_mismatch` in the response metadata), no
-    candidate has a cosine, so any positive floor returns nothing.
+    (`VECTOR` in `backend_failures`, with `embedding_mismatch` set for a
+    mismatch), no candidate has a cosine, so any positive floor would return
+    nothing. The request then fails open: when no result has a cosine from
+    any pass (or there are no results), `min_score` is skipped, the results
+    keep their fused order (`limit` and the source and evidence caps still
+    apply), and the response metadata sets `min_score_skipped` (issue #150).
+    Cross-scope hints come from their own vector search, so they skip the
+    floor too only when none of them has a cosine. HTTP and MCP return it in `metrics`, and
+    the LangChain and LlamaIndex retrievers, which accept an optional
+    `min_score`, add `min_score_skipped: true` to every result's metadata. A
+    result with a cosine from another pass, such as an opt-in query
+    reformulation, keeps the floor in force. A vector search that runs but
+    returns nothing, for example with `vector_k=0` or for a store without
+    vectors, reports no failure, so the floor still applies and returns
+    nothing.
   - `min_score=0` keeps everything, as under weighted scoring.
 
 The score trace keeps the raw semantic and lexical scores, graph proximity,
@@ -481,7 +494,13 @@ recorded value is at least the receipt's `min_score`. When
 which also records that decay, and every session decay in its score provenance
 must equal it. Versions 1 to 16 cannot record it; an unset value is omitted, so
 rank fusion receipts without it stay version 16 with the bytes they had before
-it existed. Version 15 receipts,
+it existed. A retrieval that skipped `min_score` because the vector path failed
+writes version 18, which records `min_score_skipped: true` with the requested
+positive `min_score`, requires every candidate's `semantic_relevance` to be 0,
+and waives the rule that each is at least `min_score`. It also records the
+rank fusion session decay when that is set, under the version 17 rules.
+Versions 1 to 17 cannot record a skipped floor; a floor that was applied
+omits the field, so every other receipt keeps its version and bytes. Version 15 receipts,
 written before the relevance gate existed, stay valid and omit it; their
 `min_score` was compared against the fused score. Weighted receipts keep their
 version and bytes: a weighted `ScoringWeights` omits `fusion` and `rrf_k` when

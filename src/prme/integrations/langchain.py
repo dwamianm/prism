@@ -45,7 +45,7 @@ except ImportError as e:
         "Install with: pip install prme[langchain]"
     ) from e
 
-from pydantic import PrivateAttr
+from pydantic import Field, PrivateAttr
 
 from prme.client import MemoryClient
 from prme.config import PRMEConfig
@@ -99,6 +99,10 @@ class PRMERetriever(BaseRetriever):
         scope: Scope filter(s) for retrieval.
         token_budget: Token budget for context packing.
         top_k: Maximum number of documents to return.
+        min_score: Optional inclusive floor passed to retrieval. Under rank
+            fusion it compares each result's ``semantic_relevance``; when it
+            could not be applied, every document's metadata carries
+            ``min_score_skipped: True`` (RFC-0005 Section 7.2).
     """
 
     directory: str = "."
@@ -107,6 +111,7 @@ class PRMERetriever(BaseRetriever):
     scope: Scope | list[Scope] | None = None
     token_budget: int | None = None
     top_k: int = 10
+    min_score: float | None = Field(default=None, ge=0, allow_inf_nan=False)
 
     _client: MemoryClient = PrivateAttr()
 
@@ -124,6 +129,7 @@ class PRMERetriever(BaseRetriever):
             user_id=self.user_id,
             scope=self.scope,
             token_budget=self.token_budget,
+            min_score=self.min_score,
         )
 
         docs = []
@@ -149,6 +155,9 @@ class PRMERetriever(BaseRetriever):
                 # Rank fusion: the score is rank-based, so this cosine is the
                 # value to threshold on (RFC-0005 Section 7.2).
                 metadata["semantic_relevance"] = candidate.semantic_relevance
+            if response.metadata.min_score_skipped:
+                # The vector path failed, so the floor could not be applied.
+                metadata["min_score_skipped"] = True
 
             docs.append(
                 Document(

@@ -145,7 +145,12 @@ the candidates, not how relevant it is, so the floor compares against
 `semantic_relevance` instead. Each result then carries `semantic_relevance`: the
 semantic cosine similarity of the memory behind it. A floor tuned on weighted
 scores does not carry over, and when a floor is set, a result with a low cosine
-is filtered out even if it is an exact keyword match. `min_score: 0` keeps
+is filtered out even if it is an exact keyword match. If vector search is
+failing, or the embedding model changed and the index has not been rebuilt yet,
+no result has a cosine to compare. The floor is then skipped rather than
+returning nothing: results keep their ranked order, `metrics.backend_failures`
+names the vector failure, and `metrics.min_score_skipped` is `true`. Treat that
+flag as a sign that the floor did not filter anything. `min_score: 0` keeps
 everything in both modes.
 
 ### POST /v1/organize

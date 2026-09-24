@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -104,8 +105,32 @@ class TestPRMERetriever:
                     assert all(0 <= r.metadata["semantic_relevance"] <= 1 for r in results)
                 else:
                     assert all("semantic_relevance" not in r.metadata for r in results)
+                assert all("min_score_skipped" not in r.metadata for r in results)
             finally:
                 retriever.close()
+
+    def test_rank_fusion_reports_a_skipped_min_score(self, tmpdir: str, monkeypatch):
+        config = config_from_directory(tmpdir).model_copy(
+            update={"scoring": ScoringWeights(fusion="rrf")}
+        )
+        retriever = PRMERetriever(directory=tmpdir, user_id="test-user", config=config,
+                                  min_score=.999)
+        try:
+            retriever._client.store("Bob likes hiking", user_id="test-user")
+            assert retriever.retrieve("hiking") == []
+            monkeypatch.setattr(retriever._client._engine._vector_index._provider, "embed",
+                                AsyncMock(side_effect=RuntimeError("vector search is down")))
+            results = retriever.retrieve("hiking")
+            assert [r.node.get_content() for r in results] == ["Bob likes hiking"]
+            assert results[0].metadata["min_score_skipped"] is True
+            assert results[0].metadata["semantic_relevance"] == 0
+        finally:
+            retriever.close()
+
+    @pytest.mark.parametrize("value", [-0.1, float("nan"), float("inf")])
+    def test_min_score_is_validated_when_built(self, tmpdir: str, value: float):
+        with pytest.raises(ValueError, match="min_score"):
+            PRMERetriever(directory=tmpdir, user_id="test-user", min_score=value)
 
 
 class TestPRMEChatStore:

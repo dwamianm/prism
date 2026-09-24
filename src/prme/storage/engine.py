@@ -1809,7 +1809,9 @@ class MemoryEngine:
             min_score: Inclusive ranking score floor; not a probability.
                 Under rank fusion (``fusion='rrf'``) it is compared with each
                 result's ``semantic_relevance``, its semantic cosine, instead of
-                the rank-based fused score.
+                the rank-based fused score. When the vector path failed or
+                detected an embedding mismatch and no result has a cosine, the
+                floor is skipped and ``metadata.min_score_skipped`` is set.
             limit: Maximum primary results before context packing. Zero returns none.
             max_per_source: Optional maximum results with the same exact source
                 passage and evidence set. Use 1 to prevent extracted sibling
