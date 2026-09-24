@@ -152,7 +152,7 @@ before it makes any call. The frozen harness itself is unchanged.
 |---|---|---|
 | `full-context` | LoCoMo | The whole conversation: a date header per session, one `Speaker: text` line per turn, image captions kept. 12,612 to 24,081 tokens per conversation, 20,619 on average. |
 | `plain-vector`, `plain-bm25`, `plain-rrf` | LoCoMo, LongMemEval-S | The saved packs' raw turns, ranked by one index or by RRF (k=60) of both, packed in rank order as `(date) speaker: text` lines up to 3,996 tokens. No PRME scoring, expansion, filters or renderer. |
-| `prme`, `prme-<name>` | LoCoMo, LongMemEval-S | PRME's own `retrieve()`, replayed over the saved packs by the evidence gate and rendered as the product renders it, up to 3,996 tokens: the current defaults, or a named variant with the settings it changes. Its preparation counts how many contexts still match the saved 2026-09-23 run exactly. These arms run on the [DeepSeek answer track](#deepseek-answer-track-through-ollama) only. |
+| `prme`, `prme@<commit>`, `prme-<name>` | LoCoMo, LongMemEval-S | PRME's own `retrieve()`, replayed over the saved packs by the evidence gate and rendered as the product renders it, up to 3,996 tokens: the current defaults (`prme@<commit>` is a later baseline of them, filed under its commit), or a named variant with the settings it changes. Its preparation counts how many contexts still match the saved 2026-09-23 run exactly. These arms run on the [DeepSeek answer track](#deepseek-answer-track-through-ollama) only. |
 
 The plain arms use the same stored text, embedding model and indexes as PRME, so
 they isolate PRME's retrieval and rendering rather than reproduce a published
@@ -244,16 +244,19 @@ with another DeepSeek score from the same model identity and settings:
 1. Record a DeepSeek baseline for the current defaults (the `prme` arm) on both
    benchmarks, prepared from a commit on `main`.
 2. Prepare each change as a named variant of the defaults (`prme-<name>`, with
-   the settings it changes), answer it, and pair it with the baseline question
-   by question with `compare`. The baseline's contexts match the saved
-   2026-09-23 run exactly, so when a variant is prepared at a later commit, run
-   the evidence gate on the defaults at that commit first. If it no longer
-   reproduces every saved context, the pairing also measures other code
-   changes.
+   the settings it changes), answer it, and pair it with the current baseline
+   question by question with `compare`. The first baseline's contexts match
+   the saved 2026-09-23 run exactly, so when a variant is prepared at a later
+   commit, run the evidence gate on the defaults at that commit first. If it
+   no longer reproduces every saved context, the pairing also measures other
+   code changes. A later baseline, recorded after a default changed, no longer
+   matches the saved run, so prepare its variants at the baseline's own commit
+   where possible (#125).
 3. A default changes only when the default-change rule in the epic #77 work
    rules in `CLAUDE.md` is met. After a default changes, or when the model
-   identity changes, a new baseline is needed; the harness cannot yet prepare
-   the `prme` arm again once it has a complete run (#123).
+   identity changes, record a new baseline with `prepare prme` and `run prme`
+   at a newer commit on `main` (see `prme@<commit>` below). The current
+   baseline is the most recent complete one; pair later variants with it.
 
 `:cloud` models are served by Ollama's hosted service, not by this machine. The
 prompts leave the machine and count against the Ollama account's usage limits.
@@ -312,6 +315,22 @@ Safeguards:
   an append-only run log outside its folder, which every result summarizes.
 - The `prme` arm prepares the shipped defaults, so `prepare` refuses it unless
   the checked-out commit is on `main`. A variant can be prepared from a branch.
+- Each commit has at most one defaults baseline. The first is the `prme` arm.
+  Once it has a complete run, `prepare prme` at another commit on `main` files
+  a new baseline as `prme@<commit>`, where `<commit>` is the first 8 characters
+  of the checked-out commit. It has its own contexts, answers, run log and
+  published result, and every earlier baseline and its record stay as they
+  were. The new arm's run log starts with a `new-baseline` event naming its
+  commit, the first baseline's commit and any earlier `prme@<commit>` baseline
+  that never finished, and its result reports that event.
+- `run prme` answers the baseline of the checked-out commit, so run it from the
+  commit that prepared it. While a `prme@<commit>` baseline is prepared and not
+  complete, `prepare prme` and `run prme` at any other commit refuse and name
+  it: check out its commit to finish it, or move its folder aside to give it
+  up, which the next baseline's `new-baseline` event records.
+- A commit that already has a complete baseline cannot get another. If the
+  model identity changes while the newest baseline is at the checked-out
+  commit, record the new baseline at the next commit on `main`.
 - The registered retry and failure rules apply, as described for the GPT-5.4
   arms above. `run` needs no spending cap or terminal confirmation. It uses the
   registration's four concurrent requests; if the Ollama account's usage limit
