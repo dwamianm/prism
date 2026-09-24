@@ -426,3 +426,27 @@ claim the reader format, and mean citations were off. A retrieval scored with
 opt-in rank fusion (RFC-0005 Section 7.2) writes version 15 in any format. The default remains
 `"auditable"` until the reader format passes the evidence gate and a paired
 answer run (epic #77).
+
+## Text-free fallback clarification (2026-09-23)
+
+The implemented `KEY_VALUE` level renders `id: <uuid>, type: <type>, confidence:
+<value>` and `REFERENCE` renders `<type>:<uuid>`. Neither carries memory text.
+With the default `PackingConfig.min_fidelity="reference"`, the auditable and
+compact formats still pack these fallbacks, each inside a full metadata
+envelope: in the saved 2026-09-23 contexts, 337 LoCoMo and 109 LongMemEval-S
+records were packed this way.
+
+A text-bearing `min_fidelity` (`FULL`, `PROSE` or `STRUCTURED`) keeps them out of
+the rendered context in every format. Neither `PROSE` nor `STRUCTURED` is ever
+shorter than `FULL`, so the three floors pack the same records. Under such a
+floor a record whose stored text is blank is also excluded, because it has
+nothing to show at any level, and aggregation coverage does not report that
+exclusion as a token-budget limit. Excluded records are listed in
+`MemoryBundle.excluded_ids` and recorded in the retrieval receipt as candidates
+that were not in the context, so node IDs stay available outside the prompt.
+The reader format applies the same rule at every floor. A receipt candidate's
+`has_content` flag uses the same definition of memory text (non-blank content
+at `FULL`, `PROSE` or `STRUCTURED`), and the offline evidence gate counts
+records without memory text from that flag. The default floor remains
+`REFERENCE` until the evidence gate and a paired answer run support changing it
+(epic #77).

@@ -344,7 +344,10 @@ class MemoryBundle(BaseModel):
     )
     excluded_ids: list[UUID] = Field(
         default_factory=list,
-        description="IDs of candidates dropped for budget",
+        description=(
+            "IDs of candidates dropped for budget, or because they have no "
+            "memory text to show at the allowed representation levels"
+        ),
     )
     tokens_used: int = Field(
         default=0, description="Total tokens consumed by bundle"

@@ -11,7 +11,8 @@ from pydantic import (AwareDatetime, BaseModel, ConfigDict, Field, StrictBool,
 from prme.retrieval.config import PackingConfig, ScoringWeights
 from prme.retrieval.execution import RetrievalExecution
 from prme.retrieval.models import ScoreProvenance, ScoreTrace
-from prme.types import RepresentationLevel, RetrievalMode, Scope
+from prme.types import (TEXT_REPRESENTATIONS, RepresentationLevel, RetrievalMode, Scope,
+                        has_memory_text)
 
 
 class ReceiptCandidate(BaseModel):
@@ -31,8 +32,8 @@ class ReceiptCandidate(BaseModel):
     def valid_trace_and_exposure(self):
         if self.trace is not None and not all(math.isfinite(v) for v in self.trace.model_dump().values()):
             raise ValueError("Receipt score components must be finite")
-        if self.has_content and (not self.in_context or self.representation not in {
-            RepresentationLevel.FULL, RepresentationLevel.PROSE, RepresentationLevel.STRUCTURED}):
+        if self.has_content and (
+                not self.in_context or self.representation not in TEXT_REPRESENTATIONS):
             raise ValueError("Content credit requires a content-bearing context entry")
         return self
 
@@ -471,8 +472,8 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
             score=item.composite_score, trace=item.score_trace, reranker_score=item.reranker_score,
             representation=packed.representation if packed else None,
             token_cost=packed.token_cost if packed else 0, in_context=packed is not None,
-            has_content=bool(packed and item.node.content.strip() and packed.representation in {
-                RepresentationLevel.FULL, RepresentationLevel.PROSE, RepresentationLevel.STRUCTURED}),
+            has_content=bool(packed and has_memory_text(item.node.content)
+                             and packed.representation in TEXT_REPRESENTATIONS),
         ))
     provenance = {}
     for candidate in candidates:

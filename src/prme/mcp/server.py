@@ -346,7 +346,9 @@ async def memory_retrieve(
         event_time_from: Inclusive source event-time lower bound, with timezone.
         event_time_to: Source event-time upper bound, with timezone.
         include_cross_scope: Allow supplementary hints from other scopes.
-        min_fidelity: Minimum packed representation level.
+        min_fidelity: Minimum packed representation level. structured, prose or
+            full leaves out records that would fit only as a text-free
+            key_value or reference fallback, or whose text is blank.
         mode: Epistemic filtering mode within generated candidates.
         include_context: Include the rendered, token-budgeted context in the response,
             with context_references mapping any bundle-local references such as

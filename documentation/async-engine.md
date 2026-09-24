@@ -230,9 +230,12 @@ caller outside the measured context.
 
 Entries retain complete source text or become explicit metadata/references;
 text is never sliced to fit. A tiny budget can produce an empty bundle even for
-pinned memories. Set `min_fidelity=RepresentationLevel.FULL` when references
-without full text are unsuitable. Full node objects remain in `results` for
-inspection; concatenating their content bypasses the bundle's budget.
+pinned memories. Set `min_fidelity=RepresentationLevel.FULL` (or `PROSE` or
+`STRUCTURED`, which pack the same records) when references without memory text
+are unsuitable: records that fit only as a `KEY_VALUE` or `REFERENCE` fallback,
+or whose text is blank, are then excluded and listed in `bundle.excluded_ids`.
+Full node objects remain in `results` for inspection; concatenating their
+content bypasses the bundle's budget.
 
 The separate `format_for_llm(..., token_budget=...)` formatter also counts its
 entire output. It accepts `token_counter=your_model_counter` for tokenizers

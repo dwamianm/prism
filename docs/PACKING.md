@@ -34,7 +34,8 @@ Ties use node ID. Instructions, pinned memories and active tasks keep their
 existing higher priority; single-path candidates keep their existing lower tier.
 Every entry still passes the same measured whole-context budget and fidelity
 checks. Reserving the first position does not guarantee that its full text fits:
-it can become a reference or be excluded. References do not contain source text.
+it can become a reference or be excluded. References do not contain source text;
+a text-bearing `min_fidelity`, described below, keeps them out of the context.
 Call `response.bundle.render()` for the exact budgeted text; the surrounding
 API response and the application's other prompts consume additional tokens.
 
@@ -111,6 +112,36 @@ The complete record, including its ID and every metadata field, stays in
 `response.bundle.sections` and in the retrieval receipt. `auditable` remains
 the default and `compact` remains available. The equivalent environment setting
 is `PRME_PACKING__CONTEXT_FORMAT=reader`.
+
+When a record does not fit whole, the packer tries lower representation levels
+down to `PackingConfig.min_fidelity`. The default floor is `reference`, and the
+two lowest levels carry no memory text: `key_value` renders
+`id: <uuid>, type: fact, confidence: <value>` and `reference` renders
+`fact:<uuid>`. In the auditable and compact formats each such entry still costs
+a full metadata envelope and gives the answering model nothing to read. To keep
+these text-free fallbacks out of the context in every format, set a
+text-bearing floor:
+
+```python
+config = config.model_copy(update={
+    "packing": PackingConfig(token_budget=4096, min_fidelity="full")
+})
+```
+
+With `full`, `prose` or `structured` as the floor, a record that fits only
+without its text, or whose stored text is blank, is excluded instead. It is
+listed in `response.bundle.excluded_ids` and appears in the retrieval receipt
+as a candidate that was not in the context, so a caller that needs the node IDs
+still has them outside the prompt. Neither `prose` nor `structured` is ever
+shorter than `full`, so the three floors pack the same records; `full` does the
+least work. Aggregation coverage does not count a blank record's exclusion as a
+token-budget limit. The floor governs the packed context only
+(`response.bundle` and MCP `context`); `response.results` still lists every
+retrieved record. The equivalent environment setting is
+`PRME_PACKING__MIN_FIDELITY=full`, and `retrieve()`, HTTP and MCP accept
+`min_fidelity` per request, which replaces the configured floor for that
+request. The reader format always applies this rule. The default stays
+`reference` until a paired answer run supports changing it (epic #77).
 
 For workloads that store a source block or bounded dialogue episode under one
 `session_id`, opt into deterministic two-stage episode routing:

@@ -63,7 +63,7 @@ from prme.retrieval.models import (
     RetrievalMetadata,
     RetrievalResponse,
 )
-from prme.retrieval.packing import pack_context
+from prme.retrieval.packing import pack_context, requires_memory_text
 from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.scope import ScopeInput, normalize_scope
@@ -73,7 +73,15 @@ from prme.retrieval.temporal_relations import (
     TemporalRelationConfig,
     TemporalRelationEnricher,
 )
-from prme.types import EdgeType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope
+from prme.types import (
+    EdgeType,
+    LifecycleState,
+    NodeType,
+    RepresentationLevel,
+    RetrievalMode,
+    Scope,
+    has_memory_text,
+)
 
 if TYPE_CHECKING:
     from prme.models.relevance import RankingPolicy
@@ -318,7 +326,10 @@ class RetrievalPipeline:
             weights: Override default scoring weights for this request.
             ranking_multipliers: Explicit bounded adjustment after query-specific
                 weight redistribution, before reranking and session expansion.
-            min_fidelity: Override minimum representation level.
+            min_fidelity: Override minimum representation level. A
+                text-bearing level (structured, prose or full) keeps records
+                that fit only as a text-free key_value or reference fallback,
+                or whose text is blank, out of the context.
             retrieval_mode: Retrieval mode controlling epistemic filtering.
             include_cross_scope: Whether to include cross-scope hints when
                 scope is active. When True and a scope filter is set, a
@@ -358,7 +369,8 @@ class RetrievalPipeline:
             if token_budget is not None:
                 overrides["token_budget"] = token_budget
             if min_fidelity is not None:
-                overrides["min_fidelity"] = min_fidelity
+                # model_copy skips validation, so convert here.
+                overrides["min_fidelity"] = RepresentationLevel(min_fidelity)
             effective_packing_config = self._packing_config.model_copy(
                 update=overrides
             )
@@ -934,10 +946,20 @@ class RetrievalPipeline:
             coverage_status: Literal[
                 "semantic_candidates", "candidate_limited", "context_limited"
             ]
-            if bundle.excluded_ids:
+            # A record with no text to show is excluded for that reason, not
+            # for lack of budget.
+            blank_ids = (
+                {c.node.id for c in scored if not has_memory_text(c.node.content)}
+                if requires_memory_text(effective_packing_config)
+                else set()
+            )
+            budget_limited = any(
+                node_id not in blank_ids for node_id in bundle.excluded_ids
+            )
+            if budget_limited:
                 limitation_codes.append("token_budget")
 
-            if bundle.excluded_ids:
+            if budget_limited:
                 coverage_status = "context_limited"
             elif len(limitation_codes) > 1:
                 coverage_status = "candidate_limited"

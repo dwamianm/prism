@@ -281,7 +281,16 @@ class PackingConfig(BaseModel):
     )
     min_fidelity: RepresentationLevel = Field(
         default=RepresentationLevel.REFERENCE,
-        description="Minimum representation level for packed candidates",
+        description=(
+            "Minimum representation level for packed candidates. The "
+            "'key_value' and 'reference' fallbacks render a node ID and type "
+            "(key_value adds a confidence) but no memory text. A text-bearing "
+            "level ('structured', 'prose' or 'full', which pack the same "
+            "records) keeps them out of the context in every format and also "
+            "excludes records whose text is blank; excluded records are listed "
+            "in MemoryBundle.excluded_ids. The reader format always behaves "
+            "this way."
+        ),
     )
     overhead_tokens: int = Field(
         default=100,
