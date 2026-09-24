@@ -894,15 +894,16 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
                     for old, new in zip(prepared["contexts"], kept["contexts"]))
     # Whether this test's own tree is committed does not matter here.
     before, after = ({**result, "prepared": {**result["prepared"], "dirty": False}} for result in (before, after))
-    comparison = baselines.compare(before, after)
+    comparison = baselines.compare(before, after, data=harness["data"])
     assert comparison["arms"] == {"before": "prme", "after": "prme-rrf"} and comparison["warnings"] == []
+    assert comparison["baseline"]["current"] == "prme"
     assert comparison["pair"]["number"] == 1 and comparison["repeat"] is None
     assert {key: value for key, value in comparison["contexts"].items() if key != "note"} == {
         "questions": 2, "differing": differing, "shown_by": "text hashes"}
     assert comparison["prepared"]["after"]["tokenizer"] == baselines.RULE_TOKENIZER
     # Another commit's contexts are flagged only when some context text differs, and the flag counts them.
     moved = {**after, "prepared": {**after["prepared"], "commit": "0" * 40, "dirty": True}}
-    warnings = baselines.compare(before, moved)["warnings"]
+    warnings = baselines.compare(before, moved, data=harness["data"])["warnings"]
     assert any("uncommitted changes" in warning for warning in warnings)
     assert any("different commits" in warning for warning in warnings) is (differing > 0)
     assert comparison["accuracy"]["delta"] == 0 and comparison["gained"] == comparison["lost"] == []
@@ -922,6 +923,9 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
 async def test_a_later_defaults_baseline_is_filed_under_its_commit_and_leaves_the_first_alone(harness, monkeypatch):
     await gate_cases(harness, monkeypatch)
     data = harness["data"]
+    # The earlier commit below is not a real git object, so the ancestry git would report is given here (#127).
+    ancestry = []
+    monkeypatch.setattr(baselines, "_descends", lambda commit, ancestor: ancestry.append((commit, ancestor)) or True)
 
     def prepare(arm, **kwargs):
         return asyncio.to_thread(baselines.prepare, arm, "locomo", data=data, archive=harness["archive"], **kwargs)
@@ -960,8 +964,11 @@ async def test_a_later_defaults_baseline_is_filed_under_its_commit_and_leaves_th
             await prepare(wrong)
     assert not (arm_folder(harness, wrong) / "prepared.json").exists()
     assert not (data / "runs" / f"{wrong}-locomo.jsonl").exists()
+    ancestry.clear()
     later = await prepare(arm)
     assert later["arm"] == arm and later["provenance"]["commit"] == head
+    # The new baseline was checked against the complete one, before and after its contexts were built.
+    assert ancestry == [(head, earlier), (head, earlier)]
     assert (later["context_budget"], later["context_rule"]) == (first["context_budget"], first["context_rule"])
     [event] = [json.loads(line) for line in (data / "runs" / f"{arm}-locomo.jsonl").read_text().splitlines()]
     assert event == {"at": event["at"], "event": "new-baseline", "prepared_commit": head,
@@ -977,8 +984,11 @@ async def test_a_later_defaults_baseline_is_filed_under_its_commit_and_leaves_th
     # These test cases name no saved context, so matching the saved run shows nothing, but the rows' text hashes
     # show both baselines read the same text, so two baselines answered on their own compare as a repeat (#125).
     assert before["prepared"]["contexts_matching_saved_run"] == after["prepared"]["contexts_matching_saved_run"] == 0
-    repeat = baselines.compare(before, after)
+    repeat = baselines.compare(before, after, data=data)
     assert repeat["repeat"] is not None and repeat["contexts"]["shown_by"] == "text hashes"
+    # The later baseline is now the current one; a repeat may still pair it with the first (#127).
+    assert [baseline["arm"] for baseline in repeat["baseline"]["complete"]] == ["prme", arm]
+    assert repeat["baseline"]["current"] == arm
     assert repeat["contexts"]["differing"] == 0
     assert [row["context_sha256"] for row in before["rows"]] != [row["context_sha256"] for row in after["rows"]]
     # Without the text hashes, as in results published before them, nothing shows it and they are refused.
@@ -998,6 +1008,7 @@ async def test_a_later_defaults_baseline_is_filed_under_its_commit_and_leaves_th
 async def test_an_unfinished_later_baseline_is_finished_or_given_up_on_record(harness, monkeypatch):
     await gate_cases(harness, monkeypatch)
     data = harness["data"]
+    monkeypatch.setattr(baselines, "_descends", lambda commit, ancestor: True)
 
     def prepare(arm):
         return asyncio.to_thread(baselines.prepare, arm, "locomo", data=data, archive=harness["archive"])
@@ -1110,13 +1121,18 @@ def test_cli_prepares_the_defaults_only_from_main_and_variants_anywhere(monkeypa
         ("prme", baselines.data_root(OLLAMA_MODEL), None)]
 
 
-def answered(data: Path, benchmark: str, commit: str | None, arm: str = "prme") -> None:
-    """A complete answer run in the arm's run log; ``commit`` None writes an older finished event, without it."""
+def answered(data: Path, benchmark: str, commit: str | None, arm: str = "prme", *, at: str | None = None) -> None:
+    """A complete answer run in the arm's run log, finished ``at`` (by default now).
+
+    ``commit`` None writes an older finished event, without the commit.
+    """
     baselines._log_run(data, arm, benchmark, {"event": "finished", "sample": None, "complete": True, "completed": 1,
-                                              "total": 1, **({} if commit is None else {"prepared_commit": commit})})
+                                              "total": 1, **({} if commit is None else {"prepared_commit": commit}),
+                                              **({} if at is None else {"at": at})})
 
 
-def test_the_defaults_at_another_commit_are_a_new_baseline_once_prme_is_answered(tmp_path):
+def test_the_defaults_at_another_commit_are_a_new_baseline_once_prme_is_answered(tmp_path, monkeypatch):
+    monkeypatch.setattr(baselines, "_descends", lambda commit, ancestor: True)
     first, later = "a" * 40, "0123abcd" + "9" * 32
     assert baselines.baseline_arm("locomo", later, data=tmp_path) == "prme"
     # A sample, an incomplete run or the other benchmark's complete run leaves the prme arm open.
@@ -1151,9 +1167,151 @@ def test_the_defaults_at_another_commit_are_a_new_baseline_once_prme_is_answered
     assert baselines.baseline_arm("locomo", later, data=legacy) == "prme@0123abcd"
 
 
+def test_the_current_baseline_is_the_one_whose_own_answer_run_completed_last(tmp_path):
+    assert baselines._complete_baselines(tmp_path, "locomo") == []
+    assert baselines.current_baseline(tmp_path, "locomo") is None
+    first, second, third = "a" * 40, "0123abcd" + "9" * 32, "4567cdef" + "9" * 32
+    answered(tmp_path, "locomo", first, at="2026-09-24T03:07:22+00:00")
+    # A sample, an incomplete run, a baseline that is only prepared and the other benchmark's runs record nothing.
+    for event in ({"sample": 2, "complete": True, "at": "2026-09-24T04:00:00+00:00"},
+                  {"sample": None, "complete": False, "at": "2026-09-24T04:30:00+00:00"}):
+        baselines._log_run(tmp_path, "prme@0123abcd", "locomo", {"event": "finished", "prepared_commit": second,
+                                                                 **event})
+    (tmp_path / "prme@89abcdef" / "locomo").mkdir(parents=True)
+    (tmp_path / "prme@89abcdef" / "locomo" / "prepared.json").write_text("{}")
+    answered(tmp_path, "longmemeval", third, arm="prme@4567cdef", at="2026-09-25T00:00:00+00:00")
+    assert baselines._complete_baselines(tmp_path, "locomo") == [
+        {"arm": "prme", "commit": first, "finished_at": "2026-09-24T03:07:22+00:00"}]
+    assert baselines.current_baseline(tmp_path, "locomo") == "prme"
+    # The order the runs completed in decides, not the names.
+    answered(tmp_path, "locomo", third, arm="prme@4567cdef", at="2026-09-24T05:27:14.042424+00:00")
+    answered(tmp_path, "locomo", second, arm="prme@0123abcd", at="2026-09-24T05:51:15+00:00")
+    assert [(baseline["arm"], baseline["commit"]) for baseline in baselines._complete_baselines(tmp_path, "locomo")] \
+        == [("prme", first), ("prme@4567cdef", third), ("prme@0123abcd", second)]
+    assert baselines.current_baseline(tmp_path, "locomo") == "prme@0123abcd"
+    assert baselines.current_baseline(tmp_path, "longmemeval") == "prme@4567cdef"
+    # A complete pair answers a baseline again, but only the baseline's own answer run records it.
+    baselines._append_event(baselines._pair_log_path(tmp_path, "prme@ffffffff", "prme-x", "locomo"), {
+        "event": "finished", "pair": 1, "sample": None, "complete": True, "at": "2026-09-26T00:00:00+00:00"})
+    assert baselines.current_baseline(tmp_path, "locomo") == "prme@0123abcd"
+    # An older run log without the commit, whose manifest was moved aside, still orders; its commit is unknown.
+    legacy = tmp_path / "legacy"
+    answered(legacy, "locomo", None)
+    assert [baseline["commit"] for baseline in baselines._complete_baselines(legacy, "locomo")] == [None]
+    assert baselines.current_baseline(legacy, "locomo") == "prme"
+    # A finish time without a time zone cannot be ordered against the others, so nothing is chosen from it.
+    for at in ("2026-09-24T06:00:00", "yesterday"):
+        answered(tmp_path / at, "locomo", first, at=at)
+        with pytest.raises(ValueError, match="does not record when its complete run finished"):
+            baselines.current_baseline(tmp_path / at, "locomo")
+
+
+def test_a_later_baseline_must_descend_from_every_complete_baseline(tmp_path, monkeypatch):
+    first, older, mid, side, newer = ("a" * 40, *(f"{prefix}{'9' * 32}" for prefix in (
+        "4567cdef", "0123abcd", "89abcdef", "cdef0123")))
+    # older is first's parent, mid and side each descend from first apart from each other, and newer from mid.
+    parents = {first: older, mid: first, side: first, newer: mid}
+
+    def descends(commit, ancestor):
+        while commit is not None and commit != ancestor:
+            commit = parents.get(commit)
+        return commit is not None
+
+    monkeypatch.setattr(baselines, "_descends", descends)
+    answered(tmp_path, "locomo", first)
+    # An older commit on main is not a newer baseline of the defaults (#127).
+    with pytest.raises(ValueError, match=f"The defaults at {older} do not descend from {first}, which prepared the "
+                                         "complete prme locomo baseline"):
+        baselines.baseline_arm("locomo", older, data=tmp_path)
+    # Nor is it the other benchmark's first baseline, which would then hold older defaults than this one's.
+    with pytest.raises(ValueError, match="complete prme locomo baseline"):
+        baselines.baseline_arm("longmemeval", older, data=tmp_path)
+    assert baselines.baseline_arm("longmemeval", first, data=tmp_path) == "prme"
+    assert baselines.baseline_arm("locomo", mid, data=tmp_path) == "prme@0123abcd"
+    answered(tmp_path, "locomo", mid, arm="prme@0123abcd")
+    # Every complete baseline counts, not only the first.
+    with pytest.raises(ValueError, match=f"do not descend from {mid}, which prepared the complete prme@0123abcd "
+                                         "locomo baseline"):
+        baselines.baseline_arm("locomo", side, data=tmp_path)
+    assert baselines.baseline_arm("locomo", newer, data=tmp_path) == "prme@cdef0123"
+    answered(tmp_path, "locomo", newer, arm="prme@cdef0123")
+    # A complete baseline's own commit still names it, so prepare and run give their own refusals for it.
+    assert baselines.baseline_arm("locomo", mid, data=tmp_path) == "prme@0123abcd"
+    assert baselines.baseline_arm("locomo", first, data=tmp_path) == "prme"
+    # The other benchmark's baselines must descend from this one's newest too.
+    with pytest.raises(ValueError, match="complete prme@cdef0123 locomo baseline"):
+        baselines.baseline_arm("longmemeval", mid, data=tmp_path)
+    assert baselines.baseline_arm("longmemeval", newer, data=tmp_path) == "prme"
+    # A complete baseline that records no commit leaves nothing to check against, so nothing new is recorded.
+    answered(tmp_path, "longmemeval", None, arm="prme@cdef0123")
+    with pytest.raises(ValueError, match="The prme@cdef0123 longmemeval baseline records no commit"):
+        baselines.baseline_arm("longmemeval", newer, data=tmp_path)
+
+
+def test_descends_asks_git_and_refuses_what_git_cannot_tell(tmp_path, monkeypatch):
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c",
+                               "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args], cwd=tmp_path,
+                              check=True, capture_output=True, text=True).stdout.strip()
+
+    git("init", "-q")
+    commits = {}
+    for name in ("base", "main"):
+        git("commit", "-q", "--allow-empty", "-m", name)
+        commits[name] = git("rev-parse", "HEAD")
+    git("checkout", "-q", "-b", "side", commits["base"])
+    git("commit", "-q", "--allow-empty", "-m", "side")
+    commits["side"] = git("rev-parse", "HEAD")
+    monkeypatch.setattr(study, "ROOT", tmp_path)
+    descends = baselines._descends
+    assert descends(commits["main"], commits["base"]) and descends(commits["main"], commits["main"])
+    assert not descends(commits["base"], commits["main"]) and not descends(commits["side"], commits["main"])
+    with pytest.raises(ValueError, match="git cannot tell whether .* Run git fetch first"):
+        descends(commits["main"], "0" * 40)
+    # Only a full commit name reaches git, so a recorded value can never pass as an option, a branch or a tag.
+    git("tag", commits["side"][:8], commits["side"])
+    for value in ("--output=x", "HEAD", "", None, "0" * 6, commits["side"][:8], commits["main"].upper()):
+        with pytest.raises(ValueError, match="is not a full commit name"):
+            descends(commits["main"], value)
+    # Without git on the path, the check says so instead of failing with an unrelated error.
+    monkeypatch.setenv("PATH", str(tmp_path / "nowhere"))
+    with pytest.raises(ValueError, match="git is needed"):
+        descends(commits["main"], commits["base"])
+
+
+async def test_run_never_completes_a_baseline_older_than_a_complete_one(harness, monkeypatch):
+    recorded_baseline(harness, "locomo", DEFAULTS_TEXT)
+    stale = "prme@0123abcd"
+    fabricate_plain(harness["data"], "locomo", DEFAULTS_TEXT, arm=stale)
+    requests = ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    requests.clear()
+    monkeypatch.setattr(baselines, "_descends", lambda commit, ancestor: False)
+    # Called directly, run checks the commit that prepared the baseline, which must be on record (#127).
+    with pytest.raises(ValueError, match=f"The {stale} locomo baseline records no commit"):
+        await run_ollama(harness, stale)
+    manifest = arm_folder(harness, stale) / "prepared.json"
+    manifest.write_text(json.dumps({**json.loads(manifest.read_text()),
+                                    "provenance": {"commit": "0123abcd" + "9" * 32}}))
+    with pytest.raises(ValueError, match="do not descend from a{40}, which prepared the complete prme locomo baseline"):
+        await run_ollama(harness, stale)
+    assert requests == [] and [event["event"] for event in baselines._run_events(
+        harness["data"] / "runs" / f"{stale}-locomo.jsonl")] == []
+    # A sample records no baseline, so it is not refused.
+    sample = await run_ollama(harness, stale, sample=1)
+    assert sample["kind"].endswith("-sample") and sample["completed"] == sample["total"] == 2
+    # One that descends from it is answered as usual, and becomes the current baseline.
+    monkeypatch.setattr(baselines, "_descends", lambda commit, ancestor: True)
+    assert (await run_ollama(harness, stale))["complete"]
+    assert baselines.current_baseline(harness["data"], "locomo") == stale
+
+
 def test_cli_prepares_and_runs_the_baseline_of_the_checked_out_commit(monkeypatch, capsys):
     seen = []
     monkeypatch.setattr(baselines, "_on_main", lambda: True)
+    monkeypatch.setattr(baselines, "_descends", lambda commit, ancestor: True)
     monkeypatch.setattr(baselines.gate, "_quiet_offline_cli", lambda: None)
     monkeypatch.setattr(baselines, "prepare", lambda arm, benchmark, **kwargs: seen.append(arm) or {
         "arm": arm, "benchmark": benchmark, "questions": 0, "context_budget": 3996})
@@ -1288,6 +1446,7 @@ def test_the_rules_budget_is_the_registered_runs_context_ceiling():
 
 
 def test_compare_reads_the_defaults_and_their_variants_only_at_the_rules_4k_budget():
+    answered(baselines.data_root(OLLAMA_MODEL), "locomo", "a" * 40)
     # A variant pair at the 4K budget is compared.
     assert baselines.compare(*one_pair(answer_result("prme", [True, False]),
                                        answer_result("prme-rrf", [True, True])))["arms"]["after"] == "prme-rrf"
@@ -1328,6 +1487,7 @@ def test_compare_reads_the_defaults_and_their_variants_only_at_the_rules_4k_budg
 
 
 def test_compare_reports_how_many_questions_each_side_asked_on_different_context_text():
+    answered(baselines.data_root(OLLAMA_MODEL), "locomo", "a" * 40)
     texts = ["t0", "t1", "t2", "t3"]
     before = answer_result("prme", [True, True, False, False], texts=texts)
     after = answer_result("prme-rrf", [True, False, True, False], texts=["t0", "x1", "t2", "x3"])
@@ -1562,10 +1722,13 @@ DEFAULTS_TEXT = {"conv-1-q0000": "(8 May, 2023) Caroline: I painted a sunset.",
                  "conv-1-q0001": "(20 May, 2023) Melanie: I adopted a puppy named Oscar."}
 
 
-def recorded_baseline(harness, benchmark: str, contexts: dict[str, str]) -> None:
+def recorded_baseline(harness, benchmark: str, contexts: dict[str, str], arm: str = "prme",
+                      commit: str = "a" * 40) -> None:
     """A prepared defaults baseline whose own answer run is complete, as a pair's before side needs."""
-    fabricate_plain(harness["data"], benchmark, contexts, arm="prme")
-    answered(harness["data"], benchmark, "a" * 40)
+    fabricate_plain(harness["data"], benchmark, contexts, arm=arm)
+    manifest = harness["data"] / arm / benchmark / "prepared.json"
+    manifest.write_text(json.dumps({**json.loads(manifest.read_text()), "provenance": {"commit": commit}}))
+    answered(harness["data"], benchmark, commit, arm=arm)
 
 
 def pair_arms(harness, *, marked: bool = True) -> None:
@@ -1643,7 +1806,7 @@ async def test_a_pair_answers_the_variant_and_a_fresh_defaults_run_interleaved_i
     replayed = baselines.report("prme", "locomo", folder_before, questions, prepared, entries, None,
                                 model=OLLAMA_MODEL, answers=folder / "before")
     assert replayed["rows"] == before["rows"]
-    comparison = baselines.compare(before, after)
+    comparison = baselines.compare(before, after, data=harness["data"])
     assert comparison["pair"] == mark and comparison["repeat"] is None
     assert comparison["accuracy"]["delta"] == -1.0 and comparison["lost"] == ["conv-1-q0000", "conv-1-q0001"]
     # One conversation has no conversation-level interval.
@@ -1691,7 +1854,7 @@ async def test_run_pair_resumes_an_unfinished_pair_and_starts_the_next_after_a_c
     second = await run_pair(harness, "prme", "prme-marked")
     assert second["pair"]["number"] == 2 and second["pair"]["pairs_started"] == 2 and len(requests) == 8
     assert second["pair"]["id"] != first["pair"]["id"] and pair_folder(harness, after="prme-marked").is_dir()
-    assert baselines.compare(second["before"], second["after"])["pair"]["number"] == 2
+    assert baselines.compare(second["before"], second["after"], data=harness["data"])["pair"]["number"] == 2
     with pytest.raises(ValueError, match="different pairs"):
         baselines.compare(first["before"], second["after"])
     assert [(event["event"], event["pair"]) for event in pair_log(harness, after="prme-marked")] == [
@@ -1913,16 +2076,27 @@ def test_cli_run_pair_answers_an_arm_or_the_baseline_itself_alongside_the_baseli
         return {"pair": {"number": 1}, "before": side, "after": side}
 
     monkeypatch.setattr(baselines, "run_pair", fake_run_pair)
+    data = baselines.data_root(OLLAMA_MODEL)
+    answered(data, "locomo", "a" * 40, at="2026-09-24T03:07:22+00:00")
+    answered(data, "locomo", "4" * 40, arm="prme@46647825", at="2026-09-24T05:51:15+00:00")
+    answered(data, "longmemeval", "a" * 40)
     for argv in (["run-pair", "prme", "--benchmark", "locomo", "--variant", "rrf", "--baseline", "prme@46647825"],
                  ["run-pair", "prme", "--benchmark", "longmemeval", "--baseline", "prme", "--sample", "2"],
-                 ["run-pair", "full-context", "--baseline", "prme"]):
+                 ["run-pair", "full-context", "--baseline", "prme@46647825"]):
         baselines.main([*argv, "--provider", "ollama"])
     assert seen == [("prme@46647825", "prme-rrf", "locomo", {"model": OLLAMA_MODEL, "sample": None}),
                     ("prme", "prme", "longmemeval", {"model": OLLAMA_MODEL, "sample": 2}),
-                    ("prme", "full-context", "locomo", {"model": OLLAMA_MODEL, "sample": None})]
+                    ("prme@46647825", "full-context", "locomo", {"model": OLLAMA_MODEL, "sample": None})]
     printed = capsys.readouterr().out.splitlines()
     assert json.loads(printed[0]) == {"pair": {"number": 1}, "before": {"complete": True},
                                       "after": {"complete": True}}
+    # A baseline that is no longer current is refused as a usage error, before anything is sent (#127).
+    with pytest.raises(SystemExit):
+        baselines.main(["run-pair", "prme", "--benchmark", "locomo", "--variant", "rrf", "--baseline", "prme",
+                        "--provider", "ollama"])
+    error = capsys.readouterr().err
+    assert "prme is not the current locomo baseline of the defaults: prme@46647825 is" in error
+    assert "Reader and judge" not in error and len(seen) == 3
 
 
 async def test_a_pair_that_fails_its_calibration_check_leaves_no_pair_on_record(harness, monkeypatch):
@@ -1971,6 +2145,8 @@ def test_gpt54_results_answered_on_their_own_are_still_compared():
         result.update(kind="gpt54-baseline-result", answer_model=baselines.OPENAI_ANSWER_MODEL)
     comparison = baselines.compare(before, after)
     assert comparison["pair"] is None and comparison["server_versions"] == [None] and comparison["warnings"] == []
+    # That track answers no baseline of the defaults, so it has none to report.
+    assert comparison["baseline"] is None
     assert comparison["gained"] == ["q1"]
 
 
@@ -1993,6 +2169,59 @@ async def test_run_pair_answers_on_the_ollama_track_only_and_from_a_baseline(har
         await baselines.run_pair("prme", "prme", "locomo", model=None, data=harness["data"])
     with pytest.raises(ValueError, match="baseline of the defaults"):
         await run_pair(harness, "plain-rrf", "prme")
+
+
+async def test_pairs_are_answered_and_compared_only_against_the_current_baseline(harness, monkeypatch):
+    pair_arms(harness)
+    newer, newest = "prme@0123abcd", "prme@4567cdef"
+    recorded_baseline(harness, "locomo", DEFAULTS_TEXT, arm=newer, commit="0123abcd" + "9" * 32)
+    requests = ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    requests.clear()
+    # The first baseline is complete but no longer current, so nothing is answered alongside it, not even the A/A
+    # check, and no pair is opened (#127).
+    for after in ("prme-marked", "prme"):
+        with pytest.raises(ValueError, match=f"prme is not the current locomo baseline of the defaults: {newer} is"):
+            await run_pair(harness, "prme", after)
+    assert requests == [] and not (harness["data"] / "pairs" / "prme").exists()
+    assert not (harness["data"] / "runs" / "pairs" / "prme").exists()
+    paired = await run_pair(harness, newer, "prme-marked")
+    before, after = paired["before"], paired["after"]
+    comparison = baselines.compare(before, after, data=harness["data"])
+    assert comparison["repeat"] is None and comparison["baseline"]["current"] == newer
+    assert [(baseline["arm"], baseline["commit"]) for baseline in comparison["baseline"]["complete"]] == [
+        ("prme", "a" * 40), (newer, "0123abcd" + "9" * 32)]
+    # A before side with the current baseline's name but another preparation's contexts is not the current one.
+    moved = {**before, "prepared": {**before["prepared"], "commit": "b" * 40}}
+    with pytest.raises(ValueError, match=f"read contexts prepared at b{{40}}, but the current locomo baseline, {newer}"):
+        baselines.compare(moved, after, data=harness["data"])
+    # A newer baseline that completes while a pair is answered stops it from being published.
+    answer = baselines._answer
+
+    async def answered_while_a_baseline_completes(*args, **kwargs):
+        await answer(*args, **kwargs)
+        recorded_baseline(harness, "locomo", DEFAULTS_TEXT, arm=newest, commit="4567cdef" + "9" * 32)
+
+    monkeypatch.setattr(baselines, "_answer", answered_while_a_baseline_completes)
+    with pytest.raises(RuntimeError, match=f"pair 2: {newest} became the current locomo baseline while it was "
+                                           f"answered, so nothing is published.* alongside {newest} from now on"):
+        await run_pair(harness, newer, "prme-marked")
+    assert not pair_published(harness, newer, "prme-marked", number=2)
+    finished = pair_log(harness, newer, "prme-marked")[-1]
+    assert (finished["complete"], finished["reason"]) == (False, f"{newest} became the current locomo baseline")
+    # So is the pair answered before it: its defaults may have changed since.
+    with pytest.raises(ValueError, match=f"{newer} is not the current locomo baseline of the defaults: {newest} "
+                                         "is, the most recent to complete its own answer run"):
+        baselines.compare(before, after, data=harness["data"])
+    # Where no baseline's own run is on record, nothing shows the before side is current, so the pair is refused.
+    with pytest.raises(ValueError, match="No locomo baseline of the defaults has a complete answer run on record"):
+        baselines.compare(before, after)
+    # The benchmark a result names is checked before it reaches a path.
+    with pytest.raises(ValueError, match="unknown benchmark, '../x'"):
+        baselines.compare(*({**result, "benchmark": "../x"} for result in (before, after)), data=harness["data"])
+    # A repeat of the defaults may pair any two baselines, wherever it is compared.
+    repeat = baselines.compare(*one_pair(answer_result("prme", [True, False]), answer_result("prme", [False, False])))
+    assert repeat["repeat"] is not None and repeat["baseline"]["current"] is None
 
 
 def test_pair_logs_find_each_arm_on_either_side_of_its_own_pairs_only(tmp_path):
@@ -2219,7 +2448,7 @@ async def test_a_pair_survives_a_looping_answer_and_an_unresolved_verdict_on_eit
     later = await run_pair(harness, "prme", "prme-marked")
     assert later["pair"]["number"] == 2 and later["pair"]["earlier_pairs"][0]["state"].startswith(
         "complete but invalid: more than 1%")
-    assert baselines.compare(later["before"], later["after"])["failure_policy"] == {
+    assert baselines.compare(later["before"], later["after"], data=harness["data"])["failure_policy"] == {
         "id": baselines.FAILURE_POLICY, "sha256": digest(baselines.FAILURE_AMENDMENT), "before": NOTHING_UNSCORED,
         "after": NOTHING_UNSCORED}
 

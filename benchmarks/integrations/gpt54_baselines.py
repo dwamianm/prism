@@ -19,6 +19,9 @@ of its gap belongs to the memory system. These arms add them:
   ``prme`` has a complete answer run, the defaults at another commit on main
   are a new baseline, ``prme@<commit>`` (the commit's first 8 characters),
   which ``prepare prme`` and ``run prme`` choose from the checked-out commit.
+  That commit must descend from the commit of every complete baseline on
+  either benchmark, so the current baseline, the one whose own answer run
+  completed last, holds the newest defaults recorded for its benchmark (#127).
   A later baseline also answers the defaults a second time: paired with an
   earlier baseline that read the same context text, ``compare`` reports the
   two as a repeat, which measures run-to-run variation (#118).
@@ -45,10 +48,11 @@ track, and needs its own ``calibrate`` before ``run`` or ``run-pair``. The ``prm
 with GPT-5.4 scores; compare DeepSeek runs only with each other.
 
 On this track a variant is answered only by ``run-pair``, together with a fresh
-answer run of a prepared defaults baseline, in one session and interleaved
-question by question, so drift and the time of day reach both sides equally
-(#129). ``compare`` pairs a variant only with the defaults run answered
-alongside it. ``run-pair`` with the ``prme`` arm and no variant answers the
+answer run of the current baseline of the defaults, in one session and
+interleaved question by question, so drift and the time of day reach both sides
+equally (#129). ``compare`` pairs a variant only with the defaults run answered
+alongside it, and only while that run's baseline is still the current one
+(#127). ``run-pair`` with the ``prme`` arm and no variant answers the
 baseline against itself: the A/A check of the paired test. A plain or
 full-context arm can be paired with the defaults the same way. The
 default-change rule reads only the 4K budget, so ``run-pair`` and ``compare``
@@ -109,6 +113,8 @@ _VARIANT = re.compile(r"[a-z0-9][a-z0-9-]{0,39}")
 # A defaults baseline recorded after the first one: prme@ and the first 8 characters of its commit.
 SHORT_COMMIT = 8
 _BASELINE = re.compile(rf"prme@([0-9a-f]{{{SHORT_COMMIT}}})")
+# A full commit name (SHA-1 or SHA-256), the only kind the harness passes to git.
+_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 ARMS = {"prme": gate.GATE_BENCHMARKS, "full-context": ("locomo",),
         **{f"plain-{method}": gate.GATE_BENCHMARKS for method in gate.PLAIN_METHODS}}
 # What gpt54_budget.call and client_for send for the registered GPT-5.4 track.
@@ -395,9 +401,16 @@ def baseline_arm(benchmark: str, commit: str | None, *, data: Path) -> str:
     most one baseline. While another later baseline is prepared and not
     complete, there is none: answer that one from its commit, or move its
     folder aside to give it up, which the next baseline's run log records.
+    Nor is there one, first or later, at a commit that does not descend from
+    the commit of every complete baseline on either benchmark
+    (``_check_descends``), so the current baseline holds the newest defaults
+    recorded (#127).
     """
     first = _complete_run_commit(data, "prme", benchmark)
-    if first is None or first == commit:
+    if first == commit:
+        return "prme"
+    if first is None:
+        _check_descends("prme", benchmark, commit, data)
         return "prme"
     arm = f"prme@{(commit or '')[:SHORT_COMMIT]}"
     if not _BASELINE.fullmatch(arm):
@@ -408,6 +421,7 @@ def baseline_arm(benchmark: str, commit: str | None, *, data: Path) -> str:
         if name != arm and (folder / "prepared.json").is_file() and not any(map(_complete_run, history)):
             raise ValueError(f"{name} {benchmark} is a baseline that is prepared and not complete. Check out commit "
                              f"{name.removeprefix('prme@')} to answer it, or move {folder} aside to give it up.")
+    _check_descends(arm, benchmark, commit, data)
     return arm
 
 
@@ -425,6 +439,118 @@ def _later_baselines(data: Path, benchmark: str) -> dict[str, list[dict]]:
     names |= {path.name.removesuffix(f"-{benchmark}.jsonl") for path in logs}
     return {name: _run_events(_run_log_path(data, name, benchmark)) for name in sorted(names)
             if _BASELINE.fullmatch(name)}
+
+
+def _complete_baselines(data: Path, benchmark: str) -> list[dict]:
+    """Every baseline of the defaults with a complete answer run of its own, in the order those runs finished.
+
+    Each entry is the arm, the commit that prepared it (None when neither its
+    run log nor its manifest records one) and when its complete run finished.
+    A baseline's own run is complete once at most, since neither ``prepare``
+    nor ``run`` starts over after it. The last entry is the current baseline
+    (``current_baseline``).
+    """
+    found = []
+    histories = {"prme": _run_events(_run_log_path(data, "prme", benchmark)), **_later_baselines(data, benchmark)}
+    for arm, events in histories.items():
+        finished = next((event for event in events if _complete_run(event)), None)
+        if finished is None:
+            continue
+        try:
+            when = datetime.fromisoformat(finished["at"])
+        except (KeyError, TypeError, ValueError):
+            when = None
+        if when is None or when.tzinfo is None:
+            raise ValueError(f"The {arm} {benchmark} run log does not record when its complete run finished, with a "
+                             "time zone")
+        found.append((when, arm, {"arm": arm, "commit": _recorded_commit(data, arm, benchmark, finished),
+                                  "finished_at": finished["at"]}))
+    return [baseline for *_, baseline in sorted(found, key=lambda item: item[:2])]
+
+
+def current_baseline(data: Path, benchmark: str) -> str | None:
+    """The current baseline of the defaults: the one whose own answer run completed last, or None before any.
+
+    No baseline is recorded at a commit older than a complete one on either
+    benchmark (``_check_descends``), so it holds the newest defaults recorded
+    for the benchmark. Pairs are answered alongside it only, and ``compare``
+    accepts no other as a pair's before side, so the choice of baseline is
+    never left open (#127).
+    """
+    found = _complete_baselines(data, benchmark)
+    return found[-1]["arm"] if found else None
+
+
+def _descends(commit: str, ancestor: str) -> bool:
+    """Whether ``commit`` is ``ancestor`` or descends from it, in this checkout's git history."""
+    import subprocess
+
+    for value in (commit, ancestor):
+        # Only a full commit name reaches git, so a recorded value can never read as an option, a branch or a tag.
+        if not isinstance(value, str) or not _COMMIT.fullmatch(value):
+            raise ValueError(f"{value!r} is not a full commit name")
+    try:
+        found = subprocess.run(["git", "merge-base", "--is-ancestor", ancestor, commit], cwd=study.ROOT,
+                               capture_output=True, text=True)
+    except OSError as exc:
+        raise ValueError(f"git is needed to check which commit a baseline descends from ({exc})") from None
+    if found.returncode not in (0, 1):
+        raise ValueError(f"git cannot tell whether {commit} descends from {ancestor} ({found.stderr.strip()}). Run "
+                         "git fetch first, with the full history in a shallow clone.")
+    return found.returncode == 0
+
+
+def _check_descends(arm: str, benchmark: str, commit: str | None, data: Path) -> None:
+    """A baseline not yet recorded must be at a commit that descends from every complete baseline's (#127).
+
+    Any ancestor of ``origin/main`` is on main, so without this an older
+    commit, whose defaults may have changed since, could become the current
+    baseline. The complete baselines of both benchmarks count, so neither
+    benchmark's newest baseline holds older defaults than the other's. A
+    complete baseline is left to ``prepare`` and ``run``, which refuse it
+    themselves.
+    """
+    recorded = {name: _complete_baselines(data, name) for name in gate.GATE_BENCHMARKS}
+    if any(baseline["arm"] == arm for baseline in recorded[benchmark]):
+        return
+    for name, found in recorded.items():
+        for baseline in found:
+            if commit is not None and baseline["commit"] == commit:
+                continue
+            if commit is None or baseline["commit"] is None:
+                missing = (f"The {arm} {benchmark} baseline" if commit is None
+                           else f"The {baseline['arm']} {name} baseline")
+                raise ValueError(f"{missing} records no commit, so nothing shows that {arm} {benchmark} descends "
+                                 f"from the complete {baseline['arm']} {name} baseline. Prepare the baseline from a "
+                                 "git checkout of main (#127).")
+            if not _descends(commit, baseline["commit"]):
+                raise ValueError(f"The defaults at {commit} do not descend from {baseline['commit']}, which prepared "
+                                 f"the complete {baseline['arm']} {name} baseline, so they cannot be the newest "
+                                 "baseline. Record a new baseline only at a commit on main that descends from every "
+                                 "complete one (#127).")
+
+
+def _check_current_baseline(arm: str, benchmark: str, found: list[dict], commit: str | None = None) -> None:
+    """A pair counts only with the current baseline as its before side (#127), and the same baseline's contexts.
+
+    ``found`` is ``_complete_baselines`` for the benchmark. With ``commit``,
+    the before side must also have read contexts prepared at the current
+    baseline's recorded commit, so a result from another data root with the
+    same arm name is not taken for it.
+    """
+    if not found:
+        raise ValueError(f"No {benchmark} baseline of the defaults has a complete answer run on record, so nothing "
+                         f"shows that {arm} is the current one. The run logs live in the main checkout that answered "
+                         "the pair (#127).")
+    current = found[-1]
+    if arm != current["arm"]:
+        raise ValueError(f"{arm} is not the current {benchmark} baseline of the defaults: {current['arm']} is, the "
+                         "most recent to complete its own answer run. Pairs are answered and compared only alongside "
+                         "the current baseline, and every earlier pair of an arm stays on record for the pull "
+                         "request to list (#127, #130).")
+    if commit is not None and current["commit"] is not None and commit != current["commit"]:
+        raise ValueError(f"The before side read contexts prepared at {commit}, but the current {benchmark} baseline, "
+                         f"{arm}, was prepared at {current['commit']} (#127)")
 
 
 def _prepare_full_context(folder: Path, benchmark: str, questions: list[dict]) -> tuple[list[dict], dict]:
@@ -701,15 +827,21 @@ def _complete_run_commit(data: Path, arm: str, benchmark: str) -> str | None:
     finished = [event for event in _run_events(_run_log_path(data, arm, benchmark)) if _complete_run(event)]
     if not finished:
         return None
-    commit = finished[-1].get("prepared_commit")
+    commit = _recorded_commit(data, arm, benchmark, finished[-1])
+    if not commit:
+        raise ValueError(f"{arm} {benchmark} has a complete answer run, but neither its run log nor "
+                         f"{data / arm / benchmark / 'prepared.json'} records the commit that prepared it")
+    return commit
+
+
+def _recorded_commit(data: Path, arm: str, benchmark: str, finished: dict) -> str | None:
+    """The commit a complete run's ``finished`` event records, or else the arm's manifest; None when neither does."""
+    commit = finished.get("prepared_commit")
     manifest = data / arm / benchmark / "prepared.json"
     if commit is None and manifest.is_file():
         # Run logs written before the finished event recorded the commit: a complete arm keeps its manifest.
         commit = (json.loads(manifest.read_text()).get("provenance") or {}).get("commit")
-    if not commit:
-        raise ValueError(f"{arm} {benchmark} has a complete answer run, but neither its run log nor {manifest} "
-                         "records the commit that prepared it")
-    return commit
+    return commit or None
 
 
 def _run_history(data: Path, arm: str, benchmark: str) -> dict:
@@ -1131,6 +1263,10 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
     with _run_lock(folder), _registered_judge(registration, benchmark):
         if _complete_result(private):
             raise ValueError(f"{run_name} is already complete; a finished arm or sample is never rerun")
+        if is_baseline(arm) and sample is None:
+            # The CLI answers the baseline of the checked-out commit (baseline_arm); a direct call is checked against
+            # the commit that prepared it, so an older baseline never completes after a newer one (#127).
+            _check_descends(arm, benchmark, (prepared.get("provenance") or {}).get("commit"), data)
         if model is None:
             ledger = _ledger(_ledger_path(data, arm, benchmark), max_usd)
             ask = partial(call, ledger=ledger)
@@ -1215,7 +1351,9 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     """Answer ``after`` together with a fresh run of the defaults baseline ``before``, in one session.
 
     Both arms must be prepared, and ``before`` must have a complete answer run
-    of its own (``run``), which records the baseline. ``after`` is a variant of
+    of its own (``run``), which records the baseline, and be the current
+    baseline (``current_baseline``), the only one ``compare`` pairs a variant
+    with (#127). ``after`` is a variant of
     the defaults, another arm, or ``before`` itself for the A/A check. The two
     answer runs share one queue, interleaved question by question
     (``PAIR_ORDER``), so drift and the time of day reach both sides equally,
@@ -1234,6 +1372,7 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     if _complete_run_commit(data, before, benchmark) is None:
         raise ValueError(f"The {before} {benchmark} baseline has no complete answer run of its own; answer it with "
                          "run first, which records the baseline")
+    _check_current_baseline(before, benchmark, _complete_baselines(data, benchmark))
     registration, questions = registered_protocol(benchmark)
     arms = {"before": before, "after": after}
     # The A/A check reads one prepared arm on both sides, so it is loaded and checked once.
@@ -1302,8 +1441,12 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
             _write_json(folder / side / private, result)
         versions = [version for version in _sorted_versions(
             version for result in outcome.values() for version in result["server_versions"]) if version]
-        # compare refuses a pair whose server version changed, so such a pair is never published as complete.
+        # compare refuses a pair whose server version changed, or whose baseline is no longer the current one
+        # (#127), so such a pair is never published as complete.
         changed = f"the Ollama server version changed ({', '.join(versions)})" if len(versions) > 1 else None
+        superseded = current_baseline(data, benchmark)
+        if changed is None and superseded != before:
+            changed = f"{superseded} became the current {benchmark} baseline"
         complete = changed is None and all(result["complete"] for result in outcome.values())
         invalid = _invalid(run_name, outcome, len(questions), complete and sample is None)
         _append_event(log, {"event": "finished", "pair": number, "sample": sample, "complete": complete,
@@ -1318,8 +1461,10 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
                                  "runs_started": sum(event["event"] == "started" for event in events),
                                  "arm": _run_history(data, arms[side], benchmark)}
         if changed:
+            then = ("the next run starts a new pair" if superseded == before
+                    else f"pairs are answered alongside {superseded} from now on")
             raise RuntimeError(f"{run_name}: {changed} while it was answered, so nothing is published. Its answers "
-                               "stay on record, and the next run starts a new pair.")
+                               f"stay on record, and {then}.")
         if not complete:
             counts = "; ".join(f"{side} {result['completed']}/{result['total']} answered, "
                                f"{result['final_failures']} final failures" for side, result in outcome.items())
@@ -1533,6 +1678,22 @@ def _pair_of(before: dict, after: dict) -> dict | None:
     return {key: value for key, value in first.items() if key != "side"}
 
 
+def _baseline_record(before: dict, data: Path | None) -> list[dict] | None:
+    """Every complete baseline of the defaults on the before result's track and benchmark (``_complete_baselines``).
+
+    Read from the track's run logs under ``data``, or the result's own track,
+    when ``compare`` runs, so a baseline recorded after a pair was answered
+    counts (#127). None for a GPT-5.4 result: that track answers no baseline
+    of the defaults.
+    """
+    if before["kind"] != "ollama-answer-result":
+        return None
+    if before.get("benchmark") not in gate.GATE_BENCHMARKS:
+        raise ValueError(f"The results name an unknown benchmark, {before.get('benchmark')!r}")
+    return _complete_baselines(data or data_root(ollama_answers.AnswerModel(model=before["model"])),
+                               before["benchmark"])
+
+
 def _paired(pairs: list[tuple[str | None, float, float]], *, samples: int, clustered: bool) -> dict:
     """The paired difference and its 95% interval, resampling questions or, with ``clustered``, conversations too.
 
@@ -1564,14 +1725,20 @@ def _paired(pairs: list[tuple[str | None, float, float]], *, samples: int, clust
             "interval_95_conversations": conversations, "interval_95_questions": questions}
 
 
-def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
+def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None = None) -> dict:
     """Pair two complete answer results on the same questions, answered by the same reader and judge.
 
     ``before`` is the baseline. On the Ollama track the two results must be the
     sides of one ``run_pair`` pair (#129). The one exception is a repeat: two
     answer runs of the defaults, each answered on its own, that sent the reader
     and judge the same inputs (``_same_inputs``), which keeps the #118
-    measurement checkable. Every Ollama server version the two results recorded
+    measurement checkable. Unless the two results are a repeat, the pair's
+    before side must be the current baseline of the defaults, prepared at its
+    recorded commit (``_check_current_baseline``), read from the track's run
+    logs under ``data`` (by default the before result's track) when compare
+    runs, so a pair answered before a newer baseline completed no longer
+    counts (#127). ``baseline`` reports every complete baseline and which is
+    current. Every Ollama server version the two results recorded
     must be the same; a pair must record one at every start, and a repeat that
     did not gets a warning. The difference's 95% interval resamples LoCoMo's
     conversations, keeping each conversation's questions together, and
@@ -1661,6 +1828,10 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
     repeat = both_baselines and (same_contexts or _same_inputs(before, after))
     if pair is None and before["kind"] == "ollama-answer-result" and not repeat:
         raise ValueError(unpaired)
+    recorded = _baseline_record(before, data)
+    # A repeat measures two runs of the defaults, so it may pair an earlier baseline with a later one.
+    if recorded is not None and not repeat:
+        _check_current_baseline(before["arm"], before["benchmark"], recorded, prepared["before"].get("commit"))
     warnings = [f"The {side} contexts were prepared from a tree with uncommitted changes"
                 for side, value in prepared.items() if value.get("dirty")]
     if contexts["differing"] is None:
@@ -1693,6 +1864,12 @@ def compare(before: dict, after: dict, *, samples: int = 2000) -> dict:
                           "a bootstrap over 10 conversations covers less than 95%. LongMemEval-S intervals resample "
                           "questions, since each question has its own history."),
         "arms": {"before": before["arm"], "after": after["arm"]}, "pair": pair,
+        "baseline": None if recorded is None else {
+            "current": recorded[-1]["arm"] if recorded else None, "complete": recorded,
+            "note": "The baselines of the defaults with a complete answer run of their own on this benchmark, in "
+                    "the order those runs finished, from the track's run logs when compare ran. The last is the "
+                    "current baseline. A pair counts only with it as the before side, so a pair can be compared "
+                    "again only while its baseline is current; a repeat of the defaults may pair any two (#127)."},
         "server_versions": _sorted_versions(versions),
         # Each side's retries and unscored questions under the amended policy; None under the registered one.
         "failure_policy": None if outcomes is None else {
@@ -1986,8 +2163,8 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
             command != "compare" and (args.before or args.after)):
         parser.error("compare takes --before and --after, the result files to pair; nothing else does")
     if (command == "run-pair") != (args.baseline is not None):
-        parser.error("run-pair takes --baseline, the prepared defaults baseline to answer alongside the arm; nothing "
-                     "else does")
+        parser.error("run-pair takes --baseline, the current baseline of the defaults to answer alongside the arm; "
+                     "nothing else does")
     if command in {"calibrate", "compare"}:
         return "", "", {}
     if args.arm is None:
@@ -2044,9 +2221,9 @@ def main(argv: list[str] | None = None) -> None:
                         help="prme arm on the ollama provider: a named variant of the defaults, prepared with --set "
                              "and answered with run-pair as the arm prme-NAME")
     parser.add_argument("--baseline", metavar="ARM",
-                        help="run-pair only: the prepared baseline of the defaults (prme or prme@<commit>) answered "
-                             "again alongside the arm. With the prme arm and no --variant, the baseline is paired "
-                             "with itself: the A/A check.")
+                        help="run-pair only: the current baseline of the defaults (prme or prme@<commit>, the one "
+                             "whose own answer run completed last), answered again alongside the arm. With the prme "
+                             "arm and no --variant, the baseline is paired with itself: the A/A check.")
     parser.add_argument("--archive", type=Path,
                         help="Saved 2026-09-23 run archive (default: the main checkout's data/gpt54-comparison-v1)")
     parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
@@ -2103,6 +2280,10 @@ def main(argv: list[str] | None = None) -> None:
         result = asyncio.run(run(arm, benchmark, max_usd=args.max_usd, archive=args.archive))
         print(json.dumps(_summary(result)))
     elif args.command == "run-pair":
+        try:
+            _check_current_baseline(args.baseline, benchmark, _complete_baselines(data, benchmark))
+        except ValueError as exc:
+            parser.error(str(exc))
         _announce(model)
         # The prme arm without a variant is the defaults, so the baseline is answered against itself.
         after = args.baseline if arm == "prme" else arm
