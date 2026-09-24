@@ -482,6 +482,11 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
     if "rrf_k" in overrides.get("scoring", {}) and config.scoring.fusion != "rrf":
         # Weighted scoring ignores the rank constant, so this run would change nothing.
         raise ValueError("scoring.rrf_k applies only with scoring.fusion=\"rrf\"")
+    if (config.packing.session_context_rank_fusion_score_decay is not None
+            and config.scoring.fusion != "rrf"):
+        # Weighted scoring never applies it either.
+        raise ValueError("packing.session_context_rank_fusion_score_decay applies only with "
+                         "scoring.fusion=\"rrf\"")
     return config
 
 

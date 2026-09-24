@@ -5,8 +5,11 @@ adjacent turns from the same session_id. This addresses the "orphaned
 question" problem where a retrieved question node lacks its adjacent answer.
 
 Expanded context nodes are marked with a SESSION_CONTEXT path and assigned
-a slightly lower score (composite_score * decay) to sort just below the
-triggering node while remaining higher than unrelated results.
+a slightly lower score (composite_score * decay). Under the weighted formula
+this sorts them just below the triggering node while remaining higher than
+unrelated results. Rank-fused scores are compressed, so the same fraction
+ranks a neighbor far higher; the opt-in rank fusion decay places neighbors
+lower (issue #111).
 """
 
 from __future__ import annotations
@@ -42,8 +45,12 @@ async def expand_session_context(
     retrieved node.
 
     Adjacent nodes receive:
-    - A composite_score of ``trigger.composite_score * config.session_context_score_decay``
-      when that is stronger than their existing score
+    - A composite_score of ``trigger.composite_score * decay`` when that is
+      stronger than their existing score. ``decay`` is
+      ``config.session_context_score_decay``, or
+      ``config.session_context_rank_fusion_score_decay`` when that is set
+      and the trigger was scored by rank fusion (formula version 2
+      provenance)
     - A ``SESSION_CONTEXT`` entry in their paths list
     - De-duplication by node ID
 
@@ -62,7 +69,8 @@ async def expand_session_context(
     """
     window = config.session_context_window
     top_k = config.session_context_top_k
-    decay = config.session_context_score_decay
+    weighted_decay = config.session_context_score_decay
+    rank_fusion_decay = config.session_context_rank_fusion_score_decay
 
     if window <= 0 or not scored:
         return scored
@@ -135,6 +143,16 @@ async def expand_session_context(
             continue
 
         trigger_id = str(trigger.node.id)
+        # The trigger's own provenance says which formula scored it, so the
+        # decay and the receipt that replays it always agree.
+        rank_fused = (
+            trigger.score_provenance is not None
+            and trigger.score_provenance.formula_version == 2
+        )
+        decay = (
+            rank_fusion_decay
+            if rank_fused and rank_fusion_decay is not None else weighted_decay
+        )
         context_score = trigger.composite_score * decay
         # A neighbor keeps its trigger's relevance even when its own score
         # stays higher; min_score gates it under rank fusion.

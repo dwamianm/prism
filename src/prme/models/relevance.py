@@ -49,7 +49,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -349,6 +349,20 @@ class RetrievalReceipt(BaseModel):
                 value is not None and value < self.min_score for value in relevances
             ):
                 raise ValueError("Rank fusion relevance does not reproduce the min_score selection")
+        # Version 17 records the opt-in rank fusion session decay; without it,
+        # rank-fused neighbors took session_context_score_decay.
+        rank_fusion_decay = self.packing.session_context_rank_fusion_score_decay
+        if self.schema_version < 17 and rank_fusion_decay is not None:
+            raise ValueError("A rank fusion session decay requires a version 17 receipt")
+        if self.schema_version == 17:
+            if rank_fusion_decay is None:
+                raise ValueError("Version 17 records a rank fusion session decay")
+            if any(
+                adjustment.kind == "session_decay" and adjustment.coefficient != rank_fusion_decay
+                for provenance in (self.score_provenance or {}).values()
+                for adjustment in provenance.adjustments
+            ):
+                raise ValueError("Session decay does not match the recorded rank fusion session decay")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -535,19 +549,26 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
             "context_citations": False,
         }
     )
+    if not rank_fused and packing.session_context_rank_fusion_score_decay is not None:
+        # Weighted scoring never applies it, so the receipt keeps the version
+        # and bytes it would have without it.
+        receipt_packing = receipt_packing.model_copy(
+            update={"session_context_rank_fusion_score_decay": None}
+        )
     has_rank_assignment = any(
         operation.kind == "neural_rank_assignment"
         for item in provenance.values() for operation in item.adjustments
     )
     if has_rank_assignment and execution is None:
         raise ValueError("Neural rank assignment requires an execution descriptor")
-    version: Literal[2, 12, 13, 14, 16]
+    version: Literal[2, 12, 13, 14, 16, 17]
     if execution is None:
         version = 2
     elif rank_fused:
         # Version 16 also admits every version 13 and 14 feature, and records
-        # each candidate's relevance (version 15 did not).
-        version = 16
+        # each candidate's relevance (version 15 did not). Version 17 adds the
+        # opt-in rank fusion session decay.
+        version = 17 if packing.session_context_rank_fusion_score_decay is not None else 16
     elif packing.context_format == "reader":
         # Version 14 also admits the version 13 rank-assignment operation.
         version = 14

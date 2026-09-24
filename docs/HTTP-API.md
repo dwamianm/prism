@@ -215,7 +215,9 @@ references to node IDs. Retrievals with opt-in rank fusion
 (`PRME_SCORING__FUSION=rrf`) use version 16, which records `fusion` and `rrf_k`,
 formula version 2 score provenance, and each candidate's `semantic_relevance`.
 Version 15 rank fusion receipts saved before `semantic_relevance` existed stay
-valid. Under rank fusion, `POST /v1/retrieve` returns 422 for non-neutral
+valid. With the opt-in rank fusion session decay
+(`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`) set, they use version
+17, which also records that decay. Under rank fusion, `POST /v1/retrieve` returns 422 for non-neutral
 `ranking_multipliers`. A result's `score` is then the rank-based fused score,
 which says where the result ranks among the candidates rather than how relevant
 it is, so `min_score` compares against each result's `semantic_relevance` instead:

@@ -192,7 +192,10 @@ nodes around top candidates. The signal applies whether an adjacent node is new
 to the pool or was already found by vector, lexical, or graph generation; a
 broad candidate pool must not turn session expansion into a no-op. Inherited
 scores retain the triggering node and decay operation in replayable score
-provenance. Expansion remains owner and exact-scope constrained and is filtered
+provenance. The decay is `PackingConfig.session_context_score_decay` (0.85);
+for triggers scored by rank fusion, the opt-in
+`session_context_rank_fusion_score_decay` replaces it when set (Section 7.2).
+Expansion remains owner and exact-scope constrained and is filtered
 again before packing. Built-in stores compute bounded neighborhoods in SQL for
 each exact `(session_id, scope)` partition; the behavior does not depend on a
 fixed whole-session read limit.
@@ -419,8 +422,26 @@ score(obj) =
   candidate below the relevance floor gets no update boost; its score is not
   capped at its similarity, because a fused score is not on that scale.
 - Session, episode and evidence-context inheritance, reranking and packing
-  operate on the fused score unchanged. Cross-scope hints are fused within
-  their own pool.
+  operate on the fused score unchanged by default. Cross-scope hints are fused
+  within their own pool.
+- Fused scores are compressed, so a fixed fraction of one ranks far higher than
+  the same fraction of a weighted score. A candidate ranked r-th on both
+  channels scores `(k + 1) / (k + r)`: with `k = 60`, 0.85 of a first-place
+  score (the default session decay) outranks every candidate from about twelfth
+  place down, and the neighbors of the top 20 candidates land between about
+  twelfth and thirty-fifth place, ahead of primary evidence. On the offline
+  evidence gate (reader format, score order) this crowded LongMemEval-S
+  multi-session evidence out of the context at the 4K and 8K budgets (issue
+  #111). The opt-in `PackingConfig.session_context_rank_fusion_score_decay`
+  `[HYPOTHESIS]` gives triggers scored by rank fusion (formula version 2
+  provenance) their own session decay; unset, they take
+  `session_context_score_decay`. At 0.6, the value the gate favored, a
+  first-place trigger's neighbors rank below about the fortieth candidate
+  ranked on both channels, though still above any candidate found by one
+  channel alone, which scores at most 0.5. The value was measured with
+  `k = 60` and does not carry over to another rank constant. The episode (0.95)
+  and evidence-context (1.0 and 0.99) decays have not been measured on the
+  fused scale; both features are opt-in and off by default.
 - The fused score measures rank within the pool rather than similarity, so an
   unrelated memory can score near 1.0 when nothing better exists. `min_score`
   (for results and cross-scope hints) therefore compares against each result's
@@ -455,7 +476,12 @@ provenance records `formula_version: 2` and a `rank_fusion` object with both
 ranks and the three applied factors, so replay needs no other candidate.
 Retrieval receipts that use rank fusion are schema version 16 and must state
 `rrf_k`. Version 16 also records each candidate's `semantic_relevance`, and every
-recorded value is at least the receipt's `min_score`. Version 15 receipts,
+recorded value is at least the receipt's `min_score`. When
+`session_context_rank_fusion_score_decay` is set, the receipt is version 17,
+which also records that decay, and every session decay in its score provenance
+must equal it. Versions 1 to 16 cannot record it; an unset value is omitted, so
+rank fusion receipts without it stay version 16 with the bytes they had before
+it existed. Version 15 receipts,
 written before the relevance gate existed, stay valid and omit it; their
 `min_score` was compared against the fused score. Weighted receipts keep their
 version and bytes: a weighted `ScoringWeights` omits `fusion` and `rrf_k` when

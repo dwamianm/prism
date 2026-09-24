@@ -330,6 +330,15 @@ def test_gate_config_selects_rank_fusion_and_refuses_a_rank_constant_without_it(
         gate_config(tmp_path, parse_overrides(["scoring.rrf_k=30"]))
 
 
+def test_gate_config_refuses_a_rank_fusion_session_decay_without_rank_fusion(tmp_path):
+    decay = "packing.session_context_rank_fusion_score_decay=0.6"
+    fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', decay]))
+    assert fused.packing.session_context_rank_fusion_score_decay == .6
+    assert gate_config(tmp_path).packing.session_context_rank_fusion_score_decay is None
+    with pytest.raises(ValueError, match="applies only with"):
+        gate_config(tmp_path, parse_overrides([decay]))
+
+
 @pytest.mark.parametrize("value", ['"full"', "full", '"structured"'])
 def test_gate_config_selects_a_text_bearing_floor(tmp_path, value):
     floored = gate_config(tmp_path, parse_overrides([f"packing.min_fidelity={value}"]))

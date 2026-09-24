@@ -91,6 +91,8 @@ These control the hybrid retrieval scoring formula. They should sum to approxima
 | `PRME_PACKING__GRAPH_MAX_HOPS` | `3` | Max graph traversal depth |
 | `PRME_PACKING__SESSION_CONTEXT_WINDOW` | `3` | Adjacent turns to include |
 | `PRME_PACKING__SESSION_CONTEXT_TOP_K` | `20` | Top results for session expansion |
+| `PRME_PACKING__SESSION_CONTEXT_SCORE_DECAY` | `0.85` | Fraction of the triggering result's score that an adjacent turn inherits |
+| `PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` | unset | Opt-in fraction for results scored with `PRME_SCORING__FUSION=rrf`, between 0 (exclusive) and 1; unset, they take the decay above. Fused scores are compressed, so at 0.85 adjacent turns can crowd primary evidence out of the context. The offline evidence gate favored 0.6 (RFC-0005 Section 7.2); provisional |
 | `PRME_PACKING__AGGREGATION_K_MULTIPLIER` | `2.5` | Multiplier for aggregation queries |
 | `PRME_PACKING__AGGREGATION_K_MAX` | `500` | Max candidates for aggregation |
 

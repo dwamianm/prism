@@ -57,6 +57,13 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "scoring.fusion == 'rrf'",
         lambda value: value == "rrf",
     ),
+    # Applied only to triggers scored by rank fusion, which a request's own
+    # weights can select on a weighted engine.
+    "packing.session_context_rank_fusion_score_decay": (
+        "packing.session_context_rank_fusion_score_decay",
+        "packing.session_context_rank_fusion_score_decay is set",
+        lambda value: value is not None,
+    ),
     "packing.cross_scope_top_n": (
         "packing.cross_scope_top_n",
         "packing.cross_scope_top_n > 0",
