@@ -220,7 +220,7 @@ class RetrievalMode(str, Enum):
 class RepresentationLevel(str, Enum):
     """Context representation fidelity levels (RFC-0006 S4).
 
-    Ordered by token cost, lowest to highest.
+    Ordered by fidelity, lowest to highest.
     """
 
     REFERENCE = "reference"
@@ -228,6 +228,24 @@ class RepresentationLevel(str, Enum):
     STRUCTURED = "structured"
     PROSE = "prose"
     FULL = "full"
+
+
+# Levels whose rendering includes the stored memory text. KEY_VALUE and
+# REFERENCE render a node ID, type and at most a confidence, never the text.
+TEXT_REPRESENTATIONS: frozenset[RepresentationLevel] = frozenset({
+    RepresentationLevel.FULL,
+    RepresentationLevel.PROSE,
+    RepresentationLevel.STRUCTURED,
+})
+
+
+def has_memory_text(content: str | None) -> bool:
+    """Whether stored content has any text to show once whitespace is removed.
+
+    A record shows memory text when this holds and it is rendered at one of
+    ``TEXT_REPRESENTATIONS``.
+    """
+    return bool(content and content.strip())
 
 
 # Epistemic types valid at creation time. DEPRECATED is excluded --

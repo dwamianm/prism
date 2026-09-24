@@ -52,7 +52,8 @@ beside it (same name, `.md`). For each benchmark and category, the report gives:
 
 - records per context;
 - the memory-text share of context tokens;
-- packed records without memory text (REFERENCE and KEY_VALUE fallbacks);
+- packed records without memory text (REFERENCE and KEY_VALUE fallbacks, and
+  records whose text is blank);
 - the share of questions with all annotated evidence in the context, and with
   its text;
 - the rank distribution of annotated evidence;

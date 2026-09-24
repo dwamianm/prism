@@ -25,11 +25,13 @@ from prme.retrieval.models import MemoryBundle, RetrievalCandidate
 from prme.retrieval.tokenization import count_tokens
 from prme.retrieval.time import as_utc
 from prme.types import (
+    TEXT_REPRESENTATIONS,
     ConditionState,
     EpistemicType,
     LifecycleState,
     NodeType,
     RepresentationLevel,
+    has_memory_text,
 )
 
 
@@ -42,13 +44,9 @@ _REPRESENTATION_ORDER: list[RepresentationLevel] = [
     RepresentationLevel.REFERENCE,
 ]
 
-# The reader format packs only levels that show the stored text itself.
-# STRUCTURED adds the node type and is never shorter than FULL; KEY_VALUE and
-# REFERENCE show only a node ID.
-_READER_REPRESENTATIONS = frozenset({
-    RepresentationLevel.FULL,
-    RepresentationLevel.PROSE,
-})
+# A reader line is the stored text itself. STRUCTURED adds the node type and
+# is never shorter than FULL.
+_READER_REPRESENTATIONS = TEXT_REPRESENTATIONS - {RepresentationLevel.STRUCTURED}
 
 _READER_HEADER = (
     'Lines starting with "- " are memory records: {reference}an optional '
@@ -147,6 +145,29 @@ def _render_representation(
 
     # RepresentationLevel.REFERENCE
     return f"{node.node_type.value}:{node.id}"
+
+
+def _text_levels(config: PackingConfig) -> frozenset[RepresentationLevel] | None:
+    """Levels a packed record may use when it must show its stored text.
+
+    The reader format always requires the text. The other formats require it
+    when ``min_fidelity`` is itself a text-bearing level; the default REFERENCE
+    floor keeps the text-free KEY_VALUE and REFERENCE fallbacks (None).
+    """
+    if config.context_format == "reader":
+        return _READER_REPRESENTATIONS
+    if config.min_fidelity in TEXT_REPRESENTATIONS:
+        return TEXT_REPRESENTATIONS
+    return None
+
+
+def requires_memory_text(config: PackingConfig) -> bool:
+    """Whether packing excludes records that cannot show their stored text.
+
+    Under this rule a record whose text is blank is excluded however much
+    budget remains, so its exclusion is not a budget limit.
+    """
+    return _text_levels(config) is not None
 
 
 def select_representation(
@@ -285,6 +306,12 @@ def pack_context(
         raise ValueError("Token budget and reserved overhead must be nonnegative")
     available = max(0, budget - config.overhead_tokens)
     min_fidelity = config.min_fidelity
+    text_levels = _text_levels(config)
+    fallback_levels = [
+        level
+        for level in _REPRESENTATION_ORDER[: _REPRESENTATION_ORDER.index(min_fidelity) + 1]
+        if text_levels is None or level in text_levels
+    ]
     sections: dict[str, list[RetrievalCandidate]] = {}
     excluded_ids: list[UUID] = []
     notice = coverage_notice.strip() if coverage_notice else None
@@ -356,6 +383,8 @@ def pack_context(
             and c.path_count >= 2
             and c.node.node_type != NodeType.INSTRUCTION
             and not _is_pinned_or_active_task(c)
+            # A record that can never be packed must not take the reserved head.
+            and (text_levels is None or has_memory_text(c.node.content))
         ]
         if eligible:
             balanced_head = min(
@@ -364,25 +393,27 @@ def pack_context(
 
     def _try_include(candidate: RetrievalCandidate) -> None:
         nonlocal rendered, tokens_used
+        if text_levels is not None and not has_memory_text(candidate.node.content):
+            # Blank text has nothing to show at any level.
+            excluded_ids.append(candidate.node.id)
+            return
         section = classify_into_sections(candidate)
         tried_text: set[str] = set()
         levels = (
             [required[candidate.node.id]]
             if candidate.node.id in required
-            else _REPRESENTATION_ORDER[: _REPRESENTATION_ORDER.index(min_fidelity) + 1]
+            else fallback_levels
         )
         for level in levels:
+            if text_levels is not None and level not in text_levels:
+                # Only a reserved level can get here: fallback_levels already
+                # holds just the allowed levels.
+                continue
             candidate.representation = level
             candidate.rendered_text = _render_representation(candidate, level)
             if candidate.rendered_text in tried_text:
                 continue
             tried_text.add(candidate.rendered_text)
-            if config.context_format == "reader" and (
-                level not in _READER_REPRESENTATIONS
-                or not (candidate.node.content or "").strip()
-            ):
-                # A reader line must carry the stored text itself.
-                continue
             entry_cost = (
                 full_costs[str(candidate.node.id)]
                 if level == RepresentationLevel.FULL

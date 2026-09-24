@@ -84,6 +84,7 @@ These control the hybrid retrieval scoring formula. They should sum to approxima
 | `PRME_PACKING__CHARS_PER_TOKEN` | `4.2` | Estimated chars per token |
 | `PRME_PACKING__CONTEXT_FORMAT` | `auditable` | `auditable`, `compact`, or `reader` (one plain line per record) |
 | `PRME_PACKING__CONTEXT_CITATIONS` | `false` | Reader format only: add `[m3]` references and fill `context_references` |
+| `PRME_PACKING__MIN_FIDELITY` | `reference` | Lowest representation a record may fall back to. `full`, `prose` or `structured` keeps the text-free `key_value` and `reference` fallbacks, and blank records, out of every context format |
 | `PRME_PACKING__VECTOR_K` | `250` | Vector search candidates |
 | `PRME_PACKING__LEXICAL_K` | `250` | Lexical search candidates |
 | `PRME_PACKING__GRAPH_MAX_CANDIDATES` | `150` | Graph search candidates |

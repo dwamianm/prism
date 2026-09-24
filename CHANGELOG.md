@@ -43,12 +43,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Context ablation now keeps a compact or reader bundle's format and references
   instead of re-rendering the counterfactual as auditable JSON.
+- A text-bearing `PackingConfig.min_fidelity` (`full`, `prose` or
+  `structured`, set in code, with `PRME_PACKING__MIN_FIDELITY` or per request)
+  now keeps every packed record's memory text in the auditable and compact
+  formats too. A record whose stored text is blank is excluded and listed in
+  `MemoryBundle.excluded_ids` instead of being packed with empty text, and it no
+  longer takes the reserved first place under balanced ordering. Set such a
+  floor to keep the text-free `key_value` and `reference` fallbacks out of the
+  context. The default floor stays `reference`, so default contexts are
+  unchanged.
+- Aggregation coverage no longer reports a blank record's exclusion as a
+  `token_budget` limit when the reader format or a text-bearing floor excludes
+  it.
+- A per-request `min_fidelity` passed to `MemoryEngine.retrieve()` as a plain
+  string is now converted to `RepresentationLevel`, so receipts serialize it
+  without warnings and an unknown value fails before retrieval runs.
 
 ### Changed
 
 - Receipt versions from 4, 6 and 8 on must state their ordering, guidance and
   episode settings instead of taking the current defaults. Stored receipts
   always include them.
+- Installs that already set `min_fidelity` to `full`, `prose` or `structured`
+  and store records with blank text (for example tool-call-only chat turns) now
+  see those records excluded from the auditable and compact contexts instead of
+  packed with empty text.
 
 ## [0.12.0] - 2026-09-22
 

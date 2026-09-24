@@ -282,7 +282,9 @@ class RetrieveRequest(BaseModel):
     ranking_multipliers: RankingMultipliers | None = Field(default=None,
         description="Explicit per-request ranking trial; does not activate learned weights")
     min_fidelity: RepresentationLevel | None = Field(default=None,
-        description="Minimum context representation level")
+        description=("Minimum context representation level. structured, prose or full "
+                     "leaves out records that would fit only as a text-free key_value or "
+                     "reference fallback, or whose text is blank"))
 
 
 class RetrieveResultItem(BaseModel):

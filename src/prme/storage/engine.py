@@ -1811,7 +1811,10 @@ class MemoryEngine:
             weights: Override default scoring weights.
             ranking_multipliers: Explicit request-only adjustment for full-pipeline
                 trials; does not activate or persist a learned profile.
-            min_fidelity: Override minimum representation level.
+            min_fidelity: Override minimum representation level. A
+                text-bearing level (structured, prose or full) keeps records
+                that fit only as a text-free key_value or reference fallback,
+                or whose text is blank, out of the context.
             include_cross_scope: Whether to include cross-scope hints.
                 Defaults to True. Set to False to disable.
 

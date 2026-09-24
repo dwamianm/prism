@@ -384,7 +384,7 @@ Hybrid retrieval through the 6-stage pipeline.
 | `time_to` | `datetime \| None` | `None` | End of temporal window |
 | `token_budget` | `int \| None` | `None` | Override default token budget (default: 4096) |
 | `weights` | `ScoringWeights \| None` | `None` | Override scoring weights |
-| `min_fidelity` | `RepresentationLevel \| None` | `None` | Override minimum representation level |
+| `min_fidelity` | `RepresentationLevel \| None` | `None` | Override minimum representation level. `STRUCTURED`, `PROSE` or `FULL` keeps text-free `KEY_VALUE` and `REFERENCE` fallbacks, and blank records, out of the context |
 | `include_cross_scope` | `bool` | `True` | Include cross-scope hints when scope is filtered |
 
 **Returns:** `RetrievalResponse` with bundle, scored results, metadata, score traces.
@@ -807,14 +807,14 @@ Five source provenance types:
 
 ### RepresentationLevel
 
-Ordered by token cost (lowest → highest):
+Ordered by fidelity (lowest → highest):
 
 | Value | Description |
 |---|---|
-| `"reference"` | ID + type only |
-| `"key_value"` | Structured key-value pairs |
-| `"structured"` | Full structured representation |
-| `"prose"` | Natural language |
+| `"reference"` | Type and ID only, no memory text |
+| `"key_value"` | ID, type and confidence, no memory text |
+| `"structured"` | Type label plus the complete text |
+| `"prose"` | The complete text (no separate prose rendering exists) |
 | `"full"` | Complete original content |
 
 ---

@@ -23,7 +23,7 @@ from prme.config import OrganizerConfig
 from prme.models import MemoryNode
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import RetrievalCandidate
-from prme.retrieval.packing import compute_str, pack_context
+from prme.retrieval.packing import compute_str, pack_context, requires_memory_text
 from prme.retrieval.tokenization import count_tokens
 
 
@@ -328,6 +328,14 @@ def test_gate_config_selects_rank_fusion_and_refuses_a_rank_constant_without_it(
     assert gate_config(tmp_path, parse_overrides(["scoring.fusion=rrf"])).scoring.rrf_k == 60
     with pytest.warns(UserWarning), pytest.raises(ValueError, match="applies only with"):
         gate_config(tmp_path, parse_overrides(["scoring.rrf_k=30"]))
+
+
+@pytest.mark.parametrize("value", ['"full"', "full", '"structured"'])
+def test_gate_config_selects_a_text_bearing_floor(tmp_path, value):
+    floored = gate_config(tmp_path, parse_overrides([f"packing.min_fidelity={value}"]))
+    assert floored.packing.min_fidelity.value == value.strip('"')
+    assert requires_memory_text(floored.packing)
+    assert not requires_memory_text(gate_config(tmp_path).packing)
 
 
 def gate_row(question_id, category, *, all_packed=None, unresolved=(), ranks=None, records=25,
