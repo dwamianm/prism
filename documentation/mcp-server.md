@@ -136,8 +136,15 @@ Search memories using 6-signal hybrid retrieval.
 | `user_id` | string | required | User whose memories to search |
 | `scope` | string | optional | Filter by scope |
 | `knowledge_at` | string | optional | ISO datetime for point-in-time queries |
+| `min_score` | number | optional | Inclusive floor on each result's `score`; under rank fusion, on its `semantic_relevance` |
 
 Returns JSON: `{"results": [...], "count": N}`
+
+With opt-in rank fusion (`PRME_SCORING__FUSION=rrf`), a result's `score` says
+where it ranks among the candidates rather than how relevant it is. Each result
+then also carries `semantic_relevance`, the semantic cosine similarity of the
+memory behind it, and `min_score` is compared with that instead. A floor tuned
+on weighted scores does not carry over.
 
 ### memory_ingest
 

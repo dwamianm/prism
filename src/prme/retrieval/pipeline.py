@@ -67,7 +67,11 @@ from prme.retrieval.packing import pack_context, requires_memory_text
 from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.scope import ScopeInput, normalize_scope
-from prme.retrieval.selection import select_candidates, validate_selection
+from prme.retrieval.selection import (
+    select_candidates,
+    validate_selection,
+    with_rank_fusion_relevance,
+)
 from prme.retrieval.session_context import expand_session_context
 from prme.retrieval.temporal_relations import (
     TemporalRelationConfig,
@@ -318,6 +322,8 @@ class RetrievalPipeline:
             event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.
             min_score: Inclusive ranking score floor; not a probability.
+                Under rank fusion it is compared with each result's
+                semantic_relevance (semantic cosine) instead of the fused score.
             limit: Maximum primary results before context packing. Zero returns none.
             max_per_source: Optional maximum results with the same exact source
                 passage and evidence set.
@@ -883,6 +889,13 @@ class RetrievalPipeline:
                 )
 
         aggregation_candidate_count = len(scored) if analysis.is_aggregation else 0
+
+        if effective_weights.fusion == "rrf":
+            # A fused score ranks within the pool, so an unrelated memory can
+            # score near 1.0; min_score gates semantic cosine instead (issue
+            # #110). The fused ranking and scores stay as they are.
+            scored = with_rank_fusion_relevance(scored)
+            cross_scope_hints = with_rank_fusion_relevance(cross_scope_hints)
 
         # Apply selection to results and the bundle together. Explicit count
         # and score bounds apply to pinned/tasks and adjacent context as well.

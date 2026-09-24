@@ -29,14 +29,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   salience and confidence, which were constant or uninformative in the
   2026-09-23 benchmark archive, are not used. Score provenance records formula
   version 2 with the saved ranks and factors, and these receipts use schema
-  version 15. Under rank fusion, `min_score` compares against the rank-based
-  fused score; non-neutral request ranking multipliers are rejected before
+  version 16 (version 15 receipts from earlier development builds, which lack
+  `semantic_relevance`, stay readable). Because a fused score says where a result
+  ranks rather than how relevant it is, `min_score` under rank fusion compares
+  against each result's `semantic_relevance` instead: the semantic cosine
+  similarity of the memory behind it (for session, episode and evidence
+  context, the memory that pulled it in), recorded on every result, cross-scope
+  hint, selection exclusion and receipt candidate, and in the LangChain and
+  LlamaIndex result metadata. A floor tuned on weighted scores does not carry
+  over, cosine ranges depend on the embedding model, and a low-cosine exact
+  keyword match is filtered out when a floor is set. Non-neutral request ranking
+  multipliers are rejected before
   retrieval (HTTP 422); weighted ranking profiles are inapplicable with reason
   `rank_fusion_scoring`; learning evaluation skips rank-fused receipts
   (`rank_fusion_receipt_records`); and the `feedback_apply` job reports
   `not_applicable` and keeps its signals. The default remains the weighted sum,
   whose serialized settings, version ID and receipts are unchanged. As with
-  earlier receipt versions, a release without version 15 support cannot read
+  earlier receipt versions, a release without version 16 support cannot read
   rank-fusion receipts.
 
 ### Fixed

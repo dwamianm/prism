@@ -277,12 +277,15 @@ emitting versions 12 and 13. Older readers without
 version 14 support cannot consume reader receipts.
 
 Retrievals scored with opt-in rank fusion (`ScoringWeights.fusion="rrf"`,
-RFC-0005 Section 7.2) emit version 15 in every context format. Version 15 records
+RFC-0005 Section 7.2) emit version 16 in every context format. Version 16 records
 `scoring.fusion` and `scoring.rrf_k`, formula version 2 score provenance with
-saved ranks and factors, and everything versions 13 and 14 admit. Versions 1 to
-14 cannot claim rank fusion; weighted scoring omits both settings, so their
-stored bytes and checksums remain unchanged. Older readers without version 15
-support cannot consume rank-fusion receipts.
+saved ranks and factors, each candidate's `semantic_relevance` (the semantic cosine
+that `min_score` is compared with under rank fusion), and everything versions 13
+and 14 admit. Version 15 receipts, saved before `semantic_relevance` existed, keep
+their bytes and checksums and cannot claim it. Versions 1 to 14 cannot claim
+rank fusion; weighted scoring omits both settings, so their stored bytes and
+checksums remain unchanged. Older readers without version 16 support cannot
+consume these rank-fusion receipts.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

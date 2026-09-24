@@ -331,7 +331,9 @@ async def memory_retrieve(
     Args:
         query: Natural language search query.
         user_id: User whose memories to search.
-        min_score: Inclusive composite score floor, not a probability.
+        min_score: Inclusive composite score floor, not a probability. Under
+            rank fusion it is a floor on each result's semantic_relevance, the
+            semantic cosine similarity, instead of the rank-based score.
         limit: Maximum primary results; zero returns none.
         max_per_source: Optional maximum results sharing one exact source
             passage and evidence set. Use 1 for source-diverse results.
@@ -422,14 +424,18 @@ async def memory_retrieve(
         results = []
         for candidate in response.results:
             node = candidate.node
-            results.append({
+            item = {
                 "node_id": str(node.id),
                 "content": node.content,
                 "score": round(candidate.composite_score, 4),
                 "node_type": node.node_type.value if hasattr(node.node_type, "value") else str(node.node_type),
                 "lifecycle_state": node.lifecycle_state.value if hasattr(node.lifecycle_state, "value") else str(node.lifecycle_state),
                 "confidence": node.confidence,
-            })
+            }
+            if candidate.semantic_relevance is not None:
+                # Rank fusion: the cosine that min_score compares against.
+                item["semantic_relevance"] = round(candidate.semantic_relevance, 4)
+            results.append(item)
 
         payload = {
             "results": results,

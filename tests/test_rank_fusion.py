@@ -5,6 +5,7 @@ import json
 import random
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
@@ -329,11 +330,11 @@ def test_rank_fusion_inputs_are_rejected_on_formula_one():
         ScoreProvenance.model_validate(data)
 
 
-def test_rank_fusion_receipt_is_version_15_and_replays_its_ranking():
+def test_rank_fusion_receipt_is_version_16_and_replays_its_ranking():
     ranked, _ = score_and_rank([candidate(i, semantic=i / 10, lexical=1 - i / 10) for i in range(1, 6)],
                                RRF, now=NOW)
     saved = receipt(ranked)
-    assert saved.schema_version == 15
+    assert saved.schema_version == 16
     assert saved.replay_ranking() == tuple(c.node.id for c in ranked)
     data = json.loads(saved.model_dump_json())
     assert data["scoring"]["fusion"] == "rrf"
@@ -353,6 +354,7 @@ def test_weighted_receipts_keep_their_version_and_bytes():
     data = json.loads(saved.model_dump_json())
     assert "fusion" not in data["scoring"]
     assert "rank_fusion" not in next(iter(data["score_provenance"].values()))
+    assert "semantic_relevance" not in data["candidates"][0]
 
 
 @pytest.mark.parametrize("version", [9, 12, 13, 14])
@@ -364,20 +366,27 @@ def test_earlier_receipt_versions_cannot_claim_rank_fusion(version):
         RetrievalReceipt.model_validate(data)
 
 
+@pytest.mark.parametrize("version", [15, 16])
 @pytest.mark.parametrize("where", ["scoring", "provenance"])
-def test_version_15_requires_an_explicit_rank_constant(where):
-    ranked, _ = score_and_rank([candidate(1, semantic=.9)], RRF, now=NOW)
-    data = json.loads(receipt(ranked).model_dump_json())
+def test_versions_15_and_later_require_an_explicit_rank_constant(where, version):
+    if version == 15:
+        # Saved before rank fusion receipts recorded semantic relevance.
+        data = json.loads((Path(__file__).parent / "fixtures/relevance/receipt-v15-rrf.json").read_text())
+    else:
+        ranked, _ = score_and_rank([candidate(1, semantic=.9)], RRF, now=NOW)
+        data = json.loads(receipt(ranked).model_dump_json())
+    assert data["schema_version"] == version
     target = data["scoring"] if where == "scoring" else next(iter(data["score_provenance"].values()))["weights"]
     target.pop("rrf_k")
     with pytest.raises(ValidationError, match="explicit rank fusion constant"):
         RetrievalReceipt.model_validate(data)
 
 
-def test_version_15_is_only_for_rank_fusion():
+@pytest.mark.parametrize("version", [15, 16])
+def test_versions_15_and_later_are_only_for_rank_fusion(version):
     ranked, _ = score_and_rank([candidate(1, semantic=.9)], now=NOW)
     data = json.loads(receipt(ranked, weights=DEFAULT_SCORING_WEIGHTS).model_dump_json())
-    data["schema_version"] = 15
+    data["schema_version"] = version
     data["packing"]["context_citations"] = False
     with pytest.raises(ValidationError, match="rank fusion scoring only"):
         RetrievalReceipt.model_validate(data)
@@ -396,7 +405,7 @@ def test_rank_fusion_receipts_keep_reader_and_rank_assignment_features():
                          reference_time=NOW, scopes=(Scope.PROJECT,), scoring=RRF, packing=packing,
                          candidates=ranked, bundle=MemoryBundle(), ranking_policy="score_id",
                          execution=EXECUTION)
-    assert saved.schema_version == 15
+    assert saved.schema_version == 16
     assert json.loads(saved.model_dump_json())["packing"]["context_citations"] is True
     assert saved.replay_ranking() == tuple(c.node.id for c in ranked)
     assert RetrievalReceipt.model_validate_json(saved.model_dump_json()).checksum == saved.checksum
@@ -413,8 +422,10 @@ async def test_session_neighbors_inherit_replayable_fused_scores():
     assert added.composite_score == pytest.approx(.85)
     assert added.score_provenance.formula_version == 2
     saved = receipt(expanded, policy="score_id")
-    assert saved.schema_version == 15
+    assert saved.schema_version == 16
     assert saved.replay_ranking() == tuple(c.node.id for c in expanded)
+    # The neighbor has no cosine of its own and records its trigger's.
+    assert next(c for c in saved.candidates if c.node_id == neighbor.node.id).semantic_relevance == .9
 
 
 # --- Sibling paths ------------------------------------------------------------
@@ -465,7 +476,7 @@ async def test_engine_retrieval_with_rank_fusion_persists_a_replayable_receipt(c
         # First on both channels is 1.0; only the current-update multiplier can exceed it.
         assert all(0 <= item.composite_score <= 1 for item in response.results)
         saved = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
-        assert saved.schema_version == 15
+        assert saved.schema_version == 16
         assert saved.scoring == RRF
         assert saved.replay_ranking() == tuple(item.node.id for item in response.results)
         assert {p.formula_version for p in saved.score_provenance.values()} == {2}

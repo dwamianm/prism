@@ -15,7 +15,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from prme.retrieval.config import PackingConfig
-from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment
+from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment, rank_fusion_relevance
 
 from prme.types import Scope
 
@@ -136,6 +136,9 @@ async def expand_session_context(
 
         trigger_id = str(trigger.node.id)
         context_score = trigger.composite_score * decay
+        # A neighbor keeps its trigger's relevance even when its own score
+        # stays higher; min_score gates it under rank fusion.
+        context_relevance = rank_fusion_relevance(trigger)
         provenance = trigger.score_provenance
         if provenance is not None:
             provenance = provenance.model_copy(update={
@@ -162,6 +165,7 @@ async def expand_session_context(
                     graph_proximity=0.0,
                     composite_score=context_score,
                     score_provenance=provenance,
+                    context_relevance=context_relevance,
                 )
                 changed = True
                 ranking_changed = True
@@ -170,6 +174,8 @@ async def expand_session_context(
             updates: dict[str, object] = {}
             if "SESSION_CONTEXT" not in current.paths:
                 updates["paths"] = [*current.paths, "SESSION_CONTEXT"]
+            if context_relevance > current.context_relevance:
+                updates["context_relevance"] = context_relevance
             if context_score > current.composite_score:
                 updates.update(
                     composite_score=context_score,

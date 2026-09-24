@@ -10,7 +10,7 @@ from pydantic import (AwareDatetime, BaseModel, ConfigDict, Field, StrictBool,
 
 from prme.retrieval.config import PackingConfig, ScoringWeights
 from prme.retrieval.execution import RetrievalExecution
-from prme.retrieval.models import ScoreProvenance, ScoreTrace
+from prme.retrieval.models import ScoreProvenance, ScoreTrace, rank_fusion_relevance
 from prme.types import (TEXT_REPRESENTATIONS, RepresentationLevel, RetrievalMode, Scope,
                         has_memory_text)
 
@@ -23,6 +23,12 @@ class ReceiptCandidate(BaseModel):
     score: float = Field(allow_inf_nan=False)
     trace: ScoreTrace | None
     reranker_score: float | None = Field(default=None, allow_inf_nan=False)
+    # Version 16 and later, rank fusion only: the semantic cosine that
+    # min_score compares against. Omitted otherwise, so earlier receipts keep
+    # their bytes and checksums.
+    semantic_relevance: float | None = Field(
+        default=None, ge=0, allow_inf_nan=False, exclude_if=lambda value: value is None,
+    )
     representation: RepresentationLevel | None = None
     token_cost: int = Field(default=0, ge=0)
     in_context: bool = False
@@ -43,7 +49,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -323,12 +329,26 @@ class RetrievalReceipt(BaseModel):
         )
         if self.schema_version < 15 and rank_fused:
             raise ValueError("Rank fusion scoring requires a version 15 receipt")
-        if self.schema_version == 15 and not (
+        if self.schema_version >= 15 and not (
             self.scoring.fusion == "rrf"
             and all(provenance.formula_version == 2
                     for provenance in (self.score_provenance or {}).values())
         ):
-            raise ValueError("Version 15 receipts record rank fusion scoring only")
+            raise ValueError("Versions 15 and later record rank fusion scoring only")
+        # Version 15 compared min_score with the fused score and recorded no
+        # relevance; version 16 records the cosine it compares instead.
+        relevances = [candidate.semantic_relevance for candidate in self.candidates]
+        if self.schema_version < 16 and any(value is not None for value in relevances):
+            raise ValueError("Rank fusion relevance requires a version 16 receipt")
+        if self.schema_version >= 16:
+            if any(value is None for value in relevances):
+                raise ValueError(
+                    "Versions 16 and later record every candidate's rank fusion relevance"
+                )
+            if self.min_score is not None and any(
+                value is not None and value < self.min_score for value in relevances
+            ):
+                raise ValueError("Rank fusion relevance does not reproduce the min_score selection")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -343,6 +363,14 @@ class RetrievalReceipt(BaseModel):
             for candidate in self.candidates:
                 if self.score_provenance[candidate.node_id].replay_score() != candidate.score:
                     raise ValueError("Score provenance does not reproduce the returned score")
+                # A candidate's own trace is absent once context replaced its
+                # score, so only this lower bound is replayable.
+                if candidate.semantic_relevance is not None and candidate.semantic_relevance < max(
+                    0.0,
+                    self.score_provenance[candidate.node_id].trace.semantic_similarity,
+                    candidate.trace.semantic_similarity if candidate.trace is not None else 0.0,
+                ):
+                    raise ValueError("Rank fusion relevance is below a cosine this receipt records")
             if self.replay_ranking() != tuple(ids):
                 raise ValueError("Score provenance does not reproduce the returned ranking")
             if self.schema_version < 9 and any(
@@ -461,6 +489,7 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
                  time_from=None, time_to=None, ranking_policy: RankingPolicy = "score_path_id",
                  execution: RetrievalExecution | None = None) -> RetrievalReceipt:
     included = {item.node.id: item for group in bundle.sections.values() for item in group}
+    rank_fused = scoring.fusion == "rrf"
     snapshots = []
     for item in candidates:
         if item.node.user_id != user_id:
@@ -470,6 +499,7 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
             node_id=item.node.id, scope=item.node.scope,
             content_sha256=hashlib.sha256(item.node.content.encode()).hexdigest(),
             score=item.composite_score, trace=item.score_trace, reranker_score=item.reranker_score,
+            semantic_relevance=rank_fusion_relevance(item) if rank_fused else None,
             representation=packed.representation if packed else None,
             token_cost=packed.token_cost if packed else 0, in_context=packed is not None,
             has_content=bool(packed and has_memory_text(item.node.content)
@@ -511,12 +541,13 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     )
     if has_rank_assignment and execution is None:
         raise ValueError("Neural rank assignment requires an execution descriptor")
-    version: Literal[2, 12, 13, 14, 15]
+    version: Literal[2, 12, 13, 14, 16]
     if execution is None:
         version = 2
-    elif scoring.fusion == "rrf":
-        # Version 15 also admits every version 13 and 14 feature.
-        version = 15
+    elif rank_fused:
+        # Version 16 also admits every version 13 and 14 feature, and records
+        # each candidate's relevance (version 15 did not).
+        version = 16
     elif packing.context_format == "reader":
         # Version 14 also admits the version 13 rank-assignment operation.
         version = 14

@@ -1801,6 +1801,9 @@ class MemoryEngine:
             event_time_to: Filter by event_time <= this value (bi-temporal).
             token_budget: Override default token budget for this request.
             min_score: Inclusive ranking score floor; not a probability.
+                Under rank fusion (``fusion='rrf'``) it is compared with each
+                result's ``semantic_relevance``, its semantic cosine, instead of
+                the rank-based fused score.
             limit: Maximum primary results before context packing. Zero returns none.
             max_per_source: Optional maximum results with the same exact source
                 passage and evidence set. Use 1 to prevent extracted sibling

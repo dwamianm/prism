@@ -17,6 +17,7 @@ from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import (
     RetrievalCandidate,
     ScoreAdjustment,
+    rank_fusion_relevance,
 )
 
 
@@ -145,6 +146,9 @@ def expand_episode_context(
             ),
         )
         inherited_score = anchor.composite_score * config.episode_context_score_decay
+        # Every promoted member keeps the anchor's relevance, even one whose own
+        # score stays higher; min_score gates it under rank fusion.
+        inherited_relevance = rank_fusion_relevance(anchor)
         inherited_provenance = anchor.score_provenance
         if inherited_provenance is not None:
             inherited_provenance = inherited_provenance.model_copy(
@@ -168,6 +172,8 @@ def expand_episode_context(
             if "EPISODE_CONTEXT" not in current.paths:
                 updates["paths"] = [*current.paths, "EPISODE_CONTEXT"]
                 updates["path_count"] = current.path_count + 1
+            if inherited_relevance > current.context_relevance:
+                updates["context_relevance"] = inherited_relevance
             if inherited_score > current.composite_score:
                 updates.update(
                     composite_score=inherited_score,

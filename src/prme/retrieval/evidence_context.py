@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.filtering import filter_epistemic
-from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment
+from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment, rank_fusion_relevance
 from prme.types import NodeType, RetrievalMode, Scope
 
 if TYPE_CHECKING:
@@ -178,6 +178,9 @@ async def project_evidence_context(
                     )
                 }
             )
+        # The source stands in for every member it replaces, so it keeps the
+        # largest of their relevances; min_score gates it under rank fusion.
+        group_relevance = max(rank_fusion_relevance(member) for member in members)
         for source in eligible[: config.evidence_projection_max_sources]:
             replacements.append(
                 RetrievalCandidate(
@@ -186,6 +189,7 @@ async def project_evidence_context(
                     path_count=1,
                     composite_score=projection_score,
                     score_provenance=provenance,
+                    context_relevance=group_relevance,
                 )
             )
         replaced_ids.update(str(member.node.id) for member in members)
@@ -200,15 +204,22 @@ async def project_evidence_context(
     for replacement in replacements:
         source_id = str(replacement.node.id)
         current = projected_by_id.get(source_id)
-        if current is None or replacement.composite_score > current.composite_score:
+        if current is None:
             projected_by_id[source_id] = replacement
-        elif "EVIDENCE_CONTEXT" not in current.paths:
-            projected_by_id[source_id] = current.model_copy(
-                update={
-                    "paths": [*current.paths, "EVIDENCE_CONTEXT"],
-                    "path_count": current.path_count + 1,
-                }
-            )
+            continue
+        # Whichever score wins, the source keeps the relevance of both.
+        relevance = max(rank_fusion_relevance(current), rank_fusion_relevance(replacement))
+        updates: dict[str, object] = {}
+        if replacement.composite_score > current.composite_score:
+            kept = replacement
+        else:
+            kept = current
+            if "EVIDENCE_CONTEXT" not in current.paths:
+                updates["paths"] = [*current.paths, "EVIDENCE_CONTEXT"]
+                updates["path_count"] = current.path_count + 1
+        if relevance > kept.context_relevance:
+            updates["context_relevance"] = relevance
+        projected_by_id[source_id] = kept.model_copy(update=updates) if updates else kept
     projected = list(projected_by_id.values())
     projected.sort(key=lambda candidate: (-candidate.composite_score, str(candidate.node.id)))
     return projected
@@ -261,6 +272,9 @@ async def augment_evidence_context(
         inherited_score = (
             anchor.composite_score * config.evidence_augmentation_score_decay
         )
+        # A source keeps its group's relevance even when its own score stays
+        # higher; min_score gates it under rank fusion.
+        group_relevance = max(rank_fusion_relevance(member) for member in members)
         provenance = anchor.score_provenance
         if provenance is not None:
             provenance = provenance.model_copy(
@@ -285,6 +299,7 @@ async def augment_evidence_context(
                     path_count=1,
                     composite_score=inherited_score,
                     score_provenance=provenance,
+                    context_relevance=group_relevance,
                 )
                 changed = True
                 ranking_changed = True
@@ -293,6 +308,8 @@ async def augment_evidence_context(
             if "EVIDENCE_CONTEXT" not in current.paths:
                 updates["paths"] = [*current.paths, "EVIDENCE_CONTEXT"]
                 updates["path_count"] = current.path_count + 1
+            if group_relevance > current.context_relevance:
+                updates["context_relevance"] = group_relevance
             if inherited_score > current.composite_score:
                 updates.update(
                     composite_score=inherited_score,

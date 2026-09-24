@@ -454,6 +454,7 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
                 node_id=str(node.id),
                 content=node.content,
                 score=candidate.composite_score,
+                semantic_relevance=candidate.semantic_relevance,
                 node_type=node.node_type.value if hasattr(node.node_type, "value") else str(node.node_type),
                 lifecycle_state=node.lifecycle_state.value if hasattr(node.lifecycle_state, "value") else str(node.lifecycle_state),
                 confidence=node.confidence,

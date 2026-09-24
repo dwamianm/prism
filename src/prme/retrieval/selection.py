@@ -2,7 +2,11 @@
 
 import math
 
-from prme.retrieval.models import ExcludedCandidate, RetrievalCandidate
+from prme.retrieval.models import (
+    ExcludedCandidate,
+    RetrievalCandidate,
+    rank_fusion_relevance,
+)
 
 
 def validate_selection(
@@ -49,6 +53,17 @@ def _evidence_key(candidate: RetrievalCandidate) -> tuple[str, ...] | None:
     return refs or None
 
 
+def with_rank_fusion_relevance(candidates: list[RetrievalCandidate]) -> list[RetrievalCandidate]:
+    """Copy candidates with ``semantic_relevance`` set, leaving their scores unchanged.
+
+    Under rank fusion, ``select_candidates`` then compares ``min_score`` with it.
+    """
+    return [
+        candidate.model_copy(update={"semantic_relevance": rank_fusion_relevance(candidate)})
+        for candidate in candidates
+    ]
+
+
 def select_candidates(
     candidates: list[RetrievalCandidate],
     *,
@@ -60,7 +75,9 @@ def select_candidates(
     """Keep ranked candidates meeting the inclusive score floor and count cap.
 
     Scores are model/configuration-dependent ranking signals, not calibrated
-    probabilities. ``max_per_source`` optionally limits byte-identical passages
+    probabilities. A candidate with a ``semantic_relevance`` (set under rank
+    fusion) is compared with the floor by that value instead of its rank-based
+    composite score. ``max_per_source`` optionally limits byte-identical passages
     carrying the same exact evidence set. ``max_per_evidence`` applies a broader
     cap to all nodes carrying the same exact evidence set, even when their text
     differs. Both fill the result cap from later groups. Nodes without evidence
@@ -73,7 +90,11 @@ def select_candidates(
     evidence_counts: dict[tuple[str, ...], int] = {}
     for candidate in candidates:
         reason = None
-        if min_score is not None and candidate.composite_score < min_score:
+        gated_score = (
+            candidate.composite_score if candidate.semantic_relevance is None
+            else candidate.semantic_relevance
+        )
+        if min_score is not None and gated_score < min_score:
             reason = "below_threshold"
         source_key = _source_key(candidate)
         evidence_key = _evidence_key(candidate)
@@ -96,6 +117,7 @@ def select_candidates(
         if reason:
             excluded.append(ExcludedCandidate(
                 node_id=candidate.node.id, reason=reason, composite_score=candidate.composite_score,
+                semantic_relevance=candidate.semantic_relevance,
             ))
         else:
             selected.append(candidate)

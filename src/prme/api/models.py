@@ -276,7 +276,15 @@ class RetrieveRequest(BaseModel):
         strict=True,
         description="Max results sharing one exact nonempty evidence set",
     )
-    min_score: float | None = Field(default=None, ge=0, allow_inf_nan=False, description="Inclusive ranking score floor, not a probability")
+    min_score: float | None = Field(
+        default=None, ge=0, allow_inf_nan=False,
+        description=(
+            "Inclusive ranking score floor, not a probability. Under rank fusion "
+            "(PRME_SCORING__FUSION=rrf) it is a floor on each result's "
+            "semantic_relevance, the semantic cosine similarity, instead of the "
+            "rank-based score, so a floor tuned on weighted scores does not carry over"
+        ),
+    )
     mode: RetrievalMode | None = Field(default=None, description="Epistemic filtering mode within generated candidates")
     filters: RetrievalFilters | None = None
     ranking_multipliers: RankingMultipliers | None = Field(default=None,
@@ -293,6 +301,15 @@ class RetrieveResultItem(BaseModel):
     node_id: str
     content: str
     score: float
+    # Omitted under weighted scoring, whose response keeps its earlier shape.
+    semantic_relevance: float | None = Field(
+        default=None, ge=0,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Rank fusion only: the semantic cosine similarity that min_score "
+            "compares against; score is then the rank-based fused score"
+        ),
+    )
     node_type: str
     lifecycle_state: str
     confidence: float

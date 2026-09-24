@@ -15,7 +15,9 @@ try:
 except ImportError:
     from llama_index.core.base.llms.types import ChatMessage
 
+from prme.client import config_from_directory
 from prme.integrations.llamaindex import PRMEChatStore, PRMERetriever
+from prme.retrieval.config import ScoringWeights
 from prme.types import SourceType
 
 
@@ -85,6 +87,25 @@ class TestPRMERetriever:
             assert results[0].score >= 0.0
         finally:
             retriever.close()
+
+
+    def test_rank_fusion_reports_semantic_relevance(self, tmpdir: str):
+        for fusion in ("rrf", "weighted"):
+            config = config_from_directory(tmpdir).model_copy(
+                update={"scoring": ScoringWeights(fusion=fusion)}
+            )
+            retriever = PRMERetriever(directory=tmpdir, user_id="test-user", config=config)
+            try:
+                if fusion == "rrf":
+                    retriever._client.store("Bob likes hiking", user_id="test-user")
+                results = retriever.retrieve("hiking")
+                assert results
+                if fusion == "rrf":
+                    assert all(0 <= r.metadata["semantic_relevance"] <= 1 for r in results)
+                else:
+                    assert all("semantic_relevance" not in r.metadata for r in results)
+            finally:
+                retriever.close()
 
 
 class TestPRMEChatStore:
