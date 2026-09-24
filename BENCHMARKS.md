@@ -541,6 +541,56 @@ zero. Since #129, `compare` also resamples LoCoMo's 10 conversations, which
 gives -1.36 to +0.39 points for this pair, narrower than the question-level
 interval; the LoCoMo `interval_95` spans both.
 
+### Interleaved A/A check
+
+The revised test (#129) is checked by answering the defaults against
+themselves as one interleaved pair on each benchmark:
+
+```sh
+uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchmark longmemeval --provider ollama \
+  --baseline prme@46647825
+uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchmark locomo --provider ollama \
+  --baseline prme@46647825
+```
+
+Both sides read the same prepared contexts, so they send identical requests,
+and `compare` reports the pair as an interleaved repeat. The check holds when
+the interval (for LoCoMo, the one spanning the conversation-level and
+question-level intervals) includes zero on both benchmarks. If either excludes
+zero, a variant's gain must also be larger than the largest absolute A/A
+difference measured so far on that benchmark, the #118 repeat included (2.2
+points on LongMemEval-S and 0.45 points on LoCoMo so far).
+
+**It has not completed yet.** On 2026-09-24, four LongMemEval-S pairs and two
+LoCoMo pairs of `prme@46647825` against itself were started, with the same
+model identity (manifest digest `e04da138`), Ollama server version (0.34.3)
+and settings as the #118 runs. Each one stopped at a final failure, which the
+registered retry policy never asks again, so none published a result:
+
+| Pair | Answered by both sides | What stopped it |
+|---|---:|---|
+| LongMemEval-S 1 | 264 of 500 | Both sides' reader answers to `gpt4_7abb270c` ran to the 8,192-token limit |
+| LongMemEval-S 2 | 267 of 500 | The after side's reader answer to `gpt4_7abb270c` ran to the limit |
+| LongMemEval-S 3 | 261 of 500 | The before side's reader answer to `gpt4_7f6b06db` ran to the limit |
+| LongMemEval-S 4 | 314 of 500 | The before side's verdict on `gpt4_385a5000` was `Yes` with a stray character in front |
+| LoCoMo 1 | 61 of 1,540 | The before side's verdict on `conv-26-q0060` had stray characters before `<answer>no</answer>` |
+| LoCoMo 2 | 62 of 1,540 | The after side's verdict on `conv-26-q0062` had a stray character and a multiple-choice layout |
+
+`gpt4_7abb270c` has now run to the limit in 4 of its 11 reader answers,
+including the first #118 run (#124), and verdicts with stray characters
+appeared 3 times in these 2,470 judge calls but never in the 4,080 of the two
+published runs of the defaults. A pair has twice as many answers for one final
+failure to stop, so until the DeepSeek track handles these differently (#132),
+a pair rarely completes. Every stopped pair stays on record: the next
+`run-pair` gives it up with the reason and lists it in `earlier_pairs`.
+
+The attempts do answer one question about the design. The two sides of an A/A
+pair send identical requests back to back, which could have made them agree
+more than two runs hours apart would. They did not: on the 1,229 questions both
+sides answered, the reader text was identical on 46 (3.7%) and the verdicts
+differed on 30 (2.4%). The two #118 runs, two hours apart, differed on 23 of
+500 LongMemEval-S verdicts (4.6%) and 61 of 1,540 LoCoMo verdicts (4.0%).
+
 ## Earlier registered memory-utility comparison
 
 The first registered held-out current-product answer comparison is complete.

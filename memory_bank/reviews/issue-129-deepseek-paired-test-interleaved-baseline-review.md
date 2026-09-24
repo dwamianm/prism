@@ -59,7 +59,7 @@ file changed, so no product default changed and the evidence gate does not apply
 
 ## Must Fix
 1. Broken `#interleaved-aa-check` anchor in `BENCHMARKS.md` (Agents 3, 4, 5, 6, 1). Resolved: the section
-   is added with the A/A results.
+   is added and records the A/A attempts.
 2. `CLAUDE.md`, `BENCHMARKS.md` and the `repeat` note disagreed on when a default may change (Agent 3).
    Resolved: all three say the test can be used once the A/A check is recorded, with the margin condition
    when an A/A interval excludes zero.
@@ -150,9 +150,36 @@ intervals label about 91% coverage as 95% and `run-pair` hands out fresh pairs u
 Also raised by Agents 1 and 3: an A/A pair sends byte-identical requests back to back, which could make
 its two sides agree more than a real pair's would. Agent 7 checked the saved answers: the hosted model
 rarely repeats itself on identical requests (reader text matched on 20 of 292 questions 15 minutes apart).
-Verdict: measure it on the A/A run (identical reader answers and verdict changes), recorded below.
+Verdict: Dismissed on evidence from the A/A attempts below (identical reader text on 46 of 1,229
+questions, differing verdicts on 30).
+
+## A/A attempts (step 4 of the owner's decision)
+After committing the code, I answered `run-pair prme --baseline prme@46647825` from a clean tree on both
+benchmarks (model identity `e04da138`, Ollama 0.34.3, the #118 settings). Four LongMemEval-S pairs and two
+LoCoMo pairs each stopped at a final failure, so none published a result:
+
+| Pair | Answered by both sides | What stopped it |
+|---|---:|---|
+| LongMemEval-S 1 | 264 of 500 | Both sides' reader answers to `gpt4_7abb270c` ran to the 8,192-token limit |
+| LongMemEval-S 2 | 267 of 500 | After side: `gpt4_7abb270c` ran to the limit |
+| LongMemEval-S 3 | 261 of 500 | Before side: `gpt4_7f6b06db` ran to the limit |
+| LongMemEval-S 4 | 314 of 500 | Before side: verdict on `gpt4_385a5000` had a stray leading character |
+| LoCoMo 1 | 61 of 1,540 | Before side: verdict on `conv-26-q0060` had stray leading characters |
+| LoCoMo 2 | 62 of 1,540 | After side: verdict on `conv-26-q0062` had a stray leading character |
+
+`gpt4_7abb270c` ran to the limit in 4 of its 11 reader answers so far (#124), and stray-character verdicts
+appeared 3 times in 2,470 judge calls but never in the 4,080 of the published runs. A pair doubles the
+answers one final failure can stop, and the registered retry policy never asks such a question again, so an
+interleaved pair rarely completes today. I stopped after these attempts rather than keep drawing pairs
+against the account's usage limit, and raised #132 for the failure-policy decision. The A/A criterion of
+#129 stays open, so the pull request says `Part of #129`.
+
+The machinery behaved as designed during the attempts: every stopped pair was given up with its reason on
+the next run, the next pair started from the first question, and nothing was published.
 
 ## Follow-ups Raised
+- #132 (new): DeepSeek pairs rarely complete, because one truncated answer or garbled verdict on either
+  side stops the whole pair. Blocks the A/A check.
 - #130 (existing): commented with the pair-specific redraw angle (scenario 2).
 
 ## Resolution Status
@@ -164,3 +191,5 @@ Verdict: measure it on the A/A run (identical reader answers and verdict changes
 | Break scenarios 1, 3, 4, 5 | Fixed |
 | Break scenario 2 | Follow-up on #130 |
 | Break scenario 6 | Accepted |
+| Identical-request A/A concern | Dismissed on evidence |
+| A/A check (owner step 4) | Attempted; blocked by final failures, #132 |
