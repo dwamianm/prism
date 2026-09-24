@@ -263,6 +263,12 @@ with another DeepSeek score from the same model identity and settings:
    rules in `CLAUDE.md` is met. That rule includes a confirmation run: run
    `run-pair` again for the same variant, which starts a new pair with a fresh
    variant run and a fresh defaults run; it must pass the test a second time.
+   A variant is what it changes, not its arm name: every arm prepared with
+   the same settings, or with the same context text on every question, is
+   the same variant, and its pairs count together alongside any baseline.
+   Its first pair is the first of them to complete and its confirmation the
+   next to complete that started after the first completed; `compare`
+   refuses any later pair and `run-pair` answers none (#130).
    It also needs the [interleaved A/A check](#interleaved-aa-check): one pair
    of the defaults against themselves on both benchmarks. After a default
    changes, or when the model identity changes, record a new baseline with
@@ -326,6 +332,14 @@ Safeguards:
 - An arm's first answer binds it to that reader and judge; a run with another
   model or other settings is refused, so answers are never mixed. Each arm keeps
   an append-only run log outside its folder, which every result summarizes.
+  A named variant's run log also records every preparation of it with its
+  identity: the settings whose values differ from the defaults at that
+  commit, by dotted name as the configuration reads them, and the hash of
+  its context text on every question (#130). So `--set x=true` and
+  `--set x=True` are the same settings, an override that repeats a default
+  changes nothing, and `prepare` refuses a variant whose settings are all
+  defaults. `prepare` says when another arm was already prepared with the
+  same settings or context text.
 - Every start, resume and finish records the live Ollama server version in the
   run log, and every result lists the server versions its answers were given
   under (`server_versions`). `compare` refuses results whose recorded server
@@ -354,8 +368,15 @@ Safeguards:
   worktree, and older code gives up a pair started under the amendment and
   answers the next one under the registered rules. An
   unfinished pair it gives up gets an `abandoned` event with the reason, and
-  every pair stays on record: each result lists every earlier pair of that
-  baseline and arm and how it ended (`earlier_pairs`). A server version that
+  every pair stays on record: each result lists every other pair of that arm
+  and how it ended (`earlier_pairs`), alongside this baseline or an earlier
+  one, since a new baseline numbers the arm's pairs from 1 again, and
+  `pairs_started` counts them all (#130). Each start of a variant's pair
+  records the pair's id and the variant's identity in the pair's run log.
+  Once the run log records a pair complete, it stays complete, even when its
+  folder is moved aside. `run-pair` refuses to answer a variant whose first
+  pair and confirmation are already complete, under any of its arm names. A
+  server version that
   changes while a pair is answered is caught at its finish, and the pair is
   kept but not published. A complete pair with a side that `compare` will
   refuse under the 1% limit is published, and its `finished` event and every
@@ -486,7 +507,26 @@ two sides of one `run-pair` pair, with the defaults as `--before`, or a repeat
 before side is not the current baseline when `compare` runs, or did not read
 that baseline's own contexts, so a pair answered before a newer baseline
 completed no longer counts. It reads the track's run logs for that, so compare
-pairs on the machine that keeps their answers. Its `baseline` block lists every
+pairs on the machine that keeps their answers. A variant's pair must be the
+variant's first pair or its confirmation (#130). `compare` reads every variant
+preparation and pair in the track's run logs for that: the pairs with the same
+settings or the same context text, under any arm name and alongside any
+baseline, in the order they completed. The first to complete is the first
+pair, and the next to complete that started after the first completed is the
+confirmation; a pair given up, not published, or complete but invalid under
+the 1% limit counts as neither. `compare` refuses a later pair, and a pair the
+run logs do not show as complete, with the pair id and identity its start
+recorded. Its `variant` block names the pair's `role`, the `first` pair and
+the `confirmation` (with the commit and server version each was answered
+with), every arm of the variant with each preparation and pair (`arms`), the
+variants that change any of the same settings to other values (`related`),
+the variant pairs that record no identity (`unknown`), and the variant's pairs
+that started before this one finished and never completed for a reason other
+than a final failure (`dropped`). It warns about dropped pairs, about unknown
+pairs that completed earlier, when the first pair and the confirmation were
+answered alongside different baselines or read contexts prepared at different
+commits, and when related variants have complete pairs. Its `baseline` block
+lists every
 complete baseline in the order their own runs finished and names the current
 one (#127). A pair can therefore be compared again only while its baseline is
 current: keep `compare`'s output with the pull request that relies on it,

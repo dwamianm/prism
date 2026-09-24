@@ -60,6 +60,18 @@ refuse the defaults or a variant prepared at any other budget or tokenizer, and
 ``compare`` reports how many questions the two sides asked on different context
 text, from the hash of each row's context text (#125).
 
+A variant is identified by what it changes, not by its arm name (#130): the
+settings whose values differ from the defaults (``variant_settings``), or its
+context text on every question. ``prepare`` logs every variant preparation
+with that identity and refuses a variant that changes nothing, and each start
+of a variant's pair records it. Its first pair is the first of its pairs to
+complete, under any arm name and alongside any baseline, and its confirmation
+the next to complete that started after the first completed. ``compare``
+reports which of the two a pair is, lists every arm and pair of the variant,
+and refuses any later pair, which the default-change rule never reads;
+``run-pair`` answers none. A pair's ``earlier_pairs`` lists the arm's pairs
+alongside every baseline.
+
 The Ollama track answers under an amendment to the registered failure policy
 (#132, recorded in ``FAILURE_AMENDMENT``), so one looping reader answer or
 garbled verdict no longer stops a run or a pair: a truncated reader answer is
@@ -186,6 +198,12 @@ _ANSWER_ORDER = ("after", "before")
 # What both sides of one pair record identically, so compare can tell they were answered together.
 _PAIR_KEYS = ("id", "number", "before", "after", "sha256")
 _PAIR = re.compile(r"pair-(\d+)")
+# Why run_pair gives up a pair stopped by a final failure, which the default-change rule counts as neither a pass
+# nor a fail.
+_FINAL_FAILURE = "a question failed finally"
+# What identifies a named variant's pairs across arm names and baselines (#130): the settings it changes
+# (variant_settings) and the hash of its context text on every question (_contexts_sha256).
+_VARIANT_KEYS = ("variant_settings", "contexts_sha256")
 # Run log events that record the live Ollama server version.
 _VERSION_EVENTS = frozenset({"started", "finished", "model-changed"})
 # compare's paired bootstrap, as the evidence gate's comparisons draw it.
@@ -276,6 +294,11 @@ def is_prme(arm: str) -> bool:
     return is_baseline(arm) or (arm.startswith("prme-") and bool(_VARIANT.fullmatch(arm.removeprefix("prme-"))))
 
 
+def is_variant(arm: str) -> bool:
+    """A named variant of the defaults, ``prme-<name>``: the defaults with the settings it was prepared with."""
+    return is_prme(arm) and not is_baseline(arm)
+
+
 def _check_arm(arm: str, benchmark: str) -> None:
     kind = "prme" if is_prme(arm) else arm
     if kind not in ARMS:
@@ -291,7 +314,7 @@ def _check_overrides(arm: str, overrides: dict | None) -> None:
     if is_baseline(arm) and overrides:
         raise ValueError(f"The {arm} arm prepares the current defaults; name a variant with --variant to change "
                          "settings")
-    if is_prme(arm) and not is_baseline(arm) and not overrides:
+    if is_variant(arm) and not overrides:
         raise ValueError(f"The {arm} variant needs the settings it changes, as --set KEY=VALUE")
     if arm.startswith("plain-") and overrides:
         gate.check_plain(arm.removeprefix("plain-"), overrides)
@@ -354,6 +377,10 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
             raise ValueError(f"{arm} {benchmark} has a complete answer run in a pair ({path}); its contexts are "
                              "never prepared again")
     _check_overrides(arm, overrides)
+    settings = variant_settings(overrides) if is_variant(arm) and overrides else None
+    if settings == {}:
+        raise ValueError(f"The settings of the {arm} variant are the defaults' at this commit, so its pairs would "
+                         "answer the defaults again; set a value that differs from the default (#130)")
     later = _BASELINE.fullmatch(arm) is not None
     if later:
         # The CLI names a later baseline after the checked-out commit; check a direct call before any work.
@@ -373,10 +400,13 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
     prepared = {
         "kind": "gpt54-baseline-contexts", "complete": True, "arm": arm, "benchmark": benchmark,
         "questions": len(entries), "registration_sha256": digest(study.REG),
-        "tokenizer": gate.gate_config(Path("{pack}"), overrides).packing.tokenizer, **extra,
+        "tokenizer": gate.gate_config(Path("{pack}"), overrides).packing.tokenizer,
+        **({} if settings is None else {"variant_settings": settings}), **extra,
         "modules": _module_identity(), "contexts": entries,
     }
     write_new(folder / "prepared.json", prepared)
+    if settings is not None:
+        _log_prepared_variant(data, arm, benchmark, prepared, digest(folder / "prepared.json"))
     if later and not any(event["event"] == "new-baseline" for event in events):
         # Any other later baseline without a complete run was given up (baseline_arm refuses while one is still
         # prepared), so the new baseline's record names it.
@@ -387,6 +417,25 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
             "event": "new-baseline", "prepared_commit": commit,
             "first_baseline_commit": _complete_run_commit(data, "prme", benchmark), "abandoned": abandoned})
     return prepared
+
+
+def _log_prepared_variant(data: Path, arm: str, benchmark: str, prepared: dict, prepared_sha256: str) -> None:
+    """Record a variant's preparation and its identity in its run log, and name any other arm of the same variant.
+
+    The run log lives outside the arm's folder, so every arm prepared with
+    these settings or this context text stays on record for ``compare`` to
+    list, even once its folder is moved aside (#130).
+    """
+    identity = _prepared_identity(prepared)
+    others = [name for name, found in _variant_preparations(data, benchmark).items()
+              if name != arm and any(_same_variant(entry, identity) for entry in found)]
+    commit = (prepared.get("provenance") or {}).get("commit")
+    _log_run(data, arm, benchmark, {"event": "prepared", **identity, "prepared_commit": commit,
+                                    "prepared_sha256": prepared_sha256})
+    if others:
+        print(f"{', '.join(others)} {benchmark} {'was' if len(others) == 1 else 'were'} prepared with the same "
+              f"settings or context text, so {arm} is the same variant: its pairs and theirs count together, and "
+              "compare reads only the first pair and the confirmation among them (#130).", file=sys.stderr, flush=True)
 
 
 def baseline_arm(benchmark: str, commit: str | None, *, data: Path) -> str:
@@ -456,16 +505,21 @@ def _complete_baselines(data: Path, benchmark: str) -> list[dict]:
         finished = next((event for event in events if _complete_run(event)), None)
         if finished is None:
             continue
-        try:
-            when = datetime.fromisoformat(finished["at"])
-        except (KeyError, TypeError, ValueError):
-            when = None
-        if when is None or when.tzinfo is None:
-            raise ValueError(f"The {arm} {benchmark} run log does not record when its complete run finished, with a "
-                             "time zone")
+        when = _recorded_time(finished.get("at"), f"The {arm} {benchmark} run log does not record when its complete "
+                                                  "run finished, with a time zone")
         found.append((when, arm, {"arm": arm, "commit": _recorded_commit(data, arm, benchmark, finished),
                                   "finished_at": finished["at"]}))
     return [baseline for *_, baseline in sorted(found, key=lambda item: item[:2])]
+
+
+def _recorded_time(value, missing: str) -> datetime:
+    """A time a run log recorded, which must name its time zone; ``missing`` is the error when it does not."""
+    when = None
+    with suppress(TypeError, ValueError):
+        when = datetime.fromisoformat(value)
+    if when is None or when.tzinfo is None:
+        raise ValueError(missing)
+    return when
 
 
 def current_baseline(data: Path, benchmark: str) -> str | None:
@@ -848,7 +902,8 @@ def _run_history(data: Path, arm: str, benchmark: str) -> dict:
     """What the arm's run log holds, so a result shows every earlier run and preparation."""
     path = _run_log_path(data, arm, benchmark)
     events = _run_events(path)
-    # An arm answered only in pairs has no run log of its own until it is prepared again.
+    # An arm answered only in pairs has no run log of its own until it is prepared again, unless it is a variant,
+    # whose every preparation is logged (#130).
     history = {"sha256": digest(path) if path.exists() else None,
                "runs_started": sum(event["event"] == "started" for event in events),
                "prepared_again": sum(event["event"] == "prepared-again" for event in events)}
@@ -1244,7 +1299,7 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
             raise ValueError("The prme arms and samples run on the Ollama track only")
     elif max_usd is not None or api_key is not None:
         raise ValueError("An Ollama run makes no paid calls; it takes no spending cap or API key")
-    elif is_prme(arm) and not is_baseline(arm):
+    elif is_variant(arm):
         raise ValueError(f"{arm} is a variant of the defaults, which is answered only alongside a fresh run of the "
                          "defaults: use run-pair with a prepared baseline (#129)")
     data = data or data_root(model)
@@ -1363,6 +1418,12 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     the latest pair of these arms while it can still finish
     (``_pair_blocker``), and otherwise starts the next one, which is
     how a confirmation redraws both sides; every pair stays on record.
+    Each result lists every other pair of ``after`` on record, alongside this
+    baseline or an earlier one (``earlier_pairs``). Each start of a variant's
+    pair records the pair's id and the variant's identity, so ``compare`` can
+    tell a first pair from its confirmation across arm names and baselines,
+    and no pair of a variant whose first pair and confirmation are complete
+    is answered (``_check_uncounted``, #130).
     ``sample`` works as in ``run``. Returns the pair's mark and both results.
     """
     if not isinstance(model, ollama_answers.AnswerModel):
@@ -1384,6 +1445,11 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     if sample is not None:
         questions = sample_questions(questions, sample)
     prepared_sha256 = {side: digest(folder / "prepared.json") for side, (folder, _, _) in loaded.items()}
+    # A variant's pairs count together across arm names and baselines (#130): each start records the variant's
+    # identity, and a pair the default-change rule would never read is never answered.
+    identity = _prepared_identity(loaded["after"][1]) if is_variant(after) else None
+    if identity is not None:
+        _check_uncounted(data, after, benchmark, identity)
     root = _pair_root(data, before, after, benchmark)
     root.mkdir(parents=True, exist_ok=True)
     log = _pair_log_path(data, before, after, benchmark)
@@ -1404,7 +1470,8 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
         bound = {side: _bind_answer_model(folder / side, settings) for side in PAIR_SIDES}
         _append_event(log, {"event": "started", "pair": number, "sample": sample,
                             "answer_model_sha256": {side: sha(value) for side, value in bound.items()},
-                            "server_version": _version_of(settings), "failure_policy": _policy_of(settings)})
+                            "server_version": _version_of(settings), "failure_policy": _policy_of(settings),
+                            **({} if identity is None else {"id": record["id"], **identity})})
         sides = []
         for side in _ANSWER_ORDER:
             prepared_folder, _, entries = loaded[side]
@@ -1420,9 +1487,9 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
             raise RuntimeError(f"The Ollama model identity changed during {run_name}; nothing is reported. Its "
                                "answers stay in the pair, and the next run starts a new pair.")
         events = _pair_events(log, number)
+        earlier = _earlier_pairs(_pairs_on_record(data, after, benchmark), before, number)
         mark = {**{key: record[key] for key in _PAIR_KEYS if key != "sha256"}, "sha256": digest(folder / "pair.json"),
-                "order": PAIR_ORDER, "pairs_started": len(_pair_numbers(root, log)),
-                "earlier_pairs": _earlier_pairs(log, number)}
+                "order": PAIR_ORDER, "pairs_started": len(earlier) + 1, "earlier_pairs": earlier}
         shared = {"started_at": started, "finished_at": study.utc(), "retry_policy": OLLAMA_RETRY_POLICY,
                   "provenance": _provenance(), "modules": _module_identity(), "calibration": calibration}
         outcome = {}
@@ -1476,6 +1543,21 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
             _publish(results / started[:10] / f"{model.track}-{before}-vs-{after}-{benchmark}-pair-{number}-{side}"
                                               f"{suffix}-result.json", result)
     return {"pair": mark, **outcome}
+
+
+def _check_uncounted(data: Path, arm: str, benchmark: str, identity: dict) -> None:
+    """Refuse a pair of a variant whose first pair and confirmation are already complete (#130).
+
+    ``compare`` refuses any later pair, since the default-change rule never
+    reads one, so none is answered, under this arm name or any other of the
+    same variant.
+    """
+    pairs = _variant_pairs(data, benchmark, _variant_preparations(data, benchmark))
+    counted = _counted([pair for pair in pairs if _same_variant(pair, identity)])
+    if len(counted) > 1:
+        raise ValueError(f"The {arm} {benchmark} variant already has its first pair ({_named(counted[0])}) and its "
+                         f"confirmation ({_named(counted[1])}), counting every arm with its settings or context text. "
+                         "The default-change rule reads no later pair, so none is answered (#130).")
 
 
 def _check_pair_baseline(arm: str) -> None:
@@ -1533,7 +1615,8 @@ def _pair_blocker(folder: Path, events: list[dict], prepared_sha256: dict[str, s
     one stays on record. The failure policy is read from the run log, so it
     is found even when the pair's folder was moved aside.
     """
-    if all(_complete_result(folder / side / "result.json") for side in PAIR_SIDES):
+    # A pair whose run log records it complete stays complete, even once its folder is moved aside (#130).
+    if any(map(_complete_run, events)) or all(_complete_result(folder / side / "result.json") for side in PAIR_SIDES):
         return "complete"
     if any(event["event"] == "started" and event.get("failure_policy") != _policy_of(settings) for event in events):
         return "it was started under another failure policy"
@@ -1544,7 +1627,7 @@ def _pair_blocker(folder: Path, events: list[dict], prepared_sha256: dict[str, s
         return "an arm was prepared again"
     if any(_status(question) == "final" for side in PAIR_SIDES
            for question in (folder / side / "execution").glob("*") if question.is_dir()):
-        return "a question failed finally"
+        return _FINAL_FAILURE
     bindings = [folder / side / "answer-model.json" for side in PAIR_SIDES]
     bound = [json.loads(binding.read_text()) for binding in bindings if binding.is_file()]
     if not all(ollama_answers.same_model(value, settings) for value in bound):
@@ -1556,22 +1639,330 @@ def _pair_blocker(folder: Path, events: list[dict], prepared_sha256: dict[str, s
     return None
 
 
-def _earlier_pairs(log: Path, number: int) -> list[dict]:
-    """Every earlier pair of these arms and how it ended, so a result shows the pairs it was not."""
-    states = {}
+def _pair_states(root: Path, log: Path) -> dict[int, dict]:
+    """How each pair of one baseline and arm went, by number, from its run log and its folders.
+
+    ``state`` is ``complete``, ``complete but invalid: <why>``,
+    ``abandoned: <why>``, ``not published: <why>`` or ``unfinished``; a pair
+    folder that its run log never names is unfinished. A pair keeps what its
+    first complete full run recorded: neither an ``abandoned`` event, logged
+    once its folder was moved aside, nor another ``finished`` event changes
+    it (#130). ``finished_at``, ``commit`` (the after side's prepared commit)
+    and ``server_version`` come from that run, and the pair's ``id`` and the
+    variant identity (``_VARIANT_KEYS``) from its first start that recorded
+    them.
+    """
+    pairs: dict[int, dict] = {}
+
+    def pair(number: int) -> dict:
+        return pairs.setdefault(number, {"state": "unfinished", "started_at": None, "finished_at": None, "commit": None,
+                                         "server_version": None, "id": None, **dict.fromkeys(_VARIANT_KEYS)})
+
+    for number, _ in _numbered(root, _PAIR):
+        pair(number)
     for event in _run_events(log):
-        pair = event.get("pair")
-        if pair is None or pair >= number:
+        if event.get("pair") is None:
             continue
-        if event["event"] == "finished" and event.get("sample") is None and event.get("complete"):
-            states[pair] = f"complete but invalid: {event['invalid']}" if event.get("invalid") else "complete"
+        found = pair(event["pair"])
+        if event["event"] == "started":
+            found["started_at"] = found["started_at"] or event.get("at")
+            for key in ("id", *_VARIANT_KEYS):
+                found[key] = event.get(key) if found[key] is None else found[key]
+        if found["finished_at"] is not None:
+            continue
+        if _complete_run(event):
+            found.update(state=f"complete but invalid: {event['invalid']}" if event.get("invalid") else "complete",
+                         finished_at=event.get("at"), commit=(event.get("prepared_commit") or {}).get("after"),
+                         server_version=event.get("server_version"))
         elif event["event"] == "abandoned":
-            states[pair] = f"abandoned: {event['reason']}"
+            found["state"] = f"abandoned: {event['reason']}"
         elif event["event"] == "finished" and event.get("reason"):
-            states[pair] = f"not published: {event['reason']}"
+            found["state"] = f"not published: {event['reason']}"
+    return dict(sorted(pairs.items()))
+
+
+def _pairs_on_record(data: Path, after: str, benchmark: str) -> dict[tuple[str, str], dict[int, dict]]:
+    """Every pair whose after side is ``after``, an arm or a glob of arms, alongside any baseline.
+
+    Keyed by (baseline, arm), then by pair number, to ``_pair_states``, and
+    found from both the pair run logs and the pair folders.
+    """
+    logs, roots = (data.glob(str(path.relative_to(data))) for path in (_pair_log_path(data, "*", after, benchmark),
+                                                                      _pair_root(data, "*", after, benchmark)))
+    sides = {(path.parent.name, path.name.removesuffix(f"-{benchmark}.jsonl")) for path in logs}
+    sides |= {(path.parent.parent.name, path.parent.name) for path in roots if path.is_dir()}
+    return {(before, arm): _pair_states(_pair_root(data, before, arm, benchmark),
+                                        _pair_log_path(data, before, arm, benchmark))
+            for before, arm in sorted(sides)}
+
+
+def _earlier_pairs(pairs: dict[tuple[str, str], dict[int, dict]], before: str, number: int) -> list[dict]:
+    """Every other pair of the arm and how it ended, so a result shows the pairs it was not.
+
+    ``pairs`` is ``_pairs_on_record`` for the arm: this baseline's earlier
+    pairs, and the arm's pairs alongside any other baseline, since a new
+    baseline numbers the arm's pairs from 1 again (#130). Listed in the order
+    they started.
+    """
+    earlier = [(state["started_at"] or "", baseline, pair, state["state"])
+               for (baseline, _), numbered in pairs.items() for pair, state in numbered.items()
+               if baseline != before or pair < number]
+    return [{"baseline": baseline, "number": pair, "state": state} for _, baseline, pair, state in sorted(earlier)]
+
+
+# Variant identity (#130) ---------------------------------------------------------
+
+def variant_settings(overrides: dict) -> dict:
+    """What a variant's ``--set`` overrides change in the configuration, by dotted setting name.
+
+    Only the settings whose values differ from the defaults' configuration at
+    this commit are kept, as the configuration reads them. So neither another
+    spelling (``x=true`` and ``x=True``) nor an override that repeats a
+    default makes a new variant, and a setting the configuration fills in
+    because of another (``scoring.rrf_k`` under rank fusion) is kept too. A
+    setting the variant's configuration leaves out is recorded as None.
+    """
+    changed, defaults = (_dotted(gate.gate_config(Path("{pack}"), values).model_dump(mode="json"))
+                         for values in (overrides, None))
+    return {name: changed.get(name) for name in sorted(changed.keys() | defaults.keys())
+            if name not in changed or name not in defaults or changed[name] != defaults[name]}
+
+
+def _dotted(values: dict, prefix: str = "") -> dict:
+    found = {}
+    for key, value in values.items():
+        if isinstance(value, dict) and value:
+            found.update(_dotted(value, f"{prefix}{key}."))
         else:
-            states.setdefault(pair, "unfinished")
-    return [{"number": pair, "state": states[pair]} for pair in sorted(states)]
+            found[f"{prefix}{key}"] = value
+    return found
+
+
+def _contexts_sha256(entries) -> str:
+    """The hash of a preparation's context text on every question, in registered order.
+
+    Two preparations with the same hash send the reader the same text on
+    every question, so their pairs are pairs of one variant even when their
+    settings differ, for example by a setting that retrieval never reads.
+    """
+    return sha([[entry["question_id"], entry["text_sha256"]] for entry in entries])
+
+
+def _prepared_identity(prepared: dict) -> dict:
+    """A variant manifest's identity, which its pairs record at every start (``_VARIANT_KEYS``).
+
+    A manifest written before #130 records only its overrides, which are
+    read against this checkout's defaults, or not at all (None) when this
+    checkout's configuration no longer accepts them.
+    """
+    settings = prepared.get("variant_settings")
+    overrides = (prepared.get("provenance") or {}).get("overrides")
+    if settings is None and overrides:
+        with suppress(ValueError):
+            settings = variant_settings(overrides)
+    return {"variant_settings": settings, "contexts_sha256": _contexts_sha256(prepared["contexts"])}
+
+
+def _same_variant(found: dict, identity: dict) -> bool:
+    """Whether a pair or preparation records the same settings or the same context text as ``identity``."""
+    return any(found[key] is not None and found[key] == identity[key] for key in _VARIANT_KEYS)
+
+
+def _variant_preparations(data: Path, benchmark: str) -> dict[str, list[dict]]:
+    """Every preparation of a named variant on the track for this benchmark, by arm, with its identity.
+
+    Each comes from a ``prepared`` event in the arm's run log, which stays
+    when the arm's folder is moved aside, or, for an arm prepared before
+    those events were logged (#130), from its complete manifest.
+    """
+    logs = data.glob(str(_run_log_path(data, "prme-*", benchmark).relative_to(data)))
+    names = {path.name.removesuffix(f"-{benchmark}.jsonl") for path in logs}
+    names |= {path.parent.parent.name for path in data.glob(f"prme-*/{benchmark}/prepared.json")}
+    found = {}
+    for name in sorted(filter(is_variant, names)):
+        events = [event for event in _run_events(_run_log_path(data, name, benchmark)) if event["event"] == "prepared"]
+        found[name] = [{"at": event["at"], "commit": event.get("prepared_commit"),
+                        **{key: event.get(key) for key in _VARIANT_KEYS}} for event in events]
+        manifest = data / name / benchmark / "prepared.json"
+        if manifest.is_file() and digest(manifest) not in {event.get("prepared_sha256") for event in events}:
+            try:
+                prepared = json.loads(manifest.read_text())
+            except ValueError:
+                continue  # A manifest that was never written whole was never answered.
+            if prepared.get("complete") and prepared.get("arm") == name:
+                found[name].append({"at": None, "commit": (prepared.get("provenance") or {}).get("commit"),
+                                    **_prepared_identity(prepared)})
+    return found
+
+
+def _variant_pairs(data: Path, benchmark: str, preparations: dict[str, list[dict]]) -> list[dict]:
+    """Every pair of a named variant on the track for this benchmark, alongside any baseline, with its identity.
+
+    A pair's identity is what its start recorded (#130). A pair started
+    before starts recorded it takes its arm's, when every preparation of the
+    arm on record has the same identity, and otherwise has none.
+    """
+    pairs = []
+    for (baseline, arm), numbered in _pairs_on_record(data, "prme-*", benchmark).items():
+        if not is_variant(arm):
+            continue
+        known = {sha([entry[key] for key in _VARIANT_KEYS]): entry for entry in preparations.get(arm, [])}
+        fallback = next(iter(known.values())) if len(known) == 1 else dict.fromkeys(_VARIANT_KEYS)
+        for number, state in numbered.items():
+            unrecorded = all(state[key] is None for key in _VARIANT_KEYS)
+            pairs.append({**state, **({key: fallback[key] for key in _VARIANT_KEYS} if unrecorded else {}),
+                          "arm": arm, "baseline": baseline, "number": number})
+    return pairs
+
+
+def _counted(pairs: list[dict]) -> list[dict]:
+    """Of one variant's pairs, the ones the default-change rule reads: its first pair, then its confirmation.
+
+    The first pair is the first to complete. The confirmation is the next to
+    complete that started after the first completed, so it is a fresh pair.
+    A complete pair that is invalid under the 1% limit, and a pair given up,
+    not published or unfinished, count as neither.
+    """
+    complete = sorted((pair for pair in pairs if pair["state"] == "complete"),
+                      key=lambda pair: (_pair_time(pair, "finished_at"), pair["baseline"], pair["arm"], pair["number"]))
+    if not complete:
+        return []
+    first_ended = _pair_time(complete[0], "finished_at")
+    fresh = [pair for pair in complete[1:] if pair["started_at"] and _pair_time(pair, "started_at") > first_ended]
+    return complete[:1] + fresh[:1]
+
+
+def _pair_time(pair: dict, key: str) -> datetime:
+    return _recorded_time(pair[key], f"The {pair['baseline']} and {pair['arm']} pair run log does not record when "
+                                     f"pair {pair['number']} {key.removesuffix('_at')}, with a time zone")
+
+
+def _named(pair: dict) -> str:
+    return f"pair {pair['number']} of {pair['baseline']} and {pair['arm']}"
+
+
+def _listed(pair: dict) -> dict:
+    return {key: pair[key] for key in ("arm", "baseline", "number", "state", "finished_at", "commit",
+                                        "server_version")}
+
+
+def _arms_of(pairs: list[dict], preparations: dict[str, list[dict]], wanted) -> list[dict]:
+    """Every arm with a preparation or a pair that ``wanted`` accepts, with those preparations and pairs."""
+    arms = []
+    for name in sorted({pair["arm"] for pair in pairs} | set(preparations)):
+        prepared = [{"at": entry["at"], "commit": entry["commit"]} for entry in preparations.get(name, [])
+                    if wanted(entry)]
+        answered = [{key: value for key, value in _listed(pair).items() if key != "arm"} for pair in pairs
+                    if pair["arm"] == name and wanted(pair)]
+        if prepared or answered:
+            arms.append({"arm": name, "preparations": prepared, "pairs": answered})
+    return arms
+
+
+def _variant_record(data: Path, benchmark: str, mark: dict) -> dict:
+    """Where a variant's pair stands among every pair of the same variant in the track's records under ``data``.
+
+    The default-change rule in CLAUDE.md reads a variant's first pair and its
+    confirmation (``_counted``). Pairs of one variant can sit under another
+    arm name, or alongside an earlier baseline, where a new baseline numbers
+    the arm's pairs from 1 again, so this reads every variant preparation and
+    pair on record for the benchmark (#130). Pairs belong to the variant when
+    they record its settings (``variant_settings``) or its context text on
+    every question (``_contexts_sha256``).
+
+    The pair ``mark`` names must be on record as complete, with the pair id
+    and identity its start recorded, and must be the first pair or the
+    confirmation: a later pair is refused, since the rule never reads it.
+    Returns its ``role``, the ``first`` pair and the ``confirmation``, every
+    arm of the variant with each of its preparations and pairs (``arms``),
+    the settings of the other variants that change any of the same settings
+    (``related``), every variant pair that records no identity
+    (``unknown``), and the variant's pairs that started before this one
+    finished and never completed for a reason other than a final failure
+    (``dropped``).
+    """
+    preparations = _variant_preparations(data, benchmark)
+    pairs = _variant_pairs(data, benchmark, preparations)
+    this = next((pair for pair in pairs if (pair["arm"], pair["baseline"], pair["number"])
+                 == (mark["after"], mark["before"], mark["number"])), None)
+    named = f"Pair {mark['number']} of {mark['before']} and {mark['after']}"
+    if this is None:
+        raise ValueError(f"{named} is not in the track's pair run logs, so nothing shows whether it is the variant's "
+                         "first pair or its confirmation. Compare a variant's pair on the machine that answered it "
+                         "(#130).")
+    if this["state"] != "complete":
+        raise ValueError(f"{named} is on record as {this['state']}, not complete (#130)")
+    if this["id"] is not None and this["id"] != mark["id"]:
+        raise ValueError(f"{named} on record has another pair id than these results, so they were not answered in it "
+                         "(#130)")
+    if all(this[key] is None for key in _VARIANT_KEYS):
+        raise ValueError(f"Nothing records the settings or the contexts {named[0].lower()}{named[1:]} was answered "
+                         "with, so nothing shows which variant it belongs to (#130)")
+    identity = {key: this[key] for key in _VARIANT_KEYS}
+    same = [pair for pair in pairs if _same_variant(pair, identity)]
+    counted = _counted(same)
+    role = next((("first", "confirmation")[place] for place, pair in enumerate(counted) if pair is this), None)
+    if role is None:
+        which = " and ".join(f"{name} is {_named(pair)}" for name, pair in zip(("the first", "the confirmation"),
+                                                                             counted))
+        raise ValueError(f"{named} is neither the variant's first pair nor its confirmation: {which}, and a "
+                         "confirmation must start after the first pair completed. The default-change rule reads only "
+                         "those two, so compare pairs no later one. Every pair stays on record, and compare lists it "
+                         "with the two that count (#130).")
+    changed = set(this["variant_settings"] or ())
+    related: dict[str, dict] = {}
+    for found in [*pairs, *(entry for entries in preparations.values() for entry in entries)]:
+        settings = found["variant_settings"]
+        if settings and changed & set(settings) and not _same_variant(found, identity):
+            related.setdefault(sha(settings), settings)
+    ended = _pair_time(this, "finished_at")
+    return {
+        **identity, "role": role, "first": _listed(counted[0]),
+        "confirmation": _listed(counted[1]) if len(counted) > 1 else None,
+        "arms": _arms_of(same, preparations, partial(_same_variant, identity=identity)),
+        "related": [{"variant_settings": settings,
+                     "arms": _arms_of(pairs, preparations, lambda found, settings=settings: (
+                         found["variant_settings"] == settings and not _same_variant(found, identity)))}
+                    for _, settings in sorted(related.items())],
+        "unknown": [_listed(pair) for pair in pairs if all(pair[key] is None for key in _VARIANT_KEYS)],
+        "dropped": [_listed(pair) for pair in same if pair is not this and pair["finished_at"] is None
+                    and pair["state"] != f"abandoned: {_FINAL_FAILURE}"
+                    and (pair["started_at"] is None or _pair_time(pair, "started_at") < ended)],
+    }
+
+
+def _variant_warnings(variant: dict) -> list[str]:
+    """What compare warns about in a variant's ``_variant_record``: pairs that could hide the result that counts."""
+    this = variant["first"] if variant["role"] == "first" else variant["confirmation"]
+    ended = _pair_time(this, "finished_at")
+
+    def names(pairs: list[dict]) -> str:
+        return ", ".join(f"{_named(pair)} ({pair['state']})" for pair in pairs)
+
+    warnings = []
+    if variant["dropped"]:
+        warnings.append(f"Pairs of this variant that started before this one finished never completed, for a reason "
+                        f"other than a final failure: {names(variant['dropped'])}. A pair left unfinished or given up "
+                        "by hand can hide a result (#130)")
+    unknown = [pair for pair in variant["unknown"]
+               if pair["state"] == "complete" and _pair_time(pair, "finished_at") < ended]
+    if unknown:
+        warnings.append(f"Variant pairs that completed before this one record neither settings nor contexts, so any of "
+                        f"them may be an earlier pair of this variant: {names(unknown)} (#130)")
+    first, confirmation = variant["first"], variant["confirmation"]
+    if confirmation is not None:
+        for key, what in (("baseline", "were answered alongside different baselines"),
+                          ("commit", "read contexts prepared at different commits")):
+            if first[key] != confirmation[key]:
+                warnings.append(f"The first pair and the confirmation {what} ({first[key]} and "
+                                f"{confirmation[key]}), so the confirmation did not repeat the same test (#130)")
+    related = [f"pair {pair['number']} of {pair['baseline']} and {arm['arm']}" for group in variant["related"]
+               for arm in group["arms"] for pair in arm["pairs"] if pair["state"] == "complete"]
+    if related:
+        warnings.append(f"Other variants that change some of the same settings have complete pairs: "
+                        f"{', '.join(related)}. Each is a variant of its own, with its own first pair and confirmation "
+                        "(#130)")
+    return warnings
 
 
 def _prepared_summary(prepared: dict) -> dict:
@@ -1579,6 +1970,7 @@ def _prepared_summary(prepared: dict) -> dict:
     provenance = prepared.get("provenance") or {}
     return {"commit": provenance.get("commit"), "dirty": provenance.get("dirty"),
             "worktree_sha256": provenance.get("worktree_sha256"), "overrides": provenance.get("overrides", {}),
+            "variant_settings": prepared.get("variant_settings"),
             "tokenizer": prepared.get("tokenizer"), "context_rule": prepared["context_rule"],
             "contexts_matching_saved_run": prepared.get("contexts_matching_saved_run")}
 
@@ -1690,8 +2082,12 @@ def _baseline_record(before: dict, data: Path | None) -> list[dict] | None:
         return None
     if before.get("benchmark") not in gate.GATE_BENCHMARKS:
         raise ValueError(f"The results name an unknown benchmark, {before.get('benchmark')!r}")
-    return _complete_baselines(data or data_root(ollama_answers.AnswerModel(model=before["model"])),
-                               before["benchmark"])
+    return _complete_baselines(_track_data(before, data), before["benchmark"])
+
+
+def _track_data(result: dict, data: Path | None) -> Path:
+    """Where compare reads an Ollama result's track records: ``data``, or else the result's own track."""
+    return data or data_root(ollama_answers.AnswerModel(model=result["model"]))
 
 
 def _paired(pairs: list[tuple[str | None, float, float]], *, samples: int, clustered: bool) -> dict:
@@ -1738,7 +2134,11 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     logs under ``data`` (by default the before result's track) when compare
     runs, so a pair answered before a newer baseline completed no longer
     counts (#127). ``baseline`` reports every complete baseline and which is
-    current. Every Ollama server version the two results recorded
+    current. A variant's pair must be its first pair or its confirmation,
+    on record as complete in the same run logs, and ``variant`` lists every
+    arm and pair of the variant (``_variant_record``, #130), with warnings for
+    pairs that could hide a result (``_variant_warnings``). Every Ollama
+    server version the two results recorded
     must be the same; a pair must record one at every start, and a repeat that
     did not gets a warning. The difference's 95% interval resamples LoCoMo's
     conversations, keeping each conversation's questions together, and
@@ -1832,8 +2232,13 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     # A repeat measures two runs of the defaults, so it may pair an earlier baseline with a later one.
     if recorded is not None and not repeat:
         _check_current_baseline(before["arm"], before["benchmark"], recorded, prepared["before"].get("commit"))
+    variant = None
+    if recorded is not None and pair is not None and is_variant(after["arm"]):
+        variant = _variant_record(_track_data(before, data), before["benchmark"], pair)
     warnings = [f"The {side} contexts were prepared from a tree with uncommitted changes"
                 for side, value in prepared.items() if value.get("dirty")]
+    if variant is not None:
+        warnings += _variant_warnings(variant)
     if contexts["differing"] is None:
         warnings.append("Nothing shows which questions the two sides asked on different context text: a result was "
                         "published before rows carried text hashes (#125)")
@@ -1870,6 +2275,18 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
                     "the order those runs finished, from the track's run logs when compare ran. The last is the "
                     "current baseline. A pair counts only with it as the before side, so a pair can be compared "
                     "again only while its baseline is current; a repeat of the defaults may pair any two (#127)."},
+        "variant": None if variant is None else {
+            **variant,
+            "note": "Every arm and pair of this variant: every preparation and pair on the track's run logs when "
+                    "compare ran with the same settings (variant_settings) or the same context text on every question "
+                    "(contexts_sha256), under any arm name and alongside any baseline. The first pair is the first to "
+                    "complete, and the confirmation the next to complete that started after it; the default-change "
+                    "rule in CLAUDE.md reads only those two, compare refuses any later pair, and a failed first pair "
+                    "or confirmation fails the variant. A complete pair that is invalid under the 1% limit, and a pair "
+                    "given up, not published or unfinished, count as neither. dropped lists this variant's pairs that "
+                    "started before this one finished and never completed, other than for a final failure; related "
+                    "lists the other variants that change any of the same settings, each with its own first pair and "
+                    "confirmation; unknown lists the variant pairs that record neither settings nor contexts (#130)."},
         "server_versions": _sorted_versions(versions),
         # Each side's retries and unscored questions under the amended policy; None under the registered one.
         "failure_policy": None if outcomes is None else {
