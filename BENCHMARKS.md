@@ -244,26 +244,26 @@ with another DeepSeek score from the same model identity and settings:
 1. Record a DeepSeek baseline for the current defaults (the `prme` arm) on both
    benchmarks, prepared from a commit on `main`.
 2. Prepare each change as a named variant of the defaults (`prme-<name>`, with
-   the settings it changes), answer it, and pair it with the current baseline
-   question by question with `compare`. The first baseline's contexts match
-   the saved 2026-09-23 run exactly, so when a variant is prepared at a later
-   commit, run the evidence gate on the defaults at that commit first. If it
-   no longer reproduces every saved context, the pairing also measures other
-   code changes. A later baseline, recorded after a default changed, no longer
-   matches the saved run, so prepare its variants at the baseline's own commit
-   where possible (#125).
+   the settings it changes), then answer it with `run-pair` together with a
+   fresh answer run of a recorded defaults baseline (`--baseline`, normally the
+   most recent complete one). The two runs are answered in one session,
+   interleaved question by question, and `compare` pairs a variant only with
+   the defaults run answered alongside it (#129). The current baseline's
+   contexts match the saved 2026-09-23 run exactly, so when a variant is prepared at a
+   later commit, run the evidence gate on the defaults at that commit first.
+   If it no longer reproduces every saved context, the pairing also measures
+   other code changes. A later baseline, recorded after a default changed, no
+   longer matches the saved run, so prepare its variants at the baseline's own
+   commit where possible (#125).
 3. A default changes only when the default-change rule in the epic #77 work
-   rules in `CLAUDE.md` is met. That rule includes a confirmation run: prepare
-   the variant again under a new name with the same settings (for example
-   `prme-<name>-2`), answer it, and pair it with the same baseline; it must
-   pass the test a second time. It also needs the
-   [run-to-run floor](#run-to-run-floor) to hold, meaning that two runs of the
-   defaults differ by an interval that includes zero on both benchmarks. **It
-   does not hold today** (#129), so no default changes until the paired test
-   is revised. After a default changes, or when the model identity changes,
-   record a new baseline with `prepare prme` and `run prme` at a newer commit
-   on `main` (see `prme@<commit>` below). The current baseline is the most
-   recent complete one; pair later variants with it.
+   rules in `CLAUDE.md` is met. That rule includes a confirmation run: run
+   `run-pair` again for the same variant, which starts a new pair with a fresh
+   variant run and a fresh defaults run; it must pass the test a second time.
+   It also needs the [interleaved A/A check](#interleaved-aa-check): one pair
+   of the defaults against themselves on both benchmarks. After a default
+   changes, or when the model identity changes, record a new baseline with
+   `prepare prme` and `run prme` at a newer commit on `main` (see
+   `prme@<commit>` below), and answer later variants alongside it.
 
 `:cloud` models are served by Ollama's hosted service, not by this machine. The
 prompts leave the machine and count against the Ollama account's usage limits.
@@ -314,12 +314,40 @@ Safeguards:
   `ollama-deepseek-v4.1-flash-cloud-<arm>-<benchmark>-result.json`.
 - `calibrate` runs the registered authored calibration: two authored cases with
   each benchmark's prompts, where the judge must accept the reader's answer and
-  the reference and reject a wrong answer. Every attempt is kept, and `run`
-  refuses to start until the same model identity, with the same settings, has
-  passed.
+  the reference and reject a wrong answer. Every attempt is kept, and `run` and
+  `run-pair` refuse to start until the same model identity, with the same
+  settings, has passed.
 - An arm's first answer binds it to that reader and judge; a run with another
   model or other settings is refused, so answers are never mixed. Each arm keeps
   an append-only run log outside its folder, which every result summarizes.
+- Every start, resume and finish records the live Ollama server version in the
+  run log, and every result lists the server versions its answers were given
+  under (`server_versions`). `compare` refuses results whose recorded server
+  versions differ, within one run or between the two (#129).
+- A named variant is answered only with `run-pair`; `run` refuses it. A plain
+  or full-context arm can be paired with the defaults the same way; answered
+  on its own, it is a reference score that `compare` pairs with nothing. The
+  pair's `--baseline` must be a defaults baseline with a complete answer run of
+  its own (`run prme`), which records it.
+- A pair's answers live under `pairs/<baseline>/<arm>/<benchmark>/pair-<N>/`,
+  with a `before` folder (the defaults) and an `after` folder. Each baseline
+  and arm has one append-only pair run log under `runs/pairs/`, whose events
+  carry the pair number. The two sides share one queue in registered question
+  order, each question's `after` side first, through the registration's four
+  concurrent requests. `run-pair` resumes the latest pair while it can still
+  finish. It starts the next pair instead after a complete pair, a final
+  failure, a new preparation of either arm, an answer model or settings change,
+  or a different Ollama server version from the one the pair started under. An
+  unfinished pair it gives up gets an `abandoned` event with the reason, and
+  every pair stays on record: each result lists every earlier pair of that
+  baseline and arm and how it ended (`earlier_pairs`). A server version that
+  changes while a pair is answered is caught at its finish, and the pair is
+  kept but not published. A `--sample` after a complete pair opens the next
+  pair, whose full run reuses the sample's answers. Each side is published as its own result,
+  named
+  `ollama-deepseek-v4.1-flash-cloud-<baseline>-vs-<arm>-<benchmark>-pair-<N>-<side>-result.json`,
+  and carries a `pair` block that `compare` checks. Its `run_log` summarizes
+  the pair's run log and the run log of the arm whose contexts it read.
 - The `prme` arm prepares the shipped defaults, so `prepare` refuses it unless
   the checked-out commit is on `main`. A variant can be prepared from a branch.
 - Each commit has at most one defaults baseline. The first is the `prme` arm.
@@ -339,15 +367,17 @@ Safeguards:
   model identity changes while the newest baseline is at the checked-out
   commit, record the new baseline at the next commit on `main`.
 - The registered retry and failure rules apply, as described for the GPT-5.4
-  arms above. `run` needs no spending cap or terminal confirmation. It uses the
-  registration's four concurrent requests; if the Ollama account's usage limit
-  stops a run with HTTP 429, run it again later and it asks only the questions
-  that got no answer.
+  arms above. `run` and `run-pair` need no spending cap or terminal
+  confirmation. They use the registration's four concurrent requests (a pair's
+  two sides share them); if the Ollama account's usage limit stops a run with
+  HTTP 429, run it again later and it asks only the questions that got no
+  answer.
 - A final failure (a malformed verdict or a truncated answer) leaves the arm
   incomplete, and it publishes nothing. To start that arm over, move its folder
   aside (or remove it) and prepare it again. The run log outside the folder keeps every
   earlier run, and the result reports how many runs and preparations there
-  were. An arm with a complete run is never prepared again.
+  were. An arm with a complete run, alone or in a pair, is never prepared
+  again.
 
 ```sh
 # No model calls. prepare needs a clean, committed tree.
@@ -358,36 +388,56 @@ uv run python -m benchmarks.integrations.gpt54_baselines prepare prme --benchmar
 uv run python -m benchmarks.integrations.gpt54_baselines calibrate --provider ollama
 uv run python -m benchmarks.integrations.gpt54_baselines run prme --benchmark locomo --provider ollama --sample 2
 uv run python -m benchmarks.integrations.gpt54_baselines run prme --benchmark locomo --provider ollama
-uv run python -m benchmarks.integrations.gpt54_baselines run prme --benchmark locomo --provider ollama \
-  --variant rrf
+# A variant and a fresh run of the defaults, interleaved question by question.
+uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchmark locomo --provider ollama \
+  --variant rrf --baseline prme@46647825
+# The A/A check: the baseline answered against itself.
+uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchmark locomo --provider ollama \
+  --baseline prme@46647825
 # No model calls: the paired difference and its 95% interval.
 uv run python -m benchmarks.integrations.gpt54_baselines compare \
-  --before <baseline result> --after <variant result>
+  --before <pair's before result> --after <same pair's after result>
 # A repeat: an earlier baseline and a later one that read the same contexts.
 uv run python -m benchmarks.integrations.gpt54_baselines compare \
   --before <earlier baseline result> --after <later baseline result>
 ```
 
 `--sample N` asks only the first N questions of each category, in registered
-order, as a smoke check. Its result is labeled as a sample, reports only how
-many answers the judge accepted, with no accuracy or interval, and is published
-with a `-sample-N` suffix. A later full run reuses its answers.
+order, as a smoke check, with `run` or `run-pair`. Its result is labeled as a
+sample, reports only how many answers the judge accepted, with no accuracy or
+interval, and is published with a `-sample-N` suffix. A later full run (of the
+same pair, for `run-pair`) reuses its answers.
 
 `compare` refuses results that are incomplete, are samples, cover different
 questions, are the same answer run, or were answered by different model
 identities or settings (an Ollama server upgrade alone does not change the
-identity). It reports the paired accuracy difference with a 95% interval that
-resamples questions, per category as well, and the questions gained and lost.
-When both results are baselines of the defaults, and they sent the reader and
-judge the same inputs, `compare` reports them as a repeat: how many verdicts
-changed, and whether the interval excludes zero. The same inputs means the same
-budget, both preparations reproducing the saved 2026-09-23 context on every
-question (so the context text is the same), the same code for sending,
-checking and judging the calls, and the same Ollama server version. Two
-baselines without that evidence get a warning instead. The saved-run check
-works only while the defaults reproduce the saved run; after a default
-changes, a repeat needs per-question text hashes in the results (#125). A
-different server version is a warning on any pair.
+identity). On the DeepSeek track it also refuses any pairing other than the
+two sides of one `run-pair` pair, with the defaults as `--before`, or a repeat
+(below), and it refuses results whose recorded Ollama server versions differ
+(#129). It reports the paired accuracy difference with a 95% interval, per
+category as well, and the questions gained and lost. LoCoMo intervals resample
+its 10 conversations, keeping each conversation's questions together;
+LongMemEval-S intervals resample questions, because each question has its own
+history. The default-change rule reads `interval_95`. A percentile bootstrap
+over only 10 conversations covers less than 95% (for a variant with no effect
+it excluded zero about 9% of the time instead of 5%), so for LoCoMo
+`interval_95` spans the conversation-level interval
+(`interval_95_conversations`) and the question-level one
+(`interval_95_questions`), and a LoCoMo difference excludes zero only when
+both do. A category with fewer than two conversations has no
+conversation-level interval, and its `interval_95` is empty. When both results are
+baselines of the defaults with the same inputs,
+`compare` reports them as a repeat: how many verdicts changed, whether the
+interval excludes zero, and whether the two were answered as one interleaved
+pair. The two sides of an A/A pair read the same prepared contexts. Two
+baselines answered on their own have the same inputs when they have the same
+budget, both preparations reproduce the saved 2026-09-23 context on every
+question (so the context text is the same), and they used the same code for
+sending, checking and judging the calls and the same Ollama server version;
+that sequential repeat is still accepted so the #118 measurement can be
+checked. The saved-run check works only while the defaults reproduce the saved
+run; after a default changes, a repeat needs per-question text hashes in the
+results (#125).
 
 | DeepSeek run | LongMemEval-S | LoCoMo | Context |
 |---|---:|---:|---|
@@ -397,7 +447,7 @@ different server version is a warning on any pair.
 
 The first baseline was the reference for DeepSeek paired runs until its
 repeat, `prme@46647825`, completed; the repeat is now the most recent complete
-baseline, so later variants pair with it (step 3). `compare` refuses results
+baseline, so later variants are answered alongside it (step 2). `compare` refuses results
 answered by another model identity or other settings. Both first-baseline arms
 were prepared from `main` at `97c9402f`,
 and every context matches the saved 2026-09-23 run (all 1,540 LoCoMo and 500
@@ -460,11 +510,15 @@ over the kept records reproduces both results exactly.
 | Benchmark | First baseline (`prme`) | Repeat (`prme@46647825`) | Paired difference, 95% interval | Changed verdicts |
 |---|---:|---:|---:|---:|
 | LongMemEval-S | 423/500 (84.6%) | 434/500 (86.8%) | **+2.2 points, +0.4 to +4.2** | 23 of 500 (17 gained, 6 lost) |
-| LoCoMo | 1,014/1,540 (65.8%) | 1,007/1,540 (65.4%) | -0.45 points, -1.43 to +0.52 | 61 of 1,540 (27 gained, 34 lost) |
+| LoCoMo | 1,014/1,540 (65.8%) | 1,007/1,540 (65.4%) | -0.45 points, -1.43 to +0.52 (spanning -1.36 to +0.39 resampling conversations and -1.43 to +0.52 resampling questions) | 61 of 1,540 (27 gained, 34 lost) |
 
 **The floor does not hold.** The LongMemEval-S interval excludes zero, so under
-the default-change rule in `CLAUDE.md` the paired test is not trustworthy as it
-stands, and no default changes until it is revised (#129). A variant paired
+the default-change rule in `CLAUDE.md` the paired test was not trustworthy as it
+stood. #129 revised it: each variant is now answered alongside its own fresh
+run of the defaults, LoCoMo intervals resample conversations, and server
+versions are recorded and checked. No default changes until the
+[interleaved A/A check](#interleaved-aa-check) has been answered and
+recorded. A variant paired
 with the first LongMemEval-S baseline would have shown a 2.2-point gain whose
 interval excludes zero without changing anything. The data cannot tell chance
 (a 95% interval excludes zero about 1 time in 20 when nothing changes) from the
@@ -477,12 +531,65 @@ made against it: on the 292 LongMemEval-S questions that three runs answered
 By category, the LongMemEval-S repeat gained on `knowledge-update` (7 gained,
 1 lost) and `multi-session` (8 gained, none lost) and lost on
 `temporal-reasoning` (4 lost, none gained). No LoCoMo category's interval
-excludes zero. LoCoMo's conversation-level interval for the repeat is 63.5% to
+excludes zero, resampling either questions or conversations. LoCoMo's conversation-level interval for the repeat is 63.5% to
 67.5%.
 
 To check the numbers, pair the two published results of each benchmark with
 `compare` (the first baseline as `--before`, the repeat as `--after`). A test
-pins the changed verdicts and whether each interval excludes zero.
+pins the changed verdicts, the intervals and whether each interval excludes
+zero. Since #129, `compare` also resamples LoCoMo's 10 conversations, which
+gives -1.36 to +0.39 points for this pair, narrower than the question-level
+interval; the LoCoMo `interval_95` spans both.
+
+### Interleaved A/A check
+
+The revised test (#129) is checked by answering the defaults against
+themselves as one interleaved pair on each benchmark:
+
+```sh
+uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchmark longmemeval --provider ollama \
+  --baseline prme@46647825
+uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchmark locomo --provider ollama \
+  --baseline prme@46647825
+```
+
+Both sides read the same prepared contexts, so they send identical requests,
+and `compare` reports the pair as an interleaved repeat. The check holds when
+the interval (for LoCoMo, the one spanning the conversation-level and
+question-level intervals) includes zero on both benchmarks. If either excludes
+zero, a variant's gain must also be larger than the largest absolute A/A
+difference measured so far on that benchmark, the #118 repeat included (2.2
+points on LongMemEval-S and 0.45 points on LoCoMo so far).
+
+**It has not completed yet.** On 2026-09-24, four LongMemEval-S pairs and two
+LoCoMo pairs of `prme@46647825` against itself were started, with the same
+model identity (manifest digest `e04da138`), Ollama server version (0.34.3)
+and settings as the #118 runs. Each one stopped at a final failure, which the
+registered retry policy never asks again, so none published a result:
+
+| Pair | Answered by both sides | What stopped it |
+|---|---:|---|
+| LongMemEval-S 1 | 264 of 500 | Both sides' reader answers to `gpt4_7abb270c` ran to the 8,192-token limit |
+| LongMemEval-S 2 | 267 of 500 | The after side's reader answer to `gpt4_7abb270c` ran to the limit |
+| LongMemEval-S 3 | 261 of 500 | The before side's reader answer to `gpt4_7f6b06db` ran to the limit |
+| LongMemEval-S 4 | 314 of 500 | The before side's verdict on `gpt4_385a5000` was `Yes` with a stray character in front |
+| LoCoMo 1 | 61 of 1,540 | The before side's verdict on `conv-26-q0060` had stray characters before `<answer>no</answer>` |
+| LoCoMo 2 | 62 of 1,540 | The after side's verdict on `conv-26-q0062` had a stray character and a multiple-choice layout |
+
+`gpt4_7abb270c` has now run to the limit in 4 of its 11 reader answers,
+including the first #118 run (#124), and verdicts with stray characters
+appeared 3 times in these 2,470 judge calls but never in the 4,080 of the two
+published runs of the defaults. A pair has twice as many answers for one final
+failure to stop, so until the DeepSeek track handles these differently (#132),
+a pair rarely completes. Every stopped pair stays on record: the next
+`run-pair` gives it up with the reason and lists it in `earlier_pairs`.
+
+The attempts do answer one question about the design. The two sides of an A/A
+pair send identical requests back to back, which could have made them agree
+more than two runs hours apart would. They did not: on the 1,229 questions both
+sides answered, the reader text was identical on 46 (3.7%) and the verdicts
+differed on 30 (2.4%). The two #118 runs, two hours apart, differed on 23 of
+500 LongMemEval-S verdicts (4.6%) and 61 of 1,540 LoCoMo verdicts (4.0%).
 
 ## Earlier registered memory-utility comparison
 
