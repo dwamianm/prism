@@ -891,3 +891,29 @@ def test_cli_calibrate_and_compare(monkeypatch, tmp_path, capsys):
     with pytest.raises(SystemExit):
         baselines.main(["compare", "--before", str(before), "--after", str(after)])
     assert "not a complete answer run" in capsys.readouterr().err
+
+
+PUBLISHED = Path(__file__).parents[1] / "benchmarks/results/research"
+
+
+@pytest.mark.parametrize("benchmark", ["locomo", "longmemeval"])
+def test_the_published_deepseek_baseline_is_complete_and_matches_the_current_answer_settings(benchmark):
+    result = json.loads((PUBLISHED / "2026-09-24" / f"{OLLAMA_MODEL.track}-prme-{benchmark}-result.json").read_text())
+    rows = result["rows"]
+    assert (result["kind"], result["arm"], result["benchmark"]) == ("ollama-answer-result", "prme", benchmark)
+    assert result["registration_sha256"] == digest(study.REG)
+    assert [row["question_id"] for row in rows] == json.loads(study.REG.read_text())["cohort_ids"][benchmark]
+    assert result["complete"] and result["total"] == result["completed"] == len(rows)
+    assert not result["failures"] and result["final_failures"] == result["unreplaced_failures"] == 0
+    assert result["correct"] == sum(row["correct"] for row in rows)
+    assert result["accuracy"] == result["correct"] / len(rows)
+    assert result["categories"] == {
+        category: {"correct": sum(row["correct"] for row in rows if row["question_type"] == category),
+                   "total": sum(row["question_type"] == category for row in rows)}
+        for category in sorted({row["question_type"] for row in rows})}
+    assert result["prepared"]["overrides"] == {} and result["prepared"]["dirty"] is False
+    assert result["cost"]["usd"] == 0
+    # compare() pairs a variant with this baseline only when both were answered with the same settings, so a
+    # change to the answer settings needs a new baseline.
+    assert {key: value for key, value in result["answer_model"].items() if key != "identity"} == \
+        OLLAMA_MODEL.settings()

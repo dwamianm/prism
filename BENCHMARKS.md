@@ -245,12 +245,15 @@ with another DeepSeek score from the same model identity and settings:
    benchmarks, prepared from a commit on `main`.
 2. Prepare each change as a named variant of the defaults (`prme-<name>`, with
    the settings it changes), answer it, and pair it with the baseline question
-   by question with `compare`.
-3. A default still changes only with the owner's approval. Issue #117 proposes
-   that a recorded DeepSeek paired run replace the paid one as the evidence for
-   that approval; until the owner updates the epic #77 work rules in
-   `CLAUDE.md`, those rules decide. After a default changes, record a new
-   baseline.
+   by question with `compare`. The baseline's contexts match the saved
+   2026-09-23 run exactly, so when a variant is prepared at a later commit, run
+   the evidence gate on the defaults at that commit first. If it no longer
+   reproduces every saved context, the pairing also measures other code
+   changes.
+3. A default changes only when the default-change rule in the epic #77 work
+   rules in `CLAUDE.md` is met. After a default changes, or when the model
+   identity changes, a new baseline is needed; the harness cannot yet prepare
+   the `prme` arm again once it has a complete run (#123).
 
 `:cloud` models are served by Ollama's hosted service, not by this machine. The
 prompts leave the machine and count against the Ollama account's usage limits.
@@ -315,8 +318,8 @@ Safeguards:
   stops a run with HTTP 429, run it again later and it asks only the questions
   that got no answer.
 - A final failure (a malformed verdict or a truncated answer) leaves the arm
-  incomplete, and it publishes nothing. To start that arm over, remove its
-  folder and prepare it again. The run log outside the folder keeps every
+  incomplete, and it publishes nothing. To start that arm over, move its folder
+  aside (or remove it) and prepare it again. The run log outside the folder keeps every
   earlier run, and the result reports how many runs and preparations there
   were. An arm with a complete run is never prepared again.
 
@@ -348,8 +351,50 @@ questions, per category as well, and the questions gained and lost.
 
 | DeepSeek run | LongMemEval-S | LoCoMo | Context |
 |---|---:|---:|---|
-| Baseline, `prme` current defaults | not run yet | not run yet | 3,996-token ceiling |
+| Baseline, `prme` defaults at `97c9402f` (2026-09-24) ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-locomo-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-longmemeval-result.json)) | **423/500 (84.6%)**, 95% interval 81.4% to 87.6% | **1,014/1,540 (65.8%)**, 95% interval 63.4% to 68.2% | 3,996-token ceiling |
 | Smoke check, first 2 per category ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-locomo-sample-2-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-longmemeval-sample-2-result.json)) | 12 answered, 9 accepted (not a score) | 8 answered, 8 accepted (not a score) | 3,996-token ceiling |
+
+The baseline is the reference for DeepSeek paired runs until a default or the
+model identity changes: `compare` refuses results answered by another model
+identity or other settings. Both arms were prepared from `main` at `97c9402f`,
+and every context matches the saved 2026-09-23 run (all 1,540 LoCoMo and 500
+LongMemEval-S questions). The smoke checks used separate local folders, so the
+baseline reused none of their answers. The model passed calibration on its
+first attempt, and all 4,080 reader and judge calls in the two results returned
+HTTP 200 on their first attempt. Each row was checked against its recorded
+calls when the result was written, and repeating that check over the kept
+records reproduces both results exactly. The intervals resample questions;
+LoCoMo's questions come from 10 conversations, and its conversation-level
+interval is 63.5% to 68.4%.
+
+This baseline does not replace the earlier DeepSeek 437/500 (87.4%)
+LongMemEval-S result. That run used the same model under a different harness
+and settings (among them a 64-token judge limit), so the two are not paired.
+
+| Benchmark | Category | Accepted |
+|---|---|---:|
+| LongMemEval-S | `single-session-user` | 68/70 (97.1%) |
+| LongMemEval-S | `single-session-assistant` | 53/56 (94.6%) |
+| LongMemEval-S | `single-session-preference` | 27/30 (90.0%) |
+| LongMemEval-S | `knowledge-update` | 69/78 (88.5%) |
+| LongMemEval-S | `temporal-reasoning` | 113/133 (85.0%) |
+| LongMemEval-S | `multi-session` | 93/133 (69.9%) |
+| LoCoMo | `single-hop` | 644/841 (76.6%) |
+| LoCoMo | `temporal` | 229/321 (71.3%) |
+| LoCoMo | `open-domain` | 40/96 (41.7%) |
+| LoCoMo | `multi-hop` | 101/282 (35.8%) |
+
+The first LongMemEval-S baseline run stopped at 292 of 500 questions. On one
+temporal-reasoning question the reader repeated itself until it reached the
+8,192-token limit, and the registered retry policy treats a truncated answer as
+final (#124). The arm was prepared again from the same commit, with identical
+context text, and answered in full; that question then got an ordinary answer,
+which the judge rejected. The result's run log counts both runs and the second
+preparation. The first run's records are kept locally under
+`data/ollama-answers-v1/discarded-attempts/`. On the 292 questions both runs
+answered, 8 verdicts differed (6 accepted only in the first run, 2 only in the
+second). That is an incidental observation, not the noise-floor measurement
+#118 asks for.
 
 The same smoke sample, answered twice on identical contexts, gave differently
 worded answers for 18 of 20 questions and one flipped verdict, so seeded runs of
