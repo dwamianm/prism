@@ -225,8 +225,12 @@ the semantic cosine similarity of the memory behind it (for added session,
 episode or evidence context, the memory that pulled it in). Each result carries
 that value; weighted scoring omits it. A floor tuned on weighted scores does not
 carry over, and when a floor is set, a result with a low cosine is filtered out
-even if it is an exact keyword match. `min_score=0` keeps everything in both
-modes. Version 9 score provenance records any
+even if it is an exact keyword match. When vector search fails or detects an
+embedding model mismatch (`VECTOR` in `metrics.backend_failures`) and no result
+has a cosine, the floor is skipped instead of returning nothing: results and
+cross-scope hints keep their fused order, `metrics.min_score_skipped` is true,
+and the receipt uses version 18, which records `min_score_skipped`.
+`min_score=0` keeps everything in both modes. Version 9 score provenance records any
 applied `current_update` operation and its exact coefficient. Version 10 retains
 the evidence-projection policy and replayable `evidence_projection` operations;
 versions 1–9 mean projection was disabled.

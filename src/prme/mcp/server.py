@@ -333,7 +333,9 @@ async def memory_retrieve(
         user_id: User whose memories to search.
         min_score: Inclusive composite score floor, not a probability. Under
             rank fusion it is a floor on each result's semantic_relevance, the
-            semantic cosine similarity, instead of the rank-based score.
+            semantic cosine similarity, instead of the rank-based score. If the
+            vector path failed or detected an embedding mismatch and no result
+            has a cosine, it is skipped and metrics.min_score_skipped is true.
         limit: Maximum primary results; zero returns none.
         max_per_source: Optional maximum results sharing one exact source
             passage and evidence set. Use 1 for source-diverse results.

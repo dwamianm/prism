@@ -138,13 +138,16 @@ Search memories using 6-signal hybrid retrieval.
 | `knowledge_at` | string | optional | ISO datetime for point-in-time queries |
 | `min_score` | number | optional | Inclusive floor on each result's `score`; under rank fusion, on its `semantic_relevance` |
 
-Returns JSON: `{"results": [...], "count": N}`
+Returns JSON: `{"results": [...], "count": N, "metrics": {...}}`
 
 With opt-in rank fusion (`PRME_SCORING__FUSION=rrf`), a result's `score` says
 where it ranks among the candidates rather than how relevant it is. Each result
 then also carries `semantic_relevance`, the semantic cosine similarity of the
 memory behind it, and `min_score` is compared with that instead. A floor tuned
-on weighted scores does not carry over.
+on weighted scores does not carry over. If vector search is failing or the
+embedding model changed without a rebuild, no result has a cosine, so the floor
+is skipped rather than returning nothing: `metrics.backend_failures` names the
+vector failure and `metrics.min_score_skipped` is `true`.
 
 ### memory_ingest
 

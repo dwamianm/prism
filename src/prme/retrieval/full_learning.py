@@ -79,8 +79,8 @@ def _validate_pair(
     if _normalized_query(baseline.query) != _normalized_query(candidate.query):
         raise ValueError("Paired retrievals must use the same normalized query")
     fixed = (
-        "reference_time", "scoring", "packing", "min_score", "result_limit",
-        "retrieval_mode", "time_from", "time_to",
+        "reference_time", "scoring", "packing", "min_score", "min_score_skipped",
+        "result_limit", "retrieval_mode", "time_from", "time_to",
     )
     if any(getattr(baseline, name) != getattr(candidate, name) for name in fixed):
         raise ValueError("Paired retrievals must use the same clock, filters, limits, scoring, and packing")

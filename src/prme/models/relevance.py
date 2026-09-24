@@ -49,7 +49,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -59,6 +59,10 @@ class RetrievalReceipt(BaseModel):
     packing: PackingConfig
     context_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     min_score: float | None = None
+    # Version 18 and later, rank fusion only: min_score was not applied because
+    # no candidate had a cosine after the vector path failed. Omitted when
+    # false, so earlier receipts keep their bytes and checksums.
+    min_score_skipped: StrictBool = Field(default=False, exclude_if=lambda value: not value)
     result_limit: int | None = None
     retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT
     time_from: AwareDatetime | None = None
@@ -340,29 +344,41 @@ class RetrievalReceipt(BaseModel):
         relevances = [candidate.semantic_relevance for candidate in self.candidates]
         if self.schema_version < 16 and any(value is not None for value in relevances):
             raise ValueError("Rank fusion relevance requires a version 16 receipt")
+        # Version 18 records a floor skipped because the vector path failed and
+        # no candidate had a cosine (issue #150); versions 16 and 17 always
+        # applied it. The rank fusion rules above still hold.
+        if self.min_score_skipped:
+            if self.schema_version < 18:
+                raise ValueError("A skipped min_score requires a version 18 receipt")
+            if not (self.min_score is not None and self.min_score > 0):
+                raise ValueError("A skipped min_score requires a positive min_score")
+            if any(value is not None and value != 0 for value in relevances):
+                raise ValueError("A min_score is skipped only when no candidate has a cosine")
+        elif self.schema_version == 18:
+            raise ValueError("Version 18 records a skipped min_score")
         if self.schema_version >= 16:
             if any(value is None for value in relevances):
                 raise ValueError(
                     "Versions 16 and later record every candidate's rank fusion relevance"
                 )
-            if self.min_score is not None and any(
+            if self.min_score is not None and not self.min_score_skipped and any(
                 value is not None and value < self.min_score for value in relevances
             ):
                 raise ValueError("Rank fusion relevance does not reproduce the min_score selection")
         # Version 17 records the opt-in rank fusion session decay; without it,
-        # rank-fused neighbors took session_context_score_decay.
+        # rank-fused neighbors took session_context_score_decay. Version 18
+        # records it when set.
         rank_fusion_decay = self.packing.session_context_rank_fusion_score_decay
         if self.schema_version < 17 and rank_fusion_decay is not None:
             raise ValueError("A rank fusion session decay requires a version 17 receipt")
-        if self.schema_version == 17:
-            if rank_fusion_decay is None:
-                raise ValueError("Version 17 records a rank fusion session decay")
-            if any(
-                adjustment.kind == "session_decay" and adjustment.coefficient != rank_fusion_decay
-                for provenance in (self.score_provenance or {}).values()
-                for adjustment in provenance.adjustments
-            ):
-                raise ValueError("Session decay does not match the recorded rank fusion session decay")
+        if self.schema_version == 17 and rank_fusion_decay is None:
+            raise ValueError("Version 17 records a rank fusion session decay")
+        if rank_fusion_decay is not None and any(
+            adjustment.kind == "session_decay" and adjustment.coefficient != rank_fusion_decay
+            for provenance in (self.score_provenance or {}).values()
+            for adjustment in provenance.adjustments
+        ):
+            raise ValueError("Session decay does not match the recorded rank fusion session decay")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -501,9 +517,14 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
                  reference_time: datetime, scopes, scoring, packing, candidates, bundle,
                  min_score=None, result_limit=None, retrieval_mode=RetrievalMode.DEFAULT,
                  time_from=None, time_to=None, ranking_policy: RankingPolicy = "score_path_id",
-                 execution: RetrievalExecution | None = None) -> RetrievalReceipt:
+                 execution: RetrievalExecution | None = None,
+                 min_score_skipped: bool = False) -> RetrievalReceipt:
     included = {item.node.id: item for group in bundle.sections.values() for item in group}
     rank_fused = scoring.fusion == "rrf"
+    if min_score_skipped and not rank_fused:
+        # Unlike the rank fusion session decay, which weighted receipts drop,
+        # this is what happened to the request, so it is never discarded.
+        raise ValueError("Only rank fusion skips min_score")
     snapshots = []
     for item in candidates:
         if item.node.user_id != user_id:
@@ -561,14 +582,20 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     )
     if has_rank_assignment and execution is None:
         raise ValueError("Neural rank assignment requires an execution descriptor")
-    version: Literal[2, 12, 13, 14, 16, 17]
+    version: Literal[2, 12, 13, 14, 16, 17, 18]
     if execution is None:
         version = 2
     elif rank_fused:
         # Version 16 also admits every version 13 and 14 feature, and records
         # each candidate's relevance (version 15 did not). Version 17 adds the
-        # opt-in rank fusion session decay.
-        version = 17 if packing.session_context_rank_fusion_score_decay is not None else 16
+        # opt-in rank fusion session decay, and version 18 a skipped min_score
+        # with or without that decay.
+        if min_score_skipped:
+            version = 18
+        elif packing.session_context_rank_fusion_score_decay is not None:
+            version = 17
+        else:
+            version = 16
     elif packing.context_format == "reader":
         # Version 14 also admits the version 13 rank-assignment operation.
         version = 14
@@ -578,7 +605,8 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
                             request_id=request_id, user_id=user_id, query=query,
                             reference_time=reference_time, scopes=scopes,
                             scoring=scoring, packing=receipt_packing, candidates=tuple(snapshots),
-                            min_score=min_score, result_limit=result_limit, retrieval_mode=retrieval_mode,
+                            min_score=min_score, min_score_skipped=min_score_skipped,
+                            result_limit=result_limit, retrieval_mode=retrieval_mode,
                             time_from=time_from, time_to=time_to,
                             score_provenance=provenance, ranking_policy=ranking_policy,
                             context_sha256=hashlib.sha256(bundle.render().encode()).hexdigest())

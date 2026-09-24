@@ -614,6 +614,17 @@ class RetrievalMetadata(BaseModel):
         default_factory=dict,
         description="Failed primary candidate paths with sanitized reason codes; empty means no detected failure",
     )
+    min_score_skipped: bool = Field(
+        default=False,
+        description=(
+            "Rank fusion only: min_score was not applied, because the vector path "
+            "failed or detected an embedding mismatch (see backend_failures) and "
+            "no result had a semantic cosine to compare with it. Results keep their "
+            "fused order and are not filtered by min_score; limit and the source "
+            "and evidence caps still apply. Cross-scope hints skip it too unless "
+            "one of them has a cosine"
+        ),
+    )
     aggregation_coverage: AggregationCoverage | None = Field(
         default=None,
         description="Explicit non-exhaustive coverage for detected count/list queries",

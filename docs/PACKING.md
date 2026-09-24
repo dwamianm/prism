@@ -289,7 +289,11 @@ consume these rank-fusion receipts. A rank fusion retrieval with the opt-in
 `session_context_rank_fusion_score_decay` set emits version 17, which also
 records that decay; every session decay in its score provenance must equal it.
 Versions 1 to 16 cannot record it, and an unset value is omitted from the
-packing settings, so no earlier receipt changes.
+packing settings, so no earlier receipt changes. A rank fusion retrieval that
+skipped a positive `min_score` because the vector path failed and no candidate
+had a cosine emits version 18, which records `min_score_skipped: true`, requires
+every candidate's `semantic_relevance` to be 0, and also records the rank fusion
+session decay when it is set. Versions 1 to 17 cannot record a skipped floor.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

@@ -132,7 +132,10 @@ class ScoringWeights(BaseModel):
             "each result's semantic_relevance, the semantic cosine similarity of "
             "the memory behind it, instead of the fused score. A floor tuned on "
             "weighted scores does not carry over, and a low-cosine exact keyword "
-            "match is filtered out when a floor is set."
+            "match is filtered out when a floor is set. When the vector path "
+            "fails or detects an embedding mismatch and no result has a cosine, "
+            "min_score is skipped and the response metadata sets "
+            "min_score_skipped."
         ),
     )
     rrf_k: int | None = Field(

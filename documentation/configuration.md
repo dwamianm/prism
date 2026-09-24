@@ -72,7 +72,7 @@ These control the hybrid retrieval scoring formula. They should sum to approxima
 | `PRME_SCORING__W_PATHS` | `0.00` | Path count tiebreaker |
 | `PRME_SCORING__RECENCY_LAMBDA` | `0.02` | Decay rate for recency |
 | `PRME_SCORING__TEMPORAL_BOOST` | `0.15` | Bonus for temporal queries |
-| `PRME_SCORING__FUSION` | `weighted` | `weighted` (the sum above) or `rrf`: opt-in reciprocal rank fusion of semantic and lexical ranks, which ignores the additive weights (RFC-0005 Section 7.2). Under `rrf` a result's score is rank-based, so a request's `min_score` is compared with its `semantic_relevance`, the semantic cosine similarity, instead; a floor tuned on weighted scores does not carry over, and a low-cosine exact keyword match is filtered out when a floor is set |
+| `PRME_SCORING__FUSION` | `weighted` | `weighted` (the sum above) or `rrf`: opt-in reciprocal rank fusion of semantic and lexical ranks, which ignores the additive weights (RFC-0005 Section 7.2). Under `rrf` a result's score is rank-based, so a request's `min_score` is compared with its `semantic_relevance`, the semantic cosine similarity, instead; a floor tuned on weighted scores does not carry over, and a low-cosine exact keyword match is filtered out when a floor is set. If vector search fails or detects an embedding model mismatch and no result has a cosine, the floor is skipped and the response metadata sets `min_score_skipped` |
 | `PRME_SCORING__RRF_K` | `60` | Rank constant for `rrf`; set it only with `PRME_SCORING__FUSION=rrf` |
 
 ## Context Packing

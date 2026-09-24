@@ -49,6 +49,7 @@ from prme.integrations._chat_history import (
     serialized_chat_message,
     visible_chat_events,
 )
+from prme.retrieval.selection import validate_selection
 from prme.types import NodeType, Scope
 
 _LLAMAINDEX_MESSAGE_FORMAT = "llamaindex-v1"
@@ -79,6 +80,10 @@ class PRMERetriever(BaseRetriever):
         scope: Scope filter(s) for retrieval.
         token_budget: Token budget for context packing.
         top_k: Maximum number of nodes to return.
+        min_score: Optional inclusive floor passed to retrieval. Under rank
+            fusion it compares each result's ``semantic_relevance``; when it
+            could not be applied, every node's metadata carries
+            ``min_score_skipped: True`` (RFC-0005 Section 7.2).
     """
 
     def __init__(
@@ -90,14 +95,17 @@ class PRMERetriever(BaseRetriever):
         scope: Scope | list[Scope] | None = None,
         token_budget: int | None = None,
         top_k: int = 10,
+        min_score: float | None = None,
         **kwargs: Any,
     ) -> None:
+        validate_selection(min_score, None)
         super().__init__(**kwargs)
         self._client = MemoryClient(directory, config=config)
         self._user_id = user_id
         self._scope = scope
         self._token_budget = token_budget
         self._top_k = top_k
+        self._min_score = min_score
 
     def _retrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
         response = self._client.retrieve(
@@ -105,6 +113,7 @@ class PRMERetriever(BaseRetriever):
             user_id=self._user_id,
             scope=self._scope,
             token_budget=self._token_budget,
+            min_score=self._min_score,
         )
 
         nodes_with_scores = []
@@ -129,6 +138,9 @@ class PRMERetriever(BaseRetriever):
                 # Rank fusion: the score is rank-based, so this cosine is the
                 # value to threshold on (RFC-0005 Section 7.2).
                 metadata["semantic_relevance"] = candidate.semantic_relevance
+            if response.metadata.min_score_skipped:
+                # The vector path failed, so the floor could not be applied.
+                metadata["min_score_skipped"] = True
 
             text_node = TextNode(
                 text=node.content,
