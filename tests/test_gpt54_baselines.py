@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import fcntl
+from datetime import datetime
 from functools import partial
 import hashlib
 import json
@@ -147,6 +148,10 @@ def published(harness, arm="full-context", benchmark="locomo"):
     return list(harness["results"].glob(f"*/gpt54-baseline-{arm}-{benchmark}-result.json"))
 
 
+def text_sha256(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
 def fabricate_plain(data: Path, benchmark: str, contexts: dict[str, str], arm: str = "plain-rrf") -> None:
     """Prepared contexts of an arm (plain-rrf by default) in the layout prepare writes, without replaying packs."""
     folder = data / arm / benchmark
@@ -156,8 +161,8 @@ def fabricate_plain(data: Path, benchmark: str, contexts: dict[str, str], arm: s
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"question_id": qid, "context": context}))
         entries.append({"question_id": qid, "path": str(path.relative_to(folder)), "sha256": digest(path),
-                        "text_sha256": hashlib.sha256(context.encode()).hexdigest(),
-                        "context_tokens": count_tokens(context), "retrieval_seconds": .1})
+                        "text_sha256": text_sha256(context), "context_tokens": count_tokens(context),
+                        "retrieval_seconds": .1})
     (folder / "prepared.json").write_text(json.dumps({
         "kind": "gpt54-baseline-contexts", "complete": True, "arm": arm, "benchmark": benchmark,
         "questions": len(entries), "registration_sha256": digest(study.REG), "tokenizer": "cl100k_base",
@@ -884,9 +889,26 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     again = await asyncio.to_thread(baselines.prepare, "prme-small-again", "locomo", data=harness["data"],
                                     archive=harness["archive"], overrides=spelled)
     assert again["variant_settings"] == variant["variant_settings"] and again["provenance"]["overrides"] == spelled
-    notice = capsys.readouterr().err
+    replaying, notice = [line for line in capsys.readouterr().err.splitlines()
+                         if line.startswith(("Replaying the defaults", "prme-"))]
+    assert replaying.startswith("Replaying the defaults at this commit as well")
     assert "prepared with the same settings or context text, so prme-small-again is the same variant" in notice
     assert notice.startswith("prme-rrf, prme-small locomo were" if same_text else "prme-small locomo was")
+    # Each variant's preparation also replays the defaults at its commit, without captures, and records their text
+    # on every question, which is the defaults' own preparation at this commit, question by question (#139). The
+    # test pack's contexts may read the same under every setting, so what is recorded where is checked separately.
+    defaults = [entry["text_sha256"] for entry in prepared["contexts"]]
+    for name, found in (("prme-small", variant), ("prme-rrf", kept), ("prme-small-again", again)):
+        assert [entry["defaults_text_sha256"] for entry in found["contexts"]] == defaults
+        defaults_report = arm_folder(harness, name) / "defaults-gate.json"
+        assert digest(defaults_report) == found["defaults_gate_report_sha256"]
+        report = json.loads(defaults_report.read_text())
+        assert report["provenance"]["overrides"] == {} and "capture_sha256" not in report["rows"][0]
+        assert report["provenance"]["commit"] == found["provenance"]["commit"]
+        assert len(list((arm_folder(harness, name) / "contexts").rglob("*.json"))) == len(found["contexts"])
+    # The defaults' own preparation replays nothing more.
+    assert not (folder / "defaults-gate.json").exists() and "defaults_gate_report_sha256" not in prepared
+    assert not any("defaults_text_sha256" in entry for entry in prepared["contexts"])
     # A variant whose every setting is a default would answer the defaults again, so it is refused before any work.
     with pytest.raises(ValueError, match="settings of the prme-noop variant are the defaults' at this commit"):
         baselines.prepare("prme-noop", "locomo", data=harness["data"], archive=harness["archive"],
@@ -926,7 +948,11 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     # published, also carries the hash of the context text alone, next to the capture's (#125).
     for result, entries in ((before, prepared["contexts"]), (after, kept["contexts"])):
         assert [row["context_text_sha256"] for row in result["rows"]] == [entry["text_sha256"] for entry in entries]
-        assert list(result["rows"][0])[4:7] == ["context_sha256", "context_text_sha256", "context_tokens"]
+    assert list(before["rows"][0])[4:7] == ["context_sha256", "context_text_sha256", "context_tokens"]
+    # The variant's rows also carry the defaults' text at its commit (#139).
+    assert list(after["rows"][0])[4:8] == ["context_sha256", "context_text_sha256", "defaults_text_sha256",
+                                           "context_tokens"]
+    assert [row["defaults_text_sha256"] for row in after["rows"]] == defaults
     assert published_before["rows"] == before["rows"] and published_after["rows"] == after["rows"]
     assert all(old["context_sha256"] != new["context_sha256"] for old, new in zip(before["rows"], after["rows"]))
     differing = sum(old["text_sha256"] != new["text_sha256"]
@@ -938,14 +964,20 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     assert (comparison["variant"]["variant_settings"], comparison["variant"]["role"]) == (fused, "first")
     assert comparison["baseline"]["current"] == "prme"
     assert comparison["pair"]["number"] == 1 and comparison["repeat"] is None
+    # The defaults at the variant's commit read the before side's text on every question, so no other code changed
+    # what the two sides read (#139).
     assert {key: value for key, value in comparison["contexts"].items() if key != "note"} == {
-        "questions": 2, "differing": differing, "shown_by": "text hashes"}
+        "questions": 2, "differing": differing, "shown_by": "text hashes", "changed_by_other_code": 0}
     assert comparison["prepared"]["after"]["tokenizer"] == baselines.RULE_TOKENIZER
-    # Another commit's contexts are flagged only when some context text differs, and the flag counts them.
+    # Another commit's contexts are not flagged while the defaults at that commit read the before side's text.
     moved = {**after, "prepared": {**after["prepared"], "commit": "0" * 40, "dirty": True}}
     warnings = baselines.compare(before, moved, data=harness["data"])["warnings"]
     assert any("uncommitted changes" in warning for warning in warnings)
-    assert any("different commits" in warning for warning in warnings) is (differing > 0)
+    assert not any("different commits" in warning for warning in warnings)
+    # The rows the defaults' replay would change are refused (#139).
+    other = {**after, "rows": [{**row, "defaults_text_sha256": "0" * 64} for row in after["rows"]]}
+    with pytest.raises(ValueError, match="On 2 of 2 questions the defaults at the commit that prepared prme-rrf"):
+        baselines.compare(before, other, data=harness["data"])
     assert comparison["accuracy"]["delta"] == 0 and comparison["gained"] == comparison["lost"] == []
     assert comparison["prepared"]["after"]["overrides"] == fusion
     # A result relabeled with another budget or tokenizer is refused too.
@@ -1424,15 +1456,18 @@ def test_cli_calibrate_and_compare(monkeypatch, tmp_path, capsys):
 
 def answer_result(arm: str, verdicts: list[bool], *, commit: str = "a" * 40, matching: int | None = None,
                   budget: int | None = baselines.RULE_BUDGET, identity: dict | None = None, modules: dict | None = None,
-                  texts: list[str] | None = None) -> dict:
+                  texts: list[str] | None = None, defaults: list[str | None] | None = None) -> dict:
     """A complete Ollama answer result with one row per verdict, as compare() reads it.
 
-    ``texts`` gives each row's context text hash; without it the rows have none, as before #125.
+    ``texts`` gives each row's context text hash; without it the rows have none, as before #125. ``defaults`` gives
+    each row's hash of the defaults' text at the variant's commit, as a variant prepared since #139 has.
     """
     rows = [{"question_id": f"q{number}", "question_type": "single-hop", "cluster": f"conv-{number % 2}",
              "correct": verdict, "reader_sha256": f"{arm}-{number}"} for number, verdict in enumerate(verdicts)]
     for row, text in (zip(rows, texts, strict=True) if texts is not None else ()):
         row["context_text_sha256"] = text
+    for row, text in (zip(rows, defaults, strict=True) if defaults is not None else ()):
+        row["defaults_text_sha256"] = text
     return {"kind": "ollama-answer-result", "arm": arm, "benchmark": "locomo", "model": OLLAMA_MODEL.model,
             "registration_sha256": "r" * 64, "complete": True, "context_budget": budget,
             "answer_model": {**OLLAMA_MODEL.settings(), "identity": IDENTITY if identity is None else identity},
@@ -1615,15 +1650,17 @@ def test_compare_reports_how_many_questions_each_side_asked_on_different_context
     before = answer_result("prme", [True, True, False, False], texts=texts)
     after = answer_result("prme-rrf", [True, False, True, False], texts=["t0", "x1", "t2", "x3"])
     comparison = baselines.compare(*one_pair(before, after))
+    # A variant prepared before #139 records no replay of the defaults at its commit, so nothing splits the count.
     assert {key: value for key, value in comparison["contexts"].items() if key != "note"} == {
-        "questions": 4, "differing": 2, "shown_by": "text hashes"}
+        "questions": 4, "differing": 2, "shown_by": "text hashes", "changed_by_other_code": None}
     assert comparison["warnings"] == []
     # Contexts from another commit are flagged with how many questions read different text.
     moved = {**after, "prepared": {**after["prepared"], "commit": "b" * 40}}
     assert baselines.compare(*one_pair(before, moved))["warnings"] == [
         "The contexts were prepared from different commits, so code changes are part of the difference: 2 of 4 "
         "questions read different context text, from the after side's settings and from any other change between "
-        "the commits"]
+        "the commits. The variant was prepared before prepare replayed the defaults at its commit, so nothing shows "
+        "how many of them other code changed (#139)"]
     # With the same text on every question, the commits that built it changed nothing the reader saw.
     same = answer_result("prme-rrf", [True, False, True, False], commit="b" * 40, texts=texts)
     assert baselines.compare(*one_pair(before, same))["warnings"] == []
@@ -1655,6 +1692,67 @@ def test_compare_reports_how_many_questions_each_side_asked_on_different_context
     doubled["rows"][1] = {**doubled["rows"][1], "reader_sha256": "other"}
     with pytest.raises(ValueError, match="lists a question more than once"):
         baselines.compare(*one_pair({**before, "rows": [before["rows"][0], *before["rows"]]}, doubled))
+
+
+def test_compare_refuses_a_variants_pair_whose_defaults_at_its_commit_read_other_text_than_its_baseline(monkeypatch):
+    answered(baselines.data_root(OLLAMA_MODEL), "locomo", "a" * 40)
+    logged_pair(settings=MARKED)
+    aa_checked(answer_result("prme", [True, False]))
+    texts = ["t0", "t1", "t2", "t3"]
+    before = answer_result("prme", [True, True, False, False], texts=texts)
+
+    def variant(defaults: list[str | None] | None, **changes) -> dict:
+        return {**answer_result("prme-rrf", [True, False, True, False], commit="b" * 40,
+                                texts=["t0", "x1", "t2", "x3"], defaults=defaults), **changes}
+
+    # The defaults at the variant's commit read the baseline's text on every question, so every difference is the
+    # variant's settings, and contexts from another commit are not flagged (#139).
+    comparison = baselines.compare(*one_pair(before, variant(texts)))
+    assert {key: value for key, value in comparison["contexts"].items() if key != "note"} == {
+        "questions": 4, "differing": 2, "shown_by": "text hashes", "changed_by_other_code": 0}
+    assert comparison["warnings"] == []
+    # Something between the two preparations changed the defaults' text on a question, where the variant reads the
+    # new defaults' text (q3), or its settings changed that text again (q1). The pair would credit that change to
+    # the variant, so it is refused.
+    for defaults in (["t0", "t1", "t2", "x3"], ["t0", "y1", "t2", "t3"]):
+        assert baselines._context_changes(before, variant(defaults))["changed_by_other_code"] == 1
+        with pytest.raises(ValueError, match=r"On 1 of 4 questions the defaults at the commit that prepared prme-rrf "
+                                             r"\(b{40}\) read other context text than prme, prepared at a{40}\. .* "
+                                             r"record a new baseline at a commit on main that includes the change"):
+            baselines.compare(*one_pair(before, variant(defaults)))
+    # So is a change at one commit, which can only come from the dependencies or the saved run.
+    with pytest.raises(ValueError, match=r"On 4 of 4 questions the defaults at the commit that prepared prme-rrf "
+                                         r"\(a{40}\)"):
+        baselines.compare(*one_pair(before, variant(["d"] * 4, prepared=before["prepared"])))
+    with pytest.raises(ValueError, match="hashes of the defaults' context text on some of its rows only"):
+        baselines.compare(*one_pair(before, variant([*texts[:3], None])))
+    # Without the before side's text hashes, nothing splits the count either.
+    legacy = answer_result("prme", [True, True, False, False], matching=3)
+    assert baselines._context_changes(legacy, variant(texts))["changed_by_other_code"] is None
+    # A variant pair without the split is accepted only when it started before #139, as every variant pair on record
+    # did (the last, pair 2 of prme-reader-rrf, at 14:35 UTC), and compare warns that nothing splits it. A later one
+    # came from a checkout without #139. These results use the registered failure policy, so they start before its
+    # amendment (#132), and #139's time is moved before them.
+    assert baselines.DEFAULTS_REPLAYED_SINCE > datetime.fromisoformat("2026-09-24T14:35:10.543804+00:00")
+    since = datetime.fromisoformat("2026-09-24T01:00:00+00:00")
+    monkeypatch.setattr(baselines, "DEFAULTS_REPLAYED_SINCE", since)
+    earlier = baselines.compare(*one_pair(before, variant(None, started_at="2026-09-24T00:59:59+00:00")))
+    assert earlier["contexts"]["changed_by_other_code"] is None
+    assert earlier["warnings"] == [
+        "The contexts were prepared from different commits, so code changes are part of the difference: 2 of 4 "
+        "questions read different context text, from the after side's settings and from any other change between "
+        "the commits. The variant was prepared before prepare replayed the defaults at its commit, so nothing shows "
+        "how many of them other code changed (#139)"]
+    for started in (since.isoformat(), "2026-09-24T02:00:00+00:00"):
+        with pytest.raises(ValueError, match=r"The prme-rrf result's rows do not record the defaults' context text at "
+                                             r"the variant's commit, .* checkout without #139"):
+            baselines.compare(*one_pair(before, variant(None, started_at=started)))
+    # Other arms record no replay of the defaults, and are never split or refused for it.
+    plain = baselines.compare(*one_pair(before, answer_result("plain-rrf", [True, False, True, False],
+                                                              commit="b" * 40, texts=["t0", "x1", "t2", "x3"])))
+    assert plain["contexts"]["changed_by_other_code"] is None
+    assert plain["warnings"][0].startswith("The contexts were prepared from different commits") and \
+        "(#139)" not in plain["warnings"][0]
 
 
 def test_two_baselines_that_no_longer_reproduce_the_saved_run_are_a_repeat_when_their_texts_match():
@@ -1858,15 +1956,30 @@ def recorded_baseline(harness, benchmark: str, contexts: dict[str, str], arm: st
 MARKED = {"scoring.fusion": "rrf", "scoring.rrf_k": 60}
 
 
-def fabricate_variant(harness, arm: str = "prme-marked", settings: dict | None = None, marker: str = "VARIANT") -> None:
-    """A variant prepared as prepare records one since #130: its manifest and a prepared event name its identity."""
+def fabricate_variant(harness, arm: str = "prme-marked", settings: dict | None = None, marker: str = "VARIANT",
+                      defaults: dict[str, str] | None = DEFAULTS_TEXT) -> None:
+    """A variant prepared as prepare records one since #130: its manifest and a prepared event name its identity.
+
+    Each entry also records the text of the defaults replayed at its commit, ``defaults`` (#139), which by default
+    is the baseline's, next to the defaults' gate report; with None the manifest records none, as before #139.
+    """
     settings = MARKED if settings is None else settings
     fabricate_plain(harness["data"], "locomo", {qid: f"{text} {marker}" for qid, text in DEFAULTS_TEXT.items()},
                     arm=arm)
     manifest = harness["data"] / arm / "locomo" / "prepared.json"
-    manifest.write_text(json.dumps({**json.loads(manifest.read_text()), "variant_settings": settings,
-                                    "provenance": {"commit": "a" * 40, "overrides": {"scoring": {"fusion": "rrf"}}}}))
+    prepared = {**json.loads(manifest.read_text()), "variant_settings": settings,
+                "provenance": {"commit": "a" * 40, "overrides": {"scoring": {"fusion": "rrf"}}}}
+    if defaults is not None:
+        prepared["contexts"] = [{**entry, "defaults_text_sha256": text_sha256(defaults[entry["question_id"]])}
+                                for entry in prepared["contexts"]]
+        report = manifest.parent / "defaults-gate.json"
+        report.write_text(json.dumps({"provenance": {"commit": "a" * 40, "overrides": {}}, "rows": [
+            {"question_id": entry["question_id"], "context_sha256": entry["defaults_text_sha256"]}
+            for entry in prepared["contexts"]]}))
+        prepared["defaults_gate_report_sha256"] = digest(report)
+    manifest.write_text(json.dumps(prepared))
     baselines._log_prepared_variant(harness["data"], arm, "locomo", json.loads(manifest.read_text()), digest(manifest))
+
 
 
 def contexts_sha256(harness, arm: str) -> str:
@@ -1993,6 +2106,103 @@ async def test_a_pair_answers_the_variant_and_a_fresh_defaults_run_interleaved_i
         baselines.compare({**alone, "arm": "prme", "context_budget": baselines.RULE_BUDGET}, after)
 
 
+async def test_run_pair_answers_a_variant_only_when_the_defaults_at_its_commit_read_the_baselines_text(
+        harness, monkeypatch):
+    pair_arms(harness, marked=False)
+    requests = ollama_provider(monkeypatch)
+    await baselines.calibrate(OLLAMA_MODEL, data=harness["data"])
+    requests.clear()
+    # A variant prepared before #139 records no replay of the defaults, so nothing would split its pair (#139).
+    fabricate_variant(harness, "prme-legacy", defaults=None)
+    for sample in (None, 1):
+        with pytest.raises(ValueError, match="The prme-legacy locomo preparation does not record the defaults' "
+                                             "context text at its commit, which prepare records since #139"):
+            await run_pair(harness, "prme", "prme-legacy", sample=sample)
+    # A variant whose first pair and confirmation are complete hears that first, since preparing it again would not
+    # help (#130).
+    with monkeypatch.context() as patched:
+        patched.setattr(baselines, "_check_uncounted", lambda *args: pytest.fail("the #130 check runs first"))
+        with pytest.raises(pytest.fail.Exception, match="the #130 check runs first"):
+            await run_pair(harness, "prme", "prme-legacy")
+    # Something changed the defaults' text on a question between the baseline's preparation and the variant's, so
+    # the pair would credit it to the variant; it is refused before any question is asked, naming what else the two
+    # preparations differ in.
+    moved = {**DEFAULTS_TEXT, "conv-1-q0001": "(20 May, 2023) Melanie: I adopted a kitten named Oscar."}
+    fabricate_variant(harness, "prme-moved", marker="MOVED", defaults=moved)
+    manifest = arm_folder(harness, "prme-moved") / "prepared.json"
+    prepared = json.loads(manifest.read_text())
+    manifest.write_text(json.dumps({**prepared, "provenance": {**prepared["provenance"], "dependencies": {"x": "2"}}}))
+    with pytest.raises(ValueError, match=r"On 1 of 2 questions the defaults at the commit that prepared prme-moved "
+                                         r"\(a{40}\) read other context text than prme, prepared at a{40}\. They were "
+                                         r"also prepared with different dependencies\."):
+        await run_pair(harness, "prme", "prme-moved")
+    # The recorded text must be the defaults' gate report's: kept, unchanged, and from the defaults at that commit.
+    fabricate_variant(harness, "prme-unbacked", marker="UNBACKED")
+    report = arm_folder(harness, "prme-unbacked") / "defaults-gate.json"
+    kept = json.loads(report.read_text())
+    for changed in ({**kept, "provenance": {**kept["provenance"], "overrides": {"scoring": {"fusion": "rrf"}}}},
+                    {**kept, "provenance": {**kept["provenance"], "commit": "b" * 40}},
+                    {**kept, "rows": kept["rows"][::-1]}, None):
+        if changed is None:
+            report.unlink()
+        else:
+            report.write_text(json.dumps(changed))
+            manifest = arm_folder(harness, "prme-unbacked") / "prepared.json"
+            manifest.write_text(json.dumps({**json.loads(manifest.read_text()),
+                                            "defaults_gate_report_sha256": digest(report)}))
+        with pytest.raises(ValueError, match="does not match the defaults' gate report it kept"):
+            await run_pair(harness, "prme", "prme-unbacked")
+    assert requests == []
+    assert not any((harness["data"] / "pairs" / "prme" / arm).exists()
+                   for arm in ("prme-legacy", "prme-moved", "prme-unbacked"))
+    # When they read the same text, the pair is answered, and compare credits every difference to the settings.
+    fabricate_variant(harness)
+    paired = await run_pair(harness, "prme", "prme-marked")
+    comparison = baselines.compare(paired["before"], paired["after"], data=harness["data"])
+    assert (comparison["contexts"]["differing"], comparison["contexts"]["changed_by_other_code"]) == (2, 0)
+    assert all("defaults_text_sha256" not in row for row in paired["before"]["rows"])
+
+
+@pytest.mark.usefixtures("mock_embeddings")
+async def test_a_variant_records_the_defaults_replayed_on_the_same_code_and_questions(harness, monkeypatch):
+    await gate_cases(harness, monkeypatch)
+    replay = gate.run_gate
+    fusion = gate.parse_overrides(['scoring.fusion="rrf"'])
+
+    def changing(change):
+        async def run_gate(*args, **kwargs):
+            report = await replay(*args, **kwargs)
+            # Only the defaults' replay writes no captures.
+            return report if kwargs.get("capture_dir") is not None else change(report)
+        return run_gate
+
+    # Each question's entry records the defaults' replay's text for that question, whatever the variant's own is.
+    marked = {qid: text_sha256(f"defaults {qid}") for qid in ("conv-1-q0000", "conv-1-q0001")}
+    monkeypatch.setattr(gate, "run_gate", changing(lambda report: {**report, "rows": [
+        {**row, "context_sha256": marked[row["question_id"]]} for row in report["rows"]]}))
+    prepared = await asyncio.to_thread(baselines.prepare, "prme-rrf", "locomo", data=harness["data"],
+                                       archive=harness["archive"], overrides=fusion)
+    assert {entry["question_id"]: entry["defaults_text_sha256"] for entry in prepared["contexts"]} == marked
+    assert all(entry["defaults_text_sha256"] != entry["text_sha256"] for entry in prepared["contexts"])
+    kept = json.loads((arm_folder(harness, "prme-rrf") / "defaults-gate.json").read_text())
+    assert [row["context_sha256"] for row in kept["rows"]] == list(marked.values())
+    # The two replays must run on the same code and saved run, over the same questions in order.
+    for arm, change, message in (
+            ("prme-edited", lambda report: {**report, "provenance": {**report["provenance"], "worktree_sha256": "0"}},
+             r"The worktree_sha256 changed between the variant's replay and the defaults' replay, .* Remove "
+             r".*prme-edited/locomo and prepare the variant again"),
+            ("prme-reordered", lambda report: {**report, "rows": report["rows"][::-1]},
+             "does not cover the variant's questions in order")):
+        monkeypatch.setattr(gate, "run_gate", changing(change))
+        with pytest.raises(ValueError, match=message):
+            await asyncio.to_thread(baselines.prepare, arm, "locomo", data=harness["data"],
+                                    archive=harness["archive"], overrides=fusion)
+        # Nothing is recorded as prepared, so the arm is never answered.
+        assert not (arm_folder(harness, arm) / "prepared.json").exists()
+        assert not (arm_folder(harness, arm) / "defaults-gate.json").exists()
+        assert not (harness["data"] / f"runs/{arm}-locomo.jsonl").exists()
+
+
 async def test_run_pair_resumes_an_unfinished_pair_and_starts_the_next_after_a_complete_one(harness, monkeypatch):
     pair_arms(harness)
     ollama_provider(monkeypatch)
@@ -2065,8 +2275,7 @@ async def test_an_unfinished_pair_is_never_finished_on_other_contexts_or_under_a
         await run_pair(harness, "prme", "prme-marked")
     # The variant is prepared again: the unfinished pair stays as it is, and the next pair reads the new contexts.
     shutil.rmtree(arm_folder(harness, "prme-marked"))
-    fabricate_plain(harness["data"], "locomo", {qid: f"{text} CHANGED" for qid, text in DEFAULTS_TEXT.items()},
-                    arm="prme-marked")
+    fabricate_variant(harness, marker="CHANGED")
     ollama_provider(monkeypatch, fail="Melanie: I adopted")
     with pytest.raises(RuntimeError, match="pair 2 is incomplete"):
         await run_pair(harness, "prme", "prme-marked")

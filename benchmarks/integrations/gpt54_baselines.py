@@ -60,6 +60,17 @@ refuse the defaults or a variant prepared at any other budget or tokenizer, and
 ``compare`` reports how many questions the two sides asked on different context
 text, from the hash of each row's context text (#125).
 
+A variant's baseline may have been prepared at another commit, so the text
+a pair differs on could come from the variant's settings or from any code
+that changed between the two preparations. ``prepare`` therefore replays the
+defaults at the variant's commit too, without captures, and records the hash
+of their text on every question (#139). ``compare`` counts the questions on
+which those defaults read other text than the baseline, and refuses a
+variant's pair with any, which ``run-pair`` never answers: after main changes
+the defaults, a new baseline is recorded before any further variant pair
+counts. A variant pair without that count is refused too, unless it started
+before #139, as the ``prme-reader-rrf`` pairs did.
+
 A variant is identified by what it changes, not by its arm name (#130): the
 settings whose values differ from the defaults (``variant_settings``), or its
 context text on every question. ``prepare`` logs every variant preparation
@@ -234,6 +245,14 @@ RULE_TOKENIZER = "cl100k_base"
 REFERENCE_ARMS = frozenset(ARMS) - {"prme"}
 # What an A/A check measured, which a variant's pair must share for the check to cover it (#137).
 AA_CONDITIONS = ("model identity", "answer settings", "failure policy", "Ollama server version", "context budget")
+# What a variant's replay and the defaults' replay at its commit must share, so the two differ by settings alone (#139).
+_REPLAY_INPUTS = ("commit", "dirty", "worktree_sha256", "python", "dependencies", "archive", "datasets")
+# Since when every variant pair must record the defaults' text at the variant's commit (#139). Every variant pair on
+# record started before it: the last, pair 2 of prme-reader-rrf, at 14:35 UTC that day. That variant was prepared at
+# 7b36b2b7, and between the prme@46647825 baseline's commit and 7b36b2b7 only this module's answering and pairing code
+# and ollama_answers.py changed, neither of which builds contexts, so the defaults read the same text at both commits.
+# compare accepts those pairs unsplit, with a warning, and refuses any later variant pair without the split.
+DEFAULTS_REPLAYED_SINCE = datetime.fromisoformat("2026-09-24T18:00:00+00:00")
 
 
 # Contexts ------------------------------------------------------------------
@@ -411,6 +430,8 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
         entries, extra = _prepare_replay(folder, arm, benchmark, archive, overrides, progress)
     if [entry["question_id"] for entry in entries] != [question["question_id"] for question in questions]:
         raise ValueError("Prepared contexts do not cover the registered questions in order")
+    if is_variant(arm):
+        entries, extra = _replay_defaults(folder, benchmark, archive, entries, extra, progress)
     commit = extra["provenance"].get("commit")
     if later:
         _check_baseline_name(arm, benchmark, commit, data)
@@ -665,6 +686,37 @@ def _prepare_replay(folder: Path, arm: str, benchmark: str, archive: Path | None
     rule = {"vector": "vector similarity", "bm25": "BM25",
             "rrf": f"reciprocal rank fusion (k={gate.PLAIN_RRF_K}) of vector and BM25 ranks"}[method]
     return entries, {**extra, "context_rule": f"Stored turns ranked by {rule}, packed in rank order as plain lines."}
+
+
+def _replay_defaults(folder: Path, benchmark: str, archive: Path | None, entries: list[dict], extra: dict,
+                     progress) -> tuple[list[dict], dict]:
+    """A variant's entries with the hash of the defaults' context text at the same commit, from a second replay.
+
+    The variant's pairs read their before side from a baseline that may have
+    been prepared at another commit, so the text they differ on can come from
+    the variant's settings or from code that changed between the two
+    preparations. This
+    replays the defaults through the evidence gate on the same code and saved
+    run, writing no captures, and keeps its report as ``defaults-gate.json``.
+    Each entry gains ``defaults_text_sha256``, which ``compare`` and
+    ``run_pair`` read against the baseline's text (#139).
+    """
+    print(f"Replaying the defaults at this commit as well, so compare can tell the variant's own {benchmark} context "
+          "changes from other code's (#139)", file=sys.stderr, flush=True)
+    report = asyncio.run(gate.run_gate(benchmark, archive=archive, progress=progress))
+    changed = [name for name in _REPLAY_INPUTS if report["provenance"].get(name) != extra["provenance"].get(name)]
+    if changed:
+        raise ValueError(f"The {', '.join(changed)} changed between the variant's replay and the defaults' replay, so "
+                         "the defaults' contexts do not show what the variant's settings changed. Remove "
+                         f"{folder} and prepare the variant again from an unchanged checkout.")
+    texts = {row["question_id"]: row["context_sha256"] for row in report["rows"]}
+    if list(texts) != [entry["question_id"] for entry in entries]:
+        raise ValueError(f"The defaults' replay does not cover the variant's questions in order. Remove {folder} and "
+                         "prepare the variant again.")
+    report_path = folder / "defaults-gate.json"
+    gate._write_report(report_path, report, gate.gate_markdown(report))
+    return ([{**entry, "defaults_text_sha256": texts[entry["question_id"]]} for entry in entries],
+            {**extra, "defaults_gate_report_sha256": digest(report_path)})
 
 
 def load_prepared(arm: str, benchmark: str, questions: list[dict], *,
@@ -1448,7 +1500,9 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     record could take its results or cover them (``_check_aa_ready``): an
     A/A pair needs the record to list every complete A/A pair on its
     benchmark, and a variant's pair a recorded A/A check under the current
-    conditions on both benchmarks.
+    conditions on both benchmarks. A variant's pair is answered only when its
+    preparation replayed the defaults at its commit and those defaults read
+    the baseline's text on every question (``_check_defaults_replayed``, #139).
     ``sample`` works as in ``run``. Returns the pair's mark and both results.
     """
     if not isinstance(model, ollama_answers.AnswerModel):
@@ -1476,6 +1530,8 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     identity = _prepared_identity(loaded["after"][1]) if is_variant(after) else None
     if identity is not None:
         _check_uncounted(data, after, benchmark, identity)
+        # compare would refuse the pair, so it is never answered (#139).
+        _check_defaults_replayed(loaded["before"][1], *loaded["after"][:2])
     root = _pair_root(data, before, after, benchmark)
     root.mkdir(parents=True, exist_ok=True)
     log = _pair_log_path(data, before, after, benchmark)
@@ -1597,6 +1653,40 @@ def _check_uncounted(data: Path, arm: str, benchmark: str, identity: dict) -> No
         raise ValueError(f"The {arm} {benchmark} variant already has its first pair ({_named(counted[0])}) and its "
                          f"confirmation ({_named(counted[1])}), counting every arm with its settings or context text. "
                          "The default-change rule reads no later pair, so none is answered (#130).")
+
+
+def _check_defaults_replayed(baseline: dict, folder: Path, variant: dict) -> None:
+    """Refuse a variant's pair that compare could not split, or would refuse for other code's changes (#139).
+
+    ``baseline`` and ``variant`` are the two manifests, as ``load_prepared``
+    checked them, and ``folder`` the variant's. The variant's must hold the
+    defaults' text at its commit on every question, as ``prepare`` records
+    it since #139, matching the defaults' gate report it kept, and that text
+    must be the baseline's on every question; otherwise the pair would credit
+    other code to the variant.
+    """
+    name = f"{variant['arm']} {variant['benchmark']}"
+    defaults = [entry.get("defaults_text_sha256") for entry in variant["contexts"]]
+    changed = _other_code_changes([entry["text_sha256"] for entry in baseline["contexts"]], defaults)
+    if changed is None:
+        raise ValueError(f"The {name} preparation does not record the defaults' context text at its commit, which "
+                         "prepare records since #139, so nothing would show which of its contexts other code changed. "
+                         "Prepare the variant again from a checkout with #139, under a new name with the same "
+                         "settings, which keep it the same variant (#130), and answer that arm.")
+    report_path = folder / "defaults-gate.json"
+    report = json.loads(report_path.read_text()) if report_path.is_file() else {}
+    provenance = report.get("provenance") or {}
+    if (not report or digest(report_path) != variant.get("defaults_gate_report_sha256")
+            or provenance.get("overrides") != {} or provenance.get("commit") != variant["provenance"].get("commit")
+            or [row.get("context_sha256") for row in report.get("rows", [])] != defaults):
+        raise ValueError(f"The defaults' context text the {name} preparation records does not match the defaults' "
+                         "gate report it kept (defaults-gate.json), so it is not shown to be the defaults' at its "
+                         "commit. Prepare the variant again under a new name with the same settings (#139).")
+    if changed:
+        inputs = tuple(key for key in ("dirty", "python", "dependencies", "archive", "datasets")
+                       if baseline["provenance"].get(key) != variant["provenance"].get(key))
+        raise _other_code_refusal(changed, len(defaults), baseline["arm"], baseline["provenance"].get("commit"),
+                                  variant["arm"], variant["provenance"].get("commit"), inputs)
 
 
 def _check_pair_baseline(arm: str) -> None:
@@ -2393,21 +2483,95 @@ def _context_changes(before: dict, after: dict) -> dict:
     reproduce the ``saved run``'s 2026-09-23 context on every question, which
     holds only while the defaults still do; otherwise both values are None.
     Both results must list the same questions in order, once each.
+
+    A variant prepared since #139 also replayed the defaults at its own
+    commit, and each of its rows carries that text's hash
+    (``defaults_text_sha256``). ``changed_by_other_code`` counts the
+    questions on which those defaults read other text than the before side:
+    what changed between the two preparations, such as code on main or on
+    the variant's branch (``_other_code_changes``). At 0, every question in
+    ``differing`` differs by the variant's settings alone. It is None when
+    the after side's rows do not carry the hash or the before side's rows
+    carry no text hashes.
     """
     rows = [result["rows"] for result in (before, after)]
-    hashed = [[isinstance(row.get("context_text_sha256"), str) and bool(row["context_text_sha256"]) for row in side]
-              for side in rows]
+    hashed = [[_has_hash(row, "context_text_sha256") for row in side] for side in rows]
     if any(any(side) and not all(side) for side in hashed):
         raise ValueError("A result has context text hashes on some of its rows only")
+    replayed = [_has_hash(row, "defaults_text_sha256") for row in rows[1]]
+    if any(replayed) and not all(replayed):
+        raise ValueError("A result has hashes of the defaults' context text on some of its rows only")
     if all(map(all, hashed)):
+        other = _other_code_changes([row["context_text_sha256"] for row in rows[0]],
+                                    [row.get("defaults_text_sha256") for row in rows[1]])
         return {"differing": sum(old["context_text_sha256"] != new["context_text_sha256"]
-                                 for old, new in zip(*rows, strict=True)), "shown_by": "text hashes"}
+                                 for old, new in zip(*rows, strict=True)), "shown_by": "text hashes",
+                "changed_by_other_code": other}
+    unsplit = {"changed_by_other_code": None}
     if before.get("prepared_sha256") is not None and before["prepared_sha256"] == after.get("prepared_sha256"):
-        return {"differing": 0, "shown_by": "one preparation"}
+        return {"differing": 0, "shown_by": "one preparation", **unsplit}
     if all((result.get("prepared") or {}).get("contexts_matching_saved_run") == len(result["rows"])
            for result in (before, after)):
-        return {"differing": 0, "shown_by": "saved run"}
-    return {"differing": None, "shown_by": None}
+        return {"differing": 0, "shown_by": "saved run", **unsplit}
+    return {"differing": None, "shown_by": None, **unsplit}
+
+
+def _has_hash(record: dict, key: str) -> bool:
+    return isinstance(record.get(key), str) and bool(record[key])
+
+
+def _other_code_changes(texts: list, defaults: list) -> int | None:
+    """On how many questions the defaults replayed at a variant's commit read other text than its baseline (#139).
+
+    ``texts`` are the baseline's context text hashes and ``defaults`` the
+    variant's hashes of the defaults' text, question by question in
+    registered order. None when a hash is missing on either side, since
+    nothing then shows it. ``run_pair`` reads them from the two manifests
+    and ``compare`` from the two results' rows.
+    """
+    if not all(isinstance(value, str) and value for value in (*texts, *defaults)):
+        return None
+    return sum(old != new for old, new in zip(texts, defaults, strict=True))
+
+
+def _other_code_refusal(changed: int, total: int, before: str, before_commit: str | None, after: str,
+                        after_commit: str | None, inputs: tuple[str, ...] = ()) -> ValueError:
+    """Why a variant's pair is refused when the defaults at its commit read other text than its baseline (#139).
+
+    ``inputs`` names what else the two manifests show was prepared differently, when ``run_pair`` knows it.
+    """
+    also = f" They were also prepared with different {', '.join(inputs)}." if inputs else ""
+    return ValueError(
+        f"On {changed} of {total} questions the defaults at the commit that prepared {after} "
+        f"({after_commit or 'an unrecorded commit'}) read other context text than {before}, prepared at "
+        f"{before_commit or 'an unrecorded commit'}.{also} That difference comes from what changed between the two "
+        "preparations, such as code on main or on the variant's branch, the dependencies or the saved run, and the "
+        "pair would credit it to the variant. If main changed the defaults, record a new baseline at a commit on "
+        "main that includes the change. Then prepare the variant again, under a new name with the same settings, "
+        "which keep it the same variant (#130), from a commit that descends from the current baseline's commit. If "
+        "the variant's own branch changes the defaults, put that change behind its settings (#139).")
+
+
+def _check_other_code(before: dict, after: dict, changed: int | None, prepared: dict[str, dict]) -> None:
+    """Refuse a variant's pair whose split shows other code's changes, or that no split covers (#139).
+
+    ``changed`` is ``_context_changes``'s ``changed_by_other_code``. A pair
+    without the split is accepted only when it started before
+    ``DEFAULTS_REPLAYED_SINCE``, as every variant pair on record did, and
+    ``compare`` warns that nothing splits it. Any later one was answered on
+    a preparation, or by a checkout, without #139.
+    """
+    if changed is None:
+        started = after.get("started_at")
+        if started and datetime.fromisoformat(started) >= DEFAULTS_REPLAYED_SINCE:
+            raise ValueError(f"The {after['arm']} result's rows do not record the defaults' context text at the "
+                             "variant's commit, so nothing shows which of its contexts other code changed. It started "
+                             f"at or after {DEFAULTS_REPLAYED_SINCE.isoformat()}, so it was prepared or answered by a checkout "
+                             "without #139. Prepare the variant again from a checkout with #139, under a new name with "
+                             "the same settings, and answer its pair there (#139).")
+    elif changed:
+        raise _other_code_refusal(changed, len(after["rows"]), before["arm"], prepared["before"].get("commit"),
+                                  after["arm"], prepared["after"].get("commit"))
 
 
 def _same_inputs(before: dict, after: dict) -> bool:
@@ -2537,7 +2701,12 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     (``_check_rule_budget``); the plain and full-context reference arms
     compare at any budget (#125). ``contexts`` reports how many questions the
     two sides asked on different context text, and what shows it
-    (``_context_changes``).
+    (``_context_changes``). For a variant prepared since #139 it also counts
+    the questions on which the defaults replayed at the variant's commit
+    read other text than the before side (``changed_by_other_code``), and a
+    variant's pair with any is refused, since that change would be credited
+    to the variant; so is a variant's pair without the count that started
+    after ``DEFAULTS_REPLAYED_SINCE`` (``_check_other_code``).
     """
     for side, result in (("before", before), ("after", after)):
         if not result.get("complete") or "sample" in result or result.get("kind", "").endswith("-sample"):
@@ -2615,6 +2784,8 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     # A repeat measures two runs of the defaults, so it may pair an earlier baseline with a later one.
     if recorded is not None and not repeat:
         _check_current_baseline(before["arm"], before["benchmark"], recorded, prepared["before"].get("commit"))
+    if is_variant(after["arm"]):
+        _check_other_code(before, after, contexts["changed_by_other_code"], prepared)
     variant = aa_check = None
     if recorded is not None and pair is not None and is_variant(after["arm"]):
         track = _track_data(before, data)
@@ -2627,12 +2798,19 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     if contexts["differing"] is None:
         warnings.append("Nothing shows which questions the two sides asked on different context text: a result was "
                         "published before rows carried text hashes (#125)")
-    # With the same text on every question, the code that built it changed nothing the reader saw.
+    # With the same text on every question, the code that built it changed nothing the reader saw, and when the
+    # defaults at the after side's commit read the before side's text, every difference is the after side's settings.
     if prepared["before"].get("commit") != prepared["after"].get("commit") and not repeat \
-            and contexts["differing"] != 0:
-        counted = "" if contexts["differing"] is None else (
-            f": {contexts['differing']} of {len(old)} questions read different context text, from the after side's "
-            "settings and from any other change between the commits")
+            and contexts["differing"] != 0 and contexts["changed_by_other_code"] != 0:
+        counted = ""
+        if contexts["differing"] is not None:
+            counted = (f": {contexts['differing']} of {len(old)} questions read different context text, from the "
+                       "after side's settings and from any other change between the commits")
+            if is_variant(after["arm"]):
+                # Other code's changes to a variant's contexts are refused above, and so is a pair without the
+                # count that started since #139, so this is a variant pair from before it.
+                counted += (". The variant was prepared before prepare replayed the defaults at its commit, so "
+                            "nothing shows how many of them other code changed (#139)")
         warnings.append("The contexts were prepared from different commits, so code changes are part of the "
                         f"difference{counted}")
     if known and None in versions:
@@ -2693,7 +2871,13 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
                              "shown_by names what shows it: each row's context_text_sha256 (text hashes), or, for "
                              "results published before rows carried it (#125), both results reading one "
                              "preparation or both reproducing every saved 2026-09-23 context (saved run). Both are "
-                             "None when nothing shows it."},
+                             "None when nothing shows it. A variant prepared since #139 also replayed the defaults at "
+                             "its own commit, and changed_by_other_code counts the questions on which those defaults "
+                             "read other text than the before side: what changed between the two preparations, such "
+                             "as code on main or on the variant's branch. compare refuses a variant's pair with any, "
+                             "so at 0 every differing question differs by the variant's settings alone. It is None "
+                             "for any other after side, when the before side's rows carry no text hashes, and for "
+                             "the variant pairs that started before #139, which compare accepts with a warning."},
         "accuracy": accuracy,
         "categories": {category: paired([key for key, row in old.items() if row["question_type"] == category])
                        for category in categories},
@@ -2854,10 +3038,16 @@ def _row(question: dict, entry: dict, scored: dict, *, reported: bool = False) -
 
     ``context_sha256`` is the capture file's hash, which covers the retrieval
     receipt's random request id. A ``reported`` row also carries
-    ``context_text_sha256``, the hash of the text alone (#125); the attempt's
-    own record does not, so answers recorded before it still verify.
+    ``context_text_sha256``, the hash of the text alone (#125), and a
+    variant's, ``defaults_text_sha256``, the hash of the defaults' text at the
+    variant's commit (#139); the attempt's own record does not, so answers
+    recorded before them still verify.
     """
-    text = {"context_text_sha256": entry["text_sha256"]} if reported else {}
+    text = {}
+    if reported:
+        text["context_text_sha256"] = entry["text_sha256"]
+        if "defaults_text_sha256" in entry:
+            text["defaults_text_sha256"] = entry["defaults_text_sha256"]
     # "correct" stays where rows have always had it; the scoring's own fields follow.
     return {"question_id": question["question_id"], "question_type": question["question_type"],
             "cluster": question.get("conversation_id") or sha(question["haystack_sessions"]),
@@ -2872,7 +3062,8 @@ def _verified_row(verify, tally, benchmark: str, question: dict, folder: Path, p
     With ``amended``, every call the amended failure policy made is checked,
     retries and truncated answers included, and so is the order they came in.
     The reported row adds the context text's hash, which ``_context`` has
-    just checked (#125), so answers recorded before it gain it too.
+    just checked (#125), and a variant's the manifest's hash of the defaults'
+    text at its commit (#139), so answers recorded before them gain them too.
     """
     qid = question["question_id"]
     row = json.loads((attempt / "result.json").read_text())
@@ -3037,7 +3228,9 @@ def main(argv: list[str] | None = None) -> None:
                              "API cost)")
     parser.add_argument("--variant", metavar="NAME",
                         help="prme arm on the ollama provider: a named variant of the defaults, prepared with --set "
-                             "and answered with run-pair as the arm prme-NAME")
+                             "and answered with run-pair as the arm prme-NAME. Its preparation also replays the "
+                             "defaults at the same commit, and run-pair and compare refuse it while those defaults "
+                             "read other text than the baseline (#139).")
     parser.add_argument("--baseline", metavar="ARM",
                         help="run-pair only: the current baseline of the defaults (prme or prme@<commit>, the one "
                              "whose own answer run completed last), answered again alongside the arm. With the prme "
@@ -3091,8 +3284,10 @@ def main(argv: list[str] | None = None) -> None:
 
         def progress(done: int) -> None:
             nonlocal reported
+            # A variant's preparation replays twice, once with its settings and once with the defaults (#139).
+            reported = 0 if done < reported else reported
             if done // 100 > reported // 100:
-                print(f"{done} questions prepared", file=sys.stderr, flush=True)
+                print(f"{done} questions replayed", file=sys.stderr, flush=True)
             reported = done
 
         prepared = prepare(arm, benchmark, data=data, archive=args.archive, overrides=overrides or None,
