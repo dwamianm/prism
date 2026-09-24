@@ -349,6 +349,11 @@ questions, per category as well, and the questions gained and lost.
 | DeepSeek run | LongMemEval-S | LoCoMo | Context |
 |---|---:|---:|---|
 | Baseline, `prme` current defaults | not run yet | not run yet | 3,996-token ceiling |
+| Smoke check, first 2 per category ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-locomo-sample-2-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-longmemeval-sample-2-result.json)) | 12 answered, 9 accepted (not a score) | 8 answered, 8 accepted (not a score) | 3,996-token ceiling |
+
+The same smoke sample, answered twice on identical contexts, gave differently
+worded answers for 18 of 20 questions and one flipped verdict, so seeded runs of
+the hosted model do not repeat exactly (#118).
 
 ## Earlier registered memory-utility comparison
 

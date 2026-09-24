@@ -1,0 +1,285 @@
+{
+  "kind": "ollama-answer-result-sample",
+  "arm": "prme",
+  "benchmark": "longmemeval",
+  "model": "deepseek-v4.1-flash:cloud",
+  "registration_sha256": "b62256d8c461feece94ae76a096132e58db1b7ca4483f24783226b352b8c96c6",
+  "prepared_sha256": "7ea681d7fd1aa6cfd1536e4fa6ee6b5e86c33b8ecfe417c66b4cea895a19bbb7",
+  "context_budget": 3996,
+  "context_rule": "PRME retrieve() with the current defaults, as the product renders it.",
+  "complete": true,
+  "total": 12,
+  "completed": 12,
+  "final_failures": 0,
+  "unreplaced_failures": 0,
+  "failures": [],
+  "cost": {
+    "usd": 0,
+    "note": "Local Ollama server; no API charge. A :cloud model's calls count against the Ollama account's usage limits instead."
+  },
+  "provider_tokens": {
+    "input_tokens": 55284,
+    "cached_input_tokens": 48640,
+    "output_tokens": 4038,
+    "successful_calls": 24,
+    "http_attempts": 24,
+    "http_status_counts": {
+      "200": 24
+    },
+    "note": "Successful reader and judge calls of answered questions."
+  },
+  "context_tokens": {
+    "mean": 3958.5,
+    "p50": 3963.0,
+    "max": 3996
+  },
+  "retrieval_seconds": {
+    "p50": 0.2657297084952006,
+    "p95": 0.31529442484752507,
+    "note": "Time to rank and pack each context during prepare; not model-response latency."
+  },
+  "rows": [
+    {
+      "question_id": "e47becba",
+      "question_type": "single-session-user",
+      "cluster": "19b8e41e13385be03281bbb1c6014d86fe85e87356ef4fe679ae0e38cb2e632b",
+      "correct": true,
+      "context_sha256": "9222ffde097deff2a7231d78ea34e041e1e60c40b712d2ce7d5485f2871e94c9",
+      "context_tokens": 3941,
+      "retrieval_seconds": 0.27251754101598635,
+      "reader_sha256": "9d44cd91bb89c1e14d7f058819baafdba75331eddfebddd9338d32f9550ca5ab",
+      "judge_sha256": "b70906bc678c473c1a7e5207e2dd5d54b19afd1e028b28e41af2d5b038170b96"
+    },
+    {
+      "question_id": "118b2229",
+      "question_type": "single-session-user",
+      "cluster": "f6f53fcebccd098a6e4fe01a641169fe5a12daa44b984714f32c44050f926e76",
+      "correct": true,
+      "context_sha256": "a8a64d4fff95c0e8d593dcf1066a53a81814620e59a8de7503ad2775f64b0a3d",
+      "context_tokens": 3993,
+      "retrieval_seconds": 0.2724656659993343,
+      "reader_sha256": "c5c58e45ad38640fa5d7e5c23a82017ddbc8d40062ac14439f233d35aad8ea9d",
+      "judge_sha256": "efb227349388624a15d616fa534e5138a6f3d36f5305fad28f2371e3db51da25"
+    },
+    {
+      "question_id": "0a995998",
+      "question_type": "multi-session",
+      "cluster": "d7398d4c22b63b66f92313c563a5f0b8948024614641da2cca8ff89abd9f1867",
+      "correct": false,
+      "context_sha256": "018d2495ffa22023fe596ec105e9f71ce8190d2bec3f8435475ef0c84c745c78",
+      "context_tokens": 3924,
+      "retrieval_seconds": 0.2679184579756111,
+      "reader_sha256": "5c0af81788385918c2a0b64237092fe037eb575f00dc86342fef8fd1abb159a6",
+      "judge_sha256": "d076f195ef367618f47d1de8ab9590c456a631fd4a342fa2c1e81ef316f885c9"
+    },
+    {
+      "question_id": "6d550036",
+      "question_type": "multi-session",
+      "cluster": "ed9003e27a5061ddfeaca55df321f726ca30f0b65df7dd6a18e794412ff68f23",
+      "correct": false,
+      "context_sha256": "34314bbb56ef918985ac485d866dbd08b3f420ed408f504eae4d212fe4386320",
+      "context_tokens": 3986,
+      "retrieval_seconds": 0.26512416699551977,
+      "reader_sha256": "49e52dfe744fae7c1ed62ae27cf8d8f15f97f21cbf73c89418b11d239bc2408a",
+      "judge_sha256": "ca4b7e1116ace62aedeb2bdc82958e0dd7f7c3678f6188c5780cd01a761875ea"
+    },
+    {
+      "question_id": "8a2466db",
+      "question_type": "single-session-preference",
+      "cluster": "b030d328d6f49ea8ac7bf6156fbc5208edfe9d51b25bae70a7b9a608bad3a624",
+      "correct": true,
+      "context_sha256": "0e98abd68053c3bc273470b6a87aa3d15bab24ae9ee2da3e6d61a0b50b675539",
+      "context_tokens": 3928,
+      "retrieval_seconds": 0.26392537500942126,
+      "reader_sha256": "48c24334da6b41c91625225bbf9a25e05be813b916c65a6ffe2d5b10dae300dc",
+      "judge_sha256": "487f21c0b5394fcbee2be89d78abadbd1e2750856c932b53411c13b1ec3437a4"
+    },
+    {
+      "question_id": "06878be2",
+      "question_type": "single-session-preference",
+      "cluster": "5478e34226216ba90c265238791a03e71073d07db4276dce37b562562500a119",
+      "correct": true,
+      "context_sha256": "a27abd30761430c78e8d6afcd05ad02391da3c3ba043d96c8c02676db835f1f6",
+      "context_tokens": 3973,
+      "retrieval_seconds": 0.28191912500187755,
+      "reader_sha256": "1160c9bd0983d075550945011cc2cd80943007a1acb28be13aefdeaf0f4bd8f5",
+      "judge_sha256": "6f852db8fd76edcdb799bd0fc59cbf77bdadeb3671ac61839b78230d63797bc5"
+    },
+    {
+      "question_id": "gpt4_59149c77",
+      "question_type": "temporal-reasoning",
+      "cluster": "9c5b39e7aa51991ecac8e41ede0fae97ced40c25f153edc6dbc6d6c68743f690",
+      "correct": true,
+      "context_sha256": "56fd7f0071acaa7fd7beeb49b1872f2e32cf4397a496e4ac4138578f407c2c72",
+      "context_tokens": 3983,
+      "retrieval_seconds": 0.2625790419988334,
+      "reader_sha256": "0932ca5eb8009d0653ead887771768ddf803de44cf40263ae7de99509b7eb27f",
+      "judge_sha256": "9dd17f46c3640f990503433f7ff208de376bc421101a3a67dbd9d3c5d213760d"
+    },
+    {
+      "question_id": "gpt4_f49edff3",
+      "question_type": "temporal-reasoning",
+      "cluster": "969e3b2b59279e8b461d282c3a8b52a1098c5344e669ee578eab0fe8231e2cf9",
+      "correct": true,
+      "context_sha256": "2d7ec2f4a117d5984b0ac88f0fd2bad0e4e52695388385f18f2d58d6b2286bbf",
+      "context_tokens": 3996,
+      "retrieval_seconds": 0.3560864579922054,
+      "reader_sha256": "879d66ac5f8efb728bc7f3b9c6574ffa9d115cab8249c0c03beeafe0fa4d12a2",
+      "judge_sha256": "300d698e9fc022581c74f649015cd9eadb79b4e4204821e7a110daa53c8a1273"
+    },
+    {
+      "question_id": "6a1eabeb",
+      "question_type": "knowledge-update",
+      "cluster": "7d7a352a5a98e86d02edc607ffe1e2e8205b94b8b0b257c4a97102b8767518e7",
+      "correct": false,
+      "context_sha256": "54e31302da75cccd9181b0580eba78ce84138423d90d5b3a4983ff1763417aaa",
+      "context_tokens": 3944,
+      "retrieval_seconds": 0.2454869160137605,
+      "reader_sha256": "0f6bed451af2af542a670420974efeb032e5f45309313b7bc7e20eba35305884",
+      "judge_sha256": "d32ad7c56c16928354abbbc659ae7c58e32b6eaa003ead6496ad7004574b1790"
+    },
+    {
+      "question_id": "6aeb4375",
+      "question_type": "knowledge-update",
+      "cluster": "70645afa3492ba85868f344b7cacdb33eabccb3b75426abd12eac69ba20a04b3",
+      "correct": true,
+      "context_sha256": "af323d95460e9517f503c90562431b28a90b1d56095e2fd8fc7ede1f03152e8b",
+      "context_tokens": 3993,
+      "retrieval_seconds": 0.2617314579838421,
+      "reader_sha256": "ed4d6c5b6eea5a91a914cdb1fc0c963e166389849dbc7fe1b6e35230ecaa1b11",
+      "judge_sha256": "ffc485d530b30fe80334eaaa0b8a72e008646cb6e365cbb2e9daf48ae8be5f30"
+    },
+    {
+      "question_id": "7161e7e2",
+      "question_type": "single-session-assistant",
+      "cluster": "fa730f5d092d5d8cad9eb21962f03104e75a09a1221adeef2cb2a3902615ae06",
+      "correct": true,
+      "context_sha256": "3e9d4c3de62f1b0bbf2211a4e0f32c89b9405b4341a22b24ebcee8c5146f376f",
+      "context_tokens": 3953,
+      "retrieval_seconds": 0.26633524999488145,
+      "reader_sha256": "796dd2e2023a0c50041d690efcb19dc5d5c25eab40f673860a2e364aadcb5886",
+      "judge_sha256": "a73fcc259c23eb949aadcf64ddea77d96085c4fa409d3729d93e890924f3b1b8"
+    },
+    {
+      "question_id": "c4f10528",
+      "question_type": "single-session-assistant",
+      "cluster": "839789a6998cb95e4f25bbc45f22f996906c75f0ba50c36e27db18ddc05e409b",
+      "correct": true,
+      "context_sha256": "9fdeec69406488b8ac6813a8453bd7d8ea6c33ff5808a149be3e3d9d1519c743",
+      "context_tokens": 3888,
+      "retrieval_seconds": 0.2637456250085961,
+      "reader_sha256": "52dc0a7257e128322b1a8d2eac400c72d078ea4155d75894e63e418d5781d2e0",
+      "judge_sha256": "f384ff2651a5f46e618476a6ede732693a0fefffeebdad800099f35bcfae1a15"
+    }
+  ],
+  "correct": 9,
+  "started_at": "2026-09-24T02:06:01.852882+00:00",
+  "finished_at": "2026-09-24T02:06:07.893550+00:00",
+  "retry_policy": "Within a run, the registered policy applies: at most four identical HTTP attempts for transient 429/5xx, no retry of truncated, invalid or ambiguous responses, and the first failure stops new questions. A later run asks a question again, in a new attempt, only when no answer or verdict was received: a budget stop, a provider HTTP error, an ambiguous transport failure or an interrupted process. Truncated or malformed responses and invalid verdicts are final and leave the arm incomplete. Every attempt is kept.",
+  "provenance": {
+    "commit": "7272b064324291c296b1579691f4290570edd3d1",
+    "dirty": false,
+    "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "dependencies": {
+      "prme": "0.12.0",
+      "duckdb": "1.4.4",
+      "usearch": "2.26.2",
+      "tantivy": "0.25.1",
+      "fastembed": "0.7.4",
+      "tiktoken": "0.12.0",
+      "dateparser": "1.3.0"
+    }
+  },
+  "modules": {
+    "benchmarks/integrations/gpt54_baselines.py": "2869a0f44fda7d0118940e4344b50c574165121929abd526ca71dec80270650a",
+    "benchmarks/diagnostics/product_packing.py": "a8b794c5ef6236183f6edbad0e2f593a48e7e733d9b1aefd1ac400bb2ac1ab81",
+    "benchmarks/integrations/gpt54_official_prompt_loader.py": "808cbc000d3e42f6f85e5c966d0a2518691bcc87b5f10dfb6b4a837730cfb9bd",
+    "benchmarks/integrations/analyze_gpt54_comparison.py": "65429edcad7135bc470dfc7ba627bf75b4b5b89695bd2594cbf976607d6caa8a",
+    "benchmarks/integrations/ollama_answers.py": "7497ecc22cba444c5c5285aab0326ae497750ae171b4a8f70203df3f7e774da2",
+    "benchmarks/integrations/run_longmemeval_v2.py": "b1004088250bf67adac3651fc1b9253dd38d6904cb01fc4c2bf7d65df224cbb6",
+    "benchmarks/diagnostics/reader_judge.py": "ac04239c7e3587867d5250ec042605f67de9c3545326cca18e784c9e68496c50",
+    "benchmarks/compare_evidence.py": "c03e605002a0b750d48e67b1198f24529fe039bdfdc9b7333df0692fa3ce5bee",
+    "benchmarks/evidence.py": "802d0579d62d9f60ad18f4424d52ed39331d857115c169bf68ad37bea918ff28",
+    "benchmarks/integrations/gpt54_budget.py": "e9b6dd0de8b9f38df77d63a1c9dc22562126802f6498156abd30e0f0a55babe2",
+    "benchmarks/integrations/run_gpt54_comparison.py": "c25c4d99919843c1ff3fb226df88b8e6d5fde2e2dd34b41b05fb5d17bf47c08f",
+    "benchmarks/integrations/run_longmemeval_s_baseline.py": "c6f57439c8793387fe9f5e6ebaafc9c52f7a6c1c0bc93f2cb4f65828c8cedf73"
+  },
+  "answer_model": {
+    "provider": "ollama",
+    "api": "chat.completions",
+    "endpoint": "http://127.0.0.1:11434/v1",
+    "model": "deepseek-v4.1-flash:cloud",
+    "temperature": 0,
+    "seed": 20260923,
+    "reasoning_effort": "none",
+    "stream": false,
+    "reader_limit": 8192,
+    "judge_limit": 2048,
+    "attempts": 4,
+    "timeout_seconds": 900,
+    "identity": {
+      "provider": "ollama_cloud",
+      "api_base_url": "http://127.0.0.1:11434",
+      "server_version": "0.34.3",
+      "model": "deepseek-v4.1-flash:cloud",
+      "resolved_model": "deepseek-v4.1-flash:cloud",
+      "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+      "manifest_size_bytes": 326,
+      "remote_host": "https://ollama.com",
+      "remote_model": "deepseek-v4.1-flash",
+      "remote_weights_pinned": false,
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "",
+        "families": null,
+        "parameter_size": "763B",
+        "quantization_level": "FP8",
+        "context_length": 1048576
+      },
+      "capabilities": [
+        "completion",
+        "thinking",
+        "tools",
+        "vision"
+      ]
+    }
+  },
+  "calibration": {
+    "attempt": "attempt-1",
+    "sha256": "1da4159c0da4df02a2fa51d34a43ac90080feb72ad2ac11d79a8a5851d1e8110",
+    "attempts_before_pass": 0,
+    "attempts": 1
+  },
+  "prepared": {
+    "commit": "7272b064324291c296b1579691f4290570edd3d1",
+    "dirty": false,
+    "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "overrides": {},
+    "context_rule": "PRME retrieve() with the current defaults, as the product renders it.",
+    "contexts_matching_saved_run": 500
+  },
+  "sample": {
+    "per_category": 2,
+    "question_ids": [
+      "e47becba",
+      "118b2229",
+      "0a995998",
+      "6d550036",
+      "8a2466db",
+      "06878be2",
+      "gpt4_59149c77",
+      "gpt4_f49edff3",
+      "6a1eabeb",
+      "6aeb4375",
+      "7161e7e2",
+      "c4f10528"
+    ],
+    "note": "A fixed smoke sample: the first questions of each category in registered order. Not a benchmark score."
+  },
+  "run_log": {
+    "sha256": "ce53079021f3ac777cedbd335ca7c3f255a6201efb2e4f589fffac7843d81a43",
+    "runs_started": 1,
+    "prepared_again": 0
+  }
+}
