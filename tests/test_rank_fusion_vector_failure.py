@@ -42,6 +42,11 @@ V17_CHECKSUM = "565860a967edc591f4599570d573dbf853b636b6c64ad2b60f138f41088fea0d
 VECTOR_DOWN = {"VECTOR": "backend_error"}
 QUERY = "telescope lens"
 KWARGS = {"scope": Scope.PROJECT, "include_cross_scope": False, "reference_time": NOW}
+# With the vector path down, only lexical search finds the primary memory, and
+# the hint pass runs only when the primary pass found something. PostgreSQL's
+# plainto_tsquery requires every query word (Tantivy needs any one), so the
+# primary memory contains all of QUERY to be found on both backends.
+PRIMARY = "The telescope lens is blue."
 
 
 def _fail_vector(engine, monkeypatch, failure="backend_error"):
@@ -281,19 +286,19 @@ async def test_a_vector_search_that_finds_nothing_keeps_the_floor(keyword_config
 
 async def test_cross_scope_hints_follow_the_skipped_floor(keyword_config, user, monkeypatch):
     async with MemoryEngine.open(keyword_config) as engine:
-        await engine.store("The telescope is blue.", user_id=user, scope=Scope.PROJECT)
+        await engine.store(PRIMARY, user_id=user, scope=Scope.PROJECT)
         await engine.store("The telescope lens is cracked.", user_id=user, scope=Scope.PERSONAL)
         _fail_vector(engine, monkeypatch)
         response = await engine.retrieve(QUERY, user_id=user, scope=Scope.PROJECT, min_score=.3,
                                          reference_time=NOW)
     assert response.metadata.min_score_skipped is True
-    assert [c.node.content for c in response.results] == ["The telescope is blue."]
+    assert [c.node.content for c in response.results] == [PRIMARY]
     assert [c.node.content for c in response.cross_scope_hints] == ["The telescope lens is cracked."]
 
 
 async def test_cross_scope_hints_with_a_cosine_keep_the_floor(keyword_config, user, monkeypatch):
     async with MemoryEngine.open(keyword_config) as engine:
-        await engine.store("The telescope is blue.", user_id=user, scope=Scope.PROJECT)
+        await engine.store(PRIMARY, user_id=user, scope=Scope.PROJECT)
         await engine.store("The telescope lens is cracked.", user_id=user, scope=Scope.PERSONAL)
         await engine.store("We bought bread yesterday.", user_id=user, scope=Scope.PERSONAL)
         provider = engine._vector_index._provider
@@ -311,7 +316,7 @@ async def test_cross_scope_hints_with_a_cosine_keep_the_floor(keyword_config, us
                                          reference_time=NOW)
     assert len(calls) == 2 and response.metadata.backend_failures == VECTOR_DOWN
     assert response.metadata.min_score_skipped is True
-    assert [c.node.content for c in response.results] == ["The telescope is blue."]
+    assert [c.node.content for c in response.results] == [PRIMARY]
     assert [(c.node.content, c.semantic_relevance >= .3) for c in response.cross_scope_hints] == [
         ("The telescope lens is cracked.", True),
     ]
