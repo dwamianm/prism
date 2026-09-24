@@ -245,8 +245,9 @@ with another DeepSeek score from the same model identity and settings:
    benchmarks, prepared from a commit on `main`.
 2. Prepare each change as a named variant of the defaults (`prme-<name>`, with
    the settings it changes), then answer it with `run-pair` together with a
-   fresh answer run of a recorded defaults baseline (`--baseline`, normally the
-   most recent complete one). The two runs are answered in one session,
+   fresh answer run of the current baseline of the defaults (`--baseline`):
+   the one whose own answer run completed most recently for that benchmark
+   (#127). The two runs are answered in one session,
    interleaved question by question, and `compare` pairs a variant only with
    the defaults run answered alongside it (#129). The current baseline's
    contexts match the saved 2026-09-23 run exactly, so when a variant is prepared at a
@@ -333,7 +334,11 @@ Safeguards:
   or full-context arm can be paired with the defaults the same way; answered
   on its own, it is a reference score that `compare` pairs with nothing. The
   pair's `--baseline` must be a defaults baseline with a complete answer run of
-  its own (`run prme`), which records it.
+  its own (`run prme`), which records it, and it must be the current baseline:
+  the one whose own complete answer run finished last on that benchmark. So
+  once a newer baseline is recorded, no pair is answered alongside an older
+  one, not even an A/A pair, and a pair whose baseline stops being current
+  while it is answered is kept but not published (#127).
 - A pair's answers live under `pairs/<baseline>/<arm>/<benchmark>/pair-<N>/`,
   with a `before` folder (the defaults) and an `after` folder. Each baseline
   and arm has one append-only pair run log under `runs/pairs/`, whose events
@@ -379,6 +384,13 @@ Safeguards:
 - A commit that already has a complete baseline cannot get another. If the
   model identity changes while the newest baseline is at the checked-out
   commit, record the new baseline at the next commit on `main`.
+- A new baseline, the first on a benchmark or a later one, must be prepared at
+  a commit that descends from the commit of every complete baseline on either
+  benchmark, so the current baseline holds the newest defaults recorded and
+  neither benchmark's lags behind the other's. `prepare prme` and `run prme`
+  refuse an older commit on `main`, or one git cannot place (run `git fetch`
+  first), and `run` refuses to answer such a baseline in full when called
+  directly (#127).
 - `run` and `run-pair` need no spending cap or terminal confirmation. They use
   the registration's four concurrent requests (a pair's two sides share them);
   if the Ollama account's usage limit stops a run with HTTP 429, run it again
@@ -470,11 +482,19 @@ registered, which only a checkout without #132 produces (#132). Its
 also refuses any pairing other than the
 two sides of one `run-pair` pair, with the defaults as `--before`, or a repeat
 (below), and it refuses results whose recorded Ollama server versions differ
-(#129). The default-change rule reads only the 4K budget, so `run-pair` and
-`compare` refuse the defaults or a variant prepared with any context budget
-other than 3,996 tokens, counted by the registered `cl100k_base` tokenizer; the
-plain and full-context reference arms are paired with the defaults at any
-budget (#125). A variant that changes the budget can still be prepared, so the
+(#129). Unless the two results are a repeat, it also refuses a pair whose
+before side is not the current baseline when `compare` runs, or did not read
+that baseline's own contexts, so a pair answered before a newer baseline
+completed no longer counts. It reads the track's run logs for that, so compare
+pairs on the machine that keeps their answers. Its `baseline` block lists every
+complete baseline in the order their own runs finished and names the current
+one (#127). A pair can therefore be compared again only while its baseline is
+current: keep `compare`'s output with the pull request that relies on it,
+before a newer baseline is recorded. The default-change rule reads only the 4K
+budget, so `run-pair` and `compare` refuse the defaults or a variant prepared
+with any context budget other than 3,996 tokens, counted by the registered
+`cl100k_base` tokenizer; the plain and full-context reference arms are paired
+with the defaults at any budget (#125). A variant that changes the budget can still be prepared, so the
 evidence gate can measure it. Each row published since #125 carries two
 hashes: `context_sha256` covers the whole capture file, including the retrieval
 receipt's random request id, so two preparations of the same contexts never
@@ -518,7 +538,13 @@ holds only while the defaults still do.
 
 The first baseline was the reference for DeepSeek paired runs until its
 repeat, `prme@46647825`, completed; the repeat is now the most recent complete
-baseline, so later variants are answered alongside it (step 2). `compare` refuses results
+baseline, so later variants are answered alongside it (step 2), and `run-pair`
+and `compare` refuse the first baseline as the before side of any pair other
+than a repeat of the defaults (#127). The repeat counts as a baseline because
+it holds the defaults prepared at a newer commit on `main`. Its own answer run
+is never the before side of a variant's comparison, because `compare` pairs a
+variant only with the fresh defaults run answered alongside it (#129).
+`compare` refuses results
 answered by another model identity or other settings. Both first-baseline arms
 were prepared from `main` at `97c9402f`,
 and every context matches the saved 2026-09-23 run (all 1,540 LoCoMo and 500
