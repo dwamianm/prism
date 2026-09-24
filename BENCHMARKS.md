@@ -24,6 +24,10 @@ All source/answer records are retained locally under `data/gpt54-comparison-v1/`
 public reports contain their checksums. The completed run must not be rerun or
 overwritten as part of verification.
 
+These GPT-5.4 numbers stay the published reference. New answer runs use the
+[DeepSeek answer track](#deepseek-answer-track-through-ollama), which is reported
+separately and is not comparable with them.
+
 ## Offline evidence gate: the first gate for retrieval changes
 
 Run this gate on every retrieval, packing or representation change before any
@@ -148,6 +152,7 @@ before it makes any call. The frozen harness itself is unchanged.
 |---|---|---|
 | `full-context` | LoCoMo | The whole conversation: a date header per session, one `Speaker: text` line per turn, image captions kept. 12,612 to 24,081 tokens per conversation, 20,619 on average. |
 | `plain-vector`, `plain-bm25`, `plain-rrf` | LoCoMo, LongMemEval-S | The saved packs' raw turns, ranked by one index or by RRF (k=60) of both, packed in rank order as `(date) speaker: text` lines up to 3,996 tokens. No PRME scoring, expansion, filters or renderer. |
+| `prme`, `prme-<name>` | LoCoMo, LongMemEval-S | PRME's own `retrieve()`, replayed over the saved packs by the evidence gate and rendered as the product renders it, up to 3,996 tokens: the current defaults, or a named variant with the settings it changes. Its preparation counts how many contexts still match the saved 2026-09-23 run exactly. These arms run on the [DeepSeek answer track](#deepseek-answer-track-through-ollama) only. |
 
 The plain arms use the same stored text, embedding model and indexes as PRME, so
 they isolate PRME's retrieval and rendering rather than reproduce a published
@@ -222,6 +227,128 @@ None of these arms has been run yet:
 | PRME defaults (2026-09-23) | 430/500 (86.0%) | 985/1,540 (64.0%) | 3,996-token ceiling |
 | Full context | not in scope | not run yet | whole conversation |
 | Plain RRF | not run yet | not run yet | 3,996-token ceiling |
+
+## DeepSeek answer track through Ollama
+
+Paid answer runs are not allowed for the epic #77 work, so answer runs use a
+second track: `deepseek-v4.1-flash:cloud` as both reader and judge, through the
+local Ollama server's OpenAI-compatible endpoint at `http://127.0.0.1:11434/v1`.
+It is `gpt54_baselines` with `--provider ollama`. It uses the same arms,
+registered prompts, question sets and official LongMemEval-S judge as the GPT-5.4
+track, and it keeps its own contexts, answers and results.
+
+**The two tracks are not comparable.** The GPT-5.4 numbers (LongMemEval-S 86.0%,
+LoCoMo 64.0%) stay the published reference. A DeepSeek score is compared only
+with another DeepSeek score from the same model identity and settings:
+
+1. Record a DeepSeek baseline for the current defaults (the `prme` arm) on both
+   benchmarks, prepared from a commit on `main`.
+2. Prepare each change as a named variant of the defaults (`prme-<name>`, with
+   the settings it changes), answer it, and pair it with the baseline question
+   by question with `compare`.
+3. A default still changes only with the owner's approval. Issue #117 proposes
+   that a recorded DeepSeek paired run replace the paid one as the evidence for
+   that approval; until the owner updates the epic #77 work rules in
+   `CLAUDE.md`, those rules decide. After a default changes, record a new
+   baseline.
+
+`:cloud` models are served by Ollama's hosted service, not by this machine. The
+prompts leave the machine and count against the Ollama account's usage limits.
+LoCoMo and LongMemEval-S are public datasets.
+
+Before running it:
+
+- An Ollama server on `127.0.0.1:11434`, signed in to an Ollama account, with
+  `deepseek-v4.1-flash:cloud` pulled. The address and model are fixed.
+- If `HTTP_PROXY` is set, exclude `127.0.0.1` in `NO_PROXY`: the model identity
+  lookup honors proxy settings, while the answer calls ignore them.
+- The same datasets and official LongMemEval-S judge as the GPT-5.4 track.
+  `calibrate` uses both benchmarks' prompts, so it needs them even for a LoCoMo
+  run.
+- For `prepare prme`, a current `origin/main` (run `git fetch` first).
+
+What the track sends and records:
+
+- Every request: the prompt as one user message, temperature 0, seed 20260923
+  (the registration's bootstrap seed), the registered token limits (8,192 for
+  the reader, 2,048 for the judge), no streaming, and thinking off
+  (`reasoning_effort` `none`, as in this repository's earlier DeepSeek runs).
+  The reader prompts already ask for the evidence to be explained before the
+  answer.
+- Every result, private and published: an `answer_model` block with the provider,
+  API, endpoint, model, sampling settings, retry settings and the Ollama server's
+  model identity (manifest digest, remote host and remote model); the
+  calibration it passed and how many attempts that took; the commit and settings
+  that prepared the contexts; the provider token counts; and a cost of $0.
+- Each call's request, every HTTP attempt and the answer are written once, so
+  the result can be verified again from them, as on the GPT-5.4 track.
+
+Safeguards:
+
+- The endpoint must be `127.0.0.1` or `::1` with the `/v1` path, and no
+  credentials are sent, so the track cannot reach a paid API. It never builds
+  the OpenAI client and never reads `OPENAI_API_KEY`.
+- Only Ollama cloud models are accepted. The OpenAI-compatible endpoint cannot
+  set a context size, so a local model could cut long prompts short without
+  saying so.
+- A cloud model's remote weights are not pinned; the manifest digest is the
+  strongest identity Ollama gives, and seeded sampling on a hosted service is
+  not guaranteed to repeat. The identity is checked before and after every
+  calibration and run, and a change during a run publishes nothing.
+- Contexts and answers live under the main checkout's
+  `data/ollama-answers-v1/ollama-deepseek-v4.1-flash-cloud/`, apart from the
+  GPT-5.4 track. Published results are named
+  `ollama-deepseek-v4.1-flash-cloud-<arm>-<benchmark>-result.json`.
+- `calibrate` runs the registered authored calibration: two authored cases with
+  each benchmark's prompts, where the judge must accept the reader's answer and
+  the reference and reject a wrong answer. Every attempt is kept, and `run`
+  refuses to start until the same model identity, with the same settings, has
+  passed.
+- An arm's first answer binds it to that reader and judge; a run with another
+  model or other settings is refused, so answers are never mixed. Each arm keeps
+  an append-only run log outside its folder, which every result summarizes.
+- The `prme` arm prepares the shipped defaults, so `prepare` refuses it unless
+  the checked-out commit is on `main`. A variant can be prepared from a branch.
+- The registered retry and failure rules apply, as described for the GPT-5.4
+  arms above. `run` needs no spending cap or terminal confirmation. It uses the
+  registration's four concurrent requests; if the Ollama account's usage limit
+  stops a run with HTTP 429, run it again later and it asks only the questions
+  that got no answer.
+- A final failure (a malformed verdict or a truncated answer) leaves the arm
+  incomplete, and it publishes nothing. To start that arm over, remove its
+  folder and prepare it again. The run log outside the folder keeps every
+  earlier run, and the result reports how many runs and preparations there
+  were. An arm with a complete run is never prepared again.
+
+```sh
+# No model calls. prepare needs a clean, committed tree.
+uv run python -m benchmarks.integrations.gpt54_baselines prepare prme --benchmark locomo --provider ollama
+uv run python -m benchmarks.integrations.gpt54_baselines prepare prme --benchmark locomo --provider ollama \
+  --variant rrf --set 'scoring.fusion="rrf"'
+# DeepSeek reader and judge calls through Ollama. No API cost.
+uv run python -m benchmarks.integrations.gpt54_baselines calibrate --provider ollama
+uv run python -m benchmarks.integrations.gpt54_baselines run prme --benchmark locomo --provider ollama --sample 2
+uv run python -m benchmarks.integrations.gpt54_baselines run prme --benchmark locomo --provider ollama
+uv run python -m benchmarks.integrations.gpt54_baselines run prme --benchmark locomo --provider ollama \
+  --variant rrf
+# No model calls: the paired difference and its 95% interval.
+uv run python -m benchmarks.integrations.gpt54_baselines compare \
+  --before <baseline result> --after <variant result>
+```
+
+`--sample N` asks only the first N questions of each category, in registered
+order, as a smoke check. Its result is labeled as a sample, reports only how
+many answers the judge accepted, with no accuracy or interval, and is published
+with a `-sample-N` suffix. A later full run reuses its answers.
+
+`compare` refuses results that are incomplete, are samples, cover different
+questions, or were answered by different model identities or settings. It
+reports the paired accuracy difference with a 95% interval that resamples
+questions, per category as well, and the questions gained and lost.
+
+| DeepSeek run | LongMemEval-S | LoCoMo | Context |
+|---|---:|---:|---|
+| Baseline, `prme` current defaults | not run yet | not run yet | 3,996-token ceiling |
 
 ## Earlier registered memory-utility comparison
 
