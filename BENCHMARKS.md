@@ -285,7 +285,9 @@ with another DeepSeek score from the same model identity and settings:
    the same context text stay in the same count, but only a pair with the
    first pair's settings can confirm it. `compare` lists every arm and pair
    with the variant's settings or its context text, alongside any baseline,
-   so the earlier attempts stay in view.
+   so the earlier attempts stay in view. `compare` records each first pair and
+   confirmation it accepts, and `verdict` reads those records and says whether
+   the variant passed (#144); the pull request that flips a default cites it.
    It also needs the [interleaved A/A check](#interleaved-aa-check): one pair
    of the defaults against themselves on both benchmarks. After a default
    changes, or when the model identity changes, record a new baseline with
@@ -445,6 +447,57 @@ Safeguards:
   pair. Commit each new line with the pair's published results: the record
   is tracked, so until then the tree is not clean and `prepare` refuses to
   run. The two A/A pairs of 2026-09-24 were added with `record-aa-check`.
+- Every pair the `compare` command accepts as a variant's first pair or
+  confirmation, or as an A/A pair, is recorded for the verdict step (#144): a
+  `compared` event in the pair's run log, and a line in the track's verdict
+  record,
+  `benchmarks/results/research/ollama-deepseek-v4.1-flash-cloud-pair-verdicts.jsonl`.
+  The line records the benchmark, the role (`first`, `confirmation` or `aa`),
+  the baseline and the arm, the pair's id and when it started and finished,
+  the variant's settings and context text hash with the first pair it counts
+  with, the difference, `interval_95` (for LoCoMo also the conversation-level
+  and question-level intervals), whether the interval excludes zero, the A/A
+  check a variant's pair relied on, compare's warnings, and the paths and
+  digests of both published results. It is checked against those results
+  before it is written, and the pair must be on record as complete in its
+  run log. The record keeps one line per pair: comparing a pair again adds an
+  event to its run log but no line, and a line with other values for the pair
+  is refused. `compare` records only results published under this checkout's
+  `benchmarks/results/research/`: for results anywhere else it prints the
+  comparison and then fails, so compare the published copies. On a machine
+  without the track's run logs it compares and records nothing. A reference
+  arm's pair and a repeat answered as two runs on their own are not recorded,
+  and the `aa` lines are for reference, since the margin reads the A/A
+  record. The record is tracked from the start, so a new line leaves the tree
+  dirty and `prepare` refuses to run until it is committed with the pair's
+  published results, as for the A/A record.
+- `verdict prme --variant <name> --provider ollama` reads the verdict record
+  for the variant on both benchmarks and prints `pass`, `fail` or
+  `incomplete`, with each pair's numbers. On each benchmark the variant's
+  pairs count alongside the current baseline on its context text (#143). With
+  the track's run logs on the machine, the current baseline is theirs, the
+  context text that of the arm's latest preparation, the recorded first pair
+  and confirmation must be the ones the run logs count, the A/A record must
+  list every complete A/A pair, and compare's current warnings about each
+  pair are repeated; the output then reports `checked_against_run_logs:
+  true`. Elsewhere the baseline is that of the record's last first pair or
+  confirmation on the benchmark, with a warning. A first pair or confirmation
+  passes with a gain on at least one benchmark whose 95% interval excludes
+  zero and no loss on either whose interval excludes zero, and a loss decides
+  it as soon as it is recorded. Where an accepted A/A pair under the pair's
+  conditions excluded zero, on either benchmark, the gain must also be larger
+  than the largest absolute A/A difference in the A/A record on its
+  benchmark, or the #118 repeat's if that is larger; each pair's `margin`
+  says whether that applied. The variant passes when both pass, and fails
+  when either fails. A pair `compare` refused was never recorded, so it
+  counts as neither, and a pair alongside an earlier baseline or on other
+  context text does not count. The pairs must record the same settings on
+  both benchmarks, and a first pair and its confirmation the same model
+  identity and answer settings. Every line is checked against the published
+  results it names, and its numbers, and each accepted A/A line's, are
+  recomputed from them, so an edited line is refused; so is one recorded
+  before a change to the paired bootstrap code, which says so. The pull
+  request that flips a default cites its output.
 - The `prme` arm prepares the shipped defaults, so `prepare` refuses it unless
   the checked-out commit is on `main`. A variant can be prepared from a branch.
   A variant's preparation replays the evidence gate twice, once with its
@@ -538,9 +591,12 @@ uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchma
 # The A/A check: the baseline answered against itself.
 uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchmark locomo --provider ollama \
   --baseline prme@46647825
-# No model calls: the paired difference and its 95% interval.
+# No model calls: the paired difference and its 95% interval. A variant's first pair or confirmation, or an A/A
+# pair, is also recorded in the verdict record (#144).
 uv run python -m benchmarks.integrations.gpt54_baselines compare \
-  --before <pair's before result> --after <same pair's after result>
+  --before <pair's published before result> --after <same pair's published after result>
+# No model calls: whether a variant passed the default-change rule, from the pairs compare recorded (#144).
+uv run python -m benchmarks.integrations.gpt54_baselines verdict prme --variant rrf --provider ollama
 # No model calls: add an A/A pair published before the A/A record existed (run-pair adds the others).
 uv run python -m benchmarks.integrations.gpt54_baselines record-aa-check \
   --before <A/A pair's before result> --after <same pair's after result>
