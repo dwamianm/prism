@@ -285,7 +285,11 @@ and 14 admit. Version 15 receipts, saved before `semantic_relevance` existed, ke
 their bytes and checksums and cannot claim it. Versions 1 to 14 cannot claim
 rank fusion; weighted scoring omits both settings, so their stored bytes and
 checksums remain unchanged. Older readers without version 16 support cannot
-consume these rank-fusion receipts.
+consume these rank-fusion receipts. A rank fusion retrieval with the opt-in
+`session_context_rank_fusion_score_decay` set emits version 17, which also
+records that decay; every session decay in its score provenance must equal it.
+Versions 1 to 16 cannot record it, and an unset value is omitted from the
+packing settings, so no earlier receipt changes.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

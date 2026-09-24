@@ -982,7 +982,11 @@ reciprocal rank fusion of semantic and lexical ranks instead of the weighted sum
 (RFC-0005 Section 7.2); those receipts use schema version 16. Rank-fused scores
 are rank-based, so `min_score` then compares against each result's
 `semantic_relevance`, its semantic cosine similarity, and a floor tuned on weighted
-scores does not carry over. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+scores does not carry over. Fused scores are compressed, so session neighbors
+at the default decay of 0.85 can crowd primary evidence out of the context; set
+`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` (0.6 on the offline
+evidence gate) to give rank-fused triggers their own decay, which version 17
+receipts record. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
 their original canonical JSON and feedback checksums and always mean auditable
 rendering. Versions 1–5 also mean context guidance was off. For source blocks or
 bounded dialogue episodes stored under meaningful session IDs, set

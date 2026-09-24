@@ -357,7 +357,29 @@ class PackingConfig(BaseModel):
         description=(
             "Score multiplier for session-context expanded nodes. Applied to "
             "the triggering node's composite_score so context nodes rank just "
-            "below the node that caused their inclusion."
+            "below the node that caused their inclusion. Under rank fusion, "
+            "session_context_rank_fusion_score_decay replaces it when set."
+        ),
+    )
+    # Omitted when unset, so configurations, receipts and benchmark variants
+    # that do not use it keep the bytes and identity they had before it existed.
+    session_context_rank_fusion_score_decay: float | None = Field(
+        default=None,
+        gt=0,
+        le=1,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Opt-in score multiplier for session-context expanded nodes whose "
+            "trigger was scored by rank fusion (ScoringWeights.fusion='rrf'), "
+            "in place of session_context_score_decay. Unset, rank fusion uses "
+            "session_context_score_decay. Fused scores are compressed: with "
+            "rrf_k=60, 0.85 of a first-place score outranks every candidate "
+            "from about twelfth place down on both channels, so neighbors can "
+            "crowd primary evidence out of the context. 0.6 places a "
+            "first-place trigger's neighbors below about the fortieth "
+            "candidate ranked on both channels, though still above any "
+            "candidate found by one channel alone, which scores at most 0.5. "
+            "[HYPOTHESIS]"
         ),
     )
     episode_context_top_k: int = Field(

@@ -424,7 +424,8 @@ every complete line. Reader receipts use version 14, which records
 `packing.context_citations`; versions 1–13 keep their canonical bytes, cannot
 claim the reader format, and mean citations were off. A retrieval scored with
 opt-in rank fusion (RFC-0005 Section 7.2) writes version 16 in any format (version 15 before
-it recorded `semantic_relevance`). The default remains
+it recorded `semantic_relevance`, version 17 when it records the opt-in rank fusion session
+decay). The default remains
 `"auditable"` until the reader format passes the evidence gate and a paired
 answer run (epic #77).
 

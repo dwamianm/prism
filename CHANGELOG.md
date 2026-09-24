@@ -48,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   earlier receipt versions, a release without version 16 support cannot read
   rank-fusion receipts.
 
+- Add an opt-in session decay for rank fusion
+  (`PackingConfig.session_context_rank_fusion_score_decay`, or
+  `PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`). Rank-fused scores
+  are compressed, so at the default session decay of 0.85 a first-place
+  result's adjacent turns outrank every result from about twelfth place down,
+  and they crowded LongMemEval-S multi-session evidence out of the context.
+  When set, it replaces `session_context_score_decay` for results scored by
+  rank fusion; the offline evidence gate favored 0.6. Unset (the default),
+  nothing changes. Receipts that record it use schema version 17.
+
 ### Fixed
 
 - Context ablation now keeps a compact or reader bundle's format and references

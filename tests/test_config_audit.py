@@ -16,6 +16,7 @@ from prme.retrieval.config import PackingConfig, ScoringWeights
 EXPECTED_HYPOTHESES = {
     "scoring.current_update_multiplier",
     "scoring.rrf_k",
+    "packing.session_context_rank_fusion_score_decay",
     "packing.cross_scope_top_n",
     "packing.episode_context_top_k",
     "packing.episode_context_local_k",
@@ -60,6 +61,7 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     assert report.customized_count == 0
     assert settings["scoring.current_update_multiplier"].effective is True
     assert settings["scoring.rrf_k"].effective is False
+    assert settings["packing.session_context_rank_fusion_score_decay"].effective is False
     assert settings["packing.episode_context_top_k"].effective is False
     assert settings["packing.episode_context_local_k"].effective is False
     assert settings["enable_qa_pairing"].effective is False
@@ -100,6 +102,21 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
     assert rank_fused["scoring.rrf_k"].effective is True
     assert rank_fused["scoring.rrf_k"].value == 60
     assert rank_fused["scoring.rrf_k"].activation_condition == "scoring.fusion == 'rrf'"
+
+    _, session = _by_path(PRMEConfig(
+        scoring=ScoringWeights(fusion="rrf"),
+        packing=PackingConfig(session_context_rank_fusion_score_decay=.6),
+    ))
+    session_decay = session["packing.session_context_rank_fusion_score_decay"]
+    assert session_decay.effective is True
+    assert session_decay.value == .6
+    assert session_decay.customized is True
+    assert session_decay.activation_condition == (
+        "packing.session_context_rank_fusion_score_decay is set"
+    )
+    assert session_decay.environment_variable == (
+        "PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY"
+    )
 
 
 def test_hypothesis_audit_redacts_future_secret_fields():
