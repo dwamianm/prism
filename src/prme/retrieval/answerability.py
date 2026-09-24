@@ -14,7 +14,6 @@ import asyncio
 from enum import Enum
 import hashlib
 import json
-import os
 from typing import Any, Literal
 from uuid import UUID
 
@@ -415,42 +414,13 @@ class AnswerabilityEvaluator:
         if self._client is not None:
             return self._client
 
-        import instructor
-        from dotenv import dotenv_values
+        from prme.model_runtime import create_instructor_client
 
         config = self.config
-        provider = config.provider.casefold()
-        kwargs: dict[str, Any] = {}
-        if config.api_key is not None:
-            kwargs["api_key"] = config.api_key.get_secret_value()
-        if config.base_url is not None:
-            kwargs["base_url"] = config.base_url
-        if provider == "ollama":
-            kwargs["mode"] = instructor.Mode.JSON
-
-        provider_prefix = {
-            "openai": "OPENAI",
-            "anthropic": "ANTHROPIC",
-        }.get(provider)
-        if provider_prefix:
-            local = dotenv_values(".env")
-            key_name = f"{provider_prefix}_API_KEY"
-            url_name = f"{provider_prefix}_BASE_URL"
-            key = (
-                config.api_key.get_secret_value()
-                if config.api_key is not None
-                else os.environ.get(key_name) or local.get(key_name)
-            )
-            url = config.base_url or os.environ.get(url_name) or local.get(url_name)
-            if key:
-                kwargs["api_key"] = key
-            if url:
-                kwargs["base_url"] = url
-
-        self._client = instructor.from_provider(
+        self._client = create_instructor_client(
             f"{config.provider}/{config.model}",
-            async_client=True,
-            **kwargs,
+            api_key=config.api_key,
+            base_url=config.base_url,
         )
         return self._client
 

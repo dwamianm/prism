@@ -53,8 +53,10 @@ The default `fastembed` provider runs locally with no API key needed. It downloa
 | `PRME_EXTRACTION__MODEL` | `gpt-4o-mini` | Model name |
 | `PRME_EXTRACTION__MAX_RETRIES` | `3` | Retry count for API failures |
 | `PRME_EXTRACTION__TIMEOUT` | `30.0` | Timeout in seconds |
+| `PRME_EXTRACTION__API_KEY` | `None` | Credential; defaults to the provider's own (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) |
+| `PRME_EXTRACTION__BASE_URL` | `None` | Endpoint; defaults to the provider's own (`OPENAI_BASE_URL`, `ANTHROPIC_BASE_URL`, or a local Ollama) |
 
-The extraction provider is only used by `ingest()` and `ingest_batch()`. The `store()` method does not call an LLM.
+The extraction provider is used by `ingest()` and `ingest_batch()`, and by `retrieve()` only when `PRME_ENABLE_QUERY_REFORMULATION=true`: query reformulation calls the same provider, model, endpoint and credential, with the same timeout. The `store()` method does not call an LLM.
 
 ## Scoring Weights
 

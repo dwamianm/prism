@@ -15,14 +15,19 @@ The LLM call is always mocked -- no network/provider access in tests.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 import tempfile
+import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from pydantic import SecretStr
 
 import prme.retrieval.reformulation as reformulation
 from prme.client import MemoryClient, config_from_directory
+from prme.config import ExtractionConfig
 from prme.retrieval.reformulation import QueryReformulations, reformulate_query
 
 
@@ -198,3 +203,205 @@ class TestPipelineIntegration:
 
         node_ids = [str(r.node.id) for r in response.results]
         assert len(node_ids) == len(set(node_ids)), "duplicate nodes in results"
+
+
+# ---------------------------------------------------------------------------
+# Connection settings (issue #101)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def provider_env(tmp_path, monkeypatch):
+    """No provider settings in the environment or .env, and an empty cache."""
+    monkeypatch.chdir(tmp_path)
+    for name in list(os.environ):
+        if name.startswith(("PRME_", "OPENAI_", "ANTHROPIC_")):
+            monkeypatch.delenv(name)
+    reformulation._client_cache.clear()
+    yield tmp_path / ".env"
+    reformulation._client_cache.clear()
+
+
+def _recording_builder(built: list[tuple]):
+    def build(provider_string, *, api_key=None, base_url=None):
+        built.append((provider_string, api_key, base_url))
+        return _mock_client_returning(["alt"])
+
+    return build
+
+
+@pytest.mark.usefixtures("provider_env")
+class TestReformulationConnection:
+    @pytest.mark.asyncio
+    async def test_configured_endpoint_and_credential_build_the_client(self):
+        built: list[tuple] = []
+        with patch.object(
+            reformulation, "create_instructor_client", side_effect=_recording_builder(built)
+        ):
+            result = await reformulate_query(
+                "original question",
+                provider="openai",
+                model="example",
+                api_key=SecretStr("configured-key"),
+                base_url="https://gateway.invalid/v1",
+            )
+
+        assert result == ["alt"]
+        assert built == [
+            ("openai/example", SecretStr("configured-key"), "https://gateway.invalid/v1")
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_blank_key_uses_the_providers_own_like_extraction(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "environment-key")
+        built: list[tuple] = []
+        with patch.object(
+            reformulation, "create_instructor_client", side_effect=_recording_builder(built)
+        ):
+            await reformulate_query("q", model="m", api_key=SecretStr(""))
+
+        assert built == [("openai/m", SecretStr("environment-key"), None)]
+
+    @pytest.mark.asyncio
+    async def test_clients_are_not_shared_across_connections(self, monkeypatch):
+        built: list[tuple] = []
+        with patch.object(
+            reformulation, "create_instructor_client", side_effect=_recording_builder(built)
+        ):
+            await reformulate_query("q", model="m", base_url="https://a.invalid/v1")
+            await reformulate_query("q", model="m", base_url="https://a.invalid/v1")
+            await reformulate_query("q", model="m", base_url="https://b.invalid/v1")
+            await reformulate_query(
+                "q", model="m", base_url="https://a.invalid/v1", api_key=SecretStr("other")
+            )
+            await reformulate_query("q", model="other-model", base_url="https://a.invalid/v1")
+            # A credential read from the environment is part of the connection too.
+            monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+            await reformulate_query("q", model="m", base_url="https://a.invalid/v1")
+
+        assert [(entry[0], entry[2]) for entry in built] == [
+            ("openai/m", "https://a.invalid/v1"),
+            ("openai/m", "https://b.invalid/v1"),
+            ("openai/m", "https://a.invalid/v1"),
+            ("openai/other-model", "https://a.invalid/v1"),
+            ("openai/m", "https://a.invalid/v1"),
+        ]
+        assert built[2][1] == SecretStr("other")
+        assert built[4][1] == SecretStr("rotated-key")
+        assert "rotated-key" not in repr(reformulation._client_cache)
+
+    @pytest.mark.asyncio
+    async def test_a_callers_cache_keeps_its_clients_out_of_the_process_cache(self):
+        mine: dict = {}
+        with patch.object(
+            reformulation, "create_instructor_client", side_effect=_recording_builder([])
+        ):
+            await reformulate_query("q", model="m", client_cache=mine)
+
+        assert len(mine) == 1
+        assert reformulation._client_cache == {}
+
+    @pytest.mark.asyncio
+    async def test_the_call_names_its_model_and_turns_off_ollama_reasoning(self):
+        mock_client = _mock_client_returning(["alt"])
+        with patch.object(reformulation, "_get_client", return_value=mock_client):
+            await reformulate_query("q", provider="openai", model="example")
+            await reformulate_query("q", provider="ollama", model="thinker")
+
+        openai_call, ollama_call = mock_client.create.call_args_list
+        assert openai_call.kwargs["model"] == "example"
+        assert "reasoning_effort" not in openai_call.kwargs
+        assert "temperature" not in openai_call.kwargs
+        assert ollama_call.kwargs["model"] == "thinker"
+        assert ollama_call.kwargs["reasoning_effort"] == "none"
+
+    @pytest.mark.asyncio
+    async def test_timeout_bounds_the_whole_call_and_falls_back(self, caplog):
+        async def stall(**kwargs):
+            await asyncio.sleep(30)
+
+        client = AsyncMock()
+        client.create = AsyncMock(side_effect=stall)
+        started = time.perf_counter()
+        with patch.object(reformulation, "_get_client", return_value=client):
+            with caplog.at_level(logging.WARNING, logger=reformulation.__name__):
+                result = await reformulate_query("q", timeout=0.05)
+
+        assert result == []
+        assert time.perf_counter() - started < 5
+        assert "timed out after 0.05s" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_without_a_timeout_the_call_is_not_limited_here(self):
+        async def slow(**kwargs):
+            await asyncio.sleep(0.1)
+            return QueryReformulations(queries=["alt"])
+
+        client = AsyncMock()
+        client.create = AsyncMock(side_effect=slow)
+        with patch.object(reformulation, "_get_client", return_value=client):
+            assert await reformulate_query("q") == ["alt"]
+
+    @pytest.mark.asyncio
+    async def test_cancellation_still_propagates(self):
+        started = asyncio.Event()
+
+        async def stall(**kwargs):
+            started.set()
+            await asyncio.sleep(30)
+
+        client = AsyncMock()
+        client.create = AsyncMock(side_effect=stall)
+        with patch.object(reformulation, "_get_client", return_value=client):
+            task = asyncio.create_task(reformulate_query("q", timeout=10))
+            await started.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+
+class TestPipelineConnection:
+    def test_engines_reach_the_extraction_endpoint_with_their_own_clients(
+        self, tmp_dir, provider_env
+    ):
+        """Each engine builds its reformulation client from config.extraction."""
+        built: list[tuple] = []
+
+        def build(provider_string, *, api_key=None, base_url=None):
+            built.append((provider_string, api_key, base_url))
+            return _mock_client_returning(["aurochs"])
+
+        def config_for(directory, base_url):
+            config = config_from_directory(directory)
+            config.enable_query_reformulation = True
+            config.extraction = ExtractionConfig(
+                provider="openai",
+                model="example-model",
+                api_key=SecretStr("configured-key"),
+                base_url=base_url,
+                timeout=7.5,
+            )
+            return config
+
+        with patch.object(reformulation, "create_instructor_client", side_effect=build):
+            for index, base_url in enumerate(
+                ["https://gateway.invalid/v1", "https://gateway.invalid/v1"]
+            ):
+                config = config_for(os.path.join(tmp_dir, str(index)), base_url)
+                with MemoryClient(config=config) as client:
+                    client.store(
+                        "Last summer the team photographed an aurochs in the reserve",
+                        user_id="u1",
+                    )
+                    response = client.retrieve("tell me about wildlife", user_id="u1")
+                    pipeline = client._engine._retrieval_pipeline
+                    assert pipeline._query_reformulation_timeout == 7.5
+                    assert len(pipeline._query_reformulation_clients) == 1
+                assert response.results
+
+        # Two engines with the same settings still build two clients, one on
+        # each engine's event loop, and none lands in the process-wide cache.
+        assert built == [
+            ("openai/example-model", SecretStr("configured-key"), "https://gateway.invalid/v1")
+        ] * 2
+        assert reformulation._client_cache == {}

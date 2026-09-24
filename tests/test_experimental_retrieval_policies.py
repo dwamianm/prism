@@ -132,7 +132,9 @@ async def test_merge_failure_settles_all_passes_before_propagation(monkeypatch):
     monkeypatch.setattr(module, 'generate_candidates', generate)
     pipeline = SimpleNamespace(_query_reformulation_provider='ollama', _query_reformulation_model='authored',
         _query_reformulation_count=2, _temporal_languages=['en'], _graph_store=None,
-        _vector_index=None, _lexical_index=None, _query_reformulation_merge_policy='max_signals')
+        _vector_index=None, _lexical_index=None, _query_reformulation_merge_policy='max_signals',
+        _query_reformulation_api_key=None, _query_reformulation_base_url=None, _query_reformulation_timeout=None,
+        _query_reformulation_clients={})
     values = [candidate(1, ['VECTOR'], .3)]
     with pytest.raises(RuntimeError, match='authored failure'):
         await RetrievalPipeline._expand_reformulated_queries(pipeline, 'telescope', candidates=values,

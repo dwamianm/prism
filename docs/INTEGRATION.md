@@ -900,8 +900,18 @@ ExtractionConfig(
     timeout=30.0,                        # PRME_EXTRACTION_TIMEOUT
     temperature=0.0,                     # PRME_EXTRACTION_TEMPERATURE
     reasoning_effort=None,               # PRME_EXTRACTION_REASONING_EFFORT
+    api_key=None,                        # PRME_EXTRACTION_API_KEY
+    base_url=None,                       # PRME_EXTRACTION_BASE_URL
 )
 ```
+
+Without `api_key` or `base_url`, OpenAI and Anthropic use their own
+`OPENAI_API_KEY`/`OPENAI_BASE_URL` or `ANTHROPIC_API_KEY`/`ANTHROPIC_BASE_URL`,
+from the process environment first and then `.env`; Ollama uses its local
+server. Opt-in query reformulation (`enable_query_reformulation=True`) calls the
+same provider, model, endpoint and credential, and gives up after the same
+`timeout`. It keeps its own sampling: the provider's default temperature, and
+for Ollama a reasoning effort of `"none"`.
 
 Supported providers: `"openai"`, `"anthropic"`, `"ollama"`. Temperature zero
 favors repeatable schema-constrained extraction. Ollama resolves an omitted

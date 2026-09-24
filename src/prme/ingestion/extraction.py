@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 from contextvars import ContextVar
 from decimal import Decimal
-import os
 import re
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
@@ -1049,38 +1048,13 @@ class InstructorExtractionProvider:
         the provider to be created without environment variables set.
         """
         if self._client is None:
-            import instructor
-            from dotenv import dotenv_values
+            from prme.model_runtime import create_instructor_client
 
-            # SDK defaults read process variables but do not load .env. Resolve
-            # only the selected provider's settings, without mutating os.environ.
-            kwargs: dict = {}
-            if self._api_key:
-                kwargs["api_key"] = self._api_key.get_secret_value()
-            if self._base_url:
-                kwargs["base_url"] = self._base_url
-            if self.provider_name == "ollama":
-                # Ollama's constrained structured-output path returns JSON in
-                # message content. Tool mode can return the same valid JSON
-                # without a tool envelope, which Instructor rejects.
-                kwargs["mode"] = instructor.Mode.JSON
-            provider_prefix = {"openai": "OPENAI", "anthropic": "ANTHROPIC"}.get(self.provider_name)
-            if provider_prefix:
-                local = dotenv_values(".env")
-                key_name, url_name = f"{provider_prefix}_API_KEY", f"{provider_prefix}_BASE_URL"
-                key = (
-                    self._api_key.get_secret_value()
-                    if self._api_key
-                    else os.environ.get(key_name) or local.get(key_name)
-                )
-                url = self._base_url or os.environ.get(url_name) or local.get(url_name)
-                if key:
-                    kwargs["api_key"] = key
-                if url:
-                    kwargs["base_url"] = url
-
-            self._client = instructor.from_provider(
-                self._provider_string, async_client=True, **kwargs
+            # A blank extraction key has always meant "use the provider's own".
+            self._client = create_instructor_client(
+                self._provider_string,
+                api_key=self._api_key or None,
+                base_url=self._base_url,
             )
         return self._client
 

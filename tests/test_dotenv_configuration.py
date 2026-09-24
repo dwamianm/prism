@@ -78,12 +78,14 @@ def test_only_selected_provider_credentials_are_loaded(project_env):
     project_env.write_text("OPENAI_API_KEY=openai-fixture\nANTHROPIC_API_KEY=anthropic-fixture\n"
                           "ANTHROPIC_BASE_URL=https://example.invalid/anthropic\n")
     provider = create_extraction_provider(ExtractionConfig(provider="anthropic", model="example"))
-    with patch("instructor.from_provider") as factory:
+    # Instructor's from_provider drops an Anthropic endpoint, so the client is
+    # built for it directly.
+    with patch("instructor.from_anthropic") as factory:
         provider._ensure_client()
-    assert factory.call_args.kwargs == {
-        "async_client": True, "api_key": "anthropic-fixture",
-        "base_url": "https://example.invalid/anthropic",
-    }
+    client = factory.call_args.args[0]
+    assert client.api_key == "anthropic-fixture"
+    assert str(client.base_url) == "https://example.invalid/anthropic/"
+    assert factory.call_args.kwargs["model"] == "example"
     assert "ANTHROPIC_API_KEY" not in os.environ
 
 

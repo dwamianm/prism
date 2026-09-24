@@ -33,9 +33,16 @@ CACHED = ContextVar('frozen_reformulation')
 ARMS = ('baseline', 'original_reformulation', 'merged_reformulation')
 
 
+# Where a request would be sent, with which credential, for how long and through
+# which client cache does not change what a cached replay returns, and the
+# recorded options never included them. Compare only the recorded request.
+UNRECORDED_OPTIONS = frozenset({'api_key', 'base_url', 'timeout', 'client_cache'})
+
+
 async def cached_reformulation(query, **kwargs):
     value = CACHED.get()
-    if query != value['query'] or kwargs != value['options']:
+    request = {key: option for key, option in kwargs.items() if key not in UNRECORDED_OPTIONS}
+    if query != value['query'] or request != value['options']:
         raise study.old.ResearchFailure('Cached reformulation request differs')
     value['calls'] += 1
     return list(value['alternatives'])

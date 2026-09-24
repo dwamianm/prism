@@ -465,6 +465,9 @@ class MemoryEngine:
                 query_reformulation_merge_policy=config.query_reformulation_merge_policy,
                 query_reformulation_provider=config.extraction.provider,
                 query_reformulation_model=config.extraction.model,
+                query_reformulation_api_key=config.extraction.api_key,
+                query_reformulation_base_url=config.extraction.base_url,
+                query_reformulation_timeout=config.extraction.timeout,
                 temporal_languages=config.temporal_languages,
                 temporal_relation_config=config.temporal_relation,
             )
@@ -602,6 +605,9 @@ class MemoryEngine:
                 query_reformulation_merge_policy=config.query_reformulation_merge_policy,
                 query_reformulation_provider=config.extraction.provider,
                 query_reformulation_model=config.extraction.model,
+                query_reformulation_api_key=config.extraction.api_key,
+                query_reformulation_base_url=config.extraction.base_url,
+                query_reformulation_timeout=config.extraction.timeout,
                 temporal_languages=config.temporal_languages,
                 temporal_relation_config=config.temporal_relation,
             )
