@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 import hashlib
 
+import pytest
+
 from prme import MemoryEngine, PRMEConfig
 from prme.retrieval.context_formatter import (
     _detect_context_type,
@@ -15,6 +17,7 @@ from prme.retrieval.temporal_relations import (
     TemporalRelationConfig,
     TemporalRelationEnricher,
 )
+from prme.types import RepresentationLevel
 from tests.test_durable_ingestion import config, user  # noqa: F401
 
 
@@ -84,13 +87,21 @@ class _Gate:
         )
 
 
+@pytest.mark.parametrize("prior_exclusion", [False, True])
 async def test_public_retrieval_enriches_temporal_context_and_receipt(
-    config, user  # noqa: F811
+    config, user, prior_exclusion  # noqa: F811
 ) -> None:
     relation_config = TemporalRelationConfig(enabled=True)
     configured = config.model_copy(
         update={"temporal_relation": relation_config}
     )
+    if prior_exclusion:
+        configured = configured.model_copy(update={
+            "packing": config.packing.model_copy(update={
+                "token_budget": 1024,
+                "min_fidelity": RepresentationLevel.FULL,
+            }),
+        })
     resolver = _Resolver()
     async with MemoryEngine.open(configured) as engine:
         await engine.ingest_fast(
@@ -103,13 +114,20 @@ async def test_public_retrieval_enriches_temporal_context_and_receipt(
             user_id=user,
             event_time=datetime(2026, 8, 8, 9, tzinfo=timezone.utc),
         )
+        if prior_exclusion:
+            await engine.ingest_fast(
+                "Frame notes about finishing and hanging. " * 2000,
+                user_id=user,
+                event_time=REFERENCE_TIME,
+            )
         await engine.process_pending(user_id=user)
         engine._retrieval_pipeline._temporal_relation_enricher = (  # type: ignore[union-attr]
             TemporalRelationEnricher(relation_config, resolver, _Gate())
         )
 
         response = await engine.retrieve(
-            "How long passed between finishing and hanging the frame?",
+            "List all frame milestones and how long passed between "
+            "finishing and hanging the frame?",
             user_id=user,
             min_score=0,
             reference_time=REFERENCE_TIME,
@@ -122,10 +140,19 @@ async def test_public_retrieval_enriches_temporal_context_and_receipt(
         assert len(metadata.evidence_ids) == 2
         assert "Deterministic calendar-date difference: 7 days" in response.bundle.render()
         assert response.bundle.tokens_used <= response.bundle.token_budget
+        if prior_exclusion:
+            assert response.bundle.excluded_ids
+            coverage = response.metadata.aggregation_coverage
+            assert coverage is not None and coverage.status == "context_limited"
+            assert "token_budget" in coverage.limitations
         receipt = await engine.get_retrieval_receipt(
             str(response.metadata.request_id), user_id=user
         )
         assert receipt is not None and receipt.execution is not None
+        if prior_exclusion:
+            assert receipt.execution.parameters["aggregation_coverage"] == (
+                coverage.model_dump(mode="json")
+            )
         recorded = receipt.execution.parameters["temporal_relation"]
         assert isinstance(recorded, dict) and recorded["status"] == "accepted"
         assert recorded["evidence_ids"] == [str(item) for item in metadata.evidence_ids]

@@ -519,6 +519,11 @@ def repack_with_relation(
         or candidate.tokens_used > candidate.token_budget
     ):
         return None
+    # Only the already packed candidates were reconsidered. Keep earlier
+    # exclusions as well as any records displaced by the relation guidance.
+    candidate.excluded_ids = list(
+        dict.fromkeys([*bundle.excluded_ids, *candidate.excluded_ids])
+    )
     return candidate
 
 

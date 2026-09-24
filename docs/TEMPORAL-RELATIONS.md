@@ -62,6 +62,12 @@ context packing:
    their selected representation. The derived guidance must fit inside the
    same token budget; only uncited records may be displaced.
 
+The returned bundle retains the original packing exclusions and appends any
+records displaced by the relation, without duplicate IDs. Aggregation coverage
+therefore still reports context limits when records were excluded before
+enrichment. The temporal metadata's `dropped_record_ids` describes only records
+displaced by this stage.
+
 The inserted block labels the result as inferred, identifies every evidence
 node, and asks the downstream reader to verify the interpretation. It is query
 context only. PRME does not persist it as a fact, mutate graph state, or treat a

@@ -253,6 +253,51 @@ async def test_gate_rejection_returns_byte_identical_control() -> None:
     assert metadata.result_context_sha256 == metadata.control_context_sha256
 
 
+@pytest.mark.parametrize("context_format", ["auditable", "reader"])
+@pytest.mark.asyncio
+async def test_repacking_retains_prior_exclusions_without_mutating_control(
+    context_format,
+) -> None:
+    config, original = _control()
+    config = config.model_copy(update={"context_format": context_format})
+    candidates = [item for values in original.sections.values() for item in values]
+    candidates += [
+        _candidate(4, " ", NOW),
+        _candidate(5, "Other frame detail. " * 10000, NOW),
+    ]
+    control = pack_context(candidates, config)
+    if context_format == "reader":
+        assert UUID(int=4) in control.excluded_ids
+    assert UUID(int=5) in control.excluded_ids
+    expected_prior = list(control.excluded_ids)
+    control.excluded_ids += control.excluded_ids[:1]
+    before = control.model_dump(mode="json")
+    resolution = RawResolution(
+        operation="elapsed_between",
+        operands=[
+            _operand(1, "frame completion", "finished the frame today"),
+            _operand(2, "frame hanging", "hung the frame today"),
+        ],
+    )
+    enricher = TemporalRelationEnricher(
+        TemporalRelationConfig(enabled=True),
+        _Resolver(_resolver_result(resolution)),
+        _Gate(0.91),
+    )
+    result, metadata = await enricher.enrich(
+        "How long passed between finishing and hanging the frame?",
+        control,
+        question_time=NOW,
+        packing_config=config,
+    )
+    assert metadata.status == "accepted"
+    assert result.excluded_ids[: len(expected_prior)] == expected_prior
+    assert set(metadata.dropped_record_ids) <= set(result.excluded_ids)
+    assert len(result.excluded_ids) == len(set(result.excluded_ids))
+    assert control.model_dump(mode="json") == before
+    assert result.tokens_used <= result.token_budget == control.token_budget
+
+
 @pytest.mark.asyncio
 async def test_provider_failure_is_explicit_and_falls_back() -> None:
     config, control = _control()
