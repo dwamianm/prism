@@ -118,6 +118,12 @@ class SimCheckpoint:
     # Optional ground truth for computing IR evaluation metrics (precision@k,
     # recall@k, nDCG@k, MRR, F1@k, hit rate).  When set, evaluation metrics
     # are attached to the corresponding CheckpointResult.
+    context_keywords: list[str] = field(default_factory=list)
+    # Must appear in the context the reader gets at the engine's token budget
+    # (the default budget unless the configuration sets another), wherever
+    # the memory ranks. For checks about what reaches the reader, not about
+    # the order of the results. A small scenario's whole store can fit the
+    # budget, so such a check then fails only when the memory is dropped.
 
 
 @dataclass
@@ -156,8 +162,10 @@ class CheckpointResult:
     lifecycle_counts: dict[str, int] = field(default_factory=dict)
     # Actual counts of each lifecycle state
     eval_metrics: EvalMetrics | None = None
-    rendered_context: str = ""  # Actual token-packed context for reader diagnostics.
     # IR evaluation metrics (populated when ground_truth is present)
+    rendered_context: str = ""  # Actual token-packed context for reader diagnostics.
+    context_missing: list[str] = field(default_factory=list)
+    # Context keywords that the rendered context does not contain
 
 
 @dataclass
@@ -223,6 +231,8 @@ class SimulationReport:
                 print(f"    Unwanted found: {', '.join(cr.excluded_found)}")
             if cr.ranking_failures:
                 print(f"    Ranking failures: {'; '.join(cr.ranking_failures)}")
+            if cr.context_missing:
+                print(f"    Missing from context: {', '.join(cr.context_missing)}")
 
             if cr.lifecycle_counts:
                 counts_str = ", ".join(
@@ -614,12 +624,20 @@ class SimulationRunner:
         if checkpoint.ground_truth is not None:
             eval_metrics = evaluate_retrieval(top_results, checkpoint.ground_truth)
 
+        rendered_context = response.bundle.rendered_context
+        context_lower = rendered_context.lower()
+        context_missing = [
+            kw for kw in checkpoint.context_keywords
+            if kw.lower() not in context_lower
+        ]
+
         # Pass if all expected found, no excluded found, and no assertion failures
         passed = (
             len(expected_missing) == 0
             and len(excluded_found) == 0
             and len(ranking_failures) == 0
             and len(lifecycle_failures) == 0
+            and len(context_missing) == 0
         )
 
         return CheckpointResult(
@@ -633,5 +651,6 @@ class SimulationRunner:
             lifecycle_failures=lifecycle_failures,
             lifecycle_counts=lifecycle_counts,
             eval_metrics=eval_metrics,
-            rendered_context=response.bundle.rendered_context,
+            rendered_context=rendered_context,
+            context_missing=context_missing,
         )

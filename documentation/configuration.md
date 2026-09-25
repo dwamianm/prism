@@ -76,6 +76,8 @@ These control the hybrid retrieval scoring formula. They should sum to approxima
 | `PRME_SCORING__TEMPORAL_BOOST` | `0.15` | Bonus for temporal queries |
 | `PRME_SCORING__FUSION` | `weighted` | `weighted` (the sum above) or `rrf`: opt-in reciprocal rank fusion of semantic and lexical ranks, which ignores the additive weights (RFC-0005 Section 7.2). Under `rrf` a result's score is rank-based, so a request's `min_score` is compared with its `semantic_relevance`, the semantic cosine similarity, instead; a floor tuned on weighted scores does not carry over, and a low-cosine exact keyword match is filtered out when a floor is set. If vector search fails or detects an embedding model mismatch and no result has a cosine, the floor is skipped and the response metadata sets `min_score_skipped` |
 | `PRME_SCORING__RRF_K` | `60` | Rank constant for `rrf`; set it only with `PRME_SCORING__FUSION=rrf` |
+| `PRME_SCORING__RRF_RECENCY_BOOST` | unset | Opt-in, `rrf` only: on current-state questions, multiplies each fused score by `1 + boost x recency` relative to the pool's largest value, where recency is the weighted formula's current-state recency (exp decay from the newest candidate, doubled for update wording), so the newer of two conflicting memories can rank first. Above 0 and at most 4. 0.25 passed the simulations with no significant change on the offline evidence gate; 1.0 lost LoCoMo evidence (RFC-0005 Section 7.2); provisional |
+| `PRME_SCORING__RRF_TIE_BREAK` | unset | Opt-in, `rrf` only: `event_time` orders equal fused scores newest first instead of by path count and node ID |
 
 ## Context Packing
 

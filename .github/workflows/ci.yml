@@ -127,6 +127,18 @@ jobs:
       - name: Run simulations
         run: uv run python -m scripts.run_simulations
 
+      # The reader-rrf-sd06 settings with the opt-in rank fusion recency boost
+      # and tie-break (issue #168) must also pass every checkpoint.
+      - name: Run simulations with rank fusion recency and tie-break
+        env:
+          PRME_SCORING__FUSION: rrf
+          PRME_SCORING__RRF_RECENCY_BOOST: "0.25"
+          PRME_SCORING__RRF_TIE_BREAK: event_time
+          PRME_PACKING__CONTEXT_FORMAT: reader
+          PRME_PACKING__MULTIPATH_ORDERING: score
+          PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY: "0.6"
+        run: uv run python -m scripts.run_simulations
+
   test-integrations:
     runs-on: ubuntu-latest
     env:

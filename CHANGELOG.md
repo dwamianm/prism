@@ -27,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   place on both is 1.0. Epistemic, node-type and temporal adjustments then
   apply relative to the pool's largest value. Graph proximity, recency,
   salience and confidence, which were constant or uninformative in the
-  2026-09-23 benchmark archive, are not used. Score provenance records formula
+  2026-09-23 benchmark archive, are not used (recency is available through an
+  opt-in, below). Score provenance records formula
   version 2 with the saved ranks and factors, and these receipts use schema
   version 16 (version 15 receipts from earlier development builds, which lack
   `semantic_relevance`, stay readable). Because a fused score says where a result
@@ -70,6 +71,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `min_score_skipped`. The LangChain and LlamaIndex retrievers accept an
   optional `min_score` and add `min_score_skipped: True` to each result's
   metadata when the floor was skipped.
+
+- Add two opt-in rank fusion settings for conflicting memories
+  (`ScoringWeights.rrf_recency_boost` and `ScoringWeights.rrf_tie_break`, or
+  `PRME_SCORING__RRF_RECENCY_BOOST` and `PRME_SCORING__RRF_TIE_BREAK`). Rank
+  fusion ignores recency, so on a current-state question the older of two
+  conflicting memories could rank above the newer one. With the recency boost
+  set, those questions multiply each fused score by `1 + boost x recency`,
+  relative to the pool's largest value, where recency is the weighted
+  formula's current-state recency (with lambda at least 0.05). With
+  `rrf_tie_break="event_time"`, equal fused scores are ordered newest first
+  instead of by path count and node ID. Both apply only under rank fusion, and
+  unset (the default), nothing changes. A boost of 0.25 with the tie-break
+  passed every simulation with the reader format, score order and a 0.6 rank
+  fusion session decay, and changed no benchmark's share of questions with all
+  evidence packed significantly on the offline evidence gate. Receipts that
+  record either use schema version 19.
 
 ### Fixed
 
@@ -115,6 +132,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Simulation checkpoints can require memory text in the context the reader
+  gets (`SimCheckpoint.context_keywords`, reported as
+  `CheckpointResult.context_missing`). Four checks that tested the weighted
+  formula's order rather than what reaches the reader now use it: the
+  infrastructure question in `consolidation`, the tools question in
+  `remention`, and the database and observability questions in
+  `surprise_gating`.
 - Receipt versions from 4, 6 and 8 on must state their ordering, guidance and
   episode settings instead of taking the current defaults. Stored receipts
   always include them.

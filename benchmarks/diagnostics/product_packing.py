@@ -46,7 +46,7 @@ from benchmarks.compare_evidence import paired_statistics
 from benchmarks.evidence import reciprocal_rank_fusion
 from prme import MemoryEngine, NodeType, PRMEConfig
 from prme.config import OrganizerConfig
-from prme.retrieval.config import PackingConfig
+from prme.retrieval.config import RANK_FUSION_ONLY_SETTINGS, PackingConfig
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import pack_context, reader_text
 from prme.retrieval.tokenization import count_tokens
@@ -479,9 +479,10 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
                             vector_path=str(pack / "vectors.usearch"), lexical_path=str(pack / "lexical_index"))
     if config.enable_query_reformulation or config.temporal_relation.enabled:
         raise ValueError("The evidence gate does not run model-backed query features")
-    if "rrf_k" in overrides.get("scoring", {}) and config.scoring.fusion != "rrf":
-        # Weighted scoring ignores the rank constant, so this run would change nothing.
-        raise ValueError("scoring.rrf_k applies only with scoring.fusion=\"rrf\"")
+    for name in RANK_FUSION_ONLY_SETTINGS:
+        if name in overrides.get("scoring", {}) and config.scoring.fusion != "rrf":
+            # Weighted scoring ignores rank fusion settings, so this run would change nothing.
+            raise ValueError(f"scoring.{name} applies only with scoring.fusion=\"rrf\"")
     if (config.packing.session_context_rank_fusion_score_decay is not None
             and config.scoring.fusion != "rrf"):
         # Weighted scoring never applies it either.

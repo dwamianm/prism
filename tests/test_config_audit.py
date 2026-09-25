@@ -16,6 +16,7 @@ from prme.retrieval.config import PackingConfig, ScoringWeights
 EXPECTED_HYPOTHESES = {
     "scoring.current_update_multiplier",
     "scoring.rrf_k",
+    "scoring.rrf_recency_boost",
     "packing.session_context_rank_fusion_score_decay",
     "packing.cross_scope_top_n",
     "packing.episode_context_top_k",
@@ -61,6 +62,7 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     assert report.customized_count == 0
     assert settings["scoring.current_update_multiplier"].effective is True
     assert settings["scoring.rrf_k"].effective is False
+    assert settings["scoring.rrf_recency_boost"].effective is False
     assert settings["packing.session_context_rank_fusion_score_decay"].effective is False
     assert settings["packing.episode_context_top_k"].effective is False
     assert settings["packing.episode_context_local_k"].effective is False
@@ -117,6 +119,16 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
     assert session_decay.environment_variable == (
         "PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY"
     )
+
+    _, recency = _by_path(PRMEConfig(scoring=ScoringWeights(fusion="rrf", rrf_recency_boost=.25)))
+    boost = recency["scoring.rrf_recency_boost"]
+    assert boost.effective is True
+    assert boost.value == .25
+    assert boost.customized is True
+    assert boost.activation_condition == (
+        "scoring.rrf_recency_boost is set (current-state questions only)"
+    )
+    assert boost.environment_variable == "PRME_SCORING__RRF_RECENCY_BOOST"
 
 
 def test_hypothesis_audit_redacts_future_secret_fields():

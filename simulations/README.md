@@ -46,6 +46,11 @@ Each checkpoint shows:
 - **Found expected** -- Which expected keywords appeared in top-5 results
 - **Missing expected** -- Which expected keywords were absent (causes FAIL)
 - **Unwanted found** -- Which excluded keywords appeared (causes FAIL)
+- **Missing from context** -- Which `context_keywords` were absent from the
+  context the reader gets at the engine's token budget (causes FAIL). These
+  check what reaches the reader wherever the memory ranks, for checkpoints that
+  are not about ranking order. When a scenario's whole store fits the budget,
+  they fail only if the memory is dropped
 - **Top results** -- The top-5 retrieved nodes with scores
 
 A summary line shows the overall pass rate.

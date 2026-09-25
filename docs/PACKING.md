@@ -30,7 +30,10 @@ or MCP parameter.
 | `score` | Composite score. |
 | `balanced` | Highest composite score first, then score divided by full-entry token cost to the power 0.25. |
 
-Ties use node ID. Instructions, pinned memories and active tasks keep their
+Ties use node ID. Under rank fusion, the opt-in `ScoringWeights.rrf_tie_break`
+(RFC-0005 Section 7.2) makes equal fused scores differ by event time, newest
+first, so only memories with the same time or the same inherited score still
+fall back to node ID. Instructions, pinned memories and active tasks keep their
 existing higher priority; single-path candidates keep their existing lower tier.
 Every entry still passes the same measured whole-context budget and fidelity
 checks. Reserving the first position does not guarantee that its full text fits:
@@ -294,6 +297,12 @@ skipped a positive `min_score` because the vector path failed and no candidate
 had a cosine emits version 18, which records `min_score_skipped: true`, requires
 every candidate's `semantic_relevance` to be 0, and also records the rank fusion
 session decay when it is set. Versions 1 to 17 cannot record a skipped floor.
+A rank fusion retrieval with the opt-in `scoring.rrf_recency_boost` or
+`scoring.rrf_tie_break` set emits version 19, which records them in its scoring
+settings and saved factors, requires every score provenance to use the same
+values, and also admits the version 17 and 18 features. Versions 1 to 18 cannot
+record either setting, and unset settings are omitted, so no earlier receipt
+changes.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

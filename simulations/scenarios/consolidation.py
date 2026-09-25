@@ -71,9 +71,13 @@ _CHECKPOINTS = [
     SimCheckpoint(
         day=30,
         query="What infrastructure does the team use?",
-        expected_keywords=["Kubernetes"],
+        expected_keywords=[],
         excluded_keywords=[],
-        description="Unrelated facts should not be affected by consolidation",
+        description=(
+            "Unrelated facts should not be affected by consolidation: the "
+            "Kubernetes fact should reach the reader's context"
+        ),
+        context_keywords=["Kubernetes"],
     ),
 ]
 

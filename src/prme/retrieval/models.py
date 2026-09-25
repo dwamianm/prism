@@ -162,6 +162,12 @@ class ScoreAdjustment(BaseModel):
         return self
 
 
+# Most that the opt-in tie-break (ScoringWeights.rrf_tie_break) takes from a
+# fused score. Fused scores are rounded to ten decimals, so two that differ do
+# so by at least 1e-10 and keep their order.
+RANK_FUSION_TIE_BREAK_SCALE = 1e-11
+
+
 class RankFusion(BaseModel):
     """Saved inputs of a rank-fused score (score formula version 2).
 
@@ -169,7 +175,10 @@ class RankFusion(BaseModel):
     channel scores share the better rank); ``None`` means the candidate is not
     on that channel. Each factor is the candidate's adjustment divided by the
     largest one in the pool, so it lies in [0, 1] and is exactly 1.0 when every
-    candidate shares a positive value.
+    candidate shares a positive value. ``recency_boost_factor`` is present only
+    when ``ScoringWeights.rrf_recency_boost`` applied to the question (the raw
+    recency is the trace's ``recency_factor``), and ``tie_break`` exactly when
+    ``ScoringWeights.rrf_tie_break`` is set.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -178,13 +187,30 @@ class RankFusion(BaseModel):
     epistemic_factor: float = Field(ge=0, le=1, allow_inf_nan=False)
     node_type_factor: float = Field(ge=0, le=1, allow_inf_nan=False)
     temporal_factor: float = Field(ge=0, le=1, allow_inf_nan=False)
+    # Omitted when unset, so provenance scored without them keeps its bytes.
+    recency_boost_factor: float | None = Field(
+        default=None, ge=0, le=1, allow_inf_nan=False, exclude_if=lambda value: value is None,
+    )
+    # The candidate's place in the pool by event time, newest first, as a
+    # fraction: 0 for the newest, and equal times share a place.
+    tie_break: float | None = Field(
+        default=None, ge=0, lt=1, allow_inf_nan=False, exclude_if=lambda value: value is None,
+    )
 
     def score(self, k: int) -> float:
         """The fused score, scaled so first place on both channels is 1.0."""
         fused = sum(1 / (k + rank) for rank in (self.semantic_rank, self.lexical_rank)
                     if rank is not None)
-        return round(fused * (k + 1) / 2
-                     * self.epistemic_factor * self.node_type_factor * self.temporal_factor, 10)
+        value = (fused * (k + 1) / 2
+                 * self.epistemic_factor * self.node_type_factor * self.temporal_factor)
+        if self.recency_boost_factor is not None:
+            value *= self.recency_boost_factor
+        score = round(value, 10)
+        if self.tie_break is not None and score > 0:
+            # Only orders scores that are equal at ten decimals; the smallest
+            # positive one, 1e-10, stays positive.
+            score -= self.tie_break * RANK_FUSION_TIE_BREAK_SCALE
+        return score
 
 
 class ScoreProvenance(BaseModel):
@@ -219,6 +245,12 @@ class ScoreProvenance(BaseModel):
             raise ValueError("Score formula version 2 requires rank fusion inputs")
         if self.formula_version == 1 and self.rank_fusion is not None:
             raise ValueError("Rank fusion inputs require score formula version 2")
+        if self.rank_fusion is not None:
+            if (self.rank_fusion.recency_boost_factor is not None
+                    and self.weights.rrf_recency_boost is None):
+                raise ValueError("A rank fusion recency boost factor requires rrf_recency_boost")
+            if (self.rank_fusion.tie_break is not None) != (self.weights.rrf_tie_break is not None):
+                raise ValueError("A rank fusion tie-break is recorded exactly when rrf_tie_break is set")
         values = list(self.trace.model_dump().values())
         # Numeric settings only: node-type boosts follow, and fusion is a label.
         values.extend(

@@ -18,7 +18,9 @@ to prefer newer knowledge updates over older original facts.
 Rank fusion (opt-in, ``ScoringWeights.fusion == "rrf"``, score formula
 version 2): candidates are ranked within the pool on the semantic and lexical
 channels and scored by reciprocal rank fusion, then by epistemic, node-type
-and temporal factors relative to the pool's largest value.
+and temporal factors relative to the pool's largest value. Two opt-in
+settings add the current-state recency factor (``rrf_recency_boost``) and an
+event-time tie-break (``rrf_tie_break``).
 """
 
 from __future__ import annotations
@@ -207,6 +209,13 @@ _RELATIONAL_ANSWER_CLASS_QUERY_RE = re.compile(
 )
 
 
+# On a current-state question the weighted formula raises the recency decay to
+# at least this lambda and measures recency back from the newest candidate,
+# with this multiplier (capped at 1.0) for update wording.
+_CURRENT_STATE_RECENCY_LAMBDA = 0.05
+_UPDATE_RECENCY_MULTIPLIER = 2.0
+
+
 def _has_update_language(content: str) -> bool:
     """Check whether content contains temporal update signal words.
 
@@ -279,6 +288,56 @@ def _is_recent_episodic_query(query_analysis: QueryAnalysis) -> bool:
         True if the query is about recent episodic interactions.
     """
     return bool(_RECENT_EPISODIC_QUERY_RE.search(query_analysis.query))
+
+
+def _memory_time(candidate: RetrievalCandidate) -> datetime:
+    """When a memory happened: its event time, else when it was updated or created."""
+    return (
+        candidate.node.event_time
+        or candidate.node.updated_at
+        or candidate.node.created_at
+    )
+
+
+def _stated_time(candidate: RetrievalCandidate) -> datetime:
+    """When a memory was stated: its event time, else when it was stored.
+
+    Unlike ``_memory_time`` it never moves: lifecycle changes such as an
+    organizer promotion reset ``updated_at``, which would make a promoted older
+    memory look newest. The context formatter dates memories the same way. A
+    time without a zone is read as UTC, as storage records it, so the result
+    never depends on the host.
+    """
+    moment = candidate.node.event_time or candidate.node.created_at
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def _update_recency_multiplier(candidate: RetrievalCandidate) -> float:
+    """Recency multiplier on a current-state question: doubled for update wording."""
+    return _UPDATE_RECENCY_MULTIPLIER if _has_update_language(candidate.node.content) else 1.0
+
+
+def _recency(
+    reference_time: datetime, anchor: datetime, recency_lambda: float, multiplier: float,
+) -> float:
+    """``exp(-lambda * days from reference_time to anchor)`` times ``multiplier``, capped at 1.0."""
+    days = max(0.0, (anchor - reference_time).total_seconds() / 86400.0)
+    return min(1.0, math.exp(-recency_lambda * days) * multiplier)
+
+
+def _current_state_recency(
+    candidate: RetrievalCandidate, newest: datetime, recency_lambda: float,
+) -> float:
+    """Recency on a current-state question under rank fusion, measured from ``newest``.
+
+    It follows the weighted formula with its default weights, which raises
+    lambda to 0.05 only while it shifts weight to recency; rank fusion does
+    not read those weights, so it always raises it. Times are stated times.
+    """
+    return _recency(
+        _stated_time(candidate), newest, max(recency_lambda, _CURRENT_STATE_RECENCY_LAMBDA),
+        _update_recency_multiplier(candidate),
+    )
 
 
 def _compute_effective_scores(node: MemoryNode, now: datetime) -> tuple[float, float]:
@@ -414,12 +473,12 @@ def compute_composite_score(
     # between this candidate and the newest candidate) so that recency is
     # meaningful even when all events are old relative to ``now``.
     reference_time = (
-        node.event_time or node.updated_at or node.created_at
-        if recency_reference is not None else node.updated_at or node.created_at
+        _memory_time(candidate) if recency_reference is not None
+        else node.updated_at or node.created_at
     )
-    recency_anchor = recency_reference or now
-    days_since_update = max(0.0, (recency_anchor - reference_time).total_seconds() / 86400.0)
-    recency = min(1.0, math.exp(-weights.recency_lambda * days_since_update) * recency_multiplier)
+    recency = _recency(
+        reference_time, recency_reference or now, weights.recency_lambda, recency_multiplier,
+    )
 
     epistemic_weight = _epistemic_weight(node, epistemic_weights)
 
@@ -510,11 +569,26 @@ def _temporal_affinity_applies(weights: ScoringWeights, query_analysis: QueryAna
     )
 
 
+def _event_time_tie_breaks(candidates: list[RetrievalCandidate], ranked: list[bool]) -> list[float]:
+    """Each ranked candidate's place by event time, newest first, as a fraction in [0, 1).
+
+    The newest is 0 and equal times share a place, so the fraction orders
+    candidates by time alone. A time without a zone is read as UTC, as storage
+    records it, so the order never depends on the host. Candidates on neither
+    channel score 0 and get 0.
+    """
+    times = [_stated_time(candidate).timestamp() if on_channel else None
+             for candidate, on_channel in zip(candidates, ranked)]
+    count = sum(ranked)
+    return [0.0 if rank is None else (rank - 1) / count for rank in _competition_ranks(times)]
+
+
 def _rank_fused_scores(
     candidates: list[RetrievalCandidate],
     weights: ScoringWeights,
     epistemic_weights: dict[str, float] | None,
     query_analysis: QueryAnalysis | None,
+    current_state: bool = False,
 ) -> list[tuple[ScoreTrace, RankFusion]]:
     """Score formula version 2: reciprocal rank fusion of semantic and lexical ranks.
 
@@ -522,7 +596,12 @@ def _rank_fused_scores(
     it carries that channel's score. Min-max normalization gives the weakest
     lexical hit a score of 0.0, so the path matters. Epistemic, node-type and
     temporal adjustments apply after fusion relative to the pool's largest
-    value. Graph proximity, recency, salience and confidence are not used.
+    value. Graph proximity, salience and confidence are not used.
+
+    On a current-state question, ``rrf_recency_boost`` adds the weighted
+    formula's current-state recency, measured from the newest stated time in
+    the pool, as another pool-relative adjustment. ``rrf_tie_break`` records each
+    candidate's place by event time, which orders equal fused scores.
     """
     semantic = [
         candidate.semantic_score
@@ -552,6 +631,19 @@ def _rank_fused_scores(
     epistemic_factors = _pool_relative(epistemic, ranked)
     node_type_factors = _pool_relative(node_type, ranked)
     temporal_factors = _pool_relative([1.0 + weights.temporal_boost * value for value in affinity], ranked)
+    recency: list[float] | None = None
+    recency_factors: list[float | None] = [None] * len(candidates)
+    if weights.rrf_recency_boost is not None and current_state and candidates:
+        newest = max(_stated_time(candidate) for candidate in candidates)
+        recency = [_current_state_recency(candidate, newest, weights.recency_lambda)
+                   for candidate in candidates]
+        recency_factors = list(_pool_relative(
+            [1.0 + weights.rrf_recency_boost * value for value in recency], ranked,
+        ))
+    tie_breaks: list[float | None] = (
+        list(_event_time_tie_breaks(candidates, ranked)) if weights.rrf_tie_break == "event_time"
+        else [None] * len(candidates)
+    )
 
     scored: list[tuple[ScoreTrace, RankFusion]] = []
     for index, candidate in enumerate(candidates):
@@ -561,11 +653,15 @@ def _rank_fused_scores(
             epistemic_factor=epistemic_factors[index],
             node_type_factor=node_type_factors[index],
             temporal_factor=temporal_factors[index],
+            recency_boost_factor=recency_factors[index],
+            tie_break=tie_breaks[index],
         )
         scored.append((ScoreTrace(
             semantic_similarity=candidate.semantic_score,
             lexical_relevance=candidate.lexical_score,
             graph_proximity=candidate.graph_proximity,
+            # The raw recency, recorded only where the boost applied.
+            recency_factor=recency[index] if recency is not None else 0.0,
             epistemic_weight=epistemic[index],
             path_score=min(candidate.path_count / 3.0, 1.0),
             temporal_affinity=affinity[index],
@@ -608,7 +704,7 @@ def _query_adjusted_weights(
         })
     if is_current_query:
         target_recency = 0.25
-        target_lambda = max(weights.recency_lambda, 0.05)
+        target_lambda = max(weights.recency_lambda, _CURRENT_STATE_RECENCY_LAMBDA)
         recency_increase = target_recency - weights.w_recency
         if recency_increase > 0:
             # Redistribute from semantic and lexical proportionally.
@@ -664,8 +760,14 @@ def validate_rank_fusion_request(
 
     Learned ranking multipliers reweight the weighted sum, which rank fusion
     does not use, so non-neutral multipliers would silently change nothing.
+    The opt-in rank fusion terms would likewise change nothing under the
+    weighted sum; validation drops them, so only a ``model_copy`` gets here.
     """
     if weights.fusion != "rrf":
+        if weights.rank_fusion_opt_ins:
+            raise ValueError(
+                f"{', '.join(weights.rank_fusion_opt_ins)} apply only to fusion='rrf'"
+            )
         return
     if weights.rrf_k is None:
         raise ValueError("fusion='rrf' requires rrf_k")
@@ -700,7 +802,8 @@ def score_and_rank(
     (see ``_rank_fused_scores``). The query-specific weight shifts do not
     apply, non-neutral ranking multipliers are rejected, and the current-update
     multiplier is withheld from candidates below the relevance floor instead
-    of capping their score.
+    of capping their score. On a current-state query, ``rrf_recency_boost``
+    applies the recency factor described above to the fused score.
 
     Args:
         candidates: Candidates to score.
@@ -764,20 +867,14 @@ def score_and_rank(
     # Only used for current-state queries where we need to differentiate
     # old vs new facts. For other queries (temporal, multi_session, etc.),
     # relative recency would hurt by biasing toward newer events.
-    def _ref_time(candidate: RetrievalCandidate) -> datetime:
-        return (
-            candidate.node.event_time
-            or candidate.node.updated_at
-            or candidate.node.created_at
-        )
-
     recency_ref: datetime | None = None
     if is_current_query and candidates:
-        recency_ref = max(_ref_time(candidate) for candidate in candidates)
+        recency_ref = max(_memory_time(candidate) for candidate in candidates)
 
     traces: list[ScoreTrace] = []
     fused = (
-        _rank_fused_scores(candidates, effective_weights, epistemic_weights, query_analysis)
+        _rank_fused_scores(candidates, effective_weights, epistemic_weights, query_analysis,
+                           current_state=is_current_query)
         if rank_fused else None
     )
 
@@ -796,7 +893,9 @@ def score_and_rank(
                 candidate, effective_weights, epistemic_weights, now=now,
                 query_analysis=query_analysis,
                 recency_reference=recency_ref,
-                recency_multiplier=2.0 if is_current_query and _has_update_language(candidate.node.content) else 1.0,
+                recency_multiplier=(
+                    _update_recency_multiplier(candidate) if is_current_query else 1.0
+                ),
             )
             provenance = ScoreProvenance(
                 base_node_id=candidate.node.id,
@@ -806,7 +905,7 @@ def score_and_rank(
         if (
             is_current_query
             and recency_ref is not None
-            and _ref_time(candidate) == recency_ref
+            and _memory_time(candidate) == recency_ref
             and _has_update_language(candidate.node.content)
             and trace.composite_score > 0
             and effective_weights.current_update_multiplier > 1

@@ -1002,7 +1002,12 @@ Fused scores are compressed, so session neighbors
 at the default decay of 0.85 can crowd primary evidence out of the context; set
 `PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` (0.6 on the offline
 evidence gate) to give rank-fused triggers their own decay, which version 17
-receipts record. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+receipts record. Rank fusion ignores recency, so on a current-state question the
+older of two conflicting memories can rank above the newer one; set
+`PRME_SCORING__RRF_RECENCY_BOOST` to apply the weighted formula's current-state
+recency to the fused score, and `PRME_SCORING__RRF_TIE_BREAK=event_time` to
+order equal fused scores newest first instead of by node ID. Receipts with
+either use version 19. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
 their original canonical JSON and feedback checksums and always mean auditable
 rendering. Versions 1–5 also mean context guidance was off. For source blocks or
 bounded dialogue episodes stored under meaningful session IDs, set
