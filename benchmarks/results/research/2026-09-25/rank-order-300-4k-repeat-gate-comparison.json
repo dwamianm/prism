@@ -1,0 +1,1256 @@
+{
+  "kind": "offline-evidence-gate-comparison",
+  "complete": true,
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "interval_note": "Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, so they are narrower than conversation-level intervals.",
+  "before": {
+    "provenance": {
+      "commit": "725ddb34f370cb88c696221bb512c98998000d8f",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.12.0",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time"
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": true,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 300,
+        "reranker_prior_weight": 0.0,
+        "reranker_policy": "score_envelope",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {
+        "enable_reranker": true,
+        "reranker_policy": "score_envelope",
+        "reranker_prior_weight": 0,
+        "reranker_top_k": 300
+      },
+      "retrieval_timing": "after-warm-up-v1",
+      "reranker_runtime": {
+        "sentence-transformers": "5.3.0",
+        "transformers": "5.3.0",
+        "torch": "2.10.0",
+        "device": "mps",
+        "model_revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a"
+      },
+      "archive": {
+        "path": "/Users/dwamianm/Sites/prism/data/gpt54-comparison-v1",
+        "prepared_sha256": {
+          "locomo": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+          "longmemeval": "685284d70d36c2865e0942c4d2a1066d6a4403b2647077dcf7f06228c9cdc742"
+        }
+      },
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      }
+    },
+    "started_at": "2026-09-25T14:04:38.754878+00:00",
+    "load_average": {
+      "start": [
+        4.7890625,
+        4.564453125,
+        4.51220703125
+      ],
+      "end": [
+        5.39013671875,
+        4.201171875,
+        4.0693359375
+      ]
+    }
+  },
+  "after": {
+    "provenance": {
+      "commit": "725ddb34f370cb88c696221bb512c98998000d8f",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.12.0",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time"
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": true,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 300,
+        "reranker_prior_weight": 0.0,
+        "reranker_policy": "score_envelope",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {
+        "enable_reranker": true,
+        "reranker_policy": "score_envelope",
+        "reranker_prior_weight": 0,
+        "reranker_top_k": 300
+      },
+      "retrieval_timing": "after-warm-up-v1",
+      "reranker_runtime": {
+        "sentence-transformers": "5.3.0",
+        "transformers": "5.3.0",
+        "torch": "2.10.0",
+        "device": "mps",
+        "model_revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a"
+      },
+      "archive": {
+        "path": "/Users/dwamianm/Sites/prism/data/gpt54-comparison-v1",
+        "prepared_sha256": {
+          "locomo": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+          "longmemeval": "685284d70d36c2865e0942c4d2a1066d6a4403b2647077dcf7f06228c9cdc742"
+        }
+      },
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      }
+    },
+    "started_at": "2026-09-25T15:29:14.886773+00:00",
+    "load_average": {
+      "start": [
+        3.63037109375,
+        3.8544921875,
+        3.95263671875
+      ],
+      "end": [
+        3.58203125,
+        3.201171875,
+        3.34765625
+      ]
+    }
+  },
+  "projection": {
+    "label": "Planning estimate, not an answer score.",
+    "method": "Each question takes the saved GPT-5.4 run's accuracy on questions whose annotated evidence was all packed, or partly missing: per category for LoCoMo, pooled for LongMemEval-S. Questions that retrieval cannot move (no resolvable annotation, or abstention) keep their category's measured rate.",
+    "calibration": "At the saved run's evidence states the projection reproduces 985/1,540 and 430/500 by construction; LongMemEval-S category values are pooled estimates. The audit's re-pack simulator, using the same LoCoMo rates, reproduced the real packed sets with mean Jaccard 0.83 and projected 63.3% against 64.0% measured (memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md, section 1).",
+    "limits": [
+      "It ignores distractor effects: added or reordered context can change answers without changing evidence coverage.",
+      "It relies on the datasets' evidence annotations, which have gaps; equivalent evidence can exist elsewhere.",
+      "Its conditional accuracies come from one reader and one strict judge (GPT-5.4).",
+      "All 2,040 questions have already been examined, so this is a development gate. Publication claims need fresh or held-out data."
+    ],
+    "conditional_accuracy": {
+      "locomo": {
+        "single-hop": {
+          "all_packed": [
+            600,
+            657
+          ],
+          "missing": [
+            30,
+            183
+          ]
+        },
+        "temporal": {
+          "all_packed": [
+            216,
+            252
+          ],
+          "missing": [
+            10,
+            68
+          ]
+        },
+        "multi-hop": {
+          "all_packed": [
+            37,
+            45
+          ],
+          "missing": [
+            42,
+            233
+          ]
+        },
+        "open-domain": {
+          "all_packed": [
+            22,
+            29
+          ],
+          "missing": [
+            19,
+            60
+          ]
+        }
+      },
+      "longmemeval": {
+        "*": {
+          "all_packed": [
+            385,
+            403
+          ],
+          "missing": [
+            21,
+            67
+          ]
+        }
+      }
+    },
+    "unscored_accuracy": {
+      "locomo": {
+        "multi-hop": [
+          1,
+          4
+        ],
+        "open-domain": [
+          7,
+          7
+        ],
+        "single-hop": [
+          0,
+          1
+        ],
+        "temporal": [
+          1,
+          1
+        ]
+      },
+      "longmemeval": {
+        "knowledge-update": [
+          4,
+          6
+        ],
+        "multi-session": [
+          9,
+          12
+        ],
+        "single-session-user": [
+          6,
+          6
+        ],
+        "temporal-reasoning": [
+          5,
+          6
+        ]
+      }
+    },
+    "measured_accuracy": {
+      "locomo": [
+        985,
+        1540
+      ],
+      "longmemeval": [
+        430,
+        500
+      ]
+    }
+  },
+  "benchmarks": {
+    "locomo": {
+      "all_evidence_packed": {
+        "queries": 1536,
+        "before": 0.8606770833333334,
+        "after": 0.8606770833333334,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 1536
+      },
+      "all_evidence_packed_with_text": {
+        "queries": 1536,
+        "before": 0.8606770833333334,
+        "after": 0.8606770833333334,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 1536
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "before": 0.9072386706231702,
+        "after": 0.9072386706231702,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 1536
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "before": 0.9928385416666666,
+        "after": 0.9928385416666666,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 1536
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "before": 0.7903048017900757,
+        "after": 0.7903048017900757,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 1540
+      },
+      "gained_all_evidence_among_candidates": [],
+      "lost_all_evidence_among_candidates": [],
+      "gained_all_evidence": [],
+      "lost_all_evidence": [],
+      "all_evidence_packed_by_category": {
+        "multi-hop": {
+          "queries": 282,
+          "before": 0.5531914893617021,
+          "after": 0.5531914893617021,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 282
+        },
+        "open-domain": {
+          "queries": 92,
+          "before": 0.5978260869565217,
+          "after": 0.5978260869565217,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 92
+        },
+        "single-hop": {
+          "queries": 841,
+          "before": 0.9595719381688466,
+          "after": 0.9595719381688466,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 841
+        },
+        "temporal": {
+          "queries": 321,
+          "before": 0.9470404984423676,
+          "after": 0.9470404984423676,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 321
+        }
+      },
+      "context": {
+        "before": {
+          "questions": 1540,
+          "contexts_matching_saved": 0,
+          "records_per_context": 86.70194805194805,
+          "memory_text_share": 0.9655789350988133,
+          "records_without_text": 0,
+          "candidates_mean": 555.0467532467533
+        },
+        "after": {
+          "questions": 1540,
+          "contexts_matching_saved": 0,
+          "records_per_context": 86.70194805194805,
+          "memory_text_share": 0.9655789350988133,
+          "records_without_text": 0,
+          "candidates_mean": 555.0467532467533
+        }
+      },
+      "retrieval_seconds": {
+        "before": {
+          "p50": 0.42110504148877226,
+          "p95": 0.5226423002837691
+        },
+        "after": {
+          "p50": 0.4275016665342264,
+          "p95": 0.521532518757158
+        }
+      },
+      "reranking_seconds": {
+        "before": {
+          "p50": 0.27013281249674037,
+          "p95": 0.3277567517798161
+        },
+        "after": {
+          "p50": 0.27440164546715096,
+          "p95": 0.32776012709364294
+        }
+      },
+      "aggregation": {
+        "before": {
+          "questions": 41,
+          "filled_widened_limit": 0,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 41
+          }
+        },
+        "after": {
+          "questions": 41,
+          "filled_widened_limit": 0,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 41
+          }
+        }
+      },
+      "query_scoring": {
+        "temporal_affinity_varies_by_category": {
+          "questions": {
+            "multi-hop": 282,
+            "open-domain": 96,
+            "single-hop": 841,
+            "temporal": 321
+          },
+          "before": {
+            "multi-hop": 0,
+            "open-domain": 0,
+            "single-hop": 0,
+            "temporal": 0
+          },
+          "after": {
+            "multi-hop": 0,
+            "open-domain": 0,
+            "single-hop": 0,
+            "temporal": 0
+          }
+        },
+        "entered_current_state_path": [],
+        "left_current_state_path": [],
+        "current_state_path_unknown": 0
+      },
+      "session_context_records": {
+        "before": {
+          "all": {
+            "reached": 59133,
+            "added": 5,
+            "promoted": 33598,
+            "reached_share": 0.442874154627362,
+            "added_share": 3.7447292935193716e-05,
+            "promoted_share": 0.2516308296073277
+          },
+          "multi-hop": {
+            "reached": 10476,
+            "added": 1,
+            "promoted": 5962,
+            "reached_share": 0.44310971998984855,
+            "added_share": 4.2297605955502916e-05,
+            "promoted_share": 0.2521783267067084
+          },
+          "open-domain": {
+            "reached": 3623,
+            "added": 1,
+            "promoted": 2105,
+            "reached_share": 0.4221134801351509,
+            "added_share": 0.0001165093790050099,
+            "promoted_share": 0.24525224280554583
+          },
+          "single-hop": {
+            "reached": 32668,
+            "added": 2,
+            "promoted": 18463,
+            "reached_share": 0.45626335563345854,
+            "added_share": 2.793335102445565e-05,
+            "promoted_share": 0.25786672998226234
+          },
+          "temporal": {
+            "reached": 12366,
+            "added": 1,
+            "promoted": 7068,
+            "reached_share": 0.41640569754520657,
+            "added_share": 3.367343502710711e-05,
+            "promoted_share": 0.2380038387715931
+          }
+        },
+        "after": {
+          "all": {
+            "reached": 59133,
+            "added": 5,
+            "promoted": 33598,
+            "reached_share": 0.442874154627362,
+            "added_share": 3.7447292935193716e-05,
+            "promoted_share": 0.2516308296073277
+          },
+          "multi-hop": {
+            "reached": 10476,
+            "added": 1,
+            "promoted": 5962,
+            "reached_share": 0.44310971998984855,
+            "added_share": 4.2297605955502916e-05,
+            "promoted_share": 0.2521783267067084
+          },
+          "open-domain": {
+            "reached": 3623,
+            "added": 1,
+            "promoted": 2105,
+            "reached_share": 0.4221134801351509,
+            "added_share": 0.0001165093790050099,
+            "promoted_share": 0.24525224280554583
+          },
+          "single-hop": {
+            "reached": 32668,
+            "added": 2,
+            "promoted": 18463,
+            "reached_share": 0.45626335563345854,
+            "added_share": 2.793335102445565e-05,
+            "promoted_share": 0.25786672998226234
+          },
+          "temporal": {
+            "reached": 12366,
+            "added": 1,
+            "promoted": 7068,
+            "reached_share": 0.41640569754520657,
+            "added_share": 3.367343502710711e-05,
+            "promoted_share": 0.2380038387715931
+          }
+        }
+      }
+    },
+    "longmemeval": {
+      "all_evidence_packed": {
+        "queries": 470,
+        "before": 0.9425531914893617,
+        "after": 0.9425531914893617,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 470
+      },
+      "all_evidence_packed_with_text": {
+        "queries": 470,
+        "before": 0.9425531914893617,
+        "after": 0.9425531914893617,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 470
+      },
+      "evidence_recall": {
+        "queries": 470,
+        "before": 0.9628723404255319,
+        "after": 0.9628723404255319,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 470
+      },
+      "all_evidence_returned": {
+        "queries": 470,
+        "before": 1.0,
+        "after": 1.0,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 470
+      },
+      "projected_accuracy": {
+        "queries": 500,
+        "before": 0.9113521721417726,
+        "after": 0.9113521721417726,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 500
+      },
+      "gained_all_evidence_among_candidates": [],
+      "lost_all_evidence_among_candidates": [],
+      "gained_all_evidence": [],
+      "lost_all_evidence": [],
+      "all_evidence_packed_by_category": {
+        "knowledge-update": {
+          "queries": 72,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 72
+        },
+        "multi-session": {
+          "queries": 121,
+          "before": 0.9090909090909091,
+          "after": 0.9090909090909091,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 121
+        },
+        "single-session-assistant": {
+          "queries": 56,
+          "before": 0.9464285714285714,
+          "after": 0.9464285714285714,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 56
+        },
+        "single-session-preference": {
+          "queries": 30,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 30
+        },
+        "single-session-user": {
+          "queries": 64,
+          "before": 0.984375,
+          "after": 0.984375,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 64
+        },
+        "temporal-reasoning": {
+          "queries": 127,
+          "before": 0.905511811023622,
+          "after": 0.905511811023622,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 127
+        }
+      },
+      "context": {
+        "before": {
+          "questions": 500,
+          "contexts_matching_saved": 0,
+          "records_per_context": 37.796,
+          "memory_text_share": 0.8285241719439551,
+          "records_without_text": 0,
+          "candidates_mean": 492.058
+        },
+        "after": {
+          "questions": 500,
+          "contexts_matching_saved": 0,
+          "records_per_context": 37.796,
+          "memory_text_share": 0.8285241719439551,
+          "records_without_text": 0,
+          "candidates_mean": 492.058
+        }
+      },
+      "retrieval_seconds": {
+        "before": {
+          "p50": 1.736395583517151,
+          "p95": 1.9790844497096258
+        },
+        "after": {
+          "p50": 1.7106168959871866,
+          "p95": 1.8948810329893604
+        }
+      },
+      "reranking_seconds": {
+        "before": {
+          "p50": 1.586391500022728,
+          "p95": 1.7994282562751323
+        },
+        "after": {
+          "p50": 1.5713712919969112,
+          "p95": 1.7381187002960359
+        }
+      },
+      "aggregation": {
+        "before": {
+          "questions": 180,
+          "filled_widened_limit": 0,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 114
+          }
+        },
+        "after": {
+          "questions": 180,
+          "filled_widened_limit": 0,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 114
+          }
+        }
+      },
+      "query_scoring": {
+        "temporal_affinity_varies_by_category": {
+          "questions": {
+            "knowledge-update": 78,
+            "multi-session": 133,
+            "single-session-assistant": 56,
+            "single-session-preference": 30,
+            "single-session-user": 70,
+            "temporal-reasoning": 133
+          },
+          "before": {
+            "knowledge-update": 11,
+            "multi-session": 23,
+            "single-session-assistant": 3,
+            "single-session-preference": 1,
+            "single-session-user": 7,
+            "temporal-reasoning": 37
+          },
+          "after": {
+            "knowledge-update": 11,
+            "multi-session": 23,
+            "single-session-assistant": 3,
+            "single-session-preference": 1,
+            "single-session-user": 7,
+            "temporal-reasoning": 37
+          }
+        },
+        "entered_current_state_path": [],
+        "left_current_state_path": [],
+        "current_state_path_unknown": 0
+      },
+      "session_context_records": {
+        "before": {
+          "all": {
+            "reached": 11634,
+            "added": 0,
+            "promoted": 4525,
+            "reached_share": 0.6156207006032385,
+            "added_share": 0.0,
+            "promoted_share": 0.23944332733622606
+          },
+          "knowledge-update": {
+            "reached": 1812,
+            "added": 0,
+            "promoted": 689,
+            "reached_share": 0.6988044735827227,
+            "added_share": 0.0,
+            "promoted_share": 0.2657153875819514
+          },
+          "multi-session": {
+            "reached": 3212,
+            "added": 0,
+            "promoted": 1301,
+            "reached_share": 0.72423900789177,
+            "added_share": 0.0,
+            "promoted_share": 0.29334836527621194
+          },
+          "single-session-assistant": {
+            "reached": 1244,
+            "added": 0,
+            "promoted": 268,
+            "reached_share": 0.3815950920245399,
+            "added_share": 0.0,
+            "promoted_share": 0.08220858895705521
+          },
+          "single-session-preference": {
+            "reached": 707,
+            "added": 0,
+            "promoted": 260,
+            "reached_share": 0.5240919199406968,
+            "added_share": 0.0,
+            "promoted_share": 0.1927353595255745
+          },
+          "single-session-user": {
+            "reached": 1580,
+            "added": 0,
+            "promoted": 748,
+            "reached_share": 0.7217907720420284,
+            "added_share": 0.0,
+            "promoted_share": 0.3417085427135678
+          },
+          "temporal-reasoning": {
+            "reached": 3079,
+            "added": 0,
+            "promoted": 1259,
+            "reached_share": 0.607058359621451,
+            "added_share": 0.0,
+            "promoted_share": 0.2482255520504732
+          }
+        },
+        "after": {
+          "all": {
+            "reached": 11634,
+            "added": 0,
+            "promoted": 4525,
+            "reached_share": 0.6156207006032385,
+            "added_share": 0.0,
+            "promoted_share": 0.23944332733622606
+          },
+          "knowledge-update": {
+            "reached": 1812,
+            "added": 0,
+            "promoted": 689,
+            "reached_share": 0.6988044735827227,
+            "added_share": 0.0,
+            "promoted_share": 0.2657153875819514
+          },
+          "multi-session": {
+            "reached": 3212,
+            "added": 0,
+            "promoted": 1301,
+            "reached_share": 0.72423900789177,
+            "added_share": 0.0,
+            "promoted_share": 0.29334836527621194
+          },
+          "single-session-assistant": {
+            "reached": 1244,
+            "added": 0,
+            "promoted": 268,
+            "reached_share": 0.3815950920245399,
+            "added_share": 0.0,
+            "promoted_share": 0.08220858895705521
+          },
+          "single-session-preference": {
+            "reached": 707,
+            "added": 0,
+            "promoted": 260,
+            "reached_share": 0.5240919199406968,
+            "added_share": 0.0,
+            "promoted_share": 0.1927353595255745
+          },
+          "single-session-user": {
+            "reached": 1580,
+            "added": 0,
+            "promoted": 748,
+            "reached_share": 0.7217907720420284,
+            "added_share": 0.0,
+            "promoted_share": 0.3417085427135678
+          },
+          "temporal-reasoning": {
+            "reached": 3079,
+            "added": 0,
+            "promoted": 1259,
+            "reached_share": 0.607058359621451,
+            "added_share": 0.0,
+            "promoted_share": 0.2482255520504732
+          }
+        }
+      }
+    }
+  },
+  "inputs": {
+    "before_sha256": "1b11638366ca6ade89c6964b42d5fc1e32762c3421406aafcd7497c90e0fbb04",
+    "after_sha256": "443d1e83560dbce60c8d3104795f071931a7674995ebe2362a7097141f0b9fee"
+  }
+}

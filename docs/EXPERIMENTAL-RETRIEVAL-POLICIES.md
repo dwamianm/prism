@@ -98,7 +98,7 @@ config = PRMEConfig(
   node-type boost, temporal affinity and current-state recency that rank
   fusion multiplies in no longer change the order inside it, only the scores
   it is given. The evidence gate's packs hold raw turns, where the first two do
-  not vary, so it cannot show that effect.
+  not vary, so it cannot show that effect (#200).
 - The model reads the question and the record together up to its input limit
   (512 tokens for the default MiniLM model), so a long record is judged by its
   start.
@@ -109,9 +109,8 @@ config = PRMEConfig(
   Before session expansion, fused scores tie for about 0.1% (LoCoMo) and 0.5% to
   0.8% (LongMemEval-S) of the top 100 to 300 candidates, so this rarely moves
   a record.
-- The model runs in the request, under one lock per engine. On a CPU a prefix
-  of 300 long records takes seconds, so measure latency before using it on a
-  shared server.
+- The model runs in the request, under one lock per engine, and loads on the
+  first request. Measure latency before using it on a shared server (#201).
 - Receipts need no new schema. Each reranked candidate's provenance records
   the weight as its `neural_blend` coefficient, and rank fusion receipts
   (versions 16 to 21) admit the rank assignment. A weight other than 0.3 is
@@ -124,6 +123,15 @@ config = PRMEConfig(
   receipt records the scores, so replaying it never reruns the model. The
   evidence gate records the versions, the device and the model revision of a
   reranker run.
+
+On the offline evidence gate (all annotated evidence packed, against rank
+fusion alone), rank order over the top 100 gains on LoCoMo at 4K (+1.7 points,
+multi-hop +3.9) and the anchored policy also gains on LongMemEval-S there
+(+1.3 points), but at 8K no variant is higher on LongMemEval-S or clearly
+higher on LoCoMo, and the top 300 loses LongMemEval-S evidence at both budgets
+(temporal-reasoning most). Reranking takes about 0.1 s per LoCoMo question and
+0.5 s per LongMemEval-S question at the top 100 on an Apple GPU. The option
+stays off by default; `BENCHMARKS.md` has the full results.
 
 ## Evidence and limits
 

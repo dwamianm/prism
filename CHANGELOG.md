@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add an opt-in cross-encoder rank order for the reranked candidates
+  (`PRMEConfig.reranker_prior_weight`, or `PRME_RERANKER_PRIOR_WEIGHT`; issue
+  #88). The reranker always ordered its prefix by 0.7 model score plus 0.3 of
+  the candidate's own score. At 0.0 the model's score alone orders it, and with
+  `reranker_policy="score_envelope"` or `"anchored_score_envelope"` the prefix
+  keeps its rank-fused scores in that order. The default, 0.3, changes
+  nothing. A weight other than 0.3 needs an envelope policy (configuration
+  with `"legacy"` is refused) and is recorded in the receipt's execution
+  parameters and the reranker's feature identity; at 0.3 neither records it,
+  so receipts keep their bytes, and no new receipt schema is needed. The
+  offline evidence gate now refuses reranker settings without
+  `enable_reranker`, times the reranker per question (p50 and p95) and records
+  the model runtime of a reranker run. On the gate, rank order over the top
+  100 packed all evidence for more LoCoMo questions at 4K (+1.7 points,
+  multi-hop +3.9) and, with the anchored policy, more LongMemEval-S questions
+  (+1.3 points), but no variant was higher on LongMemEval-S at 8K, and the top
+  300 lost LongMemEval-S evidence at both budgets. The reranker stays off
+  until an answer comparison supports it.
 - Add opt-in session context packing (`PackingConfig.session_context_packing`,
   or `PRME_PACKING__SESSION_CONTEXT_PACKING`; issue #86). Session expansion
   gave a turn it added a single path and never counted its path on a turn
