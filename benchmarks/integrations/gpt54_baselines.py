@@ -3951,8 +3951,7 @@ def _tally_ollama(usage: dict, response: dict) -> None:
 def _seconds_summary(values: list[float | None]) -> dict:
     if any(value is None for value in values):
         return {"p50": None, "p95": None, "note": "The full-context arm has no retrieval step."}
-    return {"p50": statistics.median(values), "p95": statistics.quantiles(values, n=20, method="inclusive")[-1]
-            if len(values) > 1 else values[0],
+    return {**gate._latency(values),
             "note": "Time to rank and pack each context during prepare; not model-response latency."}
 
 

@@ -10,9 +10,14 @@ gate replays the public ``retrieve()`` over copies of the saved 2026-09-23
 LoCoMo and LongMemEval-S memory packs and measures the context the product
 renderer actually produced: records, memory text, annotated evidence and its
 rank, and the packed records that session expansion brought in. Like the saved
-run's diagnostics, it counts evidence packed in any
-representation, and it also reports evidence packed with its text. It makes no
-reader, judge or paid API calls. Its projected accuracy is a planning estimate,
+run's diagnostics, it counts evidence packed in any representation, and it
+also reports evidence packed with its text. It also records the candidates
+behind each context (issue #87): how many ``retrieve()`` returned out of the
+user's stored turns, whether all annotated evidence was among them, where each
+evidence turn ranks in the vector and BM25 indexes' own rankings, which
+``vector_k`` and ``lexical_k`` cut, and how long retrieval took after one
+warm-up per engine. It makes no reader, judge or paid API calls. Its projected
+accuracy is a planning estimate,
 not an answer score. ``gate --plain`` measures a plain RAG reference over the
 same stored turns instead of ``retrieve()``, and
 ``benchmarks.integrations.gpt54_baselines`` prepares those contexts for the
@@ -290,14 +295,22 @@ GATE_FIXED_SETTINGS = frozenset({
 _PACK_IDENTITY_EXCLUDED = frozenset({"capture-manifest.json"})
 # Candidate channels whose own ranking the gate records for each question, and
 # the depths at which it reports their recall (issue #87). ``vector_k`` and
-# ``lexical_k`` cut these rankings; "either" is the union of the two cuts.
+# ``lexical_k`` cut these rankings; GATE_EITHER is the union of two equal cuts.
+# The depths are fixed report columns: 500 was the default for both limits
+# when they were chosen, and the columns do not follow later defaults.
 GATE_CHANNELS = ("vector", "lexical")
-CHANNEL_RECALL_DEPTHS = (25, 50, 100, 150, 500)
+GATE_EITHER = "either"
+GATE_RECALL_DEPTHS = (25, 50, 100, 150, 500)
+# The candidate limits that count and list questions multiply by
+# aggregation_k_multiplier, as pipeline paths name them. The keyword scan's
+# per-term limit (LEXICAL_AGG) and the pinned limit (PINNED) stay fixed.
+GATE_WIDENED_PATHS = frozenset({"GRAPH", "VECTOR", "LEXICAL"})
 # Each engine searches this once before its first timed question, so that
-# ``retrieval_seconds`` leaves out the one-time model load. Reports record it
-# as their timing, and only reports timed the same way compare latency.
+# ``retrieval_seconds`` leaves out the one-time model loads. Reports record the
+# timing, and only reports timed the same way compare latency; change the
+# version whenever the warm-up changes.
 GATE_WARM_UP_QUERY = "offline evidence gate warm-up"
-GATE_RETRIEVAL_TIMING = "after-warm-up"
+GATE_RETRIEVAL_TIMING = "after-warm-up-v1"
 
 
 @dataclass(frozen=True)
@@ -578,7 +591,7 @@ def _first_ranks(benchmark: str, ranked_metadata: Iterable[dict | None]) -> dict
 
 def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens: int, packed_sources: set[str],
               text_sources: set[str], first_rank: dict[str, int], records: int, records_without_text: int,
-              representations: dict[str, int], candidates: int, seconds: float, stored: int,
+              representations: dict[str, int], candidates: int, seconds: float, stored: int | None,
               channel_ranks: dict[str, dict[str, int | None]] | None) -> dict:
     """One question's measurements; PRME and plain replays share it so their reports compare."""
     evidence = None
@@ -598,21 +611,24 @@ def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens:
         "context_sha256": context_sha256, "context_matches_saved": context_sha256 == case.saved_context_sha256,
         "context_tokens": context_tokens, "memory_text_tokens": text_tokens, "records": records,
         "records_without_text": records_without_text, "representations": representations,
-        "candidates": candidates, "stored_records": stored, "retrieval_seconds": seconds, "evidence": evidence,
+        "candidates": candidates, "stored_turns": stored, "retrieval_seconds": seconds, "evidence": evidence,
         "projected_correct": projected_correct(case.benchmark, case.category, evidence),
     }
 
 
-async def _channel_ranks(engine, case: GateCase, turns: dict) -> dict[str, dict[str, int | None]] | None:
+async def _channel_ranks(engine, case: GateCase, turns: dict | None) -> dict[str, dict[str, int | None]] | None:
     """Where each resolved evidence turn ranks in each candidate channel's own ranking (issue #87).
 
     Each channel ranks every stored turn it matches by the question alone, the
-    ranking that ``vector_k`` and ``lexical_k`` cut. The rest of retrieval
-    (entity and aggregation lexical scans, session context, filters, fusion)
-    does not change it, so it is the same for every configuration of one
-    embedding model. None for a question without an evidence annotation.
+    ranking that ``vector_k`` and ``lexical_k`` cut (count and list questions
+    cut it at the widened limit). The rest of retrieval (entity and
+    aggregation lexical scans, graph, pinned records, session context,
+    filters, fusion) does not change it, so it is the same for every setting
+    with one embedding model and exact vector search (``vector_exact_search``,
+    the default). None for a question without an evidence annotation, or when
+    the pack holds records other than turns (``turns`` is None).
     """
-    if case.evidence is None:
+    if case.evidence is None or turns is None:
         return None
     rankings = await _index_rankings(engine, case.question, case.user_id, turns, GATE_CHANNELS)
     wanted = sorted(case.evidence.difference(case.unresolved))
@@ -623,17 +639,33 @@ async def _channel_ranks(engine, case: GateCase, turns: dict) -> dict[str, dict[
     return ranks
 
 
-def _aggregation_observations(metadata) -> dict | None:
-    """Aggregation coverage of one retrieval: None unless the question was read as a count or list (issue #87).
+def _channel_limits(packing: PackingConfig, *, widened: bool) -> dict[str, int]:
+    """How deep retrieval cut each channel's ranking for this question (issue #87).
 
-    Aggregation questions widen every candidate limit by
-    ``aggregation_k_multiplier`` up to ``aggregation_k_max``, and
-    ``candidate_limit_paths`` names the channels that still filled theirs.
+    Count and list questions multiply both limits by
+    ``aggregation_k_multiplier``, up to ``aggregation_k_max``, as the pipeline
+    does before candidate generation (``RetrievalPipeline.retrieve``).
+    """
+    limits = {"vector": packing.vector_k, "lexical": packing.lexical_k}
+    if widened:
+        limits = {channel: min(int(limit * packing.aggregation_k_multiplier), packing.aggregation_k_max)
+                  for channel, limit in limits.items()}
+    return limits
+
+
+def _aggregation_observations(metadata) -> dict | None:
+    """The candidate paths at their limit, for a question read as a count or list; None otherwise (issue #87).
+
+    Such questions multiply ``vector_k``, ``lexical_k`` and
+    ``graph_max_candidates`` by ``aggregation_k_multiplier``, up to
+    ``aggregation_k_max`` (GATE_WIDENED_PATHS). ``candidate_limit_paths`` also
+    names the keyword scan (LEXICAL_AGG) and pinned records (PINNED) when they
+    reach their fixed limits.
     """
     coverage = metadata.aggregation_coverage
     if coverage is None:
         return None
-    return {"status": coverage.status, "candidate_limit_paths": list(coverage.candidate_limit_paths)}
+    return {"candidate_limit_paths": list(coverage.candidate_limit_paths)}
 
 
 def _query_scoring_observations(receipt) -> dict:
@@ -680,7 +712,22 @@ def _session_context_observations(packed: Iterable) -> dict[str, int]:
     return counts
 
 
-async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_dir: Path | None) -> dict:
+async def _cached_turns(engine, user_id: str, cache: dict) -> dict | None:
+    """The user's stored turns, loaded once per engine: replays add receipts, never records.
+
+    None when the user's records are not all turns, as in a pack built with
+    extraction; the channel ranks are then not recorded.
+    """
+    if user_id not in cache:
+        try:
+            cache[user_id] = await _stored_turns(engine, user_id)
+        except NotAllTurnsError:
+            cache[user_id] = None
+    return cache[user_id]
+
+
+async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_dir: Path | None,
+                       turns_cache: dict) -> dict:
     started = time.perf_counter()
     response = await engine.retrieve(case.question, user_id=case.user_id, reference_time=case.reference_time)
     seconds = time.perf_counter() - started
@@ -705,21 +752,22 @@ async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_d
             packed_sources.add(source)
             if has_text[candidate.node.id]:
                 text_sources.add(source)
-    # Measured after the timed retrieval, and read-only, so neither its time
-    # nor the next question's context depends on it.
-    turns = await _stored_turns(engine, case.user_id)
+    # Read-only and after the timed retrieval, so it changes no context and
+    # not this question's time. The index searches can warm caches for the next
+    # question, the same way in every run.
+    turns = await _cached_turns(engine, case.user_id, turns_cache)
     row = _gate_row(
         case, context=context, context_tokens=response.bundle.tokens_used, text_tokens=text_tokens,
         packed_sources=packed_sources, text_sources=text_sources,
         first_rank=_first_ranks(case.benchmark, (result.node.metadata for result in response.results)),
         records=len(packed), records_without_text=sum(not has_text[candidate.node.id] for candidate in packed),
         representations=dict(Counter(candidate.representation.value for candidate in packed)),
-        candidates=len(response.results), seconds=seconds, stored=len(turns),
+        candidates=len(response.results), seconds=seconds, stored=None if turns is None else len(turns),
         channel_ranks=await _channel_ranks(engine, case, turns))
     row["query_scoring"] = _query_scoring_observations(receipt)
     row["session_context"] = _session_context_observations(packed)
-    row["candidates_generated"] = dict(response.metadata.candidates_generated)
     row["aggregation"] = _aggregation_observations(response.metadata)
+    row["channel_limits"] = _channel_limits(packing, widened=row["aggregation"] is not None)
     if capture_dir is not None:
         row["capture_sha256"] = _write_capture(capture_dir, case, context,
                                                {"receipt": receipt.model_dump(mode="json")})
@@ -751,13 +799,17 @@ def context_limit(packing: PackingConfig) -> int:
     return max(0, packing.token_budget - packing.overhead_tokens)
 
 
+class NotAllTurnsError(ValueError):
+    """A user's stored records are not all turns, so an index ranking of them is not a ranking of turns."""
+
+
 async def _stored_turns(engine, user_id: str) -> dict:
-    """The user's stored records by node ID; in a gate pack each one is a turn, and anything else is an error."""
+    """The user's stored records by node ID; in a saved gate pack each one is a turn."""
     stored = await engine.count_nodes(user_id=user_id)
     turns = {str(node.id): node for node in await engine.query_nodes(
         user_id=user_id, node_type=NodeType.FACT, limit=max(stored, 1))}
     if len(turns) != stored:
-        raise ValueError(f"User {user_id} has {stored} stored records, of which {len(turns)} are turns")
+        raise NotAllTurnsError(f"User {user_id} has {stored} stored records, of which {len(turns)} are turns")
     return turns
 
 
@@ -771,6 +823,8 @@ async def _index_rankings(engine, question: str, user_id: str, turns: dict,
     """
     rankings: dict[str, list[str]] = {}
     for channel in channels:
+        if channel not in GATE_CHANNELS:
+            raise ValueError(f"Unknown candidate channel: {channel}")
         if not turns:
             rankings[channel] = []
         elif channel == "vector":
@@ -784,8 +838,6 @@ async def _index_rankings(engine, question: str, user_id: str, turns: dict,
             rankings[channel] = list(dict.fromkeys(hit["node_id"] for hit in hits))
             if not set(rankings[channel]) <= turns.keys():
                 raise ValueError("The BM25 index returned records that are not stored turns")
-        else:
-            raise ValueError(f"Unknown candidate channel: {channel}")
     return rankings
 
 
@@ -839,7 +891,7 @@ def pack_records(records: Sequence[str], limit: int, tokenizer: str) -> tuple[st
 
 
 async def _replay_plain_case(engine, packing: PackingConfig, case: GateCase, method: str,
-                             capture_dir: Path | None) -> dict:
+                             capture_dir: Path | None, turns_cache: dict) -> dict:
     """The same measurements for a plain RAG baseline: one index's ranking of the stored turns, plain lines."""
     started = time.perf_counter()
     ranked = await plain_ranking(engine, method, case.question, case.user_id)
@@ -849,14 +901,14 @@ async def _replay_plain_case(engine, packing: PackingConfig, case: GateCase, met
     packed = [ranked[index] for index in indexes]
     sources = {source for node in packed
                if (source := _source_key(case.benchmark, node.metadata or {})) is not None}
-    turns = await _stored_turns(engine, case.user_id)
+    turns = await _cached_turns(engine, case.user_id, turns_cache)
     row = _gate_row(
         case, context=context, context_tokens=tokens,
         text_tokens=sum(count_tokens(node.content, packing.tokenizer) for node in packed),
         packed_sources=sources, text_sources=sources,
         first_rank=_first_ranks(case.benchmark, (node.metadata for node in ranked)),
         records=len(packed), records_without_text=0, representations={"plain": len(packed)},
-        candidates=len(ranked), seconds=seconds, stored=len(turns),
+        candidates=len(ranked), seconds=seconds, stored=None if turns is None else len(turns),
         channel_ranks=await _channel_ranks(engine, case, turns))
     if capture_dir is not None:
         row["capture_sha256"] = _write_capture(capture_dir, case, context, {"plain": {
@@ -873,15 +925,21 @@ def _verify_copy(copy: Path, expected_sha256: str) -> None:
 
 
 async def _warm_up(engine, user_id: str) -> None:
-    """Load what an engine loads once, before the first timed question (issue #87).
+    """Load the query embedding model and open both indexes before the first timed question (issue #87).
 
-    The query embedding model loads on the first search, and LongMemEval-S
-    opens a new engine for every question, so without this each of its times
-    would include the load. Both searches are read-only and use a fixed text
-    that is never a question.
+    The model loads on the first search, and LongMemEval-S opens a new engine
+    for every question, so without this each of its times would include the
+    load. With ``enable_reranker`` set, the cross-encoder, which also loads on
+    first use, scores one fixed pair. All of it is read-only and uses a fixed
+    text that is never a question. Other first-query costs stay in the time: a
+    new engine's cold database reads (every LongMemEval-S question, the first
+    LoCoMo question of each conversation) and the process's first date parsing.
     """
     await engine._vector_index.search(GATE_WARM_UP_QUERY, user_id, k=1)
     await engine._lexical_index.search(GATE_WARM_UP_QUERY, user_id, limit=1)
+    reranker = engine._retrieval_pipeline._reranker
+    if reranker is not None:
+        await asyncio.to_thread(reranker._predict_sync, [(GATE_WARM_UP_QUERY, GATE_WARM_UP_QUERY)])
 
 
 async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict | None = None,
@@ -913,11 +971,13 @@ async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict |
             config = gate_config(copy, overrides)
             async with MemoryEngine.open(config) as engine:
                 await _warm_up(engine, group[0].user_id)
+                turns_cache: dict = {}
                 for case in group:
                     if plain is None:
-                        rows.append(await _replay_case(engine, config.packing, case, capture_dir))
+                        rows.append(await _replay_case(engine, config.packing, case, capture_dir, turns_cache))
                     else:
-                        rows.append(await _replay_plain_case(engine, config.packing, case, plain, capture_dir))
+                        rows.append(await _replay_plain_case(engine, config.packing, case, plain, capture_dir,
+                                                             turns_cache))
         finally:
             shutil.rmtree(copy, ignore_errors=True)
         if progress is not None:
@@ -930,9 +990,8 @@ def _share(numerator: float, denominator: float) -> float | None:
 
 
 def _all_within(evidence: dict, limit: float) -> bool:
-    """Every annotated turn resolves and ranks inside ``limit``."""
-    return not evidence["unresolved"] and all(rank is not None and rank <= limit
-                                              for rank in evidence["ranks"].values())
+    """Every annotated turn resolves and ranks inside ``limit`` of the returned candidates."""
+    return _all_ranked_within(evidence["unresolved"], evidence["ranks"].values(), limit)
 
 
 def _session_context_summary(rows: list[dict]) -> dict | None:
@@ -955,52 +1014,87 @@ def _latency(seconds: list[float]) -> dict:
             "p95": statistics.quantiles(seconds, n=20, method="inclusive")[-1] if len(seconds) > 1 else seconds[0]}
 
 
-def _channel_rank(evidence: dict, channel: str, key: str) -> int | None:
-    """A turn's rank in one channel, or its better rank in the two for "either"."""
-    ranks = [evidence["channel_ranks"][name][key] for name in (GATE_CHANNELS if channel == "either" else (channel,))]
+def _rank_in_channel(evidence: dict, channel: str, key: str) -> int | None:
+    """A turn's rank in one channel, or its better rank of the two for GATE_EITHER."""
+    ranks = [evidence["channel_ranks"][name][key]
+             for name in (GATE_CHANNELS if channel == GATE_EITHER else (channel,))]
     return min((rank for rank in ranks if rank is not None), default=None)
+
+
+def _all_ranked_within(unresolved: list, ranks: Iterable[int | None], limit: float) -> bool:
+    """Every annotated turn resolves and ranks inside ``limit``."""
+    return not unresolved and all(rank is not None and rank <= limit for rank in ranks)
 
 
 def _channel_recall(annotated: list[dict]) -> dict | None:
     """Recall at each depth of each candidate channel's own ranking (issue #87).
 
-    For each channel and depth: the share of resolved annotated evidence turns
-    ranked inside it, and the share of annotated questions with all their
-    evidence inside it. "all" is the channel's whole ranking: every stored turn
-    for vector, only turns that share a term with the question for lexical.
-    None when a report predates these ranks.
+    For each channel and depth: the share of resolved evidence turns, pooled
+    over questions, ranked inside it, and the share of annotated questions with
+    all their evidence inside it. "all" is the channel's whole ranking: every
+    stored turn for vector, only turns that share a term with the question for
+    lexical. None when a report predates these ranks, a pack held records other
+    than turns, or there is no annotated question.
     """
     if not annotated or any(evidence.get("channel_ranks") is None for evidence in annotated):
         return None
-    depths = [*map(str, CHANNEL_RECALL_DEPTHS), "all"]
+    depths = {**{str(depth): depth for depth in GATE_RECALL_DEPTHS}, "all": math.inf}
     recall = {}
-    for channel in (*GATE_CHANNELS, "either"):
-        by_question = [[_channel_rank(evidence, channel, key) for key in evidence["ranks"]] for evidence in annotated]
-        turns = [rank for ranks in by_question for rank in ranks]
-        recall[channel] = {}
-        for depth in depths:
-            limit = math.inf if depth == "all" else int(depth)
+    for channel in (*GATE_CHANNELS, GATE_EITHER):
+        by_question = [[_rank_in_channel(evidence, channel, key) for key in evidence["ranks"]]
+                       for evidence in annotated]
+        turn_ranks = [rank for ranks in by_question for rank in ranks]
+        recall[channel] = {label: {
+            "evidence_turns": _share(sum(rank is not None and rank <= limit for rank in turn_ranks), len(turn_ranks)),
+            "all_evidence": _share(sum(_all_ranked_within(evidence["unresolved"], ranks, limit)
+                                       for evidence, ranks in zip(annotated, by_question)), len(annotated)),
+        } for label, limit in depths.items()}
+    return recall
 
-            def inside(rank: int | None) -> bool:
-                return rank is not None and rank <= limit
 
-            recall[channel][depth] = {
-                "evidence_turns": _share(sum(map(inside, turns)), len(turns)),
-                "all_evidence": _share(sum(not evidence["unresolved"] and all(map(inside, ranks))
-                                           for evidence, ranks in zip(annotated, by_question)), len(annotated)),
-            }
+def _inside_limits(evidence: dict, limits: dict[str, int], channel: str, key: str) -> bool:
+    """Whether a turn is inside one channel's cut, or inside either cut for GATE_EITHER."""
+    return any((rank := evidence["channel_ranks"][name][key]) is not None and rank <= limits[name]
+               for name in (GATE_CHANNELS if channel == GATE_EITHER else (channel,)))
+
+
+def _recall_at_run_limits(rows: list[dict]) -> dict | None:
+    """Channel recall at the depths this run's retrieval cut, per question (issue #87).
+
+    Unlike the fixed depths, each question counts at its own limits, widened
+    for count and list questions. None for plain baselines, earlier reports
+    and packs whose records are not all turns.
+    """
+    annotated = [row for row in rows if row["evidence"] is not None]
+    if (not annotated or any(row.get("channel_limits") is None or row["evidence"].get("channel_ranks") is None
+                             for row in annotated)):
+        return None
+    turns = sum(len(row["evidence"]["ranks"]) for row in annotated)
+    recall = {}
+    for channel in (*GATE_CHANNELS, GATE_EITHER):
+        inside = [[_inside_limits(row["evidence"], row["channel_limits"], channel, key)
+                   for key in row["evidence"]["ranks"]] for row in annotated]
+        recall[channel] = {
+            "evidence_turns": _share(sum(map(sum, inside)), turns),
+            "all_evidence": _share(sum(not row["evidence"]["unresolved"] and all(flags)
+                                       for row, flags in zip(annotated, inside)), len(annotated)),
+        }
     return recall
 
 
 def _aggregation_summary(rows: list[dict]) -> dict | None:
-    """Aggregation questions, and those whose widened limit a channel still filled; None for earlier reports."""
+    """Count and list questions, and those that still filled a widened limit (issue #87).
+
+    ``paths_at_limit`` counts questions by every path at its limit, the fixed
+    LEXICAL_AGG and PINNED limits included. None for plain baselines and
+    earlier reports.
+    """
     if any("aggregation" not in row for row in rows):
         return None
-    aggregation = [row["aggregation"] for row in rows if row["aggregation"] is not None]
+    aggregation = [row["aggregation"]["candidate_limit_paths"] for row in rows if row["aggregation"] is not None]
     return {"questions": len(aggregation),
-            "candidate_limited": sum(bool(item["candidate_limit_paths"]) for item in aggregation),
-            "limited_paths": dict(sorted(Counter(path for item in aggregation
-                                                 for path in item["candidate_limit_paths"]).items()))}
+            "filled_widened_limit": sum(bool(GATE_WIDENED_PATHS.intersection(paths)) for paths in aggregation),
+            "paths_at_limit": dict(sorted(Counter(path for paths in aggregation for path in paths).items()))}
 
 
 def summarize_gate(rows: list[dict]) -> dict:
@@ -1018,15 +1112,13 @@ def summarize_gate(rows: list[dict]) -> dict:
     representations = Counter()
     for row in rows:
         representations.update(row["representations"])
-    stored = [row.get("stored_records") for row in rows]
+    # Candidates per stored turn, over questions whose user has stored turns.
+    shares = [row["candidates"] / row["stored_turns"] for row in rows if row.get("stored_turns")]
     return {
         "questions": len(rows),
         "contexts_matching_saved": sum(row["context_matches_saved"] for row in rows),
         "candidates_mean": statistics.fmean(row["candidates"] for row in rows),
-        "candidates_max": max(row["candidates"] for row in rows),
-        # Candidates per stored turn; session context can add turns no channel returned.
-        "candidate_share_mean": None if None in stored or 0 in stored else statistics.fmean(
-            row["candidates"] / row["stored_records"] for row in rows),
+        "candidate_share_mean": statistics.fmean(shares) if shares else None,
         "retrieval_seconds": _latency([row["retrieval_seconds"] for row in rows]),
         "records_per_context": statistics.fmean(row["records"] for row in rows),
         "context_tokens_mean": context_tokens / len(rows),
@@ -1042,6 +1134,7 @@ def summarize_gate(rows: list[dict]) -> dict:
         "all_evidence_returned": all_returned,
         "all_evidence_returned_share": _share(all_returned, len(annotated)),
         "channel_recall": _channel_recall(annotated),
+        "channel_recall_at_run_limits": _recall_at_run_limits(rows),
         "aggregation": _aggregation_summary(rows),
         "evidence_ranks": {
             "annotated_turns": len(ranks), "not_returned": len(ranks) - len(returned),
@@ -1096,7 +1189,7 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     if run_provenance["commit"] is None:
         raise ValueError("Run the gate from a git checkout so the report names its commit")
     loaders = {"locomo": _locomo_cases, "longmemeval": _longmemeval_cases}
-    started_at, started = gpt54.utc(), time.perf_counter()
+    started_at, started, load_at_start = gpt54.utc(), time.perf_counter(), os.getloadavg()
     cases = [case for name in selected for case in loaders[name](archive)]
     if capture_dir is not None:
         capture_dir.mkdir(parents=True, exist_ok=False)
@@ -1111,7 +1204,10 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
                     "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}},
         "datasets": {name: datasets[name] for name in selected},
     })
-    report.update(started_at=started_at, seconds=time.perf_counter() - started)
+    # The host's 1, 5 and 15 minute load averages, so a latency comparison can
+    # show whether either run shared the machine (issue #87).
+    report.update(started_at=started_at, seconds=time.perf_counter() - started,
+                  load_average={"start": list(load_at_start), "end": list(os.getloadavg())})
     return report
 
 
@@ -1210,15 +1306,24 @@ def _session_context_comparison(before: dict, after: dict, name: str) -> dict | 
 
 
 def _compared_latency(before: dict, after: dict, old: dict, new: dict, keys: list) -> dict | None:
-    """Retrieval p50 and p95 on each side, or None unless both reports timed retrieval after a warm-up.
+    """Retrieval p50 and p95 on each side (issue #87), or None when the two times measure different things.
 
-    Latency depends on the machine and its load, so compare only reports run
-    on one machine, one at a time.
+    Both reports must be timed after a warm-up, and both must time the same
+    work: ``retrieve()``, or the same plain baseline's ranking and packing.
+    Latency also depends on the machine and its load, so compare only reports
+    run on one machine, one at a time.
     """
-    if any(report["provenance"].get("retrieval_timing") != GATE_RETRIEVAL_TIMING for report in (before, after)):
+    if (any(report["provenance"].get("retrieval_timing") != GATE_RETRIEVAL_TIMING for report in (before, after))
+            or before["provenance"].get("plain") != after["provenance"].get("plain")):
         return None
     return {side: _latency([rows[key]["retrieval_seconds"] for key in keys])
             for side, rows in (("before", old), ("after", new))}
+
+
+def _compared_aggregation(old: dict, new: dict, keys: list) -> dict | None:
+    """Count and list questions on each side, or None when either report does not record them (issue #87)."""
+    sides = {side: _aggregation_summary([rows[key] for key in keys]) for side, rows in (("before", old), ("after", new))}
+    return None if None in sides.values() else sides
 
 
 def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
@@ -1249,6 +1354,10 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
             "evidence_recall": paired(annotated, _evidence_recall),
             "all_evidence_returned": paired(annotated, _all_returned),
             "projected_accuracy": paired(keys, _projected),
+            "gained_all_evidence_among_candidates": [key[1] for key in annotated
+                                                     if not _all_returned(old[key]) and _all_returned(new[key])],
+            "lost_all_evidence_among_candidates": [key[1] for key in annotated
+                                                   if _all_returned(old[key]) and not _all_returned(new[key])],
             "gained_all_evidence": [key[1] for key in annotated
                                     if not _all_packed(old[key]) and _all_packed(new[key])],
             "lost_all_evidence": [key[1] for key in annotated if _all_packed(old[key]) and not _all_packed(new[key])],
@@ -1260,8 +1369,7 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
                                              "memory_text_share", "records_without_text", "candidates_mean")}
                         for side, report in (("before", before), ("after", after))},
             "retrieval_seconds": _compared_latency(before, after, old, new, keys),
-            "aggregation": {side: _aggregation_summary([rows[key] for key in keys])
-                            for side, rows in (("before", old), ("after", new))},
+            "aggregation": _compared_aggregation(old, new, keys),
             "query_scoring": _query_scoring(old, new, keys),
             "session_context_records": _session_context_comparison(before, after, name),
         }
@@ -1269,8 +1377,10 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
         "kind": f"{GATE_KIND}-comparison", "complete": True, "bootstrap_samples": samples, "bootstrap_seed": 42,
         "interval_note": ("Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, "
                           "so they are narrower than conversation-level intervals."),
-        "before": {"provenance": before["provenance"], "started_at": before.get("started_at")},
-        "after": {"provenance": after["provenance"], "started_at": after.get("started_at")},
+        "before": {"provenance": before["provenance"], "started_at": before.get("started_at"),
+                   "load_average": before.get("load_average")},
+        "after": {"provenance": after["provenance"], "started_at": after.get("started_at"),
+                  "load_average": after.get("load_average")},
         "projection": before["projection"], "benchmarks": benchmarks,
     }
 
@@ -1341,12 +1451,13 @@ def gate_markdown(report: dict) -> str:
             f"| {_rank(summary['evidence_ranks']['median'])} | {_pct(summary['projected_accuracy'])} |")
     for name, bench in report["benchmarks"].items():
         lines += ["", f"## {name}", "", _baseline_line(report["baseline"][name], bench), "",
-                  "| Category | Questions | All evidence among candidates | All evidence packed "
+                  "| Category | Questions | All evidence among the candidates | All evidence packed "
                   "| Packed with memory text | Median rank | Evidence in top 25 | Projected accuracy |",
                   "|---|---:|---:|---:|---:|---:|---:|---:|"]
         for category, summary in bench["categories"].items():
             lines.append(
-                f"| {category} | {summary['questions']} | {_pct(summary['all_evidence_returned_share'])} "
+                f"| {category} | {summary['questions']} | {summary['all_evidence_returned']}/"
+                f"{summary['annotated_questions']} ({_pct(summary['all_evidence_returned_share'])}) "
                 f"| {summary['all_evidence_packed']}/"
                 f"{summary['annotated_questions']} ({_pct(summary['all_evidence_packed_share'])}) "
                 f"| {_pct(summary['all_evidence_packed_with_text_share'])} "
@@ -1372,34 +1483,69 @@ def _seconds(latency: dict | None) -> str:
 
 def _candidates(summary: dict) -> str:
     share = summary.get("candidate_share_mean")
-    return f"{summary['candidates_mean']:.1f}" + ("" if share is None else f" ({share:.0%} of stored)")
+    return f"{summary['candidates_mean']:.1f}" + ("" if share is None else f" ({_pct(share)} of stored turns)")
 
 
 def _aggregation_line(aggregation: dict) -> str:
-    paths = ", ".join(f"{path} {count}" for path, count in aggregation["limited_paths"].items())
-    return (f"{aggregation['questions']} questions read as counts or lists, which widen the candidate limits; "
-            f"{aggregation['candidate_limited']} still filled a limit" + (f" ({paths})." if paths else "."))
+    paths = ", ".join(f"{path} {count}" for path, count in aggregation["paths_at_limit"].items())
+    return (f"{aggregation['questions']} questions read as counts or lists, whose vector, lexical and graph limits "
+            f"are multiplied by `aggregation_k_multiplier` up to `aggregation_k_max`; "
+            f"{aggregation['filled_widened_limit']} still filled a widened limit. Questions by path at its limit, "
+            f"including the fixed keyword-scan (LEXICAL_AGG) and pinned limits: {paths or 'none'}.")
 
 
 def _candidate_markdown(summary: dict) -> list[str]:
     """Candidate recall per channel and the aggregation widening for one benchmark (issue #87)."""
     lines = []
     recall = summary.get("channel_recall")
+    at_limits = summary.get("channel_recall_at_run_limits")
     if recall is not None:
-        depths = list(recall["vector"])
-        lines += ["", "Candidate recall per channel: the share of annotated evidence turns inside each channel's "
-                  "own top k, and in parentheses the share of questions with all their evidence inside it. "
-                  "`vector_k` and `lexical_k` cut these rankings; either is the union of the two cuts. Entity "
-                  "and aggregation lexical scans and session context are not counted. Lexical ranks only turns "
-                  "that share a term with the question.", "",
-                  "| Channel | " + " | ".join("All" if depth == "all" else f"Top {depth}" for depth in depths) + " |",
-                  "|---|" + "---:|" * len(depths)]
+        depths = list(recall[GATE_CHANNELS[0]])
+        lines += ["", "Candidate recall per channel: the share of resolved evidence turns (pooled over questions) "
+                  "inside each channel's own top k, and in parentheses the share of annotated questions with all "
+                  "their evidence inside it. `vector_k` and `lexical_k` cut these rankings; count and list "
+                  "questions cut them at the widened limit, which only the last column applies, and either is the "
+                  "union of the two cuts. Lexical ranks "
+                  "only turns that share a term with the question. Graph, pinned records, the entity and "
+                  "aggregation lexical scans and session context are not counted. The rankings do not depend on "
+                  "the run's settings. The pool's \"Evidence in top 25\" above counts only returned turns. The "
+                  "JSON report has this table per category.", "",
+                  "| Channel | " + " | ".join("All" if depth == "all" else f"Top {depth}" for depth in depths)
+                  + (" | This run's limits |" if at_limits else " |"),
+                  "|---|" + "---:|" * (len(depths) + bool(at_limits))]
         for channel, by_depth in recall.items():
+            cells = [*by_depth.values(), *([at_limits[channel]] if at_limits else [])]
             lines.append(f"| {channel} | " + " | ".join(
-                f"{_pct(value['evidence_turns'])} ({_pct(value['all_evidence'])})" for value in by_depth.values()) + " |")
+                f"{_pct(value['evidence_turns'])} ({_pct(value['all_evidence'])})" for value in cells) + " |")
     aggregation = summary.get("aggregation")
     if aggregation is not None:
         lines += ["", f"Aggregation: {_aggregation_line(aggregation)}"]
+    return lines
+
+
+def _load_line(result: dict) -> str:
+    def shown(side: str) -> str:
+        load = result[side].get("load_average")
+        return "not recorded" if load is None else f"{load['start'][0]:.1f} to {load['end'][0]:.1f}"
+
+    return f"One-minute load average from start to end: before {shown('before')}, after {shown('after')}."
+
+
+def _candidates_comparison_markdown(benchmarks: dict) -> list[str]:
+    """Questions whose evidence left or entered the candidates, and count and list questions (issue #87)."""
+    lines = [""]
+    for name, bench in benchmarks.items():
+        for label, moved in (("lost", bench["lost_all_evidence_among_candidates"]),
+                             ("gained", bench["gained_all_evidence_among_candidates"])):
+            lines.append(f"- {name} questions that {label} all their evidence among the candidates: {len(moved)}"
+                         + (f" ({_listed(moved)})." if moved else "."))
+        aggregation = bench["aggregation"]
+        if aggregation is None:
+            lines.append(f"- {name} count and list questions: not recorded in both reports (a plain baseline or "
+                         "a report from before issue #87).")
+        else:
+            lines += [f"- {name} before: {_aggregation_line(aggregation['before'])}",
+                      f"- {name} after: {_aggregation_line(aggregation['after'])}"]
     return lines
 
 
@@ -1476,16 +1622,13 @@ def comparison_markdown(result: dict) -> str:
                      f"| {_pct(old['memory_text_share'])} to {_pct(new['memory_text_share'])} "
                      f"| {old['records_without_text']} to {new['records_without_text']} |")
     if any(bench["retrieval_seconds"] is None for bench in result["benchmarks"].values()):
-        lines += ["", "Retrieval latency is shown only when both reports timed each question after a warm-up "
-                  "search; earlier reports included the embedding model's load."]
+        lines += ["", "Retrieval latency is shown only when both reports timed the same work after a warm-up "
+                  "search: reports from before issue #87 included the embedding model's load, and a plain "
+                  "baseline times its own ranking and packing."]
     else:
         lines += ["", "Retrieval latency depends on the machine and its load: compare it only between reports "
-                  "run on one machine, one at a time."]
-    for name, bench in result["benchmarks"].items():
-        aggregation = bench["aggregation"]
-        if aggregation["before"] is not None and aggregation["after"] is not None:
-            lines += [f"- {name} aggregation, before: {_aggregation_line(aggregation['before'])}",
-                      f"- {name} aggregation, after: {_aggregation_line(aggregation['after'])}"]
+                  "run on one machine, one at a time. " + _load_line(result)]
+    lines += _candidates_comparison_markdown(result["benchmarks"])
     lines += _query_scoring_markdown(result["benchmarks"])
     lines += _session_context_markdown(result["benchmarks"])
     lines += ["", result["interval_note"]]
@@ -1542,12 +1685,14 @@ def _quiet_offline_cli() -> None:
 def gate_main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         prog="python -m benchmarks.diagnostics.product_packing gate",
-        description="Replay retrieve() over the saved LoCoMo and LongMemEval-S packs and measure the reader's context.")
+        description="Replay retrieve() over the saved LoCoMo and LongMemEval-S packs and measure the reader's "
+                    "context, the candidates behind it and the retrieval time.")
     parser.add_argument("--output", type=_json_output, required=True,
                         help="JSON report; a Markdown summary is written beside it")
     parser.add_argument("--benchmark", choices=GATE_BENCHMARKS, action="append", help="Repeatable; both by default")
     parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
-                        help="Configuration override: a dotted key and a JSON value, e.g. packing.token_budget=8192")
+                        help="Configuration override: a dotted key and a JSON value, e.g. packing.token_budget=8192 "
+                             "or packing.vector_k=150")
     parser.add_argument("--archive", type=Path,
                         help="Saved 2026-09-23 run archive (default: the main checkout's data/gpt54-comparison-v1)")
     parser.add_argument("--capture-dir", type=Path,

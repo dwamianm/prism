@@ -96,17 +96,17 @@ decay), which stored receipts and configurations rely on.
 | `PRME_PACKING__MULTIPATH_ORDERING` | `balanced` | Order within the multi-path tier: `balanced`, `score` (briefly the default with the reader format) or `density` |
 | `PRME_PACKING__CONTEXT_CITATIONS` | `false` | Reader format only: add `[m3]` references and fill `context_references` |
 | `PRME_PACKING__MIN_FIDELITY` | `reference` | Lowest representation a record may fall back to. `full`, `prose` or `structured` keeps the text-free `key_value` and `reference` fallbacks, and blank records, out of every context format |
-| `PRME_PACKING__VECTOR_K` | `250` | Vector search candidates |
-| `PRME_PACKING__LEXICAL_K` | `250` | Lexical search candidates |
-| `PRME_PACKING__GRAPH_MAX_CANDIDATES` | `150` | Graph search candidates |
+| `PRME_PACKING__VECTOR_K` | `500` | Vector search candidates. Count and list questions multiply it by `PRME_PACKING__AGGREGATION_K_MULTIPLIER`, up to `PRME_PACKING__AGGREGATION_K_MAX`. At 500 the saved benchmark packs return nearly every stored turn; the offline evidence gate reports each channel's recall at smaller limits (issue #87) |
+| `PRME_PACKING__LEXICAL_K` | `500` | BM25 search candidates, widened the same way. The entity-name and aggregation keyword scans add hits beyond this limit |
+| `PRME_PACKING__GRAPH_MAX_CANDIDATES` | `150` | Graph search candidates, widened the same way |
 | `PRME_PACKING__GRAPH_MAX_HOPS` | `3` | Max graph traversal depth |
 | `PRME_PACKING__SESSION_CONTEXT_WINDOW` | `3` | Adjacent turns to include |
 | `PRME_PACKING__SESSION_CONTEXT_TOP_K` | `20` | Top results for session expansion |
 | `PRME_PACKING__SESSION_CONTEXT_SCORE_DECAY` | `0.85` | Fraction of the triggering result's score that an adjacent turn inherits |
 | `PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` | `0.6` | Fraction for results scored with `PRME_SCORING__FUSION=rrf`, between 0 (exclusive) and 1, in place of the decay above; weighted scoring never uses it. Fused scores are compressed, so at 0.85 adjacent turns can crowd primary evidence out of the context. The offline evidence gate favored 0.6 (RFC-0005 Section 7.2); provisional |
 | `PRME_PACKING__SESSION_CONTEXT_PACKING` | unset | Opt-in (issue #86). `trigger_tier` counts session expansion as a path on a turn another search found and gives a turn it added the multi-path tier of the match that brought it in; `adjacent` packs the same records and places each neighbor beside that match in session order. Needs session expansion. Receipts that record it use schema version 21; remove the variable (an empty value is invalid) to turn it off. Provisional |
-| `PRME_PACKING__AGGREGATION_K_MULTIPLIER` | `2.5` | Multiplier for aggregation queries |
-| `PRME_PACKING__AGGREGATION_K_MAX` | `500` | Max candidates for aggregation |
+| `PRME_PACKING__AGGREGATION_K_MULTIPLIER` | `3.0` | Multiplier applied to `VECTOR_K`, `LEXICAL_K` and `GRAPH_MAX_CANDIDATES` for count and list questions |
+| `PRME_PACKING__AGGREGATION_K_MAX` | `2000` | Cap on each widened limit |
 
 ## Organizer
 
