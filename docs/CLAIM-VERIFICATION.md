@@ -104,8 +104,9 @@ adds `localized_assessments` and binds the schema version into new evaluation
 identities; schemas 1 and 2 remain readable.
 
 `verify_bundle()` sees only packed candidates whose references occur in the exact
-rendered context. A reader-format bundle has references only when packed with
-`PackingConfig.context_citations=True`; without them `verify_bundle()` raises
+rendered context. A reader-format bundle, the retrieval default, has
+references only when packed with `PackingConfig.context_citations=True`
+(`PRME_PACKING__CONTEXT_CITATIONS=true`); without them `verify_bundle()` raises
 `ValueError`. It uses `candidate.rendered_text`, so it does not verify against
 hidden full text after packing selected a lower-fidelity representation. Each
 `ClaimEvidence` also retains source type, epistemic type, lifecycle, event time,

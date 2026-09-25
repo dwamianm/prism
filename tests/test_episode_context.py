@@ -14,6 +14,7 @@ from prme.retrieval.scoring import score_and_rank
 from prme.storage.engine import MemoryEngine
 from prme.types import LifecycleState, NodeType, RepresentationLevel, Scope
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 
 
 config = test_durable_ingestion.config
@@ -158,6 +159,8 @@ def test_packing_reserves_routed_episode_evidence_after_user_priorities():
 
 @pytest.mark.asyncio
 async def test_pipeline_persists_episode_policy_and_replayable_promotions(config, user):
+    # The weighted formula's receipt version; episode routing is opt-in under either formula.
+    config = previous_defaults(config)
     config = config.model_copy(
         update={
             "packing": config.packing.model_copy(

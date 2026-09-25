@@ -2,6 +2,7 @@
 from benchmarks.diagnostics.opt_in_anchored_rank import AnchoredRankEnvelopeReranker
 from tests import test_opt_in_rank_envelope as prior
 
+durable_config = prior.durable_config
 config = prior.config
 user = prior.user
 

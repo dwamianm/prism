@@ -35,7 +35,8 @@ labelled sources versus density at 74.85% on all 119 development questions, and
 answer trial then scored 83/119 for balanced and 67/119 for density, with 26
 paired wins and 10 losses. A separately registered answer confirmation on the
 different 381-question partition scored 250/381 versus 185/381, with 88 paired
-wins, 23 losses and no lower category total. Balanced is now the default. Both
+wins, 23 losses and no lower category total. Balanced then became the default
+(until the 2026-09-25 update below). Both
 partitions had been inspected for source retention, and the custom local judge
 does not establish universal superiority. The
 [development answer report](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md)
@@ -48,12 +49,16 @@ LongMemEval-S evidence (#81). At 4K, score order packed all annotated evidence
 for 8.8 percentage points more LoCoMo questions and 3.2 fewer LongMemEval-S
 questions under the weighted score, and for 1.0 more and 7.9 fewer under rank
 fusion with a session decay of 0.6. LongMemEval-S evidence mostly sits in short
-user turns that the quarter-length penalty keeps. Balanced remains the default;
-the [reader ordering record](../benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
-has both budgets, the opt-in recency settings and every category.
+user turns that the quarter-length penalty keeps. Balanced was then the
+default; score order became the default with the reader format in the
+2026-09-25 update below, because it is the order the DeepSeek answer pairs
+measured, and a balanced version would be a new variant. The
+[reader ordering record](../benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
+has both budgets, the rank fusion recency settings and every category.
 
-**Configurable policy:** `PackingConfig.multipath_ordering` accepts `"balanced"`
-(default), `"density"` or `"score"`. It changes only the ordering of the multi-path tier; ties
+**Configurable policy:** `PackingConfig.multipath_ordering` accepts `"score"`
+(`PRMEConfig`'s default since the 2026-09-25 update below), `"balanced"` (the
+class's own default, which stored configurations rely on) or `"density"`. It changes only the ordering of the multi-path tier; ties
 still use node ID and all representations obey the same measured budget. The
 public implementation reproduces all 714 frozen development contexts and source
 measurements across both arms and three budgets. This is implementation parity,
@@ -133,7 +138,7 @@ Where:
 - `token_cost` is the estimated token count for the object's representation in the bundle (Section 3).
 
 STR represents how much retrieval value the object delivers per token consumed.
-It is the explicit `density` ordering metric. The default `balanced` policy uses
+It is the explicit `density` ordering metric. The `balanced` policy uses
 `score / token_cost**0.25` after reserving the highest-scored ordinary multi-path
 candidate, reducing the extreme short-entry bias observed with STR.
 
@@ -387,7 +392,7 @@ schema, then emits each whole record as a JSON array with a short, deterministic
 bundle-local reference. Type, scope, epistemic state, lifecycle, source type,
 representation, event time, validity interval, and selected representation text remain present.
 JSON encoding preserves record boundaries and treats embedded newlines and
-delimiters as data. The default `"auditable"` object format is unchanged.
+delimiters as data. The `"auditable"` object format is unchanged.
 
 `MemoryBundle.context_references` maps compact references to full node UUIDs, and
 `resolve_context_ref()` provides checked lookup for citation handling. Token
@@ -401,7 +406,8 @@ Versions 1–6 retain their canonical bytes and always mean
 
 ## Reader rendering extension (2026-09-23)
 
-`PackingConfig.context_format="reader"` is an opt-in serialization that spends
+`PackingConfig.context_format="reader"`, `PRMEConfig`'s default since the
+2026-09-25 update below, is a serialization that spends
 the context budget on memory text instead of record metadata. The 2026-09-23
 benchmark gap audit found that the auditable envelope was about 71% of a 4K
 LoCoMo context (`memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md`, section 1).
@@ -433,11 +439,30 @@ header. Temporal guidance names the bracketed date instead of `event_time`. Toke
 every complete line. Reader receipts use version 14, which records
 `packing.context_citations`; versions 1–13 keep their canonical bytes, cannot
 claim the reader format, and mean citations were off. A retrieval scored with
-opt-in rank fusion (RFC-0005 Section 7.2) writes version 16 in any format (version 15 before
-it recorded `semantic_relevance`, version 17 when it records the opt-in rank fusion session
-decay, version 18 when it records a `min_score` skipped because the vector path failed, version 19 when it records the opt-in rank fusion recency boost or event-time tie-break). The default remains
-`"auditable"` until the reader format passes the evidence gate and a paired
-answer run (epic #77).
+rank fusion (RFC-0005 Section 7.2) writes version 16 in any format (version 15 before
+it recorded `semantic_relevance`, version 17 when it records the rank fusion session
+decay, version 18 when it records a `min_score` skipped because the vector path failed, version 19 when it records the rank fusion recency boost or event-time tie-break, which the default settings do).
+
+## Default update (2026-09-25)
+
+The reader format, score ordering, rank fusion scoring (RFC-0005 Section 7.2)
+with a 0.25 current-state recency boost and an event-time tie-break, and a rank
+fusion session decay of 0.6 became the defaults together, replacing
+`"auditable"`, `"balanced"` and the weighted formula. Score ordering is the
+order the DeepSeek answer pairs measured with the reader format; on the offline
+evidence gate `balanced` traded LoCoMo evidence for LongMemEval-S evidence
+under these settings (#81), and a balanced version would be a new variant. The
+context budget is unchanged. On the offline evidence gate at 4K, LoCoMo
+contexts went from 25.2 to 77.6 records and from 28.8% to 96.8% memory text,
+and all annotated evidence was packed for 85.0% of LoCoMo questions instead of
+64.0% and for 87.0% of LongMemEval-S questions instead of 85.7%. The combination passed the epic #77 default-change test twice on
+the DeepSeek answer track at a 3,996-token context (LoCoMo +15.2 and +15.7
+points, LongMemEval-S +1.0 and +0.2, with no interval excluding zero on
+LongMemEval-S). The new defaults live in `PRMEConfig`; `PackingConfig` and
+`ScoringWeights` keep their field defaults, which stored receipts and
+configurations read a missing value as. The
+[packing guide](PACKING.md) lists the results, what else changes, and the
+settings that restore the previous defaults.
 
 ## Text-free fallback clarification (2026-09-23)
 

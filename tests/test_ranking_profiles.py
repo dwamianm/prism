@@ -21,8 +21,18 @@ from prme.models.learning import QueryLearningResult
 from prme.retrieval.config import ScoringWeights
 from prme.types import Scope
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 
-config = test_durable_ingestion.config
+durable_config = test_durable_ingestion.config
+
+
+@pytest.fixture
+def config(durable_config):
+    # Learned ranking profiles adjust the weighted formula: they keep the previous retrieval
+    # defaults, which rank fusion and the reader format replaced on 2026-09-24.
+    return previous_defaults(durable_config)
+
+
 user = test_durable_ingestion.user
 
 

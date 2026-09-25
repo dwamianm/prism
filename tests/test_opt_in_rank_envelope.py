@@ -17,8 +17,18 @@ from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import NodeType, Scope
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 
-config = test_durable_ingestion.config
+durable_config = test_durable_ingestion.config
+
+
+@pytest.fixture
+def config(durable_config):
+    # Reranker envelopes of the weighted formula and their receipt versions: they keep the previous retrieval
+    # defaults, which rank fusion and the reader format replaced on 2026-09-24.
+    return previous_defaults(durable_config)
+
+
 user = test_durable_ingestion.user
 
 NOW = datetime(2026, 9, 22, tzinfo=timezone.utc)

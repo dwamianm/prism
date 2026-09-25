@@ -27,6 +27,7 @@ from prme.retrieval.selection import rank_fusion_skips_min_score, with_rank_fusi
 from prme.retrieval.session_context import expand_session_context
 from prme.types import Scope
 from tests import test_durable_ingestion, test_rank_fusion_min_score
+from tests.previous_defaults import previous_defaults
 from tests.test_http_write_fidelity import app_for, client_for
 from tests.test_rank_fusion import EXECUTION, NOW, RRF, candidate
 
@@ -237,7 +238,8 @@ async def test_a_vector_failure_skips_the_floor_and_reports_it(keyword_config, u
         assert [c.node_id for c in saved.candidates] == [c.node.id for c in floored.results]
         assert all(c.semantic_relevance == 0 for c in saved.candidates)
         plain = await engine.get_retrieval_receipt(str(unfloored.metadata.request_id), user_id=user)
-        assert plain.schema_version == 16 and not plain.min_score_skipped
+        # Version 17: the default packing also records the rank fusion session decay.
+        assert plain.schema_version == 17 and not plain.min_score_skipped
         logged = await _operation_payload(engine, floored.metadata.request_id)
         assert logged["min_score_skipped"] is True and logged["min_score"] == .3
         assert (await _operation_payload(engine, unfloored.metadata.request_id))[
@@ -323,6 +325,7 @@ async def test_cross_scope_hints_with_a_cosine_keep_the_floor(keyword_config, us
 
 
 async def test_weighted_scoring_keeps_its_floor_when_the_vector_path_fails(config, user, monkeypatch):
+    config = previous_defaults(config)
     async with MemoryEngine.open(config) as engine:
         await engine.store("The telescope is blue.", user_id=user, scope=Scope.PROJECT)
         await engine.store("We bought bread.", user_id=user, scope=Scope.PROJECT)
@@ -367,7 +370,8 @@ async def test_http_and_mcp_report_the_skipped_floor(keyword_config, user, monke
             assert "private detail" not in response.text + reply.content[0].text
             return response.json(), json.loads(reply.content[0].text)
 
-        healthy = await both(16)
+        # Version 17: the default packing also records the rank fusion session decay.
+        healthy = await both(17)
         _fail_vector(engine, monkeypatch)
         degraded = await both(18)
 

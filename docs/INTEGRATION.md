@@ -924,6 +924,13 @@ Benchmark before increasing either setting.
 
 Scoring fields are frozen. The six additive weights must sum to 1.0. Epistemic weight is multiplicative; paths weight is a tiebreaker.
 
+`PRMEConfig()` scores with reciprocal rank fusion (`fusion="rrf"`, `rrf_k=60`,
+RFC-0005 Section 7.2), which does not use the additive weights. A
+`ScoringWeights` object built in code, like the one below, defaults to
+`fusion="weighted"` and scores with them. Set `PRME_SCORING__FUSION=weighted`
+to keep the weighted formula with environment settings; other
+`PRME_SCORING__*` variables keep rank fusion unless it is set.
+
 Scoring and packing configuration reject `NaN` and positive/negative infinity
 at construction or environment loading, including nested node-type boosts and
 scoped scoring overrides. Validation errors identify the offending field before
@@ -948,22 +955,26 @@ ScoringWeights(
 
 ### PackingConfig
 
-`multipath_ordering="score"` selects composite-score ordering within the multi-path
-priority tier. The default is `"balanced"`: it reserves the highest-scored ordinary
-multi-path candidate, then uses a quarter-length penalty. Pins, instructions,
-active tasks, other tiers and measured whole-output budgets keep their existing
-rules. The default change follows a complete 119-question answer trial at 4K:
-balanced scored 83 versus density at 67, with 26 wins and 10 losses. A separately
-registered 381-question answer confirmation scored 250 versus 185, with 88 wins
-and 23 losses. Both source partitions had already been inspected, so these results
-do not establish superior behavior for every workload.
+`multipath_ordering="score"`, the `PRMEConfig` default, selects composite-score
+ordering within the multi-path priority tier. `"balanced"`, the previous default
+and still `PackingConfig`'s own field default, reserves the
+highest-scored ordinary multi-path candidate, then uses a quarter-length penalty.
+Pins, instructions, active tasks, other tiers and measured whole-output budgets
+keep their existing rules. Balanced was chosen for JSON records after a complete
+119-question answer trial at 4K: balanced scored 83 versus density at 67, with 26
+wins and 10 losses. A separately registered 381-question answer confirmation
+scored 250 versus 185, with 88 wins and 23 losses. Both source partitions had
+already been inspected, so these results do not establish superior behavior for
+every workload. Score order became the default with the one-line reader format
+and rank fusion, which passed a paired answer test twice (see
+[Default retrieval settings](PACKING.md#default-retrieval-settings)).
 
 ```python
 from prme import MemoryClient, config_from_directory
 from prme.retrieval.config import PackingConfig
 
 config = config_from_directory("./my_memories")
-config.packing = PackingConfig(multipath_ordering="density")
+config.packing = config.packing.model_copy(update={"multipath_ordering": "density"})
 
 with MemoryClient(config=config) as client:
     client.store("Aurora requires deployment approval.", user_id="alice")
@@ -978,19 +989,19 @@ is ignored. The equivalent environment setting is
 `PRME_PACKING__MULTIPATH_ORDERING=density`.
 Temporal context guidance is enabled by default; disable it with
 `PRME_PACKING__CONTEXT_GUIDANCE_MODE=off`. `all` additionally enables
-experimental current-state and personalization prompts. Ordinary retrieval
-receipts use schema version 12 and retains ordering, guidance, context format,
-episode and evidence-projection settings in `receipt.packing`, and the
-current-update multiplier in `receipt.scoring`. Set
-`PRME_PACKING__CONTEXT_FORMAT=compact` to use
-schema-declared JSON arrays and bundle-local references; `auditable` remains the
-default. Set `PRME_PACKING__CONTEXT_FORMAT=reader` for one plain line per record
-(date, state tags, text) with the audit envelope kept in the bundle and receipt,
-and `PRME_PACKING__CONTEXT_CITATIONS=true` to add `[m3]` references; reader
-receipts use schema version 14. Set `PRME_SCORING__FUSION=rrf` to rank by
-reciprocal rank fusion of semantic and lexical ranks instead of the weighted sum
-(RFC-0005 Section 7.2); those receipts use schema version 16. Rank-fused scores
-are rank-based, so `min_score` then compares against each result's
+experimental current-state and personalization prompts. Retrieval receipts
+retain ordering, guidance, context format, episode and evidence-projection
+settings in `receipt.packing`, and the current-update multiplier in
+`receipt.scoring`. The default context format is `reader`: one plain line per
+record (date, state tags, text) with the audit envelope kept in the bundle and
+receipt. Set `PRME_PACKING__CONTEXT_CITATIONS=true` to add `[m3]` references,
+which answerability checks and `verify_bundle()` need. Set
+`PRME_PACKING__CONTEXT_FORMAT=auditable` for self-describing JSON records, or
+`compact` for schema-declared JSON arrays and bundle-local references. Scoring
+defaults to reciprocal rank fusion of semantic and lexical ranks
+(`PRME_SCORING__FUSION=rrf`, RFC-0005 Section 7.2); set
+`PRME_SCORING__FUSION=weighted` for the weighted sum. Rank-fused scores are
+rank-based, so `min_score` then compares against each result's
 `semantic_relevance`, its semantic cosine similarity, and a floor tuned on weighted
 scores does not carry over. When vector search fails or detects an embedding
 model mismatch and no result has a cosine, the floor is skipped instead of
@@ -999,15 +1010,18 @@ version 18. The LangChain and LlamaIndex retrievers accept an optional
 `min_score`, and add `min_score_skipped: True` to every result's metadata when
 the floor was skipped.
 Fused scores are compressed, so session neighbors
-at the default decay of 0.85 can crowd primary evidence out of the context; set
-`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` (0.6 on the offline
-evidence gate) to give rank-fused triggers their own decay, which version 17
-receipts record. Rank fusion ignores recency, so on a current-state question the
-older of two conflicting memories can rank above the newer one; set
-`PRME_SCORING__RRF_RECENCY_BOOST` to apply the weighted formula's current-state
-recency to the fused score, and `PRME_SCORING__RRF_TIE_BREAK=event_time` to
-order equal fused scores newest first instead of by node ID. Receipts with
-either use version 19. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+at the weighted decay of 0.85 could crowd primary evidence out of the context;
+`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` (default 0.6) gives
+rank-fused triggers their own decay. Rank fusion alone ignores recency, so on a
+current-state question the older of two conflicting memories could rank above
+the newer one; `PRME_SCORING__RRF_RECENCY_BOOST` (default 0.25) applies the
+weighted formula's current-state recency to the fused score, and
+`PRME_SCORING__RRF_TIE_BREAK=event_time` (the default) orders equal fused
+scores newest first instead of by node ID. Default retrievals write schema
+version 19 receipts, which record those settings and the decay. Rank fusion
+without the recency settings writes version 16, 17 with the decay or 18 with a
+skipped `min_score`; the reader format with weighted scoring writes version 14,
+and weighted retrievals in the auditable or compact format write version 12. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
 their original canonical JSON and feedback checksums and always mean auditable
 rendering. Versions 1–5 also mean context guidance was off. For source blocks or
 bounded dialogue episodes stored under meaningful session IDs, set
@@ -1029,6 +1043,9 @@ the provisional `1.30`, and `1.0` disables it. Receipts record the exact applied
 coefficient. This ranking signal does not supersede or validate either claim.
 
 This example chooses smaller candidate limits explicitly; it is not a list of defaults.
+A `PackingConfig` built from scratch starts from its field defaults (`auditable`,
+`balanced`, no rank fusion session decay), not from `PRMEConfig().packing`; copy
+`config.packing` with `model_copy(update=...)` to keep the product defaults.
 
 ```python
 from prme.retrieval.config import PackingConfig
@@ -1038,7 +1055,7 @@ PackingConfig(
     token_budget=4096,               # Context budget in tokens
     min_fidelity=RepresentationLevel.REFERENCE,  # Minimum fidelity
     overhead_tokens=100,             # Additional caller reserve beyond measured context
-    context_format="auditable",      # Or "compact" for schema-declared arrays, "reader" for plain lines
+    context_format="auditable",      # PRMEConfig default "reader" (plain lines); or "compact" for arrays
     context_citations=False,         # Reader only: add [m3] references and context_references
     episode_context_top_k=0,         # Opt-in session-scoped episode routing
     episode_context_local_k=8,       # Records reserved per selected episode

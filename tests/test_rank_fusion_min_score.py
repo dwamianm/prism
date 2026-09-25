@@ -26,6 +26,7 @@ from prme.retrieval.selection import select_candidates, with_rank_fusion_relevan
 from prme.retrieval.session_context import expand_session_context
 from prme.types import RetrievalMode, Scope
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 from tests.test_http_write_fidelity import app_for, client_for
 from tests.test_rank_fusion import EXECUTION, NOW, RRF, candidate, receipt
 
@@ -301,7 +302,8 @@ async def test_min_score_filters_unrelated_memories_under_rank_fusion(keyword_co
                                                             "The telescope is blue."]
         assert all(c.semantic_relevance >= .3 for c in relevant.results)
         saved = await engine.get_retrieval_receipt(str(relevant.metadata.request_id), user_id=user)
-        assert saved.schema_version == 16 and saved.min_score == .3
+        # Version 17: the default packing also records the rank fusion session decay.
+        assert saved.schema_version == 17 and saved.min_score == .3
         assert [c.semantic_relevance for c in saved.candidates] == [
             c.semantic_relevance for c in relevant.results
         ]
@@ -322,7 +324,7 @@ async def test_a_per_request_rank_fusion_is_gated_and_its_receipt_is_readable(ke
             saved = await client.get(f"/v1/retrievals/{request_id}")
         assert saved.status_code == 200, saved.text
         body = saved.json()
-        assert body["schema_version"] == 16 and body["min_score"] == .3
+        assert body["schema_version"] == 17 and body["min_score"] == .3
         assert [c["semantic_relevance"] for c in body["candidates"]] == [
             c.semantic_relevance for c in response.results
         ]
@@ -344,6 +346,7 @@ async def test_cross_scope_hints_are_gated_on_relevance(keyword_config, user):
 
 
 async def test_weighted_retrieval_is_unchanged(config, user):
+    config = previous_defaults(config)
     async with MemoryEngine.open(config) as engine:
         await engine.store("The telescope is blue.", user_id=user, scope=Scope.PROJECT)
         await engine.store("We bought bread.", user_id=user, scope=Scope.PROJECT)

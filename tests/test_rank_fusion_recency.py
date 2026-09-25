@@ -5,7 +5,8 @@ a current-state question the older of two conflicting memories can rank above
 the newer one, and equal fused scores fall back to node ID order.
 ``rrf_recency_boost`` applies the weighted formula's current-state recency
 factor to the fused score, and ``rrf_tie_break="event_time"`` orders equal
-fused scores newest first. Both are off by default.
+fused scores newest first. ``ScoringWeights()`` leaves both unset, and
+``PRMEConfig`` sets both by default (0.25 and "event_time").
 """
 
 import hashlib
@@ -88,9 +89,19 @@ def test_weighted_scoring_drops_the_settings_with_a_warning(monkeypatch):
         assert ScoringWeights(rrf_recency_boost=.25) == DEFAULT_SCORING_WEIGHTS
     with pytest.warns(UserWarning, match="rrf_recency_boost, rrf_tie_break apply only .* are ignored"):
         assert ScoringWeights(rrf_recency_boost=.25, rrf_tie_break="event_time") == DEFAULT_SCORING_WEIGHTS
+    # Rank fusion is the default, so an environment that names only the
+    # tie-break keeps it; a weighted fusion set beside it drops it with a warning.
+    monkeypatch.setenv("PRME_SCORING__FUSION", "weighted")
     monkeypatch.setenv("PRME_SCORING__RRF_TIE_BREAK", "event_time")
     with pytest.warns(UserWarning, match="rrf_tie_break applies only"):
         assert PRMEConfig(_env_file=None).scoring == DEFAULT_SCORING_WEIGHTS
+
+
+def test_prme_config_sets_both_by_default(monkeypatch):
+    assert PRMEConfig(_env_file=None).scoring == BOTH
+    monkeypatch.setenv("PRME_SCORING__RRF_RECENCY_BOOST", "0.5")
+    assert PRMEConfig(_env_file=None).scoring == ScoringWeights(
+        fusion="rrf", rrf_recency_boost=.5, rrf_tie_break="event_time")
 
 
 def test_settings_are_read_from_the_environment(monkeypatch):
@@ -435,10 +446,15 @@ async def test_retrieval_applies_and_records_the_settings(config, user):
     # Separate users keep the two stores apart in the shared database.
     plain, before = await _conflict_retrieval(config, f"{user}-plain", RRF)
     assert _position(plain, "What database") < _position(plain, "The team switched")
-    assert before.schema_version == 16
+    # Version 17: the default packing also records the rank fusion session decay.
+    assert before.schema_version == 17
 
+    # BOTH is PRMEConfig's default scoring, so this retrieval runs the default settings.
+    assert config.scoring == BOTH
     boosted, saved = await _conflict_retrieval(config, f"{user}-boosted", BOTH)
     assert _position(boosted, "The team switched") < _position(boosted, "What database")
     assert saved.schema_version == 19 and saved.scoring == BOTH
+    assert (saved.packing.context_format, saved.packing.multipath_ordering,
+            saved.packing.session_context_rank_fusion_score_decay) == ("reader", "score", .6)
     fusions = [provenance.rank_fusion for provenance in saved.score_provenance.values()]
     assert all(f.recency_boost_factor is not None and f.tie_break is not None for f in fusions)

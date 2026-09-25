@@ -35,6 +35,7 @@ from prme import (
     Scope,
 )
 from prme.config import OrganizerConfig
+from prme.retrieval.config import ScoringWeights
 from prme.organizer.models import JobResult, OrganizeResult
 from prme.types import EpistemicType
 
@@ -58,6 +59,9 @@ def config(tmp_dir):
         db_path=str(Path(tmp_dir) / "memory.duckdb"),
         vector_path=str(Path(tmp_dir) / "vectors.usearch"),
         lexical_path=str(lexical_path),
+        # Virtual decay reaches ranking through the weighted formula's salience and
+        # recency; rank fusion does not use them.
+        scoring=ScoringWeights(),
     )
 
 

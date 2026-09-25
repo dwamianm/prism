@@ -73,10 +73,21 @@ def write_new(path, value):
         handle.write("\n")
 
 
+# The retrieval defaults this study was registered with (2026-09-22). Rank
+# fusion, the reader format, score ordering and a rank fusion session decay
+# became the defaults later, so they are pinned here to keep the registered
+# arms and their configuration hashes.
+REGISTERED_RETRIEVAL = {
+    "scoring": {"fusion": "weighted"},
+    "packing": {"context_format": "auditable", "multipath_ordering": "balanced",
+                "session_context_rank_fusion_score_decay": None},
+}
+
+
 def clean_config():
     # _env_file=None alone does NOT disable PRME_* process environment settings.
     with patch.dict(os.environ, {}, clear=True):
-        return PRMEConfig(_env_file=None).model_dump(mode="json")
+        return PRMEConfig(_env_file=None, **REGISTERED_RETRIEVAL).model_dump(mode="json")
 
 
 def configure(defaults, overrides):

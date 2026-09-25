@@ -45,7 +45,7 @@ from pydantic_settings import BaseSettings
 from benchmarks.compare_evidence import paired_statistics
 from benchmarks.evidence import reciprocal_rank_fusion
 from prme import MemoryEngine, NodeType, PRMEConfig
-from prme.config import OrganizerConfig
+from prme.config import OrganizerConfig, with_product_retrieval_defaults
 from prme.retrieval.config import RANK_FUSION_ONLY_SETTINGS, PackingConfig
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import pack_context, reader_text
@@ -470,12 +470,15 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
     if fixed:
         raise ValueError(f"The evidence gate cannot override {', '.join(fixed)}")
     _check_override_keys(PRMEConfig, overrides)
+    # Scoring and packing values passed in code take their classes' historical
+    # defaults; --set changes only the settings it names, like the environment.
+    values = with_product_retrieval_defaults(overrides)
     with patch.dict(os.environ, {}, clear=True):
         # Nested settings read .env by themselves, so build each one without it.
         settings = {name: field.annotation(_env_file=None) for name, field in PRMEConfig.model_fields.items()
                     if isinstance(field.annotation, type) and issubclass(field.annotation, BaseSettings)}
         settings["organizer"] = OrganizerConfig(_env_file=None, opportunistic_enabled=False)
-        config = PRMEConfig(_env_file=None, **overrides, **settings, db_path=str(pack / "memory.duckdb"),
+        config = PRMEConfig(_env_file=None, **values, **settings, db_path=str(pack / "memory.duckdb"),
                             vector_path=str(pack / "vectors.usearch"), lexical_path=str(pack / "lexical_index"))
     if config.enable_query_reformulation or config.temporal_relation.enabled:
         raise ValueError("The evidence gate does not run model-backed query features")
@@ -483,9 +486,10 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
         if name in overrides.get("scoring", {}) and config.scoring.fusion != "rrf":
             # Weighted scoring ignores rank fusion settings, so this run would change nothing.
             raise ValueError(f"scoring.{name} applies only with scoring.fusion=\"rrf\"")
-    if (config.packing.session_context_rank_fusion_score_decay is not None
+    if (overrides.get("packing", {}).get("session_context_rank_fusion_score_decay") is not None
             and config.scoring.fusion != "rrf"):
-        # Weighted scoring never applies it either.
+        # Weighted scoring never applies it either. The default value is left
+        # alone, so a weighted run needs only scoring.fusion="weighted".
         raise ValueError("packing.session_context_rank_fusion_score_decay applies only with "
                          "scoring.fusion=\"rrf\"")
     return config

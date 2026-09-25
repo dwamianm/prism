@@ -354,6 +354,8 @@ class TestEngineIntegration:
             db_path=str(Path(tmp_dir) / "memory.duckdb"),
             vector_path=str(Path(tmp_dir) / "vectors.usearch"),
             lexical_path=str(lexical_path),
+            # Feedback tunes the weighted formula's weights; rank fusion does not use them.
+            scoring=ScoringWeights(),
         )
 
     @pytest.mark.asyncio

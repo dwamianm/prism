@@ -27,6 +27,7 @@ from prme.types import (
     has_memory_text,
 )
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 
 config = test_durable_ingestion.config
 user = test_durable_ingestion.user
@@ -273,6 +274,8 @@ def test_environment_sets_the_floor(monkeypatch):
 
 
 async def test_per_request_text_floor_keeps_pointers_out_and_records_them(config, user):
+    # The auditable format packs text-free fallbacks at the default floor; the reader format never does.
+    config = previous_defaults(config)
     long_text = "The telescope manual covers every lens and mount. " * 80
     async with MemoryEngine.open(config) as engine:
         await engine.store(long_text, user_id=user, scope=Scope.PROJECT)
@@ -313,6 +316,8 @@ async def test_per_request_text_floor_keeps_pointers_out_and_records_them(config
 
 
 async def test_blank_exclusions_are_not_reported_as_a_budget_limit(config, user):
+    # The auditable format packs blank turns at the default floor; the reader format never does.
+    config = previous_defaults(config)
     async with MemoryEngine.open(config) as engine:
         for index in range(5):
             await engine.store(f"User asked about hiking trail {index}", user_id=user,

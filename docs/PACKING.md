@@ -1,17 +1,22 @@
 # Choosing a memory context packing policy
 
 `PackingConfig.multipath_ordering` controls which ordinary multi-path memories
-get space first. The default is `"balanced"`, selected after completed source
-retention studies and two complete answer trials. Use `"density"` or `"score"`
-explicitly when your workload evaluation favors one of those policies.
+get space first. The default configuration (`PRMEConfig().packing`) uses
+`"score"`, which ships with the one-line `"reader"` context format and rank
+fusion scoring (see [Default retrieval settings](#default-retrieval-settings)
+below). `"balanced"` was the default while every record carried a JSON
+envelope, and it stays the field's own default; use `"balanced"` or
+`"density"` explicitly when your workload evaluation favors one of those
+policies.
 
 ```python
 from prme import MemoryClient
 from prme.client import config_from_directory
-from prme.retrieval.config import PackingConfig
 
 config = config_from_directory("./my_memories")
-config = config.model_copy(update={"packing": PackingConfig(token_budget=4096)})
+config = config.model_copy(update={
+    "packing": config.packing.model_copy(update={"token_budget": 4096})
+})
 
 with MemoryClient(config=config) as memory:
     memory.store("The pilot can launch only after approval.", user_id="alice")
@@ -20,9 +25,12 @@ with MemoryClient(config=config) as memory:
 ```
 
 The same configuration applies to `MemoryEngine.open(config)` and servers using
-that config. Set `PRME_PACKING__MULTIPATH_ORDERING=density` for an explicit
-density override. This is an engine configuration, not a new per-request HTTP
-or MCP parameter.
+that config. Copying `config.packing` keeps the other defaults. A
+`PackingConfig` built from scratch starts from the class's own historical
+defaults instead (`auditable`, `balanced` and no rank fusion session decay),
+which stored receipts and configurations rely on. Set
+`PRME_PACKING__MULTIPATH_ORDERING=density` for an explicit density override.
+This is an engine configuration, not a new per-request HTTP or MCP parameter.
 
 | Policy | Ordering within the ordinary multi-path tier |
 |---|---|
@@ -30,8 +38,8 @@ or MCP parameter.
 | `score` | Composite score. |
 | `balanced` | Highest composite score first, then score divided by full-entry token cost to the power 0.25. |
 
-Ties use node ID. Under rank fusion, the opt-in `ScoringWeights.rrf_tie_break`
-(RFC-0005 Section 7.2) makes equal fused scores differ by event time, newest
+Ties use node ID. Under rank fusion, `ScoringWeights.rrf_tie_break`
+(RFC-0005 Section 7.2), which the default configuration sets, makes equal fused scores differ by event time, newest
 first, so only memories with the same time or the same inherited score still
 fall back to node ID. Instructions, pinned memories and active tasks keep their
 existing higher priority; single-path candidates keep their existing lower tier.
@@ -46,7 +54,7 @@ For stores with many short records, opt into the compact renderer:
 
 ```python
 config = config.model_copy(update={
-    "packing": PackingConfig(token_budget=4096, context_format="compact")
+    "packing": config.packing.model_copy(update={"context_format": "compact"})
 })
 ```
 
@@ -55,17 +63,17 @@ retaining type, scope, epistemic state, lifecycle, provenance, representation,
 event/validity times, and complete selected representation text. Resolve a model-returned reference
 with `response.bundle.resolve_context_ref("m3")`; the full mapping is available as
 `response.bundle.context_references`. Embedded delimiters and newlines remain
-JSON-escaped data. The default `"auditable"` format keeps self-describing JSON
+JSON-escaped data. The `"auditable"` format keeps self-describing JSON
 objects and full node IDs in the model context. Exact token accounting applies to
 both formats. Evaluate answer quality before changing a production workload.
 The equivalent environment setting is `PRME_PACKING__CONTEXT_FORMAT=compact`.
 
-To give the answering model the memory text instead of the audit envelope, opt
-into the reader format:
+The default reader format gives the answering model the memory text instead of
+the audit envelope. To choose it explicitly:
 
 ```python
 config = config.model_copy(update={
-    "packing": PackingConfig(token_budget=4096, context_format="reader")
+    "packing": config.packing.model_copy(update={"context_format": "reader"})
 })
 ```
 
@@ -112,9 +120,9 @@ references and auditable records carry full node IDs. Context ablation keeps
 the bundle's format and references.
 
 The complete record, including its ID and every metadata field, stays in
-`response.bundle.sections` and in the retrieval receipt. `auditable` remains
-the default and `compact` remains available. The equivalent environment setting
-is `PRME_PACKING__CONTEXT_FORMAT=reader`.
+`response.bundle.sections` and in the retrieval receipt. `reader` is the
+default, and `auditable` and `compact` remain available. The equivalent
+environment setting is `PRME_PACKING__CONTEXT_FORMAT=reader`.
 
 With the reader format, score order and `balanced` trade LoCoMo evidence against
 LongMemEval-S evidence. On the
@@ -126,10 +134,12 @@ turns next to long assistant replies. Under the weighted score LoCoMo gained 8.8
 percentage points and LongMemEval-S lost 3.2. Under rank fusion
 (`ScoringWeights.fusion="rrf"`) with
 `PackingConfig.session_context_rank_fusion_score_decay=0.6`, LoCoMo gained only
-1.0 and LongMemEval-S lost 7.9. Changing the ordering default needs a paired
-answer run (epic #77). The
+1.0 and LongMemEval-S lost 7.9. The defaults use score order, the order the
+DeepSeek answer pairs measured with the reader format (see
+[Default retrieval settings](#default-retrieval-settings)); a balanced version
+would be a new variant with its own answer pairs (epic #77). The
 [reader ordering record](../benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
-has both budgets, the opt-in rank fusion recency settings and every category.
+has both budgets, the rank fusion recency settings and every category.
 
 When a record does not fit whole, the packer tries lower representation levels
 down to `PackingConfig.min_fidelity`. The default floor is `reference`, and the
@@ -142,7 +152,7 @@ text-bearing floor:
 
 ```python
 config = config.model_copy(update={
-    "packing": PackingConfig(token_budget=4096, min_fidelity="full")
+    "packing": config.packing.model_copy(update={"min_fidelity": "full"})
 })
 ```
 
@@ -166,12 +176,11 @@ For workloads that store a source block or bounded dialogue episode under one
 
 ```python
 config = config.model_copy(update={
-    "packing": PackingConfig(
-        token_budget=4096,
-        episode_context_top_k=2,
-        episode_context_local_k=8,
-        episode_context_score_decay=0.95,
-    )
+    "packing": config.packing.model_copy(update={
+        "episode_context_top_k": 2,
+        "episode_context_local_k": 8,
+        "episode_context_score_decay": 0.95,
+    })
 })
 ```
 
@@ -188,12 +197,11 @@ enable bounded evidence projection:
 
 ```python
 config = config.model_copy(update={
-    "packing": PackingConfig(
-        token_budget=4096,
-        evidence_projection_top_k=50,
-        evidence_projection_max_sources=1,
-        evidence_projection_score_decay=1.0,
-    )
+    "packing": config.packing.model_copy(update={
+        "evidence_projection_top_k": 50,
+        "evidence_projection_max_sources": 1,
+        "evidence_projection_score_decay": 1.0,
+    })
 })
 ```
 
@@ -212,13 +220,12 @@ Use augmentation when both the concise claim and direct wording are needed:
 
 ```python
 config = config.model_copy(update={
-    "packing": PackingConfig(
-        token_budget=4096,
-        evidence_augmentation_top_k=10,
-        evidence_augmentation_max_sources=1,
-        evidence_augmentation_score_decay=0.99,
-        evidence_augmentation_anchor_policy="non_entity",
-    )
+    "packing": config.packing.model_copy(update={
+        "evidence_augmentation_top_k": 10,
+        "evidence_augmentation_max_sources": 1,
+        "evidence_augmentation_score_decay": 0.99,
+        "evidence_augmentation_anchor_policy": "non_entity",
+    })
 })
 ```
 
@@ -242,7 +249,8 @@ after a paired two-conversation diagnostic fixed the observed contradiction
 regression but produced one win, one temporal loss and a -0.03000 combined mean
 delta. Use it as an explicit safety control, not as an assumed quality gain.
 
-On 119 examined development questions, 4K source
+The earlier `balanced` default was chosen on the following evidence, measured
+while records were rendered as JSON. On 119 examined development questions, 4K source
 recall increased from 74.85% to 95.91%. On the separately captured, previously
 examined 381-question regression partition, it increased from 65.04% to 90.55%,
 with two question-level losses and positive category mean changes. Preference
@@ -259,7 +267,100 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
-Ordinary retrievals produce version 12 receipts with explicit ordering,
+## Default retrieval settings
+
+`PRMEConfig()` retrieves with these settings, which changed together after
+v0.12.0 (see the changelog):
+
+| Setting | Default | Previous default |
+|---|---|---|
+| `scoring.fusion` (`PRME_SCORING__FUSION`) | `rrf`, with `rrf_k=60` | `weighted` |
+| `scoring.rrf_recency_boost` (`PRME_SCORING__RRF_RECENCY_BOOST`) | `0.25` | unset (rank fusion did not exist as a default) |
+| `scoring.rrf_tie_break` (`PRME_SCORING__RRF_TIE_BREAK`) | `event_time` | unset |
+| `packing.context_format` (`PRME_PACKING__CONTEXT_FORMAT`) | `reader` | `auditable` |
+| `packing.multipath_ordering` (`PRME_PACKING__MULTIPATH_ORDERING`) | `score` | `balanced` |
+| `packing.session_context_rank_fusion_score_decay` (`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`) | `0.6` | None (0.85, the weighted decay) |
+
+The context budget and session expansion did not change. The combination
+passed the project's default-change test twice on the DeepSeek answer track
+(`deepseek-v4.1-flash:cloud` as reader and judge through Ollama 0.34.3, a
+3,996-token context, the registered 2026-09-23 prompts). Each pair answered the
+new settings and a fresh run of the previous defaults interleaved question by
+question over the same questions:
+
+| Pair | LoCoMo (1,540 questions) | LongMemEval-S (500 questions) |
+|---|---|---|
+| First | 65.7% to 80.9%, +15.2 points (95% interval +13.0 to +17.4) | 85.8% to 86.8%, +1.0 (-1.6 to +3.6) |
+| Confirmation | 65.8% to 81.6%, +15.7 (+13.5 to +17.9) | 86.4% to 86.6%, +0.2 (-2.6 to +3.0) |
+
+These are DeepSeek-track numbers and are not comparable with the GPT-5.4
+results; [BENCHMARKS.md](../BENCHMARKS.md) has the categories and receipts.
+LongMemEval-S knowledge-update questions went from 73 to 71 of 78 in both
+pairs (-2.6 points, intervals including zero); #169 tracks recency on those
+questions. Score order is the order the answer pairs measured. On the offline
+evidence gate, `balanced` order with the same reader format and rank fusion
+settings packed all LongMemEval-S evidence for more questions and all LoCoMo
+evidence for fewer (#81); a balanced version would be a new variant with its
+own answer pairs.
+
+What else changes with these defaults:
+
+- The new defaults live in `PRMEConfig` (`PRMEConfig().scoring` and
+  `PRMEConfig().packing`), and environment variables, `.env` entries and
+  secrets that set only some `PRME_SCORING__*` or `PRME_PACKING__*` values
+  keep them. `ScoringWeights()` and `PackingConfig()` built in code keep their
+  historical defaults (the weighted formula without the rank fusion settings;
+  `auditable`, `balanced` and no rank fusion session decay), because stored
+  receipts and configurations omit some of those values and must keep their
+  meaning. To change one setting and keep the new defaults, copy from the
+  configuration: `config.packing.model_copy(update={...})`.
+- Rank fusion does not use the additive weights, graph proximity, salience or
+  confidence, and uses recency only through the current-state recency boost,
+  so salience decay, reinforcement and confidence changes no longer move a
+  result's rank. A candidate found only through the graph or a pin scores 0,
+  though pins are still packed first. `min_score` is compared with each
+  result's semantic cosine (`semantic_relevance`). Non-neutral request
+  `ranking_multipliers` are rejected (HTTP 422, MCP error), learned ranking
+  profiles report `rank_fusion_scoring` and are not applied, and the
+  `feedback_apply` organizer job reports `not_applicable` and keeps its signals.
+- The reader format does not print a record's source type or ID, so the same
+  statement stored by the user and by the assistant reads alike; the bundle
+  sections and the receipt keep both.
+- Answerability checks and `verify_bundle()` cite records through the context,
+  so they raise `ValueError` for a reader bundle without citations. Set
+  `PRME_PACKING__CONTEXT_CITATIONS=true` (which adds `[m3]` references to the
+  context) or use the `auditable` format for those callers.
+- Retrieval receipts are written as version 19 by default.
+
+To go back to the previous defaults, set all three:
+
+```bash
+PRME_SCORING__FUSION=weighted
+PRME_PACKING__CONTEXT_FORMAT=auditable
+PRME_PACKING__MULTIPATH_ORDERING=balanced
+```
+
+or, in code:
+
+```python
+from prme.retrieval.config import PackingConfig, ScoringWeights
+
+config = config.model_copy(update={
+    "scoring": ScoringWeights(),
+    "packing": PackingConfig(),
+})
+```
+
+`ScoringWeights()` and `PackingConfig()` are the previous defaults. A weighted
+fusion set through the environment drops the rank fusion recency boost and
+tie-break, and the rank fusion session decay stays 0.6, but weighted scoring
+never applies it and its receipts omit it. With these three settings the
+offline evidence gate reproduces every saved 2026-09-23 LoCoMo and
+LongMemEval-S context byte for byte.
+
+Retrievals with the default settings produce version 19 receipts (rank
+fusion with its recency boost, tie-break and session decay, described below). Weighted retrievals in the
+auditable or compact format produce version 12 receipts with explicit ordering,
 context-guidance, context-format, and episode-routing policies and the same
 score-replay and execution requirements. Version 9 records the explicit
 current-update scoring policy, version 10 records evidence projection, and
@@ -294,8 +395,9 @@ episode routing from 8, instead of taking a later default. Other formats keep
 emitting versions 12 and 13. Older readers without
 version 14 support cannot consume reader receipts.
 
-Retrievals scored with opt-in rank fusion (`ScoringWeights.fusion="rrf"`,
-RFC-0005 Section 7.2) emit version 16 in every context format. Version 16 records
+Retrievals scored with rank fusion (`ScoringWeights.fusion="rrf"`, the
+`PRMEConfig` default, RFC-0005 Section 7.2) emit version 16 in every context
+format. Version 16 records
 `scoring.fusion` and `scoring.rrf_k`, formula version 2 score provenance with
 saved ranks and factors, each candidate's `semantic_relevance` (the semantic cosine
 that `min_score` is compared with under rank fusion), and everything versions 13
@@ -303,25 +405,28 @@ and 14 admit. Version 15 receipts, saved before `semantic_relevance` existed, ke
 their bytes and checksums and cannot claim it. Versions 1 to 14 cannot claim
 rank fusion; weighted scoring omits both settings, so their stored bytes and
 checksums remain unchanged. Older readers without version 16 support cannot
-consume these rank-fusion receipts. A rank fusion retrieval with the opt-in
-`session_context_rank_fusion_score_decay` set emits version 17, which also
-records that decay; every session decay in its score provenance must equal it.
-Versions 1 to 16 cannot record it, and an unset value is omitted from the
-packing settings, so no earlier receipt changes. A rank fusion retrieval that
-skipped a positive `min_score` because the vector path failed and no candidate
-had a cosine emits version 18, which records `min_score_skipped: true`, requires
-every candidate's `semantic_relevance` to be 0, and also records the rank fusion
-session decay when it is set. Versions 1 to 17 cannot record a skipped floor.
-A rank fusion retrieval with the opt-in `scoring.rrf_recency_boost` or
-`scoring.rrf_tie_break` set emits version 19, which records them in its scoring
+consume these rank-fusion receipts. A rank fusion retrieval with
+`session_context_rank_fusion_score_decay` set (0.6 by default) emits version
+17, which also records that decay; every session decay in its score provenance
+must equal it. Versions 1 to 16 cannot record it, and a value of None is
+omitted from the packing settings. A stored receipt from before version 17
+reads a missing value as None rather than as the current default, so no earlier
+receipt changes. Weighted retrievals never apply the decay, so their receipts
+omit it too. A rank fusion retrieval that skipped a positive `min_score`
+because the vector path failed and no candidate had a cosine emits version 18,
+which records `min_score_skipped: true`, requires every candidate's
+`semantic_relevance` to be 0, and also records the rank fusion session decay
+when it is set. Versions 1 to 17 cannot record a skipped floor. A rank fusion
+retrieval with `scoring.rrf_recency_boost` or `scoring.rrf_tie_break` set (the
+defaults set both) emits version 19, which records them in its scoring
 settings and saved factors, requires every score provenance to use the same
-values, and also admits the version 17 and 18 features. Versions 1 to 18 cannot
-record either setting, and unset settings are omitted, so no earlier receipt
-changes.
+values, and also admits the version 17 and 18 features, so default retrievals
+write version 19. Versions 1 to 18 cannot record either setting, and unset
+settings are omitted, so no earlier receipt changes.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole
-output still fits. Set `PackingConfig(context_guidance_mode="off")` for exact
+output still fits. Set `context_guidance_mode="off"` for exact
 pre-guidance behavior. `"all"` also enables experimental current-state and
 personalization guidance; confirmation evidence did not support those prompts
 as defaults. The [confirmation report](../benchmarks/results/research/2026-09-14/CONTEXT-GUIDANCE-CONFIRMATION.md)

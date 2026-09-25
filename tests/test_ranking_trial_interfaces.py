@@ -13,9 +13,19 @@ from prme.api.app import create_app
 from prme.mcp.server import create_mcp_server
 from prme.types import RepresentationLevel, RetrievalMode, Scope
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 from tests.test_http_write_fidelity import app_for, client_for
 
-config = test_durable_ingestion.config
+durable_config = test_durable_ingestion.config
+
+
+@pytest.fixture
+def config(durable_config):
+    # Ranking trials reweight the weighted formula: they keep the previous retrieval
+    # defaults, which rank fusion and the reader format replaced on 2026-09-24.
+    return previous_defaults(durable_config)
+
+
 user = test_durable_ingestion.user
 ADJUSTMENT = RankingMultipliers(semantic=.25, lexical=4, graph=.25)
 

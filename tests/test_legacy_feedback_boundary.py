@@ -7,8 +7,18 @@ from prme import MemoryEngine
 from prme.organizer.jobs import run_job
 from prme.quality.feedback import FeedbackSignal, FeedbackSignalType
 from tests import test_durable_ingestion as fixtures
+from tests.previous_defaults import previous_defaults
 
-config = fixtures.config
+durable_config = fixtures.config
+
+
+@pytest.fixture
+def config(durable_config):
+    # Legacy feedback tunes the weighted formula: they keep the previous retrieval
+    # defaults, which rank fusion and the reader format replaced on 2026-09-24.
+    return previous_defaults(durable_config)
+
+
 user = fixtures.user
 
 

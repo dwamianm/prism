@@ -13,6 +13,7 @@ from prme.api.app import create_app
 from prme.config import MCPConfig
 from prme.models.nodes import MemoryNode
 from prme.mcp.server import create_mcp_server
+from prme.retrieval.config import ScoringWeights
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.selection import select_candidates, validate_selection
 from prme.types import EpistemicType, NodeType, Scope
@@ -20,6 +21,8 @@ from tests.test_durable_ingestion import config, user  # noqa: F401
 
 
 async def test_selection_filters_context_and_records_exclusions(config, user):  # noqa: F811
+    # min_score compares against the weighted score here; rank fusion compares it with the cosine.
+    config = config.model_copy(update={"scoring": ScoringWeights()})
     async with MemoryEngine.open(config) as engine:
         await engine.store("The telescope studies Saturn's rings", user_id=user)
         await engine.store("The project uses PostgreSQL databases", user_id=user)

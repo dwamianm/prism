@@ -266,11 +266,19 @@ accept labels but cannot replay scores. Replay excludes unseen/filtered candidat
 Version 3 adds request parameters and reported feature identity in extensible
 execution maps. Density/score pipeline receipts use version 4 to record the explicit
 packing order; versions 1–3 retain their canonical bytes and implicit density
-ordering. The default `multipath_ordering="balanced"` reserves the highest-scored
+ordering. `multipath_ordering="balanced"`, the default before rank fusion and the
+reader format became defaults, reserves the highest-scored
 ordinary multi-path candidate, then uses score / full-entry-tokens**0.25.
 It emits version 5 receipts with explicit ordering and execution; versions 1–4
 cannot claim balanced and retain their canonical bytes. See `docs/PACKING.md`.
-Ordinary pipeline receipts use version 12. Explicit reranker score-envelope policies use version 13 when they assign scores; versions 1 to 12 cannot contain those assignments and retain their canonical bytes. The opt-in reader context format uses version 14, which records `context_citations`; versions 1 to 13 cannot claim the reader format and retain their canonical bytes. Opt-in rank fusion (`ScoringWeights.fusion="rrf"`) uses version 16 with formula version 2 score provenance and each candidate's `semantic_relevance`, the semantic cosine that `min_score` is compared with under rank fusion, or version 17 when the opt-in `packing.session_context_rank_fusion_score_decay` is set, which it also records (an unset value is omitted, so other receipts keep their bytes); version 15 rank-fusion receipts saved before `semantic_relevance` keep their canonical bytes, versions 1 to 14 cannot claim rank fusion, and weighted scoring omits the fusion settings so those versions retain their canonical bytes. A rank fusion retrieval that skipped `min_score` because the vector path failed and no candidate had a cosine uses version 18, which records `min_score_skipped` (and the session decay when set); versions 1 to 17 cannot record it. A rank fusion retrieval with the opt-in `scoring.rrf_recency_boost` or `scoring.rrf_tie_break` set uses version 19, which records them and requires every score provenance to use the same values (and admits the version 17 and 18 features); versions 1 to 18 cannot record them, and unset values are omitted. Version 6 introduced context guidance,
+The retrieval defaults are rank fusion (`rrf_k=60`) with a current-state recency
+boost of 0.25 and an event-time tie-break, the reader context format, score
+ordering and a rank fusion session decay of 0.6 (`docs/PACKING.md`, "Default
+retrieval settings"). They live in `PRMEConfig`: `ScoringWeights()` and
+`PackingConfig()` built in code keep their field defaults (weighted; auditable,
+balanced, no rank fusion session decay), because stored receipts and
+configurations omit some of those values. Default retrievals write version 19
+receipts. Weighted pipeline receipts use version 12. Explicit reranker score-envelope policies use version 13 when they assign scores; versions 1 to 12 cannot contain those assignments and retain their canonical bytes. The reader context format with weighted scoring uses version 14, which records `context_citations`; versions 1 to 13 cannot claim the reader format and retain their canonical bytes. Rank fusion (`ScoringWeights.fusion="rrf"`) uses version 16 with formula version 2 score provenance and each candidate's `semantic_relevance`, the semantic cosine that `min_score` is compared with under rank fusion, or version 17 when `packing.session_context_rank_fusion_score_decay` is set (0.6 in the default configuration), which it also records (None is omitted, and a stored receipt from before version 17 reads a missing value as None, so other receipts keep their bytes); version 15 rank-fusion receipts saved before `semantic_relevance` keep their canonical bytes, versions 1 to 14 cannot claim rank fusion, and weighted scoring omits the fusion settings so those versions retain their canonical bytes. A rank fusion retrieval that skipped `min_score` because the vector path failed and no candidate had a cosine uses version 18, which records `min_score_skipped` (and the session decay when set); versions 1 to 17 cannot record it. A rank fusion retrieval with `scoring.rrf_recency_boost` or `scoring.rrf_tie_break` set (both are, in the default configuration) uses version 19, which records them and requires every score provenance to use the same values (and admits the version 17 and 18 features); versions 1 to 18 cannot record them, and unset values are omitted. Version 6 introduced context guidance,
 version 7 introduced auditable/compact context format, and version 8 records the
 optional deterministic episode-routing policy. Version 9 records the configured
 current-update multiplier and replayable applied operations; versions 1–8 mean
@@ -294,11 +302,15 @@ by default; direct source passages are not proof of the queried claim state.
 Versions 1–7 mean episode
 routing was disabled and omit its fields. Episode routing is candidate-backed within exact
 `(scope, session_id)` groups; it is not a full session scan or historical replay.
-Explicit density and score policies remain available. The default follows a
+Explicit density and balanced policies remain available. The earlier balanced
+default followed a
 complete 119-question development answer trial where balanced scored 83 versus
 density at 67 and a separately registered 381-question answer confirmation where
 balanced scored 250 versus 185, plus source-retention gains on both cohorts.
-These examined cohorts do not establish universal superiority.
+These examined cohorts do not establish universal superiority. Score ordering
+became the default with the reader format because it is the order the DeepSeek
+answer pairs measured; on the offline evidence gate balanced order traded
+LoCoMo evidence for LongMemEval-S evidence under those settings (#81).
 `AnswerabilityEvaluator` is an optional model-assisted check over the exact
 packed bundle. It resolves compact labels and auditable full-UUID citations,
 then derives full, partial, insufficient and conflicting verdicts outside the
@@ -334,8 +346,12 @@ superiority evidence.
 
 The completed GPT-5.4 default-retrieval baselines are LongMemEval-S **430/500
 (86.0%)** and LoCoMo **985/1,540 (64.0%)**, using medium reader/judge reasoning
-and a 3,996-token memory-context ceiling. These are scoped raw-turn storage
-evaluations; the separate DeepSeek 87.4% result is not replaced. Zep's published
+and a 3,996-token memory-context ceiling. They measure the retrieval defaults
+before rank fusion, the reader format and score ordering became defaults; no
+GPT-5.4 run of the new defaults exists. These are scoped raw-turn storage
+evaluations; the separate DeepSeek 87.4% result is not replaced. The new
+defaults were adopted on the separate DeepSeek answer track (`BENCHMARKS.md`),
+whose numbers are never compared directly with GPT-5.4 numbers. Zep's published
 values are external references, not matched live comparisons. See the
 [complete report](benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md)
 and `memory_bank/GOALS.md` before making benchmark claims or planning improvements.

@@ -208,18 +208,21 @@ nonempty evidence set share this cap even when their text differs. Nodes without
 evidence are not grouped. Response metrics and receipts retain the applied value,
 and excluded candidates use reason `evidence_limit`.
 
-Current pipeline receipts use schema version 12 and explicitly retain packing
-ordering, context guidance, context format, episode-routing settings, and the
-configured current-update multiplier. Reader-format retrievals
-(`context_format="reader"`) use version 14, which also records
+Pipeline receipts explicitly retain packing ordering, context guidance, context
+format, episode-routing settings, and the configured current-update multiplier.
+With the default settings (rank fusion with a current-state recency boost and
+an event-time tie-break, the reader format, score ordering and a rank fusion
+session decay of 0.6) they use schema version 19. Weighted
+retrievals (`PRME_SCORING__FUSION=weighted`) use version 12, or version 14 in
+the reader format (`context_format="reader"`), which also records
 `context_citations`; the bundle's `context_references` maps any `m3` style
-references to node IDs. Retrievals with opt-in rank fusion
-(`PRME_SCORING__FUSION=rrf`) use version 16, which records `fusion` and `rrf_k`,
-formula version 2 score provenance, and each candidate's `semantic_relevance`.
-Version 15 rank fusion receipts saved before `semantic_relevance` existed stay
-valid. With the opt-in rank fusion session decay
-(`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`) set, they use version
-17, which also records that decay. Under rank fusion, `POST /v1/retrieve` returns 422 for non-neutral
+references to node IDs. Retrievals with rank fusion
+(`PRME_SCORING__FUSION=rrf`, the default) use version 16, which records `fusion`
+and `rrf_k`, formula version 2 score provenance, and each candidate's
+`semantic_relevance`. Version 15 rank fusion receipts saved before
+`semantic_relevance` existed stay valid. With the rank fusion session decay
+(`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`, 0.6 by default) set,
+they use version 17, which also records that decay. Under rank fusion, `POST /v1/retrieve` returns 422 for non-neutral
 `ranking_multipliers`. A result's `score` is then the rank-based fused score,
 which says where the result ranks among the candidates rather than how relevant
 it is, so `min_score` compares against each result's `semantic_relevance` instead:
@@ -232,8 +235,9 @@ embedding model mismatch (`VECTOR` in `metrics.backend_failures`) and no result
 has a cosine, the floor is skipped instead of returning nothing: results and
 cross-scope hints keep their fused order, `metrics.min_score_skipped` is true,
 and the receipt uses version 18, which records `min_score_skipped`. With the
-opt-in rank fusion recency boost or event-time tie-break
-(`PRME_SCORING__RRF_RECENCY_BOOST`, `PRME_SCORING__RRF_TIE_BREAK`) set, rank
+rank fusion recency boost or event-time tie-break
+(`PRME_SCORING__RRF_RECENCY_BOOST`, 0.25 by default, and
+`PRME_SCORING__RRF_TIE_BREAK`, `event_time` by default) set, rank
 fusion receipts use version 19 instead, which records those settings as well as
 any session decay or skipped floor.
 `min_score=0` keeps everything in both modes. Version 9 score provenance records any

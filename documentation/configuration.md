@@ -60,7 +60,7 @@ The extraction provider is used by `ingest()` and `ingest_batch()`, and by `retr
 
 ## Scoring Weights
 
-These control the hybrid retrieval scoring formula. They should sum to approximately 1.0.
+These control the hybrid retrieval scoring formula. The six additive weights must sum to 1.0. The default fusion is `rrf`, which ranks by semantic and lexical rank and does not use the additive weights; set `PRME_SCORING__FUSION=weighted` to score with them. Setting any other `PRME_SCORING__*` variable keeps `rrf` and its recency boost and tie-break unless `PRME_SCORING__FUSION` is set too.
 
 | Variable | Default | Signal |
 |----------|---------|--------|
@@ -74,19 +74,25 @@ These control the hybrid retrieval scoring formula. They should sum to approxima
 | `PRME_SCORING__W_PATHS` | `0.00` | Path count tiebreaker |
 | `PRME_SCORING__RECENCY_LAMBDA` | `0.02` | Decay rate for recency |
 | `PRME_SCORING__TEMPORAL_BOOST` | `0.15` | Bonus for temporal queries |
-| `PRME_SCORING__FUSION` | `weighted` | `weighted` (the sum above) or `rrf`: opt-in reciprocal rank fusion of semantic and lexical ranks, which ignores the additive weights (RFC-0005 Section 7.2). Under `rrf` a result's score is rank-based, so a request's `min_score` is compared with its `semantic_relevance`, the semantic cosine similarity, instead; a floor tuned on weighted scores does not carry over, and a low-cosine exact keyword match is filtered out when a floor is set. If vector search fails or detects an embedding model mismatch and no result has a cosine, the floor is skipped and the response metadata sets `min_score_skipped` |
-| `PRME_SCORING__RRF_K` | `60` | Rank constant for `rrf`; set it only with `PRME_SCORING__FUSION=rrf` |
-| `PRME_SCORING__RRF_RECENCY_BOOST` | unset | Opt-in, `rrf` only: on current-state questions, multiplies each fused score by `1 + boost x recency` relative to the pool's largest value, where recency is the weighted formula's current-state recency (exp decay from the newest candidate, doubled for update wording), so the newer of two conflicting memories can rank first. Above 0 and at most 4. 0.25 passed the simulations with no significant change on the offline evidence gate; 1.0 lost LoCoMo evidence (RFC-0005 Section 7.2); provisional |
-| `PRME_SCORING__RRF_TIE_BREAK` | unset | Opt-in, `rrf` only: `event_time` orders equal fused scores newest first instead of by path count and node ID |
+| `PRME_SCORING__FUSION` | `rrf` | `rrf`: reciprocal rank fusion of semantic and lexical ranks, which ignores the additive weights (RFC-0005 Section 7.2), or `weighted`: the sum above. A `ScoringWeights` object built in code defaults to `weighted`; `PRMEConfig().scoring` is `rrf`. Under `rrf` a result's score is rank-based, so a request's `min_score` is compared with its `semantic_relevance`, the semantic cosine similarity, instead; a floor tuned on weighted scores does not carry over, and a low-cosine exact keyword match is filtered out when a floor is set. If vector search fails or detects an embedding model mismatch and no result has a cosine, the floor is skipped and the response metadata sets `min_score_skipped` |
+| `PRME_SCORING__RRF_K` | `60` | Rank constant for `rrf`; ignored, with a warning, under `PRME_SCORING__FUSION=weighted` |
+| `PRME_SCORING__RRF_RECENCY_BOOST` | `0.25` | `rrf` only: on current-state questions, multiplies each fused score by `1 + boost x recency` relative to the pool's largest value, where recency is the weighted formula's current-state recency (exp decay from the newest candidate, doubled for update wording), so the newer of two conflicting memories can rank first. Above 0 and at most 4. 0.25 passed the simulations with no significant change on the offline evidence gate; 1.0 lost LoCoMo evidence (RFC-0005 Section 7.2); provisional. Dropped when `PRME_SCORING__FUSION=weighted` is set; a `ScoringWeights` object built in code leaves it unset |
+| `PRME_SCORING__RRF_TIE_BREAK` | `event_time` | `rrf` only: `event_time` orders equal fused scores newest first instead of by path count and node ID. Dropped when `PRME_SCORING__FUSION=weighted` is set; a `ScoringWeights` object built in code leaves it unset |
 
 ## Context Packing
+
+The defaults below are `PRMEConfig`'s, and environment variables that set only
+some of them keep the others. A `PackingConfig` built in code starts from its
+own field defaults instead (`auditable`, `balanced` and no rank fusion session
+decay), which stored receipts and configurations rely on.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PRME_PACKING__TOKEN_BUDGET` | `4096` | Max tokens in packed context |
 | `PRME_PACKING__OVERHEAD_TOKENS` | `100` | Reserved for formatting overhead |
 | `PRME_PACKING__CHARS_PER_TOKEN` | `4.2` | Estimated chars per token |
-| `PRME_PACKING__CONTEXT_FORMAT` | `auditable` | `auditable`, `compact`, or `reader` (one plain line per record) |
+| `PRME_PACKING__CONTEXT_FORMAT` | `reader` | `reader` (one plain line per record), `auditable` (one JSON object per record) or `compact`. Answerability and claim verification need `PRME_PACKING__CONTEXT_CITATIONS=true` with `reader` |
+| `PRME_PACKING__MULTIPATH_ORDERING` | `score` | Order within the multi-path tier: `score`, `balanced` (the previous default) or `density` |
 | `PRME_PACKING__CONTEXT_CITATIONS` | `false` | Reader format only: add `[m3]` references and fill `context_references` |
 | `PRME_PACKING__MIN_FIDELITY` | `reference` | Lowest representation a record may fall back to. `full`, `prose` or `structured` keeps the text-free `key_value` and `reference` fallbacks, and blank records, out of every context format |
 | `PRME_PACKING__VECTOR_K` | `250` | Vector search candidates |
@@ -96,7 +102,7 @@ These control the hybrid retrieval scoring formula. They should sum to approxima
 | `PRME_PACKING__SESSION_CONTEXT_WINDOW` | `3` | Adjacent turns to include |
 | `PRME_PACKING__SESSION_CONTEXT_TOP_K` | `20` | Top results for session expansion |
 | `PRME_PACKING__SESSION_CONTEXT_SCORE_DECAY` | `0.85` | Fraction of the triggering result's score that an adjacent turn inherits |
-| `PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` | unset | Opt-in fraction for results scored with `PRME_SCORING__FUSION=rrf`, between 0 (exclusive) and 1; unset, they take the decay above. Fused scores are compressed, so at 0.85 adjacent turns can crowd primary evidence out of the context. The offline evidence gate favored 0.6 (RFC-0005 Section 7.2); provisional |
+| `PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` | `0.6` | Fraction for results scored with `PRME_SCORING__FUSION=rrf`, between 0 (exclusive) and 1, in place of the decay above; weighted scoring never uses it. Fused scores are compressed, so at 0.85 adjacent turns can crowd primary evidence out of the context. The offline evidence gate favored 0.6 (RFC-0005 Section 7.2); provisional |
 | `PRME_PACKING__AGGREGATION_K_MULTIPLIER` | `2.5` | Multiplier for aggregation queries |
 | `PRME_PACKING__AGGREGATION_K_MAX` | `500` | Max candidates for aggregation |
 

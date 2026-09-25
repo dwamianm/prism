@@ -80,9 +80,10 @@ cross-owner key enumeration operation.
 
 Both retrievers accept an optional `min_score`, the same inclusive floor as
 `MemoryEngine.retrieve()` (for example `PRMERetriever(..., min_score=0.5)`).
-With the default weighted scoring it applies to the composite score. Under
-opt-in rank fusion (`PRME_SCORING__FUSION=rrf`) it applies to each result's
-`semantic_relevance`, which is in the result metadata. If vector search fails or
+Under rank fusion (`PRME_SCORING__FUSION=rrf`, the default) it applies to
+each result's `semantic_relevance`, which is in the result metadata. With
+weighted scoring (`PRME_SCORING__FUSION=weighted`) it applies to the composite
+score. If vector search fails or
 the embedding model changed without a rebuild, no result has a cosine, so the
 floor is skipped instead of returning nothing, and every result's metadata then
 carries `min_score_skipped: True` (RFC-0005 Section 7.2).
