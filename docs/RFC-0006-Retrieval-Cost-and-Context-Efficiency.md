@@ -239,7 +239,9 @@ for obj in ranked_objects where EPISODE_CONTEXT in obj.paths and obj not in incl
     representation = select_representation(available, obj)
     include only when that representation fits
 
-# Priority 3: Multi-path objects (path_count >= 2) by configured ordering
+# Priority 3: Multi-path objects (path_count >= 2) by configured ordering.
+# With session_context_packing set, a single-path session neighbor whose
+# trigger is in this tier or above joins it (see the note after this block).
 multi_path = [obj for obj in ranked_objects if obj.path_count >= 2 and obj not in included]
 if packing_policy == BALANCED:
     reserve argmax(multi_path, by=(composite_score, inverse_node_id))
@@ -275,6 +277,19 @@ for obj in remaining:
         if available < token_cost(smallest_representable_object, REFERENCE):
             break  # No point continuing — budget is exhausted
 ```
+
+**Session context neighbors (opt-in, issue #86).** Session expansion (RFC-0005
+Section 4.5) links each neighbor it reaches to the highest-ranked trigger whose
+window holds it. With `PackingConfig.session_context_packing` unset, the default,
+the algorithm above is unchanged. With `"trigger_tier"`, `SESSION_CONTEXT` counts
+toward `path_count` when it joins a candidate another path found, and a neighbor
+that expansion added (one path) joins Priority 3 when its trigger is in Priority 3
+or above. `"adjacent"` includes the same objects in the same order and places
+every included trigger and neighbor beside the others of its window in session
+order within its section, so it changes where an object appears in the bundle,
+not which objects are included. The whole-context budget check is unchanged.
+Packing a trigger's nearest turns right after the trigger instead was measured
+and rejected: it lost LongMemEval-S evidence (see `docs/PACKING.md`).
 
 The packing algorithm is deterministic. Given the same input list and budget, it MUST produce the same bundle.
 
@@ -455,7 +470,7 @@ every complete line. Reader receipts use version 14, which records
 claim the reader format, and mean citations were off. A retrieval scored with
 rank fusion (RFC-0005 Section 7.2) writes version 16 in any format (version 15 before
 it recorded `semantic_relevance`, version 17 when it records the rank fusion session
-decay, version 18 when it records a `min_score` skipped because the vector path failed, version 19 when it records the rank fusion recency boost or event-time tie-break, which the default settings do). A weighted retrieval with event-time recency (`scoring.recency_time`, RFC-0005 Section 7) writes version 20 in any format.
+decay, version 18 when it records a `min_score` skipped because the vector path failed, version 19 when it records the rank fusion recency boost or event-time tie-break, which the default settings do). A weighted retrieval with event-time recency (`scoring.recency_time`, RFC-0005 Section 7) writes version 20 in any format. A retrieval with session context packing (Section 5) writes version 21 under either formula.
 
 ## Default update (2026-09-25)
 

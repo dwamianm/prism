@@ -1070,7 +1070,7 @@ version 19 receipts, which record those settings and the decay. Rank fusion
 without the recency settings writes version 16, 17 with the decay or 18 with a
 skipped `min_score`; the reader format with weighted scoring writes version 14,
 and weighted retrievals in the auditable or compact format write version 12. Weighted
-retrievals with `PRME_SCORING__RECENCY_TIME=event_time` write version 20 in any format. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+retrievals with `PRME_SCORING__RECENCY_TIME=event_time` write version 20 in any format. Retrievals with `PRME_PACKING__SESSION_CONTEXT_PACKING` set write version 21 under either formula. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
 their original canonical JSON and feedback checksums and always mean auditable
 rendering. Versions 1–5 also mean context guidance was off. For source blocks or
 bounded dialogue episodes stored under meaningful session IDs, set
