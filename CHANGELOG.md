@@ -110,6 +110,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a warning, and nothing changes by default. Receipts that record it use
   schema version 20; to stop using it, unset the variable rather than
   returning to an earlier release, which cannot read version 20 receipts.
+  On the offline evidence gate it lost LoCoMo evidence (-4.8 points of
+  questions with all evidence packed with the previous auditable format and
+  balanced order, -4.5 with the reader format, both intervals excluding zero)
+  and left LongMemEval-S unchanged, so it stays off.
 
 ### Fixed
 

@@ -394,7 +394,20 @@ ago, and memories stored without an event time, such as entity, consolidation
 and profile nodes, count from when they were stored, so against a past
 reference time they keep full recency while imported turns decay. Rank fusion
 drops the setting with a warning; its current-update eligibility still reads
-`updated_at`.
+`updated_at` (issue #183).
+
+Issue #83 asked the offline evidence gate whether event-time recency helps
+outside current-state questions. It does not. At 3,996 tokens, weighted scoring
+with the setting against weighted scoring without it packed all annotated
+evidence for 909 instead of 983 of 1,536 LoCoMo questions with the previous
+auditable format and balanced order (-4.8 points, 95% interval -6.4 to -3.5),
+and 1,133 instead of 1,202 with the reader format and score order (-4.5
+points, -5.7 to -3.3). Every LoCoMo category lost (multi-hop -5.0 and -9.9
+points, temporal -6.2 and -6.2), because the questions ask at the last session
+and earlier sessions decay. LongMemEval-S did not move significantly (+0.2 and
+-0.6 points, both intervals including zero). Rank fusion, the default, applies
+no recency outside current-state questions, which is the outcome the issue
+named for this case, so the setting stays off.
 
 ### 7.1 Explicit current updates
 
