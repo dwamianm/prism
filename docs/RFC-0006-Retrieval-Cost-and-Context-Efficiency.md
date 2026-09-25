@@ -36,7 +36,8 @@ answer trial then scored 83/119 for balanced and 67/119 for density, with 26
 paired wins and 10 losses. A separately registered answer confirmation on the
 different 381-question partition scored 250/381 versus 185/381, with 88 paired
 wins, 23 losses and no lower category total. Balanced then became the default
-(until the 2026-09-25 update below). Both
+(score ordering replaced it briefly in the 2026-09-25 update below, and it is
+the default again). Both
 partitions had been inspected for source retention, and the custom local judge
 does not establish universal superiority. The
 [development answer report](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-ALL-V2.md)
@@ -52,13 +53,16 @@ fusion with a session decay of 0.6. LongMemEval-S evidence mostly sits in short
 user turns that the quarter-length penalty keeps. Balanced was then the
 default; score order became the default with the reader format in the
 2026-09-25 update below, because it is the order the DeepSeek answer pairs
-measured, and a balanced version would be a new variant. The
+measured, and a balanced version would be a new variant. That balanced
+variant then passed the same test twice against score order, and balanced is
+the default again (the second 2026-09-25 update below). The
 [reader ordering record](../benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
 has both budgets, the rank fusion recency settings and every category.
 
-**Configurable policy:** `PackingConfig.multipath_ordering` accepts `"score"`
-(`PRMEConfig`'s default since the 2026-09-25 update below), `"balanced"` (the
-class's own default, which stored configurations rely on) or `"density"`. It changes only the ordering of the multi-path tier; ties
+**Configurable policy:** `PackingConfig.multipath_ordering` accepts `"balanced"`
+(`PRMEConfig`'s default and the class's own default, which stored
+configurations rely on), `"score"` (`PRMEConfig`'s default between the two
+2026-09-25 updates below) or `"density"`. It changes only the ordering of the multi-path tier; ties
 still use node ID and all representations obey the same measured budget. The
 public implementation reproduces all 714 frozen development contexts and source
 measurements across both arms and three budgets. This is implementation parity,
@@ -463,6 +467,21 @@ LongMemEval-S). The new defaults live in `PRMEConfig`; `PackingConfig` and
 configurations read a missing value as. The
 [packing guide](PACKING.md) lists the results, what else changes, and the
 settings that restore the previous defaults.
+
+## Default update: balanced ordering (2026-09-25)
+
+Balanced ordering replaced score ordering in the defaults above; the reader
+format, rank fusion with its recency boost and tie-break, the 0.6 session
+decay and the context budget are unchanged. The balanced version of those
+settings passed the epic #77 default-change test twice on the DeepSeek answer
+track, each pair against a fresh run of the score-order defaults at a
+3,996-token context: LongMemEval-S +3.2 points in both pairs (95% intervals
++0.6 to +6.0 and +0.6 to +5.8) and LoCoMo +0.5 and -0.2 (both intervals
+including zero). This is the trade the offline evidence gate found above:
+balanced packs all LongMemEval-S evidence for more questions and all LoCoMo
+evidence for fewer. The 0.6 session decay was tuned under score order (#111)
+and has not been swept again under balanced. Set
+`PRME_PACKING__MULTIPATH_ORDERING=score` to keep score order.
 
 ## Text-free fallback clarification (2026-09-23)
 

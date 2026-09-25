@@ -211,7 +211,7 @@ and excluded candidates use reason `evidence_limit`.
 Pipeline receipts explicitly retain packing ordering, context guidance, context
 format, episode-routing settings, and the configured current-update multiplier.
 With the default settings (rank fusion with a current-state recency boost and
-an event-time tie-break, the reader format, score ordering and a rank fusion
+an event-time tie-break, the reader format, balanced ordering and a rank fusion
 session decay of 0.6) they use schema version 19. Weighted
 retrievals (`PRME_SCORING__FUSION=weighted`) use version 12, or version 14 in
 the reader format (`context_format="reader"`), which also records

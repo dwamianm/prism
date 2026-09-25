@@ -2,9 +2,11 @@
 
 Rank fusion with a current-state recency boost of 0.25 and an event-time
 tie-break, the reader context format, score ordering and a 0.6 rank fusion
-session decay became the defaults then. Tests of the weighted formula, JSON
-contexts, balanced ordering, or the receipt versions those settings write pin
-these settings explicitly instead of relying on the defaults.
+session decay became the defaults then, and balanced ordering replaced score
+ordering again later that day. Tests of the weighted formula, JSON contexts,
+or the receipt versions those settings write pin these settings explicitly
+instead of relying on the defaults. Balanced ordering is named too, so the set
+stays complete whatever the ordering default is.
 """
 
 from prme.retrieval.config import PackingConfig, ScoringWeights

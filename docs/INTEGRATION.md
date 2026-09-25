@@ -955,10 +955,10 @@ ScoringWeights(
 
 ### PackingConfig
 
-`multipath_ordering="score"`, the `PRMEConfig` default, selects composite-score
-ordering within the multi-path priority tier. `"balanced"`, the previous default
-and still `PackingConfig`'s own field default, reserves the
-highest-scored ordinary multi-path candidate, then uses a quarter-length penalty.
+`multipath_ordering="balanced"`, the `PRMEConfig` default and `PackingConfig`'s
+own field default, reserves the highest-scored ordinary multi-path candidate,
+then uses a quarter-length penalty. `"score"` selects composite-score ordering
+within the multi-path priority tier.
 Pins, instructions, active tasks, other tiers and measured whole-output budgets
 keep their existing rules. Balanced was chosen for JSON records after a complete
 119-question answer trial at 4K: balanced scored 83 versus density at 67, with 26
@@ -966,7 +966,9 @@ wins and 10 losses. A separately registered 381-question answer confirmation
 scored 250 versus 185, with 88 wins and 23 losses. Both source partitions had
 already been inspected, so these results do not establish superior behavior for
 every workload. Score order became the default with the one-line reader format
-and rank fusion, which passed a paired answer test twice (see
+and rank fusion, which passed a paired answer test twice. Balanced order with
+those settings then passed the same test twice against score order and is the
+default again (see
 [Default retrieval settings](PACKING.md#default-retrieval-settings)).
 
 ```python

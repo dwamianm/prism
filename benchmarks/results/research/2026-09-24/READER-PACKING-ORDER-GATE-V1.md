@@ -262,8 +262,13 @@ still reorders them.
 - `balanced` stays the default for now. Update, 2026-09-25: score order
   became the default together with the reader format, rank fusion with its
   recency boost and tie-break, and session decay 0.6, after the DeepSeek
-  pairs of `prme-reader-rrf-sd06-rec` (`BENCHMARKS.md`). The balanced
-  version of those settings is still an untested variant.
+  pairs of `prme-reader-rrf-sd06-rec` (`BENCHMARKS.md`). Later update,
+  2026-09-25: the balanced version of those settings, `prme-rrf-rec-balanced`,
+  passed the DeepSeek default-change test twice against the score-order
+  defaults (`prme@335ee82b`): LongMemEval-S +3.2 points in both pairs
+  (intervals excluding zero) and LoCoMo +0.5 and -0.2 (intervals including
+  zero), the direction this record's gate projected. `balanced` is the default
+  again. The session decay has not been swept again under it (next items).
 - The `reader-rrf`, `reader-rrf-sd06` and `reader-rrf-sd06-rec` variants
   prepared for the DeepSeek track so far all use score order. The same settings
   with `balanced` form a different variant (other settings and other context

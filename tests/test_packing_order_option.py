@@ -89,6 +89,11 @@ def test_ordering_does_not_override_priority_or_budget(ordering, priority):
 
 def test_default_and_environment_selection_are_explicit(monkeypatch):
     assert PackingConfig().multipath_ordering == "balanced"
+    # Balanced is also the product default, with the reader format.
+    monkeypatch.delenv("PRME_PACKING__MULTIPATH_ORDERING", raising=False)
+    monkeypatch.delenv("PRME_PACKING__CONTEXT_FORMAT", raising=False)
+    default = PRMEConfig(_env_file=None).packing
+    assert (default.multipath_ordering, default.context_format) == ("balanced", "reader")
     assert PackingConfig().context_guidance_mode == "temporal"
     assert PackingConfig().context_format == "auditable"
     monkeypatch.setenv("PRME_PACKING__MULTIPATH_ORDERING", "score")

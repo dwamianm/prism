@@ -4,9 +4,12 @@
 
 These measure the retrieval defaults before 2026-09-25, when rank fusion with a
 current-state recency boost and an event-time tie-break, the reader context
-format, score ordering and a 0.6 rank fusion session decay became the defaults.
-No GPT-5.4 run of the new defaults exists; they were adopted on the separate
-[DeepSeek answer track](#default-change-reader-format-rank-fusion-with-recency-and-session-decay-2026-09-25).
+format and a 0.6 rank fusion session decay became the defaults, first with
+score ordering and then, after a second change the same day, with balanced
+ordering, the ordering these runs also used. No GPT-5.4 run of the new
+defaults exists; they were adopted on the separate DeepSeek answer track
+([first change](#default-change-reader-format-rank-fusion-with-recency-and-session-decay-2026-09-25),
+[second change](#default-change-balanced-multi-path-ordering-2026-09-25)).
 
 | Benchmark | Complete result | Effective context ceiling |
 |---|---:|---:|
@@ -201,15 +204,17 @@ With the defaults before 2026-09-25 (`--set 'scoring.fusion="weighted"'
 'packing.multipath_ordering="balanced"'`) the gate reproduces every saved
 context (same `context_sha256`; the report lists any mismatch) and these
 baselines. The current defaults (rank fusion with a 0.25 current-state recency
-boost and an event-time tie-break, the reader format, score order and a 0.6
-rank fusion session decay) reproduce none of them, by design:
+boost and an event-time tie-break, the reader format, balanced order and a 0.6
+rank fusion session decay) reproduce none of them, by design. Neither do the
+same settings with score order (`--set 'packing.multipath_ordering="score"'`),
+the defaults between the two 2026-09-25 changes:
 
-| | LoCoMo, previous defaults | LoCoMo, current defaults | LongMemEval-S, previous defaults | LongMemEval-S, current defaults |
-|---|---:|---:|---:|---:|
-| Records per context | 25.2 | 77.6 | 23.9 | 19.5 |
-| Memory-text share of context tokens | 29% | 97% | 32% | 88% |
-| All annotated evidence packed | 983/1,536 (64.0%); multi-hop 45/282 (16.0%) | 1,305/1,536 (85.0%); multi-hop 145/282 (51.4%) | 403/470 (85.7%) | 409/470 (87.0%) |
-| Projected accuracy | 64.0% | 78.3% | 86.0% | 86.8% |
+| | LoCoMo, previous defaults | LoCoMo, current defaults | LoCoMo, score order | LongMemEval-S, previous defaults | LongMemEval-S, current defaults | LongMemEval-S, score order |
+|---|---:|---:|---:|---:|---:|---:|
+| Records per context | 25.2 | 84.5 | 77.6 | 23.9 | 39.9 | 19.5 |
+| Memory-text share of context tokens | 29% | 97% | 97% | 32% | 83% | 88% |
+| All annotated evidence packed | 983/1,536 (64.0%); multi-hop 45/282 (16.0%) | 1,290/1,536 (84.0%); multi-hop 140/282 (49.6%) | 1,305/1,536 (85.0%); multi-hop 145/282 (51.4%) | 403/470 (85.7%) | 445/470 (94.7%) | 409/470 (87.0%) |
+| Projected accuracy | 64.0% | 77.6% | 78.3% | 86.0% | 91.4% | 86.8% |
 
 **The projected accuracy is a planning estimate, not an answer score.** Each
 question takes the saved GPT-5.4 run's accuracy on questions whose annotated
@@ -298,9 +303,12 @@ before 2026-09-25: the first row is the previous defaults, and the
 reader-format row used `--set 'packing.context_format="reader"' --set
 'packing.multipath_ordering="score"'` with the weighted score. The current
 defaults, which add rank fusion with its recency boost and tie-break and the
-0.6 session decay, pack all LoCoMo evidence for 1,305/1,536 questions (85.0%;
-multi-hop 145/282, 51.4%; projected 78.3%) and all LongMemEval-S evidence for
-409/470 (87.0%; projected 86.8%).
+0.6 session decay and use balanced order, pack all LoCoMo evidence for
+1,290/1,536 questions (84.0%; multi-hop 140/282, 49.6%; projected 77.6%) and
+all LongMemEval-S evidence for 445/470 (94.7%; projected 91.4%). With score
+order instead, as between the two 2026-09-25 changes, they pack 1,305/1,536
+(85.0%; multi-hop 145/282, 51.4%; projected 78.3%) and 409/470 (87.0%;
+projected 86.8%).
 
 | Run | LoCoMo all evidence packed | LoCoMo multi-hop | LoCoMo projected | LongMemEval-S all evidence packed | LongMemEval-S projected |
 |---|---:|---:|---:|---:|---:|
@@ -903,6 +911,11 @@ baseline as the before side of any pair other than a repeat of the defaults
 prepared at a newer commit on `main`. A baseline's own answer run is never the
 before side of a variant's comparison, because `compare` pairs a variant only
 with the fresh defaults run answered alongside it (#129).
+After the balanced-ordering change
+([below](#default-change-balanced-multi-path-ordering-2026-09-25)),
+`prme@335ee82b` no longer holds the defaults: the next baseline is recorded
+with `prepare prme` and `run prme` on `main` at that change's merge commit,
+and later variants are paired with it.
 `compare` refuses results
 answered by another model identity or other settings. Both first-baseline arms
 were prepared from `main` at `97c9402f`,
@@ -1224,6 +1237,102 @@ recorded with `prepare prme` and `run prme` on `main` at the merge commit
 `335ee82b` (LoCoMo 1,237/1,540, LongMemEval-S 431/500; see the table of
 DeepSeek runs above), and later variants are paired with it. The Ollama server
 stays on 0.34.3, the version the A/A checks cover.
+
+### Default change: balanced multi-path ordering (2026-09-25)
+
+The variant `prme-rrf-rec-balanced` passed the default-change rule twice
+against the defaults of the change above, and `balanced` replaced score order
+as the default `packing.multipath_ordering`. It changes only that setting
+(`variant_settings` `{"packing.multipath_ordering": "balanced"}`); rank fusion
+with its recency boost and tie-break, the reader format, the 0.6 session decay,
+the context budget and session expansion did not change. It was prepared once
+per benchmark, from a clean tree at `5e93caab`, whose `src/` is the same as
+`335ee82b`; its context text hashes (`contexts_sha256`) are
+`d0eb16780d8e16ef669ea47bb81ed840f71014be66d3a4179d67760eaa3aee54` on LoCoMo
+and `bbb19605b98a10cde129b7798000fd1a10b67937860d0b3d13faaecb808c969c` on
+LongMemEval-S, and its text differs from the defaults' on all 1,540 and all 500
+questions. Both pairs were answered alongside the baseline `prme@335ee82b` with
+model identity `e04da138`, Ollama server version 0.34.3 at the start and end of
+every run, the amended failure policy (#132) and a **3,996-token context**, and
+both relied on the A/A checks above (LongMemEval-S pair 5,
+`ed5d99a7a1d545cea5232eb1573e5f92`; LoCoMo pair 3,
+`09ab2ec8689c4eb28c19a5cdb6e19775`), neither of which excludes zero, so no
+margin applies. All 16,328 reader and judge calls returned HTTP 200 on their
+first attempt. Under the amended failure policy 8 judge verdicts were asked
+once more and 4 were normalized; no reader answer was asked again, and no
+question on either side of any pair scored `truncated` or
+`verdict_unresolved`. `changed_by_other_code` was 0 on every pair. `verdict
+prme --variant rrf-rec-balanced --provider ollama` reads `pass` with
+`checked_against_run_logs: true`, from the four lines of the
+[verdict record](benchmarks/results/research/ollama-deepseek-v4.1-flash-cloud-pair-verdicts.jsonl)
+that this change adds. These are DeepSeek-track numbers and are not comparable
+with the GPT-5.4 results.
+
+| Pair | Benchmark | Defaults (before) | Variant (after) | Paired difference, 95% interval | Gained / lost |
+|---|---|---:|---:|---|---:|
+| 1 | LoCoMo ([before](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-locomo-pair-1-before-result.json), [after](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-locomo-pair-1-after-result.json), [compare](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-locomo-pair-1-compare.json)) | 1,234/1,540 (80.1%) | 1,242/1,540 (80.6%) | +0.5 points, -0.9 to +2.0 (conversations -0.9 to +2.0, questions -0.9 to +1.9) | 66 / 58 |
+| 1 | LongMemEval-S ([before](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-longmemeval-pair-1-before-result.json), [after](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-longmemeval-pair-1-after-result.json), [compare](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-longmemeval-pair-1-compare.json)) | 434/500 (86.8%) | 450/500 (90.0%) | **+3.2 points, +0.6 to +6.0** | 32 / 16 |
+| 2 (confirmation) | LoCoMo ([before](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-locomo-pair-2-before-result.json), [after](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-locomo-pair-2-after-result.json), [compare](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-locomo-pair-2-compare.json)) | 1,241/1,540 (80.6%) | 1,238/1,540 (80.4%) | -0.2 points, -1.5 to +1.1 (conversations -1.5 to +1.0, questions -1.5 to +1.1) | 54 / 57 |
+| 2 (confirmation) | LongMemEval-S ([before](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-longmemeval-pair-2-before-result.json), [after](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-longmemeval-pair-2-after-result.json), [compare](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-vs-prme-rrf-rec-balanced-longmemeval-pair-2-compare.json)) | 434/500 (86.8%) | 450/500 (90.0%) | **+3.2 points, +0.6 to +5.8** | 30 / 14 |
+
+The first pairs finished at 05:55 UTC (LongMemEval-S) and 06:16 UTC (LoCoMo)
+and were compared as passing before the confirmation pairs started at 06:17
+UTC. The whole gain is on LongMemEval-S, mostly multi-session questions:
+
+| LongMemEval-S category | Pair 1 | Pair 2 |
+|---|---|---|
+| knowledge-update (78) | 93.6% to 89.7%, -3.8 (-10.3 to +1.3), 1 gained, 4 lost | 93.6% to 89.7%, -3.8 (-10.3 to +1.3), 1 gained, 4 lost |
+| multi-session (133) | 74.4% to 82.0%, +7.5 (+0.8 to +14.3), 17 gained, 7 lost | 72.9% to 84.2%, +11.3 (+3.8 to +18.8), 21 gained, 6 lost |
+| single-session-assistant (56) | 92.9% to 98.2%, +5.4 (0.0 to +12.5) | 91.1% to 94.6%, +3.6 (0.0 to +8.9) |
+| single-session-preference (30) | 93.3% to 86.7%, -6.7 (-23.3 to +10.0), 2 gained, 4 lost | 96.7% to 93.3%, -3.3 (-10.0 to 0.0), 0 gained, 1 lost |
+| single-session-user (70) | 98.6% to 100.0%, +1.4 (0.0 to +4.3) | 100.0% to 98.6%, -1.4 (-4.3 to 0.0) |
+| temporal-reasoning (133) | 85.0% to 90.2%, +5.3 (+1.5 to +9.8), 8 gained, 1 lost | 85.7% to 88.7%, +3.0 (-0.8 to +7.5), 6 gained, 2 lost |
+
+| LoCoMo category | Pair 1 | Pair 2 |
+|---|---|---|
+| multi-hop (282) | 62.8% to 61.0%, -1.8 (-6.4 to +2.8), 20 gained, 25 lost | 64.2% to 59.9%, -4.3 (-9.2 to +0.4), 15 gained, 27 lost |
+| open-domain (96) | 58.3% to 60.4%, +2.1 (-4.2 to +7.3) | 55.2% to 58.3%, +3.1 (-2.1 to +8.3) |
+| single-hop (841) | 88.9% to 89.3%, +0.4 (-1.3 to +1.9) | 89.4% to 89.3%, -0.1 (-1.5 to +1.3) |
+| temporal (321) | 78.8% to 81.3%, +2.5 (-0.7 to +5.9) | 79.4% to 81.6%, +2.2 (-0.6 to +5.3) |
+
+The rule reads overall accuracy only. Two categories moved the same way in
+both pairs without an interval that excludes zero, and both are worth
+watching. LongMemEval-S knowledge-update questions went from 73 to 70 of 78 in
+both pairs, after going from 73 to 71 in the change above; #169 tracks recency
+on those questions. LoCoMo multi-hop questions fell in both pairs. In the
+confirmation its conversation-level interval excludes zero (-9.2 to -0.6), but
+its question-level interval does not (-9.2 to +0.4), so its `interval_95`,
+which spans both, includes zero. The LongMemEval-S multi-session intervals
+exclude zero in both pairs, and the temporal-reasoning interval does in the
+first pair.
+
+This is the trade the offline evidence gate predicted (#81, #176; the
+[reader ordering record](benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)).
+With the settings of the change above at 4K, `balanced` packed all annotated
+evidence for more LongMemEval-S questions (445/470 against 409/470, projected
++4.6 points), most of all multi-session (+16.5 points) and temporal-reasoning
+(+7.9) questions, and for fewer LoCoMo questions (1,290/1,536 against
+1,305/1,536, projected -0.7 points), most of all multi-hop (-1.8). The gate did
+not predict the answer losses on knowledge-update (evidence unchanged) or
+single-session-preference (evidence +20.0 points), whose intervals include zero.
+
+Every arm prepared with this setting or this context text, and every pair
+answered with them (#130): `prme-rrf-rec-balanced` was prepared once per
+benchmark and answered in pairs 1 and 2 on each; no pair was given up, and no
+other arm shares its settings or its context text (`verdict` lists no other
+text pair and no other baseline pair). `compare` warned only that three earlier
+variants that change some of the same settings have complete pairs alongside
+`prme@46647825`: `prme-reader-rrf-sd06-rec` (pairs 1 and 2),
+`prme-reader-rrf` (pair 2; its first pair recorded no settings) and
+`prme-reader-rrf-sd06` (pairs 1 and 2), each a variant of its own with its own
+first pair and confirmation, all in the change above. All use score order, so
+none shares this variant's settings or text.
+
+After this change `prme@335ee82b` no longer holds the defaults, so every
+variant's count starts again. A new defaults baseline must be recorded with
+`prepare prme` and `run prme` on `main` at the merge commit, and later variants
+are paired with it. The Ollama server stays on 0.34.3, the version the A/A
+checks cover.
 
 ## Earlier registered memory-utility comparison
 

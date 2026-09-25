@@ -455,6 +455,6 @@ async def test_retrieval_applies_and_records_the_settings(config, user):
     assert _position(boosted, "The team switched") < _position(boosted, "What database")
     assert saved.schema_version == 19 and saved.scoring == BOTH
     assert (saved.packing.context_format, saved.packing.multipath_ordering,
-            saved.packing.session_context_rank_fusion_score_decay) == ("reader", "score", .6)
+            saved.packing.session_context_rank_fusion_score_decay) == ("reader", "balanced", .6)
     fusions = [provenance.rank_fusion for provenance in saved.score_provenance.values()]
     assert all(f.recency_boost_factor is not None and f.tie_break is not None for f in fusions)
