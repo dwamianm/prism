@@ -276,6 +276,7 @@ class MemoryClient:
         value_bindings: list[MemoryValueBinding | dict[str, Any]] | None = None,
         session_id: str | None = None,
         role: str = "user",
+        speaker: str | None = None,
         node_type: NodeType = NodeType.NOTE,
         scope: Scope = Scope.PERSONAL,
         metadata: dict | None = None,
@@ -295,6 +296,8 @@ class MemoryClient:
         representation while ``content`` remains the immutable source.
         ``value_bindings`` preserve exact presentation values while exposing
         complete caller-supplied lookup forms for tool boundaries.
+        ``speaker`` names who said it (``role="participant"`` marks another
+        human in the conversation as a first-party source).
         """
         return self._run(
             self._engine.store(
@@ -304,6 +307,7 @@ class MemoryClient:
                 value_bindings=value_bindings,
                 session_id=session_id,
                 role=role,
+                speaker=speaker,
                 node_type=node_type,
                 scope=scope,
                 metadata=metadata,
@@ -326,6 +330,7 @@ class MemoryClient:
         value_bindings: list[MemoryValueBinding | dict[str, Any]] | None = None,
         session_id: str | None = None,
         role: str = "user",
+        speaker: str | None = None,
         node_type: NodeType = NodeType.NOTE,
         scope: Scope = Scope.PERSONAL,
         metadata: dict | None = None,
@@ -345,6 +350,7 @@ class MemoryClient:
             value_bindings=value_bindings,
             session_id=session_id,
             role=role,
+            speaker=speaker,
             node_type=node_type,
             scope=scope,
             metadata=metadata,
@@ -412,6 +418,7 @@ class MemoryClient:
         *,
         user_id: str,
         role: str = "user",
+        speaker: str | None = None,
         session_id: str | None = None,
         metadata: dict | None = None,
         event_time: datetime | None = None,
@@ -423,6 +430,7 @@ class MemoryClient:
                 content,
                 user_id=user_id,
                 role=role,
+                speaker=speaker,
                 session_id=session_id,
                 metadata=metadata,
                 event_time=event_time,
@@ -739,12 +747,13 @@ class MemoryClient:
 
     def ingest_fast(
         self, content: str, *, user_id: str, role: str = "user",
+        speaker: str | None = None,
         session_id: str | None = None, metadata: dict | None = None,
         scope: Scope = Scope.PERSONAL, event_time: datetime | None = None,
     ) -> str:
         """Durably accept a raw event; indexing resumes on processing/retrieval."""
         return self._run(self._engine.ingest_fast(
-            content, user_id=user_id, role=role, session_id=session_id,
+            content, user_id=user_id, role=role, speaker=speaker, session_id=session_id,
             metadata=metadata, scope=scope, event_time=event_time,
         ))
 

@@ -560,7 +560,7 @@ def _enrich_turn(turn: dict, date_prefix: str) -> str | None:
     text = turn["text"].strip()
     if len(text) < 15:
         return None
-    speaker = turn.get("speaker", "")
+    speaker = (turn.get("speaker") or "").strip()
     caption = turn.get("blip_caption", "")
     if caption:
         return f"{date_prefix}{speaker}: {text} [Image: {caption}]"
@@ -575,25 +575,16 @@ async def _ingest_sessions(
 ) -> int:
     """Ingest conversation sessions into the engine.
 
-    Stores each turn individually, plus Q-A paired turns when consecutive
-    speakers differ (reconstructive memory: adjacent context helps retrieval
-    find answers to questions that were asked in the conversation).
+    Stores each turn individually. With ``enable_qa_pairing``, the engine
+    also stores Q-A paired turns when consecutive speakers differ
+    (reconstructive memory: adjacent context helps retrieval find answers to
+    questions that were asked in the conversation).
+
+    Both people in a LoCoMo conversation are human, so every turn is stored
+    as a first-party ``participant`` statement with its speaker's name.
 
     Returns the number of turns ingested.
     """
-    # Track speakers to assign alternating roles — this enables the
-    # core engine's Q-A turn pairing (which triggers on role changes
-    # within a session).
-    speakers = set()
-    for sess_turns, _ in sessions:
-        for turn in sess_turns:
-            s = turn.get("speaker", "")
-            if s:
-                speakers.add(s)
-    speaker_list = sorted(speakers)
-    speaker_roles = {s: ("user" if i % 2 == 0 else "assistant")
-                     for i, s in enumerate(speaker_list)}
-
     total_turns = 0
     for sess_idx, (turns, date_str) in enumerate(sessions):
         session_id = f"{sample_id}-s{sess_idx}"
@@ -603,14 +594,12 @@ async def _ingest_sessions(
             enriched = _enrich_turn(turn, date_prefix)
             if enriched is None:
                 continue
-            speaker = turn.get("speaker", "")
-            # Use speaker-based role so the engine's Q-A pairing triggers
-            # automatically when speakers alternate.
-            role = speaker_roles.get(speaker, "user")
+            speaker = (turn.get("speaker") or "").strip()
             await engine.store(
                 enriched,
                 user_id=user_id,
-                role=role,
+                role="participant",
+                speaker=speaker or None,
                 node_type=NodeType.FACT,
                 scope=Scope.PERSONAL,
                 session_id=session_id,

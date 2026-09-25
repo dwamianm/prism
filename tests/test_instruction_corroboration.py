@@ -21,6 +21,8 @@ RULE = "Always use Python for data analysis."
     {"epistemic_type": EpistemicType.CONDITIONAL},
     {"source_type": SourceType.SYSTEM_INFERRED},
     {"role": "assistant"},
+    # Another person in the conversation is first-party but not the owner.
+    {"role": "participant", "speaker": "Melanie"},
 ])
 async def test_similar_message_cannot_corroborate_an_unrelated_or_untrusted_instruction(config, user, monkeypatch, change, remention_enabled):
     config.reinforce_similarity_threshold = .5 if remention_enabled else None

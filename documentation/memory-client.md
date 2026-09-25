@@ -42,6 +42,7 @@ def store(
     user_id: str,
     session_id: str | None = None,
     role: str = "user",
+    speaker: str | None = None,
     node_type: NodeType = NodeType.NOTE,
     scope: Scope = Scope.PERSONAL,
     metadata: dict | None = None,
@@ -60,7 +61,8 @@ def store(
 | `content` | `str` | required | Text content to store |
 | `user_id` | `str` | required | Owner of this memory |
 | `session_id` | `str \| None` | `None` | Group related memories |
-| `role` | `str` | `"user"` | Speaker role (user, assistant, system) |
+| `role` | `str` | `"user"` | Source role: user (the memory's owner), participant (another human in the conversation), assistant, tool or system |
+| `speaker` | `str \| None` | `None` | Name of who said it, shown by the reader context |
 | `node_type` | `NodeType` | `NOTE` | Type of memory node |
 | `scope` | `Scope` | `PERSONAL` | Visibility scope |
 | `metadata` | `dict \| None` | `None` | Arbitrary key-value metadata |
@@ -166,6 +168,7 @@ def ingest(
     *,
     user_id: str,
     role: str = "user",
+    speaker: str | None = None,
     session_id: str | None = None,
     scope: Scope = Scope.PERSONAL,
 ) -> str  # returns event UUID
@@ -183,7 +186,7 @@ event_id = client.ingest(
 
 ## ingest_batch()
 
-Ingest multiple messages at once. Each message dict must have `role` and `content` keys.
+Ingest multiple messages at once. Each message dict must have `role` and `content` keys, and can set `speaker`.
 
 ```python
 def ingest_batch(

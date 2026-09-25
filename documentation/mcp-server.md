@@ -123,6 +123,8 @@ Store a memory node with vector embedding and full-text indexing.
 | `user_id` | string | required | Owner of this memory |
 | `node_type` | string | `"note"` | One of: entity, fact, decision, preference, task, instruction, summary, note |
 | `scope` | string | `"personal"` | One of: personal, project, organisation |
+| `role` | string | `"user"` | `user` (the memory's owner), `participant` (another human in the conversation), `assistant`, `tool` or `system` |
+| `speaker` | string | optional | Name of who said it, shown by the reader context |
 
 Returns JSON: `{"event_id": "...", "node_id": "..."}`
 
@@ -157,7 +159,8 @@ Ingest content with LLM-powered entity/fact extraction. Requires an LLM API key.
 |-----------|------|---------|-------------|
 | `content` | string | required | Text to ingest |
 | `user_id` | string | required | Owner |
-| `role` | string | `"user"` | Speaker role |
+| `role` | string | `"user"` | `user` (the memory's owner), `participant` (another human in the conversation), `assistant`, `tool` or `system` |
+| `speaker` | string | optional | Name of who said it, shown by the reader context |
 | `scope` | string | `"personal"` | Scope |
 
 Returns JSON: `{"event_id": "..."}`

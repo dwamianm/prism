@@ -31,8 +31,8 @@ HTTP 409. The API never turns Jev advice into an automatic merge.
 
 ## Store supplied memory
 
-`POST /v1/store` accepts the Python `store()` fields: `content`, `retrieval_content`, `value_bindings`, `role`, `user_id`,
-`session_id`, `node_type`, `scope`, `metadata`, `epistemic_type`, `source_type`,
+`POST /v1/store` accepts the Python `store()` fields: `content`, `retrieval_content`, `value_bindings`, `role`, `speaker`,
+`user_id`, `session_id`, `node_type`, `scope`, `metadata`, `epistemic_type`, `source_type`,
 `confidence`, `event_time` and `ttl_days`.
 
 ```json
@@ -64,6 +64,35 @@ indexes, retrieval results and packed model context. Omit it for the historical
 one-string behavior. The projection is recovered from the checksummed direct
 store journal and never regenerated after restart.
 
+`role` is `user` (the memory's owner, the default), `participant` (another human
+in the conversation), `assistant`, `tool` or `system`. Without an explicit
+`source_type`, `user` and `participant` sources are `user_stated`, `assistant` and
+`system` sources are `system_inferred`, and `tool` sources are `tool_output`.
+`speaker` optionally names who said it, such as each person in a conversation
+between two people:
+
+```json
+{
+  "content": "I went to the support group yesterday.",
+  "role": "participant",
+  "speaker": "Caroline",
+  "session_id": "chat-7",
+  "event_time": "2023-06-09T19:55:00Z"
+}
+```
+
+The speaker is kept with the source event and its node under the reserved
+`metadata.prme_speaker_v1` key. A request that sets that key in `metadata`
+returns HTTP 422, so remove it when copying metadata from a stored memory and
+pass `speaker` instead. The reader context format prints the name before the
+record text unless the text already begins with it, and the auditable format
+adds a `speaker` key. Leading and trailing whitespace is removed; an empty name,
+a name longer than 200 characters, or one with control characters, line breaks
+or bidirectional controls returns HTTP 422. The speaker is an unverified caller
+assertion, not an identity. It does not change the role or source type, and it
+is not a separate search field: a name written only in `speaker` is not matched
+by lexical search.
+
 `value_bindings` can attach source-backed `presentation` values and distinct,
 caller-supplied `lookup` forms to a direct memory. Every presentation must occur
 verbatim in both `content` and the indexed text. Retrieval responses expose only
@@ -84,8 +113,10 @@ the original source, or `/nodes` below that event to inspect its derived nodes.
 
 ## Extract memory from a message
 
-`POST /v1/ingest` accepts `content`, `role`, `user_id`, `session_id`, `metadata`,
-`scope`, `event_time` and `wait_for_extraction`. Extraction is asynchronous by default. Set
+`POST /v1/ingest` accepts `content`, `role`, `speaker`, `user_id`, `session_id`, `metadata`,
+`scope`, `event_time` and `wait_for_extraction`. `role` and `speaker` work as for
+`POST /v1/store`; the speaker stays with the source event and its raw note, not
+yet with the claims extracted from it. Extraction is asynchronous by default. Set
 `wait_for_extraction: true` to wait for the configured extraction pipeline.
 Inspect saved extraction work with `GET /v1/events/{event_id}/extraction-status`.
 For historical messages, provide `event_time` with a timezone offset, such as
@@ -145,7 +176,7 @@ support client idempotency keys.
 | LLM extraction and its derived artifacts | `GET /v1/events/{event_id}/extraction-status` | `POST /v1/events/{event_id}/retry-extraction`, then `POST /v1/extractions/process` |
 
 For raw imports, `POST /v1/ingest/fast` accepts `{"user_id": "...", "items":
-[...]}`. Each item can set `content`, `role`, `session_id`, `scope`, `metadata`,
+[...]}`. Each item can set `content`, `role`, `speaker`, `session_id`, `scope`, `metadata`,
 and a timezone-aware `event_time`. The resolved owner applies to the complete
 ordered list, which is validated before I/O and committed with its repair jobs
 as one transaction. The response returns `event_ids` in input order and an

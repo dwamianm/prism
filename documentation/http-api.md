@@ -77,7 +77,8 @@ Store a memory node.
 |-------|------|----------|---------|-------------|
 | `content` | string | yes | | Text content |
 | `user_id` | string | yes | | Owner |
-| `role` | string | no | `"user"` | Speaker role |
+| `role` | string | no | `"user"` | `user` (the memory's owner), `participant` (another human in the conversation), `assistant`, `tool` or `system` |
+| `speaker` | string | no | `null` | Name of who said it, shown by the reader context |
 | `node_type` | string | no | `null` | Node type enum value |
 | `scope` | string | no | `null` | Scope enum value |
 | `epistemic_type` | string | no | `null` | Epistemic type |
@@ -94,7 +95,8 @@ Store a memory node.
 
 ### POST /v1/ingest
 
-Run the LLM extraction pipeline on content.
+Run the LLM extraction pipeline on content. `role` and `speaker` work as for
+`POST /v1/store`.
 
 **Request:**
 

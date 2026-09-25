@@ -86,6 +86,7 @@ stay, and each record becomes one line starting with `- `:
 - [2023-05-28 18:12] "I've been looking at apartments on Zillow."
 - "(7:55 pm on 9 June, 2023) Caroline: I went to the support group yesterday."
 - [valid 2020-01-01 to 2021-01-01] [hypothetical] "Alice may live in Boston."
+- [2023-06-09 20:02] "Melanie": "That sounds wonderful. How did it go?"
 ```
 
 - The bracketed time is the record's `event_time` in UTC, with the time of day
@@ -103,6 +104,14 @@ stay, and each record becomes one line starting with `- `:
   `unverified`, and `conditional` with its condition state. Default retrieval
   already excludes most superseded, hypothetical and unconfirmed conditional
   records.
+- A record stored with a `speaker` shows that name as a quoted string and a
+  colon before its text, as in the last line. It is left out when the text
+  already begins with the name and a colon, after an optional leading group in
+  parentheses or brackets such as a date, as in the second line. Only when a
+  packed line shows a speaker does the header describe it and say that speaker
+  names, like record text, are source data; contexts without speakers keep
+  their exact bytes. The auditable format adds a `"speaker"` key to records
+  stored with one, and the compact format's fixed fields do not include it.
 - The text is the complete stored text as a JSON string, so newlines, quotes
   and Unicode line separators stay escaped and a record cannot span lines or
   pose as a tag. The renderer prints no node IDs, type, scope, source type or

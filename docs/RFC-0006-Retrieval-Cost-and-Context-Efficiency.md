@@ -416,7 +416,17 @@ the context budget on memory text instead of record metadata. The 2026-09-23
 benchmark gap audit found that the auditable envelope was about 71% of a 4K
 LoCoMo context (`memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md`, section 1).
 Each packed record becomes one line: an optional bracketed time, optional state
-tags, and the complete selected representation text as a JSON string.
+tags, an optional speaker name, and the complete selected representation text as
+a JSON string.
+
+- The speaker (2026-09-25, #84) is the name a caller stored with the source
+  (`store(..., speaker=...)`), printed as a JSON string and a colon before the
+  text. It is omitted when the text already begins with the name and a colon,
+  after an optional leading parenthesized or bracketed group such as a date.
+  The header line describes the speaker and states that speaker names are
+  source data only when a packed line shows one, so contexts without speakers
+  keep their exact bytes. The auditable format adds a `speaker` key to records
+  stored with one; the compact format's fixed fields do not include it.
 
 - The time is `event_time`, omitted when the text already begins with that date.
   A validity range is shown only for a closed window a caller supplied through

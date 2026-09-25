@@ -29,8 +29,11 @@ def consume(client: MemoryClient) -> None:
         valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
         valid_to=datetime(2026, 1, 1, tzinfo=timezone.utc),
     ), StoreReceipt)
+    assert_type(client.store("I went to the support group yesterday.", user_id="alice",
+                             role="participant", speaker="Caroline"), str)
     assert_type(client.ingest_fast_many([
         FastIngestItem(content="first"),
+        FastIngestItem(content="reply", role="participant", speaker="Melanie"),
         {"content": "second", "scope": Scope.PROJECT},
     ], user_id="alice", request_id="47ad2465-9d6d-4e8a-bd64-d4ff27ad1eae"), list[str])
     assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | None)

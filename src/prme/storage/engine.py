@@ -71,6 +71,8 @@ from prme.models.learning import (
 )
 from prme.models.profile import ProfilePublication, ProfileJobStatus, ProfileProcessingResult, profile_key, ProfileCollectionResult
 from prme.models.derivation import PreparedEmbedding
+from prme.epistemic.inference import OWNER_ROLES
+from prme.models.speaker import attach_speaker, normalize_speaker, speaker_labeled
 from prme.storage.relevance import RelevanceRepository
 from prme.storage.ranking_profiles import RankingProfileRepository, StaleRankingProfileError
 from prme.storage.alias_review import (
@@ -207,11 +209,13 @@ class MemoryEngine:
         self._closed = False
 
         # Session turn tracking for automatic Q-A pairing.
-        # Maps (user_id, session_id, scope) -> (role, content, node_type, scope)
-        # When consecutive messages in the same session have different roles,
-        # a merged Q-A node is created for better retrieval coverage.
+        # Maps (user_id, session_id, scope) ->
+        # ((role, speaker), content, node_type, scope). When consecutive
+        # messages in the same session have different authors (a different
+        # role, or the same role with a different speaker), a merged Q-A node
+        # is created for better retrieval coverage.
         self._last_session_turn: dict[
-            tuple[str, str, Scope], tuple[str, str, NodeType, Scope]
+            tuple[str, str, Scope], tuple[tuple[str, str | None], str, NodeType, Scope]
         ] = {}
 
         # Config-driven overrides with module-level defaults as fallback
@@ -659,6 +663,7 @@ class MemoryEngine:
         value_bindings: list[MemoryValueBinding | dict[str, Any]] | None = None,
         session_id: str | None = None,
         role: str = "user",
+        speaker: str | None = None,
         node_type: NodeType = NodeType.NOTE,
         scope: Scope = Scope.PERSONAL,
         metadata: dict | None = None,
@@ -690,7 +695,17 @@ class MemoryEngine:
                 content. Lookup values remain caller-supplied operational data.
             user_id: Owner user ID.
             session_id: Optional session identifier.
-            role: Event role ('user', 'assistant', 'tool', or 'system').
+            role: Event role: 'user' (the memory's owner), 'participant'
+                (another human in the conversation), 'assistant', 'tool', or
+                'system'. 'user' and 'participant' sources are USER_STATED;
+                'assistant' and 'system' sources are SYSTEM_INFERRED.
+            speaker: Optional name of who said this, such as "Caroline" in a
+                conversation between two people. Kept with the source event
+                and its node, and shown by the reader context format. Leading
+                and trailing whitespace is removed; then at most 200
+                characters, without control characters, line breaks or
+                bidirectional controls. It does not change the role or source
+                type.
             node_type: Type of memory node to create.
             scope: Memory scope (personal, project, org).
             metadata: Optional structured metadata.
@@ -727,6 +742,9 @@ class MemoryEngine:
             metadata=metadata,
             value_bindings=value_bindings,
         )
+        speaker = normalize_speaker(speaker)
+        metadata = attach_speaker(metadata, speaker)
+        author = (role, speaker)
         # Infer epistemic_type and source_type if not provided
         # Lazy imports to avoid circular dependencies
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
@@ -930,16 +948,22 @@ class MemoryEngine:
 
         # Step 6: Q-A Turn Pairing (reconstructive memory)
         # When consecutive messages in the same session are from different
-        # roles, create a merged node for better retrieval coverage.
+        # authors (role, or speaker within one role), create a merged node
+        # for better retrieval coverage.
         # This addresses the "orphaned answer" problem where a question is
         # retrievable but the adjacent answer is not.
         if session_id is not None and self._config.enable_qa_pairing:
             session_key = (user_id, session_id, scope)
             prev = self._last_session_turn.get(session_key)
             if prev is not None:
-                prev_role, prev_content, prev_nt, prev_scope = prev
-                if prev_role != role and len(prev_content) + len(materialized_content) < 1000:
-                    merged = f"{prev_content}\n{materialized_content}"
+                prev_author, prev_content, prev_nt, prev_scope = prev
+                if prev_author != author and len(prev_content) + len(materialized_content) < 1000:
+                    # The merged node carries no speaker of its own, so each
+                    # half names its speaker unless its text already does.
+                    merged = (
+                        f"{speaker_labeled(prev_content, prev_author[1])}\n"
+                        f"{speaker_labeled(materialized_content, speaker)}"
+                    )
                     try:
                         merged_node = MemoryNode(
                             user_id=user_id,
@@ -981,7 +1005,7 @@ class MemoryEngine:
                             exc_info=True,
                         )
             self._last_session_turn[session_key] = (
-                role, materialized_content, node_type, scope
+                author, materialized_content, node_type, scope
             )
 
         return event_id
@@ -995,6 +1019,7 @@ class MemoryEngine:
         value_bindings: list[MemoryValueBinding | dict[str, Any]] | None = None,
         session_id: str | None = None,
         role: str = "user",
+        speaker: str | None = None,
         node_type: NodeType = NodeType.NOTE,
         scope: Scope = Scope.PERSONAL,
         metadata: dict | None = None,
@@ -1024,6 +1049,7 @@ class MemoryEngine:
             value_bindings=value_bindings,
             session_id=session_id,
             role=role,
+            speaker=speaker,
             node_type=node_type,
             scope=scope,
             metadata=metadata,
@@ -1213,7 +1239,7 @@ class MemoryEngine:
         if (node.node_type != NodeType.INSTRUCTION
                 or node.source_type != SourceType.USER_STATED
                 or node.epistemic_type not in supported_types
-                or event.role.casefold() not in {"user", "human"}):
+                or event.role.casefold() not in OWNER_ROLES):
             return
         try:
             similar = await self._vector_index.search(node.content, node.user_id, k=5)
@@ -1309,6 +1335,7 @@ class MemoryEngine:
         *,
         user_id: str,
         role: str = "user",
+        speaker: str | None = None,
         session_id: str | None = None,
         metadata: dict | None = None,
         event_time: datetime | None = None,
@@ -1327,7 +1354,11 @@ class MemoryEngine:
         Args:
             content: The message text to ingest.
             user_id: Owner user ID.
-            role: Message role ('user', 'assistant', or 'system').
+            role: Message role: 'user', 'participant' (another human in the
+                conversation), 'assistant', 'tool', or 'system'.
+            speaker: Optional name of who said this; see ``store()``. It is
+                kept with the source event and its raw note, not with
+                extracted claims.
             session_id: Optional session identifier.
             metadata: Optional structured metadata.
             event_time: Timezone-aware source time. Relative dates in extracted
@@ -1346,6 +1377,7 @@ class MemoryEngine:
                 user_id=user_id,
                 session_id=session_id,
                 role=role,
+                speaker=speaker,
                 scope=scope,
                 metadata=metadata,
                 event_time=event_time,
@@ -1356,7 +1388,7 @@ class MemoryEngine:
                 user_id=user_id,
                 role=role,
                 session_id=session_id,
-                metadata=metadata,
+                metadata=attach_speaker(metadata, speaker),
                 event_time=event_time,
                 wait_for_extraction=wait_for_extraction,
                 scope=scope,
@@ -1383,7 +1415,8 @@ class MemoryEngine:
 
         Delegates to the IngestionPipeline for sequential batch
         processing. Each message dict must have 'content' and 'role'
-        keys, with optional 'metadata' and timezone-aware 'event_time'.
+        keys, with optional 'speaker', 'metadata' and timezone-aware
+        'event_time'.
 
         If no pipeline is configured, falls back to sequential store().
 
@@ -1397,6 +1430,14 @@ class MemoryEngine:
         Returns:
             List of event ID strings, one per message.
         """
+        # Check every message's speaker before the first one is admitted.
+        messages = list(messages)
+        speaker_metadata = []
+        for index, msg in enumerate(messages):
+            try:
+                speaker_metadata.append(attach_speaker(msg.get("metadata"), msg.get("speaker")))
+            except ValueError as exc:
+                raise type(exc)(f"messages[{index}]: {exc}") from exc
         if self._pipeline is None:
             event_ids: list[str] = []
             for msg in messages:
@@ -1405,14 +1446,19 @@ class MemoryEngine:
                     user_id=user_id,
                     session_id=session_id,
                     role=msg["role"],
+                    speaker=msg.get("speaker"),
                     scope=scope,
                     metadata=msg.get("metadata"),
                     event_time=msg.get("event_time"),
                 )
                 event_ids.append(eid)
             return event_ids
+        # The pipeline reads a speaker only through its metadata.
+        prepared = [
+            {**msg, "metadata": metadata} for msg, metadata in zip(messages, speaker_metadata)
+        ]
         return await self._pipeline.ingest_batch(
-            messages,
+            prepared,
             user_id=user_id,
             session_id=session_id,
             wait_for_extraction=wait_for_extraction,
@@ -1427,6 +1473,7 @@ class MemoryEngine:
         *,
         user_id: str,
         role: str = "user",
+        speaker: str | None = None,
         session_id: str | None = None,
         metadata: dict | None = None,
         scope: Scope = Scope.PERSONAL,
@@ -1445,7 +1492,9 @@ class MemoryEngine:
         Args:
             content: The message text to ingest.
             user_id: Owner user ID.
-            role: Message role ('user', 'assistant', or 'system').
+            role: Message role: 'user', 'participant' (another human in the
+                conversation), 'assistant', 'tool', or 'system'.
+            speaker: Optional name of who said this; see ``store()``.
             session_id: Optional session identifier.
             metadata: Optional structured metadata.
             scope: Memory scope (personal, project, org).
@@ -1464,7 +1513,7 @@ class MemoryEngine:
             session_id=session_id,
             role=role,
             scope=scope,
-            metadata=metadata,
+            metadata=attach_speaker(metadata, speaker),
             event_time=event_time,
         )
         event_id = await self._write_queue.submit(
@@ -1518,7 +1567,7 @@ class MemoryEngine:
                 session_id=item.session_id,
                 role=item.role,
                 scope=item.scope,
-                metadata=snapshot_metadata(item.metadata),
+                metadata=snapshot_metadata(attach_speaker(item.metadata, item.speaker)),
                 event_time=item.event_time,
             )
             for item in validated

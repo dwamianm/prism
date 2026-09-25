@@ -31,6 +31,7 @@ from prme.models.learning import (
     RankingMultipliers,
 )
 from prme.models.processing import FastIngestItem
+from prme.models.speaker import SpeakerError
 from prme.retrieval.scoring import validate_rank_fusion_request
 from prme.models.value_bindings import MemoryValueBinding
 from prme.storage.fast_ingest import FastIngestConflict
@@ -169,6 +170,7 @@ async def memory_store(
     confidence: Optional[float] = None,
     epistemic_type: Optional[EpistemicType] = None,
     source_type: Optional[SourceType] = None,
+    speaker: Optional[str] = None,
     ctx: Context = None,
 ) -> str:
     """Store a memory.
@@ -189,12 +191,17 @@ async def memory_store(
         event_time: Original source time with timezone; separate from admission and validity.
         valid_from: Optional timezone-aware start of real-world claim validity.
         valid_to: Optional exclusive validity end; requires valid_from.
-        role: Source role used for default provenance inference.
+        role: Source role used for default provenance inference: user (the
+            memory's owner), participant (another human in the conversation),
+            assistant, tool or system. user and participant are user_stated,
+            assistant and system are system_inferred, tool is tool_output.
         session_id: Optional conversation or episode identifier.
         metadata: Optional structured application metadata.
         confidence: Optional initial confidence from zero to one.
         epistemic_type: Optional explicit epistemic classification.
         source_type: Optional explicit provenance classification.
+        speaker: Optional name of who said this, such as one person in a
+            conversation between two people. Shown by the reader context format.
     """
     engine = _get_engine(ctx)
     try:
@@ -221,6 +228,7 @@ async def memory_store(
             node_type=nt,
             scope=sc,
             role=role,
+            speaker=speaker,
             session_id=session_id,
             metadata=metadata,
             confidence=confidence,
@@ -469,6 +477,7 @@ async def memory_ingest(
     session_id: Optional[str] = None,
     metadata: Optional[dict[str, Any]] = None,
     event_time: Optional[AwareDatetime] = None,
+    speaker: Optional[str] = None,
 ) -> str:
     """Ingest content with LLM-powered extraction.
 
@@ -482,7 +491,10 @@ async def memory_ingest(
         session_id: Optional source session identifier.
         metadata: Optional source metadata.
         event_time: Original source time with timezone; anchors relative dates.
-        role: Role of the speaker (user or assistant). Default: user.
+        role: Role of the speaker: user (the memory's owner), participant
+            (another human in the conversation), assistant, tool or system.
+            Default: user.
+        speaker: Optional name of who said this; see memory_store.
         scope: Memory scope. One of: personal, project, organisation. Default: personal.
     """
     engine = _get_engine(ctx)
@@ -501,12 +513,15 @@ async def memory_ingest(
             content,
             user_id=user_id,
             role=role,
+            speaker=speaker,
             scope=sc,
             session_id=session_id,
             metadata=metadata,
             event_time=event_time,
         )
         return json.dumps({"event_id": event_id})
+    except SpeakerError as e:
+        return json.dumps({"error": str(e)})
     except Exception as e:
         return _internal_error("memory_ingest", e)
 

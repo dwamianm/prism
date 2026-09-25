@@ -510,7 +510,8 @@ class PRMEConfig(_ProjectSettings):
         default=False,
         description=(
             "[HYPOTHESIS] When True, store() creates best-effort merged Q-A "
-            "nodes for consecutive, differently-typed session roles. The "
+            "nodes for consecutive session turns from different roles or "
+            "speakers. The "
             "heuristic is in-process, is not part of durable store recovery, "
             "and has not improved a registered quality benchmark. Default "
             "False; requires session_id."

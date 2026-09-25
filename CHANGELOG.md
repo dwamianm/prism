@@ -91,6 +91,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fusion session decay, and changed no benchmark's share of questions with all
   evidence packed significantly on the offline evidence gate. Receipts that
   record either use schema version 19.
+- Add conversation participants (#84). `store()`, `store_with_receipt()`,
+  `ingest()`, `ingest_batch()`, `ingest_fast()` and `FastIngestItem` accept an
+  optional `speaker` name, as do HTTP `POST /v1/store`, `/v1/ingest` and
+  `/v1/ingest/fast` and the MCP `memory_store`, `memory_ingest` and
+  `memory_ingest_fast_many` tools. The new `participant` role marks a human in
+  the conversation other than the memory's owner: like `user`, its sources are
+  `USER_STATED` (with the default confidence matrix, 0.80 for an asserted claim
+  instead of the 0.60 an `assistant` source gets), but its statements do not
+  reinforce the owner's instructions. The speaker is kept in the reserved
+  `metadata.prme_speaker_v1` key of the source event and its direct node or raw
+  note, not yet on extracted claims; passing that key in `metadata` is now
+  rejected. The reader context format prints it as `"Caroline": "text"` unless
+  the text already begins with it, and the auditable format adds a `speaker`
+  key. With `enable_qa_pairing=True`, a change of speaker within one role also
+  creates a merged Q-A node, whose halves start with their speakers' names.
+  Contexts for records without a speaker keep their exact bytes. The legacy
+  LoCoMo harness (`benchmarks/locomo.py`) now stores both people as
+  participants, so its scores are not comparable with its earlier runs; the
+  registered 2026-09-23 comparison and its saved packs are unchanged.
 
 - Add an opt-in event-time clock for the weighted formula's recency
   (`ScoringWeights.recency_time="event_time"`, or
@@ -117,6 +136,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The LlamaIndex chat store reads a session turn whose role LlamaIndex has no
+  value for, such as `participant` or `human`, as a user turn instead of
+  failing to read or clear the session.
 - The HTTP API docs and the example Dockerfile now start the server with
   `python -m prme.api`. The `uvicorn prme.api:app` command they showed never
   loaded the app, because `prme.api:app` names the `prme.api.app` module.
