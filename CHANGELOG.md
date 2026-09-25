@@ -92,6 +92,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   evidence packed significantly on the offline evidence gate. Receipts that
   record either use schema version 19.
 
+- Add an opt-in event-time clock for the weighted formula's recency
+  (`ScoringWeights.recency_time="event_time"`, or
+  `PRME_SCORING__RECENCY_TIME=event_time` with
+  `PRME_SCORING__FUSION=weighted`). Unset, the weighted formula measures
+  recency on questions that are not about the current state from when a
+  memory was last updated or created, so history imported with a past event
+  time and retrieved at a past reference time scored full recency on every
+  memory (issue #83). With the setting, every memory is dated by when it was
+  stated: its event time, else when it was stored, never when it was last
+  updated and never its validity start. Questions that are not about the
+  current state measure that back from the request's reference time;
+  current-state questions keep measuring back from the newest candidate.
+  Memories without an event time, such as entity, consolidation and profile
+  nodes, count from when they were stored. Rank fusion, the default, already
+  uses this clock for its recency boost and tie-break, so it drops the setting
+  with a warning, and nothing changes by default. Receipts that record it use
+  schema version 20; to stop using it, unset the variable rather than
+  returning to an earlier release, which cannot read version 20 receipts.
+  On the offline evidence gate it lost LoCoMo evidence (-4.8 points of
+  questions with all evidence packed with the previous auditable format and
+  balanced order, -4.5 with the reader format, both intervals excluding zero)
+  and left LongMemEval-S unchanged, so it stays off.
+
 ### Fixed
 
 - The HTTP API docs and the example Dockerfile now start the server with

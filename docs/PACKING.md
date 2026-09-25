@@ -422,7 +422,10 @@ defaults set both) emits version 19, which records them in its scoring
 settings and saved factors, requires every score provenance to use the same
 values, and also admits the version 17 and 18 features, so default retrievals
 write version 19. Versions 1 to 18 cannot record either setting, and unset
-settings are omitted, so no earlier receipt changes.
+settings are omitted, so no earlier receipt changes. A weighted retrieval with
+`scoring.recency_time="event_time"` emits version 20 in any context format,
+which records the setting and requires every score provenance to use it.
+Versions 1 to 19 cannot record it, and an unset value is omitted.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

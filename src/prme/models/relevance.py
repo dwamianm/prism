@@ -45,11 +45,13 @@ class ReceiptCandidate(BaseModel):
 
 
 RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
+# Rank fusion receipt versions. Version 20 is weighted again (issue #83).
+RANK_FUSION_RECEIPT_VERSIONS = range(15, 20)
 
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -331,35 +333,47 @@ class RetrievalReceipt(BaseModel):
             provenance.formula_version == 2
             for provenance in (self.score_provenance or {}).values()
         )
+        is_rank_fusion_version = self.schema_version in RANK_FUSION_RECEIPT_VERSIONS
         if self.schema_version < 15 and rank_fused:
             raise ValueError("Rank fusion scoring requires a version 15 receipt")
-        if self.schema_version >= 15 and not (
+        if is_rank_fusion_version and not (
             self.scoring.fusion == "rrf"
             and all(provenance.formula_version == 2
                     for provenance in (self.score_provenance or {}).values())
         ):
-            raise ValueError("Versions 15 and later record rank fusion scoring only")
+            raise ValueError("Versions 15 to 19 record rank fusion scoring only")
+        # Version 20 is weighted and records none of the rank fusion features
+        # of versions 15 to 19. ScoringWeights itself rejects rank fusion
+        # settings under weighted scoring.
+        weighted_version = self.schema_version == 20
+        if weighted_version and rank_fused:
+            raise ValueError("Version 20 records weighted scoring only")
         # Version 15 compared min_score with the fused score and recorded no
         # relevance; version 16 records the cosine it compares instead.
         relevances = [candidate.semantic_relevance for candidate in self.candidates]
-        if self.schema_version < 16 and any(value is not None for value in relevances):
-            raise ValueError("Rank fusion relevance requires a version 16 receipt")
+        if any(value is not None for value in relevances):
+            if self.schema_version < 16:
+                raise ValueError("Rank fusion relevance requires a version 16 receipt")
+            if weighted_version:
+                raise ValueError("Version 20 records no rank fusion relevance")
         # Version 18 records a floor skipped because the vector path failed and
         # no candidate had a cosine (issue #150); versions 16 and 17 always
         # applied it. The rank fusion rules above still hold.
         if self.min_score_skipped:
             if self.schema_version < 18:
                 raise ValueError("A skipped min_score requires a version 18 receipt")
+            if weighted_version:
+                raise ValueError("Only rank fusion skips min_score")
             if not (self.min_score is not None and self.min_score > 0):
                 raise ValueError("A skipped min_score requires a positive min_score")
             if any(value is not None and value != 0 for value in relevances):
                 raise ValueError("A min_score is skipped only when no candidate has a cosine")
         elif self.schema_version == 18:
             raise ValueError("Version 18 records a skipped min_score")
-        if self.schema_version >= 16:
+        if self.schema_version >= 16 and is_rank_fusion_version:
             if any(value is None for value in relevances):
                 raise ValueError(
-                    "Versions 16 and later record every candidate's rank fusion relevance"
+                    "Versions 16 to 19 record every candidate's rank fusion relevance"
                 )
             if self.min_score is not None and not self.min_score_skipped and any(
                 value is not None and value < self.min_score for value in relevances
@@ -369,8 +383,11 @@ class RetrievalReceipt(BaseModel):
         # rank-fused neighbors took session_context_score_decay. Version 18
         # records it when set.
         rank_fusion_decay = self.packing.session_context_rank_fusion_score_decay
-        if self.schema_version < 17 and rank_fusion_decay is not None:
-            raise ValueError("A rank fusion session decay requires a version 17 receipt")
+        if rank_fusion_decay is not None:
+            if self.schema_version < 17:
+                raise ValueError("A rank fusion session decay requires a version 17 receipt")
+            if weighted_version:
+                raise ValueError("Version 20 records no rank fusion session decay")
         if self.schema_version == 17 and rank_fusion_decay is None:
             raise ValueError("Version 17 records a rank fusion session decay")
         if rank_fusion_decay is not None and any(
@@ -393,6 +410,16 @@ class RetrievalReceipt(BaseModel):
             raise ValueError("Rank fusion recency and tie-break settings require a version 19 receipt")
         if self.schema_version == 19 and not opt_ins:
             raise ValueError("Version 19 records a rank fusion recency boost or tie-break")
+        # Version 20 records the weighted formula's event-time recency (issue
+        # #83), with the version 12 to 14 features; earlier versions cannot, so
+        # they keep their bytes.
+        recency_time = self.scoring.recency_time
+        if any(provenance.weights.recency_time != recency_time for provenance in provenances):
+            raise ValueError("Score provenance does not match the recorded recency time")
+        if self.schema_version < 20 and recency_time is not None:
+            raise ValueError("Event-time recency requires a version 20 receipt")
+        if self.schema_version == 20 and recency_time is None:
+            raise ValueError("Version 20 records event-time recency")
         boosted = {provenance.rank_fusion.recency_boost_factor is not None
                    for provenance in provenances if provenance.rank_fusion is not None}
         if len(boosted) > 1:
@@ -579,6 +606,8 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         raise ValueError("Evidence augmentation receipts require an execution descriptor")
     if scoring.fusion == "rrf" and execution is None:
         raise ValueError("Rank fusion receipts require an execution descriptor")
+    if scoring.recency_time is not None and execution is None:
+        raise ValueError("Event-time recency receipts require an execution descriptor")
     # Pre-guidance receipts mean guidance was off. Direct callers that omit an
     # execution descriptor retain that historical schema and exact semantics.
     receipt_packing = packing if execution is not None else packing.model_copy(
@@ -600,7 +629,7 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     )
     if has_rank_assignment and execution is None:
         raise ValueError("Neural rank assignment requires an execution descriptor")
-    version: Literal[2, 12, 13, 14, 16, 17, 18, 19]
+    version: Literal[2, 12, 13, 14, 16, 17, 18, 19, 20]
     if execution is None:
         version = 2
     elif rank_fused:
@@ -617,6 +646,9 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
             version = 17
         else:
             version = 16
+    elif scoring.recency_time is not None:
+        # Version 20 also admits every version 12 to 14 feature.
+        version = 20
     elif packing.context_format == "reader":
         # Version 14 also admits the version 13 rank-assignment operation.
         version = 14

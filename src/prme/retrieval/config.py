@@ -30,6 +30,9 @@ DEFAULT_RRF_K = 60
 RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break")
 # Settings that only rank fusion reads; weighted scoring drops them.
 RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
+# Settings that only the weighted formula reads; rank fusion drops them.
+# Receipts record them from version 20 (issue #83).
+WEIGHTED_ONLY_SETTINGS = ("recency_time",)
 
 # The retrieval defaults PRMEConfig applies over the class defaults below. They
 # passed the epic #77 DeepSeek default-change test twice (2026-09-25, variant
@@ -65,8 +68,9 @@ class ScoringWeights(BaseModel):
     The additive weights are then unused, but they are still validated and
     recorded. A weighted configuration leaves ``fusion`` and ``rrf_k`` out of
     its serialized form, and any configuration leaves the unset rank fusion
-    terms out, so receipts, ranking profiles and evaluations written
-    before they existed keep their exact bytes and checksums.
+    terms and an unset ``recency_time`` out, so receipts, ranking profiles and
+    evaluations written before they existed keep their exact bytes and
+    checksums.
 
     ``ScoringWeights()`` is therefore the weighted formula. The product
     default, which ``PRMEConfig().scoring`` holds, is rank fusion with a 0.25
@@ -227,31 +231,57 @@ class ScoringWeights(BaseModel):
             "ignores a supplied value with a warning."
         ),
     )
+    # Omitted when unset, so configurations, receipts and version ids that do
+    # not use it keep the bytes they had before it existed (issue #83).
+    recency_time: Literal["event_time"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Weighted fusion only; unset by default. Unset, the weighted formula "
+            "measures recency on questions that are not about the current state "
+            "from when a memory was last updated or created, against the "
+            "request's reference time, so history imported with a past event "
+            "time and retrieved at a past reference time looks brand new. "
+            "'event_time' dates every memory by when it was stated: its event "
+            "time, else when it was stored, never when it was last updated and "
+            "never its validity start. Questions that are not about the current "
+            "state measure that back from the reference time; current-state "
+            "questions keep measuring back from the newest candidate, dated the "
+            "same way. A memory dated after the reference time counts as no "
+            "time ago, and memories stored without an event time (entity, "
+            "consolidation and profile nodes included) are dated when stored. "
+            "Rank fusion's recency boost and tie-break already use this clock, "
+            "so rank fusion ignores a supplied value with a warning."
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod
-    def rank_fusion_settings_only_for_rank_fusion(cls, value: Any) -> Any:
-        """Give rank fusion its default constant and drop its settings from weighted scoring.
+    def drop_settings_the_fusion_ignores(cls, value: Any) -> Any:
+        """Give rank fusion its default constant and drop settings the chosen fusion does not read.
 
-        Dropping stray settings keeps one serialized form per configuration
-        and lets an operator turn rank fusion off by removing only the fusion
-        setting.
+        Weighted scoring drops the rank fusion settings and rank fusion drops
+        the weighted-only ones. Dropping stray settings keeps one serialized
+        form per configuration and lets an operator switch fusion by changing
+        only the fusion setting.
         """
         if not isinstance(value, dict):
             return value
         rank_fused = value.get("fusion", "weighted") == "rrf"
-        if rank_fused and value.get("rrf_k") is None:
-            return {**value, "rrf_k": DEFAULT_RRF_K}
-        stray = [name for name in RANK_FUSION_ONLY_SETTINGS if value.get(name) is not None]
-        if not rank_fused and stray:
+        ignored = WEIGHTED_ONLY_SETTINGS if rank_fused else RANK_FUSION_ONLY_SETTINGS
+        stray = [name for name in ignored if value.get(name) is not None]
+        if stray:
             one = len(stray) == 1
             warnings.warn(
                 f"ScoringWeights {', '.join(stray)} {'applies' if one else 'apply'} only when "
-                f"fusion is 'rrf' and {'is' if one else 'are'} ignored.",
+                f"fusion is '{'weighted' if rank_fused else 'rrf'}' and "
+                f"{'is' if one else 'are'} ignored.",
                 UserWarning,
                 stacklevel=2,
             )
-            return {key: item for key, item in value.items() if key not in stray}
+            value = {key: item for key, item in value.items() if key not in stray}
+        if rank_fused and value.get("rrf_k") is None:
+            return {**value, "rrf_k": DEFAULT_RRF_K}
         return value
 
     @model_validator(mode="after")
@@ -260,16 +290,19 @@ class ScoringWeights(BaseModel):
 
         Epistemic (multiplicative) and paths (tiebreaker) are excluded
         from the sum constraint. ``rrf_k`` is set exactly when fusion is
-        ``"rrf"``, and the other rank fusion settings only then.
+        ``"rrf"``, the other rank fusion settings only then, and
+        ``recency_time`` only under weighted fusion.
         """
-        # Both checks back up the before-validator, which drops stray settings
-        # from any dict input; only input that skips it can reach them.
+        # The fusion checks back up the before-validator, which drops stray
+        # settings from any dict input; only input that skips it can reach them.
         if (self.fusion == "rrf") != (self.rrf_k is not None):
             raise ValueError("rrf_k is set exactly when fusion is 'rrf'")
         if self.fusion != "rrf" and self.rank_fusion_opt_ins:
             raise ValueError(
                 f"{', '.join(self.rank_fusion_opt_ins)} apply only when fusion is 'rrf'"
             )
+        if self.fusion == "rrf" and self.recency_time is not None:
+            raise ValueError("recency_time applies only when fusion is 'weighted'")
         additive_sum = (
             self.w_semantic
             + self.w_lexical
@@ -322,6 +355,9 @@ class ScoringWeights(BaseModel):
                 payload += f":recency={self.rrf_recency_boost}"
             if self.rrf_tie_break is not None:
                 payload += f":tie_break={self.rrf_tie_break}"
+        elif self.recency_time is not None:
+            # Weighted configurations without it keep their version.
+            payload += f":recency_time={self.recency_time}"
         return hashlib.sha256(payload.encode()).hexdigest()[:12]
 
 
