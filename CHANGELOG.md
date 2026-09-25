@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add opt-in session context packing (`PackingConfig.session_context_packing`,
+  or `PRME_PACKING__SESSION_CONTEXT_PACKING`; issue #86). Session expansion
+  gave a turn it added a single path and never counted its path on a turn
+  another search had found, so packing put those neighbors behind every
+  multi-path candidate, and in an exact replay of the 2026-09-23 LoCoMo
+  retrievals none of the turns only expansion found was packed.
+  `trigger_tier` counts the session path when it joins a candidate and gives a
+  turn that expansion added the multi-path tier of the result that brought it
+  in. `adjacent` packs the same records and places each neighbor beside that
+  result in session order. Unset (the default), nothing changes. Results and
+  bundles carry each neighbor's `session_context_link` only when the setting is
+  on. Receipts that record it use schema version 21 under either scoring
+  formula; to stop using it, unset the variable rather than returning to an
+  earlier release, which cannot read version 21 receipts. The offline evidence
+  gate now reports, per benchmark and category, how many packed records session
+  expansion reached, found alone or scored, and `gate-compare` shows them
+  before and after. On the gate at 4K both values packed all evidence for more
+  questions with no category lost: LoCoMo +0.9 points (95% interval +0.1 to
+  +1.8) and LongMemEval-S +0.4 (+0.0 to +1.1). Packing a trigger's neighbors
+  right after it instead lost LongMemEval-S evidence and was not kept. The
+  setting stays off until the epic #77 paired answer run supports it.
 - Add an opt-in reader context format (`PackingConfig.context_format="reader"`,
   or `PRME_PACKING__CONTEXT_FORMAT=reader`) that renders each packed record as
   one line: its event time or caller-supplied validity range, tags for

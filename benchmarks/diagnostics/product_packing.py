@@ -9,7 +9,8 @@ The ``gate`` and ``gate-compare`` subcommands are the offline evidence gate. The
 gate replays the public ``retrieve()`` over copies of the saved 2026-09-23
 LoCoMo and LongMemEval-S memory packs and measures the context the product
 renderer actually produced: records, memory text, annotated evidence and its
-rank. Like the saved run's diagnostics, it counts evidence packed in any
+rank, and the packed records that session expansion brought in. Like the saved
+run's diagnostics, it counts evidence packed in any
 representation, and it also reports evidence packed with its text. It makes no
 reader, judge or paid API calls. Its projected accuracy is a planning estimate,
 not an answer score. ``gate --plain`` measures a plain RAG reference over the
@@ -493,6 +494,12 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
         # alone, so a weighted run needs only scoring.fusion="weighted".
         raise ValueError("packing.session_context_rank_fusion_score_decay applies only with "
                          "scoring.fusion=\"rrf\"")
+    if config.packing.session_context_packing is not None and (
+            config.packing.session_context_window <= 0 or config.packing.session_context_top_k == 0):
+        # Without session expansion no neighbor exists, so this run would change nothing.
+        raise ValueError("packing.session_context_packing applies only with session expansion "
+                         "(a positive packing.session_context_window and a nonzero "
+                         "packing.session_context_top_k)")
     return config
 
 
@@ -605,6 +612,28 @@ def _query_scoring_observations(receipt) -> dict:
             "current_state_path": current_state_path}
 
 
+# Packed records that session expansion reached, found alone, or scored (issue #86).
+SESSION_CONTEXT_COUNTS = ("reached", "added", "promoted")
+
+
+def _session_context_observations(packed: Iterable) -> dict[str, int]:
+    """How a question's packed records arrived through session expansion (issue #86).
+
+    ``reached``: a trigger's session window held the record (its paths include
+    SESSION_CONTEXT). ``added``: no other path found it. ``promoted``: its score
+    is a trigger's score times the session decay.
+    """
+    counts = dict.fromkeys(SESSION_CONTEXT_COUNTS, 0)
+    for candidate in packed:
+        if "SESSION_CONTEXT" in candidate.paths:
+            counts["reached"] += 1
+            counts["added"] += candidate.paths == ["SESSION_CONTEXT"]
+        provenance = candidate.score_provenance
+        counts["promoted"] += provenance is not None and any(
+            adjustment.kind == "session_decay" for adjustment in provenance.adjustments)
+    return counts
+
+
 async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_dir: Path | None) -> dict:
     started = time.perf_counter()
     response = await engine.retrieve(case.question, user_id=case.user_id, reference_time=case.reference_time)
@@ -638,6 +667,7 @@ async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_d
         representations=dict(Counter(candidate.representation.value for candidate in packed)),
         candidates=len(response.results), seconds=seconds)
     row["query_scoring"] = _query_scoring_observations(receipt)
+    row["session_context"] = _session_context_observations(packed)
     if capture_dir is not None:
         row["capture_sha256"] = _write_capture(capture_dir, case, context,
                                                {"receipt": receipt.model_dump(mode="json")})
@@ -820,6 +850,20 @@ def _all_within(evidence: dict, limit: int) -> bool:
                                               for rank in evidence["ranks"].values())
 
 
+def _session_context_summary(rows: list[dict]) -> dict | None:
+    """Totals of the session expansion counts, and each as a share of packed records.
+
+    None when a row has no counts: a plain baseline, or a report written
+    before they were recorded.
+    """
+    observed = [row.get("session_context") for row in rows]
+    if any(item is None for item in observed):
+        return None
+    records = sum(row["records"] for row in rows)
+    totals = {key: sum(item[key] for item in observed) for key in SESSION_CONTEXT_COUNTS}
+    return {**totals, **{f"{key}_share": _share(totals[key], records) for key in SESSION_CONTEXT_COUNTS}}
+
+
 def summarize_gate(rows: list[dict]) -> dict:
     """Per-context and evidence metrics for one benchmark or category."""
     if not rows:
@@ -858,6 +902,7 @@ def summarize_gate(rows: list[dict]) -> dict:
         },
         "projected_correct": projected,
         "projected_accuracy": projected / len(rows),
+        "session_context_records": _session_context_summary(rows),
     }
 
 
@@ -992,6 +1037,23 @@ def _query_scoring(old: dict, new: dict, keys: list) -> dict | None:
     }
 
 
+def _session_context_comparison(before: dict, after: dict, name: str) -> dict | None:
+    """Packed records through session expansion before and after, overall and by category (issue #86).
+
+    None when either report lacks the counts.
+    """
+    sides = {}
+    for side, report in (("before", before), ("after", after)):
+        bench = report["benchmarks"][name]
+        counts = {"all": bench["summary"].get("session_context_records"),
+                  **{category: summary.get("session_context_records")
+                     for category, summary in bench["categories"].items()}}
+        if any(value is None for value in counts.values()):
+            return None
+        sides[side] = counts
+    return sides
+
+
 def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
     """Pair two gate reports question by question; their questions and inputs must be identical."""
     old, new = _gate_rows(before, "before"), _gate_rows(after, "after")
@@ -1030,6 +1092,7 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
                                              "memory_text_share", "records_without_text")}
                         for side, report in (("before", before), ("after", after))},
             "query_scoring": _query_scoring(old, new, keys),
+            "session_context_records": _session_context_comparison(before, after, name),
         }
     return {
         "kind": f"{GATE_KIND}-comparison", "complete": True, "bootstrap_samples": samples, "bootstrap_seed": 42,
@@ -1115,6 +1178,11 @@ def gate_markdown(report: dict) -> str:
                 f"| {_pct(summary['all_evidence_packed_with_text_share'])} "
                 f"| {_rank(summary['evidence_ranks']['median'])} | {_pct(summary['evidence_ranks']['top_25_share'])} "
                 f"| {_pct(summary['projected_accuracy'])} |")
+        session = bench["summary"].get("session_context_records")
+        if session is not None:
+            lines += ["", f"Packed records through session expansion: {session['reached']} reached "
+                      f"({_pct(session['reached_share'])} of packed records), {session['added']} found by no "
+                      f"other path, {session['promoted']} scored by a session decay."]
         mismatches = bench["context_mismatches"]
         if mismatches and not plain:
             shown = _listed(mismatches)
@@ -1192,8 +1260,33 @@ def comparison_markdown(result: dict) -> str:
                      f"| {_pct(old['memory_text_share'])} to {_pct(new['memory_text_share'])} "
                      f"| {old['records_without_text']} to {new['records_without_text']} |")
     lines += _query_scoring_markdown(result["benchmarks"])
+    lines += _session_context_markdown(result["benchmarks"])
     lines += ["", result["interval_note"]]
     return "\n".join(lines + _projection_note(result["projection"]))
+
+
+def _session_context_markdown(benchmarks: dict) -> list[str]:
+    compared = {name: bench.get("session_context_records") for name, bench in benchmarks.items()}
+    missing = [name for name, sides in compared.items() if sides is None]
+    lines = []
+    if missing:
+        lines += ["", f"No session expansion counts for {', '.join(missing)}: a report is a plain baseline "
+                  "or was written before they were recorded."]
+    if len(missing) == len(compared):
+        return lines
+
+    def shown(counts: dict) -> str:
+        return (f"{counts['reached']} ({_pct(counts['reached_share'])}) / {counts['added']} "
+                f"/ {counts['promoted']}")
+
+    lines += ["", "Packed records through session expansion: reached (share of packed records) / found by no "
+              "other path / scored by a session decay.", "",
+              "| Benchmark | Category | Before | After |", "|---|---|---|---|"]
+    for name, sides in compared.items():
+        if sides is not None:
+            lines += [f"| {name} | {category} | {shown(counts)} | {shown(sides['after'][category])} |"
+                      for category, counts in sides["before"].items()]
+    return lines
 
 
 def _write_report(path: Path, data: dict, markdown: str) -> None:

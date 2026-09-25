@@ -10,6 +10,9 @@ this sorts them just below the triggering node while remaining higher than
 unrelated results. Rank-fused scores are compressed, so the same fraction
 ranks a neighbor far higher; the rank fusion decay (0.6 in PRMEConfig's
 default) places neighbors lower (issue #111).
+
+``PackingConfig.session_context_packing`` also counts SESSION_CONTEXT toward
+``path_count`` and links each neighbor to its trigger for packing (issue #86).
 """
 
 from __future__ import annotations
@@ -18,7 +21,12 @@ import logging
 from typing import TYPE_CHECKING
 
 from prme.retrieval.config import PackingConfig
-from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment, rank_fusion_relevance
+from prme.retrieval.models import (
+    RetrievalCandidate,
+    ScoreAdjustment,
+    SessionContextLink,
+    rank_fusion_relevance,
+)
 
 from prme.types import Scope
 
@@ -54,6 +62,12 @@ async def expand_session_context(
     - A ``SESSION_CONTEXT`` entry in their paths list
     - De-duplication by node ID
 
+    When ``config.session_context_packing`` is set, an existing candidate's
+    ``path_count`` also rises by one when ``SESSION_CONTEXT`` joins its paths,
+    and every neighbor that is not itself one of the top-K triggers records
+    ``session_context_link``: the highest-ranked trigger whose window holds it
+    and its offset from that trigger in session order.
+
     Args:
         scored: Scored and ranked candidates (from score_and_rank).
         graph_store: GraphStore for querying session nodes.
@@ -64,13 +78,15 @@ async def expand_session_context(
             (issue #60). None means no scope filter.
 
     Returns:
-        Expanded candidate list with context nodes interleaved after
-        their trigger nodes, preserving deterministic ordering.
+        Expanded candidate list, sorted by score and then node ID when a
+        score rose or a node was added, otherwise in the input order.
     """
     window = config.session_context_window
     top_k = config.session_context_top_k
     weighted_decay = config.session_context_score_decay
     rank_fusion_decay = config.session_context_rank_fusion_score_decay
+    # Unset, neither the path count nor the trigger link changes (issue #86).
+    link_neighbors = config.session_context_packing is not None
 
     if window <= 0 or not scored:
         return scored
@@ -86,6 +102,9 @@ async def expand_session_context(
 
     # Group the top-K candidates by session_id.
     top_candidates = scored[:top_k]
+    # A trigger is a strong match in its own right, so it keeps its own place
+    # in packing instead of following another trigger.
+    trigger_ids = {str(candidate.node.id) for candidate in top_candidates}
     session_triggers: dict[tuple[str, Scope], list[RetrievalCandidate]] = {}
     for candidate in top_candidates:
         sid = candidate.node.session_id
@@ -165,13 +184,27 @@ async def expand_session_context(
                 ),),
             })
 
-        for ctx_node in nodes:
+        # The window is in session order, so a position difference is the
+        # neighbor's offset from its trigger.
+        trigger_position = next(
+            (position for position, node in enumerate(nodes) if str(node.id) == trigger_id),
+            None,
+        )
+
+        for position, ctx_node in enumerate(nodes):
             ctx_id = str(ctx_node.id)
 
             # A trigger does not provide context evidence for itself.
             if ctx_id == trigger_id:
                 continue
 
+            link = (
+                SessionContextLink(trigger_id=trigger.node.id, offset=position - trigger_position)
+                if link_neighbors
+                and trigger_position is not None
+                and ctx_id not in trigger_ids
+                else None
+            )
             current = candidates_by_id.get(ctx_id)
             if current is None:
                 candidates_by_id[ctx_id] = RetrievalCandidate(
@@ -184,6 +217,7 @@ async def expand_session_context(
                     composite_score=context_score,
                     score_provenance=provenance,
                     context_relevance=context_relevance,
+                    session_context_link=link,
                 )
                 changed = True
                 ranking_changed = True
@@ -192,6 +226,13 @@ async def expand_session_context(
             updates: dict[str, object] = {}
             if "SESSION_CONTEXT" not in current.paths:
                 updates["paths"] = [*current.paths, "SESSION_CONTEXT"]
+                if link_neighbors:
+                    # Count it like the episode and evidence context paths.
+                    updates["path_count"] = current.path_count + 1
+            # Triggers run in rank order, so the first link is the
+            # highest-ranked trigger's.
+            if link is not None and current.session_context_link is None:
+                updates["session_context_link"] = link
             if context_relevance > current.context_relevance:
                 updates["context_relevance"] = context_relevance
             if context_score > current.composite_score:

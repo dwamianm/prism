@@ -249,7 +249,9 @@ the reader format (`context_format="reader"`), which also records
 `context_citations`; the bundle's `context_references` maps any `m3` style
 references to node IDs. Weighted retrievals with event-time recency
 (`PRME_SCORING__RECENCY_TIME=event_time`) use version 20 in any context format, which
-records that setting. Retrievals with rank fusion
+records that setting. Retrievals with session context packing
+(`PRME_PACKING__SESSION_CONTEXT_PACKING`, issue #86) use version 21 under either
+scoring formula, which records that setting. Retrievals with rank fusion
 (`PRME_SCORING__FUSION=rrf`, the default) use version 16, which records `fusion`
 and `rrf_k`, formula version 2 score provenance, and each candidate's
 `semantic_relevance`. Version 15 rank fusion receipts saved before

@@ -72,6 +72,15 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "packing.session_context_rank_fusion_score_decay is set",
         lambda value: value is not None,
     ),
+    # It acts on the neighbors session expansion adds, so it needs expansion.
+    "packing.session_context_packing": (
+        "packing",
+        "packing.session_context_packing is set, packing.session_context_window > 0 "
+        "and packing.session_context_top_k != 0",
+        lambda packing: packing.session_context_packing is not None
+        and packing.session_context_window > 0
+        and packing.session_context_top_k != 0,
+    ),
     "packing.cross_scope_top_n": (
         "packing.cross_scope_top_n",
         "packing.cross_scope_top_n > 0",

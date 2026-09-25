@@ -18,6 +18,7 @@ EXPECTED_HYPOTHESES = {
     "scoring.rrf_k",
     "scoring.rrf_recency_boost",
     "packing.session_context_rank_fusion_score_decay",
+    "packing.session_context_packing",
     "packing.cross_scope_top_n",
     "packing.episode_context_top_k",
     "packing.episode_context_local_k",
@@ -72,6 +73,10 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     assert not rank_constant.customized and not recency_boost.customized and not session_decay.customized
     assert settings["packing.episode_context_top_k"].effective is False
     assert settings["packing.episode_context_local_k"].effective is False
+    # Session context packing is opt-in (issue #86), so it is dormant and unset.
+    session_packing = settings["packing.session_context_packing"]
+    assert (session_packing.effective, session_packing.value, session_packing.customized) == (False, None, False)
+    assert session_packing.environment_variable == "PRME_PACKING__SESSION_CONTEXT_PACKING"
     assert settings["enable_qa_pairing"].effective is False
     assert settings["novelty_high_threshold"].effective is False
     assert settings["query_reformulation_count"].effective is False
@@ -83,6 +88,17 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     for name in ("scoring.rrf_k", "scoring.rrf_recency_boost"):
         assert weighted[name].effective is False
         assert weighted[name].customized is True
+
+
+def test_session_context_packing_is_effective_only_with_session_expansion():
+    packing = PRMEConfig().packing.model_copy(update={"session_context_packing": "adjacent"})
+    _, settings = _by_path(PRMEConfig(packing=packing))
+    setting = settings["packing.session_context_packing"]
+    assert (setting.effective, setting.value, setting.customized) == (True, "adjacent", True)
+    assert "session_context_window > 0" in setting.activation_condition
+    for disabled in ({"session_context_window": 0}, {"session_context_top_k": 0}):
+        _, off = _by_path(PRMEConfig(packing=packing.model_copy(update=disabled)))
+        assert off["packing.session_context_packing"].effective is False
 
 
 def test_hypothesis_audit_resolves_feature_gates_and_custom_values():

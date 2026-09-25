@@ -236,6 +236,15 @@ provenance. The decay is `PackingConfig.session_context_score_decay` (0.85);
 for triggers scored by rank fusion,
 `session_context_rank_fusion_score_decay` (0.6 in `PRMEConfig`'s default)
 replaces it when set (Section 7.2).
+By default the session signal adds `SESSION_CONTEXT` to a candidate's paths
+without changing `path_count`, and a node that only expansion found has one path,
+so packing places it behind every multi-path candidate (RFC-0006 Section 5). The
+opt-in `PackingConfig.session_context_packing` (issue #86) counts the session path
+toward `path_count` and links every neighbor that is not itself one of the top
+triggers to the highest-ranked trigger whose window holds it, with its offset in
+session order (`RetrievalCandidate.session_context_link`, serialized only when
+set). Packing then gives an added neighbor its trigger's multi-path tier and, with
+`"adjacent"`, keeps each window together (RFC-0006 Section 5).
 Expansion remains owner and exact-scope constrained and is filtered
 again before packing. Built-in stores compute bounded neighborhoods in SQL for
 each exact `(session_id, scope)` partition; the behavior does not depend on a
@@ -307,6 +316,11 @@ When the same object appears in multiple paths, record which paths it appeared i
 candidate.path_count:   Integer   -- Number of retrieval paths that returned this object.
 candidate.paths:        [PathType]  -- GRAPH | VECTOR | LEXICAL | PINNED
 ```
+
+Later stages add context paths (`SESSION_CONTEXT`, `EPISODE_CONTEXT`,
+`EVIDENCE_CONTEXT`). Episode and evidence context add one to `path_count` when
+they join a candidate; session context does so only with
+`PackingConfig.session_context_packing` set (Section 4.5).
 
 An object that appears in both GRAPH and VECTOR retrieval is almost certainly more relevant than one appearing in only one path. This signal is used explicitly in scoring.
 
@@ -679,6 +693,13 @@ provenance to use the same value and admits the version 12 to 14 features
 so every other receipt keeps its version and bytes. Version 20 is weighted
 only: it records no rank fusion relevance, skipped floor or rank fusion session
 decay.
+A retrieval with `PackingConfig.session_context_packing` set and session
+expansion on (Section 4.5) writes version 21 under either formula, which records
+the setting. A rank-fused version 21 receipt follows the version 16 to 19 rules
+and admits their features; a weighted one follows the version 20 rules without
+requiring `recency_time`. Versions 1 to 20 cannot record the setting. An unset
+value is omitted, and so is one set while session expansion is off, when it
+changes nothing, so every other receipt keeps its version and bytes.
 
 ---
 
@@ -689,7 +710,9 @@ Context packing selects which scored objects to include in the final bundle, res
 The bundle MUST be assembled in the following priority order within the token budget:
 
 1. Pinned objects (salience == 1.0) and ACTIVE tasks — always included first.
-2. Objects with `path_count >= 2` — higher confidence of relevance.
+2. Objects with `path_count >= 2` — higher confidence of relevance. With the
+   opt-in session context packing, this also holds a session neighbor whose
+   trigger is here or above (Section 4.5).
 3. Objects ranked by composite score (descending).
 
 Within each priority tier, the Signal-to-Token Ratio (RFC-0006) determines which objects are included when the budget is tight.

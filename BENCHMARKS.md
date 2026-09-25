@@ -191,7 +191,11 @@ beside it (same name, `.md`). For each benchmark and category, the report gives:
 - the share of questions with all annotated evidence in the context, and with
   its text;
 - the rank distribution of annotated evidence;
-- a projected accuracy.
+- a projected accuracy;
+- how many packed records session expansion reached, found alone (no other
+  path), or scored through a session decay (#86). `gate-compare` shows these
+  before and after for each benchmark and category, and reports written before
+  they were recorded still compare.
 
 The comparison pairs the two runs question by question. It reports wins, losses
 and ties with a paired bootstrap interval. It rejects reports whose questions,

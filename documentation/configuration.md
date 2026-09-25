@@ -104,6 +104,7 @@ decay), which stored receipts and configurations rely on.
 | `PRME_PACKING__SESSION_CONTEXT_TOP_K` | `20` | Top results for session expansion |
 | `PRME_PACKING__SESSION_CONTEXT_SCORE_DECAY` | `0.85` | Fraction of the triggering result's score that an adjacent turn inherits |
 | `PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY` | `0.6` | Fraction for results scored with `PRME_SCORING__FUSION=rrf`, between 0 (exclusive) and 1, in place of the decay above; weighted scoring never uses it. Fused scores are compressed, so at 0.85 adjacent turns can crowd primary evidence out of the context. The offline evidence gate favored 0.6 (RFC-0005 Section 7.2); provisional |
+| `PRME_PACKING__SESSION_CONTEXT_PACKING` | unset | Opt-in (issue #86). `trigger_tier` counts session expansion as a path on a turn another search found and gives a turn it added the multi-path tier of the match that brought it in; `adjacent` packs the same records and places each neighbor beside that match in session order. Needs session expansion. Receipts that record it use schema version 21; remove the variable (an empty value is invalid) to turn it off. Provisional |
 | `PRME_PACKING__AGGREGATION_K_MULTIPLIER` | `2.5` | Multiplier for aggregation queries |
 | `PRME_PACKING__AGGREGATION_K_MAX` | `500` | Max candidates for aggregation |
 

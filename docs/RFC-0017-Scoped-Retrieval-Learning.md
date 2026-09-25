@@ -50,7 +50,7 @@ it runs. Redistribution cannot exceed the available semantic/lexical weight.
 
 `receipt.replay_ranking()` recomputes scores using the recorded formula version
 (1 for the weighted sum, 2 for the rank fusion of RFC-0005 Section 7.2, the default,
-in schema version 15 to 19 receipts) and the recorded sort policy: composite score/path/ID, a separately reranked prefix and
+in schema version 15 to 19 receipts, and in rank-fused version 21 receipts) and the recorded sort policy: composite score/path/ID, a separately reranked prefix and
 base-ranked tail, or score/ID after session expansion. Receipt validation checks
 both score and order reproduction. This operation uses no model, current graph,
 clock or query classifier. It describes only returned candidates; generation,

@@ -304,6 +304,16 @@ class ScoreProvenance(BaseModel):
         return score
 
 
+class SessionContextLink(BaseModel):
+    """The trigger whose session window added a candidate as context (issue #86)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    trigger_id: UUID
+    offset: int = Field(
+        description="Position relative to the trigger in session order, negative before it",
+    )
+
+
 class RetrievalCandidate(BaseModel):
     """Enriched candidate carrying all score components.
 
@@ -348,6 +358,17 @@ class RetrievalCandidate(BaseModel):
     # relevance among the memories that added this candidate as session,
     # episode or evidence context, whether or not their score replaced its own.
     context_relevance: float = Field(default=0.0, ge=0, allow_inf_nan=False, exclude=True)
+    # Set only with PackingConfig.session_context_packing and omitted
+    # otherwise, so results and bundles keep their bytes. Serialized so that a
+    # saved candidate list packs the same way again.
+    session_context_link: SessionContextLink | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "The highest-ranked trigger whose session window holds this "
+            "candidate, which packing uses under session_context_packing"
+        ),
+    )
     reranker_score: float | None = Field(
         default=None, ge=0, le=1,
         description="Normalized neural score when reranked; not a calibrated relevance probability",

@@ -44,7 +44,9 @@ Ties use node ID. Under rank fusion, `ScoringWeights.rrf_tie_break`
 (RFC-0005 Section 7.2), which the default configuration sets, makes equal fused scores differ by event time, newest
 first, so only memories with the same time or the same inherited score still
 fall back to node ID. Instructions, pinned memories and active tasks keep their
-existing higher priority; single-path candidates keep their existing lower tier.
+existing higher priority; single-path candidates keep their existing lower tier,
+except for session neighbors under the opt-in
+[session context packing](#session-context-neighbors) below.
 Every entry still passes the same measured whole-context budget and fidelity
 checks. Reserving the first position does not guarantee that its full text fits:
 it can become a reference or be excluded. References do not contain source text;
@@ -278,6 +280,58 @@ the trials used one local reader and one calibrated local judge. They support th
 default change, but they are not an independent competitive benchmark. Evaluate
 high-stakes workloads directly.
 
+## Session context neighbors
+
+Session expansion adds the turns around each of the top results
+(`session_context_window` turns on each side of the top `session_context_top_k`).
+By default a turn that only expansion found has one path, and a turn another
+search found keeps its own path count, so packing puts these neighbors behind
+every multi-path candidate. With a broad candidate pool most turns are
+multi-path: in an exact replay of the 2026-09-23 LoCoMo retrievals, none of the
+neighbors that only expansion found was packed. The opt-in
+`session_context_packing` setting changes that (issue #86):
+
+```python
+config = config.model_copy(update={
+    "packing": config.packing.model_copy(update={"session_context_packing": "adjacent"})
+})
+```
+
+- `"trigger_tier"` counts session expansion as a path when it joins a candidate
+  another search found, and gives a turn that expansion added the multi-path
+  tier when the result that brought it in (its trigger) is in that tier or
+  above. The neighbor then competes on the score it inherited.
+- `"adjacent"` packs exactly the same records and places each packed neighbor
+  beside its packed trigger in session order, so a question and its answer read
+  together in the context.
+
+Each neighbor belongs to the highest-ranked trigger whose window holds it; a
+neighbor that is itself one of the top results keeps its own place. Results and
+bundles show that link as `session_context_link` only when the setting is on.
+The setting needs session expansion: with `session_context_window=0` it changes
+nothing and receipts do not record it. The equivalent environment setting is
+`PRME_PACKING__SESSION_CONTEXT_PACKING=adjacent`; remove the variable to turn
+it off.
+
+On the offline evidence gate at 4K, against the current defaults, both values
+packed all annotated evidence for more questions and lost no category: LoCoMo
+1,290 to 1,304 of 1,536 (+0.9 points, 95% interval +0.1 to +1.8; single-hop
++1.5, +0.7 to +2.5) and LongMemEval-S 445 to 447 of 470 (+0.4, +0.0 to +1.1).
+The packed records that session expansion reached went from 45.9% to 52.8% of
+LoCoMo records and from 54.7% to 55.6% of LongMemEval-S records, and the LoCoMo
+records found by no other path from 9 to 3,232 over the 1,540 questions.
+`"adjacent"` reorders almost every context without changing which records it
+holds. Packing a trigger's neighbors right after the trigger, ahead of the
+remaining multi-path records, was measured and rejected: the whole window lost
+5.5 points of LoCoMo and 15.7 of LongMemEval-S evidence, and only the turn
+after and the turn before still lost 8.5 points of LongMemEval-S evidence
+(multi-session -16.5), because long assistant turns used the budget. The
+setting stays off until the epic #77 paired answer run supports it. The gate
+comparisons for
+[`trigger_tier`](../benchmarks/results/research/2026-09-25/session-context-packing-trigger-tier-gate-comparison.md)
+and [`adjacent`](../benchmarks/results/research/2026-09-25/session-context-packing-adjacent-gate-comparison.md)
+list every category.
+
 ## Default retrieval settings
 
 `PRMEConfig()` retrieves with these settings, which changed after v0.12.0
@@ -460,7 +514,11 @@ write version 19. Versions 1 to 18 cannot record either setting, and unset
 settings are omitted, so no earlier receipt changes. A weighted retrieval with
 `scoring.recency_time="event_time"` emits version 20 in any context format,
 which records the setting and requires every score provenance to use it.
-Versions 1 to 19 cannot record it, and an unset value is omitted.
+Versions 1 to 19 cannot record it, and an unset value is omitted. A retrieval
+with `packing.session_context_packing` set and session expansion on emits
+version 21 under either formula, which records the setting and admits the
+features of versions 12 to 20 for its formula. Versions 1 to 20 cannot record
+it; an unset value, or one set while session expansion is off, is omitted.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

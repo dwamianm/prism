@@ -45,13 +45,14 @@ class ReceiptCandidate(BaseModel):
 
 
 RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
-# Rank fusion receipt versions. Version 20 is weighted again (issue #83).
+# Rank fusion receipt versions. Version 20 is weighted again (issue #83), and
+# version 21 records either formula (issue #86).
 RANK_FUSION_RECEIPT_VERSIONS = range(15, 20)
 
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -333,7 +334,14 @@ class RetrievalReceipt(BaseModel):
             provenance.formula_version == 2
             for provenance in (self.score_provenance or {}).values()
         )
-        is_rank_fusion_version = self.schema_version in RANK_FUSION_RECEIPT_VERSIONS
+        # Version 21 records the opt-in session context packing (issue #86)
+        # under either formula: rank-fused, it follows the rules of versions
+        # 16 to 19 and admits their features; weighted, those of version 20
+        # without requiring event-time recency.
+        session_packing_version = self.schema_version == 21
+        is_rank_fusion_version = self.schema_version in RANK_FUSION_RECEIPT_VERSIONS or (
+            session_packing_version and rank_fused
+        )
         if self.schema_version < 15 and rank_fused:
             raise ValueError("Rank fusion scoring requires a version 15 receipt")
         if is_rank_fusion_version and not (
@@ -341,11 +349,17 @@ class RetrievalReceipt(BaseModel):
             and all(provenance.formula_version == 2
                     for provenance in (self.score_provenance or {}).values())
         ):
-            raise ValueError("Versions 15 to 19 record rank fusion scoring only")
-        # Version 20 is weighted and records none of the rank fusion features
-        # of versions 15 to 19. ScoringWeights itself rejects rank fusion
-        # settings under weighted scoring.
-        weighted_version = self.schema_version == 20
+            raise ValueError(
+                "Rank-fused version 21 receipts record rank fusion scoring only"
+                if session_packing_version
+                else "Versions 15 to 19 record rank fusion scoring only"
+            )
+        # Version 20, and version 21 when weighted, record none of the rank
+        # fusion features of versions 15 to 19. ScoringWeights itself rejects
+        # rank fusion settings under weighted scoring.
+        weighted_version = self.schema_version == 20 or (
+            session_packing_version and not rank_fused
+        )
         if weighted_version and rank_fused:
             raise ValueError("Version 20 records weighted scoring only")
         # Version 15 compared min_score with the fused score and recorded no
@@ -355,7 +369,7 @@ class RetrievalReceipt(BaseModel):
             if self.schema_version < 16:
                 raise ValueError("Rank fusion relevance requires a version 16 receipt")
             if weighted_version:
-                raise ValueError("Version 20 records no rank fusion relevance")
+                raise ValueError(f"Version {self.schema_version} records no rank fusion relevance")
         # Version 18 records a floor skipped because the vector path failed and
         # no candidate had a cosine (issue #150); versions 16 and 17 always
         # applied it. The rank fusion rules above still hold.
@@ -373,7 +387,9 @@ class RetrievalReceipt(BaseModel):
         if self.schema_version >= 16 and is_rank_fusion_version:
             if any(value is None for value in relevances):
                 raise ValueError(
-                    "Versions 16 to 19 record every candidate's rank fusion relevance"
+                    "Rank-fused version 21 receipts record every candidate's rank fusion relevance"
+                    if session_packing_version
+                    else "Versions 16 to 19 record every candidate's rank fusion relevance"
                 )
             if self.min_score is not None and not self.min_score_skipped and any(
                 value is not None and value < self.min_score for value in relevances
@@ -387,7 +403,9 @@ class RetrievalReceipt(BaseModel):
             if self.schema_version < 17:
                 raise ValueError("A rank fusion session decay requires a version 17 receipt")
             if weighted_version:
-                raise ValueError("Version 20 records no rank fusion session decay")
+                raise ValueError(
+                    f"Version {self.schema_version} records no rank fusion session decay"
+                )
         if self.schema_version == 17 and rank_fusion_decay is None:
             raise ValueError("Version 17 records a rank fusion session decay")
         if rank_fusion_decay is not None and any(
@@ -420,6 +438,13 @@ class RetrievalReceipt(BaseModel):
             raise ValueError("Event-time recency requires a version 20 receipt")
         if self.schema_version == 20 and recency_time is None:
             raise ValueError("Version 20 records event-time recency")
+        # Version 21 records the opt-in session context packing (issue #86);
+        # earlier versions cannot, so they keep their bytes.
+        session_packing = self.packing.session_context_packing
+        if self.schema_version < 21 and session_packing is not None:
+            raise ValueError("Session context packing requires a version 21 receipt")
+        if session_packing_version and session_packing is None:
+            raise ValueError("Version 21 records session context packing")
         boosted = {provenance.rank_fusion.recency_boost_factor is not None
                    for provenance in provenances if provenance.rank_fusion is not None}
         if len(boosted) > 1:
@@ -608,6 +633,16 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         raise ValueError("Rank fusion receipts require an execution descriptor")
     if scoring.recency_time is not None and execution is None:
         raise ValueError("Event-time recency receipts require an execution descriptor")
+    # Without session expansion no neighbor exists, so the setting changes
+    # nothing and the receipt keeps the version and bytes it would have without
+    # it, as weighted receipts drop the rank fusion session decay.
+    session_packing = (
+        packing.session_context_packing
+        if packing.session_context_window > 0 and packing.session_context_top_k != 0
+        else None
+    )
+    if session_packing is not None and execution is None:
+        raise ValueError("Session context packing receipts require an execution descriptor")
     # Pre-guidance receipts mean guidance was off. Direct callers that omit an
     # execution descriptor retain that historical schema and exact semantics.
     receipt_packing = packing if execution is not None else packing.model_copy(
@@ -623,15 +658,21 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         receipt_packing = receipt_packing.model_copy(
             update={"session_context_rank_fusion_score_decay": None}
         )
+    if packing.session_context_packing is not None and session_packing is None:
+        receipt_packing = receipt_packing.model_copy(update={"session_context_packing": None})
     has_rank_assignment = any(
         operation.kind == "neural_rank_assignment"
         for item in provenance.values() for operation in item.adjustments
     )
     if has_rank_assignment and execution is None:
         raise ValueError("Neural rank assignment requires an execution descriptor")
-    version: Literal[2, 12, 13, 14, 16, 17, 18, 19, 20]
+    version: Literal[2, 12, 13, 14, 16, 17, 18, 19, 20, 21]
     if execution is None:
         version = 2
+    elif session_packing is not None:
+        # Version 21 also admits every version 12 to 20 feature, under either
+        # formula.
+        version = 21
     elif rank_fused:
         # Version 16 also admits every version 13 and 14 feature, and records
         # each candidate's relevance (version 15 did not). Version 17 adds the
