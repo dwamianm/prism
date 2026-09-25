@@ -1,9 +1,11 @@
 """Context packing for the retrieval pipeline (Stage 6).
 
-Implements 3-priority greedy bin-packing per RFC-0006:
-1. Pinned + active tasks (always include)
-2. Multi-path objects by configured density, score or balanced ordering
-3. Remaining by composite score
+Implements tiered greedy bin-packing per RFC-0006 Section 5:
+0. System instructions
+1. Pinned memories and active tasks (always include)
+2. Bounded episode and evidence context, when enabled
+3. Multi-path objects by configured density, score or balanced ordering
+4. Remaining by composite score
 
 Token budget is NEVER exceeded. Mid-object truncation is not permitted --
 either an item fits at some representation level, or it's excluded entirely.
@@ -284,13 +286,22 @@ def pack_context(
 ) -> MemoryBundle:
     """Pack scored candidates into a MemoryBundle within token budget.
 
-    Implements 3-priority greedy bin-packing per RFC-0006 S5:
+    Implements tiered greedy bin-packing per RFC-0006 Section 5, subject to
+    one token limit throughout:
 
-    1. **Priority 1:** Pinned + active tasks, subject to the same token limit.
-    2. **Priority 2:** Multi-path objects by configured density, score or balanced ordering.
-    3. **Priority 3:** Remaining by composite score descending.
+    0. System instructions.
+    1. Pinned memories and active tasks.
+    2. Bounded episode and evidence context, when enabled.
+    3. Multi-path objects by configured density, score or balanced ordering.
+    4. Remaining objects by composite score descending.
 
     Token budget is NEVER exceeded. Mid-object truncation is not permitted.
+
+    With ``config.session_context_packing`` set (issue #86), a single-path
+    candidate that session expansion linked to a trigger in tiers 0 to 3 joins
+    tier 3. ``"adjacent"`` also places every packed trigger and linked
+    neighbor beside the others of its window in session order, within its
+    section; it changes where a record appears, not which records are packed.
 
     Args:
         scored_candidates: Candidates from scoring stage, sorted by score.
@@ -400,13 +411,14 @@ def pack_context(
                 eligible, key=lambda c: (-c.composite_score, str(c.node.id))
             ).node.id
 
-    def _try_include(candidate: RetrievalCandidate) -> None:
+    def _try_include(candidate: RetrievalCandidate, position: int | None = None) -> bool:
+        """Pack ``candidate`` at the first level that fits, at ``position`` in its section."""
         nonlocal rendered, tokens_used
         if text_levels is not None and not has_memory_text(candidate.node.content):
             # Blank text has nothing to show at any level.
-            excluded_ids.append(candidate.node.id)
-            return
+            return False
         section = classify_into_sections(candidate)
+        index = len(sections.get(section, [])) if position is None else position
         tried_text: set[str] = set()
         levels = (
             [required[candidate.node.id]]
@@ -442,7 +454,7 @@ def pack_context(
             if entry_cost > available - tokens_used:
                 continue
             proposed = {key: list(values) for key, values in sections.items()}
-            proposed.setdefault(section, []).append(candidate)
+            proposed.setdefault(section, []).insert(index, candidate)
             text = _render_sections(
                 proposed,
                 coverage_notice=notice,
@@ -453,46 +465,110 @@ def pack_context(
             total = count_tokens(text, config.tokenizer)
             if total <= available:
                 candidate.token_cost = entry_cost
-                sections.setdefault(section, []).append(candidate)
+                sections.setdefault(section, []).insert(index, candidate)
                 rendered, tokens_used = text, total
-                return
-        excluded_ids.append(candidate.node.id)
+                return True
+        return False
 
-    def priority(candidate: RetrievalCandidate) -> tuple[int, float, str]:
-        required_position = required_positions.get(candidate.node.id)
-        if required_position is not None:
-            return -1, float(required_position), str(candidate.node.id)
+    def base_tier(candidate: RetrievalCandidate) -> int:
         if candidate.node.node_type == NodeType.INSTRUCTION:
-            tier, value = 0, candidate.composite_score
-        elif _is_pinned_or_active_task(candidate):
-            tier, value = 1, candidate.composite_score
-        elif (
+            return 0
+        if _is_pinned_or_active_task(candidate):
+            return 1
+        if (
             "EPISODE_CONTEXT" in candidate.paths
             or "EVIDENCE_CONTEXT" in candidate.paths
         ):
             # Episode routing and evidence projection are already bounded.
             # Reserve their source evidence before the broad multi-path pool,
             # while preserving instructions and user pins.
-            tier, value = 2, candidate.composite_score
-        elif candidate.path_count >= 2:
-            tier = 3
-            if config.multipath_ordering == "balanced":
-                value = (
-                    float("inf")
-                    if candidate.node.id == balanced_head
-                    else candidate.composite_score
-                    / max(candidate.token_cost, 1) ** 0.25
-                )
-            elif config.multipath_ordering == "score":
-                value = candidate.composite_score
-            else:
-                value = compute_str(candidate)
+            return 2
+        if candidate.path_count >= 2:
+            return 3
+        return 4
+
+    # Session-context neighbors and the triggers they belong to (issue #86).
+    # A trigger that selection dropped is absent, so its neighbors keep their
+    # own tier and place.
+    session_triggers: dict[UUID, RetrievalCandidate] = {}
+    if config.session_context_packing is not None:
+        by_id = {candidate.node.id: candidate for candidate in candidates}
+        for candidate in candidates:
+            link = candidate.session_context_link
+            trigger = by_id.get(link.trigger_id) if link is not None else None
+            if trigger is not None and trigger is not candidate:
+                session_triggers[candidate.node.id] = trigger
+
+    def tier_of(candidate: RetrievalCandidate) -> int:
+        tier = base_tier(candidate)
+        trigger = session_triggers.get(candidate.node.id)
+        if tier == 4 and trigger is not None and base_tier(trigger) <= 3:
+            # A neighbor that session expansion added has one path; it joins
+            # the multi-path tier with the trigger that brought it in.
+            return 3
+        return tier
+
+    def priority(candidate: RetrievalCandidate) -> tuple[int, float, str]:
+        required_position = required_positions.get(candidate.node.id)
+        if required_position is not None:
+            return -1, float(required_position), str(candidate.node.id)
+        tier = tier_of(candidate)
+        if tier != 3:
+            value = candidate.composite_score
+        elif config.multipath_ordering == "balanced":
+            value = (
+                float("inf")
+                if candidate.node.id == balanced_head
+                else candidate.composite_score
+                / max(candidate.token_cost, 1) ** 0.25
+            )
+        elif config.multipath_ordering == "score":
+            value = candidate.composite_score
         else:
-            tier, value = 4, candidate.composite_score
+            value = compute_str(candidate)
         return tier, -value, str(candidate.node.id)
 
+    # Under "adjacent", the packed members of each trigger's window, by their
+    # offset from the trigger in session order.
+    windows: dict[UUID, dict[UUID, int]] = (
+        {trigger.node.id: {} for trigger in session_triggers.values()}
+        if config.session_context_packing == "adjacent"
+        else {}
+    )
+
+    def window_of(candidate: RetrievalCandidate) -> tuple[UUID, int] | None:
+        if not windows:
+            return None
+        trigger = session_triggers.get(candidate.node.id)
+        if trigger is not None:
+            link = candidate.session_context_link
+            assert link is not None
+            return trigger.node.id, link.offset
+        return (candidate.node.id, 0) if candidate.node.id in windows else None
+
+    def _pack(candidate: RetrievalCandidate) -> bool:
+        """Pack ``candidate``, beside the packed members of its window if it has one."""
+        member = window_of(candidate)
+        position = None
+        if member is not None:
+            key, offset = member
+            placed = windows[key]
+            group = sections.get(classify_into_sections(candidate), [])
+            # Members are always inserted next to each other, so the ones in
+            # this section form one run in session order.
+            run = [i for i, item in enumerate(group) if item.node.id in placed]
+            if run:
+                later = [i for i in run if placed[group[i].node.id] > offset]
+                position = later[0] if later else run[-1] + 1
+        if not _try_include(candidate, position):
+            return False
+        if member is not None:
+            windows[member[0]][candidate.node.id] = member[1]
+        return True
+
     for candidate in sorted(candidates, key=priority):
-        _try_include(candidate)
+        if not _pack(candidate):
+            excluded_ids.append(candidate.node.id)
 
     included_guidance = guidance if sections and _require_guidance else None
     if sections and guidance and not _require_guidance:

@@ -543,6 +543,27 @@ class PackingConfig(BaseModel):
             "[HYPOTHESIS]"
         ),
     )
+    # Omitted when unset, like the rank fusion session decay above, so
+    # configurations and receipts that do not use it keep their bytes.
+    session_context_packing: Literal["trigger_tier", "adjacent"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "How packing treats session-context neighbors (issue #86). Unset "
+            "(the default), a neighbor packs on its own paths: one that "
+            "session expansion added has a single path and waits behind every "
+            "multi-path candidate, and one that another path already found "
+            "keeps its path count. 'trigger_tier' counts SESSION_CONTEXT as a "
+            "path when it joins an existing candidate, and gives a neighbor "
+            "that expansion added the multi-path tier when its trigger is in "
+            "that tier or above. 'adjacent' packs the same records and places "
+            "each packed neighbor beside its packed trigger in session order, "
+            "so a question and its answer read together. Each neighbor "
+            "belongs to the highest-ranked trigger whose window holds it; a "
+            "neighbor that is itself a trigger keeps its own place. Needs "
+            "session expansion (session_context_window > 0). [HYPOTHESIS]"
+        ),
+    )
     episode_context_top_k: int = Field(
         default=0,
         ge=0,

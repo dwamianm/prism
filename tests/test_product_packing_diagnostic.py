@@ -849,3 +849,86 @@ def test_gate_cli_refuses_settings_a_plain_baseline_would_ignore(tmp_path):
     for argv in (["--plain", "rrf", "--set", "scoring.relevance_floor=0.3"], ["--plain", "graph"]):
         with pytest.raises(SystemExit):
             gate_main(["--output", str(tmp_path / "gate.json"), *argv])
+
+
+# --- Session expansion counts (issue #86) -------------------------------------
+
+
+def _session_row(question_id, category, reached, added, promoted, **kwargs):
+    row = gate_row(question_id, category, all_packed=True, **kwargs)
+    row["session_context"] = {"reached": reached, "added": added, "promoted": promoted}
+    return row
+
+
+def test_session_expansion_counts_come_from_the_packed_records_paths_and_provenance():
+    from types import SimpleNamespace
+
+    def packed(number, paths, *, decay=False):
+        kinds = ("current_update", "session_decay") if decay else ("current_update",)
+        provenance = SimpleNamespace(adjustments=[SimpleNamespace(kind=kind) for kind in kinds])
+        return SimpleNamespace(paths=list(paths), score_provenance=provenance if number != 1 else None)
+
+    counts = product_packing._session_context_observations([
+        packed(1, ["VECTOR", "LEXICAL"]),
+        packed(2, ["VECTOR", "SESSION_CONTEXT"]),
+        packed(3, ["VECTOR", "SESSION_CONTEXT"], decay=True),
+        packed(4, ["SESSION_CONTEXT"], decay=True),
+    ])
+    assert counts == {"reached": 3, "added": 1, "promoted": 2}
+
+
+async def test_gate_rows_record_session_expansion_counts(tmp_path, mock_embeddings):
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    [row] = await replay_gate([gate_case(pack, identity)], scratch=scratch)
+    counts = row["session_context"]
+    assert set(counts) == set(product_packing.SESSION_CONTEXT_COUNTS)
+    # Every stored turn shares one session, so expansion reaches the packed turns.
+    assert 0 < counts["reached"] <= row["records"] and counts["added"] <= counts["reached"]
+    # The setting reaches the replayed retrieval through --set.
+    for setting in ("trigger_tier", "adjacent"):
+        [opted] = await replay_gate([gate_case(pack, identity)], scratch=scratch,
+                                    overrides=parse_overrides([f'packing.session_context_packing="{setting}"']))
+        assert set(opted["session_context"]) == set(counts)
+        assert opted["records"] == row["records"] and opted["evidence"] == row["evidence"]
+
+
+def test_gate_summary_and_comparison_report_session_expansion_counts_by_category():
+    before = gate_fixture([_session_row("q1", "multi-hop", 4, 0, 3, records=20),
+                           _session_row("q2", "single-hop", 2, 0, 2, records=20)])
+    after = gate_fixture([_session_row("q1", "multi-hop", 8, 3, 5, records=20),
+                          _session_row("q2", "single-hop", 6, 2, 4, records=20)])
+    summary = before["benchmarks"]["locomo"]["summary"]["session_context_records"]
+    assert summary == {"reached": 6, "added": 0, "promoted": 5, "reached_share": .15, "added_share": 0.0,
+                       "promoted_share": .125}
+    assert "Packed records through session expansion: 14 reached (35.0% of packed records)" in gate_markdown(after)
+
+    result = compare_gates(before, after, samples=20)
+    counts = result["benchmarks"]["locomo"]["session_context_records"]
+    assert counts["before"]["multi-hop"]["reached"] == 4 and counts["after"]["multi-hop"]["added"] == 3
+    assert counts["after"]["all"]["reached"] == 14
+    markdown = comparison_markdown(result)
+    assert "| locomo | multi-hop | 4 (20.0%) / 0 / 3 | 8 (40.0%) / 3 / 5 |" in markdown
+    assert "| locomo | all | 6 (15.0%) / 0 / 5 | 14 (35.0%) / 5 / 9 |" in markdown
+
+    # Reports written before the counts existed, and plain baselines, still compare.
+    old = gate_fixture([gate_row("q1", "multi-hop", all_packed=True, records=20),
+                        gate_row("q2", "single-hop", all_packed=True, records=20)])
+    assert old["benchmarks"]["locomo"]["summary"]["session_context_records"] is None
+    legacy = compare_gates(old, after, samples=20)
+    assert legacy["benchmarks"]["locomo"]["session_context_records"] is None
+    assert "No session expansion counts for locomo" in comparison_markdown(legacy)
+
+
+def test_gate_config_refuses_session_context_packing_without_session_expansion(tmp_path):
+    setting = 'packing.session_context_packing="adjacent"'
+    packing = gate_config(tmp_path, parse_overrides([setting])).packing
+    assert packing.session_context_packing == "adjacent"
+    # The other product defaults stay.
+    assert (packing.context_format, packing.multipath_ordering, packing.session_context_rank_fusion_score_decay) == (
+        "reader", "balanced", .6)
+    for disabled in ("packing.session_context_window=0", "packing.session_context_top_k=0"):
+        with pytest.raises(ValueError, match="applies only with session expansion"):
+            gate_config(tmp_path, parse_overrides([setting, disabled]))
