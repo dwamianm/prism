@@ -333,7 +333,7 @@ score(obj) =
 | `semantic_similarity` | Cosine similarity between query embedding and object embedding. | [0, 1] |
 | `lexical_relevance` | Normalised BM25 score. | [0, 1] |
 | `graph_proximity` | 1.0 for 1-hop, 0.7 for 2-hop, 0.4 for 3-hop. 0 if not retrieved via graph. | [0, 1] |
-| `recency_factor` | `exp(-λ × days_since_last_access)` where λ = 0.02 by default. | (0, 1] |
+| `recency_factor` | `exp(-λ × days)` where λ = 0.02 by default; which time the days are counted from is set by `recency_time` (see Recency clock below). | (0, 1] |
 | `obj.salience` | Current salience score from RFC-0007. | [0, 1] |
 | `obj.confidence` | Current confidence score from RFC-0008. | [0, 1] |
 | `epistemic_weight` | Multiplier by epistemic type from RFC-0003, Section 8. | [0.1, 1.0] |
@@ -367,6 +367,34 @@ change finite defaults or scoring version hashes. As with other Pydantic models,
 trusted `model_construct`/`model_copy(update=...)` calls bypass normal validation.
 
 **Calibration requirement:** Default weights are design estimates. Implementations MUST expose weight configuration and SHOULD tune weights based on feedback loop data (RFC-0009). `[HYPOTHESIS — optimal weights are use-case dependent and require A/B testing to validate]`
+
+**Recency clock.** Unset (`ScoringWeights.recency_time`, the default), the
+weighted formula measures recency on questions that are not about the current
+state from the memory's `updated_at`, else its `created_at`, back from the
+request's reference time, and a time after the reference time counts as no
+time ago. History imported with a past `event_time` and retrieved at a past
+reference time is therefore newer than the reference time everywhere and
+scores 1.0: in the 2026-09-23 LoCoMo run, `recency_factor` was exactly 1.0 for
+89% of sampled candidates (issue #83). Current-state questions (Section 7.1)
+already measure `event_time`, else `updated_at`, else `created_at`, back from
+the newest candidate. `recency_time="event_time"`
+(`PRME_SCORING__RECENCY_TIME`, weighted fusion only) dates every memory by
+when it was stated: its `event_time`, else its `created_at`. It never reads
+`updated_at`, which lifecycle changes such as an organizer promotion reset, or
+`valid_from`, which is the start of the claim's real-world validity rather than
+when it was stated and can lie in the future. This is the clock the rank
+fusion recency boost and tie-break use (Section 7.2). Questions that are not
+about the current state measure it back from the reference time; current-state
+questions keep their anchor, the newest candidate by the same clock, which also
+decides the current-update multiplier of Section 7.1. A time without a zone is
+read as UTC. A memory stored without an event time and never updated has the
+same time either way, apart from the microseconds between its `created_at` and
+`updated_at`. Memories dated after the reference time still count as no time
+ago, and memories stored without an event time, such as entity, consolidation
+and profile nodes, count from when they were stored, so against a past
+reference time they keep full recency while imported turns decay. Rank fusion
+drops the setting with a warning; its current-update eligibility still reads
+`updated_at`.
 
 ### 7.1 Explicit current updates
 
@@ -589,6 +617,13 @@ written before the relevance gate existed, stay valid and omit it; their
 version and bytes: a weighted `ScoringWeights` omits `fusion` and `rrf_k` when
 serialized, and formula version 1 provenance omits `rank_fusion`. A missing
 `fusion` therefore always means weighted.
+A weighted retrieval with `recency_time` set writes version 20 in any context
+format, which records it in its scoring settings, requires every score
+provenance to use the same value and admits the version 12 to 14 features
+(reader format, citations and rank assignment). Versions 1 to 19 cannot record it, and an unset value is omitted,
+so every other receipt keeps its version and bytes. Version 20 is weighted
+only: it records no rank fusion relevance, skipped floor or rank fusion session
+decay.
 
 ---
 

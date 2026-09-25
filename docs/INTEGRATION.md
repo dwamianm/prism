@@ -1021,7 +1021,8 @@ scores newest first instead of by node ID. Default retrievals write schema
 version 19 receipts, which record those settings and the decay. Rank fusion
 without the recency settings writes version 16, 17 with the decay or 18 with a
 skipped `min_score`; the reader format with weighted scoring writes version 14,
-and weighted retrievals in the auditable or compact format write version 12. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
+and weighted retrievals in the auditable or compact format write version 12. Weighted
+retrievals with `PRME_SCORING__RECENCY_TIME=event_time` write version 20 in any format. Versions 1–7 mean episode routing was disabled. Versions 1–6 retain
 their original canonical JSON and feedback checksums and always mean auditable
 rendering. Versions 1–5 also mean context guidance was off. For source blocks or
 bounded dialogue episodes stored under meaningful session IDs, set
@@ -1156,7 +1157,7 @@ composite = additive * epistemic_weight
 The epistemic weight is a **direct multiplier** on the additive sum (not `1 + w_epistemic * ...`). The `w_paths` / `path_score` value is used only as a **sort tiebreaker**, not in the composite score itself.
 
 Where:
-- `recency_factor = exp(-recency_lambda * days_since_update)` — uses `updated_at` (falls back to `created_at`)
+- `recency_factor = exp(-recency_lambda * days_since_update)` — uses `updated_at` (falls back to `created_at`); with `recency_time="event_time"` (`PRME_SCORING__RECENCY_TIME`, weighted fusion only) it uses `event_time`, else `created_at`, so history imported with a past event time is not scored as brand new
 - `graph_proximity`: 1-hop = 1.0, 2-hop = 0.7, 3-hop = 0.4
 - `epistemic_weight`: looked up from `epistemic_weights` dict by `EpistemicType`
 - `path_score`: number of backends that independently found this candidate (tiebreaker only)

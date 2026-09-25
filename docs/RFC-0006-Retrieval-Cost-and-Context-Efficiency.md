@@ -441,7 +441,7 @@ every complete line. Reader receipts use version 14, which records
 claim the reader format, and mean citations were off. A retrieval scored with
 rank fusion (RFC-0005 Section 7.2) writes version 16 in any format (version 15 before
 it recorded `semantic_relevance`, version 17 when it records the rank fusion session
-decay, version 18 when it records a `min_score` skipped because the vector path failed, version 19 when it records the rank fusion recency boost or event-time tie-break, which the default settings do).
+decay, version 18 when it records a `min_score` skipped because the vector path failed, version 19 when it records the rank fusion recency boost or event-time tie-break, which the default settings do). A weighted retrieval with event-time recency (`scoring.recency_time`, RFC-0005 Section 7) writes version 20 in any format.
 
 ## Default update (2026-09-25)
 

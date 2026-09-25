@@ -354,6 +354,17 @@ def test_gate_config_refuses_rank_fusion_recency_and_tie_break_without_rank_fusi
         gate_config(tmp_path, parse_overrides(['scoring.fusion="weighted"', setting]))
 
 
+def test_gate_config_refuses_event_time_recency_without_weighted_scoring(tmp_path):
+    setting = 'scoring.recency_time="event_time"'
+    weighted = gate_config(tmp_path, parse_overrides(['scoring.fusion="weighted"', setting]))
+    assert (weighted.scoring.fusion, weighted.scoring.recency_time) == ("weighted", "event_time")
+    # Rank fusion is the default and ignores the setting, so a run would change nothing.
+    for overrides in ([setting], ['scoring.fusion="rrf"', setting]):
+        with pytest.warns(UserWarning), pytest.raises(
+                ValueError, match='scoring.recency_time applies only with scoring.fusion="weighted"'):
+            gate_config(tmp_path, parse_overrides(overrides))
+
+
 def test_gate_config_refuses_a_rank_fusion_session_decay_without_rank_fusion(tmp_path):
     decay = "packing.session_context_rank_fusion_score_decay=0.5"
     fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', decay]))

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -313,6 +314,16 @@ def _stated_time(candidate: RetrievalCandidate) -> datetime:
     return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
 
 
+def _weighted_time_source(weights: ScoringWeights) -> Callable[[RetrievalCandidate], datetime]:
+    """The function that dates memories for the newest-candidate anchor and current updates.
+
+    ``recency_time="event_time"`` (weighted fusion only) dates them when they
+    were stated. Otherwise, and always under rank fusion, they keep
+    ``_memory_time``, which falls back to ``updated_at``.
+    """
+    return _stated_time if weights.recency_time == "event_time" else _memory_time
+
+
 def _update_recency_multiplier(candidate: RetrievalCandidate) -> float:
     """Recency multiplier on a current-state question: doubled for update wording."""
     return _UPDATE_RECENCY_MULTIPLIER if _has_update_language(candidate.node.content) else 1.0
@@ -429,7 +440,9 @@ def compute_composite_score(
     Salience and confidence are now computed via virtual decay from base
     values, decay profile, and reinforcement state (RFC-0015).
 
-    Recency: exp(-lambda * days_since_update)
+    Recency: exp(-lambda * days_since_update), or with
+    ``weights.recency_time == "event_time"`` days since the memory's event
+    time, else since it was stored.
     Epistemic weight: lookup from EPISTEMIC_WEIGHTS table or config override.
 
     Args:
@@ -473,12 +486,17 @@ def compute_composite_score(
     # When recency_reference is provided, compute relative recency (gap
     # between this candidate and the newest candidate) so that recency is
     # meaningful even when all events are old relative to ``now``.
-    reference_time = (
-        _memory_time(candidate) if recency_reference is not None
-        else node.updated_at or node.created_at
-    )
+    # recency_time="event_time" reads when the memory was stated on every
+    # question, so imported history measured from a past ``now`` is not
+    # uniformly brand new (issue #83).
+    if weights.recency_time == "event_time":
+        memory_time = _stated_time(candidate)
+    elif recency_reference is not None:
+        memory_time = _memory_time(candidate)
+    else:
+        memory_time = node.updated_at or node.created_at
     recency = _recency(
-        reference_time, recency_reference or now, weights.recency_lambda, recency_multiplier,
+        memory_time, recency_reference or now, weights.recency_lambda, recency_multiplier,
     )
 
     epistemic_weight = _epistemic_weight(node, epistemic_weights)
@@ -762,14 +780,20 @@ def validate_rank_fusion_request(
     Learned ranking multipliers reweight the weighted sum, which rank fusion
     does not use, so non-neutral multipliers would silently change nothing.
     The opt-in rank fusion terms would likewise change nothing under the
-    weighted sum; validation drops them, so only a ``model_copy`` gets here.
+    weighted sum, nor ``recency_time`` under rank fusion; validation drops
+    them, so only a ``model_copy`` gets here.
     """
     if weights.fusion != "rrf":
         if weights.rank_fusion_opt_ins:
             raise ValueError(
                 f"{', '.join(weights.rank_fusion_opt_ins)} apply only to fusion='rrf'"
             )
+        if weights.recency_time not in (None, "event_time"):
+            # Only a model_copy can set another value; scoring would ignore it.
+            raise ValueError(f"Unknown recency_time {weights.recency_time!r}")
         return
+    if weights.recency_time is not None:
+        raise ValueError("recency_time applies only to fusion='weighted'")
     if weights.rrf_k is None:
         raise ValueError("fusion='rrf' requires rrf_k")
     if ranking_multipliers not in (None, RankingMultipliers()):
@@ -868,9 +892,12 @@ def score_and_rank(
     # Only used for current-state queries where we need to differentiate
     # old vs new facts. For other queries (temporal, multi_session, etc.),
     # relative recency would hurt by biasing toward newer events.
+    # Rank fusion drops recency_time, so it always dates memories by
+    # _memory_time here.
+    time_of = _weighted_time_source(effective_weights)
     recency_ref: datetime | None = None
     if is_current_query and candidates:
-        recency_ref = max(_memory_time(candidate) for candidate in candidates)
+        recency_ref = max(time_of(candidate) for candidate in candidates)
 
     traces: list[ScoreTrace] = []
     fused = (
@@ -906,7 +933,7 @@ def score_and_rank(
         if (
             is_current_query
             and recency_ref is not None
-            and _memory_time(candidate) == recency_ref
+            and time_of(candidate) == recency_ref
             and _has_update_language(candidate.node.content)
             and trace.composite_score > 0
             and effective_weights.current_update_multiplier > 1
