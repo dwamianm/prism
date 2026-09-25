@@ -216,6 +216,23 @@ Lexical search is particularly valuable when:
 - The embedding model is outdated or mismatched.
 - The query is short (single words or names) where semantic embedding is less reliable.
 
+**Implementation status (2026-09-25, issue #87):** the reference
+implementation's limits are `PackingConfig.vector_k` and `lexical_k`, 500 each,
+with `graph_max_candidates` 150 and `graph_max_hops` 3. Candidate generation
+applies no similarity floor; `retrieve(min_score=...)` filters after scoring,
+and under rank fusion it compares `semantic_relevance` (Section 7.2). Count and
+list questions multiply the three limits by `aggregation_k_multiplier` (3.0),
+up to `aggregation_k_max` (2000), and add a keyword scan (50 hits per term) and
+entity-name scans (20 hits per entity) that these limits do not bound;
+`aggregation_coverage.candidate_limit_paths` names any path that reached its
+limit. On the saved LoCoMo and LongMemEval-S packs, 500 returns about 93% and
+100% of the stored turns, so ranking decides what is packed. The offline
+evidence gate reports each channel's recall at k and the retrieval latency. At
+150, 100 and 50 per channel under rank fusion it packs all evidence for more
+LoCoMo questions but fewer LongMemEval-S questions, whose evidence is often
+found by one channel only, so the limits stay at 500 (`BENCHMARKS.md`,
+"Candidate limits"; #198).
+
 ### 4.4 Pinned and Active Objects
 
 Retrieve directly:

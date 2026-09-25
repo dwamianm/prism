@@ -1,0 +1,1405 @@
+{
+  "kind": "offline-evidence-gate-comparison",
+  "complete": true,
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "interval_note": "Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, so they are narrower than conversation-level intervals.",
+  "before": {
+    "provenance": {
+      "commit": "7825ec201849255bad1ff70c406ae6b70028bfea",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.12.0",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time"
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "reranker_policy": "legacy",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {},
+      "retrieval_timing": "after-warm-up-v1",
+      "archive": {
+        "path": "/Users/dwamianm/Sites/prism/data/gpt54-comparison-v1",
+        "prepared_sha256": {
+          "locomo": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+          "longmemeval": "685284d70d36c2865e0942c4d2a1066d6a4403b2647077dcf7f06228c9cdc742"
+        }
+      },
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      }
+    },
+    "started_at": "2026-09-25T12:05:53.764151+00:00",
+    "load_average": {
+      "start": [
+        4.7822265625,
+        4.8671875,
+        5.07177734375
+      ],
+      "end": [
+        6.39306640625,
+        4.83984375,
+        4.77490234375
+      ]
+    }
+  },
+  "after": {
+    "provenance": {
+      "commit": "7825ec201849255bad1ff70c406ae6b70028bfea",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.12.0",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time"
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 50,
+          "lexical_k": 50,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "reranker_policy": "legacy",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {
+        "packing": {
+          "vector_k": 50,
+          "lexical_k": 50
+        }
+      },
+      "retrieval_timing": "after-warm-up-v1",
+      "archive": {
+        "path": "/Users/dwamianm/Sites/prism/data/gpt54-comparison-v1",
+        "prepared_sha256": {
+          "locomo": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+          "longmemeval": "685284d70d36c2865e0942c4d2a1066d6a4403b2647077dcf7f06228c9cdc742"
+        }
+      },
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      }
+    },
+    "started_at": "2026-09-25T12:32:55.261513+00:00",
+    "load_average": {
+      "start": [
+        3.7880859375,
+        3.494140625,
+        3.966796875
+      ],
+      "end": [
+        5.96875,
+        5.0361328125,
+        4.57763671875
+      ]
+    }
+  },
+  "projection": {
+    "label": "Planning estimate, not an answer score.",
+    "method": "Each question takes the saved GPT-5.4 run's accuracy on questions whose annotated evidence was all packed, or partly missing: per category for LoCoMo, pooled for LongMemEval-S. Questions that retrieval cannot move (no resolvable annotation, or abstention) keep their category's measured rate.",
+    "calibration": "At the saved run's evidence states the projection reproduces 985/1,540 and 430/500 by construction; LongMemEval-S category values are pooled estimates. The audit's re-pack simulator, using the same LoCoMo rates, reproduced the real packed sets with mean Jaccard 0.83 and projected 63.3% against 64.0% measured (memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md, section 1).",
+    "limits": [
+      "It ignores distractor effects: added or reordered context can change answers without changing evidence coverage.",
+      "It relies on the datasets' evidence annotations, which have gaps; equivalent evidence can exist elsewhere.",
+      "Its conditional accuracies come from one reader and one strict judge (GPT-5.4).",
+      "All 2,040 questions have already been examined, so this is a development gate. Publication claims need fresh or held-out data."
+    ],
+    "conditional_accuracy": {
+      "locomo": {
+        "single-hop": {
+          "all_packed": [
+            600,
+            657
+          ],
+          "missing": [
+            30,
+            183
+          ]
+        },
+        "temporal": {
+          "all_packed": [
+            216,
+            252
+          ],
+          "missing": [
+            10,
+            68
+          ]
+        },
+        "multi-hop": {
+          "all_packed": [
+            37,
+            45
+          ],
+          "missing": [
+            42,
+            233
+          ]
+        },
+        "open-domain": {
+          "all_packed": [
+            22,
+            29
+          ],
+          "missing": [
+            19,
+            60
+          ]
+        }
+      },
+      "longmemeval": {
+        "*": {
+          "all_packed": [
+            385,
+            403
+          ],
+          "missing": [
+            21,
+            67
+          ]
+        }
+      }
+    },
+    "unscored_accuracy": {
+      "locomo": {
+        "multi-hop": [
+          1,
+          4
+        ],
+        "open-domain": [
+          7,
+          7
+        ],
+        "single-hop": [
+          0,
+          1
+        ],
+        "temporal": [
+          1,
+          1
+        ]
+      },
+      "longmemeval": {
+        "knowledge-update": [
+          4,
+          6
+        ],
+        "multi-session": [
+          9,
+          12
+        ],
+        "single-session-user": [
+          6,
+          6
+        ],
+        "temporal-reasoning": [
+          5,
+          6
+        ]
+      }
+    },
+    "measured_accuracy": {
+      "locomo": [
+        985,
+        1540
+      ],
+      "longmemeval": [
+        430,
+        500
+      ]
+    }
+  },
+  "benchmarks": {
+    "locomo": {
+      "all_evidence_packed": {
+        "queries": 1536,
+        "before": 0.83984375,
+        "after": 0.8509114583333334,
+        "delta": 0.011067708333333334,
+        "interval_95": [
+          -0.0006510416666666666,
+          0.0234375
+        ],
+        "wins": 53,
+        "losses": 36,
+        "ties": 1447
+      },
+      "all_evidence_packed_with_text": {
+        "queries": 1536,
+        "before": 0.83984375,
+        "after": 0.8509114583333334,
+        "delta": 0.011067708333333334,
+        "interval_95": [
+          -0.0006510416666666666,
+          0.0234375
+        ],
+        "wins": 53,
+        "losses": 36,
+        "ties": 1447
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "before": 0.8916084222597864,
+        "after": 0.8995817617401161,
+        "delta": 0.007973339480329612,
+        "interval_95": [
+          -0.0010869903807814996,
+          0.017525666379490393
+        ],
+        "wins": 69,
+        "losses": 59,
+        "ties": 1408
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "before": 0.9928385416666666,
+        "after": 0.90625,
+        "delta": -0.08658854166666667,
+        "interval_95": [
+          -0.1015625,
+          -0.07291666666666667
+        ],
+        "wins": 0,
+        "losses": 133,
+        "ties": 1403
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "before": 0.7764529438704758,
+        "after": 0.7845058823385291,
+        "delta": 0.008052938468053304,
+        "interval_95": [
+          -0.00012987707045720957,
+          0.015920112996593426
+        ],
+        "wins": 53,
+        "losses": 36,
+        "ties": 1451
+      },
+      "gained_all_evidence_among_candidates": [],
+      "lost_all_evidence_among_candidates": [
+        "conv-26-q0004",
+        "conv-26-q0015",
+        "conv-26-q0034",
+        "conv-26-q0038",
+        "conv-26-q0042",
+        "conv-26-q0048",
+        "conv-26-q0069",
+        "conv-26-q0075",
+        "conv-30-q0002",
+        "conv-30-q0018",
+        "conv-30-q0023",
+        "conv-30-q0031",
+        "conv-30-q0044",
+        "conv-30-q0074",
+        "conv-41-q0003",
+        "conv-41-q0006",
+        "conv-41-q0008",
+        "conv-41-q0010",
+        "conv-41-q0011",
+        "conv-41-q0014",
+        "conv-41-q0028",
+        "conv-41-q0032",
+        "conv-41-q0035",
+        "conv-41-q0040",
+        "conv-41-q0045",
+        "conv-41-q0047",
+        "conv-41-q0050",
+        "conv-41-q0057",
+        "conv-41-q0064",
+        "conv-42-q0001",
+        "conv-42-q0014",
+        "conv-42-q0034",
+        "conv-42-q0050",
+        "conv-42-q0055",
+        "conv-42-q0056",
+        "conv-42-q0059",
+        "conv-42-q0063",
+        "conv-42-q0066",
+        "conv-42-q0067",
+        "conv-42-q0074",
+        "conv-42-q0081",
+        "conv-42-q0083",
+        "conv-42-q0087",
+        "conv-42-q0120",
+        "conv-42-q0151",
+        "conv-43-q0003",
+        "conv-43-q0004",
+        "conv-43-q0005",
+        "conv-43-q0007",
+        "conv-43-q0011",
+        "conv-43-q0020",
+        "conv-43-q0021",
+        "conv-43-q0025",
+        "conv-43-q0034",
+        "conv-43-q0038",
+        "conv-43-q0041",
+        "conv-43-q0052",
+        "conv-43-q0053",
+        "conv-43-q0059",
+        "conv-43-q0065",
+        "conv-43-q0067",
+        "conv-43-q0118",
+        "conv-43-q0151",
+        "conv-44-q0002",
+        "conv-44-q0003",
+        "conv-44-q0008",
+        "conv-44-q0012",
+        "conv-44-q0015",
+        "conv-44-q0019",
+        "conv-44-q0023",
+        "conv-44-q0024",
+        "conv-44-q0026",
+        "conv-44-q0027",
+        "conv-44-q0031",
+        "conv-44-q0033",
+        "conv-44-q0039",
+        "conv-44-q0044",
+        "conv-44-q0049",
+        "conv-44-q0051",
+        "conv-44-q0052",
+        "conv-44-q0053",
+        "conv-44-q0054",
+        "conv-44-q0055",
+        "conv-47-q0000",
+        "conv-47-q0001",
+        "conv-47-q0002",
+        "conv-47-q0005",
+        "conv-47-q0012",
+        "conv-47-q0019",
+        "conv-47-q0024",
+        "conv-47-q0027",
+        "conv-47-q0051",
+        "conv-47-q0056",
+        "conv-48-q0023",
+        "conv-48-q0036",
+        "conv-48-q0080",
+        "conv-48-q0082",
+        "conv-48-q0086",
+        "conv-48-q0088",
+        "conv-48-q0188",
+        "conv-49-q0001",
+        "conv-49-q0007",
+        "conv-49-q0010",
+        "conv-49-q0011",
+        "conv-49-q0019",
+        "conv-49-q0020",
+        "conv-49-q0025",
+        "conv-49-q0026",
+        "conv-49-q0028",
+        "conv-49-q0032",
+        "conv-49-q0036",
+        "conv-49-q0048",
+        "conv-49-q0049",
+        "conv-49-q0050",
+        "conv-49-q0051",
+        "conv-49-q0054",
+        "conv-49-q0060",
+        "conv-49-q0068",
+        "conv-49-q0077",
+        "conv-49-q0082",
+        "conv-50-q0004",
+        "conv-50-q0019",
+        "conv-50-q0023",
+        "conv-50-q0029",
+        "conv-50-q0031",
+        "conv-50-q0043",
+        "conv-50-q0045",
+        "conv-50-q0046",
+        "conv-50-q0056",
+        "conv-50-q0063",
+        "conv-50-q0068",
+        "conv-50-q0140",
+        "conv-50-q0152"
+      ],
+      "gained_all_evidence": [
+        "conv-26-q0024",
+        "conv-26-q0043",
+        "conv-26-q0047",
+        "conv-26-q0070",
+        "conv-26-q0071",
+        "conv-26-q0085",
+        "conv-26-q0090",
+        "conv-26-q0121",
+        "conv-26-q0144",
+        "conv-26-q0146",
+        "conv-30-q0009",
+        "conv-30-q0081",
+        "conv-41-q0025",
+        "conv-41-q0044",
+        "conv-41-q0112",
+        "conv-41-q0124",
+        "conv-41-q0150",
+        "conv-42-q0000",
+        "conv-42-q0005",
+        "conv-42-q0075",
+        "conv-42-q0084",
+        "conv-42-q0098",
+        "conv-42-q0171",
+        "conv-43-q0105",
+        "conv-44-q0036",
+        "conv-44-q0045",
+        "conv-44-q0046",
+        "conv-47-q0003",
+        "conv-47-q0018",
+        "conv-47-q0022",
+        "conv-47-q0048",
+        "conv-47-q0064",
+        "conv-47-q0094",
+        "conv-47-q0103",
+        "conv-47-q0147",
+        "conv-48-q0014",
+        "conv-48-q0015",
+        "conv-48-q0025",
+        "conv-48-q0041",
+        "conv-48-q0084",
+        "conv-48-q0090",
+        "conv-48-q0179",
+        "conv-49-q0006",
+        "conv-49-q0014",
+        "conv-49-q0039",
+        "conv-49-q0055",
+        "conv-49-q0071",
+        "conv-49-q0081",
+        "conv-49-q0122",
+        "conv-50-q0003",
+        "conv-50-q0027",
+        "conv-50-q0119",
+        "conv-50-q0120"
+      ],
+      "lost_all_evidence": [
+        "conv-26-q0055",
+        "conv-26-q0081",
+        "conv-26-q0149",
+        "conv-41-q0007",
+        "conv-41-q0131",
+        "conv-42-q0017",
+        "conv-42-q0023",
+        "conv-42-q0051",
+        "conv-42-q0070",
+        "conv-42-q0082",
+        "conv-42-q0095",
+        "conv-42-q0186",
+        "conv-43-q0019",
+        "conv-43-q0024",
+        "conv-43-q0065",
+        "conv-44-q0014",
+        "conv-44-q0050",
+        "conv-44-q0056",
+        "conv-47-q0000",
+        "conv-47-q0015",
+        "conv-47-q0075",
+        "conv-48-q0013",
+        "conv-48-q0020",
+        "conv-48-q0050",
+        "conv-48-q0059",
+        "conv-48-q0080",
+        "conv-48-q0081",
+        "conv-48-q0085",
+        "conv-48-q0102",
+        "conv-49-q0045",
+        "conv-50-q0005",
+        "conv-50-q0020",
+        "conv-50-q0037",
+        "conv-50-q0075",
+        "conv-50-q0117",
+        "conv-50-q0140"
+      ],
+      "all_evidence_packed_by_category": {
+        "multi-hop": {
+          "queries": 282,
+          "before": 0.49645390070921985,
+          "after": 0.5177304964539007,
+          "delta": 0.02127659574468085,
+          "interval_95": [
+            -0.02127659574468085,
+            0.06382978723404255
+          ],
+          "wins": 22,
+          "losses": 16,
+          "ties": 244
+        },
+        "open-domain": {
+          "queries": 92,
+          "before": 0.5760869565217391,
+          "after": 0.5652173913043478,
+          "delta": -0.010869565217391304,
+          "interval_95": [
+            -0.06521739130434782,
+            0.043478260869565216
+          ],
+          "wins": 3,
+          "losses": 4,
+          "ties": 85
+        },
+        "single-hop": {
+          "queries": 841,
+          "before": 0.9524375743162902,
+          "after": 0.9667063020214031,
+          "delta": 0.014268727705112961,
+          "interval_95": [
+            0.0011890606420927466,
+            0.027348394768133173
+          ],
+          "wins": 22,
+          "losses": 10,
+          "ties": 809
+        },
+        "temporal": {
+          "queries": 321,
+          "before": 0.9221183800623053,
+          "after": 0.9221183800623053,
+          "delta": 0.0,
+          "interval_95": [
+            -0.021806853582554516,
+            0.021806853582554516
+          ],
+          "wins": 6,
+          "losses": 6,
+          "ties": 309
+        }
+      },
+      "context": {
+        "before": {
+          "questions": 1540,
+          "contexts_matching_saved": 0,
+          "records_per_context": 84.51428571428572,
+          "memory_text_share": 0.9661244611738291,
+          "records_without_text": 0,
+          "candidates_mean": 554.8227272727273
+        },
+        "after": {
+          "questions": 1540,
+          "contexts_matching_saved": 0,
+          "records_per_context": 83.8077922077922,
+          "memory_text_share": 0.9662757161833695,
+          "records_without_text": 0,
+          "candidates_mean": 167.95194805194805
+        }
+      },
+      "retrieval_seconds": {
+        "before": {
+          "p50": 0.1916591460176278,
+          "p95": 0.2401829898939468
+        },
+        "after": {
+          "p50": 0.10002531250938773,
+          "p95": 0.1333347818639595
+        }
+      },
+      "aggregation": {
+        "before": {
+          "questions": 41,
+          "filled_widened_limit": 0,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 41
+          }
+        },
+        "after": {
+          "questions": 41,
+          "filled_widened_limit": 41,
+          "paths_at_limit": {
+            "LEXICAL": 41,
+            "LEXICAL_AGG": 41,
+            "VECTOR": 41
+          }
+        }
+      },
+      "query_scoring": {
+        "temporal_affinity_varies_by_category": {
+          "questions": {
+            "multi-hop": 282,
+            "open-domain": 96,
+            "single-hop": 841,
+            "temporal": 321
+          },
+          "before": {
+            "multi-hop": 0,
+            "open-domain": 0,
+            "single-hop": 0,
+            "temporal": 0
+          },
+          "after": {
+            "multi-hop": 0,
+            "open-domain": 0,
+            "single-hop": 0,
+            "temporal": 0
+          }
+        },
+        "entered_current_state_path": [],
+        "left_current_state_path": [
+          "conv-41-q0012",
+          "conv-41-q0015",
+          "conv-41-q0023",
+          "conv-41-q0025",
+          "conv-41-q0028",
+          "conv-41-q0029",
+          "conv-41-q0030",
+          "conv-41-q0032",
+          "conv-41-q0035",
+          "conv-41-q0036",
+          "conv-41-q0037",
+          "conv-41-q0044",
+          "conv-41-q0057",
+          "conv-41-q0088",
+          "conv-41-q0101",
+          "conv-41-q0106",
+          "conv-41-q0136",
+          "conv-41-q0150",
+          "conv-42-q0010",
+          "conv-42-q0014",
+          "conv-42-q0027",
+          "conv-42-q0030",
+          "conv-42-q0034",
+          "conv-42-q0046",
+          "conv-42-q0047",
+          "conv-42-q0058",
+          "conv-42-q0060",
+          "conv-42-q0061",
+          "conv-42-q0063",
+          "conv-42-q0067",
+          "conv-42-q0070",
+          "conv-42-q0081",
+          "conv-42-q0082",
+          "conv-42-q0085",
+          "conv-42-q0092",
+          "conv-42-q0096",
+          "conv-42-q0098",
+          "conv-42-q0114",
+          "conv-42-q0115",
+          "conv-42-q0128",
+          "conv-42-q0144",
+          "conv-42-q0147",
+          "conv-42-q0153",
+          "conv-42-q0163",
+          "conv-42-q0164",
+          "conv-42-q0183",
+          "conv-42-q0187",
+          "conv-42-q0190",
+          "conv-43-q0002",
+          "conv-43-q0004",
+          "conv-43-q0011",
+          "conv-43-q0014",
+          "conv-43-q0018",
+          "conv-43-q0035",
+          "conv-43-q0036",
+          "conv-43-q0041",
+          "conv-43-q0057",
+          "conv-43-q0061",
+          "conv-43-q0065",
+          "conv-43-q0083",
+          "conv-43-q0090",
+          "conv-43-q0097",
+          "conv-43-q0099",
+          "conv-43-q0114",
+          "conv-43-q0124",
+          "conv-43-q0127",
+          "conv-43-q0128",
+          "conv-43-q0164",
+          "conv-43-q0169",
+          "conv-43-q0171",
+          "conv-44-q0002",
+          "conv-44-q0032",
+          "conv-44-q0051",
+          "conv-44-q0064",
+          "conv-44-q0080",
+          "conv-44-q0083",
+          "conv-44-q0095",
+          "conv-44-q0101",
+          "conv-44-q0103",
+          "conv-47-q0027",
+          "conv-47-q0036",
+          "conv-47-q0045",
+          "conv-47-q0060",
+          "conv-47-q0068",
+          "conv-47-q0085",
+          "conv-47-q0086",
+          "conv-47-q0087",
+          "conv-47-q0116",
+          "conv-48-q0015",
+          "conv-48-q0042",
+          "conv-48-q0086",
+          "conv-48-q0088",
+          "conv-48-q0091",
+          "conv-48-q0126",
+          "conv-48-q0141",
+          "conv-48-q0154",
+          "conv-48-q0155",
+          "conv-48-q0166",
+          "conv-50-q0011",
+          "conv-50-q0060",
+          "conv-50-q0064",
+          "conv-50-q0076",
+          "conv-50-q0091",
+          "conv-50-q0095",
+          "conv-50-q0097",
+          "conv-50-q0107",
+          "conv-50-q0124",
+          "conv-50-q0147",
+          "conv-50-q0148",
+          "conv-50-q0149",
+          "conv-50-q0153",
+          "conv-50-q0157"
+        ],
+        "current_state_path_unknown": 0
+      }
+    },
+    "longmemeval": {
+      "all_evidence_packed": {
+        "queries": 470,
+        "before": 0.9468085106382979,
+        "after": 0.874468085106383,
+        "delta": -0.07234042553191489,
+        "interval_95": [
+          -0.09787234042553192,
+          -0.04680851063829787
+        ],
+        "wins": 3,
+        "losses": 37,
+        "ties": 430
+      },
+      "all_evidence_packed_with_text": {
+        "queries": 470,
+        "before": 0.9468085106382979,
+        "after": 0.874468085106383,
+        "delta": -0.07234042553191489,
+        "interval_95": [
+          -0.09787234042553192,
+          -0.04680851063829787
+        ],
+        "wins": 3,
+        "losses": 37,
+        "ties": 430
+      },
+      "evidence_recall": {
+        "queries": 470,
+        "before": 0.9730141843971631,
+        "after": 0.9267730496453901,
+        "delta": -0.04624113475177305,
+        "interval_95": [
+          -0.06624113475177305,
+          -0.029078014184397163
+        ],
+        "wins": 5,
+        "losses": 41,
+        "ties": 424
+      },
+      "all_evidence_returned": {
+        "queries": 470,
+        "before": 1.0,
+        "after": 0.9851063829787234,
+        "delta": -0.014893617021276596,
+        "interval_95": [
+          -0.027659574468085105,
+          -0.00425531914893617
+        ],
+        "wins": 0,
+        "losses": 7,
+        "ties": 463
+      },
+      "projected_accuracy": {
+        "queries": 500,
+        "before": 0.9139197807488612,
+        "after": 0.8702704344283545,
+        "delta": -0.04364934632050665,
+        "interval_95": [
+          -0.059054997963038404,
+          -0.029527498981519202
+        ],
+        "wins": 3,
+        "losses": 37,
+        "ties": 460
+      },
+      "gained_all_evidence_among_candidates": [],
+      "lost_all_evidence_among_candidates": [
+        "6d550036",
+        "1a8a66a6",
+        "75832dbd",
+        "gpt4_7abb270c",
+        "eac54add",
+        "6e984302",
+        "gpt4_68e94288"
+      ],
+      "gained_all_evidence": [
+        "e47becba",
+        "58470ed2",
+        "6222b6eb"
+      ],
+      "lost_all_evidence": [
+        "5d3d2817",
+        "gpt4_d84a3211",
+        "88432d0a",
+        "gpt4_7fce9456",
+        "d682f1a2",
+        "2ce6a0f2",
+        "eeda8a6d",
+        "gpt4_194be4b3",
+        "75832dbd",
+        "35a27287",
+        "afdc33df",
+        "06f04340",
+        "38146c39",
+        "95228167",
+        "d6233ab6",
+        "1c0ddc50",
+        "0a34ad58",
+        "51c32626",
+        "5025383b",
+        "a1cc6108",
+        "92a0aa75",
+        "157a136e",
+        "0bc8ad92",
+        "af082822",
+        "gpt4_7f6b06db",
+        "gpt4_e061b84f",
+        "gpt4_ec93e27f",
+        "gpt4_21adecb5",
+        "gpt4_d6585ce9",
+        "gpt4_1e4a8aec",
+        "gpt4_4929293b",
+        "4dfccbf8",
+        "0bc8ad93",
+        "gpt4_8279ba03",
+        "gpt4_65aabe59",
+        "gpt4_b4a80587",
+        "gpt4_2f56ae70"
+      ],
+      "all_evidence_packed_by_category": {
+        "knowledge-update": {
+          "queries": 72,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 72
+        },
+        "multi-session": {
+          "queries": 121,
+          "before": 0.8925619834710744,
+          "after": 0.7933884297520661,
+          "delta": -0.09917355371900827,
+          "interval_95": [
+            -0.15702479338842976,
+            -0.049586776859504134
+          ],
+          "wins": 0,
+          "losses": 12,
+          "ties": 109
+        },
+        "single-session-assistant": {
+          "queries": 56,
+          "before": 0.9642857142857143,
+          "after": 1.0,
+          "delta": 0.03571428571428571,
+          "interval_95": [
+            0.0,
+            0.08928571428571429
+          ],
+          "wins": 2,
+          "losses": 0,
+          "ties": 54
+        },
+        "single-session-preference": {
+          "queries": 30,
+          "before": 1.0,
+          "after": 0.7,
+          "delta": -0.3,
+          "interval_95": [
+            -0.4666666666666667,
+            -0.13333333333333333
+          ],
+          "wins": 0,
+          "losses": 9,
+          "ties": 21
+        },
+        "single-session-user": {
+          "queries": 64,
+          "before": 0.96875,
+          "after": 0.96875,
+          "delta": 0.0,
+          "interval_95": [
+            -0.046875,
+            0.046875
+          ],
+          "wins": 1,
+          "losses": 1,
+          "ties": 62
+        },
+        "temporal-reasoning": {
+          "queries": 127,
+          "before": 0.937007874015748,
+          "after": 0.8188976377952756,
+          "delta": -0.11811023622047244,
+          "interval_95": [
+            -0.1732283464566929,
+            -0.06299212598425197
+          ],
+          "wins": 0,
+          "losses": 15,
+          "ties": 112
+        }
+      },
+      "context": {
+        "before": {
+          "questions": 500,
+          "contexts_matching_saved": 0,
+          "records_per_context": 39.88,
+          "memory_text_share": 0.826047670570807,
+          "records_without_text": 0,
+          "candidates_mean": 492.028
+        },
+        "after": {
+          "questions": 500,
+          "contexts_matching_saved": 0,
+          "records_per_context": 24.818,
+          "memory_text_share": 0.868362022870706,
+          "records_without_text": 0,
+          "candidates_mean": 156.802
+        }
+      },
+      "retrieval_seconds": {
+        "before": {
+          "p50": 0.17881602101260796,
+          "p95": 0.24853192290465814
+        },
+        "after": {
+          "p50": 0.06796552098239772,
+          "p95": 0.1590824201965006
+        }
+      },
+      "aggregation": {
+        "before": {
+          "questions": 180,
+          "filled_widened_limit": 0,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 114
+          }
+        },
+        "after": {
+          "questions": 180,
+          "filled_widened_limit": 180,
+          "paths_at_limit": {
+            "LEXICAL": 180,
+            "LEXICAL_AGG": 114,
+            "VECTOR": 180
+          }
+        }
+      },
+      "query_scoring": {
+        "temporal_affinity_varies_by_category": {
+          "questions": {
+            "knowledge-update": 78,
+            "multi-session": 133,
+            "single-session-assistant": 56,
+            "single-session-preference": 30,
+            "single-session-user": 70,
+            "temporal-reasoning": 133
+          },
+          "before": {
+            "knowledge-update": 11,
+            "multi-session": 23,
+            "single-session-assistant": 3,
+            "single-session-preference": 1,
+            "single-session-user": 7,
+            "temporal-reasoning": 37
+          },
+          "after": {
+            "knowledge-update": 11,
+            "multi-session": 23,
+            "single-session-assistant": 3,
+            "single-session-preference": 1,
+            "single-session-user": 7,
+            "temporal-reasoning": 37
+          }
+        },
+        "entered_current_state_path": [],
+        "left_current_state_path": [
+          "75499fd8"
+        ],
+        "current_state_path_unknown": 0
+      }
+    }
+  },
+  "inputs": {
+    "before_sha256": "51dd868943f5e5fa6203756a460238e78cace8a673233a98c53b3867e280dd26",
+    "after_sha256": "b4163abf848a6c582a217700f6aa53f44a89a3bd7c0726ed18f1509d3c5a454b"
+  }
+}
