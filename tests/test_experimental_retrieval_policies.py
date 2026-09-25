@@ -100,13 +100,18 @@ async def test_public_config_receipt_replay_owner_feedback_and_restart(config, u
         assert 'query_reformulation_merge' not in ordinary.execution.features
 
 
-@pytest.mark.parametrize('changed_policy', ['rank', 'merge', 'intent'])
+@pytest.mark.parametrize('changed_policy', ['rank', 'merge', 'intent', 'prior'])
 async def test_policy_change_prevents_profile_activation(config, user, changed_policy):
     async with MemoryEngine.open(config) as engine:
+        pipeline = engine._retrieval_pipeline
+        if changed_policy == 'prior':
+            # The profile is learned with a reranker, so only its weight changes (issue #88).
+            pipeline._reranker = CrossEncoderReranker(policy='score_envelope')
         proposal, holdout = test_ranking_profiles._evidence(engine, RankingMultipliers(lexical=2), owner=user)
         profile = await engine.create_ranking_profile(proposal, holdout, user_id=user)
-        pipeline = engine._retrieval_pipeline
-        if changed_policy == 'rank':
+        if changed_policy == 'prior':
+            pipeline._reranker = CrossEncoderReranker(policy='score_envelope', prior_weight=0.0)
+        elif changed_policy == 'rank':
             pipeline._reranker = CrossEncoderReranker(policy='anchored_score_envelope')
         elif changed_policy == 'merge':
             pipeline._enable_query_reformulation = True

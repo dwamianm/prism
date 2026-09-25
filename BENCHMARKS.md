@@ -168,8 +168,9 @@ The gate replays the public `retrieve()` for all 1,540 LoCoMo and 500
 LongMemEval-S questions over copies of the saved 2026-09-23 memory packs, at
 each question's recorded reference time. It then measures the context that the
 product renderer actually produced. It makes no reader, judge or paid API calls;
-only the local query embedding runs, from locally cached model files. A full run
-takes about 8 to 12 minutes on a laptop.
+only the local query embedding runs (and the local cross-encoder, when
+`enable_reranker` is set), from locally cached model files. A full run
+takes about 8 to 12 minutes on a laptop without the reranker.
 
 ```sh
 # Current code and defaults
@@ -180,6 +181,11 @@ uv run python -m benchmarks.diagnostics.product_packing gate \
 # Candidate limits per channel (issue #87)
 uv run python -m benchmarks.diagnostics.product_packing gate \
   --set packing.vector_k=150 --set packing.lexical_k=150 --output /tmp/gate-k150.json
+# Cross-encoder rank order over the fused top 300 (issue #88). Needs the reranker
+# extra and the model already in the local Hugging Face cache: the gate runs offline.
+uv run --extra reranker python -m benchmarks.diagnostics.product_packing gate --set enable_reranker=true \
+  --set 'reranker_policy="score_envelope"' --set reranker_prior_weight=0 \
+  --set reranker_top_k=300 --output /tmp/gate-rerank.json
 uv run python -m benchmarks.diagnostics.product_packing gate-compare \
   /tmp/gate-before.json /tmp/gate-after.json --output /tmp/gate-comparison.json
 ```
@@ -220,7 +226,14 @@ beside it (same name, `.md`). For each benchmark and category, the report gives:
   `retrieval_timing: after-warm-up-v1`, with the host's load average at the
   start and end of the run. LongMemEval-S opens a new engine for every
   question, so its times include a new engine's cold database reads, which
-  LoCoMo pays once per conversation.
+  LoCoMo pays once per conversation;
+- with `enable_reranker` set, the reranker's own time inside each retrieval,
+  p50 and p95 (issue #88), and in the provenance the sentence-transformers,
+  transformers and torch versions, the device and the model revision, which
+  decide the model's scores. `gate-compare` shows the time for each side that
+  ran the reranker. The gate refuses the other reranker settings without
+  `enable_reranker`, and a reranker run that would change nothing (a
+  `reranker_top_k` of 0 or a `reranker_prior_weight` of 1).
 
 A pack whose records are not all turns (for example one built with extraction)
 still replays; its channel ranks are left out.
@@ -356,6 +369,77 @@ and last; the two defaults runs bound the noise):
 
 These times cover `retrieve()` over histories of a few hundred turns with
 exact vector search, whose cost grows with the stored turns whatever the limit.
+
+### Cross-encoder rank order (issue #88)
+
+With `enable_reranker`, `reranker_policy="score_envelope"` (or
+`"anchored_score_envelope"`) and `reranker_prior_weight=0`, the local
+cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) orders the top
+`reranker_top_k` candidates of the rank-fused pool by its own score, and the
+envelope gives them the fused scores in that order. The gate compared this
+with rank fusion alone (the current defaults) at 3,996 and 8,092 tokens. All
+numbers are the share of questions with all annotated evidence packed, as the
+change against rank fusion alone with its paired 95% interval over questions.
+The comparisons are in
+`benchmarks/results/research/2026-09-25/rank-order-*-gate-comparison.md`.
+
+| Variant | LoCoMo 4K | LoCoMo multi-hop 4K | LongMemEval-S 4K | LoCoMo 8K | LoCoMo multi-hop 8K | LongMemEval-S 8K |
+|---|---|---|---|---|---|---|
+| Rank fusion alone | 1,290/1,536 (84.0%) | 140/282 (49.6%) | 445/470 (94.7%) | 1,377/1,536 (89.6%) | 186/282 (66.0%) | 457/470 (97.2%) |
+| Top 100 | +1.7 pp (+0.8 to +2.7) | +3.9 pp (+0.4 to +7.1) | +0.9 pp (-0.4 to +2.1) | +0.1 pp (-0.5 to +0.8) | +0.4 pp (-2.1 to +2.8) | -0.4 pp (-1.3 to +0.4) |
+| Top 100, anchored | +1.5 pp (+0.7 to +2.5) | +3.9 pp (+0.4 to +7.1) | +1.3 pp (+0.0 to +2.6) | +0.1 pp (-0.6 to +0.7) | +0.0 pp (-2.5 to +2.5) | -0.4 pp (-1.3 to +0.4) |
+| Top 300 | +2.1 pp (+1.0 to +3.3) | +5.7 pp (+1.4 to +9.9) | -0.4 pp (-2.1 to +1.5) | +0.4 pp (-0.5 to +1.3) | +2.5 pp (-1.1 to +6.4) | -0.9 pp (-2.1 to +0.4) |
+
+The anchored top 100, which keeps the fused top multi-path record first,
+comes closest: at 4K it is higher on both benchmarks and on LoCoMo multi-hop
+(LongMemEval-S's interval just reaches zero), but at 8K LongMemEval-S loses 3
+questions and gains 1, and LoCoMo multi-hop does not move.
+
+- Categories below rank fusion alone: top 100 at 4K, LongMemEval-S
+  single-session-assistant (-1.8 pp, one question); at 8K, LoCoMo single-hop
+  (-0.4 pp) and LongMemEval-S temporal-reasoning (-1.6 pp, two questions). Top
+  300 at 4K, LongMemEval-S temporal-reasoning (-3.1 pp, 3 wins and 7 losses)
+  and single-session-assistant (-1.8 pp); at 8K, LoCoMo single-hop (-0.2 pp)
+  and LongMemEval-S multi-session (-0.8 pp) and temporal-reasoning (-2.4 pp).
+  Anchored top 100 at 4K, LongMemEval-S single-session-assistant (-1.8 pp, one
+  question); at 8K, LoCoMo single-hop (-0.4 pp) and LongMemEval-S
+  temporal-reasoning (-1.6 pp, two questions).
+- The LoCoMo gain is at 4K. At 8K a context already holds about 166 LoCoMo
+  records, so reordering inside the top 100 or 300 moves little evidence
+  across the budget.
+- LongMemEval-S loses most in temporal-reasoning. Ordered by the model alone,
+  the prefix no longer uses rank fusion's temporal affinity and current-state
+  recency, which is a likely cause. Its contexts also hold fewer records (39.9
+  to 37.8 at 4K with the top 300), so the records the model puts first are
+  longer. Keeping the fused top multi-path record first recovers LongMemEval-S
+  at 4K (multi-session +3.3 pp, temporal-reasoning +1.6 pp), but not at 8K.
+
+Reranking time inside `retrieve()`, p50 and p95 per question, on one laptop's
+Apple GPU (MPS; torch 2.10.0, sentence-transformers 5.3.0), runs made one at a
+time after each engine's warm-up. Retrieval p50 at 4K without the reranker
+was 0.141 s (LoCoMo) and 0.130 s (LongMemEval-S).
+
+| Variant | LoCoMo 4K | LongMemEval-S 4K | LoCoMo 8K | LongMemEval-S 8K |
+|---|---|---|---|---|
+| Top 100 | 0.106 / 0.135 s | 0.546 / 0.708 s | 0.117 / 0.160 s | 0.554 / 0.750 s |
+| Top 100, anchored | 0.105 / 0.129 s | 0.544 / 0.678 s | 0.108 / 0.146 s | 0.537 / 0.696 s |
+| Top 300 | 0.270 / 0.328 s | 1.586 / 1.799 s | not comparable | 1.588 / 1.803 s |
+| Top 300, repeated | 0.274 / 0.328 s | 1.571 / 1.738 s | | |
+
+LongMemEval-S turns are long, so each question scores 100 or 300 pairs of up
+to the model's 512-token input limit. These are GPU times; a CPU was not
+measured. The first 10 minutes of the top 300 run at 8K overlapped another
+run, so its LoCoMo time is left out.
+
+Determinism: the top 300 run at 4K, repeated, rendered the same context for
+all 2,040 questions, and every replay checks that its receipt reproduces the
+returned ranking. The model's scores depend on the device and library
+versions, which reranker runs now record in their provenance.
+
+No variant meets the issue's bar (a higher all-evidence share than rank fusion
+alone overall on each benchmark and on LoCoMo multi-hop, at 4K and at 8K), so
+the reranker stays off by default. #200 tracks the signals rank order leaves
+out.
 
 ### What the gate can and cannot measure
 

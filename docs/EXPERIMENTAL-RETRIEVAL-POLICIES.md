@@ -27,7 +27,8 @@ multi-path candidate when it occurs in the reranked prefix. Instructions, pinned
 records, maximum-salience records and active tasks are not ordinary anchors.
 This is a priority, not a guarantee that any source fits or stays packed. The
 remaining prefix follows neural order. Neither variant calibrates probabilities.
-The existing model, prefix limit and prior blend weight are unchanged. Direct
+The policies change neither the model, the prefix limit nor the prior blend
+weight; `reranker_prior_weight` (below) sets that weight. Direct
 `CrossEncoderReranker(..., policy=...)` calls need candidates with replayable
 scoring provenance for an envelope assignment; the normal pipeline supplies it.
 
@@ -66,6 +67,71 @@ as in ordinary reformulation.
 The merge policy is reported in execution parameters and, when enabled, feature
 identity. It requires no new receipt schema because final scoring inputs already
 have provenance. Neither option mutates the stored memory artifact.
+
+## Cross-encoder rank order (issue #88)
+
+`reranker_prior_weight` (`PRME_RERANKER_PRIOR_WEIGHT`, default 0.3) is the
+weight of a reranked candidate's own score in the order of the reranked prefix;
+the cross-encoder gets the rest. At 0.0 the prefix follows the cross-encoder
+alone. With an envelope policy the prefix then takes its original scores in that
+order: the model decides the ranks, and the scale of the scores (rank fusion's,
+under the defaults) reaches session expansion and packing unchanged. Zep and
+Hindsight use a cross-encoder after fusion the same way.
+
+```python
+config = PRMEConfig(
+    enable_reranker=True,
+    reranker_policy="score_envelope",
+    reranker_prior_weight=0.0,
+    reranker_top_k=300,
+)
+```
+
+- The reranker runs after scoring, on the top `reranker_top_k` candidates of
+  the scored pool, and needs the `reranker` extra and locally available model
+  files. Rank fusion scores are the default, so this reranks the fused order.
+- A weight other than 0.3 needs an envelope policy. `PRMEConfig` and the
+  pipeline refuse it with `legacy`, where the prefix would carry raw model
+  scores next to the tail's own scores: the scale failure the envelope policies
+  fix.
+- At 0.0 nothing but the model orders the prefix: the epistemic weight,
+  node-type boost, temporal affinity and current-state recency that rank
+  fusion multiplies in no longer change the order inside it, only the scores
+  it is given. The evidence gate's packs hold raw turns, where the first two do
+  not vary, so it cannot show that effect (#200).
+- The model reads the question and the record together up to its input limit
+  (512 tokens for the default MiniLM model), so a long record is judged by its
+  start.
+- Packing keeps its tiers and ordering. Under the default balanced order a
+  multi-path record's score is divided by the fourth root of its token cost, so
+  the packed order inside that tier is not the model's order.
+- Equal assigned scores still break ties by UUID, as in the envelope policies.
+  Before session expansion, fused scores tie for about 0.1% (LoCoMo) and 0.5% to
+  0.8% (LongMemEval-S) of the top 100 to 300 candidates, so this rarely moves
+  a record.
+- The model runs in the request, under one lock per engine, and loads on the
+  first request. Measure latency before using it on a shared server (#201).
+- Receipts need no new schema. Each reranked candidate's provenance records
+  the weight as its `neural_blend` coefficient, and rank fusion receipts
+  (versions 16 to 21) admit the rank assignment. A weight other than 0.3 is
+  also recorded in `execution.parameters.reranker_prior_weight` and in the
+  reranker's feature identity, so a ranking profile learned under another
+  weight does not activate. At 0.3 both are omitted, and receipts keep their
+  bytes.
+- Model scores depend on the model files, library versions and hardware (CPU,
+  Apple GPU or CUDA), so another machine can order near-ties differently. The
+  receipt records the scores, so replaying it never reruns the model. The
+  evidence gate records the versions, the device and the model revision of a
+  reranker run.
+
+On the offline evidence gate (all annotated evidence packed, against rank
+fusion alone), rank order over the top 100 gains on LoCoMo at 4K (+1.7 points,
+multi-hop +3.9) and the anchored policy also gains on LongMemEval-S there
+(+1.3 points), but at 8K no variant is higher on LongMemEval-S or clearly
+higher on LoCoMo, and the top 300 loses LongMemEval-S evidence at both budgets
+(temporal-reasoning most). Reranking takes about 0.1 s per LoCoMo question and
+0.5 s per LongMemEval-S question at the top 100 on an Apple GPU. The option
+stays off by default; `BENCHMARKS.md` has the full results.
 
 ## Evidence and limits
 

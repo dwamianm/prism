@@ -718,6 +718,22 @@ requiring `recency_time`. Versions 1 to 20 cannot record the setting. An unset
 value is omitted, and so is one set while session expansion is off, when it
 changes nothing, so every other receipt keeps its version and bytes.
 
+### 7.3 Optional cross-encoder rank order (issue #88)
+
+With `enable_reranker` on, a local cross-encoder scores the top
+`reranker_top_k` candidates of the scored pool after this stage and before
+session expansion. `reranker_prior_weight` sets the weight of each candidate's
+own score in the new order of that prefix; a value other than 0.3 requires an
+envelope `reranker_policy`. At 0.0 the prefix follows the cross-encoder alone,
+and the envelope policy gives the prefix its original scores in that order, so
+only the ranks change and the score scale that session expansion and packing
+read stays the scale of this stage (rank fusion's, under the defaults). The tail keeps its scores and order. Receipts
+record each candidate's model score and the weight in its score provenance and
+replay without the model; a weight other than 0.3 is also recorded in the
+execution parameters and feature identity. The option is off by default until
+an answer comparison supports it
+([experimental retrieval policies](EXPERIMENTAL-RETRIEVAL-POLICIES.md)).
+
 ---
 
 ## 8. Stage 6: Context Packing
@@ -817,6 +833,7 @@ The lock guards PRME calls, not unrelated application calls to dateparser.
 
 Non-determinism that MUST be guarded against:
 - Floating-point ordering instability (use tie-breaking by `object_id` as a stable sort; under rank fusion, the event-time tie-break of Section 7.2, set by default, comes first).
+- Cross-encoder scores (Section 7.3, opt-in) depend on the model files, library versions and hardware, so another machine can order near-ties differently. Receipts record the scores, and replay uses them instead of rerunning the model.
 - HNSW approximate search non-determinism (use a fixed `ef_search` parameter and seed where supported).
 - Graph traversal order instability (sort edges by `id` before traversal).
 
