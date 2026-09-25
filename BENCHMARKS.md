@@ -168,8 +168,9 @@ The gate replays the public `retrieve()` for all 1,540 LoCoMo and 500
 LongMemEval-S questions over copies of the saved 2026-09-23 memory packs, at
 each question's recorded reference time. It then measures the context that the
 product renderer actually produced. It makes no reader, judge or paid API calls;
-only the local query embedding runs, from locally cached model files. A full run
-takes about 8 to 12 minutes on a laptop.
+only the local query embedding runs (and the local cross-encoder, when
+`enable_reranker` is set), from locally cached model files. A full run
+takes about 8 to 12 minutes on a laptop without the reranker.
 
 ```sh
 # Current code and defaults
@@ -180,6 +181,10 @@ uv run python -m benchmarks.diagnostics.product_packing gate \
 # Candidate limits per channel (issue #87)
 uv run python -m benchmarks.diagnostics.product_packing gate \
   --set packing.vector_k=150 --set packing.lexical_k=150 --output /tmp/gate-k150.json
+# Cross-encoder rank order over the fused top 300 (issue #88)
+uv run python -m benchmarks.diagnostics.product_packing gate --set enable_reranker=true \
+  --set 'reranker_policy="score_envelope"' --set reranker_prior_weight=0 \
+  --set reranker_top_k=300 --output /tmp/gate-rerank.json
 uv run python -m benchmarks.diagnostics.product_packing gate-compare \
   /tmp/gate-before.json /tmp/gate-after.json --output /tmp/gate-comparison.json
 ```
@@ -220,7 +225,11 @@ beside it (same name, `.md`). For each benchmark and category, the report gives:
   `retrieval_timing: after-warm-up-v1`, with the host's load average at the
   start and end of the run. LongMemEval-S opens a new engine for every
   question, so its times include a new engine's cold database reads, which
-  LoCoMo pays once per conversation.
+  LoCoMo pays once per conversation;
+- with `enable_reranker` set, the reranker's own time inside each retrieval,
+  p50 and p95 (issue #88). `gate-compare` shows it for each side that ran it.
+  The gate refuses the other reranker settings without `enable_reranker`,
+  since they would change nothing.
 
 A pack whose records are not all turns (for example one built with extraction)
 still replays; its channel ranks are left out.

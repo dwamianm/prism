@@ -27,7 +27,8 @@ multi-path candidate when it occurs in the reranked prefix. Instructions, pinned
 records, maximum-salience records and active tasks are not ordinary anchors.
 This is a priority, not a guarantee that any source fits or stays packed. The
 remaining prefix follows neural order. Neither variant calibrates probabilities.
-The existing model, prefix limit and prior blend weight are unchanged. Direct
+The policies change neither the model, the prefix limit nor the prior blend
+weight; `reranker_prior_weight` (below) sets that weight. Direct
 `CrossEncoderReranker(..., policy=...)` calls need candidates with replayable
 scoring provenance for an envelope assignment; the normal pipeline supplies it.
 
@@ -38,6 +39,46 @@ unchanged. Empty/no-assignment retrievals retain schema 12. The enabled policy
 is part of the execution feature identity, so a learned ranking profile from
 another policy cannot activate as if the pipelines matched. Score replay covers
 returned candidates, not unseen candidates or full packing reconstruction.
+
+### Cross-encoder rank order (issue #88)
+
+`reranker_prior_weight` (`PRME_RERANKER_PRIOR_WEIGHT`, default 0.3) is the
+weight of a reranked candidate's own score in the order of the reranked prefix;
+the cross-encoder gets the rest. At 0.0 the prefix follows the cross-encoder
+alone. With an envelope policy the prefix then takes its original scores in that
+order: the model decides the ranks, and the scale of the scores (rank fusion's,
+under the defaults) reaches session expansion and packing unchanged. Zep and
+Hindsight use a cross-encoder after fusion the same way.
+
+```python
+config = PRMEConfig(
+    enable_reranker=True,
+    reranker_policy="score_envelope",
+    reranker_prior_weight=0.0,
+    reranker_top_k=300,
+)
+```
+
+- The reranker runs after scoring, on the top `reranker_top_k` candidates of
+  the scored pool, and needs the `reranker` extra and locally available model
+  files. Rank fusion scores are the default, so this reranks the fused order.
+- Packing keeps its tiers and ordering. Under the default balanced order a
+  multi-path record's score is divided by the fourth root of its token cost, so
+  the packed order inside that tier is not the model's order.
+- Equal assigned scores still break ties by UUID, as in the envelope policies.
+- With the `legacy` policy a weight of 0.0 puts raw model scores on the prefix
+  next to the tail's own scores, which is the scale problem the envelope
+  policies fix.
+- Receipts need no new schema. Each reranked candidate's provenance records
+  the weight as its `neural_blend` coefficient, and rank fusion receipts
+  (versions 16 to 21) admit the rank assignment. A weight other than 0.3 is
+  also recorded in `execution.parameters.reranker_prior_weight` and in the
+  reranker's feature identity, so a ranking profile learned under another
+  weight does not activate. At 0.3 both are omitted, and receipts keep their
+  bytes.
+- Model scores depend on the model files, library versions and hardware (CPU,
+  Apple GPU or CUDA), so another machine can order near-ties differently. The
+  receipt records the scores, so replaying it never reruns the model.
 
 ```python
 config = PRMEConfig(

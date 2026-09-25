@@ -574,6 +574,19 @@ class PRMEConfig(_ProjectSettings):
         default=100,
         description="Number of top candidates to rerank (controls latency vs quality).",
     )
+    reranker_prior_weight: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Weight of a reranked candidate's own score (the fused or composite "
+            "score) in the order of the reranked prefix; the cross-encoder gets "
+            "the rest. 0.0 orders the prefix by cross-encoder score alone. Used "
+            "only with enable_reranker. With an envelope reranker_policy the "
+            "prefix keeps its original score scale; with 'legacy' the prefix "
+            "carries the blended scores (issue #88)."
+        ),
+    )
 
     reranker_policy: Literal["legacy", "score_envelope", "anchored_score_envelope"] = Field(
         default="legacy",

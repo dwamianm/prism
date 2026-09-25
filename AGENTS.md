@@ -384,6 +384,11 @@ ordinary multi-path anchor within that prefix. Neither is a calibrated
 probability or guaranteed retention policy. The complete development answer
 trial scored 430/500 versus its new control's 429/500 (95% paired difference
 interval −1.6 to +2.0 percentage points), insufficient for default promotion.
+`reranker_prior_weight` (default 0.3) is the weight of a reranked candidate's
+own score in the prefix order; 0.0 orders the prefix by the cross-encoder alone,
+and with an envelope policy the prefix keeps its fused scores in that order
+(issue #88). A weight other than 0.3 is recorded in receipts and the reranker's
+feature identity; 0.3 is omitted, so earlier receipts keep their bytes.
 `query_reformulation_merge_policy="max_signals"` is another explicit experiment:
 union distinct backend paths and take component maxima only for identical source
 snapshots. Backend failures abort that retrieval before candidate mutation;

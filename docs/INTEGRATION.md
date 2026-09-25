@@ -1823,8 +1823,11 @@ Two explicit policies are available for controlled trials through `PRMEConfig`:
 `reranker_policy="anchored_score_envelope"` with `enable_reranker=True`, and
 `query_reformulation_merge_policy="max_signals"` with
 `enable_query_reformulation=True`. The unanchored `"score_envelope"` reranker is
-also available. Default flags and the existing `"legacy"` / `"new_only"` policies
-are unchanged. Both local and PostgreSQL engines use these settings.
+also available, and `reranker_prior_weight=0.0` orders the reranked prefix by
+the cross-encoder alone (with an envelope policy, the prefix keeps its fused
+scores in that order). Default flags, the existing `"legacy"` / `"new_only"`
+policies and the 0.3 prior weight are unchanged. Both local and PostgreSQL
+engines use these settings.
 
 See [experimental retrieval policies](EXPERIMENTAL-RETRIEVAL-POLICIES.md) for
 failure semantics, receipt versions, quality evidence and configuration examples.

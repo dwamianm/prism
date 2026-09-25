@@ -1173,3 +1173,80 @@ def test_gate_config_refuses_session_context_packing_without_session_expansion(t
     for disabled in ("packing.session_context_window=0", "packing.session_context_top_k=0"):
         with pytest.raises(ValueError, match="applies only with session expansion"):
             gate_config(tmp_path, parse_overrides([setting, disabled]))
+
+
+def test_gate_config_refuses_reranker_settings_without_the_reranker(tmp_path):
+    # Issue #88: without enable_reranker these settings change nothing.
+    rank_order = gate_config(tmp_path, parse_overrides([
+        "enable_reranker=true", 'reranker_policy="score_envelope"', "reranker_prior_weight=0",
+        "reranker_top_k=300"]))
+    assert (rank_order.enable_reranker, rank_order.reranker_policy, rank_order.reranker_prior_weight,
+            rank_order.reranker_top_k) == (True, "score_envelope", 0.0, 300)
+    # The retrieval defaults stay.
+    assert rank_order.scoring.fusion == "rrf" and rank_order.packing.context_format == "reader"
+    for setting in ("reranker_prior_weight=0", 'reranker_policy="score_envelope"', "reranker_top_k=300",
+                    'reranker_model="other"'):
+        with pytest.raises(ValueError, match=r"applies only with enable_reranker=true"):
+            gate_config(tmp_path, parse_overrides([setting]))
+        with pytest.raises(ValueError, match=r"applies only with enable_reranker=true"):
+            gate_config(tmp_path, parse_overrides(["enable_reranker=false", setting]))
+    with pytest.raises(ValueError, match=r"reranker_policy, reranker_prior_weight apply only with"):
+        gate_config(tmp_path, parse_overrides(["reranker_prior_weight=0", 'reranker_policy="score_envelope"']))
+
+
+async def test_gate_times_the_reranker_inside_retrieval_and_replays_its_receipts(
+        tmp_path, mock_embeddings, monkeypatch):
+    from prme.retrieval.reranker import CrossEncoderReranker
+
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    scored = []
+
+    def predict(self, pairs):
+        scored.append(len(pairs))
+        # Prefers later turns, the reverse of the fused order on this pack.
+        return [min(0.99, 0.1 + index / 100) for index in range(len(pairs))]
+
+    monkeypatch.setattr(CrossEncoderReranker, "_predict_sync", predict)
+    [fused] = await replay_gate([gate_case(pack, identity)], scratch=scratch)
+    assert fused["reranking_seconds"] is None and scored == []
+    rows = await replay_gate([gate_case(pack, identity), gate_case(pack, identity)], scratch=scratch,
+                             overrides=parse_overrides(["enable_reranker=true", 'reranker_policy="score_envelope"',
+                                                        "reranker_prior_weight=0"]))
+    # The warm-up scores one pair; each question scores its candidates once. The replay
+    # checks that every receipt replays the returned ranking.
+    assert scored[0] == 1 and len(scored) == 3
+    for row in rows:
+        assert 0 < row["reranking_seconds"] <= row["retrieval_seconds"]
+    assert rows[0]["context_sha256"] == rows[1]["context_sha256"]
+    assert pack_identity(pack) == identity
+
+
+def test_gate_summary_and_comparison_report_reranking_latency():
+    # Issue #88: the reranker's own time, beside the retrieval time.
+    timing = "after-warm-up-v1"
+    before = gate_fixture([gate_row("q1", "multi-hop", all_packed=True), gate_row("q2", "multi-hop", all_packed=False)],
+                          timing=timing)
+    after = gate_fixture([gate_row("q1", "multi-hop", all_packed=True, seconds=.3, reranking_seconds=.2),
+                          gate_row("q2", "multi-hop", all_packed=True, seconds=.5, reranking_seconds=.4)],
+                         timing=timing)
+    assert summarize_gate(before["rows"])["reranking_seconds"] is None
+    assert summarize_gate(after["rows"])["reranking_seconds"] == {"p50": pytest.approx(.3),
+                                                                 "p95": pytest.approx(.39)}
+    assert "reranking" not in gate_markdown(before)
+    assert ("Cross-encoder reranking inside retrieval, p50 / p95 per question: locomo 0.300 / 0.390 s. "
+            "It is part of the retrieval time above.") in gate_markdown(after)
+    bench = compare_gates(before, after, samples=20)["benchmarks"]["locomo"]
+    assert bench["reranking_seconds"] == {"before": None, "after": {"p50": pytest.approx(.3),
+                                                                   "p95": pytest.approx(.39)}}
+    markdown = comparison_markdown(compare_gates(before, after, samples=20))
+    assert "After, cross-encoder reranking inside retrieval, p50 / p95 per question: locomo 0.300 / 0.390 s." \
+        in markdown
+    assert "Before, cross-encoder" not in markdown
+    # Reports written before the reranker was timed still compare.
+    earlier = gate_fixture(before["rows"], timing=timing)
+    for row in earlier["rows"]:
+        row.pop("reranking_seconds", None)
+    assert compare_gates(earlier, after, samples=20)["benchmarks"]["locomo"]["reranking_seconds"]["before"] is None
