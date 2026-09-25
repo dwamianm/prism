@@ -86,6 +86,15 @@ semantic yes/no judging rather than the dataset's token-F1 metric. These are
 end-to-end answer scores on examined development cohorts; results depend on the
 reader, judge, storage protocol, and context budget.
 
+The LoCoMo judge is strict ([prompt](benchmarks/integrations/run_gpt54_comparison.py)):
+when the reference lists several items, the answer must name all of them.
+Several vendor LoCoMo scores are graded by Mem0-style lenient judges
+([Mem0's prompt](benchmarks/integrations/lenient_judge.py)), which accept an
+answer on the same topic. The lenient grade of these GPT-5.4 answers has not
+been run yet;
+[strict and lenient LoCoMo judges](BENCHMARKS.md#strict-and-lenient-locomo-judges)
+shows both scores side by side where they exist.
+
 See [benchmark methodology and detailed results](BENCHMARKS.md) for category
 scores, protocols, reproducibility artifacts, and evaluations with other readers.
 

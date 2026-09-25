@@ -12,7 +12,8 @@ retrieval over stored conversation turns. All 2,040 questions completed; all
 4,080 benchmark model calls succeeded on their first attempt. The full
 LongMemEval cohort includes preference and abstention questions. LoCoMo excludes
 all 446 adversarial questions prospectively and uses a disclosed semantic yes/no
-judge, not upstream token-F1. These scoped registrations differ from the older
+judge, not upstream token-F1. That judge is strict; see
+[strict and lenient LoCoMo judges](#strict-and-lenient-locomo-judges). These scoped registrations differ from the older
 adapter defaults documented below.
 
 See the [registered protocol](benchmarks/results/research/2026-09-23/GPT54-COMPARISON-PROTOCOL.md),
@@ -27,6 +28,113 @@ overwritten as part of verification.
 These GPT-5.4 numbers stay the published reference. New answer runs use the
 [DeepSeek answer track](#deepseek-answer-track-through-ollama), which is reported
 separately and is not comparable with them.
+
+## Strict and lenient LoCoMo judges
+
+Every LoCoMo score on this page is graded by the registered strict judge
+([`LOCO_JUDGE`](benchmarks/integrations/run_gpt54_comparison.py)). It answers
+yes only when the response gives the same essential answer, and "when the
+reference lists required items, all are required." That stays the primary
+score. Several vendor LoCoMo scores are graded more leniently: Mem0-style judges
+tell the grader to "be generous with your grading" and to count an answer as
+correct "as long as it touches on the same topic as the gold answer", and
+Hindsight's benchmark harness uses a variant of the same prompt. Zep does not
+publish its judge prompt.
+
+The lenient judge is a second pass over saved answers, reported beside the
+strict score. It sends each answer of a complete LoCoMo run to Mem0's LoCoMo
+judge prompt, copied verbatim into
+[`LENIENT_JUDGE`](benchmarks/integrations/lenient_judge.py) from
+[Mem0's evaluation code](https://github.com/mem0ai/mem0/blob/aae5989e78a6188b3b047c104d960c9ad0927e75/evaluation/metrics/llm_judge.py).
+No reader is called, so both judges grade the same answers, with the judge model
+and settings that gave the strict verdicts. Three things still differ from a
+pure prompt swap:
+
+- The strict verdicts are the published ones, given in an earlier session, and
+  hosted judges do not repeat every verdict. On the DeepSeek track, where the
+  baseline and both sides of the LoCoMo A/A pair gave the same reader answer, the
+  strict judge saw byte-identical prompts, and 5 of those 444 verdicts (about
+  1%) still changed between runs. So a row's difference is the prompt's effect
+  plus that run-to-run variation.
+- The judge is not Mem0's. Mem0 sent the prompt to `gpt-4o-mini` in JSON mode;
+  here it goes to the run's own judge without JSON mode, and the label is read
+  from the reply (below).
+- The pass has its own retry policy (below), while the DeepSeek baseline's strict
+  verdicts were given under the registered one. Each result records both.
+
+So the lenient score shows how much of the gap to vendor tables is the judge
+prompt. It is not a vendor-comparable score: vendors used other judge models and
+readers. External audits of LoCoMo also found that 99 of 1,540 gold answers
+(6.4%) are wrong, which caps a perfect score near 93.6%, and that a "be
+generous" judge accepted 62.8% of deliberately vague wrong answers.
+
+| Run | Answers and judge | Strict judge (primary) | Lenient judge (secondary) |
+|---|---|---:|---:|
+| GPT-5.4 defaults, 2026-09-23 | GPT-5.4 | 985/1,540 (64.0%) | not run yet (about $2.23, needs the owner's approval) |
+| DeepSeek baseline `prme@46647825`, 2026-09-24 ([lenient result](TBD-LINK)) | `deepseek-v4.1-flash:cloud` | 1,007/1,540 (65.4%) | **TBD** |
+
+The two tracks are not comparable with each other. By category, under the
+upstream LoCoMo category numbers (several vendor tables mix up the labels):
+
+| DeepSeek baseline category | Questions | Strict | Lenient | Accepted only by the lenient judge | Accepted only by the strict judge |
+|---|---:|---:|---:|---:|---:|
+| 1 multi-hop | 282 | 99 | TBD | TBD | TBD |
+| 2 temporal | 321 | 229 | TBD | TBD | TBD |
+| 3 open-domain | 96 | 41 | TBD | TBD | TBD |
+| 4 single-hop | 841 | 638 | TBD | TBD | TBD |
+
+How the pass works:
+
+- A source is the registered 2026-09-23 GPT-5.4 run or a complete DeepSeek
+  answer run, published under `benchmarks/results/research/` in this checkout.
+  Samples and pair sides are refused. The registered run's result must be the
+  verified one, and every saved answer and strict judge call must have the hash
+  in its published row.
+- `estimate` scales each question's recorded strict judge usage to the lenient
+  prompt, which is longer, and adds 48 output tokens per call for the
+  one-sentence explanation it asks for. For the 2026-09-23 GPT-5.4 answers that
+  is about $2.23, with a minimum cap of $2.40; the strict judge's own recorded
+  cost was $1.17. It makes no model calls.
+- On the GPT-5.4 source, `run` makes paid judge calls with the registered
+  settings (`gpt-5.4-2026-03-05`, medium reasoning, Flex, 2,048 output tokens).
+  It needs `OPENAI_API_KEY` in the main checkout's `.env`, `--max-usd`, which
+  the pass's ledger enforces across runs, and the owner typing the pass name,
+  `lenient-judge-gpt54-comparison-v1`, at an interactive terminal, so the
+  command line cannot spend unattended.
+- On a DeepSeek source it makes no paid calls, and the Ollama model identity and
+  settings must be the ones recorded with the strict verdicts, checked before
+  and after the pass; a change publishes nothing.
+- Mem0 asks for a JSON object with a `label` of CORRECT or WRONG. Without JSON
+  mode, judges often write the explanation first, so the label is read from
+  every JSON object in the reply that has a `label` key, and they must agree.
+- A reply whose label cannot be read is sent once more, and if that label cannot
+  be read either, the question is scored incorrect as `verdict_unresolved`, as
+  Mem0 scores any reply whose label is not CORRECT. On Ollama a reply that ends
+  early or is empty counts the same way. So one odd reply cannot strand a paid
+  pass. The result counts the retries and unresolved questions, and more than
+  1% unresolved sets `within_limit` to false, with a warning.
+- Calls are kept in the main checkout's track data folder, in
+  `lenient-judge/<run>/locomo/`, apart from every answer run and pair, and the
+  pass's run log is kept outside that folder, in
+  `runs/lenient-judge-<run>-locomo.jsonl`. A later run asks again only the
+  questions whose verdict never arrived. A finished pass is never rerun, even
+  after its folder is moved aside, and every result reports the runs its log
+  holds.
+- The result is published next to the date the pass started, named after its
+  source with `-lenient-judge-result.json` in place of `-result.json`. It has
+  both scores with their 95% intervals, each category under its upstream
+  number, how many verdicts each judge alone accepted, tokens, cost, the Ollama
+  server versions and both prompts' hashes.
+
+```sh
+# No model calls: the cost of grading the 2026-09-23 GPT-5.4 answers.
+uv run python -m benchmarks.integrations.lenient_judge estimate
+# Paid GPT-5.4 judge calls: the owner runs this after approving the spend.
+uv run python -m benchmarks.integrations.lenient_judge run --max-usd <approved cap>
+# DeepSeek judge calls through Ollama. No API cost.
+uv run python -m benchmarks.integrations.lenient_judge run \
+  --result benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-locomo-result.json
+```
 
 ## Offline evidence gate: the first gate for retrieval changes
 
@@ -775,10 +883,10 @@ and settings (among them a 64-token judge limit), so the two are not paired.
 | LongMemEval-S | `knowledge-update` | 69/78 (88.5%) |
 | LongMemEval-S | `temporal-reasoning` | 113/133 (85.0%) |
 | LongMemEval-S | `multi-session` | 93/133 (69.9%) |
-| LoCoMo | `single-hop` | 644/841 (76.6%) |
-| LoCoMo | `temporal` | 229/321 (71.3%) |
-| LoCoMo | `open-domain` | 40/96 (41.7%) |
-| LoCoMo | `multi-hop` | 101/282 (35.8%) |
+| LoCoMo | 4 `single-hop` | 644/841 (76.6%) |
+| LoCoMo | 2 `temporal` | 229/321 (71.3%) |
+| LoCoMo | 3 `open-domain` | 40/96 (41.7%) |
+| LoCoMo | 1 `multi-hop` | 101/282 (35.8%) |
 
 The first LongMemEval-S baseline run stopped at 292 of 500 questions. On one
 temporal-reasoning question the reader repeated itself until it reached the
