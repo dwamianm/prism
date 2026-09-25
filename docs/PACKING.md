@@ -116,6 +116,21 @@ The complete record, including its ID and every metadata field, stays in
 the default and `compact` remains available. The equivalent environment setting
 is `PRME_PACKING__CONTEXT_FORMAT=reader`.
 
+With the reader format, score order and `balanced` trade LoCoMo evidence against
+LongMemEval-S evidence. On the
+[offline evidence gate](../BENCHMARKS.md#offline-evidence-gate-the-first-gate-for-retrieval-changes)
+at 4K, measured on 2026-09-24 while `balanced` and the weighted score were the
+defaults, score order packed all annotated evidence for more LoCoMo questions
+and for fewer LongMemEval-S questions, whose evidence mostly sits in short user
+turns next to long assistant replies. Under the weighted score LoCoMo gained 8.8
+percentage points and LongMemEval-S lost 3.2. Under rank fusion
+(`ScoringWeights.fusion="rrf"`) with
+`PackingConfig.session_context_rank_fusion_score_decay=0.6`, LoCoMo gained only
+1.0 and LongMemEval-S lost 7.9. Changing the ordering default needs a paired
+answer run (epic #77). The
+[reader ordering record](../benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
+has both budgets, the opt-in rank fusion recency settings and every category.
+
 When a record does not fit whole, the packer tries lower representation levels
 down to `PackingConfig.min_fidelity`. The default floor is `reference`, and the
 two lowest levels carry no memory text: `key_value` renders

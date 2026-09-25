@@ -179,6 +179,11 @@ plain vector (403/470 each, with 20 and 29 questions won and lost each way) and
 beats plain BM25 (+9.8 pp, +7.2 to +12.8). The projected accuracies are planning
 estimates from the gate, not answer scores.
 
+The [reader ordering record](benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
+compares score order with `balanced` under the reader format at 4K (3,996
+tokens) and 8K, under the weighted score and under rank fusion with session
+decay 0.6, by category.
+
 ```sh
 # No model calls. prepare needs a clean, committed tree.
 uv run python -m benchmarks.integrations.gpt54_baselines prepare full-context

@@ -42,6 +42,16 @@ does not establish universal superiority. The
 and [answer confirmation](../benchmarks/results/research/2026-09-13/BALANCED-QWEN35B-REGRESSION.md)
 retain the protocols, failures, category results and audits.
 
+**Evidence update, 2026-09-24:** with the reader context format, the offline
+evidence gate found that score order and balanced trade LoCoMo evidence against
+LongMemEval-S evidence (#81). At 4K, score order packed all annotated evidence
+for 8.8 percentage points more LoCoMo questions and 3.2 fewer LongMemEval-S
+questions under the weighted score, and for 1.0 more and 7.9 fewer under rank
+fusion with a session decay of 0.6. LongMemEval-S evidence mostly sits in short
+user turns that the quarter-length penalty keeps. Balanced remains the default;
+the [reader ordering record](../benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
+has both budgets, the opt-in recency settings and every category.
+
 **Configurable policy:** `PackingConfig.multipath_ordering` accepts `"balanced"`
 (default), `"density"` or `"score"`. It changes only the ordering of the multi-path tier; ties
 still use node ID and all representations obey the same measured budget. The
