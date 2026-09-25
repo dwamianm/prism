@@ -298,6 +298,125 @@ async def test_gate_records_temporal_affinity_and_the_current_state_path(tmp_pat
     assert pack_identity(pack) == identity
 
 
+async def test_gate_records_each_channels_own_evidence_ranks_and_the_candidate_limits(tmp_path, mock_embeddings):
+    # Issue #87: channel recall comes from each index's own ranking, whatever the limits.
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    case = gate_case(pack, identity, evidence=("D1:1", "D1:3", "D9:9"), unresolved=("D9:9",))
+    limited = parse_overrides(["packing.vector_k=1", "packing.lexical_k=1"])
+    probe = tmp_path / "probe"
+    shutil.copytree(pack, probe)
+    async with MemoryEngine.open(gate_config(probe, limited)) as engine:
+        vector = await plain_ranking(engine, "vector", case.question, case.user_id)
+        # Only the two turns that say "painted" share a term with the question.
+        lexical = [node.metadata["source_dialog_id"]
+                   for node in await plain_ranking(engine, "bm25", case.question, case.user_id)]
+        # At vector_k=1, retrieval's vector candidate is the first turn of the vector ranking.
+        response = await engine.retrieve(case.question, user_id=case.user_id, reference_time=case.reference_time)
+        assert [result.node.id for result in response.results if "VECTOR" in result.paths] == [vector[0].id]
+    assert sorted(lexical) == ["D1:1", "D1:3"]
+    expected_vector = {node.metadata["source_dialog_id"]: rank for rank, node in enumerate(vector, start=1)}
+
+    [row] = await replay_gate([case], scratch=scratch)
+    assert row["stored_turns"] == len(GATE_TURNS) and row["aggregation"] is None
+    assert row["channel_limits"] == {"vector": 500, "lexical": 500}
+    ranks = row["evidence"]["channel_ranks"]
+    assert ranks == {"vector": {key: expected_vector[key] for key in ("D1:1", "D1:3")},
+                     "lexical": {key: lexical.index(key) + 1 for key in ("D1:1", "D1:3")}}
+
+    [small] = await replay_gate([case], scratch=scratch, overrides=limited)
+    assert small["evidence"]["channel_ranks"] == ranks
+    assert small["channel_limits"] == {"vector": 1, "lexical": 1}
+    # A count question widens both limits (1 x 3.0 here), and the report names the channels that filled them.
+    count = replace(case, question="How many things has Caroline painted?")
+    [widened] = await replay_gate([count], scratch=scratch, overrides=limited)
+    assert widened["channel_limits"] == {"vector": 3, "lexical": 3}
+    # BM25 matches only the two turns that share a term, under its widened limit of 3.
+    assert widened["aggregation"] == {"candidate_limit_paths": ["VECTOR"]}
+    [plain] = await replay_gate([case], scratch=scratch, plain="rrf")
+    assert plain["evidence"]["channel_ranks"] == ranks and plain["stored_turns"] == len(GATE_TURNS)
+    assert "aggregation" not in plain and "channel_limits" not in plain
+    assert pack_identity(pack) == identity
+
+
+async def test_gate_skips_channel_ranks_for_packs_that_hold_more_than_turns(tmp_path, mock_embeddings):
+    pack = tmp_path / "pack"
+    await make_gate_pack(pack)
+    async with MemoryEngine.open(gate_config(pack)) as engine:
+        await engine.store("A note.", user_id="conv-1", node_type=NodeType.NOTE)
+        await engine.process_pending(user_id="conv-1", budget_ms=0)
+    identity = pack_identity(pack)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    # Retrieval is measured as before; the channel ranks cannot be, so they are left out.
+    [row] = await replay_gate([gate_case(pack, identity)], scratch=scratch)
+    assert row["stored_turns"] is None and row["evidence"]["channel_ranks"] is None
+    assert row["evidence"]["all_packed"] is True and row["channel_limits"] == {"vector": 500, "lexical": 500}
+    summary = summarize_gate([row])
+    assert summary["channel_recall"] is None and summary["channel_recall_at_run_limits"] is None
+    # A plain baseline ranks turns only, so it still refuses the pack.
+    with pytest.raises(ValueError, match="of which 4 are turns"):
+        await replay_gate([gate_case(pack, identity)], scratch=scratch, plain="bm25")
+
+
+async def test_gate_warms_each_engine_before_its_first_timed_question(tmp_path, mock_embeddings, monkeypatch):
+    import benchmarks.diagnostics.product_packing as diagnostic
+
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    warm_up, retrieve = diagnostic._warm_up, MemoryEngine.retrieve
+
+    async def no_warm_up(engine, user_id):
+        return None
+
+    monkeypatch.setattr(diagnostic, "_warm_up", no_warm_up)
+    [cold] = await replay_gate([gate_case(pack, identity)], scratch=scratch)
+    events = []
+
+    async def record_warm_up(engine, user_id):
+        events.append(("warm-up", user_id))
+        await warm_up(engine, user_id)
+
+    async def record_retrieve(self, query, **kwargs):
+        events.append(("retrieve", kwargs["user_id"]))
+        return await retrieve(self, query, **kwargs)
+
+    monkeypatch.setattr(diagnostic, "_warm_up", record_warm_up)
+    monkeypatch.setattr(MemoryEngine, "retrieve", record_retrieve)
+    rows = await replay_gate([gate_case(pack, identity), gate_case(pack, identity)], scratch=scratch)
+    assert events == [("warm-up", "conv-1"), ("retrieve", "conv-1"), ("retrieve", "conv-1")]
+    # The warm-up changes nothing the reader sees, and nothing the channel ranks record.
+    assert rows[0]["context_sha256"] == cold["context_sha256"]
+    assert rows[0]["evidence"]["channel_ranks"] == cold["evidence"]["channel_ranks"]
+
+
+async def test_warm_up_loads_the_reranker_only_when_it_is_enabled(tmp_path, mock_embeddings):
+    import benchmarks.diagnostics.product_packing as diagnostic
+
+    pack = tmp_path / "pack"
+    await make_gate_pack(pack)
+    scored = []
+
+    class Reranker:
+        def _predict_sync(self, pairs):
+            scored.append(pairs)
+            return [0.5] * len(pairs)
+
+    async with MemoryEngine.open(gate_config(pack)) as engine:
+        await diagnostic._warm_up(engine, "conv-1")
+        assert scored == []
+        engine._retrieval_pipeline._reranker = Reranker()
+        await diagnostic._warm_up(engine, "conv-1")
+    assert scored == [[(diagnostic.GATE_WARM_UP_QUERY, diagnostic.GATE_WARM_UP_QUERY)]]
+    async with MemoryEngine.open(gate_config(pack)) as engine:
+        with pytest.raises(ValueError, match="Unknown candidate channel"):
+            await diagnostic._index_rankings(engine, "q", "nobody", {}, ["graph"])
+
+
 async def test_gate_rejects_changed_packs_unordered_questions_and_missing_receipts(
         tmp_path, mock_embeddings, monkeypatch):
     pack = tmp_path / "pack"
@@ -424,24 +543,29 @@ def test_gate_config_selects_a_text_bearing_floor(tmp_path, value):
 
 
 def gate_row(question_id, category, *, all_packed=None, unresolved=(), ranks=None, records=25,
-             text=300, tokens=1000, without_text=0, benchmark="locomo", matches=True):
+             text=300, tokens=1000, without_text=0, benchmark="locomo", matches=True, candidates=500,
+             seconds=.1, **observed):
+    """A report row; ``observed`` adds fields that earlier reports lack (channel_ranks goes in evidence)."""
     evidence = None
+    channel_ranks = observed.pop("channel_ranks", None)
     if all_packed is not None:
         ranks = {"a": 1, "b": 2 if all_packed else None} if ranks is None else ranks
         evidence = {"annotated": 2, "unresolved": list(unresolved), "packed": 2 if all_packed else 1,
                     "packed_with_text": 2 if all_packed else 1, "all_packed": all_packed,
-                    "all_packed_with_text": all_packed, "ranks": ranks}
+                    "all_packed_with_text": all_packed, "ranks": ranks,
+                    **({"channel_ranks": channel_ranks} if channel_ranks is not None else {})}
     return {"benchmark": benchmark, "question_id": question_id, "category": category,
             "context_sha256": "0" * 64, "context_matches_saved": matches, "context_tokens": tokens,
             "memory_text_tokens": text, "records": records, "records_without_text": without_text,
             "representations": {"full": records - without_text, "reference": without_text},
-            "candidates": 500, "retrieval_seconds": .1, "evidence": evidence,
-            "projected_correct": projected_correct(benchmark, category, evidence)}
+            "candidates": candidates, "retrieval_seconds": seconds, "evidence": evidence,
+            "projected_correct": projected_correct(benchmark, category, evidence), **observed}
 
 
-def gate_fixture(rows, *, datasets=None, archive="prepared", overrides=None):
+def gate_fixture(rows, *, datasets=None, archive="prepared", overrides=None, timing=None):
     return gate_report(rows, provenance={
         "commit": "abc123", "dirty": False, "overrides": overrides or {},
+        **({"retrieval_timing": timing} if timing else {}),
         "engine_config": {"packing": {"tokenizer": "cl100k_base"}},
         "archive": {"path": "/archive", "prepared_sha256": {"locomo": archive}},
         "datasets": datasets or {"locomo": "dataset"}})
@@ -512,6 +636,56 @@ def test_summary_reports_text_share_evidence_and_rank_distribution():
         summarize_gate([])
     with pytest.raises(ValueError):
         gate_fixture([])
+
+
+def test_summary_reports_channel_recall_candidate_recall_latency_and_aggregation():
+    # Issue #87.
+    rows = [
+        gate_row("q1", "multi-hop", all_packed=True, ranks={"a": 1, "b": 30}, candidates=100, seconds=.1,
+                 stored_turns=400, channel_ranks={"vector": {"a": 10, "b": 120}, "lexical": {"a": 3, "b": None}},
+                 aggregation=None, channel_limits={"vector": 100, "lexical": 100}),
+        gate_row("q2", "multi-hop", all_packed=False, ranks={"a": 3, "b": None}, candidates=300, seconds=.3,
+                 stored_turns=600, channel_ranks={"vector": {"a": 60, "b": 600}, "lexical": {"a": 400, "b": 90}},
+                 aggregation={"candidate_limit_paths": ["VECTOR", "LEXICAL"]},
+                 channel_limits={"vector": 300, "lexical": 300}),
+        gate_row("q3", "multi-hop", all_packed=False, unresolved=["z"], ranks={"a": 200}, seconds=.2,
+                 stored_turns=500, channel_ranks={"vector": {"a": 1}, "lexical": {"a": 1}},
+                 aggregation={"candidate_limit_paths": ["LEXICAL_AGG"]}, channel_limits={"vector": 300, "lexical": 300}),
+        # A user with no stored turns has no candidate share.
+        gate_row("q4", "open-domain", seconds=.5, candidates=0, stored_turns=0, aggregation=None,
+                 channel_limits={"vector": 100, "lexical": 100}),
+    ]
+    summary = summarize_gate(rows)
+    assert summary["candidate_share_mean"] == pytest.approx((.25 + .5 + 1) / 3)
+    assert summary["retrieval_seconds"]["p50"] == pytest.approx(.25)
+    assert summary["retrieval_seconds"]["p95"] == pytest.approx(.47)
+    # Only q1 has all its evidence among the candidates: q2 lost "b" and q3 has an unresolved turn.
+    assert (summary["all_evidence_returned"], summary["all_evidence_returned_share"]) == (1, pytest.approx(1 / 3))
+    recall = summary["channel_recall"]
+    assert list(recall) == ["vector", "lexical", "either"]
+    assert list(recall["vector"]) == ["25", "50", "100", "150", "500", "all"]
+    assert recall["vector"]["25"] == {"evidence_turns": pytest.approx(2 / 5), "all_evidence": 0}
+    assert recall["vector"]["150"] == {"evidence_turns": pytest.approx(4 / 5), "all_evidence": pytest.approx(1 / 3)}
+    assert recall["vector"]["all"]["evidence_turns"] == 1
+    # Lexical never ranks q1's "b"; either takes each turn's better rank.
+    assert recall["lexical"]["all"] == {"evidence_turns": pytest.approx(4 / 5), "all_evidence": pytest.approx(1 / 3)}
+    assert recall["either"]["100"] == {"evidence_turns": pytest.approx(4 / 5), "all_evidence": pytest.approx(1 / 3)}
+    assert recall["either"]["150"] == {"evidence_turns": 1, "all_evidence": pytest.approx(2 / 3)}
+    # q3 has an unresolved annotation, so its evidence is never all inside any depth.
+    assert recall["either"]["all"]["all_evidence"] == pytest.approx(2 / 3)
+    # At each question's own limits: q1 is cut at 100, the widened q2 and q3 at 300.
+    assert summary["channel_recall_at_run_limits"] == {
+        "vector": {"evidence_turns": pytest.approx(3 / 5), "all_evidence": 0},
+        "lexical": {"evidence_turns": pytest.approx(3 / 5), "all_evidence": 0},
+        "either": {"evidence_turns": pytest.approx(4 / 5), "all_evidence": pytest.approx(1 / 3)}}
+    # The keyword scan's fixed limit is not a widened limit.
+    assert summary["aggregation"] == {"questions": 2, "filled_widened_limit": 1,
+                                      "paths_at_limit": {"LEXICAL": 1, "LEXICAL_AGG": 1, "VECTOR": 1}}
+    # Reports written before issue #87 summarize without these observations.
+    earlier = summarize_gate([gate_row("q1", "multi-hop", all_packed=True)])
+    assert earlier["channel_recall"] is None and earlier["aggregation"] is None
+    assert earlier["channel_recall_at_run_limits"] is None
+    assert earlier["candidate_share_mean"] is None and earlier["all_evidence_returned"] == 1
 
 
 def test_gate_markdown_labels_the_projection_and_flags_mismatches_and_ineffective_overrides():
@@ -617,6 +791,71 @@ def test_comparison_reports_temporal_affinity_and_current_state_changes():
     assert "questions that left" not in unobserved
 
 
+def test_gate_and_comparison_report_candidate_recall_limits_and_latency():
+    # Issue #87: candidate recall separately from context retention, and latency before and after.
+    def observed(question_id, *, returned, seconds, limited, limit):
+        return gate_row(question_id, "multi-hop", all_packed=False, ranks={"a": 1, "b": 9 if returned else None},
+                        seconds=seconds, candidates=500 if returned else 150, stored_turns=500,
+                        channel_ranks={"vector": {"a": 1, "b": 9}, "lexical": {"a": 2, "b": None}},
+                        aggregation={"candidate_limit_paths": ["VECTOR", "LEXICAL_AGG"] if limited else []},
+                        channel_limits={"vector": limit, "lexical": limit})
+
+    timing = "after-warm-up-v1"
+    before = gate_fixture([observed("q1", returned=True, seconds=.2, limited=False, limit=500),
+                           observed("q2", returned=True, seconds=.4, limited=False, limit=500)], timing=timing)
+    after = gate_fixture([observed("q1", returned=False, seconds=.1, limited=True, limit=5),
+                          observed("q2", returned=True, seconds=.1, limited=False, limit=50)], timing=timing)
+    before["load_average"] = {"start": [1.25, 1, 1], "end": [2.0, 1, 1]}
+    markdown = gate_markdown(before)
+    assert "| locomo | 2 | 2/2 | 500.0 (100.0% of stored turns) | 0.300 / 0.390 s |" in markdown
+    assert "| Channel | Top 25 | Top 50 | Top 100 | Top 150 | Top 500 | All | This run's limits |" in markdown
+    assert "| vector | 100.0% (100.0%) |" in markdown and "| lexical | 50.0% (0.0%) |" in markdown
+    assert "Aggregation: 2 questions read as counts or lists" in markdown
+    assert "0 still filled a widened limit" in markdown and "limits: none." in markdown
+    assert "| multi-hop | 2 | 2/2 (100.0%) | 0/2" in markdown
+    # q1 is cut at 5 after, so its "b" (vector rank 9) falls outside this run's limits.
+    at_limits = summarize_gate(after["rows"])["channel_recall_at_run_limits"]
+    assert at_limits["vector"] == {"evidence_turns": .75, "all_evidence": .5}
+    assert "| vector | 100.0% (100.0%) | 100.0% (100.0%) | 100.0% (100.0%) | 100.0% (100.0%) | 100.0% (100.0%) " \
+           "| 100.0% (100.0%) | 75.0% (50.0%) |" in gate_markdown(after)
+
+    result = compare_gates(before, after, samples=50)
+    bench = result["benchmarks"]["locomo"]
+    returned = bench["all_evidence_returned"]
+    assert (returned["before"], returned["after"], returned["losses"]) == (1, .5, 1)
+    assert bench["lost_all_evidence_among_candidates"] == ["q1"]
+    assert bench["gained_all_evidence_among_candidates"] == []
+    assert bench["retrieval_seconds"] == {"before": {"p50": pytest.approx(.3), "p95": pytest.approx(.39)},
+                                          "after": {"p50": pytest.approx(.1), "p95": pytest.approx(.1)}}
+    assert bench["context"]["after"]["candidates_mean"] == 325
+    assert bench["aggregation"]["after"]["paths_at_limit"] == {"LEXICAL_AGG": 1, "VECTOR": 1}
+    assert result["before"]["load_average"]["start"][0] == 1.25 and result["after"]["load_average"] is None
+    markdown = comparison_markdown(result)
+    assert "| locomo | All evidence among the candidates | 100.0% | 50.0% | -50.0 pp |" in markdown
+    assert "| 500.0 to 325.0 | 0.300 / 0.390 s to 0.100 / 0.100 s |" in markdown
+    assert "compare it only between reports run on one machine" in markdown
+    assert "load average from start to end: before 1.2 to 2.0, after not recorded." in markdown
+    assert "- locomo questions that lost all their evidence among the candidates: 1 (q1)." in markdown
+    assert "- locomo after: 2 questions read as counts or lists" in markdown
+    assert "1 still filled a widened limit" in markdown and "LEXICAL_AGG 1, VECTOR 1." in markdown
+    # Reports timed before the warm-up included the model load, and a plain baseline times other work.
+    earlier = gate_fixture(before["rows"])
+    plain = gate_fixture(before["rows"], timing=timing)
+    plain["provenance"].update(plain="rrf", plain_rrf_k=60)
+    for pair in ((earlier, after), (after, earlier), (plain, after), (after, plain)):
+        unmatched = compare_gates(*pair, samples=20)
+        assert unmatched["benchmarks"]["locomo"]["retrieval_seconds"] is None
+        assert "n/a to n/a" in comparison_markdown(unmatched)
+        assert "a plain baseline times its own ranking and packing" in comparison_markdown(unmatched)
+    # Count and list questions compare only when both reports record them.
+    unrecorded = gate_fixture([{key: value for key, value in row.items() if key != "aggregation"}
+                               for row in before["rows"]])
+    for pair in ((unrecorded, after), (after, unrecorded)):
+        compared = compare_gates(*pair, samples=20)
+        assert compared["benchmarks"]["locomo"]["aggregation"] is None
+        assert "locomo count and list questions: not recorded in both reports" in comparison_markdown(compared)
+
+
 async def test_gate_cli_writes_json_and_markdown_for_a_replayed_run(tmp_path, mock_embeddings, monkeypatch, capsys):
     import benchmarks.diagnostics.product_packing as diagnostic
 
@@ -636,6 +875,8 @@ async def test_gate_cli_writes_json_and_markdown_for_a_replayed_run(tmp_path, mo
     assert provenance["overrides"] == {"packing": {"token_budget": 3000}} and provenance["commit"]
     assert provenance["engine_config"]["packing"]["token_budget"] == 3000
     assert provenance["engine_config"]["organizer"]["opportunistic_enabled"] is False
+    assert provenance["retrieval_timing"] == "after-warm-up-v1"
+    assert set(report["load_average"]) == {"start", "end"} and len(report["load_average"]["end"]) == 3
     assert set(provenance["datasets"]) == {"locomo"} and set(provenance["archive"]["prepared_sha256"]) == {"locomo"}
     assert output.with_suffix(".md").read_text() in capsys.readouterr().out
     for arguments in (["--output", str(tmp_path / "gate.md")],

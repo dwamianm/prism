@@ -178,6 +178,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The configuration reference now gives the candidate limit defaults that
+  retrieval uses: `PRME_PACKING__VECTOR_K` and `PRME_PACKING__LEXICAL_K` 500,
+  `PRME_PACKING__AGGREGATION_K_MULTIPLIER` 3.0 and
+  `PRME_PACKING__AGGREGATION_K_MAX` 2000. It listed 250, 250, 2.5 and 500. The
+  offline evidence gate now reports each channel's candidate recall at k and
+  the retrieval latency (issue #87); smaller limits lost LongMemEval-S evidence
+  there, so the defaults are unchanged.
 - The LlamaIndex chat store reads a session turn whose role LlamaIndex has no
   value for, such as `participant` or `human`, as a user turn instead of
   failing to read or clear the session.

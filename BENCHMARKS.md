@@ -169,7 +169,7 @@ LongMemEval-S questions over copies of the saved 2026-09-23 memory packs, at
 each question's recorded reference time. It then measures the context that the
 product renderer actually produced. It makes no reader, judge or paid API calls;
 only the local query embedding runs, from locally cached model files. A full run
-takes about 10 minutes on a laptop.
+takes about 8 to 12 minutes on a laptop.
 
 ```sh
 # Current code and defaults
@@ -177,6 +177,9 @@ uv run python -m benchmarks.diagnostics.product_packing gate --output /tmp/gate-
 # The change, switched on through its configuration option
 uv run python -m benchmarks.diagnostics.product_packing gate \
   --set packing.token_budget=8192 --output /tmp/gate-after.json
+# Candidate limits per channel (issue #87)
+uv run python -m benchmarks.diagnostics.product_packing gate \
+  --set packing.vector_k=150 --set packing.lexical_k=150 --output /tmp/gate-k150.json
 uv run python -m benchmarks.diagnostics.product_packing gate-compare \
   /tmp/gate-before.json /tmp/gate-after.json --output /tmp/gate-comparison.json
 ```
@@ -195,13 +198,44 @@ beside it (same name, `.md`). For each benchmark and category, the report gives:
 - how many packed records session expansion reached, found alone (no other
   path), or scored through a session decay (#86). `gate-compare` shows these
   before and after for each benchmark and category, and reports written before
-  they were recorded still compare.
+  they were recorded still compare;
+- candidates per question and their share of the user's stored turns (issue #87);
+- the share of questions with all annotated evidence among the candidates
+  `retrieve()` returned, which is candidate recall, separate from what the
+  context kept;
+- candidate recall per channel: where each evidence turn ranks in the vector
+  index's and the BM25 index's own ranking of the stored turns, which is what
+  `vector_k` and `lexical_k` cut. It is shown at depths 25, 50, 100, 150 and
+  500, over the whole ranking, and at each question's own limits in this run
+  (count and list questions multiply both limits by `aggregation_k_multiplier`,
+  up to `aggregation_k_max`), for each channel and for their union, as a share
+  of evidence turns and of questions with all their evidence inside. BM25 ranks
+  only turns that share a term with the question. These rankings do not depend
+  on the run's settings; the entity and aggregation keyword scans, graph,
+  pinned records and session context are not counted;
+- the count and list questions, and how many still filled a widened limit;
+- retrieval time per question, p50 and p95. Each engine first runs one warm-up
+  search (and loads the cross-encoder when `enable_reranker` is set), so the
+  time leaves out the model loads; reports record this as
+  `retrieval_timing: after-warm-up-v1`, with the host's load average at the
+  start and end of the run. LongMemEval-S opens a new engine for every
+  question, so its times include a new engine's cold database reads, which
+  LoCoMo pays once per conversation.
+
+A pack whose records are not all turns (for example one built with extraction)
+still replays; its channel ranks are left out.
 
 The comparison pairs the two runs question by question. It reports wins, losses
 and ties with a paired bootstrap interval. It rejects reports whose questions,
 datasets, archive, tokenizer or projection constants differ. Its intervals
 resample questions, and LoCoMo's questions come from only 10 conversations, so
-treat them as narrow.
+treat them as narrow. It also pairs "all evidence among the candidates", lists
+the questions whose evidence left or entered the candidates, and shows
+candidates per question and retrieval p50 and p95 before and after. It shows
+latency only when both reports were timed the same way after a warm-up (not
+reports from before issue #87, and never a plain baseline against `retrieve()`),
+and latency depends on the machine and its load, so compare it only between
+runs made one at a time on one machine.
 
 Each PRME replay also records what the question's retrieval receipt shows
 about temporal and current-state scoring (issue #85), and the comparison of two
@@ -245,6 +279,83 @@ reproduced the real packed sets with mean Jaccard 0.83 and projected 63.3%
 against 64.0% measured. The projection ignores distractor effects and gaps in
 the annotations. All 2,040 questions have already been examined, so this is a
 development gate: publication claims still need fresh or held-out data.
+
+### Candidate limits (issue #87)
+
+`vector_k` and `lexical_k` default to 500, which returns nearly every stored
+turn: 555 candidates per LoCoMo question (93% of the conversation) and 492 per
+LongMemEval-S question (100% of the history). Count and list questions
+multiply both limits by `aggregation_k_multiplier` (3.0), up to
+`aggregation_k_max` (2000). The gate compared the defaults with 150, 100 and
+50 per channel, at 3,996 and 8,092 tokens, with everything else at the
+current defaults (rank fusion, reader format, balanced order). All numbers are
+the share of questions with all annotated evidence packed; intervals are paired
+95% intervals over questions. The comparisons are in
+`benchmarks/results/research/2026-09-25/candidate-limits-*.md`.
+
+| Limit per channel | LoCoMo 4K | LongMemEval-S 4K | LoCoMo 8K | LongMemEval-S 8K |
+|---|---|---|---|---|
+| 500 (default) | 1,290/1,536 (84.0%) | 445/470 (94.7%) | 1,377/1,536 (89.6%) | 457/470 (97.2%) |
+| 150 | +0.7 pp (-0.7 to +2.0) | -3.2 pp (-5.1 to -1.5) | +1.5 pp (+0.4 to +2.6) | -3.4 pp (-5.1 to -1.9) |
+| 100 | +1.7 pp (+0.6 to +2.9) | -3.8 pp (-5.7 to -2.1) | +1.2 pp (+0.1 to +2.3) | -3.8 pp (-6.0 to -1.9) |
+| 50 | +1.1 pp (-0.1 to +2.3) | -7.2 pp (-9.8 to -4.7) | +0.4 pp (-0.8 to +1.6) | -5.3 pp (-7.7 to -3.2) |
+
+| Limit per channel | Candidates per question, LoCoMo / LongMemEval-S | All evidence among the candidates, LoCoMo / LongMemEval-S |
+|---|---|---|
+| 500 (default) | 555 / 492 | 99.3% / 100% |
+| 150 | 296 / 327 | 95.6% / 100% |
+| 100 | 234 / 256 | 94.1% / 100% |
+| 50 | 168 / 157 | 90.6% / 98.5% |
+
+No tested limit meets the issue's bar (no category lower than with the current
+pool, at 4K and 8K, on both benchmarks), so the defaults stay at 500:
+
+- LoCoMo gains overall at every limit and budget, most at 100 at 4K
+  (single-hop +1.4 pp, multi-hop +3.5 pp), although fewer questions keep all
+  their evidence among the candidates. Some categories still lose, for
+  example open-domain at 100 and 8K (-5.4 pp, -12.0 to 0.0).
+- LongMemEval-S loses at every limit, most in temporal-reasoning (-6.3 pp at
+  100, 4K) and multi-session (-5.0 pp), although at 150 and 100 every question
+  still has all its evidence among the candidates. Each question that loses
+  evidence at those limits has an evidence turn inside exactly one channel's
+  cut: rank fusion then gives it nothing from the other channel, and it falls
+  behind turns both channels found, which on LongMemEval-S tend to be long
+  (records per context at 4K: 39.9, 34.8, 30.8 and 24.8). #198 tracks this and
+  the entity and aggregation lexical scans, whose hits tie with the top BM25
+  hit once the main list is cut.
+- Count and list questions (41 on LoCoMo, 180 on LongMemEval-S) are widened to
+  1,500 at the defaults, which no history reaches. At 150 (widened to 450), 38
+  LoCoMo and 167 LongMemEval-S count and list questions still fill it, and at
+  100 or 50 all of them do. The aggregation keyword scan's fixed 50 hits per
+  term fill on 41 and 114 of them at every setting. Exhaustive enumeration
+  stays with #29.
+
+Candidate recall per channel (share of evidence turns inside each channel's
+own top k; the rankings are the same at every budget and setting). The gate
+summaries `candidate-limits-gate-*-4k.md` in the same folder have the full
+tables, including recall at each question's own limits in that run, widened
+for count and list questions.
+
+| Channel | LoCoMo top 50 / 100 / 150 / 500 | LongMemEval-S top 50 / 100 / 150 / 500 |
+|---|---|---|
+| Vector | 74.2% / 83.2% / 88.4% / 99.3% | 95.3% / 98.5% / 99.0% / 100% |
+| BM25 | 66.3% / 74.8% / 79.6% / 96.3% | 88.5% / 92.9% / 94.8% / 99.5% |
+| Either | 83.2% / 90.6% / 94.2% / 99.8% | 98.2% / 99.4% / 99.8% / 100% |
+
+Retrieval latency per question at 4K, from runs made one at a time on one
+laptop at the same commit, after each engine's warm-up (the defaults ran first
+and last; the two defaults runs bound the noise):
+
+| Limit per channel | LoCoMo p50 / p95 | LongMemEval-S p50 / p95 |
+|---|---|---|
+| 500 (default), first run | 0.192 / 0.240 s | 0.179 / 0.249 s |
+| 500 (default), last run | 0.192 / 0.244 s | 0.175 / 0.231 s |
+| 150 | 0.134 / 0.175 s | 0.121 / 0.225 s |
+| 100 | 0.117 / 0.154 s | 0.094 / 0.204 s |
+| 50 | 0.100 / 0.133 s | 0.068 / 0.159 s |
+
+These times cover `retrieve()` over histories of a few hundred turns with
+exact vector search, whose cost grows with the stored turns whatever the limit.
 
 ### What the gate can and cannot measure
 
