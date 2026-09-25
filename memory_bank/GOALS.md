@@ -24,8 +24,12 @@ branch and subsequent production merges. The safe promoted surface includes:
 - durable raw ingestion and restart/retry handling;
 - source-preserving extraction, scoped retrieval, contradiction handling, and
   atomic replacement/publication paths;
-- balanced context packing as the default, with density and score policies
-  still available explicitly;
+- the reader context format, score ordering, rank fusion scoring with a
+  0.25 current-state recency boost and an event-time tie-break, and a 0.6
+  rank fusion session decay as the retrieval defaults (since 2026-09-25,
+  adopted on the DeepSeek answer track), with the auditable and compact
+  formats, balanced and density ordering and the weighted formula still
+  available explicitly;
 - tenant-bound HTTP/MCP access, workspace/lease isolation, PostgreSQL parity,
   deterministic rebuild and recovery paths;
 - durable profile staging/recovery, shared temporal-parser locking, and typed
@@ -58,9 +62,14 @@ because they resemble competitor techniques:
 
 ## Evidence we can currently defend
 
-- complete GPT-5.4 default-retrieval benchmarks: **LongMemEval-S 430/500
-  (86.0%)** and **LoCoMo 985/1,540 (64.0%)**, with a 3,996-token effective
-  context ceiling, medium reader/judge reasoning and zero terminal failures;
+- complete GPT-5.4 benchmarks of the retrieval defaults before 2026-09-25:
+  **LongMemEval-S 430/500 (86.0%)** and **LoCoMo 985/1,540 (64.0%)**, with a
+  3,996-token effective context ceiling, medium reader/judge reasoning and zero
+  terminal failures;
+- on the separate DeepSeek answer track at the same 3,996-token ceiling, the
+  current defaults against the previous ones in two interleaved pairs: LoCoMo
+  65.7% to 80.9% and 65.8% to 81.6%, LongMemEval-S 85.8% to 86.8% and 86.4% to
+  86.6% (`BENCHMARKS.md`; not comparable with the GPT-5.4 numbers);
 - balanced packing: 83/119 development and 250/381 confirmation answers versus
   67/119 and 185/381 for density, using the registered local reader/judge;
 - LongMemEval-V2 web-small: 80/149 with memory versus 10/149 without memory;

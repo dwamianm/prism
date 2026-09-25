@@ -1,4 +1,4 @@
-"""Opt-in session decay for rank-fused triggers (issue #111).
+"""Session decay for rank-fused triggers (issue #111), 0.6 in PRMEConfig's default.
 
 A rank-fused score is compressed: 0.85 of a first-place score outranks every
 candidate from about twelfth place down on both channels, so session
@@ -23,6 +23,7 @@ from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import Scope
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 from tests.test_http_write_fidelity import app_for, client_for
 from tests.test_rank_fusion import EXECUTION, NOW, RRF, candidate
 
@@ -112,8 +113,14 @@ def test_the_rank_fusion_decay_is_a_fraction(value):
 def test_the_rank_fusion_decay_is_read_from_the_environment(monkeypatch):
     from prme import PRMEConfig
 
-    monkeypatch.setenv("PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY", "0.6")
+    # 0.6 is PRMEConfig's default, and other packing settings in the environment keep it.
     assert PRMEConfig(_env_file=None).packing.session_context_rank_fusion_score_decay == .6
+    monkeypatch.setenv("PRME_PACKING__TOKEN_BUDGET", "8192")
+    assert PRMEConfig(_env_file=None).packing.session_context_rank_fusion_score_decay == .6
+    monkeypatch.setenv("PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY", "0.5")
+    assert PRMEConfig(_env_file=None).packing.session_context_rank_fusion_score_decay == .5
+    # A PackingConfig built in code keeps the field's own default, so saved settings keep their meaning.
+    assert PackingConfig().session_context_rank_fusion_score_decay is None
 
 
 def test_an_unset_rank_fusion_decay_keeps_the_packing_bytes():
@@ -156,7 +163,7 @@ async def test_rank_fused_retrieval_applies_and_records_the_rank_fusion_decay(co
 
 
 async def test_rank_fused_retrieval_without_the_decay_is_unchanged(config, user):
-    decays, saved, _ = await _neighbor_retrieval(config.model_copy(update={"scoring": RRF}), user)
+    decays, saved, _ = await _neighbor_retrieval(_with_decay(config, RRF, None), user)
 
     assert decays == {.85}
     assert saved.schema_version == 16
@@ -172,6 +179,8 @@ async def test_a_per_request_rank_fusion_takes_the_rank_fusion_decay(config, use
 
 
 async def test_weighted_retrieval_ignores_and_omits_the_rank_fusion_decay(config, user):
+    # The previous defaults, whose weighted receipts are version 12 and record no decay.
+    config = previous_defaults(config)
     decays, saved, _ = await _neighbor_retrieval(_with_decay(config, DEFAULT_SCORING_WEIGHTS), user)
 
     assert decays == {.85}

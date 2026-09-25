@@ -2,13 +2,25 @@
 from types import MethodType
 from unittest.mock import AsyncMock
 
+import pytest
+
 from benchmarks.diagnostics.opt_in_reformulation_merge import expand_with_merge
 from prme import MemoryEngine
 from prme.models.relevance import RelevanceSubmission
 from prme.types import Scope
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 
-config = test_durable_ingestion.config
+durable_config = test_durable_ingestion.config
+
+
+@pytest.fixture
+def config(durable_config):
+    # Reformulation merges of the weighted formula and their receipt versions: they keep the previous retrieval
+    # defaults, which rank fusion and the reader format replaced on 2026-09-24.
+    return previous_defaults(durable_config)
+
+
 user = test_durable_ingestion.user
 
 

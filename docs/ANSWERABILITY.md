@@ -55,12 +55,14 @@ Use one evaluator instance for repeated calls so its provider client is reused.
 | `conflicting` | `surface_conflict` | At least one requirement has two cited, incompatible answers. |
 
 The provider does not control the set-level verdict. PRME resolves compact
-references such as `m3` through `MemoryBundle.context_references`. The default
+references such as `m3` through `MemoryBundle.context_references`. The
 auditable format uses the exact UUID already present in each record's `id`
-field. The reader format prints references such as `[m3]` only with
-`PackingConfig.context_citations=True`; a citation may keep or drop the
+field. The reader format, which is the retrieval default, prints references
+such as `[m3]` only with `PackingConfig.context_citations=True`
+(`PRME_PACKING__CONTEXT_CITATIONS=true`); a citation may keep or drop the
 brackets. Assessing a nonempty reader bundle packed without them raises
-`ValueError` instead of abstaining. In every format, a citation is accepted
+`ValueError` instead of abstaining, so enable citations, or use the auditable
+format, for retrievals you assess. In every format, a citation is accepted
 only when its token occurs in the exact rendered bundle. Unknown citations are discarded. A claimed
 supported requirement without one valid citation is downgraded to
 `unsupported`; a claimed conflict requires two. The final verdict and action

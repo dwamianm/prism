@@ -49,7 +49,7 @@ from the returned set. Query-specific recency redistribution is captured after
 it runs. Redistribution cannot exceed the available semantic/lexical weight.
 
 `receipt.replay_ranking()` recomputes scores using the recorded formula version
-(1 for the weighted sum, 2 for the opt-in rank fusion of RFC-0005 Section 7.2,
+(1 for the weighted sum, 2 for the rank fusion of RFC-0005 Section 7.2, the default,
 in schema version 15 to 19 receipts) and the recorded sort policy: composite score/path/ID, a separately reranked prefix and
 base-ranked tail, or score/ID after session expansion. Receipt validation checks
 both score and order reproduction. This operation uses no model, current graph,
@@ -114,11 +114,12 @@ check old receipt feedback and new policy recording across graph changes and
 restart. Score replay still describes returned candidate order, not a replay of
 packing or unseen candidates.
 
-### Default balanced policy and receipt version 5
+### Balanced policy and receipt version 5
 
 Balanced packing reserves the highest-scored ordinary multi-path candidate and
 then applies the fixed quarter-length penalty. It uses the same priority tiers,
-whole-source rendering and measured budget. It is the application default after
+whole-source rendering and measured budget. It was the application default,
+until score ordering replaced it with the reader format (RFC-0006), after
 a complete 119-question answer trial improved correctness from 67 to 83, with
 26 paired wins and 10 losses. A separately registered 381-question answer
 confirmation improved correctness from 185 to 250, with 88 paired wins, 23

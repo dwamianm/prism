@@ -439,10 +439,12 @@ def test_version_fourteen_requires_explicit_format_and_citation_settings():
 
 
 async def test_engine_retrieval_renders_reader_lines_and_persists_the_receipt(config, user):
+    # The reader format under the weighted formula writes version 14 receipts.
     config = config.model_copy(update={
+        "scoring": ScoringWeights(),
         "packing": config.packing.model_copy(update={
             "context_format": "reader", "context_citations": True,
-        })
+        }),
     })
     async with MemoryEngine.open(config) as engine:
         await engine.store(

@@ -15,12 +15,13 @@ Supersedence-aware scoring: when queries ask about current state and
 candidates contain temporal update language, recency scores are boosted
 to prefer newer knowledge updates over older original facts.
 
-Rank fusion (opt-in, ``ScoringWeights.fusion == "rrf"``, score formula
-version 2): candidates are ranked within the pool on the semantic and lexical
-channels and scored by reciprocal rank fusion, then by epistemic, node-type
-and temporal factors relative to the pool's largest value. Two opt-in
-settings add the current-state recency factor (``rrf_recency_boost``) and an
-event-time tie-break (``rrf_tie_break``).
+Rank fusion (``ScoringWeights.fusion == "rrf"``, the PRMEConfig default,
+score formula version 2): candidates are ranked within the pool on the
+semantic and lexical channels and scored by reciprocal rank fusion, then by
+epistemic, node-type and temporal factors relative to the pool's largest
+value. Two settings, which PRMEConfig sets by default, add the current-state
+recency factor (``rrf_recency_boost``) and an event-time tie-break
+(``rrf_tie_break``).
 """
 
 from __future__ import annotations

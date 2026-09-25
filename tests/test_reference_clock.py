@@ -6,10 +6,13 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from prme import MemoryEngine
+from prme.retrieval.config import ScoringWeights
 from tests.test_durable_ingestion import config, user  # noqa: F401
 
 
 async def test_same_clock_replays_scores_and_is_logged(config, user):  # noqa: F811
+    # Salience decay moves the weighted formula's score traces; rank fusion does not compute salience.
+    config = config.model_copy(update={"scoring": ScoringWeights()})
     async with MemoryEngine.open(config) as engine:
         await engine.store("The release uses Python", user_id=user)
         base = datetime.now(timezone.utc) + timedelta(days=1)

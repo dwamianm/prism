@@ -3,6 +3,7 @@
 import hashlib
 import json
 import random
+import warnings
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,7 +22,12 @@ from prme.models.nodes import MemoryNode
 from prme.models.relevance import RelevanceRecord, RetrievalReceipt, make_receipt
 from prme.quality.feedback import FeedbackSignal, FeedbackSignalType
 from prme.quality.tuner import WeightTuner
-from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, PackingConfig, ScoringWeights
+from prme.retrieval.config import (
+    DEFAULT_SCORING_WEIGHTS,
+    PackingConfig,
+    ScoringWeights,
+    default_scoring_weights,
+)
 from prme.retrieval.execution import RetrievalExecution
 from prme.retrieval.learning import evaluate_learning, proposed_score
 from prme.retrieval.models import (
@@ -44,6 +50,8 @@ user = test_durable_ingestion.user
 
 NOW = datetime(2026, 9, 12, tzinfo=timezone.utc)
 RRF = ScoringWeights(fusion="rrf")
+# PRMEConfig's default scoring: rank fusion with the #168 recency boost and tie-break.
+PRODUCT = {"fusion": "rrf", "rrf_recency_boost": .25, "rrf_tie_break": "event_time"}
 EXECUTION = RetrievalExecution(features={"test": True}, parameters={})
 
 
@@ -100,14 +108,46 @@ def test_rank_fusion_settings_are_serialized_versioned_and_validated():
 
 
 def test_a_stray_rank_constant_is_ignored_with_a_warning(monkeypatch):
-    # Turning rank fusion off by removing only the fusion setting must not
+    # Turning rank fusion off while a rank constant is left behind must not
     # stop the engine from starting.
     with pytest.warns(UserWarning, match="rrf_k applies only"):
         weights = ScoringWeights(rrf_k=30)
     assert weights == DEFAULT_SCORING_WEIGHTS
     monkeypatch.setenv("PRME_SCORING__RRF_K", "30")
+    # Rank fusion is the default, so the constant alone applies to it.
+    assert PRMEConfig(_env_file=None).scoring == ScoringWeights(**PRODUCT, rrf_k=30)
+    monkeypatch.setenv("PRME_SCORING__FUSION", "weighted")
     with pytest.warns(UserWarning, match="rrf_k applies only"):
         assert PRMEConfig(_env_file=None).scoring == DEFAULT_SCORING_WEIGHTS
+
+
+def test_prme_config_defaults_to_rank_fusion(monkeypatch, tmp_path):
+    assert PRMEConfig(_env_file=None).scoring == ScoringWeights(**PRODUCT) == default_scoring_weights()
+    assert default_scoring_weights().rrf_k == 60
+    # Environment settings that name only some scoring values keep rank fusion unless they set it.
+    monkeypatch.setenv("PRME_SCORING__RELEVANCE_FLOOR", "0.3")
+    assert PRMEConfig(_env_file=None).scoring == ScoringWeights(**PRODUCT, relevance_floor=.3)
+    # A weighted fusion takes none of the rank fusion defaults, so it warns about nothing.
+    monkeypatch.setenv("PRME_SCORING__FUSION", "weighted")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert PRMEConfig(_env_file=None).scoring == ScoringWeights(relevance_floor=.3)
+    monkeypatch.delenv("PRME_SCORING__FUSION")
+    # A default filled in for one source never replaces a value that a lower-priority source sets.
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("PRME_SCORING__FUSION=weighted\n")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert PRMEConfig(_env_file=dotenv).scoring == ScoringWeights(relevance_floor=.3)
+    monkeypatch.delenv("PRME_SCORING__RELEVANCE_FLOOR")
+    assert PRMEConfig(_env_file=dotenv).scoring == DEFAULT_SCORING_WEIGHTS
+    # Scoring passed in code follows ScoringWeights, where a missing fusion means weighted, so a
+    # saved weighted configuration, which omits its fusion, reloads as it was written.
+    saved = PRMEConfig(_env_file=None, scoring=DEFAULT_SCORING_WEIGHTS).model_dump(mode="json")
+    assert "fusion" not in saved["scoring"]
+    assert PRMEConfig(_env_file=None, **saved).scoring == DEFAULT_SCORING_WEIGHTS
+    assert PRMEConfig(_env_file=None, scoring={"relevance_floor": .3}).scoring == \
+        ScoringWeights(relevance_floor=.3)
 
 
 def test_rank_fusion_is_selected_from_the_environment(monkeypatch):
@@ -476,7 +516,8 @@ async def test_engine_retrieval_with_rank_fusion_persists_a_replayable_receipt(c
         # First on both channels is 1.0; only the current-update multiplier can exceed it.
         assert all(0 <= item.composite_score <= 1 for item in response.results)
         saved = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
-        assert saved.schema_version == 16
+        # The default packing also records its rank fusion session decay, so the receipt is version 17.
+        assert saved.schema_version == 17
         assert saved.scoring == RRF
         assert saved.replay_ranking() == tuple(item.node.id for item in response.results)
         assert {p.formula_version for p in saved.score_provenance.values()} == {2}
@@ -516,6 +557,8 @@ async def test_request_multipliers_are_rejected_before_retrieval_on_every_interf
 
 
 async def test_weighted_ranking_profiles_are_not_applied_to_rank_fusion(config, user):
+    # A profile activates only on a weighted engine; a request then selects rank fusion.
+    config = config.model_copy(update={"scoring": DEFAULT_SCORING_WEIGHTS})
     async with MemoryEngine.open(config) as engine:
         await engine.store("The telescope is blue.", user_id=user, scope=Scope.PROJECT)
         proposal, holdout = _evidence(engine, RankingMultipliers(lexical=2), owner=user)

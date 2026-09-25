@@ -1,0 +1,292 @@
+{
+  "kind": "answer-comparison",
+  "benchmark": "longmemeval",
+  "model": "deepseek-v4.1-flash:cloud",
+  "answer_model": {
+    "provider": "ollama",
+    "api": "chat.completions",
+    "endpoint": "http://127.0.0.1:11434/v1",
+    "model": "deepseek-v4.1-flash:cloud",
+    "temperature": 0,
+    "seed": 20260923,
+    "reasoning_effort": "none",
+    "stream": false,
+    "reader_limit": 8192,
+    "judge_limit": 2048,
+    "attempts": 4,
+    "timeout_seconds": 900,
+    "identity": {
+      "provider": "ollama_cloud",
+      "api_base_url": "http://127.0.0.1:11434",
+      "server_version": "0.34.3",
+      "model": "deepseek-v4.1-flash:cloud",
+      "resolved_model": "deepseek-v4.1-flash:cloud",
+      "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+      "manifest_size_bytes": 326,
+      "remote_host": "https://ollama.com",
+      "remote_model": "deepseek-v4.1-flash",
+      "remote_weights_pinned": false,
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "",
+        "families": null,
+        "parameter_size": "763B",
+        "quantization_level": "FP8",
+        "context_length": 1048576
+      },
+      "capabilities": [
+        "completion",
+        "thinking",
+        "tools",
+        "vision"
+      ]
+    },
+    "failure_policy": "ollama-failure-policy-2026-09-24"
+  },
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "interval_unit": "questions",
+  "interval_note": "LoCoMo intervals resample its conversations, keeping each conversation's questions together, and its interval_95 spans that interval and the question-level one, because a bootstrap over 10 conversations covers less than 95%. LongMemEval-S intervals resample questions, since each question has its own history.",
+  "arms": {
+    "before": "prme@46647825",
+    "after": "prme-reader-rrf"
+  },
+  "pair": {
+    "id": "ca1d61d71386491786c1790a5a6999d9",
+    "number": 1,
+    "before": "prme@46647825",
+    "after": "prme-reader-rrf",
+    "sha256": "761019a5d93f425b4571633ecba467124a56ed5097f410164e0e8e301890f914",
+    "order": "Interleaved question by question in registered order: each question's after side, then its before side, from one queue that the registration's concurrent requests share.",
+    "pairs_started": 1,
+    "earlier_pairs": []
+  },
+  "baseline": {
+    "current": "prme@46647825",
+    "complete": [
+      {
+        "arm": "prme",
+        "commit": "97c9402ff08921e1f29d8235841631398551d08c",
+        "finished_at": "2026-09-24T03:13:50.386423+00:00"
+      },
+      {
+        "arm": "prme@46647825",
+        "commit": "466478254658da428bd214c8e39bc6988219a863",
+        "finished_at": "2026-09-24T05:27:14.042424+00:00"
+      }
+    ],
+    "note": "The baselines of the defaults with a complete answer run of their own on this benchmark, in the order those runs finished, from the track's run logs when compare ran. The last is the current baseline. A pair counts only with it as the before side, so a pair can be compared again only while its baseline is current; a repeat of the defaults may pair any two (#127)."
+  },
+  "server_versions": [
+    "0.34.3"
+  ],
+  "failure_policy": {
+    "id": "ollama-failure-policy-2026-09-24",
+    "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083",
+    "before": {
+      "reader_retries": 0,
+      "judge_retries": 0,
+      "verdicts_normalized": 1,
+      "truncated": 0,
+      "verdict_unresolved": 0,
+      "unscored": 0,
+      "unscored_limit_percent": 1,
+      "within_limit": true
+    },
+    "after": {
+      "reader_retries": 1,
+      "judge_retries": 1,
+      "verdicts_normalized": 0,
+      "truncated": 0,
+      "verdict_unresolved": 0,
+      "unscored": 0,
+      "unscored_limit_percent": 1,
+      "within_limit": true
+    }
+  },
+  "prepared": {
+    "before": {
+      "commit": "466478254658da428bd214c8e39bc6988219a863",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "overrides": {},
+      "tokenizer": "cl100k_base",
+      "context_rule": "PRME retrieve() with the current defaults, as the product renders it.",
+      "contexts_matching_saved_run": 500
+    },
+    "after": {
+      "commit": "7b36b2b7d0a1fef58078d57de0e4b25c562861db",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "overrides": {
+        "packing": {
+          "context_format": "reader",
+          "multipath_ordering": "score"
+        },
+        "scoring": {
+          "fusion": "rrf"
+        }
+      },
+      "tokenizer": "cl100k_base",
+      "context_rule": "PRME retrieve() with the current defaults and {\"packing\": {\"context_format\": \"reader\", \"multipath_ordering\": \"score\"}, \"scoring\": {\"fusion\": \"rrf\"}}, as the product renders it.",
+      "contexts_matching_saved_run": 0
+    }
+  },
+  "warnings": [
+    "The contexts were prepared from different commits, so code changes are part of the difference: 500 of 500 questions read different context text, from the after side's settings and from any other change between the commits"
+  ],
+  "contexts": {
+    "questions": 500,
+    "differing": 500,
+    "shown_by": "text hashes",
+    "note": "differing counts the questions the two sides asked on different context text. shown_by names what shows it: each row's context_text_sha256 (text hashes), or, for results published before rows carried it (#125), both results reading one preparation or both reproducing every saved 2026-09-23 context (saved run). Both are None when nothing shows it."
+  },
+  "accuracy": {
+    "queries": 500,
+    "before": 0.864,
+    "after": 0.854,
+    "delta": -0.01,
+    "interval_95": [
+      -0.038,
+      0.018
+    ],
+    "wins": 22,
+    "losses": 27,
+    "ties": 451
+  },
+  "categories": {
+    "knowledge-update": {
+      "queries": 78,
+      "before": 0.9230769230769231,
+      "after": 0.9102564102564102,
+      "delta": -0.01282051282051282,
+      "interval_95": [
+        -0.07692307692307693,
+        0.05128205128205128
+      ],
+      "wins": 3,
+      "losses": 4,
+      "ties": 71
+    },
+    "multi-session": {
+      "queries": 133,
+      "before": 0.7443609022556391,
+      "after": 0.7142857142857143,
+      "delta": -0.03007518796992481,
+      "interval_95": [
+        -0.09774436090225563,
+        0.03759398496240601
+      ],
+      "wins": 8,
+      "losses": 12,
+      "ties": 113
+    },
+    "single-session-assistant": {
+      "queries": 56,
+      "before": 0.9642857142857143,
+      "after": 0.9464285714285714,
+      "delta": -0.017857142857142856,
+      "interval_95": [
+        -0.08928571428571429,
+        0.05357142857142857
+      ],
+      "wins": 2,
+      "losses": 3,
+      "ties": 51
+    },
+    "single-session-preference": {
+      "queries": 30,
+      "before": 0.9,
+      "after": 0.9333333333333333,
+      "delta": 0.03333333333333333,
+      "interval_95": [
+        0.0,
+        0.1
+      ],
+      "wins": 1,
+      "losses": 0,
+      "ties": 29
+    },
+    "single-session-user": {
+      "queries": 70,
+      "before": 0.9714285714285714,
+      "after": 0.9857142857142858,
+      "delta": 0.014285714285714285,
+      "interval_95": [
+        -0.02857142857142857,
+        0.05714285714285714
+      ],
+      "wins": 2,
+      "losses": 1,
+      "ties": 67
+    },
+    "temporal-reasoning": {
+      "queries": 133,
+      "before": 0.8421052631578947,
+      "after": 0.8345864661654135,
+      "delta": -0.007518796992481203,
+      "interval_95": [
+        -0.06015037593984962,
+        0.045112781954887216
+      ],
+      "wins": 6,
+      "losses": 7,
+      "ties": 120
+    }
+  },
+  "gained": [
+    "51a45a95",
+    "75499fd8",
+    "6d550036",
+    "2e6d26dc",
+    "88432d0a",
+    "d23cf73b",
+    "1a8a66a6",
+    "gpt4_372c3eed",
+    "38146c39",
+    "27016adc",
+    "09ba9854",
+    "0db4c65d",
+    "gpt4_1e4a8aec",
+    "9a707b82",
+    "0bc8ad93",
+    "gpt4_65aabe59",
+    "gpt4_2c50253f",
+    "0f05491a",
+    "3ba21379",
+    "dad224aa",
+    "8752c811",
+    "eaca4986"
+  ],
+  "lost": [
+    "5d3d2817",
+    "gpt4_a56e767c",
+    "28dc39ac",
+    "gpt4_2f8be40d",
+    "7024f17c",
+    "gpt4_2ba83207",
+    "a9f6b44c",
+    "gpt4_e05b82a6",
+    "10d9b85a",
+    "2b8f3739",
+    "bf659f65",
+    "81507db6",
+    "c18a7dc8",
+    "gpt4_18c2b244",
+    "gpt4_45189cb4",
+    "gpt4_d6585ce9",
+    "gpt4_e414231f",
+    "4dfccbf8",
+    "a3838d2b",
+    "gpt4_70e84552_abs",
+    "852ce960",
+    "b6019101",
+    "f685340e",
+    "69fee5aa",
+    "58470ed2",
+    "1568498a",
+    "561fabcd"
+  ],
+  "repeat": null
+}

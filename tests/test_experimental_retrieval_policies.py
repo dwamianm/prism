@@ -13,9 +13,19 @@ from prme.retrieval.pipeline import RetrievalPipeline
 from prme.retrieval.reranker import CrossEncoderReranker
 from prme.types import Scope
 from tests import test_durable_ingestion, test_ranking_profiles
+from tests.previous_defaults import previous_defaults
 from tests.test_reformulation_merge import candidate
 
-config = test_durable_ingestion.config
+durable_config = test_durable_ingestion.config
+
+
+@pytest.fixture
+def config(durable_config):
+    # Experimental policies of the weighted formula and their receipt versions: they keep the previous retrieval
+    # defaults, which rank fusion and the reader format replaced on 2026-09-24.
+    return previous_defaults(durable_config)
+
+
 user = test_durable_ingestion.user
 
 

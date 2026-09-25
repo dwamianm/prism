@@ -8,8 +8,8 @@ Expanded context nodes are marked with a SESSION_CONTEXT path and assigned
 a slightly lower score (composite_score * decay). Under the weighted formula
 this sorts them just below the triggering node while remaining higher than
 unrelated results. Rank-fused scores are compressed, so the same fraction
-ranks a neighbor far higher; the opt-in rank fusion decay places neighbors
-lower (issue #111).
+ranks a neighbor far higher; the rank fusion decay (0.6 in PRMEConfig's
+default) places neighbors lower (issue #111).
 """
 
 from __future__ import annotations

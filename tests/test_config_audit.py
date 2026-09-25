@@ -58,12 +58,18 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
 
     assert set(settings) == EXPECTED_HYPOTHESES
     assert report.hypothesis_count == len(EXPECTED_HYPOTHESES)
-    assert report.effective_count == 12
+    assert report.effective_count == 15
     assert report.customized_count == 0
     assert settings["scoring.current_update_multiplier"].effective is True
-    assert settings["scoring.rrf_k"].effective is False
-    assert settings["scoring.rrf_recency_boost"].effective is False
-    assert settings["packing.session_context_rank_fusion_score_decay"].effective is False
+    # Rank fusion, its recency boost and its session decay are the defaults, so their provisional values apply
+    # and are the defaults the audit reports, not customizations.
+    rank_constant = settings["scoring.rrf_k"]
+    assert (rank_constant.effective, rank_constant.value, rank_constant.default) == (True, 60, 60)
+    recency_boost = settings["scoring.rrf_recency_boost"]
+    assert (recency_boost.effective, recency_boost.value, recency_boost.default) == (True, .25, .25)
+    session_decay = settings["packing.session_context_rank_fusion_score_decay"]
+    assert (session_decay.effective, session_decay.value, session_decay.default) == (True, .6, .6)
+    assert not rank_constant.customized and not recency_boost.customized and not session_decay.customized
     assert settings["packing.episode_context_top_k"].effective is False
     assert settings["packing.episode_context_local_k"].effective is False
     assert settings["enable_qa_pairing"].effective is False
@@ -72,6 +78,11 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     assert settings["organizer.promotion_evidence_count"].environment_variable == (
         "PRME_ORGANIZER__PROMOTION_EVIDENCE_COUNT"
     )
+    # Under the weighted formula the rank fusion settings are dormant, and dropping them is a customization.
+    _, weighted = _by_path(PRMEConfig(scoring=ScoringWeights()))
+    for name in ("scoring.rrf_k", "scoring.rrf_recency_boost"):
+        assert weighted[name].effective is False
+        assert weighted[name].customized is True
 
 
 def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
@@ -87,8 +98,10 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
     )
     report, settings = _by_path(config)
 
-    assert report.effective_count == 24
-    assert report.customized_count == 4
+    # A PackingConfig built in code has no rank fusion session decay, which the audit reports.
+    assert report.effective_count == 26
+    assert report.customized_count == 5
+    assert settings["packing.session_context_rank_fusion_score_decay"].value is None
     assert settings["packing.episode_context_local_k"].effective is True
     assert settings["packing.evidence_projection_score_decay"].effective is True
     assert settings["packing.evidence_augmentation_anchor_policy"].effective is False
@@ -107,11 +120,11 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
 
     _, session = _by_path(PRMEConfig(
         scoring=ScoringWeights(fusion="rrf"),
-        packing=PackingConfig(session_context_rank_fusion_score_decay=.6),
+        packing=PackingConfig(session_context_rank_fusion_score_decay=.5),
     ))
     session_decay = session["packing.session_context_rank_fusion_score_decay"]
     assert session_decay.effective is True
-    assert session_decay.value == .6
+    assert session_decay.value == .5
     assert session_decay.customized is True
     assert session_decay.activation_condition == (
         "packing.session_context_rank_fusion_score_decay is set"
@@ -120,10 +133,10 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
         "PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY"
     )
 
-    _, recency = _by_path(PRMEConfig(scoring=ScoringWeights(fusion="rrf", rrf_recency_boost=.25)))
+    _, recency = _by_path(PRMEConfig(scoring=ScoringWeights(fusion="rrf", rrf_recency_boost=.5)))
     boost = recency["scoring.rrf_recency_boost"]
     assert boost.effective is True
-    assert boost.value == .25
+    assert boost.value == .5
     assert boost.customized is True
     assert boost.activation_condition == (
         "scoring.rrf_recency_boost is set (current-state questions only)"

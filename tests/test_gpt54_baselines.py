@@ -863,27 +863,30 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     assert variant["provenance"]["overrides"] == budget
     context = baselines._context(folder, prepared["contexts"][0])
     assert count_tokens(context) == prepared["contexts"][0]["context_tokens"] <= 3996
-    # A variant that keeps the 4K budget, which the default-change rule reads (#125).
-    fusion = gate.parse_overrides(['scoring.fusion="rrf"'])
-    kept = await asyncio.to_thread(baselines.prepare, "prme-rrf", "locomo", data=harness["data"],
+    # A variant that keeps the 4K budget, which the default-change rule reads (#125). Rank fusion is the
+    # default, so this one selects the weighted formula.
+    fusion = gate.parse_overrides(['scoring.fusion="weighted"'])
+    kept = await asyncio.to_thread(baselines.prepare, "prme-weighted", "locomo", data=harness["data"],
                                    archive=harness["archive"], overrides=fusion)
     assert kept["context_budget"] == baselines.RULE_BUDGET and kept["tokenizer"] == baselines.RULE_TOKENIZER
     # Every variant preparation stays on record with what it changes, outside the arm's folder; the defaults change
-    # nothing (#130). Rank fusion also fills in its rank constant.
-    fused = {"scoring.fusion": "rrf", "scoring.rrf_k": 60}
+    # nothing (#130). The weighted formula leaves out its fusion and the rank fusion settings (the rank constant,
+    # recency boost and tie-break), recorded as None.
+    fused = {"scoring.fusion": None, "scoring.rrf_k": None, "scoring.rrf_recency_boost": None,
+             "scoring.rrf_tie_break": None}
     assert (variant["variant_settings"], kept["variant_settings"]) == ({"packing.token_budget": 2048}, fused)
     assert "variant_settings" not in prepared
     # Variants that send the reader the same text on every question count together whatever their settings, as
     # these two may over the test pack's two short contexts, though only a pair with the first pair's settings can
     # confirm it (#143); prepare says so.
-    same_text = contexts_sha256(harness, "prme-small") == contexts_sha256(harness, "prme-rrf")
-    assert ("prme-small locomo was prepared on the same context text under other settings, so prme-rrf's pairs "
+    same_text = contexts_sha256(harness, "prme-small") == contexts_sha256(harness, "prme-weighted")
+    assert ("prme-small locomo was prepared on the same context text under other settings, so prme-weighted's pairs "
             "count with theirs" in capsys.readouterr().err) is same_text
-    [event] = [json.loads(line) for line in (harness["data"] / "runs/prme-rrf-locomo.jsonl").read_text().splitlines()]
+    [event] = [json.loads(line) for line in (harness["data"] / "runs/prme-weighted-locomo.jsonl").read_text().splitlines()]
     assert event == {"at": event["at"], "event": "prepared", "variant_settings": fused,
-                     "contexts_sha256": contexts_sha256(harness, "prme-rrf"),
+                     "contexts_sha256": contexts_sha256(harness, "prme-weighted"),
                      "prepared_commit": kept["provenance"]["commit"],
-                     "prepared_sha256": digest(arm_folder(harness, "prme-rrf") / "prepared.json")}
+                     "prepared_sha256": digest(arm_folder(harness, "prme-weighted") / "prepared.json")}
     assert not (harness["data"] / "runs/prme-locomo.jsonl").exists()
     # The same settings under another name, spelled another way, read the same text at this commit, so they are the
     # same variant, and prepare says so.
@@ -898,7 +901,7 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
                           "prme-small-again is the same variant: alongside one baseline, its pairs and theirs count "
                           "together, and compare reads only the first pair and the confirmation among them (#130, "
                           "#143).")
-    assert notices[1:] == (["prme-rrf locomo was prepared on the same context text under other settings, so "
+    assert notices[1:] == (["prme-weighted locomo was prepared on the same context text under other settings, so "
                             "prme-small-again's pairs count with theirs: alongside one baseline, whichever completes "
                             "first is the first pair, and only a pair with its settings can confirm it (#143)."]
                            if same_text else [])
@@ -906,7 +909,7 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     # on every question, which is the defaults' own preparation at this commit, question by question (#139). The
     # test pack's contexts may read the same under every setting, so what is recorded where is checked separately.
     defaults = [entry["text_sha256"] for entry in prepared["contexts"]]
-    for name, found in (("prme-small", variant), ("prme-rrf", kept), ("prme-small-again", again)):
+    for name, found in (("prme-small", variant), ("prme-weighted", kept), ("prme-small-again", again)):
         assert [entry["defaults_text_sha256"] for entry in found["contexts"]] == defaults
         defaults_report = arm_folder(harness, name) / "defaults-gate.json"
         assert digest(defaults_report) == found["defaults_gate_report_sha256"]
@@ -928,13 +931,13 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     requests.clear()
     # A variant is never answered on its own: only alongside a fresh run of the defaults.
     with pytest.raises(ValueError, match="use run-pair"):
-        await run_ollama(harness, "prme-rrf")
+        await run_ollama(harness, "prme-weighted")
     with pytest.raises(ValueError, match="use run-pair"):
-        await run_ollama(harness, "prme-rrf", sample=1)
+        await run_ollama(harness, "prme-weighted", sample=1)
     assert requests == []
     # A baseline is recorded by its own answer run before any pair uses it.
     with pytest.raises(ValueError, match="no complete answer run of its own"):
-        await run_pair(harness, "prme", "prme-rrf")
+        await run_pair(harness, "prme", "prme-weighted")
     await run_ollama(harness, "prme")
     requests.clear()
     # compare would refuse a variant that changes the budget, so it is never answered, and no pair is opened.
@@ -945,13 +948,13 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     assert requests == [] and not (harness["data"] / "pairs" / "prme" / "prme-small").exists()
     # A variant's pair is answered only under a recorded A/A check (#137).
     harness_aa_checked(harness)
-    paired = await run_pair(harness, "prme", "prme-rrf")
+    paired = await run_pair(harness, "prme", "prme-weighted")
     before, after = paired["before"], paired["after"]
     # The first request is the variant's reader, on the variant's own context.
     assert before["complete"] and after["complete"] and requests[0][1]["messages"][0]["content"] == \
         study.reader_prompt("locomo", study.question_rows("locomo")[0],
-                            baselines._context(arm_folder(harness, "prme-rrf"), kept["contexts"][0]))
-    [published_before, published_after] = pair_published(harness, "prme", "prme-rrf")
+                            baselines._context(arm_folder(harness, "prme-weighted"), kept["contexts"][0]))
+    [published_before, published_after] = pair_published(harness, "prme", "prme-weighted")
     # Each gate replay's capture holds a new receipt id, so no capture hash is shared. Every row, private and
     # published, also carries the hash of the context text alone, next to the capture's (#125).
     for result, entries in ((before, prepared["contexts"]), (after, kept["contexts"])):
@@ -968,7 +971,7 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     # Whether this test's own tree is committed does not matter here.
     before, after = ({**result, "prepared": {**result["prepared"], "dirty": False}} for result in (before, after))
     comparison = baselines.compare(before, after, data=harness["data"])
-    assert comparison["arms"] == {"before": "prme", "after": "prme-rrf"} and comparison["warnings"] == []
+    assert comparison["arms"] == {"before": "prme", "after": "prme-weighted"} and comparison["warnings"] == []
     assert (comparison["variant"]["variant_settings"], comparison["variant"]["role"]) == (fused, "first")
     assert comparison["baseline"]["current"] == "prme"
     assert comparison["pair"]["number"] == 1 and comparison["repeat"] is None
@@ -984,12 +987,12 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     assert not any("different commits" in warning for warning in warnings)
     # The rows the defaults' replay would change are refused (#139).
     other = {**after, "rows": [{**row, "defaults_text_sha256": "0" * 64} for row in after["rows"]]}
-    with pytest.raises(ValueError, match="On 2 of 2 questions the defaults at the commit that prepared prme-rrf"):
+    with pytest.raises(ValueError, match="On 2 of 2 questions the defaults at the commit that prepared prme-weighted"):
         baselines.compare(before, other, data=harness["data"])
     assert comparison["accuracy"]["delta"] == 0 and comparison["gained"] == comparison["lost"] == []
     assert comparison["prepared"]["after"]["overrides"] == fusion
     # A result relabeled with another budget or tokenizer is refused too.
-    with pytest.raises(ValueError, match=r"after result, prme-rrf, was prepared with a context budget of 1948"):
+    with pytest.raises(ValueError, match=r"after result, prme-weighted, was prepared with a context budget of 1948"):
         baselines.compare(before, {**after, "context_budget": 1948})
     with pytest.raises(ValueError, match=r"prepared with its budget counted by the 'o200k_base' tokenizer"):
         baselines.compare(before, {**after, "prepared": {**after["prepared"], "tokenizer": "o200k_base"}})
@@ -1967,6 +1970,64 @@ def test_the_published_interleaved_aa_pairs_hold_the_check_in_benchmarks_md(
     assert comparison["repeat"]["interval_excludes_zero"] is False
 
 
+# The default change of 2026-09-24: the first pair and the confirmation of the variant whose settings became the
+# retrieval defaults, answered alongside the repeat. BENCHMARKS.md reports these counts and context hashes.
+DEFAULT_CHANGE = "prme-reader-rrf-sd06"
+DEFAULT_CHANGE_CORRECT = {"locomo": {1: (1003, 1231), 2: (1009, 1236)},
+                          "longmemeval": {1: (431, 433), 2: (434, 433)}}
+DEFAULT_CHANGE_CONTEXTS = {"locomo": "6de858be3f1388a78f1132319dff149f373c2f04521d0098000550e6cf137a5e",
+                           "longmemeval": "eb3cbacb8296a6d7abe7497f13ee870de7f00034d6f9432c24b1e3323ffe2d38"}
+DEFAULT_CHANGE_SETTINGS = {"packing.context_format": "reader", "packing.multipath_ordering": "score",
+                           "packing.session_context_rank_fusion_score_decay": 0.6, "scoring.fusion": "rrf",
+                           "scoring.rrf_k": 60}
+
+
+def first_aa_check(benchmark: str) -> dict:
+    record = PUBLISHED / f"{OLLAMA_MODEL.track}-aa-checks.jsonl"
+    return next(entry for entry in map(json.loads, record.read_text().splitlines())
+                if entry["benchmark"] == benchmark and entry["first"])
+
+
+@pytest.mark.parametrize("benchmark", ["locomo", "longmemeval"])
+@pytest.mark.parametrize("number", [1, 2])
+def test_the_published_default_change_pairs_are_complete_and_match_benchmarks_md(benchmark, number):
+    before, after = published_deepseek_pair(REPEAT, DEFAULT_CHANGE, benchmark, number)
+    conditions = first_aa_check(benchmark)["conditions"]
+    for side, result, arm in zip(baselines.PAIR_SIDES, (before, after), (REPEAT, DEFAULT_CHANGE)):
+        rows = result["rows"]
+        assert (result["kind"], result["arm"], result["benchmark"]) == ("ollama-answer-result", arm, benchmark)
+        assert [row["question_id"] for row in rows] == json.loads(study.REG.read_text())["cohort_ids"][benchmark]
+        assert result["complete"] and result["total"] == result["completed"] == len(rows)
+        assert result["final_failures"] == result["unreplaced_failures"] == 0
+        assert result["correct"] == sum(row["correct"] for row in rows)
+        # Answered under the conditions of the A/A check the pair relied on, with no question left unscored.
+        assert result["answer_model"] == conditions["answer_model"]
+        assert result["server_versions"] == conditions["server_versions"] == ["0.34.3"]
+        assert result["context_budget"] == conditions["context_budget"] == baselines.RULE_BUDGET
+        assert result["failure_policy"]["unscored"] == 0 and {row["outcome"] for row in rows} == {"judged"}
+        assert (result["pair"]["side"], result["pair"]["number"]) == (side, number)
+    assert (before["correct"], after["correct"]) == DEFAULT_CHANGE_CORRECT[benchmark][number]
+    assert before["prepared"]["overrides"] == {} and after["prepared"]["variant_settings"] == DEFAULT_CHANGE_SETTINGS
+    assert baselines._contexts_sha256([{"question_id": row["question_id"], "text_sha256": row["context_text_sha256"]}
+                                       for row in after["rows"]]) == DEFAULT_CHANGE_CONTEXTS[benchmark]
+    # The defaults replayed at the variant's commit read the before side's text on every question, so the pair
+    # credits the variant's settings with no other code change (#139).
+    assert [row["defaults_text_sha256"] for row in after["rows"]] == \
+        [row["context_text_sha256"] for row in before["rows"]]
+
+
+def test_the_default_change_confirmation_started_after_both_first_pairs_finished():
+    pairs = {(benchmark, number): published_deepseek_pair(REPEAT, DEFAULT_CHANGE, benchmark, number)
+             for benchmark in ("locomo", "longmemeval") for number in (1, 2)}
+    first_finished = max(datetime.fromisoformat(side["finished_at"])
+                         for (_, number), sides in pairs.items() if number == 1 for side in sides)
+    confirmation_started = min(datetime.fromisoformat(side["started_at"])
+                               for (_, number), sides in pairs.items() if number == 2 for side in sides)
+    assert first_finished < confirmation_started
+    assert all(side["pair"]["earlier_pairs"] == [{"baseline": REPEAT, "number": 1, "state": "complete"}]
+               for (_, number), sides in pairs.items() if number == 2 for side in sides)
+
+
 # Interleaved pairs (#129) ---------------------------------------------------------
 
 DEFAULTS_TEXT = {"conv-1-q0000": "(8 May, 2023) Caroline: I painted a sunset.",
@@ -2197,7 +2258,7 @@ async def test_run_pair_answers_a_variant_only_when_the_defaults_at_its_commit_r
 async def test_a_variant_records_the_defaults_replayed_on_the_same_code_and_questions(harness, monkeypatch):
     await gate_cases(harness, monkeypatch)
     replay = gate.run_gate
-    fusion = gate.parse_overrides(['scoring.fusion="rrf"'])
+    fusion = gate.parse_overrides(['scoring.fusion="weighted"'])
 
     def changing(change):
         async def run_gate(*args, **kwargs):
@@ -2210,11 +2271,11 @@ async def test_a_variant_records_the_defaults_replayed_on_the_same_code_and_ques
     marked = {qid: text_sha256(f"defaults {qid}") for qid in ("conv-1-q0000", "conv-1-q0001")}
     monkeypatch.setattr(gate, "run_gate", changing(lambda report: {**report, "rows": [
         {**row, "context_sha256": marked[row["question_id"]]} for row in report["rows"]]}))
-    prepared = await asyncio.to_thread(baselines.prepare, "prme-rrf", "locomo", data=harness["data"],
+    prepared = await asyncio.to_thread(baselines.prepare, "prme-weighted", "locomo", data=harness["data"],
                                        archive=harness["archive"], overrides=fusion)
     assert {entry["question_id"]: entry["defaults_text_sha256"] for entry in prepared["contexts"]} == marked
     assert all(entry["defaults_text_sha256"] != entry["text_sha256"] for entry in prepared["contexts"])
-    kept = json.loads((arm_folder(harness, "prme-rrf") / "defaults-gate.json").read_text())
+    kept = json.loads((arm_folder(harness, "prme-weighted") / "defaults-gate.json").read_text())
     assert [row["context_sha256"] for row in kept["rows"]] == list(marked.values())
     # The two replays must run on the same code and saved run, over the same questions in order.
     for arm, change, message in (
@@ -2657,9 +2718,19 @@ def test_variant_settings_are_what_the_overrides_change_from_the_defaults():
                ['packing.token_budget="2048"', "enable_reranker=True"])
     assert [baselines.variant_settings(gate.parse_overrides(items)) for items in spelled] == [
         {"enable_reranker": True, "packing.token_budget": 2048}] * 2
-    # Rank fusion fills in its rank constant, so naming the default constant too changes nothing more.
-    assert baselines.variant_settings(gate.parse_overrides(['scoring={"fusion": "rrf"}'])) == MARKED
-    assert baselines.variant_settings(gate.parse_overrides(["scoring.fusion=rrf", "scoring.rrf_k=60"])) == MARKED
+    # Rank fusion is the default and fills in its rank constant, so naming either changes nothing.
+    assert baselines.variant_settings(gate.parse_overrides(['scoring={"fusion": "rrf"}'])) == {}
+    assert baselines.variant_settings(gate.parse_overrides(["scoring.fusion=rrf", "scoring.rrf_k=60"])) == {}
+    assert baselines.variant_settings(gate.parse_overrides(["scoring.rrf_k=30"])) == {"scoring.rrf_k": 30}
+    # The weighted formula leaves out its fusion and the rank fusion settings, so all are recorded as None.
+    assert baselines.variant_settings(gate.parse_overrides(['scoring.fusion="weighted"'])) == {
+        "scoring.fusion": None, "scoring.rrf_k": None, "scoring.rrf_recency_boost": None,
+        "scoring.rrf_tie_break": None}
+    # The recency boost and tie-break are defaults too, so naming them changes nothing.
+    assert baselines.variant_settings(gate.parse_overrides(
+        ["scoring.rrf_recency_boost=0.25", 'scoring.rrf_tie_break="event_time"'])) == {}
+    assert baselines.variant_settings(gate.parse_overrides(["scoring.rrf_recency_boost=0.5"])) == {
+        "scoring.rrf_recency_boost": 0.5}
     # An override that repeats a default changes nothing.
     assert baselines.variant_settings(gate.parse_overrides(["packing.token_budget=4096", "scoring.w_paths=0.0"])) == {}
     # A mapping replaced whole records the entries it drops as None.

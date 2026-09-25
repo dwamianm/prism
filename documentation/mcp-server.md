@@ -140,7 +140,7 @@ Search memories using 6-signal hybrid retrieval.
 
 Returns JSON: `{"results": [...], "count": N, "metrics": {...}}`
 
-With opt-in rank fusion (`PRME_SCORING__FUSION=rrf`), a result's `score` says
+With rank fusion (`PRME_SCORING__FUSION=rrf`, the default), a result's `score` says
 where it ranks among the candidates rather than how relevant it is. Each result
 then also carries `semantic_relevance`, the semantic cosine similarity of the
 memory behind it, and `min_score` is compared with that instead. A floor tuned

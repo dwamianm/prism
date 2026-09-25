@@ -259,7 +259,11 @@ still reorders them.
 
 ## Consequence
 
-- `balanced` stays the default for now.
+- `balanced` stays the default for now. Update, 2026-09-25: score order
+  became the default together with the reader format, rank fusion with its
+  recency boost and tie-break, and session decay 0.6, after the DeepSeek
+  pairs of `prme-reader-rrf-sd06-rec` (`BENCHMARKS.md`). The balanced
+  version of those settings is still an untested variant.
 - The `reader-rrf`, `reader-rrf-sd06` and `reader-rrf-sd06-rec` variants
   prepared for the DeepSeek track so far all use score order. The same settings
   with `balanced` form a different variant (other settings and other context

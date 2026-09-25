@@ -7,6 +7,7 @@ import inspect
 import json
 from pathlib import Path
 import shutil
+import warnings
 
 import pytest
 
@@ -21,7 +22,7 @@ from benchmarks.evidence import reciprocal_rank_fusion
 from prme import MemoryEngine, NodeType
 from prme.config import OrganizerConfig
 from prme.models import MemoryNode
-from prme.retrieval.config import PackingConfig
+from prme.retrieval.config import PackingConfig, ScoringWeights
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import compute_str, pack_context, requires_memory_text
 from prme.retrieval.tokenization import count_tokens
@@ -127,7 +128,9 @@ async def test_public_capture_reproduces_after_engine_close_and_excludes_labels(
     from tests.test_durable_ingestion import MockEmbeddingProvider
 
     monkeypatch.setattr("prme.storage.engine.create_embedding_provider", lambda _: MockEmbeddingProvider())
-    config = PRMEConfig(enable_qa_pairing=False, organizer={"opportunistic_enabled": False})
+    # The diagnostic measures JSON contexts, with the settings it was registered under.
+    config = PRMEConfig(enable_qa_pairing=False, organizer={"opportunistic_enabled": False},
+                        scoring=ScoringWeights(), packing=PackingConfig())
     row = await evaluate_question(question(), config, budgets=[1000], count_tokens=len, k=10,
                                   capture_candidates=tmp_path)
     raw = (tmp_path / row["candidate_snapshot"]["filename"]).read_bytes()
@@ -326,26 +329,44 @@ def test_gate_config_selects_rank_fusion_and_refuses_a_rank_constant_without_it(
     fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', "scoring.rrf_k=30"]))
     assert (fused.scoring.fusion, fused.scoring.rrf_k) == ("rrf", 30)
     assert gate_config(tmp_path, parse_overrides(["scoring.fusion=rrf"])).scoring.rrf_k == 60
+    # Rank fusion is the default, so a constant alone applies to it, and other scoring settings keep it.
+    assert gate_config(tmp_path).scoring == ScoringWeights(fusion="rrf", rrf_recency_boost=.25,
+                                                           rrf_tie_break="event_time")
+    assert gate_config(tmp_path, parse_overrides(["scoring.rrf_k=30"])).scoring.rrf_k == 30
+    assert gate_config(tmp_path, parse_overrides(["scoring.relevance_floor=0.3"])).scoring.fusion == "rrf"
+    # A weighted fusion takes none of the rank fusion defaults, so it warns about nothing.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        weighted = gate_config(tmp_path, parse_overrides(['scoring.fusion="weighted"'])).scoring
+    assert weighted == ScoringWeights()
     with pytest.warns(UserWarning), pytest.raises(ValueError, match="applies only with"):
-        gate_config(tmp_path, parse_overrides(["scoring.rrf_k=30"]))
+        gate_config(tmp_path, parse_overrides(['scoring.fusion="weighted"', "scoring.rrf_k=30"]))
 
 
-@pytest.mark.parametrize("setting", ["scoring.rrf_recency_boost=0.25", 'scoring.rrf_tie_break="event_time"'])
+@pytest.mark.parametrize("setting", ["scoring.rrf_recency_boost=0.5", 'scoring.rrf_tie_break="event_time"'])
 def test_gate_config_refuses_rank_fusion_recency_and_tie_break_without_rank_fusion(tmp_path, setting):
-    fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', setting]))
     name, value = setting.removeprefix("scoring.").split("=")
-    assert getattr(fused.scoring, name) == json.loads(value)
+    for fused in (gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', setting])),
+                  # Rank fusion is the default, so the setting alone applies to it.
+                  gate_config(tmp_path, parse_overrides([setting]))):
+        assert getattr(fused.scoring, name) == json.loads(value)
     with pytest.warns(UserWarning), pytest.raises(ValueError, match=f"scoring.{name} applies only with"):
-        gate_config(tmp_path, parse_overrides([setting]))
+        gate_config(tmp_path, parse_overrides(['scoring.fusion="weighted"', setting]))
 
 
 def test_gate_config_refuses_a_rank_fusion_session_decay_without_rank_fusion(tmp_path):
-    decay = "packing.session_context_rank_fusion_score_decay=0.6"
+    decay = "packing.session_context_rank_fusion_score_decay=0.5"
     fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', decay]))
-    assert fused.packing.session_context_rank_fusion_score_decay == .6
-    assert gate_config(tmp_path).packing.session_context_rank_fusion_score_decay is None
+    assert fused.packing.session_context_rank_fusion_score_decay == .5
+    # The default is 0.6, and other packing settings keep it, as they keep the reader format and score order.
+    assert gate_config(tmp_path).packing.session_context_rank_fusion_score_decay == .6
+    budget = gate_config(tmp_path, parse_overrides(["packing.token_budget=8192"])).packing
+    assert (budget.session_context_rank_fusion_score_decay, budget.context_format,
+            budget.multipath_ordering) == (.6, "reader", "score")
+    # Weighted scoring never applies the default decay, so only a decay set with it is refused.
+    assert gate_config(tmp_path, parse_overrides(['scoring.fusion="weighted"'])).scoring.fusion == "weighted"
     with pytest.raises(ValueError, match="applies only with"):
-        gate_config(tmp_path, parse_overrides([decay]))
+        gate_config(tmp_path, parse_overrides(['scoring.fusion="weighted"', decay]))
 
 
 @pytest.mark.parametrize("value", ['"full"', "full", '"structured"'])
@@ -353,7 +374,11 @@ def test_gate_config_selects_a_text_bearing_floor(tmp_path, value):
     floored = gate_config(tmp_path, parse_overrides([f"packing.min_fidelity={value}"]))
     assert floored.packing.min_fidelity.value == value.strip('"')
     assert requires_memory_text(floored.packing)
-    assert not requires_memory_text(gate_config(tmp_path).packing)
+    # The default reader format always keeps text-free records out; the auditable format needs the floor.
+    auditable = gate_config(tmp_path, parse_overrides(['packing.context_format="auditable"']))
+    assert not requires_memory_text(auditable.packing)
+    assert requires_memory_text(gate_config(tmp_path, parse_overrides(
+        ['packing.context_format="auditable"', f"packing.min_fidelity={value}"])).packing)
 
 
 def gate_row(question_id, category, *, all_packed=None, unresolved=(), ranks=None, records=25,

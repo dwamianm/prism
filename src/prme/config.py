@@ -12,7 +12,15 @@ from uuid import UUID
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
-from prme.retrieval.config import PackingConfig, ScoringWeights
+from prme.retrieval.config import (
+    DEFAULT_PACKING_SETTINGS,
+    DEFAULT_SCORING_SETTINGS,
+    RANK_FUSION_ONLY_SETTINGS,
+    PackingConfig,
+    ScoringWeights,
+    default_packing_config,
+    default_scoring_weights,
+)
 from prme.retrieval.temporal_relations import TemporalRelationConfig
 
 
@@ -437,12 +445,31 @@ class PRMEConfig(_ProjectSettings):
 
     # Retrieval scoring and packing config (RFC-0005, RFC-0006)
     scoring: ScoringWeights = Field(
-        default_factory=ScoringWeights,
-        description="Scoring weights for composite retrieval formula (RFC-0005 S7)",
+        default_factory=default_scoring_weights,
+        description=(
+            "Retrieval scoring (RFC-0005 S7). Defaults to reciprocal rank fusion "
+            "(fusion='rrf', rrf_k=60) with a 0.25 current-state recency boost "
+            "(rrf_recency_boost) and an event-time tie-break (rrf_tie_break); "
+            "set fusion='weighted' for the weighted composite formula. "
+            "PRME_SCORING__* environment variables and .env entries keep those "
+            "defaults for the settings they leave out, and a weighted fusion "
+            "they set drops the rank fusion ones. Scoring passed in code, as a "
+            "ScoringWeights object or a dict, follows ScoringWeights, whose "
+            "fusion defaults to 'weighted', so a saved configuration reloads as "
+            "it was written."
+        ),
     )
     packing: PackingConfig = Field(
-        default_factory=PackingConfig,
-        description="Context packing configuration (RFC-0006)",
+        default_factory=default_packing_config,
+        description=(
+            "Context packing configuration (RFC-0006). Defaults to the reader "
+            "context format, score ordering and a 0.6 rank fusion session "
+            "decay. PRME_PACKING__* environment variables and .env entries keep "
+            "those unless they set them. Packing passed in code, as a "
+            "PackingConfig object or a dict, follows PackingConfig's own "
+            "defaults (auditable, balanced, no rank fusion session decay), so a "
+            "saved configuration reloads as it was written."
+        ),
     )
     temporal_relation: TemporalRelationConfig = Field(
         default_factory=TemporalRelationConfig,
@@ -780,3 +807,57 @@ class PRMEConfig(_ProjectSettings):
         "env_prefix": "PRME_",
         "env_nested_delimiter": "__",
     }
+
+    @classmethod
+    def settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings):
+        init, *others = super().settings_customise_sources(
+            settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings,
+        )
+
+        def environment() -> dict[str, Any]:
+            # ScoringWeights and PackingConfig read a missing setting as their
+            # own historical default, because saved receipts and configurations
+            # rely on that. Environment, .env and secret settings that name
+            # only some scoring or packing values keep the product defaults
+            # instead; values passed in code are left as written. The sources
+            # are merged first, highest priority last, so a default never
+            # replaces a value that a lower-priority source sets.
+            merged: dict[str, Any] = {}
+            for source in reversed(others):
+                merged = _merged(merged, source())
+            return with_product_retrieval_defaults(merged)
+
+        return (init, environment)
+
+
+def _merged(low: dict[str, Any], high: dict[str, Any]) -> dict[str, Any]:
+    """``low`` updated with ``high``, merging nested dicts key by key."""
+    result = dict(low)
+    for key, value in high.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _merged(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def with_product_retrieval_defaults(values: dict[str, Any]) -> dict[str, Any]:
+    """Fill scoring and packing settings given as dicts with the product defaults they leave out.
+
+    PRMEConfig applies this to its environment and .env settings. Callers that
+    build a configuration from partial settings, such as the evidence gate's
+    ``--set`` overrides, apply it so their settings change only what they name.
+    Scoring that sets a fusion other than rank fusion takes none of the rank
+    fusion defaults, which weighted scoring would drop with a warning.
+    """
+    filled = dict(values)
+    scoring = filled.get("scoring")
+    if isinstance(scoring, dict):
+        defaults = DEFAULT_SCORING_SETTINGS
+        if scoring.get("fusion", defaults["fusion"]) != "rrf":
+            defaults = {key: value for key, value in defaults.items() if key not in RANK_FUSION_ONLY_SETTINGS}
+        filled["scoring"] = {**defaults, **scoring}
+    packing = filled.get("packing")
+    if isinstance(packing, dict):
+        filled["packing"] = {**DEFAULT_PACKING_SETTINGS, **packing}
+    return filled

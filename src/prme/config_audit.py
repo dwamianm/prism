@@ -13,6 +13,7 @@ from collections.abc import Callable
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic_settings import BaseSettings
 
 
 class HypothesisSetting(BaseModel):
@@ -197,13 +198,25 @@ def audit_hypotheses(config: BaseModel) -> HypothesisAudit:
     """
     settings: list[HypothesisSetting] = []
 
-    def visit(model: BaseModel, prefix: str = "") -> None:
+    def visit(model: BaseModel, prefix: str = "", defaults: BaseModel | None = None) -> None:
+        # ``defaults`` is the default a parent model gives this nested model.
+        # PRMEConfig's default scoring is rank fusion with its constant, while
+        # ScoringWeights' own field defaults are the weighted formula, so a
+        # nested field's default is read from the parent's default when there
+        # is one. Nested settings classes read the environment when built, so
+        # their own field defaults are used instead.
         for name, field in type(model).model_fields.items():
             value = getattr(model, name)
             path = f"{prefix}.{name}" if prefix else name
             description = field.description or ""
+            nested = isinstance(value, BaseModel) and not isinstance(value, BaseSettings)
+            if "[HYPOTHESIS" in description or nested:
+                default = (
+                    getattr(defaults, name)
+                    if defaults is not None
+                    else field.get_default(call_default_factory=True)
+                )
             if "[HYPOTHESIS" in description:
-                default = field.get_default(call_default_factory=True)
                 gate = _ACTIVATION_GATES.get(path)
                 effective = True
                 condition = None
@@ -224,7 +237,9 @@ def audit_hypotheses(config: BaseModel) -> HypothesisAudit:
                         description=description,
                     )
                 )
-            if isinstance(value, BaseModel):
+            if nested:
+                visit(value, path, default if type(default) is type(value) else None)
+            elif isinstance(value, BaseModel):
                 visit(value, path)
 
     visit(config)

@@ -3,6 +3,13 @@
 Provides ScoringWeights (frozen, deterministically versioned) and
 PackingConfig for the hybrid retrieval pipeline. Default instances
 are exported as module-level constants.
+
+The class defaults are the settings that stored receipts, snapshots and
+configurations read a missing value as, so they do not change. The product
+defaults that ``PRMEConfig`` applies (``DEFAULT_SCORING_SETTINGS`` and
+``DEFAULT_PACKING_SETTINGS``) differ from them: rank fusion with a 0.25
+current-state recency boost and an event-time tie-break, the reader context
+format, score ordering and a 0.6 rank fusion session decay.
 """
 
 from __future__ import annotations
@@ -18,11 +25,29 @@ from prme.types import RepresentationLevel
 
 # Rank constant for fusion="rrf" when none is given.
 DEFAULT_RRF_K = 60
-# Opt-in rank fusion terms, unset by default and recorded only in version 19
-# receipts (issue #168).
+# Rank fusion terms that ScoringWeights() leaves unset and PRMEConfig sets by
+# default, recorded only in version 19 receipts (issue #168).
 RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break")
 # Settings that only rank fusion reads; weighted scoring drops them.
 RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
+
+# The retrieval defaults PRMEConfig applies over the class defaults below. They
+# passed the epic #77 DeepSeek default-change test twice (2026-09-25, variant
+# prme-reader-rrf-sd06-rec). Stored receipts and configurations omit a weighted
+# fusion, unset rank fusion terms and an unset rank fusion session decay, and
+# their readers take the class defaults, so the product defaults live here and
+# in PRMEConfig rather than in the fields. rrf_k is left to ScoringWeights,
+# which gives rank fusion DEFAULT_RRF_K.
+DEFAULT_SCORING_SETTINGS: dict[str, Any] = {
+    "fusion": "rrf",
+    "rrf_recency_boost": 0.25,
+    "rrf_tie_break": "event_time",
+}
+DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
+    "context_format": "reader",
+    "multipath_ordering": "score",
+    "session_context_rank_fusion_score_decay": 0.6,
+}
 
 
 class ScoringWeights(BaseModel):
@@ -39,9 +64,14 @@ class ScoringWeights(BaseModel):
     each candidate's semantic and lexical ranks (score formula version 2).
     The additive weights are then unused, but they are still validated and
     recorded. A weighted configuration leaves ``fusion`` and ``rrf_k`` out of
-    its serialized form, and any configuration leaves the unset opt-in rank
-    fusion terms out, so receipts, ranking profiles and evaluations written
+    its serialized form, and any configuration leaves the unset rank fusion
+    terms out, so receipts, ranking profiles and evaluations written
     before they existed keep their exact bytes and checksums.
+
+    ``ScoringWeights()`` is therefore the weighted formula. The product
+    default, which ``PRMEConfig().scoring`` holds, is rank fusion with a 0.25
+    current-state recency boost and an event-time tie-break
+    (``default_scoring_weights()``).
     """
 
     model_config = ConfigDict(frozen=True, allow_inf_nan=False)
@@ -118,22 +148,22 @@ class ScoringWeights(BaseModel):
         ),
     )
     # Stored receipts, ranking profiles and evaluations omit a weighted
-    # fusion, so a missing value must always mean "weighted". To make rank
-    # fusion a product default, change PRMEConfig.scoring's default instead of
-    # this field's default.
+    # fusion, so a missing value must always mean "weighted". Rank fusion is
+    # the product default through PRMEConfig.scoring (DEFAULT_SCORING_SETTINGS),
+    # so this field's own default stays "weighted".
     fusion: Literal["weighted", "rrf"] = Field(
         default="weighted",
         exclude_if=lambda value: value == "weighted",
         description=(
-            "How candidate signals are combined. 'weighted' is the default "
-            "weighted sum above (score formula version 1). 'rrf' is opt-in "
-            "reciprocal rank fusion of each candidate's semantic and lexical "
+            "How candidate signals are combined. 'weighted' is the weighted "
+            "sum above (score formula version 1) and this class's default. "
+            "'rrf' is reciprocal rank fusion of each candidate's semantic and lexical "
             "ranks within the candidate pool (formula version 2), scaled so a "
             "candidate ranked first on both scores 1.0. Epistemic, node-type "
             "and temporal adjustments then apply as multipliers relative to "
             "the pool's largest value, so an adjustment every candidate shares "
             "is 1.0. Graph proximity, salience and confidence are not used, "
-            "recency is used only through the opt-in rrf_recency_boost, and "
+            "recency is used only through rrf_recency_boost, and "
             "the query-specific weight shifts and learned ranking multipliers "
             "are not used. Scores are rank-based, so min_score compares against "
             "each result's semantic_relevance, the semantic cosine similarity of "
@@ -142,7 +172,7 @@ class ScoringWeights(BaseModel):
             "match is filtered out when a floor is set. When the vector path "
             "fails or detects an embedding mismatch and no result has a cosine, "
             "min_score is skipped and the response metadata sets "
-            "min_score_skipped."
+            "min_score_skipped. PRMEConfig uses 'rrf' by default."
         ),
     )
     rrf_k: int | None = Field(
@@ -165,7 +195,8 @@ class ScoringWeights(BaseModel):
         le=4,
         exclude_if=lambda value: value is None,
         description=(
-            "[HYPOTHESIS] Opt-in, fusion='rrf' only: on current-state questions, "
+            "[HYPOTHESIS] fusion='rrf' only; PRMEConfig sets 0.25 by default, and "
+            "this class leaves it unset. On current-state questions, "
             "multiply each fused score by 1 + rrf_recency_boost x its recency, "
             "relative to the pool's largest value, so the newer of two "
             "conflicting memories can rank first. Recency is computed as the "
@@ -183,7 +214,8 @@ class ScoringWeights(BaseModel):
         default=None,
         exclude_if=lambda value: value is None,
         description=(
-            "Opt-in, fusion='rrf' only: 'event_time' puts candidates whose "
+            "fusion='rrf' only; PRMEConfig sets 'event_time' by default, and this "
+            "class leaves it unset. 'event_time' puts candidates whose "
             "fused scores are equal in order of event time (else the time they "
             "were stored), newest first, instead of path count and node ID "
             "order. Older candidates lose less than 1e-11, which is below the "
@@ -298,6 +330,12 @@ class PackingConfig(BaseModel):
 
     Controls token budget, representation fidelity, and per-backend
     candidate limits for the retrieval pipeline.
+
+    The field defaults are the historical ones that stored receipts and
+    configurations rely on. ``PRMEConfig().packing`` applies the product
+    defaults over them (``DEFAULT_PACKING_SETTINGS``: the reader format, score
+    ordering and a 0.6 rank fusion session decay); to change one setting and
+    keep those, copy it with ``config.packing.model_copy(update=...)``.
     """
 
     model_config = ConfigDict(allow_inf_nan=False)
@@ -308,9 +346,12 @@ class PackingConfig(BaseModel):
             "Order multi-path candidates by score per token ('density'), "
             "composite score ('score'), or reserve the highest-scored ordinary "
             "multi-path candidate then use score / full_tokens**0.25 ('balanced'). "
-            "Balanced is the evidence-backed default; density and score remain "
-            "available for compatibility and workload-specific evaluation. "
-            "Other priority tiers and whole-output token limits are unchanged."
+            "PRMEConfig uses 'score' by default, with the reader format: it is "
+            "the order the answer runs that made the reader format the default "
+            "measured. Balanced, this class's default, was chosen for JSON "
+            "records; density remains available for compatibility and "
+            "workload-specific evaluation. Other priority tiers and whole-output "
+            "token limits are unchanged."
         ),
     )
     context_guidance_mode: Literal["off", "temporal", "all"] = Field(
@@ -334,7 +375,11 @@ class PackingConfig(BaseModel):
             "Reader shows only the event date or explicit validity window, tags "
             "for non-default epistemic and lifecycle states, and the text; the "
             "complete record stays in the bundle sections and the receipt. All "
-            "three formats keep the complete selected representation text."
+            "three formats keep the complete selected representation text. "
+            "PRMEConfig uses 'reader' by default; this class's default is "
+            "'auditable'. Answerability and claim verification cite records "
+            "through the context, so reader bundles they check need "
+            "context_citations."
         ),
     )
     context_citations: bool = Field(
@@ -428,20 +473,23 @@ class PackingConfig(BaseModel):
             "Score multiplier for session-context expanded nodes. Applied to "
             "the triggering node's composite_score so context nodes rank just "
             "below the node that caused their inclusion. Under rank fusion, "
-            "session_context_rank_fusion_score_decay replaces it when set."
+            "session_context_rank_fusion_score_decay replaces it when set, "
+            "which PRMEConfig does by default."
         ),
     )
     # Omitted when unset, so configurations, receipts and benchmark variants
     # that do not use it keep the bytes and identity they had before it existed.
+    # PRMEConfig sets 0.6 by default (DEFAULT_PACKING_SETTINGS).
     session_context_rank_fusion_score_decay: float | None = Field(
         default=None,
         gt=0,
         le=1,
         exclude_if=lambda value: value is None,
         description=(
-            "Opt-in score multiplier for session-context expanded nodes whose "
+            "Score multiplier for session-context expanded nodes whose "
             "trigger was scored by rank fusion (ScoringWeights.fusion='rrf'), "
-            "in place of session_context_score_decay. Unset, rank fusion uses "
+            "in place of session_context_score_decay. PRMEConfig sets 0.6 by "
+            "default; unset (this class's default), rank fusion uses "
             "session_context_score_decay. Fused scores are compressed: with "
             "rrf_k=60, 0.85 of a first-place score outranks every candidate "
             "from about twelfth place down on both channels, so neighbors can "
@@ -601,6 +649,22 @@ class PackingConfig(BaseModel):
         return self
 
 
-# Module-level default instances.
+def default_scoring_weights() -> ScoringWeights:
+    """The product's default scoring, PRMEConfig().scoring.
+
+    Rank fusion with rrf_k=60, a 0.25 current-state recency boost and an
+    event-time tie-break.
+    """
+    return ScoringWeights(**DEFAULT_SCORING_SETTINGS)
+
+
+def default_packing_config() -> PackingConfig:
+    """The product's default packing, PRMEConfig().packing."""
+    return PackingConfig(**DEFAULT_PACKING_SETTINGS)
+
+
+# Module-level default instances of the class defaults: the weighted formula and
+# the historical packing settings. The product defaults are
+# default_scoring_weights() and default_packing_config().
 DEFAULT_SCORING_WEIGHTS = ScoringWeights()
 DEFAULT_PACKING_CONFIG = PackingConfig()

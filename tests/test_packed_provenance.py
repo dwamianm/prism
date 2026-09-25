@@ -34,6 +34,11 @@ def test_every_representation_keeps_source_type_inside_measured_budget(source_ty
 
 
 async def test_same_statement_from_different_sources_remains_distinguishable(fresh_config):  # noqa: F811
+    # The auditable format prints each record's source type; the reader format leaves it to the
+    # bundle sections and the receipt.
+    fresh_config = fresh_config.model_copy(update={
+        "packing": fresh_config.packing.model_copy(update={"context_format": "auditable"}),
+    })
     async with MemoryEngine.open(fresh_config) as engine:
         for role in ("user", "assistant"):
             await engine.store("I relocated to Oslo.", user_id="u", role=role)

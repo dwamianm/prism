@@ -56,8 +56,9 @@ node/event identities, scoped evidence and the sync/async replacement workflow.
 [Metadata handling](METADATA.md) covers finite JSON admission, copied inputs and
 lossless special-float snapshots for previously admitted graph metadata.
 
-[Context packing](PACKING.md) explains the default balanced policy plus density and score
-ordering, exact token budgets, evidence limits and receipt compatibility.
+[Context packing](PACKING.md) explains the default retrieval settings (reader format, score
+ordering and rank fusion), the balanced and density orderings, exact token budgets, evidence
+limits and receipt compatibility.
 
 [Evidence-bound temporal relations](TEMPORAL-RELATIONS.md) documents the opt-in
 resolver, deterministic citation validation and arithmetic, independent Jev

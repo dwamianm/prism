@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock
 
+import pytest
+
 from prme import MemoryClient, MemoryEngine, RankingMultipliers, RetrievalReceipt
 from prme.retrieval import pipeline
 from prme.retrieval.config import ScoringWeights
@@ -14,8 +16,18 @@ from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.reranker import CrossEncoderReranker
 from prme.types import RepresentationLevel, Scope
 from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
 
-config = test_durable_ingestion.config
+durable_config = test_durable_ingestion.config
+
+
+@pytest.fixture
+def config(durable_config):
+    # Runtime ranking multipliers reweight the weighted formula: they keep the previous retrieval
+    # defaults, which rank fusion and the reader format replaced on 2026-09-24.
+    return previous_defaults(durable_config)
+
+
 user = test_durable_ingestion.user
 NOW = datetime(2026, 9, 12, 18, tzinfo=timezone.utc)
 

@@ -193,8 +193,9 @@ to the pool or was already found by vector, lexical, or graph generation; a
 broad candidate pool must not turn session expansion into a no-op. Inherited
 scores retain the triggering node and decay operation in replayable score
 provenance. The decay is `PackingConfig.session_context_score_decay` (0.85);
-for triggers scored by rank fusion, the opt-in
-`session_context_rank_fusion_score_decay` replaces it when set (Section 7.2).
+for triggers scored by rank fusion,
+`session_context_rank_fusion_score_decay` (0.6 in `PRMEConfig`'s default)
+replaces it when set (Section 7.2).
 Expansion remains owner and exact-scope constrained and is filtered
 again before packing. Built-in stores compute bounded neighborhoods in SQL for
 each exact `(session_id, scope)` partition; the behavior does not depend on a
@@ -305,6 +306,12 @@ Removed objects MUST be logged in the bundle's `retrieval_metadata.excluded` map
 
 Each remaining candidate receives a composite score. The score determines rank order for context packing.
 
+PRME's default configuration (`PRMEConfig().scoring`) scores with rank fusion,
+score formula version 2 (Section 7.2). The weighted formula below is score
+formula version 1: it applies with `ScoringWeights.fusion="weighted"`, which is
+also the `ScoringWeights` class default, because stored receipts omit a weighted
+fusion.
+
 **Composite score formula:**
 
 ```
@@ -384,17 +391,26 @@ the adjusted scorer returned it first in 100%. This single synthetic diagnostic
 does not establish the multiplier as universally optimal; retained workloads
 must evaluate it directly.
 
-### 7.2 Opt-in rank fusion (score formula version 2)
+### 7.2 Rank fusion (score formula version 2)
 
 `ScoringWeights.fusion="rrf"` (`PRME_SCORING__FUSION=rrf`) replaces the
-weighted sum with reciprocal rank fusion. The default remains `"weighted"`.
+weighted sum with reciprocal rank fusion. It is the product default:
+`PRMEConfig().scoring` is `ScoringWeights(fusion="rrf", rrf_recency_boost=0.25,
+rrf_tie_break="event_time")`, and environment settings that name only some
+scoring values keep those unless they set them; a weighted `fusion` set there
+drops the two rank fusion settings. `ScoringWeights()` built in code still
+defaults to `"weighted"` with both unset, so a stored receipt or configuration
+that omits `fusion` keeps meaning weighted. The default changed after it passed
+the epic #77 DeepSeek default-change test twice, together with the reader
+context format, score ordering, the 0.6 session decay and the recency boost
+and tie-break below (`docs/PACKING.md`, "Default retrieval settings").
 
 ```
 score(obj) =
   (1/(k + semantic_rank) + 1/(k + lexical_rank)) × (k + 1) / 2
   × epistemic_factor × node_type_factor × temporal_factor
-  [× recency_boost_factor]                 (opt-in, current-state questions)
-  [− tie_break × 1e-11]                    (opt-in)
+  [× recency_boost_factor]                 (when set, current-state questions)
+  [− tie_break × 1e-11]                    (when set)
 ```
 
 - Ranks are competition ranks (tied scores share the better rank) within the
@@ -413,7 +429,7 @@ score(obj) =
   only to TEMPORAL intent, as in formula version 1. Negative epistemic weights
   or node-type boosts are rejected.
 - Graph proximity, salience and confidence are not used, and recency only
-  through the opt-in setting below. In the 2026-09-23 benchmark archive they
+  through the recency boost below. In the 2026-09-23 benchmark archive they
   were constant or carried no relevance information. Graph proximity can become a fused channel once ingestion
   populates the graph. The query-specific weight shifts for current-state,
   episodic and relational questions do not apply. Non-neutral ranking
@@ -424,9 +440,10 @@ score(obj) =
   candidate below the relevance floor gets no update boost; its score is not
   capped at its similarity, because a fused score is not on that scale.
 - Without recency, the older of two conflicting memories can rank above the
-  newer one on a current-state question (issue #168). The opt-in
+  newer one on a current-state question (issue #168).
   `ScoringWeights.rrf_recency_boost` `[HYPOTHESIS]`
-  (`PRME_SCORING__RRF_RECENCY_BOOST`, above 0 and at most 4) brings back the
+  (`PRME_SCORING__RRF_RECENCY_BOOST`, above 0 and at most 4; 0.25 in
+  `PRMEConfig`'s default, unset in `ScoringWeights()`) brings back the
   weighted formula's recency on the questions where that formula uses it:
   those Section 7.1 treats as current-state. Recency is computed as the
   weighted formula computes it there with its default weights,
@@ -460,9 +477,9 @@ score(obj) =
   Other questions are unaffected.
 - Equal fused scores are common: ranks (1, 2) and (2, 1) fuse to the same
   score, as do ranks r on one channel alone. Unset, they are ordered by path
-  count and then node ID, which is random. The opt-in
-  `ScoringWeights.rrf_tie_break="event_time"` (`PRME_SCORING__RRF_TIE_BREAK`)
-  orders them newest first by event time (else the time they were stored),
+  count and then node ID, which is random.
+  `ScoringWeights.rrf_tie_break="event_time"` (`PRME_SCORING__RRF_TIE_BREAK`,
+  set in `PRMEConfig`'s default, unset in `ScoringWeights()`) orders them newest first by event time (else the time they were stored),
   whatever their channels. Each candidate on a channel records its place by
   time as a fraction, 0 for the newest, with equal times sharing a place, and
   loses that fraction of 1e-11 from a positive score. Fused scores are rounded
@@ -488,10 +505,10 @@ score(obj) =
   twelfth and thirty-fifth place, ahead of primary evidence. On the offline
   evidence gate (reader format, score order) this crowded LongMemEval-S
   multi-session evidence out of the context at the 4K and 8K budgets (issue
-  #111). The opt-in `PackingConfig.session_context_rank_fusion_score_decay`
-  `[HYPOTHESIS]` gives triggers scored by rank fusion (formula version 2
-  provenance) their own session decay; unset, they take
-  `session_context_score_decay`. At 0.6, the value the gate favored, a
+  #111). `PackingConfig.session_context_rank_fusion_score_decay`
+  `[HYPOTHESIS]`, which `PRMEConfig` sets to 0.6 by default, gives triggers
+  scored by rank fusion (formula version 2 provenance) their own session decay;
+  unset (the field's own default), they take `session_context_score_decay`. At 0.6, the value the gate favored, a
   first-place trigger's neighbors rank below about the fortieth candidate
   ranked on both channels, though still above any candidate found by one
   channel alone, which scores at most 0.5. The value was measured with
@@ -553,14 +570,16 @@ recorded value is at least the receipt's `min_score`. When
 which also records that decay, and every session decay in its score provenance
 must equal it. Versions 1 to 16 cannot record it; an unset value is omitted, so
 rank fusion receipts without it stay version 16 with the bytes they had before
-it existed. A retrieval that skipped `min_score` because the vector path failed
+it existed. Weighted retrievals never apply it, so their receipts omit it. A
+retrieval that skipped `min_score` because the vector path failed
 writes version 18, which records `min_score_skipped: true` with the requested
 positive `min_score`, requires every candidate's `semantic_relevance` to be 0,
 and waives the rule that each is at least `min_score`. It also records the
 rank fusion session decay when that is set, under the version 17 rules.
 Versions 1 to 17 cannot record a skipped floor; a floor that was applied
 omits the field, so every other receipt keeps its version and bytes. When
-`rrf_recency_boost` or `rrf_tie_break` is set, the receipt is version 19, which
+`rrf_recency_boost` or `rrf_tie_break` is set, as both are in `PRMEConfig`'s
+defaults, the receipt is version 19, which
 records them in its scoring settings and requires every score provenance to
 use the same values; it also admits the version 17 and 18 features. Versions
 1 to 18 cannot record either setting, and an unset setting is omitted, so
@@ -667,7 +686,7 @@ locks would allow mixed ingestion/retrieval threads to exchange reference clocks
 The lock guards PRME calls, not unrelated application calls to dateparser.
 
 Non-determinism that MUST be guarded against:
-- Floating-point ordering instability (use tie-breaking by `object_id` as a stable sort; under rank fusion, the opt-in event-time tie-break of Section 7.2 comes first).
+- Floating-point ordering instability (use tie-breaking by `object_id` as a stable sort; under rank fusion, the event-time tie-break of Section 7.2, set by default, comes first).
 - HNSW approximate search non-determinism (use a fixed `ef_search` parameter and seed where supported).
 - Graph traversal order instability (sort edges by `id` before traversal).
 
@@ -680,7 +699,7 @@ Non-determinism that MUST be guarded against:
 - All four candidate generation paths MUST be implemented.
 - Epistemic filtering MUST occur before scoring, not after.
 - The composite score formula (version 1) MUST include all eight inputs. The
-  opt-in rank fusion formula (version 2, Section 7.2) is exempt.
+  rank fusion formula (version 2, Section 7.2) is exempt.
 - Weights MUST sum to 1.0 (excluding epistemic multiplier and path tiebreaker).
 - Embedding version mismatch MUST be detected and handled.
 - Every retrieval request MUST generate a retrieval log record.
@@ -841,7 +860,7 @@ to the floor, then retains at most `limit` primary candidates in ranked order.
 Pinned nodes, instructions and active tasks do not override an explicit caller
 bound. Packing sees only selected candidates. An empty selection stays empty.
 Cross-scope hints apply the same floor and retain their independent count cap.
-Under opt-in rank fusion the floor compares against semantic cosine similarity
+Under rank fusion, the default, the floor compares against semantic cosine similarity
 (`semantic_relevance`) instead of the rank-based score (Section 7.2).
 Responses expose epistemic/selection exclusions with reasons and scores; the
 operation log records the floor, limit and selection exclusions. Token-budget

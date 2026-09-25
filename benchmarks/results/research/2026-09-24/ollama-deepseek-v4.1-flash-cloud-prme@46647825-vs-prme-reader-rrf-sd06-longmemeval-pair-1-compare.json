@@ -1,0 +1,458 @@
+{
+  "kind": "answer-comparison",
+  "benchmark": "longmemeval",
+  "model": "deepseek-v4.1-flash:cloud",
+  "answer_model": {
+    "provider": "ollama",
+    "api": "chat.completions",
+    "endpoint": "http://127.0.0.1:11434/v1",
+    "model": "deepseek-v4.1-flash:cloud",
+    "temperature": 0,
+    "seed": 20260923,
+    "reasoning_effort": "none",
+    "stream": false,
+    "reader_limit": 8192,
+    "judge_limit": 2048,
+    "attempts": 4,
+    "timeout_seconds": 900,
+    "identity": {
+      "provider": "ollama_cloud",
+      "api_base_url": "http://127.0.0.1:11434",
+      "server_version": "0.34.3",
+      "model": "deepseek-v4.1-flash:cloud",
+      "resolved_model": "deepseek-v4.1-flash:cloud",
+      "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+      "manifest_size_bytes": 326,
+      "remote_host": "https://ollama.com",
+      "remote_model": "deepseek-v4.1-flash",
+      "remote_weights_pinned": false,
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "",
+        "families": null,
+        "parameter_size": "763B",
+        "quantization_level": "FP8",
+        "context_length": 1048576
+      },
+      "capabilities": [
+        "completion",
+        "thinking",
+        "tools",
+        "vision"
+      ]
+    },
+    "failure_policy": "ollama-failure-policy-2026-09-24"
+  },
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "interval_unit": "questions",
+  "interval_note": "LoCoMo intervals resample its conversations, keeping each conversation's questions together, and its interval_95 spans that interval and the question-level one, because a bootstrap over 10 conversations covers less than 95%. LongMemEval-S intervals resample questions, since each question has its own history.",
+  "arms": {
+    "before": "prme@46647825",
+    "after": "prme-reader-rrf-sd06"
+  },
+  "pair": {
+    "id": "1fd214bc07b6475a8ae0cd151c4604b8",
+    "number": 1,
+    "before": "prme@46647825",
+    "after": "prme-reader-rrf-sd06",
+    "sha256": "2b0ffe684cbfe53af0a56dd6c96eaa877537797c5fd5b6d738fc5dfb445fc49c",
+    "order": "Interleaved question by question in registered order: each question's after side, then its before side, from one queue that the registration's concurrent requests share.",
+    "pairs_started": 1,
+    "earlier_pairs": []
+  },
+  "baseline": {
+    "current": "prme@46647825",
+    "complete": [
+      {
+        "arm": "prme",
+        "commit": "97c9402ff08921e1f29d8235841631398551d08c",
+        "finished_at": "2026-09-24T03:13:50.386423+00:00"
+      },
+      {
+        "arm": "prme@46647825",
+        "commit": "466478254658da428bd214c8e39bc6988219a863",
+        "finished_at": "2026-09-24T05:27:14.042424+00:00"
+      }
+    ],
+    "note": "The baselines of the defaults with a complete answer run of their own on this benchmark, in the order those runs finished, from the track's run logs when compare ran. The last is the current baseline. A pair counts only with it as the before side, so a pair can be compared again only while its baseline is current; a repeat of the defaults may pair any two (#127)."
+  },
+  "variant": {
+    "variant_settings": {
+      "packing.context_format": "reader",
+      "packing.multipath_ordering": "score",
+      "packing.session_context_rank_fusion_score_decay": 0.6,
+      "scoring.fusion": "rrf",
+      "scoring.rrf_k": 60
+    },
+    "contexts_sha256": "eb3cbacb8296a6d7abe7497f13ee870de7f00034d6f9432c24b1e3323ffe2d38",
+    "role": "first",
+    "first": {
+      "arm": "prme-reader-rrf-sd06",
+      "baseline": "prme@46647825",
+      "number": 1,
+      "state": "complete",
+      "finished_at": "2026-09-24T20:58:22.773781+00:00",
+      "commit": "88e6090a3bb7edde739a5e634aaae83a96be15bd",
+      "server_version": "0.34.3"
+    },
+    "confirmation": null,
+    "arms": [
+      {
+        "arm": "prme-reader-rrf-sd06",
+        "preparations": [
+          {
+            "at": "2026-09-24T20:42:16.709328+00:00",
+            "commit": "88e6090a3bb7edde739a5e634aaae83a96be15bd"
+          }
+        ],
+        "pairs": [
+          {
+            "baseline": "prme@46647825",
+            "number": 1,
+            "state": "complete",
+            "finished_at": "2026-09-24T20:58:22.773781+00:00",
+            "commit": "88e6090a3bb7edde739a5e634aaae83a96be15bd",
+            "server_version": "0.34.3"
+          }
+        ]
+      }
+    ],
+    "related": [
+      {
+        "variant_settings": {
+          "packing.context_format": "reader",
+          "packing.multipath_ordering": "score",
+          "scoring.fusion": "rrf",
+          "scoring.rrf_k": 60
+        },
+        "arms": [
+          {
+            "arm": "prme-reader-rrf",
+            "preparations": [
+              {
+                "at": null,
+                "commit": "7b36b2b7d0a1fef58078d57de0e4b25c562861db"
+              }
+            ],
+            "pairs": [
+              {
+                "baseline": "prme@46647825",
+                "number": 1,
+                "state": "complete",
+                "finished_at": "2026-09-24T14:08:37.052385+00:00",
+                "commit": "7b36b2b7d0a1fef58078d57de0e4b25c562861db",
+                "server_version": "0.34.3"
+              },
+              {
+                "baseline": "prme@46647825",
+                "number": 2,
+                "state": "complete",
+                "finished_at": "2026-09-24T14:50:27.005294+00:00",
+                "commit": "7b36b2b7d0a1fef58078d57de0e4b25c562861db",
+                "server_version": "0.34.3"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "unknown": [],
+    "dropped": [],
+    "note": "Every arm and pair of this variant: every preparation and pair on the track's run logs when compare ran with the same settings (variant_settings) or the same context text on every question (contexts_sha256), under any arm name and alongside any baseline. The first pair is the first to complete, and the confirmation the next to complete that started after it; the default-change rule in CLAUDE.md reads only those two, compare refuses any later pair, and a failed first pair or confirmation fails the variant. A complete pair that is invalid under the 1% limit, and a pair given up, not published or unfinished, count as neither. dropped lists this variant's pairs that started before this one finished and never completed, other than for a final failure; related lists the other variants that change any of the same settings, each with its own first pair and confirmation; unknown lists the variant pairs that record neither settings nor contexts (#130)."
+  },
+  "aa_check": {
+    "conditions": {
+      "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+      "server_versions": [
+        "0.34.3"
+      ],
+      "failure_policy": {
+        "id": "ollama-failure-policy-2026-09-24",
+        "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083"
+      },
+      "context_budget": 3996,
+      "tokenizer": "cl100k_base"
+    },
+    "record": {
+      "path": "ollama-deepseek-v4.1-flash-cloud-aa-checks.jsonl",
+      "sha256": "69f620e16fb3d30649f40ba1aaa471585bfebf71d6f11fded9d5270f4eaac0af"
+    },
+    "checks": {
+      "locomo": {
+        "check": {
+          "baseline": "prme@46647825",
+          "number": 3,
+          "pair_id": "09ab2ec8689c4eb28c19a5cdb6e19775",
+          "finished_at": "2026-09-24T10:02:21.835117+00:00",
+          "accepted": true,
+          "refused": null,
+          "difference": -0.003896103896103896,
+          "interval_95": [
+            -0.012987012987012988,
+            0.005194805194805195
+          ],
+          "interval_excludes_zero": false,
+          "changed_verdicts": 50,
+          "results": {
+            "after": {
+              "path": "2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-locomo-pair-3-after-result.json",
+              "sha256": "c49c9a75aca8a190825c8e7af0b6bbc877dc05e89c5d0300dcbc2dd2aa5d6694"
+            },
+            "before": {
+              "path": "2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-locomo-pair-3-before-result.json",
+              "sha256": "d7edd02d20cbfbe6b992dc61006c4a2b7a829c996f60476b8b6f7e7163209ea8"
+            }
+          }
+        },
+        "other_pairs": []
+      },
+      "longmemeval": {
+        "check": {
+          "baseline": "prme@46647825",
+          "number": 5,
+          "pair_id": "ed5d99a7a1d545cea5232eb1573e5f92",
+          "finished_at": "2026-09-24T09:44:58.134695+00:00",
+          "accepted": true,
+          "refused": null,
+          "difference": -0.002,
+          "interval_95": [
+            -0.014,
+            0.01
+          ],
+          "interval_excludes_zero": false,
+          "changed_verdicts": 9,
+          "results": {
+            "after": {
+              "path": "2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-longmemeval-pair-5-after-result.json",
+              "sha256": "8006dbfa1421a80e5b32d250ac1e8f54fb9804a3a6c4399c902d9fbfd76c8151"
+            },
+            "before": {
+              "path": "2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-longmemeval-pair-5-before-result.json",
+              "sha256": "1bb89e1a733aada6a288db4f38570b2e341e983530d9c9e7e02b5b682686063a"
+            }
+          }
+        },
+        "other_pairs": []
+      }
+    },
+    "note": "The A/A check this pair relies on, on each benchmark: the first A/A pair in the track's A/A record that was answered under the same model identity, answer settings, failure policy, Ollama server version and context budget as this pair and that compare accepted. The default-change rule in CLAUDE.md reads a variant's pair only under the conditions of an A/A check on both benchmarks, so compare refuses any other, and a later A/A pair never replaces the check. other_pairs lists every other A/A pair recorded under these conditions, accepted or refused, in the order they finished. If any A/A pair under them excludes zero, a variant's gain on that benchmark must also be larger than the largest absolute A/A difference measured so far there (#137)."
+  },
+  "server_versions": [
+    "0.34.3"
+  ],
+  "failure_policy": {
+    "id": "ollama-failure-policy-2026-09-24",
+    "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083",
+    "before": {
+      "reader_retries": 0,
+      "judge_retries": 1,
+      "verdicts_normalized": 0,
+      "truncated": 0,
+      "verdict_unresolved": 0,
+      "unscored": 0,
+      "unscored_limit_percent": 1,
+      "within_limit": true
+    },
+    "after": {
+      "reader_retries": 1,
+      "judge_retries": 1,
+      "verdicts_normalized": 1,
+      "truncated": 0,
+      "verdict_unresolved": 0,
+      "unscored": 0,
+      "unscored_limit_percent": 1,
+      "within_limit": true
+    }
+  },
+  "prepared": {
+    "before": {
+      "commit": "466478254658da428bd214c8e39bc6988219a863",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "overrides": {},
+      "variant_settings": null,
+      "tokenizer": "cl100k_base",
+      "context_rule": "PRME retrieve() with the current defaults, as the product renders it.",
+      "contexts_matching_saved_run": 500
+    },
+    "after": {
+      "commit": "88e6090a3bb7edde739a5e634aaae83a96be15bd",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "overrides": {
+        "packing": {
+          "context_format": "reader",
+          "multipath_ordering": "score",
+          "session_context_rank_fusion_score_decay": 0.6
+        },
+        "scoring": {
+          "fusion": "rrf"
+        }
+      },
+      "variant_settings": {
+        "packing.context_format": "reader",
+        "packing.multipath_ordering": "score",
+        "packing.session_context_rank_fusion_score_decay": 0.6,
+        "scoring.fusion": "rrf",
+        "scoring.rrf_k": 60
+      },
+      "tokenizer": "cl100k_base",
+      "context_rule": "PRME retrieve() with the current defaults and {\"packing\": {\"context_format\": \"reader\", \"multipath_ordering\": \"score\", \"session_context_rank_fusion_score_decay\": 0.6}, \"scoring\": {\"fusion\": \"rrf\"}}, as the product renders it.",
+      "contexts_matching_saved_run": 0
+    }
+  },
+  "warnings": [
+    "Other variants that change some of the same settings have complete pairs: pair 1 of prme@46647825 and prme-reader-rrf, pair 2 of prme@46647825 and prme-reader-rrf. Each is a variant of its own, with its own first pair and confirmation (#130)"
+  ],
+  "contexts": {
+    "questions": 500,
+    "differing": 500,
+    "shown_by": "text hashes",
+    "changed_by_other_code": 0,
+    "note": "differing counts the questions the two sides asked on different context text. shown_by names what shows it: each row's context_text_sha256 (text hashes), or, for results published before rows carried it (#125), both results reading one preparation or both reproducing every saved 2026-09-23 context (saved run). Both are None when nothing shows it. A variant prepared since #139 also replayed the defaults at its own commit, and changed_by_other_code counts the questions on which those defaults read other text than the before side: what changed between the two preparations, such as code on main or on the variant's branch. compare refuses a variant's pair with any, so at 0 every differing question differs by the variant's settings alone. It is None for any other after side, when the before side's rows carry no text hashes, and for the variant pairs that started before #139, which compare accepts with a warning."
+  },
+  "accuracy": {
+    "queries": 500,
+    "before": 0.862,
+    "after": 0.866,
+    "delta": 0.004,
+    "interval_95": [
+      -0.022,
+      0.03
+    ],
+    "wins": 23,
+    "losses": 21,
+    "ties": 456
+  },
+  "categories": {
+    "knowledge-update": {
+      "queries": 78,
+      "before": 0.9358974358974359,
+      "after": 0.9358974358974359,
+      "delta": 0.0,
+      "interval_95": [
+        -0.05128205128205128,
+        0.05128205128205128
+      ],
+      "wins": 2,
+      "losses": 2,
+      "ties": 74
+    },
+    "multi-session": {
+      "queries": 133,
+      "before": 0.7443609022556391,
+      "after": 0.7142857142857143,
+      "delta": -0.03007518796992481,
+      "interval_95": [
+        -0.09022556390977443,
+        0.022556390977443608
+      ],
+      "wins": 6,
+      "losses": 10,
+      "ties": 117
+    },
+    "single-session-assistant": {
+      "queries": 56,
+      "before": 0.9285714285714286,
+      "after": 0.9285714285714286,
+      "delta": 0.0,
+      "interval_95": [
+        -0.08928571428571429,
+        0.07142857142857142
+      ],
+      "wins": 3,
+      "losses": 3,
+      "ties": 50
+    },
+    "single-session-preference": {
+      "queries": 30,
+      "before": 0.8666666666666667,
+      "after": 0.9666666666666667,
+      "delta": 0.1,
+      "interval_95": [
+        0.0,
+        0.23333333333333334
+      ],
+      "wins": 3,
+      "losses": 0,
+      "ties": 27
+    },
+    "single-session-user": {
+      "queries": 70,
+      "before": 0.9857142857142858,
+      "after": 0.9857142857142858,
+      "delta": 0.0,
+      "interval_95": [
+        -0.04285714285714286,
+        0.04285714285714286
+      ],
+      "wins": 1,
+      "losses": 1,
+      "ties": 68
+    },
+    "temporal-reasoning": {
+      "queries": 133,
+      "before": 0.8421052631578947,
+      "after": 0.8646616541353384,
+      "delta": 0.022556390977443608,
+      "interval_95": [
+        -0.03007518796992481,
+        0.07518796992481203
+      ],
+      "wins": 8,
+      "losses": 5,
+      "ties": 120
+    }
+  },
+  "gained": [
+    "75499fd8",
+    "6d550036",
+    "gpt4_f2262a51",
+    "d23cf73b",
+    "gpt4_372c3eed",
+    "38146c39",
+    "d6233ab6",
+    "1c0ddc50",
+    "27016adc",
+    "8e91e7d9",
+    "0db4c65d",
+    "gpt4_59149c78",
+    "9a707b82",
+    "0bc8ad93",
+    "gpt4_65aabe59",
+    "gpt4_2c50253f",
+    "gpt4_2f56ae70",
+    "gpt4_fe651585",
+    "618f13b2",
+    "dad224aa",
+    "8752c811",
+    "e8a79c70",
+    "eaca4986"
+  ],
+  "lost": [
+    "51a45a95",
+    "e831120c",
+    "gpt4_a56e767c",
+    "46a3abf7",
+    "28dc39ac",
+    "gpt4_2ba83207",
+    "eeda8a6d",
+    "9d25d4e0",
+    "81507db6",
+    "88432d0a_abs",
+    "51c32626",
+    "b46e15ed",
+    "gpt4_18c2b244",
+    "gpt4_d6585ce9",
+    "a3838d2b",
+    "gpt4_93159ced_abs",
+    "b6019101",
+    "a2f3aa27",
+    "1903aded",
+    "6222b6eb",
+    "561fabcd"
+  ],
+  "repeat": null
+}

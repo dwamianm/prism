@@ -15,6 +15,11 @@ user = test_durable_ingestion.user
 
 @pytest.mark.parametrize("method,role", [("store", "tool"), ("ingest_fast", "TOOL"), ("ingest", "tool")])
 async def test_tool_origin_survives_recovery_and_retrieval(config, user, monkeypatch, method, role):
+    # The auditable format prints each record's source type; the reader format leaves it to the
+    # bundle sections and the receipt.
+    config = config.model_copy(update={
+        "packing": config.packing.model_copy(update={"context_format": "auditable"}),
+    })
     source = "Cobalt telescope recorded 42 observations."
     async with MemoryEngine.open(config) as engine:
         if method == "ingest":

@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MemoryBundle.sections` and the retrieval receipt. `context_citations=True`
   adds `[m3]` references and fills `context_references`, which MCP now returns
   with `include_context`. Reader receipts use schema version 14; versions 1 to
-  13 keep their canonical bytes. The default remains `auditable`.
+  13 keep their canonical bytes. It is now the default (see Changed).
 - Add opt-in reciprocal rank fusion for retrieval ranking
   (`ScoringWeights.fusion="rrf"`, or `PRME_SCORING__FUSION=rrf`, with
   `rrf_k`, default 60). Each candidate is ranked within the pool on the semantic
@@ -44,10 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   retrieval (HTTP 422); weighted ranking profiles are inapplicable with reason
   `rank_fusion_scoring`; learning evaluation skips rank-fused receipts
   (`rank_fusion_receipt_records`); and the `feedback_apply` job reports
-  `not_applicable` and keeps its signals. The default remains the weighted sum,
-  whose serialized settings, version ID and receipts are unchanged. As with
-  earlier receipt versions, a release without version 16 support cannot read
-  rank-fusion receipts.
+  `not_applicable` and keeps its signals. `PRMEConfig` now uses it by default
+  (see Changed); `ScoringWeights()` remains the weighted sum, whose serialized
+  settings, version ID and receipts are unchanged. As with earlier receipt
+  versions, a release without version 16 support cannot read rank-fusion
+  receipts.
 
 - Add an opt-in session decay for rank fusion
   (`PackingConfig.session_context_rank_fusion_score_decay`, or
@@ -56,8 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   result's adjacent turns outrank every result from about twelfth place down,
   and they crowded LongMemEval-S multi-session evidence out of the context.
   When set, it replaces `session_context_score_decay` for results scored by
-  rank fusion; the offline evidence gate favored 0.6. Unset (the default),
-  nothing changes. Receipts that record it use schema version 17.
+  rank fusion; the offline evidence gate favored 0.6, which is now the default
+  (see Changed). None restores the previous behavior. Receipts that record it
+  use schema version 17.
 
 - Add a fail-open for a rank fusion `min_score` floor, which used to empty
   every retrieval while vector search was failing or had detected an embedding
@@ -81,8 +83,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   relative to the pool's largest value, where recency is the weighted
   formula's current-state recency (with lambda at least 0.05). With
   `rrf_tie_break="event_time"`, equal fused scores are ordered newest first
-  instead of by path count and node ID. Both apply only under rank fusion, and
-  unset (the default), nothing changes. A boost of 0.25 with the tie-break
+  instead of by path count and node ID. Both apply only under rank fusion.
+  `PRMEConfig` now sets a boost of 0.25 and the tie-break by default (see
+  Changed); `ScoringWeights()` leaves both unset, and then nothing changes. A
+  boost of 0.25 with the tie-break
   passed every simulation with the reader format, score order and a 0.6 rank
   fusion session decay, and changed no benchmark's share of questions with all
   evidence packed significantly on the offline evidence gate. Receipts that
@@ -135,6 +139,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Retrieval defaults.** `PRMEConfig()` now retrieves with rank fusion
+  (`scoring.fusion="rrf"`, `rrf_k=60`) with a current-state recency boost of
+  0.25 (`scoring.rrf_recency_boost`) and an event-time tie-break
+  (`scoring.rrf_tie_break="event_time"`), the reader context format
+  (`packing.context_format="reader"`, previously `auditable`), score ordering
+  (`packing.multipath_ordering="score"`, previously `balanced`) and a rank
+  fusion session decay of 0.6
+  (`packing.session_context_rank_fusion_score_decay`, previously unset). The
+  context budget and session expansion are unchanged. The combination (the
+  DeepSeek-track variant `prme-reader-rrf-sd06-rec`) passed the epic #77
+  default-change test twice on the DeepSeek answer track at a 3,996-token
+  context: LoCoMo went from 65.7% to 80.9% and from 65.8% to 81.6% (+15.2 and
+  +15.7 points, 95% intervals +13.0 to +17.4 and +13.5 to +17.9), and
+  LongMemEval-S went from 85.8% to 86.8% and from 86.4% to 86.6% (+1.0 and
+  +0.2 points, intervals -1.6 to +3.6 and -2.6 to +3.0). See `BENCHMARKS.md`.
+  What this changes for existing installs:
+  - Contexts are one plain line per record instead of JSON objects, so more
+    records fit in the same budget. The lines carry no node ID or source type.
+    Callers that parse the context text as JSON must set
+    `PRME_PACKING__CONTEXT_FORMAT=auditable`.
+  - Answerability checks and `verify_bundle()` raise `ValueError` for a reader
+    bundle without citations. Set `PRME_PACKING__CONTEXT_CITATIONS=true` or use
+    the `auditable` format for those callers.
+  - Rank fusion ignores the additive scoring weights, graph proximity,
+    salience and confidence, and uses recency only through the current-state
+    recency boost, so salience decay, reinforcement and confidence changes no
+    longer move a result's rank. Candidates found only through the graph or a
+    pin score 0 (pins are still packed first), and `min_score` is compared
+    with the semantic cosine instead of the composite score. Non-neutral
+    request `ranking_multipliers` are rejected (HTTP 422, MCP error), learned
+    ranking profiles are not applied (`rank_fusion_scoring`), and
+    `feedback_apply` reports `not_applicable`. Set
+    `PRME_SCORING__FUSION=weighted` to keep the weighted formula, including
+    any tuned `PRME_SCORING__W_*` weights.
+  - The new defaults live in `PRMEConfig` (`default_scoring_weights()` and
+    `default_packing_config()`), and `PRME_SCORING__*` and `PRME_PACKING__*`
+    environment variables, `.env` entries and secrets that set only some values
+    keep them. Setting `PRME_SCORING__FUSION=weighted` also drops the rank
+    fusion recency boost and tie-break, which weighted scoring cannot use.
+    `ScoringWeights()` and `PackingConfig()` built in code keep their field
+    defaults (the weighted formula; `auditable`, `balanced` and no rank fusion
+    session decay), because stored receipts and configurations omit some of
+    those values and must keep their meaning; code that builds them from
+    scratch gets the previous behavior. Copy `config.packing` or
+    `config.scoring` with `model_copy(update=...)` to change one setting and
+    keep the new defaults.
+  - Default retrievals write receipt schema version 19. Stored receipts keep
+    their bytes and replay unchanged.
+  - To restore the previous defaults, set `PRME_SCORING__FUSION=weighted`,
+    `PRME_PACKING__CONTEXT_FORMAT=auditable` and
+    `PRME_PACKING__MULTIPATH_ORDERING=balanced`. The recency boost and
+    tie-break are then dropped, and weighted scoring never applies the 0.6
+    session decay (its receipts omit it), so retrieval, contexts and receipts
+    are those of the previous defaults. In code, pass
+    `scoring=ScoringWeights()` and `packing=PackingConfig()` to `PRMEConfig`.
 - Simulation checkpoints can require memory text in the context the reader
   gets (`SimCheckpoint.context_keywords`, reported as
   `CheckpointResult.context_missing`). Four checks that tested the weighted
