@@ -84,10 +84,30 @@ state replay is not currently available.
 | LongMemEval-S | 453 / 500 | **90.6%** |
 | LoCoMo, non-adversarial questions | 1,250 / 1,540 | **81.2%** |
 
+### LongMemEval-S by question type
+
+| Question type | Correct answers | Answer accuracy |
+|---|---:|---:|
+| Single-session user | 69 / 70 | 98.6% |
+| Single-session assistant | 54 / 56 | 96.4% |
+| Knowledge update | 71 / 78 | 91.0% |
+| Temporal reasoning | 120 / 133 | 90.2% |
+| Single-session preference | 26 / 30 | 86.7% |
+| Multi-session | 113 / 133 | 85.0% |
+
+### LoCoMo by question type
+
+| Question type | Correct answers | Answer accuracy |
+|---|---:|---:|
+| Single-hop | 756 / 841 | 89.9% |
+| Temporal | 256 / 321 | 79.8% |
+| Multi-hop | 182 / 282 | 64.5% |
+| Open-domain | 56 / 96 | 58.3% |
+
 Measured on September 25, 2026 with the current retrieval defaults and a
 3,996-token memory-context budget per question. See
-[BENCHMARKS.md](BENCHMARKS.md) for the method, category scores, earlier
-results and reproducibility artifacts.
+[BENCHMARKS.md](BENCHMARKS.md) for the method, earlier results and
+reproducibility artifacts.
 
 ## Installation
 
