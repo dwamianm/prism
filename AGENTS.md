@@ -363,8 +363,12 @@ The post-hoc audit found 94 LongMemEval and 989 LoCoMo returned annotation
 instances omitted during packing. Prioritize answer-blind complementary evidence
 selection, while preserving the negative evidence for blanket episode routing
 and broad session penalties. Retention alone does not prove an answer gain.
-Both cohorts are examined development data; require new untouched confirmation
-and relevant backend/regression checks before any default change.
+Both cohorts are examined development data; publication claims still need new
+untouched confirmation and relevant backend/regression checks. Retrieval default
+changes for epic #77 follow the DeepSeek default-change rule in `CLAUDE.md`. On
+that track the baseline of the current defaults, `prme@d811e3ed`, scores
+LongMemEval-S 453/500 (90.6%) and LoCoMo 1,250/1,540 (81.2%); it is not
+comparable with the GPT-5.4 numbers.
 
 ## Configuration Surface
 
@@ -374,7 +378,7 @@ putting WHERE filters on an HNSW query can hide eligible memories. `False` allow
 approximate search and its recall tradeoff. New receipts report the configured
 mode in `execution.features.vector_search.exact`; old receipt bytes remain unchanged.
 
-Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retrieval/config.py` (loaded from `PRME_`-prefixed env vars, `.env`, or direct args). The surface is large (roughly 100 fields across both files). Several parameter defaults are explicitly tagged `[HYPOTHESIS]` in their descriptions — these are reasoned but not yet benchmark-validated and may change. Treat `[HYPOTHESIS]` knobs as provisional and prefer not to depend on their exact values. Notable defaults to be aware of: `enable_store_supersedence=False`, `enable_surprise_gating=False`, `enable_qa_pairing=False`, and `enable_reranker=False` (the cross-encoder reranker has not improved benchmark scores in practice). QA pairing is an in-process, unreplayed heuristic without registered quality evidence; do not enable it by default until it has source-complete provenance, atomic publication, restart recovery and matched evaluation.
+Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retrieval/config.py` (loaded from `PRME_`-prefixed env vars, `.env`, or direct args). The surface is large (roughly 100 fields across both files). Several parameter defaults are explicitly tagged `[HYPOTHESIS]` in their descriptions; these are reasoned but not yet benchmark-validated and may change. Treat `[HYPOTHESIS]` knobs as provisional and prefer not to depend on their exact values. Notable defaults to be aware of: the rank fusion, reader format, balanced ordering and 0.6 rank fusion session decay retrieval defaults described above, `enable_store_supersedence=False`, `enable_surprise_gating=False`, `enable_qa_pairing=False`, and `enable_reranker=False` (on the offline evidence gate, no cross-encoder rank-order variant beat rank fusion alone on both benchmarks at both 4K and 8K, so the reranker stays off; issue #88). QA pairing is an in-process, unreplayed heuristic without registered quality evidence; do not enable it by default until it has source-complete provenance, atomic publication, restart recovery and matched evaluation.
 
 Explicit `reranker_policy="score_envelope"` and `"anchored_score_envelope"`
 require `enable_reranker=True`; `"legacy"` remains the default policy. They keep
