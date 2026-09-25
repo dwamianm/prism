@@ -1220,8 +1220,10 @@ async def test_gate_times_the_reranker_inside_retrieval_and_replays_its_receipts
 
     def predict(self, pairs):
         scored.append(len(pairs))
-        # Prefers later turns, the reverse of the fused order on this pack.
-        return [min(0.99, 0.1 + index / 100) for index in range(len(pairs))]
+        # Prefers D1:1, which rank fusion puts below D1:3. Both are the multi-path
+        # tier's only records, so the packed order changes by score alone. Ranking by
+        # position instead could leave tied scores, broken by random node IDs.
+        return [0.9 if "sunset" in text else 0.5 if "horse" in text else 0.1 for _, text in pairs]
 
     monkeypatch.setattr(CrossEncoderReranker, "_predict_sync", predict)
     [fused] = await replay_gate([gate_case(pack, identity)], scratch=scratch)
