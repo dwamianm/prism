@@ -583,6 +583,28 @@ def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens:
     }
 
 
+def _query_scoring_observations(receipt) -> dict:
+    """What a receipt shows about the question's temporal and current-state scoring (issue #85).
+
+    ``temporal_affinity_varies``: the returned candidates do not all share one
+    temporal affinity. Under rank fusion that is when temporal scoring can
+    reorder them, and only candidates on a channel count, as only they set the
+    pool-relative factor. ``current_state_path``: rank fusion's current-state
+    recency boost applied, which it records on every candidate. None when the
+    receipt cannot show it: weighted scoring, no recency boost, or no
+    candidates.
+    """
+    provenance = list((receipt.score_provenance or {}).values())
+    ranked = [item for item in provenance if item.rank_fusion is None
+              or item.rank_fusion.semantic_rank is not None or item.rank_fusion.lexical_rank is not None]
+    current_state_path = None
+    if provenance and receipt.scoring.fusion == "rrf" and receipt.scoring.rrf_recency_boost is not None:
+        current_state_path = any(item.rank_fusion is not None and item.rank_fusion.recency_boost_factor is not None
+                                 for item in provenance)
+    return {"temporal_affinity_varies": len({item.trace.temporal_affinity for item in ranked}) > 1,
+            "current_state_path": current_state_path}
+
+
 async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_dir: Path | None) -> dict:
     started = time.perf_counter()
     response = await engine.retrieve(case.question, user_id=case.user_id, reference_time=case.reference_time)
@@ -615,10 +637,12 @@ async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_d
         records=len(packed), records_without_text=sum(not has_text[candidate.node.id] for candidate in packed),
         representations=dict(Counter(candidate.representation.value for candidate in packed)),
         candidates=len(response.results), seconds=seconds)
+    row["query_scoring"] = _query_scoring_observations(receipt)
     if capture_dir is not None:
         row["capture_sha256"] = _write_capture(capture_dir, case, context,
                                                {"receipt": receipt.model_dump(mode="json")})
     return row
+
 
 
 # Plain RAG reference --------------------------------------------------------
@@ -937,6 +961,37 @@ _COMPARED_INPUTS = {
 }
 
 
+def _query_scoring(old: dict, new: dict, keys: list) -> dict | None:
+    """Temporal affinity and current-state changes between two PRME replays (issue #85).
+
+    None when either side has a question without observations: a plain
+    baseline, or a report written before they were recorded. A question whose
+    current-state path either side cannot show is counted as unknown and is in
+    neither list.
+    """
+    if any(rows[key].get("query_scoring") is None for rows in (old, new) for key in keys):
+        return None
+    categories = sorted({old[key]["category"] for key in keys})
+
+    def path(rows: dict, key) -> bool | None:
+        return rows[key]["query_scoring"]["current_state_path"]
+
+    def moved(was: bool, now: bool) -> list[str]:
+        return [key[1] for key in keys if path(old, key) is was and path(new, key) is now]
+
+    return {
+        "temporal_affinity_varies_by_category": {
+            "questions": {category: sum(old[key]["category"] == category for key in keys) for category in categories},
+            **{side: {category: sum(rows[key]["query_scoring"]["temporal_affinity_varies"]
+                                    for key in keys if rows[key]["category"] == category)
+                      for category in categories}
+               for side, rows in (("before", old), ("after", new))}},
+        "entered_current_state_path": moved(False, True),
+        "left_current_state_path": moved(True, False),
+        "current_state_path_unknown": sum(path(old, key) is None or path(new, key) is None for key in keys),
+    }
+
+
 def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
     """Pair two gate reports question by question; their questions and inputs must be identical."""
     old, new = _gate_rows(before, "before"), _gate_rows(after, "after")
@@ -974,6 +1029,7 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
                                for field in ("questions", "contexts_matching_saved", "records_per_context",
                                              "memory_text_share", "records_without_text")}
                         for side, report in (("before", before), ("after", after))},
+            "query_scoring": _query_scoring(old, new, keys),
         }
     return {
         "kind": f"{GATE_KIND}-comparison", "complete": True, "bootstrap_samples": samples, "bootstrap_seed": 42,
@@ -1061,10 +1117,50 @@ def gate_markdown(report: dict) -> str:
                 f"| {_pct(summary['projected_accuracy'])} |")
         mismatches = bench["context_mismatches"]
         if mismatches and not plain:
-            shown = ", ".join(mismatches[:20]) + (", ..." if len(mismatches) > 20 else "")
+            shown = _listed(mismatches)
             lines += ["", f"Contexts that differ from the saved run: {len(mismatches)} ({shown}). "
                       "The JSON report lists every one."]
     return "\n".join(lines + _projection_note(report["projection"]))
+
+
+def _listed(ids: list[str]) -> str:
+    """Up to 20 question IDs, for a Markdown summary whose JSON report lists every one."""
+    return ", ".join(ids[:20]) + (", ..." if len(ids) > 20 else "")
+
+
+def _query_scoring_markdown(benchmarks: dict) -> list[str]:
+    scored = {name: bench.get("query_scoring") for name, bench in benchmarks.items()}
+    missing = [name for name, scoring in scored.items() if scoring is None]
+    lines = []
+    if missing:
+        lines += ["", f"Temporal affinity and the current-state path are not shown for {', '.join(missing)}: "
+                  "a report is a plain baseline or was written before they were recorded."]
+    if len(missing) == len(scored):
+        return lines
+    lines += ["", "Questions whose candidates do not all share one temporal affinity, so that temporal scoring "
+              "can reorder them under rank fusion:", "",
+              "| Benchmark | Category | Questions | Before | After |", "|---|---|---:|---:|---:|"]
+    for name, scoring in scored.items():
+        if scoring is not None:
+            varies = scoring["temporal_affinity_varies_by_category"]
+            lines += [f"| {name} | {category} | {count} | {varies['before'][category]} | {varies['after'][category]} |"
+                      for category, count in varies["questions"].items()]
+    lines.append("")
+    for name, scoring in scored.items():
+        if scoring is None:
+            continue
+        for label, moved in (("entered", scoring["entered_current_state_path"]),
+                             ("left", scoring["left_current_state_path"])):
+            lines.append(f"- {name} questions that {label} the current-state path: {len(moved)}"
+                         + (f" ({_listed(moved)})." if moved else "."))
+        if scoring["current_state_path_unknown"]:
+            lines.append(f"- {name} questions whose current-state path these receipts cannot show (weighted "
+                         f"scoring or no recency boost): {scoring['current_state_path_unknown']}. They are in "
+                         "neither list.")
+    if any(scoring and (scoring["entered_current_state_path"] or scoring["left_current_state_path"])
+           for scoring in scored.values()):
+        lines.append("The JSON report lists every question.")
+    return lines
 
 
 def comparison_markdown(result: dict) -> str:
@@ -1095,6 +1191,7 @@ def comparison_markdown(result: dict) -> str:
                      f"| {old['records_per_context']:.1f} to {new['records_per_context']:.1f} "
                      f"| {_pct(old['memory_text_share'])} to {_pct(new['memory_text_share'])} "
                      f"| {old['records_without_text']} to {new['records_without_text']} |")
+    lines += _query_scoring_markdown(result["benchmarks"])
     lines += ["", result["interval_note"]]
     return "\n".join(lines + _projection_note(result["projection"]))
 

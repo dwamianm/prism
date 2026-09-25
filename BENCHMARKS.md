@@ -199,6 +199,17 @@ datasets, archive, tokenizer or projection constants differ. Its intervals
 resample questions, and LoCoMo's questions come from only 10 conversations, so
 treat them as narrow.
 
+Each PRME replay also records what the question's retrieval receipt shows
+about temporal and current-state scoring (issue #85), and the comparison of two
+PRME runs reports it. Per category, it counts the questions whose returned
+candidates do not all share one temporal affinity: under rank fusion these are
+the only questions where temporal scoring can change the order. It lists the
+questions that enter or leave the current-state path, which the receipt shows
+under rank fusion with its recency boost set, as in the defaults, and counts
+the questions whose path the receipts cannot show (weighted scoring, or no
+recency boost). Plain baselines and reports written before this change carry
+no such observations, and the comparison says so.
+
 With the defaults before 2026-09-25 (`--set 'scoring.fusion="weighted"'
 --set 'packing.context_format="auditable"' --set
 'packing.multipath_ordering="balanced"'`) the gate reproduces every saved

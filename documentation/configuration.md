@@ -131,6 +131,7 @@ decay), which stored receipts and configurations rely on.
 | `PRME_ENABLE_STORE_SUPERSEDENCE` | `false` | Auto-detect supersedence on store |
 | `PRME_REINFORCE_SIMILARITY_THRESHOLD` | `None` | Auto-reinforce similar existing nodes |
 | `PRME_ENABLE_SURPRISE_GATING` | `false` | Novelty-based salience adjustment |
+| `PRME_QUERY_INTENT_ORDER` | `entity_first` | `temporal_first` treats a question with temporal wording (when, last, before, since and similar) or a date in it as temporal even when it names a person, place or organization, so it gets temporal affinity scoring. A present-tense question that only its wording put on the current-state path ("Who is Caroline dating since the breakup?") leaves it unless it says current, now, latest or similar, and the temporal context guidance is added where the question's wording does not already select it. A lone capitalized month or weekday word that is part of a name ("Who is June dating?") is read as the name, not a date. `entity_first` checks the entity patterns first, so a temporal question that names someone gets no temporal affinity. Experimental (RFC-0005 Section 3); changing it makes a learned ranking profile built under the other order inapplicable |
 
 ## Encryption
 

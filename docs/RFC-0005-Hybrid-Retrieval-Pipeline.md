@@ -92,6 +92,33 @@ QueryAnalysis {
 
 Intent classification is `[BEST-EFFORT]`. Implementations SHOULD treat unknown or low-confidence intent as `CONTEXTUAL`.
 
+The implementation classifies with patterns and takes the first match: entity
+lookup (the question starts with who, what is or what are, or has a capitalized
+word after its first word), temporal (temporal wording such as when, last,
+before, after or since, or a date parsed from the question), relational,
+factual, and semantic otherwise. Only the temporal intent is read downstream.
+It turns on temporal affinity (Section 7). It keeps the question off the
+current-state path unless the question has explicit current-state wording,
+which matters only for present-tense questions ("Who is Caroline dating since
+the breakup?"); questions with when did, how long, before or after are off that
+path anyway. It selects the temporal context guidance, which keywords such as
+when, before, after and last also select. Entity names are extracted whatever
+the intent. Because the entity checks come first, a temporal question that
+names a person, place or organization is an entity lookup and gets no temporal
+affinity.
+
+`PRMEConfig.query_intent_order="temporal_first"` (`PRME_QUERY_INTENT_ORDER`,
+default `entity_first`) checks temporal intent before both entity checks (issue
+#85). Under this order a date match that is a single capitalized word and part
+of an extracted name, such as "June" in "Who is June dating?" or "Sun" in "Sun
+Microsystems", is read as the name: it is dropped from the temporal signals and
+the resolved window. A date after a preposition or with a number ("in June",
+"May 2023") is kept. Receipts record the order in `execution.parameters` as
+`query_intent_order` and in `execution.features` as
+`query_intent_classification`, only when it is `temporal_first`, so receipts
+written with the default keep their bytes and a learned ranking profile built
+under the other order does not apply.
+
 **TemporalType values:** `ABSOLUTE` (specific date), `RELATIVE` (e.g., "last week"), `DURATION` (e.g., "over the past month"), `RECURRING` (e.g., "every Tuesday").
 
 Query analysis is NOT a blocking LLM call by default. Implementations SHOULD use a lightweight classification model or rule-based extraction for this stage. A full LLM call is permitted only if the retrieval budget allows it.

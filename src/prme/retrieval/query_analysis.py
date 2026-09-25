@@ -12,6 +12,7 @@ import asyncio
 import re
 from collections.abc import Sequence
 from datetime import datetime, timezone
+from typing import Literal, get_args
 from uuid import uuid4
 
 from prme._temporal import DATEPARSER_LOCK as _DATEPARSER_LOCK
@@ -21,6 +22,10 @@ from prme.types import QueryIntent, RetrievalMode
 logger = logging.getLogger(__name__)
 
 # --- Intent classification patterns ---
+
+# Whether the entity checks or the temporal check runs first (issue #85).
+QueryIntentOrder = Literal["entity_first", "temporal_first"]
+QUERY_INTENT_ORDERS = frozenset(get_args(QueryIntentOrder))
 
 # Keywords triggering ENTITY_LOOKUP intent.
 _ENTITY_PREFIXES = re.compile(
@@ -129,11 +134,24 @@ def _has_temporal_cue(query: str) -> bool:
     )
 
 
-def _classify_intent(query: str, has_temporal_signals: bool) -> QueryIntent:
+def _classify_intent(
+    query: str,
+    has_temporal_signals: bool,
+    *,
+    temporal_first: bool = False,
+) -> QueryIntent:
     """Classify query intent using keyword/pattern matching.
 
-    Returns the FIRST matching pattern, with SEMANTIC as fallback.
+    Returns the FIRST matching pattern, with SEMANTIC as fallback. By default
+    the two entity checks come first, so a temporal question that names a
+    person, place or organization is an ENTITY_LOOKUP. ``temporal_first``
+    checks temporal wording and parsed dates before them (issue #85). Only
+    TEMPORAL is read downstream; entity names are extracted separately.
     """
+    temporal = bool(_TEMPORAL_KEYWORDS.search(query)) or has_temporal_signals
+    if temporal_first and temporal:
+        return QueryIntent.TEMPORAL
+
     if _ENTITY_PREFIXES.search(query):
         return QueryIntent.ENTITY_LOOKUP
 
@@ -141,7 +159,7 @@ def _classify_intent(query: str, has_temporal_signals: bool) -> QueryIntent:
     if _PROPER_NOUN_RE.search(query):
         return QueryIntent.ENTITY_LOOKUP
 
-    if _TEMPORAL_KEYWORDS.search(query) or has_temporal_signals:
+    if temporal:
         return QueryIntent.TEMPORAL
 
     if _RELATIONAL_KEYWORDS.search(query):
@@ -151,6 +169,25 @@ def _classify_intent(query: str, has_temporal_signals: bool) -> QueryIntent:
         return QueryIntent.FACTUAL
 
     return QueryIntent.SEMANTIC
+
+
+def _is_name_signal(signal: dict, entities: list[str]) -> bool:
+    """Whether a date match is a lone month or weekday word used as a name.
+
+    "Who is June dating?" and "What does Sun Microsystems make?" give
+    dateparser a single capitalized word that is also part of an extracted
+    name. A date after a preposition or with a number keeps them in the match
+    ("in June", "on Sunday", "May 2023"), so it is not read as a name. A bare
+    capitalized month or weekday word is read as a name, as the entity-first
+    order reads it.
+    """
+    text = signal["value"].strip()
+    return (
+        " " not in text
+        and not any(c.isdigit() for c in text)
+        and text[:1].isupper()
+        and any(text in entity.split() for entity in entities)
+    )
 
 
 def _extract_entities(query: str) -> list[str]:
@@ -259,6 +296,7 @@ async def analyze_query(
     reference_time: datetime | None = None,
     retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
     languages: Sequence[str] | None = DEFAULT_TEMPORAL_LANGUAGES,
+    intent_order: QueryIntentOrder = "entity_first",
 ) -> QueryAnalysis:
     """Analyze a query into intent, entities, and temporal signals.
 
@@ -274,11 +312,22 @@ async def analyze_query(
         retrieval_mode: Retrieval mode controlling epistemic filtering.
         languages: Languages for temporal parsing. None restores dateparser's
             own language detection at its original cost.
+        intent_order: ``"temporal_first"`` classifies a question with
+            temporal wording or a parsed date as TEMPORAL even when it names
+            an entity (``PRMEConfig.query_intent_order``, issue #85). It also
+            drops date matches that are a name, such as "June" in "Who is
+            June dating?", from the signals and the resolved window.
 
     Returns:
         QueryAnalysis with classified intent, extracted entities,
         temporal signals, and a unique request_id.
+
+    Raises:
+        ValueError: An unknown ``intent_order``, or a ``reference_time``
+            without a timezone.
     """
+    if intent_order not in QUERY_INTENT_ORDERS:
+        raise ValueError(f"Unknown query intent order: {intent_order!r}")
     # Extract temporal signals from query text. dateparser is CPU-bound and
     # can take milliseconds on a long query, so it runs off the event loop
     # (issue #61) -- otherwise concurrent retrievals serialize behind it.
@@ -289,13 +338,18 @@ async def analyze_query(
     temporal_signals = await asyncio.to_thread(
         _extract_temporal_signals, query, languages, reference_time
     )
-    has_temporal_signals = len(temporal_signals) > 0
-
-    # Classify intent (temporal detection feeds into intent classification).
-    intent = _classify_intent(query, has_temporal_signals)
 
     # Extract entity names.
     entities = _extract_entities(query)
+
+    temporal_first = intent_order == "temporal_first"
+    if temporal_first:
+        # The entity-first order reads these as names before it looks at dates.
+        temporal_signals = [s for s in temporal_signals if not _is_name_signal(s, entities)]
+    has_temporal_signals = len(temporal_signals) > 0
+
+    # Classify intent (temporal detection feeds into intent classification).
+    intent = _classify_intent(query, has_temporal_signals, temporal_first=temporal_first)
 
     # Resolve time_from / time_to: explicit overrides take priority.
     resolved_time_from = time_from
