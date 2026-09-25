@@ -3711,41 +3711,57 @@ async def _answer(label: str, benchmark: str, sides: list[_Side], questions: lis
     With ``amended`` (the Ollama track), each question is asked and judged
     under ``OLLAMA_RETRY_POLICY``; otherwise under the registered policy.
     """
-    jobs = iter([(side, question) for question in questions for side in sides
-                 if _status(side.answers / "execution" / question["question_id"]) == "pending"])
+    async def answer(job: tuple[_Side, dict], attempt: Path, semaphore: asyncio.Semaphore) -> dict:
+        side, question = job
+        entry = side.entries[question["question_id"]]
+        context = _context(side.prepared, entry)
+        if amended:
+            scored = await _ask_amended(ask, client, semaphore, benchmark, question, context, attempt)
+        else:
+            reader = await ask(client, semaphore, prompt=study.reader_prompt(benchmark, question, context),
+                               limit=READER_LIMIT, path=attempt / READER_CALLS[0])
+            judged = await ask(client, semaphore, prompt=study.judge_prompt(benchmark, question, reader["text"]),
+                               limit=JUDGE_LIMIT, path=attempt / JUDGE_CALLS[0])
+            scored = _registered_scored(attempt, judged)
+        return _row(question, entry, scored)
+
+    await drain_pending(label, [(side.answers / "execution" / question["question_id"], (side, question))
+                                for question in questions for side in sides], concurrency, answer, ledger)
+
+
+async def drain_pending(label: str, jobs: list[tuple[Path, object]], concurrency: int, handle,
+                        ledger: Ledger | None, *, done: str = "answered", every: int = 25) -> None:
+    """Run ``handle`` for each job whose question folder is still pending, as a new attempt, under the retry rules.
+
+    Each job is the question's folder and what ``handle(job, attempt,
+    semaphore)`` needs; it returns the row written as the attempt's
+    ``result.json``. The first failure stops new jobs, and each failure is
+    written as the attempt's ``failure.json`` with whether a later run may ask
+    it again (``_retryable``). The lenient judge (#96) grades saved answers
+    through this loop too, so both follow one set of rules.
+    """
+    pending = iter([(folder, job) for folder, job in jobs if _status(folder) == "pending"])
     errors: list[dict] = []
-    answered = 0
+    finished = 0
 
     async def worker(semaphore):
-        nonlocal answered
+        nonlocal finished
         while not errors:
-            job = next(jobs, None)
-            if job is None:
+            item = next(pending, None)
+            if item is None:
                 return
-            side, question = job
-            qid = question["question_id"]
-            entry = side.entries[qid]
+            folder, job = item
             attempt = None
             try:
-                attempt = _next_attempt(side.answers / "execution" / qid)
-                context = _context(side.prepared, entry)
-                if amended:
-                    scored = await _ask_amended(ask, client, semaphore, benchmark, question, context, attempt)
-                else:
-                    reader = await ask(client, semaphore, prompt=study.reader_prompt(benchmark, question, context),
-                                       limit=READER_LIMIT, path=attempt / READER_CALLS[0])
-                    judged = await ask(client, semaphore,
-                                       prompt=study.judge_prompt(benchmark, question, reader["text"]),
-                                       limit=JUDGE_LIMIT, path=attempt / JUDGE_CALLS[0])
-                    scored = _registered_scored(attempt, judged)
-                _write_json(attempt / "result.json", _row(question, entry, scored))
-                answered += 1
-                if answered % 25 == 0:
-                    cost = "" if ledger is None else "; arm cost ${:.3f}".format(
+                attempt = _next_attempt(folder)
+                _write_json(attempt / "result.json", await handle(job, attempt, semaphore))
+                finished += 1
+                if finished % every == 0:
+                    spent = "" if ledger is None else "; cost so far ${:.3f}".format(
                         sum(charge["charge"] for charge in ledger.update()["entries"].values()) / 1e9)
-                    print(f"{label}: {answered} answered this run{cost}", file=sys.stderr, flush=True)
+                    print(f"{label}: {finished} {done} this run{spent}", file=sys.stderr, flush=True)
             except Exception as exc:
-                error = {"question_id": qid, "attempt": attempt.name if attempt else None,
+                error = {"question_id": folder.name, "attempt": attempt.name if attempt else None,
                          "exception_type": type(exc).__name__, "message": str(exc)[:500],
                          "retryable": _retryable(exc), "budget_stop": isinstance(exc, BudgetExhausted)}
                 errors.append(error)
@@ -3775,46 +3791,25 @@ def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepar
     tally = _tally_gpt54 if model is None else _tally_ollama
     policy = None if model is None else _bound_policy(answers or folder)
     rows, failures = [], []
-    usage = {"input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0, "successful_calls": 0,
-             "http_attempts": 0, "http_status_counts": Counter()}
-    if model is None:
-        usage.update(reasoning_tokens=0, observed_nanodollars=0)
+    usage = new_usage(paid=model is None)
     execution = (answers or folder) / "execution"
     for question in questions:
         qid = question["question_id"]
-        records = [(attempt, _attempt_record(attempt)) for attempt in _attempts(execution / qid)]
-        answer = next((attempt for attempt, record in records if record["kind"] == "result"), None)
-        failures += [{key: value for key, value in record.items() if key != "kind"} | {"replaced": answer is not None}
-                     for _, record in records if record["kind"] == "failure"]
+        answer, found = recorded_attempts(execution / qid)
+        failures += found
         if answer is not None:
             rows.append(_verified_row(verify, tally, benchmark, question, folder, prepared, entries[qid], answer,
                                       usage, amended=policy is not None))
-    if model is None:
-        charges = list(ledger.update()["entries"].values())
-        if sum(entry["charge"] for entry in charges) < usage["observed_nanodollars"]:
-            raise ValueError("The spending ledger records less than the verified calls cost; it is not this arm's "
-                             "complete ledger")
-        cost = {"usd": sum(entry["charge"] for entry in charges) / 1e9,
-                "unsettled_reservations": sum(not entry["settled"] for entry in charges),
-                "ledger_sha256": digest(ledger.path),
-                "note": "Every provider attempt of this arm, including failed ones; an unsettled request keeps "
-                        "its full reservation."}
-    else:
-        cost = {"usd": 0, "note": "Local Ollama server; no API charge. A :cloud model's calls count against the "
-                                  "Ollama account's usage limits instead."}
     chosen = [entries[question["question_id"]] for question in questions]
     result = {
         "kind": "gpt54-baseline-result" if model is None else "ollama-answer-result", "arm": arm,
         "benchmark": benchmark, "model": MODEL if model is None else model.model,
         "registration_sha256": digest(study.REG), "prepared_sha256": digest(folder / "prepared.json"),
         "context_budget": prepared["context_budget"], "context_rule": prepared["context_rule"],
-        "complete": len(rows) == len(questions), "total": len(questions), "completed": len(rows),
-        "final_failures": sum(not failure["retryable"] and not failure["replaced"] for failure in failures),
-        "unreplaced_failures": sum(not failure["replaced"] for failure in failures),
-        "failures": failures,
+        **coverage(rows, failures, len(questions)),
         **({} if policy is None else {"failure_policy": {**failure_amendment(),
                                                          **_outcome_counts(rows, len(questions))}}),
-        "cost": cost,
+        "cost": provider_cost(ledger, usage, "arm"),
         "provider_tokens": {**usage, "http_status_counts": dict(usage["http_status_counts"]),
                             "note": "Successful reader and judge calls of answered questions."},
         "context_tokens": _token_summary([entry["context_tokens"] for entry in chosen]),
@@ -3884,12 +3879,59 @@ def _verified_row(verify, tally, benchmark: str, question: dict, folder: Path, p
     if row != _row(question, entry, scored) or tokens != entry["context_tokens"] or (
             budget is not None and tokens > budget):
         raise ValueError(f"The recorded result for {qid} does not match its context, calls or verdict")
+    count_calls(usage, calls, tally)
+    return _row(question, entry, scored, reported=True)
+
+
+# Shared by the answer runs' report and the lenient judge's (#96) ------------------
+
+def new_usage(*, paid: bool) -> dict:
+    """Empty provider token counts; GPT-5.4 calls also count reasoning tokens and what they cost."""
+    usage = {"input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0, "successful_calls": 0,
+             "http_attempts": 0, "http_status_counts": Counter()}
+    if paid:
+        usage.update(reasoning_tokens=0, observed_nanodollars=0)
+    return usage
+
+
+def count_calls(usage: dict, calls: list[dict], tally) -> None:
+    """Add verified calls to ``usage``: their provider tokens (``tally``), attempts and HTTP statuses."""
     for value in calls:
         tally(usage, value["response"])
         usage["successful_calls"] += 1
         usage["http_attempts"] += value["attempts"]
         usage["http_status_counts"].update(value["verified_http_statuses"])
-    return _row(question, entry, scored, reported=True)
+
+
+def recorded_attempts(folder: Path) -> tuple[Path | None, list[dict]]:
+    """A question's attempt with a result, if any, and its failures, each marked replaced when a result exists."""
+    records = [(attempt, _attempt_record(attempt)) for attempt in _attempts(folder)]
+    answered = next((attempt for attempt, record in records if record["kind"] == "result"), None)
+    return answered, [{key: value for key, value in record.items() if key != "kind"} | {"replaced": answered is not None}
+                      for _, record in records if record["kind"] == "failure"]
+
+
+def coverage(rows: list[dict], failures: list[dict], total: int) -> dict:
+    """Whether every question has a verified result, and the failures on the way, as every result reports them."""
+    return {"complete": len(rows) == total, "total": total, "completed": len(rows),
+            "final_failures": sum(not failure["retryable"] and not failure["replaced"] for failure in failures),
+            "unreplaced_failures": sum(not failure["replaced"] for failure in failures), "failures": failures}
+
+
+def provider_cost(ledger: Ledger | None, usage: dict, what: str) -> dict:
+    """What the calls cost: the ledger's charges on GPT-5.4, which must cover the verified calls, or nothing on Ollama."""
+    if ledger is None:
+        return {"usd": 0, "note": "Local Ollama server; no API charge. A :cloud model's calls count against the "
+                                  "Ollama account's usage limits instead."}
+    charges = list(ledger.update()["entries"].values())
+    if sum(entry["charge"] for entry in charges) < usage["observed_nanodollars"]:
+        raise ValueError(f"The spending ledger records less than the verified calls cost; it is not this {what}'s "
+                         "complete ledger")
+    return {"usd": sum(entry["charge"] for entry in charges) / 1e9,
+            "unsettled_reservations": sum(not entry["settled"] for entry in charges),
+            "ledger_sha256": digest(ledger.path),
+            "note": f"Every provider attempt of this {what}, including failed ones; an unsettled request keeps its "
+                    "full reservation."}
 
 
 def _tally_gpt54(usage: dict, response: dict) -> None:
@@ -3916,12 +3958,16 @@ def _seconds_summary(values: list[float | None]) -> dict:
 
 # CLI ------------------------------------------------------------------------
 
-def _confirm_spend(parser: argparse.ArgumentParser, arm: str, benchmark: str, max_usd: float) -> None:
-    """Paid runs need the owner at an interactive terminal, so nothing unattended can start one."""
+def _confirm_spend(parser: argparse.ArgumentParser, arm: str, benchmark: str, max_usd: float, *,
+                   kind: str = "arm") -> None:
+    """Paid runs need the owner at an interactive terminal, so nothing unattended can start one.
+
+    The owner types ``arm``, the name of what the cap pays for: an arm, or a lenient judge pass (#96).
+    """
     if not sys.stdin.isatty():
         parser.error("run makes paid calls; start it from an interactive terminal so the owner can confirm")
     typed = input(f"This can spend up to ${max_usd:,.2f} on {arm} {benchmark} with {MODEL}. "
-                  "Type the arm name to confirm: ")
+                  f"Type the {kind} name, {arm}, to confirm: ")
     if typed.strip() != arm:
         parser.error("not confirmed; nothing was sent")
 
@@ -4158,8 +4204,8 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(_summary(result)))
 
 
-def _announce(model: ollama_answers.AnswerModel) -> None:
-    print(f"Reader and judge: {model.model} through {model.endpoint}. A :cloud model sends the prompts to "
+def _announce(model: ollama_answers.AnswerModel, role: str = "Reader and judge") -> None:
+    print(f"{role}: {model.model} through {model.endpoint}. A :cloud model sends the prompts to "
           "Ollama's hosted service and uses the account's usage limits.", file=sys.stderr, flush=True)
 
 
