@@ -11,6 +11,14 @@ from __future__ import annotations
 
 from prme.types import EpistemicType, NodeType, SourceType
 
+# Roles that speak for the memory's owner. Owner-only behavior, such as
+# reinforcing a repeated instruction, applies only to these.
+OWNER_ROLES = frozenset({"user", "human"})
+# A human in the conversation other than the memory's owner, such as the
+# second person in a two-person chat. Like the owner, a first-party source.
+PARTICIPANT_ROLE = "participant"
+FIRST_PARTY_ROLES = OWNER_ROLES | {PARTICIPANT_ROLE}
+
 
 def infer_epistemic_type(
     node_type: NodeType,
@@ -55,24 +63,27 @@ def infer_source_type(
 
     Heuristics based on role and node_type:
     - role == "user" or "human" -> USER_STATED
+    - role == "participant" -> USER_STATED (a human in the conversation
+      other than the memory's owner, such as the second person in a
+      two-person chat)
     - role == "assistant" or "system" -> SYSTEM_INFERRED
     - role == "tool" -> TOOL_OUTPUT
     - EVENT nodes without role -> USER_STATED (events are user input)
     - All others without role -> USER_STATED (conservative default)
 
-    This is for the store() path. The ingestion pipeline determines
-    source_type from conversation role independently.
+    The store() path, raw-source materialization and the ingestion
+    pipeline's extracted claims all use this mapping.
 
     Args:
         node_type: The type of the memory node.
-        role: Optional role string (e.g., 'user', 'assistant').
+        role: Optional role string (e.g., 'user', 'participant', 'assistant').
 
     Returns:
         The inferred SourceType.
     """
     if role is not None:
         role_lower = role.lower()
-        if role_lower in ("user", "human"):
+        if role_lower in FIRST_PARTY_ROLES:
             return SourceType.USER_STATED
         if role_lower in ("assistant", "system"):
             return SourceType.SYSTEM_INFERRED

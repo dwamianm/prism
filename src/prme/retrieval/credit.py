@@ -9,7 +9,7 @@ from uuid import UUID
 from prme.models.credit import CreditTier, ContextAblation, ContextPresenceCredit
 from prme.models.relevance import AnswerCitationRecord
 from prme.retrieval.models import MemoryBundle
-from prme.retrieval.packing import _render_sections
+from prme.retrieval.packing import _render_sections, reader_shows_speaker
 from prme.retrieval.tokenization import count_tokens
 
 
@@ -55,8 +55,8 @@ def ablate_context(
         for section, candidates in snapshot.sections.items()
     }
     sections = {section: candidates for section, candidates in sections.items() if candidates}
-    # Re-render in the bundle's own format and references, so the counterfactual
-    # differs from the baseline only by the removed entries.
+    # Re-render in the bundle's own format, references and header, so the
+    # counterfactual differs from the baseline only by the removed entries.
     context_refs = {
         node_id: reference for reference, node_id in snapshot.context_references.items()
     }
@@ -66,6 +66,7 @@ def ablate_context(
         context_guidance=snapshot.context_guidance,
         context_format=snapshot.context_format,
         context_refs=context_refs or None,
+        speaker_header=reader_shows_speaker(snapshot.sections),
     )
     if snapshot.tokenizer is None:
         raise ValueError("Context ablation requires the bundle tokenizer")

@@ -19,7 +19,7 @@ from prme.models.learning import (
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from prme.models.aggregation import AssertionQuery, QuantityAggregationQuery
 from prme.models.temporal import AssertionStateQuery
@@ -34,7 +34,13 @@ from prme.types import (
     SourceType,
 )
 from prme.models.processing import FastIngestItem, ProcessingStatus
+from prme.models.speaker import MAX_SPEAKER_LENGTH, attach_speaker, normalize_speaker
 from prme.models.value_bindings import MemoryValueBinding, RetrievedValueBinding
+
+
+def _reject_reserved_speaker_key(metadata: dict[str, Any] | None) -> dict[str, Any] | None:
+    """A speaker comes only from the ``speaker`` field, never from metadata."""
+    return attach_speaker(metadata, None)
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +128,21 @@ class StoreRequest(BaseModel):
     )
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
     session_id: str | None = None
-    role: str = Field(default="user", description="Event role")
+    role: str = Field(
+        default="user",
+        description=(
+            "Event role: user (the memory's owner), participant (another human in the "
+            "conversation), assistant, tool or system"
+        ),
+    )
+    speaker: str | None = Field(
+        default=None,
+        description=(
+            "Optional name of who said this, kept with the source and shown by the "
+            f"reader context format; at most {MAX_SPEAKER_LENGTH} characters, without "
+            "control characters, line breaks or bidirectional controls"
+        ),
+    )
     node_type: NodeType | None = Field(
         default=None, description="Node type (defaults to note)"
     )
@@ -146,6 +166,9 @@ class StoreRequest(BaseModel):
     metadata: dict[str, Any] | None = Field(
         default=None, description="Optional structured metadata"
     )
+
+    _validate_speaker = field_validator("speaker")(normalize_speaker)
+    _validate_metadata = field_validator("metadata")(_reject_reserved_speaker_key)
 
 
 class StoreResponse(BaseModel):
@@ -172,7 +195,14 @@ class IngestRequest(BaseModel):
 
     content: str = Field(description="Message text to ingest")
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
-    role: str = Field(default="user", description="Message role")
+    role: str = Field(
+        default="user",
+        description="Message role: user, participant, assistant, tool or system",
+    )
+    speaker: str | None = Field(
+        default=None,
+        description="Optional name of who said this; see POST /v1/store",
+    )
     session_id: str | None = None
     metadata: dict[str, Any] | None = None
     event_time: AwareDatetime | None = Field(default=None,
@@ -182,6 +212,9 @@ class IngestRequest(BaseModel):
     scope: Scope | None = Field(
         default=None, description="Memory scope"
     )
+
+    _validate_speaker = field_validator("speaker")(normalize_speaker)
+    _validate_metadata = field_validator("metadata")(_reject_reserved_speaker_key)
 
 
 class IngestResponse(BaseModel):

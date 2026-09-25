@@ -22,6 +22,7 @@ from prme.storage.lifecycle import LifecycleConflict
 from prme.storage.citations import CitationConflict
 from prme.storage.ranking_profiles import StaleRankingProfileError
 from prme.storage.fast_ingest import FastIngestConflict
+from prme.models.speaker import SpeakerError
 from prme.storage.alias_review import (
     AliasProposalInboxItem,
     AliasProposalReviewConflict,
@@ -237,7 +238,7 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse | JSONRes
         "role": body.role,
     }
     for name in ("retrieval_content", "value_bindings", "node_type", "scope", "epistemic_type", "metadata", "session_id",
-                 "source_type", "confidence", "event_time", "valid_from", "valid_to"):
+                 "source_type", "confidence", "event_time", "valid_from", "valid_to", "speaker"):
         value = getattr(body, name)
         if value is not None:
             kwargs[name] = value
@@ -276,7 +277,7 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse | JSON
         "role": body.role,
         "wait_for_extraction": body.wait_for_extraction,
     }
-    for name in ("scope", "session_id", "metadata", "event_time"):
+    for name in ("scope", "session_id", "metadata", "event_time", "speaker"):
         value = getattr(body, name)
         if value is not None:
             kwargs[name] = value
@@ -285,6 +286,8 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse | JSON
         event_id = await engine.ingest(**kwargs)
     except (ExtractionError, MaterializationError) as exc:
         return _accepted_work_failure(exc)
+    except SpeakerError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return IngestResponse(event_id=event_id)
 
 

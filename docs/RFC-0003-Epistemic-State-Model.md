@@ -413,6 +413,19 @@ Existing durable node snapshots and prepared derivation plans retain their saved
 values; this correction does not rewrite historical provenance or prove tool
 output is accurate.
 
+**Implemented role handling, 2026-09-25 (#84):** `role="participant"` marks a
+human in the conversation other than the memory's owner, such as the second
+person in a two-person chat. Direct writes, raw-source materialization and
+extracted facts classify it as `USER_STATED` through the same helper, so both
+people in a conversation get the same confidence matrix entry instead of the
+second person being `SYSTEM_INFERRED` as an `assistant`. A participant is not
+the owner: its statements do not reinforce the owner's instructions, the
+extractor uses its generic admission policy for it, and the user-only literal
+recoveries do not run. An optional speaker name, kept in the reserved
+`prme_speaker_v1` metadata key of the source event and its direct node or raw
+note, says which person spoke. It is an unverified caller assertion, not an
+identity, and extracted claims do not carry it yet.
+
 Every memory object MUST be able to answer the following questions from the event and operation logs alone:
 
 1. **Why is this believed?** — What `evidence_ids` underpin it?

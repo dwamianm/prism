@@ -284,6 +284,22 @@ class TestPRMEChatStore:
         finally:
             store.close()
 
+    def test_turns_stored_with_other_roles_read_as_user_turns(self, tmpdir: str):
+        store = PRMEChatStore(directory=tmpdir)
+        try:
+            store.add_message("alice:s1", ChatMessage(role="user", content="Hello"))
+            for role, text in [("participant", "Hi, I am Melanie."), ("human", "Hi again.")]:
+                store._client.store(text, user_id="alice", session_id="s1", role=role,
+                                    speaker="Melanie" if role == "participant" else None)
+            messages = store.get_messages("alice:s1")
+            assert [(m.role.value, m.content) for m in messages] == [
+                ("user", "Hello"), ("user", "Hi, I am Melanie."), ("user", "Hi again."),
+            ]
+            store.delete_messages("alice:s1")
+            assert store.get_messages("alice:s1") == []
+        finally:
+            store.close()
+
     def test_tool_role_keeps_tool_provenance(self, tmpdir: str):
         store = PRMEChatStore(directory=tmpdir)
         try:

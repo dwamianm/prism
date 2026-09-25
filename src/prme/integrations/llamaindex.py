@@ -316,7 +316,12 @@ class PRMEChatStore(BaseChatStore):
             except (TypeError, ValueError):
                 pass
         role = event.role if hasattr(event, "role") else "user"
-        return ChatMessage(role=role, content=event.content)
+        try:
+            return ChatMessage(role=role, content=event.content)
+        except (TypeError, ValueError):
+            # A role LlamaIndex has no value for, such as "participant" or
+            # "human", reads as a user turn, as the LangChain adapter does.
+            return ChatMessage(role="user", content=event.content)
 
     def close(self) -> None:
         """Close the underlying MemoryClient."""

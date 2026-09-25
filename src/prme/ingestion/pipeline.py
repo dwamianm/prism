@@ -184,9 +184,11 @@ class IngestionPipeline:
         Args:
             content: The message text to ingest.
             user_id: Owner user ID.
-            role: Message role ('user', 'assistant', or 'system').
+            role: Message role ('user', 'participant', 'assistant', 'tool',
+                or 'system').
             session_id: Optional session identifier.
-            metadata: Optional structured metadata.
+            metadata: Optional structured metadata. ``MemoryEngine`` adds a
+                caller's speaker here under the reserved speaker key.
             event_time: Timezone-aware source time; omitted uses ingestion time.
             wait_for_extraction: If True, block until extraction and
                 materialization complete. Defaults to False (async).

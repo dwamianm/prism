@@ -167,6 +167,7 @@ async def store(
     value_bindings: list[MemoryValueBinding | dict] | None = None,
     session_id: str | None = None,
     role: str = "user",
+    speaker: str | None = None,
     node_type: NodeType = NodeType.NOTE,
     scope: Scope = Scope.PERSONAL,
     metadata: dict | None = None,
@@ -199,7 +200,7 @@ are outside this job's completion boundary.
 
 Question/answer pairing is disabled by default. `enable_qa_pairing=True`
 enables an experimental in-process heuristic that creates an extra merged node
-for consecutive, differently-typed roles in one exact session and scope. It is
+for consecutive turns from different roles or speakers in one exact session and scope. It is
 not recovered after restart, its graph/index writes are not one atomic durable
 publication, and registered quality evaluations have not enabled it. Prefer
 normal session-aware retrieval unless you are explicitly evaluating this
@@ -220,19 +221,62 @@ truth judgment or calibrated confidence model.
 | `value_bindings` | `list[MemoryValueBinding \| dict] \| None` | `None` | Exact presentation values paired with caller-supplied complete lookup forms |
 | `user_id` | `str` | required | Owner user ID (all queries scoped to this) |
 | `session_id` | `str \| None` | `None` | Optional session identifier |
-| `role` | `str` | `"user"` | `"user"`, `"assistant"`, or `"system"` |
+| `role` | `str` | `"user"` | `"user"` (the memory's owner), `"participant"` (another human in the conversation), `"assistant"`, `"tool"`, or `"system"` |
+| `speaker` | `str \| None` | `None` | Optional name of who said it; kept with the source and node and shown by the reader context format |
 | `node_type` | `NodeType` | `NodeType.NOTE` | Type of memory node |
 | `scope` | `Scope` | `Scope.PERSONAL` | Memory scope |
 | `metadata` | `dict \| None` | `None` | Optional structured metadata |
 | `confidence` | `float \| None` | `None` | Confidence 0.0-1.0. If None, derived from confidence matrix |
 | `epistemic_type` | `EpistemicType \| None` | `None` | If None, inferred from node_type |
-| `source_type` | `SourceType \| None` | `None` | If None, inferred from node_type + role; `role="tool"` selects `TOOL_OUTPUT` |
+| `source_type` | `SourceType \| None` | `None` | If None, inferred from node_type + role: `"user"` and `"participant"` select `USER_STATED`, `"assistant"` and `"system"` select `SYSTEM_INFERRED`, `"tool"` selects `TOOL_OUTPUT` |
 | `event_time` | `datetime \| None` | `None` | Timezone-aware source event time; remains separate from admission and validity |
 | `valid_from` | `datetime \| None` | `None` | Timezone-aware inclusive validity start; omission uses admission time |
 | `valid_to` | `datetime \| None` | `None` | Exclusive validity end; requires an explicit earlier `valid_from` |
 | `ttl_days` | `int \| None` | `...` | Omit for configured default, pass `None` to disable, or set a nonnegative override |
 
 **Returns:** `str` — UUID of the created event (source of truth ID).
+
+A conversation between two or more people has more than one first-party
+speaker. Store the memory owner's turns with `role="user"` and every other
+person's with `role="participant"`, each with their name as `speaker`. Every
+human's statements are then `USER_STATED` with the same confidence, while
+assistant and system output stays `SYSTEM_INFERRED`. When the owner is not in
+the conversation, as with an imported chat between two other people, every
+person is a participant:
+
+```python
+when = datetime(2023, 6, 9, 19, 55, tzinfo=timezone.utc)
+for speaker, text in [("Caroline", "I went to the support group yesterday."),
+                      ("Melanie", "That sounds wonderful. How did it go?")]:
+    await engine.store(text, user_id="chat-7", role="participant",
+                       speaker=speaker, session_id="s1", event_time=when)
+```
+
+The name is kept in the reserved `metadata.prme_speaker_v1` key of the source
+event and its node. Passing that key in `metadata` raises `ValueError`, so a
+caller that copies metadata from a stored memory into a new write must remove
+the key and pass `speaker` instead. Leading and trailing whitespace is removed;
+the name must then be non-empty, at most 200 characters, and free of control
+characters, line breaks and bidirectional controls. The speaker is an unverified
+caller assertion, not an identity: PRME does not resolve it to an entity. It does
+not select the role or source type, and it is not indexed for lexical search.
+
+The reader context format prints it as
+`- [2023-06-09 19:55] "Caroline": "I went to the support group yesterday."`,
+and leaves it out when the text already begins with the name and a colon, after
+an optional leading parenthesized or bracketed group such as a date. The
+auditable format adds a `"speaker"` key to such records; the compact format does
+not show it. With `enable_qa_pairing=True`, a change of speaker within one role
+also creates a merged question/answer node, as a change of role does, and each
+half of its text starts with its speaker's name.
+
+`ingest()`, `ingest_batch()` (a `"speaker"` key per message), `ingest_fast()` and
+`FastIngestItem` accept the same `speaker`. It stays with the source event and
+its raw note. Claims that `ingest()` extracts do not carry it yet: a
+participant's first-person claim such as "I moved to Boston" reads like any
+other first-party claim, so follow a claim's `evidence_refs` to its source event
+to see who said it. The extractor applies its generic admission policy to
+participants, and the user-only literal recoveries do not run for them.
 
 Use `store_with_receipt()` when the next operation needs the created node ID:
 
@@ -273,7 +317,7 @@ exactly during restart recovery.
 
 For raw imports that do not need typed-node overrides or model extraction, use
 `ingest_fast_many(items, user_id=...)`. Each `FastIngestItem` carries `content`,
-`role`, `session_id`, `scope`, `metadata`, and an optional timezone-aware
+`role`, `speaker`, `session_id`, `scope`, `metadata`, and an optional timezone-aware
 `event_time`. PRME validates and snapshots the complete list before I/O, then
 admits every immutable event and materialization job in one transaction. It
 returns event IDs in input order; an empty Python batch is a no-op. Run
@@ -310,6 +354,7 @@ async def ingest(
     *,
     user_id: str,
     role: str = "user",
+    speaker: str | None = None,
     session_id: str | None = None,
     metadata: dict | None = None,
     wait_for_extraction: bool = False,
@@ -325,7 +370,8 @@ Ingest with LLM-powered extraction. Two-phase pipeline:
 |---|---|---|---|
 | `content` | `str` | required | Message text to ingest |
 | `user_id` | `str` | required | Owner user ID |
-| `role` | `str` | `"user"` | Message role |
+| `role` | `str` | `"user"` | Message role; see `store()` |
+| `speaker` | `str \| None` | `None` | Optional name of who said it; see `store()` |
 | `session_id` | `str \| None` | `None` | Optional session ID |
 | `metadata` | `dict \| None` | `None` | Optional metadata |
 | `wait_for_extraction` | `bool` | `False` | If True, block until extraction completes |
@@ -349,7 +395,7 @@ async def ingest_batch(
 ) -> list[str]
 ```
 
-Ingest multiple messages sequentially (preserves conversation order). Each dict must have `"content"` and `"role"` keys, with optional `"metadata"`.
+Ingest multiple messages sequentially (preserves conversation order). Each dict must have `"content"` and `"role"` keys, with optional `"speaker"`, `"metadata"` and `"event_time"`. Every speaker is checked before the first message is admitted.
 
 **Returns:** `list[str]` — Event IDs, one per message.
 
@@ -631,7 +677,7 @@ from prme.models import Event
 class Event(MemoryObject):
     # Frozen (immutable)
     timestamp: datetime         # default: now(UTC)
-    role: str                   # required — "user", "assistant", or "system"
+    role: str                   # required — "user", "participant", "assistant", "tool", or "system"
     content: str                # required — event content text
     content_hash: str           # auto-computed SHA-256 of content
     metadata: dict | None       # default: None

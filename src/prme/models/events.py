@@ -33,7 +33,9 @@ class Event(MemoryObject):
             "The timestamp field records ingestion time separately."
         ),
     )
-    role: str = Field(description="Conversation role, e.g. 'user', 'assistant', 'tool', or 'system'")
+    role: str = Field(
+        description="Conversation role, e.g. 'user', 'participant', 'assistant', 'tool', or 'system'"
+    )
     content: str = Field(description="Event content text")
     content_hash: str = Field(
         default="",

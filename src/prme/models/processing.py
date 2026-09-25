@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from prme.models.nodes import MemoryNode
+from prme.models.speaker import MAX_SPEAKER_LENGTH, normalize_speaker
 from prme.types import Scope
 
 
@@ -21,10 +22,22 @@ class FastIngestItem(BaseModel):
 
     content: str
     role: str = "user"
+    speaker: str | None = Field(
+        default=None,
+        description=(
+            f"Optional name of who said this (at most {MAX_SPEAKER_LENGTH} characters), "
+            "kept with the source and shown by the reader context format"
+        ),
+    )
     session_id: str | None = None
     metadata: dict[str, Any] | None = None
     scope: Scope = Scope.PERSONAL
     event_time: AwareDatetime | None = Field(default=None)
+
+    @field_validator("speaker")
+    @classmethod
+    def validate_speaker(cls, value: str | None) -> str | None:
+        return normalize_speaker(value)
 
 
 class ProcessingStatus(BaseModel):
