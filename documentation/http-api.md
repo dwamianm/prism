@@ -11,34 +11,46 @@ pip install prme[api]
 ## Running the Server
 
 ```bash
-uvicorn prme.api:app
+python -m prme.api
 ```
 
 Or with custom host/port:
 
 ```bash
-uvicorn prme.api:app --host 127.0.0.1 --port 8000
+python -m prme.api --host 127.0.0.1 --port 8000
 ```
 
-The server binds to `127.0.0.1` (loopback only) by default. Binding to `0.0.0.0` exposes the API to the network and is an explicit opt-in — set an API key first (see [Authentication](#authentication)) or put the server behind an authenticating reverse proxy. `python -m prme.api` logs a warning when binding to a non-loopback address.
+The server binds to `127.0.0.1` (loopback only) by default, and with no credentials configured it serves single-user local use without authentication. A non-loopback bind such as `0.0.0.0` exposes the API to the network, so `python -m prme.api` refuses to start there unless API credentials are configured (see [Authentication](#authentication)). `prme.api.server.run_server` does the same by raising `prme.api.server.UnauthenticatedBindError`, a `ValueError`. The check runs before the engine starts or a port is opened. Only literal loopback addresses (anything in `127.0.0.0/8`, `::1`, and IPv4-mapped forms such as `::ffff:127.0.0.1`) and the name `localhost` (when it resolves only to loopback addresses) count as loopback. Any other host name counts as a network address, because the server resolves it again when it binds.
+
+If an authenticating reverse proxy is the only way to reach the server and it must run without its own credentials, pass `--allow-unauthenticated-external-bind` (`allow_unauthenticated_external_bind=True` for `run_server`). The server then starts with a warning. The API accepts every request it receives and binds no identity to it, so every caller that gets through the proxy has operator access to every user's memories and can name any `user_id`. Make sure nothing but the proxy can reach that port, and remove the flag if the proxy goes away. When the proxy fronts several users, keep `PRME_API_USER_KEYS` configured and have the proxy send each user's key instead.
+
+Running the app under another ASGI server (`uvicorn prme.api.app:create_app --factory`, Gunicorn, Hypercorn or your own process) skips this check, because only the server that opens the socket knows the bind address. Protect those deployments yourself: configure credentials, or bind the server to loopback behind an authenticating proxy.
 
 The API reads configuration from environment variables (`PRME_*` prefix). Set `PRME_DB_PATH`, `PRME_VECTOR_PATH`, and `PRME_LEXICAL_PATH` to point at your memory directory.
 
 ## Authentication
 
-Authentication is disabled by default (suitable for single-user localhost use). To require bearer-token auth on all endpoints except `/v1/health`:
+Authentication is disabled when no credentials are configured, which is only suitable for single-user use on loopback. Configure one of these to require a bearer token on every `/v1` endpoint except `/v1/health`:
 
-```bash
-export PRME_API_API_KEY="your-secret-key"
+- Per-user keys, which bind each request to its owner (recommended for shared deployments). A caller can then only reach its own owner's memories, and naming another `user_id` returns 403:
+
+  ```bash
+  export PRME_API_USER_KEYS='{"alice": "<alice key>", "bob": "<bob key>"}'
+  ```
+
+- A single global key with operator access, for example for one backend service that acts for many users:
+
+  ```bash
+  export PRME_API_API_KEY="<operator key>"
+  ```
+
+The two cannot be combined. Generate each key rather than reusing an example value, for instance with `python -c "import secrets; print(secrets.token_urlsafe(32))"`, and keep keys out of version control (use an untracked `.env` file or a secret store). Clients send their own key:
+
+```
+Authorization: Bearer <key>
 ```
 
-Clients must then send:
-
-```
-Authorization: Bearer your-secret-key
-```
-
-Requests with a missing or wrong key receive `401 {"detail": "Invalid or missing API key"}`.
+Requests with a missing or wrong key receive `401 {"detail": "Invalid or missing API key"}`. Bearer keys travel in plain text over HTTP, so terminate TLS in front of the API whenever requests cross a network.
 
 ## Endpoints
 

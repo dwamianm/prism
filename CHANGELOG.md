@@ -73,6 +73,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The HTTP API docs and the example Dockerfile now start the server with
+  `python -m prme.api`. The `uvicorn prme.api:app` command they showed never
+  loaded the app, because `prme.api:app` names the `prme.api.app` module.
 - Query reformulation (`enable_query_reformulation=True`) now uses the
   extraction endpoint, credential and timeout as well as its provider and
   model. It used to build its own client from the provider and model alone, so
@@ -122,6 +125,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and store records with blank text (for example tool-call-only chat turns) now
   see those records excluded from the auditable and compact contexts instead of
   packed with empty text.
+- **Upgrade note:** `python -m prme.api` and `prme.api.server.run_server()`
+  now refuse to start on a non-loopback address (such as `0.0.0.0`, including
+  inside a container) when neither `PRME_API_USER_KEYS` nor `PRME_API_API_KEY`
+  is set. They used to log a warning and serve every request without
+  authentication. The command exits with status 2 and `run_server()` raises
+  `prme.api.server.UnauthenticatedBindError` (a `ValueError`), before the app,
+  the engine or a listener is created. Configure credentials before upgrading
+  a network-reachable server. Per-user keys bind each request to its owner, so
+  a backend that acts for many users needs the global key. Only literal
+  loopback addresses (`127.0.0.0/8`, `::1` and IPv4-mapped loopback) and
+  `localhost` (when it resolves only to loopback) count as loopback; other
+  host names count as network addresses. A server that only an authenticating
+  reverse proxy can reach can pass `--allow-unauthenticated-external-bind`
+  (`allow_unauthenticated_external_bind=True`), which starts it with a warning
+  and gives every caller operator access. The command no longer accepts
+  abbreviated options. Hosting the app under another ASGI server skips the
+  check, as the HTTP and deployment guides now explain.
+- The development `docker-compose.yml` publishes its PostgreSQL test database
+  (fixed `prme_test` credentials) on `127.0.0.1:5432` only, instead of on all
+  interfaces. CI connects to `127.0.0.1`. An existing container keeps its old
+  mapping until it is recreated: run `docker compose up -d` once. The
+  deployment guide now separates this test database from a network-reachable
+  one.
 
 ## [0.12.0] - 2026-09-22
 

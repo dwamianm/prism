@@ -75,6 +75,12 @@ config = PRMEConfig(database_url="postgresql://user:pass@localhost:5432/prme")
 
 When `database_url` is set, PRME uses PostgreSQL for events, graph, and vectors (via pgvector). Full-text search uses PostgreSQL's built-in capabilities.
 
+### Local test database versus a deployed database
+
+The repository's `docker-compose.yml` starts PostgreSQL with pgvector for local development and CI only. It uses the fixed `prme_test` user and password and publishes port 5432 on `127.0.0.1`, so other machines cannot reach it. Do not change that mapping to a network address or reuse the test credentials.
+
+A PostgreSQL that other machines can reach needs its own role with a strong, unique password, network rules that admit only the hosts running PRME, and TLS where the connection crosses a network. Put those credentials in `PRME_DATABASE_URL` from a secret store or an untracked `.env` file.
+
 ### Schema
 
 Tables are created automatically on first connection. The PostgreSQL backend provides:
@@ -153,8 +159,11 @@ engine.unlock()  # Decrypt memory pack
 ### Security
 
 - Set `PRME_ENCRYPTION_ENABLED=true` for data at rest
-- The HTTP API binds to `127.0.0.1` and disables CORS by default; set `PRME_API_API_KEY` before exposing it on `0.0.0.0`, and pin `PRME_API_CORS_ORIGINS` if browser clients need access
-- The MCP server runs over stdio (no network exposure) by default
+- The HTTP API binds to `127.0.0.1` and disables CORS by default. `python -m prme.api` refuses to start on a non-loopback address such as `0.0.0.0` unless `PRME_API_USER_KEYS` or `PRME_API_API_KEY` is set. See [Running the Server](http-api.md#running-the-server) for what counts as loopback and for the `--allow-unauthenticated-external-bind` override, which gives every caller operator access and is only for a server that nothing but an authenticating reverse proxy can reach. Pin `PRME_API_CORS_ORIGINS` if browser clients need access
+- If another ASGI server hosts the app (for example `uvicorn prme.api.app:create_app --factory` or Gunicorn), that server picks the bind address and PRME cannot check it: configure API credentials, or keep it on loopback behind an authenticating proxy
+- Bearer keys travel in plain text over HTTP: terminate TLS in front of the API whenever requests cross a network
+- The MCP server runs over stdio (no network exposure) by default. Its Streamable HTTP transport listens on `127.0.0.1:8000` only and requires `PRME_MCP_USER_KEYS`
+- The PostgreSQL in the repository's `docker-compose.yml` is a local test database with fixed credentials; see [Local test database versus a deployed database](#local-test-database-versus-a-deployed-database)
 - Never commit `.env` files with API keys to version control
 
 ## Docker
@@ -173,12 +182,23 @@ ENV PRME_LEXICAL_PATH=/data/lexical_index
 VOLUME /data
 EXPOSE 8000
 
-# 0.0.0.0 is required inside the container; pass PRME_API_API_KEY at
-# `docker run` time so the exposed port requires authentication.
-CMD ["uvicorn", "prme.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# 0.0.0.0 is required inside the container. The server refuses to start
+# there without API credentials, so pass them at `docker run` time.
+CMD ["python", "-m", "prme.api", "--host", "0.0.0.0", "--port", "8000"]
 ```
+
+Keep the credentials out of the image and out of your shell history, for example in an untracked `prme-api.env` file. This is Docker env-file syntax, where the value takes no surrounding quotes, so do not `source` it from a shell:
+
+```text
+# prme-api.env (never commit this file)
+PRME_API_USER_KEYS={"alice": "<generated key>"}
+```
+
+Generate each key, for instance with `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
 
 ```bash
 docker build -t prme .
-docker run -v ./memories:/data -p 8000:8000 prme
+docker run -v ./memories:/data -p 8000:8000 --env-file prme-api.env prme
 ```
+
+To keep the API on the host machine only, publish it on loopback instead: `-p 127.0.0.1:8000:8000`. The server inside the container still binds `0.0.0.0`, which other containers on the same Docker network and every local user of the host can reach, so it still needs credentials.

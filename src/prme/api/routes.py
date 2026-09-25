@@ -119,7 +119,7 @@ async def require_api_key(
     config = getattr(request.app.state, "config", None)
     api = config.api if config is not None else None
     request.state.user_id = None
-    if api is None or (api.api_key is None and not api.user_keys):
+    if api is None or not api.auth_enabled:
         return
     token = credentials.credentials.encode("utf-8") if credentials else b""
     if api.user_keys:

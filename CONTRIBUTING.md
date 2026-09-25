@@ -35,6 +35,25 @@ pytest tests/test_retrieval_scoring.py
 pytest -v
 ```
 
+The PostgreSQL variants skip unless `PRME_TEST_DATABASE_URL` points at a live
+database. The repository's `docker-compose.yml` starts one for local testing,
+the same way CI does:
+
+```bash
+docker compose up -d --wait && \
+  PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:5432/prme_test pytest
+docker compose down
+```
+
+Port 5432 on `127.0.0.1` must be free: if another PostgreSQL already listens
+there, `docker compose up` fails. The service uses fixed test credentials and
+publishes the port on `127.0.0.1` only. Keep it that way: do not expose it on a
+network address. If you created the container before the port was restricted
+to loopback, run `docker compose up -d` again so Compose recreates it with the
+new mapping (`docker compose ps` should show `127.0.0.1:5432->5432/tcp`).
+Deployed databases need their own credentials (see
+`documentation/deployment.md`).
+
 ### Code Style
 
 We use [Ruff](https://docs.astral.sh/ruff/) for linting and formatting:

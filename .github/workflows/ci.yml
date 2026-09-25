@@ -60,7 +60,7 @@ jobs:
 
       - name: Run tests (PostgreSQL)
         env:
-          PRME_TEST_DATABASE_URL: postgresql://prme_test:prme_test@localhost:5432/prme_test
+          PRME_TEST_DATABASE_URL: postgresql://prme_test:prme_test@127.0.0.1:5432/prme_test
         run: uv run --no-sync python -m pytest tests/ -q
 
       - name: Stop PostgreSQL

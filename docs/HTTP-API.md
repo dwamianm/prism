@@ -2,7 +2,9 @@
 
 The running server publishes its complete schema at `/openapi.json` and interactive
 reference at `/docs`. Configure per-user bearer credentials as described in the
-[README](../README.md#http-api). An authenticated owner can omit `user_id`; selecting
+[HTTP API reference](../documentation/http-api.md#authentication), which also covers
+[running the server](../documentation/http-api.md#running-the-server) and when it
+refuses a network bind. An authenticated owner can omit `user_id`; selecting
 another owner returns 403. Source/node lookups belonging to another user return 404.
 
 ## Review identity proposals

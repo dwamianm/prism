@@ -202,6 +202,15 @@ class APIConfig(_ProjectSettings):
         _validate_user_keys(self.user_keys)
         return self
 
+    @property
+    def auth_enabled(self) -> bool:
+        """Whether requests need a bearer token (a global key or per-user keys).
+
+        The HTTP router and the server's bind check both use this, so they
+        cannot disagree about when the API is unauthenticated.
+        """
+        return self.api_key is not None or bool(self.user_keys)
+
     cors_origins: list[str] = Field(
         default_factory=list,
         description=(

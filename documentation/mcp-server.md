@@ -25,7 +25,7 @@ python -m prme.mcp --db-path ./my_memories
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--db-path` | Current directory | Path to the memory directory |
-| `--transport` | `stdio` | Transport protocol: `stdio` or `sse` |
+| `--transport` | `stdio` | Transport protocol: `stdio`, or `streamable-http` (listens on `127.0.0.1:8000` only and requires `PRME_MCP_USER_KEYS`). `sse` is rejected. |
 
 ## Client Configuration
 

@@ -146,7 +146,9 @@ For a local assistant, install the MCP extra and run with a fixed owner:
 PRME_MCP_USER_ID=alice prme-mcp --db-path ./my_memories
 ```
 
-The HTTP extra provides a FastAPI service via `uvicorn prme.api:app`.
+The HTTP extra provides a FastAPI service via `python -m prme.api`, which binds to
+`127.0.0.1` and refuses a network bind without API credentials (see
+[Running the Server](documentation/http-api.md#running-the-server)).
 Shared HTTP deployments bind owners to credentials through `PRME_API_USER_KEYS`;
 MCP Streamable HTTP uses its separate `PRME_MCP_USER_KEYS` setting.
 See the [HTTP guide](docs/HTTP-API.md) and
