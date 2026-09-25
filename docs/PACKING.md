@@ -2,12 +2,13 @@
 
 `PackingConfig.multipath_ordering` controls which ordinary multi-path memories
 get space first. The default configuration (`PRMEConfig().packing`) uses
-`"score"`, which ships with the one-line `"reader"` context format and rank
-fusion scoring (see [Default retrieval settings](#default-retrieval-settings)
-below). `"balanced"` was the default while every record carried a JSON
-envelope, and it stays the field's own default; use `"balanced"` or
-`"density"` explicitly when your workload evaluation favors one of those
-policies.
+`"balanced"`, with the one-line `"reader"` context format and rank fusion
+scoring (see [Default retrieval settings](#default-retrieval-settings) below).
+`"balanced"` was also the default while every record carried a JSON envelope,
+and it is the field's own default. `"score"` was the default with the reader
+format for a short time on 2026-09-25, until balanced order passed the
+default-change test against it. Use `"score"` or `"density"` explicitly when
+your workload evaluation favors one of those policies.
 
 ```python
 from prme import MemoryClient
@@ -29,7 +30,8 @@ that config. Copying `config.packing` keeps the other defaults. A
 `PackingConfig` built from scratch starts from the class's own historical
 defaults instead (`auditable`, `balanced` and no rank fusion session decay),
 which stored receipts and configurations rely on. Set
-`PRME_PACKING__MULTIPATH_ORDERING=density` for an explicit density override.
+`PRME_PACKING__MULTIPATH_ORDERING=density` or `=score` for an explicit density
+or score override.
 This is an engine configuration, not a new per-request HTTP or MCP parameter.
 
 | Policy | Ordering within the ordinary multi-path tier |
@@ -134,11 +136,11 @@ turns next to long assistant replies. Under the weighted score LoCoMo gained 8.8
 percentage points and LongMemEval-S lost 3.2. Under rank fusion
 (`ScoringWeights.fusion="rrf"`) with
 `PackingConfig.session_context_rank_fusion_score_decay=0.6`, LoCoMo gained only
-1.0 and LongMemEval-S lost 7.9. The defaults use score order, the order the
-DeepSeek answer pairs measured with the reader format (see
-[Default retrieval settings](#default-retrieval-settings)); a balanced version
-would be a new variant with its own answer pairs (epic #77). The
-[reader ordering record](../benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
+1.0 and LongMemEval-S lost 7.9. The DeepSeek answer pairs that made the reader
+format the default used score order; a balanced version was then answered as a
+variant of its own and passed the default-change test twice, so the defaults
+use `balanced` (see [Default retrieval settings](#default-retrieval-settings)).
+The [reader ordering record](../benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md)
 has both budgets, the rank fusion recency settings and every category.
 
 When a record does not fit whole, the packer tries lower representation levels
@@ -269,20 +271,25 @@ high-stakes workloads directly.
 
 ## Default retrieval settings
 
-`PRMEConfig()` retrieves with these settings, which changed together after
-v0.12.0 (see the changelog):
+`PRMEConfig()` retrieves with these settings, which changed after v0.12.0
+(see the changelog):
 
-| Setting | Default | Previous default |
+| Setting | Default | Default in v0.12.0 |
 |---|---|---|
 | `scoring.fusion` (`PRME_SCORING__FUSION`) | `rrf`, with `rrf_k=60` | `weighted` |
 | `scoring.rrf_recency_boost` (`PRME_SCORING__RRF_RECENCY_BOOST`) | `0.25` | unset (rank fusion did not exist as a default) |
 | `scoring.rrf_tie_break` (`PRME_SCORING__RRF_TIE_BREAK`) | `event_time` | unset |
 | `packing.context_format` (`PRME_PACKING__CONTEXT_FORMAT`) | `reader` | `auditable` |
-| `packing.multipath_ordering` (`PRME_PACKING__MULTIPATH_ORDERING`) | `score` | `balanced` |
+| `packing.multipath_ordering` (`PRME_PACKING__MULTIPATH_ORDERING`) | `balanced` | `balanced` (`score` between the two steps described below) |
 | `packing.session_context_rank_fusion_score_decay` (`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`) | `0.6` | None (0.85, the weighted decay) |
 
-The context budget and session expansion did not change. The combination
-passed the project's default-change test twice on the DeepSeek answer track
+The settings changed in two steps on 2026-09-25, and each step passed the
+project's default-change test twice on the DeepSeek answer track. The first
+step made rank fusion with its recency settings, the reader format, score order
+and the 0.6 session decay the defaults. The second replaced score order with
+`balanced`. The context budget and session expansion did not change.
+
+The first step's combination passed the test on the DeepSeek answer track
 (`deepseek-v4.1-flash:cloud` as reader and judge through Ollama 0.34.3, a
 3,996-token context, the registered 2026-09-23 prompts). Each pair answered the
 new settings and a fresh run of the previous defaults interleaved question by
@@ -297,11 +304,28 @@ These are DeepSeek-track numbers and are not comparable with the GPT-5.4
 results; [BENCHMARKS.md](../BENCHMARKS.md) has the categories and receipts.
 LongMemEval-S knowledge-update questions went from 73 to 71 of 78 in both
 pairs (-2.6 points, intervals including zero); #169 tracks recency on those
-questions. Score order is the order the answer pairs measured. On the offline
-evidence gate, `balanced` order with the same reader format and rank fusion
-settings packed all LongMemEval-S evidence for more questions and all LoCoMo
-evidence for fewer (#81); a balanced version would be a new variant with its
-own answer pairs.
+questions.
+
+The second step changed only the ordering. On the offline evidence gate,
+`balanced` order with the same reader format and rank fusion settings packed
+all LongMemEval-S evidence for more questions and all LoCoMo evidence for fewer
+(#81). Its answer pairs, each against a fresh run of the first step's
+defaults under the same conditions, gained on LongMemEval-S and showed no
+LoCoMo difference:
+
+| Pair | LoCoMo (1,540 questions) | LongMemEval-S (500 questions) |
+|---|---|---|
+| First | 80.1% to 80.6%, +0.5 points (95% interval -0.9 to +2.0) | 86.8% to 90.0%, +3.2 (+0.6 to +6.0) |
+| Confirmation | 80.6% to 80.4%, -0.2 (-1.5 to +1.1) | 86.8% to 90.0%, +3.2 (+0.6 to +5.8) |
+
+LongMemEval-S multi-session questions gained the most (+7.5 and +11.3 points,
+both intervals excluding zero). LongMemEval-S knowledge-update questions went
+from 73 to 70 of 78 in both pairs (-3.8 points, intervals including zero;
+#169). LoCoMo multi-hop questions fell by 1.8 and 4.3 points. In the
+confirmation the conversation-level interval excludes zero (-9.2 to -0.6), but
+the question-level one does not (-9.2 to +0.4), so the category's interval,
+which spans both, includes zero. Set `PRME_PACKING__MULTIPATH_ORDERING=score`
+to keep the first step's score order.
 
 What else changes with these defaults:
 
@@ -332,7 +356,7 @@ What else changes with these defaults:
   context) or use the `auditable` format for those callers.
 - Retrieval receipts are written as version 19 by default.
 
-To go back to the previous defaults, set all three:
+To go back to the v0.12.0 defaults, set all three:
 
 ```bash
 PRME_SCORING__FUSION=weighted
@@ -351,7 +375,9 @@ config = config.model_copy(update={
 })
 ```
 
-`ScoringWeights()` and `PackingConfig()` are the previous defaults. A weighted
+`ScoringWeights()` and `PackingConfig()` are the v0.12.0 defaults. `balanced`
+ordering is the default again, so the third setting only makes it explicit. A
+weighted
 fusion set through the environment drops the rank fusion recency boost and
 tie-break, and the rank fusion session decay stays 0.6, but weighted scoring
 never applies it and its receipts omit it. With these three settings the

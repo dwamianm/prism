@@ -1906,10 +1906,11 @@ FAILED = "abandoned: a question failed finally"
 OTHER_POLICY = "abandoned: it was started under another failure policy"
 
 
-def published_deepseek_pair(before: str, after: str, benchmark: str, number: int) -> list[dict]:
+def published_deepseek_pair(before: str, after: str, benchmark: str, number: int,
+                            day: str = "2026-09-24") -> list[dict]:
     """Both sides of a published DeepSeek pair, before side first."""
     stem = f"{OLLAMA_MODEL.track}-{before}-vs-{after}-{benchmark}-pair-{number}"
-    return [json.loads((PUBLISHED / "2026-09-24" / f"{stem}-{side}-result.json").read_text())
+    return [json.loads((PUBLISHED / day / f"{stem}-{side}-result.json").read_text())
             for side in baselines.PAIR_SIDES]
 
 
@@ -2025,6 +2026,62 @@ def test_the_default_change_confirmation_started_after_both_first_pairs_finished
                                for (_, number), sides in pairs.items() if number == 2 for side in sides)
     assert first_finished < confirmation_started
     assert all(side["pair"]["earlier_pairs"] == [{"baseline": REPEAT, "number": 1, "state": "complete"}]
+               for (_, number), sides in pairs.items() if number == 2 for side in sides)
+
+
+# The balanced ordering default change of 2026-09-25: the first pair and the confirmation of the variant that made
+# balanced order the default again, answered alongside the baseline of the defaults #177 set. BENCHMARKS.md reports
+# these counts and context hashes.
+BALANCED_BASELINE = "prme@335ee82b"
+BALANCED_CHANGE = "prme-rrf-rec-balanced"
+BALANCED_CHANGE_CORRECT = {"locomo": {1: (1234, 1242), 2: (1241, 1238)},
+                           "longmemeval": {1: (434, 450), 2: (434, 450)}}
+BALANCED_CHANGE_CONTEXTS = {"locomo": "d0eb16780d8e16ef669ea47bb81ed840f71014be66d3a4179d67760eaa3aee54",
+                            "longmemeval": "bbb19605b98a10cde129b7798000fd1a10b67937860d0b3d13faaecb808c969c"}
+
+
+def published_balanced_pair(benchmark: str, number: int) -> list[dict]:
+    return published_deepseek_pair(BALANCED_BASELINE, BALANCED_CHANGE, benchmark, number, day="2026-09-25")
+
+
+@pytest.mark.parametrize("benchmark", ["locomo", "longmemeval"])
+@pytest.mark.parametrize("number", [1, 2])
+def test_the_published_balanced_ordering_pairs_are_complete_and_match_benchmarks_md(benchmark, number):
+    before, after = published_balanced_pair(benchmark, number)
+    conditions = first_aa_check(benchmark)["conditions"]
+    for side, result, arm in zip(baselines.PAIR_SIDES, (before, after), (BALANCED_BASELINE, BALANCED_CHANGE)):
+        rows = result["rows"]
+        assert (result["kind"], result["arm"], result["benchmark"]) == ("ollama-answer-result", arm, benchmark)
+        assert [row["question_id"] for row in rows] == json.loads(study.REG.read_text())["cohort_ids"][benchmark]
+        assert result["complete"] and result["total"] == result["completed"] == len(rows)
+        assert result["final_failures"] == result["unreplaced_failures"] == 0
+        assert result["correct"] == sum(row["correct"] for row in rows)
+        # Answered under the conditions of the A/A check the pair relied on, with no question left unscored.
+        assert result["answer_model"] == conditions["answer_model"]
+        assert result["server_versions"] == conditions["server_versions"] == ["0.34.3"]
+        assert result["context_budget"] == conditions["context_budget"] == baselines.RULE_BUDGET
+        assert result["failure_policy"]["unscored"] == 0 and {row["outcome"] for row in rows} == {"judged"}
+        assert (result["pair"]["side"], result["pair"]["number"]) == (side, number)
+    assert (before["correct"], after["correct"]) == BALANCED_CHANGE_CORRECT[benchmark][number]
+    assert before["prepared"]["overrides"] == {}
+    assert after["prepared"]["variant_settings"] == {"packing.multipath_ordering": "balanced"}
+    assert baselines._contexts_sha256([{"question_id": row["question_id"], "text_sha256": row["context_text_sha256"]}
+                                       for row in after["rows"]]) == BALANCED_CHANGE_CONTEXTS[benchmark]
+    # The defaults replayed at the variant's commit read the before side's text on every question, so the pair
+    # credits the ordering alone (#139).
+    assert [row["defaults_text_sha256"] for row in after["rows"]] == \
+        [row["context_text_sha256"] for row in before["rows"]]
+
+
+def test_the_balanced_ordering_confirmation_started_after_both_first_pairs_finished():
+    pairs = {(benchmark, number): published_balanced_pair(benchmark, number)
+             for benchmark in ("locomo", "longmemeval") for number in (1, 2)}
+    first_finished = max(datetime.fromisoformat(side["finished_at"])
+                         for (_, number), sides in pairs.items() if number == 1 for side in sides)
+    confirmation_started = min(datetime.fromisoformat(side["started_at"])
+                               for (_, number), sides in pairs.items() if number == 2 for side in sides)
+    assert first_finished < confirmation_started
+    assert all(side["pair"]["earlier_pairs"] == [{"baseline": BALANCED_BASELINE, "number": 1, "state": "complete"}]
                for (_, number), sides in pairs.items() if number == 2 for side in sides)
 
 

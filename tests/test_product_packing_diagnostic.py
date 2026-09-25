@@ -369,11 +369,15 @@ def test_gate_config_refuses_a_rank_fusion_session_decay_without_rank_fusion(tmp
     decay = "packing.session_context_rank_fusion_score_decay=0.5"
     fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', decay]))
     assert fused.packing.session_context_rank_fusion_score_decay == .5
-    # The default is 0.6, and other packing settings keep it, as they keep the reader format and score order.
+    # The default is 0.6, and other packing settings keep it, as they keep the reader format and balanced order.
     assert gate_config(tmp_path).packing.session_context_rank_fusion_score_decay == .6
     budget = gate_config(tmp_path, parse_overrides(["packing.token_budget=8192"])).packing
     assert (budget.session_context_rank_fusion_score_decay, budget.context_format,
-            budget.multipath_ordering) == (.6, "reader", "score")
+            budget.multipath_ordering) == (.6, "reader", "balanced")
+    # Score order, the default before balanced order passed the default-change test, keeps the others too.
+    score = gate_config(tmp_path, parse_overrides(['packing.multipath_ordering="score"'])).packing
+    assert (score.session_context_rank_fusion_score_decay, score.context_format,
+            score.multipath_ordering) == (.6, "reader", "score")
     # Weighted scoring never applies the default decay, so only a decay set with it is refused.
     assert gate_config(tmp_path, parse_overrides(['scoring.fusion="weighted"'])).scoring.fusion == "weighted"
     with pytest.raises(ValueError, match="applies only with"):

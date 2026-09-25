@@ -167,8 +167,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   0.25 (`scoring.rrf_recency_boost`) and an event-time tie-break
   (`scoring.rrf_tie_break="event_time"`), the reader context format
   (`packing.context_format="reader"`, previously `auditable`), score ordering
-  (`packing.multipath_ordering="score"`, previously `balanced`) and a rank
-  fusion session decay of 0.6
+  (`packing.multipath_ordering="score"`, previously `balanced`; `balanced` is
+  the default again, see the next entry) and a rank fusion session decay of 0.6
   (`packing.session_context_rank_fusion_score_decay`, previously unset). The
   context budget and session expansion are unchanged. The combination (the
   DeepSeek-track variant `prme-reader-rrf-sd06-rec`) passed the epic #77
@@ -217,6 +217,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     session decay (its receipts omit it), so retrieval, contexts and receipts
     are those of the previous defaults. In code, pass
     `scoring=ScoringWeights()` and `packing=PackingConfig()` to `PRMEConfig`.
+- **Multi-path ordering default.** `PRMEConfig()` now orders the ordinary
+  multi-path tier with `balanced` (`packing.multipath_ordering="balanced"`)
+  instead of score order. The other retrieval defaults above are unchanged.
+  `balanced` was also the ordering in v0.12.0, so an install upgrading from
+  that release sees only the scoring, context format and session decay change
+  above. Balanced reserves the highest-scored ordinary multi-path candidate and
+  then orders the rest by score / full-entry tokens\*\*0.25, so a context
+  holds more short records than under score order. With the other defaults
+  (the DeepSeek-track variant `prme-rrf-rec-balanced`), it passed the epic #77
+  default-change test twice on the DeepSeek answer track at a 3,996-token
+  context, each pair against a fresh run of the score-order defaults:
+  LongMemEval-S went from 86.8% to 90.0% in both pairs (+3.2 points, 95%
+  intervals +0.6 to +6.0 and +0.6 to +5.8), and LoCoMo went from 80.1% to
+  80.6% and from 80.6% to 80.4% (+0.5 and -0.2 points, intervals -0.9 to +2.0
+  and -1.5 to +1.1). LongMemEval-S multi-session questions gained 7.5 and 11.3
+  points; LongMemEval-S knowledge-update questions (73 to 70 of 78 in both
+  pairs, #169) and LoCoMo multi-hop questions (-1.8 and -4.3 points) fell, with
+  intervals including zero. See `BENCHMARKS.md`. Candidate retrieval and
+  scoring, the context budget and the receipt schema version (19) are
+  unchanged; receipts record the ordering as before.
+  - **Upgrade note:** to keep score order, set
+    `PRME_PACKING__MULTIPATH_ORDERING=score`. In code, copy the packing
+    configuration with `multipath_ordering="score"`:
+    `config.packing.model_copy(update={"multipath_ordering": "score"})`.
 - Simulation checkpoints can require memory text in the context the reader
   gets (`SimCheckpoint.context_keywords`, reported as
   `CheckpointResult.context_missing`). Four checks that tested the weighted

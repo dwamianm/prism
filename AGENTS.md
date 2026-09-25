@@ -266,13 +266,13 @@ accept labels but cannot replay scores. Replay excludes unseen/filtered candidat
 Version 3 adds request parameters and reported feature identity in extensible
 execution maps. Density/score pipeline receipts use version 4 to record the explicit
 packing order; versions 1–3 retain their canonical bytes and implicit density
-ordering. `multipath_ordering="balanced"`, the default before rank fusion and the
-reader format became defaults, reserves the highest-scored
-ordinary multi-path candidate, then uses score / full-entry-tokens**0.25.
+ordering. `multipath_ordering="balanced"`, the default ordering (score ordering
+replaced it briefly with the reader format, and it is the default again), reserves
+the highest-scored ordinary multi-path candidate, then uses score / full-entry-tokens**0.25.
 It emits version 5 receipts with explicit ordering and execution; versions 1–4
 cannot claim balanced and retain their canonical bytes. See `docs/PACKING.md`.
 The retrieval defaults are rank fusion (`rrf_k=60`) with a current-state recency
-boost of 0.25 and an event-time tie-break, the reader context format, score
+boost of 0.25 and an event-time tie-break, the reader context format, balanced
 ordering and a rank fusion session decay of 0.6 (`docs/PACKING.md`, "Default
 retrieval settings"). They live in `PRMEConfig`: `ScoringWeights()` and
 `PackingConfig()` built in code keep their field defaults (weighted; auditable,
@@ -310,7 +310,10 @@ balanced scored 250 versus 185, plus source-retention gains on both cohorts.
 These examined cohorts do not establish universal superiority. Score ordering
 became the default with the reader format because it is the order the DeepSeek
 answer pairs measured; on the offline evidence gate balanced order traded
-LoCoMo evidence for LongMemEval-S evidence under those settings (#81).
+LoCoMo evidence for LongMemEval-S evidence under those settings (#81). Balanced
+order with the reader format and rank fusion then passed the DeepSeek
+default-change test twice against the score-order defaults (LongMemEval-S +3.2
+points in both pairs, no LoCoMo difference shown) and became the default again.
 `AnswerabilityEvaluator` is an optional model-assisted check over the exact
 packed bundle. It resolves compact labels and auditable full-UUID citations,
 then derives full, partial, insufficient and conflicting verdicts outside the
@@ -347,8 +350,9 @@ superiority evidence.
 The completed GPT-5.4 default-retrieval baselines are LongMemEval-S **430/500
 (86.0%)** and LoCoMo **985/1,540 (64.0%)**, using medium reader/judge reasoning
 and a 3,996-token memory-context ceiling. They measure the retrieval defaults
-before rank fusion, the reader format and score ordering became defaults; no
-GPT-5.4 run of the new defaults exists. These are scoped raw-turn storage
+before rank fusion and the reader format became defaults (with balanced
+ordering, which is the default again); no GPT-5.4 run of the new defaults
+exists. These are scoped raw-turn storage
 evaluations; the separate DeepSeek 87.4% result is not replaced. The new
 defaults were adopted on the separate DeepSeek answer track (`BENCHMARKS.md`),
 whose numbers are never compared directly with GPT-5.4 numbers. Zep's published

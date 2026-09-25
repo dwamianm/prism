@@ -127,10 +127,11 @@ jobs:
       - name: Run simulations
         run: uv run python -m scripts.run_simulations
 
-      # The retrieval defaults before rank fusion, the reader format and score
-      # ordering became the defaults must also pass every checkpoint. A
-      # weighted fusion drops the rank fusion recency boost and tie-break, and
-      # weighted scoring never applies the rank fusion session decay.
+      # The retrieval defaults before rank fusion and the reader format became
+      # the defaults (v0.12.0) must also pass every checkpoint. A weighted
+      # fusion drops the rank fusion recency boost and tie-break, and weighted
+      # scoring never applies the rank fusion session decay. Balanced ordering
+      # is the default again; naming it keeps this set explicit.
       - name: Run simulations with the previous retrieval defaults
         env:
           PRME_SCORING__FUSION: weighted

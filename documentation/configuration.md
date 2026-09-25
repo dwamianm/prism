@@ -93,7 +93,7 @@ decay), which stored receipts and configurations rely on.
 | `PRME_PACKING__OVERHEAD_TOKENS` | `100` | Reserved for formatting overhead |
 | `PRME_PACKING__CHARS_PER_TOKEN` | `4.2` | Estimated chars per token |
 | `PRME_PACKING__CONTEXT_FORMAT` | `reader` | `reader` (one plain line per record), `auditable` (one JSON object per record) or `compact`. Answerability and claim verification need `PRME_PACKING__CONTEXT_CITATIONS=true` with `reader` |
-| `PRME_PACKING__MULTIPATH_ORDERING` | `score` | Order within the multi-path tier: `score`, `balanced` (the previous default) or `density` |
+| `PRME_PACKING__MULTIPATH_ORDERING` | `balanced` | Order within the multi-path tier: `balanced`, `score` (briefly the default with the reader format) or `density` |
 | `PRME_PACKING__CONTEXT_CITATIONS` | `false` | Reader format only: add `[m3]` references and fill `context_references` |
 | `PRME_PACKING__MIN_FIDELITY` | `reference` | Lowest representation a record may fall back to. `full`, `prose` or `structured` keeps the text-free `key_value` and `reference` fallbacks, and blank records, out of every context format |
 | `PRME_PACKING__VECTOR_K` | `250` | Vector search candidates |

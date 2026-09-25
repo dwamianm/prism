@@ -9,7 +9,8 @@ configurations read a missing value as, so they do not change. The product
 defaults that ``PRMEConfig`` applies (``DEFAULT_SCORING_SETTINGS`` and
 ``DEFAULT_PACKING_SETTINGS``) differ from them: rank fusion with a 0.25
 current-state recency boost and an event-time tie-break, the reader context
-format, score ordering and a 0.6 rank fusion session decay.
+format and a 0.6 rank fusion session decay. Their multi-path ordering is
+balanced, which is also the class default.
 """
 
 from __future__ import annotations
@@ -40,7 +41,10 @@ WEIGHTED_ONLY_SETTINGS = ("recency_time",)
 # fusion, unset rank fusion terms and an unset rank fusion session decay, and
 # their readers take the class defaults, so the product defaults live here and
 # in PRMEConfig rather than in the fields. rrf_k is left to ScoringWeights,
-# which gives rank fusion DEFAULT_RRF_K.
+# which gives rank fusion DEFAULT_RRF_K. Balanced multi-path ordering replaced
+# score ordering in these defaults after it passed the same test twice against
+# them (2026-09-25, variant prme-rrf-rec-balanced). It equals the class default
+# and is named here so the product ordering stays explicit.
 DEFAULT_SCORING_SETTINGS: dict[str, Any] = {
     "fusion": "rrf",
     "rrf_recency_boost": 0.25,
@@ -48,7 +52,7 @@ DEFAULT_SCORING_SETTINGS: dict[str, Any] = {
 }
 DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
     "context_format": "reader",
-    "multipath_ordering": "score",
+    "multipath_ordering": "balanced",
     "session_context_rank_fusion_score_decay": 0.6,
 }
 
@@ -369,9 +373,10 @@ class PackingConfig(BaseModel):
 
     The field defaults are the historical ones that stored receipts and
     configurations rely on. ``PRMEConfig().packing`` applies the product
-    defaults over them (``DEFAULT_PACKING_SETTINGS``: the reader format, score
-    ordering and a 0.6 rank fusion session decay); to change one setting and
-    keep those, copy it with ``config.packing.model_copy(update=...)``.
+    defaults over them (``DEFAULT_PACKING_SETTINGS``: the reader format,
+    balanced ordering and a 0.6 rank fusion session decay); to change one
+    setting and keep those, copy it with
+    ``config.packing.model_copy(update=...)``.
     """
 
     model_config = ConfigDict(allow_inf_nan=False)
@@ -382,10 +387,11 @@ class PackingConfig(BaseModel):
             "Order multi-path candidates by score per token ('density'), "
             "composite score ('score'), or reserve the highest-scored ordinary "
             "multi-path candidate then use score / full_tokens**0.25 ('balanced'). "
-            "PRMEConfig uses 'score' by default, with the reader format: it is "
-            "the order the answer runs that made the reader format the default "
-            "measured. Balanced, this class's default, was chosen for JSON "
-            "records; density remains available for compatibility and "
+            "Balanced is this class's default and PRMEConfig's: with rank fusion "
+            "and the reader format it answered more LongMemEval-S questions than "
+            "score order in paired answer runs, with no LoCoMo difference shown. "
+            "Score order was PRMEConfig's default with the reader format before "
+            "that; density remains available for compatibility and "
             "workload-specific evaluation. Other priority tiers and whole-output "
             "token limits are unchanged."
         ),

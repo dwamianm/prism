@@ -24,11 +24,12 @@ branch and subsequent production merges. The safe promoted surface includes:
 - durable raw ingestion and restart/retry handling;
 - source-preserving extraction, scoped retrieval, contradiction handling, and
   atomic replacement/publication paths;
-- the reader context format, score ordering, rank fusion scoring with a
+- the reader context format, balanced ordering, rank fusion scoring with a
   0.25 current-state recency boost and an event-time tie-break, and a 0.6
   rank fusion session decay as the retrieval defaults (since 2026-09-25,
-  adopted on the DeepSeek answer track), with the auditable and compact
-  formats, balanced and density ordering and the weighted formula still
+  adopted on the DeepSeek answer track in two steps, the second of which
+  replaced score ordering with balanced ordering), with the auditable and
+  compact formats, score and density ordering and the weighted formula still
   available explicitly;
 - tenant-bound HTTP/MCP access, workspace/lease isolation, PostgreSQL parity,
   deterministic rebuild and recovery paths;

@@ -118,8 +118,9 @@ packing or unseen candidates.
 
 Balanced packing reserves the highest-scored ordinary multi-path candidate and
 then applies the fixed quarter-length penalty. It uses the same priority tiers,
-whole-source rendering and measured budget. It was the application default,
-until score ordering replaced it with the reader format (RFC-0006), after
+whole-source rendering and measured budget. It is the application default,
+except for a short time when score ordering replaced it with the reader format
+(RFC-0006). It first became the default after
 a complete 119-question answer trial improved correctness from 67 to 83, with
 26 paired wins and 10 losses. A separately registered 381-question answer
 confirmation improved correctness from 185 to 250, with 88 paired wins, 23

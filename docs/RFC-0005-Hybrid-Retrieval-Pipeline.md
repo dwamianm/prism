@@ -445,6 +445,8 @@ that omits `fusion` keeps meaning weighted. The default changed after it passed
 the epic #77 DeepSeek default-change test twice, together with the reader
 context format, score ordering, the 0.6 session decay and the recency boost
 and tie-break below (`docs/PACKING.md`, "Default retrieval settings").
+Balanced ordering later replaced score ordering in those defaults after it
+passed the same test twice against them.
 
 ```
 score(obj) =

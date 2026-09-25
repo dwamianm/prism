@@ -463,7 +463,7 @@ class PRMEConfig(_ProjectSettings):
         default_factory=default_packing_config,
         description=(
             "Context packing configuration (RFC-0006). Defaults to the reader "
-            "context format, score ordering and a 0.6 rank fusion session "
+            "context format, balanced ordering and a 0.6 rank fusion session "
             "decay. PRME_PACKING__* environment variables and .env entries keep "
             "those unless they set them. Packing passed in code, as a "
             "PackingConfig object or a dict, follows PackingConfig's own "
