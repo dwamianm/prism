@@ -113,6 +113,20 @@ those conditions. The record must list exactly the A/A pairs the track's run
 logs show complete, each line matching its published results.
 ``record-aa-check`` adds an A/A pair published before the record existed, or
 one ``run-pair`` could not add.
+
+Whether a variant passed is recorded, not worked out by hand (#144). When
+the ``compare`` command accepts a variant's first pair or confirmation, or
+an A/A pair, it appends a ``compared`` event to the pair's run log and a
+line to the track's tracked verdict record (``record_pair_verdict``): the
+role, the baseline, the variant's identity, the difference, its 95% interval
+and whether it excludes zero, the A/A check it relied on, and the published
+results with their digests. ``verdict`` reads those lines for one variant on
+both benchmarks, checks them against the published results and, on the
+machine that answered the pairs, against the run logs, and prints ``pass``,
+``fail`` or ``incomplete`` with the numbers behind it, applying the
+default-change rule's A/A margin where an A/A pair under a pair's
+conditions excluded zero. A failed first pair fails the variant, and the
+pull request that flips a default cites the output.
 """
 from __future__ import annotations
 
@@ -124,7 +138,7 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime
 import fcntl
-from functools import partial
+from functools import cache, partial
 import hashlib
 import json
 import math
@@ -241,6 +255,7 @@ _VARIANT_KEYS = ("variant_settings", "contexts_sha256")
 _VERSION_EVENTS = frozenset({"started", "finished", "model-changed"})
 # compare's paired bootstrap, as the evidence gate's comparisons draw it.
 BOOTSTRAP_SEED = 42
+BOOTSTRAP_SAMPLES = 2000
 # LoCoMo's questions come from 10 conversations, so its intervals resample conversations. Each LongMemEval-S
 # question has its own history, so its intervals resample questions.
 CONVERSATION_INTERVALS = frozenset({"locomo"})
@@ -252,6 +267,17 @@ RULE_TOKENIZER = "cl100k_base"
 REFERENCE_ARMS = frozenset(ARMS) - {"prme"}
 # What an A/A check measured, which a variant's pair must share for the check to cover it (#137).
 AA_CONDITIONS = ("model identity", "answer settings", "failure policy", "Ollama server version", "context budget")
+# The roles compare records a pair in for the verdict step (#144): a variant's first pair and its confirmation (#130),
+# and an A/A pair (#137).
+VERDICT_ROLES = ("first", "confirmation")
+RECORDED_ROLES = (*VERDICT_ROLES, "aa")
+_ROLE_LABELS = {"first": "first pair", "confirmation": "confirmation"}
+# What a tracked record keeps of a pair's mark, and of a LoCoMo interval's two halves.
+_MARK_KEYS = ("id", "number", "sha256")
+_SPLIT_INTERVALS = ("interval_95_conversations", "interval_95_questions")
+# The #118 sequential repeat of the defaults: the day its results were published, the first baseline and its repeat,
+# each answered on its own. The default-change rule's A/A margin counts its difference with the A/A pairs' (#144).
+SEQUENTIAL_REPEAT = ("2026-09-24", "prme", "prme@46647825")
 # What a variant's replay and the defaults' replay at its commit must share, so the two differ by settings alone (#139).
 _REPLAY_INPUTS = ("commit", "dirty", "worktree_sha256", "python", "dependencies", "archive", "datasets")
 # Since when every variant pair must record the defaults' text at the variant's commit (#139). Every variant pair on
@@ -2146,7 +2172,7 @@ def _variant_record(data: Path, benchmark: str, mark: dict) -> dict:
     identity = {key: this[key] for key in _VARIANT_KEYS}
     same = [pair for pair in pairs if _shares_identity(pair, identity)]
     counted = _counted(_counting(pairs, this["baseline"], this["contexts_sha256"]))
-    role = next((("first", "confirmation")[place] for place, pair in enumerate(counted) if pair is this), None)
+    role = next((VERDICT_ROLES[place] for place, pair in enumerate(counted) if pair is this), None)
     if role is None:
         which = " and ".join(f"{name} is {_named(pair)}" for name, pair in zip(("the first", "the confirmation"),
                                                                              counted))
@@ -2333,15 +2359,34 @@ def _published_aa_pair(before: Path, after: Path, results: Path) -> tuple[dict[s
     benchmark = sides["before"].get("benchmark")
     if benchmark not in gate.GATE_BENCHMARKS or sides["after"].get("benchmark") != benchmark:
         raise ValueError(f"The results name an unknown benchmark, {benchmark!r}")
-    paths = {}
-    for side, path in zip(PAIR_SIDES, (before, after)):
+    return sides, pair, _published(dict(zip(PAIR_SIDES, (before, after))), results, "#137")
+
+
+def _published(paths: dict[str, Path], results: Path, issue: str) -> dict[str, dict]:
+    """Where each side's result is published under ``results``, with its digest, as a tracked record names it."""
+    found = {}
+    for side, path in paths.items():
         try:
-            paths[side] = {"path": str(path.resolve().relative_to(results.resolve())), "sha256": digest(path)}
+            found[side] = {"path": str(path.resolve().relative_to(results.resolve())), "sha256": digest(path)}
         except ValueError:
             raise ValueError(f"The {side} result is not published under {results}. Copy the pair's published "
                              "results into this checkout's results, where they are committed with the record "
-                             "(#137).") from None
-    return sides, pair, paths
+                             f"({issue}).") from None
+    return found
+
+
+def _recorded_sides(results: Path, entry: dict, record: str, named: str, issue: str) -> dict[str, dict]:
+    """Both sides' results a tracked record's line names, which must be published under ``results`` with the
+    digests the line records."""
+    sides = {}
+    for side in PAIR_SIDES:
+        found = entry["results"][side]
+        path = (results / found["path"]).resolve()
+        if not path.is_relative_to(results.resolve()) or not path.is_file() or digest(path) != found["sha256"]:
+            raise ValueError(f"The {record} names {found['path']} as the {side} result of {named}, which is not "
+                             f"published in this checkout with the recorded digest ({issue})")
+        sides[side] = json.loads(path.read_text())
+    return sides
 
 
 def record_aa_check(before: Path, after: Path, *, data: Path | None = None, results: Path | None = None) -> dict:
@@ -2468,25 +2513,34 @@ def _check_aa_record(path: Path, benchmark: str, listed: list[dict], on_record: 
                          "finished (#137)")
 
 
-def _check_aa_results(results: Path, entry: dict) -> None:
+def _check_aa_results(results: Path, entry: dict) -> dict[str, dict]:
     """A record line must name the pair's published results with their digests, and the conditions they record.
 
     So an edited line cannot move an A/A check to conditions it was not
-    answered under, or hide a pair under others (#137).
+    answered under, or hide a pair under others (#137). Returns both sides.
     """
     named = _aa_named(entry["baseline"], entry["pair"]["number"], entry["benchmark"])
-    sides = {}
-    for side in PAIR_SIDES:
-        found = entry["results"][side]
-        path = (results / found["path"]).resolve()
-        if not path.is_relative_to(results.resolve()) or not path.is_file() or digest(path) != found["sha256"]:
-            raise ValueError(f"The A/A record names {found['path']} as the {side} result of {named}, which is not "
-                             "published in this checkout with the recorded digest (#137)")
-        sides[side] = json.loads(path.read_text())
+    sides = _recorded_sides(results, entry, "A/A record", named, "#137")
     if (any((result.get("pair") or {}).get("id") != entry["pair"]["id"] for result in sides.values())
             or _pair_conditions(sides["before"], sides["after"]) != entry["conditions"]):
         raise ValueError(f"The A/A record's line for {named} does not match the pair and conditions its published "
                          "results record (#137)")
+    return sides
+
+
+def _checked_aa_lines(results: Path, model: str, benchmark: str,
+                      on_record: dict[tuple[str, int], dict] | None) -> list[tuple[dict, dict[str, dict]]]:
+    """The A/A record's lines on the benchmark, each with both sides of its published pair (``_check_aa_results``).
+
+    With ``on_record``, the complete A/A pairs in the track's run logs
+    (``_complete_aa_pairs``), the record must list exactly them
+    (``_check_aa_record``). Without the run logs, None, nothing can show it.
+    """
+    path = _aa_record_path(results, model)
+    listed = _aa_lines(path, benchmark)
+    if on_record is not None:
+        _check_aa_record(path, benchmark, listed, on_record)
+    return [(entry, _check_aa_results(results, entry)) for entry in listed]
 
 
 def _aa_listed(entry: dict) -> dict:
@@ -2513,10 +2567,7 @@ def _aa_coverage(data: Path, results: Path, model: str, conditions: dict) -> dic
     checks = {}
     for benchmark in gate.GATE_BENCHMARKS:
         on_record = _complete_aa_pairs(data, benchmark)
-        listed = _aa_lines(path, benchmark)
-        _check_aa_record(path, benchmark, listed, on_record)
-        for entry in listed:
-            _check_aa_results(results, entry)
+        listed = [entry for entry, _ in _checked_aa_lines(results, model, benchmark, on_record)]
         covering = [entry for entry in listed if not _condition_differences(entry["conditions"], conditions)]
         accepted = [entry for entry in covering if entry["accepted"]
                     and on_record[(entry["baseline"], entry["pair"]["number"])]["state"] == "complete"]
@@ -2590,6 +2641,555 @@ def _check_aa_ready(data: Path, results: Path, model: ollama_answers.AnswerModel
                "failure_policy": {"sha256": failure_amendment()["sha256"]} if _policy_of(settings) else None,
                "context_budget": prepared["context_budget"], "prepared": {"tokenizer": prepared.get("tokenizer")}}
         _aa_coverage(data, results, model.model, _pair_conditions(now, now))
+
+
+# Pair verdicts (#144) -------------------------------------------------------------
+
+def _verdict_record_path(results: Path, model: str) -> Path:
+    """The verdict record under ``results`` of the Ollama model named ``model``.
+
+    One line per pair the ``compare`` command accepted as a variant's first
+    pair or confirmation, or as an A/A pair, in the order they were first
+    compared. The record is tracked, so it is committed with the pairs'
+    published results, like the A/A record.
+    """
+    return results / f"{ollama_answers.AnswerModel(model=model).track}-pair-verdicts.jsonl"
+
+
+def _pair_named(entry: dict) -> str:
+    """A verdict record line's pair, for messages."""
+    return f"{_named({'number': entry['pair']['number'], **{key: entry[key] for key in ('baseline', 'arm')}})} " \
+           f"on {entry['benchmark']}"
+
+
+def _role_of(comparison: dict) -> str | None:
+    """The role a pair compare accepted has under the default-change rule (``RECORDED_ROLES``), or None.
+
+    A variant's pair is its first pair or its confirmation (#130), and a pair
+    of a baseline with itself that compare shows as a repeat is an A/A pair
+    (#137). A reference arm's pair, and a repeat answered as two runs on
+    their own, have no role.
+    """
+    if comparison.get("variant") is not None:
+        return comparison["variant"]["role"]
+    pair = comparison.get("pair")
+    if pair is not None and comparison.get("repeat") is not None and pair["before"] == pair["after"]:
+        return "aa"
+    return None
+
+
+def record_pair_verdict(comparison: dict, before: Path, after: Path, *, data: Path | None = None,
+                        results: Path | None = None) -> tuple[dict, bool] | None:
+    """Record a pair compare accepted, for the verdict step (``verdict``, #144).
+
+    ``comparison`` is compare's output for the results at ``before`` and
+    ``after``, which must be that pair's. A variant's first pair or
+    confirmation, and an A/A pair (``_role_of``), get a ``compared`` event
+    in the pair's run log under ``data`` and a line in the track's verdict
+    record under ``results`` (``_verdict_record_path``): the role, the
+    baseline, the variant's identity and the first pair it counts with, when
+    the pair started and finished, the difference, ``interval_95`` and
+    whether it excludes zero, the A/A check a variant's pair relied on,
+    compare's warnings, and both results' published paths and digests, so a
+    reviewer can check the line without the track's private data. The line
+    is checked against those results before it is written
+    (``_check_verdict_results``), and the pair must be on record as complete
+    in its run log with their pair id.
+
+    Returns the line and whether it was added. The record keeps one line per
+    pair: comparing a pair again adds an event to its run log but no line,
+    and a line that records other values for the pair is refused. None means
+    nothing was recorded: the pair has no role, or the track's run logs are
+    not on this machine, where only the pair's numbers can be checked.
+    """
+    role = _role_of(comparison)
+    if role is None:
+        return None
+    if (comparison["bootstrap_samples"], comparison["bootstrap_seed"]) != (BOOTSTRAP_SAMPLES, BOOTSTRAP_SEED):
+        raise ValueError(f"The verdict record keeps comparisons with compare's own bootstrap ({BOOTSTRAP_SAMPLES} "
+                         f"samples, seed {BOOTSTRAP_SEED}) only (#144)")
+    results = results or RESULTS
+    pair, benchmark = comparison["pair"], comparison["benchmark"]
+    paths = _published({"before": before, "after": after}, results, "#144")
+    sides = {side: json.loads(path.read_text()) for side, path in zip(PAIR_SIDES, (before, after))}
+    marked = _pair_of(sides["before"], sides["after"])
+    if marked != pair or sides["before"].get("benchmark") != benchmark:
+        raise ValueError("The comparison is not of the pair these results were answered in (#144)")
+    data = _track_data(sides["before"], data)
+    if current_baseline(data, benchmark) is None:
+        return None
+    log = _pair_log_path(data, pair["before"], pair["after"], benchmark)
+    state = _pair_states(_pair_root(data, pair["before"], pair["after"], benchmark), log).get(pair["number"])
+    named = f"pair {pair['number']} of {pair['before']} and {pair['after']} on {benchmark}"
+    if state is None or state["state"] != "complete" or (state["id"] is not None and state["id"] != pair["id"]):
+        raise ValueError(f"{named[0].upper()}{named[1:]} is not on record as complete in the track's pair run log, "
+                         "with these results' pair id, so it was not recorded for the verdict. Compare a pair on the "
+                         "machine that answered it (#144).")
+    accuracy, variant, aa_check = comparison["accuracy"], comparison["variant"], comparison["aa_check"]
+    entry = {
+        "kind": "ollama-pair-verdict", "benchmark": benchmark, "role": role, "baseline": pair["before"],
+        "arm": pair["after"], "pair": {key: pair[key] for key in _MARK_KEYS},
+        "started_at": state["started_at"], "finished_at": state["finished_at"],
+        "variant": None if variant is None else {
+            **{key: variant[key] for key in _VARIANT_KEYS},
+            "first": {key: variant["first"][key] for key in ("arm", "baseline", "number")}},
+        "questions": accuracy["queries"], "correct": {side: result.get("correct") for side, result in sides.items()},
+        "bootstrap_samples": BOOTSTRAP_SAMPLES, "bootstrap_seed": BOOTSTRAP_SEED, "difference": accuracy["delta"],
+        "interval_95": accuracy["interval_95"], **{key: accuracy[key] for key in _SPLIT_INTERVALS if key in accuracy},
+        "interval_excludes_zero": _excludes_zero(accuracy["interval_95"]),
+        # The check itself, which a later A/A pair never replaces; other_pairs grows, so it is left to compare.
+        "aa_check": None if aa_check is None else {
+            "conditions": aa_check["conditions"],
+            "checks": {name: {key: found["check"][key] for key in ("baseline", "number", "pair_id")}
+                       for name, found in aa_check["checks"].items()}},
+        "warnings": comparison["warnings"], "results": paths,
+    }
+    # As JSON reads it back (lists, not tuples), so a line already on record compares like with like.
+    entry = json.loads(json.dumps(entry, allow_nan=False))
+    _check_verdict_results(results, entry)
+    record = _verdict_record_path(results, comparison["model"])
+    record.parent.mkdir(parents=True, exist_ok=True)
+    # The record's own file is locked, as the A/A record is, so nothing untracked is left beside it.
+    with record.open("a+") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        handle.seek(0)
+        same = [line for line in map(json.loads, handle.read().splitlines())
+                if line.get("benchmark") == benchmark and (line["pair"]["id"] == pair["id"] or (
+                    line["baseline"], line["arm"], line["pair"]["number"]) == (entry["baseline"], entry["arm"],
+                                                                               pair["number"]))]
+        for line in same:
+            # compare's warnings can grow later, as more pairs complete, so only the recorded result must repeat.
+            differs = sorted(key for key in {*line, *entry} - {"recorded_at", "warnings"}
+                             if line.get(key) != entry.get(key))
+            if differs:
+                raise ValueError(f"The verdict record ({record.name}) already lists {named} with other values "
+                                 f"({', '.join(differs)}), so nothing was recorded (#144)")
+        _append_event(log, {"event": "compared", "pair": pair["number"], "id": pair["id"],
+                            **{key: value for key, value in entry.items() if key not in ("kind", "pair")}})
+        if same:
+            return same[0], False
+        entry["recorded_at"] = study.utc()
+        handle.write(json.dumps(entry, sort_keys=True, allow_nan=False) + "\n")
+    return entry, True
+
+
+def _check_numbers(entry: dict, sides: dict[str, dict], record: str, named: str) -> None:
+    """A tracked record's line must give the numbers its published results give, recomputed with compare's bootstrap.
+
+    So an edited line cannot turn a result into another (#144). The A/A
+    record and the verdict record both keep them.
+    """
+    accuracy = _accuracy(sides["before"], sides["after"])
+    found = {"questions": accuracy["queries"], "difference": accuracy["delta"], "interval_95": accuracy["interval_95"],
+             **{key: accuracy[key] for key in _SPLIT_INTERVALS if key in accuracy},
+             "interval_excludes_zero": _excludes_zero(accuracy["interval_95"]),
+             "correct": {side: result.get("correct") for side, result in sides.items()}}
+    if json.loads(json.dumps(found)) != {key: entry.get(key) for key in found}:
+        raise ValueError(f"The {record}'s line for {named} gives other numbers than this checkout recomputes from its "
+                         "published results: the line was edited, or the paired bootstrap code changed since it was "
+                         "recorded (#144)")
+
+
+def _check_verdict_results(results: Path, entry: dict) -> dict[str, dict]:
+    """A verdict record line must name its pair's published results with their digests, and match what they record.
+
+    Its role must be one the record keeps, its numbers compare's own for
+    those results (``_check_numbers``), and a variant's identity the one its
+    after side records, where it records one: the settings it was prepared
+    with and the hash of its context text on every question. Returns both
+    sides.
+    """
+    named = _pair_named(entry)
+    if entry.get("kind") != "ollama-pair-verdict" or entry.get("role") not in RECORDED_ROLES:
+        raise ValueError(f"The verdict record's line for {named} is not a pair verdict with a known role (#144)")
+    if (entry.get("bootstrap_samples"), entry.get("bootstrap_seed")) != (BOOTSTRAP_SAMPLES, BOOTSTRAP_SEED):
+        raise ValueError(f"The verdict record's line for {named} names another bootstrap than compare's "
+                         f"({BOOTSTRAP_SAMPLES} samples, seed {BOOTSTRAP_SEED}) (#144)")
+    sides = _recorded_sides(results, entry, "verdict record", named, "#144")
+    pair = _pair_of(sides["before"], sides["after"])
+    if (pair is None or {key: pair[key] for key in _MARK_KEYS} != entry["pair"]
+            or (pair["before"], pair["after"]) != (entry["baseline"], entry["arm"])
+            or sides["before"].get("benchmark") != entry["benchmark"]
+            or (entry["role"] == "aa") != (entry["variant"] is None)):
+        raise ValueError(f"The verdict record's line for {named} does not match the pair its published results "
+                         "record (#144)")
+    _check_numbers(entry, sides, "verdict record", named)
+    if entry["variant"] is not None:
+        after = sides["after"]
+        settings = (after.get("prepared") or {}).get("variant_settings")
+        texts = [{"question_id": row["question_id"], "text_sha256": row.get("context_text_sha256")}
+                 for row in after["rows"]]
+        if ((settings is not None and settings != entry["variant"]["variant_settings"])
+                or (all(_has_hash(row, "context_text_sha256") for row in after["rows"])
+                    and _contexts_sha256(texts) != entry["variant"]["contexts_sha256"])):
+            raise ValueError(f"The verdict record's line for {named} names another variant than its published "
+                             "results record (#144)")
+    return sides
+
+
+def _aa_refused(sides: dict[str, dict]) -> bool:
+    """Whether an A/A pair's published results show why compare refused it: a side over the 1% limit (#132)."""
+    with suppress(KeyError, TypeError, ValueError):
+        return any(not _outcome_counts(result["rows"], len(result["rows"]))["within_limit"]
+                   for result in sides.values())
+    return False
+
+
+def _accepted_aa_lines(results: Path, model: str, benchmark: str, data: Path, *, logs: bool) -> list[dict]:
+    """The accepted A/A pairs on the benchmark in the track's A/A record, each checked against its published pair.
+
+    The verdict reads them for the A/A margin, so each accepted line's
+    numbers are recomputed from its published results (``_check_numbers``),
+    and whether a line is accepted must be shown too: with the track's run
+    logs on this machine (``logs``), by the pair's state there, which also
+    requires the record to list exactly the complete A/A pairs they show,
+    so no A/A pair that excluded zero can be left out; without them, by a
+    refused pair's published results being over the failure policy's limit.
+    """
+    on_record = _complete_aa_pairs(data, benchmark) if logs else None
+    accepted = []
+    for entry, sides in _checked_aa_lines(results, model, benchmark, on_record):
+        named = _aa_named(entry["baseline"], entry["pair"]["number"], benchmark)
+        shown = (on_record[(entry["baseline"], entry["pair"]["number"])]["state"] == "complete"
+                 if on_record is not None else not _aa_refused(sides))
+        if entry["accepted"] != shown:
+            shows = "the track's run logs" if logs else "its published results"
+            raise ValueError(f"The A/A record marks {named} {'accepted' if entry['accepted'] else 'refused'}, which "
+                             f"{shows} do not show (#144)")
+        if entry["accepted"]:
+            _check_numbers(entry, sides, "A/A record", named)
+            accepted.append(entry)
+    return accepted
+
+
+def _sequential_repeat(results: Path, model: str, benchmark: str) -> float:
+    """The paired difference of the #118 sequential repeat on the benchmark, as compare gives it for its results."""
+    day, *arms = SEQUENTIAL_REPEAT
+    track = ollama_answers.AnswerModel(model=model).track
+    paths = [results / day / f"{track}-{arm}-{benchmark}-result.json" for arm in arms]
+    missing = [str(path.relative_to(results)) for path in paths if not path.is_file()]
+    if missing:
+        raise ValueError(f"The #118 repeat's published results are missing ({', '.join(missing)}), and the A/A margin "
+                         "counts its difference (#144)")
+    comparison = compare(*(json.loads(path.read_text()) for path in paths))
+    if comparison["repeat"] is None:
+        raise ValueError("compare does not show the #118 repeat's published results as a repeat of the defaults, "
+                         "and the A/A margin counts its difference (#144)")
+    return comparison["accuracy"]["delta"]
+
+
+def _aa_margin(accepted: dict[str, list[dict]], conditions: dict, benchmark: str, relied_on: dict, repeat) -> dict:
+    """Whether the default-change rule's A/A margin applies to a variant's pair on the benchmark, and how large it is.
+
+    ``accepted`` is ``_accepted_aa_lines`` on each benchmark, ``conditions``
+    the pair's (``_pair_conditions``) and ``relied_on`` the A/A check on this
+    benchmark the pair recorded, which must be one of them under those
+    conditions. The margin applies when an accepted A/A pair under the same
+    conditions excluded zero, on either benchmark, as the rule reads ("if
+    either excludes zero"), and a gain on this benchmark must then also be
+    larger than the largest absolute A/A difference recorded on it, the #118
+    repeat included (``repeat``, called only then).
+    """
+    def covering(entries: list[dict]) -> list[dict]:
+        return [entry for entry in entries if not _condition_differences(entry["conditions"], conditions)]
+
+    if not any((entry["baseline"], entry["pair"]["number"], entry["pair"]["id"])
+               == (relied_on["baseline"], relied_on["number"], relied_on["pair_id"])
+               for entry in covering(accepted[benchmark])):
+        raise ValueError(f"The A/A record holds no accepted A/A check on {benchmark} under the conditions of this pair "
+                         f"that is the one it relied on, {_aa_named(relied_on['baseline'], relied_on['number'])} "
+                         "(#137, #144)")
+    excluding = [_aa_named(entry["baseline"], entry["pair"]["number"], name) for name, entries in accepted.items()
+                 for entry in covering(entries) if entry["interval_excludes_zero"]]
+    if not excluding:
+        return {"applies": False, "excluding": [], "largest_aa_difference": None, "from": None,
+                "case": "No accepted A/A pair under this pair's conditions excludes zero on either benchmark, so no "
+                        "margin applies: a gain counts when its 95% interval excludes zero"}
+    sources = [(abs(entry["difference"]), _aa_named(entry["baseline"], entry["pair"]["number"]))
+               for entry in accepted[benchmark]]
+    sources.append((abs(repeat()), "the #118 sequential repeat"))
+    largest, source = max(sources, key=lambda item: item[0])
+    return {"applies": True, "excluding": excluding, "largest_aa_difference": largest, "from": source,
+            "case": f"{', '.join(excluding)} under this pair's conditions "
+                    f"{'excludes' if len(excluding) == 1 else 'exclude'} zero, so a gain on {benchmark} counts only "
+                    f"when it is also larger than {largest:.4f}, the largest absolute A/A difference recorded on "
+                    f"{benchmark} ({source})"}
+
+
+def _judged(entry: dict, margin: dict) -> dict:
+    """What a recorded pair shows on its benchmark under the default-change rule, with the A/A margin applied.
+
+    A gain or a loss is one whose 95% interval excludes zero, on that side of it.
+    """
+    difference, interval = entry["difference"], entry["interval_95"]
+    outcome = ("gain" if interval and interval[0] > 0 else "loss" if interval and interval[1] < 0
+               else "no difference shown")
+    counts = outcome == "gain" and (not margin["applies"] or difference > margin["largest_aa_difference"])
+    return {"pair": {"arm": entry["arm"], "baseline": entry["baseline"], **entry["pair"]},
+            "variant_settings": entry["variant"]["variant_settings"],
+            **{key: entry.get(key) for key in ("started_at", "finished_at", "correct", "questions")},
+            "difference": difference, "interval_95": interval,
+            **{key: entry[key] for key in _SPLIT_INTERVALS if key in entry},
+            "interval_excludes_zero": entry["interval_excludes_zero"], "outcome": outcome, "margin": margin,
+            "gain_counts": counts, "aa_check": entry["aa_check"], "results": entry["results"],
+            "recorded_at": entry.get("recorded_at")}
+
+
+def _verdict_lines(benchmark: str, arm: str, lines: list[dict], data: Path) -> dict:
+    """The variant's first pair and confirmation lines on one benchmark, found without recomputing anything.
+
+    The count is the variant's pairs alongside the current baseline on its
+    context text (``_counting``, #143). With the track's run logs on this
+    machine, the current baseline is theirs, the context text that of the
+    arm's latest preparation, and each recorded role must be the pair they
+    count in it (``_counted``). Without them, the baseline is that of the
+    last first pair or confirmation recorded on the benchmark, since compare
+    records a variant's pair only while its baseline is current, and the
+    text that of the arm's last line alongside it.
+    """
+    listed = [line for line in lines if line.get("benchmark") == benchmark]
+    for line in listed:
+        if line.get("kind") != "ollama-pair-verdict" or line.get("role") not in RECORDED_ROLES:
+            raise ValueError(f"The verdict record lists a line on {benchmark} that is not a pair verdict with a known "
+                             "role (#144)")
+    variants = [line for line in listed if line["role"] in VERDICT_ROLES]
+    baseline, source, text, pairs = current_baseline(data, benchmark), "run logs", None, []
+    if baseline is not None:
+        preparations = _variant_preparations(data, benchmark)
+        pairs = _variant_pairs(data, benchmark, preparations)
+        text = (preparations.get(arm) or [{}])[-1].get("contexts_sha256")
+    else:
+        baseline = next((line["baseline"] for line in reversed(variants)), None)
+        source = None if baseline is None else "verdict record"
+    own = [line for line in variants if line["arm"] == arm]
+    if text is None:
+        text = next((line["variant"]["contexts_sha256"] for line in reversed(own) if line["baseline"] == baseline),
+                    None)
+    counting = [line for line in variants if line["baseline"] == baseline and text is not None
+                and line["variant"]["contexts_sha256"] == text]
+    recorded = {}
+    for role in VERDICT_ROLES:
+        found = {line["pair"]["id"]: line for line in counting if line["role"] == role}
+        if len(found) > 1:
+            raise ValueError(f"The verdict record lists more than one {_ROLE_LABELS[role]} of the variant alongside "
+                             f"{baseline} on {benchmark}: {', '.join(map(_pair_named, found.values()))} (#144)")
+        recorded[role] = next(iter(found.values()), None)
+    counted = dict(zip(VERDICT_ROLES, _counted(_counting(pairs, baseline, text)))) if pairs and text else {}
+    first, confirmation = recorded["first"], recorded["confirmation"]
+    for role, line in recorded.items():
+        pair = counted.get(role)
+        if source == "run logs" and line is not None and (
+                pair is None or (pair["arm"], pair["baseline"], pair["number"])
+                != (line["arm"], line["baseline"], line["pair"]["number"])
+                or (pair["id"] is not None and pair["id"] != line["pair"]["id"])
+                or any(pair[key] != line["variant"][key] for key in _VARIANT_KEYS)):
+            raise ValueError(f"The verdict record lists {_pair_named(line)} as the variant's {_ROLE_LABELS[role]}, "
+                             "but the track's run logs do not count it as that (#144)")
+    if confirmation is not None:
+        named = confirmation["variant"]["first"]
+        if first is not None and named != {"arm": first["arm"], "baseline": first["baseline"],
+                                           "number": first["pair"]["number"]}:
+            raise ValueError(f"The verdict record's line for {_pair_named(confirmation)} names another first pair than "
+                             f"{_pair_named(first)} (#144)")
+        if first is not None and (
+                _recorded_time(confirmation["started_at"], f"The verdict record's line for {_pair_named(confirmation)} "
+                                                           "does not record when it started, with a time zone (#144)")
+                <= _recorded_time(first["finished_at"], f"The verdict record's line for {_pair_named(first)} does "
+                                                        "not record when it finished, with a time zone (#144)")):
+            raise ValueError(f"The verdict record's line for {_pair_named(confirmation)} started before its first pair "
+                             "finished, so it is not a confirmation (#130, #144)")
+    # With the run logs, compare's own view of each recorded pair as it stands now: its role, and its warnings about
+    # pairs that could hide a result, such as pairs alongside an earlier baseline with the same defaults' text (#143).
+    warnings = []
+    for line in recorded.values():
+        if source == "run logs" and line is not None:
+            mark = {"before": line["baseline"], "after": line["arm"], "number": line["pair"]["number"],
+                    "id": line["pair"]["id"]}
+            warnings += [f"{_pair_named(line)}: {text}" for text in _variant_warnings(
+                _variant_record(data, benchmark, mark))]
+        elif line is not None:
+            warnings += [f"compare warned about {_pair_named(line)}: {text}" for text in line.get("warnings", [])]
+    missing = []
+    if baseline is None:
+        missing.append(f"nothing on {benchmark} is in the verdict record, and the track's run logs are not on this "
+                       "machine")
+    for role in VERDICT_ROLES if baseline is not None else ():
+        if recorded[role] is not None:
+            continue
+        # The pair that holds the role, from the confirmation's line or the run logs, when either names it.
+        pair = confirmation["variant"]["first"] if role == "first" and confirmation else counted.get(role)
+        if pair is not None:
+            missing.append(f"{_named(pair)} is the variant's {_ROLE_LABELS[role]} on {benchmark}, but compare has "
+                           "not recorded it: compare its published results")
+        else:
+            missing.append(f"no {_ROLE_LABELS[role]} of the variant alongside {baseline} on {benchmark} is in the "
+                           "verdict record")
+    return {"baseline": baseline, "baseline_from": source, "contexts_sha256": text, "recorded": recorded,
+            "missing": missing, "warnings": warnings,
+            "other_baseline_pairs": [_pair_named(line) for line in own if line["baseline"] != baseline],
+            "other_text_pairs": [_pair_named(line) for line in own if line["baseline"] == baseline
+                                 and line["variant"]["contexts_sha256"] != text],
+            "baselines_recorded": list(dict.fromkeys(line["baseline"] for line in variants))}
+
+
+def _same_answers(found: dict[str, dict], sides: dict[str, dict[str, dict]]) -> None:
+    """A variant's first pair and its confirmation on one benchmark must share the model identity and answer settings.
+
+    The default-change rule in CLAUDE.md reads the two as one test repeated
+    (#144); ``sides`` are both pairs' published results.
+    """
+    if len(sides) < 2:
+        return
+    conditions = [_pair_conditions(pair["before"], pair["after"]) for pair in sides.values()]
+    differs = [name for name in _condition_differences(*conditions) if name in ("model identity", "answer settings")]
+    if differs:
+        lines = " and ".join(_pair_named(found["recorded"][role]) for role in sides)
+        raise ValueError(f"{lines[0].upper()}{lines[1:]} were answered under different {' and '.join(differs)}, so "
+                         "the confirmation does not repeat the first pair's test (#144)")
+
+
+def _role_verdict(role: str, found: dict[str, dict | None]) -> dict:
+    """Whether a variant's first pair or confirmation passed, over both benchmarks, or None while it is undecided.
+
+    It passes with a gain on at least one benchmark whose 95% interval
+    excludes zero (and, where the A/A margin applies, is larger than it) and
+    no loss on either benchmark whose interval excludes zero. A loss decides
+    it as soon as it is recorded, on either benchmark.
+    """
+    label = _ROLE_LABELS[role]
+    losses = [name for name, value in found.items() if value is not None and value["outcome"] == "loss"]
+    if losses:
+        return {"passed": False, "why": f"A loss on {' and '.join(losses)} whose 95% interval excludes zero",
+                "benchmarks": found}
+    if any(value is None for value in found.values()):
+        return {"passed": None, "why": f"The {label} is not recorded on both benchmarks", "benchmarks": found}
+    gains = [name for name, value in found.items() if value["gain_counts"]]
+    short = [name for name, value in found.items() if value["outcome"] == "gain" and not value["gain_counts"]]
+    if not gains:
+        why = "No gain on either benchmark whose 95% interval excludes zero" + (
+            f"; the gain on {' and '.join(short)} excludes zero but is not larger than the A/A margin" if short else "")
+    else:
+        why = (f"A gain on {' and '.join(gains)} whose 95% interval excludes zero, and no loss on either benchmark "
+               "whose interval excludes zero")
+    return {"passed": bool(gains), "why": why, "benchmarks": found}
+
+
+def verdict(arm: str, *, model: ollama_answers.AnswerModel | None = None, data: Path | None = None,
+            results: Path | None = None) -> dict:
+    """Whether a variant passed the default-change rule in CLAUDE.md, from the track's verdict record (#144).
+
+    ``arm`` is a named variant. On each benchmark, its pairs count together
+    alongside the current baseline on its context text (#143), and the
+    verdict reads the first pair and the confirmation compare recorded among
+    them (``_verdict_lines``), each checked against its published results
+    (``_check_verdict_results``). A first pair or confirmation passes with a
+    gain on at least one benchmark whose 95% interval excludes zero and no
+    loss on either whose interval excludes zero (``_role_verdict``); where an
+    accepted A/A pair under the pair's conditions excluded zero, the gain
+    must also be larger than the largest absolute A/A difference recorded on
+    that benchmark, the #118 repeat included (``_aa_margin``). ``pass`` needs
+    both to pass. A failed first pair fails the variant, whatever its
+    confirmation shows, and so does a failed confirmation. Anything else is
+    ``incomplete``, with what is missing: a pair compare refused was never
+    recorded, so it counts as neither, and a new baseline starts the count
+    again. The pairs must record the same settings on both benchmarks, when
+    they record any, and a first pair and its confirmation the same model
+    identity and answer settings. ``checked_against_run_logs`` says whether
+    the track's run logs were on this machine for both benchmarks, which the
+    pull request that flips a default needs.
+    """
+    if not is_variant(arm):
+        raise ValueError(f"{arm} is not a named variant of the defaults (prme-<name>), which is what the verdict "
+                         "decides on (#144)")
+    model = model or ollama_answers.AnswerModel()
+    data = data or data_root(model)
+    results = results or RESULTS
+    path = _verdict_record_path(results, model.model)
+    lines = _run_events(path)
+    found = {benchmark: _verdict_lines(benchmark, arm, lines, data) for benchmark in gate.GATE_BENCHMARKS}
+    # The settings are compared first, since recomputing the pairs' numbers takes a while.
+    recorded = [line for record in found.values() for line in record["recorded"].values() if line is not None]
+    settings = {sha(line["variant"]["variant_settings"]): line["variant"]["variant_settings"] for line in recorded
+                if line["variant"]["variant_settings"] is not None}
+    if len(settings) > 1:
+        raise ValueError(f"The variant's recorded pairs were answered under different settings "
+                         f"({'; '.join(map(_shown_settings, settings.values()))}), so they are not one variant's "
+                         "(#130, #144)")
+    repeat = cache(partial(_sequential_repeat, results, model.model))
+    # The margin reads the A/A pairs on both benchmarks, so both are checked once any pair is recorded.
+    accepted = {benchmark: _accepted_aa_lines(results, model.model, benchmark, data,
+                                              logs=record["baseline_from"] == "run logs")
+                for benchmark, record in found.items()} if recorded else {}
+    judged: dict[str, dict[str, dict | None]] = {role: {} for role in VERDICT_ROLES}
+    for benchmark, record in found.items():
+        sides = {}
+        for role, line in record["recorded"].items():
+            judged[role][benchmark] = None
+            if line is None:
+                continue
+            sides[role] = _check_verdict_results(results, line)
+            margin = _aa_margin(accepted, _pair_conditions(sides[role]["before"], sides[role]["after"]), benchmark,
+                                line["aa_check"]["checks"][benchmark], partial(repeat, benchmark))
+            judged[role][benchmark] = _judged(line, margin)
+        _same_answers(record, sides)
+    roles = {role: _role_verdict(role, judged[role]) for role in VERDICT_ROLES}
+    first, confirmation = roles["first"]["passed"], roles["confirmation"]["passed"]
+    missing = [item for record in found.values() for item in record["missing"]]
+    if first is False:
+        outcome, reason = "fail", (f"The first pair failed: {roles['first']['why']}. A failed first pair fails the "
+                                   "variant, whatever its confirmation shows.")
+    elif confirmation is False:
+        outcome, reason = "fail", (f"The confirmation failed: {roles['confirmation']['why']}. A failed confirmation "
+                                   "fails the variant.")
+    elif first and confirmation:
+        outcome, reason = "pass", "The first pair and the confirmation both passed."
+    else:
+        outcome, reason = "incomplete", f"Not decided yet: {'; '.join(missing)}."
+    logs = all(record["baseline_from"] == "run logs" for record in found.values())
+    warnings = []
+    for benchmark, record in found.items():
+        if record["baseline_from"] == "verdict record":
+            named = ", ".join(record["baselines_recorded"])
+            several = (f"; the record's first pairs and confirmations on it name {named}"
+                       if len(record["baselines_recorded"]) > 1 else "")
+            warnings.append(f"The track's run logs are not on this machine, so the current {benchmark} baseline is "
+                            f"taken from the verdict record ({record['baseline']}{several}), and nothing checks the "
+                            "record against the run logs. Run verdict on the machine that answered the pairs before a "
+                            "default flips (#144)")
+        if record["other_baseline_pairs"]:
+            warnings.append(f"Recorded pairs of {arm} alongside other baselines do not count: "
+                            f"{', '.join(record['other_baseline_pairs'])}. A new baseline starts every count again "
+                            "(#143)")
+        if record["other_text_pairs"]:
+            warnings.append(f"Recorded pairs of {arm} on other context text do not count with its current text: "
+                            f"{', '.join(record['other_text_pairs'])}. Each context text is a variant of its own "
+                            "(#143)")
+        warnings += record["warnings"]
+    if settings and any(line["variant"]["variant_settings"] is None for line in recorded):
+        warnings.append("Some of the variant's recorded pairs record no settings, so their settings are not compared "
+                        "with the others' (#130)")
+    aa_path = _aa_record_path(results, model.model)
+    return {
+        "kind": "variant-verdict", "arm": arm, "verdict": outcome, "reason": reason,
+        "checked_against_run_logs": logs, "variant_settings": next(iter(settings.values()), None),
+        "benchmarks": {benchmark: {key: record[key] for key in ("baseline", "baseline_from", "contexts_sha256",
+                                                                "missing", "other_baseline_pairs", "other_text_pairs")}
+                       for benchmark, record in found.items()},
+        "first": roles["first"], "confirmation": roles["confirmation"],
+        "record": {"path": path.name, "sha256": digest(path) if path.exists() else None},
+        "aa_record": {"path": aa_path.name, "sha256": digest(aa_path) if aa_path.exists() else None},
+        "warnings": warnings,
+        "note": "The default-change rule in CLAUDE.md, applied to the pairs compare recorded in the track's verdict "
+                "record: the variant passes only when its first pair and its confirmation each show a gain on at least "
+                "one benchmark whose 95% interval excludes zero and no loss on either whose interval excludes zero. "
+                "Where an accepted A/A pair under a pair's conditions excluded zero, that pair's gain must also be "
+                "larger than the largest absolute A/A difference recorded on its benchmark, the #118 repeat included "
+                "(margin). A failed first pair fails the variant, whatever its confirmation shows, and so does a "
+                "failed confirmation. A pair compare refused was never recorded and counts as neither, and a new "
+                "baseline starts the count again (#143). checked_against_run_logs is true only when the track's run "
+                "logs were on this machine for both benchmarks; the pull request that flips a default cites this "
+                "output with it true.",
+    }
 
 
 def _prepared_summary(prepared: dict) -> dict:
@@ -2822,7 +3422,31 @@ def _paired(pairs: list[tuple[str | None, float, float]], *, samples: int, clust
             "interval_95_conversations": conversations, "interval_95_questions": questions}
 
 
-def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None = None,
+def _paired_questions(old: dict[str, dict], new: dict[str, dict], keys, *, samples: int, clustered: bool) -> dict:
+    """``_paired`` over the questions ``keys`` of two results' rows, each keyed by question id."""
+    return _paired([(old[key].get("cluster"), float(old[key]["correct"]), float(new[key]["correct"])) for key in keys],
+                   samples=samples, clustered=clustered)
+
+
+def _accuracy(before: dict, after: dict, *, samples: int = BOOTSTRAP_SAMPLES) -> dict:
+    """The paired accuracy difference of two results on every question and its 95% interval, as compare gives it.
+
+    The verdict step recomputes a tracked record's numbers with it from the
+    published results the record names, so an edited line is refused (#144).
+    """
+    old, new = ({row["question_id"]: row for row in result["rows"]} for result in (before, after))
+    if list(old) != list(new):
+        raise ValueError("The results answer different questions")
+    return _paired_questions(old, new, list(old), samples=samples,
+                             clustered=before.get("benchmark") in CONVERSATION_INTERVALS)
+
+
+def _excludes_zero(interval: list | None) -> bool | None:
+    """Whether a 95% interval excludes zero; None when there is none (fewer than two LoCoMo conversations)."""
+    return None if interval is None else interval[0] > 0 or interval[1] < 0
+
+
+def compare(before: dict, after: dict, *, samples: int = BOOTSTRAP_SAMPLES, data: Path | None = None,
             results: Path | None = None) -> dict:
     """Pair two complete answer results on the same questions, answered by the same reader and judge.
 
@@ -2932,8 +3556,7 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
         raise ValueError("Every LoCoMo row must name its conversation, the same one on both sides")
 
     def paired(keys: list[str]) -> dict:
-        return _paired([(old[key].get("cluster"), float(old[key]["correct"]), float(new[key]["correct"]))
-                        for key in keys], samples=samples, clustered=clustered)
+        return _paired_questions(old, new, keys, samples=samples, clustered=clustered)
 
     categories = sorted({row["question_type"] for row in old.values()})
     prepared = {side: result.get("prepared") or {} for side, result in (("before", before), ("after", after))}
@@ -2980,7 +3603,8 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
     if both_baselines and not repeat:
         warnings.append("Both results are baselines of the defaults, but they are not shown to have sent the same "
                         "context text, budget, answering code and server version, so this is not a repeat")
-    accuracy = paired(list(old))
+    # The verdict step recomputes a recorded pair's numbers with the same function (#144).
+    accuracy = _accuracy(before, after, samples=samples)
     # None with fewer than two LoCoMo conversations, where no conversation-level interval exists.
     interval = accuracy["interval_95"]
     how = ("answered together as one interleaved pair (#129)" if pair is not None
@@ -3034,7 +3658,7 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
                     "other_pairs lists every other A/A pair recorded under these conditions, accepted or refused, in "
                     "the order they finished. If any A/A pair under them excludes zero, a variant's gain on that "
                     "benchmark must also be larger than the largest absolute A/A difference measured so far there "
-                    "(#137)."},
+                    "(#137), which the verdict step applies (#144)."},
         "server_versions": _sorted_versions(versions),
         # Each side's retries and unscored questions under the amended policy; None under the registered one.
         "failure_policy": None if outcomes is None else {
@@ -3059,7 +3683,7 @@ def compare(before: dict, after: dict, *, samples: int = 2000, data: Path | None
         "lost": [key for key in old if old[key]["correct"] and not new[key]["correct"]],
         "repeat": None if not repeat else {
             "changed_verdicts": accuracy["wins"] + accuracy["losses"],
-            "interval_excludes_zero": None if interval is None else interval[0] > 0 or interval[1] < 0,
+            "interval_excludes_zero": _excludes_zero(interval),
             "interleaved": pair is not None,
             "note": (f"Two answer runs of the defaults with the same inputs and the same model identity and settings, "
                      f"{how}, so the difference is run-to-run variation alone. If an interleaved A/A interval "
@@ -3330,6 +3954,8 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
         parser.error("calibrate is for the ollama provider; the GPT-5.4 track reuses the saved calibration")
     if command == "run-pair" and model is None:
         parser.error("run-pair is for the ollama provider; the GPT-5.4 track has no defaults arm to pair with")
+    if command == "verdict" and model is None:
+        parser.error("verdict is for the ollama provider, whose variants the default-change rule reads")
     # Commands that read or record results rather than answering an arm.
     reading = {"calibrate", "compare", "record-aa-check"}
     if command in reading:
@@ -3349,6 +3975,19 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
                      "nothing else does")
     if command in reading:
         return "", "", {}
+    if command == "verdict":
+        # It reads both benchmarks' recorded pairs, and answers nothing.
+        given = [flag for flag, value in (("--benchmark", args.benchmark), ("--set", args.overrides or None),
+                                          ("--max-usd", args.max_usd), ("--sample", args.sample),
+                                          ("--archive", args.archive)) if value is not None]
+        if given:
+            parser.error(f"verdict takes none of: {', '.join(given)}")
+        if args.arm != "prme" or args.variant is None:
+            parser.error("verdict takes the prme arm and --variant, the variant to decide on, over both benchmarks")
+        try:
+            return arm_name(args.arm, args.variant), "", {}
+        except ValueError as exc:
+            parser.error(str(exc))
     if args.arm is None:
         parser.error(f"{command} needs an arm")
     benchmark = args.benchmark or ("locomo" if args.arm == "full-context" else None)
@@ -3391,11 +4030,13 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m benchmarks.integrations.gpt54_baselines",
                                      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["prepare", "estimate", "calibrate", "run", "run-pair", "compare",
-                                            "record-aa-check"])
+                                            "record-aa-check", "verdict"])
     parser.add_argument("arm", nargs="?", choices=list(ARMS),
-                        help="Every command but calibrate, compare and record-aa-check needs an arm")
+                        help="Every command but calibrate, compare and record-aa-check needs an arm; verdict takes "
+                             "prme with --variant")
     parser.add_argument("--benchmark", choices=gate.GATE_BENCHMARKS,
-                        help="Required for plain and prme arms; full-context covers LoCoMo only")
+                        help="Required for plain and prme arms; full-context covers LoCoMo only. verdict reads both "
+                             "benchmarks and takes none")
     parser.add_argument("--provider", choices=["openai", "ollama"], default="openai",
                         help=f"Reader and judge: the registered GPT-5.4 (default, paid) or {ollama_answers.MODEL} "
                              f"through the local Ollama server at {ollama_answers.ENDPOINT} (a separate track, no "
@@ -3404,7 +4045,8 @@ def main(argv: list[str] | None = None) -> None:
                         help="prme arm on the ollama provider: a named variant of the defaults, prepared with --set "
                              "and answered with run-pair as the arm prme-NAME. Its preparation also replays the "
                              "defaults at the same commit, and run-pair and compare refuse it while those defaults "
-                             "read other text than the baseline (#139).")
+                             "read other text than the baseline (#139). verdict decides on it from the pairs compare "
+                             "recorded (#144).")
     parser.add_argument("--baseline", metavar="ARM",
                         help="run-pair only: the current baseline of the defaults (prme or prme@<commit>, the one "
                              "whose own answer run completed last), answered again alongside the arm. With the prme "
@@ -3425,7 +4067,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--after", type=Path,
                         help="compare and record-aa-check only: the other side's result file from the same pair, "
                              "or a later baseline's for a repeat. record-aa-check adds a published A/A pair to the "
-                             "track's A/A record (#137).")
+                             "track's A/A record (#137). The compare command records a variant's first pair or "
+                             "confirmation, or an A/A pair, in the track's verdict record, which verdict reads "
+                             "(#144).")
     args = parser.parse_args(argv)
     model = ollama_answers.AnswerModel() if args.provider == "ollama" else None
     arm, benchmark, overrides = _check_args(parser, args, model)
@@ -3438,6 +4082,28 @@ def main(argv: list[str] | None = None) -> None:
         except (OSError, ValueError) as exc:
             parser.error(str(exc))
         print(json.dumps(result, indent=2))
+        # A pair the default-change rule reads is recorded for the verdict step (#144).
+        try:
+            recorded = record_pair_verdict(result, args.before, args.after)
+        except (OSError, ValueError) as exc:
+            parser.error(f"compare accepted the pair, but did not record it for the verdict: {exc}")
+        record = _verdict_record_path(RESULTS, result["model"])
+        # The record belongs to this checkout, while the run log is shared by every worktree.
+        shown = record.relative_to(study.ROOT) if record.is_relative_to(study.ROOT) else record
+        if recorded is not None:
+            line, added = recorded
+            print(f"{'Recorded' if added else 'Already recorded'} {_pair_named(line)} as {line['role']} in {shown}"
+                  + ("; commit it with the pair's published results (#144)" if added else " (#144)"),
+                  file=sys.stderr, flush=True)
+        elif _role_of(result) is not None:
+            print("Not recorded for the verdict: the track's run logs are not on this machine, so only the machine "
+                  "that answered the pair records it (#144)", file=sys.stderr, flush=True)
+    elif args.command == "verdict":
+        try:
+            found = verdict(arm, model=model)
+        except (OSError, ValueError) as exc:
+            parser.error(str(exc))
+        print(json.dumps(found, indent=2))
     elif args.command == "record-aa-check":
         try:
             entry = record_aa_check(args.before, args.after)

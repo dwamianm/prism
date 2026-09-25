@@ -1890,6 +1890,9 @@ def test_the_published_repeat_of_the_defaults_is_the_run_to_run_floor_in_benchma
     assert comparison["repeat"]["changed_verdicts"] == gained + lost
     # BENCHMARKS.md reports the floor, and the default-change rule in CLAUDE.md depends on this flag.
     assert comparison["repeat"]["interval_excludes_zero"] is excludes_zero
+    # The verdict's A/A margin counts this repeat's difference, read from these results (#144).
+    assert baselines.SEQUENTIAL_REPEAT == ("2026-09-24", "prme", REPEAT)
+    assert baselines._sequential_repeat(PUBLISHED, OLLAMA_MODEL.model, benchmark) == accuracy["delta"]
 
 
 # The interleaved A/A check of the revised test: the repeat answered against itself as one pair on each benchmark,
@@ -3401,6 +3404,557 @@ def test_every_line_of_the_tracked_aa_record_matches_its_published_aa_pair():
             assert (entry["changed_verdicts"], entry["interval_excludes_zero"]) == (
                 comparison["repeat"]["changed_verdicts"], comparison["repeat"]["interval_excludes_zero"])
             assert (entry["refused"], entry["warnings"]) == (None, comparison["warnings"])
+
+
+# Pair verdicts (#144) --------------------------------------------------------------
+
+GAIN, LOSS, EVEN = ([False] * 4, [True] * 4), ([True] * 4, [False] * 4), ([True, False] * 2, [True, False] * 2)
+
+
+def verdict_record(results: Path | None = None) -> list[dict]:
+    return baselines._run_events(baselines._verdict_record_path(results or baselines.RESULTS, OLLAMA_MODEL.model))
+
+
+def verdict_record_file() -> Path:
+    return baselines._verdict_record_path(baselines.RESULTS, OLLAMA_MODEL.model)
+
+
+def track_pair_log(baseline: str = "prme", arm: str = "prme-rrf", benchmark: str = "locomo") -> list[dict]:
+    return baselines._run_events(baselines._pair_log_path(baselines.data_root(OLLAMA_MODEL), baseline, arm, benchmark))
+
+
+def verdict_pair(benchmark: str, number: int, verdicts: tuple[list[bool], list[bool]], *, arm: str = "prme-rrf",
+                 baseline: str = "prme", settings: dict | None = None, contexts: str = LOGGED_TEXT,
+                 identity: dict | None = None, settings_recorded: bool = True) -> list[Path]:
+    """Pair ``number`` of ``baseline`` and ``arm`` on the benchmark as run-pair leaves one: complete in the track's
+    pair run log, started after the previous pair finished, with the variant's identity (``MARKED`` settings unless
+    given, or none without ``settings_recorded``, as a pair started before #130), and both sides published under
+    RESULTS with the before and after ``verdicts``, the after side recording the settings it was prepared with.
+    Returns both paths."""
+    settings = (MARKED if settings is None else settings) if settings_recorded else None
+    pair_id = f"{arm}-{baseline}-{benchmark}-{number}"
+    log = baselines._pair_log_path(baselines.data_root(OLLAMA_MODEL), baseline, arm, benchmark)
+    baselines._append_event(log, {"event": "started", "pair": number, "sample": None, "id": pair_id,
+                                  "variant_settings": settings, "contexts_sha256": contexts,
+                                  "at": logged_at(2 * number)})
+    baselines._append_event(log, {"event": "finished", "pair": number, "sample": None, "complete": True,
+                                  "at": logged_at(2 * number, 30)})
+    mark = {"id": pair_id, "number": number, "before": baseline, "after": arm, "sha256": "s"}
+    paths = []
+    for side, name, answered_right in zip(baselines.PAIR_SIDES, (baseline, arm), verdicts):
+        result = {**answer_result(name, answered_right, identity=identity), "benchmark": benchmark,
+                  "pair": {**mark, "side": side}, "correct": sum(answered_right)}
+        if side == "after":
+            result["prepared"] = {**result["prepared"], "variant_settings": settings}
+        path = (baselines.RESULTS / "2026-09-24" / f"{OLLAMA_MODEL.track}-{baseline}-vs-{arm}-{benchmark}-pair-"
+                                                   f"{number}-{side}-result.json")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result))
+        paths.append(path)
+    return paths
+
+
+def recorded_pair(paths: list[Path]) -> dict:
+    """The published pair at ``paths`` compared and recorded for the verdict, as the compare command does."""
+    line, _ = baselines.record_pair_verdict(baselines.compare(*(json.loads(path.read_text()) for path in paths)),
+                                            *paths)
+    return line
+
+
+def compared_pair(benchmark: str, number: int, verdicts: tuple[list[bool], list[bool]], **kwargs) -> dict:
+    """A variant pair (``verdict_pair``) compared and recorded for the verdict."""
+    return recorded_pair(verdict_pair(benchmark, number, verdicts, **kwargs))
+
+
+def verdict_track(**changes) -> None:
+    """The prme baseline complete on both benchmarks, with an A/A check on both that a variant's pair relies on."""
+    data = baselines.data_root(OLLAMA_MODEL)
+    for benchmark in gate.GATE_BENCHMARKS:
+        answered(data, benchmark, "a" * 40, at=logged_at(1))
+    aa_checked(answer_result("prme", [True, False]), **changes)
+
+
+def rewritten(lines: list[dict]) -> None:
+    verdict_record_file().write_text("".join(json.dumps(line) + "\n" for line in lines))
+
+
+def test_compare_records_a_variants_first_pair_confirmation_and_an_aa_pair_once_for_the_verdict(tmp_path):
+    verdict_track()
+    before_path, after_path = verdict_pair("locomo", 1, GAIN)
+    before, after = (json.loads(path.read_text()) for path in (before_path, after_path))
+    comparison = baselines.compare(before, after)
+    line, added = baselines.record_pair_verdict(comparison, before_path, after_path)
+    assert added and verdict_record() == [line]
+    assert line == {
+        "kind": "ollama-pair-verdict", "benchmark": "locomo", "role": "first", "baseline": "prme",
+        "arm": "prme-rrf", "pair": {"id": "prme-rrf-prme-locomo-1", "number": 1, "sha256": "s"},
+        "started_at": logged_at(2), "finished_at": logged_at(2, 30),
+        "variant": {"variant_settings": MARKED, "contexts_sha256": LOGGED_TEXT,
+                    "first": {"arm": "prme-rrf", "baseline": "prme", "number": 1}},
+        "questions": 4, "correct": {"before": 0, "after": 4}, "bootstrap_samples": 2000, "bootstrap_seed": 42,
+        "difference": 1.0, "interval_95": [1.0, 1.0], "interval_95_conversations": [1.0, 1.0],
+        "interval_95_questions": [1.0, 1.0], "interval_excludes_zero": True,
+        "aa_check": {"conditions": comparison["aa_check"]["conditions"],
+                     "checks": {benchmark: {"baseline": "prme@00aa00aa", "number": 1,
+                                            "pair_id": f"aa-prme@00aa00aa-{benchmark}-1"}
+                                for benchmark in gate.GATE_BENCHMARKS}},
+        "warnings": [], "results": {side: {"path": str(path.relative_to(baselines.RESULTS)), "sha256": digest(path)}
+                                    for side, path in zip(baselines.PAIR_SIDES, (before_path, after_path))},
+        "recorded_at": line["recorded_at"]}
+    # The pair's run log gets a compared event with the same record, and still records the pair complete, so
+    # compare reads it as before.
+    log = track_pair_log()
+    assert log[-1] == {"at": log[-1]["at"], "event": "compared", "pair": 1, "id": "prme-rrf-prme-locomo-1",
+                       **{key: value for key, value in line.items() if key not in ("kind", "pair", "recorded_at")}}
+    data = baselines.data_root(OLLAMA_MODEL)
+    states = baselines._pair_states(baselines._pair_root(data, "prme", "prme-rrf", "locomo"),
+                                    baselines._pair_log_path(data, "prme", "prme-rrf", "locomo"))
+    assert states[1]["state"] == "complete"
+    # Comparing the pair again adds an event to its run log, but no second line.
+    assert baselines.record_pair_verdict(baselines.compare(before, after), before_path, after_path) == (line, False)
+    assert verdict_record() == [line]
+    assert [event["event"] for event in track_pair_log()] == ["started", "finished", "compared", "compared"]
+    # A line that records other values for the pair, under its id or its number, is refused, and nothing is added.
+    kept = verdict_record_file().read_text()
+    for edited, differs in (({"difference": 0.5}, "difference"),
+                            ({"pair": {**line["pair"], "id": "other"}}, "pair")):
+        rewritten([{**line, **edited}])
+        with pytest.raises(ValueError, match=rf"already lists pair 1 of prme and prme-rrf on locomo with other values "
+                                             rf"\({differs}\), so nothing was recorded"):
+            baselines.record_pair_verdict(comparison, before_path, after_path)
+    assert len(track_pair_log()) == 4
+    verdict_record_file().write_text(kept)
+    # The confirmation names the first pair it counts with.
+    confirmation = compared_pair("locomo", 2, GAIN)
+    assert (confirmation["role"], confirmation["variant"]["first"]) == (
+        "confirmation", {"arm": "prme-rrf", "baseline": "prme", "number": 1})
+    # An A/A pair is recorded with its role and interval, and no variant or A/A check of its own.
+    [check] = aa_record()[:1]
+    aa = recorded_pair([baselines.RESULTS / check["results"][side]["path"] for side in baselines.PAIR_SIDES])
+    assert (aa["role"], aa["baseline"], aa["arm"], aa["variant"], aa["aa_check"], aa["interval_excludes_zero"]) == (
+        "aa", "prme@00aa00aa", "prme@00aa00aa", None, None, False)
+    assert [entry["role"] for entry in verdict_record()] == ["first", "confirmation", "aa"]
+    # A reference arm's pair and a repeat answered on its own have no role, so nothing is recorded.
+    plain = one_pair(answer_result("prme", [True, False]), answer_result("plain-rrf", [True, True]))
+    assert baselines.record_pair_verdict(baselines.compare(*plain), before_path, after_path) is None
+    repeat = (answer_result("prme", [True, False]), answer_result("prme@0123abcd", [False, False], commit="b" * 40))
+    assert baselines.record_pair_verdict(baselines.compare(*repeat), before_path, after_path) is None
+    assert len(verdict_record()) == 3
+    # Only published results are recorded, since the line names them with their digests, only with the comparison
+    # of the pair they were answered in, only with compare's own bootstrap, and only for a pair its run log records
+    # complete.
+    elsewhere = [tmp_path / f"{side}.json" for side in baselines.PAIR_SIDES]
+    for path, source in zip(elsewhere, (before_path, after_path)):
+        path.write_text(source.read_text())
+    with pytest.raises(ValueError, match="The before result is not published under .* committed with the record "
+                                         r"\(#144\)"):
+        baselines.record_pair_verdict(comparison, *elsewhere)
+    with pytest.raises(ValueError, match="The comparison is not of the pair these results were answered in"):
+        baselines.record_pair_verdict({**comparison, "pair": {**comparison["pair"], "id": "other"}}, before_path,
+                                      after_path)
+    with pytest.raises(ValueError, match="keeps comparisons with compare's own bootstrap"):
+        baselines.record_pair_verdict({**comparison, "bootstrap_samples": 5}, before_path, after_path)
+    unlogged = aa_published(answer_result("prme", [True, False]), "locomo", number=7)
+    with pytest.raises(ValueError, match="Pair 7 of prme@00aa00aa and prme@00aa00aa on locomo is not on record as "
+                                         "complete in the track's pair run log"):
+        recorded_pair(unlogged)
+    assert len(verdict_record()) == 3
+    # Away from the track's run logs nothing can be recorded, so nothing is.
+    assert baselines.record_pair_verdict(comparison, before_path, after_path, data=tmp_path / "elsewhere") is None
+
+
+def test_verdict_passes_a_variant_only_when_its_first_pair_and_confirmation_both_pass():
+    verdict_track()
+    nothing = baselines.verdict("prme-rrf")
+    assert (nothing["verdict"], nothing["first"]["passed"], nothing["confirmation"]["passed"]) == (
+        "incomplete", None, None)
+    assert nothing["benchmarks"]["locomo"]["missing"] == [
+        "no first pair of the variant alongside prme on locomo is in the verdict record",
+        "no confirmation of the variant alongside prme on locomo is in the verdict record"]
+    # The first pair on both benchmarks: LoCoMo shows a gain whose interval excludes zero, LongMemEval-S none.
+    compared_pair("locomo", 1, GAIN)
+    compared_pair("longmemeval", 1, EVEN)
+    first = baselines.verdict("prme-rrf")
+    assert (first["verdict"], first["first"]["passed"], first["confirmation"]["passed"]) == ("incomplete", True, None)
+    assert first["reason"] == ("Not decided yet: no confirmation of the variant alongside prme on locomo is in the "
+                               "verdict record; no confirmation of the variant alongside prme on longmemeval is in the "
+                               "verdict record.")
+    locomo = first["first"]["benchmarks"]["locomo"]
+    assert {key: locomo[key] for key in ("correct", "questions", "difference", "interval_95", "interval_excludes_zero",
+                                         "outcome", "gain_counts")} == {
+        "correct": {"before": 0, "after": 4}, "questions": 4, "difference": 1.0, "interval_95": [1.0, 1.0],
+        "interval_excludes_zero": True, "outcome": "gain", "gain_counts": True}
+    assert locomo["pair"] == {"arm": "prme-rrf", "baseline": "prme", "id": "prme-rrf-prme-locomo-1", "number": 1,
+                              "sha256": "s"}
+    assert locomo["aa_check"]["checks"]["locomo"] == {"baseline": "prme@00aa00aa", "number": 1,
+                                                      "pair_id": "aa-prme@00aa00aa-locomo-1"}
+    assert locomo["margin"]["applies"] is False and "so no margin applies" in locomo["margin"]["case"]
+    assert first["first"]["benchmarks"]["longmemeval"]["outcome"] == "no difference shown"
+    assert first["first"]["why"] == ("A gain on locomo whose 95% interval excludes zero, and no loss on either "
+                                     "benchmark whose interval excludes zero")
+    assert (first["variant_settings"], first["warnings"], first["checked_against_run_logs"]) == (MARKED, [], True)
+    assert first["benchmarks"]["locomo"] == {
+        "baseline": "prme", "baseline_from": "run logs", "contexts_sha256": LOGGED_TEXT,
+        "missing": ["no confirmation of the variant alongside prme on locomo is in the verdict record"],
+        "other_baseline_pairs": [], "other_text_pairs": []}
+    # The confirmation passes too, so the variant passes.
+    compared_pair("locomo", 2, GAIN)
+    compared_pair("longmemeval", 2, GAIN)
+    passed = baselines.verdict("prme-rrf")
+    assert (passed["verdict"], passed["reason"]) == ("pass", "The first pair and the confirmation both passed.")
+    aa = baselines._aa_record_path(baselines.RESULTS, OLLAMA_MODEL.model)
+    assert (passed["record"], passed["aa_record"]) == ({"path": verdict_record_file().name,
+                                                        "sha256": digest(verdict_record_file())},
+                                                       {"path": aa.name, "sha256": digest(aa)})
+
+
+def test_a_failed_first_pair_or_confirmation_fails_the_variant_as_soon_as_it_is_recorded():
+    verdict_track()
+    # A loss on LongMemEval-S whose interval excludes zero fails the first pair before LoCoMo is even compared.
+    compared_pair("longmemeval", 1, LOSS)
+    early = baselines.verdict("prme-rrf")
+    assert (early["verdict"], early["first"]["passed"]) == ("fail", False)
+    assert early["reason"] == ("The first pair failed: A loss on longmemeval whose 95% interval excludes zero. A "
+                               "failed first pair fails the variant, whatever its confirmation shows.")
+    # A gain on LoCoMo does not make up for it, and neither does a passing confirmation.
+    compared_pair("locomo", 1, GAIN)
+    compared_pair("locomo", 2, GAIN)
+    compared_pair("longmemeval", 2, GAIN)
+    again = baselines.verdict("prme-rrf")
+    assert (again["verdict"], again["first"]["passed"], again["confirmation"]["passed"]) == ("fail", False, True)
+
+
+def test_a_failed_confirmation_fails_the_variant_and_a_pair_without_a_gain_passes_nothing():
+    verdict_track()
+    compared_pair("locomo", 1, GAIN)
+    compared_pair("longmemeval", 1, GAIN)
+    compared_pair("locomo", 2, EVEN)
+    compared_pair("longmemeval", 2, EVEN)
+    failed = baselines.verdict("prme-rrf")
+    assert (failed["verdict"], failed["reason"]) == (
+        "fail", "The confirmation failed: No gain on either benchmark whose 95% interval excludes zero. A failed "
+                "confirmation fails the variant.")
+
+
+def test_verdict_needs_the_first_pair_recorded_when_only_the_confirmation_is():
+    verdict_track()
+    # The first pairs are complete, but only the confirmations were compared and recorded.
+    firsts = [verdict_pair(benchmark, 1, LOSS) for benchmark in gate.GATE_BENCHMARKS]
+    for benchmark in gate.GATE_BENCHMARKS:
+        compared_pair(benchmark, 2, GAIN)
+    found = baselines.verdict("prme-rrf")
+    assert (found["verdict"], found["first"]["passed"], found["confirmation"]["passed"]) == ("incomplete", None, True)
+    assert found["benchmarks"]["locomo"]["missing"] == [
+        "pair 1 of prme and prme-rrf is the variant's first pair on locomo, but compare has not recorded it: compare "
+        "its published results"]
+    # Once they are compared, their loss decides the variant.
+    for paths in firsts:
+        recorded_pair(paths)
+    assert baselines.verdict("prme-rrf")["verdict"] == "fail"
+
+
+def test_a_confirmation_that_fails_before_its_first_pair_is_recorded_fails_the_variant():
+    verdict_track()
+    for benchmark in gate.GATE_BENCHMARKS:
+        verdict_pair(benchmark, 1, GAIN)
+        compared_pair(benchmark, 2, LOSS)
+    found = baselines.verdict("prme-rrf")
+    assert (found["verdict"], found["first"]["passed"], found["confirmation"]["passed"]) == ("fail", None, False)
+
+
+def test_verdict_applies_the_aa_margin_when_an_aa_pair_under_the_pairs_conditions_excludes_zero_on_either_benchmark():
+    # The LoCoMo A/A check excludes zero, with a difference of 1.0; the LongMemEval-S one does not.
+    verdict_track(benchmarks=("longmemeval",))
+    aa_checked(answer_result("prme", [True, False]), benchmarks=("locomo",), excludes_zero=True)
+    compared_pair("locomo", 1, GAIN)
+    compared_pair("longmemeval", 1, GAIN)
+    # The margin counts the #118 repeat too, from its published results.
+    with pytest.raises(ValueError, match=r"The #118 repeat's published results are missing \(2026-09-24/"):
+        baselines.verdict("prme-rrf")
+    day, first, again = baselines.SEQUENTIAL_REPEAT
+    for benchmark in gate.GATE_BENCHMARKS:
+        for arm, right, commit in ((first, [True, False, False, False], "a" * 40),
+                                   (again, [True, True, False, False], "b" * 40)):
+            path = baselines.RESULTS / day / f"{OLLAMA_MODEL.track}-{arm}-{benchmark}-result.json"
+            path.write_text(json.dumps({**answer_result(arm, right, commit=commit), "benchmark": benchmark}))
+    found = baselines.verdict("prme-rrf")
+    locomo, longmemeval = (found["first"]["benchmarks"][benchmark] for benchmark in gate.GATE_BENCHMARKS)
+    assert locomo["margin"] == {
+        "applies": True, "excluding": ["A/A pair 1 of prme@00aa00aa on locomo"], "largest_aa_difference": 1.0,
+        "from": "A/A pair 1 of prme@00aa00aa",
+        "case": "A/A pair 1 of prme@00aa00aa on locomo under this pair's conditions excludes zero, so a gain on locomo "
+                "counts only when it is also larger than 1.0000, the largest absolute A/A difference recorded on "
+                "locomo (A/A pair 1 of prme@00aa00aa)"}
+    # A gain of 1.0 excludes zero but is not larger than the LoCoMo margin. The rule reads "if either excludes
+    # zero", so the LongMemEval-S gain needs a margin too, there the #118 repeat's 0.25, which it clears.
+    assert (locomo["outcome"], locomo["gain_counts"]) == ("gain", False)
+    assert {key: longmemeval["margin"][key] for key in ("applies", "largest_aa_difference", "from")} == {
+        "applies": True, "largest_aa_difference": 0.25, "from": "the #118 sequential repeat"}
+    assert longmemeval["gain_counts"] is True and found["first"]["passed"] is True
+    # Without the LongMemEval-S gain, the first pair shows no gain that counts.
+    compared = verdict_pair("longmemeval", 2, EVEN, arm="prme-even", contexts="e" * 64)
+    recorded_pair(compared)
+    recorded_pair(verdict_pair("locomo", 2, GAIN, arm="prme-even", contexts="e" * 64))
+    even = baselines.verdict("prme-even")
+    assert (even["verdict"], even["reason"]) == (
+        "fail", "The first pair failed: No gain on either benchmark whose 95% interval excludes zero; the gain on "
+                "locomo excludes zero but is not larger than the A/A margin. A failed first pair fails the variant, "
+                "whatever its confirmation shows.")
+
+
+def test_the_aa_margin_is_the_largest_absolute_aa_difference_on_the_benchmark_the_118_repeat_included():
+    before, after = variant_results()
+    conditions = baselines._pair_conditions(before, after)
+    other = baselines._pair_conditions(*variant_results({**IDENTITY, "server_version": "0.34.4"}))
+
+    def line(number: int, difference: float, excludes: bool, under: dict = conditions) -> dict:
+        return {"baseline": "prme", "pair": {"number": number, "id": f"aa-{number}"}, "conditions": under,
+                "difference": difference, "interval_excludes_zero": excludes}
+
+    relied_on = {"baseline": "prme", "number": 1, "pair_id": "aa-1"}
+    asked = []
+
+    def repeat() -> float:
+        asked.append(True)
+        return 0.022
+
+    # No A/A pair under the pair's conditions excludes zero: no margin, and the repeat is not read. One under other
+    # conditions does not bring it in.
+    unmoved = baselines._aa_margin({"longmemeval": [line(1, -0.002, False), line(2, 0.05, True, other)],
+                                    "locomo": []}, conditions, "longmemeval", relied_on, repeat)
+    assert (unmoved["applies"], asked) == (False, [])
+    # Once one does, on either benchmark, the margin is the largest absolute difference on this benchmark under any
+    # conditions, or the #118 repeat's when that is larger.
+    margin = baselines._aa_margin({"longmemeval": [line(1, -0.002, False), line(3, 0.01, False, other)],
+                                   "locomo": [line(2, -0.015, True)]}, conditions, "longmemeval", relied_on, repeat)
+    assert {key: margin[key] for key in ("applies", "excluding", "largest_aa_difference", "from")} == {
+        "applies": True, "excluding": ["A/A pair 2 of prme on locomo"], "largest_aa_difference": 0.022,
+        "from": "the #118 sequential repeat"}
+    wider = baselines._aa_margin({"longmemeval": [line(1, -0.03, True)], "locomo": []}, conditions, "longmemeval",
+                                 relied_on, repeat)
+    assert (wider["largest_aa_difference"], wider["from"]) == (0.03, "A/A pair 1 of prme")
+    entry = {"arm": "prme-rrf", "baseline": "prme", "pair": {"id": "p", "number": 1, "sha256": "s"},
+             "variant": {"variant_settings": MARKED}, "correct": {}, "questions": 500, "results": {},
+             "aa_check": None, "interval_95": [0.01, 0.05], "interval_excludes_zero": True}
+    assert baselines._judged({**entry, "difference": 0.023}, margin)["gain_counts"] is True
+    assert baselines._judged({**entry, "difference": 0.022}, margin)["gain_counts"] is False
+    assert baselines._judged({**entry, "difference": 0.022}, unmoved)["gain_counts"] is True
+    # A gain or a loss is read from the interval, not from the sign of the difference.
+    assert baselines._judged({**entry, "difference": 0.02, "interval_95": [-0.05, -0.01]}, unmoved)["outcome"] == "loss"
+    # The pair must have relied on an accepted A/A check under its conditions, as compare required when it recorded it.
+    with pytest.raises(ValueError, match="The A/A record holds no accepted A/A check on longmemeval under the "
+                                         "conditions of this pair that is the one it relied on, A/A pair 1 of prme"):
+        baselines._aa_margin({"longmemeval": [line(1, 0.01, False, other)], "locomo": []}, conditions, "longmemeval",
+                             relied_on, repeat)
+
+
+def test_verdict_counts_again_at_a_new_baseline_and_holds_the_record_to_its_results_and_the_run_logs(tmp_path):
+    data = baselines.data_root(OLLAMA_MODEL)
+    verdict_track()
+    for benchmark in gate.GATE_BENCHMARKS:
+        compared_pair(benchmark, 1, GAIN)
+        compared_pair(benchmark, 2, GAIN)
+    assert baselines.verdict("prme-rrf")["verdict"] == "pass"
+    # An A/A pair of another baseline compared later does not move the baseline read without the run logs.
+    [check] = aa_record()[:1]
+    recorded_pair([baselines.RESULTS / check["results"][side]["path"] for side in baselines.PAIR_SIDES])
+    kept = verdict_record_file().read_text()
+    lines = [json.loads(line) for line in kept.splitlines()]
+    away = baselines.verdict("prme-rrf", data=tmp_path / "elsewhere")
+    assert (away["verdict"], away["checked_against_run_logs"], away["benchmarks"]["locomo"]["baseline_from"]) == (
+        "pass", False, "verdict record")
+    assert away["warnings"][0].startswith("The track's run logs are not on this machine, so the current locomo "
+                                          "baseline is taken from the verdict record (prme)")
+    # A line edited after it was recorded no longer matches its published results: its numbers, its bootstrap, or
+    # the variant its after side records, even when every line names the same other settings.
+    for edited, message in (({"difference": 0.9}, "gives other numbers than this checkout recomputes"),
+                            ({"correct": {"before": 4, "after": 4}}, "gives other numbers"),
+                            ({"bootstrap_samples": 1}, "names another bootstrap than compare's")):
+        rewritten([{**lines[0], **edited}, *lines[1:]])
+        with pytest.raises(ValueError, match=f"line for pair 1 of prme and prme-rrf on locomo {message}"):
+            baselines.verdict("prme-rrf", data=tmp_path / "elsewhere")
+    rewritten([{**line, "variant": {**line["variant"], "variant_settings": {"scoring.fusion": "rrf"}}}
+               if line["variant"] else line for line in lines])
+    with pytest.raises(ValueError, match="line for pair 1 of prme and prme-rrf on locomo names another variant than "
+                                         "its published results record"):
+        baselines.verdict("prme-rrf", data=tmp_path / "elsewhere")
+    # A line whose role the run logs do not give its pair, such as a confirmation relabeled as the first pair once the
+    # failed first pair's line is dropped, is refused. Two lines for one role are refused anywhere.
+    relabeled = {**lines[1], "role": "first", "variant": {**lines[1]["variant"], "first": {
+        "arm": "prme-rrf", "baseline": "prme", "number": 2}}}
+    rewritten([relabeled, *lines[2:]])
+    with pytest.raises(ValueError, match="The verdict record lists pair 2 of prme and prme-rrf on locomo as the "
+                                         "variant's first pair, but the track's run logs do not count it as that"):
+        baselines.verdict("prme-rrf")
+    rewritten([lines[0], relabeled, *lines[2:]])
+    with pytest.raises(ValueError, match="lists more than one first pair of the variant alongside prme on locomo"):
+        baselines.verdict("prme-rrf", data=tmp_path / "elsewhere")
+    # Without the run logs, a confirmation must still name the first pair on record and start after it finished.
+    for edited, message in (({"variant": {**lines[1]["variant"], "first": {**lines[1]["variant"]["first"],
+                                                                           "number": 3}}},
+                             "names another first pair than pair 1 of prme and prme-rrf on locomo"),
+                            ({"started_at": logged_at(2, 10)}, "started before its first pair finished")):
+        rewritten([lines[0], {**lines[1], **edited}, *lines[2:]])
+        with pytest.raises(ValueError, match=f"line for pair 2 of prme and prme-rrf on locomo {message}"):
+            baselines.verdict("prme-rrf", data=tmp_path / "elsewhere")
+    verdict_record_file().write_text(kept)
+    # The A/A record must mark each pair accepted as its run log and its results show, and list every complete one,
+    # since an A/A pair that excluded zero brings in the margin.
+    aa_path = baselines._aa_record_path(baselines.RESULTS, OLLAMA_MODEL.model)
+    aa_kept = aa_path.read_text()
+    aa_path.write_text("".join(json.dumps({**entry, "accepted": False}) + "\n" for entry in aa_record()))
+    with pytest.raises(ValueError, match="The A/A record marks A/A pair 1 of prme@00aa00aa on locomo refused, which "
+                                         "the track's run logs do not show"):
+        baselines.verdict("prme-rrf")
+    with pytest.raises(ValueError, match="refused, which its published results do not show"):
+        baselines.verdict("prme-rrf", data=tmp_path / "elsewhere")
+    aa_path.write_text(aa_kept)
+    aa_logged(data, "locomo", baseline="prme@0b0b0b0b", number=4, finished=LATER_AA)
+    with pytest.raises(ValueError, match="A/A pair 4 of prme@0b0b0b0b on locomo is on record in the track's run logs"):
+        baselines.verdict("prme-rrf")
+    baselines._pair_log_path(data, "prme@0b0b0b0b", "prme@0b0b0b0b", "locomo").unlink()
+    # A new baseline starts every count again: the pairs alongside prme stay listed without counting, and compare's
+    # warning that they ran the same test when the defaults' text did not change is repeated where it applies.
+    answered(data, "locomo", "0123abcd" + "9" * 32, arm="prme@0123abcd", at=logged_at(20))
+    moved = baselines.verdict("prme-rrf")
+    assert (moved["verdict"], moved["benchmarks"]["locomo"]["baseline"]) == ("incomplete", "prme@0123abcd")
+    assert moved["benchmarks"]["locomo"]["other_baseline_pairs"] == [
+        "pair 1 of prme and prme-rrf on locomo", "pair 2 of prme and prme-rrf on locomo"]
+    assert "A new baseline starts every count again (#143)" in moved["warnings"][0]
+
+
+def test_verdict_reads_the_arms_current_context_text_and_repeats_compares_warnings():
+    data = baselines.data_root(OLLAMA_MODEL)
+    verdict_track()
+    for benchmark in gate.GATE_BENCHMARKS:
+        compared_pair(benchmark, 1, GAIN)
+    # A pair given up before the first pair finished could hide a result, so compare's warning about it is repeated.
+    baselines._append_event(baselines._pair_log_path(data, "prme", "prme-rrf-again", "locomo"),
+                            {"event": "started", "pair": 1, "sample": None, "id": "dropped", "variant_settings": MARKED,
+                             "contexts_sha256": LOGGED_TEXT, "at": logged_at(2, 5)})
+    found = baselines.verdict("prme-rrf")
+    assert [warning.split(":")[0] for warning in found["warnings"]] == ["pair 1 of prme and prme-rrf on locomo"]
+    assert "never completed" in found["warnings"][0]
+    # A code change prepared under the same arm name is a new variant: its old pairs no longer count (#143).
+    baselines._log_run(data, "prme-rrf", "locomo", {"event": "prepared", "variant_settings": MARKED,
+                                                    "contexts_sha256": "f" * 64, "prepared_commit": "c" * 40,
+                                                    "prepared_sha256": "p"})
+    moved = baselines.verdict("prme-rrf")
+    assert (moved["verdict"], moved["benchmarks"]["locomo"]["contexts_sha256"]) == ("incomplete", "f" * 64)
+    assert moved["benchmarks"]["locomo"]["other_text_pairs"] == ["pair 1 of prme and prme-rrf on locomo"]
+    assert any(warning.startswith("Recorded pairs of prme-rrf on other context text do not count")
+               for warning in moved["warnings"])
+
+
+def test_verdict_refuses_pairs_of_one_variant_answered_under_other_settings_or_models():
+    verdict_track()
+    compared_pair("locomo", 1, GAIN)
+    compared_pair("longmemeval", 1, GAIN, settings={"scoring.fusion": "rrf"})
+    with pytest.raises(ValueError, match=r"The variant's recorded pairs were answered under different settings "
+                                         r"\(scoring.fusion=rrf, scoring.rrf_k=60; scoring.fusion=rrf\)"):
+        baselines.verdict("prme-rrf")
+    with pytest.raises(ValueError, match="prme is not a named variant of the defaults"):
+        baselines.verdict("prme")
+
+
+def test_a_confirmation_under_another_model_identity_does_not_repeat_the_first_pairs_test():
+    verdict_track()
+    other = {**IDENTITY, "manifest_digest_sha256": "f" * 64}
+    aa_checked(answer_result("prme", [True, False], identity=other), number=2, finished=LATER_AA)
+    for benchmark in gate.GATE_BENCHMARKS:
+        compared_pair(benchmark, 1, GAIN)
+        compared_pair(benchmark, 2, GAIN, identity=other)
+    with pytest.raises(ValueError, match="Pair 1 of prme and prme-rrf on locomo and pair 2 of prme and prme-rrf on "
+                                         "locomo were answered under different model identity"):
+        baselines.verdict("prme-rrf")
+
+
+def test_verdict_says_when_some_recorded_pairs_record_no_settings():
+    verdict_track()
+    compared_pair("locomo", 1, GAIN)
+    compared_pair("longmemeval", 1, GAIN, settings_recorded=False)
+    found = baselines.verdict("prme-rrf")
+    assert (found["variant_settings"], found["first"]["benchmarks"]["longmemeval"]["variant_settings"]) == (
+        MARKED, None)
+    assert found["warnings"][-1] == ("Some of the variant's recorded pairs record no settings, so their settings are "
+                                     "not compared with the others' (#130)")
+
+
+def test_verdict_away_from_the_run_logs_with_nothing_recorded_says_so_once_per_benchmark(tmp_path):
+    found = baselines.verdict("prme-rrf", data=tmp_path)
+    assert (found["verdict"], found["checked_against_run_logs"]) == ("incomplete", False)
+    assert found["reason"] == ("Not decided yet: nothing on locomo is in the verdict record, and the track's run logs "
+                               "are not on this machine; nothing on longmemeval is in the verdict record, and the "
+                               "track's run logs are not on this machine.")
+
+
+def test_cli_compare_records_the_pair_and_verdict_decides_on_a_variant(tmp_path, capsys, monkeypatch):
+    verdict_track()
+    paths = verdict_pair("locomo", 1, GAIN)
+    for said in ("Recorded", "Already recorded"):
+        baselines.main(["compare", "--before", str(paths[0]), "--after", str(paths[1])])
+        captured = capsys.readouterr()
+        assert json.loads(captured.out)["variant"]["role"] == "first"
+        assert f"{said} pair 1 of prme and prme-rrf on locomo as first in {verdict_record_file()}" in captured.err
+    assert [entry["role"] for entry in verdict_record()] == ["first"]
+    # compare prints a pair it accepted even when it cannot record it, and then fails loudly.
+    elsewhere = [tmp_path / f"{side}.json" for side in baselines.PAIR_SIDES]
+    for path, source in zip(elsewhere, verdict_pair("longmemeval", 1, GAIN)):
+        path.write_text(source.read_text())
+    with pytest.raises(SystemExit):
+        baselines.main(["compare", "--before", str(elsewhere[0]), "--after", str(elsewhere[1])])
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["variant"]["role"] == "first"
+    assert "compare accepted the pair, but did not record it for the verdict: The before result is not published" in \
+        captured.err
+    # A published A/A pair checked away from the track's run logs is compared, and simply not recorded.
+    [check] = aa_record()[:1]
+    monkeypatch.setattr(baselines, "OLLAMA_DATA", tmp_path / "no-run-logs")
+    baselines.main(["compare", "--before", str(baselines.RESULTS / check["results"]["before"]["path"]),
+                    "--after", str(baselines.RESULTS / check["results"]["after"]["path"])])
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["repeat"]["interleaved"] is True
+    assert "Not recorded for the verdict: the track's run logs are not on this machine" in captured.err
+    baselines.main(["verdict", "prme", "--variant", "rrf", "--provider", "ollama"])
+    found = json.loads(capsys.readouterr().out)
+    assert (found["kind"], found["arm"], found["verdict"]) == ("variant-verdict", "prme-rrf", "incomplete")
+    # A record verdict refuses is a usage error, not a traceback.
+    verdict_record_file().write_text(json.dumps({**verdict_record()[0], "bootstrap_samples": 1}) + "\n")
+    with pytest.raises(SystemExit):
+        baselines.main(["verdict", "prme", "--variant", "rrf", "--provider", "ollama"])
+    assert "names another bootstrap than compare's" in capsys.readouterr().err
+    for argv in (["verdict", "prme", "--variant", "rrf"],
+                 ["verdict", "prme", "--provider", "ollama"],
+                 ["verdict", "plain-rrf", "--variant", "rrf", "--provider", "ollama"],
+                 ["verdict", "prme", "--variant", "rrf", "--provider", "ollama", "--benchmark", "locomo"],
+                 ["verdict", "prme", "--variant", "rrf", "--provider", "ollama", "--sample", "0"],
+                 ["verdict", "prme", "--variant", "rrf", "--provider", "ollama", "--before", "b.json"],
+                 ["verdict", "prme", "--variant", "rrf", "--provider", "ollama", "--baseline", "prme"],
+                 ["verdict", "prme", "--variant", "Bad_Name", "--provider", "ollama"]):
+        with pytest.raises(SystemExit):
+            baselines.main(argv)
+
+
+def test_every_line_of_the_tracked_verdict_record_matches_its_published_pair():
+    # The record is tracked from the start, so a line compare adds leaves the tree dirty until it is committed.
+    assert baselines._verdict_record_path(PUBLISHED, OLLAMA_MODEL.model).is_file()
+    entries = verdict_record(PUBLISHED)
+    # Every committed line names its pair's published results with their digests, gives compare's numbers for
+    # them, and is the only line for its pair. A count has at most one first pair and one confirmation, and a
+    # committed confirmation's first pair is committed with it, so a failed first pair cannot be left out.
+    assert len({(entry["benchmark"], entry["pair"]["id"]) for entry in entries}) == len(entries)
+    counts: dict[tuple, dict[str, dict]] = {}
+    for entry in entries:
+        baselines._check_verdict_results(PUBLISHED, entry)
+        if entry["variant"] is not None:
+            key = (entry["benchmark"], entry["baseline"], entry["variant"]["contexts_sha256"])
+            assert entry["role"] not in counts.setdefault(key, {})
+            counts[key][entry["role"]] = entry
+    for count in counts.values():
+        if "confirmation" in count:
+            first = count.get("first")
+            assert first is not None and count["confirmation"]["variant"]["first"] == {
+                "arm": first["arm"], "baseline": first["baseline"], "number": first["pair"]["number"]}
 
 
 # Amended failure policy (#132) --------------------------------------------------------
