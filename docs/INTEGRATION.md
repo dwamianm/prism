@@ -1699,10 +1699,10 @@ PostgreSQL mode uses an `asyncpg` connection pool (default: `min_size=2`, `max_s
 
 ### Testing Against PostgreSQL
 
-PostgreSQL tests require the `PRME_TEST_DATABASE_URL` environment variable:
+PostgreSQL tests require the `PRME_TEST_DATABASE_URL` environment variable. The repository's `docker-compose.yml` starts a loopback-only test database for this; see [CONTRIBUTING.md](../CONTRIBUTING.md#running-tests):
 
 ```bash
-export PRME_TEST_DATABASE_URL=postgresql://user:pass@localhost:5432/prme_test
+export PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:5432/prme_test
 pytest tests/test_pg_*.py -v
 ```
 

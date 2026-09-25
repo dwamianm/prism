@@ -45,4 +45,4 @@ Your Application
 - **Search memories**: [`client.retrieve()`](memory-client.md#retrieve)
 - **LLM extraction**: [`client.ingest()`](memory-client.md#ingest)
 - **Run as MCP server**: [`prme-mcp --db-path ./memories`](mcp-server.md#running-the-server)
-- **Run as HTTP API**: [`uvicorn prme.api:app`](http-api.md#running-the-server)
+- **Run as HTTP API**: [`python -m prme.api`](http-api.md#running-the-server)
