@@ -879,16 +879,30 @@ holds only while the defaults still do.
 |---|---:|---:|---|
 | Baseline, `prme` defaults at `97c9402f` (2026-09-24) ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-locomo-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-longmemeval-result.json)) | **423/500 (84.6%)**, 95% interval 81.4% to 87.6% | **1,014/1,540 (65.8%)**, 95% interval 63.4% to 68.2% | 3,996-token ceiling |
 | Repeat of the defaults, `prme@46647825` (2026-09-24) ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-locomo-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-longmemeval-result.json)) | **434/500 (86.8%)**, 95% interval 83.8% to 89.6% | **1,007/1,540 (65.4%)**, 95% interval 63.0% to 67.7% | 3,996-token ceiling |
+| Baseline of the new defaults, `prme@335ee82b` (2026-09-25) ([LoCoMo](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-locomo-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@335ee82b-longmemeval-result.json)) | **431/500 (86.2%)**, 95% interval 83.2% to 89.2% | **1,237/1,540 (80.3%)**, 95% interval 78.3% to 82.3% | 3,996-token ceiling |
 | Smoke check, first 2 per category ([LoCoMo](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-locomo-sample-2-result.json), [LongMemEval-S](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme-longmemeval-sample-2-result.json)) | 12 answered, 9 accepted (not a score) | 8 answered, 8 accepted (not a score) | 3,996-token ceiling |
 
 The first baseline was the reference for DeepSeek paired runs until its
-repeat, `prme@46647825`, completed; the repeat is now the most recent complete
-baseline, so later variants are answered alongside it (step 2), and `run-pair`
-and `compare` refuse the first baseline as the before side of any pair other
-than a repeat of the defaults (#127). The repeat counts as a baseline because
-it holds the defaults prepared at a newer commit on `main`. Its own answer run
-is never the before side of a variant's comparison, because `compare` pairs a
-variant only with the fresh defaults run answered alongside it (#129).
+repeat, `prme@46647825`, completed. The repeat is the baseline that the A/A
+checks and the pairs behind the 2026-09-25 default change (#177) were answered
+alongside. **The current DeepSeek defaults baseline is `prme@335ee82b`**,
+recorded after #177 changed the defaults: it was prepared from a clean tree on
+`main` at `335ee82b`, the #177 merge commit, and answered on its own on
+2026-09-25, under the same model identity (`e04da138`), Ollama server version
+(0.34.3), answer settings, amended failure policy (#132) and 3,996-token budget
+as the A/A checks, so those checks still cover it. Its context text is the same
+as that of the variant `prme-reader-rrf-sd06-rec` on every question
+(`contexts_sha256` `dd27bbac` on LoCoMo and `9719c1d7` on LongMemEval-S), and
+none of its contexts matches the saved 2026-09-23 run, since the defaults
+changed. All 4,084 of its reader and judge calls returned HTTP 200 on the first
+attempt, and no question was scored `truncated` or `verdict_unresolved`. Later
+variants are answered alongside it (step 2), every variant's count starts again
+from zero against it, and `run-pair` and `compare` refuse each earlier
+baseline as the before side of any pair other than a repeat of the defaults
+(#127). Each later baseline counts as a baseline because it holds the defaults
+prepared at a newer commit on `main`. A baseline's own answer run is never the
+before side of a variant's comparison, because `compare` pairs a variant only
+with the fresh defaults run answered alongside it (#129).
 `compare` refuses results
 answered by another model identity or other settings. Both first-baseline arms
 were prepared from `main` at `97c9402f`,
@@ -1205,10 +1219,11 @@ compare's warning without that arm's first pair, which recorded no settings;
 its second pair recorded them and is still named.
 
 After this change `prme@46647825` no longer holds the defaults, so every
-variant's count starts again: record a new DeepSeek baseline of the new
-defaults (`prepare prme` and `run prme` on `main` at the merge commit) before
-answering any later variant, and pair later variants with it. The Ollama
-server stays on 0.34.3, the version the A/A checks cover.
+variant's count starts again. The new defaults' baseline, `prme@335ee82b`, was
+recorded with `prepare prme` and `run prme` on `main` at the merge commit
+`335ee82b` (LoCoMo 1,237/1,540, LongMemEval-S 431/500; see the table of
+DeepSeek runs above), and later variants are paired with it. The Ollama server
+stays on 0.34.3, the version the A/A checks cover.
 
 ## Earlier registered memory-utility comparison
 
