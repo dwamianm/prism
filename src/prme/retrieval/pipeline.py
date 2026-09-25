@@ -22,7 +22,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import math
 import time
 import uuid
 from collections.abc import Sequence
@@ -34,7 +33,6 @@ import duckdb
 
 from prme.models.learning import RankingMultipliers
 from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
-from prme.retrieval.reranker import DEFAULT_PRIOR_WEIGHT
 from prme.retrieval.candidates import (
     CandidateDiagnostics,
     generate_candidates,
@@ -42,9 +40,13 @@ from prme.retrieval.candidates import (
 )
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
+    DEFAULT_RERANKER_PRIOR_WEIGHT,
     DEFAULT_SCORING_WEIGHTS,
+    LEGACY_PRIOR_WEIGHT_ERROR,
+    RERANKER_ENVELOPE_POLICIES,
     PackingConfig,
     ScoringWeights,
+    normalize_reranker_prior_weight,
 )
 from prme.retrieval.context_formatter import (
     build_context_guidance,
@@ -203,7 +205,7 @@ class RetrievalPipeline:
         query_reformulation_base_url: str | None = None,
         query_reformulation_timeout: float | None = None,
         query_intent_order: QueryIntentOrder = "entity_first",
-        reranker_prior_weight: float = DEFAULT_PRIOR_WEIGHT,
+        reranker_prior_weight: float = DEFAULT_RERANKER_PRIOR_WEIGHT,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -227,8 +229,10 @@ class RetrievalPipeline:
         self._query_reformulation_clients: dict = {}
         if reranker_policy not in {"legacy", "score_envelope", "anchored_score_envelope"}:
             raise ValueError("Unknown reranker policy")
-        if not math.isfinite(reranker_prior_weight) or not 0 <= reranker_prior_weight <= 1:
-            raise ValueError("reranker_prior_weight must be between 0 and 1")
+        reranker_prior_weight = normalize_reranker_prior_weight(reranker_prior_weight)
+        if (enable_reranker and reranker_policy not in RERANKER_ENVELOPE_POLICIES
+                and reranker_prior_weight != DEFAULT_RERANKER_PRIOR_WEIGHT):
+            raise ValueError(LEGACY_PRIOR_WEIGHT_ERROR)
         if query_reformulation_merge_policy not in {"new_only", "max_signals"}:
             raise ValueError("Unknown query reformulation merge policy")
         self._query_reformulation_merge_policy = query_reformulation_merge_policy
@@ -1046,6 +1050,8 @@ class RetrievalPipeline:
         try:
             from prme.models.relevance import make_receipt
 
+            # Recorded only when it differs from the original blend (issue #88).
+            prior_weight = getattr(self._reranker, "_prior_weight", DEFAULT_RERANKER_PRIOR_WEIGHT)
             execution = RetrievalExecution(features=execution_features, parameters={
                 "ranking_multipliers": ranking_multipliers.model_dump(mode="json") if ranking_multipliers else None,
                 "ranking_profile": ranking_profile,
@@ -1070,9 +1076,8 @@ class RetrievalPipeline:
                 **({"query_intent_order": self._query_intent_order}
                    if self._query_intent_order != "entity_first" else {}),
                 "reranker_top_k": self._reranker_top_k,
-                **({"reranker_prior_weight": self._reranker._prior_weight}
-                   if self._reranker is not None
-                   and self._reranker._prior_weight != DEFAULT_PRIOR_WEIGHT else {}),
+                **({"reranker_prior_weight": prior_weight}
+                   if prior_weight != DEFAULT_RERANKER_PRIOR_WEIGHT else {}),
                 "query_reformulation": {"enabled": self._enable_query_reformulation,
                     "count": self._query_reformulation_count, "provider": self._query_reformulation_provider,
                     "model": self._query_reformulation_model,

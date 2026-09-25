@@ -35,6 +35,34 @@ RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
 # Receipts record them from version 20 (issue #83).
 WEIGHTED_ONLY_SETTINGS = ("recency_time",)
 
+# The reranker's original blend: 0.7 cross-encoder, 0.3 the candidate's own
+# score. Receipts and feature identities omit it, so other weights are
+# recorded and this one keeps earlier bytes (issue #88).
+DEFAULT_RERANKER_PRIOR_WEIGHT = 0.3
+RERANKER_ENVELOPE_POLICIES = ("score_envelope", "anchored_score_envelope")
+# Under the legacy policy the reranked candidates keep their blended scores, so
+# a lower prior weight puts raw model scores beside the rest of the pool's own
+# scores: the scale failure the envelope policies fix.
+LEGACY_PRIOR_WEIGHT_ERROR = (
+    "reranker_prior_weight other than 0.3 needs an envelope reranker_policy "
+    "('score_envelope' or 'anchored_score_envelope'): under 'legacy' the reranked "
+    "candidates would carry blended model scores next to the other candidates' own scores"
+)
+
+
+def normalize_reranker_prior_weight(value: float) -> float:
+    """A reranker prior weight as a float in [0, 1], with -0.0 read as 0.0.
+
+    The weight is recorded in receipts and feature identities, so equal
+    weights must have equal bytes: an int 0, 0.0 and -0.0 all become 0.0.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"reranker prior_weight must be a number between 0 and 1, not {value!r}")
+    weight = float(value) + 0.0
+    if not math.isfinite(weight) or not 0 <= weight <= 1:
+        raise ValueError(f"reranker prior_weight must be between 0 and 1, not {value!r}")
+    return weight
+
 # The retrieval defaults PRMEConfig applies over the class defaults below. They
 # passed the epic #77 DeepSeek default-change test twice (2026-09-25, variant
 # prme-reader-rrf-sd06-rec). Stored receipts and configurations omit a weighted

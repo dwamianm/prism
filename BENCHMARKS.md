@@ -181,8 +181,9 @@ uv run python -m benchmarks.diagnostics.product_packing gate \
 # Candidate limits per channel (issue #87)
 uv run python -m benchmarks.diagnostics.product_packing gate \
   --set packing.vector_k=150 --set packing.lexical_k=150 --output /tmp/gate-k150.json
-# Cross-encoder rank order over the fused top 300 (issue #88)
-uv run python -m benchmarks.diagnostics.product_packing gate --set enable_reranker=true \
+# Cross-encoder rank order over the fused top 300 (issue #88). Needs the reranker
+# extra and the model already in the local Hugging Face cache: the gate runs offline.
+uv run --extra reranker python -m benchmarks.diagnostics.product_packing gate --set enable_reranker=true \
   --set 'reranker_policy="score_envelope"' --set reranker_prior_weight=0 \
   --set reranker_top_k=300 --output /tmp/gate-rerank.json
 uv run python -m benchmarks.diagnostics.product_packing gate-compare \
@@ -227,9 +228,12 @@ beside it (same name, `.md`). For each benchmark and category, the report gives:
   question, so its times include a new engine's cold database reads, which
   LoCoMo pays once per conversation;
 - with `enable_reranker` set, the reranker's own time inside each retrieval,
-  p50 and p95 (issue #88). `gate-compare` shows it for each side that ran it.
-  The gate refuses the other reranker settings without `enable_reranker`,
-  since they would change nothing.
+  p50 and p95 (issue #88), and in the provenance the sentence-transformers,
+  transformers and torch versions, the device and the model revision, which
+  decide the model's scores. `gate-compare` shows the time for each side that
+  ran the reranker. The gate refuses the other reranker settings without
+  `enable_reranker`, and a reranker run that would change nothing (a
+  `reranker_top_k` of 0 or a `reranker_prior_weight` of 1).
 
 A pack whose records are not all turns (for example one built with extraction)
 still replays; its channel ranks are left out.

@@ -14,12 +14,16 @@ from pydantic_settings import BaseSettings
 
 from prme.retrieval.config import (
     DEFAULT_PACKING_SETTINGS,
+    DEFAULT_RERANKER_PRIOR_WEIGHT,
     DEFAULT_SCORING_SETTINGS,
+    LEGACY_PRIOR_WEIGHT_ERROR,
     RANK_FUSION_ONLY_SETTINGS,
+    RERANKER_ENVELOPE_POLICIES,
     PackingConfig,
     ScoringWeights,
     default_packing_config,
     default_scoring_weights,
+    normalize_reranker_prior_weight,
 )
 from prme.retrieval.temporal_relations import TemporalRelationConfig
 
@@ -575,16 +579,16 @@ class PRMEConfig(_ProjectSettings):
         description="Number of top candidates to rerank (controls latency vs quality).",
     )
     reranker_prior_weight: float = Field(
-        default=0.3,
+        default=DEFAULT_RERANKER_PRIOR_WEIGHT,
         ge=0.0,
         le=1.0,
         description=(
-            "Weight of a reranked candidate's own score (the fused or composite "
-            "score) in the order of the reranked prefix; the cross-encoder gets "
-            "the rest. 0.0 orders the prefix by cross-encoder score alone. Used "
-            "only with enable_reranker. With an envelope reranker_policy the "
-            "prefix keeps its original score scale; with 'legacy' the prefix "
-            "carries the blended scores (issue #88)."
+            "Experimental. Weight of a reranked candidate's own score (the fused "
+            "or composite score) in the order of the reranked prefix; the "
+            "cross-encoder gets the rest. 0.0 orders the prefix by cross-encoder "
+            "score alone, and the prefix keeps its original score scale. Used only "
+            "with enable_reranker; a value other than 0.3 needs an envelope "
+            "reranker_policy (issue #88)."
         ),
     )
 
@@ -814,6 +818,19 @@ class PRMEConfig(_ProjectSettings):
             "encryption regardless of encryption_enabled."
         ),
     )
+
+    @field_validator("reranker_prior_weight")
+    @classmethod
+    def _normalize_reranker_prior_weight(cls, value: float) -> float:
+        # -0.0 would otherwise be recorded with other bytes than 0.0.
+        return normalize_reranker_prior_weight(value)
+
+    @model_validator(mode="after")
+    def _validate_reranker_prior_weight(self) -> PRMEConfig:
+        if (self.enable_reranker and self.reranker_policy not in RERANKER_ENVELOPE_POLICIES
+                and self.reranker_prior_weight != DEFAULT_RERANKER_PRIOR_WEIGHT):
+            raise ValueError(LEGACY_PRIOR_WEIGHT_ERROR)
+        return self
 
     @model_validator(mode="after")
     def _validate_confidence_overrides(self) -> PRMEConfig:

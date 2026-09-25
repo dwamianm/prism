@@ -1192,6 +1192,20 @@ def test_gate_config_refuses_reranker_settings_without_the_reranker(tmp_path):
             gate_config(tmp_path, parse_overrides(["enable_reranker=false", setting]))
     with pytest.raises(ValueError, match=r"reranker_policy, reranker_prior_weight apply only with"):
         gate_config(tmp_path, parse_overrides(["reranker_prior_weight=0", 'reranker_policy="score_envelope"']))
+    # A reranker run that would change nothing, and the legacy policy that would mix scales.
+    for no_op in (["reranker_top_k=0"], ['reranker_policy="score_envelope"', "reranker_prior_weight=1"]):
+        with pytest.raises(ValueError, match="needs a nonzero reranker_top_k and a reranker_prior_weight below 1"):
+            gate_config(tmp_path, parse_overrides(["enable_reranker=true", *no_op]))
+    with pytest.raises(ValueError, match="needs an envelope reranker_policy"):
+        gate_config(tmp_path, parse_overrides(["enable_reranker=true", "reranker_prior_weight=0"]))
+
+
+def test_gate_records_the_reranker_runtime_that_decides_model_scores(tmp_path):
+    from benchmarks.diagnostics.product_packing import _reranker_runtime
+
+    runtime = _reranker_runtime(gate_config(tmp_path, parse_overrides(["enable_reranker=true"])))
+    assert set(runtime) == {"sentence-transformers", "transformers", "torch", "device", "model_revision"}
+    assert all(value is None or isinstance(value, str) for value in runtime.values())
 
 
 async def test_gate_times_the_reranker_inside_retrieval_and_replays_its_receipts(
@@ -1212,15 +1226,19 @@ async def test_gate_times_the_reranker_inside_retrieval_and_replays_its_receipts
     monkeypatch.setattr(CrossEncoderReranker, "_predict_sync", predict)
     [fused] = await replay_gate([gate_case(pack, identity)], scratch=scratch)
     assert fused["reranking_seconds"] is None and scored == []
+    captures = tmp_path / "captures"
     rows = await replay_gate([gate_case(pack, identity), gate_case(pack, identity)], scratch=scratch,
                              overrides=parse_overrides(["enable_reranker=true", 'reranker_policy="score_envelope"',
-                                                        "reranker_prior_weight=0"]))
+                                                        "reranker_prior_weight=0"]), capture_dir=captures)
     # The warm-up scores one pair; each question scores its candidates once. The replay
     # checks that every receipt replays the returned ranking.
     assert scored[0] == 1 and len(scored) == 3
     for row in rows:
         assert 0 < row["reranking_seconds"] <= row["retrieval_seconds"]
-    assert rows[0]["context_sha256"] == rows[1]["context_sha256"]
+    assert rows[0]["context_sha256"] == rows[1]["context_sha256"] != fused["context_sha256"]
+    receipt = json.loads((captures / "locomo" / "conv-1-q0000.json").read_bytes())["receipt"]
+    assert receipt["execution"]["parameters"]["reranker_prior_weight"] == 0.0
+    assert receipt["execution"]["features"]["reranker"]["prior_weight"] == 0.0
     assert pack_identity(pack) == identity
 
 
@@ -1237,7 +1255,7 @@ def test_gate_summary_and_comparison_report_reranking_latency():
                                                                  "p95": pytest.approx(.39)}
     assert "reranking" not in gate_markdown(before)
     assert ("Cross-encoder reranking inside retrieval, p50 / p95 per question: locomo 0.300 / 0.390 s. "
-            "It is part of the retrieval time above.") in gate_markdown(after)
+            "Retrieval time includes it.") in gate_markdown(after)
     bench = compare_gates(before, after, samples=20)["benchmarks"]["locomo"]
     assert bench["reranking_seconds"] == {"before": None, "after": {"p50": pytest.approx(.3),
                                                                    "p95": pytest.approx(.39)}}
@@ -1245,8 +1263,7 @@ def test_gate_summary_and_comparison_report_reranking_latency():
     assert "After, cross-encoder reranking inside retrieval, p50 / p95 per question: locomo 0.300 / 0.390 s." \
         in markdown
     assert "Before, cross-encoder" not in markdown
-    # Reports written before the reranker was timed still compare.
-    earlier = gate_fixture(before["rows"], timing=timing)
-    for row in earlier["rows"]:
-        row.pop("reranking_seconds", None)
-    assert compare_gates(earlier, after, samples=20)["benchmarks"]["locomo"]["reranking_seconds"]["before"] is None
+    # Like retrieval time, reranking time compares only between reports timed after a warm-up.
+    untimed = gate_fixture(after["rows"])
+    assert compare_gates(before, untimed, samples=20)["benchmarks"]["locomo"]["reranking_seconds"] == {
+        "before": None, "after": None}

@@ -723,11 +723,11 @@ changes nothing, so every other receipt keeps its version and bytes.
 With `enable_reranker` on, a local cross-encoder scores the top
 `reranker_top_k` candidates of the scored pool after this stage and before
 session expansion. `reranker_prior_weight` sets the weight of each candidate's
-own score in the new order of that prefix. At 0.0 the prefix follows the
-cross-encoder alone; with an envelope `reranker_policy`, the prefix then takes
-its original scores in that order, so only the ranks change and the score scale
-that session expansion and packing read stays the scale of this stage (rank
-fusion's, under the defaults). The tail keeps its scores and order. Receipts
+own score in the new order of that prefix; a value other than 0.3 requires an
+envelope `reranker_policy`. At 0.0 the prefix follows the cross-encoder alone,
+and the envelope policy gives the prefix its original scores in that order, so
+only the ranks change and the score scale that session expansion and packing
+read stays the scale of this stage (rank fusion's, under the defaults). The tail keeps its scores and order. Receipts
 record each candidate's model score and the weight in its score provenance and
 replay without the model; a weight other than 0.3 is also recorded in the
 execution parameters and feature identity. The option is off by default until

@@ -11,7 +11,7 @@ import platform
 from pydantic import BaseModel, ConfigDict, JsonValue
 from typing import Any, Literal
 
-from prme.retrieval.reranker import DEFAULT_PRIOR_WEIGHT
+from prme.retrieval.config import DEFAULT_RERANKER_PRIOR_WEIGHT
 
 
 class RetrievalExecution(BaseModel):
@@ -43,8 +43,8 @@ def reranker_identity(reranker: Any) -> dict[str, JsonValue]:
         identity["policy"] = policy
     # Recorded only when it differs from the original blend, so earlier
     # identities keep their bytes; it decides the reranked order (issue #88).
-    prior_weight = getattr(reranker, "_prior_weight", DEFAULT_PRIOR_WEIGHT)
-    if prior_weight != DEFAULT_PRIOR_WEIGHT:
+    prior_weight = getattr(reranker, "_prior_weight", DEFAULT_RERANKER_PRIOR_WEIGHT)
+    if prior_weight != DEFAULT_RERANKER_PRIOR_WEIGHT:
         identity["prior_weight"] = _reported(prior_weight)
     return identity
 

@@ -32,6 +32,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
+import importlib.metadata
 import inspect
 import itertools
 import json
@@ -291,6 +292,8 @@ GATE_FIXED_SETTINGS = frozenset({
     "encryption_key", "embedding", "extraction", "temporal_relation", "enable_query_reformulation",
     "organizer", "api", "mcp",
 })
+# Settings that change nothing unless enable_reranker is on (issue #88).
+GATE_RERANKER_ONLY_SETTINGS = frozenset(name for name in PRMEConfig.model_fields if name.startswith("reranker_"))
 # The LoCoMo capture wrote this file after recording each pack's tree identity.
 _PACK_IDENTITY_EXCLUDED = frozenset({"capture-manifest.json"})
 # Candidate channels whose own ranking the gate records for each question, and
@@ -488,12 +491,6 @@ def _check_override_keys(model: type[BaseModel], values: dict, prefix: str = "")
             _check_override_keys(nested, value, f"{prefix}{key}.")
 
 
-# Reranker settings that do nothing unless enable_reranker is on (issue #88).
-GATE_RERANKER_SETTINGS = frozenset({
-    "reranker_model", "reranker_top_k", "reranker_policy", "reranker_prior_weight",
-})
-
-
 def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
     """Current defaults over a pack copy, isolated from environment variables and .env files."""
     overrides = overrides or {}
@@ -524,11 +521,14 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
         # alone, so a weighted run needs only scoring.fusion="weighted".
         raise ValueError("packing.session_context_rank_fusion_score_decay applies only with "
                          "scoring.fusion=\"rrf\"")
-    dormant = sorted(GATE_RERANKER_SETTINGS.intersection(overrides))
+    dormant = sorted(GATE_RERANKER_ONLY_SETTINGS.intersection(overrides))
     if dormant and not config.enable_reranker:
         # Without the reranker these change nothing, so this run would equal the defaults.
         verb = "applies" if len(dormant) == 1 else "apply"
         raise ValueError(f"{', '.join(dormant)} {verb} only with enable_reranker=true")
+    if config.enable_reranker and (config.reranker_top_k == 0 or config.reranker_prior_weight == 1):
+        # Nothing is reranked, or the prefix keeps its own order.
+        raise ValueError("enable_reranker needs a nonzero reranker_top_k and a reranker_prior_weight below 1")
     if config.packing.session_context_packing is not None and (
             config.packing.session_context_window <= 0 or config.packing.session_context_top_k == 0):
         # Without session expansion no neighbor exists, so this run would change nothing.
@@ -959,9 +959,9 @@ async def _warm_up(engine, user_id: str) -> None:
 class _RerankTimer:
     """The seconds one ``retrieve()`` spends in the cross-encoder reranker (issue #88).
 
-    Retrieval reports no per-stage times, so this wraps the engine's reranker
-    for the gate's own replay; it changes no result. ``seconds`` is None when
-    the reranker is off.
+    Retrieval metadata has no reranker time, so this wraps the engine's
+    reranker for the gate's own replay, which runs one question at a time; it
+    changes no result. ``seconds`` is None when the reranker is off.
     """
 
     def __init__(self, engine) -> None:
@@ -976,7 +976,7 @@ class _RerankTimer:
             try:
                 return await rerank(*args, **kwargs)
             finally:
-                self.seconds += time.perf_counter() - started
+                self.seconds = (self.seconds or 0.0) + time.perf_counter() - started
 
         self._reranker.rerank = timed
 
@@ -1236,7 +1236,8 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     gpt54 = _harness()
     archive = archive or default_archive()
     # Record the code that runs before replaying; this also rejects bad overrides.
-    run_provenance = provenance(gate_config(Path("{pack}"), overrides))
+    config = gate_config(Path("{pack}"), overrides)
+    run_provenance = provenance(config)
     if run_provenance["commit"] is None:
         raise ValueError("Run the gate from a git checkout so the report names its commit")
     loaders = {"locomo": _locomo_cases, "longmemeval": _longmemeval_cases}
@@ -1251,6 +1252,7 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     report = gate_report(rows, provenance={
         **run_provenance, "overrides": overrides or {}, "retrieval_timing": GATE_RETRIEVAL_TIMING,
         **({"plain": plain, "plain_rrf_k": PLAIN_RRF_K} if plain is not None else {}),
+        **({"reranker_runtime": _reranker_runtime(config)} if config.enable_reranker else {}),
         "archive": {"path": str(archive),
                     "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}},
         "datasets": {name: datasets[name] for name in selected},
@@ -1260,6 +1262,35 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     report.update(started_at=started_at, seconds=time.perf_counter() - started,
                   load_average={"start": list(load_at_start), "end": list(os.getloadavg())})
     return report
+
+
+def _reranker_runtime(config: PRMEConfig) -> dict:
+    """What decides the cross-encoder's scores beyond the settings (issue #88).
+
+    Model scores, and so the reranked order and its time, depend on these
+    library versions, the device sentence-transformers picks (CUDA, then Apple
+    MPS, then CPU) and the cached model revision. None marks what is missing.
+    """
+    runtime: dict = {}
+    for package in ("sentence-transformers", "transformers", "torch"):
+        try:
+            runtime[package] = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            runtime[package] = None
+    try:
+        from sentence_transformers.util import get_device_name
+
+        runtime["device"] = get_device_name()
+    except ImportError:
+        runtime["device"] = None
+    try:
+        from huggingface_hub import snapshot_download
+
+        runtime["model_revision"] = Path(snapshot_download(config.reranker_model, local_files_only=True)).name
+    except Exception:
+        # Not cached (or no hub client): the replay then fails to load the model anyway.
+        runtime["model_revision"] = None
+    return runtime
 
 
 def _gate_rows(report: dict, side: str) -> dict:
@@ -1421,7 +1452,9 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
                         for side, report in (("before", before), ("after", after))},
             "retrieval_seconds": _compared_latency(before, after, old, new, keys),
             "reranking_seconds": {side: _reranking_latency([rows[key] for key in keys])
-                                  for side, rows in (("before", old), ("after", new))},
+                                  if report["provenance"].get("retrieval_timing") == GATE_RETRIEVAL_TIMING
+                                  else None
+                                  for side, rows, report in (("before", old, before), ("after", new, after))},
             "aggregation": _compared_aggregation(old, new, keys),
             "query_scoring": _query_scoring(old, new, keys),
             "session_context_records": _session_context_comparison(before, after, name),
@@ -1542,7 +1575,7 @@ def _reranking_markdown(latencies: dict[str, dict | None], label: str = "Cross-e
     if not shown:
         return []
     return ["", f"{label} reranking inside retrieval, p50 / p95 per question: " + "; ".join(shown)
-            + ". It is part of the retrieval time above."]
+            + ". Retrieval time includes it."]
 
 
 def _candidates(summary: dict) -> str:

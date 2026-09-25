@@ -12,23 +12,15 @@ order, so rank fusion's scale is kept and only the ranks change (issue #88).
 from __future__ import annotations
 
 import asyncio
-import math
 import threading
 from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
+from prme.retrieval.config import DEFAULT_RERANKER_PRIOR_WEIGHT, normalize_reranker_prior_weight
 from prme.retrieval.models import ScoreAdjustment
 
 if TYPE_CHECKING:
     from prme.retrieval.models import RetrievalCandidate
-
-# The original blend: 0.7 cross-encoder, 0.3 the candidate's own score.
-DEFAULT_PRIOR_WEIGHT = 0.3
-
-
-def _check_prior_weight(prior_weight: float) -> None:
-    if not math.isfinite(prior_weight) or not 0 <= prior_weight <= 1:
-        raise ValueError("prior_weight must be between 0 and 1")
 
 
 class CrossEncoderReranker:
@@ -45,15 +37,14 @@ class CrossEncoderReranker:
         batch_size: int = 64,
         *,
         policy: Literal["legacy", "score_envelope", "anchored_score_envelope"] = "legacy",
-        prior_weight: float = DEFAULT_PRIOR_WEIGHT,
+        prior_weight: float = DEFAULT_RERANKER_PRIOR_WEIGHT,
     ) -> None:
         if batch_size < 1:
             raise ValueError("batch_size must be positive")
         if policy not in {"legacy", "score_envelope", "anchored_score_envelope"}:
             raise ValueError("Unknown reranker policy")
-        _check_prior_weight(prior_weight)
         self._policy = policy
-        self._prior_weight = prior_weight
+        self._prior_weight = normalize_reranker_prior_weight(prior_weight)
         self._model_name = model_name
         self._batch_size = batch_size
         self._model = None  # Lazy init
@@ -116,9 +107,7 @@ class CrossEncoderReranker:
         """
         if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 0:
             raise ValueError("top_k must be a nonnegative integer")
-        if prior_weight is None:
-            prior_weight = self._prior_weight
-        _check_prior_weight(prior_weight)
+        prior_weight = self._prior_weight if prior_weight is None else normalize_reranker_prior_weight(prior_weight)
         # Do not change input candidates: callers may reuse the base ranking
         # for another policy or an ablation, and repeated calls must not blend
         # the model score into an already-blended prior.

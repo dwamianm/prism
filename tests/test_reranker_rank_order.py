@@ -18,12 +18,12 @@ from pydantic import ValidationError
 from prme import MemoryEngine, PRMEConfig, RetrievalReceipt
 from prme.models.nodes import MemoryNode
 from prme.models.relevance import make_receipt
-from prme.retrieval.config import PackingConfig, ScoringWeights
+from prme.retrieval.config import DEFAULT_RERANKER_PRIOR_WEIGHT, PackingConfig, ScoringWeights
 from prme.retrieval.execution import RetrievalExecution, reranker_identity
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import pack_context
 from prme.retrieval.pipeline import RetrievalPipeline
-from prme.retrieval.reranker import DEFAULT_PRIOR_WEIGHT, CrossEncoderReranker
+from prme.retrieval.reranker import CrossEncoderReranker
 from prme.retrieval.scoring import score_and_rank
 from prme.types import NodeType, Scope
 from tests import test_durable_ingestion
@@ -87,16 +87,33 @@ async def test_zero_prior_weight_orders_the_fused_prefix_by_the_model_alone():
 
 
 async def test_zero_prior_weight_with_the_legacy_policy_carries_raw_model_scores():
+    # Called directly, the legacy policy shows why configuration refuses the pair:
+    # the prefix carries raw model scores below the tail's fused score.
     rows = fused_rows()
     ranked = await ranker(NEURAL, prior_weight=0.0).rerank("telescope", rows, top_k=4)
     assert [c.composite_score for c in ranked[:4]] == [0.505, 0.50, 0.2, 0.1]
-    assert ranked[4] == rows[4]
+    assert ranked[4] == rows[4] and ranked[4].composite_score > ranked[2].composite_score
+
+
+def test_configuration_refuses_a_non_default_weight_under_the_legacy_policy():
+    for weight in (0.0, 0.5):
+        with pytest.raises(ValidationError, match="needs an envelope reranker_policy"):
+            PRMEConfig(_env_file=None, enable_reranker=True, reranker_prior_weight=weight)
+        with pytest.raises(ValueError, match="needs an envelope reranker_policy"):
+            RetrievalPipeline(None, None, None, None, enable_reranker=True, reranker_prior_weight=weight)
+        for policy in ("score_envelope", "anchored_score_envelope"):
+            config = PRMEConfig(_env_file=None, enable_reranker=True, reranker_policy=policy,
+                                reranker_prior_weight=weight)
+            assert config.reranker_prior_weight == weight
+    # Without the reranker the weight is unused, as the policy is.
+    assert PRMEConfig(_env_file=None, reranker_prior_weight=0.0).reranker_prior_weight == 0.0
+    assert PRMEConfig(_env_file=None, enable_reranker=True).reranker_prior_weight == DEFAULT_RERANKER_PRIOR_WEIGHT
 
 
 async def test_a_call_weight_overrides_the_reranker_weight():
     rows = fused_rows()
     configured = ranker(NEURAL, policy="score_envelope", prior_weight=0.0)
-    assert (await configured.rerank("telescope", rows, top_k=4, prior_weight=DEFAULT_PRIOR_WEIGHT))[0].node.id \
+    assert (await configured.rerank("telescope", rows, top_k=4, prior_weight=DEFAULT_RERANKER_PRIOR_WEIGHT))[0].node.id \
         == rows[0].node.id
     assert (await configured.rerank("telescope", rows, top_k=4))[0].node.id == rows[1].node.id
     with pytest.raises(ValueError, match="prior_weight"):
@@ -108,18 +125,41 @@ def test_prior_weight_must_be_between_zero_and_one(weight):
     with pytest.raises(ValueError, match="prior_weight"):
         CrossEncoderReranker(prior_weight=weight)
     with pytest.raises(ValidationError):
-        PRMEConfig(reranker_prior_weight=weight)
-    with pytest.raises(ValueError, match="reranker_prior_weight"):
+        PRMEConfig(_env_file=None, reranker_prior_weight=weight)
+    with pytest.raises(ValueError, match="prior_weight"):
         RetrievalPipeline(None, None, None, None, reranker_prior_weight=weight)
 
 
+@pytest.mark.parametrize("weight", [True, "0"])
+def test_code_callers_must_pass_a_number(weight):
+    with pytest.raises(ValueError, match="prior_weight must be a number"):
+        CrossEncoderReranker(prior_weight=weight)
+
+
 def test_default_weight_and_identity_keep_their_bytes():
-    assert PRMEConfig().reranker_prior_weight == DEFAULT_PRIOR_WEIGHT == 0.3
+    assert PRMEConfig(_env_file=None).reranker_prior_weight == DEFAULT_RERANKER_PRIOR_WEIGHT == 0.3
     default = reranker_identity(CrossEncoderReranker())
     assert "prior_weight" not in default
     assert reranker_identity(CrossEncoderReranker(prior_weight=0.3)) == default
     rank_order = reranker_identity(CrossEncoderReranker(policy="score_envelope", prior_weight=0.0))
     assert rank_order == {**default, "policy": "score_envelope", "prior_weight": 0.0}
+    # Equal weights are recorded with equal bytes, however they were written.
+    for same in (0, -0.0):
+        identity = reranker_identity(CrossEncoderReranker(policy="score_envelope", prior_weight=same))
+        assert repr(identity["prior_weight"]) == "0.0"
+    assert repr(PRMEConfig(_env_file=None, reranker_prior_weight=-0.0).reranker_prior_weight) == "0.0"
+
+
+def test_the_environment_sets_the_weight(monkeypatch):
+    monkeypatch.setenv("PRME_ENABLE_RERANKER", "true")
+    monkeypatch.setenv("PRME_RERANKER_POLICY", "score_envelope")
+    monkeypatch.setenv("PRME_RERANKER_PRIOR_WEIGHT", "0")
+    config = PRMEConfig(_env_file=None)
+    assert (config.enable_reranker, config.reranker_policy, config.reranker_prior_weight) == (
+        True, "score_envelope", 0.0)
+    monkeypatch.setenv("PRME_RERANKER_POLICY", "legacy")
+    with pytest.raises(ValidationError, match="needs an envelope reranker_policy"):
+        PRMEConfig(_env_file=None)
 
 
 async def test_rank_fusion_receipt_replays_the_rank_order():
