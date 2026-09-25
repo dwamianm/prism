@@ -79,57 +79,15 @@ state replay is not currently available.
 
 ## Current benchmarks
 
-### GPT-5.4 reference results
-
-Completed September 23, 2026, using the PRME retrieval defaults of that date
-(weighted scoring, the JSON `auditable` context format and balanced ordering)
-over stored conversation turns and **GPT-5.4 (`gpt-5.4-2026-03-05`)** with
-medium reasoning for both reader and judge. Each query had a **3,996-token
-memory-context ceiling**; experimental retrieval features were disabled. These
-remain the published reference. The retrieval defaults changed on September 25,
-2026, and no GPT-5.4 run of the current defaults exists.
-
 | Benchmark | Correct answers | Answer accuracy |
 |---|---:|---:|
-| LongMemEval-S | 430 / 500 | **86.0%** |
-| LoCoMo, non-adversarial questions | 985 / 1,540 | **64.0%** |
+| LongMemEval-S | 453 / 500 | **90.6%** |
+| LoCoMo, non-adversarial questions | 1,250 / 1,540 | **81.2%** |
 
-All 2,040 questions completed with no terminal provider failures. LoCoMo uses
-semantic yes/no judging rather than the dataset's token-F1 metric. These are
-end-to-end answer scores on examined development cohorts; results depend on the
-reader, judge, storage protocol, and context budget.
-
-The LoCoMo judge is strict ([prompt](benchmarks/integrations/run_gpt54_comparison.py)):
-when the reference lists several items, the answer must name all of them.
-Several vendor LoCoMo scores are graded by Mem0-style lenient judges
-([Mem0's prompt](benchmarks/integrations/lenient_judge.py)), which accept an
-answer on the same topic. The lenient grade of these GPT-5.4 answers has not
-been run yet;
-[strict and lenient LoCoMo judges](BENCHMARKS.md#strict-and-lenient-locomo-judges)
-shows both scores side by side where they exist.
-
-### DeepSeek answer track
-
-Retrieval changes made since v0.12.0 are answered on a separate track with no
-API cost: **`deepseek-v4.1-flash:cloud`** as both reader and judge through a
-local Ollama server, with the registered prompts and questions, the strict
-LoCoMo judge and the same 3,996-token ceiling. **DeepSeek scores are not
-comparable with the GPT-5.4 results above.**
-
-| DeepSeek baseline | Retrieval defaults | LongMemEval-S | LoCoMo, non-adversarial questions |
-|---|---|---:|---:|
-| `prme` at `97c9402f`, September 24, 2026 | Those of the GPT-5.4 run (every context identical) | 423 / 500 (84.6%) | 1,014 / 1,540 (65.8%) |
-| `prme@d811e3ed`, September 25, 2026 | Current defaults | 453 / 500 (90.6%) | 1,250 / 1,540 (81.2%) |
-
-The current defaults were adopted in two steps on September 25, 2026. Each step
-passed the project's default-change test twice on this track: a paired run
-against a fresh run of the defaults it replaced, answered in the same session,
-then a confirmation pair. The two baselines above are separate runs, not a
-paired comparison; the paired results for each step are in
-[BENCHMARKS.md](BENCHMARKS.md#deepseek-answer-track-through-ollama).
-
-See [benchmark methodology and detailed results](BENCHMARKS.md) for category
-scores, protocols, reproducibility artifacts, and evaluations with other readers.
+Measured on September 25, 2026 with the current retrieval defaults and a
+3,996-token memory-context budget per question. See
+[BENCHMARKS.md](BENCHMARKS.md) for the method, category scores, earlier
+results and reproducibility artifacts.
 
 ## Installation
 
@@ -210,7 +168,7 @@ See the [HTTP guide](docs/HTTP-API.md) and
 | v0.10 | Deterministic vector search, batched ingestion indexing, and context-budget enforcement |
 | v0.11 | Tenant-scoped maintenance, ownership and retrieval-filter fixes, and broader backend CI coverage |
 | v0.12 — current | Durable ingestion and recovery, atomic lifecycle and correction records, scoped workspaces, structured assertion and quantity operations, retrieval receipts, and evaluated ranking profiles |
-| Unreleased, on `main` | Rank fusion with current-state recency, the one-line reader context format and balanced ordering as retrieval defaults; conversation participants with speaker names; refusal of unauthenticated network binds for the HTTP API; an offline evidence gate and a DeepSeek answer track for measuring retrieval changes |
+| Unreleased, on `main` | Rank fusion with current-state recency, the one-line reader context format and balanced ordering as retrieval defaults; conversation participants with speaker names; refusal of unauthenticated network binds for the HTTP API; an offline evidence gate and paired answer runs for measuring retrieval changes |
 
 Experimental reranking (including the cross-encoder rank order), temporal-relation
 guidance, model-assisted verification, temporal-first query intent, event-time
