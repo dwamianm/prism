@@ -132,7 +132,7 @@ decay), which stored receipts and configurations rely on.
 | `PRME_ENABLE_STORE_SUPERSEDENCE` | `false` | Auto-detect supersedence on store |
 | `PRME_REINFORCE_SIMILARITY_THRESHOLD` | `None` | Auto-reinforce similar existing nodes |
 | `PRME_ENABLE_SURPRISE_GATING` | `false` | Novelty-based salience adjustment |
-| `PRME_ENABLE_RERANKER` | `false` | Rerank the top scored candidates with a local cross-encoder after scoring. Needs `pip install prme[reranker]` and the model files. Experimental: it has not improved answer scores so far |
+| `PRME_ENABLE_RERANKER` | `false` | Rerank the top scored candidates with a local cross-encoder after scoring. Needs `pip install prme[reranker]` and the model files. Experimental: it has not improved answer scores so far, and on the offline evidence gate no cross-encoder rank-order variant beat rank fusion alone on both benchmarks at both 4K and 8K (issue #88) |
 | `PRME_RERANKER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Hugging Face cross-encoder the reranker loads |
 | `PRME_RERANKER_TOP_K` | `100` | How many of the top scored candidates the reranker scores; the rest keep their order |
 | `PRME_RERANKER_POLICY` | `legacy` | `score_envelope` gives the reranked candidates their original scores in the new order, so later stages see the same score scale; `anchored_score_envelope` also keeps the original top multi-path record first. `legacy` puts the blended scores on them. See [experimental retrieval policies](../docs/EXPERIMENTAL-RETRIEVAL-POLICIES.md) |

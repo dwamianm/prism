@@ -56,9 +56,14 @@ node/event identities, scoped evidence and the sync/async replacement workflow.
 [Metadata handling](METADATA.md) covers finite JSON admission, copied inputs and
 lossless special-float snapshots for previously admitted graph metadata.
 
-[Context packing](PACKING.md) explains the default retrieval settings (reader format, score
-ordering and rank fusion), the balanced and density orderings, exact token budgets, evidence
-limits and receipt compatibility.
+[Context packing](PACKING.md) explains the default retrieval settings (rank fusion, the
+reader format and balanced ordering) and how to restore the v0.12.0 defaults, the score and
+density orderings, exact token budgets, evidence limits and receipt compatibility.
+
+[Experimental retrieval policies](EXPERIMENTAL-RETRIEVAL-POLICIES.md) documents opt-in
+retrieval experiments that do not change production defaults: the reranker score-envelope
+policies, the cross-encoder rank order and alternate-query signal merging, with their
+evidence and limits.
 
 [Evidence-bound temporal relations](TEMPORAL-RELATIONS.md) documents the opt-in
 resolver, deterministic citation validation and arithmetic, independent Jev
@@ -75,6 +80,32 @@ provider configuration and audit boundary.
 [Local claim verification](CLAIM-VERIFICATION.md) documents the optional pinned
 NLI verifier, bounded minimal evidence groups, typed bundle evidence and the
 explicit completeness boundary for derived counts and lists.
+
+[Memory credit](MEMORY-CREDIT.md) documents removing one cited record from a packed
+context and re-answering, to measure whether that memory changed an answer.
+
+[Memory confirmations and safe retries](REINFORCEMENT.md) covers the async engine,
+synchronous client and HTTP idempotency header.
+
+[Integration reference](INTEGRATION.md) is the broad API, data model, configuration
+and retrieval pipeline reference for developers and coding assistants; its coverage
+is partial.
+
+[HTTP source fidelity and recovery](HTTP-API.md) documents HTTP routes for storing
+sources, extraction, quantity aggregation, request recovery, corrections, relevance
+judgments, answer citations, confirmations and alias proposal review.
+
+[Named memory workspaces](WORKSPACES.md) documents `MemoryWorkspace`: named projects
+in separate local packs or PostgreSQL schemas, with bounded open engines and leases.
+The [namespace design review](NAMESPACE-DESIGN-REVIEW.md) records the 2026-09-12
+comparison that led to it.
+
+[Resource control for multiple local packs](LOCAL-RESOURCES.md) covers one pack per
+project, DuckDB worker counts and sharing an embedding provider.
+
+[PostgreSQL vector eligibility and search mode](POSTGRES-VECTOR-SEARCH.md) explains
+exact vector search under owner, scope, lifecycle and validity filters, and the
+approximate mode's recall tradeoff.
 
 ## RFC Listing
 
@@ -185,6 +216,20 @@ A system claiming "Tier 2 conformance" has implemented Tiers 0, 1, and 2 — not
 
 ---
 
+## Earlier Specifications and Audit
+
+These files predate the revised suite and are kept for reference.
+
+| File | Description |
+|---|---|
+| [Portable_Relational_Memory_Engine_Technical_Spec.md](Portable_Relational_Memory_Engine_Technical_Spec.md) | Original PRME technical specification, version 0.1 (2026-02-19). |
+| [RFC_0001_PRME_Technical_Spec.md](RFC_0001_PRME_Technical_Spec.md) | Original RFC-0001 draft of the PRME architecture and requirements (2026-02-19). |
+| [RFC_0002_RMS_Git_Sync_Profile_v1.md](RFC_0002_RMS_Git_Sync_Profile_v1.md) | Original Git sync profile draft (2026-02-19), replaced by RFC-0014 as noted above. |
+| [RMS_PRME_Scientific_Audit_Report.md](RMS_PRME_Scientific_Audit_Report.md) | Scientific audit of the original RFC-0001 through RFC-0015 (2026-02-19) that led to this revised suite. |
+| [archive/RESEARCH-AGENDA-v0.6.md](archive/RESEARCH-AGENDA-v0.6.md) | Research agenda from v0.6, archived on 2026-09-12; its scores are not current results. |
+
+---
+
 ## Key Design Decisions
 
 **Why is `[HYPOTHESIS]` used so frequently?**
@@ -206,6 +251,3 @@ Because the original suite implicitly required all features simultaneously. A mi
 ---
 
 *End of Index*
-
-[Memory confirmations and safe retries](REINFORCEMENT.md) covers the async engine,
-synchronous client and HTTP idempotency header.

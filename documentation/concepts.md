@@ -133,14 +133,26 @@ Nodes are connected by typed edges in the graph:
 
 The retrieval pipeline runs 6 stages:
 
-1. **Query Analysis** — classifies intent (semantic, factual, entity_lookup, temporal, relational), extracts entities and temporal signals
-2. **Candidate Generation** — gathers candidates from vector search (k=250), lexical search (k=250), graph neighborhood (150), and pinned nodes
-3. **Candidate Merging** — deduplicates by node ID, tracks discovery paths
-4. **Epistemic Filtering** — removes HYPOTHETICAL/DEPRECATED in DEFAULT mode, filters by lifecycle state
-5. **Scoring** — computes composite score from 6 additive signals + epistemic multiplier + temporal boost
-6. **Context Packing** — greedy bin-packing into token budget with representation levels
+1. **Query Analysis**: classifies intent (semantic, factual, entity_lookup, temporal, relational), extracts entities and temporal signals
+2. **Candidate Generation**: gathers candidates from vector search (k=500), lexical search (k=500), graph neighborhood (150), and pinned nodes
+3. **Candidate Merging**: deduplicates by node ID, tracks discovery paths
+4. **Epistemic Filtering**: removes HYPOTHETICAL/DEPRECATED in DEFAULT mode, filters by lifecycle state
+5. **Scoring**: by default, reciprocal rank fusion of the semantic and lexical ranks, adjusted by epistemic, node-type and temporal factors, with a recency boost on current-state questions; the weighted formula below is available with `PRME_SCORING__FUSION=weighted`
+6. **Context Packing**: greedy bin-packing into token budget with representation levels; by default each record is rendered as one plain line (the `reader` context format)
 
 ### Scoring Formula
+
+By default (`PRMEConfig().scoring`), PRME ranks candidates with reciprocal rank
+fusion (`fusion="rrf"`, `rrf_k=60`): each candidate scores `1/(60 + rank)` on the
+semantic and on the lexical channel, scaled so first place on both is 1.0, then
+adjusted by its epistemic, node-type and temporal factors relative to the
+largest in the pool. On current-state questions a recency boost of 0.25
+applies, and equal scores are ordered newest first by event time. Rank fusion
+does not use the additive weights, graph proximity, salience or confidence
+(RFC-0005 Section 7.2).
+
+With `PRME_SCORING__FUSION=weighted`, or a `ScoringWeights()` built in code, PRME
+uses the weighted formula:
 
 ```
 score = semantic * 0.25

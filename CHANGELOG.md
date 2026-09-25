@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrade notes
+
+- **Retrieval defaults.** The retrieval defaults changed twice on 2026-09-25
+  (both entries are under Changed). An install upgrading from v0.12.0 gets:
+  - rank fusion scoring (`scoring.fusion="rrf"`, `rrf_k=60`) with a
+    current-state recency boost of 0.25 and an event-time tie-break, and a
+    rank fusion session decay of 0.6 (#177). `PRME_SCORING__FUSION=weighted`
+    restores the weighted formula; it also drops the recency boost and
+    tie-break, and weighted scoring never applies the 0.6 session decay;
+  - the `reader` context format, one plain line per record without node IDs
+    or source types (#177). `PRME_PACKING__CONTEXT_FORMAT=auditable` restores
+    JSON records, which callers that parse the context as JSON need.
+    Answerability checks and `verify_bundle()` need that setting or
+    `PRME_PACKING__CONTEXT_CITATIONS=true`;
+  - `balanced` multi-path ordering, as in v0.12.0. #177 had made score order
+    the default and #187 made `balanced` the default again.
+    `PRME_PACKING__MULTIPATH_ORDERING=score` keeps #177's score order.
+
+  To go back to the v0.12.0 retrieval defaults, set
+  `PRME_SCORING__FUSION=weighted`, `PRME_PACKING__CONTEXT_FORMAT=auditable`
+  and `PRME_PACKING__MULTIPATH_ORDERING=balanced` (the last only makes the
+  current default explicit), or in code pass `scoring=ScoringWeights()` and
+  `packing=PackingConfig()` to `PRMEConfig`. `docs/PACKING.md` ("Default
+  retrieval settings") has the details.
+- **HTTP API network binds.** `python -m prme.api` and
+  `prme.api.server.run_server()` refuse a non-loopback address without
+  `PRME_API_USER_KEYS` or `PRME_API_API_KEY` (#120); configure credentials
+  before upgrading a network-reachable server (see Changed).
+
 ### Added
 
 - Add an opt-in cross-encoder rank order for the reranked candidates
@@ -193,9 +222,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   annotated evidence for 5 more LoCoMo questions and 1 more LongMemEval-S
   question and for none fewer (+0.3 and +0.2 points); it stays off until the
   paired answer run.
+- Publish the complete 2026-09-23 GPT-5.4 benchmark comparison, with
+  `gpt-5.4-2026-03-05` as reader and judge, the retrieval defaults of that date
+  and a 3,996-token context: LongMemEval-S 430/500 (86.0%) and LoCoMo
+  985/1,540 (64.0%, categories 1 to 4, strict judge), with its registered
+  protocol and evidence-retention diagnostics under
+  `benchmarks/results/research/2026-09-23/`. These remain the published
+  reference. `benchmarks.integrations.gpt54_baselines` adds full-context and
+  plain-RAG (`plain-vector`, `plain-bm25`, `plain-rrf`) baseline arms that
+  reuse its reader, judge, prompts and questions (issue #95). No arm has been
+  answered with GPT-5.4 yet.
+- Add an offline evidence gate for retrieval, packing and representation
+  changes (issue #78). `python -m benchmarks.diagnostics.product_packing gate`
+  replays the public `retrieve()` for all 1,540 LoCoMo and 500 LongMemEval-S
+  questions over copies of the saved 2026-09-23 memory packs and measures the
+  context the product renderer produced: records per context, the memory-text
+  share, packed records without text, the questions with all annotated
+  evidence packed, evidence ranks, and a projected accuracy that is a planning
+  estimate, not an answer score. `gate-compare` pairs two runs question by
+  question with a bootstrap interval, and `--plain vector`, `bm25` or `rrf`
+  measures a plain RAG reference (#95). It makes no reader, judge or paid API
+  calls. Later changes added session expansion counts (#86), temporal and
+  current-state observations (#85), and candidate recall per channel and
+  retrieval latency (#87). A gate comparison of balanced and score order under
+  the reader format is recorded in
+  `benchmarks/results/research/2026-09-24/READER-PACKING-ORDER-GATE-V1.md`
+  (#81). See `BENCHMARKS.md`.
+- Add a DeepSeek answer track for benchmark answer runs with no API cost
+  (issue #117). `benchmarks.integrations.gpt54_baselines --provider ollama`
+  answers with `deepseek-v4.1-flash:cloud` as reader and judge through a local
+  Ollama server, with the registered prompts, questions and official
+  LongMemEval-S judge. It prepares the defaults as the `prme` arm and a change
+  as a named variant (`--variant` with `--set`). `run-pair` answers a variant
+  and a fresh run of the defaults interleaved question by question (#129),
+  `compare` reports the paired difference with a 95% interval, and `verdict`
+  decides a variant from the pairs `compare` recorded (#144). The track
+  measured its run-to-run floor (#118), records an interleaved A/A check
+  (#129, #137), scores a looping answer or a garbled verdict as incorrect
+  after one retry (#132), records a new defaults baseline after a default
+  changes (#123), and ties each pair to the current baseline, the 4K budget,
+  and the variant's settings and context text (#125, #127, #130, #139, #143).
+  Its scores are reported separately and are never compared directly with the
+  GPT-5.4 results. On this track the defaults of the GPT-5.4 run scored
+  LongMemEval-S 423/500 (84.6%) and LoCoMo 1,014/1,540 (65.8%) (#126). A new
+  baseline was recorded after each default change (#182, #191); the current
+  one, `prme@d811e3ed`, scores LongMemEval-S 453/500 (90.6%) and LoCoMo
+  1,250/1,540 (81.2%). See `BENCHMARKS.md`.
+- Add a lenient LoCoMo judge score beside the strict one (issue #96).
+  `benchmarks.integrations.lenient_judge` sends the saved answers of a
+  complete LoCoMo run to Mem0's published LoCoMo judge prompt, with the judge
+  model and settings that gave the strict verdicts; no reader is called. On
+  the DeepSeek baseline `prme@46647825` it accepts 1,095/1,540 (71.1%)
+  against the strict judge's 1,007/1,540 (65.4%). The strict judge stays the
+  primary score, and the lenient pass over the GPT-5.4 answers has not been
+  run.
 
 ### Fixed
 
+- Accepted temporal relation guidance (`TemporalRelationConfig.enabled`,
+  opt-in) now keeps the bundle's earlier packing exclusions after its repack
+  and adds the records it displaced, without duplicate IDs. Aggregation
+  coverage therefore still reports context limits when records were excluded
+  before enrichment; the temporal metadata's `dropped_record_ids` still lists
+  only the records that stage displaced.
 - The configuration reference now gives the candidate limit defaults that
   retrieval uses: `PRME_PACKING__VECTOR_K` and `PRME_PACKING__LEXICAL_K` 500,
   `PRME_PACKING__AGGREGATION_K_MULTIPLIER` 3.0 and

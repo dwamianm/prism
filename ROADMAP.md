@@ -1,6 +1,6 @@
 # PRME roadmap
 
-Updated 2026-09-23. Current package: v0.12.0. Product priority: **reliable, measurable AI memory with an excellent developer experience**.
+Updated 2026-09-25. Current package: v0.12.0; `main` has unreleased changes (see the [changelog](CHANGELOG.md)). Product priority: **reliable, measurable AI memory with an excellent developer experience**.
 
 ## Direction
 
@@ -10,23 +10,102 @@ The foundation already includes local DuckDB/USearch/Tantivy storage, optional P
 
 ## Current retrieval-quality priority
 
+Retrieval-quality work follows [epic #77](https://github.com/dwamianm/prism/issues/77),
+which acts on the [2026-09-23 benchmark gap audit](memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md).
+
 The completed [GPT-5.4 default benchmarks](benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md)
-score **86.0% LongMemEval-S** and **64.0% LoCoMo**. The
+score **86.0% LongMemEval-S** and **64.0% LoCoMo**, with the retrieval defaults
+before 2026-09-25. They remain the published reference. The
 [evidence audit](benchmarks/results/research/2026-09-23/GPT54-EVIDENCE-DIAGNOSTICS.md)
 identifies context packing as the main measured opportunity: 94 and 989 returned
 annotation instances, respectively, were omitted from packed context. LoCoMo
 multi-hop accuracy is 28.37%; annotation omissions accompany 191 of its 202
-incorrect multi-hop answers.
+incorrect multi-hop answers. The benchmark gap audit found that in LoCoMo 71% of
+the context was the JSON envelope around each record and 29% was memory text,
+and that only semantic similarity and BM25 carried relevance information in the
+ranking.
 
-Prioritize an answer-blind complementary-evidence packing candidate that
-preserves the strongest anchor under the same token budget. Require complete
-paired answer results as well as source retention, then relevant regression and
-backend checks and a new untouched confirmation cohort. Separately investigate
-errors with retained evidence, especially updates, conflict handling and temporal
-reasoning. Do not infer a deployable gain from annotation coverage alone, revive
-failed blanket episode routing, or change defaults based on these baseline runs.
-See [project goals](memory_bank/GOALS.md) and the [research agenda](docs/RESEARCH-AGENDA.md)
+Epic #77 checks every retrieval, packing and representation change on the
+offline evidence gate first. A production default changes only when the change
+passes the default-change rule in `CLAUDE.md` on the DeepSeek answer track: a
+paired answer run on both benchmarks, then a confirmation pair. DeepSeek scores
+are a separate track and are never compared directly with the GPT-5.4 numbers.
+Do not infer a deployable gain from annotation coverage alone or revive failed
+blanket episode routing. See [project goals](memory_bank/GOALS.md), the
+[research agenda](docs/RESEARCH-AGENDA.md) and [BENCHMARKS.md](BENCHMARKS.md)
 for current evidence and promotion gates.
+
+### Delivered under epic #77
+
+Many of these issues stay open for acceptance criteria listed in their pull
+requests, such as a paired answer run before a default changes.
+
+| Phase | Issue | Merged on `main` | Issue state |
+|---|---|---|---|
+| 0, measurement gate | [#78](https://github.com/dwamianm/prism/issues/78) offline evidence gate | #105 | Closed |
+| 1, reader-facing context | [#79](https://github.com/dwamianm/prism/issues/79) reader context format | #109; the default since #177 | Open |
+| 1 | [#80](https://github.com/dwamianm/prism/issues/80) text-free fallbacks in the context | #116: a text-bearing `min_fidelity` floor keeps them out (opt-in) | Open |
+| 1 | [#81](https://github.com/dwamianm/prism/issues/81) packing order for plain lines | #176 compared balanced and score order on the gate; balanced is the default again since #187 | Open |
+| 2, ranking | [#82](https://github.com/dwamianm/prism/issues/82) reciprocal rank fusion | #112, with a semantic `min_score` (#110, #150), a rank fusion session decay (#111) and a current-state recency boost with an event-time tie-break (#168); the default since #177 | Open |
+| 2 | [#83](https://github.com/dwamianm/prism/issues/83) event-time recency | #186 (opt-in, weighted formula only; it lost LoCoMo evidence on the gate) | Closed |
+| 2 | [#84](https://github.com/dwamianm/prism/issues/84) conversation participants | #190: `speaker` names and the `participant` role | Open |
+| 2 | [#85](https://github.com/dwamianm/prism/issues/85) temporal intent for questions that name a person | #194: `query_intent_order="temporal_first"` (opt-in) | Open |
+| 2 | [#86](https://github.com/dwamianm/prism/issues/86) session-expansion neighbors in the lowest tier | #197: `session_context_packing` (opt-in) | Open |
+| 2 | [#87](https://github.com/dwamianm/prism/issues/87) bounded candidate generation | #199 measured smaller limits on the gate; they lost LongMemEval-S evidence, so the limits stay at 500 | Open |
+| 2 | [#88](https://github.com/dwamianm/prism/issues/88) cross-encoder rank order | #202: `reranker_prior_weight` (opt-in); no variant beat rank fusion alone on both benchmarks at both 4K and 8K on the gate, so the reranker stays off | Open |
+| Measurement | [#95](https://github.com/dwamianm/prism/issues/95) full-context and plain-RAG baselines | #113 added the arms; none has a GPT-5.4 run yet | Open |
+| Measurement | [#96](https://github.com/dwamianm/prism/issues/96) lenient judge score | #181; published for a DeepSeek baseline; the GPT-5.4 pass needs the owner's approval | Closed |
+
+The DeepSeek answer track itself (#117) came with a measured run-to-run floor
+(#118), interleaved pairs and an A/A check (#129), a failure policy for looping
+answers and garbled verdicts (#132), and recorded A/A checks and pair verdicts
+(#137, #144). The audit and its reproduction scripts were committed in #99.
+
+Two default changes passed the default-change rule on 2026-09-25:
+
+- #177 made rank fusion with its recency boost and tie-break, the reader
+  format and a 0.6 rank fusion session decay the defaults. LoCoMo gained 15.2
+  and 15.7 points in its two pairs; the LongMemEval-S differences (+1.0 and
+  +0.2) had intervals including zero.
+- #187 made balanced ordering the default again. LongMemEval-S gained 3.2
+  points in both pairs; the LoCoMo differences (+0.5 and -0.2) had intervals
+  including zero.
+
+The DeepSeek baseline of the current defaults, `prme@d811e3ed`, scores
+LongMemEval-S 453/500 (90.6%) and LoCoMo 1,250/1,540 (81.2%). The epic's
+checkpoint and exit criteria call for complete runs with the fixed 2026-09-23
+reader (GPT-5.4) and the strict judge. No GPT-5.4 run of the current defaults
+exists, so those criteria are not met.
+
+### Still open under epic #77
+
+- [#89](https://github.com/dwamianm/prism/issues/89): packing tokenizes every
+  candidate at up to four representation levels.
+- [#90](https://github.com/dwamianm/prism/issues/90): choose the default context
+  budget with evidence.
+- [#91](https://github.com/dwamianm/prism/issues/91),
+  [#92](https://github.com/dwamianm/prism/issues/92) and
+  [#93](https://github.com/dwamianm/prism/issues/93): dated facts extracted at
+  write time, fact-first retrieval, and per-entity topic cards. #91 needs #84,
+  which stays open for searchable speaker names, benchmark packs stored with
+  participants (#102) and its paired answer run; #92 needs #91, and #93 needs
+  both.
+- [#94](https://github.com/dwamianm/prism/issues/94): optional second-hop
+  retrieval for list and multi-hop questions.
+- [#97](https://github.com/dwamianm/prism/issues/97): record the audit in the
+  goals, roadmap and research agenda.
+- [#98](https://github.com/dwamianm/prism/issues/98): run Hindsight and Graphiti
+  under PRME's reader and judge. Parked until #90 settles the context budget.
+- Follow-ups from #88: [#200](https://github.com/dwamianm/prism/issues/200)
+  (the rank order drops trust, temporal and recency signals from the reranked
+  candidates) and [#201](https://github.com/dwamianm/prism/issues/201)
+  (enabling the reranker can stall or fail every retrieval on a shared engine).
+
+Other follow-ups from this work are open under the `audit-2026-09` label, for
+example [#169](https://github.com/dwamianm/prism/issues/169) (the rank fusion
+recency boost misses most current-state and knowledge-update questions) and
+[#198](https://github.com/dwamianm/prism/issues/198) (rank fusion over bounded
+candidate lists drops evidence that only one channel finds).
 
 ## Earlier evidence-led delivery
 
