@@ -64,7 +64,12 @@ from prme.retrieval.models import (
     RetrievalResponse,
 )
 from prme.retrieval.packing import pack_context, requires_memory_text
-from prme.retrieval.query_analysis import DEFAULT_TEMPORAL_LANGUAGES, analyze_query
+from prme.retrieval.query_analysis import (
+    DEFAULT_TEMPORAL_LANGUAGES,
+    QUERY_INTENT_ORDERS,
+    QueryIntentOrder,
+    analyze_query,
+)
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.scope import ScopeInput, normalize_scope
 from prme.retrieval.selection import (
@@ -195,6 +200,7 @@ class RetrievalPipeline:
         query_reformulation_api_key: SecretStr | None = None,
         query_reformulation_base_url: str | None = None,
         query_reformulation_timeout: float | None = None,
+        query_intent_order: QueryIntentOrder = "entity_first",
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -221,6 +227,9 @@ class RetrievalPipeline:
         if query_reformulation_merge_policy not in {"new_only", "max_signals"}:
             raise ValueError("Unknown query reformulation merge policy")
         self._query_reformulation_merge_policy = query_reformulation_merge_policy
+        if query_intent_order not in QUERY_INTENT_ORDERS:
+            raise ValueError(f"Unknown query intent order: {query_intent_order!r}")
+        self._query_intent_order = query_intent_order
         self._temporal_languages = temporal_languages
         self._temporal_relation_config = (
             temporal_relation_config or TemporalRelationConfig()
@@ -275,6 +284,9 @@ class RetrievalPipeline:
                 "policy": self._query_reformulation_merge_policy,
                 "version": 1,
             }
+        if self._query_intent_order != "entity_first":
+            # It decides which questions get temporal scoring (issue #85).
+            features["query_intent_classification"] = {"order": self._query_intent_order, "version": 1}
         return features
 
     async def retrieve(
@@ -402,6 +414,7 @@ class RetrievalPipeline:
             retrieval_mode=retrieval_mode,
             languages=self._temporal_languages,
             reference_time=scoring_now,
+            intent_order=self._query_intent_order,
         )
 
         # Query dates guide temporal affinity; they are not assertion-validity
@@ -1047,6 +1060,8 @@ class RetrievalPipeline:
                 "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
                     if temporal_relation_metadata is not None else None,
                 "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
+                **({"query_intent_order": self._query_intent_order}
+                   if self._query_intent_order != "entity_first" else {}),
                 "reranker_top_k": self._reranker_top_k,
                 "query_reformulation": {"enabled": self._enable_query_reformulation,
                     "count": self._query_reformulation_count, "provider": self._query_reformulation_provider,
@@ -1241,6 +1256,7 @@ class RetrievalPipeline:
                 retrieval_mode=retrieval_mode,
                 languages=self._temporal_languages,
                 reference_time=reference_time,
+                intent_order=self._query_intent_order,
             )
             diagnostics = CandidateDiagnostics() if merge_signals_enabled else None
             alt_candidates, _ = await generate_candidates(

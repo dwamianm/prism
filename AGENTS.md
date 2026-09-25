@@ -391,6 +391,11 @@ provider failures retain the existing empty-reformulation fallback. Its register
 quality trial remains separate. Ordinary `"new_only"` behavior is unchanged.
 See `docs/EXPERIMENTAL-RETRIEVAL-POLICIES.md`.
 
+`query_intent_order="temporal_first"` (issue #85) is an explicit experiment of
+its own: a question with temporal wording or a date is TEMPORAL even when it
+names an entity, so it gets temporal affinity scoring. The default
+`"entity_first"` is unchanged (RFC-0005 Section 3).
+
 ## Storage Backends
 
 `MemoryWorkspace` manages named projects as identity-checked local packs or

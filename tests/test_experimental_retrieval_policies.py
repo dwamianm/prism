@@ -34,7 +34,8 @@ def test_policy_defaults_and_invalid_values():
     assert not cfg.enable_reranker and not cfg.enable_query_reformulation
     assert cfg.reranker_policy == 'legacy'
     assert cfg.query_reformulation_merge_policy == 'new_only'
-    for key in ('reranker_policy', 'query_reformulation_merge_policy'):
+    assert cfg.query_intent_order == 'entity_first'
+    for key in ('reranker_policy', 'query_reformulation_merge_policy', 'query_intent_order'):
         with pytest.raises(ValidationError):
             PRMEConfig(**{key: 'unknown'})
     with pytest.raises(ValueError, match='policy'):
@@ -99,7 +100,7 @@ async def test_public_config_receipt_replay_owner_feedback_and_restart(config, u
         assert 'query_reformulation_merge' not in ordinary.execution.features
 
 
-@pytest.mark.parametrize('changed_policy', ['rank', 'merge'])
+@pytest.mark.parametrize('changed_policy', ['rank', 'merge', 'intent'])
 async def test_policy_change_prevents_profile_activation(config, user, changed_policy):
     async with MemoryEngine.open(config) as engine:
         proposal, holdout = test_ranking_profiles._evidence(engine, RankingMultipliers(lexical=2), owner=user)
@@ -107,9 +108,12 @@ async def test_policy_change_prevents_profile_activation(config, user, changed_p
         pipeline = engine._retrieval_pipeline
         if changed_policy == 'rank':
             pipeline._reranker = CrossEncoderReranker(policy='anchored_score_envelope')
-        else:
+        elif changed_policy == 'merge':
             pipeline._enable_query_reformulation = True
             pipeline._query_reformulation_merge_policy = 'max_signals'
+        else:
+            # The order decides which questions get temporal scoring (issue #85).
+            pipeline._query_intent_order = 'temporal_first'
         with pytest.raises(ValueError, match='feature_identity_mismatch'):
             await engine.activate_ranking_profile(str(profile.profile_id), user_id=user)
 
@@ -144,7 +148,7 @@ async def test_merge_failure_settles_all_passes_before_propagation(monkeypatch):
         _query_reformulation_count=2, _temporal_languages=['en'], _graph_store=None,
         _vector_index=None, _lexical_index=None, _query_reformulation_merge_policy='max_signals',
         _query_reformulation_api_key=None, _query_reformulation_base_url=None, _query_reformulation_timeout=None,
-        _query_reformulation_clients={})
+        _query_reformulation_clients={}, _query_intent_order='entity_first')
     values = [candidate(1, ['VECTOR'], .3)]
     with pytest.raises(RuntimeError, match='authored failure'):
         await RetrievalPipeline._expand_reformulated_queries(pipeline, 'telescope', candidates=values,

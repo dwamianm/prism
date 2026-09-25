@@ -133,6 +133,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   questions with all evidence packed with the previous auditable format and
   balanced order, -4.5 with the reader format, both intervals excluding zero)
   and left LongMemEval-S unchanged, so it stays off.
+- Add an opt-in temporal-first query intent
+  (`PRMEConfig.query_intent_order="temporal_first"`, or
+  `PRME_QUERY_INTENT_ORDER=temporal_first`). By default a question that names a
+  person, place or organization, such as "When did Caroline go to the support
+  group?", is classified as an entity lookup before its temporal wording is
+  checked, so it never gets temporal affinity scoring (issue #85). With the
+  setting, temporal wording or a date in the question makes it temporal first,
+  so it gets temporal affinity. A present-tense question that only its wording
+  put on the current-state path leaves it unless it says current, now, latest
+  or similar, and the temporal context guidance is added where the question's
+  wording does not already select it. A lone capitalized month or weekday word
+  that is part of a name ("Who is June dating?") is read as the name, not a
+  date. Entity names are extracted either way. Receipts record the setting only
+  when it is `temporal_first`, so default receipts keep their bytes. The
+  offline evidence gate now records, for each replayed question, whether its
+  candidates share one temporal affinity and whether the current-state path
+  applied; its comparison counts the first per category and lists the
+  questions that enter or leave the path. On the gate the setting packed all
+  annotated evidence for 5 more LoCoMo questions and 1 more LongMemEval-S
+  question and for none fewer (+0.3 and +0.2 points); it stays off until the
+  paired answer run.
 
 ### Fixed
 

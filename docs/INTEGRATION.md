@@ -1146,6 +1146,14 @@ class QueryAnalysis(BaseModel):
     request_id: UUID                      # unique per retrieval
 ```
 
+Intent is the first pattern that matches: entity lookup, temporal, relational,
+factual, then semantic. Only the temporal intent is read downstream, by
+temporal affinity scoring, the current-state path and the context guidance.
+`PRMEConfig.query_intent_order="temporal_first"` (`PRME_QUERY_INTENT_ORDER`)
+checks temporal wording and dates before the entity patterns, so a temporal
+question that names someone gets temporal affinity (RFC-0005 Section 3, issue
+#85). The default, `entity_first`, is unchanged.
+
 ### Stages 2-3: Candidate Generation + Merging
 
 **Input:** `QueryAnalysis`, user_id, scope, temporal window, packing config.

@@ -631,6 +631,26 @@ class PRMEConfig(_ProjectSettings):
         ),
     )
 
+    # Query intent classification (issue #85)
+    query_intent_order: Literal["entity_first", "temporal_first"] = Field(
+        default="entity_first",
+        description=(
+            "Which query intent check runs first. entity_first (the default) "
+            "treats a question that starts with who, what is or what are, or "
+            "has a capitalized word after its first word, as an entity lookup "
+            "before it looks for temporal wording, so \"When did Caroline go "
+            "to the support group?\" never gets temporal affinity scoring. "
+            "temporal_first checks temporal wording and dates in the question "
+            "first. A temporal question then gets temporal affinity, leaves "
+            "the current-state path if only its present-tense wording put it "
+            "there, and gets the temporal context guidance where its wording "
+            "does not already select it. A lone capitalized month or weekday "
+            "word that is part of a name (\"Who is June dating?\") does not "
+            "count as a date. Entity names are extracted either way. "
+            "Experimental."
+        ),
+    )
+
     # Dual-stream ingestion (issue #25)
     materialization_queue_size: int = Field(
         default=500,

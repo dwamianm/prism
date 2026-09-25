@@ -1,6 +1,7 @@
 """Product evidence credit requires source text, not merely an included UUID."""
 import asyncio
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import hashlib
 import inspect
@@ -268,6 +269,32 @@ async def test_gate_replays_public_retrieval_on_a_verified_copy_and_measures_rea
     [small] = await replay_gate([gate_case(pack, identity)], scratch=scratch,
                                 overrides=parse_overrides(["packing.token_budget=160"]))
     assert small["context_tokens"] <= 60 and small["records"] < row["records"]
+    assert pack_identity(pack) == identity
+
+
+async def test_gate_records_temporal_affinity_and_the_current_state_path(tmp_path, mock_embeddings):
+    # Issue #85: which questions get temporal scoring, and which take the current-state path.
+    pack = tmp_path / "pack"
+    identity = await make_gate_pack(pack)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    dated = replace(gate_case(pack, identity), question="What did Caroline paint in May 2023?")
+    current = replace(gate_case(pack, identity), question="What does Caroline paint today?")
+    rows = {}
+    for order in ("entity_first", "temporal_first"):
+        overrides = parse_overrides([f'query_intent_order="{order}"'])
+        rows[order] = [row for case in (dated, current)
+                       for row in await replay_gate([case], scratch=scratch, overrides=overrides)]
+    observed = {order: [row["query_scoring"] for row in replayed] for order, replayed in rows.items()}
+    assert observed["entity_first"][0] == {"temporal_affinity_varies": False, "current_state_path": False}
+    assert observed["temporal_first"][0] == {"temporal_affinity_varies": True, "current_state_path": False}
+    # Explicit current wording keeps the current-state path under either order.
+    assert observed["entity_first"][1]["current_state_path"] is True
+    assert observed["temporal_first"][1]["current_state_path"] is True
+    # Weighted scoring and rank fusion without the recency boost do not show the current-state path.
+    for override in ('scoring.fusion="weighted"', "scoring.rrf_recency_boost=null"):
+        [unseen] = await replay_gate([current], scratch=scratch, overrides=parse_overrides([override]))
+        assert unseen["query_scoring"]["current_state_path"] is None
     assert pack_identity(pack) == identity
 
 
@@ -554,6 +581,40 @@ def test_comparison_pairs_questions_and_rejects_mismatched_inputs(tmp_path, caps
     for output in (str(paths[1]), str(tmp_path / "comparison.md")):
         with pytest.raises(SystemExit):
             main(["gate-compare", *map(str, paths), "--output", output])
+
+
+def test_comparison_reports_temporal_affinity_and_current_state_changes():
+    def observed(row, varies, path):
+        return {**row, "query_scoring": {"temporal_affinity_varies": varies, "current_state_path": path}}
+
+    rows = [gate_row("q1", "temporal", all_packed=True), gate_row("q2", "temporal", all_packed=True),
+            gate_row("q3", "single-hop"), gate_row("q4", "single-hop")]
+    before = gate_fixture([observed(row, varies, path) for row, varies, path in
+                           zip(rows, (False, False, True, False), (True, False, None, True))])
+    after = gate_fixture([observed(row, varies, path) for row, varies, path in
+                          zip(rows, (True, True, True, False), (False, True, False, True))])
+    result = compare_gates(before, after, samples=20)
+    assert result["benchmarks"]["locomo"]["query_scoring"] == {
+        "temporal_affinity_varies_by_category": {"questions": {"single-hop": 2, "temporal": 2},
+                                                 "before": {"single-hop": 1, "temporal": 0},
+                                                 "after": {"single-hop": 1, "temporal": 2}},
+        # The receipts cannot show q3's current-state path before, so it is in neither list.
+        "entered_current_state_path": ["q2"], "left_current_state_path": ["q1"],
+        "current_state_path_unknown": 1,
+    }
+    markdown = comparison_markdown(result)
+    assert "| locomo | temporal | 2 | 0 | 2 |" in markdown
+    assert "locomo questions that entered the current-state path: 1 (q2)." in markdown
+    assert "locomo questions that left the current-state path: 1 (q1)." in markdown
+    assert "locomo questions whose current-state path these receipts cannot show" in markdown
+    assert "not shown" not in markdown
+    # Reports without the observations, such as plain baselines and earlier reports, compare as before.
+    plain = gate_fixture(rows)
+    for pair in ((plain, after), (before, plain)):
+        assert compare_gates(*pair, samples=20)["benchmarks"]["locomo"]["query_scoring"] is None
+    unobserved = comparison_markdown(compare_gates(plain, after, samples=20))
+    assert "current-state path are not shown for locomo" in unobserved
+    assert "questions that left" not in unobserved
 
 
 async def test_gate_cli_writes_json_and_markdown_for_a_replayed_run(tmp_path, mock_embeddings, monkeypatch, capsys):

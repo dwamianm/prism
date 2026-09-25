@@ -79,7 +79,7 @@ async def test_alternate_backend_failure_does_not_commit_partial_merge(monkeypat
         _query_reformulation_count=2, _temporal_languages=['en'], _graph_store=None,
         _vector_index=None, _lexical_index=None, _query_reformulation_merge_policy="max_signals",
         _query_reformulation_api_key=None, _query_reformulation_base_url=None, _query_reformulation_timeout=None,
-        _query_reformulation_clients={})
+        _query_reformulation_clients={}, _query_intent_order="entity_first")
     values = [candidate(1, ['VECTOR'], .3)]
     with pytest.raises(RuntimeError, match='backend failed'):
         await policy.RetrievalPipeline._expand_reformulated_queries(engine, 'telescope', candidates=values, user_id='authored',
