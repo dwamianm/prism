@@ -31,6 +31,7 @@ import inspect
 import itertools
 import json
 import logging
+import math
 import os
 from pathlib import Path
 import shutil
@@ -287,6 +288,16 @@ GATE_FIXED_SETTINGS = frozenset({
 })
 # The LoCoMo capture wrote this file after recording each pack's tree identity.
 _PACK_IDENTITY_EXCLUDED = frozenset({"capture-manifest.json"})
+# Candidate channels whose own ranking the gate records for each question, and
+# the depths at which it reports their recall (issue #87). ``vector_k`` and
+# ``lexical_k`` cut these rankings; "either" is the union of the two cuts.
+GATE_CHANNELS = ("vector", "lexical")
+CHANNEL_RECALL_DEPTHS = (25, 50, 100, 150, 500)
+# Each engine searches this once before its first timed question, so that
+# ``retrieval_seconds`` leaves out the one-time model load. Reports record it
+# as their timing, and only reports timed the same way compare latency.
+GATE_WARM_UP_QUERY = "offline evidence gate warm-up"
+GATE_RETRIEVAL_TIMING = "after-warm-up"
 
 
 @dataclass(frozen=True)
@@ -567,7 +578,8 @@ def _first_ranks(benchmark: str, ranked_metadata: Iterable[dict | None]) -> dict
 
 def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens: int, packed_sources: set[str],
               text_sources: set[str], first_rank: dict[str, int], records: int, records_without_text: int,
-              representations: dict[str, int], candidates: int, seconds: float) -> dict:
+              representations: dict[str, int], candidates: int, seconds: float, stored: int,
+              channel_ranks: dict[str, dict[str, int | None]] | None) -> dict:
     """One question's measurements; PRME and plain replays share it so their reports compare."""
     evidence = None
     if case.evidence is not None:
@@ -578,6 +590,7 @@ def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens:
             "all_packed": case.evidence <= packed_sources,
             "all_packed_with_text": case.evidence <= text_sources,
             "ranks": {key: first_rank.get(key) for key in sorted(case.evidence.difference(case.unresolved))},
+            "channel_ranks": channel_ranks,
         }
     context_sha256 = hashlib.sha256(context.encode()).hexdigest()
     return {
@@ -585,9 +598,42 @@ def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens:
         "context_sha256": context_sha256, "context_matches_saved": context_sha256 == case.saved_context_sha256,
         "context_tokens": context_tokens, "memory_text_tokens": text_tokens, "records": records,
         "records_without_text": records_without_text, "representations": representations,
-        "candidates": candidates, "retrieval_seconds": seconds, "evidence": evidence,
+        "candidates": candidates, "stored_records": stored, "retrieval_seconds": seconds, "evidence": evidence,
         "projected_correct": projected_correct(case.benchmark, case.category, evidence),
     }
+
+
+async def _channel_ranks(engine, case: GateCase, turns: dict) -> dict[str, dict[str, int | None]] | None:
+    """Where each resolved evidence turn ranks in each candidate channel's own ranking (issue #87).
+
+    Each channel ranks every stored turn it matches by the question alone, the
+    ranking that ``vector_k`` and ``lexical_k`` cut. The rest of retrieval
+    (entity and aggregation lexical scans, session context, filters, fusion)
+    does not change it, so it is the same for every configuration of one
+    embedding model. None for a question without an evidence annotation.
+    """
+    if case.evidence is None:
+        return None
+    rankings = await _index_rankings(engine, case.question, case.user_id, turns, GATE_CHANNELS)
+    wanted = sorted(case.evidence.difference(case.unresolved))
+    ranks = {}
+    for channel in GATE_CHANNELS:
+        first_rank = _first_ranks(case.benchmark, (turns[node_id].metadata for node_id in rankings[channel]))
+        ranks[channel] = {key: first_rank.get(key) for key in wanted}
+    return ranks
+
+
+def _aggregation_observations(metadata) -> dict | None:
+    """Aggregation coverage of one retrieval: None unless the question was read as a count or list (issue #87).
+
+    Aggregation questions widen every candidate limit by
+    ``aggregation_k_multiplier`` up to ``aggregation_k_max``, and
+    ``candidate_limit_paths`` names the channels that still filled theirs.
+    """
+    coverage = metadata.aggregation_coverage
+    if coverage is None:
+        return None
+    return {"status": coverage.status, "candidate_limit_paths": list(coverage.candidate_limit_paths)}
 
 
 def _query_scoring_observations(receipt) -> dict:
@@ -659,15 +705,21 @@ async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_d
             packed_sources.add(source)
             if has_text[candidate.node.id]:
                 text_sources.add(source)
+    # Measured after the timed retrieval, and read-only, so neither its time
+    # nor the next question's context depends on it.
+    turns = await _stored_turns(engine, case.user_id)
     row = _gate_row(
         case, context=context, context_tokens=response.bundle.tokens_used, text_tokens=text_tokens,
         packed_sources=packed_sources, text_sources=text_sources,
         first_rank=_first_ranks(case.benchmark, (result.node.metadata for result in response.results)),
         records=len(packed), records_without_text=sum(not has_text[candidate.node.id] for candidate in packed),
         representations=dict(Counter(candidate.representation.value for candidate in packed)),
-        candidates=len(response.results), seconds=seconds)
+        candidates=len(response.results), seconds=seconds, stored=len(turns),
+        channel_ranks=await _channel_ranks(engine, case, turns))
     row["query_scoring"] = _query_scoring_observations(receipt)
     row["session_context"] = _session_context_observations(packed)
+    row["candidates_generated"] = dict(response.metadata.candidates_generated)
+    row["aggregation"] = _aggregation_observations(response.metadata)
     if capture_dir is not None:
         row["capture_sha256"] = _write_capture(capture_dir, case, context,
                                                {"receipt": receipt.model_dump(mode="json")})
@@ -699,36 +751,54 @@ def context_limit(packing: PackingConfig) -> int:
     return max(0, packing.token_budget - packing.overhead_tokens)
 
 
-async def plain_ranking(engine, method: str, question: str, user_id: str) -> list:
-    """The user's stored turns ranked by one index, or by RRF (k=60) of both; best first.
+async def _stored_turns(engine, user_id: str) -> dict:
+    """The user's stored records by node ID; in a gate pack each one is a turn, and anything else is an error."""
+    stored = await engine.count_nodes(user_id=user_id)
+    turns = {str(node.id): node for node in await engine.query_nodes(
+        user_id=user_id, node_type=NodeType.FACT, limit=max(stored, 1))}
+    if len(turns) != stored:
+        raise ValueError(f"User {user_id} has {stored} stored records, of which {len(turns)} are turns")
+    return turns
+
+
+async def _index_rankings(engine, question: str, user_id: str, turns: dict,
+                          channels: Iterable[str]) -> dict[str, list[str]]:
+    """Each named index's own ranking of the user's stored turns, best first, as node IDs.
 
     The vector ranking must cover every stored turn. BM25 ranks only turns
     that share a term with the question. Anything else an index returns is an
     error, never silently dropped.
     """
+    rankings: dict[str, list[str]] = {}
+    for channel in channels:
+        if not turns:
+            rankings[channel] = []
+        elif channel == "vector":
+            hits = await engine._vector_index.search(question, user_id, k=len(turns))
+            rankings[channel] = [hit["node_id"] for hit in hits]
+            if sorted(rankings[channel]) != sorted(turns):
+                raise ValueError(f"The vector index ranks {len(rankings[channel])} records for {len(turns)} "
+                                 "stored turns")
+        elif channel == "lexical":
+            hits = await engine._lexical_index.search(question, user_id, limit=len(turns))
+            rankings[channel] = list(dict.fromkeys(hit["node_id"] for hit in hits))
+            if not set(rankings[channel]) <= turns.keys():
+                raise ValueError("The BM25 index returned records that are not stored turns")
+        else:
+            raise ValueError(f"Unknown candidate channel: {channel}")
+    return rankings
+
+
+async def plain_ranking(engine, method: str, question: str, user_id: str) -> list:
+    """The user's stored turns ranked by one index, or by RRF (k=60) of both; best first."""
     if method not in PLAIN_METHODS:
         raise ValueError(f"Choose a plain method from: {', '.join(PLAIN_METHODS)}")
-    stored = await engine.count_nodes(user_id=user_id)
-    nodes = {str(node.id): node for node in await engine.query_nodes(
-        user_id=user_id, node_type=NodeType.FACT, limit=max(stored, 1))}
-    if len(nodes) != stored:
-        raise ValueError(f"User {user_id} has {stored} stored records, of which {len(nodes)} are turns")
-    if not nodes:
-        return []
-    rankings = {}
-    if method in {"vector", "rrf"}:
-        hits = await engine._vector_index.search(question, user_id, k=len(nodes))
-        rankings["vector"] = [hit["node_id"] for hit in hits]
-        if sorted(rankings["vector"]) != sorted(nodes):
-            raise ValueError(f"The vector index ranks {len(rankings['vector'])} records for {len(nodes)} stored turns")
-    if method in {"bm25", "rrf"}:
-        hits = await engine._lexical_index.search(question, user_id, limit=len(nodes))
-        rankings["bm25"] = list(dict.fromkeys(hit["node_id"] for hit in hits))
-        if not set(rankings["bm25"]) <= nodes.keys():
-            raise ValueError("The BM25 index returned records that are not stored turns")
-    order = (reciprocal_rank_fusion([rankings["bm25"], rankings["vector"]], constant=PLAIN_RRF_K)
-             if method == "rrf" else rankings[method])
-    return [nodes[node_id] for node_id in order]
+    turns = await _stored_turns(engine, user_id)
+    channels = {"vector": ("vector",), "bm25": ("lexical",), "rrf": ("lexical", "vector")}[method]
+    rankings = await _index_rankings(engine, question, user_id, turns, channels)
+    order = (reciprocal_rank_fusion([rankings["lexical"], rankings["vector"]], constant=PLAIN_RRF_K)
+             if method == "rrf" else rankings[channels[0]])
+    return [turns[node_id] for node_id in order]
 
 
 def plain_record(benchmark: str, node) -> str:
@@ -779,13 +849,15 @@ async def _replay_plain_case(engine, packing: PackingConfig, case: GateCase, met
     packed = [ranked[index] for index in indexes]
     sources = {source for node in packed
                if (source := _source_key(case.benchmark, node.metadata or {})) is not None}
+    turns = await _stored_turns(engine, case.user_id)
     row = _gate_row(
         case, context=context, context_tokens=tokens,
         text_tokens=sum(count_tokens(node.content, packing.tokenizer) for node in packed),
         packed_sources=sources, text_sources=sources,
         first_rank=_first_ranks(case.benchmark, (node.metadata for node in ranked)),
         records=len(packed), records_without_text=0, representations={"plain": len(packed)},
-        candidates=len(ranked), seconds=seconds)
+        candidates=len(ranked), seconds=seconds, stored=len(turns),
+        channel_ranks=await _channel_ranks(engine, case, turns))
     if capture_dir is not None:
         row["capture_sha256"] = _write_capture(capture_dir, case, context, {"plain": {
             "method": method, "context_tokens": tokens, "packed_node_ids": [str(node.id) for node in packed]}})
@@ -798,6 +870,18 @@ def _verify_copy(copy: Path, expected_sha256: str) -> None:
         raise ValueError(f"The saved pack copied to {copy} contains a symlink")
     if pack_identity(copy) != expected_sha256:
         raise ValueError(f"The pack copied to {copy} differs from the identity the saved run recorded")
+
+
+async def _warm_up(engine, user_id: str) -> None:
+    """Load what an engine loads once, before the first timed question (issue #87).
+
+    The query embedding model loads on the first search, and LongMemEval-S
+    opens a new engine for every question, so without this each of its times
+    would include the load. Both searches are read-only and use a fixed text
+    that is never a question.
+    """
+    await engine._vector_index.search(GATE_WARM_UP_QUERY, user_id, k=1)
+    await engine._lexical_index.search(GATE_WARM_UP_QUERY, user_id, limit=1)
 
 
 async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict | None = None,
@@ -828,6 +912,7 @@ async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict |
             _verify_copy(copy, group[0].pack_sha256)
             config = gate_config(copy, overrides)
             async with MemoryEngine.open(config) as engine:
+                await _warm_up(engine, group[0].user_id)
                 for case in group:
                     if plain is None:
                         rows.append(await _replay_case(engine, config.packing, case, capture_dir))
@@ -844,7 +929,7 @@ def _share(numerator: float, denominator: float) -> float | None:
     return numerator / denominator if denominator else None
 
 
-def _all_within(evidence: dict, limit: int) -> bool:
+def _all_within(evidence: dict, limit: float) -> bool:
     """Every annotated turn resolves and ranks inside ``limit``."""
     return not evidence["unresolved"] and all(rank is not None and rank <= limit
                                               for rank in evidence["ranks"].values())
@@ -864,6 +949,60 @@ def _session_context_summary(rows: list[dict]) -> dict | None:
     return {**totals, **{f"{key}_share": _share(totals[key], records) for key in SESSION_CONTEXT_COUNTS}}
 
 
+def _latency(seconds: list[float]) -> dict:
+    """Median and 95th percentile (linear interpolation) of per-question retrieval seconds."""
+    return {"p50": statistics.median(seconds),
+            "p95": statistics.quantiles(seconds, n=20, method="inclusive")[-1] if len(seconds) > 1 else seconds[0]}
+
+
+def _channel_rank(evidence: dict, channel: str, key: str) -> int | None:
+    """A turn's rank in one channel, or its better rank in the two for "either"."""
+    ranks = [evidence["channel_ranks"][name][key] for name in (GATE_CHANNELS if channel == "either" else (channel,))]
+    return min((rank for rank in ranks if rank is not None), default=None)
+
+
+def _channel_recall(annotated: list[dict]) -> dict | None:
+    """Recall at each depth of each candidate channel's own ranking (issue #87).
+
+    For each channel and depth: the share of resolved annotated evidence turns
+    ranked inside it, and the share of annotated questions with all their
+    evidence inside it. "all" is the channel's whole ranking: every stored turn
+    for vector, only turns that share a term with the question for lexical.
+    None when a report predates these ranks.
+    """
+    if not annotated or any(evidence.get("channel_ranks") is None for evidence in annotated):
+        return None
+    depths = [*map(str, CHANNEL_RECALL_DEPTHS), "all"]
+    recall = {}
+    for channel in (*GATE_CHANNELS, "either"):
+        by_question = [[_channel_rank(evidence, channel, key) for key in evidence["ranks"]] for evidence in annotated]
+        turns = [rank for ranks in by_question for rank in ranks]
+        recall[channel] = {}
+        for depth in depths:
+            limit = math.inf if depth == "all" else int(depth)
+
+            def inside(rank: int | None) -> bool:
+                return rank is not None and rank <= limit
+
+            recall[channel][depth] = {
+                "evidence_turns": _share(sum(map(inside, turns)), len(turns)),
+                "all_evidence": _share(sum(not evidence["unresolved"] and all(map(inside, ranks))
+                                           for evidence, ranks in zip(annotated, by_question)), len(annotated)),
+            }
+    return recall
+
+
+def _aggregation_summary(rows: list[dict]) -> dict | None:
+    """Aggregation questions, and those whose widened limit a channel still filled; None for earlier reports."""
+    if any("aggregation" not in row for row in rows):
+        return None
+    aggregation = [row["aggregation"] for row in rows if row["aggregation"] is not None]
+    return {"questions": len(aggregation),
+            "candidate_limited": sum(bool(item["candidate_limit_paths"]) for item in aggregation),
+            "limited_paths": dict(sorted(Counter(path for item in aggregation
+                                                 for path in item["candidate_limit_paths"]).items()))}
+
+
 def summarize_gate(rows: list[dict]) -> dict:
     """Per-context and evidence metrics for one benchmark or category."""
     if not rows:
@@ -874,14 +1013,21 @@ def summarize_gate(rows: list[dict]) -> dict:
     context_tokens = sum(row["context_tokens"] for row in rows)
     all_packed = sum(evidence["all_packed"] for evidence in annotated)
     with_text = sum(evidence["all_packed_with_text"] for evidence in annotated)
+    all_returned = sum(_all_within(evidence, math.inf) for evidence in annotated)
     projected = sum(row["projected_correct"] for row in rows)
     representations = Counter()
     for row in rows:
         representations.update(row["representations"])
+    stored = [row.get("stored_records") for row in rows]
     return {
         "questions": len(rows),
         "contexts_matching_saved": sum(row["context_matches_saved"] for row in rows),
         "candidates_mean": statistics.fmean(row["candidates"] for row in rows),
+        "candidates_max": max(row["candidates"] for row in rows),
+        # Candidates per stored turn; session context can add turns no channel returned.
+        "candidate_share_mean": None if None in stored or 0 in stored else statistics.fmean(
+            row["candidates"] / row["stored_records"] for row in rows),
+        "retrieval_seconds": _latency([row["retrieval_seconds"] for row in rows]),
         "records_per_context": statistics.fmean(row["records"] for row in rows),
         "context_tokens_mean": context_tokens / len(rows),
         "memory_text_share": _share(sum(row["memory_text_tokens"] for row in rows), context_tokens),
@@ -892,6 +1038,11 @@ def summarize_gate(rows: list[dict]) -> dict:
         "all_evidence_packed_share": _share(all_packed, len(annotated)),
         "all_evidence_packed_with_text": with_text,
         "all_evidence_packed_with_text_share": _share(with_text, len(annotated)),
+        # Candidate recall, separate from what the context kept.
+        "all_evidence_returned": all_returned,
+        "all_evidence_returned_share": _share(all_returned, len(annotated)),
+        "channel_recall": _channel_recall(annotated),
+        "aggregation": _aggregation_summary(rows),
         "evidence_ranks": {
             "annotated_turns": len(ranks), "not_returned": len(ranks) - len(returned),
             "median": statistics.median(returned) if returned else None,
@@ -954,7 +1105,7 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
                                  capture_dir=capture_dir, plain=plain, progress=progress)
     datasets = {"locomo": gpt54.LOCOMO_SHA, "longmemeval": gpt54.lme.DATASET_SHA256}
     report = gate_report(rows, provenance={
-        **run_provenance, "overrides": overrides or {},
+        **run_provenance, "overrides": overrides or {}, "retrieval_timing": GATE_RETRIEVAL_TIMING,
         **({"plain": plain, "plain_rrf_k": PLAIN_RRF_K} if plain is not None else {}),
         "archive": {"path": str(archive),
                     "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}},
@@ -990,6 +1141,10 @@ def _all_packed_with_text(row: dict) -> bool:
 
 def _evidence_recall(row: dict) -> float:
     return row["evidence"]["packed"] / row["evidence"]["annotated"]
+
+
+def _all_returned(row: dict) -> bool:
+    return _all_within(row["evidence"], math.inf)
 
 
 def _projected(row: dict) -> float:
@@ -1054,6 +1209,18 @@ def _session_context_comparison(before: dict, after: dict, name: str) -> dict | 
     return sides
 
 
+def _compared_latency(before: dict, after: dict, old: dict, new: dict, keys: list) -> dict | None:
+    """Retrieval p50 and p95 on each side, or None unless both reports timed retrieval after a warm-up.
+
+    Latency depends on the machine and its load, so compare only reports run
+    on one machine, one at a time.
+    """
+    if any(report["provenance"].get("retrieval_timing") != GATE_RETRIEVAL_TIMING for report in (before, after)):
+        return None
+    return {side: _latency([rows[key]["retrieval_seconds"] for key in keys])
+            for side, rows in (("before", old), ("after", new))}
+
+
 def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
     """Pair two gate reports question by question; their questions and inputs must be identical."""
     old, new = _gate_rows(before, "before"), _gate_rows(after, "after")
@@ -1080,6 +1247,7 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
             "all_evidence_packed": paired(annotated, _all_packed),
             "all_evidence_packed_with_text": paired(annotated, _all_packed_with_text),
             "evidence_recall": paired(annotated, _evidence_recall),
+            "all_evidence_returned": paired(annotated, _all_returned),
             "projected_accuracy": paired(keys, _projected),
             "gained_all_evidence": [key[1] for key in annotated
                                     if not _all_packed(old[key]) and _all_packed(new[key])],
@@ -1089,8 +1257,11 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
                 for category in sorted({old[key]["category"] for key in keys})},
             "context": {side: {field: report["benchmarks"][name]["summary"][field]
                                for field in ("questions", "contexts_matching_saved", "records_per_context",
-                                             "memory_text_share", "records_without_text")}
+                                             "memory_text_share", "records_without_text", "candidates_mean")}
                         for side, report in (("before", before), ("after", after))},
+            "retrieval_seconds": _compared_latency(before, after, old, new, keys),
+            "aggregation": {side: _aggregation_summary([rows[key] for key in keys])
+                            for side, rows in (("before", old), ("after", new))},
             "query_scoring": _query_scoring(old, new, keys),
             "session_context_records": _session_context_comparison(before, after, name),
         }
@@ -1155,25 +1326,28 @@ def gate_markdown(report: dict) -> str:
     elif report["provenance"].get("overrides") and not changed:
         lines += ["", "**Every context matches the saved run, so these overrides changed nothing the reader "
                   "sees.** Check the setting names. Changes that act when memories are stored need new packs."]
-    lines += ["", "| Benchmark | Questions | Saved contexts reproduced | Records per context | Memory text share "
-              "| Records without text | All evidence packed | Median evidence rank | Projected accuracy |",
-              "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    lines += ["", "| Benchmark | Questions | Saved contexts reproduced | Candidates per question "
+              "| Retrieval p50 / p95 | Records per context | Memory text share | Records without text "
+              "| All evidence packed | Median evidence rank | Projected accuracy |",
+              "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for name, bench in report["benchmarks"].items():
         summary = bench["summary"]
         lines.append(
             f"| {name} | {summary['questions']} | {summary['contexts_matching_saved']}/{summary['questions']} "
+            f"| {_candidates(summary)} | {_seconds(summary['retrieval_seconds'])} "
             f"| {summary['records_per_context']:.1f} | {_pct(summary['memory_text_share'])} "
             f"| {summary['records_without_text']} | {summary['all_evidence_packed']}/"
             f"{summary['annotated_questions']} ({_pct(summary['all_evidence_packed_share'])}) "
             f"| {_rank(summary['evidence_ranks']['median'])} | {_pct(summary['projected_accuracy'])} |")
     for name, bench in report["benchmarks"].items():
         lines += ["", f"## {name}", "", _baseline_line(report["baseline"][name], bench), "",
-                  "| Category | Questions | All evidence packed | Packed with memory text | Median rank "
-                  "| Evidence in top 25 | Projected accuracy |",
-                  "|---|---:|---:|---:|---:|---:|---:|"]
+                  "| Category | Questions | All evidence among candidates | All evidence packed "
+                  "| Packed with memory text | Median rank | Evidence in top 25 | Projected accuracy |",
+                  "|---|---:|---:|---:|---:|---:|---:|---:|"]
         for category, summary in bench["categories"].items():
             lines.append(
-                f"| {category} | {summary['questions']} | {summary['all_evidence_packed']}/"
+                f"| {category} | {summary['questions']} | {_pct(summary['all_evidence_returned_share'])} "
+                f"| {summary['all_evidence_packed']}/"
                 f"{summary['annotated_questions']} ({_pct(summary['all_evidence_packed_share'])}) "
                 f"| {_pct(summary['all_evidence_packed_with_text_share'])} "
                 f"| {_rank(summary['evidence_ranks']['median'])} | {_pct(summary['evidence_ranks']['top_25_share'])} "
@@ -1183,12 +1357,50 @@ def gate_markdown(report: dict) -> str:
             lines += ["", f"Packed records through session expansion: {session['reached']} reached "
                       f"({_pct(session['reached_share'])} of packed records), {session['added']} found by no "
                       f"other path, {session['promoted']} scored by a session decay."]
+        lines += _candidate_markdown(bench["summary"])
         mismatches = bench["context_mismatches"]
         if mismatches and not plain:
             shown = _listed(mismatches)
             lines += ["", f"Contexts that differ from the saved run: {len(mismatches)} ({shown}). "
                       "The JSON report lists every one."]
     return "\n".join(lines + _projection_note(report["projection"]))
+
+
+def _seconds(latency: dict | None) -> str:
+    return "n/a" if latency is None else f"{latency['p50']:.3f} / {latency['p95']:.3f} s"
+
+
+def _candidates(summary: dict) -> str:
+    share = summary.get("candidate_share_mean")
+    return f"{summary['candidates_mean']:.1f}" + ("" if share is None else f" ({share:.0%} of stored)")
+
+
+def _aggregation_line(aggregation: dict) -> str:
+    paths = ", ".join(f"{path} {count}" for path, count in aggregation["limited_paths"].items())
+    return (f"{aggregation['questions']} questions read as counts or lists, which widen the candidate limits; "
+            f"{aggregation['candidate_limited']} still filled a limit" + (f" ({paths})." if paths else "."))
+
+
+def _candidate_markdown(summary: dict) -> list[str]:
+    """Candidate recall per channel and the aggregation widening for one benchmark (issue #87)."""
+    lines = []
+    recall = summary.get("channel_recall")
+    if recall is not None:
+        depths = list(recall["vector"])
+        lines += ["", "Candidate recall per channel: the share of annotated evidence turns inside each channel's "
+                  "own top k, and in parentheses the share of questions with all their evidence inside it. "
+                  "`vector_k` and `lexical_k` cut these rankings; either is the union of the two cuts. Entity "
+                  "and aggregation lexical scans and session context are not counted. Lexical ranks only turns "
+                  "that share a term with the question.", "",
+                  "| Channel | " + " | ".join("All" if depth == "all" else f"Top {depth}" for depth in depths) + " |",
+                  "|---|" + "---:|" * len(depths)]
+        for channel, by_depth in recall.items():
+            lines.append(f"| {channel} | " + " | ".join(
+                f"{_pct(value['evidence_turns'])} ({_pct(value['all_evidence'])})" for value in by_depth.values()) + " |")
+    aggregation = summary.get("aggregation")
+    if aggregation is not None:
+        lines += ["", f"Aggregation: {_aggregation_line(aggregation)}"]
+    return lines
 
 
 def _listed(ids: list[str]) -> str:
@@ -1241,6 +1453,7 @@ def comparison_markdown(result: dict) -> str:
         metrics = [("All evidence packed", bench["all_evidence_packed"]),
                    ("All evidence packed with memory text", bench["all_evidence_packed_with_text"]),
                    ("Evidence recall", bench["evidence_recall"]),
+                   ("All evidence among the candidates", bench["all_evidence_returned"]),
                    ("Projected accuracy", bench["projected_accuracy"]),
                    *[(f"All evidence packed, {category}", stats)
                      for category, stats in bench["all_evidence_packed_by_category"].items()]]
@@ -1250,15 +1463,29 @@ def comparison_markdown(result: dict) -> str:
             lines.append(f"| {name} | {label} | {_pct(stats['before'])} | {_pct(stats['after'])} "
                          f"| {_pct(stats['delta'], True)} | {shown} | {stats.get('wins', 0)} "
                          f"| {stats.get('losses', 0)} | {stats.get('ties', 0)} |")
-    lines += ["", "| Benchmark | Saved contexts reproduced | Records per context | Memory text share "
-              "| Records without text |", "|---|---|---|---|---|"]
+    lines += ["", "| Benchmark | Saved contexts reproduced | Candidates per question | Retrieval p50 / p95 "
+              "| Records per context | Memory text share | Records without text |", "|---|---|---|---|---|---|---|"]
     for name, bench in result["benchmarks"].items():
         old, new = bench["context"]["before"], bench["context"]["after"]
+        latency = bench["retrieval_seconds"] or {"before": None, "after": None}
         lines.append(f"| {name} | {old['contexts_matching_saved']}/{old['questions']} to "
                      f"{new['contexts_matching_saved']}/{new['questions']} "
+                     f"| {old['candidates_mean']:.1f} to {new['candidates_mean']:.1f} "
+                     f"| {_seconds(latency['before'])} to {_seconds(latency['after'])} "
                      f"| {old['records_per_context']:.1f} to {new['records_per_context']:.1f} "
                      f"| {_pct(old['memory_text_share'])} to {_pct(new['memory_text_share'])} "
                      f"| {old['records_without_text']} to {new['records_without_text']} |")
+    if any(bench["retrieval_seconds"] is None for bench in result["benchmarks"].values()):
+        lines += ["", "Retrieval latency is shown only when both reports timed each question after a warm-up "
+                  "search; earlier reports included the embedding model's load."]
+    else:
+        lines += ["", "Retrieval latency depends on the machine and its load: compare it only between reports "
+                  "run on one machine, one at a time."]
+    for name, bench in result["benchmarks"].items():
+        aggregation = bench["aggregation"]
+        if aggregation["before"] is not None and aggregation["after"] is not None:
+            lines += [f"- {name} aggregation, before: {_aggregation_line(aggregation['before'])}",
+                      f"- {name} aggregation, after: {_aggregation_line(aggregation['after'])}"]
     lines += _query_scoring_markdown(result["benchmarks"])
     lines += _session_context_markdown(result["benchmarks"])
     lines += ["", result["interval_note"]]
