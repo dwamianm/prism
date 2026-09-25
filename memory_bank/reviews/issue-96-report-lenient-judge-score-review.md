@@ -14,8 +14,8 @@
   usage, attempt, coverage and cost blocks of `report` into `new_usage`, `count_calls`, `recorded_attempts`,
   `coverage` and `provider_cost`, so the answer runs and the lenient pass share one set of rules. `_confirm_spend`
   takes the kind of name to type and `_announce` a role. No behavior change for the answer runs.
-- `tests/test_lenient_judge.py` (new): 41 tests over mocked OpenAI and Ollama endpoints, plus one that pins the
-  published DeepSeek pass.
+- `tests/test_lenient_judge.py` (new): 41 tests over mocked OpenAI and Ollama endpoints, including one that pins
+  the published DeepSeek pass.
 - `BENCHMARKS.md`, `README.md`: a "Strict and lenient LoCoMo judges" section with both prompts linked, the
   strict and lenient scores side by side, the category table with upstream numbers, caveats, and commands; the
   DeepSeek category table gains the upstream numbers; the README links both prompts.
@@ -128,7 +128,21 @@ Accept:
   answers are stronger evidence of label compliance than two authored cases. Not a regression.
 
 ## Follow-ups Raised
-Filled in after the issues are created.
+- #178 Lenient LoCoMo gain mixes the judge prompt's effect with judge run-to-run noise (adversarial S2, the
+  same-session strict control).
+- #179 A published lenient pass or answer run cannot be replayed or re-published from the command line
+  (adversarial S5, Reviewer 1 C9, Reviewer 6 C4).
+- #180 Verdicts from a run whose Ollama model identity changed are published by a later run (adversarial S8,
+  Reviewer 1 C1; pre-existing in `gpt54_baselines.run`).
+
+## Results
+- DeepSeek pass over `prme@46647825` LoCoMo (2026-09-25, clean tree, identity `e04da138`, server 0.34.3):
+  strict 1,007/1,540 (65.4%), lenient 1,095/1,540 (71.1%, 95% interval 68.8% to 73.4%). 91 accepted only by
+  the lenient judge (48 multi-hop), 3 only by the strict judge. All 1,540 calls returned HTTP 200 on the first
+  attempt; no retries, no unresolved labels; 82 replies put the explanation before the JSON label. The recorded
+  calls replay to the published rows.
+- Tests: 4,495 passed, 873 skipped in the full suite (the published-pass test deselected before the pass ran, then
+  run on its own and passing); `tests/test_lenient_judge.py` 41 passed; ruff and the strict mypy check pass.
 
 ## Resolution Status
 | Item | Status |
@@ -136,5 +150,5 @@ Filled in after the issues are created.
 | Must Fix (1) | Resolved |
 | Should Fix (17) | Resolved |
 | Adversarial Fix now (S1, S2 wording, S3, S4, S6, S7) | Resolved |
-| Adversarial Follow-up (S2 control, S5, S8) | Issues raised (see above) |
+| Adversarial Follow-up (S2 control, S5, S8) | Raised as #178, #179, #180 |
 | Accept (lenient prompt calibration) | Recorded |

@@ -71,17 +71,30 @@ generous" judge accepted 62.8% of deliberately vague wrong answers.
 | Run | Answers and judge | Strict judge (primary) | Lenient judge (secondary) |
 |---|---|---:|---:|
 | GPT-5.4 defaults, 2026-09-23 | GPT-5.4 | 985/1,540 (64.0%) | not run yet (about $2.23, needs the owner's approval) |
-| DeepSeek baseline `prme@46647825`, 2026-09-24 ([lenient result](TBD-LINK)) | `deepseek-v4.1-flash:cloud` | 1,007/1,540 (65.4%) | **TBD** |
+| DeepSeek baseline `prme@46647825`, 2026-09-24 ([lenient result](benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@46647825-locomo-lenient-judge-result.json)) | `deepseek-v4.1-flash:cloud` | 1,007/1,540 (65.4%) | **1,095/1,540 (71.1%)**, 95% interval 68.8% to 73.4% |
 
 The two tracks are not comparable with each other. By category, under the
 upstream LoCoMo category numbers (several vendor tables mix up the labels):
 
 | DeepSeek baseline category | Questions | Strict | Lenient | Accepted only by the lenient judge | Accepted only by the strict judge |
 |---|---:|---:|---:|---:|---:|
-| 1 multi-hop | 282 | 99 | TBD | TBD | TBD |
-| 2 temporal | 321 | 229 | TBD | TBD | TBD |
-| 3 open-domain | 96 | 41 | TBD | TBD | TBD |
-| 4 single-hop | 841 | 638 | TBD | TBD | TBD |
+| 1 multi-hop | 282 | 99 (35.1%) | 145 (51.4%) | 48 | 2 |
+| 2 temporal | 321 | 229 (71.3%) | 243 (75.7%) | 14 | 0 |
+| 3 open-domain | 96 | 41 (42.7%) | 46 (47.9%) | 5 | 0 |
+| 4 single-hop | 841 | 638 (75.9%) | 661 (78.6%) | 24 | 1 |
+| All | 1,540 | 1,007 (65.4%) | 1,095 (71.1%) | 91 | 3 |
+
+On the DeepSeek baseline's answers the lenient judge adds 5.7 points. It
+accepted 91 answers the strict judge rejected and rejected 3 it accepted. More
+than half of those 91 (48) are multi-hop, where the strict judge requires every
+listed item: multi-hop rises from 35.1% to 51.4%. About 1% of verdicts change
+between runs anyway (above), roughly 15 of 1,540, so some of the 91 may be
+run-to-run variation rather than the prompt. All 1,540 judge calls returned
+HTTP 200 on their first attempt, with no retry and no unresolved label; 82
+replies wrote the explanation before the JSON label. The pass ran in about 5
+minutes on 2026-09-25 from a clean tree, under the model identity (`e04da138`)
+and Ollama server version (0.34.3) of the strict verdicts, and its recorded
+calls replay to the published rows.
 
 How the pass works:
 
