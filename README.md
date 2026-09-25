@@ -12,7 +12,7 @@ tracks changing claims, and packs relevant memories into a configurable token
 budget. The default backend runs locally in a portable directory; PostgreSQL is
 available for server deployments.
 
-**Current release: v0.12.0.** Python 3.11+, synchronous and async clients, HTTP,
+**Current release: v0.13.0.** Python 3.11+, synchronous and async clients, HTTP,
 MCP, and LangChain/LlamaIndex integrations.
 
 ## Architecture
