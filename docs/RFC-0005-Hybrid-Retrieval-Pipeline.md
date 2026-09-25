@@ -393,6 +393,8 @@ weighted sum with reciprocal rank fusion. The default remains `"weighted"`.
 score(obj) =
   (1/(k + semantic_rank) + 1/(k + lexical_rank)) × (k + 1) / 2
   × epistemic_factor × node_type_factor × temporal_factor
+  [× recency_boost_factor]                 (opt-in, current-state questions)
+  [− tie_break × 1e-11]                    (opt-in)
 ```
 
 - Ranks are competition ranks (tied scores share the better rank) within the
@@ -410,9 +412,9 @@ score(obj) =
   every ranked candidate shares is therefore 1.0. Temporal affinity applies
   only to TEMPORAL intent, as in formula version 1. Negative epistemic weights
   or node-type boosts are rejected.
-- Graph proximity, recency, salience and confidence are not used. In the
-  2026-09-23 benchmark archive they were constant or carried no relevance
-  information. Graph proximity can become a fused channel once ingestion
+- Graph proximity, salience and confidence are not used, and recency only
+  through the opt-in setting below. In the 2026-09-23 benchmark archive they
+  were constant or carried no relevance information. Graph proximity can become a fused channel once ingestion
   populates the graph. The query-specific weight shifts for current-state,
   episodic and relational questions do not apply. Non-neutral ranking
   multipliers are rejected before retrieval runs (HTTP 422), weighted ranking
@@ -421,6 +423,60 @@ score(obj) =
 - The current-update multiplier (Section 7.1) still applies after fusion. A
   candidate below the relevance floor gets no update boost; its score is not
   capped at its similarity, because a fused score is not on that scale.
+- Without recency, the older of two conflicting memories can rank above the
+  newer one on a current-state question (issue #168). The opt-in
+  `ScoringWeights.rrf_recency_boost` `[HYPOTHESIS]`
+  (`PRME_SCORING__RRF_RECENCY_BOOST`, above 0 and at most 4) brings back the
+  weighted formula's recency on the questions where that formula uses it:
+  those Section 7.1 treats as current-state. Recency is computed as the
+  weighted formula computes it there with its default weights,
+  `exp(-λ × days before the newest candidate)` with λ at least 0.05, doubled
+  up to 1.0 for update wording. (The weighted formula raises λ only while it
+  shifts weight to recency, which a custom `w_recency` of 0.25 or more
+  prevents; rank fusion does not read the additive weights, so it always
+  raises λ.) One difference is deliberate: a memory's time is its event time,
+  else when it was stored, and never its update time, because a lifecycle
+  change such as an organizer promotion (after 7 days, by default) resets
+  `updated_at` and would make a promoted older memory look newest. The
+  context formatter dates memories the same way. The weighted formula still
+  falls back to `updated_at`. Recency enters as another pool-relative factor,
+  `recency_boost_factor = (1 + rrf_recency_boost × recency)` divided by the
+  largest value in the pool. The newest memory's factor is 1.0, so no score rises above
+  first place on both channels and a memory found by one channel alone still
+  scores at most 0.5. The weighted formula applies no other supersedence or
+  epistemic demotion that fusion lacks: epistemic weights and the current-update
+  multiplier already apply. A separate recency ranked list was also
+  considered and rejected: it would add a term to every candidate, including
+  those found by one channel alone, change the scale the session decay was
+  measured on, and treat a day-old and a year-old memory as one step apart.
+  With `rrf_recency_boost = 0.25` the three conflicting-memory checks in
+  `run_simulations` pass. On the offline evidence gate with the reader
+  format, score order and a 0.6 rank fusion session decay, 0.25 (with the
+  tie-break below) moved the share of questions with all evidence packed
+  from 85.2% to 85.0% on LoCoMo (3 losses, interval including zero) and from
+  86.8% to 87.0% on LongMemEval-S; 1.0 lost 0.6 points on LoCoMo, mostly
+  multi-hop, with an interval excluding zero. The gate cannot see which of two
+  conflicting memories comes first, only whether both reach the context.
+  Other questions are unaffected.
+- Equal fused scores are common: ranks (1, 2) and (2, 1) fuse to the same
+  score, as do ranks r on one channel alone. Unset, they are ordered by path
+  count and then node ID, which is random. The opt-in
+  `ScoringWeights.rrf_tie_break="event_time"` (`PRME_SCORING__RRF_TIE_BREAK`)
+  orders them newest first by event time (else the time they were stored),
+  whatever their channels. Each candidate on a channel records its place by
+  time as a fraction, 0 for the newest, with equal times sharing a place, and
+  loses that fraction of 1e-11 from a positive score. Fused scores are rounded
+  to ten decimals, so fused scores that differ keep their order, and because
+  the tie-break is part of the score, later sorts and receipt replay honor it
+  without a new sort key. Two limits remain. Session, episode and evidence
+  context inherit the score of the memory that added them, tie-break
+  included, so neighbors of one trigger still share a score and fall back to
+  node ID, and an inherited score that equals another candidate's compares
+  the trigger's place, scaled by the decay. Later adjustments with other
+  coefficients (the current-update multiplier, context decays, packing's
+  density ratios) can reorder scores that differ by less than 1e-11.
+- Both settings apply only when `fusion="rrf"`; weighted scoring drops either
+  with a warning, and the evidence gate refuses them without rank fusion.
 - Session, episode and evidence-context inheritance, reranking and packing
   operate on the fused score unchanged by default. Cross-scope hints are fused
   within their own pool.
@@ -483,10 +539,13 @@ score(obj) =
   - `min_score=0` keeps everything, as under weighted scoring.
 
 The score trace keeps the raw semantic and lexical scores, graph proximity,
-epistemic weight, node-type boost and temporal affinity. Its recency, salience
-and confidence are 0 because formula version 2 does not compute them. Score
-provenance records `formula_version: 2` and a `rank_fusion` object with both
-ranks and the three applied factors, so replay needs no other candidate.
+epistemic weight, node-type boost and temporal affinity. Its salience and
+confidence are 0 because formula version 2 does not compute them, and so is
+its recency unless `rrf_recency_boost` applied, when it holds the raw recency.
+Score provenance records `formula_version: 2` and a `rank_fusion` object with
+both ranks and the three applied factors, plus `recency_boost_factor` when the
+recency boost applied and `tie_break` whenever the tie-break is set, so replay
+needs no other candidate.
 Retrieval receipts that use rank fusion are schema version 16 and must state
 `rrf_k`. Version 16 also records each candidate's `semantic_relevance`, and every
 recorded value is at least the receipt's `min_score`. When
@@ -500,7 +559,12 @@ positive `min_score`, requires every candidate's `semantic_relevance` to be 0,
 and waives the rule that each is at least `min_score`. It also records the
 rank fusion session decay when that is set, under the version 17 rules.
 Versions 1 to 17 cannot record a skipped floor; a floor that was applied
-omits the field, so every other receipt keeps its version and bytes. Version 15 receipts,
+omits the field, so every other receipt keeps its version and bytes. When
+`rrf_recency_boost` or `rrf_tie_break` is set, the receipt is version 19, which
+records them in its scoring settings and requires every score provenance to
+use the same values; it also admits the version 17 and 18 features. Versions
+1 to 18 cannot record either setting, and an unset setting is omitted, so
+rank fusion receipts without them keep their version and bytes. Version 15 receipts,
 written before the relevance gate existed, stay valid and omit it; their
 `min_score` was compared against the fused score. Weighted receipts keep their
 version and bytes: a weighted `ScoringWeights` omits `fusion` and `rrf_k` when
@@ -603,7 +667,7 @@ locks would allow mixed ingestion/retrieval threads to exchange reference clocks
 The lock guards PRME calls, not unrelated application calls to dateparser.
 
 Non-determinism that MUST be guarded against:
-- Floating-point ordering instability (use tie-breaking by `object_id` as a stable sort).
+- Floating-point ordering instability (use tie-breaking by `object_id` as a stable sort; under rank fusion, the opt-in event-time tie-break of Section 7.2 comes first).
 - HNSW approximate search non-determinism (use a fixed `ef_search` parameter and seed where supported).
 - Graph traversal order instability (sort edges by `id` before traversal).
 

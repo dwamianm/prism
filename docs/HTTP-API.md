@@ -229,7 +229,11 @@ even if it is an exact keyword match. When vector search fails or detects an
 embedding model mismatch (`VECTOR` in `metrics.backend_failures`) and no result
 has a cosine, the floor is skipped instead of returning nothing: results and
 cross-scope hints keep their fused order, `metrics.min_score_skipped` is true,
-and the receipt uses version 18, which records `min_score_skipped`.
+and the receipt uses version 18, which records `min_score_skipped`. With the
+opt-in rank fusion recency boost or event-time tie-break
+(`PRME_SCORING__RRF_RECENCY_BOOST`, `PRME_SCORING__RRF_TIE_BREAK`) set, rank
+fusion receipts use version 19 instead, which records those settings as well as
+any session decay or skipped floor.
 `min_score=0` keeps everything in both modes. Version 9 score provenance records any
 applied `current_update` operation and its exact coefficient. Version 10 retains
 the evidence-projection policy and replayable `evidence_projection` operations;

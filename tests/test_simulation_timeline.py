@@ -41,3 +41,18 @@ async def test_checkpoints_only_see_arrived_messages_and_preserve_event_timestam
     assert all(values[0] == values[2] for values in snapshots[2].values())
     assert not caller_path.exists()
     assert not Path(report.config_summary["db_path"]).parent.exists()
+
+
+async def test_context_checks_read_the_readers_context(tmp_path, monkeypatch):
+    monkeypatch.setattr("prme.storage.engine.create_embedding_provider", lambda _: MockEmbeddingProvider())
+    scenario = SimScenario("context", "Check what reaches the reader", [
+        SimMessage(1, "user", "The telescope lens is blue.", ["telescope"]),
+    ], [
+        SimCheckpoint(2, "telescope", [], [], "In the context", context_keywords=["LENS IS BLUE"]),
+        SimCheckpoint(2, "telescope", [], [], "Not stored", context_keywords=["lens", "red"]),
+    ])
+    config = PRMEConfig(db_path=str(tmp_path / "unused.duckdb"), organizer={"opportunistic_enabled": False})
+    report = await SimulationRunner().run(scenario, config=config, organize_at_checkpoints=False)
+    found, missing = report.checkpoints
+    assert found.passed and found.context_missing == []
+    assert not missing.passed and missing.context_missing == ["red"]

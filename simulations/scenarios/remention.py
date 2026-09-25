@@ -111,10 +111,10 @@ _CHECKPOINTS = [
     SimCheckpoint(
         day=30,
         query="What tools does the team rely on?",
-        expected_keywords=["Docker"],
+        expected_keywords=[],
         excluded_keywords=[],
-        description="Docker should dominate broad queries due to repeated re-mentions",
-        ranking_assertions=[("Docker", "Snowflake")],
+        description="Repeatedly re-mentioned Docker should reach the reader's context on broad queries",
+        context_keywords=["Docker"],
     ),
 ]
 

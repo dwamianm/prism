@@ -49,7 +49,7 @@ RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -379,6 +379,24 @@ class RetrievalReceipt(BaseModel):
             for adjustment in provenance.adjustments
         ):
             raise ValueError("Session decay does not match the recorded rank fusion session decay")
+        # Version 19 records the opt-in rank fusion recency boost and
+        # tie-break (issue #168), with or without the version 17 and 18
+        # features; earlier versions cannot, so they keep their bytes. Every
+        # score comes from one pool scored with the recorded settings.
+        provenances = list((self.score_provenance or {}).values())
+        opt_ins = self.scoring.rank_fusion_opt_ins
+        if any(provenance.weights.rank_fusion_opt_ins != opt_ins for provenance in provenances):
+            raise ValueError(
+                "Score provenance does not match the recorded rank fusion recency and tie-break settings"
+            )
+        if self.schema_version < 19 and opt_ins:
+            raise ValueError("Rank fusion recency and tie-break settings require a version 19 receipt")
+        if self.schema_version == 19 and not opt_ins:
+            raise ValueError("Version 19 records a rank fusion recency boost or tie-break")
+        boosted = {provenance.rank_fusion.recency_boost_factor is not None
+                   for provenance in provenances if provenance.rank_fusion is not None}
+        if len(boosted) > 1:
+            raise ValueError("The recency boost applies to every score in a pool or to none")
         ids = [candidate.node_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Receipt candidate identities must be unique")
@@ -582,15 +600,18 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     )
     if has_rank_assignment and execution is None:
         raise ValueError("Neural rank assignment requires an execution descriptor")
-    version: Literal[2, 12, 13, 14, 16, 17, 18]
+    version: Literal[2, 12, 13, 14, 16, 17, 18, 19]
     if execution is None:
         version = 2
     elif rank_fused:
         # Version 16 also admits every version 13 and 14 feature, and records
         # each candidate's relevance (version 15 did not). Version 17 adds the
-        # opt-in rank fusion session decay, and version 18 a skipped min_score
-        # with or without that decay.
-        if min_score_skipped:
+        # opt-in rank fusion session decay, version 18 a skipped min_score
+        # with or without that decay, and version 19 the opt-in recency boost
+        # or tie-break with or without either.
+        if scoring.rank_fusion_opt_ins:
+            version = 19
+        elif min_score_skipped:
             version = 18
         elif packing.session_context_rank_fusion_score_decay is not None:
             version = 17

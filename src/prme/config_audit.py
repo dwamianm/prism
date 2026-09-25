@@ -57,6 +57,13 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "scoring.fusion == 'rrf'",
         lambda value: value == "rrf",
     ),
+    # ScoringWeights drops it unless fusion is 'rrf', so set means applied,
+    # to current-state questions.
+    "scoring.rrf_recency_boost": (
+        "scoring.rrf_recency_boost",
+        "scoring.rrf_recency_boost is set (current-state questions only)",
+        lambda value: value is not None,
+    ),
     # Applied only to triggers scored by rank fusion, which a request's own
     # weights can select on a weighted engine.
     "packing.session_context_rank_fusion_score_decay": (

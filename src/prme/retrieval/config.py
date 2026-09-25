@@ -18,6 +18,11 @@ from prme.types import RepresentationLevel
 
 # Rank constant for fusion="rrf" when none is given.
 DEFAULT_RRF_K = 60
+# Opt-in rank fusion terms, unset by default and recorded only in version 19
+# receipts (issue #168).
+RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break")
+# Settings that only rank fusion reads; weighted scoring drops them.
+RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
 
 
 class ScoringWeights(BaseModel):
@@ -34,7 +39,8 @@ class ScoringWeights(BaseModel):
     each candidate's semantic and lexical ranks (score formula version 2).
     The additive weights are then unused, but they are still validated and
     recorded. A weighted configuration leaves ``fusion`` and ``rrf_k`` out of
-    its serialized form, so receipts, ranking profiles and evaluations written
+    its serialized form, and any configuration leaves the unset opt-in rank
+    fusion terms out, so receipts, ranking profiles and evaluations written
     before they existed keep their exact bytes and checksums.
     """
 
@@ -126,9 +132,10 @@ class ScoringWeights(BaseModel):
             "candidate ranked first on both scores 1.0. Epistemic, node-type "
             "and temporal adjustments then apply as multipliers relative to "
             "the pool's largest value, so an adjustment every candidate shares "
-            "is 1.0. Graph proximity, recency, salience and confidence are not "
-            "used, nor are the query-specific weight shifts or learned ranking "
-            "multipliers. Scores are rank-based, so min_score compares against "
+            "is 1.0. Graph proximity, salience and confidence are not used, "
+            "recency is used only through the opt-in rrf_recency_boost, and "
+            "the query-specific weight shifts and learned ranking multipliers "
+            "are not used. Scores are rank-based, so min_score compares against "
             "each result's semantic_relevance, the semantic cosine similarity of "
             "the memory behind it, instead of the fused score. A floor tuned on "
             "weighted scores does not carry over, and a low-cosine exact keyword "
@@ -150,13 +157,51 @@ class ScoringWeights(BaseModel):
             "supplied value with a warning."
         ),
     )
+    # Omitted when unset, so configurations, receipts and version ids that do
+    # not use them keep the bytes they had before they existed (issue #168).
+    rrf_recency_boost: float | None = Field(
+        default=None,
+        gt=0,
+        le=4,
+        exclude_if=lambda value: value is None,
+        description=(
+            "[HYPOTHESIS] Opt-in, fusion='rrf' only: on current-state questions, "
+            "multiply each fused score by 1 + rrf_recency_boost x its recency, "
+            "relative to the pool's largest value, so the newer of two "
+            "conflicting memories can rank first. Recency is computed as the "
+            "weighted formula computes it on those questions with its default "
+            "weights: exp(-lambda x days before the newest candidate, by event "
+            "time, else the time it was stored), with "
+            "lambda at least 0.05, doubled up to 1.0 for update wording such as "
+            "'switched to' or 'no longer'. A factor "
+            "is at most 1.0, so no candidate rises above first place on both "
+            "channels. Unset, rank fusion ignores recency. Weighted fusion "
+            "ignores a supplied value with a warning."
+        ),
+    )
+    rrf_tie_break: Literal["event_time"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Opt-in, fusion='rrf' only: 'event_time' puts candidates whose "
+            "fused scores are equal in order of event time (else the time they "
+            "were stored), newest first, instead of path count and node ID "
+            "order. Older candidates lose less than 1e-11, which is below the "
+            "1e-10 step of the rounded fused scores, so fused scores that "
+            "differ keep their order; later adjustments with other "
+            "coefficients can reorder scores that differ by less than 1e-11. "
+            "Memories stated at the same time still fall back to path count and "
+            "node ID, as do all equal scores when it is unset. Weighted fusion "
+            "ignores a supplied value with a warning."
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod
-    def rank_constant_only_for_rank_fusion(cls, value: Any) -> Any:
-        """Give rank fusion its default constant and drop it from weighted scoring.
+    def rank_fusion_settings_only_for_rank_fusion(cls, value: Any) -> Any:
+        """Give rank fusion its default constant and drop its settings from weighted scoring.
 
-        Dropping a stray constant keeps one serialized form per configuration
+        Dropping stray settings keeps one serialized form per configuration
         and lets an operator turn rank fusion off by removing only the fusion
         setting.
         """
@@ -165,13 +210,16 @@ class ScoringWeights(BaseModel):
         rank_fused = value.get("fusion", "weighted") == "rrf"
         if rank_fused and value.get("rrf_k") is None:
             return {**value, "rrf_k": DEFAULT_RRF_K}
-        if not rank_fused and value.get("rrf_k") is not None:
+        stray = [name for name in RANK_FUSION_ONLY_SETTINGS if value.get(name) is not None]
+        if not rank_fused and stray:
+            one = len(stray) == 1
             warnings.warn(
-                "ScoringWeights rrf_k applies only when fusion is 'rrf' and is ignored.",
+                f"ScoringWeights {', '.join(stray)} {'applies' if one else 'apply'} only when "
+                f"fusion is 'rrf' and {'is' if one else 'are'} ignored.",
                 UserWarning,
                 stacklevel=2,
             )
-            return {key: item for key, item in value.items() if key != "rrf_k"}
+            return {key: item for key, item in value.items() if key not in stray}
         return value
 
     @model_validator(mode="after")
@@ -180,10 +228,16 @@ class ScoringWeights(BaseModel):
 
         Epistemic (multiplicative) and paths (tiebreaker) are excluded
         from the sum constraint. ``rrf_k`` is set exactly when fusion is
-        ``"rrf"``.
+        ``"rrf"``, and the other rank fusion settings only then.
         """
+        # Both checks back up the before-validator, which drops stray settings
+        # from any dict input; only input that skips it can reach them.
         if (self.fusion == "rrf") != (self.rrf_k is not None):
             raise ValueError("rrf_k is set exactly when fusion is 'rrf'")
+        if self.fusion != "rrf" and self.rank_fusion_opt_ins:
+            raise ValueError(
+                f"{', '.join(self.rank_fusion_opt_ins)} apply only when fusion is 'rrf'"
+            )
         additive_sum = (
             self.w_semantic
             + self.w_lexical
@@ -201,6 +255,14 @@ class ScoringWeights(BaseModel):
             )
             raise ValueError(msg)
         return self
+
+    @property
+    def rank_fusion_opt_ins(self) -> dict[str, Any]:
+        """The opt-in rank fusion terms that are set, by name; empty when none is."""
+        return {
+            name: value for name in RANK_FUSION_OPT_INS
+            if (value := getattr(self, name)) is not None
+        }
 
     @property
     def version_id(self) -> str:
@@ -221,8 +283,13 @@ class ScoringWeights(BaseModel):
         )
         if self.fusion != "weighted":
             # Weighted configurations keep the version they had before
-            # rank fusion existed.
+            # rank fusion existed, and rank fusion without the settings below
+            # keeps the version it had before them.
             payload += f":{self.fusion}:{self.rrf_k}"
+            if self.rrf_recency_boost is not None:
+                payload += f":recency={self.rrf_recency_boost}"
+            if self.rrf_tie_break is not None:
+                payload += f":tie_break={self.rrf_tie_break}"
         return hashlib.sha256(payload.encode()).hexdigest()[:12]
 
 

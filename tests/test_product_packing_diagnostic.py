@@ -330,6 +330,15 @@ def test_gate_config_selects_rank_fusion_and_refuses_a_rank_constant_without_it(
         gate_config(tmp_path, parse_overrides(["scoring.rrf_k=30"]))
 
 
+@pytest.mark.parametrize("setting", ["scoring.rrf_recency_boost=0.25", 'scoring.rrf_tie_break="event_time"'])
+def test_gate_config_refuses_rank_fusion_recency_and_tie_break_without_rank_fusion(tmp_path, setting):
+    fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', setting]))
+    name, value = setting.removeprefix("scoring.").split("=")
+    assert getattr(fused.scoring, name) == json.loads(value)
+    with pytest.warns(UserWarning), pytest.raises(ValueError, match=f"scoring.{name} applies only with"):
+        gate_config(tmp_path, parse_overrides([setting]))
+
+
 def test_gate_config_refuses_a_rank_fusion_session_decay_without_rank_fusion(tmp_path):
     decay = "packing.session_context_rank_fusion_score_decay=0.6"
     fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', decay]))
