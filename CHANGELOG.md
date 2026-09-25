@@ -150,7 +150,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   offline evidence gate now records, for each replayed question, whether its
   candidates share one temporal affinity and whether the current-state path
   applied; its comparison counts the first per category and lists the
-  questions that enter or leave the path.
+  questions that enter or leave the path. On the gate the setting packed all
+  annotated evidence for 5 more LoCoMo questions and 1 more LongMemEval-S
+  question and for none fewer (+0.3 and +0.2 points); it stays off until the
+  paired answer run.
 
 ### Fixed
 

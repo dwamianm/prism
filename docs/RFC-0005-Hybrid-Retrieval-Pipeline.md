@@ -119,6 +119,19 @@ the resolved window. A date after a preposition or with a number ("in June",
 written with the default keep their bytes and a learned ranking profile built
 under the other order does not apply.
 
+On the offline evidence gate with the other defaults (commit `22007c01`), the
+setting changed the intent of 569 LoCoMo and 86 LongMemEval-S questions,
+including 291 of the 321 LoCoMo temporal questions. Temporal affinity varied
+among the candidates of 210 LoCoMo questions instead of none (37 of them
+temporal) and of 168 LongMemEval-S questions instead of 82. All annotated
+evidence was packed for 5 more LoCoMo questions and 1 more LongMemEval-S
+question, and for none fewer: +0.3 points (95% interval +0.1 to +0.7) and +0.2
+points (+0.0 to +0.6). LoCoMo temporal gained 0.9 points and LongMemEval-S
+temporal-reasoning 0.8. Eighteen LoCoMo questions left the current-state path
+and none entered it: thirteen name a date or period, three use "when" to mean
+"whenever" and two say "recently" (#192). The default stays `entity_first`
+until the epic #77 paired answer run.
+
 **TemporalType values:** `ABSOLUTE` (specific date), `RELATIVE` (e.g., "last week"), `DURATION` (e.g., "over the past month"), `RECURRING` (e.g., "every Tuesday").
 
 Query analysis is NOT a blocking LLM call by default. Implementations SHOULD use a lightweight classification model or rule-based extraction for this stage. A full LLM call is permitted only if the retrieval budget allows it.
