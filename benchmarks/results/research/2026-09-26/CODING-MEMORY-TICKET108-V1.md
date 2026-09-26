@@ -80,6 +80,13 @@ debugging episodes, full Codex/Claude agents, or unrestricted repository edits.
 After recording the fix in memory, issue 108 must not be reused as untouched
 evidence of learning.
 
+After all four scored runs, the controller saved the observed experiment lesson
+as node `baade190-89f2-4b5b-8ab9-490f54715285`. Repeating the unchanged task
+query returned that node and made its text visible in the packed context:
+1,147 tokens within the 2,048-token budget, with a new persisted receipt
+(`abe6aab7-c0ed-4dbd-872a-b981596af808`). This checks the capture/retrieval loop;
+no new agent repair was scored and this is not coding-quality evidence.
+
 ## Production validation
 
 The reviewed production patch (`538a2c6b`) applies the existing separator map
@@ -93,15 +100,47 @@ that boundary. No retrieval or format default changes.
 Focused validation: **174 passed, 1 skipped** across the new contract/tool
 checks, original trial tests, reader/context formatting, packing composition
 and receipt compatibility. Ruff and whitespace checks passed. The skipped test
-requires the PostgreSQL environment. Offline evidence comparisons are in
-progress and will be recorded before this work is marked ready.
+requires the PostgreSQL environment.
+
+All ten [CI jobs](https://github.com/dwamianm/prism/actions/runs/36215339624)
+passed on implementation/report commit `c82ba509`: DuckDB and PostgreSQL on
+Python 3.11–3.13, framework integrations on 3.11/3.13, lint/build and simulations.
+The final gate/capture report update changes only evidence documentation.
+
+The required offline evidence gate validates this production rendering change;
+it is separate from the four coding-agent runs above. Four complete passes
+replayed 1,540 LoCoMo and 500 LongMemEval-S questions: each format before
+(`4dba69a1`) and after (`538a2c6b`), with all other defaults unchanged. The
+configured budget was 4,096 tokens with a 100-token reserve. No reader/judge
+model was called. The [compact gate record](coding-memory-ticket108-v1/offline-gates.json)
+contains identities, paired metrics and hashes for the full local reports.
+
+| Format | Dataset | All annotated evidence present as text, before → after |
+|---|---|---:|
+| Auditable | LoCoMo | 1,108/1,536 → 1,108/1,536 |
+| Auditable | LongMemEval-S | 415/470 → 415/470 |
+| Compact | LoCoMo | 1,182/1,536 → 1,182/1,536 |
+| Compact | LongMemEval-S | 430/470 → 430/470 |
+
+The denominators exclude questions without evidence annotations. There were
+zero paired retention wins or losses, unchanged evidence recall and identical
+candidate counts. In each format, one LongMemEval-S context (`25e5aa4f`)
+changed bytes and grew by one token; every other context hash was unchanged.
+These are development-corpus regression measurements, not answer scores or
+evidence about coding assistance. Concurrent gate timings are not compared.
+
+The gate commands were `python -m benchmarks.diagnostics.product_packing gate`
+with `--set 'packing.context_format="auditable"'` or `"compact"` on each pinned
+commit, followed by `gate-compare` for each before/after pair. All full reports,
+comparisons and logs remain under the ignored gate directory below.
 
 ## Artifacts
 
-Five compact evidence files are tracked beside this report: manifest, per-run
-metrics, summary, preflight and a [checksum index](coding-memory-ticket108-v1/SHA256SUMS.json).
+Six compact evidence files are tracked beside this report: manifest, per-run
+metrics, summary, preflight, the offline gate record and a
+[checksum index](coding-memory-ticket108-v1/SHA256SUMS.json).
 Complete source hashes, recall, transcripts and repairs remain in ignored
 `benchmarks/coding/runs/ticket108-v1/`; the checksum index covers every file.
 A fresh clone does not contain these raw artifacts. Gate reports/logs likewise
-stay in ignored `benchmarks/coding/runs/ticket108-gates/`; compact comparisons
-will accompany the completed validation.
+stay in ignored `benchmarks/coding/runs/ticket108-gates/`; their checksums are in
+the compact gate record. Combined tracked evidence is about 19 KB.
