@@ -12,6 +12,9 @@ CMD ["python", "-m", "prme.integrations.coding_server"]
 
 FROM runtime AS sandbox
 # No model, credentials, memory pack, Docker socket, or host checkout is mounted.
+ENV TIKTOKEN_CACHE_DIR=/opt/tiktoken-cache
+# Packing checks run without network access, including their tokenizer assets.
+RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
 WORKDIR /work
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/work/src
 CMD ["python", "/case/check.py"]
