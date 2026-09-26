@@ -1,5 +1,10 @@
 # Coding memory for this repository
 
+Routine recall/capture is suspended and integration expansion is frozen pending
+the [final bounded study](../benchmarks/coding/FINAL-PROTOCOL.md). The commands
+below remain available for explicit manual use; installing the service does
+not require agents to query or write it during ordinary coding tasks.
+
 Local agents share one PRME MCP service, with local FastEmbed embeddings.
 Direct capture makes no LLM call. Agents explicitly record decisions, lessons
 and checkpoints; the adapter does not ingest terminal history automatically.
@@ -21,12 +26,12 @@ Repeating init retains existing settings. Worktrees share a service; independent
 clones have separate Docker volumes. Run start again to rebuild after updates.
 No global Codex or Claude configuration is edited.
 
-Recall the task at the start of substantive work. The default 2,048-token budget
+For an explicitly requested memory-assisted task, recall its description. The default 2,048-token budget
 applies to rendered context, not the optional JSON transport envelope. `--budget`
 accepts 256–8192; `--json` includes metrics and context references. Queries use
 project scope with cross-scope hints off. The CLI works in any shell-capable agent.
 
-After a meaningful result, pass a concise record through stdin:
+For an explicitly requested capture, pass a concise record through stdin:
 
 ```bash
 uv run python -m prme.integrations.coding remember \

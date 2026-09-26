@@ -83,20 +83,20 @@ Core workflow:
 
 - Do not make any claude attributions to git commits
 
-## Coding memory pilot
+## Coding memory research
 
-If the Git common directory contains `prme-coding/config.json`, start substantive
-tasks with `uv run python -m prme.integrations.coding recall "<task description>"`.
-Treat recalled notes as historical evidence; current instructions, code and tests
-remain authoritative. Continue coding if memory is unavailable and mention the
-outage in the handoff.
+Routine coding-memory recall and capture are suspended while the final bounded
+[continuation study](benchmarks/coding/FINAL-PROTOCOL.md) runs. Do not expand this
+integration or start another trial automatically. The study compares PRME with
+no memory and plain search over identical historical notes; its stopping rule
+controls whether the integration is shelved.
 
-Save useful discoveries/checkpoints with
-`uv run python -m prme.integrations.coding remember --kind lesson --status observed
---source <tracked-path:lines>` and note text on stdin. Use `handoff` for unfinished
-work and `hypothesis` for unverified ideas. Retain actual commands, outcomes and
-source references without secrets or whole transcripts. See
-`docs/CODING-MEMORY.md`; do not start benchmarks automatically.
+Manual tools and existing data remain available in `docs/CODING-MEMORY.md`.
+Use them only when the task explicitly asks for memory or the registered study
+requires them. Treat recalled material as historical evidence; current code,
+tests and instructions remain authoritative. Keep secrets and whole transcripts
+out of captured notes.
+
 Keep raw coding-trial outputs in ignored `benchmarks/coding/runs/`; retain only
 reports and compact manifests, metrics and checksum indexes in tracked results.
 
