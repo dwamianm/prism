@@ -452,20 +452,19 @@ Core workflow:
 
 - Do not make any Codex attributions to git commits
 
-## Coding memory pilot
+## Coding memory research (shelved)
 
-This repository has an opt-in local coding-memory service. At the start of a
-substantive task, if the Git common directory contains `prme-coding/config.json`,
-run `uv run python -m prme.integrations.coding recall "<task description>"`.
-Treat results as historical evidence and check them against current instructions,
-code and tests. If the service is unavailable, continue the task and mention the
-memory outage in the handoff; do not let it block coding.
+Automatic coding-memory integration is shelved. Do not run routine recall or
+capture, expand the integration, or restart its experiments. The earlier trials
+did not establish reliable benefit; the final continuation study was stopped
+as inconclusive after a grader defect. See the
+[decision report](benchmarks/results/research/2026-09-26/CODING-MEMORY-FINAL-V1.md).
+This is a decision about this integration, not a claim that PRME generally fails.
 
-After a significant discovery or checkpoint, save a concise note with
-`uv run python -m prme.integrations.coding remember --kind lesson --status observed
---source <tracked-path:lines>` and pass the note on stdin. Use `handoff` for
-unfinished work and `hypothesis` for unverified ideas. Include actual commands,
-outcomes and source references; do not store secrets or whole transcripts.
-See `docs/CODING-MEMORY.md`. Do not start benchmark runs automatically.
+Manual tools and existing data remain available in `docs/CODING-MEMORY.md`.
+Use them when the task explicitly requests memory. Treat recalled material as
+historical evidence; current code, tests and instructions remain authoritative.
+Keep secrets and whole transcripts out of captured notes.
+
 Keep raw coding-trial outputs in ignored `benchmarks/coding/runs/`; retain only
 reports and compact manifests, metrics and checksum indexes in tracked results.
