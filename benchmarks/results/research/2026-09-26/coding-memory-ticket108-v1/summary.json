@@ -1,0 +1,22 @@
+{
+  "control": {
+    "passed": 2,
+    "runs": 2,
+    "median_seconds": 33.83773677048157,
+    "input_tokens": 183822,
+    "output_tokens": 1476,
+    "provider_failures": 0
+  },
+  "memory": {
+    "passed": 0,
+    "runs": 2,
+    "median_seconds": 42.055951229005586,
+    "input_tokens": 244362,
+    "output_tokens": 2318,
+    "provider_failures": 0
+  },
+  "paired_outcomes": {
+    "loss": 2
+  },
+  "claim_boundary": "One real development ticket, two repeated pairs; no general coding-quality inference."
+}

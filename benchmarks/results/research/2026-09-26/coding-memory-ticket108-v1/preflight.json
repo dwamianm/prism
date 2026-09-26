@@ -1,0 +1,14 @@
+{
+  "baseline": {
+    "passed": false,
+    "exit_code": 1,
+    "output": "Traceback (most recent call last):\n  File \"/case/check.py\", line 134, in <module>\n    check_records()\n  File \"/case/check.py\", line 62, in check_records\n    assert len(audit.splitlines()) == 1, (\"auditable\", repr(separator))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: ('auditable', \"'\\\\x85'\")\n",
+    "seconds": 1.8088841669959947
+  },
+  "witness": {
+    "passed": true,
+    "exit_code": 0,
+    "output": "CHECKS_PASSED\n",
+    "seconds": 1.9157405419973657
+  }
+}
