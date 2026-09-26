@@ -72,6 +72,20 @@ objects and full node IDs in the model context. Exact token accounting applies t
 both formats. Evaluate answer quality before changing a production workload.
 The equivalent environment setting is `PRME_PACKING__CONTEXT_FORMAT=compact`.
 
+All three context formats escape U+0085 (next line), U+2028 (line separator)
+and U+2029 (paragraph separator), in addition to JSON's ordinary escapes. A
+stored record cannot introduce another record or section by containing a line
+separator; decoding the JSON restores its exact text. Ordinary multilingual
+characters remain readable. Escaped bytes count toward the complete context
+token budget and can change which records fit near the limit.
+
+Compatibility for issue #108: new auditable and compact contexts containing
+these three characters differ from earlier rendered bytes and `context_sha256`
+values. Repacking those inputs with the corrected renderer is not a byte-exact
+replay of the old context. Persisted receipt bytes/checksums and stored source
+text are unchanged; reader output and inputs without these characters retain
+their rendering. No retrieval or format default changes.
+
 The default reader format gives the answering model the memory text instead of
 the audit envelope. To choose it explicitly:
 
