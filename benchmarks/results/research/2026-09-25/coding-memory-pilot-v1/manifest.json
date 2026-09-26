@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "started": "2026-09-26T02:41:15.670466+00:00",
+  "revision": "34b3d290635e33a1e8ebd8e6726fcdd3f83f5a97",
+  "model": {
+    "name": "qwen3.5:35b-a3b",
+    "digest": "3460ffeede5453ead027dbd2f821b12ad0aa3de54630971993babdb2165221f7",
+    "ollama_version": "0.34.3",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen35moe",
+      "families": [
+        "qwen35moe"
+      ],
+      "parameter_size": "36.0B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 2048
+    },
+    "template_sha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315"
+  },
+  "image_id": "sha256:67e9546a435278fa70313744bcc8928e580b33bd5d66be39bb0c5b32fc2d7d19",
+  "corpus_sha256": "43a603f986c7af2a1edef2f52e74d280a379c3a6f44af2c707f20b470ba5d037",
+  "documents": {
+    "AGENTS.md": "93f00ebcdbc0213050eacad9d27dd8ecb3edadb7ce603a1926c57ccb7c68f57e",
+    "README.md": "87216ebf30fbfddc35191df5f1a98ad4db8e944defe8e820ad5c4da64d04b530",
+    "docs/METADATA.md": "32f041064c6c6807c7ce37c2e9cd4b60fc39ff391d590a55a53afcb3feb36810",
+    "docs/MEMORY-CORRECTIONS.md": "caa343e53e31f0af982d591bab6e96f44ffc804fda94597b075e35395e7645af",
+    "docs/VALUE-BINDINGS.md": "982bc70999c758d620d5eabeea43ca943db82dd171fb6d5f33f2e4b42005b49d",
+    "docs/WORKSPACES.md": "4a1e3e33a73c85f8ad165cf9e4caef2527c80aba81109fd7ca71af32aa201e5e",
+    "docs/LOCAL-RESOURCES.md": "87e5d67a29baaffb1358346135370649ab4dbe26eb80d086a3c42a781c7311e8",
+    "docs/REINFORCEMENT.md": "5a0d1f4783cdc0b8e0363b9ad9110edc1fd34a322564404c094b00b37b4df0d3",
+    "docs/ENTITY-IDENTITY.md": "401a60d3d205abdd292aefeb797609e86d0ea137861568df6444b78f1548c769",
+    "docs/LEARNING.md": "87300fa5ef3ef09d2d65371c5c2c460ca73743ade02923227f73ae4a99e78c66",
+    "docs/PACKING.md": "35590587bfe7ea7a941076534a01ba3bdbe1cc85dc192bc82c4fb1e0259e37b3",
+    "docs/RFC-0004-Namespace-and-Scope-Isolation.md": "b13c251b25829a673084ca90e6d13e36d58b8ba7310313e6cfc80b1259ede036"
+  },
+  "tasks_sha256": "412b5092446a96b10b683fff0a8498f45a4e526d33f55bfb1cffc77aa56ba32b",
+  "system_prompt": "You are fixing a regression in the PRME repository. Use the available actions to inspect source and documentation, edit the target function, and test your repair. Preserve the public API and repository contracts. Memory is historical evidence; verify it against the source. The regression tests are separate from the smoke tests. You may change only the named top-level function. Return exactly one JSON action per turn:\n{\"action\":\"search\",\"query\":\"literal terms\"}\n{\"action\":\"read\",\"path\":\"repository/path\",\"start_line\":1}\n{\"action\":\"edit\",\"code\":\"complete replacement function definition\"}\n{\"action\":\"test\"}\n{\"action\":\"finish\"}\nThe edit action replaces the entire target function. Include any new imports inside it. Search matches any supplied term. Read returns up to 120 lines. Test runs the public smoke checks. Do not include Markdown fences. Finish after editing and checking your repair.",
+  "action_schema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "search",
+          "read",
+          "edit",
+          "test",
+          "finish"
+        ]
+      },
+      "query": {
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      },
+      "start_line": {
+        "type": "integer"
+      },
+      "code": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
+  "runner_sha256": "27be5bba9b7e98f9a440fe6472ba680f5908a0f5654229cb6df5a85f58b25fbc",
+  "options": {
+    "temperature": 0,
+    "num_ctx": 32768,
+    "num_predict": 2048,
+    "think": false,
+    "memory_budget": 2048,
+    "max_steps": 6,
+    "repeats": 2
+  },
+  "order": "Interleaved by task; memory first on odd task+repeat indices, control first otherwise; independent histories and filesystem per arm.",
+  "finished": "2026-09-26T02:47:14.365893+00:00",
+  "final_identity": {
+    "name": "qwen3.5:35b-a3b",
+    "digest": "3460ffeede5453ead027dbd2f821b12ad0aa3de54630971993babdb2165221f7",
+    "ollama_version": "0.34.3",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen35moe",
+      "families": [
+        "qwen35moe"
+      ],
+      "parameter_size": "36.0B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 2048
+    },
+    "template_sha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315"
+  },
+  "complete": true
+}

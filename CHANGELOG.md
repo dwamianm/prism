@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in repository coding memory through a local Docker MCP service, with
+  source-backed lesson/handoff capture, bounded recall, shared Git-worktree
+  configuration, and an isolated local-model experiment harness. The first
+  four-task development pilot passed 2/8 runs with memory versus 0/8 without;
+  both gains repeated one task and do not establish general coding improvement.
+  See [coding memory](docs/CODING-MEMORY.md).
+
 ## [0.13.0] - 2026-09-25
 
 ### Upgrade notes

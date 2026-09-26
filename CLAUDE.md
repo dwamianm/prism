@@ -83,6 +83,23 @@ Core workflow:
 
 - Do not make any claude attributions to git commits
 
+## Coding memory pilot
+
+If the Git common directory contains `prme-coding/config.json`, start substantive
+tasks with `uv run python -m prme.integrations.coding recall "<task description>"`.
+Treat recalled notes as historical evidence; current instructions, code and tests
+remain authoritative. Continue coding if memory is unavailable and mention the
+outage in the handoff.
+
+Save useful discoveries/checkpoints with
+`uv run python -m prme.integrations.coding remember --kind lesson --status observed
+--source <tracked-path:lines>` and note text on stdin. Use `handoff` for unfinished
+work and `hypothesis` for unverified ideas. Retain actual commands, outcomes and
+source references without secrets or whole transcripts. See
+`docs/CODING-MEMORY.md`; do not start benchmarks automatically.
+Keep raw coding-trial outputs in ignored `benchmarks/coding/runs/`; retain only
+reports and compact manifests, metrics and checksum indexes in tracked results.
+
 ## Epic #77 work rules (label `audit-2026-09`)
 
 These rules apply to every issue in epic #77, including unattended ticket-loop runs. They exist because pull requests in this repository can merge automatically once CI passes. The evidence behind the epic is `memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md`.

@@ -1,0 +1,23 @@
+{
+  "control": {
+    "passed": 0,
+    "runs": 8,
+    "median_seconds": 10.970311375538586,
+    "input_tokens": 155059,
+    "output_tokens": 1862,
+    "provider_failures": 0
+  },
+  "memory": {
+    "passed": 2,
+    "runs": 8,
+    "median_seconds": 13.31903856198187,
+    "input_tokens": 203700,
+    "output_tokens": 6335,
+    "provider_failures": 0
+  },
+  "paired_outcomes": {
+    "both_fail": 6,
+    "gain": 2
+  },
+  "claim_boundary": "Four authored development regressions, repeated on the same tasks. This is not an untouched confirmation, an evaluation of Codex/Claude Code, or evidence of general coding superiority."
+}
