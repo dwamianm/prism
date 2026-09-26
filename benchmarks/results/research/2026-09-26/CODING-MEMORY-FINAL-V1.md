@@ -68,9 +68,13 @@ trial or a retrospective promotion score. See
 | Scenario | Completed arms | Interpretation |
 | --- | --- | --- |
 | Corrections | Control, notes, PRME | None passed. Control/notes made no edit; PRME wrote before validating the old node and omitted its scope. |
-| Workspaces | Control, notes, PRME | None passed. Control/notes made no edit; PRME omitted existing-only namespace opening and used the wrong rendering interface. |
+| Workspaces | Control, notes, PRME | None passed. Control/notes made no edit; PRME omitted existing-only namespace opening. |
 | Value bindings | Control, notes, PRME | Registered grading invalid for all three. Identical candidates passed the real-object diagnostic. |
 | Feedback | Control; notes interrupted | Control made no edit. No completed comparison. |
+
+The workspace fake also omitted the real bundle's `rendered_context` field.
+That field access was valid; the observed PRME candidate nevertheless violated
+the explicit existing-only namespace requirement before reaching it.
 
 These partial observations do not establish a comparative success rate. Raw
 registered scores and token measurements are preserved with explicit validity
