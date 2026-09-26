@@ -76,9 +76,9 @@ _MONTH_NAMES = (
 )
 # A leading "(7:55 pm on 9 June, 2023)" or "[2023-06-09]" group in stored text.
 _LEADING_GROUP_RE = re.compile(r"\s*[(\[]([^()\[\]\n]{1,80})[)\]]")
-# JSON leaves these line separators raw; the reader format escapes them so a
-# record stays on one line. The auditable and compact bytes stay unchanged.
-_READER_LINE_SEPARATORS = {
+# JSON leaves these line separators raw. Escape them in every context format
+# so source text cannot create apparent records or section headings.
+_CONTEXT_LINE_SEPARATORS = {
     ord("\u0085"): "\\u0085",
     ord("\u2028"): "\\u2028",
     ord("\u2029"): "\\u2029",
@@ -739,7 +739,7 @@ def reader_text(text: str) -> str:
     The result is a JSON string that ``json.loads`` restores exactly and that
     contains no line break of any kind.
     """
-    return json.dumps(text, ensure_ascii=False).translate(_READER_LINE_SEPARATORS)
+    return json.dumps(text, ensure_ascii=False).translate(_CONTEXT_LINE_SEPARATORS)
 
 
 def _reader_time_label(node: MemoryNode, text: str) -> str | None:
@@ -841,7 +841,9 @@ def _render_compact_entry(
         as_utc(node.valid_to).isoformat() if node.valid_to else None,
         candidate.rendered_text,
     ]
-    return json.dumps(entry, ensure_ascii=False, separators=(",", ":"))
+    return json.dumps(entry, ensure_ascii=False, separators=(",", ":")).translate(
+        _CONTEXT_LINE_SEPARATORS
+    )
 
 
 def _render_entry(candidate: RetrievalCandidate) -> str:
@@ -867,7 +869,9 @@ def _render_entry(candidate: RetrievalCandidate) -> str:
     speaker = metadata_speaker(node.metadata)
     if speaker is not None:
         entry["speaker"] = speaker
-    return json.dumps(entry, ensure_ascii=False, separators=(",", ":"))
+    return json.dumps(entry, ensure_ascii=False, separators=(",", ":")).translate(
+        _CONTEXT_LINE_SEPARATORS
+    )
 
 
 def _render_sections(

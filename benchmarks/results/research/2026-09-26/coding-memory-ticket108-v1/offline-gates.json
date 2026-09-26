@@ -1,0 +1,323 @@
+{
+  "purpose": "Regression validation of the production renderer fix, separate from coding-agent outcomes",
+  "complete": true,
+  "raw_directory": "benchmarks/coding/runs/ticket108-gates",
+  "formats": {
+    "auditable": {
+      "before_commit": "4dba69a1a2b14ab980c9ec60744036753f6d97e7",
+      "after_commit": "538a2c6b1c3959211db90cac3a2125029b5d5a19",
+      "overrides": {
+        "packing": {
+          "context_format": "auditable"
+        }
+      },
+      "engine_config_sha256": "93e38e636277c58c2cc7b24afab2d885ad2eb7dbae7528d8c5c5276f0594c2c1",
+      "token_budget": 4096,
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      },
+      "benchmarks": {
+        "locomo": {
+          "before": {
+            "questions": 1540,
+            "annotated_questions": 1536,
+            "all_evidence_packed": 1111,
+            "all_evidence_packed_with_text": 1108,
+            "records_per_context": 24.691558441558442,
+            "records_without_text": 320,
+            "context_tokens_mean": 3951.9084415584416,
+            "candidates_mean": 554.8227272727273
+          },
+          "after": {
+            "questions": 1540,
+            "annotated_questions": 1536,
+            "all_evidence_packed": 1111,
+            "all_evidence_packed_with_text": 1108,
+            "records_per_context": 24.691558441558442,
+            "records_without_text": 320,
+            "context_tokens_mean": 3951.9084415584416,
+            "candidates_mean": 554.8227272727273
+          },
+          "all_evidence_packed": {
+            "queries": 1536,
+            "before": 0.7233072916666666,
+            "after": 0.7233072916666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 1536
+          },
+          "all_evidence_packed_with_text": {
+            "queries": 1536,
+            "before": 0.7213541666666666,
+            "after": 0.7213541666666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 1536
+          },
+          "evidence_recall": {
+            "queries": 1536,
+            "before": 0.7799562811526458,
+            "after": 0.7799562811526458,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 1536
+          },
+          "changed_contexts": [],
+          "candidate_counts_identical": true
+        },
+        "longmemeval": {
+          "before": {
+            "questions": 500,
+            "annotated_questions": 470,
+            "all_evidence_packed": 415,
+            "all_evidence_packed_with_text": 415,
+            "records_per_context": 17.85,
+            "records_without_text": 304,
+            "context_tokens_mean": 3962.998,
+            "candidates_mean": 492.028
+          },
+          "after": {
+            "questions": 500,
+            "annotated_questions": 470,
+            "all_evidence_packed": 415,
+            "all_evidence_packed_with_text": 415,
+            "records_per_context": 17.85,
+            "records_without_text": 304,
+            "context_tokens_mean": 3963.0,
+            "candidates_mean": 492.028
+          },
+          "all_evidence_packed": {
+            "queries": 470,
+            "before": 0.8829787234042553,
+            "after": 0.8829787234042553,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 470
+          },
+          "all_evidence_packed_with_text": {
+            "queries": 470,
+            "before": 0.8829787234042553,
+            "after": 0.8829787234042553,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 470
+          },
+          "evidence_recall": {
+            "queries": 470,
+            "before": 0.9310283687943263,
+            "after": 0.9310283687943263,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 470
+          },
+          "changed_contexts": [
+            {
+              "question_id": "25e5aa4f",
+              "token_delta": 1
+            }
+          ],
+          "candidate_counts_identical": true
+        }
+      }
+    },
+    "compact": {
+      "before_commit": "4dba69a1a2b14ab980c9ec60744036753f6d97e7",
+      "after_commit": "538a2c6b1c3959211db90cac3a2125029b5d5a19",
+      "overrides": {
+        "packing": {
+          "context_format": "compact"
+        }
+      },
+      "engine_config_sha256": "63df53883a3929a144f79717cbd2bed42684dc7e460a170edea2f2378eb54a6a",
+      "token_budget": 4096,
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      },
+      "benchmarks": {
+        "locomo": {
+          "before": {
+            "questions": 1540,
+            "annotated_questions": 1536,
+            "all_evidence_packed": 1186,
+            "all_evidence_packed_with_text": 1182,
+            "records_per_context": 36.44220779220779,
+            "records_without_text": 405,
+            "context_tokens_mean": 3969.0980519480518,
+            "candidates_mean": 554.8227272727273
+          },
+          "after": {
+            "questions": 1540,
+            "annotated_questions": 1536,
+            "all_evidence_packed": 1186,
+            "all_evidence_packed_with_text": 1182,
+            "records_per_context": 36.44220779220779,
+            "records_without_text": 405,
+            "context_tokens_mean": 3969.0980519480518,
+            "candidates_mean": 554.8227272727273
+          },
+          "all_evidence_packed": {
+            "queries": 1536,
+            "before": 0.7721354166666666,
+            "after": 0.7721354166666666,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 1536
+          },
+          "all_evidence_packed_with_text": {
+            "queries": 1536,
+            "before": 0.76953125,
+            "after": 0.76953125,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 1536
+          },
+          "evidence_recall": {
+            "queries": 1536,
+            "before": 0.830974780605773,
+            "after": 0.830974780605773,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 1536
+          },
+          "changed_contexts": [],
+          "candidate_counts_identical": true
+        },
+        "longmemeval": {
+          "before": {
+            "questions": 500,
+            "annotated_questions": 470,
+            "all_evidence_packed": 431,
+            "all_evidence_packed_with_text": 430,
+            "records_per_context": 24.852,
+            "records_without_text": 441,
+            "context_tokens_mean": 3977.702,
+            "candidates_mean": 492.028
+          },
+          "after": {
+            "questions": 500,
+            "annotated_questions": 470,
+            "all_evidence_packed": 431,
+            "all_evidence_packed_with_text": 430,
+            "records_per_context": 24.852,
+            "records_without_text": 441,
+            "context_tokens_mean": 3977.704,
+            "candidates_mean": 492.028
+          },
+          "all_evidence_packed": {
+            "queries": 470,
+            "before": 0.9170212765957447,
+            "after": 0.9170212765957447,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 470
+          },
+          "all_evidence_packed_with_text": {
+            "queries": 470,
+            "before": 0.9148936170212766,
+            "after": 0.9148936170212766,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 470
+          },
+          "evidence_recall": {
+            "queries": 470,
+            "before": 0.9528014184397163,
+            "after": 0.9528014184397163,
+            "delta": 0.0,
+            "interval_95": [
+              0.0,
+              0.0
+            ],
+            "wins": 0,
+            "losses": 0,
+            "ties": 470
+          },
+          "changed_contexts": [
+            {
+              "question_id": "25e5aa4f",
+              "token_delta": 1
+            }
+          ],
+          "candidate_counts_identical": true
+        }
+      }
+    }
+  },
+  "raw_sha256": {
+    "after-auditable.json": "2ad8e2ef49528d136bcb493df35aed6ba6a354170c869db74d0e3959a1e96d33",
+    "after-auditable.log": "3f6415d125f4d22342dd76b8f8347098c621a75b714fcec28f6f7677c1783141",
+    "after-auditable.md": "609723dc3e26431e7296910a15e875078fff4341c72d647001b2c8270b435628",
+    "after-compact.json": "f9f34a21f7d24e5944b0d2c7aa8870c4d4f7324aeb1e03d6f0650767a7d827d6",
+    "after-compact.log": "6047ee0d1c86cd88ae8c75e6a13c87e51a8a99f60506326b50e54c9d1c0cd6e0",
+    "after-compact.md": "442ef32a201534c4c195f8a115387ac05df577ac44221c7980ef3482d38213cc",
+    "auditable-comparison.json": "a6a95f910d9c6288cccf60be4d9e331cc547bf69769b172b4ce31fe163f7f0c2",
+    "auditable-comparison.log": "841f2e764d1cf5238d68d937cf20ea83436c21f796b1fbbc1c761fdd5c911284",
+    "auditable-comparison.md": "b996478e1c868ab879d1038d6f41f1634efa1c8f832a88b1c88ae6edf6c5c7a7",
+    "before-auditable.json": "777275cb44bf9b640f4f924d3b65314bd9f0b67deec6c85a09a2cad80fd23d6c",
+    "before-auditable.log": "9dccfa752f218c0ca65ea1d663da1f5907d83788d5a2026a0a3dfa72da848d26",
+    "before-auditable.md": "3d5d7ca912c6b19939bb9dca3f55132322bb1f6ef763964b822d9311aa0c4d3d",
+    "before-compact.json": "56adadc1b2a7fe809730ef411d676e8d0eb9b85b0aa84e47ed528c04f1a7a0eb",
+    "before-compact.log": "1393af3159e27ee064bee422f0b108573f4577e3cfa88e2017cb77847172ba6a",
+    "before-compact.md": "e6f831ff6bf48e6defcce8ea9ab4c089bbb54adafc9d3c244b22d8135953bbeb",
+    "compact-comparison.json": "68d2a47b73633d2d12e8578c812ceefd3dd50a43255805aed86c5ae37345efef",
+    "compact-comparison.log": "bfa059df7b66e717176155b2d9ac433d02fa4d75c5382f1564cb8395784c88cc",
+    "compact-comparison.md": "8a402be5272f64d42831943fb97e6974313f9a64a543c81505503b3824f9cab6"
+  }
+}

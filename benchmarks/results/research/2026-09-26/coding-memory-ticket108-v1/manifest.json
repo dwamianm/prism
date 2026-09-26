@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "started": "2026-09-26T03:31:28.306787+00:00",
+  "revision": "4dba69a1a2b14ab980c9ec60744036753f6d97e7",
+  "image_id": "sha256:9fb0d32a30ad675340d9d158c52a5356a2ba475074af92e6c9de55325247336d",
+  "model": {
+    "name": "qwen3.5:35b-a3b",
+    "digest": "3460ffeede5453ead027dbd2f821b12ad0aa3de54630971993babdb2165221f7",
+    "ollama_version": "0.34.3",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen35moe",
+      "families": [
+        "qwen35moe"
+      ],
+      "parameter_size": "36.0B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 2048
+    },
+    "template_sha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315"
+  },
+  "source_snapshot_sha256": "4b4e55c9f69d43135e882ef5b7d72f50571764dca08aa5848b895ff5ab8c97ab",
+  "file_count": 586,
+  "runner_sha256": "7fc11ca6e4c3c1049177f036d430c2fde673ac4f7b95bfe3dd535249cfbc0e86",
+  "checks_sha256": "fcac7d873848cffbc2d08a2b9ee090f3187962e43263adc94dd6cfec6647d6ba",
+  "shared_runner_sha256": "27be5bba9b7e98f9a440fe6472ba680f5908a0f5654229cb6df5a85f58b25fbc",
+  "protocol_sha256": "07b377dc9f27124a1e705e0e06eacf983aee5a30f0d8ea3371d4fed792bc7bbf",
+  "dockerfile_sha256": "3cb158f90f38da9024a9b0f267faa3e6c7d9f2b19e8928539c32a81533533e9b",
+  "context_sha256": "662089e333b9d92e34841c589579df30fa0d8f66b032ffb2a3eaee8c6d197d60",
+  "memory_request_id": "3a5b0bd8-16f8-473a-b1e9-711f82c8655a",
+  "memory_node_ids": [
+    "438493bf-7a96-4f38-9fe0-f30dd43e6ea4",
+    "fe6a5018-4c4f-4db1-a6e9-3e79d24f2142",
+    "7a2cb259-5912-4e5b-82a7-9a4962c382b8",
+    "e94c2c32-684b-4bc7-83ff-eba11aebcf26",
+    "b39d6b68-ec7e-494f-bea9-9e043cf1e529",
+    "66aef128-a564-4621-97e8-40fe1b67a671",
+    "64358a08-2f1b-4816-a075-63eadeecdb23",
+    "5bc90c59-479c-41fc-9445-994931539e46"
+  ],
+  "system_prompt": "You are implementing a real PRME bug fix. Treat retrieved memory as historical evidence and verify it against source. You have read/search/list access to frozen src/, docs/, existing tests/ Python files and root instructions; no shell or network tools. You can edit only the named two top-level functions. Return exactly one JSON action per turn:\n{\"action\":\"list\",\"path\":\"src/prme/retrieval/\",\"offset\":0}\n{\"action\":\"search\",\"query\":\"literal phrase\",\"path\":\"src/\"}\n{\"action\":\"read\",\"path\":\"repository/file\",\"start_line\":1}\n{\"action\":\"edit\",\"function\":\"_render_entry\",\"code\":\"complete replacement function\"}\n{\"action\":\"test\"}\n{\"action\":\"finish\"}\nSearch matches the literal phrase, case insensitively, within an optional path prefix. List pages hold 100 paths, read pages 120 lines. Edit replaces exactly one permitted function; any new imports must go inside it. The public smoke check is limited; separate acceptance checks grade both renderers. Inspect, edit, test and finish within twelve actions. Each reply reports the remaining budget. Invalid actions use a step. Do not include Markdown fences.",
+  "task_prompt": "Fix PRME issue 108. Auditable and compact memory records currently allow Unicode next-line U+0085, line separator U+2028 and paragraph separator U+2029 to split one stored record into apparent extra records or section headings. Each rendered record must occupy one line, even for untrusted speaker text where supported. Preserve exact JSON round trips, existing fields and references, ordinary multilingual Unicode bytes, validation errors and measured packing token budgets. Keep reader format output unchanged. Fix both affected renderers in src/prme/retrieval/packing.py.",
+  "action_schema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "list",
+          "search",
+          "read",
+          "edit",
+          "test",
+          "finish"
+        ]
+      },
+      "path": {
+        "type": "string"
+      },
+      "offset": {
+        "type": "integer"
+      },
+      "query": {
+        "type": "string"
+      },
+      "start_line": {
+        "type": "integer"
+      },
+      "function": {
+        "type": "string"
+      },
+      "code": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
+  "settings": {
+    "max_steps": 12,
+    "repeats": 2,
+    "seeds": [
+      20260926,
+      20260927
+    ],
+    "memory_budget": 2048,
+    "temperature": 0,
+    "think": false,
+    "num_ctx": 32768,
+    "num_predict": 2048
+  },
+  "order": [
+    "control",
+    "memory",
+    "memory",
+    "control"
+  ],
+  "complete": true,
+  "finished": "2026-09-26T03:34:10.954919+00:00"
+}
