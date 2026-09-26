@@ -83,19 +83,19 @@ Core workflow:
 
 - Do not make any claude attributions to git commits
 
-## Coding memory research
+## Coding memory research (shelved)
 
-Routine coding-memory recall and capture are suspended while the final bounded
-[continuation study](benchmarks/coding/FINAL-PROTOCOL.md) runs. Do not expand this
-integration or start another trial automatically. The study compares PRME with
-no memory and plain search over identical historical notes; its stopping rule
-controls whether the integration is shelved.
+Automatic coding-memory integration is shelved. Do not run routine recall or
+capture, expand the integration, or restart its experiments. The earlier trials
+did not establish reliable benefit; the final continuation study was stopped
+as inconclusive after a grader defect. See the
+[decision report](benchmarks/results/research/2026-09-26/CODING-MEMORY-FINAL-V1.md).
+This is a decision about this integration, not a claim that PRME generally fails.
 
 Manual tools and existing data remain available in `docs/CODING-MEMORY.md`.
-Use them only when the task explicitly asks for memory or the registered study
-requires them. Treat recalled material as historical evidence; current code,
-tests and instructions remain authoritative. Keep secrets and whole transcripts
-out of captured notes.
+Use them when the task explicitly requests memory. Treat recalled material as
+historical evidence; current code, tests and instructions remain authoritative.
+Keep secrets and whole transcripts out of captured notes.
 
 Keep raw coding-trial outputs in ignored `benchmarks/coding/runs/`; retain only
 reports and compact manifests, metrics and checksum indexes in tracked results.

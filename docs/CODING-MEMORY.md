@@ -1,9 +1,11 @@
 # Coding memory for this repository
 
-Routine recall/capture is suspended and integration expansion is frozen pending
-the [final bounded study](../benchmarks/coding/FINAL-PROTOCOL.md). The commands
-below remain available for explicit manual use; installing the service does
-not require agents to query or write it during ordinary coding tasks.
+Automatic integration is **shelved**. Routine recall/capture requirements have
+been removed; do not expand the integration or restart its experiments. The
+[final decision report](../benchmarks/results/research/2026-09-26/CODING-MEMORY-FINAL-V1.md)
+records the earlier mixed/negative evidence and the final inconclusive study.
+The commands below remain available for explicit manual use. Existing memory
+and credentials are retained; ordinary coding tasks do not query or write them.
 
 Local agents share one PRME MCP service, with local FastEmbed embeddings.
 Direct capture makes no LLM call. Agents explicitly record decisions, lessons
@@ -61,7 +63,15 @@ organization is disabled for this service.
 the embedding model. Multiple agents connect to the service instead of opening
 DuckDB in separate processes. Local Docker/credential access remains trusted.
 
-## Experiments
+## Archived experiments
+
+These runners and protocols are retained for audit, not as a recommendation to
+start another trial. The final continuation study's bindings grader rejected a
+valid public API implementation; its registered grading is invalid for that task.
+The study stopped with ten completed runs and one interrupted run. A diagnostic
+against real objects confirmed the defect, without new model calls or rescoring.
+No replacement study is planned. Earlier results below retain their original
+scope; none establishes general benefit or general failure of PRME.
 
 The [protocol](../benchmarks/coding/PROTOCOL.md) uses a separate memory container
 and fresh networkless containers for generated code. Ollama/controller run on
@@ -91,8 +101,9 @@ when someone needs the full run; a fresh clone contains only the compact record.
 
 The [first completed pilot](../benchmarks/results/research/2026-09-25/CODING-MEMORY-PILOT-V1.md)
 passed 2/8 runs with memory versus 0/8 without it. Both gains repeated the same
-legacy serialization task; input tokens increased by 31.4%. This remains an
-opt-in development integration, with no claim of general coding improvement.
+legacy serialization task; input tokens increased by 31.4%. At that point this was an
+opt-in development integration, with no claim of general coding improvement;
+it is now shelved as described above.
 
 The [real-ticket follow-up on issue 108](../benchmarks/results/research/2026-09-26/CODING-MEMORY-TICKET108-V1.md)
 used the existing daily-use memory, complete frozen source/existing-test access

@@ -1,0 +1,63 @@
+{
+  "complete": false,
+  "totals": {
+    "control": {
+      "passes": 0,
+      "input_tokens": 265522,
+      "output_tokens": 1296,
+      "seconds": 93.40835437504575
+    },
+    "notes": {
+      "passes": 0,
+      "input_tokens": 298723,
+      "output_tokens": 801,
+      "seconds": 73.62565720896237
+    },
+    "prme": {
+      "passes": 0,
+      "input_tokens": 179313,
+      "output_tokens": 1093,
+      "seconds": 62.34353520703735
+    }
+  },
+  "reliable_tasks": {
+    "control": 0,
+    "notes": 0,
+    "prme": 0
+  },
+  "repeat_losses": [],
+  "provider_failures": 0,
+  "correctness_gate": false,
+  "efficiency_gate": false,
+  "decision": "shelve_automatic_integration",
+  "recorded_at": "2026-09-26T20:03:51.901353+00:00",
+  "evaluation_status": "inconclusive_grader_defect",
+  "reason": "Bindings test double rejects the exported resolver helper, which is exactly what MemoryBundle.resolve_tool_arguments delegates to. All three identical generated implementations pass the real-object diagnostic.",
+  "completed_runs": 10,
+  "interrupted_run": {
+    "task": "feedback",
+    "repeat": 0,
+    "arm": "notes",
+    "completed_actions": 6
+  },
+  "unstarted_runs": 13,
+  "invalidated_runs": [
+    {
+      "task": "bindings",
+      "repeat": 0,
+      "arm": "prme"
+    },
+    {
+      "task": "bindings",
+      "repeat": 0,
+      "arm": "control"
+    },
+    {
+      "task": "bindings",
+      "repeat": 0,
+      "arm": "notes"
+    }
+  ],
+  "replacement_trial": false,
+  "diagnostic_changes_registered_scores": false
+}
