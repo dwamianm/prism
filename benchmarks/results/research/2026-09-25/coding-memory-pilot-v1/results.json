@@ -1,0 +1,263 @@
+[
+  {
+    "status": "complete",
+    "task": "metadata-admission",
+    "passed": false,
+    "seconds": 16.32093262503622,
+    "input_tokens": 16156,
+    "output_tokens": 96,
+    "actions": {
+      "read": 6
+    },
+    "candidate_sha256": "a80e7b1e65040dad4d325acc39d27ccb1f594e28b3d51017cb274a72915f3774",
+    "arm": "control",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "task": "metadata-admission",
+    "passed": false,
+    "seconds": 12.405434250016697,
+    "input_tokens": 17651,
+    "output_tokens": 293,
+    "actions": {
+      "read": 2,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "197f1cf35b2584044a75bb1c1deaba6967b5c51a1f48c0426e8936fd28eaff5b",
+    "arm": "memory",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "task": "scope-validation",
+    "passed": false,
+    "seconds": 7.878507665998768,
+    "input_tokens": 21465,
+    "output_tokens": 103,
+    "actions": {
+      "read": 1,
+      "invalid": 3,
+      "search": 2
+    },
+    "candidate_sha256": "65432b85c4b5eae33e374187dc297c143e8c7faff41dbf3f284f952d86cb1101",
+    "arm": "memory",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "task": "scope-validation",
+    "passed": false,
+    "seconds": 10.006744874990545,
+    "input_tokens": 15335,
+    "output_tokens": 94,
+    "actions": {
+      "read": 1,
+      "invalid": 1,
+      "search": 4
+    },
+    "candidate_sha256": "65432b85c4b5eae33e374187dc297c143e8c7faff41dbf3f284f952d86cb1101",
+    "arm": "control",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "task": "legacy-snapshot",
+    "passed": false,
+    "seconds": 21.339092165988404,
+    "input_tokens": 22833,
+    "output_tokens": 633,
+    "actions": {
+      "read": 2,
+      "search": 1,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "d278748137ce6b9343d02ad608d86e4d1f360909c0ffab505e347c1d44907683",
+    "arm": "control",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "task": "legacy-snapshot",
+    "passed": true,
+    "seconds": 78.96806695801206,
+    "input_tokens": 36904,
+    "output_tokens": 3538,
+    "actions": {
+      "read": 1,
+      "search": 1,
+      "invalid": 2,
+      "edit": 1,
+      "test": 1
+    },
+    "candidate_sha256": "2fc768bf9eb981b0dbdacd2438b1748a1889a06b2baaae649d5f99e74321479b",
+    "arm": "memory",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "task": "assertion-normalization",
+    "passed": false,
+    "seconds": 18.137048458040226,
+    "input_tokens": 32497,
+    "output_tokens": 333,
+    "actions": {
+      "read": 2,
+      "search": 1,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "9bfd4e4cba584b16678559fe1a175e5eaab2f68ae9632b5e5da1a076c8e0d323",
+    "arm": "memory",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "task": "assertion-normalization",
+    "passed": false,
+    "seconds": 11.183707167045213,
+    "input_tokens": 23205,
+    "output_tokens": 108,
+    "actions": {
+      "read": 6
+    },
+    "candidate_sha256": "222ff767888aba83fcdb5be837a64ceeb330867d9eef5b8fd7b324f19753aba9",
+    "arm": "control",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "task": "metadata-admission",
+    "passed": false,
+    "seconds": 12.560481290973257,
+    "input_tokens": 17652,
+    "output_tokens": 293,
+    "actions": {
+      "read": 2,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "197f1cf35b2584044a75bb1c1deaba6967b5c51a1f48c0426e8936fd28eaff5b",
+    "arm": "memory",
+    "repeat": 1
+  },
+  {
+    "status": "complete",
+    "task": "metadata-admission",
+    "passed": false,
+    "seconds": 9.536616750003304,
+    "input_tokens": 16156,
+    "output_tokens": 96,
+    "actions": {
+      "read": 6
+    },
+    "candidate_sha256": "a80e7b1e65040dad4d325acc39d27ccb1f594e28b3d51017cb274a72915f3774",
+    "arm": "control",
+    "repeat": 1
+  },
+  {
+    "status": "complete",
+    "task": "scope-validation",
+    "passed": false,
+    "seconds": 10.519638125027996,
+    "input_tokens": 15335,
+    "output_tokens": 94,
+    "actions": {
+      "read": 1,
+      "invalid": 1,
+      "search": 4
+    },
+    "candidate_sha256": "65432b85c4b5eae33e374187dc297c143e8c7faff41dbf3f284f952d86cb1101",
+    "arm": "control",
+    "repeat": 1
+  },
+  {
+    "status": "complete",
+    "task": "scope-validation",
+    "passed": false,
+    "seconds": 7.390124832978472,
+    "input_tokens": 21465,
+    "output_tokens": 103,
+    "actions": {
+      "read": 1,
+      "invalid": 3,
+      "search": 2
+    },
+    "candidate_sha256": "65432b85c4b5eae33e374187dc297c143e8c7faff41dbf3f284f952d86cb1101",
+    "arm": "memory",
+    "repeat": 1
+  },
+  {
+    "status": "complete",
+    "task": "legacy-snapshot",
+    "passed": true,
+    "seconds": 33.65910533402348,
+    "input_tokens": 23570,
+    "output_tokens": 1339,
+    "actions": {
+      "read": 1,
+      "search": 1,
+      "edit": 2,
+      "test": 2
+    },
+    "candidate_sha256": "af6301e885c1701491da8a9623a2c221598f9982862b302a710b62087e5cf7ff",
+    "arm": "memory",
+    "repeat": 1
+  },
+  {
+    "status": "complete",
+    "task": "legacy-snapshot",
+    "passed": false,
+    "seconds": 20.28188045899151,
+    "input_tokens": 22834,
+    "output_tokens": 633,
+    "actions": {
+      "read": 2,
+      "search": 1,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "d278748137ce6b9343d02ad608d86e4d1f360909c0ffab505e347c1d44907683",
+    "arm": "control",
+    "repeat": 1
+  },
+  {
+    "status": "complete",
+    "task": "assertion-normalization",
+    "passed": false,
+    "seconds": 10.756915584031958,
+    "input_tokens": 23205,
+    "output_tokens": 108,
+    "actions": {
+      "read": 6
+    },
+    "candidate_sha256": "222ff767888aba83fcdb5be837a64ceeb330867d9eef5b8fd7b324f19753aba9",
+    "arm": "control",
+    "repeat": 1
+  },
+  {
+    "status": "complete",
+    "task": "assertion-normalization",
+    "passed": false,
+    "seconds": 14.077595832990482,
+    "input_tokens": 32496,
+    "output_tokens": 333,
+    "actions": {
+      "read": 2,
+      "search": 1,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "9bfd4e4cba584b16678559fe1a175e5eaab2f68ae9632b5e5da1a076c8e0d323",
+    "arm": "memory",
+    "repeat": 1
+  }
+]

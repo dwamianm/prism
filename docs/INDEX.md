@@ -42,6 +42,9 @@ Python and CLI contracts separately from draft RFC requirements.
 LlamaIndex retrievers, lossless structured-message storage, and append-only
 logical history mutations.
 
+[Coding memory](CODING-MEMORY.md) connects local coding agents to one Docker
+memory service per repository and documents isolated paired development trials.
+
 [Jev product-alignment advisor](JEV-PRODUCT-ADVISOR.md) documents the opt-in,
 pinned external advisor for caller-selected software-product pairs, its held-out
 evidence, audit fields, durable unverified-proposal workflow, and proposal-only

@@ -1,0 +1,30 @@
+{
+  "after_container_rebuild": true,
+  "concurrent_clients": 4,
+  "checks": [
+    {
+      "query": "metadata finite JSON collisions",
+      "returned": 6,
+      "context_tokens": 388,
+      "receipt_persisted": true
+    },
+    {
+      "query": "repository isolation worktrees DuckDB",
+      "returned": 6,
+      "context_tokens": 376,
+      "receipt_persisted": true
+    },
+    {
+      "query": "value binding exact argument substitution",
+      "returned": 6,
+      "context_tokens": 387,
+      "receipt_persisted": true
+    },
+    {
+      "query": "PostgreSQL tests local Docker",
+      "returned": 6,
+      "context_tokens": 375,
+      "receipt_persisted": true
+    }
+  ]
+}
