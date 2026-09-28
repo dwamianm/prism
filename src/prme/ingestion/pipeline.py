@@ -130,6 +130,7 @@ class IngestionPipeline:
         confidence_matrix: object | None = None,
         max_concurrent_extractions: int = 8,
         extraction_lease_seconds: float = 300,
+        merge_repeated_claims: bool = True,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -139,6 +140,7 @@ class IngestionPipeline:
         self._write_queue = write_queue
         self._graph_writer = graph_writer
         self._extraction_lease_seconds = extraction_lease_seconds
+        self._merge_repeated_claims = merge_repeated_claims
         self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
@@ -485,6 +487,7 @@ class IngestionPipeline:
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
+            merge_claims=self._merge_repeated_claims and materialization_policy == "speech_act_v12",
         )
         return await indexes.prepare(
             self._vector_index._provider,
@@ -494,8 +497,16 @@ class IngestionPipeline:
     async def _populate(
         self, result: ExtractionResult, event: Event, event_id: str, scope: Scope,
         *, graph_store, writer, vector_index, lexical_index, write_queue,
+        merge_claims: bool = False,
     ) -> None:
-        """Apply one set of materialization rules to durable or planning adapters."""
+        """Apply one set of materialization rules to durable or planning adapters.
+
+        ``merge_claims`` folds a repeated claim into one current record (#209).
+        Only current-policy plans use it, so a saved extraction replanned under
+        an older materialization policy keeps that policy's behavior.
+        """
+        from prme.ingestion.claim_merge import claim_key, find_repeated_claims, merged_claim
+
         entity_merger = EntityMerger(graph_store, writer)
         supersedence_detector = SupersedenceDetector(graph_store, writer)
         # Map entity name -> entity_id for relationship wiring
@@ -581,6 +592,8 @@ class IngestionPipeline:
             ), True))
 
         # --- Source-cited claims ---
+        planned_claims: set[tuple] = set()
+        planned_fact_ids: set[str] = set()
         for fact, from_relationship in claims:
             fact_scope = scope
 
@@ -682,7 +695,22 @@ class IngestionPipeline:
                 event_time=effective_time,
                 valid_from=effective_time,
             )
+            copies: list[MemoryNode] = []
+            key = claim_key(fact_node, object_entity_id) if merge_claims and subject_entity_id else None
+            if key is not None and subject_entity_id is not None:
+                claim_identity = (subject_entity_id, key, fact.temporal_intent, fact.replaces_object)
+                if claim_identity in planned_claims:
+                    # The same message stated this claim twice; one record holds it.
+                    continue
+                planned_claims.add(claim_identity)
+                copies = await find_repeated_claims(
+                    graph_store, subject_entity_id, fact_node, key, object_entity_id,
+                    exclude=planned_fact_ids,
+                )
+                if copies:
+                    fact_node = merged_claim(fact_node, copies)
             fact_node_id = await writer.create_node(fact_node)
+            planned_fact_ids.add(fact_node_id)
 
             # Log EPISTEMIC_TYPE_ASSIGNED operation
             logger.info(
@@ -705,6 +733,10 @@ class IngestionPipeline:
                     provenance_event_id=event.id,
                 )
                 await writer.create_edge(has_fact_edge)
+
+                # Earlier copies of a repeated claim retire into the merged record.
+                for copy in copies:
+                    await writer.supersede(str(copy.id), fact_node_id, evidence_id=event_id)
 
                 # Different values can coexist. Ingestion only retires an
                 # explicitly named previous value for a nonconditional

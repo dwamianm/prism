@@ -64,6 +64,35 @@ class PlanningGraph:
             node = self._read[key]
         return node.model_copy(deep=True)
 
+    async def get_nodes(self, node_ids: list[str]) -> list[MemoryNode]:
+        """Batch form of ``get_node`` for active nodes, in request order.
+
+        Durable misses are read 200 at a time instead of one query per ID.
+        """
+        found: dict[UUID, MemoryNode] = {}
+        missing = []
+        for key in dict.fromkeys(UUID(node_id) for node_id in node_ids):
+            if key in self._retired:
+                continue
+            node = self.nodes.get(key) or self._read.get(key) or self._scan_page.get(key)
+            if node is None:
+                missing.append(str(key))
+            else:
+                found[key] = node
+        for start in range(0, len(missing), 200):
+            for node in await self.graph.get_nodes(missing[start:start + 200]):
+                if (node.user_id, node.scope) == (self.event.user_id, self.event.scope):
+                    found[node.id] = node
+        result = []
+        for key in dict.fromkeys(UUID(node_id) for node_id in node_ids):
+            node = found.get(key)
+            if node is None:
+                continue
+            if key not in self.nodes:
+                node = self._read.setdefault(key, self._snapshot(node))
+            result.append(node.model_copy(deep=True))
+        return result
+
     async def scan_nodes(
         self, *, user_id: str, scope: Scope | None = None, node_type: NodeType | None = None,
         after_id: str | None = None, limit: int = 100,
