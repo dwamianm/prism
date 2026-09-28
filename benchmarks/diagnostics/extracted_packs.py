@@ -100,6 +100,18 @@ _NOT_CLAIMS = frozenset({NodeType.NOTE, NodeType.ENTITY})
 _ALL = 1_000_000
 
 
+def default_root() -> Path:
+    """Where builds live.
+
+    A build runs from its own worktree so later work cannot change the code it
+    imports, but its packs belong with the datasets in the main checkout's
+    ignored ``data/``, as the saved run's archive does.
+    """
+    from benchmarks import checkout
+
+    return checkout.main_checkout() / DEFAULT_ROOT
+
+
 @dataclass(frozen=True)
 class Unit:
     """One pack to build: a LoCoMo conversation or a LongMemEval-S question's history."""
@@ -504,7 +516,7 @@ def _shard(value: str) -> tuple[int, int]:
     return shard
 
 
-async def build(label: str, *, benchmark: str = "locomo", root: Path = DEFAULT_ROOT, units: list[str] | None = None,
+async def build(label: str, *, benchmark: str = "locomo", root: Path | None = None, units: list[str] | None = None,
                 overrides: dict | None = None, model: str = DEFAULT_MODEL, jobs: int = 1,
                 max_turns: int | None = None, cloud: bool = False, cache: bool = True,
                 shard: tuple[int, int] | None = None) -> dict:
@@ -517,6 +529,7 @@ async def build(label: str, *, benchmark: str = "locomo", root: Path = DEFAULT_R
     """
     if not label or Path(label).name != label:
         raise ValueError("The label must be a plain folder name")
+    root = default_root() if root is None else root
     overrides = overrides or {}
     identity = model_identity(model, cloud=cloud)
     available = {unit.unit_id: unit for unit in benchmark_units(benchmark)}
@@ -601,7 +614,8 @@ def main(argv: list[str] | None = None) -> None:
     command = commands.add_parser("build", help="Build or resume a labeled set of packs")
     command.add_argument("--label", required=True, help="Folder name for this build, e.g. ingest-baseline")
     command.add_argument("--benchmark", choices=BENCHMARKS, default="locomo")
-    command.add_argument("--root", type=Path, default=DEFAULT_ROOT)
+    command.add_argument("--root", type=Path, default=None,
+                         help="Where the builds live; the main checkout's data/extracted-packs-v1 by default")
     command.add_argument("--unit", action="append",
                          help="A conversation or question ID; repeatable; every one by default")
     command.add_argument("--model", default=DEFAULT_MODEL, help="An Ollama model tag")

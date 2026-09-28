@@ -78,10 +78,12 @@ The builds expect exactly this setup:
 
 ## 2. Set up the repository
 
-1. Clone the repository to `/Users/dwamianm/Sites/prism`. The registered
-   harness reads the datasets from that absolute path
-   (`ORIGINAL` in `benchmarks/integrations/run_gpt54_comparison.py`). If the
-   account name differs, create that path as a symlink to the clone.
+1. Clone the repository anywhere. The checkout holding `data/` is resolved
+   through git by `benchmarks/checkout.py`, so no particular path is needed and
+   no symlink. The registered harness still records the original machine's
+   absolute paths, because its bytes are pinned by sha256 in the saved
+   registration, but those values are re-rooted at import. Set
+   `PRME_ORIGINAL_ROOT` only for a checkout git cannot relate.
 2. Run `uv sync` in the clone.
 3. Get the two datasets:
 
@@ -120,21 +122,25 @@ main checkout cannot change the code a running build imports, and a stopped
 build can resume. Keep the output in the main checkout's ignored `data/`:
 
 ```sh
-cd /Users/dwamianm/Sites/prism
+cd <your clone>
 git worktree add --detach ../prism-extracted-packs main
 cd ../prism-extracted-packs
 uv sync
 
+# Builds go to the main checkout's data/extracted-packs-v1 by default, so the
+# packs outlive this worktree. Put the logs beside them.
+PACKS="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/data/extracted-packs-v1"
+mkdir -p "$PACKS"
+
 # LongMemEval-S on the DeepSeek cloud model: 17 packs at a time is the ceiling.
 nohup uv run python -m benchmarks.diagnostics.extracted_packs build --benchmark longmemeval \
-  --label ingest-baseline-lme-deepseek --root /Users/dwamianm/Sites/prism/data/extracted-packs-v1 \
+  --label ingest-baseline-lme-deepseek \
   --model deepseek-v4.1-flash:cloud --cloud --jobs 17 \
-  > /Users/dwamianm/Sites/prism/data/extracted-packs-v1/ingest-baseline-lme-deepseek.log 2>&1 &
+  > "$PACKS/ingest-baseline-lme-deepseek.log" 2>&1 &
 
 # LoCoMo on the local model. Ollama runs one local request at a time, so --jobs does not help.
 nohup uv run python -m benchmarks.diagnostics.extracted_packs build --label ingest-baseline \
-  --root /Users/dwamianm/Sites/prism/data/extracted-packs-v1 \
-  > /Users/dwamianm/Sites/prism/data/extracted-packs-v1/ingest-baseline.log 2>&1 &
+  > "$PACKS/ingest-baseline.log" 2>&1 &
 ```
 
 The two can run at the same time. The LoCoMo build is limited by the local
@@ -145,7 +151,7 @@ Progress: each pack writes one line per turn to `turns.jsonl` and a
 `manifest.json` when it is complete.
 
 ```sh
-cd /Users/dwamianm/Sites/prism/data/extracted-packs-v1
+cd "$PACKS"
 cat ingest-baseline-lme-deepseek/longmemeval/*/turns.jsonl | wc -l   # of 246,738
 ls ingest-baseline-lme-deepseek/longmemeval/*/manifest.json | wc -l  # of 500
 cat ingest-baseline/locomo/*/turns.jsonl | wc -l                      # of 5,882
