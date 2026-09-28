@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>PRME · Memory explorer</title>
+    <link rel="icon" href="/mark.svg" type="image/svg+xml" />
+    <link
+      rel="preload"
+      href="/fonts/inter-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#workspace">Skip to memories</a>
+    <header class="masthead">
+      <a href="/" class="brand" aria-label="PRME home"
+        ><img src="/mark.svg" width="30" height="30" alt="" />PRME<span
+          >Memory explorer</span
+        ></a
+      >
+      <div class="header-actions">
+        <span class="read-only">Read only</span
+        ><button
+          id="connection-toggle"
+          aria-expanded="true"
+          aria-controls="connection-panel"
+        >
+          Connection <span aria-hidden="true">↗</span>
+        </button>
+      </div>
+    </header>
+
+    <section
+      id="connection-panel"
+      class="connection-panel"
+      aria-label="Connect to memory"
+    >
+      <div>
+        <p class="eyebrow">Your memory, made visible</p>
+        <h1>Follow the connections.</h1>
+        <p>Browse what’s stored. Inspect the evidence. See how it relates.</p>
+      </div>
+      <form id="connection-form">
+        <label
+          >Owner ID<input
+            id="owner"
+            name="owner"
+            autocomplete="off"
+            placeholder="e.g. alice"
+            aria-describedby="connection-help"
+        /></label>
+        <label
+          >API key <span class="optional">if configured</span
+          ><input
+            id="token"
+            name="token"
+            type="password"
+            autocomplete="off"
+            placeholder="Bearer token"
+        /></label>
+        <button class="primary" type="submit" id="connect">
+          Open memory <span aria-hidden="true">→</span>
+        </button>
+        <p id="connection-help" class="form-help">
+          Use the owner ID from your stored memories, or leave it empty with a
+          per-user key. Credentials stay in this tab’s memory.
+        </p>
+      </form>
+    </section>
+
+    <main id="workspace" tabindex="-1">
+      <div class="workspace-bar">
+        <div>
+          <span class="status-dot" id="status-dot"></span
+          ><span id="connection-status">No memory connected</span>
+        </div>
+        <button id="disconnect" hidden>Disconnect</button>
+      </div>
+      <div id="error" class="error" role="alert" hidden></div>
+      <div class="workspace-grid">
+        <aside class="library" aria-label="Memory entries">
+          <div class="panel-heading">
+            <h2>Entries</h2>
+            <button id="refresh" disabled aria-label="Refresh entries">
+              ↻
+            </button>
+          </div>
+          <label class="search-label"
+            ><span class="sr-only">Search loaded entries</span
+            ><input
+              id="search"
+              type="search"
+              placeholder="Search loaded entries…"
+              disabled
+          /></label>
+          <div class="filters">
+            <label
+              >Type<select id="type" disabled>
+                <option value="">All types</option>
+                <option>entity</option>
+                <option>event</option>
+                <option>fact</option>
+                <option>decision</option>
+                <option>preference</option>
+                <option>task</option>
+                <option>summary</option>
+                <option>note</option>
+                <option>instruction</option>
+              </select></label
+            >
+            <label
+              >Lifecycle<select id="state" disabled>
+                <option value="">All states</option>
+                <option>tentative</option>
+                <option>stable</option>
+                <option>contested</option>
+                <option>superseded</option>
+                <option>deprecated</option>
+                <option>archived</option>
+              </select></label
+            >
+            <label class="scope-filter"
+              >Scope<select id="scope" disabled>
+                <option value="">All scopes</option>
+                <option>personal</option>
+                <option>project</option>
+                <option>organisation</option>
+                <option>agent</option>
+                <option>system</option>
+                <option>sandbox</option>
+              </select></label
+            >
+          </div>
+          <p class="list-count" id="list-count" role="status">
+            Connect to browse your entries
+          </p>
+          <div id="entries" class="entries">
+            <p class="empty small">Your stored memories will appear here.</p>
+          </div>
+          <button id="load-more" class="load-more" hidden>
+            Load more entries
+          </button>
+          <p class="library-note">
+            Stored records · ID order<br />Search covers loaded entries.
+          </p>
+        </aside>
+
+        <section class="exploration" aria-label="Memory connections">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Relationship map</p>
+              <h2>One memory. Its connections.</h2>
+            </div>
+            <span id="graph-count" class="muted"></span>
+          </div>
+          <div class="graph-toolbar">
+            <label class="check-label"
+              ><input id="proposals" type="checkbox" disabled /> Include
+              unverified aliases</label
+            >
+            <div class="zoom-controls">
+              <button id="zoom-out" aria-label="Zoom out">−</button
+              ><button id="zoom-reset" aria-label="Reset graph view">Fit</button
+              ><button id="zoom-in" aria-label="Zoom in">+</button>
+            </div>
+          </div>
+          <div class="graph-wrap" id="graph-wrap">
+            <svg
+              id="graph"
+              role="group"
+              aria-label="Memory graph"
+              viewBox="0 0 760 490"
+            ></svg>
+            <div id="graph-empty" class="graph-empty">
+              <div class="empty-orbit" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </div>
+              <h3>A little context changes everything.</h3>
+              <p>Select an entry to explore the memories connected to it.</p>
+            </div>
+          </div>
+          <div class="graph-caption">
+            <span
+              ><i class="legend-dot"></i> Selected memory
+              <i class="legend-line"></i> Directed relationship</span
+            ><span>Click a node to explore · Drag to pan</span>
+          </div>
+          <div class="connections-heading">
+            <h2>Connections</h2>
+            <span id="connections-status" class="muted" role="status"
+              >No entry selected</span
+            >
+          </div>
+          <p class="connection-note">
+            Stored links in this owner and scope, including closed
+            relationships. This is the current graph, not historical replay.
+          </p>
+          <div id="connections" class="connections">
+            <p class="empty small">
+              Relationships and their evidence will appear here.
+            </p>
+          </div>
+          <button id="more-connections" class="load-more" hidden>
+            Next connections
+          </button>
+          <button id="first-connections" class="text-button" hidden>
+            Back to first connections
+          </button>
+        </section>
+
+        <aside class="inspector" aria-label="Selected memory details">
+          <div class="panel-heading">
+            <h2>Memory details</h2>
+            <span class="eyebrow">Inspect</span>
+          </div>
+          <div id="details">
+            <div class="inspector-empty">
+              <span aria-hidden="true">↖</span>
+              <h3>Start with a memory.</h3>
+              <p>
+                Its full content, confidence, timeline, and metadata live here.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+    <footer>
+      <span>PRME / Portable Relational Memory Engine</span
+      ><span>Local memory. A clearer view.</span>
+    </footer>
+    <noscript
+      >This explorer needs JavaScript enabled to read the memory API.</noscript
+    >
+  </body>
+</html>
