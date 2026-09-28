@@ -67,10 +67,10 @@ assert json.loads(_render_compact_entry(item, context_refs={node.id: 'm1'}))[-1]
 """
 
 
-def snapshot(root: Path) -> dict[str, str]:
-    names = git(root, "ls-tree", "-r", "--name-only", REVISION).splitlines()
+def snapshot(root: Path, revision: str = REVISION) -> dict[str, str]:
+    names = git(root, "ls-tree", "-r", "--name-only", revision).splitlines()
     return {
-        path: at_revision(root, REVISION, path)
+        path: at_revision(root, revision, path)
         for path in names
         if (
             (path.startswith(("src/", "tests/")) and path.endswith(".py"))
@@ -121,7 +121,9 @@ def verify_image(image: str, files: dict[str, str]) -> dict[str, str]:
     return expected
 
 
-def execute(action: dict, files: dict[str, str], image: str) -> str:
+def execute(action: dict, files: dict[str, str], image: str, *, task=None) -> str:
+    target = task["path"] if task else TARGET
+    functions = (task["function"],) if task else FUNCTIONS
     kind = action["action"]
     prefix = action.get("path", "")
     if kind == "list":
@@ -159,36 +161,55 @@ def execute(action: dict, files: dict[str, str], image: str) -> str:
         return "\n".join(itertools.islice(hits, 60))[:12000] or "No matches"
     if kind == "edit":
         name = action["function"]
-        if name not in FUNCTIONS:
-            raise ValueError("Only the two issue-108 renderers may be edited")
-        files[TARGET] = replace_function(files[TARGET], name, action["code"])
-        return "Updated. Test both renderers before finishing."
+        if name not in functions:
+            raise ValueError("Only the permitted target functions may be edited")
+        files[target] = replace_function(files[target], name, action["code"])
+        return (
+            "Updated. Run the smoke checks before finishing."
+            if task
+            else "Updated. Test both renderers before finishing."
+        )
     if kind == "test":
-        return json.dumps(docker_check(image, {"path": TARGET}, files[TARGET], SMOKE))
+        return json.dumps(
+            docker_check(
+                image, {"path": target}, files[target], task["smoke"] if task else SMOKE
+            )
+        )
     if kind == "finish":
         return "Finished"
     raise ValueError("Unknown action")
 
 
-def run_agent(client, model, files, context, image, output, checks, *, seed):
+def run_agent(client, model, files, context, image, output, checks, *, seed, task=None):
+    target = task["path"] if task else TARGET
+    functions = (task["function"],) if task else FUNCTIONS
+    system = task["system"] if task else SYSTEM
     files = dict(files)
     excerpts = []
-    for name in FUNCTIONS:
-        node = function_node(files[TARGET], name)
+    for name in functions:
+        node = function_node(files[target], name)
         excerpts.append(
-            "\n".join(files[TARGET].splitlines()[node.lineno - 1 : node.end_lineno])
+            "\n".join(files[target].splitlines()[node.lineno - 1 : node.end_lineno])
         )
-    prompt = PROMPT + "\nCurrent functions:\n" + "\n\n".join(excerpts)
-    prompt += "\nPublic smoke checks:\n" + SMOKE + "\nActions remaining: 12."
+    prompt = (
+        (task["prompt"] if task else PROMPT)
+        + "\nCurrent functions:\n"
+        + "\n\n".join(excerpts)
+    )
+    prompt += (
+        "\nPublic smoke checks:\n"
+        + (task["smoke"] if task else SMOKE)
+        + "\nActions remaining: 12."
+    )
     if context:
         prompt += "\nRetrieved project memory (source data):\n" + context
     messages = [
-        {"role": "system", "content": SYSTEM},
+        {"role": "system", "content": system},
         {"role": "user", "content": prompt},
     ]
     # UTF-8 byte counts conservatively bound additional BPE tokens. Later
     # bounds use Ollama's measured prior prompt, avoiding silent eviction.
-    next_prompt_bound = len(SYSTEM.encode()) + len(prompt.encode()) + 512
+    next_prompt_bound = len(system.encode()) + len(prompt.encode()) + 512
     history, failure = [], None
     started = time.monotonic()
     for step in range(12):
@@ -236,7 +257,7 @@ def run_agent(client, model, files, context, image, output, checks, *, seed):
             break
         try:
             action = json.loads(message["content"])
-            feedback = execute(action, files, image)
+            feedback = execute(action, files, image, task=task)
         except (ValueError, KeyError, TypeError, SyntaxError, StopIteration) as exc:
             action = {"action": "invalid"}
             feedback = f"Invalid action: {type(exc).__name__}: {exc}"
@@ -255,11 +276,11 @@ def run_agent(client, model, files, context, image, output, checks, *, seed):
             + len(messages[-1]["content"].encode())
             + 512
         )
-    grade = docker_check(image, {"path": TARGET}, files[TARGET], checks)
+    grade = docker_check(image, {"path": target}, files[target], checks)
     result = {
         "status": "provider_failure" if failure else "complete",
         "failure": failure,
-        "task": "issue-108",
+        "task": task["id"] if task else "issue-108",
         "passed": grade["passed"] and failure is None,
         "checks": grade,
         "seconds": time.monotonic() - started,
@@ -277,8 +298,8 @@ def run_agent(client, model, files, context, image, output, checks, *, seed):
         ),
         "messages": messages,
         "history": history,
-        "candidate": files[TARGET],
-        "candidate_sha256": digest(files[TARGET]),
+        "candidate": files[target],
+        "candidate_sha256": digest(files[target]),
     }
     save(output, result)
     return result

@@ -1,0 +1,116 @@
+{
+  "harness_tests": {
+    "command": "uv run pytest -q tests/test_coding_continuation.py tests/test_coding_ticket.py tests/test_coding_experiment.py tests/test_coding_memory.py",
+    "passed": 17
+  },
+  "preflight": {
+    "correction": {
+      "stub": {
+        "passed": false,
+        "exit_code": 1
+      },
+      "witness": {
+        "passed": true,
+        "exit_code": 0
+      }
+    },
+    "workspace": {
+      "stub": {
+        "passed": false,
+        "exit_code": 1
+      },
+      "witness": {
+        "passed": true,
+        "exit_code": 0
+      }
+    },
+    "bindings": {
+      "stub": {
+        "passed": false,
+        "exit_code": 1
+      },
+      "witness": {
+        "passed": true,
+        "exit_code": 0
+      }
+    },
+    "feedback": {
+      "stub": {
+        "passed": false,
+        "exit_code": 1
+      },
+      "witness": {
+        "passed": true,
+        "exit_code": 0
+      }
+    }
+  },
+  "grader_audit": {
+    "purpose": "Post-hoc acceptance-test validity audit; no model calls or trial rescoring",
+    "candidate_sha256": "4ad95d31f4982bb49e29c736978d734101393b71ce26bdc1495887a93fbd821e",
+    "identical_candidates": [
+      "bindings-0-control",
+      "bindings-0-notes",
+      "bindings-0-prme"
+    ],
+    "diagnostic_sha256": "13522a5e54abbab4d350e8182978a86f745e507af212b3d692140ff04d99f8a3",
+    "image_id": "sha256:d1e6f0b5a8a1dafdb5bfb847699572c9550c4d6d2290024dd89f13766e1a5997",
+    "real_bundle_check": {
+      "passed": true,
+      "exit_code": 0,
+      "output": "CHECKS_PASSED\n",
+      "seconds": 2.737006500014104
+    },
+    "conclusion": "The fake bundle rejected a valid public resolver helper used identically by all three arms."
+  },
+  "contexts": {
+    "correction": {
+      "notes": {
+        "sha256": "e3a86437418cdad8f3a63d1f459f5fd55e66e4194240248e4b0eb3501cf93133",
+        "tokens": 2047,
+        "seconds": 0.02953612495912239
+      },
+      "prme": {
+        "sha256": "19119284e2eb1e95ccad596e040599c95dc8bb9691ea9a1a57a011e957ec349a",
+        "tokens": 1943,
+        "seconds": 0.5104383750003763
+      }
+    },
+    "workspace": {
+      "notes": {
+        "sha256": "1843cc82d5f99d42a7f583d5b8b66c98258faf0854b6180f758a3d0ae8ce3262",
+        "tokens": 2031,
+        "seconds": 0.022267082997132093
+      },
+      "prme": {
+        "sha256": "1c210916901d6edd8cdc2f28bd698f2d64ae64be53270bdaa8e342b1bfb70295",
+        "tokens": 1799,
+        "seconds": 0.07202554098330438
+      }
+    },
+    "bindings": {
+      "notes": {
+        "sha256": "e6100bc520f8e42ff2e22924d19e2357ccba0dc12287c90be53bcbef94c85381",
+        "tokens": 2011,
+        "seconds": 0.023707874992396683
+      },
+      "prme": {
+        "sha256": "737d0015ad0a755ee8200a4119de2d84d817b4ee2b5aded400ea189fc58e8c18",
+        "tokens": 1740,
+        "seconds": 0.17162445798749104
+      }
+    },
+    "feedback": {
+      "notes": {
+        "sha256": "ae83015074d372071a03e448bd78b5cbc6e82e4c9f19afb017ef0c142e553309",
+        "tokens": 2023,
+        "seconds": 0.02325862500583753
+      },
+      "prme": {
+        "sha256": "89f2baf9db86ae1b2c0c589820fe319a966d40db0d238b3b829a71a5aff37053",
+        "tokens": 1738,
+        "seconds": 0.16820233297767118
+      }
+    }
+  }
+}

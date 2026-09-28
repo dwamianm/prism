@@ -1,0 +1,186 @@
+[
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "correction",
+    "seconds": 23.496672832989134,
+    "input_tokens": 62180,
+    "output_tokens": 239,
+    "actions": {
+      "read": 7,
+      "search": 5
+    },
+    "candidate_sha256": "124fdf11069fec3ecd38e74034a0aea60153be9cfedf08e2741af234cb17acc6",
+    "arm": "control",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": true
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "correction",
+    "seconds": 27.179984083981253,
+    "input_tokens": 120740,
+    "output_tokens": 350,
+    "actions": {
+      "read": 12
+    },
+    "candidate_sha256": "124fdf11069fec3ecd38e74034a0aea60153be9cfedf08e2741af234cb17acc6",
+    "arm": "notes",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": true
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "correction",
+    "seconds": 34.16108591604279,
+    "input_tokens": 116039,
+    "output_tokens": 740,
+    "actions": {
+      "read": 9,
+      "search": 2,
+      "edit": 1
+    },
+    "candidate_sha256": "1d41d627c0db519e505a5b3b81ead4af019dbfe2603328df7f8b69569162d557",
+    "arm": "prme",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": true
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "workspace",
+    "seconds": 28.077622541983146,
+    "input_tokens": 121163,
+    "output_tokens": 243,
+    "actions": {
+      "read": 10,
+      "search": 2
+    },
+    "candidate_sha256": "2a3d669068f0e109823746e140e8f896dec3e5dc2d912b032eb20274ec055668",
+    "arm": "notes",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": true
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "workspace",
+    "seconds": 9.950692332990002,
+    "input_tokens": 9945,
+    "output_tokens": 145,
+    "actions": {
+      "read": 1,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "ad3663a6cd25ebc4a552a4c45d13d44651d98c2a1ae28d57a15f06622243c1d8",
+    "arm": "prme",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": true
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "workspace",
+    "seconds": 18.40368558402406,
+    "input_tokens": 71027,
+    "output_tokens": 241,
+    "actions": {
+      "read": 8,
+      "search": 4
+    },
+    "candidate_sha256": "2a3d669068f0e109823746e140e8f896dec3e5dc2d912b032eb20274ec055668",
+    "arm": "control",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": true
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "bindings",
+    "seconds": 18.231756958004553,
+    "input_tokens": 53329,
+    "output_tokens": 208,
+    "actions": {
+      "read": 5,
+      "invalid": 1,
+      "search": 1,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "4ad95d31f4982bb49e29c736978d734101393b71ce26bdc1495887a93fbd821e",
+    "arm": "prme",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": false
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "bindings",
+    "seconds": 18.707702165993396,
+    "input_tokens": 54227,
+    "output_tokens": 214,
+    "actions": {
+      "read": 6,
+      "search": 1,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "4ad95d31f4982bb49e29c736978d734101393b71ce26bdc1495887a93fbd821e",
+    "arm": "control",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": false
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "bindings",
+    "seconds": 18.368050582997967,
+    "input_tokens": 56820,
+    "output_tokens": 208,
+    "actions": {
+      "read": 5,
+      "invalid": 1,
+      "search": 1,
+      "edit": 1,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "4ad95d31f4982bb49e29c736978d734101393b71ce26bdc1495887a93fbd821e",
+    "arm": "notes",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": false
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "feedback",
+    "seconds": 32.800293792039156,
+    "input_tokens": 78088,
+    "output_tokens": 602,
+    "actions": {
+      "read": 9,
+      "invalid": 2,
+      "list": 1
+    },
+    "candidate_sha256": "5c1d1dfaf7b172da1d6e6edd35d32d37e08a5930067785728b742c9d2803ddc0",
+    "arm": "control",
+    "repeat": 0,
+    "registered_grader_passed": false,
+    "grading_valid": true
+  }
+]
