@@ -21,8 +21,8 @@ accuracy is a planning estimate,
 not an answer score. ``gate --plain`` measures a plain RAG reference over the
 same stored turns instead of ``retrieve()``, and
 ``benchmarks.integrations.gpt54_baselines`` prepares those contexts for the
-GPT-5.4 baseline arms. ``gate --packs`` replays LoCoMo packs that
-``benchmarks.diagnostics.extracted_packs`` built through ``ingest()`` instead of
+GPT-5.4 baseline arms. ``gate --packs`` replays LoCoMo or LongMemEval-S packs
+that ``benchmarks.diagnostics.extracted_packs`` built through ``ingest()`` instead of
 the saved run, and credits an evidence turn that a packed extracted record
 cites (#102).
 """
@@ -461,35 +461,36 @@ def _longmemeval_cases(archive: Path) -> list[GateCase]:
     return cases
 
 
-def _built_locomo_cases(packs: Path) -> list[GateCase]:
-    """LoCoMo questions over packs that ``extracted_packs`` built, for each conversation it completed (#102).
+def _built_cases(packs: Path, benchmark: str) -> list[GateCase]:
+    """Questions over packs that ``extracted_packs`` built, for each pack it completed (#102).
 
     No saved context exists for these packs, so none is expected to match.
     """
     from benchmarks.diagnostics import extracted_packs
 
-    gpt54 = _harness()
-    if gpt54.digest(gpt54.LOCOMO) != gpt54.LOCOMO_SHA:
-        raise ValueError("The LoCoMo dataset differs from the registered one")
-    built = extracted_packs.built_conversations(packs / "locomo")
+    built = extracted_packs.built_units(packs / benchmark)
     if not built:
-        raise ValueError(f"No complete LoCoMo pack under {packs / 'locomo'}")
-    stored = {sample["sample_id"]: {turn["metadata"]["source_dialog_id"]
-                                    for turn in gpt54.source_turns(sample["conversation"])}
-              for sample in json.loads(gpt54.LOCOMO.read_text())}
+        raise ValueError(f"No complete {benchmark} pack under {packs / benchmark}")
+    units = {unit.unit_id: unit for unit in extracted_packs.benchmark_units(benchmark)}
+    gpt54 = _harness()
     cases = []
-    for question in gpt54.question_rows("locomo"):
-        manifest = built.get(question["conversation_id"])
+    for question in gpt54.question_rows(benchmark):
+        unit_id = question["conversation_id"] if benchmark == "locomo" else question["question_id"]
+        manifest = built.get(unit_id)
         if manifest is None:
             continue
-        wanted = frozenset(question.get("evidence", []))
+        unit = units[unit_id]
+        if benchmark == "locomo":
+            wanted = frozenset(question.get("evidence", []))
+        else:
+            wanted = unit.annotated
+        stored = {turn["key"] for turn in unit.turns}
         cases.append(GateCase(
-            benchmark="locomo", question_id=question["question_id"], category=question["question_type"],
+            benchmark=benchmark, question_id=question["question_id"], category=question["question_type"],
             question=question["question"], user_id=manifest["user_id"],
             reference_time=datetime.fromisoformat(manifest["reference_time"]),
-            pack=_pack_dir(packs / "locomo" / question["conversation_id"] / "pack"),
-            pack_sha256=manifest["pack_sha256"], saved_context_sha256="", evidence=wanted or None,
-            unresolved=tuple(sorted(wanted - stored[question["conversation_id"]])),
+            pack=_pack_dir(packs / benchmark / unit_id / "pack"), pack_sha256=manifest["pack_sha256"],
+            saved_context_sha256="", evidence=wanted or None, unresolved=tuple(sorted(wanted - stored)),
         ))
     return cases
 
@@ -1304,8 +1305,8 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     if plain is not None:
         check_plain(plain, overrides)
     selected = [name for name in GATE_BENCHMARKS if name in requested]
-    if packs is not None and (archive is not None or selected != ["locomo"]):
-        raise ValueError("Built packs exist for LoCoMo only; pass --benchmark locomo and no --archive")
+    if packs is not None and archive is not None:
+        raise ValueError("Replay either built packs or a saved archive, not both")
     gpt54 = _harness()
     archive = archive or default_archive()
     # Record the code that runs before replaying; this also rejects bad overrides.
@@ -1316,7 +1317,7 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     loaders = {"locomo": _locomo_cases, "longmemeval": _longmemeval_cases}
     started_at, started, load_at_start = gpt54.utc(), time.perf_counter(), os.getloadavg()
     if packs is not None:
-        cases = _built_locomo_cases(packs)
+        cases = [case for name in selected for case in _built_cases(packs, name)]
     else:
         cases = [case for name in selected for case in loaders[name](archive)]
     if capture_dir is not None:
@@ -1345,12 +1346,20 @@ def _built_provenance(packs: Path, cases: list[GateCase]) -> dict:
     """Which build the replay read: its record's digest and each conversation's pack identity."""
     from benchmarks.diagnostics import extracted_packs
 
-    built = extracted_packs.built_conversations(packs / "locomo")
+    record = json.loads((packs / "build.json").read_text())
+    replayed = {case.pack.parent.name for case in cases}
+    coverage = {}
+    for benchmark in dict.fromkeys(case.benchmark for case in cases):
+        built = extracted_packs.built_units(packs / benchmark)
+        cited = sum(manifest["annotated_evidence_turns_with_claims"] for name, manifest in built.items()
+                    if name in replayed)
+        annotated = sum(manifest["annotated_evidence_turns"] for name, manifest in built.items() if name in replayed)
+        coverage[benchmark] = {"annotated_evidence_turns": annotated, "with_claims": cited,
+                               "share": _share(cited, annotated)}
     return {"packs": {"path": str(packs), "build_sha256": extracted_packs.build_digest(packs),
-                      "build": json.loads((packs / "build.json").read_text()).get("label"),
-                      "conversations": {case.pack.parent.name: case.pack_sha256 for case in cases},
-                      "evidence_claim_coverage": {name: manifest["evidence_claim_coverage"]
-                                                  for name, manifest in built.items()}}}
+                      "build": record.get("label"), "model": record.get("model", {}).get("model"),
+                      "packs": {case.pack.parent.name: case.pack_sha256 for case in cases},
+                      "evidence_claim_coverage": coverage}}
 
 
 def _reranker_runtime(config: PRMEConfig) -> dict:
@@ -1611,8 +1620,9 @@ def gate_markdown(report: dict) -> str:
     elif report["provenance"].get("packs"):
         packs = report["provenance"]["packs"]
         lines += ["", f"**Built packs, not the saved run.** Build `{packs['build']}` under `{packs['path']}` "
-                  f"({len(packs['conversations'])} conversations) was made with `ingest()`, so no saved context "
-                  "exists to match. Evidence counts include turns that packed extracted records cite."]
+                  f"({len(packs['packs'])} packs, extraction model `{packs['model']}`) was made with `ingest()`, "
+                  "so no saved context exists to match. Evidence counts include turns that packed extracted "
+                  "records cite."]
     elif report["provenance"].get("overrides") and not changed:
         lines += ["", "**Every context matches the saved run, so these overrides changed nothing the reader "
                   "sees.** Check the setting names. Changes that act when memories are stored need new packs."]
@@ -1901,8 +1911,8 @@ def gate_main(argv: list[str]) -> None:
                         help="Measure a plain RAG baseline instead of retrieve(): stored turns ranked by this "
                              "method alone and packed as plain lines")
     parser.add_argument("--packs", type=Path,
-                        help="A build folder from benchmarks.diagnostics.extracted_packs (LoCoMo only) to replay "
-                             "instead of the saved run")
+                        help="A build folder from benchmarks.diagnostics.extracted_packs to replay instead of the "
+                             "saved run; pass --benchmark for the benchmark it holds")
     args = parser.parse_args(argv)
     try:
         overrides = parse_overrides(args.overrides)
