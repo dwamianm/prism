@@ -487,6 +487,66 @@ reciprocal rank fusion of both, k=60) and packed in rank order as plain lines.
 It accepts only `packing.token_budget` and `packing.overhead_tokens` overrides,
 and its reports compare with PRME reports through `gate-compare`.
 
+### Packs built through `ingest()` (#102)
+
+The saved packs were built with `store()`, which never runs extraction, so a
+change to extraction or the graph leaves every saved context unchanged.
+`benchmarks.diagnostics.extracted_packs` builds fresh LoCoMo and LongMemEval-S
+packs from the same source turns through `ingest()`, and `gate --packs`
+replays retrieval over them:
+
+```sh
+# LoCoMo on the local model. About 8.8 s per turn with prme-qwen3.5:35b-a3b-8k,
+# so all 5,882 turns take about 14 hours. A stopped build resumes.
+uv run python -m benchmarks.diagnostics.extracted_packs build --label ingest-baseline
+uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo \
+  --packs data/extracted-packs-v1/ingest-baseline --output /tmp/gate-ingest.json
+
+# LongMemEval-S on the DeepSeek cloud model through the local Ollama server.
+uv run python -m benchmarks.diagnostics.extracted_packs build --benchmark longmemeval \
+  --label ingest-baseline-lme-deepseek --model deepseek-v4.1-flash:cloud --cloud --jobs 17
+uv run python -m benchmarks.diagnostics.product_packing gate --benchmark longmemeval \
+  --packs data/extracted-packs-v1/ingest-baseline-lme-deepseek --output /tmp/gate-ingest-lme.json
+```
+
+By default the build refuses any model that the local Ollama server does not
+run on this machine, so it never calls a paid API or sends the dataset
+elsewhere. LongMemEval-S has 246,738 turns, which would take weeks locally, so
+the owner chose `deepseek-v4.1-flash:cloud` for it: `--cloud` accepts an Ollama
+cloud model, whose hosted service then receives the (public) turns. Nothing is
+billed per request, but the calls count against the Ollama account's usage
+limits. A trial on 2026-09-28 reached about 5.3 calls per second with 17 packs
+at a time; 34 packs, or two processes of 17, were no faster. With the cache
+below, the full set needs 189,520 calls, about 10 to 11 hours and about 936
+million tokens.
+
+- In LoCoMo the second speaker is stored as a `participant` with a speaker
+  name (#84), not as the assistant. LongMemEval-S keeps its user and assistant
+  roles, and its text and source metadata are the baseline runner's.
+- Histories share sessions, so a build keeps each model response in
+  `extraction-cache/`, keyed by the model, role, prompt and text. A repeated
+  turn is extracted once, and its cached response is validated again exactly
+  as a live one. `--no-cache` turns this off.
+- A turn whose extraction fails is retried after 15, 60 and 240 seconds. If
+  it still fails, as under a rate limit, its pack stops at that turn without a
+  manifest, so no later turn is extracted ahead of it; the next build resumes
+  it. `--jobs` builds packs at the same time and `--shard K/N` splits them
+  across processes.
+- Each pack's `manifest.json` records extraction status, model calls, tokens,
+  cache hits, wall time, claims per turn and the share of annotated evidence
+  turns that at least one extracted record cites. In the gate report, an
+  evidence turn counts as packed when a packed extracted record cites it, and
+  `packed_by_extracted` counts those turns separately. No saved context exists
+  for built packs, so none is expected to match. Built packs contain benchmark
+  text and stay in the ignored `data/` folder.
+
+A resumed build must use the same commit, working tree, settings and model.
+Compare two builds only when both were made with the same model and Ollama
+server version (`build.json` records both). Extraction at temperature 0 is
+close to repeatable but not guaranteed to be, so two builds of the same code
+can differ slightly, and the LoCoMo and LongMemEval-S baselines use different
+extraction models.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
