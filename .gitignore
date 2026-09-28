@@ -2,6 +2,9 @@
 .DS_Store
 
 my_memories/
+my_memories_extracted/
+my_memories_demo/
+my_memories_locomo/
 examples/logs/
 __pycache__/
 *.pyc

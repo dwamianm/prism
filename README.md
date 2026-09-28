@@ -180,6 +180,11 @@ MCP Streamable HTTP uses its separate `PRME_MCP_USER_KEYS` setting.
 See the [HTTP guide](docs/HTTP-API.md) and
 [framework integration guide](docs/FRAMEWORK-INTEGRATIONS.md) for application setup.
 
+To browse stored entries and explore their graph connections from a source
+checkout, run `uv run --extra api python -m web.server` and open
+**http://127.0.0.1:8080**. The standalone [memory explorer](web/README.md) lives in
+`web/` and includes filters, source evidence, and an interactive relationship map.
+
 ## Milestones
 
 | Milestone | Delivered |
