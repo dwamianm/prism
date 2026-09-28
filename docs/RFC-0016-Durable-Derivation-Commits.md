@@ -237,6 +237,28 @@ valid newer replacement closes the referenced prior interval in the same graph
 transaction. The commit skips interval closure when the boundary precedes a
 legacy stored start, avoiding an inverted range while still publishing lifecycle,
 supersedence, edge, and receipt atomically.
+
+Repeated claims (#209). With `enable_claim_merge` (default on), a new
+`speech_act_v12` plan merges a claim that exactly repeats an active claim on the
+same resolved subject entity: the same memory, epistemic and source type,
+normalized predicate and object, object entity link, polarity and resolved date.
+Normalization is NFKC, case folding, and one space for underscores and
+whitespace runs; similarity never counts. The plan still creates the new node,
+gives it the copies' evidence references in source order, their highest scores
+and the most established lifecycle state, lists their IDs in `merged_claim_ids`,
+and retires them as ordinary replacements in the same commit. The new node keeps
+its own text, `valid_from` and `event_time`, so each copy's interval closes at
+the restatement like any other replacement. Quantities (their sums across
+statements are meaningful), conditional claims, unresolved relative dates,
+pinned or expiring nodes, and claims that are not observed or asserted never
+merge. A copy whose effective time is later than the new statement stays
+active, so a late-arriving older statement gains no authority over it. One
+message that states the same claim twice produces one node. The policy label
+stays `speech_act_v12`: merging only uses the existing node and replacement
+primitives and does not change how model output is read, and `merged_claim_ids`
+marks every merged record. Saved plans and plans under older policies are
+unchanged, and setting the option to false restores one node per extracted claim.
+
 Saved v5 records prepare missing plans under v11, v4 under v10, v3 under v9, and v2 records
 prepare them under v8. Extraction records whose omitted policy defaults to `source_passage_v1` prepare
 a missing plan under `temporal_validity_v7`; recovery cannot relabel old model

@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   both gains repeated one task and do not establish general coding improvement.
   See [coding memory](docs/CODING-MEMORY.md).
 
+### Changed
+
+- `ingest()` now merges a repeated extracted claim into one current record
+  instead of adding another copy (#209). The new fact keeps the earlier
+  copies' evidence and supersedes them, so their history stays readable. Only
+  exact claim identity counts; quantities, conditional claims, unresolved
+  relative dates and claims that are not observed or asserted stay separate.
+  `store()` is unchanged. Set `PRME_ENABLE_CLAIM_MERGE=false` to restore one
+  fact per extraction.
+
 ### Fixed
 
 - Auditable and compact contexts escape Unicode line separators so stored text

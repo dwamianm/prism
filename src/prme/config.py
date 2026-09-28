@@ -510,6 +510,17 @@ class PRMEConfig(_ProjectSettings):
             "creating a duplicate. None (default) disables this behavior."
         ),
     )
+    enable_claim_merge: bool = Field(
+        default=True,
+        description=(
+            "When True, ingest() merges a repeated extracted claim into one "
+            "current record: the new fact keeps the earlier copies' evidence "
+            "and supersedes them (#209). Only exact claim identity counts; "
+            "quantities, conditions, unresolved relative dates and claims "
+            "that are not observed or asserted stay separate. Does not "
+            "affect store(). False restores one fact node per extraction."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(
