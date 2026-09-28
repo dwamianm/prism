@@ -444,6 +444,7 @@ class MemoryEngine:
                 confidence_matrix=_active_confidence_matrix,
                 max_concurrent_extractions=config.max_concurrent_extractions,
                 extraction_lease_seconds=config.extraction.lease_seconds,
+                merge_repeated_claims=config.enable_claim_merge,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -585,6 +586,7 @@ class MemoryEngine:
                 confidence_matrix=_active_confidence_matrix,
                 max_concurrent_extractions=config.max_concurrent_extractions,
                 extraction_lease_seconds=config.extraction.lease_seconds,
+                merge_repeated_claims=config.enable_claim_merge,
             )
 
             startup.push_async_callback(pipeline.shutdown)
