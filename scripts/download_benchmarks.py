@@ -11,8 +11,15 @@ Downloads (or creates stubs for) external benchmark datasets:
   Source: https://github.com/xiaowu0162/LongMemEval
   Paper: https://arxiv.org/abs/2410.10813
 
+  Two files are fetched. ``longmemeval_s_cleaned.json`` is the full history that
+  the registered harnesses and the evidence gate read, about 265 MB.
+  ``longmemeval_oracle.json`` holds only the supporting sessions and is a
+  diagnostic, so it does not test retrieval through distractors.
+
 Datasets are saved to ``data/benchmarks/locomo/`` and
-``data/benchmarks/longmemeval/`` relative to the project root.
+``data/benchmarks/longmemeval/`` relative to the project root. A file whose
+sha256 is pinned is checked after it downloads and skipped when a matching copy
+is already there, because a harness refuses a dataset whose digest differs.
 
 Usage::
 
@@ -23,6 +30,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import urllib.error
@@ -39,10 +47,25 @@ LONGMEMEVAL_DIR = PROJECT_ROOT / "data" / "benchmarks" / "longmemeval"
 LOCOMO_URL = (
     "https://raw.githubusercontent.com/snap-research/locomo/main/data/locomo10.json"
 )
-LONGMEMEVAL_URL = (
-    "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned"
-    "/resolve/main/longmemeval_oracle.json"
+_LONGMEMEVAL_REPO = (
+    "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main"
 )
+# Oracle histories hold only the supporting sessions. They are a diagnostic, not
+# a retrieval test.
+LONGMEMEVAL_URL = f"{_LONGMEMEVAL_REPO}/longmemeval_oracle.json"
+# The full-history S file, which the registered harnesses and the evidence gate
+# read. It is about 265 MB, and without it the LongMemEval-S benchmarks cannot
+# run at all.
+LONGMEMEVAL_S_URL = f"{_LONGMEMEVAL_REPO}/longmemeval_s_cleaned.json"
+
+# The harnesses refuse a dataset whose digest differs, so a download that does
+# not match is worse than none. The authorities for these two values are
+# run_gpt54_comparison.LOCOMO_SHA and run_longmemeval_s_baseline.DATASET_SHA256;
+# tests/test_download_benchmarks.py keeps this table in step with them.
+CHECKSUMS = {
+    "locomo10.json": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "longmemeval_s_cleaned.json": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+}
 
 
 def _download_file(url: str, dest: Path) -> bool:
@@ -55,6 +78,44 @@ def _download_file(url: str, dest: Path) -> bool:
     except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
         logger.warning("Download failed for %s: %s", url, exc)
         return False
+
+
+def _digest(path: Path) -> str:
+    sha = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            sha.update(block)
+    return sha.hexdigest()
+
+
+def _verified(dest: Path) -> bool:
+    """Whether *dest* is present and matches its pinned digest, if one is pinned."""
+    if not dest.exists():
+        return False
+    expected = CHECKSUMS.get(dest.name)
+    if expected is None:
+        return True
+    actual = _digest(dest)
+    if actual == expected:
+        return True
+    logger.warning("%s does not match the registered dataset (%s), so it is being "
+                   "downloaded again", dest.name, actual[:12])
+    return False
+
+
+def _fetch(url: str, dest: Path) -> bool:
+    """Download *url* to *dest* unless a verified copy is already there."""
+    if _verified(dest):
+        logger.info("%s is already present and matches", dest.name)
+        return True
+    if not _download_file(url, dest):
+        return False
+    expected = CHECKSUMS.get(dest.name)
+    if expected is not None and _digest(dest) != expected:
+        logger.error("%s does not match the registered dataset. The harnesses will "
+                     "refuse it. Remove it and try again.", dest.name)
+        return False
+    return True
 
 
 def _create_locomo_stub(dest_dir: Path) -> None:
@@ -149,11 +210,7 @@ def download_locomo(stub_only: bool = False) -> Path:
     LOCOMO_DIR.mkdir(parents=True, exist_ok=True)
 
     if not stub_only:
-        dest = LOCOMO_DIR / "locomo10.json"
-        if dest.exists():
-            logger.info("LoCoMo dataset already exists at %s", dest)
-            return LOCOMO_DIR
-        if _download_file(LOCOMO_URL, dest):
+        if _fetch(LOCOMO_URL, LOCOMO_DIR / "locomo10.json"):
             return LOCOMO_DIR
         logger.info("Falling back to synthetic stub.")
 
@@ -169,11 +226,18 @@ def download_longmemeval(stub_only: bool = False) -> Path:
     LONGMEMEVAL_DIR.mkdir(parents=True, exist_ok=True)
 
     if not stub_only:
-        dest = LONGMEMEVAL_DIR / "longmemeval_oracle.json"
-        if dest.exists():
-            logger.info("LongMemEval dataset already exists at %s", dest)
+        # The S file is what the benchmarks read; the oracle file is the
+        # diagnostic. Getting only one of them is still worth reporting.
+        wanted = ((LONGMEMEVAL_S_URL, "longmemeval_s_cleaned.json"),
+                  (LONGMEMEVAL_URL, "longmemeval_oracle.json"))
+        got = [_fetch(url, LONGMEMEVAL_DIR / name) for url, name in wanted]
+        if all(got):
             return LONGMEMEVAL_DIR
-        if _download_file(LONGMEMEVAL_URL, dest):
+        for ok, (_, name) in zip(got, wanted):
+            if not ok:
+                logger.warning("Could not get %s. Download it from %s", name,
+                               "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned")
+        if any(got):
             return LONGMEMEVAL_DIR
         logger.info("Falling back to synthetic stub.")
 
