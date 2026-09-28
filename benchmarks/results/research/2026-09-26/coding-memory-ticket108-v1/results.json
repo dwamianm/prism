@@ -1,0 +1,72 @@
+[
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "issue-108",
+    "passed": true,
+    "seconds": 35.9352910000016,
+    "input_tokens": 91911,
+    "output_tokens": 738,
+    "actions": {
+      "read": 7,
+      "edit": 2,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "9f385fba68c46ddd784ebd3983827e7a205874a8823f2d8986a46d8ef8304ebf",
+    "arm": "control",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "issue-108",
+    "passed": false,
+    "seconds": 38.04211670800578,
+    "input_tokens": 122181,
+    "output_tokens": 1159,
+    "actions": {
+      "read": 8,
+      "edit": 3,
+      "test": 1
+    },
+    "candidate_sha256": "271ec6175bb722ecf3f8e8f387281f91fa812efcfc9839f29bbf190adfb56ce6",
+    "arm": "memory",
+    "repeat": 0
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "issue-108",
+    "passed": false,
+    "seconds": 46.069785750005394,
+    "input_tokens": 122181,
+    "output_tokens": 1159,
+    "actions": {
+      "read": 8,
+      "edit": 3,
+      "test": 1
+    },
+    "candidate_sha256": "271ec6175bb722ecf3f8e8f387281f91fa812efcfc9839f29bbf190adfb56ce6",
+    "arm": "memory",
+    "repeat": 1
+  },
+  {
+    "status": "complete",
+    "failure": null,
+    "task": "issue-108",
+    "passed": true,
+    "seconds": 31.74018254096154,
+    "input_tokens": 91911,
+    "output_tokens": 738,
+    "actions": {
+      "read": 7,
+      "edit": 2,
+      "test": 1,
+      "finish": 1
+    },
+    "candidate_sha256": "9f385fba68c46ddd784ebd3983827e7a205874a8823f2d8986a46d8ef8304ebf",
+    "arm": "control",
+    "repeat": 1
+  }
+]

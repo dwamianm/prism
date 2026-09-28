@@ -88,3 +88,31 @@ The [first completed pilot](../benchmarks/results/research/2026-09-25/CODING-MEM
 passed 2/8 runs with memory versus 0/8 without it. Both gains repeated the same
 legacy serialization task; input tokens increased by 31.4%. This remains an
 opt-in development integration, with no claim of general coding improvement.
+
+The [real-ticket follow-up on issue 108](../benchmarks/results/research/2026-09-26/CODING-MEMORY-TICKET108-V1.md)
+used the existing daily-use memory, complete frozen source/existing-test access
+and twelve actions. Control passed 2/2 repairs; memory passed 0/2 and added
+32.9% input tokens. Both memory runs repeated the same syntax error. This is
+one development ticket, not a general conclusion; it shows why relevance and
+repair outcomes need measurement. No project-history backfill was tested.
+
+Its [protocol](../benchmarks/coding/TICKET-108-PROTOCOL.md) pins the original
+buggy revision. To reproduce the trial, build its frozen sandbox, with the
+tokenizer cache needed for offline packing checks:
+
+```bash
+trial_context=$(mktemp -d)
+git archive 4dba69a1a2b14ab980c9ec60744036753f6d97e7 | tar -x -C "$trial_context"
+cp docker/coding-memory.Dockerfile "$trial_context/docker/coding-memory.Dockerfile"
+docker build -f "$trial_context/docker/coding-memory.Dockerfile" --target sandbox \
+  -t prme-coding-ticket108:base "$trial_context"
+uv run python -m benchmarks.coding.ticket108 \
+  --output benchmarks/coding/runs/ticket108-new-run
+```
+
+The runner verifies that the sandbox source matches the pinned revision. Each
+invocation reads the current project memory; later invocations do not recreate
+the original memory arm, whose exact recall is retained in the raw artifacts.
+In particular, a memory containing the completed repair makes this ticket
+unsuitable as a fresh test of learning. Repeats remain explicit runs; an existing
+output directory cannot be overwritten.

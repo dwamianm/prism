@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `store()` is unchanged. Set `PRME_ENABLE_CLAIM_MERGE=false` to restore one
   fact per extraction.
 
+### Fixed
+
+- Auditable and compact contexts escape Unicode line separators so stored text
+  cannot introduce apparent records or section headings (#108). Exact token
+  accounting includes the escapes. New contexts containing these characters
+  have different rendered bytes; persisted receipt checksums, source text and
+  reader-format output remain unchanged. See [packing compatibility](docs/PACKING.md).
+
 ## [0.13.0] - 2026-09-25
 
 ### Upgrade notes
