@@ -339,8 +339,10 @@ class GateCase:
 
 def _harness():
     """The GPT-5.4 harness also holds provider clients, so load it only when the gate runs."""
+    from benchmarks import checkout
     from benchmarks.integrations import run_gpt54_comparison
 
+    checkout.retarget(run_gpt54_comparison)
     return run_gpt54_comparison
 
 

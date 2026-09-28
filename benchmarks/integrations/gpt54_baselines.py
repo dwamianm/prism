@@ -150,6 +150,7 @@ import sys
 from unittest.mock import patch
 import uuid
 
+from benchmarks import checkout
 from benchmarks.diagnostics import product_packing as gate
 from benchmarks.integrations import ollama_answers
 from benchmarks.integrations import run_gpt54_comparison as study
@@ -159,6 +160,10 @@ from benchmarks.integrations.gpt54_budget import (
 )
 from benchmarks.integrations.gpt54_official_prompt_loader import load_prompt
 from prme.retrieval.tokenization import count_tokens
+
+# The harness is frozen research evidence, so its recorded paths are re-rooted
+# here rather than edited. This has to run before the paths below are derived.
+checkout.retarget(study)
 
 # Private records live in the main checkout, like the saved run's archive, so
 # every worktree shares one spending ledger, run lock and set of answers per arm.

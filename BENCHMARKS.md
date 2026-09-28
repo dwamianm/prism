@@ -462,14 +462,22 @@ minutes old, so maintenance changed nothing there.
 
 All inputs are local and gitignored. Keep every one of them:
 
-- the archive `data/gpt54-comparison-v1/` in the main checkout
-  (`/Users/dwamianm/Sites/prism`); `--archive` points elsewhere, and worktrees
-  use the main checkout's archive by default;
+- the archive `data/gpt54-comparison-v1/` in the main checkout; `--archive`
+  points elsewhere, and worktrees use the main checkout's archive by default;
 - the LoCoMo packs that `locomo/prepared.json` names, in
-  `/Users/dwamianm/Sites/prism-locomo-baseline-2026-09-22/data/`;
+  `../prism-locomo-baseline-2026-09-22/data/`;
 - the 2026-09-22 LongMemEval-S control captures and packs, in
-  `/Users/dwamianm/Sites/prism-opt-in-study-2026-09-22/data/opt-in-study/opt-in-successor-v2/baseline/`;
+  `../prism-opt-in-study-2026-09-22/data/opt-in-study/opt-in-successor-v2/baseline/`;
 - both datasets under the main checkout's `data/benchmarks/`.
+
+The main checkout is the one holding `data/` and `.env`. `benchmarks/checkout.py`
+resolves it through git, so a worktree reads the main checkout's datasets and
+writes to its one ledger, while a plain clone resolves to itself wherever it
+sits. The study worktrees above are expected beside it. The registered harness
+still records the original research machine's absolute paths, because its bytes
+are pinned by sha256 in the saved registration; those values are re-rooted at
+import rather than edited. Set `PRME_ORIGINAL_ROOT` or `PRME_MATRIX_ROOT` when a
+checkout sits somewhere git cannot relate, such as an unpacked archive.
 
 Removing either of those two checkouts deletes the gate's baseline, and the
 packs cannot be rebuilt byte for byte. Before replaying, the gate checks the
