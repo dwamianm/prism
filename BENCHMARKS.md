@@ -487,6 +487,39 @@ reciprocal rank fusion of both, k=60) and packed in rank order as plain lines.
 It accepts only `packing.token_budget` and `packing.overhead_tokens` overrides,
 and its reports compare with PRME reports through `gate-compare`.
 
+### Packs built through `ingest()` (#102)
+
+The saved packs were built with `store()`, which never runs extraction, so a
+change to extraction or the graph leaves every saved context unchanged.
+`benchmarks.diagnostics.extracted_packs` builds fresh LoCoMo packs from the
+same source turns through `ingest()`, with a local Ollama extraction model, and
+`gate --packs` replays retrieval over them:
+
+```sh
+# Local model only. About 7.8 s per turn with prme-qwen3.5:35b-a3b-8k, so all
+# 5,882 LoCoMo turns take about 13 hours. A stopped build resumes.
+uv run python -m benchmarks.diagnostics.extracted_packs build --label ingest-baseline
+uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo \
+  --packs data/extracted-packs-v1/ingest-baseline --output /tmp/gate-ingest.json
+```
+
+The build refuses any model that the local Ollama server does not run on this
+machine, so it never calls a paid API or sends the dataset elsewhere. The
+second speaker in each conversation is stored as a `participant` with a
+speaker name (#84), not as the assistant. Each conversation's `manifest.json`
+records extraction status, model calls, tokens, wall time, claims per turn and
+the share of annotated evidence turns that at least one extracted record cites.
+In the gate report, an evidence turn counts as packed when a packed extracted
+record cites it, and `packed_by_extracted` counts those turns separately. No
+saved context exists for built packs, so none is expected to match. Built packs
+contain benchmark text and stay in the ignored `data/` folder.
+
+A resumed build must use the same commit, working tree, settings and model.
+Compare two builds only when both were made with the same model and Ollama
+server version (`build.json` records both). Local extraction at temperature 0
+is close to repeatable but not guaranteed to be, so two builds of the same code
+can differ slightly.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of

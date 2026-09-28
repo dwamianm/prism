@@ -21,7 +21,10 @@ accuracy is a planning estimate,
 not an answer score. ``gate --plain`` measures a plain RAG reference over the
 same stored turns instead of ``retrieve()``, and
 ``benchmarks.integrations.gpt54_baselines`` prepares those contexts for the
-GPT-5.4 baseline arms.
+GPT-5.4 baseline arms. ``gate --packs`` replays LoCoMo packs that
+``benchmarks.diagnostics.extracted_packs`` built through ``ingest()`` instead of
+the saved run, and credits an evidence turn that a packed extracted record
+cites (#102).
 """
 from __future__ import annotations
 
@@ -29,6 +32,7 @@ import argparse
 import asyncio
 from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -457,6 +461,39 @@ def _longmemeval_cases(archive: Path) -> list[GateCase]:
     return cases
 
 
+def _built_locomo_cases(packs: Path) -> list[GateCase]:
+    """LoCoMo questions over packs that ``extracted_packs`` built, for each conversation it completed (#102).
+
+    No saved context exists for these packs, so none is expected to match.
+    """
+    from benchmarks.diagnostics import extracted_packs
+
+    gpt54 = _harness()
+    if gpt54.digest(gpt54.LOCOMO) != gpt54.LOCOMO_SHA:
+        raise ValueError("The LoCoMo dataset differs from the registered one")
+    built = extracted_packs.built_conversations(packs / "locomo")
+    if not built:
+        raise ValueError(f"No complete LoCoMo pack under {packs / 'locomo'}")
+    stored = {sample["sample_id"]: {turn["metadata"]["source_dialog_id"]
+                                    for turn in gpt54.source_turns(sample["conversation"])}
+              for sample in json.loads(gpt54.LOCOMO.read_text())}
+    cases = []
+    for question in gpt54.question_rows("locomo"):
+        manifest = built.get(question["conversation_id"])
+        if manifest is None:
+            continue
+        wanted = frozenset(question.get("evidence", []))
+        cases.append(GateCase(
+            benchmark="locomo", question_id=question["question_id"], category=question["question_type"],
+            question=question["question"], user_id=manifest["user_id"],
+            reference_time=datetime.fromisoformat(manifest["reference_time"]),
+            pack=_pack_dir(packs / "locomo" / question["conversation_id"] / "pack"),
+            pack_sha256=manifest["pack_sha256"], saved_context_sha256="", evidence=wanted or None,
+            unresolved=tuple(sorted(wanted - stored[question["conversation_id"]])),
+        ))
+    return cases
+
+
 def parse_overrides(items: list[str]) -> dict:
     """Turn ``packing.token_budget=8192`` style arguments into nested config values."""
     overrides: dict = {}
@@ -603,13 +640,18 @@ def _first_ranks(benchmark: str, ranked_metadata: Iterable[dict | None]) -> dict
 def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens: int, packed_sources: set[str],
               text_sources: set[str], first_rank: dict[str, int], records: int, records_without_text: int,
               representations: dict[str, int], candidates: int, seconds: float, stored: int | None,
-              channel_ranks: dict[str, dict[str, int | None]] | None) -> dict:
-    """One question's measurements; PRME and plain replays share it so their reports compare."""
+              channel_ranks: dict[str, dict[str, int | None]] | None,
+              extracted_sources: AbstractSet[str] = frozenset()) -> dict:
+    """One question's measurements; PRME and plain replays share it so their reports compare.
+
+    ``extracted_sources`` are the turns that packed extracted records cite (#102).
+    """
     evidence = None
     if case.evidence is not None:
         evidence = {
             "annotated": len(case.evidence), "unresolved": list(case.unresolved),
             "packed": len(case.evidence & packed_sources),
+            "packed_by_extracted": len(case.evidence & extracted_sources),
             "packed_with_text": len(case.evidence & text_sources),
             "all_packed": case.evidence <= packed_sources,
             "all_packed_with_text": case.evidence <= text_sources,
@@ -737,8 +779,26 @@ async def _cached_turns(engine, user_id: str, cache: dict) -> dict | None:
     return cache[user_id]
 
 
+# More events than any one benchmark user holds.
+_ALL_EVENTS = 1_000_000
+
+
+async def _event_sources(engine, case: GateCase, cache: dict) -> dict[str, str]:
+    """Source turn by event ID for the question's user, loaded once per engine (#102).
+
+    Extracted records carry no source metadata of their own; their evidence
+    references name the events they came from.
+    """
+    if case.user_id not in cache:
+        events = await engine.get_events(case.user_id, limit=_ALL_EVENTS)
+        cache[case.user_id] = {str(event.id): key for event in events
+                               if (key := _source_key(case.benchmark, event.metadata or {})) is not None}
+    return cache[case.user_id]
+
+
 async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_dir: Path | None,
-                       turns_cache: dict, rerank_timer: _RerankTimer | None = None) -> dict:
+                       turns_cache: dict, rerank_timer: _RerankTimer | None = None,
+                       events_cache: dict | None = None) -> dict:
     if rerank_timer is not None:
         rerank_timer.start()
     started = time.perf_counter()
@@ -752,19 +812,25 @@ async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_d
     # Receipt flags, not the rendered format, decide what counts as memory text,
     # and that text must actually appear in the context.
     has_text = {candidate.node_id: candidate.has_content for candidate in receipt.candidates}
-    packed_sources, text_sources, text_tokens = set(), set(), 0
+    packed_sources, text_sources, extracted_sources, text_tokens = set(), set(), set(), 0
+    events_cache = {} if events_cache is None else events_cache
     for candidate in packed:
         source = _source_key(case.benchmark, candidate.node.metadata or {})
+        if source is not None:
+            sources = {source}
+        else:
+            # An extracted record: credit the turns its evidence references name.
+            events = await _event_sources(engine, case, events_cache)
+            sources = {events[str(ref)] for ref in candidate.node.evidence_refs if str(ref) in events}
+            extracted_sources |= sources
         if has_text[candidate.node.id]:
             text = candidate.rendered_text or ""
             if not _in_context(text, context):
                 raise ValueError(f"{case.benchmark} {case.question_id}: packed memory text is missing "
                                  "from the rendered context")
             text_tokens += count_tokens(text, packing.tokenizer)
-        if source is not None:
-            packed_sources.add(source)
-            if has_text[candidate.node.id]:
-                text_sources.add(source)
+            text_sources |= sources
+        packed_sources |= sources
     # Read-only and after the timed retrieval, so it changes no context and
     # not this question's time. The index searches can warm caches for the next
     # question, the same way in every run.
@@ -776,7 +842,7 @@ async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_d
         records=len(packed), records_without_text=sum(not has_text[candidate.node.id] for candidate in packed),
         representations=dict(Counter(candidate.representation.value for candidate in packed)),
         candidates=len(response.results), seconds=seconds, stored=None if turns is None else len(turns),
-        channel_ranks=await _channel_ranks(engine, case, turns))
+        channel_ranks=await _channel_ranks(engine, case, turns), extracted_sources=extracted_sources)
     row["reranking_seconds"] = rerank_timer.seconds if rerank_timer is not None else None
     row["query_scoring"] = _query_scoring_observations(receipt)
     row["session_context"] = _session_context_observations(packed)
@@ -1014,11 +1080,12 @@ async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict |
             async with MemoryEngine.open(config) as engine:
                 await _warm_up(engine, group[0].user_id)
                 turns_cache: dict = {}
+                events_cache: dict = {}
                 timer = _RerankTimer(engine)
                 for case in group:
                     if plain is None:
                         rows.append(await _replay_case(engine, config.packing, case, capture_dir, turns_cache,
-                                                       timer))
+                                                       timer, events_cache))
                     else:
                         rows.append(await _replay_plain_case(engine, config.packing, case, plain, capture_dir,
                                                              turns_cache))
@@ -1181,6 +1248,9 @@ def summarize_gate(rows: list[dict]) -> dict:
         "all_evidence_packed_share": _share(all_packed, len(annotated)),
         "all_evidence_packed_with_text": with_text,
         "all_evidence_packed_with_text_share": _share(with_text, len(annotated)),
+        # Annotated turns that a packed extracted record cites (#102); zero for packs of raw turns.
+        "evidence_turns_packed_by_extracted": sum(evidence.get("packed_by_extracted", 0) for evidence in annotated),
+        "evidence_turns_resolved": sum(evidence["annotated"] - len(evidence["unresolved"]) for evidence in annotated),
         # Candidate recall, separate from what the context kept.
         "all_evidence_returned": all_returned,
         "all_evidence_returned_share": _share(all_returned, len(annotated)),
@@ -1224,7 +1294,8 @@ def gate_report(rows: list[dict], *, provenance: dict) -> dict:
 
 async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path | None = None,
                    overrides: dict | None = None, capture_dir: Path | None = None, plain: str | None = None,
-                   progress: Callable[[int], None] | None = None) -> dict:
+                   progress: Callable[[int], None] | None = None, packs: Path | None = None) -> dict:
+    """Replay the saved run's packs, or with ``packs`` a build from ``extracted_packs`` (#102)."""
     from benchmarks.retrieval_eval import provenance
 
     requested = {benchmarks} if isinstance(benchmarks, str) else set(benchmarks)
@@ -1233,6 +1304,8 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     if plain is not None:
         check_plain(plain, overrides)
     selected = [name for name in GATE_BENCHMARKS if name in requested]
+    if packs is not None and (archive is not None or selected != ["locomo"]):
+        raise ValueError("Built packs exist for LoCoMo only; pass --benchmark locomo and no --archive")
     gpt54 = _harness()
     archive = archive or default_archive()
     # Record the code that runs before replaying; this also rejects bad overrides.
@@ -1242,7 +1315,10 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
         raise ValueError("Run the gate from a git checkout so the report names its commit")
     loaders = {"locomo": _locomo_cases, "longmemeval": _longmemeval_cases}
     started_at, started, load_at_start = gpt54.utc(), time.perf_counter(), os.getloadavg()
-    cases = [case for name in selected for case in loaders[name](archive)]
+    if packs is not None:
+        cases = _built_locomo_cases(packs)
+    else:
+        cases = [case for name in selected for case in loaders[name](archive)]
     if capture_dir is not None:
         capture_dir.mkdir(parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory(prefix="prme-evidence-gate-") as scratch:
@@ -1253,8 +1329,9 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
         **run_provenance, "overrides": overrides or {}, "retrieval_timing": GATE_RETRIEVAL_TIMING,
         **({"plain": plain, "plain_rrf_k": PLAIN_RRF_K} if plain is not None else {}),
         **({"reranker_runtime": _reranker_runtime(config)} if config.enable_reranker else {}),
-        "archive": {"path": str(archive),
-                    "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}},
+        **(_built_provenance(packs, cases) if packs is not None else {"archive": {
+            "path": str(archive),
+            "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}}}),
         "datasets": {name: datasets[name] for name in selected},
     })
     # The host's 1, 5 and 15 minute load averages, so a latency comparison can
@@ -1262,6 +1339,18 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     report.update(started_at=started_at, seconds=time.perf_counter() - started,
                   load_average={"start": list(load_at_start), "end": list(os.getloadavg())})
     return report
+
+
+def _built_provenance(packs: Path, cases: list[GateCase]) -> dict:
+    """Which build the replay read: its record's digest and each conversation's pack identity."""
+    from benchmarks.diagnostics import extracted_packs
+
+    built = extracted_packs.built_conversations(packs / "locomo")
+    return {"packs": {"path": str(packs), "build_sha256": extracted_packs.build_digest(packs),
+                      "build": json.loads((packs / "build.json").read_text()).get("label"),
+                      "conversations": {case.pack.parent.name: case.pack_sha256 for case in cases},
+                      "evidence_claim_coverage": {name: manifest["evidence_claim_coverage"]
+                                                  for name, manifest in built.items()}}}
 
 
 def _reranker_runtime(config: PRMEConfig) -> dict:
@@ -1519,6 +1608,11 @@ def gate_markdown(report: dict) -> str:
                    "rrf": f"reciprocal rank fusion (k={report['provenance'].get('plain_rrf_k')}) of both"}[plain]
         lines += ["", f"**Plain RAG reference, not PRME.** Stored turns are ranked by {ranking} and packed in "
                   "rank order as plain lines, so no context is expected to match the saved PRME run."]
+    elif report["provenance"].get("packs"):
+        packs = report["provenance"]["packs"]
+        lines += ["", f"**Built packs, not the saved run.** Build `{packs['build']}` under `{packs['path']}` "
+                  f"({len(packs['conversations'])} conversations) was made with `ingest()`, so no saved context "
+                  "exists to match. Evidence counts include turns that packed extracted records cite."]
     elif report["provenance"].get("overrides") and not changed:
         lines += ["", "**Every context matches the saved run, so these overrides changed nothing the reader "
                   "sees.** Check the setting names. Changes that act when memories are stored need new packs."]
@@ -1557,8 +1651,13 @@ def gate_markdown(report: dict) -> str:
                       f"({_pct(session['reached_share'])} of packed records), {session['added']} found by no "
                       f"other path, {session['promoted']} scored by a session decay."]
         lines += _candidate_markdown(bench["summary"])
+        extracted = bench["summary"].get("evidence_turns_packed_by_extracted")
+        if report["provenance"].get("packs") and extracted is not None:
+            lines += ["", f"Annotated evidence turns cited by a packed extracted record: {extracted} of "
+                      f"{bench['summary']['evidence_turns_resolved']} "
+                      f"({_pct(_share(extracted, bench['summary']['evidence_turns_resolved']))})."]
         mismatches = bench["context_mismatches"]
-        if mismatches and not plain:
+        if mismatches and not plain and not report["provenance"].get("packs"):
             shown = _listed(mismatches)
             lines += ["", f"Contexts that differ from the saved run: {len(mismatches)} ({shown}). "
                       "The JSON report lists every one."]
@@ -1801,6 +1900,9 @@ def gate_main(argv: list[str]) -> None:
     parser.add_argument("--plain", choices=PLAIN_METHODS,
                         help="Measure a plain RAG baseline instead of retrieve(): stored turns ranked by this "
                              "method alone and packed as plain lines")
+    parser.add_argument("--packs", type=Path,
+                        help="A build folder from benchmarks.diagnostics.extracted_packs (LoCoMo only) to replay "
+                             "instead of the saved run")
     args = parser.parse_args(argv)
     try:
         overrides = parse_overrides(args.overrides)
@@ -1819,7 +1921,8 @@ def gate_main(argv: list[str]) -> None:
         last_done = done
 
     report = asyncio.run(run_gate(args.benchmark or GATE_BENCHMARKS, archive=args.archive, overrides=overrides,
-                                  capture_dir=args.capture_dir, plain=args.plain, progress=progress))
+                                  capture_dir=args.capture_dir, plain=args.plain, progress=progress,
+                                  packs=args.packs))
     markdown = gate_markdown(report)
     _write_report(args.output, report, markdown)
     print(markdown)

@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   four-task development pilot passed 2/8 runs with memory versus 0/8 without;
   both gains repeated one task and do not establish general coding improvement.
   See [coding memory](docs/CODING-MEMORY.md).
+- `benchmarks.diagnostics.extracted_packs` builds LoCoMo memory packs through
+  `ingest()` with a local Ollama extraction model, and the offline evidence
+  gate replays them with `gate --packs` (#102, part of #91). Until now the gate
+  could replay only packs built with `store()`, which never runs extraction, so
+  it could not measure changes to extraction or the graph.
 
 ### Changed
 
