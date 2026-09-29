@@ -620,6 +620,12 @@ def build_digest(folder: Path) -> str:
     return hashlib.sha256((folder / "build.json").read_bytes()).hexdigest()
 
 
+def _default_slice() -> Path:
+    from benchmarks.diagnostics import dev_slice
+
+    return dev_slice.DEFAULT_SLICE
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m benchmarks.diagnostics.extracted_packs",
                                      description="Build LoCoMo or LongMemEval-S memory packs through ingest() "
@@ -630,8 +636,12 @@ def main(argv: list[str] | None = None) -> None:
     command.add_argument("--benchmark", choices=BENCHMARKS, default="locomo")
     command.add_argument("--root", type=Path, default=None,
                          help="Where the builds live; the main checkout's data/extracted-packs-v1 by default")
-    command.add_argument("--unit", action="append",
-                         help="A conversation or question ID; repeatable; every one by default")
+    chosen = command.add_mutually_exclusive_group()
+    chosen.add_argument("--unit", action="append",
+                        help="A conversation or question ID; repeatable; every one by default")
+    chosen.add_argument("--slice", dest="dev_slice", type=Path, nargs="?", const=_default_slice(),
+                        help="Build the packs a committed development slice needs (default file: "
+                             "benchmarks/slices/dev-v1.json)")
     command.add_argument("--model", default=DEFAULT_MODEL, help="An Ollama model tag")
     command.add_argument("--cloud", action="store_true",
                          help="Accept an Ollama cloud model: Ollama's hosted service receives the turns")
@@ -649,7 +659,15 @@ def main(argv: list[str] | None = None) -> None:
     except ValueError as exc:
         parser.error(str(exc))
     _quiet_offline_cli()
-    manifests = asyncio.run(build(args.label, benchmark=args.benchmark, root=args.root, units=args.unit,
+    units = args.unit
+    if args.dev_slice is not None:
+        from benchmarks.diagnostics import dev_slice
+
+        try:
+            units = dev_slice.slice_units(dev_slice.load_slice(args.dev_slice), args.benchmark)
+        except (OSError, ValueError) as exc:
+            parser.error(str(exc))
+    manifests = asyncio.run(build(args.label, benchmark=args.benchmark, root=args.root, units=units,
                                   overrides=overrides, model=args.model, jobs=args.jobs, max_turns=args.max_turns,
                                   cloud=args.cloud, cache=not args.no_cache, shard=args.shard))
     print(json.dumps({unit_id: {key: manifest[key] for key in (
