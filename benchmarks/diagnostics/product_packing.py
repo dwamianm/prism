@@ -1346,8 +1346,12 @@ def gate_report(rows: list[dict], *, provenance: dict) -> dict:
 
 async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path | None = None,
                    overrides: dict | None = None, capture_dir: Path | None = None, plain: str | None = None,
-                   progress: Callable[[int], None] | None = None, packs: Path | None = None) -> dict:
-    """Replay the saved run's packs, or with ``packs`` a build from ``extracted_packs`` (#102)."""
+                   progress: Callable[[int], None] | None = None, packs: Path | None = None,
+                   dev_slice: Path | None = None) -> dict:
+    """Replay the saved run's packs, or with ``packs`` a build from ``extracted_packs`` (#102).
+
+    ``dev_slice`` replays only a committed development slice's questions (``dev_slice.py``).
+    """
     from benchmarks.retrieval_eval import provenance
 
     requested = {benchmarks} if isinstance(benchmarks, str) else set(benchmarks)
@@ -1371,6 +1375,9 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
         cases = [case for name in selected for case in _built_cases(packs, name)]
     else:
         cases = [case for name in selected for case in loaders[name](archive)]
+    chosen = None
+    if dev_slice is not None:
+        cases, chosen = _slice_cases(cases, dev_slice, selected)
     if capture_dir is not None:
         capture_dir.mkdir(parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory(prefix="prme-evidence-gate-") as scratch:
@@ -1385,12 +1392,28 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
             "path": str(archive),
             "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}}}),
         "datasets": {name: datasets[name] for name in selected},
+        **({"slice": chosen} if chosen is not None else {}),
     })
     # The host's 1, 5 and 15 minute load averages, so a latency comparison can
     # show whether either run shared the machine (issue #87).
     report.update(started_at=started_at, seconds=time.perf_counter() - started,
                   load_average={"start": list(load_at_start), "end": list(os.getloadavg())})
     return report
+
+
+def _slice_cases(cases: list[GateCase], path: Path, selected: list[str]) -> tuple[list[GateCase], dict]:
+    """Keep the slice's questions, refusing a replay that lacks any, so a slice never silently shrinks."""
+    from benchmarks.diagnostics import dev_slice
+
+    record = dev_slice.load_slice(path)
+    wanted = {name: dev_slice.slice_questions(record, name) for name in selected}
+    kept = [case for case in cases if case.question_id in wanted[case.benchmark]]
+    for name in selected:
+        missing = sorted(wanted[name] - {case.question_id for case in kept if case.benchmark == name})
+        if missing:
+            raise ValueError(f"The replay lacks {len(missing)} {name} slice questions, e.g. {missing[:3]}; "
+                             f"build their packs first ({', '.join(dev_slice.slice_units(record, name)[:5])})")
+    return kept, record["identity"]
 
 
 def _built_provenance(packs: Path, cases: list[GateCase]) -> dict:
@@ -1485,6 +1508,7 @@ _COMPARED_INPUTS = {
     "tokenizers": lambda report: report["provenance"]["engine_config"]["packing"]["tokenizer"],
     "projection constants": lambda report: report["projection"],
     "baselines": lambda report: report["baseline"],
+    "development slices": lambda report: report["provenance"].get("slice"),
 }
 
 
@@ -1943,6 +1967,12 @@ def _quiet_offline_cli() -> None:
                         logger_factory=structlog.PrintLoggerFactory(file=sys.stderr))
 
 
+def _default_slice() -> Path:
+    from benchmarks.diagnostics import dev_slice
+
+    return dev_slice.DEFAULT_SLICE
+
+
 def gate_main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         prog="python -m benchmarks.diagnostics.product_packing gate",
@@ -1964,6 +1994,9 @@ def gate_main(argv: list[str]) -> None:
     parser.add_argument("--packs", type=Path,
                         help="A build folder from benchmarks.diagnostics.extracted_packs to replay instead of the "
                              "saved run; pass --benchmark for the benchmark it holds")
+    parser.add_argument("--slice", dest="dev_slice", type=Path, nargs="?", const=_default_slice(),
+                        help="Replay only a committed development slice's questions (default file: "
+                             "benchmarks/slices/dev-v1.json)")
     args = parser.parse_args(argv)
     try:
         overrides = parse_overrides(args.overrides)
@@ -1983,7 +2016,7 @@ def gate_main(argv: list[str]) -> None:
 
     report = asyncio.run(run_gate(args.benchmark or GATE_BENCHMARKS, archive=args.archive, overrides=overrides,
                                   capture_dir=args.capture_dir, plain=args.plain, progress=progress,
-                                  packs=args.packs))
+                                  packs=args.packs, dev_slice=args.dev_slice))
     markdown = gate_markdown(report)
     _write_report(args.output, report, markdown)
     print(markdown)

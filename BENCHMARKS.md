@@ -555,6 +555,54 @@ close to repeatable but not guaranteed to be, so two builds of the same code
 can differ slightly, and the LoCoMo and LongMemEval-S baselines use different
 extraction models.
 
+### Development slice
+
+Building packs for every question after each change is too slow to iterate
+on, so development uses a fixed slice, `benchmarks/slices/dev-v1.json`, and
+keeps the full benchmarks for the gates before a merge or a default change.
+`benchmarks.diagnostics.dev_slice` chose it from the committed DeepSeek
+results by rules that are written down in the module, and `check` confirms
+that the committed file still follows from the files it names:
+
+| Benchmark | Slice | Chosen by |
+|---|---|---|
+| LoCoMo | conv-26, conv-49 and conv-50: 466 of 1,540 questions, 1,496 turns | The three shortest conversations whose questions cover every category. Length alone decides, so no outcome did |
+| LongMemEval-S | 42 of 500 questions: 18 stable failures and 24 canaries | Every question the `prme@d811e3ed` defaults answer wrong on every repeated answer of an identical context, plus four questions per type that they always answer right, in order of the SHA-256 of the question ID |
+
+Each question is tagged `stable_wrong`, `stable_right` or `noisy`. A noisy
+question's verdict has changed between two answers of an identical context in
+a committed answer run: 343 of the 1,540 LoCoMo questions and 73 of the 500
+LongMemEval-S questions, including 127 of the 290 LoCoMo failures and 29 of the
+47 LongMemEval-S failures of the defaults baseline. Such a question can pass or
+fail with no change, so a flip there is not evidence. The LoCoMo slice keeps
+its 96 noisy questions, because whole conversations are kept, and the
+LongMemEval-S slice leaves them out. Every slice question has at least six
+answers of one identical context behind its tag.
+
+```sh
+# Build only the packs the slice needs, then replay only its questions.
+uv run python -m benchmarks.diagnostics.extracted_packs build --label <label> --slice
+uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo \
+  --packs data/extracted-packs-v1/<label> --slice --output /tmp/gate-slice.json
+uv run python -m benchmarks.diagnostics.dev_slice check
+```
+
+`--slice` takes a path, or the committed slice when given none. The gate
+refuses a replay that lacks any slice question instead of shrinking the slice,
+records the slice's name and SHA-256 in the report, and `gate-compare` refuses
+two reports over different slices. On the `ingest-baseline-locomo-deepseek`
+packs the LoCoMo slice replays in about 3 minutes, against about 10 for all
+1,540 questions, with per-question evidence identical to the full replay. It
+packs all annotated evidence for 72.9% of its questions, against 75.6% for
+the whole benchmark.
+
+The slice is for direction while iterating. It is too small for the intervals
+in the default-change rule, and its questions have been examined, so a
+variant that looks better on it still needs the full benchmarks. The questions
+outside it are not used while iterating. A slice is never edited: select a new
+one under a new name, for example when a new defaults baseline replaces
+`prme@d811e3ed`.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
