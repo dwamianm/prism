@@ -1269,3 +1269,53 @@ def test_gate_summary_and_comparison_report_reranking_latency():
     untimed = gate_fixture(after["rows"])
     assert compare_gates(before, untimed, samples=20)["benchmarks"]["locomo"]["reranking_seconds"] == {
         "before": None, "after": None}
+
+
+def speaker_row(question_id, speakers, *, all_packed, category="single-hop"):
+    """A LoCoMo row whose annotated evidence came from the named speaker roles."""
+    row = gate_row(question_id, category, all_packed=all_packed)
+    row["evidence"]["speaker_roles"] = [speakers] if isinstance(speakers, str) else sorted(speakers)
+    return row
+
+
+class TestBySpeaker:
+    """#84: each LoCoMo speaker is measured apart, which is how the gap shows and closes."""
+
+    def test_each_speaker_gets_its_own_count_and_share(self):
+        rows = ([speaker_row(f"u{n}", "user", all_packed=n < 7) for n in range(10)]
+                + [speaker_row(f"a{n}", "assistant", all_packed=n < 6) for n in range(10)])
+        by_speaker = summarize_gate(rows)["by_speaker"]
+        assert by_speaker["user"]["questions"] == 10
+        assert by_speaker["user"]["all_evidence_packed"] == 7
+        assert by_speaker["user"]["all_evidence_packed_share"] == pytest.approx(0.7)
+        assert by_speaker["assistant"]["all_evidence_packed_share"] == pytest.approx(0.6)
+
+    def test_evidence_spanning_both_speakers_counts_for_neither(self):
+        """Such a question says nothing about either speaker, so the baseline left it out."""
+        rows = [speaker_row("u1", "user", all_packed=True),
+                speaker_row("both", ("assistant", "user"), all_packed=False)]
+        summary = summarize_gate(rows)
+        assert summary["by_speaker"]["user"]["questions"] == 1
+        assert "assistant" not in summary["by_speaker"]
+        assert summary["annotated_questions"] == 2  # it still counts in the whole
+
+    def test_a_benchmark_with_no_second_speaker_reports_nothing(self):
+        rows = [gate_row(f"q{n}", "multi-session", all_packed=True, benchmark="longmemeval")
+                for n in range(3)]
+        assert summarize_gate(rows)["by_speaker"] is None
+
+    def test_questions_without_an_evidence_annotation_are_left_out(self):
+        rows = [speaker_row("u1", "user", all_packed=True), gate_row("unscored", "single-hop")]
+        assert summarize_gate(rows)["by_speaker"]["user"]["questions"] == 1
+
+    def test_projected_accuracy_is_reported_for_each_speaker(self):
+        rows = ([speaker_row(f"u{n}", "user", all_packed=True) for n in range(4)]
+                + [speaker_row(f"a{n}", "assistant", all_packed=False) for n in range(4)])
+        by_speaker = summarize_gate(rows)["by_speaker"]
+        assert by_speaker["user"]["projected_accuracy"] > by_speaker["assistant"]["projected_accuracy"]
+        assert by_speaker["user"]["projected_correct"] > 0
+
+    def test_an_older_report_without_speakers_still_summarizes(self):
+        """Rows saved before this metric existed carry no speaker_roles key."""
+        rows = [gate_row(f"q{n}", "single-hop", all_packed=True) for n in range(3)]
+        assert summarize_gate(rows)["by_speaker"] is None

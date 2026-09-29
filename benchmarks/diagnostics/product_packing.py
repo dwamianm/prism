@@ -335,6 +335,10 @@ class GateCase:
     saved_context_sha256: str
     evidence: frozenset[str] | None  # None when the question has no evidence annotation
     unresolved: tuple[str, ...] = ()  # annotations that name no stored turn
+    # Roles the registered LoCoMo adapter gives the speakers this question's
+    # evidence came from, by sorted name (#84). Empty where the benchmark has
+    # no second person, as LongMemEval-S does not.
+    evidence_roles: frozenset[str] = frozenset()
 
 
 def _harness():
@@ -406,9 +410,14 @@ def _locomo_cases(archive: Path) -> list[GateCase]:
     packs = {record["conversation_id"]: (_pack_dir(Path(record["config"]["db_path"]).parent),
                                          record["final_artifact"]["tree_sha256"])
              for record in prepared["packs"]}
-    stored = {sample["sample_id"]: {turn["metadata"]["source_dialog_id"]
-                                    for turn in gpt54.source_turns(sample["conversation"])}
-              for sample in json.loads(gpt54.LOCOMO.read_text())}
+    turns_by_sample = {sample["sample_id"]: gpt54.source_turns(sample["conversation"])
+                       for sample in json.loads(gpt54.LOCOMO.read_text())}
+    stored = {sample_id: {turn["metadata"]["source_dialog_id"] for turn in turns}
+              for sample_id, turns in turns_by_sample.items()}
+    # The adapter names the speaker whose name sorts first "user" and the next
+    # "assistant", which is the split #84 measures.
+    roles = {sample_id: {turn["metadata"]["source_dialog_id"]: turn["role"] for turn in turns}
+             for sample_id, turns in turns_by_sample.items()}
     cases = []
     for question in questions:
         saved = _saved_context(folder, question["question_id"], manifest)
@@ -422,6 +431,9 @@ def _locomo_cases(archive: Path) -> list[GateCase]:
             saved_context_sha256=hashlib.sha256(saved["context"].encode()).hexdigest(),
             evidence=wanted or None,
             unresolved=tuple(sorted(wanted - stored[question["conversation_id"]])),
+            evidence_roles=frozenset(
+                role for key in wanted
+                if (role := roles[question["conversation_id"]].get(key)) is not None),
         ))
     return cases
 
@@ -640,6 +652,40 @@ def _first_ranks(benchmark: str, ranked_metadata: Iterable[dict | None]) -> dict
     return first_rank
 
 
+def _by_speaker(rows: list[dict]) -> dict | None:
+    """What the gate packed and projects for each LoCoMo speaker, separately (#84).
+
+    The registered adapter maps the speaker whose name sorts second to
+    ``assistant``, so ``infer_source_type`` marked everything they said
+    ``system_inferred`` and the confidence matrix scored it 0.60 rather than
+    0.80. In the saved 2026-09-23 run that showed up as 63.8% of their
+    questions having all evidence packed against 70.0% for the other speaker.
+
+    Only questions whose annotated evidence comes from one speaker are counted,
+    which is how those baseline figures were drawn. Questions whose evidence
+    spans both say nothing about either. Returns ``None`` for a benchmark whose
+    turns have no second speaker.
+    """
+    groups: dict[str, list[dict]] = {}
+    for row in rows:
+        evidence = row.get("evidence")
+        speakers = (evidence or {}).get("speaker_roles") or []
+        if evidence is not None and len(speakers) == 1:
+            groups.setdefault(speakers[0], []).append(row)
+    if not groups:
+        return None
+    summary = {}
+    for role, group in sorted(groups.items()):
+        packed = sum(row["evidence"]["all_packed"] for row in group)
+        correct = sum(row["projected_correct"] for row in group)
+        summary[role] = {
+            "questions": len(group), "all_evidence_packed": packed,
+            "all_evidence_packed_share": _share(packed, len(group)),
+            "projected_correct": correct, "projected_accuracy": correct / len(group),
+        }
+    return summary
+
+
 def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens: int, packed_sources: set[str],
               text_sources: set[str], first_rank: dict[str, int], records: int, records_without_text: int,
               representations: dict[str, int], candidates: int, seconds: float, stored: int | None,
@@ -660,6 +706,7 @@ def _gate_row(case: GateCase, *, context: str, context_tokens: int, text_tokens:
             "all_packed_with_text": case.evidence <= text_sources,
             "ranks": {key: first_rank.get(key) for key in sorted(case.evidence.difference(case.unresolved))},
             "channel_ranks": channel_ranks,
+            "speaker_roles": sorted(case.evidence_roles),
         }
     context_sha256 = hashlib.sha256(context.encode()).hexdigest()
     return {
@@ -1271,6 +1318,8 @@ def summarize_gate(rows: list[dict]) -> dict:
         "projected_correct": projected,
         "projected_accuracy": projected / len(rows),
         "session_context_records": _session_context_summary(rows),
+        # Each LoCoMo speaker separately, the split #84 is about.
+        "by_speaker": _by_speaker(rows),
     }
 
 
