@@ -24,6 +24,11 @@ first for a baseline of the current `ingest()` on both benchmarks. PR #212
   gate over such a build and counts evidence that extracted records cite
   (`packed_by_extracted`).
 
+A LoCoMo pack has a second purpose, which the gate does not show. It is the
+extracted memory for one conversation, so it is also what gets opened in the
+memory explorer to see what ingestion actually built, rather than only how it
+scores. See "Looking at a pack in the memory explorer" below.
+
 The queued work after the baselines is the #91 windowed extractor itself, then
 #92, #64 and #31, all measured against extracted packs.
 
@@ -168,6 +173,38 @@ If the LoCoMo build is too slow on the new machine, it can use the DeepSeek
 cloud model with `--model deepseek-v4.1-flash:cloud --cloud --jobs 10` under a
 new label. It then uses a different extraction model from this plan, so ask
 the owner first, and compare LoCoMo results only with runs on the same model.
+
+## Looking at a pack in the memory explorer
+
+Each unit's pack is an ordinary PRME pack at
+`<root>/<label>/<benchmark>/<unit_id>/pack/`, holding the `memory.duckdb`,
+`vectors.usearch` and `lexical_index` that the memory explorer reads
+(`web/README.md`). Nothing has to be exported or converted.
+
+Wait for the pack to be complete, then copy it. A pack is complete when its
+unit folder holds a `manifest.json`; before that the build is still writing,
+and a `memory.duckdb.wal` beside the database means a copy would catch it part
+way through a write.
+
+Copy rather than open in place. The explorer starts a normal engine, which can
+write to a pack while it initializes or recovers, and the gate checks each
+pack's tree identity against the `pack_sha256` that its manifest recorded. One
+incidental write makes the gate refuse that pack, and a pack cannot be rebuilt
+byte for byte.
+
+```sh
+cp -R "$PACKS/<label>/locomo/conv-26/pack" /tmp/conv-26-pack
+PRME_CHAT_DATA_DIR=/tmp/conv-26-pack uv run python -m web.server
+```
+
+Run the server from the main checkout, which needs `uv sync --extra api`. Open
+http://127.0.0.1:8080 and enter the owner ID: for LoCoMo it is the
+conversation's sample ID, such as `conv-26`, and every LongMemEval-S pack uses
+`longmemeval-s-baseline`.
+
+The extraction model decides what there is to look at, so a pack built on a
+different model shows that model's extraction. Read a pack's `build.json` for
+the model it was built with before drawing conclusions from it.
 
 ## 4. After the builds
 
