@@ -141,6 +141,17 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_qa_pairing is true",
         bool,
     ),
+    "enable_windowed_extraction": (
+        "enable_windowed_extraction",
+        "enable_windowed_extraction is true",
+        bool,
+    ),
+    # The window size does nothing while the flag is off.
+    "extraction_window_turns": (
+        "enable_windowed_extraction",
+        "enable_windowed_extraction is true",
+        bool,
+    ),
     "novelty_high_threshold": (
         "enable_surprise_gating",
         "enable_surprise_gating is true",

@@ -445,6 +445,9 @@ class MemoryEngine:
                 max_concurrent_extractions=config.max_concurrent_extractions,
                 extraction_lease_seconds=config.extraction.lease_seconds,
                 merge_repeated_claims=config.enable_claim_merge,
+                extraction_window_turns=(
+                    config.extraction_window_turns if config.enable_windowed_extraction else 0
+                ),
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -587,6 +590,9 @@ class MemoryEngine:
                 max_concurrent_extractions=config.max_concurrent_extractions,
                 extraction_lease_seconds=config.extraction.lease_seconds,
                 merge_repeated_claims=config.enable_claim_merge,
+                extraction_window_turns=(
+                    config.extraction_window_turns if config.enable_windowed_extraction else 0
+                ),
             )
 
             startup.push_async_callback(pipeline.shutdown)

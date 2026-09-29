@@ -131,6 +131,7 @@ class IngestionPipeline:
         max_concurrent_extractions: int = 8,
         extraction_lease_seconds: float = 300,
         merge_repeated_claims: bool = True,
+        extraction_window_turns: int = 0,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -141,6 +142,9 @@ class IngestionPipeline:
         self._graph_writer = graph_writer
         self._extraction_lease_seconds = extraction_lease_seconds
         self._merge_repeated_claims = merge_repeated_claims
+        # Preceding turns of the same session shown to the extractor (#91).
+        # Zero sends the new turn alone, which is the default.
+        self._extraction_window_turns = max(0, extraction_window_turns)
         self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
@@ -442,6 +446,25 @@ class IngestionPipeline:
         pending, failed = await work.counts(user_id=user_id)
         return ExtractionProcessingResult(processed=processed, pending=pending, failed=failed)
 
+
+    async def _extraction_window(self, event: Event) -> list[str]:
+        """The turns before this one in its session, oldest first (#91).
+
+        Empty unless the window is on and the event names a session. Without a
+        session there is nothing to bound the window to, and turns from another
+        conversation would be worse than none. The event itself is already
+        stored by this point, so it is dropped from its own window.
+        """
+        if self._extraction_window_turns <= 0 or not event.session_id:
+            return []
+        recent = await self._event_store.get_by_user(
+            event.user_id,
+            session_id=event.session_id,
+            limit=self._extraction_window_turns + 1,
+        )
+        earlier = [item for item in recent if str(item.id) != str(event.id)]
+        return [item.content for item in reversed(earlier[: self._extraction_window_turns]) if item.content]
+
     async def _extract_or_load(self, event: Event, *, claim: ExtractionClaim | None = None) -> ExtractionResult:
         """Reuse durable validated output after downstream failure or restart.
 
@@ -450,8 +473,14 @@ class IngestionPipeline:
         """
         saved = await self._event_store.get_extraction(str(event.id), user_id=event.user_id)
         if saved is None:
+            window = await self._extraction_window(event)
+            # Only named when there is a window, so a provider written against
+            # the earlier signature keeps working while the option is off.
+            extra = {"context": window} if window else {}
             async with self._extraction_semaphore:
-                result = await self._extraction_provider.extract(event.content, role=event.role)
+                result = await self._extraction_provider.extract(
+                    event.content, role=event.role, **extra
+                )
             result = validate_grounding(result, event.content)
             record = ExtractionRecord(
                 event_id=event.id, user_id=event.user_id, scope=event.scope,
