@@ -592,9 +592,25 @@ refuses a replay that lacks any slice question instead of shrinking the slice,
 records the slice's name and SHA-256 in the report, and `gate-compare` refuses
 two reports over different slices. On the `ingest-baseline-locomo-deepseek`
 packs the LoCoMo slice replays in about 3 minutes, against about 10 for all
-1,540 questions, with per-question evidence identical to the full replay. It
-packs all annotated evidence for 72.9% of its questions, against 75.6% for
-the whole benchmark.
+1,540 questions, with per-question evidence identical to the full replay, and
+the LongMemEval-S slice in about 30 seconds.
+
+Slice baselines of the current `ingest()` with the current defaults, on the
+`ingest-baseline-locomo-deepseek` and `ingest-baseline-lme-deepseek` builds
+(both `deepseek-v4.1-flash:cloud`), replayed at `2c533b6`
+(`benchmarks/results/research/2026-09-29/dev-slice-v1-ingest-baseline-*-gate.json`):
+
+| Annotated questions with all evidence packed | LoCoMo slice | LongMemEval-S slice |
+|---|---:|---:|
+| All | 337/462 (72.9%) | 27/38 (71.1%) |
+| `stable_wrong` | 21/54 | 6/15 |
+| `stable_right` | 258/313 | 21/23 |
+| `noisy` | 58/95 | not included |
+
+The whole LoCoMo benchmark packs all evidence for 75.6% of its annotated
+questions on the same build. Most questions the defaults always answer wrong
+never get their evidence into the context, which is what extraction and
+organization changes can move.
 
 The slice is for direction while iterating. It is too small for the intervals
 in the default-change rule, and its questions have been examined, so a
