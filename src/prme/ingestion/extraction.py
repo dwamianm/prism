@@ -9,6 +9,7 @@ and Ollama backends through a single unified interface.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from contextvars import ContextVar
 from decimal import Decimal
 import re
@@ -950,16 +951,34 @@ An optional one-sentence summary may describe the message without becoming a cla
 """
 
 
-def _extraction_prompt_for_role(role: str) -> str:
+# Shown with the window (#91). The window is there to read the new turn, not to
+# be mined: grounding still rejects a claim that only the earlier turns support.
+_WINDOW_GUIDANCE = (
+    "EARLIER TURNS: the next message holds turns that came before this one, for "
+    "reference only. Use them to resolve who or what the source message refers "
+    "to. Extract only what the source message itself states. Do not extract a "
+    "claim that only an earlier turn supports."
+)
+
+
+def _extraction_prompt_for_role(role: str, *, windowed: bool = False) -> str:
     """Add source-role admission policy without trusting role as prompt text."""
     normalized = role.strip().casefold()
     if normalized == "assistant":
-        return _ASSISTANT_EXTRACTION_SYSTEM_PROMPT
-    policy = _ROLE_EXTRACTION_GUIDANCE.get(
-        normalized,
-        "Extract only durable, source-supported state; omit examples and presentation text.",
-    )
-    return f"{EXTRACTION_SYSTEM_PROMPT}\nSOURCE MESSAGE ROLE: {normalized or 'unknown'}\n{policy}"
+        prompt = _ASSISTANT_EXTRACTION_SYSTEM_PROMPT
+    else:
+        policy = _ROLE_EXTRACTION_GUIDANCE.get(
+            normalized,
+            "Extract only durable, source-supported state; omit examples and presentation text.",
+        )
+        prompt = f"{EXTRACTION_SYSTEM_PROMPT}\nSOURCE MESSAGE ROLE: {normalized or 'unknown'}\n{policy}"
+    return f"{prompt}\n{_WINDOW_GUIDANCE}" if windowed else prompt
+
+
+def _window_message(window: list[str]) -> str:
+    """The earlier turns as one reference message, oldest first (#91)."""
+    turns = "\n\n".join(f"[earlier turn {n}] {line}" for n, line in enumerate(window, 1))
+    return f"Earlier turns in this session, for reference only:\n\n{turns}"
 
 
 @runtime_checkable
@@ -982,13 +1001,17 @@ class ExtractionProvider(Protocol):
         ...
 
     async def extract(
-        self, content: str, *, role: str = "user"
+        self, content: str, *, role: str = "user", context: Sequence[str] = ()
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
         Args:
             content: The message text to extract from.
             role: The role of the message sender (e.g., 'user', 'assistant').
+            context: Earlier turns of the same session, oldest first, shown to
+                resolve what ``content`` refers to (#91). Nothing is extracted
+                from them: grounding still admits only what ``content``
+                supports.
 
         Returns:
             ExtractionResult with entities, facts, relationships, and summary.
@@ -1085,13 +1108,16 @@ class InstructorExtractionProvider:
         return None
 
     async def extract(
-        self, content: str, *, role: str = "user"
+        self, content: str, *, role: str = "user", context: Sequence[str] = ()
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
         Args:
             content: The message text to extract from.
             role: The role of the message sender.
+            context: Earlier turns of the same session, oldest first (#91).
+                They are shown for reference only. Grounding validates against
+                ``content`` alone, so a claim only they support is rejected.
 
         Returns:
             ExtractionResult with extracted entities, facts, relationships,
@@ -1100,17 +1126,21 @@ class InstructorExtractionProvider:
         """
         try:
             client = self._ensure_client()
+            window = [line for line in context if line and line.strip()]
+            messages: list[dict] = [
+                {"role": "system", "content": _extraction_prompt_for_role(role, windowed=bool(window))},
+            ]
+            if window:
+                messages.append({"role": "user", "content": _window_message(window)})
+            # This is historical text to inspect, regardless of who
+            # authored the event. Sending an assistant event as an
+            # assistant chat turn asks the model to continue it and
+            # can yield an empty response. Event.role remains the
+            # authoritative source classification downstream.
+            messages.append({"role": "user", "content": content})
             create_kwargs: dict = {
                 "response_model": _CitedExtractionResult,
-                "messages": [
-                    {"role": "system", "content": _extraction_prompt_for_role(role)},
-                    # This is historical text to inspect, regardless of who
-                    # authored the event. Sending an assistant event as an
-                    # assistant chat turn asks the model to continue it and
-                    # can yield an empty response. Event.role remains the
-                    # authoritative source classification downstream.
-                    {"role": "user", "content": content},
-                ],
+                "messages": messages,
                 "max_retries": self._max_retries,
                 "temperature": self._temperature,
             }

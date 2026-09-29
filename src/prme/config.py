@@ -521,6 +521,29 @@ class PRMEConfig(_ProjectSettings):
             "affect store(). False restores one fact node per extraction."
         ),
     )
+    enable_windowed_extraction: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() shows the extractor the turns "
+            "before the new one in the same session, so a claim that needs "
+            "them can be read (#91). Only the new turn is extracted: a claim "
+            "found solely in an earlier turn is still rejected, and the "
+            "evidence quote stays a span of the new turn. Default False, "
+            "which sends the new turn alone. Requires session_id; without "
+            "one there is no window and the turn is extracted alone."
+        ),
+    )
+    extraction_window_turns: int = Field(
+        default=4,
+        ge=0,
+        le=32,
+        description=(
+            "[HYPOTHESIS] How many preceding turns of the same session "
+            "enable_windowed_extraction shows the extractor. Zero disables "
+            "the window without changing the flag. Each turn costs prompt "
+            "tokens on every extraction, so this bounds that cost."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(

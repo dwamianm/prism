@@ -39,6 +39,8 @@ EXPECTED_HYPOTHESES = {
     "organizer.consolidation_preserve_recent_days",
     "organizer.consolidation_min_confidence_preserve",
     "enable_qa_pairing",
+    "enable_windowed_extraction",
+    "extraction_window_turns",
     "novelty_high_threshold",
     "novelty_low_threshold",
     "novelty_salience_boost",
