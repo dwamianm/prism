@@ -1504,7 +1504,9 @@ def _projected(row: dict) -> float:
 # Both reports must share these inputs, or their question pairs mean different things.
 _COMPARED_INPUTS = {
     "datasets": lambda report: report["provenance"]["datasets"],
-    "archives": lambda report: report["provenance"]["archive"]["prepared_sha256"],
+    # A replay over built packs has no saved-run archive; its packs are what the comparison varies.
+    "archives": lambda report: report["provenance"].get("archive", {}).get("prepared_sha256"),
+    "extraction models": lambda report: (report["provenance"].get("packs") or {}).get("model"),
     "tokenizers": lambda report: report["provenance"]["engine_config"]["packing"]["tokenizer"],
     "projection constants": lambda report: report["projection"],
     "baselines": lambda report: report["baseline"],
