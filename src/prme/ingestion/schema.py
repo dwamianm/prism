@@ -10,6 +10,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
+from pydantic.json_schema import SkipJsonSchema
 
 
 ClaimPolarity = Literal["positive", "negative", "unknown"]
@@ -206,6 +207,18 @@ class ExtractedFact(BaseModel):
             "explicitly replaces that value. A new preference or another value does not "
             "by itself replace previous values. Never infer this from memory."
         ),
+    )
+
+    # Self-contained fact text (#91). Hidden from the model's schema unless
+    # enable_fact_text_resolution asks for it, and left out of saved output
+    # when unset, so extraction without the option is unchanged.
+    resolved_text: SkipJsonSchema[str | None] = Field(
+        default=None, exclude_if=lambda value: value is None,
+    )
+    # Set by ingestion when resolved_text passes its check: the source span,
+    # each replacement and where it came from. Never model output.
+    resolution: SkipJsonSchema[dict | None] = Field(
+        default=None, exclude_if=lambda value: value is None,
     )
 
     @field_validator("epistemic_type")

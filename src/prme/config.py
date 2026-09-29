@@ -544,6 +544,19 @@ class PRMEConfig(_ProjectSettings):
             "tokens on every extraction, so this bounds that cost."
         ),
     )
+    enable_fact_text_resolution: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() asks the extractor for each "
+            "fact's text written to stand alone: a pronoun for a named person "
+            "becomes the name and a relative date becomes the absolute date "
+            "computed from the source time (#91). The text is kept only when "
+            "those are its sole changes to whole sentences of the new turn; "
+            "otherwise the fact keeps its source passage. The passage stays "
+            "the fact's evidence either way. Default False. Names can come "
+            "from earlier turns only with enable_windowed_extraction."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(

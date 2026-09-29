@@ -269,26 +269,40 @@ class ExtractionCache:
         self.folder = folder
         self.hits = self.misses = 0
 
-    def _key(self, provider, content: str, role: str) -> str:
-        from prme.ingestion.extraction import _extraction_prompt_for_role
+    def _key(self, provider, content: str, role: str, context: tuple[str, ...] = (), resolve=None) -> str:
+        from prme.ingestion.extraction import _extraction_prompt_for_role, _source_details_message
 
         parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
                  _extraction_prompt_for_role(role), role, content]
+        # The window and fact text resolution (#91) change what the model is
+        # asked. A turn asked neither keeps the key it had before them, so an
+        # existing cache still serves it.
+        if context or resolve is not None:
+            parts += [_extraction_prompt_for_role(role, windowed=bool(context), resolving=resolve is not None),
+                      list(context), _source_details_message(resolve) if resolve is not None else None,
+                      resolve is not None]
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
 
     def wrap(self, provider) -> None:
-        from prme.ingestion.extraction import _CitedExtractionResult
+        from prme.ingestion.extraction import _CitedExtractionResult, _ResolvingCitedExtractionResult
 
         extract = provider.extract
 
-        async def cached(content: str, *, role: str = "user"):
-            path = self.folder / (key := self._key(provider, content, role))[:2] / f"{key}.json"
+        async def cached(content: str, *, role: str = "user", context=(), resolve=None):
+            window = tuple(line for line in context if line and line.strip())
+            path = self.folder / (key := self._key(provider, content, role, window, resolve))[:2] / f"{key}.json"
+            model = _ResolvingCitedExtractionResult if resolve is not None else _CitedExtractionResult
             if path.exists():
                 self.hits += 1
-                return _CitedExtractionResult.model_validate_json(path.read_bytes(), context={
+                return model.model_validate_json(path.read_bytes(), context={
                     "source_text": content, "source_role": role.strip().casefold()})
             self.misses += 1
-            result = await extract(content, role=role)
+            # Named only when set, as ingest() does, so the provider is called
+            # exactly as it would be without the cache.
+            extra = {"context": list(window)} if window else {}
+            if resolve is not None:
+                extra["resolve"] = resolve
+            result = await extract(content, role=role, **extra)
             path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False, suffix=".tmp") as out:
                 out.write(result.model_dump_json())

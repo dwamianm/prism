@@ -448,6 +448,7 @@ class MemoryEngine:
                 extraction_window_turns=(
                     config.extraction_window_turns if config.enable_windowed_extraction else 0
                 ),
+                resolve_fact_text=config.enable_fact_text_resolution,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -593,6 +594,7 @@ class MemoryEngine:
                 extraction_window_turns=(
                     config.extraction_window_turns if config.enable_windowed_extraction else 0
                 ),
+                resolve_fact_text=config.enable_fact_text_resolution,
             )
 
             startup.push_async_callback(pipeline.shutdown)

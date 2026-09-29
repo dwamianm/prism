@@ -263,3 +263,44 @@ async def test_a_shared_cache_extracts_a_repeated_turn_once_and_the_gate_replays
     scratch.mkdir()
     answered, _ = await replay_gate(cases, scratch=scratch)
     assert answered["evidence"]["all_packed"] is True and answered["evidence"]["packed_by_extracted"] == 1
+
+
+class _Provider:
+    """A model-backed provider as the cache sees it: its identity and extract()."""
+
+    model_name, _model, _temperature, _reasoning_effort = "m", "m", 0.0, None
+
+    def __init__(self):
+        self.calls = []
+
+    async def extract(self, content, *, role="user", **extra):
+        self.calls.append(extra)
+        return ExtractionResult.model_validate({"entities": [], "facts": []})
+
+
+def test_a_turn_without_a_window_keeps_its_cache_key(tmp_path):
+    import hashlib
+
+    from prme.ingestion.extraction import _extraction_prompt_for_role
+
+    provider = _Provider()
+    before = hashlib.sha256(json.dumps(["m", "m", 0.0, None, _extraction_prompt_for_role("user"), "user",
+                                        "Hello."]).encode()).hexdigest()
+    assert ExtractionCache(tmp_path)._key(provider, "Hello.", "user") == before
+
+
+async def test_the_window_and_resolution_reach_the_provider_and_the_cache_key(tmp_path):
+    from prme.ingestion.extraction import FactTextResolution
+
+    provider = _Provider()
+    calls = provider.calls
+    cache = ExtractionCache(tmp_path)
+    cache.wrap(provider)
+    resolve = FactTextResolution(speaker="Caroline", source_time=datetime(2023, 5, 8, tzinfo=timezone.utc))
+    await provider.extract("Hello.", role="user")
+    await provider.extract("Hello.", role="user", context=["Caroline: hi"])
+    await provider.extract("Hello.", role="user", context=["Caroline: hi"], resolve=resolve)
+    await provider.extract("Hello.", role="user", context=["Caroline: hi"], resolve=resolve)
+    # Each different request is a miss and reaches the model as ingest() sends it; the repeat is a hit.
+    assert calls == [{}, {"context": ["Caroline: hi"]}, {"context": ["Caroline: hi"], "resolve": resolve}]
+    assert (cache.misses, cache.hits) == (3, 1)
