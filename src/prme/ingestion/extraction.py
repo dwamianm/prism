@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from contextvars import ContextVar
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from decimal import Decimal
 import re
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
@@ -763,6 +765,25 @@ class _CitedExtractionResult(ExtractionResult):
         self.relationships = closed_relationships
         return self
 
+class _ResolvingCitedFact(_CitedFact):
+    """A cited fact that also carries its self-contained text (#91)."""
+
+    resolved_text: str | None = Field(
+        default=None,
+        description=(
+            "The supporting source sentences rewritten to stand alone. Copy them "
+            "verbatim, except replace a pronoun that refers to a named person with "
+            "that name (the possessive, such as Melanie's, for my, your, his, her "
+            "or their) and a relative date such as yesterday or last week with the "
+            "absolute date it means, such as 7 May 2023. Change nothing else."
+        ),
+    )
+
+
+class _ResolvingCitedExtractionResult(_CitedExtractionResult):
+    facts: list[_ResolvingCitedFact] = Field(default_factory=list)  # type: ignore[assignment]
+
+
 EXTRACTION_SYSTEM_PROMPT = """\
 You are a knowledge extraction system. Your task is to extract structured \
 information from conversation messages accurately and completely.
@@ -961,7 +982,25 @@ _WINDOW_GUIDANCE = (
 )
 
 
-def _extraction_prompt_for_role(role: str, *, windowed: bool = False) -> str:
+# Shown when resolved_text is requested (#91). A checker accepts the text only
+# when these replacements are its sole changes; anything else is discarded.
+_RESOLUTION_GUIDANCE = (
+    "RESOLVED TEXT: for every fact, also write resolved_text: the supporting "
+    "sentences of the source message, whole and verbatim, except that a pronoun "
+    "referring to a named person becomes that person's name (Melanie's for my, "
+    "your, his, her or their when they mean Melanie) and a relative date "
+    "(yesterday, last week, two days ago) becomes the absolute date it means, "
+    "computed from the source time and written like 7 May 2023. Use a name only "
+    "when the speaker, the source message or an earlier turn gives it, and leave "
+    "the pronoun as written otherwise. Keep every other word, including "
+    "negations, conditions and qualifiers. Leave out a leading time or speaker "
+    "label. The subject, object and evidence_quote fields keep their own rules."
+)
+
+
+def _extraction_prompt_for_role(
+    role: str, *, windowed: bool = False, resolving: bool = False
+) -> str:
     """Add source-role admission policy without trusting role as prompt text."""
     normalized = role.strip().casefold()
     if normalized == "assistant":
@@ -972,13 +1011,43 @@ def _extraction_prompt_for_role(role: str, *, windowed: bool = False) -> str:
             "Extract only durable, source-supported state; omit examples and presentation text.",
         )
         prompt = f"{EXTRACTION_SYSTEM_PROMPT}\nSOURCE MESSAGE ROLE: {normalized or 'unknown'}\n{policy}"
-    return f"{prompt}\n{_WINDOW_GUIDANCE}" if windowed else prompt
+    if windowed:
+        prompt = f"{prompt}\n{_WINDOW_GUIDANCE}"
+    return f"{prompt}\n{_RESOLUTION_GUIDANCE}" if resolving else prompt
 
 
 def _window_message(window: list[str]) -> str:
     """The earlier turns as one reference message, oldest first (#91)."""
     turns = "\n\n".join(f"[earlier turn {n}] {line}" for n, line in enumerate(window, 1))
     return f"Earlier turns in this session, for reference only:\n\n{turns}"
+
+
+@dataclass(frozen=True)
+class FactTextResolution:
+    """Asks the extractor for self-contained fact text (#91).
+
+    ``speaker`` and ``source_time`` are what names and relative dates resolve
+    to. Either may be unknown; the extractor is then told nothing about it.
+    """
+
+    speaker: str | None = None
+    source_time: datetime | None = None
+
+
+def _source_details_message(resolution: FactTextResolution) -> str | None:
+    """The source message's speaker and time as a reference message (#91)."""
+    details = []
+    if resolution.speaker:
+        details.append(f"spoken by {resolution.speaker}")
+    if resolution.source_time is not None:
+        moment = resolution.source_time
+        if moment.tzinfo is not None:
+            # Relative dates resolve in UTC, so the date shown is the UTC date.
+            moment = moment.astimezone(timezone.utc)
+        details.append(f"sent on {moment.strftime('%A')}, {moment.day} {moment.strftime('%B %Y')}")
+    if not details:
+        return None
+    return f"Source message details, for resolving references only: {'; '.join(details)}."
 
 
 @runtime_checkable
@@ -1001,7 +1070,8 @@ class ExtractionProvider(Protocol):
         ...
 
     async def extract(
-        self, content: str, *, role: str = "user", context: Sequence[str] = ()
+        self, content: str, *, role: str = "user", context: Sequence[str] = (),
+        resolve: FactTextResolution | None = None,
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
@@ -1012,6 +1082,8 @@ class ExtractionProvider(Protocol):
                 resolve what ``content`` refers to (#91). Nothing is extracted
                 from them: grounding still admits only what ``content``
                 supports.
+            resolve: When given, also ask for each fact's self-contained
+                ``resolved_text`` (#91). Ingestion checks it before use.
 
         Returns:
             ExtractionResult with entities, facts, relationships, and summary.
@@ -1108,7 +1180,8 @@ class InstructorExtractionProvider:
         return None
 
     async def extract(
-        self, content: str, *, role: str = "user", context: Sequence[str] = ()
+        self, content: str, *, role: str = "user", context: Sequence[str] = (),
+        resolve: FactTextResolution | None = None,
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
@@ -1118,6 +1191,8 @@ class InstructorExtractionProvider:
             context: Earlier turns of the same session, oldest first (#91).
                 They are shown for reference only. Grounding validates against
                 ``content`` alone, so a claim only they support is rejected.
+            resolve: When given, also ask for each fact's ``resolved_text``
+                and show the speaker and source time it resolves against.
 
         Returns:
             ExtractionResult with extracted entities, facts, relationships,
@@ -1128,10 +1203,16 @@ class InstructorExtractionProvider:
             client = self._ensure_client()
             window = [line for line in context if line and line.strip()]
             messages: list[dict] = [
-                {"role": "system", "content": _extraction_prompt_for_role(role, windowed=bool(window))},
+                {"role": "system", "content": _extraction_prompt_for_role(
+                    role, windowed=bool(window), resolving=resolve is not None,
+                )},
             ]
             if window:
                 messages.append({"role": "user", "content": _window_message(window)})
+            details = _source_details_message(resolve) if resolve is not None else None
+            if details:
+                # A caller-supplied name stays out of the system prompt.
+                messages.append({"role": "user", "content": details})
             # This is historical text to inspect, regardless of who
             # authored the event. Sending an assistant event as an
             # assistant chat turn asks the model to continue it and
@@ -1139,7 +1220,9 @@ class InstructorExtractionProvider:
             # authoritative source classification downstream.
             messages.append({"role": "user", "content": content})
             create_kwargs: dict = {
-                "response_model": _CitedExtractionResult,
+                "response_model": (
+                    _ResolvingCitedExtractionResult if resolve is not None else _CitedExtractionResult
+                ),
                 "messages": messages,
                 "max_retries": self._max_retries,
                 "temperature": self._temperature,

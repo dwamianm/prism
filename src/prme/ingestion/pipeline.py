@@ -43,6 +43,7 @@ from prme.models.extraction_work import ExtractionClaim, ExtractionProcessingRes
 from prme.models.entity_identity import unresolved_personal_reference
 from prme.storage._threading import run_async_to_completion
 from prme.models.nodes import MemoryNode
+from prme.models.speaker import metadata_speaker, speaker_labeled
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
 
 if TYPE_CHECKING:
@@ -132,6 +133,7 @@ class IngestionPipeline:
         extraction_lease_seconds: float = 300,
         merge_repeated_claims: bool = True,
         extraction_window_turns: int = 0,
+        resolve_fact_text: bool = False,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -145,6 +147,8 @@ class IngestionPipeline:
         # Preceding turns of the same session shown to the extractor (#91).
         # Zero sends the new turn alone, which is the default.
         self._extraction_window_turns = max(0, extraction_window_turns)
+        # Ask for self-contained fact text and keep what passes its check (#91).
+        self._resolve_fact_text = resolve_fact_text
         self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
@@ -447,7 +451,7 @@ class IngestionPipeline:
         return ExtractionProcessingResult(processed=processed, pending=pending, failed=failed)
 
 
-    async def _extraction_window(self, event: Event) -> list[str]:
+    async def _extraction_window(self, event: Event) -> list[Event]:
         """The turns before this one in its session, oldest first (#91).
 
         Empty unless the window is on and the event names a session. Without a
@@ -463,7 +467,7 @@ class IngestionPipeline:
             limit=self._extraction_window_turns + 1,
         )
         earlier = [item for item in recent if str(item.id) != str(event.id)]
-        return [item.content for item in reversed(earlier[: self._extraction_window_turns]) if item.content]
+        return [item for item in reversed(earlier[: self._extraction_window_turns]) if item.content]
 
     async def _extract_or_load(self, event: Event, *, claim: ExtractionClaim | None = None) -> ExtractionResult:
         """Reuse durable validated output after downstream failure or restart.
@@ -474,14 +478,25 @@ class IngestionPipeline:
         saved = await self._event_store.get_extraction(str(event.id), user_id=event.user_id)
         if saved is None:
             window = await self._extraction_window(event)
-            # Only named when there is a window, so a provider written against
-            # the earlier signature keeps working while the option is off.
-            extra = {"context": window} if window else {}
+            # A turn's speaker labels it, so the extractor can tell who said
+            # what; a turn whose text already names its speaker is unchanged.
+            lines = [speaker_labeled(item.content, metadata_speaker(item.metadata)) for item in window]
+            # Each option is named only when on, so a provider written against
+            # the earlier signature keeps working while they are off.
+            extra: dict = {"context": lines} if lines else {}
+            if self._resolve_fact_text:
+                from prme.ingestion.extraction import FactTextResolution
+
+                extra["resolve"] = FactTextResolution(
+                    speaker=metadata_speaker(event.metadata),
+                    source_time=event.event_time or event.timestamp,
+                )
             async with self._extraction_semaphore:
                 result = await self._extraction_provider.extract(
                     event.content, role=event.role, **extra
                 )
             result = validate_grounding(result, event.content)
+            result = self._check_resolved_text(result, event, window)
             record = ExtractionRecord(
                 event_id=event.id, user_id=event.user_id, scope=event.scope,
                 content_hash=event.content_hash,
@@ -496,6 +511,42 @@ class IngestionPipeline:
             )
         saved.verify_source(event.user_id, event.scope.value, event.content_hash)
         return ExtractionResult.model_validate(saved.result)
+
+    def _check_resolved_text(self, result: ExtractionResult, event: Event, window: list[Event]) -> ExtractionResult:
+        """Keep each fact's resolved text only when it passes its check (#91).
+
+        A resolution record is only ever set here. One arriving from the
+        provider is dropped, and so is resolved text while the option is off.
+        """
+        from prme.ingestion.resolution import ResolutionSources, WindowTurn, resolve_fact_text
+
+        sources = ResolutionSources(
+            event_id=str(event.id),
+            text=event.content,
+            speaker=metadata_speaker(event.metadata),
+            reference_time=event.event_time or event.timestamp,
+            window=tuple(
+                WindowTurn(str(item.id), metadata_speaker(item.metadata), item.content) for item in window
+            ),
+        )
+        facts = []
+        for fact in result.facts:
+            resolution = None
+            text = fact.resolved_text if self._resolve_fact_text else None
+            if text:
+                resolution, reason = resolve_fact_text(
+                    text, fact.evidence_quote or event.content, sources,
+                    subject=fact.subject, object_value=fact.object,
+                    resolve_date=self._resolve_temporal,
+                )
+                if resolution is None:
+                    logger.warning(
+                        "resolved_text_discarded", subject=fact.subject,
+                        predicate=fact.predicate, reason=reason,
+                    )
+                    text = None
+            facts.append(fact.model_copy(update={"resolved_text": text, "resolution": resolution}))
+        return result.model_copy(update={"facts": facts})
 
     async def _prepare_plan(
         self,
@@ -638,6 +689,12 @@ class IngestionPipeline:
             # Grounding expands citations to full source paragraphs so
             # model triples cannot erase negations or trailing conditions.
             fact_content = fact.evidence_quote or event.content
+            # A checked self-contained text becomes the fact's text and the
+            # passage stays its evidence (#91). Turns in the window that gave
+            # it a name are listed in its resolution, not in evidence_refs:
+            # they supplied a name, not support, and promotion counts
+            # evidence_refs as support.
+            resolution = fact.resolution if fact.resolved_text else None
 
             subject_entity_id, subject_link_status = entity_refs.resolve(fact.subject, fact.subject_entity_type)
             object_entity_id, object_link_status = entity_refs.resolve(fact.object, fact.object_entity_type)
@@ -654,7 +711,7 @@ class IngestionPipeline:
                 "object": fact.object,
                 "polarity": fact.polarity,
                 "evidence_quote": fact_content,
-                "grounding_method": "source_passage_v1",
+                "grounding_method": "resolved_text_v1" if resolution is not None else "source_passage_v1",
                 "temporal_intent": fact.temporal_intent,
                 "replaces_object": fact.replaces_object,
             }
@@ -668,6 +725,9 @@ class IngestionPipeline:
                     "source_text": fact.quantity.source_text,
                     "grounding": "object_decimal_v1",
                 }
+            if resolution is not None:
+                fact_metadata["resolution"] = resolution
+                fact_content = fact.resolved_text
             if fact.scope:
                 fact_metadata["suggested_scope"] = fact.scope
             if fact.temporal_ref:
