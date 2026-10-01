@@ -1,12 +1,78 @@
 # PRME goals and production handoff
 
-**Status:** active handoff, 2026-09-23
+**Status:** active handoff, 2026-09-23; see "Current state (2026-10-01)" for
+the latest work.
 
 **Production baseline:** released v0.12.0 at `aaa2e4e`; the subsequent GPT-5.4
 benchmark evidence is integrated into `main` without product-code or default
 changes.
 
 **Research record:** [research agenda](../docs/RESEARCH-AGENDA.md)
+
+## Current state (2026-10-01)
+
+The release is v0.13.0. The retrieval defaults changed on 2026-09-25 (#177,
+#187), and the DeepSeek defaults baseline is `prme@d811e3ed` (LoCoMo
+1250/1540, LongMemEval-S 453/500). Every variant counts from zero against it.
+
+**Focus: benchmarks that test extracted memory.** The saved benchmark packs
+were built with `store()`, which never extracts, so the evidence gate could not
+see an extraction change (#210 gave 2,040 identical contexts). Work since
+2026-09-26:
+
+- Coding-memory integration shelved (#206 to #208); see CLAUDE.md.
+- `enable_claim_merge` (#210) and the browser memory explorer (#211).
+- `benchmarks/diagnostics/extracted_packs.py` builds packs through `ingest()`,
+  and `gate --packs` replays them (#212, #91, #102). The gate reports each
+  LoCoMo speaker separately (#217, #84).
+- #91 part 1, `enable_windowed_extraction` (#218), and part 2,
+  `enable_fact_text_resolution` (#219). Both default to off.
+- A fixed development slice, `benchmarks/slices/dev-v1.json`, with its
+  `ingest()` baselines (#224).
+- `gate-compare` now compares two built-pack replays, and the first #91
+  comparison is recorded (#225; `BENCHMARKS.md`, "Windowed extraction with
+  fact text resolution on LoCoMo").
+
+**#91 result on LoCoMo (all 1,540 questions).** Window of 4 turns with fact
+text resolution, against the `ingest()` baseline, both on
+`deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.34.4): evidence recall +1.6
+points (intervals exclude zero over questions and conversations), all evidence
+packed +1.0 (not clearly above zero), projected accuracy +0.7 (not
+significant). The window alone had lowered evidence coverage on conv-26 from
+0.86 to 0.74; with resolution it is 0.85. Only 60 relative dates were resolved
+against 4,796 names. No repeated build has measured build-to-build noise.
+
+**Builds in `data/extracted-packs-v1/` (ignored, this machine only):**
+`ingest-baseline-locomo-deepseek` (complete), `fact-text-w4-locomo-deepseek`
+(complete), `windowed-w4-locomo-deepseek` (conv-26 only), and
+`ingest-baseline-lme-deepseek` (the 42 slice packs; the full build was stopped
+by the owner at 34 of 500 on 2026-09-28; ask before resuming it).
+
+**Next, in order:**
+
+1. #91 on LongMemEval-S: build the slice with the window and resolution and
+   compare it with the slice baseline. It uses Ollama cloud calls, so confirm
+   with the owner first.
+2. #91: resolve relative dates in fact text more often, and run the authored
+   negation and condition probes with resolution on.
+3. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
+   pack has 576 entities, half with no edge, and "Mel" and "Melanie" are
+   separate nodes.
+4. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
+   (failing simulation check) and the recency and temporal scoring bugs.
+
+**Known flaky test:** `tests/test_extraction_workflow.py::
+test_heartbeat_keeps_long_running_provider_work_owned` fails intermittently on
+CI (Python 3.11) and passes on a rerun.
+
+**Archived research branches:** `feat/longmemeval-episode-routing`,
+`feat/longmemeval-query-routing` and `feat/structured-presentations`
+(2026-09-17 and 18) held research trials and results that never reached
+`main`. On 2026-10-01 the owner had them tagged and the branches deleted; the
+work is kept under the tags `archive/feat/longmemeval-episode-routing`,
+`archive/feat/longmemeval-query-routing` and
+`archive/feat/structured-presentations`. Per the resume instructions below, do
+not merge them wholesale.
 
 ## Product goal
 

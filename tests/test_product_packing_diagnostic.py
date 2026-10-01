@@ -744,6 +744,18 @@ def test_comparison_pairs_questions_and_rejects_mismatched_inputs(tmp_path, caps
     with pytest.raises(ValueError, match="different tokenizers"):
         compare_gates(before, tokenizer)
 
+    # Replays over built packs have no archive and compare when their extraction models match.
+    def built(report, model):
+        report = deepcopy(report)
+        del report["provenance"]["archive"]
+        report["provenance"]["packs"] = {"build": model, "model": model}
+        return report
+    assert compare_gates(built(before, "m"), built(after, "m"), samples=20)["benchmarks"]["locomo"]
+    with pytest.raises(ValueError, match="different extraction models"):
+        compare_gates(built(before, "m"), built(after, "other"))
+    with pytest.raises(ValueError, match="different archives"):
+        compare_gates(before, built(after, "m"))
+
     paths = [tmp_path / "before.json", tmp_path / "after.json"]
     for path, report in zip(paths, (before, after)):
         path.write_text(json.dumps(report))

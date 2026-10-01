@@ -619,6 +619,58 @@ outside it are not used while iterating. A slice is never edited: select a new
 one under a new name, for example when a new defaults baseline replaces
 `prme@d811e3ed`.
 
+### Windowed extraction with fact text resolution on LoCoMo (#91)
+
+`fact-text-w4-locomo-deepseek` rebuilt all ten LoCoMo conversations through
+`ingest()` with `enable_windowed_extraction` (4 preceding turns, #218) and
+`enable_fact_text_resolution` (#219), at commit `8a36782`. It is compared with
+`ingest-baseline-locomo-deepseek`, the current `ingest()` at `4e50833`. Both
+used `deepseek-v4.1-flash:cloud` with manifest digest `e04da138` on Ollama
+0.34.4, and both were replayed through the gate with the current defaults at
+`09949aa`
+(`benchmarks/results/research/2026-09-29/locomo-*-gate.json` and
+`locomo-fact-text-w4-vs-ingest-baseline.json`).
+
+| Build | Prompt tokens | Completion tokens | Build time | Claims per turn | Entities | Evidence turns cited by a claim |
+|---|---:|---:|---:|---:|---:|---:|
+| `ingest()` baseline | 30.3 M | 3.44 M | 7.6 h | 1.19 | 6,481 | 1,161/1,423 (81.6%) |
+| Window and fact text | 33.8 M | 4.17 M | 7.7 h | 1.21 | 7,345 | 1,133/1,423 (79.6%) |
+
+Build time is the sum over conversations, which ran at the same time. Nothing
+was billed; the calls count against the Ollama account's usage limits.
+
+In the resolved build, 4,424 of 7,549 facts and preferences (59%) have text
+that stands alone. Their replacements were 4,796 names, 638 verb agreements
+and only 60 relative dates, so the extractor still leaves most relative dates
+as written.
+
+| Gate metric, 1,536 annotated questions | Baseline | Window and fact text | Change | Questions 95% | Conversations 95% |
+|---|---:|---:|---:|---|---|
+| All evidence packed | 75.6% | 76.6% | +1.0 pp | -0.3 to +2.3 | +0.0 to +2.1 |
+| Evidence recall | 81.8% | 83.4% | +1.6 pp | +0.6 to +2.7 | +0.8 to +2.4 |
+| All evidence among the candidates | 95.5% | 94.7% | -0.8 pp | -1.4 to -0.2 | not computed |
+| Projected accuracy (all 1,540) | 71.9% | 72.6% | +0.7 pp | -0.2 to +1.5 | -0.1 to +1.5 |
+
+The conversation-level intervals resample the ten conversations (4,000
+samples); `gate-compare` reports only the question-level ones.
+Eight of the ten conversations gained or held on all evidence packed, and
+conv-48 and conv-49 lost.
+
+- The resolved facts are shorter, so a context holds 93.4 records instead of
+  79.1 in the same 4,096 tokens. Formatting around the extra records takes a
+  larger share of it: memory text falls from 96.1% of the context to 84.1%.
+- 17 questions lost some evidence from the candidate list and 5 gained it, so
+  the build drops a few turns that the baseline extracted.
+- Two builds of the same code can differ slightly, and no repeated build has
+  measured how much. A difference of about one point may be within that.
+
+The direction is positive but small. Only evidence recall has intervals that
+clearly exclude zero; all evidence packed touches zero at the conversation
+level. On conv-26 alone, the window without resolution had lowered evidence
+claim coverage from 0.86 to 0.74; with resolution it is 0.85, so resolution
+recovers most of what the window cost there. The LongMemEval-S side has not
+been built with these options.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
