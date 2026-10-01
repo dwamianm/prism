@@ -65,11 +65,14 @@ by the owner at 34 of 500 on 2026-09-28; ask before resuming it).
 test_heartbeat_keeps_long_running_provider_work_owned` fails intermittently on
 CI (Python 3.11) and passes on a rerun.
 
-**Unmerged remote branches kept on purpose:** `feat/longmemeval-episode-routing`,
+**Archived research branches:** `feat/longmemeval-episode-routing`,
 `feat/longmemeval-query-routing` and `feat/structured-presentations`
-(2026-09-17 and 18) hold research trials and results that never reached
-`main`. Do not delete them without the owner's decision. Per the resume
-instructions below, do not merge them wholesale.
+(2026-09-17 and 18) held research trials and results that never reached
+`main`. On 2026-10-01 the owner had them tagged and the branches deleted; the
+work is kept under the tags `archive/feat/longmemeval-episode-routing`,
+`archive/feat/longmemeval-query-routing` and
+`archive/feat/structured-presentations`. Per the resume instructions below, do
+not merge them wholesale.
 
 ## Product goal
 
