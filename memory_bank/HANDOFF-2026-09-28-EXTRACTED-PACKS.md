@@ -1,5 +1,7 @@
 # Handoff: extracted-pack baselines for #91 (2026-09-28)
 
+> **Update 2026-10-01:** since this note, the LoCoMo `ingest()` baseline (`ingest-baseline-locomo-deepseek`) and the fact-text build have completed, and the LongMemEval-S baseline has only its 42 slice packs. See "Current state (2026-10-01)" in `GOALS.md`.
+
 This note lets a new machine, and a new Claude Code session on it, pick up the
 `ingest()` baseline work for #91 and #102 where it stopped. The builds were
 stopped on the original machine because they would tie it up for most of a day.
