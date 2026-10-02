@@ -1,0 +1,165 @@
+{
+  "kind": "prme-chat-probe",
+  "schema_version": 1,
+  "name": "chat-v1",
+  "description": "A scripted first-person chat between Dana and an assistant over six sessions, written to show how ingest() maps a real conversation: repeated facts in other words, a nickname, a job change, relative dates, a negation, other people's facts and assistant echoes. The answer key lists what a correct memory holds.",
+  "owner": "chat-v1-dana",
+  "user_name": "Dana",
+  "reference_time": "2026-06-25T12:00:00+00:00",
+  "sessions": [
+    {
+      "id": "s1-intro",
+      "start": "2026-02-03T19:00:00+00:00",
+      "turns": [
+        {"role": "user", "text": "Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."},
+        {"role": "assistant", "text": "Nice to meet you, Dana! Denver with Sam and a golden retriever named Biscuit sounds like a lovely household. What would you like help with?"},
+        {"role": "user", "text": "Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards."},
+        {"role": "assistant", "text": "Got it, weekly dashboards for Priya at Northwind. I can help you template those so they take less time each week. Which tool do you build them in?"},
+        {"role": "user", "text": "We use Tableau at Northwind. Honestly I'd rather use Python, but Tableau is the standard there."},
+        {"role": "assistant", "text": "Understood: Tableau is the standard at Northwind, even though you prefer Python. We could script the data prep in Python and keep Tableau just for the visuals."},
+        {"role": "user", "text": "Good idea. Also, food-wise, I've been vegetarian for about six years, so keep that in mind if I ask about recipes."},
+        {"role": "assistant", "text": "Noted: vegetarian for about six years. I'll keep recipe suggestions meat-free."},
+        {"role": "user", "text": "Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite."},
+        {"role": "assistant", "text": "Opposite schedules can be tough. With Sam on nights at Denver Health, would it help to plan shared time around Sam's days off?"}
+      ]
+    },
+    {
+      "id": "s2-running",
+      "start": "2026-02-24T20:10:00+00:00",
+      "turns": [
+        {"role": "user", "text": "I signed up for the Cherry Creek Half Marathon on May 17! My friend Melanie talked me into it. She's going to be my running partner."},
+        {"role": "assistant", "text": "That's exciting! The Cherry Creek Half on May 17 gives you about twelve weeks. Training with Melanie should help you stay consistent."},
+        {"role": "user", "text": "Mel has run like ten half marathons, so she's making me a training plan. We're doing three runs a week."},
+        {"role": "assistant", "text": "Three runs a week on a plan from an experienced runner is a solid base. How long is your current long run?"},
+        {"role": "user", "text": "About 5 miles. Also I quit coffee last month, so mornings are rough. Green tea now."},
+        {"role": "assistant", "text": "Switching from coffee to green tea while ramping up training is a lot at once! Green tea still gives you a little caffeine for those morning runs."},
+        {"role": "user", "text": "Can you suggest a quick vegetarian dinner I can make after runs? Nothing with peanuts though, Sam is allergic to peanuts."},
+        {"role": "assistant", "text": "Sure: a chickpea and spinach curry with rice takes about 25 minutes, is vegetarian and has no peanuts. I'll leave peanuts out of suggestions since Sam is allergic."}
+      ]
+    },
+    {
+      "id": "s3-family-and-jobs",
+      "start": "2026-03-19T18:30:00+00:00",
+      "turns": [
+        {"role": "user", "text": "Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."},
+        {"role": "assistant", "text": "Congratulations, Aunt Dana! Welcome to the world, Ivy. How are Rachel and the baby doing?"},
+        {"role": "user", "text": "Both healthy. Rachel lives in Portland, so I haven't met Ivy yet. I'm hoping to visit this summer."},
+        {"role": "assistant", "text": "Wonderful that they're both healthy. A summer trip to Portland to meet Ivy sounds like a great plan."},
+        {"role": "user", "text": "Work is getting interesting too. I had a first interview with Brightpath on Monday for an analytics manager role."},
+        {"role": "assistant", "text": "An analytics manager role at Brightpath would be a step up. How did the first interview go?"},
+        {"role": "user", "text": "Really well. If Brightpath makes an offer, I'll probably take it. Their team uses Python for everything, which I love."},
+        {"role": "assistant", "text": "That sounds like a great fit, given that you prefer Python. Let me know if you want help preparing for the next round."},
+        {"role": "user", "text": "Will do. Biscuit is being a menace this week, by the way. My dog ate one of Sam's running shoes."},
+        {"role": "assistant", "text": "Oh no, Biscuit! Golden retrievers do love to chew. A few tougher chew toys might help."}
+      ]
+    },
+    {
+      "id": "s4-offer",
+      "start": "2026-04-14T21:00:00+00:00",
+      "turns": [
+        {"role": "user", "text": "I got the offer from Brightpath and I accepted it! I start as analytics manager on May 4."},
+        {"role": "assistant", "text": "Congratulations, Dana! Accepting the analytics manager offer at Brightpath is a big move, and starting on May 4 gives you a few weeks to wrap up."},
+        {"role": "user", "text": "I gave notice at Northwind yesterday. Priya was really nice about it."},
+        {"role": "assistant", "text": "It's great that Priya took it well. Leaving Northwind on good terms matters."},
+        {"role": "user", "text": "Training update: Mel and I did a 10 mile long run on Saturday. Longest run of my life."},
+        {"role": "assistant", "text": "Ten miles is a huge milestone! You and Mel are right on track for the half in May."},
+        {"role": "user", "text": "Sam has been great about all the changes, even while working nights as a nurse."},
+        {"role": "assistant", "text": "It sounds like Sam has been a big support through the job change and the training."}
+      ]
+    },
+    {
+      "id": "s5-race",
+      "start": "2026-05-20T19:45:00+00:00",
+      "turns": [
+        {"role": "user", "text": "I finished the Cherry Creek Half on Sunday in 1:58:30! I'm so happy I got under two hours."},
+        {"role": "assistant", "text": "Amazing, Dana! 1:58:30 for your first half marathon, and under two hours. Congratulations!"},
+        {"role": "user", "text": "Melanie finished in 1:41, she's so fast. And she told me after the race that she got engaged to her boyfriend Tom last weekend!"},
+        {"role": "assistant", "text": "What a stretch for Melanie: a 1:41 half and an engagement to Tom! Please pass on my congratulations."},
+        {"role": "user", "text": "Will do. The new job is going well so far. Two weeks in at Brightpath and I already like my team more than the one at Northwind."},
+        {"role": "assistant", "text": "That's a great sign two weeks in. What do you like most about the Brightpath team?"},
+        {"role": "user", "text": "They're all Python people and nobody asks for weekly dashboards. Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian."},
+        {"role": "assistant", "text": "Noted: you're pescatarian now rather than vegetarian. Should I include fish dishes in suggestions from now on?"},
+        {"role": "user", "text": "Yes please. Still no peanuts for Sam, though."},
+        {"role": "assistant", "text": "Got it: fish is fine, and peanuts are still out because of Sam's allergy."}
+      ]
+    },
+    {
+      "id": "s6-trip",
+      "start": "2026-06-18T20:20:00+00:00",
+      "turns": [
+        {"role": "user", "text": "I'm planning the Portland trip for July to finally meet Ivy. Sam can't come because of work, so it'll be just me and Biscuit."},
+        {"role": "assistant", "text": "A July trip to Portland to meet Ivy sounds lovely. Are you planning to drive with Biscuit or fly?"},
+        {"role": "user", "text": "Drive. It's about 18 hours from Denver, so I'll split it over two days. Biscuit is a great road trip dog, he's our 3 year old golden."},
+        {"role": "assistant", "text": "Splitting the 18-hour drive over two days makes sense, especially with Biscuit along. Do you want help finding dog-friendly places to stay?"},
+        {"role": "user", "text": "Yes, somewhere around Boise for the overnight stop. And remind me, what was I training for back in February? I want to tell Rachel about it."},
+        {"role": "assistant", "text": "In February you signed up for the Cherry Creek Half Marathon on May 17, and you finished it in 1:58:30. For Boise, I'd look at pet-friendly hotels near the interstate."},
+        {"role": "user", "text": "Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to."},
+        {"role": "assistant", "text": "She'll be impressed! Have a great trip, and enjoy meeting Ivy."}
+      ]
+    }
+  ],
+  "key": {
+    "entities": [
+      {"id": "dana", "names": ["Dana"], "owner": true},
+      {"id": "sam", "names": ["Sam"]},
+      {"id": "biscuit", "names": ["Biscuit"]},
+      {"id": "rachel", "names": ["Rachel"]},
+      {"id": "ivy", "names": ["Ivy"]},
+      {"id": "melanie", "names": ["Melanie", "Mel"]},
+      {"id": "tom", "names": ["Tom"]},
+      {"id": "priya", "names": ["Priya"]},
+      {"id": "northwind", "names": ["Northwind"]},
+      {"id": "brightpath", "names": ["Brightpath"]},
+      {"id": "denver-health", "names": ["Denver Health"]},
+      {"id": "denver", "names": ["Denver"]},
+      {"id": "portland", "names": ["Portland"]},
+      {"id": "boise", "names": ["Boise"]},
+      {"id": "half-marathon", "names": ["Cherry Creek Half Marathon", "Cherry Creek Half"]},
+      {"id": "tableau", "names": ["Tableau"]},
+      {"id": "python", "names": ["Python"]}
+    ],
+    "links": [
+      {"id": "partner", "between": ["dana", "sam"], "label": "Dana's partner is Sam"},
+      {"id": "dog", "between": ["dana", "biscuit"], "label": "Dana's dog is Biscuit"},
+      {"id": "home", "between": ["dana", "denver"], "label": "Dana lives in Denver"},
+      {"id": "sister", "between": ["dana", "rachel"], "label": "Rachel is Dana's sister"},
+      {"id": "niece", "between": ["rachel", "ivy"], "label": "Ivy is Rachel's daughter"},
+      {"id": "sister-city", "between": ["rachel", "portland"], "label": "Rachel lives in Portland"},
+      {"id": "running-partner", "between": ["dana", "melanie"], "label": "Melanie is Dana's friend and running partner"},
+      {"id": "fiance", "between": ["melanie", "tom"], "label": "Melanie got engaged to Tom"},
+      {"id": "old-job", "between": ["dana", "northwind"], "label": "Dana worked at Northwind (past)"},
+      {"id": "new-job", "between": ["dana", "brightpath"], "label": "Dana works at Brightpath (current)"},
+      {"id": "manager", "between": ["dana", "priya"], "label": "Priya was Dana's manager"},
+      {"id": "partner-job", "between": ["sam", "denver-health"], "label": "Sam is a nurse at Denver Health"},
+      {"id": "race", "between": ["dana", "half-marathon"], "label": "Dana ran the Cherry Creek Half Marathon"},
+      {"id": "prefers-python", "between": ["dana", "python"], "label": "Dana prefers Python"}
+    ],
+    "repeats": [
+      {"id": "biscuit-golden", "label": "Biscuit is a golden retriever", "terms": ["biscuit", "golden"], "user_mentions": 2},
+      {"id": "sam-nurse", "label": "Sam is a nurse", "terms": ["sam", "nurse"], "user_mentions": 2},
+      {"id": "peanut-allergy", "label": "Sam is allergic to peanuts", "terms": ["peanut"], "user_mentions": 2},
+      {"id": "prefers-python", "label": "Dana prefers Python", "terms": ["python"], "user_mentions": 3},
+      {"id": "race-date", "label": "The half marathon is on May 17", "terms": ["may 17"], "user_mentions": 1}
+    ],
+    "probes": [
+      {"id": "job-now", "question": "Where does Dana work now?", "all_of": ["Brightpath"], "stale": ["Northwind"]},
+      {"id": "title-now", "question": "What is Dana's job title now?", "all_of": ["analytics manager"], "stale": ["data analyst"]},
+      {"id": "start-date", "question": "When did Dana start the new job?", "any_of": ["May 4", "4 May", "2026-05-04"]},
+      {"id": "old-manager", "question": "Who was Dana's manager at Northwind?", "all_of": ["Priya"]},
+      {"id": "partner-job", "question": "What does Dana's partner do for work?", "all_of": ["nurse"]},
+      {"id": "allergy", "question": "What is Sam allergic to?", "all_of": ["peanut"]},
+      {"id": "dog", "question": "What kind of dog does Dana have, and what is it called?", "all_of": ["Biscuit", "golden"]},
+      {"id": "niece-name", "question": "What is the name of Dana's niece?", "all_of": ["Ivy"]},
+      {"id": "niece-born", "question": "When was Ivy born?", "any_of": ["12 March", "March 12", "2026-03-12", "Mar 12"], "note": "The source says \"last Thursday\" on 19 March 2026; only a resolved date counts."},
+      {"id": "sister-city", "question": "Where does Dana's sister live?", "all_of": ["Portland"]},
+      {"id": "running-partner", "question": "Who is Dana's running partner?", "any_of": ["Mel"]},
+      {"id": "race-time", "question": "What was Dana's half marathon finishing time?", "all_of": ["1:58"]},
+      {"id": "coffee", "question": "Does Dana drink coffee?", "all_of": ["green tea"]},
+      {"id": "diet", "question": "What is Dana's diet now?", "any_of": ["pescatarian", "eating fish"], "stale": ["vegetarian"]},
+      {"id": "mel-news", "question": "What news did Melanie share after the race?", "all_of": ["engaged"]},
+      {"id": "trip", "question": "What is Dana planning for July?", "all_of": ["Portland", "Ivy"]},
+      {"id": "overnight", "question": "Where will Dana stop overnight on the drive?", "all_of": ["Boise"]},
+      {"id": "language", "question": "Which programming language does Dana prefer?", "all_of": ["Python"]}
+    ]
+  }
+}
