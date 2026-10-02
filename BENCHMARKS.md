@@ -533,8 +533,15 @@ million tokens.
   roles, and its text and source metadata are the baseline runner's.
 - Histories share sessions, so a build keeps each model response in
   `extraction-cache/`, keyed by the model, role, prompt and text. A repeated
-  turn is extracted once, and its cached response is validated again exactly
-  as a live one. `--no-cache` turns this off.
+  turn is extracted once, and its cached result is replayed as stored.
+  `--no-cache` turns this off. Before 2026-10-01 a cached result was validated
+  against the source again. Validation widens each evidence quote to its
+  whole paragraph, so the second pass read conditions and modal words from
+  other sentences and discarded claims that the live run kept. In the 73
+  complete `ingest-baseline-lme-deepseek` packs, 1,552 replayed turns held
+  2,213 claims where live extractions of the same text held 2,474: 261 lost
+  on 75 turns, none gained. The LoCoMo builds had no cache hits and are
+  unaffected.
 - A turn whose extraction fails is retried after 15, 60 and 240 seconds. If
   it still fails, as under a rate limit, its pack stops at that turn without a
   manifest, so no later turn is extracted ahead of it; the next build resumes
@@ -612,6 +619,11 @@ questions on the same build. Most questions the defaults always answer wrong
 never get their evidence into the context, which is what extraction and
 organization changes can move.
 
+The LongMemEval-S slice packs were built before the cache fix described under
+"Packs built through `ingest()`", so some of their repeated turns lost claims.
+Rebuild them from the same cached responses before comparing a new build with
+this baseline.
+
 The slice is for direction while iterating. It is too small for the intervals
 in the default-change rule, and its questions have been examined, so a
 variant that looks better on it still needs the full benchmarks. The questions
@@ -670,6 +682,83 @@ level. On conv-26 alone, the window without resolution had lowered evidence
 claim coverage from 0.86 to 0.74; with resolution it is 0.85, so resolution
 recovers most of what the window cost there. The LongMemEval-S side has not
 been built with these options.
+
+### Chat probe: a short chat through `ingest()`
+
+The benchmark packs take most of an hour per conversation to build, and their
+annotations only name the turns that hold evidence. They cannot say whether a
+fact was stored once, attached to the right person or linked to the right
+entities. `benchmarks.diagnostics.chat_probe` builds a fresh pack from a short
+scripted chat with an answer key, `benchmarks/conversations/chat-v1.json`: 54
+turns between "Dana" and an assistant over six dated sessions, with facts
+repeated in other words, a nickname (Mel and Melanie), a job change, a diet
+change, relative dates, facts about other people and assistant echoes. Both
+sides of the chat go through `ingest()`, and the report counts repetition,
+the graph's links against the key and, for 18 probe questions, what reaches
+the reader's context.
+
+```sh
+uv run python -m benchmarks.diagnostics.chat_probe build --label defaults \
+  --model deepseek-v4.1-flash:cloud --cloud
+uv run python -m benchmarks.diagnostics.chat_probe build --label fact-text --speaker \
+  --set enable_windowed_extraction=true --set enable_fact_text_resolution=true \
+  --model deepseek-v4.1-flash:cloud --cloud
+uv run python -m benchmarks.diagnostics.chat_probe compare defaults fact-text
+PRME_CHAT_DATA_DIR=data/chat-probe-v1/chat-v1/defaults/pack uv run python -m web.server
+```
+
+A build takes about three minutes and 54 extraction calls. Builds of one
+conversation share an extraction cache, so a build whose settings do not
+change the extraction prompt replays it in seconds without a model call.
+`measure` measures a finished pack again, and the memory explorer opens a pack
+with the owner ID `chat-v1-dana`.
+
+First results on 2026-10-01, `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama
+0.34.4), current defaults against the window with fact text resolution and
+the owner named as the speaker of their turns:
+
+| Measure | Defaults | Window, fact text, speaker |
+|---|---:|---:|
+| Active claims | 77 | 50 |
+| Distinct claim texts | 32 | 32 |
+| Claims whose text is the whole message | 77 | 18 |
+| Owner's claims attached to "Dana" | 1 | 0 |
+| Owner's claims attached to a first-person pronoun | 35 | 15 |
+| Pronoun entities | 24 | 11 |
+| Entities with no link | 15 | 27 |
+| Records superseded by the job and diet changes | 0 | 0 |
+| Repeated records in the 18 contexts, 4,096 tokens | 1,066 of 2,283 (47%) | 652 of 2,948 (22%) |
+| Repeated records in the 18 contexts, 1,024 tokens | 203 of 458 (44%) | 132 of 484 (27%) |
+
+- Every claim's text is its whole message. Validation checks a claim against
+  its own sentences and then widens its evidence quote to the whole paragraph
+  (`_validate_fact_source_support`), and the pipeline stores that passage as
+  the fact's text. A chat message is one paragraph, so a message with four
+  claims shows the same text four times, beside the raw message itself.
+- The owner is barely in the graph. A first-person reference stays local to
+  its message (`docs/ENTITY-IDENTITY.md`), so Dana's own claims hang off 19
+  separate "I" nodes, and seven of the key's links exist only through an
+  "I". Fact text resolution writes "Dana" into the text but leaves the claim
+  on its "I" node, so it attaches no claim to Dana either.
+- Some links are missing because no claim states them. The first message
+  ("I live in Denver with my partner Sam and our golden retriever, Biscuit")
+  gave only "Dana, name, Dana", "Biscuit, is a, golden retriever" and "Sam,
+  owns pet, Biscuit", so Dana's partner, dog and home are never linked.
+- Updates do not supersede. The Northwind and Brightpath claims, and the
+  vegetarian and pescatarian ones, hang off different "I" nodes, so the
+  detector never compares them. At 1,024 tokens, the context for "Where does
+  Dana work now?" holds the Northwind message five times and only the
+  assistant's echo of the Brightpath offer.
+- The organizer does not repair any of this: on the defaults pack it found no
+  duplicate and no alias, and "Mel" and "Melanie" stay separate nodes.
+- The answer to 17 of the 18 probes reaches the context at either budget. The
+  check only looks for the answer's words in the context, so it is lenient.
+  No build resolved "last Thursday" into the date Ivy was born.
+
+The chat is one examined conversation, too small for intervals, and the
+probes test the context rather than a reader's answer. It is for seeing what
+ingestion builds and for measuring a change to it, not for claims about
+accuracy.
 
 ## Baselines for the GPT-5.4 comparison
 
