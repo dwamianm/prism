@@ -31,7 +31,7 @@ from prme.epistemic.inference import infer_source_type
 from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
-from prme.ingestion.grounding import validate_grounding
+from prme.ingestion.grounding import claim_sentences, validate_grounding
 from prme.ingestion.schema import ExtractedEntity, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
 from prme.ingestion.supersedence import SupersedenceDetector
@@ -143,6 +143,7 @@ class IngestionPipeline:
         extraction_window_turns: int = 0,
         resolve_fact_text: bool = False,
         bind_speaker_references: bool = False,
+        claim_sentence_text: bool = False,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -160,6 +161,8 @@ class IngestionPipeline:
         self._resolve_fact_text = resolve_fact_text
         # Bind I, me and my in a turn with a named speaker to that speaker's entity.
         self._bind_speaker_references = bind_speaker_references
+        # Store a claim's own sentences as its text instead of the whole paragraph.
+        self._claim_sentence_text = claim_sentence_text
         self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
@@ -582,6 +585,7 @@ class IngestionPipeline:
             merge_claims=self._merge_repeated_claims and current_policy,
             speaker=(metadata_speaker(event.metadata)
                      if self._bind_speaker_references and current_policy else None),
+            sentence_text=self._claim_sentence_text and current_policy,
         )
         return await indexes.prepare(
             self._vector_index._provider,
@@ -591,15 +595,16 @@ class IngestionPipeline:
     async def _populate(
         self, result: ExtractionResult, event: Event, event_id: str, scope: Scope,
         *, graph_store, writer, vector_index, lexical_index, write_queue,
-        merge_claims: bool = False, speaker: str | None = None,
+        merge_claims: bool = False, speaker: str | None = None, sentence_text: bool = False,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
         ``merge_claims`` folds a repeated claim into one current record (#209).
         ``speaker`` binds first-person singular references to that speaker's
-        entity (enable_speaker_references). Only current-policy plans use
-        either, so a saved extraction replanned under an older materialization
-        policy keeps that policy's behavior.
+        entity (enable_speaker_references). ``sentence_text`` stores a claim's
+        own sentences as its text (enable_claim_sentence_text). Only
+        current-policy plans use these, so a saved extraction replanned under
+        an older materialization policy keeps that policy's behavior.
         """
         from prme.ingestion.claim_merge import claim_key, find_repeated_claims, merged_claim
 
@@ -716,6 +721,12 @@ class IngestionPipeline:
             # they supplied a name, not support, and promotion counts
             # evidence_refs as support.
             resolution = fact.resolution if fact.resolved_text else None
+            # Without an accepted resolution, the claim's own sentences can be
+            # its text; the paragraph stays its evidence.
+            sentences = (
+                claim_sentences(fact_content, fact.subject, fact.object)
+                if sentence_text and resolution is None else None
+            )
 
             subject_entity_id, subject_link_status = entity_refs.resolve(fact.subject, fact.subject_entity_type)
             object_entity_id, object_link_status = entity_refs.resolve(fact.object, fact.object_entity_type)
@@ -732,7 +743,10 @@ class IngestionPipeline:
                 "object": fact.object,
                 "polarity": fact.polarity,
                 "evidence_quote": fact_content,
-                "grounding_method": "resolved_text_v1" if resolution is not None else "source_passage_v1",
+                "grounding_method": (
+                    "resolved_text_v1" if resolution is not None
+                    else "claim_sentences_v1" if sentences is not None else "source_passage_v1"
+                ),
                 "temporal_intent": fact.temporal_intent,
                 "replaces_object": fact.replaces_object,
             }
@@ -757,6 +771,8 @@ class IngestionPipeline:
             if resolution is not None:
                 fact_metadata["resolution"] = resolution
                 fact_content = fact.resolved_text
+            elif sentences is not None:
+                fact_content = sentences
             if fact.scope:
                 fact_metadata["suggested_scope"] = fact.scope
             if fact.temporal_ref:
