@@ -5,10 +5,16 @@
 export function claimParts(node) {
   const meta = node?.metadata || {};
   if (!meta.subject || !meta.predicate) return null;
+  // A pronoun bound to the turn's speaker reads as "Dana (I)".
+  const bound = meta.speaker_reference?.fields || [];
+  const named = (field, value) =>
+    bound.includes(field) && value
+      ? `${meta.speaker_reference.speaker} (${value})`
+      : value;
   return {
-    subject: String(meta.subject),
+    subject: named("subject", String(meta.subject)),
     predicate: String(meta.predicate).replaceAll("_", " "),
-    object: meta.object == null ? "" : String(meta.object),
+    object: named("object", meta.object == null ? "" : String(meta.object)),
     negative: meta.polarity === "negative",
   };
 }

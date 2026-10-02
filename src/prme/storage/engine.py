@@ -449,6 +449,7 @@ class MemoryEngine:
                     config.extraction_window_turns if config.enable_windowed_extraction else 0
                 ),
                 resolve_fact_text=config.enable_fact_text_resolution,
+                bind_speaker_references=config.enable_speaker_references,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -595,6 +596,7 @@ class MemoryEngine:
                     config.extraction_window_turns if config.enable_windowed_extraction else 0
                 ),
                 resolve_fact_text=config.enable_fact_text_resolution,
+                bind_speaker_references=config.enable_speaker_references,
             )
 
             startup.push_async_callback(pipeline.shutdown)

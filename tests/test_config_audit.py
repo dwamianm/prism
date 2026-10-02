@@ -42,6 +42,7 @@ EXPECTED_HYPOTHESES = {
     "enable_windowed_extraction",
     "extraction_window_turns",
     "enable_fact_text_resolution",
+    "enable_speaker_references",
     "novelty_high_threshold",
     "novelty_low_threshold",
     "novelty_salience_boost",

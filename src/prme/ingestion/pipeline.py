@@ -63,6 +63,14 @@ _FACT_TYPE_TO_NODE_TYPE: dict[str, NodeType] = {
 }
 
 
+_FIRST_PERSON_SINGULAR = frozenset({"i", "me", "my", "mine", "myself"})
+
+
+def _speaker_reference(name: str, entity_type: str | None) -> bool:
+    """Whether a reference means whoever speaks the turn: I, me, my, mine or myself."""
+    return name.strip().casefold() in _FIRST_PERSON_SINGULAR and unresolved_personal_reference(name, entity_type)
+
+
 def _entities_with_unresolved_references(result: ExtractionResult) -> list[ExtractedEntity]:
     """Add one noncanonical identity for each unlisted personal reference.
 
@@ -134,6 +142,7 @@ class IngestionPipeline:
         merge_repeated_claims: bool = True,
         extraction_window_turns: int = 0,
         resolve_fact_text: bool = False,
+        bind_speaker_references: bool = False,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -149,6 +158,8 @@ class IngestionPipeline:
         self._extraction_window_turns = max(0, extraction_window_turns)
         # Ask for self-contained fact text and keep what passes its check (#91).
         self._resolve_fact_text = resolve_fact_text
+        # Bind I, me and my in a turn with a named speaker to that speaker's entity.
+        self._bind_speaker_references = bind_speaker_references
         self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
@@ -564,10 +575,13 @@ class IngestionPipeline:
         result = ExtractionResult.model_validate_json(result.model_dump_json())
         graph = PlanningGraph(self._graph_store, event)
         indexes = PlanningIndexes(graph)
+        current_policy = materialization_policy == "speech_act_v12"
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
-            merge_claims=self._merge_repeated_claims and materialization_policy == "speech_act_v12",
+            merge_claims=self._merge_repeated_claims and current_policy,
+            speaker=(metadata_speaker(event.metadata)
+                     if self._bind_speaker_references and current_policy else None),
         )
         return await indexes.prepare(
             self._vector_index._provider,
@@ -577,13 +591,15 @@ class IngestionPipeline:
     async def _populate(
         self, result: ExtractionResult, event: Event, event_id: str, scope: Scope,
         *, graph_store, writer, vector_index, lexical_index, write_queue,
-        merge_claims: bool = False,
+        merge_claims: bool = False, speaker: str | None = None,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
         ``merge_claims`` folds a repeated claim into one current record (#209).
-        Only current-policy plans use it, so a saved extraction replanned under
-        an older materialization policy keeps that policy's behavior.
+        ``speaker`` binds first-person singular references to that speaker's
+        entity (enable_speaker_references). Only current-policy plans use
+        either, so a saved extraction replanned under an older materialization
+        policy keeps that policy's behavior.
         """
         from prme.ingestion.claim_merge import claim_key, find_repeated_claims, merged_claim
 
@@ -596,12 +612,17 @@ class IngestionPipeline:
         # --- Entities ---
         for entity in _entities_with_unresolved_references(result):
             entity_scope = scope
+            # The turn's named speaker is who says I, me and my in it.
+            bound = speaker is not None and _speaker_reference(entity.name, entity.entity_type)
+            name, entity_type, description = (
+                (speaker, "person", None) if bound else (entity.name, entity.entity_type, entity.description)
+            )
 
             entity_id, is_new = await entity_merger.find_or_create_entity(
-                name=entity.name,
-                entity_type=entity.entity_type,
+                name=name,
+                entity_type=entity_type,
                 user_id=event.user_id,
-                description=entity.description,
+                description=description,
                 session_id=event.session_id,
                 evidence_event_id=event_id,
                 scope=entity_scope,
@@ -618,9 +639,9 @@ class IngestionPipeline:
                 continue
 
             # Index entity in vector store (not tracked for rollback)
-            entity_text = entity.name
-            if entity.description:
-                entity_text = f"{entity.name}: {entity.description}"
+            entity_text = name
+            if description:
+                entity_text = f"{name}: {description}"
             await write_queue.submit(
                 lambda eid=entity_id, txt=entity_text, uid=event.user_id: (
                     vector_index.index(eid, txt, uid)
@@ -715,6 +736,14 @@ class IngestionPipeline:
                 "temporal_intent": fact.temporal_intent,
                 "replaces_object": fact.replaces_object,
             }
+            if speaker is not None:
+                bound_fields = [field for field, value, kind in (
+                    ("subject", fact.subject, fact.subject_entity_type),
+                    ("object", fact.object, fact.object_entity_type),
+                ) if _speaker_reference(value, kind)]
+                if bound_fields:
+                    # The literal pronoun stays in subject/object; this names who it is.
+                    fact_metadata["speaker_reference"] = {"speaker": speaker, "fields": bound_fields}
             if fact.condition is not None:
                 fact_metadata["condition"] = fact.condition
                 fact_metadata["condition_state"] = "unknown"
