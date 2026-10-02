@@ -14,6 +14,19 @@ This is a conservative English guard, not general coreference resolution. It
 does not disambiguate several quoted speakers inside one event or equal names
 belonging to different people.
 
+`enable_speaker_references` (default false) is the one exception, and the
+caller opts into it. When a turn names its speaker (`ingest(speaker=...)`), a
+first-person singular reference in its claims (`I`, `me`, `my`, `mine`,
+`myself`) binds to an entity with that speaker's name and type `person`, the
+same node that other mentions of the name use. The claim keeps the literal
+pronoun as its subject or object, and its `speaker_reference` metadata names
+the speaker and which of the two it bound. A speaker's claims then connect
+across messages, so a repeated claim can merge (#209) and a named update can
+supersede the value it replaces. Turns without a speaker, and plural,
+second-person and third-person references, stay local to their message. The
+option is off by default because only the caller knows that the named speaker,
+and not someone the turn quotes, is who says `I`.
+
 Built-in extraction keeps only claims whose named references resolve within the
 same response, apart from those event-local personal references. A missing or
 ambiguous reference discards its claim while preserving grounded, closed
