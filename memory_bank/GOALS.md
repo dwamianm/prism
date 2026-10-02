@@ -42,8 +42,11 @@ see an extraction change (#210 gave 2,040 identical contexts). Work since
 its whole message, because validation widens the evidence quote to the
 paragraph, so 44% to 47% of the records in a probe's context repeat another
 record. The owner's own claims hang off 19 per-message "I" nodes, so the job
-and diet changes superseded nothing. The organizer merged nothing, and the #91
-options reduced the repetition but attached no claim to the owner. The cache
+and diet changes superseded nothing. Validation discarded 48 proposed claims
+against 77 kept, mostly because the model named the owner ("Dana, has
+partner, Sam") where the quoted sentence says "I". The organizer merged
+nothing, and the #91 options reduced the repetition but attached no claim to
+the owner. The cache
 replay bug had dropped 261 claims on 75 replayed turns of the 73 complete
 `ingest-baseline-lme-deepseek` packs, which includes the 42 slice packs.
 

@@ -740,10 +740,18 @@ the owner named as the speaker of their turns:
   separate "I" nodes, and seven of the key's links exist only through an
   "I". Fact text resolution writes "Dana" into the text but leaves the claim
   on its "I" node, so it attaches no claim to Dana either.
-- Some links are missing because no claim states them. The first message
-  ("I live in Denver with my partner Sam and our golden retriever, Biscuit")
-  gave only "Dana, name, Dana", "Biscuit, is a, golden retriever" and "Sam,
-  owns pet, Biscuit", so Dana's partner, dog and home are never linked.
+- Validation discards many claims the model gets right. For the first
+  message ("Hi! I'm Dana. ... I live in Denver with my partner Sam and our
+  golden retriever, Biscuit") the model proposed "Dana, lives in, Denver",
+  "Dana, has partner, Sam" and "Dana, has pet, Biscuit", and validation
+  discarded them because "Dana" does not occur in the quoted sentence, which
+  says "I". Over the whole chat validation discarded 48 proposed facts and
+  relationships (some of them mirror each other) against 77 claims kept, 39
+  of them for a subject or object missing from the quote. "I've been
+  vegetarian for about six years, so keep that in mind if I ask about
+  recipes" lost its claim to the "if" of the other clause. So Dana's partner,
+  dog and home are never linked, and the later diet change has no earlier
+  value to replace.
 - Updates do not supersede. The Northwind and Brightpath claims, and the
   vegetarian and pescatarian ones, hang off different "I" nodes, so the
   detector never compares them. At 1,024 tokens, the context for "Where does
