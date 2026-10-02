@@ -32,6 +32,23 @@ see an extraction change (#210 gave 2,040 identical contexts). Work since
 - `gate-compare` now compares two built-pack replays, and the first #91
   comparison is recorded (#225; `BENCHMARKS.md`, "Windowed extraction with
   fact text resolution on LoCoMo").
+- A chat probe (`benchmarks/diagnostics/chat_probe.py`) runs a 54-turn
+  scripted chat with an answer key through `ingest()` in about three minutes,
+  the explorer shows each claim's subject, predicate and object, and the
+  extracted-pack cache now replays a cached result as stored (`BENCHMARKS.md`,
+  "Chat probe").
+
+**Chat probe result (2026-10-01).** With the defaults, every claim's text is
+its whole message, because validation widens the evidence quote to the
+paragraph, so 44% to 47% of the records in a probe's context repeat another
+record. The owner's own claims hang off 19 per-message "I" nodes, so the job
+and diet changes superseded nothing. Validation discarded 48 proposed claims
+against 77 kept, mostly because the model named the owner ("Dana, has
+partner, Sam") where the quoted sentence says "I". The organizer merged
+nothing, and the #91 options reduced the repetition but attached no claim to
+the owner. The cache
+replay bug had dropped 261 claims on 75 replayed turns of the 73 complete
+`ingest-baseline-lme-deepseek` packs, which includes the 42 slice packs.
 
 **#91 result on LoCoMo (all 1,540 questions).** Window of 4 turns with fact
 text resolution, against the `ingest()` baseline, both on
@@ -46,19 +63,27 @@ against 4,796 names. No repeated build has measured build-to-build noise.
 `ingest-baseline-locomo-deepseek` (complete), `fact-text-w4-locomo-deepseek`
 (complete), `windowed-w4-locomo-deepseek` (conv-26 only), and
 `ingest-baseline-lme-deepseek` (the 42 slice packs; the full build was stopped
-by the owner at 34 of 500 on 2026-09-28; ask before resuming it).
+by the owner at 34 of 500 on 2026-09-28; ask before resuming it). The chat
+probe's builds are in `data/chat-probe-v1/chat-v1/`.
 
 **Next, in order:**
 
-1. #91 on LongMemEval-S: build the slice with the window and resolution and
-   compare it with the slice baseline. It uses Ollama cloud calls, so confirm
-   with the owner first.
-2. #91: resolve relative dates in fact text more often, and run the authored
+1. The chat probe's recommendations, which the owner asked for on 2026-10-01:
+   rebuild the LongMemEval-S slice baseline from its cache with the replay
+   fix; an opt-in option that binds first-person references to the turn's
+   named speaker; and an opt-in option that stores a claim's own sentences as
+   its text instead of the whole paragraph. Both options only change how
+   stored extraction becomes graph records, so cached rebuilds measure them
+   without cloud calls.
+2. #91 on LongMemEval-S: build the slice with the window and resolution and
+   compare it with the rebuilt slice baseline. It uses Ollama cloud calls, so
+   confirm with the owner first.
+3. #91: resolve relative dates in fact text more often, and run the authored
    negation and condition probes with resolution on.
-3. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
+4. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
    pack has 576 entities, half with no edge, and "Mel" and "Melanie" are
    separate nodes.
-4. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
+5. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
    (failing simulation check) and the recency and temporal scoring bugs.
 
 **Known flaky test:** `tests/test_extraction_workflow.py::
