@@ -1,0 +1,2894 @@
+{
+  "kind": "offline-evidence-gate",
+  "schema_version": 1,
+  "complete": true,
+  "provenance": {
+    "commit": "f05b0ff0bcb293e1019f9c717f92dcca8d070168",
+    "dirty": false,
+    "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "python": "3.11.15",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "dependencies": {
+      "prme": "0.13.0",
+      "duckdb": "1.4.4",
+      "usearch": "2.26.2",
+      "tantivy": "0.25.1",
+      "fastembed": "0.7.4",
+      "tiktoken": "0.12.0",
+      "dateparser": "1.3.0"
+    },
+    "engine_config": {
+      "database_url": "<redacted>",
+      "namespace_id": null,
+      "db_path": "{pack}/memory.duckdb",
+      "duckdb_threads": null,
+      "vector_path": "{pack}/vectors.usearch",
+      "lexical_path": "{pack}/lexical_index",
+      "embedding": {
+        "provider": "fastembed",
+        "model_name": "BAAI/bge-small-en-v1.5",
+        "dimension": 384,
+        "api_key": "<redacted>"
+      },
+      "extraction": {
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "max_retries": 3,
+        "timeout": 30.0,
+        "temperature": 0.0,
+        "reasoning_effort": null,
+        "lease_seconds": 300.0,
+        "api_key": "<redacted>",
+        "base_url": null
+      },
+      "write_queue_size": 1000,
+      "scoring": {
+        "w_semantic": 0.25,
+        "w_lexical": 0.2,
+        "w_graph": 0.2,
+        "w_recency": 0.1,
+        "w_salience": 0.1,
+        "w_confidence": 0.15,
+        "w_epistemic": 0.05,
+        "w_paths": 0.0,
+        "recency_lambda": 0.02,
+        "temporal_boost": 0.15,
+        "node_type_boost": {
+          "fact": 1.15,
+          "preference": 1.15,
+          "decision": 1.15,
+          "summary": 1.1,
+          "instruction": 1.15
+        },
+        "relevance_floor": 0.35,
+        "current_update_multiplier": 1.3,
+        "fusion": "rrf",
+        "rrf_k": 60,
+        "rrf_recency_boost": 0.25,
+        "rrf_tie_break": "event_time"
+      },
+      "packing": {
+        "multipath_ordering": "balanced",
+        "context_guidance_mode": "temporal",
+        "context_format": "reader",
+        "context_citations": false,
+        "token_budget": 4096,
+        "tokenizer": "cl100k_base",
+        "min_fidelity": "reference",
+        "overhead_tokens": 100,
+        "chars_per_token": 4.2,
+        "graph_max_candidates": 150,
+        "vector_k": 500,
+        "lexical_k": 500,
+        "graph_max_hops": 3,
+        "cross_scope_top_n": 5,
+        "cross_scope_token_budget": 512,
+        "session_context_window": 3,
+        "session_context_top_k": 20,
+        "session_context_score_decay": 0.85,
+        "session_context_rank_fusion_score_decay": 0.6,
+        "episode_context_top_k": 0,
+        "episode_context_local_k": 8,
+        "episode_context_score_decay": 0.95,
+        "evidence_projection_top_k": 0,
+        "evidence_projection_max_sources": 1,
+        "evidence_projection_score_decay": 1.0,
+        "evidence_augmentation_top_k": 0,
+        "evidence_augmentation_max_sources": 1,
+        "evidence_augmentation_score_decay": 0.99,
+        "evidence_augmentation_anchor_policy": "all",
+        "aggregation_k_multiplier": 3.0,
+        "aggregation_k_max": 2000
+      },
+      "temporal_relation": {
+        "enabled": false,
+        "resolver_provider": "ollama",
+        "resolver_model": "deepseek-v4.1-flash:cloud",
+        "resolver_base_url": "http://127.0.0.1:11434",
+        "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+        "resolver_timeout_seconds": 90.0,
+        "resolver_max_attempts": 3,
+        "maximum_schema_repairs": 1,
+        "gate_provider": "typesafe_jev",
+        "gate_model": "jev-1.13.0",
+        "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+        "gate_threshold": 0.85,
+        "gate_timeout_seconds": 60.0,
+        "gate_max_attempts": 3,
+        "gate_api_key": "<redacted>",
+        "failure_policy": "fallback"
+      },
+      "organizer": {
+        "opportunistic_enabled": false,
+        "opportunistic_cooldown": 3600,
+        "opportunistic_budget_ms": 200,
+        "opportunistic_batch_size": 50,
+        "default_organize_budget_ms": 5000,
+        "promotion_age_days": 7.0,
+        "promotion_evidence_count": 1,
+        "archive_salience_threshold": 0.1,
+        "archive_confidence_threshold": 0.4,
+        "force_archive_salience_threshold": 0.05,
+        "deprecate_confidence_threshold": 0.15,
+        "dedup_similarity_threshold": 0.92,
+        "alias_similarity_threshold": 0.85,
+        "consolidation_min_cluster_size": 3,
+        "consolidation_similarity_threshold": 0.8,
+        "consolidation_preserve_recent_days": 7,
+        "consolidation_min_confidence_preserve": 0.8,
+        "default_ttl_days": {
+          "entity": null,
+          "fact": null,
+          "event": 365,
+          "decision": 180,
+          "preference": null,
+          "task": 90,
+          "summary": 365,
+          "note": 90
+        },
+        "summarization_daily_min_events": 5,
+        "summarization_weekly_min_summaries": 3,
+        "summarization_monthly_min_summaries": 2,
+        "summarization_max_items_per_summary": 10
+      },
+      "mcp": {
+        "user_id": null,
+        "user_keys": {}
+      },
+      "api": {
+        "api_key": "<redacted>",
+        "user_keys": {},
+        "cors_origins": [],
+        "cors_allow_credentials": false
+      },
+      "enable_store_supersedence": false,
+      "reinforce_similarity_threshold": null,
+      "enable_claim_merge": true,
+      "enable_windowed_extraction": false,
+      "extraction_window_turns": 4,
+      "enable_fact_text_resolution": false,
+      "enable_speaker_references": false,
+      "enable_claim_sentence_text": false,
+      "enable_qa_pairing": false,
+      "enable_surprise_gating": false,
+      "novelty_high_threshold": 0.7,
+      "novelty_low_threshold": 0.3,
+      "novelty_salience_boost": 0.15,
+      "novelty_salience_penalty": 0.1,
+      "enable_reranker": false,
+      "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+      "reranker_top_k": 100,
+      "reranker_prior_weight": 0.3,
+      "reranker_policy": "legacy",
+      "enable_query_reformulation": false,
+      "query_reformulation_merge_policy": "new_only",
+      "query_reformulation_count": 2,
+      "temporal_languages": [
+        "en"
+      ],
+      "query_intent_order": "entity_first",
+      "materialization_queue_size": 500,
+      "materialization_budget_ms": 100,
+      "vector_save_interval": 64,
+      "vector_exact_search": true,
+      "lexical_commit_interval": 64,
+      "lexical_commit_max_delay_s": 2.0,
+      "max_concurrent_extractions": 8,
+      "namespace_weights": {},
+      "epistemic_weights": {
+        "observed": 1.0,
+        "asserted": 0.9,
+        "inferred": 0.7,
+        "hypothetical": 0.3,
+        "conditional": 0.5,
+        "deprecated": 0.1,
+        "unverified": 0.5
+      },
+      "unverified_confidence_threshold": 0.3,
+      "confidence_overrides": {},
+      "encryption_enabled": false,
+      "encryption_key": "<redacted>"
+    },
+    "overrides": {},
+    "retrieval_timing": "after-warm-up-v1",
+    "packs": {
+      "path": "/Users/dmac/Sites/prism/data/extracted-packs-v1/ingest-baseline-lme-deepseek-r2",
+      "build_sha256": "d9b5f9da64d7c40ce2eab36143080edc7e700aa1f9f1ac62f67586563b5eb287",
+      "build": "ingest-baseline-lme-deepseek-r2",
+      "model": "deepseek-v4.1-flash:cloud",
+      "packs": {
+        "58bf7951": "d8f85029e66c93a3429f754977182a0c3ad738168ec2d02d57f798fa0aeebaef",
+        "ad7109d1": "c8b747854f45e35a2d6c38abe793d1fc77024111135195ba58fae6a06c6f900c",
+        "c8c3f81d": "c43a885ebfcd592e0d93e08d41f8c6f7e58cbe7e8236b0f94f270224748a32d6",
+        "36580ce8": "65bff173d89c61097de252fb4d7ee28db14b547a860b282af43bcf8abd814b04",
+        "0a995998": "bcb4acddf98950727a78472a98e479b3bc9811656b1ca7fbb9ed10c52a6016f6",
+        "gpt4_15e38248": "c73381ea3939f0dd9c32a3ee880e17d3c250532c60f140dcc6fd94d18c0860a4",
+        "gpt4_7fce9456": "b34480088cb3750fa03d79222c1537b73280754129e412c77df1fe9024b63eec",
+        "00ca467f": "de7aaf9d7a64656739dc0ee4f70707380bbc33bcba9f4d798f77b51426ceec3f",
+        "gpt4_ab202e7f": "6468b7b4e309cad89674a25fbb73a78fc5a705288db03baf9b13d83161f9283f",
+        "80ec1f4f_abs": "eabcf54332a45b8d1205440712c323b1c6cea24a3b714090c7f92029c763ab62",
+        "06878be2": "890f8d8cb0b5209a5ed1bd5e813027f2d351aacd647dabec53dd12388d06e7f6",
+        "195a1a1b": "e0dac301901184e46545e77e63bb334db38a4a47fe37950e812efb25641e2623",
+        "54026fce": "fc2a5fe0c888a634e437f0083a9780c627cfcd1bd979ce25cc5d253be1b6a3ef",
+        "6b7dfb22": "3b219911926a9c3986918acb717dd7f1724fe301ac4f251e3cf0537057317201",
+        "38146c39": "e2c1f8cd39f5431f7cb224f354004a417c31eb21095fe21288c3d078fa70bd17",
+        "51c32626": "eebde012ea66d099cd201474d413dad493511c1ffe3585e924149d2da846c0f5",
+        "720133ac": "abe6ac195f67739900f494ea39fc655aba97dc69bda5a1e335580c4d26b0df8f",
+        "ba358f49": "497ac4f8db85cc9f6a847f9279fb191d92917f332a5000d199819c3b68471f40",
+        "bc149d6b": "50c31d16cc3e6c5f9e7e7625e478c17db0906b6a3d09f331445aaf973cfe5616",
+        "37f165cf": "936bb6b229e3ae3811899f280560536130b7b78b20ee287ffd8584551f547d5a",
+        "a96c20ee_abs": "9940af71031def061ce31a863c92c5ec57f6b41f54701fea97a59f09859b6c49",
+        "09ba9854_abs": "c20f5fcd61e2bf17c2d3bd06d11dcebcec268490f08b5f691096fce599866ff1",
+        "gpt4_7abb270c": "5105c2c3588e417f36fc3003eb85535dfdc0e88ddbf96a036066382c76b494bc",
+        "370a8ff4": "9667c1280c4430b8c0da0975b330f9ef21ea48208c2f72ffd79df774a87045a1",
+        "gpt4_f420262c": "04d8eb399342467a9103cb13c98ac6791113a435d415e9496576deafd8f85f3e",
+        "bcbe585f": "a15dd802c7693e7cf2c9122d87c1109ee4fd241a0c00eaf6b32f888052734350",
+        "eac54add": "7afbe55b347709595500be23f6cb1a65245eb251d7e5af0d3634de0212820324",
+        "6e984302": "7729a41e565a5ce9dcfd20c2700b838b7d6dff255415949953239c29f2d9f69d",
+        "gpt4_6ed717ea": "aebfbcf0395d343a59854813a6981b363cee6ef6b8bd63f56461814445f042b2",
+        "gpt4_4edbafa2": "ecf6d29d58850d246a07fb11e7e24a40da9f64388683583b7d33e5b48bd75917",
+        "gpt4_d31cdae3": "798269626b73e6b184641a6210b8871a53280e7310474da7d277297665423fb2",
+        "6aeb4375": "0b940a06cf5f8fc7e3abff08b5209efd15c1e0994a86ab1ad37fc69a4192bfea",
+        "6071bd76": "4eeaacc79635c84d359ceb51926bde1348fc065174a00d1e1f0c3f82279afaee",
+        "b01defab": "29ee9d0dcc628670cfda2b4ce9db44c080b57552e0e2a04c3bfd383c9d549f6b",
+        "c6853660": "cb2a44e893743fa2948ba8764707a099d98e38bbeb812cbe1612ae8b4c928afa",
+        "031748ae_abs": "47cf239cf4bdc0247ee4c00c7d06c66d16847c92c642ef0d1db9525a81611b4b",
+        "07741c45": "ee3293f6302ad31e27849c25af70668655ec5b5d17cc973c4cd13f71e1c806e0",
+        "c4f10528": "527409e1695e5fc88a2a201a0ba7252e70a758da0a15771e515a31a11cf36e00",
+        "ceb54acb": "026be8df6610614facf6006dc0288f4cb098a672312dbe11b883b3b9ce95b069",
+        "1d4da289": "769f9e9a7740b079557aebe85404a3278014a94bbbc87a0dfcfbe2f15b1141d0",
+        "70b3e69b": "fc8bc447555f07ad82460da37081efdfacbd80464a10534eb3327891605f9fa0",
+        "561fabcd": "a8e8890b651d997bae796ca2de9fae17da35fceb355f0e468d9967dd7643c2f3"
+      },
+      "evidence_claim_coverage": {
+        "longmemeval": {
+          "annotated_evidence_turns": 79,
+          "with_claims": 75,
+          "share": 0.9493670886075949
+        }
+      }
+    },
+    "datasets": {
+      "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+    },
+    "slice": {
+      "name": "dev-v1",
+      "sha256": "a65242b0e85ed87978e6941a406fe25cfe42d9c31132705d313438ff8d7179a2"
+    }
+  },
+  "projection": {
+    "label": "Planning estimate, not an answer score.",
+    "method": "Each question takes the saved GPT-5.4 run's accuracy on questions whose annotated evidence was all packed, or partly missing: per category for LoCoMo, pooled for LongMemEval-S. Questions that retrieval cannot move (no resolvable annotation, or abstention) keep their category's measured rate.",
+    "calibration": "At the saved run's evidence states the projection reproduces 985/1,540 and 430/500 by construction; LongMemEval-S category values are pooled estimates. The audit's re-pack simulator, using the same LoCoMo rates, reproduced the real packed sets with mean Jaccard 0.83 and projected 63.3% against 64.0% measured (memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md, section 1).",
+    "limits": [
+      "It ignores distractor effects: added or reordered context can change answers without changing evidence coverage.",
+      "It relies on the datasets' evidence annotations, which have gaps; equivalent evidence can exist elsewhere.",
+      "Its conditional accuracies come from one reader and one strict judge (GPT-5.4).",
+      "All 2,040 questions have already been examined, so this is a development gate. Publication claims need fresh or held-out data."
+    ],
+    "conditional_accuracy": {
+      "locomo": {
+        "single-hop": {
+          "all_packed": [
+            600,
+            657
+          ],
+          "missing": [
+            30,
+            183
+          ]
+        },
+        "temporal": {
+          "all_packed": [
+            216,
+            252
+          ],
+          "missing": [
+            10,
+            68
+          ]
+        },
+        "multi-hop": {
+          "all_packed": [
+            37,
+            45
+          ],
+          "missing": [
+            42,
+            233
+          ]
+        },
+        "open-domain": {
+          "all_packed": [
+            22,
+            29
+          ],
+          "missing": [
+            19,
+            60
+          ]
+        }
+      },
+      "longmemeval": {
+        "*": {
+          "all_packed": [
+            385,
+            403
+          ],
+          "missing": [
+            21,
+            67
+          ]
+        }
+      }
+    },
+    "unscored_accuracy": {
+      "locomo": {
+        "multi-hop": [
+          1,
+          4
+        ],
+        "open-domain": [
+          7,
+          7
+        ],
+        "single-hop": [
+          0,
+          1
+        ],
+        "temporal": [
+          1,
+          1
+        ]
+      },
+      "longmemeval": {
+        "knowledge-update": [
+          4,
+          6
+        ],
+        "multi-session": [
+          9,
+          12
+        ],
+        "single-session-user": [
+          6,
+          6
+        ],
+        "temporal-reasoning": [
+          5,
+          6
+        ]
+      }
+    },
+    "measured_accuracy": {
+      "locomo": [
+        985,
+        1540
+      ],
+      "longmemeval": [
+        430,
+        500
+      ]
+    }
+  },
+  "baseline": {
+    "locomo": {
+      "records_per_context": 25.2,
+      "memory_text_share": 0.29,
+      "all_evidence_packed": {
+        "category": "multi-hop",
+        "questions": 45,
+        "annotated": 282
+      }
+    },
+    "longmemeval": {
+      "records_per_context": 23.9,
+      "memory_text_share": 0.32,
+      "all_evidence_packed": {
+        "category": null,
+        "questions": 403,
+        "annotated": 470
+      }
+    }
+  },
+  "benchmarks": {
+    "longmemeval": {
+      "summary": {
+        "questions": 42,
+        "contexts_matching_saved": 0,
+        "candidates_mean": 1093.8333333333333,
+        "candidate_share_mean": null,
+        "retrieval_seconds": {
+          "p50": 0.2965090210782364,
+          "p95": 0.9060732417972759
+        },
+        "reranking_seconds": null,
+        "records_per_context": 49.54761904761905,
+        "context_tokens_mean": 3993.809523809524,
+        "memory_text_share": 0.8091808751639442,
+        "records_without_text": 0,
+        "representations": {
+          "full": 2081
+        },
+        "annotated_questions": 38,
+        "all_evidence_packed": 27,
+        "all_evidence_packed_share": 0.7105263157894737,
+        "all_evidence_packed_with_text": 27,
+        "all_evidence_packed_with_text_share": 0.7105263157894737,
+        "evidence_turns_packed_by_extracted": 56,
+        "evidence_turns_resolved": 79,
+        "all_evidence_returned": 38,
+        "all_evidence_returned_share": 1.0,
+        "channel_recall": null,
+        "channel_recall_at_run_limits": null,
+        "aggregation": {
+          "questions": 13,
+          "filled_widened_limit": 13,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 12,
+            "VECTOR": 13
+          }
+        },
+        "evidence_ranks": {
+          "annotated_turns": 79,
+          "not_returned": 0,
+          "median": 27,
+          "top_25_share": 0.46835443037974683,
+          "beyond_150_share": 0.16455696202531644,
+          "all_within_top_25_share": 0.47368421052631576,
+          "all_within_top_75_share": 0.6578947368421053
+        },
+        "projected_correct": 32.15847252570891,
+        "projected_accuracy": 0.7656779172787835,
+        "session_context_records": {
+          "reached": 1026,
+          "added": 17,
+          "promoted": 164,
+          "reached_share": 0.49303219605958676,
+          "added_share": 0.008169149447381067,
+          "promoted_share": 0.07880826525708794
+        },
+        "by_speaker": null
+      },
+      "categories": {
+        "knowledge-update": {
+          "questions": 6,
+          "contexts_matching_saved": 0,
+          "candidates_mean": 1129.3333333333333,
+          "candidate_share_mean": null,
+          "retrieval_seconds": {
+            "p50": 0.2900347710819915,
+            "p95": 0.8460668544867076
+          },
+          "reranking_seconds": null,
+          "records_per_context": 49.833333333333336,
+          "context_tokens_mean": 3994.1666666666665,
+          "memory_text_share": 0.8077613185896099,
+          "records_without_text": 0,
+          "representations": {
+            "full": 299
+          },
+          "annotated_questions": 5,
+          "all_evidence_packed": 5,
+          "all_evidence_packed_share": 1.0,
+          "all_evidence_packed_with_text": 5,
+          "all_evidence_packed_with_text_share": 1.0,
+          "evidence_turns_packed_by_extracted": 10,
+          "evidence_turns_resolved": 10,
+          "all_evidence_returned": 5,
+          "all_evidence_returned_share": 1.0,
+          "channel_recall": null,
+          "channel_recall_at_run_limits": null,
+          "aggregation": {
+            "questions": 2,
+            "filled_widened_limit": 2,
+            "paths_at_limit": {
+              "LEXICAL_AGG": 2,
+              "VECTOR": 2
+            }
+          },
+          "evidence_ranks": {
+            "annotated_turns": 10,
+            "not_returned": 0,
+            "median": 14.5,
+            "top_25_share": 0.7,
+            "beyond_150_share": 0.0,
+            "all_within_top_25_share": 0.6,
+            "all_within_top_75_share": 1.0
+          },
+          "projected_correct": 5.443341604631928,
+          "projected_accuracy": 0.9072236007719879,
+          "session_context_records": {
+            "reached": 162,
+            "added": 2,
+            "promoted": 24,
+            "reached_share": 0.5418060200668896,
+            "added_share": 0.006688963210702341,
+            "promoted_share": 0.0802675585284281
+          },
+          "by_speaker": null
+        },
+        "multi-session": {
+          "questions": 13,
+          "contexts_matching_saved": 0,
+          "candidates_mean": 1617.7692307692307,
+          "candidate_share_mean": null,
+          "retrieval_seconds": {
+            "p50": 0.460842790780589,
+            "p95": 0.9517357750795782
+          },
+          "reranking_seconds": null,
+          "records_per_context": 48.61538461538461,
+          "context_tokens_mean": 3994.076923076923,
+          "memory_text_share": 0.8089671243957398,
+          "records_without_text": 0,
+          "representations": {
+            "full": 632
+          },
+          "annotated_questions": 10,
+          "all_evidence_packed": 4,
+          "all_evidence_packed_share": 0.4,
+          "all_evidence_packed_with_text": 4,
+          "all_evidence_packed_with_text_share": 0.4,
+          "evidence_turns_packed_by_extracted": 21,
+          "evidence_turns_resolved": 31,
+          "all_evidence_returned": 10,
+          "all_evidence_returned_share": 1.0,
+          "channel_recall": null,
+          "channel_recall_at_run_limits": null,
+          "aggregation": {
+            "questions": 11,
+            "filled_widened_limit": 11,
+            "paths_at_limit": {
+              "LEXICAL_AGG": 10,
+              "VECTOR": 11
+            }
+          },
+          "evidence_ranks": {
+            "annotated_turns": 31,
+            "not_returned": 0,
+            "median": 64,
+            "top_25_share": 0.3548387096774194,
+            "beyond_150_share": 0.1935483870967742,
+            "all_within_top_25_share": 0.1,
+            "all_within_top_75_share": 0.3
+          },
+          "projected_correct": 7.951936965297583,
+          "projected_accuracy": 0.6116874588690449,
+          "session_context_records": {
+            "reached": 342,
+            "added": 5,
+            "promoted": 67,
+            "reached_share": 0.5411392405063291,
+            "added_share": 0.007911392405063292,
+            "promoted_share": 0.1060126582278481
+          },
+          "by_speaker": null
+        },
+        "single-session-assistant": {
+          "questions": 5,
+          "contexts_matching_saved": 0,
+          "candidates_mean": 782.4,
+          "candidate_share_mean": null,
+          "retrieval_seconds": {
+            "p50": 0.2753682918846607,
+            "p95": 0.3071080001536757
+          },
+          "reranking_seconds": null,
+          "records_per_context": 47.0,
+          "context_tokens_mean": 3993.8,
+          "memory_text_share": 0.8172166858630878,
+          "records_without_text": 0,
+          "representations": {
+            "full": 235
+          },
+          "annotated_questions": 5,
+          "all_evidence_packed": 5,
+          "all_evidence_packed_share": 1.0,
+          "all_evidence_packed_with_text": 5,
+          "all_evidence_packed_with_text_share": 1.0,
+          "evidence_turns_packed_by_extracted": 1,
+          "evidence_turns_resolved": 5,
+          "all_evidence_returned": 5,
+          "all_evidence_returned_share": 1.0,
+          "channel_recall": null,
+          "channel_recall_at_run_limits": null,
+          "aggregation": {
+            "questions": 0,
+            "filled_widened_limit": 0,
+            "paths_at_limit": {}
+          },
+          "evidence_ranks": {
+            "annotated_turns": 5,
+            "not_returned": 0,
+            "median": 4,
+            "top_25_share": 1.0,
+            "beyond_150_share": 0.0,
+            "all_within_top_25_share": 1.0,
+            "all_within_top_75_share": 1.0
+          },
+          "projected_correct": 4.776674937965261,
+          "projected_accuracy": 0.9553349875930521,
+          "session_context_records": {
+            "reached": 133,
+            "added": 3,
+            "promoted": 27,
+            "reached_share": 0.5659574468085107,
+            "added_share": 0.01276595744680851,
+            "promoted_share": 0.1148936170212766
+          },
+          "by_speaker": null
+        },
+        "single-session-preference": {
+          "questions": 5,
+          "contexts_matching_saved": 0,
+          "candidates_mean": 757.6,
+          "candidate_share_mean": null,
+          "retrieval_seconds": {
+            "p50": 0.25564295798540115,
+            "p95": 0.2953698752447963
+          },
+          "reranking_seconds": null,
+          "records_per_context": 49.2,
+          "context_tokens_mean": 3995.0,
+          "memory_text_share": 0.8142678347934919,
+          "records_without_text": 0,
+          "representations": {
+            "full": 246
+          },
+          "annotated_questions": 5,
+          "all_evidence_packed": 4,
+          "all_evidence_packed_share": 0.8,
+          "all_evidence_packed_with_text": 4,
+          "all_evidence_packed_with_text_share": 0.8,
+          "evidence_turns_packed_by_extracted": 6,
+          "evidence_turns_resolved": 7,
+          "all_evidence_returned": 5,
+          "all_evidence_returned_share": 1.0,
+          "channel_recall": null,
+          "channel_recall_at_run_limits": null,
+          "aggregation": {
+            "questions": 0,
+            "filled_widened_limit": 0,
+            "paths_at_limit": {}
+          },
+          "evidence_ranks": {
+            "annotated_turns": 7,
+            "not_returned": 0,
+            "median": 41,
+            "top_25_share": 0.42857142857142855,
+            "beyond_150_share": 0.14285714285714285,
+            "all_within_top_25_share": 0.4,
+            "all_within_top_75_share": 0.6
+          },
+          "projected_correct": 4.134772786193104,
+          "projected_accuracy": 0.8269545572386209,
+          "session_context_records": {
+            "reached": 113,
+            "added": 3,
+            "promoted": 12,
+            "reached_share": 0.45934959349593496,
+            "added_share": 0.012195121951219513,
+            "promoted_share": 0.04878048780487805
+          },
+          "by_speaker": null
+        },
+        "single-session-user": {
+          "questions": 4,
+          "contexts_matching_saved": 0,
+          "candidates_mean": 830.5,
+          "candidate_share_mean": null,
+          "retrieval_seconds": {
+            "p50": 0.28725897893309593,
+            "p95": 0.38696735185803843
+          },
+          "reranking_seconds": null,
+          "records_per_context": 54.75,
+          "context_tokens_mean": 3993.5,
+          "memory_text_share": 0.7909728308501315,
+          "records_without_text": 0,
+          "representations": {
+            "full": 219
+          },
+          "annotated_questions": 4,
+          "all_evidence_packed": 4,
+          "all_evidence_packed_share": 1.0,
+          "all_evidence_packed_with_text": 4,
+          "all_evidence_packed_with_text_share": 1.0,
+          "evidence_turns_packed_by_extracted": 4,
+          "evidence_turns_resolved": 4,
+          "all_evidence_returned": 4,
+          "all_evidence_returned_share": 1.0,
+          "channel_recall": null,
+          "channel_recall_at_run_limits": null,
+          "aggregation": {
+            "questions": 0,
+            "filled_widened_limit": 0,
+            "paths_at_limit": {}
+          },
+          "evidence_ranks": {
+            "annotated_turns": 4,
+            "not_returned": 0,
+            "median": 5.5,
+            "top_25_share": 1.0,
+            "beyond_150_share": 0.0,
+            "all_within_top_25_share": 1.0,
+            "all_within_top_75_share": 1.0
+          },
+          "projected_correct": 3.8213399503722085,
+          "projected_accuracy": 0.9553349875930521,
+          "session_context_records": {
+            "reached": 82,
+            "added": 1,
+            "promoted": 13,
+            "reached_share": 0.3744292237442922,
+            "added_share": 0.0045662100456621,
+            "promoted_share": 0.0593607305936073
+          },
+          "by_speaker": null
+        },
+        "temporal-reasoning": {
+          "questions": 9,
+          "contexts_matching_saved": 0,
+          "candidates_mean": 790.2222222222222,
+          "candidate_share_mean": null,
+          "retrieval_seconds": {
+            "p50": 0.27404287504032254,
+            "p95": 0.3940404334105551
+          },
+          "reranking_seconds": null,
+          "records_per_context": 50.0,
+          "context_tokens_mean": 3992.6666666666665,
+          "memory_text_share": 0.811237268325263,
+          "records_without_text": 0,
+          "representations": {
+            "full": 450
+          },
+          "annotated_questions": 9,
+          "all_evidence_packed": 5,
+          "all_evidence_packed_share": 0.5555555555555556,
+          "all_evidence_packed_with_text": 5,
+          "all_evidence_packed_with_text_share": 0.5555555555555556,
+          "evidence_turns_packed_by_extracted": 14,
+          "evidence_turns_resolved": 22,
+          "all_evidence_returned": 9,
+          "all_evidence_returned_share": 1.0,
+          "channel_recall": null,
+          "channel_recall_at_run_limits": null,
+          "aggregation": {
+            "questions": 0,
+            "filled_widened_limit": 0,
+            "paths_at_limit": {}
+          },
+          "evidence_ranks": {
+            "annotated_turns": 22,
+            "not_returned": 0,
+            "median": 39.0,
+            "top_25_share": 0.3181818181818182,
+            "beyond_150_share": 0.2727272727272727,
+            "all_within_top_25_share": 0.3333333333333333,
+            "all_within_top_75_share": 0.5555555555555556
+          },
+          "projected_correct": 6.030406281248844,
+          "projected_accuracy": 0.6700451423609827,
+          "session_context_records": {
+            "reached": 194,
+            "added": 3,
+            "promoted": 21,
+            "reached_share": 0.4311111111111111,
+            "added_share": 0.006666666666666667,
+            "promoted_share": 0.04666666666666667
+          },
+          "by_speaker": null
+        }
+      },
+      "context_mismatches": [
+        "58bf7951",
+        "ad7109d1",
+        "c8c3f81d",
+        "36580ce8",
+        "0a995998",
+        "gpt4_15e38248",
+        "gpt4_7fce9456",
+        "00ca467f",
+        "gpt4_ab202e7f",
+        "80ec1f4f_abs",
+        "06878be2",
+        "195a1a1b",
+        "54026fce",
+        "6b7dfb22",
+        "38146c39",
+        "51c32626",
+        "720133ac",
+        "ba358f49",
+        "bc149d6b",
+        "37f165cf",
+        "a96c20ee_abs",
+        "09ba9854_abs",
+        "gpt4_7abb270c",
+        "370a8ff4",
+        "gpt4_f420262c",
+        "bcbe585f",
+        "eac54add",
+        "6e984302",
+        "gpt4_6ed717ea",
+        "gpt4_4edbafa2",
+        "gpt4_d31cdae3",
+        "6aeb4375",
+        "6071bd76",
+        "b01defab",
+        "c6853660",
+        "031748ae_abs",
+        "07741c45",
+        "c4f10528",
+        "ceb54acb",
+        "1d4da289",
+        "70b3e69b",
+        "561fabcd"
+      ]
+    }
+  },
+  "rows": [
+    {
+      "benchmark": "longmemeval",
+      "question_id": "58bf7951",
+      "category": "single-session-user",
+      "context_sha256": "5599ac033b736a1dccfdecdc3dd4869b788533b5674a19279c83e73435765e62",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3122,
+      "records": 57,
+      "records_without_text": 0,
+      "representations": {
+        "full": 57
+      },
+      "candidates": 842,
+      "stored_turns": null,
+      "retrieval_seconds": 0.29860075004398823,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_355c48bb#29#4": 12
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 22,
+        "added": 1,
+        "promoted": 3
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "ad7109d1",
+      "category": "single-session-user",
+      "context_sha256": "1c5e9381a06b8356d10f6217e1636e4081ef9ec2746ead6ac4024d4d9ae95793",
+      "context_matches_saved": false,
+      "context_tokens": 3990,
+      "memory_text_tokens": 3227,
+      "records": 48,
+      "records_without_text": 0,
+      "representations": {
+        "full": 48
+      },
+      "candidates": 841,
+      "stored_turns": null,
+      "retrieval_seconds": 0.4025614580605179,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_679840f8#16#4": 4
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": true
+      },
+      "session_context": {
+        "reached": 14,
+        "added": 0,
+        "promoted": 0
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "c8c3f81d",
+      "category": "single-session-user",
+      "context_sha256": "9b23ea8a7d16f340f956dac1df8422d495c43dd143492cc8dc75f71493fb1a7b",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3143,
+      "records": 57,
+      "records_without_text": 0,
+      "representations": {
+        "full": 57
+      },
+      "candidates": 774,
+      "stored_turns": null,
+      "retrieval_seconds": 0.23189425002783537,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_761acef8#46#6": 7
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 20,
+        "added": 0,
+        "promoted": 3
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "36580ce8",
+      "category": "single-session-user",
+      "context_sha256": "797dce1eb7dfb6cebd36cb20322b3f27ab5f16beaff06947f48b156a72068b2b",
+      "context_matches_saved": false,
+      "context_tokens": 3994,
+      "memory_text_tokens": 3143,
+      "records": 57,
+      "records_without_text": 0,
+      "representations": {
+        "full": 57
+      },
+      "candidates": 865,
+      "stored_turns": null,
+      "retrieval_seconds": 0.27591720782220364,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_93e1bd22#47#4": 4
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 26,
+        "added": 0,
+        "promoted": 7
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "0a995998",
+      "category": "multi-session",
+      "context_sha256": "05e2bd95858caf4e212a97651f8bde8057efd8a36f5b84d6a84a75e3a9273a12",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3224,
+      "records": 48,
+      "records_without_text": 0,
+      "representations": {
+        "full": 48
+      },
+      "candidates": 1717,
+      "stored_turns": null,
+      "retrieval_seconds": 0.44476608419790864,
+      "evidence": {
+        "annotated": 3,
+        "unresolved": [],
+        "packed": 3,
+        "packed_by_extracted": 3,
+        "packed_with_text": 3,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_afa9873b_1#30#4": 10,
+          "answer_afa9873b_2#11#10": 117,
+          "answer_afa9873b_3#19#6": 82
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 19,
+        "added": 0,
+        "promoted": 3
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "gpt4_15e38248",
+      "category": "multi-session",
+      "context_sha256": "3e9c384a4ebc9826315715e7296ea91c9725ad17388c5775e0d540d974446ab8",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3277,
+      "records": 45,
+      "records_without_text": 0,
+      "representations": {
+        "full": 45
+      },
+      "candidates": 1674,
+      "stored_turns": null,
+      "retrieval_seconds": 0.5658519589342177,
+      "evidence": {
+        "annotated": 5,
+        "unresolved": [],
+        "packed": 3,
+        "packed_by_extracted": 3,
+        "packed_with_text": 3,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_8858d9dc_1#27#0": 184,
+          "answer_8858d9dc_2#42#0": 15,
+          "answer_8858d9dc_3#6#0": 195,
+          "answer_8858d9dc_4#32#0": 64,
+          "answer_8858d9dc_4#32#2": 16
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 24,
+        "added": 0,
+        "promoted": 2
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "gpt4_7fce9456",
+      "category": "multi-session",
+      "context_sha256": "1aa5c0f0ec59bb5417e49e3d5e6643a5b32cc5c8500266e41e161e1877b27fe5",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3154,
+      "records": 56,
+      "records_without_text": 0,
+      "representations": {
+        "full": 56
+      },
+      "candidates": 1695,
+      "stored_turns": null,
+      "retrieval_seconds": 0.4726242502219975,
+      "evidence": {
+        "annotated": 6,
+        "unresolved": [],
+        "packed": 4,
+        "packed_by_extracted": 4,
+        "packed_with_text": 4,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_a679a86a_1#39#0": 126,
+          "answer_a679a86a_2#29#0": 151,
+          "answer_a679a86a_3#35#4": 66,
+          "answer_a679a86a_3#35#6": 50,
+          "answer_a679a86a_4#28#0": 136,
+          "answer_a679a86a_5#22#0": 13
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 32,
+        "added": 1,
+        "promoted": 12
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "00ca467f",
+      "category": "multi-session",
+      "context_sha256": "05ac9151f1a6d1c87e8e7152d3b80079a630fccfc2915a30dc3b2495d46fe268",
+      "context_matches_saved": false,
+      "context_tokens": 3989,
+      "memory_text_tokens": 3206,
+      "records": 51,
+      "records_without_text": 0,
+      "representations": {
+        "full": 51
+      },
+      "candidates": 1731,
+      "stored_turns": null,
+      "retrieval_seconds": 0.9933700000401586,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_39900a0a_1#40#0": 51,
+          "answer_39900a0a_3#1#0": 28
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 23,
+        "added": 0,
+        "promoted": 2
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "gpt4_ab202e7f",
+      "category": "multi-session",
+      "context_sha256": "5b56efda2c99a1ea6c53961602cba14a321a6f27cbf516a6a3b81abb4ee8daaf",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3259,
+      "records": 45,
+      "records_without_text": 0,
+      "representations": {
+        "full": 45
+      },
+      "candidates": 1756,
+      "stored_turns": null,
+      "retrieval_seconds": 0.4566578750964254,
+      "evidence": {
+        "annotated": 5,
+        "unresolved": [],
+        "packed": 3,
+        "packed_by_extracted": 3,
+        "packed_with_text": 3,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_728deb4d_1#34#0": 65,
+          "answer_728deb4d_2#10#0": 116,
+          "answer_728deb4d_3#29#0": 99,
+          "answer_728deb4d_4#43#0": 551,
+          "answer_728deb4d_5#4#0": 10
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 27,
+        "added": 0,
+        "promoted": 3
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "80ec1f4f_abs",
+      "category": "multi-session",
+      "context_sha256": "5a98c8700d19d52cd2501212145fc2398c01f143ee8e20f35618111951834ad4",
+      "context_matches_saved": false,
+      "context_tokens": 3994,
+      "memory_text_tokens": 3195,
+      "records": 51,
+      "records_without_text": 0,
+      "representations": {
+        "full": 51
+      },
+      "candidates": 1915,
+      "stored_turns": null,
+      "retrieval_seconds": 0.5249924999661744,
+      "evidence": null,
+      "projected_correct": 0.75,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 30,
+        "added": 0,
+        "promoted": 3
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "06878be2",
+      "category": "single-session-preference",
+      "context_sha256": "48e013e9b3edd277436596025ffa224e8c6a85baec7bd8b6089d9d493d92cce9",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3192,
+      "records": 53,
+      "records_without_text": 0,
+      "representations": {
+        "full": 53
+      },
+      "candidates": 761,
+      "stored_turns": null,
+      "retrieval_seconds": 0.30414691707119346,
+      "evidence": {
+        "annotated": 3,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_555dfb94#35#0": 8,
+          "answer_555dfb94#35#14": 72,
+          "answer_555dfb94#35#8": 168
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": true
+      },
+      "session_context": {
+        "reached": 19,
+        "added": 1,
+        "promoted": 2
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "195a1a1b",
+      "category": "single-session-preference",
+      "context_sha256": "b5bde417dcefb8a41fa563ea57148a42b56b1e79e7ad98ea2d85dd1d78f3afc5",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3242,
+      "records": 52,
+      "records_without_text": 0,
+      "representations": {
+        "full": 52
+      },
+      "candidates": 784,
+      "stored_turns": null,
+      "retrieval_seconds": 0.24784962506964803,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_6dc4305e#45#4": 41
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 25,
+        "added": 1,
+        "promoted": 2
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "54026fce",
+      "category": "single-session-preference",
+      "context_sha256": "5626bc8900efce72df4d9aa94e9ac324022c7938ac4e778a18d1968025da1184",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3398,
+      "records": 37,
+      "records_without_text": 0,
+      "representations": {
+        "full": 37
+      },
+      "candidates": 788,
+      "stored_turns": null,
+      "retrieval_seconds": 0.22399504203349352,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_f7b22c66#26#0": 6
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 22,
+        "added": 1,
+        "promoted": 3
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "6b7dfb22",
+      "category": "single-session-preference",
+      "context_sha256": "9b78a0abc7260b7deba73f107f299ec12178ec2024b6e0e108f4cf728f091606",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3232,
+      "records": 51,
+      "records_without_text": 0,
+      "representations": {
+        "full": 51
+      },
+      "candidates": 693,
+      "stored_turns": null,
+      "retrieval_seconds": 0.26026170793920755,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_f6502d0f#9#12": 3
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 24,
+        "added": 0,
+        "promoted": 4
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "38146c39",
+      "category": "single-session-preference",
+      "context_sha256": "9ba303acd224e99ff6519d33098cf4fdebc609e4dc243ad7c09fc0d879f56ba8",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3201,
+      "records": 53,
+      "records_without_text": 0,
+      "representations": {
+        "full": 53
+      },
+      "candidates": 762,
+      "stored_turns": null,
+      "retrieval_seconds": 0.25564295798540115,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_772472c8#30#0": 136
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 23,
+        "added": 0,
+        "promoted": 1
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "51c32626",
+      "category": "multi-session",
+      "context_sha256": "6923e96a2d991c2e1ec69e0679be4865e536ef06128a0c3bacb4715bf1b9b3b1",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3269,
+      "records": 52,
+      "records_without_text": 0,
+      "representations": {
+        "full": 52
+      },
+      "candidates": 846,
+      "stored_turns": null,
+      "retrieval_seconds": 0.25960712507367134,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_58820c75_1#9#0": 25,
+          "answer_58820c75_2#47#8": 88
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": true,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 38,
+        "added": 3,
+        "promoted": 10
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "720133ac",
+      "category": "multi-session",
+      "context_sha256": "7e10d5c0d3533e914910b8a7da3e1747af4df554107c19b78d332191b911ff93",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3275,
+      "records": 47,
+      "records_without_text": 0,
+      "representations": {
+        "full": 47
+      },
+      "candidates": 1744,
+      "stored_turns": null,
+      "retrieval_seconds": 0.45493474998511374,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 1,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_c9dfeaea_1#22#10": 9,
+          "answer_c9dfeaea_2#45#0": 4
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 22,
+        "added": 0,
+        "promoted": 10
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "ba358f49",
+      "category": "multi-session",
+      "context_sha256": "40002553c57b0a05aee6e562542fbefb39417c6e1e66d3dd13055dc4559a7d2f",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3193,
+      "records": 52,
+      "records_without_text": 0,
+      "representations": {
+        "full": 52
+      },
+      "candidates": 1654,
+      "stored_turns": null,
+      "retrieval_seconds": 0.46444029198028147,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_cbd08e3c_1#7#0": 5,
+          "answer_cbd08e3c_2#28#2": 739
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 23,
+        "added": 0,
+        "promoted": 2
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "bc149d6b",
+      "category": "multi-session",
+      "context_sha256": "71478e9c42f5c0917109a40bd6e1f5d8fdab2c61ae0a79791c6b2ba53f3568bf",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3256,
+      "records": 44,
+      "records_without_text": 0,
+      "representations": {
+        "full": 44
+      },
+      "candidates": 1729,
+      "stored_turns": null,
+      "retrieval_seconds": 0.44226395804435015,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_92147866_1#9#0": 17,
+          "answer_92147866_2#10#0": 327
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 29,
+        "added": 0,
+        "promoted": 8
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "37f165cf",
+      "category": "multi-session",
+      "context_sha256": "26928d4252974dc1a3423989772676a18efe23470d408cdf2b3d6b8a55aa59a3",
+      "context_matches_saved": false,
+      "context_tokens": 3991,
+      "memory_text_tokens": 3272,
+      "records": 45,
+      "records_without_text": 0,
+      "representations": {
+        "full": 45
+      },
+      "candidates": 1910,
+      "stored_turns": null,
+      "retrieval_seconds": 0.9239796251058578,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_6b9b2b1e_1#33#0": 19,
+          "answer_6b9b2b1e_2#9#0": 33
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 20,
+        "added": 0,
+        "promoted": 1
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "a96c20ee_abs",
+      "category": "multi-session",
+      "context_sha256": "ba4768338351db163f0961ea5f5f8991fd26e3cfcb66df493118fb394cca8edc",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3294,
+      "records": 44,
+      "records_without_text": 0,
+      "representations": {
+        "full": 44
+      },
+      "candidates": 879,
+      "stored_turns": null,
+      "retrieval_seconds": 0.27873387513682246,
+      "evidence": null,
+      "projected_correct": 0.75,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 22,
+        "added": 1,
+        "promoted": 7
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "09ba9854_abs",
+      "category": "multi-session",
+      "context_sha256": "120991f7e78db6225ee24349ea77add5e43ce8a6928ed786d3cade9feb83903b",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3130,
+      "records": 52,
+      "records_without_text": 0,
+      "representations": {
+        "full": 52
+      },
+      "candidates": 1781,
+      "stored_turns": null,
+      "retrieval_seconds": 0.460842790780589,
+      "evidence": null,
+      "projected_correct": 0.75,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 33,
+        "added": 0,
+        "promoted": 4
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "gpt4_7abb270c",
+      "category": "temporal-reasoning",
+      "context_sha256": "db0924e82aefee38939afd8d1239d88287caed8777b87c8aa76a6d4bc3a0bbcc",
+      "context_matches_saved": false,
+      "context_tokens": 3989,
+      "memory_text_tokens": 3332,
+      "records": 42,
+      "records_without_text": 0,
+      "representations": {
+        "full": 42
+      },
+      "candidates": 765,
+      "stored_turns": null,
+      "retrieval_seconds": 0.39863241696730256,
+      "evidence": {
+        "annotated": 6,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_7093d898_1#6#0": 26,
+          "answer_7093d898_2#9#6": 224,
+          "answer_7093d898_3#14#0": 288,
+          "answer_7093d898_4#19#0": 275,
+          "answer_7093d898_5#32#0": 36,
+          "answer_7093d898_6#44#0": 137
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": true
+      },
+      "session_context": {
+        "reached": 21,
+        "added": 0,
+        "promoted": 2
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "370a8ff4",
+      "category": "temporal-reasoning",
+      "context_sha256": "3d4769d1da1f4e887693d70b9b486bf265d69ad7636bb668deec16f6df9d5c99",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3271,
+      "records": 48,
+      "records_without_text": 0,
+      "representations": {
+        "full": 48
+      },
+      "candidates": 717,
+      "stored_turns": null,
+      "retrieval_seconds": 0.2548046251758933,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_61d1be50_1#18#0": 12,
+          "answer_61d1be50_2#39#0": 16
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": true,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 22,
+        "added": 1,
+        "promoted": 4
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "gpt4_f420262c",
+      "category": "temporal-reasoning",
+      "context_sha256": "e4cb95b236e31465c9b67a0dc33f89797ba53b9e5638435397dd199bd76ee975",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3313,
+      "records": 45,
+      "records_without_text": 0,
+      "representations": {
+        "full": 45
+      },
+      "candidates": 800,
+      "stored_turns": null,
+      "retrieval_seconds": 0.2870542500168085,
+      "evidence": {
+        "annotated": 5,
+        "unresolved": [],
+        "packed": 3,
+        "packed_by_extracted": 3,
+        "packed_with_text": 3,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_d8a1af6b_1#19#0": 197,
+          "answer_d8a1af6b_2#29#0": 118,
+          "answer_d8a1af6b_3#38#0": 41,
+          "answer_d8a1af6b_4#43#0": 39,
+          "answer_d8a1af6b_5#44#0": 43
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 24,
+        "added": 0,
+        "promoted": 1
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "bcbe585f",
+      "category": "temporal-reasoning",
+      "context_sha256": "97268708291c2461d30204f768a384855a8160cd96d882b9fc1194a6a22f76c7",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3140,
+      "records": 56,
+      "records_without_text": 0,
+      "representations": {
+        "full": 56
+      },
+      "candidates": 813,
+      "stored_turns": null,
+      "retrieval_seconds": 0.25399337499402463,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_43ba3965_1#20#0": 9
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 20,
+        "added": 1,
+        "promoted": 4
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "eac54add",
+      "category": "temporal-reasoning",
+      "context_sha256": "4be3bac4f6cb49e66799c2214ca5065cc8b370dc29afe0ab8a55c2608e1c2d92",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3287,
+      "records": 47,
+      "records_without_text": 0,
+      "representations": {
+        "full": 47
+      },
+      "candidates": 791,
+      "stored_turns": null,
+      "retrieval_seconds": 0.2513059170451015,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 0,
+        "packed_by_extracted": 0,
+        "packed_with_text": 0,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_0d4d0348_2#35#0": 775
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": true,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 17,
+        "added": 0,
+        "promoted": 2
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "6e984302",
+      "category": "temporal-reasoning",
+      "context_sha256": "e523ba5f77174830ce81ef2d520f81ce94535ae27de254e046d5a009c12f0c47",
+      "context_matches_saved": false,
+      "context_tokens": 3989,
+      "memory_text_tokens": 3248,
+      "records": 49,
+      "records_without_text": 0,
+      "representations": {
+        "full": 49
+      },
+      "candidates": 781,
+      "stored_turns": null,
+      "retrieval_seconds": 0.38715245807543397,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 0,
+        "packed_by_extracted": 0,
+        "packed_with_text": 0,
+        "all_packed": false,
+        "all_packed_with_text": false,
+        "ranks": {
+          "answer_88841f27_2#40#2": 661
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.31343283582089554,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": true,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 24,
+        "added": 0,
+        "promoted": 0
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "gpt4_6ed717ea",
+      "category": "temporal-reasoning",
+      "context_sha256": "4a2dd591360532c12e6718bb644ac9e72dc1261dc2f031dff4fae5a9a44118b2",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3177,
+      "records": 55,
+      "records_without_text": 0,
+      "representations": {
+        "full": 55
+      },
+      "candidates": 796,
+      "stored_turns": null,
+      "retrieval_seconds": 0.3110068750102073,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_d50a8a33_1#14#0": 39,
+          "answer_d50a8a33_2#20#0": 10
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 25,
+        "added": 0,
+        "promoted": 4
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "gpt4_4edbafa2",
+      "category": "temporal-reasoning",
+      "context_sha256": "4dfd86d69792c491a77e73b8c670fdad1799a6ee3cbd433adedde73c60d3c675",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3195,
+      "records": 55,
+      "records_without_text": 0,
+      "representations": {
+        "full": 55
+      },
+      "candidates": 775,
+      "stored_turns": null,
+      "retrieval_seconds": 0.25189499999396503,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_0a00c163_1#32#0": 13,
+          "answer_0a00c163_2#40#0": 15
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 18,
+        "added": 0,
+        "promoted": 1
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "gpt4_d31cdae3",
+      "category": "temporal-reasoning",
+      "context_sha256": "6d1a3085a917ea2be4af489e83d295d13e06c19a471c5b5849a6aaf22dab792b",
+      "context_matches_saved": false,
+      "context_tokens": 3993,
+      "memory_text_tokens": 3188,
+      "records": 53,
+      "records_without_text": 0,
+      "representations": {
+        "full": 53
+      },
+      "candidates": 874,
+      "stored_turns": null,
+      "retrieval_seconds": 0.27404287504032254,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_8464304d_1#20#10": 27,
+          "answer_8464304d_2#28#0": 8
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 23,
+        "added": 1,
+        "promoted": 3
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "6aeb4375",
+      "category": "knowledge-update",
+      "context_sha256": "86e2f9dacbb06f6dd944c0dd776be7310a9361bce668fe3db567da1d7304bfa0",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3181,
+      "records": 52,
+      "records_without_text": 0,
+      "representations": {
+        "full": 52
+      },
+      "candidates": 1657,
+      "stored_turns": null,
+      "retrieval_seconds": 0.4706802910659462,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_3f9693b7_1#35#8": 11,
+          "answer_3f9693b7_2#46#2": 10
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 26,
+        "added": 0,
+        "promoted": 5
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "6071bd76",
+      "category": "knowledge-update",
+      "context_sha256": "b9292b9b7ac05a1a66620dca58de73007442c3b6343f3ce3cc1950ab6cc30553",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3264,
+      "records": 46,
+      "records_without_text": 0,
+      "representations": {
+        "full": 46
+      },
+      "candidates": 795,
+      "stored_turns": null,
+      "retrieval_seconds": 0.2944172921124846,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_4dac77cb_1#1#0": 9,
+          "answer_4dac77cb_2#19#0": 19
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 25,
+        "added": 0,
+        "promoted": 2
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "b01defab",
+      "category": "knowledge-update",
+      "context_sha256": "b4dddc8688858859df4a999565ed6af5a20bed4a97cd590967d6e1467a734b49",
+      "context_matches_saved": false,
+      "context_tokens": 3994,
+      "memory_text_tokens": 3289,
+      "records": 46,
+      "records_without_text": 0,
+      "representations": {
+        "full": 46
+      },
+      "candidates": 784,
+      "stored_turns": null,
+      "retrieval_seconds": 0.2440889161080122,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_8c0712af_1#2#2": 27,
+          "answer_8c0712af_2#46#0": 14
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 25,
+        "added": 0,
+        "promoted": 2
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "c6853660",
+      "category": "knowledge-update",
+      "context_sha256": "3eb05d5c64eeab8abd5d587d761ae5208ed747a297fc289e434ccd070b8cc8af",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3323,
+      "records": 47,
+      "records_without_text": 0,
+      "representations": {
+        "full": 47
+      },
+      "candidates": 848,
+      "stored_turns": null,
+      "retrieval_seconds": 0.27106445911340415,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_626e93c4_1#2#0": 15,
+          "answer_626e93c4_2#13#0": 14
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": true,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 28,
+        "added": 2,
+        "promoted": 10
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "031748ae_abs",
+      "category": "knowledge-update",
+      "context_sha256": "82cf9214410f144d838fd6460ad1dd4bbc67d13151f8daecdb2ce2cc8ec60acd",
+      "context_matches_saved": false,
+      "context_tokens": 3991,
+      "memory_text_tokens": 3207,
+      "records": 48,
+      "records_without_text": 0,
+      "representations": {
+        "full": 48
+      },
+      "candidates": 1966,
+      "stored_turns": null,
+      "retrieval_seconds": 0.9711957089602947,
+      "evidence": null,
+      "projected_correct": 0.6666666666666666,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 26,
+        "added": 0,
+        "promoted": 3
+      },
+      "aggregation": {
+        "candidate_limit_paths": [
+          "VECTOR",
+          "LEXICAL_AGG"
+        ]
+      },
+      "channel_limits": {
+        "vector": 1500,
+        "lexical": 1500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "07741c45",
+      "category": "knowledge-update",
+      "context_sha256": "a0a794bfe69b8d4246ae766d0128395dc95265575fb8391745a03253675b5f19",
+      "context_matches_saved": false,
+      "context_tokens": 3994,
+      "memory_text_tokens": 3094,
+      "records": 60,
+      "records_without_text": 0,
+      "representations": {
+        "full": 60
+      },
+      "candidates": 726,
+      "stored_turns": null,
+      "retrieval_seconds": 0.2856522500514984,
+      "evidence": {
+        "annotated": 2,
+        "unresolved": [],
+        "packed": 2,
+        "packed_by_extracted": 2,
+        "packed_with_text": 2,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_7e9ad7b4_1#2#2": 27,
+          "answer_7e9ad7b4_2#31#0": 35
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": true
+      },
+      "session_context": {
+        "reached": 32,
+        "added": 0,
+        "promoted": 2
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "c4f10528",
+      "category": "single-session-assistant",
+      "context_sha256": "bfcddbff0be49ceb009d18b49059bbcee18241763d43cdd70309d220d2109861",
+      "context_matches_saved": false,
+      "context_tokens": 3996,
+      "memory_text_tokens": 3278,
+      "records": 46,
+      "records_without_text": 0,
+      "representations": {
+        "full": 46
+      },
+      "candidates": 793,
+      "stored_turns": null,
+      "retrieval_seconds": 0.2677245419472456,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 0,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_ultrachat_234453#38#7": 19
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 26,
+        "added": 0,
+        "promoted": 6
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "ceb54acb",
+      "category": "single-session-assistant",
+      "context_sha256": "621e24f942e3e5e1b815030468797b9a3f358658d9f8ef53e54c7cb75bd08202",
+      "context_matches_saved": false,
+      "context_tokens": 3990,
+      "memory_text_tokens": 3267,
+      "records": 44,
+      "records_without_text": 0,
+      "representations": {
+        "full": 44
+      },
+      "candidates": 778,
+      "stored_turns": null,
+      "retrieval_seconds": 0.30744729191064835,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 0,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_sharegpt_cGdjmYo_0#29#3": 1
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 34,
+        "added": 0,
+        "promoted": 3
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "1d4da289",
+      "category": "single-session-assistant",
+      "context_sha256": "83a6ed7f3f45af443a63db6c666d937df54f40e1cdac53cd6c9403f5fef862ee",
+      "context_matches_saved": false,
+      "context_tokens": 3995,
+      "memory_text_tokens": 3246,
+      "records": 47,
+      "records_without_text": 0,
+      "representations": {
+        "full": 47
+      },
+      "candidates": 838,
+      "stored_turns": null,
+      "retrieval_seconds": 0.24893587501719594,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 0,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_ultrachat_348449#16#1": 2
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 18,
+        "added": 0,
+        "promoted": 4
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "70b3e69b",
+      "category": "single-session-assistant",
+      "context_sha256": "bc6c5d7526d7ced02e32e05de93316ce4150e1c7fae08c74070a5236e37993a9",
+      "context_matches_saved": false,
+      "context_tokens": 3994,
+      "memory_text_tokens": 3380,
+      "records": 41,
+      "records_without_text": 0,
+      "representations": {
+        "full": 41
+      },
+      "candidates": 782,
+      "stored_turns": null,
+      "retrieval_seconds": 0.305750833125785,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 1,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_ultrachat_334948#4#5": 4
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 25,
+        "added": 0,
+        "promoted": 6
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    },
+    {
+      "benchmark": "longmemeval",
+      "question_id": "561fabcd",
+      "category": "single-session-assistant",
+      "context_sha256": "b4ba4efa62cbc1277886cc6349fbc9ad6d9c896b2881120c2cf5085a85fc6dc0",
+      "context_matches_saved": false,
+      "context_tokens": 3994,
+      "memory_text_tokens": 3148,
+      "records": 57,
+      "records_without_text": 0,
+      "representations": {
+        "full": 57
+      },
+      "candidates": 721,
+      "stored_turns": null,
+      "retrieval_seconds": 0.2753682918846607,
+      "evidence": {
+        "annotated": 1,
+        "unresolved": [],
+        "packed": 1,
+        "packed_by_extracted": 0,
+        "packed_with_text": 1,
+        "all_packed": true,
+        "all_packed_with_text": true,
+        "ranks": {
+          "answer_sharegpt_hChsWOp_97#46#5": 7
+        },
+        "channel_ranks": null,
+        "speaker_roles": []
+      },
+      "projected_correct": 0.9553349875930521,
+      "reranking_seconds": null,
+      "query_scoring": {
+        "temporal_affinity_varies": false,
+        "current_state_path": false
+      },
+      "session_context": {
+        "reached": 30,
+        "added": 3,
+        "promoted": 8
+      },
+      "aggregation": null,
+      "channel_limits": {
+        "vector": 500,
+        "lexical": 500
+      }
+    }
+  ],
+  "started_at": "2026-10-02T03:55:45.009556+00:00",
+  "seconds": 30.52020425000228,
+  "load_average": {
+    "start": [
+      9.74072265625,
+      8.63623046875,
+      9.1748046875
+    ],
+    "end": [
+      8.2236328125,
+      8.380859375,
+      9.06298828125
+    ]
+  }
+}
