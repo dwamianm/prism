@@ -821,6 +821,86 @@ and `locomo-full-speaker-refs-vs-control.md`.
 LongMemEval-S turns name no speaker, so the option binds nothing there until
 the harness names the user.
 
+### Claim sentences as fact text (`enable_claim_sentence_text`)
+
+With the option on, a claim's text is the shortest run of whole sentences of
+its supporting passage that mentions both its subject and object, with a
+following sentence that qualifies it, and the paragraph stays its
+`evidence_quote` (`docs/RFC-0003-Epistemic-State-Model.md`). Like speaker
+references it changes only how stored extraction becomes graph records, so
+each comparison rebuilds the same cached extraction at commit `f05b0ff` with
+the option off and on, without a model call.
+
+On the chat probe:
+
+| Measure | Option off | Option on | Both options, Dana named |
+|---|---:|---:|---:|
+| Claims whose text is the whole message | 77 of 77 | 7 of 77 | 7 of 76 |
+| Distinct claim texts | 32 | 47 | 47 |
+| Repeated records in the 18 contexts, 4,096 tokens | 1,066 of 2,283 (47%) | 738 of 3,015 (24%) | 534 of 2,755 (19%) |
+| Repeated records in the 18 contexts, 1,024 tokens | 202 of 457 (44%) | 112 of 540 (21%) | 104 of 623 (17%) |
+
+- Shorter texts let more records into the same budget: 3,015 records over the
+  18 contexts instead of 2,283.
+- One sentence can still hold several claims. "Sam is a nurse at Denver Health
+  and works night shifts, so our schedules are kind of opposite" carries three
+  and still shows three times.
+
+On the LoCoMo development slice (466 questions), against the control built
+from the same cache:
+
+| Gate metric | Control | Option on | Change | Questions 95% | Wins / losses |
+|---|---:|---:|---:|---|---|
+| All evidence packed | 73.2% | 79.0% | +5.8 pp | +3.0 to +8.7 | 35 / 8 |
+| Evidence recall | 80.6% | 85.8% | +5.2 pp | +2.9 to +7.5 | 54 / 12 |
+| All evidence among the candidates | 94.2% | 95.0% | +0.9 pp | +0.2 to +1.7 | 4 / 0 |
+| Projected accuracy | 70.8% | 74.6% | +3.8 pp | +2.1 to +5.6 | 35 / 8 |
+
+A context holds 100.1 records instead of 76.6. All evidence packed rose in
+every category: multi-hop +6.9 points, open-domain +17.2, single-hop +4.8 and
+temporal +3.9.
+
+On all ten conversations (1,536 annotated questions), against the full
+control:
+
+| Gate metric | Control | Option on | Change | Questions 95% | Conversations 95% | Wins / losses |
+|---|---:|---:|---:|---|---|---|
+| All evidence packed | 75.7% | 79.5% | +3.8 pp | +2.5 to +5.0 | +2.4 to +5.5 | 81 / 23 |
+| Evidence recall | 81.9% | 85.7% | +3.8 pp | +2.7 to +4.9 | not computed | 141 / 32 |
+| All evidence among the candidates | 95.5% | 96.0% | +0.5 pp | +0.0 to +1.0 | not computed | 13 / 5 |
+| Projected accuracy | 72.0% | 74.6% | +2.6 pp | +1.7 to +3.4 | +1.7 to +3.7 | 81 / 23 |
+
+All ten conversations improved. All evidence packed rose 5.3 points for
+multi-hop questions, 7.6 for open-domain, 3.6 for single-hop and 1.9 for
+temporal, whose interval includes zero. A context holds 102.7 records instead
+of 79.1. On the same questions the #91 window with fact text resolution gained
+1.0 point of all evidence packed. The conversation-level intervals resample the
+ten conversations (4,000 samples); `gate-compare` reports the question-level
+ones (`benchmarks/results/research/2026-10-01/dev-slice-v1-locomo-claim-sentences-vs-control.md`
+and `locomo-full-claim-sentences-vs-control.md`).
+
+On the LongMemEval-S development slice (42 questions, 38 annotated), against
+the rebuilt slice baseline `ingest-baseline-lme-deepseek-r2`, built from the
+same cache at `dfefc8e`, which differs from `f05b0ff` only by the two options,
+both off there:
+
+| Gate metric | Baseline | Option on | Change | Questions 95% | Wins / losses |
+|---|---:|---:|---:|---|---|
+| All evidence packed | 71.1% | 86.8% | +15.8 pp | +5.3 to +28.9 | 6 / 0 |
+| Evidence recall | 84.1% | 93.2% | +9.1 pp | +4.1 to +14.9 | 9 / 0 |
+| Projected accuracy | 76.6% | 85.7% | +9.2 pp | +3.1 to +16.8 | 6 / 0 |
+
+Five of the six wins are multi-session questions, whose evidence is all packed
+for 9 of 10 instead of 4. A context holds 61.7 records instead of 49.5. The
+slice is small and was chosen around the defaults' stable failures, so it shows
+the direction rather than the size of a gain on all 500 questions, whose
+`ingest()` baseline was never completed
+(`dev-slice-v1-lme-claim-sentences-vs-r2.md`).
+
+The gate counts evidence, not answers. A qualifier in another sentence of the
+paragraph is no longer in the claim's text, although the paragraph stays its
+evidence, and only a reader answer run can show whether that costs answers.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of

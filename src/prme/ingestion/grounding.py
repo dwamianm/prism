@@ -2,7 +2,9 @@
 
 Mention/citation checks reject unsupported text; they do not prove that a
 model's predicate is entailed. Materialized content keeps the source passage
-so the reader can see negations, conditions, and other qualifications.
+so the reader can see negations, conditions, and other qualifications, unless
+enable_claim_sentence_text narrows it to the claim's own sentences
+(:func:`claim_sentences`).
 """
 
 from __future__ import annotations
@@ -370,6 +372,39 @@ def _supporting_claim_passage(quote: str, source: str) -> str | None:
         )
 
     return paragraph[sentence_start:sentence_end].strip()
+
+
+_SENTENCE_END_RE = re.compile(r"[.!?](?:[\"')\]]*)?(?=\s+|$)|\n\s*\n")
+
+
+def claim_sentences(passage: str, subject: str, object_value: str) -> str | None:
+    """Return a claim's own sentences within its supporting passage.
+
+    Grounding widens a claim's evidence to its whole paragraph so a trailing
+    qualifier cannot be lost, which gives every claim of a one-paragraph
+    message the same text. This is the shortest run of whole sentences of
+    ``passage`` that mentions both the subject and the object, extended by a
+    following sentence that qualifies it, as in
+    :func:`_supporting_claim_passage`. Returns None when no run mentions
+    both, so the caller keeps the passage.
+    """
+    sentences: list[tuple[int, int]] = []
+    start = 0
+    for match in [*_SENTENCE_END_RE.finditer(passage), None]:
+        end = len(passage) if match is None else match.end()
+        text = passage[start:end]
+        if text.strip():
+            sentences.append((start + len(text) - len(text.lstrip()), start + len(text.rstrip())))
+        start = end
+    best: str | None = None
+    for first in range(len(sentences)):
+        for last in range(first, len(sentences)):
+            text = passage[sentences[first][0]:sentences[last][1]]
+            if _mentioned(subject, text) and _mentioned(object_value, text):
+                if best is None or len(text) < len(best):
+                    best = text
+                break
+    return None if best is None else _supporting_claim_passage(best, passage)
 
 
 def validate_grounding(
