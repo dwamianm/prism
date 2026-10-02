@@ -71,8 +71,11 @@ probe's builds are in `data/chat-probe-v1/chat-v1/`.
 speaker's entity (chat probe: the owner's claims on "Dana" 1 to 33; LoCoMo
 gate unchanged, since LoCoMo text already names speakers). The option
 `enable_claim_sentence_text` stores a claim's own sentences as its text
-(chat probe: repeated context records 47% to 24%; LoCoMo slice all evidence
-packed 73.2% to 79.0%, +3.0 to +8.7). The LongMemEval-S slice baseline was
+(chat probe: repeated context records 47% to 24%; all of LoCoMo, all evidence
+packed 75.7% to 79.5%, +2.4 to +5.5 over conversations, every conversation
+improved; LongMemEval-S slice 71.1% to 86.8%, +5.3 to +28.9, no losses). It
+is the strongest gate result so far and the first candidate for a default
+change. The LongMemEval-S slice baseline was
 rebuilt with faithful replay as `ingest-baseline-lme-deepseek-r2` (190 more
 claims, gate unchanged). `BENCHMARKS.md` has the full results.
 
