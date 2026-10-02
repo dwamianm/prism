@@ -879,6 +879,24 @@ ten conversations (4,000 samples); `gate-compare` reports the question-level
 ones (`benchmarks/results/research/2026-10-01/dev-slice-v1-locomo-claim-sentences-vs-control.md`
 and `locomo-full-claim-sentences-vs-control.md`).
 
+On the LongMemEval-S development slice (42 questions, 38 annotated), against
+the rebuilt slice baseline `ingest-baseline-lme-deepseek-r2`, built from the
+same cache at `dfefc8e`, which differs from `f05b0ff` only by the two options,
+both off there:
+
+| Gate metric | Baseline | Option on | Change | Questions 95% | Wins / losses |
+|---|---:|---:|---:|---|---|
+| All evidence packed | 71.1% | 86.8% | +15.8 pp | +5.3 to +28.9 | 6 / 0 |
+| Evidence recall | 84.1% | 93.2% | +9.1 pp | +4.1 to +14.9 | 9 / 0 |
+| Projected accuracy | 76.6% | 85.7% | +9.2 pp | +3.1 to +16.8 | 6 / 0 |
+
+Five of the six wins are multi-session questions, whose evidence is all packed
+for 9 of 10 instead of 4. A context holds 61.7 records instead of 49.5. The
+slice is small and was chosen around the defaults' stable failures, so it shows
+the direction rather than the size of a gain on all 500 questions, whose
+`ingest()` baseline was never completed
+(`dev-slice-v1-lme-claim-sentences-vs-r2.md`).
+
 The gate counts evidence, not answers. A qualifier in another sentence of the
 paragraph is no longer in the claim's text, although the paragraph stays its
 evidence, and only a reader answer run can show whether that costs answers.
