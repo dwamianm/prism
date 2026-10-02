@@ -768,6 +768,59 @@ probes test the context rather than a reader's answer. It is for seeing what
 ingestion builds and for measuring a change to it, not for claims about
 accuracy.
 
+### Speaker references (`enable_speaker_references`)
+
+With the option on, a first-person singular reference in a claim from a turn
+that names its speaker binds to that speaker's entity instead of a node local
+to the message (`docs/ENTITY-IDENTITY.md`). It changes only how stored
+extraction becomes graph records, so each comparison below rebuilds the same
+cached extraction twice at commit `5e7cb06`, with the option off and on, and
+needs no model call.
+
+On the chat probe, with Dana named as the speaker of her turns in both builds:
+
+| Measure | Option off | Option on |
+|---|---:|---:|
+| Owner's claims attached to "Dana" | 1 | 33 |
+| Owner's claims attached to a first-person pronoun | 35 | 2 |
+| Pronoun entities / all entities | 24 / 74 | 7 / 57 |
+| Key links: linked / only through an "I" / not linked | 4 / 7 / 3 | 11 / 0 / 3 |
+| Claims superseded | 0 | 1 |
+| Repeated records in the 18 contexts, 4,096 tokens | 1,041 of 2,248 (46%) | 939 of 2,191 (43%) |
+
+- The two claims still on a pronoun are plural ("we use Tableau"), and
+  assistant turns name no speaker, so their "I" and "you" stay local.
+- "I left Northwind and now work at Brightpath" now supersedes the Northwind
+  claim, and a repeated claim merged. The diet change supersedes nothing,
+  because validation discarded the earlier vegetarian claim.
+- The three links still missing are the ones validation discarded from the
+  first message, which no binding can restore.
+
+On the LoCoMo development slice (466 questions), against a control built from
+the same cache at the same commit:
+
+| Gate metric | Control | Option on | Change | Questions 95% | Wins / losses |
+|---|---:|---:|---:|---|---|
+| All evidence packed | 73.2% | 72.5% | -0.6 pp | -1.5 to +0.0 | 0 / 3 |
+| Evidence recall | 80.6% | 80.1% | -0.4 pp | -1.2 to +0.1 | 1 / 3 |
+| Projected accuracy | 70.8% | 70.3% | -0.5 pp | -1.1 to +0.0 | 0 / 3 |
+
+LoCoMo turns carry the speaker's name in their text, so the extractor already
+names most subjects: the option bound 35 of about 1,780 claims, cut pronoun
+entities from 162 to 132 and superseded nothing more (306 claims superseded in
+both). The three losses keep their evidence at the same rank and lose it at
+the edge of the packed context. All ten conversations (1,536 annotated
+questions), against a full control that reproduces the original `ingest()`
+baseline (1,163 against 1,161 questions with all evidence packed), give the
+same answer: all evidence packed 75.7% against 75.5% (-0.2 points, 95%
+interval -0.6 to +0.2; 3 wins, 6 losses), projected accuracy 72.0% against
+71.9% (-0.4 to +0.1). Reports:
+`benchmarks/results/research/2026-10-01/dev-slice-v1-locomo-speaker-refs-vs-control.md`
+and `locomo-full-speaker-refs-vs-control.md`.
+
+LongMemEval-S turns name no speaker, so the option binds nothing there until
+the harness names the user.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
