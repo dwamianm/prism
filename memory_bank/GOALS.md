@@ -66,24 +66,39 @@ against 4,796 names. No repeated build has measured build-to-build noise.
 by the owner at 34 of 500 on 2026-09-28; ask before resuming it). The chat
 probe's builds are in `data/chat-probe-v1/chat-v1/`.
 
+**The chat probe's recommendations (2026-10-01), all opt-in:**
+`enable_speaker_references` binds a named speaker's I, me and my to the
+speaker's entity (chat probe: the owner's claims on "Dana" 1 to 33; LoCoMo
+gate unchanged, since LoCoMo text already names speakers). The option
+`enable_claim_sentence_text` stores a claim's own sentences as its text
+(chat probe: repeated context records 47% to 24%; LoCoMo slice all evidence
+packed 73.2% to 79.0%, +3.0 to +8.7). The LongMemEval-S slice baseline was
+rebuilt with faithful replay as `ingest-baseline-lme-deepseek-r2` (190 more
+claims, gate unchanged). `BENCHMARKS.md` has the full results.
+
 **Next, in order:**
 
-1. The chat probe's recommendations, which the owner asked for on 2026-10-01:
-   rebuild the LongMemEval-S slice baseline from its cache with the replay
-   fix; an opt-in option that binds first-person references to the turn's
-   named speaker; and an opt-in option that stores a claim's own sentences as
-   its text instead of the whole paragraph. Both options only change how
-   stored extraction becomes graph records, so cached rebuilds measure them
-   without cloud calls.
-2. #91 on LongMemEval-S: build the slice with the window and resolution and
-   compare it with the rebuilt slice baseline. It uses Ollama cloud calls, so
-   confirm with the owner first.
-3. #91: resolve relative dates in fact text more often, and run the authored
-   negation and condition probes with resolution on.
-4. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
+1. Grounding discards claims the model gets right. When the model names the
+   speaker where the quoted sentence says "I" ("Dana, has partner, Sam"),
+   validation drops the claim: on the LoCoMo `ingest()` baseline build it
+   discarded 7,913 facts and 2,013 relationships against 6,995 claims kept.
+   A fix would let the turn's speaker stand for a first-person reference,
+   behind an option and a new grounding policy version. Discarded claims are
+   never cached, so measuring it needs live re-extraction; confirm with the
+   owner first.
+2. `enable_claim_sentence_text` as a default: it needs the DeepSeek paired
+   answer runs in `CLAUDE.md`, and first a new A/A pair on both benchmarks,
+   because the Ollama server is now 0.34.4.
+3. #91 on LongMemEval-S: build the slice with the window and resolution and
+   compare it with `ingest-baseline-lme-deepseek-r2`. It uses Ollama cloud
+   calls, so confirm with the owner first.
+4. #91: resolve relative dates in fact text more often, and run the authored
+   negation and condition probes with resolution on. The chat probe also
+   dated "May 4", said in April 2026, as 2025-05-04.
+5. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
    pack has 576 entities, half with no edge, and "Mel" and "Melanie" are
    separate nodes.
-5. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
+6. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
    (failing simulation check) and the recency and temporal scoring bugs.
 
 **Known flaky test:** `tests/test_extraction_workflow.py::
