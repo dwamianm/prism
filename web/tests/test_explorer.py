@@ -109,7 +109,8 @@ async def test_browser_scan_and_provenance_contract(config, user):  # noqa: F811
 async def test_static_ui_is_served_without_exposing_source():
     app = create_explorer_app(PRMEConfig(api=APIConfig(user_keys={"alice": "test-key"})))
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://test") as client:
-        for path in ("/", "/app.js", "/graph.js", "/styles.css", "/mark.svg", "/fonts/inter-latin-wght-normal.woff2"):
+        for path in ("/", "/app.js", "/graph.js", "/claim.js", "/styles.css", "/mark.svg",
+                     "/fonts/inter-latin-wght-normal.woff2"):
             result = await client.get(path)
             assert result.status_code == 200
             assert result.headers["cache-control"] == "no-store"

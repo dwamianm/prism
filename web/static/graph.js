@@ -1,3 +1,5 @@
+import { nodeLabel } from "./claim.js";
+
 const NS = "http://www.w3.org/2000/svg";
 const svgElement = (name, attrs = {}, text) => {
   const element = document.createElementNS(NS, name);
@@ -186,10 +188,10 @@ export class MemoryGraph {
         transform: `translate(${x} ${y})`,
         role: "button",
         tabindex: 0,
-        "aria-label": `Explore ${node.node_type}: ${node.content}`,
+        "aria-label": `Explore ${node.node_type}: ${nodeLabel(node)}`,
       });
       group.append(
-        svgElement("title", {}, node.content),
+        svgElement("title", {}, nodeLabel(node)),
         svgElement("rect", {
           x: -width / 2,
           y: -height / 2,
@@ -210,7 +212,10 @@ export class MemoryGraph {
           node.node_type,
         ),
       );
-      const lines = labelLines(node.content, compact ? 17 : selected ? 24 : 18);
+      const lines = labelLines(
+        nodeLabel(node),
+        compact ? 17 : selected ? 24 : 18,
+      );
       group.append(
         svgElement(
           "text",
