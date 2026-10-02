@@ -260,9 +260,12 @@ class _Usage:
 class ExtractionCache:
     """Model responses by model, role, prompt and text, shared by every pack of a build.
 
-    A hit is validated again with the turn's text and role, exactly as the
-    provider validates a live response, so grounding and discards repeat.
-    Entries are written atomically, so parallel builds can share the folder.
+    An entry is the provider's validated result, and a hit returns it as it
+    was: validation widens each evidence quote to its whole supporting
+    passage, so checking that output against the source again would read
+    words from outside the claim's own sentence and discard claims the live
+    run kept. Entries are written atomically, so parallel builds can share
+    the folder.
     """
 
     def __init__(self, folder: Path) -> None:
@@ -294,8 +297,8 @@ class ExtractionCache:
             model = _ResolvingCitedExtractionResult if resolve is not None else _CitedExtractionResult
             if path.exists():
                 self.hits += 1
-                return model.model_validate_json(path.read_bytes(), context={
-                    "source_text": content, "source_role": role.strip().casefold()})
+                # No source context: the source checks already ran when the entry was written.
+                return model.model_validate_json(path.read_bytes())
             self.misses += 1
             # Named only when set, as ingest() does, so the provider is called
             # exactly as it would be without the cache.
