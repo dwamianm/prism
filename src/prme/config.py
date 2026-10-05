@@ -587,6 +587,24 @@ class PRMEConfig(_ProjectSettings):
             "qualifier elsewhere in the paragraph is no longer in the text."
         ),
     )
+    enable_speaker_grounding: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() lets the speaker's own first-"
+            "person singular reference (I, me, my, mine, myself) in a turn "
+            "that names its speaker count as a mention of the speaker when "
+            "grounding checks that a claim's subject and object occur in its "
+            "quoted sentences, whether the claim writes the speaker's name "
+            "(\"Dana lives in Denver\" for \"I live in Denver\") or I "
+            "(\"Rachel is sister of I\" for \"my sister Rachel\"). "
+            "Grounding otherwise discards both. The model is asked the same "
+            "question either way; extractions checked this way record "
+            "grounding policy speech_act_v12. Turns without a speaker, and "
+            "plural references, are unchanged. Default False: like "
+            "enable_speaker_references, it relies on the caller to say that "
+            "the named speaker, and not someone the turn quotes, is who says I."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(

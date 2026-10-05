@@ -144,6 +144,7 @@ class IngestionPipeline:
         resolve_fact_text: bool = False,
         bind_speaker_references: bool = False,
         claim_sentence_text: bool = False,
+        speaker_grounding: bool = False,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -163,6 +164,8 @@ class IngestionPipeline:
         self._bind_speaker_references = bind_speaker_references
         # Store a claim's own sentences as its text instead of the whole paragraph.
         self._claim_sentence_text = claim_sentence_text
+        # Let a named speaker's own I, me and my ground a claim about them, by name or as I.
+        self._speaker_grounding = speaker_grounding
         self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
@@ -505,18 +508,22 @@ class IngestionPipeline:
                     speaker=metadata_speaker(event.metadata),
                     source_time=event.event_time or event.timestamp,
                 )
+            speaker = metadata_speaker(event.metadata) if self._speaker_grounding else None
+            if speaker is not None:
+                extra["speaker"] = speaker
             async with self._extraction_semaphore:
                 result = await self._extraction_provider.extract(
                     event.content, role=event.role, **extra
                 )
-            result = validate_grounding(result, event.content)
+            result = validate_grounding(result, event.content, speaker=speaker)
             result = self._check_resolved_text(result, event, window)
             record = ExtractionRecord(
                 event_id=event.id, user_id=event.user_id, scope=event.scope,
                 content_hash=event.content_hash,
                 provider=self._extraction_provider.provider_name,
                 model=self._extraction_provider.model_name,
-                grounding_policy="speech_act_v11",
+                # v12 admits a named speaker's own I, me and my as a mention of them.
+                grounding_policy="speech_act_v11" if speaker is None else "speech_act_v12",
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
@@ -586,6 +593,8 @@ class IngestionPipeline:
             speaker=(metadata_speaker(event.metadata)
                      if self._bind_speaker_references and current_policy else None),
             sentence_text=self._claim_sentence_text and current_policy,
+            grounding_speaker=(metadata_speaker(event.metadata)
+                               if self._speaker_grounding and current_policy else None),
         )
         return await indexes.prepare(
             self._vector_index._provider,
@@ -596,15 +605,18 @@ class IngestionPipeline:
         self, result: ExtractionResult, event: Event, event_id: str, scope: Scope,
         *, graph_store, writer, vector_index, lexical_index, write_queue,
         merge_claims: bool = False, speaker: str | None = None, sentence_text: bool = False,
+        grounding_speaker: str | None = None,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
         ``merge_claims`` folds a repeated claim into one current record (#209).
         ``speaker`` binds first-person singular references to that speaker's
         entity (enable_speaker_references). ``sentence_text`` stores a claim's
-        own sentences as its text (enable_claim_sentence_text). Only
-        current-policy plans use these, so a saved extraction replanned under
-        an older materialization policy keeps that policy's behavior.
+        own sentences as its text (enable_claim_sentence_text), and with
+        ``grounding_speaker`` (enable_speaker_grounding) the speaker's own I, me
+        or my mentions them there as in grounding. Only current-policy
+        plans use these, so a saved extraction replanned under an older
+        materialization policy keeps that policy's behavior.
         """
         from prme.ingestion.claim_merge import claim_key, find_repeated_claims, merged_claim
 
@@ -724,7 +736,7 @@ class IngestionPipeline:
             # Without an accepted resolution, the claim's own sentences can be
             # its text; the paragraph stays its evidence.
             sentences = (
-                claim_sentences(fact_content, fact.subject, fact.object)
+                claim_sentences(fact_content, fact.subject, fact.object, speaker=grounding_speaker)
                 if sentence_text and resolution is None else None
             )
 
@@ -980,6 +992,7 @@ class IngestionPipeline:
                         "speech_act_v9",
                         "speech_act_v10",
                         "speech_act_v11",
+                        "speech_act_v12",
                     }
                     else (
                         "speech_act_v11"

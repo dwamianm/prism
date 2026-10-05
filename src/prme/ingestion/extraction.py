@@ -11,9 +11,11 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from contextvars import ContextVar
+import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
+import json
 import re
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
@@ -32,6 +34,8 @@ from prme.ingestion.grounding import (
     _supporting_claim_passage,
     _supporting_passage,
     exact_decimal_string_from_quantity_text,
+    mentioned_or_spoken,
+    names_speaker,
     recover_exact_quantity_from_object,
     recover_exact_quantity_prefix,
     validate_extracted_quantity,
@@ -51,6 +55,15 @@ _VALIDATION_SOURCE: ContextVar[str | None] = ContextVar(
 )
 _VALIDATION_ROLE: ContextVar[str | None] = ContextVar(
     "prme_extraction_validation_role", default=None
+)
+# The turn's named speaker, when enable_speaker_grounding is on.
+_VALIDATION_SPEAKER: ContextVar[str | None] = ContextVar(
+    "prme_extraction_validation_speaker", default=None
+)
+# A list here receives the provider's output as parsed, before any check, so a
+# benchmark can keep it and validate it again under other grounding rules.
+_RAW_OUTPUT: ContextVar[list[dict[str, Any]] | None] = ContextVar(
+    "prme_extraction_raw_output", default=None
 )
 
 _EXPLICIT_CONDITION_RE = re.compile(
@@ -96,6 +109,13 @@ _NONACTUAL_PREDICATE_RE = re.compile(
 )
 
 
+def _same_subject(claim_subject: str, clause_subject: str, speaker: str | None) -> bool:
+    """Whether a claim is about a first-person clause's subject: the same words, or the speaker for their I."""
+    return claim_subject.strip().casefold() == clause_subject.casefold() or (
+        clause_subject.casefold() == "i" and names_speaker(claim_subject, speaker)
+    )
+
+
 def _has_explicit_condition(evidence_quote: str) -> bool:
     """Recognize contingent clauses without treating indirect questions as conditions."""
     without_indirect_questions = _INDIRECT_QUESTION_IF_RE.sub("", evidence_quote)
@@ -121,7 +141,8 @@ def _validate_condition(epistemic_type: str, condition: str | None, evidence_quo
 
 
 def _validate_modality(fact_type: str, epistemic_type: str, evidence_quote: str,
-                       *, subject: str, predicate: str, object_value: str) -> None:
+                       *, subject: str, predicate: str, object_value: str,
+                       speaker: str | None = None) -> None:
     """Reject common uncertainty and contingent-action category collapses."""
     uncertain = _has_uncertainty(evidence_quote)
     if uncertain and epistemic_type not in {"hypothetical", "conditional"}:
@@ -139,7 +160,7 @@ def _validate_modality(fact_type: str, epistemic_type: str, evidence_quote: str,
             if boundary is not None:
                 body = body[:boundary.start()]
             subject_in_clause = (
-                match.group("subject").casefold() == subject.strip().casefold()
+                _same_subject(subject, match.group("subject"), speaker)
                 or _mentioned(subject, body)
             )
             if subject_in_clause and _mentioned(object_value, body):
@@ -149,17 +170,22 @@ def _validate_modality(fact_type: str, epistemic_type: str, evidence_quote: str,
                 )
 
 
-def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
+def _validate_fact_source_support(
+    fact: ExtractedFact, source: str, speaker: str | None = None
+) -> None:
     claim_passage = _supporting_claim_passage(fact.evidence_quote or "", source)
     evidence_passage = _supporting_passage(fact.evidence_quote or "", source)
     if claim_passage is None or evidence_passage is None:
         raise ValueError("evidence_quote must be copied verbatim from the source")
-    if not _mentioned(fact.subject, claim_passage) or not _mentioned(fact.object, claim_passage):
+    if (
+        not mentioned_or_spoken(fact.subject, claim_passage, speaker)
+        or not mentioned_or_spoken(fact.object, claim_passage, speaker)
+    ):
         raise ValueError("subject and object must occur in evidence_quote")
     _validate_condition(fact.epistemic_type, fact.condition, claim_passage)
     _validate_modality(fact.fact_type, fact.epistemic_type, claim_passage,
                        subject=fact.subject, predicate=fact.predicate,
-                       object_value=fact.object)
+                       object_value=fact.object, speaker=speaker)
     quantity = validate_extracted_quantity(
         fact.quantity,
         object_value=fact.object,
@@ -176,7 +202,7 @@ def _validate_fact_source_support(fact: ExtractedFact, source: str) -> None:
 
 
 def _validate_relationship_source_support(
-    relationship: ExtractedRelationship, source: str
+    relationship: ExtractedRelationship, source: str, speaker: str | None = None
 ) -> None:
     claim_passage = _supporting_claim_passage(
         relationship.evidence_quote or "", source
@@ -187,8 +213,8 @@ def _validate_relationship_source_support(
     if claim_passage is None or evidence_passage is None:
         raise ValueError("relationship evidence_quote must be copied verbatim from the source")
     if (
-        not _mentioned(relationship.source_entity, claim_passage)
-        or not _mentioned(relationship.target_entity, claim_passage)
+        not mentioned_or_spoken(relationship.source_entity, claim_passage, speaker)
+        or not mentioned_or_spoken(relationship.target_entity, claim_passage, speaker)
     ):
         raise ValueError("relationship endpoints must occur in evidence_quote")
     _validate_condition(
@@ -197,7 +223,7 @@ def _validate_relationship_source_support(
     _validate_modality("fact", relationship.epistemic_type, claim_passage,
                        subject=relationship.source_entity,
                        predicate=relationship.relationship_type,
-                       object_value=relationship.target_entity)
+                       object_value=relationship.target_entity, speaker=speaker)
     relationship.evidence_quote = evidence_passage
 
 
@@ -245,7 +271,7 @@ def _nonactual_cue_predicate(prefix: str) -> str | None:
 
 
 def _recover_omitted_nonactual_targets(
-    extraction: ExtractionResult, source: str
+    extraction: ExtractionResult, source: str, speaker: str | None = None
 ) -> list[_CitedFact]:
     """Recover one exact target from a literal nonactual source clause.
 
@@ -276,7 +302,7 @@ def _recover_omitted_nonactual_targets(
             continue
         subject = match.group("subject")
         if any(
-            fact.subject.casefold() == subject.casefold()
+            _same_subject(fact.subject, subject, speaker)
             and fact.object.casefold() == target.name.casefold()
             and _NONACTUAL_PREDICATE_RE.search(fact.predicate)
             for fact in extraction.facts
@@ -444,6 +470,7 @@ def _recover_conditional_quantified_actions(
     source: str,
     *,
     role: str | None,
+    speaker: str | None = None,
 ) -> list[_CitedFact]:
     """Recover a complete first-person conditional action with one exact measure."""
     if role != "user":
@@ -470,7 +497,7 @@ def _recover_conditional_quantified_actions(
             "negative" if match.group("negative") else "positive"
         )
         if any(
-            fact.subject.casefold() == subject.casefold()
+            _same_subject(fact.subject, subject, speaker)
             and fact.predicate.casefold() == predicate
             and fact.polarity == polarity
             and fact.epistemic_type == "conditional"
@@ -528,6 +555,7 @@ def _recover_exact_first_person_measured_actions(
     source: str,
     *,
     role: str | None,
+    speaker: str | None = None,
 ) -> list[_CitedFact]:
     """Recover one leading exact measure from a bounded completed action.
 
@@ -549,7 +577,7 @@ def _recover_exact_first_person_measured_actions(
             continue
         subject = match.group("subject")
         if any(
-            fact.subject.casefold() == subject.casefold()
+            _same_subject(fact.subject, subject, speaker)
             and fact.quantity == quantity
             and (
                 (passage := _supporting_claim_passage(
@@ -594,6 +622,9 @@ class _CitedExtractionResult(ExtractionResult):
         """Keep one malformed claim from invalidating supported siblings."""
         if not isinstance(value, dict):
             return value
+        raw_output = _RAW_OUTPUT.get()
+        if raw_output is not None:
+            raw_output.append(copy.deepcopy(value))
         cleaned = dict(value)
         for field_name, model in (
             ("facts", _CitedFact),
@@ -666,15 +697,18 @@ class _CitedExtractionResult(ExtractionResult):
     def supported_closed_references(self, info: ValidationInfo):
         source = (info.context or {}).get("source_text")
         role = (info.context or {}).get("source_role")
+        speaker = (info.context or {}).get("speaker")
         if source is None:
             source = _VALIDATION_SOURCE.get()
         if role is None:
             role = _VALIDATION_ROLE.get()
+        if speaker is None:
+            speaker = _VALIDATION_SPEAKER.get()
         if source is not None:
             supported_facts = []
             for index, fact in enumerate(self.facts):
                 try:
-                    _validate_fact_source_support(fact, source)
+                    _validate_fact_source_support(fact, source, speaker)
                 except ValueError as exc:
                     logger.warning(
                         "extraction_claim_discarded",
@@ -686,7 +720,7 @@ class _CitedExtractionResult(ExtractionResult):
             supported_relationships = []
             for index, relationship in enumerate(self.relationships):
                 try:
-                    _validate_relationship_source_support(relationship, source)
+                    _validate_relationship_source_support(relationship, source, speaker)
                 except ValueError as exc:
                     logger.warning(
                         "extraction_claim_discarded",
@@ -703,7 +737,7 @@ class _CitedExtractionResult(ExtractionResult):
                     "extraction_fact_quantities_recovered",
                     count=enriched,
                 )
-            recovered = _recover_omitted_nonactual_targets(self, source)
+            recovered = _recover_omitted_nonactual_targets(self, source, speaker)
             if recovered:
                 logger.info(
                     "extraction_nonactual_target_recovered", count=len(recovered)
@@ -720,7 +754,7 @@ class _CitedExtractionResult(ExtractionResult):
                 self.entities.extend(recovered_entities)
                 self.facts.extend(recovered_facts)
             conditional_facts = _recover_conditional_quantified_actions(
-                self, source, role=role
+                self, source, role=role, speaker=speaker
             )
             if conditional_facts:
                 logger.info(
@@ -729,7 +763,7 @@ class _CitedExtractionResult(ExtractionResult):
                 )
                 self.facts.extend(conditional_facts)
             measured_actions = _recover_exact_first_person_measured_actions(
-                self, source, role=role
+                self, source, role=role, speaker=speaker
             )
             if measured_actions:
                 logger.info(
@@ -1050,6 +1084,24 @@ def _source_details_message(resolution: FactTextResolution) -> str | None:
     return f"Source message details, for resolving references only: {'; '.join(details)}."
 
 
+def validate_raw_output(
+    raw: dict[str, Any], content: str, *, role: str = "user", resolving: bool = False,
+    speaker: str | None = None,
+) -> ExtractionResult:
+    """Check a provider's parsed output as :meth:`InstructorExtractionProvider.extract` does.
+
+    ``raw`` is what the provider returned before any check, as kept through
+    ``_RAW_OUTPUT``. The checks are deterministic, so the same output, source,
+    role and speaker give the same result as the live call, and the same
+    output can be checked again under other grounding rules without a model
+    call.
+    """
+    model = _ResolvingCitedExtractionResult if resolving else _CitedExtractionResult
+    return model.model_validate_json(json.dumps(raw), context={
+        "source_text": content, "source_role": role.strip().casefold(), "speaker": speaker,
+    })
+
+
 @runtime_checkable
 class ExtractionProvider(Protocol):
     """Protocol for LLM-powered structured extraction.
@@ -1071,7 +1123,7 @@ class ExtractionProvider(Protocol):
 
     async def extract(
         self, content: str, *, role: str = "user", context: Sequence[str] = (),
-        resolve: FactTextResolution | None = None,
+        resolve: FactTextResolution | None = None, speaker: str | None = None,
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
@@ -1084,6 +1136,10 @@ class ExtractionProvider(Protocol):
                 supports.
             resolve: When given, also ask for each fact's self-contained
                 ``resolved_text`` (#91). Ingestion checks it before use.
+            speaker: The turn's named speaker, given only with
+                enable_speaker_grounding. Grounding then also accepts the
+                speaker's own I, me or my as a mention of the speaker. The
+                model is asked the same question either way.
 
         Returns:
             ExtractionResult with entities, facts, relationships, and summary.
@@ -1181,7 +1237,7 @@ class InstructorExtractionProvider:
 
     async def extract(
         self, content: str, *, role: str = "user", context: Sequence[str] = (),
-        resolve: FactTextResolution | None = None,
+        resolve: FactTextResolution | None = None, speaker: str | None = None,
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
@@ -1193,6 +1249,9 @@ class InstructorExtractionProvider:
                 ``content`` alone, so a claim only they support is rejected.
             resolve: When given, also ask for each fact's ``resolved_text``
                 and show the speaker and source time it resolves against.
+            speaker: The turn's named speaker (enable_speaker_grounding).
+                Grounding also accepts their own I, me or my as a mention of
+                them. It is not shown to the model.
 
         Returns:
             ExtractionResult with extracted entities, facts, relationships,
@@ -1237,11 +1296,13 @@ class InstructorExtractionProvider:
             # user code such as ``{{ variable }}`` reaches the model unchanged.
             source_token = _VALIDATION_SOURCE.set(content)
             role_token = _VALIDATION_ROLE.set(role.strip().casefold())
+            speaker_token = _VALIDATION_SPEAKER.set(speaker)
             try:
                 result = await asyncio.wait_for(
                     client.create(**create_kwargs), timeout=self._timeout
                 )
             finally:
+                _VALIDATION_SPEAKER.reset(speaker_token)
                 _VALIDATION_ROLE.reset(role_token)
                 _VALIDATION_SOURCE.reset(source_token)
             return result

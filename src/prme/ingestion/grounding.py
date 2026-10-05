@@ -46,6 +46,37 @@ def _mentioned(value: str, text: str) -> bool:
     return re.search(r"(?<!\w)" + re.escape(value) + r"(?!\w)", text, re.IGNORECASE) is not None
 
 
+# How a turn's speaker refers to themselves; the "i" of "i.e." is not one.
+_FIRST_PERSON_SINGULAR_RE = re.compile(
+    r"(?<!\w)(?:I(?!\.e\.)|me|my|mine|myself)(?!\w)", re.IGNORECASE
+)
+_FIRST_PERSON_SINGULAR = frozenset({"i", "me", "my", "mine", "myself"})
+
+
+def names_speaker(value: str, speaker: str | None) -> bool:
+    """Whether ``value`` is the turn's named speaker."""
+    return speaker is not None and value.strip().casefold() == speaker.strip().casefold()
+
+
+def mentioned_or_spoken(value: str, text: str, speaker: str | None = None) -> bool:
+    """A mention of ``value``, or of the speaker by their own I, me or my.
+
+    A turn's speaker writes "I live in Denver" and "my sister Rachel", so an
+    extractor writes the speaker into a claim as their name or as I, and
+    neither need occur in the claim's sentence. With ``speaker``, the turn's
+    named speaker (enable_speaker_grounding), a value that is the speaker's
+    name or a first-person singular reference is mentioned by any first-person
+    singular reference. Without it this is :func:`_mentioned`. "We" and "our"
+    stay unmatched: they include others.
+    """
+    if _mentioned(value, text):
+        return True
+    if speaker is None:
+        return False
+    refers_to_speaker = names_speaker(value, speaker) or value.strip().casefold() in _FIRST_PERSON_SINGULAR
+    return refers_to_speaker and _FIRST_PERSON_SINGULAR_RE.search(text) is not None
+
+
 _QUANTITY_NUMBER_RE = re.compile(
     r"(?<![\w.])[-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?![\d.,])"
 )
@@ -377,7 +408,9 @@ def _supporting_claim_passage(quote: str, source: str) -> str | None:
 _SENTENCE_END_RE = re.compile(r"[.!?](?:[\"')\]]*)?(?=\s+|$)|\n\s*\n")
 
 
-def claim_sentences(passage: str, subject: str, object_value: str) -> str | None:
+def claim_sentences(
+    passage: str, subject: str, object_value: str, *, speaker: str | None = None
+) -> str | None:
     """Return a claim's own sentences within its supporting passage.
 
     Grounding widens a claim's evidence to its whole paragraph so a trailing
@@ -385,8 +418,9 @@ def claim_sentences(passage: str, subject: str, object_value: str) -> str | None
     message the same text. This is the shortest run of whole sentences of
     ``passage`` that mentions both the subject and the object, extended by a
     following sentence that qualifies it, as in
-    :func:`_supporting_claim_passage`. Returns None when no run mentions
-    both, so the caller keeps the passage.
+    :func:`_supporting_claim_passage`. With ``speaker``, the speaker's own I,
+    me or my mentions the speaker (:func:`mentioned_or_spoken`). Returns None
+    when no run mentions both, so the caller keeps the passage.
     """
     sentences: list[tuple[int, int]] = []
     start = 0
@@ -400,7 +434,7 @@ def claim_sentences(passage: str, subject: str, object_value: str) -> str | None
     for first in range(len(sentences)):
         for last in range(first, len(sentences)):
             text = passage[sentences[first][0]:sentences[last][1]]
-            if _mentioned(subject, text) and _mentioned(object_value, text):
+            if mentioned_or_spoken(subject, text, speaker) and mentioned_or_spoken(object_value, text, speaker):
                 if best is None or len(text) < len(best):
                     best = text
                 break
@@ -408,7 +442,7 @@ def claim_sentences(passage: str, subject: str, object_value: str) -> str | None
 
 
 def validate_grounding(
-    result: ExtractionResult, source_text: str
+    result: ExtractionResult, source_text: str, *, speaker: str | None = None
 ) -> ExtractionResult:
     """Filter out extracted items not grounded in source text.
 
@@ -423,9 +457,13 @@ def validate_grounding(
       apply to both endpoints. Relationship entailment remains unverified.
     - Summary: preserved as model output, not treated as verified evidence.
 
+    With ``speaker`` (enable_speaker_grounding), the speaker's own I, me or my
+    also mentions the speaker's name (:func:`mentioned_or_spoken`).
+
     Args:
         result: The ExtractionResult from LLM extraction.
         source_text: The original message text to validate against.
+        speaker: The turn's named speaker, or None.
 
     Returns:
         A new ExtractionResult with ungrounded items removed.
@@ -434,7 +472,7 @@ def validate_grounding(
     # Filter entities: name must appear in source
     grounded_entities = []
     for entity in result.entities:
-        if _mentioned(entity.name, source_text):
+        if mentioned_or_spoken(entity.name, source_text, speaker):
             grounded_entities.append(entity)
         else:
             logger.warning(
@@ -452,7 +490,11 @@ def validate_grounding(
             _supporting_passage(fact.evidence_quote, source_text)
             if fact.evidence_quote is not None else source_text
         )
-        if passage and _mentioned(fact.subject, passage) and _mentioned(fact.object, passage):
+        if (
+            passage
+            and mentioned_or_spoken(fact.subject, passage, speaker)
+            and mentioned_or_spoken(fact.object, passage, speaker)
+        ):
             replacement = fact.replaces_object
             if replacement is not None and not _mentioned(replacement, passage):
                 replacement = None
@@ -501,8 +543,8 @@ def validate_grounding(
     grounded_relationships = []
     for rel in result.relationships:
         passage = _supporting_passage(rel.evidence_quote, source_text) if rel.evidence_quote is not None else source_text
-        source_grounded = passage is not None and _mentioned(rel.source_entity, passage)
-        target_grounded = passage is not None and _mentioned(rel.target_entity, passage)
+        source_grounded = passage is not None and mentioned_or_spoken(rel.source_entity, passage, speaker)
+        target_grounded = passage is not None and mentioned_or_spoken(rel.target_entity, passage, speaker)
         if passage is not None and source_grounded and target_grounded:
             condition = rel.condition
             if condition is not None and condition not in passage:

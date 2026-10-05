@@ -27,16 +27,33 @@ second-person and third-person references, stay local to their message. The
 option is off by default because only the caller knows that the named speaker,
 and not someone the turn quotes, is who says `I`.
 
+`enable_speaker_grounding` (default false) makes the same assumption during
+grounding. Grounding requires a claim's subject and object to occur in its
+quoted sentences, and an extractor writes the speaker into a claim as their
+name ("Dana, lives in, Denver" for "I live in Denver") or as `I` ("Rachel, is
+sister of, I" for "my sister Rachel"), so grounding discards both. With the
+option, in a turn that names its speaker, the speaker's own first-person
+singular reference (`I`, `me`, `my`, `mine`, `myself`) counts as a mention of
+a claim value that is the speaker's name or one of those references. That
+applies in the provider's check, the pipeline's second check and the sentence
+choice of `enable_claim_sentence_text`. The model is asked the same question either way.
+A first-person attempt or intention ("I'm trying to set up ESLint") still
+needs a predicate that keeps it when the claim names the speaker, and a claim
+naming the speaker covers the speaker's `I` clause, so recovery adds no
+duplicate for it. Turns without a speaker, and plural references, are
+unchanged.
+
 Built-in extraction keeps only claims whose named references resolve within the
 same response, apart from those event-local personal references. A missing or
 ambiguous reference discards its claim while preserving grounded, closed
 siblings; it never creates or selects an identity to repair model output.
 
-Fresh built-in extractions record `speech_act_v11`; derivations prepared from
-those records identify qualifier-aware, quantity-preserving,
+Fresh built-in extractions record `speech_act_v11`, or `speech_act_v12` when
+`enable_speaker_grounding` checked them against a named speaker; derivations
+prepared from those records identify qualifier-aware, quantity-preserving,
 speech-act-preserving, and source-effective validity rules as `speech_act_v12`.
 Saved v10 through v6 records also prepare v12, v5 records prepare v11, v4 prepare v10, v3
-prepare v9, and v2 prepare v8.
+prepare v9, and v2 prepare v8. A v12 extraction record also prepares v12.
 Legacy `source_passage_v1` extraction records prepare missing plans under
 `temporal_validity_v7`, so recovery never claims validation that did not run.
 Prepared plans using `speech_act_v11`, `speech_act_v10`, `speech_act_v9`, `speech_act_v8`, `temporal_validity_v7`, `grounded_quantities_v6`, `claim_qualifiers_v5`,

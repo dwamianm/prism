@@ -305,6 +305,45 @@ async def test_a_cached_response_replays_every_claim_the_live_validation_kept(tm
     assert replayed.model_dump() == live.model_dump()
 
 
+async def test_a_cached_raw_output_is_checked_under_each_calls_grounding_rule(tmp_path):
+    from prme.ingestion.extraction import _CitedExtractionResult
+
+    source = "I live in Denver."
+    raw = {"entities": [{"name": "Dana", "entity_type": "person"}, {"name": "Denver", "entity_type": "location"}],
+           "facts": [{"subject": "Dana", "predicate": "lives_in", "object": "Denver", "polarity": "positive",
+                      "epistemic_type": "observed", "evidence_quote": source}]}
+
+    class Parsing(_Provider):
+        async def extract(self, content, *, role="user", **extra):
+            self.calls.append(extra)
+            # As the instructor provider does: parse the model's output, then check it.
+            return _CitedExtractionResult.model_validate_json(json.dumps(raw), context={
+                "source_text": content, "source_role": role, "speaker": extra.get("speaker")})
+
+    provider = Parsing()
+    cache = ExtractionCache(tmp_path)
+    cache.wrap(provider)
+    live = await provider.extract(source, role="user", speaker="Dana")
+    assert [(fact.subject, fact.object) for fact in live.facts] == [("Dana", "Denver")]
+    # The same output checked without the speaker loses the claim, and with the speaker gives the live result.
+    assert (await provider.extract(source, role="user")).facts == []
+    assert (await provider.extract(source, role="user", speaker="Dana")).model_dump() == live.model_dump()
+    assert provider.calls == [{"speaker": "Dana"}]
+    assert (cache.misses, cache.hits, cache.unreproduced) == (1, 2, 0)
+    assert [path.name.endswith(".raw.json") for path in tmp_path.rglob("*.json")] == [True]
+
+
+async def test_an_entry_saved_after_its_checks_does_not_serve_a_call_with_a_speaker(tmp_path):
+    provider = _Provider()
+    cache = ExtractionCache(tmp_path)
+    cache.wrap(provider)
+    for speaker in (None, None, "Dana"):
+        await provider.extract("Hello.", role="user", **({} if speaker is None else {"speaker": speaker}))
+    # This provider has no raw output, so its checked result is kept. It was checked without a speaker.
+    assert provider.calls == [{}, {"speaker": "Dana"}]
+    assert (cache.misses, cache.hits) == (2, 1)
+
+
 def test_a_turn_without_a_window_keeps_its_cache_key(tmp_path):
     import hashlib
 
