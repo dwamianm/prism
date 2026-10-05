@@ -260,17 +260,27 @@ class _Usage:
 class ExtractionCache:
     """Model responses by model, role, prompt and text, shared by every pack of a build.
 
-    An entry is the provider's validated result, and a hit returns it as it
-    was: validation widens each evidence quote to its whole supporting
-    passage, so checking that output against the source again would read
-    words from outside the claim's own sentence and discard claims the live
-    run kept. Entries are written atomically, so parallel builds can share
-    the folder.
+    An entry is the provider's output as parsed, before any check
+    (``<key>.raw.json``), and a hit checks it as the live call did
+    (``validate_raw_output``). The checks are deterministic, so a hit gives
+    the live result, and the same responses can be checked again under other
+    grounding rules, such as enable_speaker_grounding's, without a model call.
+    A speaker is not part of the key: it is not shown to the model.
+
+    Entries written before 2026-10-05 hold the validated result instead
+    (``<key>.json``) and are replayed as stored. Validation widens each
+    evidence quote to its whole supporting passage, so checking that output
+    again would read words from outside the claim's own sentence and discard
+    claims the live run kept. They were checked without a speaker, so a call
+    with one ignores them and asks the model again. Entries are written
+    atomically, so parallel builds can share the folder.
     """
 
     def __init__(self, folder: Path) -> None:
         self.folder = folder
         self.hits = self.misses = 0
+        # Live results the kept raw output did not reproduce; those are not kept.
+        self.unreproduced = 0
 
     def _key(self, provider, content: str, role: str, context: tuple[str, ...] = (), resolve=None) -> str:
         from prme.ingestion.extraction import _extraction_prompt_for_role, _source_details_message
@@ -286,18 +296,36 @@ class ExtractionCache:
                       resolve is not None]
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
 
+    @staticmethod
+    def _write(path: Path, text: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False, suffix=".tmp") as out:
+            out.write(text)
+        os.replace(out.name, path)
+
     def wrap(self, provider) -> None:
-        from prme.ingestion.extraction import _CitedExtractionResult, _ResolvingCitedExtractionResult
+        from prme.ingestion.extraction import (
+            _RAW_OUTPUT,
+            _CitedExtractionResult,
+            _ResolvingCitedExtractionResult,
+            validate_raw_output,
+        )
 
         extract = provider.extract
 
-        async def cached(content: str, *, role: str = "user", context=(), resolve=None):
+        async def cached(content: str, *, role: str = "user", context=(), resolve=None, speaker=None):
             window = tuple(line for line in context if line and line.strip())
-            path = self.folder / (key := self._key(provider, content, role, window, resolve))[:2] / f"{key}.json"
-            model = _ResolvingCitedExtractionResult if resolve is not None else _CitedExtractionResult
-            if path.exists():
+            key = self._key(provider, content, role, window, resolve)
+            raw_path = self.folder / key[:2] / f"{key}.raw.json"
+            path = self.folder / key[:2] / f"{key}.json"
+            if raw_path.exists():
+                self.hits += 1
+                return validate_raw_output(json.loads(raw_path.read_bytes()), content, role=role,
+                                           resolving=resolve is not None, speaker=speaker)
+            if path.exists() and speaker is None:
                 self.hits += 1
                 # No source context: the source checks already ran when the entry was written.
+                model = _ResolvingCitedExtractionResult if resolve is not None else _CitedExtractionResult
                 return model.model_validate_json(path.read_bytes())
             self.misses += 1
             # Named only when set, as ingest() does, so the provider is called
@@ -305,11 +333,25 @@ class ExtractionCache:
             extra = {"context": list(window)} if window else {}
             if resolve is not None:
                 extra["resolve"] = resolve
-            result = await extract(content, role=role, **extra)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False, suffix=".tmp") as out:
-                out.write(result.model_dump_json())
-            os.replace(out.name, path)
+            if speaker is not None:
+                extra["speaker"] = speaker
+            raw: list[dict] = []
+            token = _RAW_OUTPUT.set(raw)
+            try:
+                result = await extract(content, role=role, **extra)
+            finally:
+                _RAW_OUTPUT.reset(token)
+            if raw:
+                # A retried call parses once per attempt; the last one produced the result.
+                replayed = validate_raw_output(raw[-1], content, role=role, resolving=resolve is not None,
+                                               speaker=speaker)
+                if replayed.model_dump() == result.model_dump():
+                    self._write(raw_path, json.dumps(raw[-1]))
+                else:
+                    self.unreproduced += 1
+            elif speaker is None:
+                # A provider that never parses through the cited models has no raw output to keep.
+                self._write(path, result.model_dump_json())
             return result
 
         provider.extract = cached
@@ -396,6 +438,7 @@ def _log_totals(path: Path) -> dict:
             "prompt_tokens": sum(row["prompt_tokens"] for row in rows),
             "completion_tokens": sum(row["completion_tokens"] for row in rows),
             "cache_hits": sum(row.get("cache_hits", 0) for row in rows),
+            "cache_unreproduced": sum(row.get("cache_unreproduced", 0) for row in rows),
             # Neither local inference nor an Ollama cloud model is billed per request or per token.
             "dollars": 0}
 
@@ -439,7 +482,7 @@ async def build_unit(folder: Path, unit: Unit, config_for, *, progress=None, pre
                     print(f"{unit.unit_id}: stopped after {max_turns} new turns", file=sys.stderr, flush=True)
                     return None
                 added += 1
-                before, hits_before = usage.snapshot(), hits.hits
+                before, hits_before, unreproduced_before = usage.snapshot(), hits.hits, hits.unreproduced
                 started, error = time.perf_counter(), None
                 try:
                     event_id = await engine.ingest(turn["content"], user_id=unit.user_id, role=turn["role"],
@@ -459,7 +502,8 @@ async def build_unit(folder: Path, unit: Unit, config_for, *, progress=None, pre
                 log.write(json.dumps({"key": turn["key"], "event_id": event_id, "role": turn["role"],
                                       "status": status, "error": error, "seconds": seconds, "calls": calls,
                                       "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
-                                      "cache_hits": hits.hits - hits_before}) + "\n")
+                                      "cache_hits": hits.hits - hits_before,
+                                      "cache_unreproduced": hits.unreproduced - unreproduced_before}) + "\n")
                 log.flush()
                 if status != "complete":
                     print(f"{unit.unit_id}: paused at {turn['key']}, whose extraction failed: {error}",

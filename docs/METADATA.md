@@ -44,8 +44,9 @@ exact-looking phrase. When quantity fields are absent or invalid, one verbatim
 currency or unit may be recognized from a bounded physical, data and count-unit
 lexicon in the grounded object. The unit is not normalized and an unlisted noun
 is not inferred as a measure. No unit, currency, plural, or locale conversion
-is implied. New extraction records use `speech_act_v11`, and their materialization
-plans use `speech_act_v12`; v11 also admits one leading exact measure from a
+is implied. New extraction records use `speech_act_v11` (`speech_act_v12` when
+`enable_speaker_grounding` checked them against a named speaker, as described in
+`docs/ENTITY-IDENTITY.md`), and their materialization plans use `speech_act_v12`; v11 also admits one leading exact measure from a
 bounded, user-authored first-person completed action after the same evidence and
 quantity checks. Saved v10 through v6 records remain v12, v5 remain v11, v4 remain
 v10, v3 remain v9, and v2 remain v8. The quantity representation is unchanged from

@@ -449,7 +449,7 @@ async def build(label: str, *, conversation_path: Path = DEFAULT_CONVERSATION, r
         if organize:
             result = await engine.organize(user_id=owner, budget_ms=600_000)
             record["organize_result"] = result.model_dump(mode="json")
-    record.update(totals={"turns": len(event_ids), **dict(totals)},
+    record.update(totals={"turns": len(event_ids), **dict(totals), "cache_unreproduced": hits.unreproduced},
                   finished_at=datetime.now(timezone.utc).isoformat())
     (folder / "build.json").write_text(json.dumps(record, indent=2) + "\n")
     return await measure(folder, conversation)
