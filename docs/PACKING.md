@@ -346,6 +346,54 @@ comparisons for
 and [`adjacent`](../benchmarks/results/research/2026-09-25/session-context-packing-adjacent-gate-comparison.md)
 list every category.
 
+## Folding repeated text
+
+`ingest()` keeps a turn's own record beside the claims extracted from it, and
+claims from one sentence share that sentence as their text, or the whole
+message without `enable_claim_sentence_text`. A reader context can therefore
+show one sentence several times. In the chat probe one context showed "I'm a
+data analyst at Northwind, and my manager Priya keeps asking me for weekly
+dashboards." five times: once in its turn and once for each of four claims.
+The opt-in `fold_repeated_text` setting packs each source text once:
+
+```python
+config = config.model_copy(update={
+    "packing": config.packing.model_copy(update={"fold_repeated_text": True})
+})
+```
+
+- A record is left out when a packed record from one of its source events
+  (`evidence_refs`) already shows its text, and packing a record removes the
+  earlier packed records of its source events whose text it shows. Their
+  budget goes to later candidates, and the bundle lists them in
+  `excluded_ids`.
+- A record folds only into one with the same tags and, where it shows them,
+  the same event time, validity window and speaker. A superseded, inferred or
+  hypothetical claim, a claim dated apart from its message and another
+  speaker's record all stay, so no text, date or state leaves the context.
+- Only the reader format folds, because its lines carry no record identity.
+  `PackingConfig` refuses the setting with the auditable and compact formats,
+  and packing ignores it there if a `model_copy` sets it anyway. Records that
+  a repack must keep, such as the operands of a temporal relation, are never
+  folded, and a packed member of an `"adjacent"` session window is never
+  removed.
+- `store()` keeps one record per message, so its records share no source
+  event and fold nothing.
+- The equivalent environment setting is
+  `PRME_PACKING__FOLD_REPEATED_TEXT=true`. Receipts record the setting in
+  schema version 22.
+
+On the offline evidence gate at 4K, over `ingest()` packs of all of LoCoMo,
+folding packed all annotated evidence for more questions in every build:
+75.2% to 79.9% with the defaults (+4.7 points, 95% interval over the ten
+conversations +3.1 to +6.4; 76 questions gained, 4 lost) and 78.9% to 81.7%
+with speaker references and claim sentences (+2.8, +2.0 to +3.7; 45 gained, 2
+lost). Every category gained, multi-hop questions most. On the LongMemEval-S
+development slice it gained 5.3 and 2.6 points with no loss. The setting stays
+off: a default change needs the DeepSeek paired answer runs, which replay
+`store()` packs and so cannot see it, until they can replay `ingest()` packs.
+`BENCHMARKS.md` ("Folding repeated text") has the full results.
+
 ## Default retrieval settings
 
 `PRMEConfig()` retrieves with these settings, which changed after v0.12.0

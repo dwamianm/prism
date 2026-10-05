@@ -290,3 +290,19 @@ async def test_a_weighted_retrieval_records_folding_in_version_22(config, user):
     assert receipt.schema_version == 22 and receipt.scoring.fusion == "weighted"
     _, unfolded = await _retrieve(previous_defaults(config), user + "-unfolded", fold=False)
     assert unfolded.schema_version == 14
+
+
+async def test_store_records_have_nothing_to_fold(config, user):
+    # store() keeps one record per message and extracts nothing, so no two records share a source.
+    contexts = []
+    for fold in (False, True):
+        settings = config.model_copy(update={"packing": config.packing.model_copy(update={FIELD: fold})})
+        async with MemoryEngine.open(settings) as engine:
+            if not fold:
+                for minute, text in enumerate((TURN, SENTENCE, OTHER)):
+                    await engine.store(text, user_id=user, session_id="s1", speaker="Dana",
+                                       event_time=EVENT + timedelta(minutes=minute))
+            response = await engine.retrieve("Who is Dana's manager?", user_id=user, reference_time=NOW)
+        contexts.append(response.bundle.render())
+    # Both turns show the sentence, but they are different messages, so both stay.
+    assert contexts[0] == contexts[1] and contexts[0].count(SENTENCE) == 2

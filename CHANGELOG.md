@@ -21,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   replays them with `gate --packs` (#102, part of #91). Until now the gate
   could replay only packs built with `store()`, which never runs extraction, so
   it could not measure changes to extraction or the graph.
+- Opt-in `packing.fold_repeated_text` (`PRME_PACKING__FOLD_REPEATED_TEXT=true`,
+  reader format only) packs each source text once. `ingest()` keeps a turn's
+  own record beside the claims extracted from it, so a context could show one
+  sentence several times. With the setting on, a record whose text a packed
+  record from the same source event already shows is left out unless its line
+  shows another date, tag or speaker, and its budget goes to other records.
+  Retrieval receipts record the setting in schema version 22, and other
+  receipts keep their version and bytes. On the offline evidence gate over
+  `ingest()` packs of all of LoCoMo, it raised the share of questions with all
+  annotated evidence packed by 4.7 points with the defaults and by 2.8 with
+  speaker references and claim sentences.
 
 ### Changed
 

@@ -1,6 +1,6 @@
 # PRME goals and production handoff
 
-**Status:** active handoff, 2026-09-23; see "Current state (2026-10-01)" for
+**Status:** active handoff, 2026-09-23; see "Current state (2026-10-05)" for
 the latest work.
 
 **Production baseline:** released v0.12.0 at `aaa2e4e`; the subsequent GPT-5.4
@@ -93,43 +93,59 @@ evidence turns have a claim instead of 80.0%, yet the gate loses evidence:
 all evidence packed -2.0 points with the defaults and -1.0 with speaker
 references and claim sentences on (both intervals exclude zero). The new
 claims restate turns that retrieval already reaches, and they take context
-room. The raw responses for every LoCoMo turn are in
+room. With folding on (below) it costs nothing with the defaults and still
+loses 0.8 points with speaker references and claim sentences (-1.8 to +0.1
+over conversations). The raw responses for every LoCoMo turn are in
 `data/extracted-packs-v1/grounding-locomo-full/extraction-cache`, so later
-grounding and packing changes on LoCoMo need no model call.
+grounding and packing changes on LoCoMo need no model call. Merged as #230.
+
+**Folding repeated text (2026-10-05, opt-in).** `packing.fold_repeated_text`
+packs each source text once: in the reader format, a record whose text a
+packed record from the same source event already shows is left out, unless its
+line shows another date, tag or speaker, and its room goes to other records.
+Receipts record it in version 22. On the chat probe, repeated context records
+fall from 19.9% to none at 4,096 tokens and from 17.6% to 0.8% at 1,024, with
+the same 17 of 18 probes answered. On all of LoCoMo, all evidence packed rises
+4.7 points with the defaults (75.2% to 79.9%, +3.1 to +6.4 over
+conversations) and 2.8 with speaker references and claim sentences (78.9% to
+81.7%, +2.0 to +3.7), and every category gains in every build. On the
+LongMemEval-S slice it gains 5.3 and 2.6 points with no loss. Claim sentences
+with folding is the best gate result so far. `store()` records share no
+source event, so folding should not change the `store()` packs that the
+DeepSeek answer track replays. Their saved archive is on the answering
+machine, so that gate did not run here.
 
 **Next, in order:**
 
-1. Packing: stop spending context on several records of one turn or one
-   sentence. Several claims from one sentence repeat it (chat probe: 19.9% to
-   23.3% repeated records with speaker grounding), and a claim and its own
-   turn can both be packed (LoCoMo: speaker grounding moved 267 evidence
-   turns to claims without packing more of them). Either group a turn's
-   claims under it or skip a record whose text is already packed. Measure on
-   the chat probe and on the LoCoMo gate from the raw cache, without model
-   calls. Speaker grounding is worth revisiting only after this.
-2. `enable_claim_sentence_text` as a default. The DeepSeek answer track
-   replays the saved GPT-5.4 run, whose packs were built with `store()`
-   (`benchmarks/integrations/run_gpt54_comparison.py`), so it cannot see an
-   option that only changes `ingest()`. A default change first needs answer
-   runs over `ingest()` packs: harness support, and an `ingest()` build of all
-   of LongMemEval-S, which the owner stopped at 34 of 500 (ask before
+1. Answer runs over `ingest()` packs, so that `enable_claim_sentence_text`
+   and `packing.fold_repeated_text` can become defaults. The DeepSeek answer
+   track replays the saved GPT-5.4 run, whose packs were built with `store()`
+   (`benchmarks/integrations/run_gpt54_comparison.py`). It cannot see an
+   option that only changes `ingest()`, and folding should change nothing in
+   `store()` packs, whose records share no source event. A default change
+   first needs harness support for `ingest()` packs and an `ingest()` build
+   of all of LongMemEval-S, which the owner stopped at 34 of 500 (ask before
    resuming). Then a new A/A pair, because the Ollama server is now 0.34.4,
    and the paired runs in `CLAUDE.md`.
-3. Grounding still discards claims that refer through a third-person pronoun
+2. Grounding still discards claims that refer through a third-person pronoun
    ("she got engaged to her boyfriend Tom") or through a neighboring sentence
-   ("Green tea now."). Like speaker grounding, recovering them only pays once
-   item 1 is done. The intention check also discards "I, hoping to visit,
-   this summer": its predicate pattern matches "hope" but not "hoping".
-4. #91 on LongMemEval-S: build the slice with the window and resolution and
+   ("Green tea now."). Speaker grounding gains no evidence even with folding
+   on, so more claims are not a retrieval gain by themselves; recover these
+   for the graph's links and supersedence, and check the gate. The intention
+   check also discards "I, hoping to visit, this summer": its predicate
+   pattern matches "hope" but not "hoping".
+3. #91 on LongMemEval-S: build the slice with the window and resolution and
    compare it with `ingest-baseline-lme-deepseek-r2`. It uses Ollama cloud
    calls, so confirm with the owner first.
-5. #91: resolve relative dates in fact text more often, and run the authored
+4. #91: resolve relative dates in fact text more often, and run the authored
    negation and condition probes with resolution on. The chat probe also
-   dated "May 4", said in April 2026, as 2025-05-04.
-6. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
+   dated "May 4", said in April 2026, as 2025-05-04, "I signed up for the
+   Cherry Creek Half Marathon on May 17!" on the race date instead of the
+   message date, and "Two weeks in at Brightpath" two weeks after the message.
+5. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
    pack has 576 entities, half with no edge, and "Mel" and "Melanie" are
    separate nodes.
-7. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
+6. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
    (failing simulation check) and the recency and temporal scoring bugs.
 
 **Known flaky test:** `tests/test_extraction_workflow.py::
