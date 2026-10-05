@@ -602,7 +602,9 @@ class PRMEConfig(_ProjectSettings):
             "grounding policy speech_act_v12. Turns without a speaker, and "
             "plural references, are unchanged. Default False: like "
             "enable_speaker_references, it relies on the caller to say that "
-            "the named speaker, and not someone the turn quotes, is who says I."
+            "the named speaker, and not someone the turn quotes, is who says "
+            "I, and on the LoCoMo gate the extra claims cost evidence in a "
+            "4,096-token context (BENCHMARKS.md, \"Speaker grounding\")."
         ),
     )
     enable_qa_pairing: bool = Field(

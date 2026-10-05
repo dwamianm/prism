@@ -533,8 +533,14 @@ million tokens.
   roles, and its text and source metadata are the baseline runner's.
 - Histories share sessions, so a build keeps each model response in
   `extraction-cache/`, keyed by the model, role, prompt and text. A repeated
-  turn is extracted once, and its cached result is replayed as stored.
-  `--no-cache` turns this off. Before 2026-10-01 a cached result was validated
+  turn is extracted once. Since 2026-10-05 an entry is the model's output as
+  parsed, before any check (`<key>.raw.json`), and a replay checks it again
+  as the live call did. A build keeps no entry that does not reproduce its
+  live result and counts any such call as `cache_unreproduced`. The same
+  model calls can then be measured under different grounding rules. Older
+  entries hold the checked result and replay as stored, except for a call
+  with a speaker (`enable_speaker_grounding`), which they were never checked
+  with. `--no-cache` turns this off. Before 2026-10-01 a cached result was validated
   against the source again. Validation widens each evidence quote to its
   whole paragraph, so the second pass read conditions and modal words from
   other sentences and discarded claims that the live run kept. In the 73
@@ -777,7 +783,7 @@ extraction becomes graph records, so each comparison below rebuilds the same
 cached extraction twice at commit `5e7cb06`, with the option off and on, and
 needs no model call.
 
-On the chat probe, with Dana named as the speaker of her turns in both builds:
+On the chat probe, with Dana named as the speaker of the user turns in both builds:
 
 | Measure | Option off | Option on |
 |---|---:|---:|
@@ -900,6 +906,97 @@ the direction rather than the size of a gain on all 500 questions, whose
 The gate counts evidence, not answers. A qualifier in another sentence of the
 paragraph is no longer in the claim's text, although the paragraph stays its
 evidence, and only a reader answer run can show whether that costs answers.
+
+### Speaker grounding (`enable_speaker_grounding`)
+
+Grounding keeps a claim only when its subject and object occur in its quoted
+sentences. In a turn spoken by Dana, the model writes Dana into a claim by
+name ("Dana, lives in, Denver" for "I live in Denver") or as I where the
+sentence says my or me ("Rachel, is sister of, I" for "my sister Rachel"),
+and grounding discarded both. With the option on, in a turn that names its
+speaker, the speaker's own I, me, my, mine or myself counts as a mention of
+the speaker (`docs/ENTITY-IDENTITY.md`). The option changes which of the
+model's claims are kept, so each comparison below checks the same model
+responses twice, kept before any check, with the option off and on.
+
+On the chat probe, with speaker references and claim sentences on in both
+builds and Dana named as the speaker of the user turns. Those turns took 27 new
+calls at commit `d48769a`; the assistant turns name no speaker and replayed
+their earlier entries:
+
+| Measure | Option off | Option on |
+|---|---:|---:|
+| Facts / relationships proposed for user turns | 88 / 34 | 88 / 34 |
+| Kept by grounding | 60 / 22 | 67 / 26 |
+| Active claims | 72 | 79 |
+| User claims attached to "Dana" | 30 | 35 |
+| Key links: linked / not linked | 11 / 3 | 14 / 0 |
+| Probes with the answer in context | 17 of 18 | 17 of 18 |
+| Repeated records in the 18 contexts, 4,096 tokens | 542 of 2,722 (19.9%) | 616 of 2,645 (23.3%) |
+
+- Dana's partner, dog and home are linked. "I live in Denver with my partner
+  Sam and our golden retriever, Biscuit." keeps "Dana, lives in, Denver",
+  "Dana, has partner, Sam" and "Dana, has pet, Biscuit".
+- Those three claims share one sentence, so the sentence appears three times.
+  That is most of the rise in repeated records.
+- Grounding discarded 36 proposed claims for a subject or object missing from
+  their sentences, and the option keeps 11 of them. Most of the other 25 name
+  someone through another pronoun ("she got engaged to her boyfriend Tom") or
+  a phrase ("my dog" for Biscuit), or lean on a neighboring sentence ("Green
+  tea now.", "Tableau is the standard there"). A few are wrong and stay
+  discarded ("I, was training for, unknown").
+- The control is close to the earlier build from older responses (19%
+  repeated records, 11 of 14 key links), so the new responses did not change
+  the picture.
+
+On all ten LoCoMo conversations, every turn was extracted again with the
+option on at `d48769a` (5,883 calls in 30 minutes, `deepseek-v4.1-flash:cloud`
+`e04da138`, Ollama 0.34.4), and each control rebuilt the same responses with
+the option off. The option keeps far more of what the model proposes:
+
+| Measure | Option off | Option on |
+|---|---:|---:|
+| Facts / relationships kept, of 15,104 / 4,205 proposed | 6,772 / 2,381 | 9,914 / 3,344 |
+| Claims in the packs | 7,136 | 10,599 |
+| Turns with a claim, of 5,882 | 4,664 | 5,223 |
+| Annotated evidence turns with a claim, of 1,423 | 1,138 (80.0%) | 1,370 (96.3%) |
+
+The gate still loses evidence, both with the defaults and with speaker
+references and claim sentences on:
+
+| Gate metric | Off | On | Change | Questions 95% | Conversations 95% | Wins / losses |
+|---|---:|---:|---:|---|---|---|
+| Defaults: all evidence packed | 75.2% | 73.2% | -2.0 pp | -3.1 to -0.8 | -2.9 to -1.3 | 25 / 56 |
+| Defaults: all evidence among the candidates | 95.4% | 94.0% | -1.4 pp | -2.0 to -0.8 | not computed | 0 / 21 |
+| Defaults: projected accuracy | 71.6% | 70.2% | -1.4 pp | -2.2 to -0.6 | -1.9 to -0.8 | 25 / 56 |
+| Both options: all evidence packed | 78.9% | 77.9% | -1.0 pp | -1.9 to -0.1 | -1.7 to -0.1 | 20 / 35 |
+| Both options: all evidence among the candidates | 96.1% | 96.0% | -0.1 pp | -0.5 to +0.3 | not computed | 4 / 6 |
+| Both options: projected accuracy | 74.2% | 73.5% | -0.7 pp | -1.3 to -0.0 | -1.2 to -0.1 | 20 / 35 |
+
+- The new claims restate turns that retrieval already reaches through the
+  turns' own records. With both options on, 1,416 annotated evidence turns
+  reach the context through a claim instead of 1,149, but 1,822 reach it at
+  all instead of 1,830, and the extra records take room that other evidence
+  had.
+- With the defaults every claim carries its whole message as text, so 49%
+  more claims put many more copies of the same messages among the
+  candidates. Evidence ranks fall (one turn from 182 to 331), a context holds
+  73.7 records instead of 79.8, and 21 questions no longer have all their
+  evidence among the candidates, while none gain it. Nine conversations lose
+  and one ties.
+- The option's mention check passes 4,173 more proposed claims: 4,161 name
+  the turn's speaker where the sentence says I, me or my, and 12 write the
+  speaker as I. Of the 2,082 claims naming the speaker that it still
+  discards, 1,959 come from sentences without I, me or my; a sample shows
+  "we" sentences ("We spent one summer restoring an old car"), which the
+  option leaves alone, and lines that are not claims ("Keep it up!"). The
+  other 123 now fail the conditional and intention checks instead.
+
+So the option completes the graph but costs evidence in a 4,096-token
+context, and it stays off. More claims can help retrieval only once the
+packer stops spending budget on several records of the same turn. Reports:
+`benchmarks/results/research/2026-10-05/locomo-full-speaker-grounding-vs-control.md`
+and `locomo-full-speaker-grounding-with-refs-sentences.md`.
 
 ## Baselines for the GPT-5.4 comparison
 

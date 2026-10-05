@@ -9,7 +9,7 @@ changes.
 
 **Research record:** [research agenda](../docs/RESEARCH-AGENDA.md)
 
-## Current state (2026-10-01)
+## Current state (2026-10-05)
 
 The release is v0.13.0. The retrieval defaults changed on 2026-09-25 (#177,
 #187), and the DeepSeek defaults baseline is `prme@d811e3ed` (LoCoMo
@@ -63,8 +63,10 @@ against 4,796 names. No repeated build has measured build-to-build noise.
 `ingest-baseline-locomo-deepseek` (complete), `fact-text-w4-locomo-deepseek`
 (complete), `windowed-w4-locomo-deepseek` (conv-26 only), and
 `ingest-baseline-lme-deepseek` (the 42 slice packs; the full build was stopped
-by the owner at 34 of 500 on 2026-09-28; ask before resuming it). The chat
-probe's builds are in `data/chat-probe-v1/chat-v1/`.
+by the owner at 34 of 500 on 2026-09-28; ask before resuming it),
+`grounding-locomo-full` (every LoCoMo turn extracted again on 2026-10-05, with
+raw responses) and its replays. The chat probe's builds are in
+`data/chat-probe-v1/chat-v1/`.
 
 **The chat probe's recommendations (2026-10-01), all opt-in:**
 `enable_speaker_references` binds a named speaker's I, me and my to the
@@ -77,31 +79,57 @@ improved; LongMemEval-S slice 71.1% to 86.8%, +5.3 to +28.9, no losses). It
 is the strongest gate result so far and the first candidate for a default
 change. The LongMemEval-S slice baseline was
 rebuilt with faithful replay as `ingest-baseline-lme-deepseek-r2` (190 more
-claims, gate unchanged). `BENCHMARKS.md` has the full results.
+claims, gate unchanged). `BENCHMARKS.md` has the full results. All of this
+merged on 2026-10-05 (#226 to #229).
+
+**Speaker grounding (2026-10-05, opt-in, stays off).**
+`enable_speaker_grounding` lets a named speaker's own I, me and my ground a
+claim that names the speaker or writes them as I. The extraction cache now
+keeps each response before any check, so one set of calls measures both
+rules. On the chat probe (27 calls) all 14 key links exist instead of 11, but
+repeated context records rise from 19.9% to 23.3%. On all of LoCoMo (5,883
+calls) the packs hold 10,599 claims instead of 7,136, and 96.3% of annotated
+evidence turns have a claim instead of 80.0%, yet the gate loses evidence:
+all evidence packed -2.0 points with the defaults and -1.0 with speaker
+references and claim sentences on (both intervals exclude zero). The new
+claims restate turns that retrieval already reaches, and they take context
+room. The raw responses for every LoCoMo turn are in
+`data/extracted-packs-v1/grounding-locomo-full/extraction-cache`, so later
+grounding and packing changes on LoCoMo need no model call.
 
 **Next, in order:**
 
-1. Grounding discards claims the model gets right. When the model names the
-   speaker where the quoted sentence says "I" ("Dana, has partner, Sam"),
-   validation drops the claim: on the LoCoMo `ingest()` baseline build it
-   discarded 7,913 facts and 2,013 relationships against 6,995 claims kept.
-   A fix would let the turn's speaker stand for a first-person reference,
-   behind an option and a new grounding policy version. Discarded claims are
-   never cached, so measuring it needs live re-extraction; confirm with the
-   owner first.
-2. `enable_claim_sentence_text` as a default: it needs the DeepSeek paired
-   answer runs in `CLAUDE.md`, and first a new A/A pair on both benchmarks,
-   because the Ollama server is now 0.34.4.
-3. #91 on LongMemEval-S: build the slice with the window and resolution and
+1. Packing: stop spending context on several records of one turn or one
+   sentence. Several claims from one sentence repeat it (chat probe: 19.9% to
+   23.3% repeated records with speaker grounding), and a claim and its own
+   turn can both be packed (LoCoMo: speaker grounding moved 267 evidence
+   turns to claims without packing more of them). Either group a turn's
+   claims under it or skip a record whose text is already packed. Measure on
+   the chat probe and on the LoCoMo gate from the raw cache, without model
+   calls. Speaker grounding is worth revisiting only after this.
+2. `enable_claim_sentence_text` as a default. The DeepSeek answer track
+   replays the saved GPT-5.4 run, whose packs were built with `store()`
+   (`benchmarks/integrations/run_gpt54_comparison.py`), so it cannot see an
+   option that only changes `ingest()`. A default change first needs answer
+   runs over `ingest()` packs: harness support, and an `ingest()` build of all
+   of LongMemEval-S, which the owner stopped at 34 of 500 (ask before
+   resuming). Then a new A/A pair, because the Ollama server is now 0.34.4,
+   and the paired runs in `CLAUDE.md`.
+3. Grounding still discards claims that refer through a third-person pronoun
+   ("she got engaged to her boyfriend Tom") or through a neighboring sentence
+   ("Green tea now."). Like speaker grounding, recovering them only pays once
+   item 1 is done. The intention check also discards "I, hoping to visit,
+   this summer": its predicate pattern matches "hope" but not "hoping".
+4. #91 on LongMemEval-S: build the slice with the window and resolution and
    compare it with `ingest-baseline-lme-deepseek-r2`. It uses Ollama cloud
    calls, so confirm with the owner first.
-4. #91: resolve relative dates in fact text more often, and run the authored
+5. #91: resolve relative dates in fact text more often, and run the authored
    negation and condition probes with resolution on. The chat probe also
    dated "May 4", said in April 2026, as 2025-05-04.
-5. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
+6. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
    pack has 576 entities, half with no edge, and "Mel" and "Melanie" are
    separate nodes.
-6. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
+7. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
    (failing simulation check) and the recency and temporal scoring bugs.
 
 **Known flaky test:** `tests/test_extraction_workflow.py::
