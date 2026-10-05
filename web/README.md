@@ -69,6 +69,11 @@ database or server. Existing authentication and external-bind protections apply;
   over **loaded entries** (content and ID), not semantic retrieval.
 - Select an entry for its full content, stored confidence/salience, source
   evidence, timestamps, metadata, and full JSON record.
+- An extracted claim shows its subject → predicate → object above its text,
+  in the list, the graph and the relationship list. Its text is the source
+  passage, which every claim from one message can share, so the claim is what
+  tells them apart. The details add the claim's polarity, kind, temporal
+  intent, the value it replaces, and the words fact text resolution rewrote.
 - Follow incoming and outgoing connections by clicking graph nodes or the
   equivalent keyboard-accessible relationship list. Zoom, reset, and pan the
   map. On small screens, entries, graph, and details stack vertically.

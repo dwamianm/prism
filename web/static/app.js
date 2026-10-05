@@ -1,4 +1,5 @@
 import { MemoryGraph, isProposal } from "./graph.js";
+import { claimParts, claimText, nodeLabel, rewrites } from "./claim.js";
 
 const $ = (id) => document.getElementById(id);
 const human = (value) =>
@@ -170,7 +171,9 @@ async function api(path, params, signal) {
 function renderEntries() {
   const query = $("search").value.trim().toLowerCase();
   const filtered = nodes.filter((node) =>
-    `${node.content} ${node.id}`.toLowerCase().includes(query),
+    `${claimText(node) ?? ""} ${node.content} ${node.id}`
+      .toLowerCase()
+      .includes(query),
   );
   const container = $("entries");
   container.replaceChildren();
@@ -182,8 +185,10 @@ function renderEntries() {
     button.setAttribute("aria-current", String(selected?.id === node.id));
     const top = el("span", "entry-top");
     top.append(tag(node), el("span", "", human(node.lifecycle_state)));
+    button.append(top);
+    const claim = claimText(node);
+    if (claim) button.append(el("span", "entry-claim", claim));
     button.append(
-      top,
       el("span", "entry-content", node.content || "(Empty content)"),
       el(
         "span",
@@ -303,6 +308,26 @@ function renderDetails(node) {
     id,
     scores,
   );
+  const claim = claimParts(node);
+  if (claim) {
+    const meta = node.metadata;
+    const changed = rewrites(node);
+    const pairs = [
+      ["Subject", claim.subject],
+      ["Predicate", claim.predicate],
+      ["Object", claim.object || null],
+      ["Polarity", claim.negative ? "Negative" : "Positive"],
+      ["Kind", human(meta.extraction_kind)],
+      ["Temporal intent", human(meta.temporal_intent)],
+    ];
+    if (meta.replaces_object) pairs.push(["Replaces", meta.replaces_object]);
+    if (changed.length) pairs.push(["Rewritten", changed.join("; ")]);
+    if (meta.evidence_quote && meta.evidence_quote !== node.content)
+      pairs.push(["Evidence quote", meta.evidence_quote]);
+    const body = el("div");
+    body.append(el("p", "claim-line", claimText(node)), fields(pairs));
+    container.append(section("Claim", body));
+  }
   container.append(
     section(
       "Classification",
@@ -460,11 +485,7 @@ function renderConnections(page) {
         `${outgoing ? "Outgoing" : "Incoming"} · ${human(edge.edge_type)}`,
       ),
     );
-    const link = el(
-      "button",
-      "connection-link",
-      neighbor.content || "(Empty content)",
-    );
+    const link = el("button", "connection-link", nodeLabel(neighbor));
     link.addEventListener("click", () => selectNode(neighbor));
     body.append(link);
     if (isProposal(edge))

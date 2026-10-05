@@ -249,7 +249,7 @@ async def test_a_shared_cache_extracts_a_repeated_turn_once_and_the_gate_replays
                              prepare=_scripted(scripted.extract), cache=cache)
     second = await build_unit(build / "longmemeval" / "q2_abs", longmemeval["q2_abs"], _config,
                               prepare=_scripted(scripted.extract), cache=cache)
-    # The shared session is extracted once; the cached response is validated again and grounds the same claim.
+    # The shared session is extracted once; the cached response is replayed and grounds the same claim.
     assert [content for content, _ in scripted.calls] == [
         "Jordan moved to Denver last spring.", "Denver is a lovely city.", "Hello."]
     assert (first["cache_hits"], second["cache_hits"]) == (0, 2)
@@ -276,6 +276,33 @@ class _Provider:
     async def extract(self, content, *, role="user", **extra):
         self.calls.append(extra)
         return ExtractionResult.model_validate({"entities": [], "facts": []})
+
+
+async def test_a_cached_response_replays_every_claim_the_live_validation_kept(tmp_path):
+    from prme.ingestion.extraction import _CitedExtractionResult
+
+    source = ("Really well. If Brightpath makes an offer, I'll probably take it. "
+              "Their team uses Python for everything, which I love.")
+
+    class Validating(_Provider):
+        async def extract(self, content, *, role="user", **extra):
+            self.calls.append(extra)
+            return _CitedExtractionResult.model_validate({
+                "entities": [{"name": "Python", "entity_type": "technology"}],
+                "facts": [{"subject": "I", "predicate": "likes", "object": "Python", "fact_type": "preference",
+                           "epistemic_type": "observed", "polarity": "positive",
+                           "evidence_quote": "Their team uses Python for everything, which I love."}]},
+                context={"source_text": content, "source_role": role})
+
+    provider = Validating()
+    cache = ExtractionCache(tmp_path)
+    cache.wrap(provider)
+    live = await provider.extract(source, role="user")
+    # Validation widened the quote to its whole paragraph, which also holds another sentence's condition.
+    assert [fact.evidence_quote for fact in live.facts] == [source]
+    replayed = await provider.extract(source, role="user")
+    assert (cache.misses, cache.hits) == (1, 1)
+    assert replayed.model_dump() == live.model_dump()
 
 
 def test_a_turn_without_a_window_keeps_its_cache_key(tmp_path):
