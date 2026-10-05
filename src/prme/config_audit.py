@@ -162,6 +162,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_speaker_references is true",
         bool,
     ),
+    "enable_claim_sentence_text": (
+        "enable_claim_sentence_text",
+        "enable_claim_sentence_text is true",
+        bool,
+    ),
     "novelty_high_threshold": (
         "enable_surprise_gating",
         "enable_surprise_gating is true",

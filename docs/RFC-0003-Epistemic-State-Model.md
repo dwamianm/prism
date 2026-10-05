@@ -92,7 +92,14 @@ request elsewhere in the paragraph from changing the claim's epistemic type.
 Indirect questions such as “see if” and “wondering if” are not treated as
 logical preconditions.
 Fact content is the paragraph-complete source passage; the model's
-subject/predicate/object stays in metadata.
+subject/predicate/object stays in metadata. In a chat, a message is usually
+one paragraph, so every claim from it shares the message as its content. The
+opt-in `enable_claim_sentence_text` stores instead the shortest run of whole
+sentences that mentions both the subject and the object, with a following
+condition or exception sentence, and records `claim_sentences_v1` as the
+grounding method; the paragraph stays in `metadata.evidence_quote`. A
+qualifier in another sentence of the paragraph is then absent from the
+content, which is why it is not the default.
 Custom providers that omit citations use the complete message as support and
 must still supply source-supported subject and object values. This deliberately
 rejects unsupported paraphrased object values.

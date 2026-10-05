@@ -572,6 +572,21 @@ class PRMEConfig(_ProjectSettings):
             "someone the turn quotes, is who says I."
         ),
     )
+    enable_claim_sentence_text: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() stores a claim's own sentences "
+            "as its text: the shortest run of whole sentences of its "
+            "supporting passage that mentions both its subject and object, "
+            "with a following sentence that qualifies it (only if, unless, "
+            "however). Grounding widens each claim's evidence to its whole "
+            "paragraph so a qualifier cannot be lost, which gives every claim "
+            "of a one-paragraph chat message that message as its text. The "
+            "paragraph stays the claim's evidence_quote, and a text that fact "
+            "text resolution accepts takes precedence. Default False: a "
+            "qualifier elsewhere in the paragraph is no longer in the text."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(
