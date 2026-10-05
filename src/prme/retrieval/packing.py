@@ -572,8 +572,9 @@ def pack_context(
             windows[member[0]][candidate.node.id] = member[1]
         return True
 
-    # Packed records by source event, for fold_repeated_text.
-    fold = config.fold_repeated_text
+    # Packed records by source event, for fold_repeated_text. Folding needs the
+    # reader format; a config built with model_copy skips that validation.
+    fold = config.fold_repeated_text and config.context_format == "reader"
     packed_by_source: dict[UUID, list[RetrievalCandidate]] = {}
 
     def _covered(candidate: RetrievalCandidate) -> bool:

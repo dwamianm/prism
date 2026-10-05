@@ -81,10 +81,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         and packing.session_context_window > 0
         and packing.session_context_top_k != 0,
     ),
+    # Packing folds only reader lines, which carry no record identity.
     "packing.fold_repeated_text": (
-        "packing.fold_repeated_text",
-        "packing.fold_repeated_text is true",
-        bool,
+        "packing",
+        "packing.fold_repeated_text is true and packing.context_format is 'reader'",
+        lambda packing: packing.fold_repeated_text and packing.context_format == "reader",
     ),
     "packing.cross_scope_top_n": (
         "packing.cross_scope_top_n",

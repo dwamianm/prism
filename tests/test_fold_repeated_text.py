@@ -1,18 +1,33 @@
 """Each source text is packed once (packing.fold_repeated_text)."""
 
+import hashlib
+import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
 
+from prme import MemoryEngine
+from prme.ingestion.schema import ExtractionResult
 from prme.models import MemoryNode
+from prme.models.relevance import RetrievalReceipt, make_receipt
 from prme.models.speaker import SPEAKER_METADATA_KEY
-from prme.retrieval.config import PackingConfig
+from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, PackingConfig, ScoringWeights
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import pack_context
+from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.tokenization import count_tokens
-from prme.types import EpistemicType, LifecycleState, NodeType
+from prme.types import EpistemicType, LifecycleState, NodeType, Scope
+from tests import test_durable_ingestion
+from tests.previous_defaults import previous_defaults
+from tests.test_http_write_fidelity import app_for, client_for
+from tests.test_rank_fusion import EXECUTION, NOW, PRODUCT, RRF, candidate
+
+config = test_durable_ingestion.config
+user = test_durable_ingestion.user
 
 EVENT = datetime(2026, 2, 3, 19, 4, tzinfo=timezone.utc)
 TURN = ("Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps "
@@ -130,18 +145,103 @@ def test_only_the_reader_format_folds():
     assert reader(fold_repeated_text=True).model_dump()["fold_repeated_text"] is True
 
 
+def test_a_copied_config_that_folds_another_format_packs_as_without_it():
+    # model_copy skips the validator that refuses other formats.
+    auditable = PackingConfig(token_budget=4096, overhead_tokens=0, min_fidelity="full")
+    copied = auditable.model_copy(update={"fold_repeated_text": True})
+    candidates = [turn(.9), *claims(.8, .7)]
+    assert packed_ids(pack_context(candidates, copied)) == {1, 10, 11}
+    assert pack_context(candidates, copied).rendered_context == pack_context(candidates, auditable).rendered_context
+
+
+# --- Receipts ----------------------------------------------------------------------------------------
+
+FIELD = "fold_repeated_text"
+FIXTURES = Path(__file__).parent / "fixtures/relevance"
+# Written by make_receipt before version 22: rank fusion with session context
+# packing (_session_receipt in tests/test_session_context_packing.py).
+V21_CHECKSUM = "61cf781f9a0f831bbcf6af1721bf743ab9ec30b5e97b6eed6466f0056b1efec7"
+
+
+def _ranked(scoring=RRF) -> list[RetrievalCandidate]:
+    return score_and_rank([candidate(1, semantic=.9, lexical=.9), candidate(2, semantic=.5)], scoring, now=NOW)[0]
+
+
+def _receipt(scoring=RRF, packing: PackingConfig | None = None, ranked=None) -> RetrievalReceipt:
+    packing = packing or PackingConfig(context_format="reader", **{FIELD: True})
+    ranked = ranked or _ranked(scoring)
+    return make_receipt(request_id=UUID(int=22), user_id="owner", query="telescope", reference_time=NOW,
+                        scopes=(Scope.PROJECT,), scoring=scoring, packing=packing, candidates=ranked,
+                        bundle=pack_context(ranked, packing), ranking_policy="score_id", execution=EXECUTION)
+
+
+@pytest.mark.parametrize("scoring", [RRF, ScoringWeights(**PRODUCT), DEFAULT_SCORING_WEIGHTS],
+                         ids=["rank fusion", "rank fusion defaults", "weighted"])
+def test_version_22_records_folding_and_round_trips(scoring):
+    saved = _receipt(scoring)
+    raw = saved.model_dump_json()
+    data = json.loads(raw)
+    assert data["schema_version"] == 22 and data["packing"][FIELD] is True
+    restored = RetrievalReceipt.model_validate_json(raw)
+    assert restored.model_dump_json() == raw and restored.checksum == saved.checksum
+    assert restored.replay_ranking() == tuple(item.node_id for item in saved.candidates)
+
+    missing = json.loads(raw)
+    missing["packing"].pop(FIELD)
+    with pytest.raises(ValidationError, match="Version 22 records folded repeated text"):
+        RetrievalReceipt.model_validate(missing)
+
+
+def test_version_22_admits_session_context_packing():
+    packing = PackingConfig(context_format="reader", session_context_packing="adjacent", **{FIELD: True})
+    saved = _receipt(RRF, packing)
+    raw = saved.model_dump_json()
+    assert saved.schema_version == 22 and saved.packing.session_context_packing == "adjacent"
+    assert RetrievalReceipt.model_validate_json(raw).model_dump_json() == raw
+
+
+@pytest.mark.parametrize("version, scoring, session", [
+    (14, DEFAULT_SCORING_WEIGHTS, None),
+    (16, RRF, None),
+    (19, ScoringWeights(**PRODUCT), None),
+    (20, ScoringWeights(recency_time="event_time"), None),
+    (21, RRF, "adjacent"),
+])
+def test_earlier_versions_cannot_record_folding(version, scoring, session):
+    packing = PackingConfig(context_format="reader", session_context_packing=session, **{FIELD: True})
+    data = json.loads(_receipt(scoring, packing).model_dump_json())
+    data["schema_version"] = version
+    with pytest.raises(ValidationError, match="Folded repeated text requires a version 22 receipt"):
+        RetrievalReceipt.model_validate(data)
+
+
+def test_a_receipt_cannot_fold_another_format():
+    data = json.loads(_receipt().model_dump_json())
+    data["packing"]["context_format"] = "auditable"
+    with pytest.raises(ValidationError, match="fold_repeated_text applies only to context_format='reader'"):
+        RetrievalReceipt.model_validate(data)
+
+
+def test_a_copied_config_that_folds_another_format_is_not_recorded():
+    # model_copy skips the validator that refuses other formats, and packing then ignores the setting.
+    auditable, ranked = PackingConfig(), _ranked()
+    copied = _receipt(RRF, auditable.model_copy(update={FIELD: True}), ranked)
+    assert copied.schema_version == 16 and FIELD not in json.loads(copied.model_dump_json())["packing"]
+    assert copied.model_dump_json() == _receipt(RRF, auditable, ranked).model_dump_json()
+
+
+def test_saved_version_21_receipts_keep_their_bytes():
+    # The version 21 receipt rules were rewritten to add version 22.
+    raw = (FIXTURES / "receipt-v21-rrf.json").read_text()
+    assert hashlib.sha256(raw.encode()).hexdigest() == V21_CHECKSUM
+    restored = RetrievalReceipt.model_validate_json(raw)
+    assert restored.schema_version == 21 and restored.packing.session_context_packing == "adjacent"
+    assert restored.packing.fold_repeated_text is False
+    assert restored.model_dump_json() == raw and restored.checksum == V21_CHECKSUM
+    assert restored.replay_ranking() == tuple(c.node_id for c in restored.candidates)
+
+
 # --- Through ingest() and retrieve() ---------------------------------------------------------------
-
-from unittest.mock import AsyncMock  # noqa: E402
-import hashlib  # noqa: E402
-
-from prme import MemoryEngine  # noqa: E402
-from prme.ingestion.schema import ExtractionResult  # noqa: E402
-from tests import test_durable_ingestion  # noqa: E402
-
-config = test_durable_ingestion.config
-user = test_durable_ingestion.user
-
 
 async def _extract(content, *, role="user", **_):
     facts = [{"subject": "I", "predicate": predicate, "object": obj, "polarity": "positive", "evidence_quote": SENTENCE}
@@ -151,25 +251,42 @@ async def _extract(content, *, role="user", **_):
                                             "facts": facts})
 
 
-async def _context(base, user, *, fold: bool):
+async def _retrieve(base, user, *, fold: bool) -> tuple[str, RetrievalReceipt]:
     settings = base.model_copy(update={
         "enable_claim_sentence_text": True,
-        "packing": base.packing.model_copy(update={"context_format": "reader", "fold_repeated_text": fold}),
+        "packing": base.packing.model_copy(update={"context_format": "reader", FIELD: fold}),
     })
     async with MemoryEngine.open(settings) as engine:
         engine._pipeline._extraction_provider.extract = AsyncMock(side_effect=_extract)
         await engine.ingest(TURN, user_id=user, session_id="s1", role="user", speaker="Dana", event_time=EVENT,
                             wait_for_extraction=True)
         response = await engine.retrieve("Where does Dana work, and who is the manager?", user_id=user)
-        receipt = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
+        request_id = str(response.metadata.request_id)
+        receipt = await engine.get_retrieval_receipt(request_id, user_id=user)
+        async with client_for(app_for(settings, engine, user)) as client:
+            served = await client.get(f"/v1/retrievals/{request_id}")
+    assert served.status_code == 200, served.text
+    assert served.json() == json.loads(receipt.model_dump_json())
     context = response.bundle.render()
     packed = {candidate.node.id for values in response.bundle.sections.values() for candidate in values}
     # The receipt describes exactly the folded context.
     assert receipt.context_sha256 == hashlib.sha256(context.encode()).hexdigest()
     assert {candidate.node_id for candidate in receipt.candidates if candidate.in_context} == packed
-    return context
+    return context, receipt
 
 
 async def test_ingest_and_retrieve_show_the_sentence_once(config, user):
-    assert (await _context(config, user, fold=False)).count(SENTENCE) == 4
-    assert (await _context(config, user + "-folded", fold=True)).count(SENTENCE) == 1
+    context, receipt = await _retrieve(config, user, fold=False)
+    assert context.count(SENTENCE) == 4
+    assert receipt.schema_version == 19 and FIELD not in json.loads(receipt.model_dump_json())["packing"]
+    context, receipt = await _retrieve(config, user + "-folded", fold=True)
+    assert context.count(SENTENCE) == 1
+    assert receipt.schema_version == 22 and receipt.packing.fold_repeated_text is True
+
+
+async def test_a_weighted_retrieval_records_folding_in_version_22(config, user):
+    context, receipt = await _retrieve(previous_defaults(config), user, fold=True)
+    assert context.count(SENTENCE) == 1
+    assert receipt.schema_version == 22 and receipt.scoring.fusion == "weighted"
+    _, unfolded = await _retrieve(previous_defaults(config), user + "-unfolded", fold=False)
+    assert unfolded.schema_version == 14

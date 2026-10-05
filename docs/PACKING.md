@@ -532,7 +532,11 @@ Versions 1 to 19 cannot record it, and an unset value is omitted. A retrieval
 with `packing.session_context_packing` set and session expansion on emits
 version 21 under either formula, which records the setting and admits the
 features of versions 12 to 20 for its formula. Versions 1 to 20 cannot record
-it; an unset value, or one set while session expansion is off, is omitted.
+it; an unset value, or one set while session expansion is off, is omitted. A
+retrieval with `packing.fold_repeated_text` on emits version 22 under either
+formula, which records the setting and admits the features of versions 12 to
+21 for its formula, session context packing included. Versions 1 to 21 cannot
+record it, and the setting is omitted while off.
 
 Temporal guidance is enabled by default. It adds the question time and explicit
 record-relative date instructions only after selection, and only when the whole

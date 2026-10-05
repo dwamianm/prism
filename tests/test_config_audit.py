@@ -84,6 +84,8 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     session_packing = settings["packing.session_context_packing"]
     assert (session_packing.effective, session_packing.value, session_packing.customized) == (False, None, False)
     assert session_packing.environment_variable == "PRME_PACKING__SESSION_CONTEXT_PACKING"
+    folding = settings["packing.fold_repeated_text"]
+    assert (folding.effective, folding.value, folding.customized) == (False, False, False)
     assert settings["enable_qa_pairing"].effective is False
     assert settings["novelty_high_threshold"].effective is False
     assert settings["query_reformulation_count"].effective is False
@@ -106,6 +108,19 @@ def test_session_context_packing_is_effective_only_with_session_expansion():
     for disabled in ({"session_context_window": 0}, {"session_context_top_k": 0}):
         _, off = _by_path(PRMEConfig(packing=packing.model_copy(update=disabled)))
         assert off["packing.session_context_packing"].effective is False
+
+
+def test_folding_is_effective_only_in_the_reader_format():
+    packing = PRMEConfig().packing.model_copy(update={"fold_repeated_text": True})
+    _, settings = _by_path(PRMEConfig(packing=packing))
+    setting = settings["packing.fold_repeated_text"]
+    assert (setting.effective, setting.value, setting.customized) == (True, True, True)
+    assert setting.environment_variable == "PRME_PACKING__FOLD_REPEATED_TEXT"
+    assert "'reader'" in setting.activation_condition
+    # model_copy skips the validator that refuses other formats; packing then ignores the setting.
+    auditable = PRMEConfig().model_copy(update={"packing": packing.model_copy(update={"context_format": "auditable"})})
+    _, off = _by_path(auditable)
+    assert off["packing.fold_repeated_text"].effective is False
 
 
 def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
