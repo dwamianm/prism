@@ -1,0 +1,1065 @@
+{
+  "kind": "offline-evidence-gate-comparison",
+  "complete": true,
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "interval_note": "Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, so they are narrower than conversation-level intervals.",
+  "before": {
+    "provenance": {
+      "commit": "f05b0ff0bcb293e1019f9c717f92dcca8d070168",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.15",
+      "platform": "macOS-26.2-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.13.0",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time"
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_claim_merge": true,
+        "enable_windowed_extraction": false,
+        "extraction_window_turns": 4,
+        "enable_fact_text_resolution": false,
+        "enable_speaker_references": false,
+        "enable_claim_sentence_text": false,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "reranker_prior_weight": 0.3,
+        "reranker_policy": "legacy",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {},
+      "retrieval_timing": "after-warm-up-v1",
+      "packs": {
+        "path": "/Users/dmac/Sites/prism/data/extracted-packs-v1/ingest-baseline-lme-deepseek-r2",
+        "build_sha256": "d9b5f9da64d7c40ce2eab36143080edc7e700aa1f9f1ac62f67586563b5eb287",
+        "build": "ingest-baseline-lme-deepseek-r2",
+        "model": "deepseek-v4.1-flash:cloud",
+        "packs": {
+          "58bf7951": "d8f85029e66c93a3429f754977182a0c3ad738168ec2d02d57f798fa0aeebaef",
+          "ad7109d1": "c8b747854f45e35a2d6c38abe793d1fc77024111135195ba58fae6a06c6f900c",
+          "c8c3f81d": "c43a885ebfcd592e0d93e08d41f8c6f7e58cbe7e8236b0f94f270224748a32d6",
+          "36580ce8": "65bff173d89c61097de252fb4d7ee28db14b547a860b282af43bcf8abd814b04",
+          "0a995998": "bcb4acddf98950727a78472a98e479b3bc9811656b1ca7fbb9ed10c52a6016f6",
+          "gpt4_15e38248": "c73381ea3939f0dd9c32a3ee880e17d3c250532c60f140dcc6fd94d18c0860a4",
+          "gpt4_7fce9456": "b34480088cb3750fa03d79222c1537b73280754129e412c77df1fe9024b63eec",
+          "00ca467f": "de7aaf9d7a64656739dc0ee4f70707380bbc33bcba9f4d798f77b51426ceec3f",
+          "gpt4_ab202e7f": "6468b7b4e309cad89674a25fbb73a78fc5a705288db03baf9b13d83161f9283f",
+          "80ec1f4f_abs": "eabcf54332a45b8d1205440712c323b1c6cea24a3b714090c7f92029c763ab62",
+          "06878be2": "890f8d8cb0b5209a5ed1bd5e813027f2d351aacd647dabec53dd12388d06e7f6",
+          "195a1a1b": "e0dac301901184e46545e77e63bb334db38a4a47fe37950e812efb25641e2623",
+          "54026fce": "fc2a5fe0c888a634e437f0083a9780c627cfcd1bd979ce25cc5d253be1b6a3ef",
+          "6b7dfb22": "3b219911926a9c3986918acb717dd7f1724fe301ac4f251e3cf0537057317201",
+          "38146c39": "e2c1f8cd39f5431f7cb224f354004a417c31eb21095fe21288c3d078fa70bd17",
+          "51c32626": "eebde012ea66d099cd201474d413dad493511c1ffe3585e924149d2da846c0f5",
+          "720133ac": "abe6ac195f67739900f494ea39fc655aba97dc69bda5a1e335580c4d26b0df8f",
+          "ba358f49": "497ac4f8db85cc9f6a847f9279fb191d92917f332a5000d199819c3b68471f40",
+          "bc149d6b": "50c31d16cc3e6c5f9e7e7625e478c17db0906b6a3d09f331445aaf973cfe5616",
+          "37f165cf": "936bb6b229e3ae3811899f280560536130b7b78b20ee287ffd8584551f547d5a",
+          "a96c20ee_abs": "9940af71031def061ce31a863c92c5ec57f6b41f54701fea97a59f09859b6c49",
+          "09ba9854_abs": "c20f5fcd61e2bf17c2d3bd06d11dcebcec268490f08b5f691096fce599866ff1",
+          "gpt4_7abb270c": "5105c2c3588e417f36fc3003eb85535dfdc0e88ddbf96a036066382c76b494bc",
+          "370a8ff4": "9667c1280c4430b8c0da0975b330f9ef21ea48208c2f72ffd79df774a87045a1",
+          "gpt4_f420262c": "04d8eb399342467a9103cb13c98ac6791113a435d415e9496576deafd8f85f3e",
+          "bcbe585f": "a15dd802c7693e7cf2c9122d87c1109ee4fd241a0c00eaf6b32f888052734350",
+          "eac54add": "7afbe55b347709595500be23f6cb1a65245eb251d7e5af0d3634de0212820324",
+          "6e984302": "7729a41e565a5ce9dcfd20c2700b838b7d6dff255415949953239c29f2d9f69d",
+          "gpt4_6ed717ea": "aebfbcf0395d343a59854813a6981b363cee6ef6b8bd63f56461814445f042b2",
+          "gpt4_4edbafa2": "ecf6d29d58850d246a07fb11e7e24a40da9f64388683583b7d33e5b48bd75917",
+          "gpt4_d31cdae3": "798269626b73e6b184641a6210b8871a53280e7310474da7d277297665423fb2",
+          "6aeb4375": "0b940a06cf5f8fc7e3abff08b5209efd15c1e0994a86ab1ad37fc69a4192bfea",
+          "6071bd76": "4eeaacc79635c84d359ceb51926bde1348fc065174a00d1e1f0c3f82279afaee",
+          "b01defab": "29ee9d0dcc628670cfda2b4ce9db44c080b57552e0e2a04c3bfd383c9d549f6b",
+          "c6853660": "cb2a44e893743fa2948ba8764707a099d98e38bbeb812cbe1612ae8b4c928afa",
+          "031748ae_abs": "47cf239cf4bdc0247ee4c00c7d06c66d16847c92c642ef0d1db9525a81611b4b",
+          "07741c45": "ee3293f6302ad31e27849c25af70668655ec5b5d17cc973c4cd13f71e1c806e0",
+          "c4f10528": "527409e1695e5fc88a2a201a0ba7252e70a758da0a15771e515a31a11cf36e00",
+          "ceb54acb": "026be8df6610614facf6006dc0288f4cb098a672312dbe11b883b3b9ce95b069",
+          "1d4da289": "769f9e9a7740b079557aebe85404a3278014a94bbbc87a0dfcfbe2f15b1141d0",
+          "70b3e69b": "fc8bc447555f07ad82460da37081efdfacbd80464a10534eb3327891605f9fa0",
+          "561fabcd": "a8e8890b651d997bae796ca2de9fae17da35fceb355f0e468d9967dd7643c2f3"
+        },
+        "evidence_claim_coverage": {
+          "longmemeval": {
+            "annotated_evidence_turns": 79,
+            "with_claims": 75,
+            "share": 0.9493670886075949
+          }
+        }
+      },
+      "datasets": {
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      },
+      "slice": {
+        "name": "dev-v1",
+        "sha256": "a65242b0e85ed87978e6941a406fe25cfe42d9c31132705d313438ff8d7179a2"
+      }
+    },
+    "started_at": "2026-10-02T03:55:45.009556+00:00",
+    "load_average": {
+      "start": [
+        9.74072265625,
+        8.63623046875,
+        9.1748046875
+      ],
+      "end": [
+        8.2236328125,
+        8.380859375,
+        9.06298828125
+      ]
+    }
+  },
+  "after": {
+    "provenance": {
+      "commit": "8ed4e559b840dc03370b092f7c8d779dfd342ef2",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.15",
+      "platform": "macOS-26.2-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.13.0",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time"
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "fold_repeated_text": true,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_claim_merge": true,
+        "enable_windowed_extraction": false,
+        "extraction_window_turns": 4,
+        "enable_fact_text_resolution": false,
+        "enable_speaker_references": false,
+        "enable_claim_sentence_text": false,
+        "enable_speaker_grounding": false,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "reranker_prior_weight": 0.3,
+        "reranker_policy": "legacy",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {
+        "packing": {
+          "fold_repeated_text": true
+        }
+      },
+      "retrieval_timing": "after-warm-up-v1",
+      "packs": {
+        "path": "/Users/dmac/Sites/prism/data/extracted-packs-v1/ingest-baseline-lme-deepseek-r2",
+        "build_sha256": "d9b5f9da64d7c40ce2eab36143080edc7e700aa1f9f1ac62f67586563b5eb287",
+        "build": "ingest-baseline-lme-deepseek-r2",
+        "model": "deepseek-v4.1-flash:cloud",
+        "packs": {
+          "58bf7951": "d8f85029e66c93a3429f754977182a0c3ad738168ec2d02d57f798fa0aeebaef",
+          "ad7109d1": "c8b747854f45e35a2d6c38abe793d1fc77024111135195ba58fae6a06c6f900c",
+          "c8c3f81d": "c43a885ebfcd592e0d93e08d41f8c6f7e58cbe7e8236b0f94f270224748a32d6",
+          "36580ce8": "65bff173d89c61097de252fb4d7ee28db14b547a860b282af43bcf8abd814b04",
+          "0a995998": "bcb4acddf98950727a78472a98e479b3bc9811656b1ca7fbb9ed10c52a6016f6",
+          "gpt4_15e38248": "c73381ea3939f0dd9c32a3ee880e17d3c250532c60f140dcc6fd94d18c0860a4",
+          "gpt4_7fce9456": "b34480088cb3750fa03d79222c1537b73280754129e412c77df1fe9024b63eec",
+          "00ca467f": "de7aaf9d7a64656739dc0ee4f70707380bbc33bcba9f4d798f77b51426ceec3f",
+          "gpt4_ab202e7f": "6468b7b4e309cad89674a25fbb73a78fc5a705288db03baf9b13d83161f9283f",
+          "80ec1f4f_abs": "eabcf54332a45b8d1205440712c323b1c6cea24a3b714090c7f92029c763ab62",
+          "06878be2": "890f8d8cb0b5209a5ed1bd5e813027f2d351aacd647dabec53dd12388d06e7f6",
+          "195a1a1b": "e0dac301901184e46545e77e63bb334db38a4a47fe37950e812efb25641e2623",
+          "54026fce": "fc2a5fe0c888a634e437f0083a9780c627cfcd1bd979ce25cc5d253be1b6a3ef",
+          "6b7dfb22": "3b219911926a9c3986918acb717dd7f1724fe301ac4f251e3cf0537057317201",
+          "38146c39": "e2c1f8cd39f5431f7cb224f354004a417c31eb21095fe21288c3d078fa70bd17",
+          "51c32626": "eebde012ea66d099cd201474d413dad493511c1ffe3585e924149d2da846c0f5",
+          "720133ac": "abe6ac195f67739900f494ea39fc655aba97dc69bda5a1e335580c4d26b0df8f",
+          "ba358f49": "497ac4f8db85cc9f6a847f9279fb191d92917f332a5000d199819c3b68471f40",
+          "bc149d6b": "50c31d16cc3e6c5f9e7e7625e478c17db0906b6a3d09f331445aaf973cfe5616",
+          "37f165cf": "936bb6b229e3ae3811899f280560536130b7b78b20ee287ffd8584551f547d5a",
+          "a96c20ee_abs": "9940af71031def061ce31a863c92c5ec57f6b41f54701fea97a59f09859b6c49",
+          "09ba9854_abs": "c20f5fcd61e2bf17c2d3bd06d11dcebcec268490f08b5f691096fce599866ff1",
+          "gpt4_7abb270c": "5105c2c3588e417f36fc3003eb85535dfdc0e88ddbf96a036066382c76b494bc",
+          "370a8ff4": "9667c1280c4430b8c0da0975b330f9ef21ea48208c2f72ffd79df774a87045a1",
+          "gpt4_f420262c": "04d8eb399342467a9103cb13c98ac6791113a435d415e9496576deafd8f85f3e",
+          "bcbe585f": "a15dd802c7693e7cf2c9122d87c1109ee4fd241a0c00eaf6b32f888052734350",
+          "eac54add": "7afbe55b347709595500be23f6cb1a65245eb251d7e5af0d3634de0212820324",
+          "6e984302": "7729a41e565a5ce9dcfd20c2700b838b7d6dff255415949953239c29f2d9f69d",
+          "gpt4_6ed717ea": "aebfbcf0395d343a59854813a6981b363cee6ef6b8bd63f56461814445f042b2",
+          "gpt4_4edbafa2": "ecf6d29d58850d246a07fb11e7e24a40da9f64388683583b7d33e5b48bd75917",
+          "gpt4_d31cdae3": "798269626b73e6b184641a6210b8871a53280e7310474da7d277297665423fb2",
+          "6aeb4375": "0b940a06cf5f8fc7e3abff08b5209efd15c1e0994a86ab1ad37fc69a4192bfea",
+          "6071bd76": "4eeaacc79635c84d359ceb51926bde1348fc065174a00d1e1f0c3f82279afaee",
+          "b01defab": "29ee9d0dcc628670cfda2b4ce9db44c080b57552e0e2a04c3bfd383c9d549f6b",
+          "c6853660": "cb2a44e893743fa2948ba8764707a099d98e38bbeb812cbe1612ae8b4c928afa",
+          "031748ae_abs": "47cf239cf4bdc0247ee4c00c7d06c66d16847c92c642ef0d1db9525a81611b4b",
+          "07741c45": "ee3293f6302ad31e27849c25af70668655ec5b5d17cc973c4cd13f71e1c806e0",
+          "c4f10528": "527409e1695e5fc88a2a201a0ba7252e70a758da0a15771e515a31a11cf36e00",
+          "ceb54acb": "026be8df6610614facf6006dc0288f4cb098a672312dbe11b883b3b9ce95b069",
+          "1d4da289": "769f9e9a7740b079557aebe85404a3278014a94bbbc87a0dfcfbe2f15b1141d0",
+          "70b3e69b": "fc8bc447555f07ad82460da37081efdfacbd80464a10534eb3327891605f9fa0",
+          "561fabcd": "a8e8890b651d997bae796ca2de9fae17da35fceb355f0e468d9967dd7643c2f3"
+        },
+        "evidence_claim_coverage": {
+          "longmemeval": {
+            "annotated_evidence_turns": 79,
+            "with_claims": 75,
+            "share": 0.9493670886075949
+          }
+        }
+      },
+      "datasets": {
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      },
+      "slice": {
+        "name": "dev-v1",
+        "sha256": "a65242b0e85ed87978e6941a406fe25cfe42d9c31132705d313438ff8d7179a2"
+      }
+    },
+    "started_at": "2026-10-05T22:06:00.399130+00:00",
+    "load_average": {
+      "start": [
+        9.861328125,
+        8.55029296875,
+        7.654296875
+      ],
+      "end": [
+        10.12060546875,
+        8.8232421875,
+        7.80078125
+      ]
+    }
+  },
+  "projection": {
+    "label": "Planning estimate, not an answer score.",
+    "method": "Each question takes the saved GPT-5.4 run's accuracy on questions whose annotated evidence was all packed, or partly missing: per category for LoCoMo, pooled for LongMemEval-S. Questions that retrieval cannot move (no resolvable annotation, or abstention) keep their category's measured rate.",
+    "calibration": "At the saved run's evidence states the projection reproduces 985/1,540 and 430/500 by construction; LongMemEval-S category values are pooled estimates. The audit's re-pack simulator, using the same LoCoMo rates, reproduced the real packed sets with mean Jaccard 0.83 and projected 63.3% against 64.0% measured (memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md, section 1).",
+    "limits": [
+      "It ignores distractor effects: added or reordered context can change answers without changing evidence coverage.",
+      "It relies on the datasets' evidence annotations, which have gaps; equivalent evidence can exist elsewhere.",
+      "Its conditional accuracies come from one reader and one strict judge (GPT-5.4).",
+      "All 2,040 questions have already been examined, so this is a development gate. Publication claims need fresh or held-out data."
+    ],
+    "conditional_accuracy": {
+      "locomo": {
+        "single-hop": {
+          "all_packed": [
+            600,
+            657
+          ],
+          "missing": [
+            30,
+            183
+          ]
+        },
+        "temporal": {
+          "all_packed": [
+            216,
+            252
+          ],
+          "missing": [
+            10,
+            68
+          ]
+        },
+        "multi-hop": {
+          "all_packed": [
+            37,
+            45
+          ],
+          "missing": [
+            42,
+            233
+          ]
+        },
+        "open-domain": {
+          "all_packed": [
+            22,
+            29
+          ],
+          "missing": [
+            19,
+            60
+          ]
+        }
+      },
+      "longmemeval": {
+        "*": {
+          "all_packed": [
+            385,
+            403
+          ],
+          "missing": [
+            21,
+            67
+          ]
+        }
+      }
+    },
+    "unscored_accuracy": {
+      "locomo": {
+        "multi-hop": [
+          1,
+          4
+        ],
+        "open-domain": [
+          7,
+          7
+        ],
+        "single-hop": [
+          0,
+          1
+        ],
+        "temporal": [
+          1,
+          1
+        ]
+      },
+      "longmemeval": {
+        "knowledge-update": [
+          4,
+          6
+        ],
+        "multi-session": [
+          9,
+          12
+        ],
+        "single-session-user": [
+          6,
+          6
+        ],
+        "temporal-reasoning": [
+          5,
+          6
+        ]
+      }
+    },
+    "measured_accuracy": {
+      "locomo": [
+        985,
+        1540
+      ],
+      "longmemeval": [
+        430,
+        500
+      ]
+    }
+  },
+  "benchmarks": {
+    "longmemeval": {
+      "all_evidence_packed": {
+        "queries": 38,
+        "before": 0.7105263157894737,
+        "after": 0.7631578947368421,
+        "delta": 0.05263157894736842,
+        "interval_95": [
+          0.0,
+          0.13157894736842105
+        ],
+        "wins": 2,
+        "losses": 0,
+        "ties": 36
+      },
+      "all_evidence_packed_with_text": {
+        "queries": 38,
+        "before": 0.7105263157894737,
+        "after": 0.7631578947368421,
+        "delta": 0.05263157894736842,
+        "interval_95": [
+          0.0,
+          0.13157894736842105
+        ],
+        "wins": 2,
+        "losses": 0,
+        "ties": 36
+      },
+      "evidence_recall": {
+        "queries": 38,
+        "before": 0.8412280701754385,
+        "after": 0.8842105263157894,
+        "delta": 0.042982456140350886,
+        "interval_95": [
+          0.013157894736842106,
+          0.07894736842105264
+        ],
+        "wins": 6,
+        "losses": 0,
+        "ties": 32
+      },
+      "all_evidence_returned": {
+        "queries": 38,
+        "before": 1.0,
+        "after": 1.0,
+        "delta": 0.0,
+        "interval_95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 38
+      },
+      "projected_accuracy": {
+        "queries": 42,
+        "before": 0.765677917278784,
+        "after": 0.7962446864107914,
+        "delta": 0.030566769132007458,
+        "interval_95": [
+          0.0,
+          0.07641692283001864
+        ],
+        "wins": 2,
+        "losses": 0,
+        "ties": 40
+      },
+      "gained_all_evidence_among_candidates": [],
+      "lost_all_evidence_among_candidates": [],
+      "gained_all_evidence": [
+        "06878be2",
+        "gpt4_f420262c"
+      ],
+      "lost_all_evidence": [],
+      "all_evidence_packed_by_category": {
+        "knowledge-update": {
+          "queries": 5,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 5
+        },
+        "multi-session": {
+          "queries": 10,
+          "before": 0.4,
+          "after": 0.4,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 10
+        },
+        "single-session-assistant": {
+          "queries": 5,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 5
+        },
+        "single-session-preference": {
+          "queries": 5,
+          "before": 0.8,
+          "after": 1.0,
+          "delta": 0.2,
+          "interval_95": [
+            0.0,
+            0.6
+          ],
+          "wins": 1,
+          "losses": 0,
+          "ties": 4
+        },
+        "single-session-user": {
+          "queries": 4,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 4
+        },
+        "temporal-reasoning": {
+          "queries": 9,
+          "before": 0.5555555555555556,
+          "after": 0.6666666666666666,
+          "delta": 0.1111111111111111,
+          "interval_95": [
+            0.0,
+            0.3333333333333333
+          ],
+          "wins": 1,
+          "losses": 0,
+          "ties": 8
+        }
+      },
+      "context": {
+        "before": {
+          "questions": 42,
+          "contexts_matching_saved": 0,
+          "records_per_context": 49.54761904761905,
+          "memory_text_share": 0.8091808751639442,
+          "records_without_text": 0,
+          "candidates_mean": 1093.8333333333333
+        },
+        "after": {
+          "questions": 42,
+          "contexts_matching_saved": 0,
+          "records_per_context": 32.80952380952381,
+          "memory_text_share": 0.8506567454284198,
+          "records_without_text": 0,
+          "candidates_mean": 1093.8333333333333
+        }
+      },
+      "retrieval_seconds": {
+        "before": {
+          "p50": 0.2965090210782364,
+          "p95": 0.9060732417972759
+        },
+        "after": {
+          "p50": 0.37791439541615546,
+          "p95": 1.0011097272858023
+        }
+      },
+      "reranking_seconds": {
+        "before": null,
+        "after": null
+      },
+      "aggregation": {
+        "before": {
+          "questions": 13,
+          "filled_widened_limit": 13,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 12,
+            "VECTOR": 13
+          }
+        },
+        "after": {
+          "questions": 13,
+          "filled_widened_limit": 13,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 12,
+            "VECTOR": 13
+          }
+        }
+      },
+      "query_scoring": {
+        "temporal_affinity_varies_by_category": {
+          "questions": {
+            "knowledge-update": 6,
+            "multi-session": 13,
+            "single-session-assistant": 5,
+            "single-session-preference": 5,
+            "single-session-user": 4,
+            "temporal-reasoning": 9
+          },
+          "before": {
+            "knowledge-update": 1,
+            "multi-session": 1,
+            "single-session-assistant": 0,
+            "single-session-preference": 0,
+            "single-session-user": 0,
+            "temporal-reasoning": 3
+          },
+          "after": {
+            "knowledge-update": 1,
+            "multi-session": 1,
+            "single-session-assistant": 0,
+            "single-session-preference": 0,
+            "single-session-user": 0,
+            "temporal-reasoning": 3
+          }
+        },
+        "entered_current_state_path": [],
+        "left_current_state_path": [],
+        "current_state_path_unknown": 0
+      },
+      "session_context_records": {
+        "before": {
+          "all": {
+            "reached": 1026,
+            "added": 17,
+            "promoted": 164,
+            "reached_share": 0.49303219605958676,
+            "added_share": 0.008169149447381067,
+            "promoted_share": 0.07880826525708794
+          },
+          "knowledge-update": {
+            "reached": 162,
+            "added": 2,
+            "promoted": 24,
+            "reached_share": 0.5418060200668896,
+            "added_share": 0.006688963210702341,
+            "promoted_share": 0.0802675585284281
+          },
+          "multi-session": {
+            "reached": 342,
+            "added": 5,
+            "promoted": 67,
+            "reached_share": 0.5411392405063291,
+            "added_share": 0.007911392405063292,
+            "promoted_share": 0.1060126582278481
+          },
+          "single-session-assistant": {
+            "reached": 133,
+            "added": 3,
+            "promoted": 27,
+            "reached_share": 0.5659574468085107,
+            "added_share": 0.01276595744680851,
+            "promoted_share": 0.1148936170212766
+          },
+          "single-session-preference": {
+            "reached": 113,
+            "added": 3,
+            "promoted": 12,
+            "reached_share": 0.45934959349593496,
+            "added_share": 0.012195121951219513,
+            "promoted_share": 0.04878048780487805
+          },
+          "single-session-user": {
+            "reached": 82,
+            "added": 1,
+            "promoted": 13,
+            "reached_share": 0.3744292237442922,
+            "added_share": 0.0045662100456621,
+            "promoted_share": 0.0593607305936073
+          },
+          "temporal-reasoning": {
+            "reached": 194,
+            "added": 3,
+            "promoted": 21,
+            "reached_share": 0.4311111111111111,
+            "added_share": 0.006666666666666667,
+            "promoted_share": 0.04666666666666667
+          }
+        },
+        "after": {
+          "all": {
+            "reached": 493,
+            "added": 8,
+            "promoted": 166,
+            "reached_share": 0.35776487663280115,
+            "added_share": 0.005805515239477504,
+            "promoted_share": 0.1204644412191582
+          },
+          "knowledge-update": {
+            "reached": 68,
+            "added": 0,
+            "promoted": 24,
+            "reached_share": 0.384180790960452,
+            "added_share": 0.0,
+            "promoted_share": 0.13559322033898305
+          },
+          "multi-session": {
+            "reached": 161,
+            "added": 0,
+            "promoted": 59,
+            "reached_share": 0.38424821002386633,
+            "added_share": 0.0,
+            "promoted_share": 0.14081145584725538
+          },
+          "single-session-assistant": {
+            "reached": 72,
+            "added": 2,
+            "promoted": 16,
+            "reached_share": 0.3829787234042553,
+            "added_share": 0.010638297872340425,
+            "promoted_share": 0.0851063829787234
+          },
+          "single-session-preference": {
+            "reached": 54,
+            "added": 0,
+            "promoted": 22,
+            "reached_share": 0.3050847457627119,
+            "added_share": 0.0,
+            "promoted_share": 0.12429378531073447
+          },
+          "single-session-user": {
+            "reached": 45,
+            "added": 2,
+            "promoted": 15,
+            "reached_share": 0.34615384615384615,
+            "added_share": 0.015384615384615385,
+            "promoted_share": 0.11538461538461539
+          },
+          "temporal-reasoning": {
+            "reached": 93,
+            "added": 4,
+            "promoted": 30,
+            "reached_share": 0.3240418118466899,
+            "added_share": 0.013937282229965157,
+            "promoted_share": 0.10452961672473868
+          }
+        }
+      }
+    }
+  },
+  "inputs": {
+    "before_sha256": "3d29659cdd52701591c61ea50cb93e6735d7d0fa106ea22c74e42fc727c22e9c",
+    "after_sha256": "ff02f51bdb431487910a1d83cc0ec658a2675f0f5c816c7296a31008b721cc1e"
+  }
+}

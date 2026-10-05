@@ -46,13 +46,13 @@ class ReceiptCandidate(BaseModel):
 
 RankingPolicy = Literal["score_path_id", "reranked_prefix", "score_id"]
 # Rank fusion receipt versions. Version 20 is weighted again (issue #83), and
-# version 21 records either formula (issue #86).
+# versions 21 (issue #86) and 22 record either formula.
 RANK_FUSION_RECEIPT_VERSIONS = range(15, 20)
 
 
 class RetrievalReceipt(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] = 1
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22] = 1
     request_id: UUID
     user_id: str = Field(min_length=1)
     query: str
@@ -335,12 +335,13 @@ class RetrievalReceipt(BaseModel):
             for provenance in (self.score_provenance or {}).values()
         )
         # Version 21 records the opt-in session context packing (issue #86)
-        # under either formula: rank-fused, it follows the rules of versions
-        # 16 to 19 and admits their features; weighted, those of version 20
-        # without requiring event-time recency.
-        session_packing_version = self.schema_version == 21
+        # and version 22 folded repeated text, under either formula:
+        # rank-fused, they follow the rules of versions 16 to 19 and admit
+        # their features; weighted, those of version 20 without requiring
+        # event-time recency.
+        either_formula_version = self.schema_version >= 21
         is_rank_fusion_version = self.schema_version in RANK_FUSION_RECEIPT_VERSIONS or (
-            session_packing_version and rank_fused
+            either_formula_version and rank_fused
         )
         if self.schema_version < 15 and rank_fused:
             raise ValueError("Rank fusion scoring requires a version 15 receipt")
@@ -350,15 +351,15 @@ class RetrievalReceipt(BaseModel):
                     for provenance in (self.score_provenance or {}).values())
         ):
             raise ValueError(
-                "Rank-fused version 21 receipts record rank fusion scoring only"
-                if session_packing_version
+                f"Rank-fused version {self.schema_version} receipts record rank fusion scoring only"
+                if either_formula_version
                 else "Versions 15 to 19 record rank fusion scoring only"
             )
-        # Version 20, and version 21 when weighted, record none of the rank
-        # fusion features of versions 15 to 19. ScoringWeights itself rejects
-        # rank fusion settings under weighted scoring.
+        # Version 20, and versions 21 and 22 when weighted, record none of the
+        # rank fusion features of versions 15 to 19. ScoringWeights itself
+        # rejects rank fusion settings under weighted scoring.
         weighted_version = self.schema_version == 20 or (
-            session_packing_version and not rank_fused
+            either_formula_version and not rank_fused
         )
         if weighted_version and rank_fused:
             raise ValueError("Version 20 records weighted scoring only")
@@ -387,8 +388,9 @@ class RetrievalReceipt(BaseModel):
         if self.schema_version >= 16 and is_rank_fusion_version:
             if any(value is None for value in relevances):
                 raise ValueError(
-                    "Rank-fused version 21 receipts record every candidate's rank fusion relevance"
-                    if session_packing_version
+                    f"Rank-fused version {self.schema_version} receipts record every candidate's "
+                    "rank fusion relevance"
+                    if either_formula_version
                     else "Versions 16 to 19 record every candidate's rank fusion relevance"
                 )
             if self.min_score is not None and not self.min_score_skipped and any(
@@ -443,8 +445,16 @@ class RetrievalReceipt(BaseModel):
         session_packing = self.packing.session_context_packing
         if self.schema_version < 21 and session_packing is not None:
             raise ValueError("Session context packing requires a version 21 receipt")
-        if session_packing_version and session_packing is None:
+        if self.schema_version == 21 and session_packing is None:
             raise ValueError("Version 21 records session context packing")
+        # Version 22 records folded repeated text, with or without session
+        # context packing; earlier versions cannot, so they keep their bytes.
+        # PackingConfig itself refuses it outside the reader format.
+        folded = self.packing.fold_repeated_text
+        if self.schema_version < 22 and folded:
+            raise ValueError("Folded repeated text requires a version 22 receipt")
+        if self.schema_version == 22 and not folded:
+            raise ValueError("Version 22 records folded repeated text")
         boosted = {provenance.rank_fusion.recency_boost_factor is not None
                    for provenance in provenances if provenance.rank_fusion is not None}
         if len(boosted) > 1:
@@ -643,6 +653,11 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
     )
     if session_packing is not None and execution is None:
         raise ValueError("Session context packing receipts require an execution descriptor")
+    # Folding applies only to the reader format, which already requires an
+    # execution descriptor. A config built with model_copy can set it on
+    # another format, where packing ignores it, so the receipt then keeps the
+    # version and bytes it would have without it.
+    folded = packing.fold_repeated_text and packing.context_format == "reader"
     # Pre-guidance receipts mean guidance was off. Direct callers that omit an
     # execution descriptor retain that historical schema and exact semantics.
     receipt_packing = packing if execution is not None else packing.model_copy(
@@ -660,15 +675,21 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         )
     if packing.session_context_packing is not None and session_packing is None:
         receipt_packing = receipt_packing.model_copy(update={"session_context_packing": None})
+    if packing.fold_repeated_text and not folded:
+        receipt_packing = receipt_packing.model_copy(update={"fold_repeated_text": False})
     has_rank_assignment = any(
         operation.kind == "neural_rank_assignment"
         for item in provenance.values() for operation in item.adjustments
     )
     if has_rank_assignment and execution is None:
         raise ValueError("Neural rank assignment requires an execution descriptor")
-    version: Literal[2, 12, 13, 14, 16, 17, 18, 19, 20, 21]
+    version: Literal[2, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22]
     if execution is None:
         version = 2
+    elif folded:
+        # Version 22 also admits every version 12 to 21 feature, under either
+        # formula.
+        version = 22
     elif session_packing is not None:
         # Version 21 also admits every version 12 to 20 feature, under either
         # formula.

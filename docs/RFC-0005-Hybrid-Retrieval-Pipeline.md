@@ -717,6 +717,12 @@ and admits their features; a weighted one follows the version 20 rules without
 requiring `recency_time`. Versions 1 to 20 cannot record the setting. An unset
 value is omitted, and so is one set while session expansion is off, when it
 changes nothing, so every other receipt keeps its version and bytes.
+A retrieval with `PackingConfig.fold_repeated_text` on (RFC-0006 Section 5)
+writes version 22 under either formula, which records the setting and follows
+the version 21 rules, with or without session context packing. Versions 1 to
+21 cannot record it. The setting is omitted while off, and also when a
+configuration built with `model_copy` sets it outside the reader format, where
+packing ignores it, so every other receipt keeps its version and bytes.
 
 ### 7.3 Optional cross-encoder rank order (issue #88)
 

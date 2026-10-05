@@ -1001,7 +1001,108 @@ So the option completes the graph but costs evidence in a 4,096-token
 context, and it stays off. More claims can help retrieval only once the
 packer stops spending budget on several records of the same turn. Reports:
 `benchmarks/results/research/2026-10-05/locomo-full-speaker-grounding-vs-control.md`
-and `locomo-full-speaker-grounding-with-refs-sentences.md`.
+and `locomo-full-speaker-grounding-with-refs-sentences.md`. With repeated text
+folded (next section), the option no longer loses evidence with the defaults
+and loses 0.8 points with both other options on, but it still gains nothing.
+
+### Folding repeated text (`packing.fold_repeated_text`)
+
+`ingest()` keeps each turn's own record beside the claims extracted from it,
+and the claims from one sentence share that sentence as their text, or the
+whole message without claim sentences. So a reader context can show one
+sentence several times. With the option on, a record is left out when a packed
+record from the same source event already shows its text, and packing a record
+removes the earlier packed records of its source events whose text it shows,
+so their budget goes to other records. A record folds only into one with the
+same tags and, where it shows them, the same event time, validity window and
+speaker (`docs/PACKING.md`). The option changes only packing, so each
+comparison below replays the same pack with the option off (the earlier
+report) and on (commit `8ed4e55`).
+
+On the chat probe, with speaker references and claim sentences on and Dana
+named as the speaker of the user turns (the `grounding-off` extraction):
+
+| Measure | Option off | Option on |
+|---|---:|---:|
+| Repeated records in the 18 contexts, 4,096 tokens | 542 of 2,722 (19.9%) | 0 of 1,188 |
+| Repeated records in the 18 contexts, 1,024 tokens | 108 of 614 (17.6%) | 4 of 509 (0.8%) |
+| Probes with the answer in context, 4,096 / 1,024 tokens | 17 / 17 of 18 | 17 / 17 of 18 |
+
+At 4,096 tokens the whole chat fits, so a folded context holds each of the 54
+turns once and 12 claims whose line shows a date or tag that their turn's line
+does not ("[2026-04-13 21:04] I gave notice at Northwind yesterday.", or an
+`[inferred]` claim): 66 records instead of 151. The probes only check that the
+answer's words reach the context, so they cannot show what the freed room is
+worth; the gate below can.
+
+On all ten LoCoMo conversations (1,536 annotated questions), on the builds from
+the speaker grounding comparison, which share one set of raw model responses:
+
+| Build | Off | On | Change | Questions 95% | Conversations 95% | Wins / losses |
+|---|---:|---:|---:|---|---|---|
+| Defaults: all evidence packed | 75.2% | 79.9% | +4.7 pp | +3.6 to +5.8 | +3.1 to +6.4 | 76 / 4 |
+| Defaults: projected accuracy | 71.6% | 74.8% | +3.2 pp | +2.4 to +3.9 | +2.1 to +4.3 | 76 / 4 |
+| Defaults with speaker grounding: all evidence packed | 73.2% | 79.9% | +6.7 pp | +5.4 to +7.9 | +5.6 to +8.0 | 107 / 4 |
+| Defaults with speaker grounding: projected accuracy | 70.2% | 74.7% | +4.5 pp | +3.6 to +5.4 | +3.7 to +5.4 | 107 / 4 |
+| Speaker references and claim sentences: all evidence packed | 78.9% | 81.7% | +2.8 pp | +2.0 to +3.7 | +2.0 to +3.7 | 45 / 2 |
+| Speaker references and claim sentences: projected accuracy | 74.2% | 76.1% | +1.9 pp | +1.3 to +2.5 | +1.4 to +2.5 | 45 / 2 |
+| Both, with speaker grounding: all evidence packed | 77.9% | 80.9% | +2.9 pp | +2.1 to +3.8 | +2.1 to +3.9 | 47 / 2 |
+| Both, with speaker grounding: projected accuracy | 73.5% | 75.4% | +1.9 pp | +1.4 to +2.5 | +1.4 to +2.5 | 47 / 2 |
+
+- Every category gains in every build, and no build has any question with all
+  its evidence among the candidates lost or gained: folding changes only what
+  is packed. Multi-hop questions gain most (+8.9, +14.9, +5.0 and +6.7
+  points).
+- With the defaults a claim's text is its whole message, so a claim and its
+  turn fold into one record; a context holds 80.4 records instead of 79.8.
+  With claim sentences the short claims fold into their whole turns, so a
+  context holds 95.7 records instead of 103.3.
+- Folding and claim sentences add up: the defaults build packs all evidence
+  for 75.2% of questions, speaker references and claim sentences for 78.9%,
+  folding for 79.9% and all three for 81.7%.
+- With folding on, speaker grounding no longer costs evidence with the
+  defaults: all evidence packed changes by +0.0 points (-1.2 to +1.2 over
+  questions, -1.3 to +1.3 over conversations; 45 wins, 45 losses) instead of
+  -2.0, although 21 questions still lose some evidence from the candidates,
+  which packing cannot change. With speaker references and claim sentences it
+  still costs 0.8 points (-1.9 to +0.2 over questions, -1.8 to +0.1 over
+  conversations; 28 wins, 41 losses) instead of 1.0. It gains nothing either
+  way, so it stays off.
+
+With the option off at `8ed4e55`, all 1,540 LoCoMo contexts of the speaker
+references and claim sentences build are byte for byte those of the `d48769a`
+report, so each change above is the option's alone.
+
+On the LongMemEval-S development slice (42 questions, 38 annotated):
+
+| Build | Off | On | Change | Questions 95% | Wins / losses |
+|---|---:|---:|---:|---|---|
+| `ingest-baseline-lme-deepseek-r2`: all evidence packed | 71.1% | 76.3% | +5.3 pp | +0.0 to +13.2 | 2 / 0 |
+| `ingest-baseline-lme-deepseek-r2`: projected accuracy | 76.6% | 79.6% | +3.1 pp | +0.0 to +7.6 | 2 / 0 |
+| Claim sentences: all evidence packed | 86.8% | 89.5% | +2.6 pp | +0.0 to +7.9 | 1 / 0 |
+| Claim sentences: projected accuracy | 85.7% | 87.3% | +1.5 pp | +0.0 to +4.6 | 1 / 0 |
+
+A context holds 32.8 records instead of 49.5 on the baseline and 39.2 instead
+of 61.7 with claim sentences. With the option off at `8ed4e55`, every slice
+question's context is byte for byte the one recorded at `f05b0ff`.
+
+The saved-archive gate, which replays the `store()` packs of the GPT-5.4 run,
+could not run here, because the archive is on the machine that answers the
+DeepSeek runs. `store()` keeps one record per message and extracts nothing, so
+its records share no source event and folding should leave those contexts
+unchanged; `tests/test_fold_repeated_text.py` checks this for `store()`
+records. For the same reason the DeepSeek answer track, which replays those
+packs, cannot measure the option. Like claim sentences, it needs answer runs
+over `ingest()` packs before it can become a default, and it stays off.
+
+Reports in `benchmarks/results/research/2026-10-05/`: `locomo-full-fold-defaults.md`,
+`locomo-full-fold-defaults-with-grounding.md`, `locomo-full-fold-refs-sentences.md`,
+`locomo-full-fold-refs-sentences-with-grounding.md`,
+`locomo-full-speaker-grounding-folded.md`,
+`locomo-full-speaker-grounding-with-refs-sentences-folded.md`,
+`dev-slice-v1-lme-fold-r2.md` and `dev-slice-v1-lme-fold-claim-sentences.md`.
+The conversation-level intervals resample the ten conversations (4,000
+samples).
 
 ## Baselines for the GPT-5.4 comparison
 

@@ -303,6 +303,12 @@ def pack_context(
     neighbor beside the others of its window in session order, within its
     section; it changes where a record appears, not which records are packed.
 
+    With ``config.fold_repeated_text`` set, each source text is packed once: a
+    record whose text a packed record from the same source event already
+    shows is left out, and packing a record removes the earlier packed records
+    of its sources whose text it shows (:func:`_folds_into`). Removed records
+    join ``excluded_ids``; their budget goes to later candidates.
+
     Args:
         scored_candidates: Candidates from scoring stage, sorted by score.
         config: Packing configuration (token budget, min fidelity, etc.).
@@ -566,9 +572,70 @@ def pack_context(
             windows[member[0]][candidate.node.id] = member[1]
         return True
 
+    # Packed records by source event, for fold_repeated_text. Folding needs the
+    # reader format; a config built with model_copy skips that validation.
+    fold = config.fold_repeated_text and config.context_format == "reader"
+    packed_by_source: dict[UUID, list[RetrievalCandidate]] = {}
+
+    def _covered(candidate: RetrievalCandidate) -> bool:
+        """Whether a packed record from one of its sources already shows its text."""
+        return any(
+            other is not candidate and _folds_into(candidate, other)
+            for source in candidate.node.evidence_refs
+            for other in packed_by_source.get(source, ())
+        )
+
+    def _fold_into(container: RetrievalCandidate) -> None:
+        """Remove earlier packed records from ``container``'s sources whose text it shows."""
+        nonlocal rendered, tokens_used
+        contained = {
+            id(other): other
+            for source in container.node.evidence_refs
+            for other in packed_by_source.get(source, ())
+            if other is not container
+            and other.node.id not in required
+            and window_of(other) is None
+            and _folds_into(other, container)
+        }
+        if not contained:
+            return
+        proposed = {
+            section: kept
+            for section, values in sections.items()
+            if (kept := [item for item in values if id(item) not in contained])
+        }
+        text = _render_sections(
+            proposed,
+            coverage_notice=notice,
+            context_guidance=guidance if _require_guidance else None,
+            context_format=config.context_format,
+            context_refs=context_refs,
+        )
+        total = count_tokens(text, config.tokenizer)
+        if total > available:
+            # Removing lines cannot normally add tokens; keep the packed context if it would.
+            return
+        sections.clear()
+        sections.update(proposed)
+        rendered, tokens_used = text, total
+        for other in contained.values():
+            for source in other.node.evidence_refs:
+                packed_by_source[source] = [
+                    item for item in packed_by_source[source] if item is not other
+                ]
+            excluded_ids.append(other.node.id)
+
     for candidate in sorted(candidates, key=priority):
+        if fold and candidate.node.id not in required and _covered(candidate):
+            excluded_ids.append(candidate.node.id)
+            continue
         if not _pack(candidate):
             excluded_ids.append(candidate.node.id)
+            continue
+        if fold:
+            for source in candidate.node.evidence_refs:
+                packed_by_source.setdefault(source, []).append(candidate)
+            _fold_into(candidate)
 
     included_guidance = guidance if sections and _require_guidance else None
     if sections and guidance and not _require_guidance:
@@ -659,6 +726,38 @@ def pack_context_monotonic_compact(
     ):
         return control
     return candidate
+
+
+def _folds_into(inner: RetrievalCandidate, outer: RetrievalCandidate) -> bool:
+    """Whether ``outer``'s reader line shows everything ``inner``'s does.
+
+    The text must lie within ``outer``'s text, the tags must match, and an
+    event time, validity window or speaker that ``inner`` shows must be
+    ``outer``'s too. A date stated at the start of ``outer``'s text, which
+    replaces its time label, still means the same event time.
+    """
+    text = (inner.rendered_text or "").strip()
+    if not text or text not in (outer.rendered_text or ""):
+        return False
+    a, b = inner.node, outer.node
+    if _reader_tags(a) != _reader_tags(b):
+        return False
+    if a.event_time is not None and (
+        b.event_time is None or as_utc(a.event_time) != as_utc(b.event_time)
+    ):
+        return False
+    window = _shown_window(a)
+    if window is not None and window != _shown_window(b):
+        return False
+    speaker = metadata_speaker(a.metadata)
+    return speaker is None or speaker == metadata_speaker(b.metadata)
+
+
+def _shown_window(node: MemoryNode) -> tuple[datetime, datetime] | None:
+    """The validity window a reader line shows, as in :func:`_reader_time_label`."""
+    if node.valid_to is None or node.superseded_by is not None:
+        return None
+    return as_utc(node.valid_from), as_utc(node.valid_to)
 
 
 def _render_context_entry(
