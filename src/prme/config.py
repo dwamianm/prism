@@ -557,6 +557,21 @@ class PRMEConfig(_ProjectSettings):
             "from earlier turns only with enable_windowed_extraction."
         ),
     )
+    enable_speaker_references: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() binds a first-person singular "
+            "reference (I, me, my, mine, myself) in a claim from a turn that "
+            "names its speaker to that speaker's entity, the node other "
+            "mentions of the name share, instead of an identity local to the "
+            "message. A speaker's claims then connect across messages, and a "
+            "repeated or replaced claim can merge with or supersede the "
+            "earlier one. Turns without a speaker, and plural, second- and "
+            "third-person references, keep message-local identities. Default "
+            "False: only the caller knows that the named speaker, and not "
+            "someone the turn quotes, is who says I."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(
