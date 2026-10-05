@@ -81,6 +81,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         and packing.session_context_window > 0
         and packing.session_context_top_k != 0,
     ),
+    "packing.fold_repeated_text": (
+        "packing.fold_repeated_text",
+        "packing.fold_repeated_text is true",
+        bool,
+    ),
     "packing.cross_scope_top_n": (
         "packing.cross_scope_top_n",
         "packing.cross_scope_top_n > 0",

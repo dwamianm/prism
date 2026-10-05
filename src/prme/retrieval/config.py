@@ -592,6 +592,25 @@ class PackingConfig(BaseModel):
             "session expansion (session_context_window > 0). [HYPOTHESIS]"
         ),
     )
+    # Omitted when off, so configurations and receipts that do not use it keep
+    # their bytes.
+    fold_repeated_text: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "Pack each source text once. ingest() keeps a turn's own record "
+            "beside the claims extracted from it, and claims from one sentence "
+            "share its text, so a context can show one sentence several times. "
+            "When True, a record whose text is already in the context, inside "
+            "a packed record from the same source event, is left out, and "
+            "packing a record removes the earlier packed records from its "
+            "source events whose text it contains. A record folds only into "
+            "one with the same tags and, where it has them, the same event "
+            "time, validity window and speaker, so no text, date or state "
+            "leaves the context. Applies only to context_format='reader', "
+            "whose lines carry no record identity. [HYPOTHESIS]"
+        ),
+    )
     episode_context_top_k: int = Field(
         default=0,
         ge=0,
@@ -727,6 +746,15 @@ class PackingConfig(BaseModel):
         ):
             raise ValueError(
                 "Evidence projection and augmentation cannot both be enabled"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def folding_requires_reader_format(self) -> PackingConfig:
+        if self.fold_repeated_text and self.context_format != "reader":
+            raise ValueError(
+                "fold_repeated_text applies only to context_format='reader'; "
+                "auditable and compact records carry their own identities"
             )
         return self
 

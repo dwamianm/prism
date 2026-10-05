@@ -19,6 +19,7 @@ EXPECTED_HYPOTHESES = {
     "scoring.rrf_recency_boost",
     "packing.session_context_rank_fusion_score_decay",
     "packing.session_context_packing",
+    "packing.fold_repeated_text",
     "packing.cross_scope_top_n",
     "packing.episode_context_top_k",
     "packing.episode_context_local_k",
