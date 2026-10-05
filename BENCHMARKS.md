@@ -627,8 +627,13 @@ organization changes can move.
 
 The LongMemEval-S slice packs were built before the cache fix described under
 "Packs built through `ingest()`", so some of their repeated turns lost claims.
-Rebuild them from the same cached responses before comparing a new build with
-this baseline.
+On 2026-10-01 they were rebuilt from the same cached responses at `dfefc8e`,
+as `ingest-baseline-lme-deepseek-r2`, with no model call: the 42 packs hold
+30,093 claims instead of 29,903, and the gate is unchanged (all evidence
+packed 27/38, projected accuracy 76.6%, every question tied;
+`benchmarks/results/research/2026-10-01/dev-slice-v1-lme-r2-vs-original.md`).
+The numbers above stand, and a new LongMemEval-S slice build is compared with
+`ingest-baseline-lme-deepseek-r2`.
 
 The slice is for direction while iterating. It is too small for the intervals
 in the default-change rule, and its questions have been examined, so a
