@@ -63,8 +63,9 @@ async def entities(engine, user):
     return await engine.query_nodes(user_id=user, node_type=NodeType.ENTITY)
 
 
-async def test_off_by_default_each_message_keeps_its_own_i(config, user):
-    async with MemoryEngine.open(config) as engine:
+async def test_on_by_default_and_off_each_message_keeps_its_own_i(config, user):
+    assert config.enable_speaker_references is True
+    async with MemoryEngine.open(config.model_copy(update={"enable_speaker_references": False})) as engine:
         engine._pipeline._extraction_provider.extract = AsyncMock(side_effect=_extract)
         await say(engine, user, ["I work at Northwind.", "I left Northwind and now work at Brightpath."])
         found = await claims(engine, user)

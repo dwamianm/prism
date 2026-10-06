@@ -318,7 +318,9 @@ async def test_neighbors_in_another_section_are_packed_but_not_placed_in_the_tri
 
 
 async def _neighbor_retrieval(config, user, setting, **packing):
-    config = config.model_copy(update={"packing": config.packing.model_copy(update={FIELD: setting, **packing})})
+    # Without folding, which would make every receipt version 22.
+    config = config.model_copy(update={"packing": config.packing.model_copy(
+        update={FIELD: setting, "fold_repeated_text": False, **packing})})
     async with MemoryEngine.open(config) as engine:
         for text in ("The telescope is blue.", "We bought bread.", "The weather was mild."):
             await engine.store(text, user_id=user, scope=Scope.PROJECT, session_id="s1")

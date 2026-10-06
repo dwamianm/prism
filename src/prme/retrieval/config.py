@@ -9,8 +9,8 @@ configurations read a missing value as, so they do not change. The product
 defaults that ``PRMEConfig`` applies (``DEFAULT_SCORING_SETTINGS`` and
 ``DEFAULT_PACKING_SETTINGS``) differ from them: rank fusion with a 0.25
 current-state recency boost and an event-time tie-break, the reader context
-format and a 0.6 rank fusion session decay. Their multi-path ordering is
-balanced, which is also the class default.
+format, a 0.6 rank fusion session decay and each source text packed once.
+Their multi-path ordering is balanced, which is also the class default.
 """
 
 from __future__ import annotations
@@ -82,6 +82,10 @@ DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
     "context_format": "reader",
     "multipath_ordering": "balanced",
     "session_context_rank_fusion_score_decay": 0.6,
+    # Each source text packed once, with claim sentence text and speaker
+    # references on in PRMEConfig, after the three passed the default-change
+    # rule together over ingest() packs.
+    "fold_repeated_text": True,
 }
 
 
@@ -402,8 +406,8 @@ class PackingConfig(BaseModel):
     The field defaults are the historical ones that stored receipts and
     configurations rely on. ``PRMEConfig().packing`` applies the product
     defaults over them (``DEFAULT_PACKING_SETTINGS``: the reader format,
-    balanced ordering and a 0.6 rank fusion session decay); to change one
-    setting and keep those, copy it with
+    balanced ordering, a 0.6 rank fusion session decay and each source text
+    packed once); to change one setting and keep those, copy it with
     ``config.packing.model_copy(update=...)``.
     """
 
@@ -608,7 +612,9 @@ class PackingConfig(BaseModel):
             "one with the same tags and, where it has them, the same event "
             "time, validity window and speaker, so no text, date or state "
             "leaves the context. Applies only to context_format='reader', "
-            "whose lines carry no record identity. [HYPOTHESIS]"
+            "whose lines carry no record identity; other formats ignore it, "
+            "and their receipts omit it. PRMEConfig sets it by default "
+            "(DEFAULT_PACKING_SETTINGS). [HYPOTHESIS]"
         ),
     )
     episode_context_top_k: int = Field(
@@ -746,15 +752,6 @@ class PackingConfig(BaseModel):
         ):
             raise ValueError(
                 "Evidence projection and augmentation cannot both be enabled"
-            )
-        return self
-
-    @model_validator(mode="after")
-    def folding_requires_reader_format(self) -> PackingConfig:
-        if self.fold_repeated_text and self.context_format != "reader":
-            raise ValueError(
-                "fold_repeated_text applies only to context_format='reader'; "
-                "auditable and compact records carry their own identities"
             )
         return self
 

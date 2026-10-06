@@ -26,7 +26,7 @@ from prme.retrieval.selection import select_candidates, with_rank_fusion_relevan
 from prme.retrieval.session_context import expand_session_context
 from prme.types import RetrievalMode, Scope
 from tests import test_durable_ingestion
-from tests.previous_defaults import previous_defaults
+from tests.previous_defaults import previous_defaults, without_folding
 from tests.test_http_write_fidelity import app_for, client_for
 from tests.test_rank_fusion import EXECUTION, NOW, RRF, candidate, receipt
 
@@ -75,7 +75,8 @@ class KeywordEmbedding:
 def keyword_config(config, monkeypatch):
     embedding = KeywordEmbedding()
     monkeypatch.setattr("prme.storage.engine.create_embedding_provider", lambda _: embedding)
-    return config.model_copy(update={"scoring": RRF})
+    # The receipts these tests read are versions 16 to 18, from before folding became a default.
+    return without_folding(config.model_copy(update={"scoring": RRF}))
 
 
 # --- Relevance ----------------------------------------------------------------

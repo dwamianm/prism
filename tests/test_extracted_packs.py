@@ -189,7 +189,8 @@ async def test_build_resumes_ingests_each_turn_once_and_the_gate_credits_extract
     assert cases[1].unresolved == ("D9:9",) and cases[0].saved_context_sha256 == ""
     scratch = tmp_path / "scratch"
     scratch.mkdir()
-    rows = await replay_gate(cases, scratch=scratch)
+    # Folding would leave out the claims, whose text their turn already shows, so it is off here.
+    rows = await replay_gate(cases, scratch=scratch, overrides={"packing": {"fold_repeated_text": False}})
     assert pack_identity(folder / "pack") == manifest["pack_sha256"]
     for row in rows:
         assert row["context_matches_saved"] is False

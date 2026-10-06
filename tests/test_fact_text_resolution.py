@@ -189,7 +189,8 @@ RESOLVED = "Caroline went to a support group on 7 May 2023 and it was so powerfu
 class TestIngestion:
     async def test_off_by_default_and_stray_output_is_dropped(self, config, user):
         calls = []
-        async with MemoryEngine.open(config) as engine:
+        # Without claim sentence text, a fact the resolution leaves alone keeps its whole source passage.
+        async with MemoryEngine.open(config.model_copy(update={"enable_claim_sentence_text": False})) as engine:
             engine._pipeline._extraction_provider.extract = extractor(
                 calls, [went(resolved_text=RESOLVED, resolution={"method": "forged"})])
             await ingest(engine, user)

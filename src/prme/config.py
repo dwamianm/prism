@@ -558,7 +558,7 @@ class PRMEConfig(_ProjectSettings):
         ),
     )
     enable_speaker_references: bool = Field(
-        default=False,
+        default=True,
         description=(
             "[HYPOTHESIS] When True, ingest() binds a first-person singular "
             "reference (I, me, my, mine, myself) in a claim from a turn that "
@@ -568,12 +568,15 @@ class PRMEConfig(_ProjectSettings):
             "repeated or replaced claim can merge with or supersede the "
             "earlier one. Turns without a speaker, and plural, second- and "
             "third-person references, keep message-local identities. Default "
-            "False: only the caller knows that the named speaker, and not "
-            "someone the turn quotes, is who says I."
+            "True since it passed the default-change rule with "
+            "enable_claim_sentence_text and packing.fold_repeated_text. Only "
+            "the caller knows that the named speaker, and not someone the "
+            "turn quotes, is who says I, so set it False when a speaker's "
+            "turns quote others in the first person."
         ),
     )
     enable_claim_sentence_text: bool = Field(
-        default=False,
+        default=True,
         description=(
             "[HYPOTHESIS] When True, ingest() stores a claim's own sentences "
             "as its text: the shortest run of whole sentences of its "
@@ -583,8 +586,11 @@ class PRMEConfig(_ProjectSettings):
             "paragraph so a qualifier cannot be lost, which gives every claim "
             "of a one-paragraph chat message that message as its text. The "
             "paragraph stays the claim's evidence_quote, and a text that fact "
-            "text resolution accepts takes precedence. Default False: a "
-            "qualifier elsewhere in the paragraph is no longer in the text."
+            "text resolution accepts takes precedence. Default True since it "
+            "passed the default-change rule with enable_speaker_references "
+            "and packing.fold_repeated_text. A qualifier elsewhere in the "
+            "paragraph is no longer in the text, though it stays in the "
+            "evidence."
         ),
     )
     enable_speaker_grounding: bool = Field(

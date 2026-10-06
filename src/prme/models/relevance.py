@@ -449,8 +449,11 @@ class RetrievalReceipt(BaseModel):
             raise ValueError("Version 21 records session context packing")
         # Version 22 records folded repeated text, with or without session
         # context packing; earlier versions cannot, so they keep their bytes.
-        # PackingConfig itself refuses it outside the reader format.
+        # Other formats ignore the setting, so a receipt records it only in the
+        # reader format (make_receipt omits it elsewhere).
         folded = self.packing.fold_repeated_text
+        if folded and self.packing.context_format != "reader":
+            raise ValueError("Folded repeated text applies only to the reader format")
         if self.schema_version < 22 and folded:
             raise ValueError("Folded repeated text requires a version 22 receipt")
         if self.schema_version == 22 and not folded:
