@@ -44,6 +44,7 @@ from prme.types import EpistemicType, NodeType, QueryIntent, Scope
 from tests import test_durable_ingestion
 from tests.test_http_write_fidelity import app_for, client_for
 from tests.test_ranking_profiles import _evidence
+from tests.previous_defaults import without_folding
 
 config = test_durable_ingestion.config
 user = test_durable_ingestion.user
@@ -505,7 +506,7 @@ def test_feedback_tuning_keeps_rank_fusion():
 
 
 async def test_engine_retrieval_with_rank_fusion_persists_a_replayable_receipt(config, user):
-    config = config.model_copy(update={"scoring": RRF})
+    config = without_folding(config.model_copy(update={"scoring": RRF}))
     async with MemoryEngine.open(config) as engine:
         for text in ("The telescope is blue.", "The telescope lens is cracked.", "We bought bread."):
             await engine.store(text, user_id=user, scope=Scope.PROJECT, session_id="s1")

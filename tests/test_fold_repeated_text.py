@@ -136,10 +136,10 @@ def test_required_records_are_never_folded():
 
 
 def test_only_the_reader_format_folds():
-    with pytest.raises(ValidationError, match="fold_repeated_text applies only"):
-        PackingConfig(fold_repeated_text=True)
-    with pytest.raises(ValidationError, match="fold_repeated_text applies only"):
-        PackingConfig(context_format="compact", fold_repeated_text=True)
+    # Other formats accept the setting and ignore it, so the product default holds whatever format is chosen.
+    for packing in (PackingConfig(fold_repeated_text=True), PackingConfig(context_format="compact",
+                                                                          fold_repeated_text=True)):
+        assert packing.fold_repeated_text is True
     # Off, the field stays out of serialized configurations and receipts.
     assert "fold_repeated_text" not in PackingConfig().model_dump()
     assert reader(fold_repeated_text=True).model_dump()["fold_repeated_text"] is True
@@ -218,7 +218,7 @@ def test_earlier_versions_cannot_record_folding(version, scoring, session):
 def test_a_receipt_cannot_fold_another_format():
     data = json.loads(_receipt().model_dump_json())
     data["packing"]["context_format"] = "auditable"
-    with pytest.raises(ValidationError, match="fold_repeated_text applies only to context_format='reader'"):
+    with pytest.raises(ValidationError, match="Folded repeated text applies only to the reader format"):
         RetrievalReceipt.model_validate(data)
 
 

@@ -2221,6 +2221,52 @@ recorded with `prepare prme` and `run prme` on `main` at the merge commit
 DeepSeek runs above), and later variants are paired with it. The Ollama server
 stays on 0.34.3, the version the A/A checks cover.
 
+### Default change: claim sentences, speaker references and folding (2026-10-06)
+
+`enable_claim_sentence_text`, `enable_speaker_references` and
+`packing.fold_repeated_text` became defaults together. They were tested as one
+variant, `prme-sentences-fold`, on the DeepSeek track over `ingest()` packs
+("Answers over `ingest()` packs"), since the saved `store()` packs cannot show
+any of them.
+
+- The baseline `prme` read the defaults over `grounding-locomo-full-control`
+  and `ingest-defaults-lme-deepseek`.
+- The variant read `grounding-locomo-full-refs-sentences` and
+  `ingest-refs-sentences-lme-deepseek`, built from the same extraction
+  responses with the two `ingest()` settings, and folding was set for its
+  replay. On every question the defaults replayed at the variant's commit read
+  the baseline's text (#139). The variant's LoCoMo contexts are byte for byte
+  those of the gate run in "Folding repeated text".
+- Every run used `deepseek-v4.1-flash:cloud` (model identity `e04da138`), the
+  amended failure policy (#132) and the 4K budget. Every start and finish
+  recorded Ollama 0.34.4. Every result is complete, with no question
+  truncated or left without a verdict.
+- Both baselines are complete: LoCoMo 1,184/1,540 (76.9%) and LongMemEval-S
+  423/500 (84.6%).
+- Every pair was interleaved question by question with a fresh run of the
+  baseline, and relied on the A/A pair 1 checks below. Neither A/A interval
+  excludes zero, so no extra margin applies.
+
+| Pair | Benchmark | Defaults | Variant | Change (points) | 95% interval | Conversations 95% | Questions 95% |
+|---|---|---:|---:|---:|---|---|---|
+| A/A pair 1 | LoCoMo | 1181 | 1185 (defaults again) | +0.26 | -0.78 to +1.30 | -0.61 to +1.01 | -0.78 to +1.30 |
+| A/A pair 1 | LongMemEval-S | 425 | 429 (defaults again) | +0.80 | -0.60 to +2.20 | - | - |
+| first (pair 1) | LoCoMo | 1177 | 1203 | +1.69 | +0.19 to +3.18 | +0.30 to +2.90 | +0.19 to +3.18 |
+| first (pair 1) | LongMemEval-S | 427 | 444 | +3.40 | +0.80 to +6.00 | - | - |
+| confirmation (pair 2) | LoCoMo | 1172 | 1200 | +1.82 | +0.19 to +3.44 | +0.56 to +3.20 | +0.19 to +3.44 |
+| confirmation (pair 2) | LongMemEval-S | 427 | 448 | +4.20 | +1.40 to +7.20 | - | - |
+
+`verdict prme --variant sentences-fold --provider ollama --contexts ingest`
+reads `pass` with `checked_against_run_logs: true`: "The first pair and the
+confirmation both passed." The output is in
+`benchmarks/results/research/2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-sentences-fold-verdict.json`.
+The published results of every run and pair are next to it. The tracked A/A
+record and verdict record are
+`ollama-deepseek-v4.1-flash-cloud-ingest-aa-checks.jsonl` and
+`ollama-deepseek-v4.1-flash-cloud-ingest-pair-verdicts.jsonl`. This baseline
+holds the old defaults, so a new one is recorded after the flip, and every
+variant on the track counts from zero against it.
+
 ## Earlier registered memory-utility comparison
 
 The first registered held-out current-product answer comparison is complete.

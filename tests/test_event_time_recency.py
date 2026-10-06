@@ -42,6 +42,7 @@ from tests import test_durable_ingestion
 from tests.test_http_write_fidelity import app_for, client_for
 from tests.test_rank_fusion import EXECUTION
 from tests.test_rank_fusion_recency import CURRENT, UPDATE, _copies
+from tests.previous_defaults import without_folding
 
 config = test_durable_ingestion.config
 user = test_durable_ingestion.user
@@ -257,6 +258,7 @@ def test_a_record_without_an_event_time_scores_as_before():
 
 async def _retrieve_both(config, user, reference_time, texts):
     """Store ``texts`` (text, event time) and retrieve with and without the setting."""
+    config = without_folding(config)
     async with MemoryEngine.open(config) as engine:
         for text, event_time in texts:
             await engine.store(text, user_id=user, scope=Scope.PROJECT, event_time=event_time)

@@ -579,9 +579,10 @@ async def test_materialized_fact_retains_conditions_and_source_provenance(config
         event_id = await engine.ingest(source, user_id=user, wait_for_extraction=True)
         nodes = await engine.query_nodes(user_id=user, node_type=NodeType.FACT)
         assert len(nodes) == 1
-        assert nodes[0].content == source
+        # The claim's own sentence is its text (enable_claim_sentence_text), and the passage stays its evidence.
+        assert nodes[0].content == "Alice uses email only for nonurgent requests."
         assert nodes[0].metadata["evidence_quote"] == source
-        assert nodes[0].metadata["grounding_method"] == "source_passage_v1"
+        assert nodes[0].metadata["grounding_method"] == "claim_sentences_v1"
         assert str(nodes[0].evidence_refs[0]) == str(event_id)
 
 

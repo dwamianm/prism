@@ -1,0 +1,360 @@
+{
+  "kind": "variant-verdict",
+  "arm": "prme-sentences-fold",
+  "verdict": "pass",
+  "reason": "The first pair and the confirmation both passed.",
+  "checked_against_run_logs": true,
+  "variant_settings": {
+    "enable_claim_sentence_text": true,
+    "enable_speaker_references": true,
+    "packing.fold_repeated_text": true
+  },
+  "benchmarks": {
+    "locomo": {
+      "baseline": "prme",
+      "baseline_from": "run logs",
+      "contexts_sha256": "6d0d46edc291feedc371ff6d1fe51c7a83db3ad08ccd6ee10da8ed7055348b81",
+      "missing": [],
+      "other_baseline_pairs": [],
+      "other_text_pairs": []
+    },
+    "longmemeval": {
+      "baseline": "prme",
+      "baseline_from": "run logs",
+      "contexts_sha256": "0f5d22f4995286c1c712900d23f63130f698bb89dcf5040da6cccbfc9776e9fa",
+      "missing": [],
+      "other_baseline_pairs": [],
+      "other_text_pairs": []
+    }
+  },
+  "first": {
+    "passed": true,
+    "why": "A gain on locomo and longmemeval whose 95% interval excludes zero, and no loss on either benchmark whose interval excludes zero",
+    "benchmarks": {
+      "locomo": {
+        "pair": {
+          "arm": "prme-sentences-fold",
+          "baseline": "prme",
+          "id": "80314db9162c48dfa5f264d896b15780",
+          "number": 1,
+          "sha256": "772b0982313088870752fc8cb13be7c55e608e42df14e2b216afd6465d7ef7b2"
+        },
+        "variant_settings": {
+          "enable_claim_sentence_text": true,
+          "enable_speaker_references": true,
+          "packing.fold_repeated_text": true
+        },
+        "started_at": "2026-10-06T15:02:42.247979+00:00",
+        "finished_at": "2026-10-06T15:18:46.207791+00:00",
+        "correct": {
+          "after": 1203,
+          "before": 1177
+        },
+        "questions": 1540,
+        "difference": 0.016883116883116882,
+        "interval_95": [
+          0.001948051948051948,
+          0.031818181818181815
+        ],
+        "interval_95_conversations": [
+          0.003048780487804878,
+          0.028994845360824743
+        ],
+        "interval_95_questions": [
+          0.001948051948051948,
+          0.031818181818181815
+        ],
+        "interval_excludes_zero": true,
+        "outcome": "gain",
+        "margin": {
+          "applies": false,
+          "excluding": [],
+          "largest_aa_difference": null,
+          "from": null,
+          "case": "No accepted A/A pair under this pair's conditions excludes zero on either benchmark, so no margin applies: a gain counts when its 95% interval excludes zero"
+        },
+        "gain_counts": true,
+        "aa_check": {
+          "checks": {
+            "locomo": {
+              "baseline": "prme",
+              "number": 1,
+              "pair_id": "daac154b2bf6482cbec30034cefaad22"
+            },
+            "longmemeval": {
+              "baseline": "prme",
+              "number": 1,
+              "pair_id": "386f4fe676f6466db82e6fb1591c8ded"
+            }
+          },
+          "conditions": {
+            "context_budget": 3996,
+            "failure_policy": {
+              "id": "ollama-failure-policy-2026-09-24",
+              "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083"
+            },
+            "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+            "server_versions": [
+              "0.34.4"
+            ],
+            "tokenizer": "cl100k_base"
+          }
+        },
+        "results": {
+          "after": {
+            "path": "2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-vs-prme-sentences-fold-locomo-pair-1-after-result.json",
+            "sha256": "a286dc31e271b7c9feed527cec0ea4c41445678b1a03de08ea4999e7a9e692f1"
+          },
+          "before": {
+            "path": "2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-vs-prme-sentences-fold-locomo-pair-1-before-result.json",
+            "sha256": "cee7742a9c652fc6b6181904907f46c5ddc9405d9d430f2d639a6d1a643b177d"
+          }
+        },
+        "recorded_at": "2026-10-06T15:18:48.822546+00:00"
+      },
+      "longmemeval": {
+        "pair": {
+          "arm": "prme-sentences-fold",
+          "baseline": "prme",
+          "id": "2044ccb7d7e947e18a812dd4bb80d676",
+          "number": 1,
+          "sha256": "acbe264a8593b5f5bffcec37d94a9c0ef2e5aa67c44f1165f4c6d09605fc42b5"
+        },
+        "variant_settings": {
+          "enable_claim_sentence_text": true,
+          "enable_speaker_references": true,
+          "packing.fold_repeated_text": true
+        },
+        "started_at": "2026-10-06T15:18:51.874788+00:00",
+        "finished_at": "2026-10-06T15:26:22.794557+00:00",
+        "correct": {
+          "after": 444,
+          "before": 427
+        },
+        "questions": 500,
+        "difference": 0.034,
+        "interval_95": [
+          0.008,
+          0.06
+        ],
+        "interval_excludes_zero": true,
+        "outcome": "gain",
+        "margin": {
+          "applies": false,
+          "excluding": [],
+          "largest_aa_difference": null,
+          "from": null,
+          "case": "No accepted A/A pair under this pair's conditions excludes zero on either benchmark, so no margin applies: a gain counts when its 95% interval excludes zero"
+        },
+        "gain_counts": true,
+        "aa_check": {
+          "checks": {
+            "locomo": {
+              "baseline": "prme",
+              "number": 1,
+              "pair_id": "daac154b2bf6482cbec30034cefaad22"
+            },
+            "longmemeval": {
+              "baseline": "prme",
+              "number": 1,
+              "pair_id": "386f4fe676f6466db82e6fb1591c8ded"
+            }
+          },
+          "conditions": {
+            "context_budget": 3996,
+            "failure_policy": {
+              "id": "ollama-failure-policy-2026-09-24",
+              "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083"
+            },
+            "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+            "server_versions": [
+              "0.34.4"
+            ],
+            "tokenizer": "cl100k_base"
+          }
+        },
+        "results": {
+          "after": {
+            "path": "2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-vs-prme-sentences-fold-longmemeval-pair-1-after-result.json",
+            "sha256": "89feeddd061745fbdbc40d68973b2b8da2d89c93970e0f4d04ab8daf39100633"
+          },
+          "before": {
+            "path": "2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-vs-prme-sentences-fold-longmemeval-pair-1-before-result.json",
+            "sha256": "2d900d91b6ecc73c0f6e4fb9b37b2b64f8b1b8c9ab51dd5be372d2704d0e6a7c"
+          }
+        },
+        "recorded_at": "2026-10-06T15:26:23.785876+00:00"
+      }
+    }
+  },
+  "confirmation": {
+    "passed": true,
+    "why": "A gain on locomo and longmemeval whose 95% interval excludes zero, and no loss on either benchmark whose interval excludes zero",
+    "benchmarks": {
+      "locomo": {
+        "pair": {
+          "arm": "prme-sentences-fold",
+          "baseline": "prme",
+          "id": "eda9675f40d64ecaac8e9d2354fbe140",
+          "number": 2,
+          "sha256": "e0e6064f977cfd88adf972a358f573ede9a039c1093cf09e070721be57fdba46"
+        },
+        "variant_settings": {
+          "enable_claim_sentence_text": true,
+          "enable_speaker_references": true,
+          "packing.fold_repeated_text": true
+        },
+        "started_at": "2026-10-06T15:26:29.577683+00:00",
+        "finished_at": "2026-10-06T15:39:42.559143+00:00",
+        "correct": {
+          "after": 1200,
+          "before": 1172
+        },
+        "questions": 1540,
+        "difference": 0.01818181818181818,
+        "interval_95": [
+          0.001948051948051948,
+          0.03441558441558441
+        ],
+        "interval_95_conversations": [
+          0.005610972568578554,
+          0.03204272363150868
+        ],
+        "interval_95_questions": [
+          0.001948051948051948,
+          0.03441558441558441
+        ],
+        "interval_excludes_zero": true,
+        "outcome": "gain",
+        "margin": {
+          "applies": false,
+          "excluding": [],
+          "largest_aa_difference": null,
+          "from": null,
+          "case": "No accepted A/A pair under this pair's conditions excludes zero on either benchmark, so no margin applies: a gain counts when its 95% interval excludes zero"
+        },
+        "gain_counts": true,
+        "aa_check": {
+          "checks": {
+            "locomo": {
+              "baseline": "prme",
+              "number": 1,
+              "pair_id": "daac154b2bf6482cbec30034cefaad22"
+            },
+            "longmemeval": {
+              "baseline": "prme",
+              "number": 1,
+              "pair_id": "386f4fe676f6466db82e6fb1591c8ded"
+            }
+          },
+          "conditions": {
+            "context_budget": 3996,
+            "failure_policy": {
+              "id": "ollama-failure-policy-2026-09-24",
+              "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083"
+            },
+            "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+            "server_versions": [
+              "0.34.4"
+            ],
+            "tokenizer": "cl100k_base"
+          }
+        },
+        "results": {
+          "after": {
+            "path": "2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-vs-prme-sentences-fold-locomo-pair-2-after-result.json",
+            "sha256": "ab694cd1e9d589502318bdce94a70d2d205e3a10f6e329bb06673284313499fe"
+          },
+          "before": {
+            "path": "2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-vs-prme-sentences-fold-locomo-pair-2-before-result.json",
+            "sha256": "beabd7c473eb144e5e6bf11bfc74b2c8fc47dfe3665df3006c822de4195d27b9"
+          }
+        },
+        "recorded_at": "2026-10-06T15:39:45.167560+00:00"
+      },
+      "longmemeval": {
+        "pair": {
+          "arm": "prme-sentences-fold",
+          "baseline": "prme",
+          "id": "03b41761b87445be8960fa24c2c1a27b",
+          "number": 2,
+          "sha256": "65b4d9062f9580514b81c543d4dbe3177ca29e980dc75ce739d47a4948ce2df1"
+        },
+        "variant_settings": {
+          "enable_claim_sentence_text": true,
+          "enable_speaker_references": true,
+          "packing.fold_repeated_text": true
+        },
+        "started_at": "2026-10-06T15:39:48.138941+00:00",
+        "finished_at": "2026-10-06T15:45:58.774989+00:00",
+        "correct": {
+          "after": 448,
+          "before": 427
+        },
+        "questions": 500,
+        "difference": 0.042,
+        "interval_95": [
+          0.014,
+          0.072
+        ],
+        "interval_excludes_zero": true,
+        "outcome": "gain",
+        "margin": {
+          "applies": false,
+          "excluding": [],
+          "largest_aa_difference": null,
+          "from": null,
+          "case": "No accepted A/A pair under this pair's conditions excludes zero on either benchmark, so no margin applies: a gain counts when its 95% interval excludes zero"
+        },
+        "gain_counts": true,
+        "aa_check": {
+          "checks": {
+            "locomo": {
+              "baseline": "prme",
+              "number": 1,
+              "pair_id": "daac154b2bf6482cbec30034cefaad22"
+            },
+            "longmemeval": {
+              "baseline": "prme",
+              "number": 1,
+              "pair_id": "386f4fe676f6466db82e6fb1591c8ded"
+            }
+          },
+          "conditions": {
+            "context_budget": 3996,
+            "failure_policy": {
+              "id": "ollama-failure-policy-2026-09-24",
+              "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083"
+            },
+            "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+            "server_versions": [
+              "0.34.4"
+            ],
+            "tokenizer": "cl100k_base"
+          }
+        },
+        "results": {
+          "after": {
+            "path": "2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-vs-prme-sentences-fold-longmemeval-pair-2-after-result.json",
+            "sha256": "0f5f40a4f8f6683b0eeca2ad32cfbdcec71b1ab48238f2661a9d7629a13dfbbe"
+          },
+          "before": {
+            "path": "2026-10-06/ollama-deepseek-v4.1-flash-cloud-ingest-prme-vs-prme-sentences-fold-longmemeval-pair-2-before-result.json",
+            "sha256": "10dcd1e1f720f48bcb5c9853420d0dbeeba635e6ff1ccab01f04d335efb4dd36"
+          }
+        },
+        "recorded_at": "2026-10-06T15:45:59.751866+00:00"
+      }
+    }
+  },
+  "record": {
+    "path": "ollama-deepseek-v4.1-flash-cloud-ingest-pair-verdicts.jsonl",
+    "sha256": "62285b5b84bfd7832321ac2505934cd22cdca6bf6e1aedb6e5d0bb616ac1418c"
+  },
+  "aa_record": {
+    "path": "ollama-deepseek-v4.1-flash-cloud-ingest-aa-checks.jsonl",
+    "sha256": "c34bed44d58c3f006dc8fe20ec355b9331c128e53a388a223cd8c92860d08021"
+  },
+  "warnings": [],
+  "note": "The default-change rule in CLAUDE.md, applied to the pairs compare recorded in the track's verdict record: the variant passes only when its first pair and its confirmation each show a gain on at least one benchmark whose 95% interval excludes zero and no loss on either whose interval excludes zero. Where an accepted A/A pair under a pair's conditions excluded zero, that pair's gain must also be larger than the largest absolute A/A difference recorded on its benchmark, the #118 repeat included (margin). A failed first pair fails the variant, whatever its confirmation shows, and so does a failed confirmation. A pair compare refused was never recorded and counts as neither, and a new baseline starts the count again (#143). checked_against_run_logs is true only when the track's run logs were on this machine for both benchmarks; the pull request that flips a default cites this output with it true."
+}

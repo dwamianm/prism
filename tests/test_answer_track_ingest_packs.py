@@ -84,7 +84,7 @@ async def test_a_baseline_replays_a_defaults_build_and_a_variant_its_own_build(h
     replayed = await built_cases(harness, monkeypatch)
     root, data = harness["root"] / "extracted", baselines.data_root(INGEST)
     defaults = fake_build(root, "defaults-locomo")
-    sentences = fake_build(root, "sentences-locomo", overrides={"enable_claim_sentence_text": True})
+    sentences = fake_build(root, "sentences-locomo", overrides={"enable_claim_sentence_text": False})
     # A build with other settings than the defaults', or from uncommitted code, cannot hold the baseline.
     with pytest.raises(ValueError, match="not built with this commit's defaults"):
         baselines.prepare("prme", "locomo", data=data, packs=sentences)
@@ -109,25 +109,29 @@ async def test_a_baseline_replays_a_defaults_build_and_a_variant_its_own_build(h
     # The two builds must differ only by the settings they were built with.
     for name, changes, differing in (("later", {"commit": "b" * 40}, "commit"),
                                      ("local", {"model": "qwen3:8b"}, "model")):
-        other = fake_build(root, f"{name}-locomo", overrides={"enable_claim_sentence_text": True}, **changes)
+        other = fake_build(root, f"{name}-locomo", overrides={"enable_claim_sentence_text": False}, **changes)
         with pytest.raises(ValueError, match=f"differ from the baseline's defaults-locomo packs in {differing}"):
             baselines.prepare(f"prme-{name}", "locomo", data=data, packs=other)
     with pytest.raises(ValueError, match="conflicts with the value its ingest"):
         baselines.prepare("prme-sentences", "locomo", data=data, packs=sentences,
-                          overrides=gate.parse_overrides(["enable_claim_sentence_text=false"]))
+                          overrides=gate.parse_overrides(["enable_claim_sentence_text=true"]))
     replayed.clear()
-    fold = gate.parse_overrides(["packing.fold_repeated_text=true"])
+    fold = gate.parse_overrides(["packing.fold_repeated_text=false"])
     variant = await asyncio.to_thread(baselines.prepare, "prme-sentences", "locomo", data=data, packs=sentences,
                                       overrides=fold)
     # The settings its packs were built with count as its own and apply to its replay, with those it sets (#130).
-    assert variant["variant_settings"] == {"enable_claim_sentence_text": True, "packing.fold_repeated_text": True}
-    assert variant["provenance"]["overrides"] == {"enable_claim_sentence_text": True,
-                                                  "packing": {"fold_repeated_text": True}}
+    # Folding off is left out of the configuration, which variant_settings records as None.
+    assert variant["variant_settings"] == {"enable_claim_sentence_text": False, "packing.fold_repeated_text": None}
+    assert variant["provenance"]["overrides"] == {"enable_claim_sentence_text": False,
+                                                  "packing": {"fold_repeated_text": False}}
     assert variant["context_source"]["defaults_packs"] == "defaults-locomo"
     assert replayed == ["sentences-locomo", "defaults-locomo"]
     # Packs built with a setting change it on their own, so such a variant needs no --set.
     alone = await asyncio.to_thread(baselines.prepare, "prme-sentences-alone", "locomo", data=data, packs=sentences)
-    assert alone["variant_settings"] == {"enable_claim_sentence_text": True}
+    assert alone["variant_settings"] == {"enable_claim_sentence_text": False}
+    # A build made with settings the defaults have since adopted holds the defaults.
+    adopted = fake_build(root, "adopted-locomo", overrides={"enable_claim_sentence_text": True})
+    baselines._check_defaults_build(adopted, baselines._packs_build(adopted, "locomo"))
 
 
 @pytest.mark.usefixtures("mock_embeddings")

@@ -31,6 +31,7 @@ from prme.types import EpistemicType, QueryIntent, Scope
 from tests import test_durable_ingestion
 from tests.test_http_write_fidelity import app_for, client_for
 from tests.test_rank_fusion import EXECUTION, NOW, RRF, candidate
+from tests.previous_defaults import without_folding
 
 config = test_durable_ingestion.config
 user = test_durable_ingestion.user
@@ -409,7 +410,7 @@ OLD_FACT = "What database does the team use? The team uses MySQL."
 
 
 async def _conflict_retrieval(config, user, scoring):
-    config = config.model_copy(update={"scoring": scoring})
+    config = without_folding(config.model_copy(update={"scoring": scoring}))
     async with MemoryEngine.open(config) as engine:
         # The newest memory is not the update, so the current-update
         # multiplier does not apply. The update contains every query word:

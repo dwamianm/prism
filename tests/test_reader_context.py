@@ -443,7 +443,7 @@ async def test_engine_retrieval_renders_reader_lines_and_persists_the_receipt(co
     config = config.model_copy(update={
         "scoring": ScoringWeights(),
         "packing": config.packing.model_copy(update={
-            "context_format": "reader", "context_citations": True,
+            "context_format": "reader", "context_citations": True, "fold_repeated_text": False,
         }),
     })
     async with MemoryEngine.open(config) as engine:

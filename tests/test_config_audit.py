@@ -66,8 +66,12 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
 
     assert set(settings) == EXPECTED_HYPOTHESES
     assert report.hypothesis_count == len(EXPECTED_HYPOTHESES)
-    assert report.effective_count == 15
+    # Speaker references, claim sentence text and folding became defaults together, so they apply.
+    assert report.effective_count == 18
     assert report.customized_count == 0
+    for name in ("enable_speaker_references", "enable_claim_sentence_text", "packing.fold_repeated_text"):
+        setting = settings[name]
+        assert (setting.effective, setting.value, setting.default, setting.customized) == (True, True, True, False)
     assert settings["scoring.current_update_multiplier"].effective is True
     # Rank fusion, its recency boost and its session decay are the defaults, so their provisional values apply
     # and are the defaults the audit reports, not customizations.
@@ -84,8 +88,6 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     session_packing = settings["packing.session_context_packing"]
     assert (session_packing.effective, session_packing.value, session_packing.customized) == (False, None, False)
     assert session_packing.environment_variable == "PRME_PACKING__SESSION_CONTEXT_PACKING"
-    folding = settings["packing.fold_repeated_text"]
-    assert (folding.effective, folding.value, folding.customized) == (False, False, False)
     assert settings["enable_qa_pairing"].effective is False
     assert settings["novelty_high_threshold"].effective is False
     assert settings["query_reformulation_count"].effective is False
@@ -111,16 +113,14 @@ def test_session_context_packing_is_effective_only_with_session_expansion():
 
 
 def test_folding_is_effective_only_in_the_reader_format():
-    packing = PRMEConfig().packing.model_copy(update={"fold_repeated_text": True})
-    _, settings = _by_path(PRMEConfig(packing=packing))
+    _, settings = _by_path(PRMEConfig())
     setting = settings["packing.fold_repeated_text"]
-    assert (setting.effective, setting.value, setting.customized) == (True, True, True)
     assert setting.environment_variable == "PRME_PACKING__FOLD_REPEATED_TEXT"
     assert "'reader'" in setting.activation_condition
-    # model_copy skips the validator that refuses other formats; packing then ignores the setting.
-    auditable = PRMEConfig().model_copy(update={"packing": packing.model_copy(update={"context_format": "auditable"})})
-    _, off = _by_path(auditable)
-    assert off["packing.fold_repeated_text"].effective is False
+    # Another format keeps the default setting but ignores it.
+    auditable = PRMEConfig().packing.model_copy(update={"context_format": "auditable"})
+    _, off = _by_path(PRMEConfig(packing=auditable))
+    assert (off["packing.fold_repeated_text"].value, off["packing.fold_repeated_text"].effective) == (True, False)
 
 
 def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
@@ -136,9 +136,10 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
     )
     report, settings = _by_path(config)
 
-    # A PackingConfig built in code has no rank fusion session decay, which the audit reports.
-    assert report.effective_count == 26
-    assert report.customized_count == 5
+    # A PackingConfig built in code has no rank fusion session decay and does not fold, which the audit reports.
+    assert report.effective_count == 28
+    assert report.customized_count == 6
+    assert settings["packing.fold_repeated_text"].customized is True
     assert settings["packing.session_context_rank_fusion_score_decay"].value is None
     assert settings["packing.episode_context_local_k"].effective is True
     assert settings["packing.evidence_projection_score_decay"].effective is True

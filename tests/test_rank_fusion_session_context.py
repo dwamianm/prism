@@ -149,7 +149,8 @@ async def _neighbor_retrieval(config, user, **kwargs):
 
 
 def _with_decay(config, scoring, decay=.55):
-    packing = config.packing.model_copy(update={DECAY_FIELD: decay})
+    # Without folding, which would make every receipt version 22.
+    packing = config.packing.model_copy(update={DECAY_FIELD: decay, "fold_repeated_text": False})
     return config.model_copy(update={"scoring": scoring, "packing": packing})
 
 
