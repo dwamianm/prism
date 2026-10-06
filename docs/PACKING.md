@@ -389,10 +389,12 @@ folding packed all annotated evidence for more questions in every build:
 conversations +3.1 to +6.4; 76 questions gained, 4 lost) and 78.9% to 81.7%
 with speaker references and claim sentences (+2.8, +2.0 to +3.7; 45 gained, 2
 lost). Every category gained, multi-hop questions most. On the LongMemEval-S
-development slice it gained 5.3 and 2.6 points with no loss. The setting stays
-off: a default change needs the DeepSeek paired answer runs, which replay
-`store()` packs and so cannot see it, until they can replay `ingest()` packs.
-`BENCHMARKS.md` ("Folding repeated text") has the full results.
+development slice it gained 5.3 and 2.6 points with no loss. It became a
+default on 2026-10-06, together with `enable_claim_sentence_text` and
+`enable_speaker_references`, after the three passed the default-change rule on
+the DeepSeek answer track over `ingest()` packs (`BENCHMARKS.md`, "Default
+change: claim sentences, speaker references and folding").
+`BENCHMARKS.md` ("Folding repeated text") has the gate results.
 
 ## Default retrieval settings
 
@@ -407,6 +409,7 @@ off: a default change needs the DeepSeek paired answer runs, which replay
 | `packing.context_format` (`PRME_PACKING__CONTEXT_FORMAT`) | `reader` | `auditable` |
 | `packing.multipath_ordering` (`PRME_PACKING__MULTIPATH_ORDERING`) | `balanced` | `balanced` (`score` between the two steps described below) |
 | `packing.session_context_rank_fusion_score_decay` (`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`) | `0.6` | None (0.85, the weighted decay) |
+| `packing.fold_repeated_text` (`PRME_PACKING__FOLD_REPEATED_TEXT`), since 2026-10-06 | `true` | `false` |
 
 The settings changed in two steps on 2026-09-25, and each step passed the
 project's default-change test twice on the DeepSeek answer track. The first
@@ -479,7 +482,9 @@ What else changes with these defaults:
   so they raise `ValueError` for a reader bundle without citations. Set
   `PRME_PACKING__CONTEXT_CITATIONS=true` (which adds `[m3]` references to the
   context) or use the `auditable` format for those callers.
-- Retrieval receipts are written as version 19 by default.
+- Retrieval receipts are written as version 22 by default, since folding became
+  a default on 2026-10-06, and as version 19 with
+  `PRME_PACKING__FOLD_REPEATED_TEXT=false`.
 
 To go back to the v0.12.0 defaults, set all three:
 
@@ -488,6 +493,11 @@ PRME_SCORING__FUSION=weighted
 PRME_PACKING__CONTEXT_FORMAT=auditable
 PRME_PACKING__MULTIPATH_ORDERING=balanced
 ```
+
+The auditable format ignores folding. To keep the reader format without it,
+set `PRME_PACKING__FOLD_REPEATED_TEXT=false`. To go back to the `ingest()`
+defaults from before 2026-10-06, set `PRME_ENABLE_CLAIM_SENTENCE_TEXT=false`
+and `PRME_ENABLE_SPEAKER_REFERENCES=false`.
 
 or, in code:
 

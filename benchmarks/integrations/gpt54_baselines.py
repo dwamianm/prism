@@ -471,7 +471,8 @@ def _check_defaults_build(packs: Path, build: dict) -> None:
     at this commit with no overrides, apart from extraction, whose model the
     build names, and the scoring and packing settings, which apply when the
     packs are replayed. A build made at an earlier commit qualifies while
-    nothing it was ingested with has changed.
+    nothing it was ingested with has changed, and so does one made with
+    overrides that the defaults have since adopted.
     """
     from benchmarks.retrieval_eval import provenance
 
@@ -479,8 +480,8 @@ def _check_defaults_build(packs: Path, build: dict) -> None:
     recorded = build["provenance"].get("engine_config") or {}
     differing = sorted(key for key in current.keys() | recorded.keys()
                        if key not in {"extraction", "scoring", "packing"} and current.get(key) != recorded.get(key))
-    if build.get("overrides") or differing:
-        changed = ", ".join(differing) or json.dumps(build.get("overrides"))
+    if differing:
+        changed = ", ".join(differing)
         raise ValueError(f"The {packs.name} packs were not built with this commit's defaults ({changed}), so they "
                          "cannot hold the defaults' baseline; prepare a variant over them instead")
 

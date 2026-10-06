@@ -35,6 +35,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `ingest()` now stores a claim's own sentences as its text
+  (`enable_claim_sentence_text=True`) and binds a named speaker's I, me and my
+  to the speaker's entity (`enable_speaker_references=True`). The reader
+  context packs each source text once (`packing.fold_repeated_text=True` in
+  the product packing defaults). Together they passed the default-change
+  rule twice on the DeepSeek answer track over `ingest()` packs: LoCoMo +1.69
+  and +1.82 points, LongMemEval-S +3.4 and +4.2, every interval excluding
+  zero. Folding outside the reader format is ignored instead of refused.
+  Default retrieval receipts are version 22. Set
+  `PRME_ENABLE_CLAIM_SENTENCE_TEXT=false`, `PRME_ENABLE_SPEAKER_REFERENCES=false`
+  or `PRME_PACKING__FOLD_REPEATED_TEXT=false` to restore the earlier behavior.
+
 - `ingest()` now merges a repeated extracted claim into one current record
   instead of adding another copy (#209). The new fact keeps the earlier
   copies' evidence and supersedes them, so their history stays readable. Only

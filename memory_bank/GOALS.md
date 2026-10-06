@@ -115,6 +115,14 @@ source event, so folding should not change the `store()` packs that the
 DeepSeek answer track replays. Their saved archive is on the answering
 machine, so that gate did not run here.
 
+**Default change (2026-10-06).** Claim sentence text, speaker references and
+folding are now defaults. The DeepSeek track over `ingest()` packs (#232)
+answered them as one variant, `prme-sentences-fold`, and `verdict` reads pass
+with its run logs checked. LoCoMo +1.69 and +1.82 points, LongMemEval-S +3.4
+and +4.2, every interval excluding zero (`BENCHMARKS.md`, "Default change:
+claim sentences, speaker references and folding"). A new ingest-track baseline
+for the new defaults comes next. The `store()` track's contexts do not change.
+
 **Next, in order:**
 
 1. Answer runs over `ingest()` packs, so that `enable_claim_sentence_text`
