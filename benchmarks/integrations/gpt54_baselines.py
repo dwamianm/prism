@@ -47,6 +47,17 @@ track, and needs its own ``calibrate`` before ``run`` or ``run-pair``. The ``prm
 ``--sample`` smoke checks run on this track only. Its scores are not comparable
 with GPT-5.4 scores; compare DeepSeek runs only with each other.
 
+``--contexts ingest`` answers PRME's arms over packs built through ``ingest()``
+(``benchmarks.diagnostics.extracted_packs``) instead of the saved run's, which
+``store()`` built, so an option that changes extraction or the graph reaches
+the contexts. ``prepare`` reads a build with ``--packs``. A baseline's build
+must hold the defaults at its commit; a variant's may hold the settings it
+changes, which count as its own, and must otherwise match the baseline's
+build, whose packs its defaults replay reads (#139). Those answers are a track
+of their own, with their own contexts, answers, calibration, run logs and A/A
+and verdict records under the same rules, and every result names it
+(``context_source``), so ``compare`` never pairs it with the other track.
+
 On this track a variant is answered only by ``run-pair``, together with a fresh
 answer run of the current baseline of the defaults, in one session and
 interleaved question by question, so drift and the time of day reach both sides
@@ -381,15 +392,20 @@ def _check_arm(arm: str, benchmark: str) -> None:
         raise ValueError(f"The {arm} arm covers {', '.join(ARMS[kind])} only")
 
 
-def _check_overrides(arm: str, overrides: dict | None) -> None:
-    """What each arm may change: nothing for full-context and the defaults, anything for a named variant."""
+def _check_overrides(arm: str, overrides: dict | None, *, built: dict | None = None) -> None:
+    """What each arm may change: nothing for full-context and the defaults, anything for a named variant.
+
+    ``built`` is what a variant's ingest() packs were built with, which it
+    changes without ``--set``.
+    """
     if arm == "full-context" and overrides:
         raise ValueError("The full-context arm has no budget to override")
     if is_baseline(arm) and overrides:
         raise ValueError(f"The {arm} arm prepares the current defaults; name a variant with --variant to change "
                          "settings")
-    if is_variant(arm) and not overrides:
-        raise ValueError(f"The {arm} variant needs the settings it changes, as --set KEY=VALUE")
+    if is_variant(arm) and not overrides and not built:
+        raise ValueError(f"The {arm} variant needs the settings it changes, as --set KEY=VALUE, or ingest() packs "
+                         "built with them")
     if arm.startswith("plain-") and overrides:
         gate.check_plain(arm.removeprefix("plain-"), overrides)
 
@@ -427,9 +443,110 @@ def _registered_judge(registration: dict, benchmark: str) -> Iterator[None]:
 
 # Prepared contexts ----------------------------------------------------------
 
+# What a variant's ingest() build must share with its baseline's, so the two packs differ only by the settings they
+# were built with: the benchmark, dataset, roles, extraction model and cache. Their commits must match too.
+_SAME_EXTRACTION = ("benchmark", "dataset_sha256", "roles", "model", "extraction_cache")
+
+
+def _packs_build(packs: Path, benchmark: str) -> dict:
+    """The record of an ingest() build of the benchmark (``extracted_packs``), made from committed code."""
+    from benchmarks.diagnostics import extracted_packs
+
+    path = packs / "build.json"
+    if not path.is_file():
+        raise ValueError(f"No ingest() build at {packs}")
+    build = json.loads(path.read_text())
+    if build.get("kind") != extracted_packs.KIND or build.get("benchmark") != benchmark:
+        raise ValueError(f"{packs} is not an ingest() build of {benchmark}")
+    if (build.get("provenance") or {}).get("dirty") is not False:
+        raise ValueError(f"The {packs.name} packs were built from a tree with uncommitted changes, so nothing records "
+                         "the code that built them")
+    return build
+
+
+def _check_defaults_build(packs: Path, build: dict) -> None:
+    """A baseline's ingest() packs must hold what the defaults ingest at this commit.
+
+    The build's engine configuration must be the one the evidence gate makes
+    at this commit with no overrides, apart from extraction, whose model the
+    build names, and the scoring and packing settings, which apply when the
+    packs are replayed. A build made at an earlier commit qualifies while
+    nothing it was ingested with has changed.
+    """
+    from benchmarks.retrieval_eval import provenance
+
+    current = provenance(gate.gate_config(Path("{pack}")))["engine_config"]
+    recorded = build["provenance"].get("engine_config") or {}
+    differing = sorted(key for key in current.keys() | recorded.keys()
+                       if key not in {"extraction", "scoring", "packing"} and current.get(key) != recorded.get(key))
+    if build.get("overrides") or differing:
+        changed = ", ".join(differing) or json.dumps(build.get("overrides"))
+        raise ValueError(f"The {packs.name} packs were not built with this commit's defaults ({changed}), so they "
+                         "cannot hold the defaults' baseline; prepare a variant over them instead")
+
+
+def _check_same_extraction(packs: Path, build: dict, defaults: Path, defaults_build: dict) -> None:
+    """A variant's packs and its baseline's must differ only by the settings they were built with."""
+    differing = [key for key in _SAME_EXTRACTION if build.get(key) != defaults_build.get(key)]
+    if build["provenance"].get("commit") != defaults_build["provenance"].get("commit"):
+        differing.append("commit")
+    if differing:
+        raise ValueError(f"The {packs.name} packs differ from the baseline's {defaults.name} packs in "
+                         f"{', '.join(differing)}, not only in the settings they were built with, so a pair would "
+                         "credit those differences to the variant. Build both from one commit, model and cache.")
+
+
+def _baseline_packs(data: Path, benchmark: str) -> Path:
+    """The ingest() packs the current baseline was prepared over, which a variant's defaults replay reads (#139)."""
+    current = current_baseline(data, benchmark)
+    if current is None:
+        raise ValueError(f"No {benchmark} baseline of the defaults has a complete answer run on this track, so a "
+                         "variant over ingest() packs has no defaults' packs to replay. Prepare the baseline with "
+                         "--packs and answer it with run first.")
+    source = json.loads((data / current / benchmark / "prepared.json").read_text()).get("context_source") or {}
+    if source.get("kind") != "ingest":
+        raise ValueError(f"The current {benchmark} baseline, {current}, was not prepared over ingest() packs, so a "
+                         "variant over them has no defaults' packs to replay")
+    return Path(source["path"])
+
+
+def _merged_overrides(built: dict, overrides: dict, prefix: str = "") -> dict:
+    """The settings a variant's packs were built with, and those it sets for the replay; a conflict is refused."""
+    merged = dict(built)
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merged_overrides(merged[key], value, f"{prefix}{key}.")
+        elif key in merged and merged[key] != value:
+            raise ValueError(f"--set {prefix}{key} conflicts with the value its ingest() packs were built with")
+        else:
+            merged[key] = value
+    return merged
+
+
+def _context_source(packs: Path, build: dict, defaults: Path | None) -> dict:
+    """What a manifest records of the ingest() packs its contexts were replayed over."""
+    kept = ("label", "benchmark", "dataset_sha256", "overrides", "roles", "extraction_cache", "model",
+            "server_versions", "started_at", "finished_at")
+    return {"kind": "ingest", "packs": packs.name, "path": str(packs),
+            "build": {**{key: build.get(key) for key in kept}, "commit": build["provenance"].get("commit"),
+                      "dirty": build["provenance"].get("dirty")},
+            **({} if defaults is None else {"defaults_packs": defaults.name, "defaults_path": str(defaults)})}
+
+
 def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None = None,
-            overrides: dict | None = None, progress=None) -> dict:
-    """Write every question's context and a manifest. No model calls."""
+            overrides: dict | None = None, progress=None, packs: Path | None = None) -> dict:
+    """Write every question's context and a manifest. No model calls.
+
+    With ``packs``, an ingest() build of the benchmark (``extracted_packs``),
+    PRME's contexts are replayed over its packs instead of the saved run's,
+    which ``store()`` built and an option that changes extraction or the graph
+    cannot reach. A baseline's build must hold the defaults at this commit
+    (``_check_defaults_build``). A variant's build may have been made with
+    other settings, which count among the settings the variant changes and
+    apply to its replay too; its defaults replay reads the current baseline's
+    packs, and the two builds must differ in nothing else
+    (``_check_same_extraction``, #139).
+    """
     _check_arm(arm, benchmark)
     _, questions = registered_protocol(benchmark)
     folder = data / arm / benchmark
@@ -450,8 +567,23 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
         if any(map(_complete_run, history)):
             raise ValueError(f"{arm} {benchmark} has a complete answer run in a pair ({path}); its contexts are "
                              "never prepared again")
-    _check_overrides(arm, overrides)
-    settings = variant_settings(overrides) if is_variant(arm) and overrides else None
+    build = defaults = None
+    if packs is not None:
+        if not is_prme(arm):
+            raise ValueError("Only PRME's own arms are replayed over ingest() packs")
+        if archive is not None:
+            raise ValueError("Replay either ingest() packs or the saved run's archive, not both")
+        build = _packs_build(packs, benchmark)
+        if is_variant(arm):
+            defaults = _baseline_packs(data, benchmark)
+            _check_same_extraction(packs, build, defaults, _packs_build(defaults, benchmark))
+        else:
+            _check_defaults_build(packs, build)
+    built = (build or {}).get("overrides") or {}
+    _check_overrides(arm, overrides, built=built)
+    # A variant's replay applies the settings its packs were built with, as the product would (#130).
+    replayed = _merged_overrides(built, overrides or {}) if built else overrides
+    settings = variant_settings(replayed) if is_variant(arm) and replayed else None
     if settings == {}:
         raise ValueError(f"The settings of the {arm} variant are the defaults' at this commit, so its pairs would "
                          "answer the defaults again; set a value that differs from the default (#130)")
@@ -465,19 +597,20 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
     if arm == "full-context":
         entries, extra = _prepare_full_context(folder, benchmark, questions)
     else:
-        entries, extra = _prepare_replay(folder, arm, benchmark, archive, overrides, progress)
+        entries, extra = _prepare_replay(folder, arm, benchmark, archive, replayed, progress, packs)
     if [entry["question_id"] for entry in entries] != [question["question_id"] for question in questions]:
         raise ValueError("Prepared contexts do not cover the registered questions in order")
     if is_variant(arm):
-        entries, extra = _replay_defaults(folder, benchmark, archive, entries, extra, progress)
+        entries, extra = _replay_defaults(folder, benchmark, archive, entries, extra, progress, defaults)
     commit = extra["provenance"].get("commit")
     if later:
         _check_baseline_name(arm, benchmark, commit, data)
     prepared = {
         "kind": "gpt54-baseline-contexts", "complete": True, "arm": arm, "benchmark": benchmark,
         "questions": len(entries), "registration_sha256": digest(study.REG),
-        "tokenizer": gate.gate_config(Path("{pack}"), overrides).packing.tokenizer,
-        **({} if settings is None else {"variant_settings": settings}), **extra,
+        "tokenizer": gate.gate_config(Path("{pack}"), replayed).packing.tokenizer,
+        **({} if settings is None else {"variant_settings": settings}),
+        **({} if packs is None else {"context_source": _context_source(packs, build, defaults)}), **extra,
         "modules": _module_identity(), "contexts": entries,
     }
     write_new(folder / "prepared.json", prepared)
@@ -722,10 +855,11 @@ def _prepare_full_context(folder: Path, benchmark: str, questions: list[dict]) -
 
 
 def _prepare_replay(folder: Path, arm: str, benchmark: str, archive: Path | None, overrides: dict | None,
-                    progress) -> tuple[list[dict], dict]:
-    """Contexts from the evidence gate's replay of the saved packs: PRME's retrieve() or a plain ranking."""
+                    progress, packs: Path | None = None) -> tuple[list[dict], dict]:
+    """Contexts from the evidence gate's replay of the saved packs, or of ``packs``: PRME's retrieve() or a plain
+    ranking."""
     method = None if is_prme(arm) else arm.removeprefix("plain-")
-    report = asyncio.run(gate.run_gate(benchmark, archive=archive, overrides=overrides,
+    report = asyncio.run(gate.run_gate(benchmark, archive=archive, overrides=overrides, packs=packs,
                                        capture_dir=folder / "contexts", plain=method, progress=progress))
     report_path = folder / "gate.json"
     gate._write_report(report_path, report, gate.gate_markdown(report))
@@ -737,6 +871,11 @@ def _prepare_replay(folder: Path, arm: str, benchmark: str, archive: Path | None
              "gate_report_sha256": digest(report_path), "provenance": report["provenance"]}
     if method is None:
         changed = "the current defaults" if not overrides else f"the current defaults and {json.dumps(overrides)}"
+        if packs is not None:
+            # Nobody answered contexts over these packs before, so none can match the saved run's.
+            return entries, {**extra, "context_rule": f"PRME retrieve() with {changed}, over the {packs.name} "
+                                                      "ingest() packs, as the product renders it.",
+                             "contexts_matching_saved_run": None}
         # How many contexts are still byte for byte the ones the saved GPT-5.4 run answered.
         return entries, {**extra, "context_rule": f"PRME retrieve() with {changed}, as the product renders it.",
                          "contexts_matching_saved_run":
@@ -747,7 +886,7 @@ def _prepare_replay(folder: Path, arm: str, benchmark: str, archive: Path | None
 
 
 def _replay_defaults(folder: Path, benchmark: str, archive: Path | None, entries: list[dict], extra: dict,
-                     progress) -> tuple[list[dict], dict]:
+                     progress, packs: Path | None = None) -> tuple[list[dict], dict]:
     """A variant's entries with the hash of the defaults' context text at the same commit, from a second replay.
 
     The variant's pairs read their before side from a baseline that may have
@@ -757,11 +896,12 @@ def _replay_defaults(folder: Path, benchmark: str, archive: Path | None, entries
     replays the defaults through the evidence gate on the same code and saved
     run, writing no captures, and keeps its report as ``defaults-gate.json``.
     Each entry gains ``defaults_text_sha256``, which ``compare`` and
-    ``run_pair`` read against the baseline's text (#139).
+    ``run_pair`` read against the baseline's text (#139). A variant over
+    ingest() packs replays the defaults over the baseline's ``packs``.
     """
     print(f"Replaying the defaults at this commit as well, so compare can tell the variant's own {benchmark} context "
           "changes from other code's (#139)", file=sys.stderr, flush=True)
-    report = asyncio.run(gate.run_gate(benchmark, archive=archive, progress=progress))
+    report = asyncio.run(gate.run_gate(benchmark, archive=archive, packs=packs, progress=progress))
     changed = [name for name in _REPLAY_INPUTS if report["provenance"].get(name) != extra["provenance"].get(name)]
     if changed:
         raise ValueError(f"The {', '.join(changed)} changed between the variant's replay and the defaults' replay, so "
@@ -799,6 +939,14 @@ def load_prepared(arm: str, benchmark: str, questions: list[dict], *,
         if checked[entry["path"]] != entry["sha256"]:
             raise ValueError(f"Prepared context {qid} changed")
     return folder, prepared, entries
+
+
+def _check_context_source(prepared: dict, model: ollama_answers.AnswerModel | None, name: str) -> None:
+    """An arm is answered only on the track of the packs its contexts were replayed over."""
+    source = (prepared.get("context_source") or {}).get("kind", "store")
+    track = "store" if model is None else model.contexts
+    if source != track:
+        raise ValueError(f"{name} was prepared over {source} packs, so the {track} track does not answer it")
 
 
 def _context_path(folder: Path, entry: dict) -> Path:
@@ -972,8 +1120,19 @@ def _check_calibration(archive: Path | None) -> None:
 
 
 def data_root(model: ollama_answers.AnswerModel | None) -> Path:
-    """Where a track keeps its contexts and answers: the GPT-5.4 track, or one folder per Ollama model."""
+    """Where a track keeps its contexts and answers: the GPT-5.4 track, or one folder per Ollama model and context
+    source."""
     return DATA if model is None else OLLAMA_DATA / model.track
+
+
+def _result_model(result: dict) -> ollama_answers.AnswerModel:
+    """The Ollama reader and judge a result or comparison names, on the track of the contexts it answered."""
+    return ollama_answers.AnswerModel(model=result["model"], contexts=result.get("context_source", "store"))
+
+
+def _track_of(model: str | ollama_answers.AnswerModel) -> str:
+    """A track's label. A bare Ollama model name is its track over the saved store() packs."""
+    return (model if isinstance(model, ollama_answers.AnswerModel) else ollama_answers.AnswerModel(model=model)).track
 
 
 def sample_questions(questions: list[dict], per_category: int) -> list[dict]:
@@ -1434,6 +1593,7 @@ async def run(arm: str, benchmark: str, *, max_usd: float | None = None,
     results = results or RESULTS
     registration, questions = registered_protocol(benchmark)
     folder, prepared, entries = load_prepared(arm, benchmark, questions, data=data)
+    _check_context_source(prepared, model, f"{arm} {benchmark}")
     if sample is not None:
         questions = sample_questions(questions, sample)
     run_name = f"{arm} {benchmark}" if sample is None else f"{arm} {benchmark} sample of {sample}"
@@ -1578,6 +1738,7 @@ async def run_pair(before: str, after: str, benchmark: str, *, model: ollama_ans
     prepared_arms = {arm: load_prepared(arm, benchmark, questions, data=data) for arm in dict.fromkeys(arms.values())}
     loaded = {side: prepared_arms[arm] for side, arm in arms.items()}
     for side, (_, prepared, _) in loaded.items():
+        _check_context_source(prepared, model, f"The {side} arm, {arms[side]},")
         # compare would refuse the pair, so it is never answered (#125).
         _check_rule_budget(f"The {side} arm", arms[side], prepared["context_budget"], prepared["tokenizer"])
     if sample is not None:
@@ -2287,13 +2448,13 @@ def _variant_warnings(variant: dict) -> list[str]:
 
 # A/A checks (#137) ----------------------------------------------------------------
 
-def _aa_record_path(results: Path, model: str) -> Path:
-    """The A/A record under ``results`` of the Ollama model named ``model``: one line per complete A/A pair.
+def _aa_record_path(results: Path, model: str | ollama_answers.AnswerModel) -> Path:
+    """The A/A record under ``results`` of the track of ``model``: one line per complete A/A pair.
 
     Each benchmark's lines are in the order its pairs finished. The record is
     tracked, so it is committed with the A/A pairs' published results.
     """
-    return results / f"{ollama_answers.AnswerModel(model=model).track}-aa-checks.jsonl"
+    return results / f"{_track_of(model)}-aa-checks.jsonl"
 
 
 def _aa_named(baseline: str, number: int, benchmark: str | None = None) -> str:
@@ -2421,7 +2582,7 @@ def record_aa_check(before: Path, after: Path, *, data: Path | None = None, resu
     named = _aa_named(baseline, number, benchmark)
     data = _track_data(sides["before"], data)
     conditions = _pair_conditions(sides["before"], sides["after"])
-    record = _aa_record_path(results, sides["before"]["model"])
+    record = _aa_record_path(results, _result_model(sides["before"]))
     record.parent.mkdir(parents=True, exist_ok=True)
     # The record's own file is locked, rather than a lock file next to it, so nothing untracked is left beside it.
     with record.open("a+") as handle:
@@ -2533,7 +2694,7 @@ def _check_aa_results(results: Path, entry: dict) -> dict[str, dict]:
     return sides
 
 
-def _checked_aa_lines(results: Path, model: str, benchmark: str,
+def _checked_aa_lines(results: Path, model: str | ollama_answers.AnswerModel, benchmark: str,
                       on_record: dict[tuple[str, int], dict] | None) -> list[tuple[dict, dict[str, dict]]]:
     """The A/A record's lines on the benchmark, each with both sides of its published pair (``_check_aa_results``).
 
@@ -2554,7 +2715,7 @@ def _aa_listed(entry: dict) -> dict:
                                            "interval_excludes_zero", "changed_verdicts", "results")}}
 
 
-def _aa_coverage(data: Path, results: Path, model: str, conditions: dict) -> dict:
+def _aa_coverage(data: Path, results: Path, model: str | ollama_answers.AnswerModel, conditions: dict) -> dict:
     """The A/A check that covers ``conditions`` on each benchmark, or a refusal when one does not (#137).
 
     The default-change rule in CLAUDE.md relies on a variant's pair only under
@@ -2639,26 +2800,26 @@ def _check_aa_ready(data: Path, results: Path, model: ollama_answers.AnswerModel
     as the variant's first pair or confirmation (#130).
     """
     if before == after:
-        record = _aa_record_path(results, model.model)
+        record = _aa_record_path(results, model)
         _check_aa_record(record, benchmark, _aa_lines(record, benchmark), _complete_aa_pairs(data, benchmark))
     elif is_variant(after):
         now = {"answer_model": settings, "server_versions": [_version_of(settings)],
                "failure_policy": {"sha256": failure_amendment()["sha256"]} if _policy_of(settings) else None,
                "context_budget": prepared["context_budget"], "prepared": {"tokenizer": prepared.get("tokenizer")}}
-        _aa_coverage(data, results, model.model, _pair_conditions(now, now))
+        _aa_coverage(data, results, model, _pair_conditions(now, now))
 
 
 # Pair verdicts (#144) -------------------------------------------------------------
 
-def _verdict_record_path(results: Path, model: str) -> Path:
-    """The verdict record under ``results`` of the Ollama model named ``model``.
+def _verdict_record_path(results: Path, model: str | ollama_answers.AnswerModel) -> Path:
+    """The verdict record under ``results`` of the track of ``model``.
 
     One line per pair the ``compare`` command accepted as a variant's first
     pair or confirmation, or as an A/A pair, in the order they were first
     compared. The record is tracked, so it is committed with the pairs'
     published results, like the A/A record.
     """
-    return results / f"{ollama_answers.AnswerModel(model=model).track}-pair-verdicts.jsonl"
+    return results / f"{_track_of(model)}-pair-verdicts.jsonl"
 
 
 def _pair_named(entry: dict) -> str:
@@ -2752,7 +2913,7 @@ def record_pair_verdict(comparison: dict, before: Path, after: Path, *, data: Pa
     # As JSON reads it back (lists, not tuples), so a line already on record compares like with like.
     entry = json.loads(json.dumps(entry, allow_nan=False))
     _check_verdict_results(results, entry)
-    record = _verdict_record_path(results, comparison["model"])
+    record = _verdict_record_path(results, _result_model(comparison))
     record.parent.mkdir(parents=True, exist_ok=True)
     # The record's own file is locked, as the A/A record is, so nothing untracked is left beside it.
     with record.open("a+") as handle:
@@ -2840,7 +3001,8 @@ def _aa_refused(sides: dict[str, dict]) -> bool:
     return False
 
 
-def _accepted_aa_lines(results: Path, model: str, benchmark: str, data: Path, *, logs: bool) -> list[dict]:
+def _accepted_aa_lines(results: Path, model: str | ollama_answers.AnswerModel, benchmark: str, data: Path, *,
+                       logs: bool) -> list[dict]:
     """The accepted A/A pairs on the benchmark in the track's A/A record, each checked against its published pair.
 
     The verdict reads them for the A/A margin, so each accepted line's
@@ -3109,7 +3271,7 @@ def verdict(arm: str, *, model: ollama_answers.AnswerModel | None = None, data: 
     model = model or ollama_answers.AnswerModel()
     data = data or data_root(model)
     results = results or RESULTS
-    path = _verdict_record_path(results, model.model)
+    path = _verdict_record_path(results, model)
     lines = _run_events(path)
     found = {benchmark: _verdict_lines(benchmark, arm, lines, data) for benchmark in gate.GATE_BENCHMARKS}
     # The settings are compared first, since recomputing the pairs' numbers takes a while.
@@ -3122,7 +3284,7 @@ def verdict(arm: str, *, model: ollama_answers.AnswerModel | None = None, data: 
                          "(#130, #144)")
     repeat = cache(partial(_sequential_repeat, results, model.model))
     # The margin reads the A/A pairs on both benchmarks, so both are checked once any pair is recorded.
-    accepted = {benchmark: _accepted_aa_lines(results, model.model, benchmark, data,
+    accepted = {benchmark: _accepted_aa_lines(results, model, benchmark, data,
                                               logs=record["baseline_from"] == "run logs")
                 for benchmark, record in found.items()} if recorded else {}
     judged: dict[str, dict[str, dict | None]] = {role: {} for role in VERDICT_ROLES}
@@ -3173,7 +3335,7 @@ def verdict(arm: str, *, model: ollama_answers.AnswerModel | None = None, data: 
     if settings and any(line["variant"]["variant_settings"] is None for line in recorded):
         warnings.append("Some of the variant's recorded pairs record no settings, so their settings are not compared "
                         "with the others' (#130)")
-    aa_path = _aa_record_path(results, model.model)
+    aa_path = _aa_record_path(results, model)
     return {
         "kind": "variant-verdict", "arm": arm, "verdict": outcome, "reason": reason,
         "checked_against_run_logs": logs, "variant_settings": next(iter(settings.values()), None),
@@ -3198,13 +3360,15 @@ def verdict(arm: str, *, model: ollama_answers.AnswerModel | None = None, data: 
 
 
 def _prepared_summary(prepared: dict) -> dict:
-    """What built the contexts: the commit, whether the tree was clean, and the settings a variant changed."""
+    """What built the contexts: the commit, whether the tree was clean, the settings a variant changed and, over
+    ingest() packs, which build."""
     provenance = prepared.get("provenance") or {}
     return {"commit": provenance.get("commit"), "dirty": provenance.get("dirty"),
             "worktree_sha256": provenance.get("worktree_sha256"), "overrides": provenance.get("overrides", {}),
             "variant_settings": prepared.get("variant_settings"),
             "tokenizer": prepared.get("tokenizer"), "context_rule": prepared["context_rule"],
-            "contexts_matching_saved_run": prepared.get("contexts_matching_saved_run")}
+            "contexts_matching_saved_run": prepared.get("contexts_matching_saved_run"),
+            **({} if prepared.get("context_source") is None else {"context_source": prepared["context_source"]})}
 
 
 def _server_version(result: dict) -> str | None:
@@ -3393,7 +3557,7 @@ def _baseline_record(before: dict, data: Path | None) -> list[dict] | None:
 
 def _track_data(result: dict, data: Path | None) -> Path:
     """Where compare reads an Ollama result's track records: ``data``, or else the result's own track."""
-    return data or data_root(ollama_answers.AnswerModel(model=result["model"]))
+    return data or data_root(_result_model(result))
 
 
 def _paired(pairs: list[tuple[str | None, float, float]], *, samples: int, clustered: bool) -> dict:
@@ -3502,7 +3666,7 @@ def compare(before: dict, after: dict, *, samples: int = BOOTSTRAP_SAMPLES, data
     for side, result in (("before", before), ("after", after)):
         if not result.get("complete") or "sample" in result or result.get("kind", "").endswith("-sample"):
             raise ValueError(f"The {side} result is not a complete answer run")
-    for field in ("kind", "benchmark", "model", "registration_sha256"):
+    for field in ("kind", "benchmark", "model", "context_source", "registration_sha256"):
         if before.get(field) != after.get(field):
             raise ValueError(f"The results differ in {field}")
     for side, result in (("before", before), ("after", after)):
@@ -3580,7 +3744,7 @@ def compare(before: dict, after: dict, *, samples: int = BOOTSTRAP_SAMPLES, data
     if recorded is not None and pair is not None and is_variant(after["arm"]):
         track = _track_data(before, data)
         variant = _variant_record(track, before["benchmark"], pair)
-        aa_check = _aa_coverage(track, results or RESULTS, before["model"], _pair_conditions(before, after))
+        aa_check = _aa_coverage(track, results or RESULTS, _result_model(before), _pair_conditions(before, after))
     warnings = [f"The {side} contexts were prepared from a tree with uncommitted changes"
                 for side, value in prepared.items() if value.get("dirty")]
     if variant is not None:
@@ -3616,6 +3780,7 @@ def compare(before: dict, after: dict, *, samples: int = BOOTSTRAP_SAMPLES, data
            else "each answered on its own, one after the other (#118)")
     return {
         "kind": "answer-comparison", "benchmark": before["benchmark"], "model": before["model"],
+        **({"context_source": before["context_source"]} if "context_source" in before else {}),
         "answer_model": before["answer_model"], "bootstrap_samples": samples, "bootstrap_seed": BOOTSTRAP_SEED,
         "interval_unit": "conversations and questions" if clustered else "questions",
         "interval_note": ("LoCoMo intervals resample its conversations, keeping each conversation's questions "
@@ -3809,6 +3974,9 @@ def report(arm: str, benchmark: str, folder: Path, questions: list[dict], prepar
     result = {
         "kind": "gpt54-baseline-result" if model is None else "ollama-answer-result", "arm": arm,
         "benchmark": benchmark, "model": MODEL if model is None else model.model,
+        # Only a track over packs other than the saved store() ones names its contexts, so earlier results keep
+        # their bytes, and compare, the A/A record and the verdict record find the track from the result.
+        **({} if model is None or model.contexts == "store" else {"context_source": model.contexts}),
         "registration_sha256": digest(study.REG), "prepared_sha256": digest(folder / "prepared.json"),
         "context_budget": prepared["context_budget"], "context_rule": prepared["context_rule"],
         **coverage(rows, failures, len(questions)),
@@ -4006,13 +4174,23 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
         parser.error("run-pair is for the ollama provider; the GPT-5.4 track has no defaults arm to pair with")
     if command == "verdict" and model is None:
         parser.error("verdict is for the ollama provider, whose variants the default-change rule reads")
+    if model is None and (args.contexts or args.packs):
+        parser.error("--contexts and --packs apply to the ollama provider only; the GPT-5.4 track answers the saved "
+                     "run's packs")
+    if args.packs is not None and (command != "prepare" or args.contexts != "ingest"):
+        parser.error("--packs applies to prepare on --contexts ingest only")
+    if command == "prepare" and args.contexts == "ingest" and args.packs is None:
+        parser.error("prepare on --contexts ingest needs --packs, the ingest() build to replay")
     # Commands that read or record results rather than answering an arm.
     reading = {"calibrate", "compare", "record-aa-check"}
     if command in reading:
         given = [flag for flag, value in (("arm", args.arm), ("--benchmark", args.benchmark),
                                           ("--set", args.overrides), ("--variant", args.variant),
                                           ("--max-usd", args.max_usd), ("--sample", args.sample),
-                                          ("--archive", args.archive), ("--baseline", args.baseline)) if value]
+                                          ("--archive", args.archive), ("--baseline", args.baseline),
+                                          # A result names the track it was answered on.
+                                          ("--contexts", args.contexts if command != "calibrate" else None))
+                 if value]
         if given:
             parser.error(f"{command} takes none of: {', '.join(given)}")
     paired = command in {"compare", "record-aa-check"}
@@ -4066,7 +4244,8 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
         arm = arm_name(args.arm, args.variant)
         overrides = gate.parse_overrides(args.overrides)
         _check_arm(arm, benchmark)
-        if command == "prepare":
+        # A variant over ingest() packs may change settings through its build alone, which prepare checks.
+        if command == "prepare" and not (args.packs and is_variant(arm) and not overrides):
             _check_overrides(arm, overrides)
         if command == "run-pair":
             _check_pair_baseline(args.baseline)
@@ -4103,6 +4282,17 @@ def main(argv: list[str] | None = None) -> None:
                              "arm and no --variant, the baseline is paired with itself: the A/A check.")
     parser.add_argument("--archive", type=Path,
                         help="Saved 2026-09-23 run archive (default: the main checkout's data/gpt54-comparison-v1)")
+    parser.add_argument("--contexts", choices=ollama_answers.CONTEXT_SOURCES,
+                        help="ollama provider only: which packs the track's contexts come from, the saved run's "
+                             "store() packs (default) or packs built through ingest(), which prepare reads with "
+                             "--packs. Each keeps its own contexts, answers, calibration, run logs and A/A and "
+                             "verdict records. compare and record-aa-check read it from the results.")
+    parser.add_argument("--packs", metavar="LABEL",
+                        help="prepare on --contexts ingest only: the ingest() build to replay, a folder under the "
+                             "main checkout's data/extracted-packs-v1 (benchmarks.diagnostics.extracted_packs). A "
+                             "baseline's build must hold this commit's defaults. A variant's build may be made with "
+                             "the settings it changes, which count as its own, from the same commit, extraction model "
+                             "and cache as the baseline's.")
     parser.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
                         help="prepare only: packing.token_budget or packing.overhead_tokens for a plain arm, or "
                              "the settings a prme variant changes (any the evidence gate accepts). run-pair and "
@@ -4121,7 +4311,7 @@ def main(argv: list[str] | None = None) -> None:
                              "confirmation, or an A/A pair, in the track's verdict record, which verdict reads "
                              "(#144).")
     args = parser.parse_args(argv)
-    model = ollama_answers.AnswerModel() if args.provider == "ollama" else None
+    model = ollama_answers.AnswerModel(contexts=args.contexts or "store") if args.provider == "ollama" else None
     arm, benchmark, overrides = _check_args(parser, args, model)
     data = data_root(model)
     if args.command == "calibrate":
@@ -4137,7 +4327,7 @@ def main(argv: list[str] | None = None) -> None:
             recorded = record_pair_verdict(result, args.before, args.after)
         except (OSError, ValueError) as exc:
             parser.error(f"compare accepted the pair, but did not record it for the verdict: {exc}")
-        record = _verdict_record_path(RESULTS, result["model"])
+        record = _verdict_record_path(RESULTS, _result_model(result))
         # The record belongs to this checkout, while the run log is shared by every worktree.
         shown = record.relative_to(study.ROOT) if record.is_relative_to(study.ROOT) else record
         if recorded is not None:
@@ -4180,8 +4370,15 @@ def main(argv: list[str] | None = None) -> None:
                 print(f"{done} questions replayed", file=sys.stderr, flush=True)
             reported = done
 
+        packs = None
+        if args.packs is not None:
+            from benchmarks.diagnostics import extracted_packs
+
+            if Path(args.packs).name != args.packs:
+                parser.error("--packs names a build folder under data/extracted-packs-v1")
+            packs = extracted_packs.default_root() / args.packs
         prepared = prepare(arm, benchmark, data=data, archive=args.archive, overrides=overrides or None,
-                           progress=progress)
+                           progress=progress, packs=packs)
         print(json.dumps({key: prepared[key] for key in ("arm", "benchmark", "questions", "context_budget",
                                                          "contexts_matching_saved_run") if key in prepared}))
     elif args.command == "estimate":

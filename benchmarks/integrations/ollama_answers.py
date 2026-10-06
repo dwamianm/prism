@@ -56,6 +56,10 @@ TIMEOUT_SECONDS = 900
 TRANSIENT = frozenset({429, 500, 502, 503, 504, 529})
 # Literal loopback addresses only: "localhost" depends on the hosts file.
 _LOOPBACK = frozenset({"127.0.0.1", "::1"})
+# Where a track's contexts come from: the saved run's packs, which the registered harness built with store(), or packs
+# built through ingest() (benchmarks.diagnostics.extracted_packs), which an option that changes extraction or the
+# graph needs.
+CONTEXT_SOURCES = ("store", "ingest")
 # Identity fields that name the model. The server version is left out, so an
 # Ollama upgrade does not look like a different model.
 _IDENTITY_KEYS = ("provider", "model", "resolved_model", "manifest_digest_sha256", "model_digest_sha256",
@@ -79,16 +83,28 @@ class AnswerModel:
     temperature: float = TEMPERATURE
     seed: int = SEED
     reasoning_effort: str = REASONING_EFFORT
+    # Where the contexts it answers come from (CONTEXT_SOURCES). Not a reader or judge setting, so settings() and
+    # same_model leave it out; each source keeps its own track.
+    contexts: str = "store"
 
     def __post_init__(self) -> None:
         check_endpoint(self.endpoint)
         if not self.model or any(character.isspace() for character in self.model):
             raise ValueError("The Ollama model must be a nonempty tag")
+        if self.contexts not in CONTEXT_SOURCES:
+            raise ValueError(f"Contexts come from one of: {', '.join(CONTEXT_SOURCES)}")
 
     @property
     def track(self) -> str:
-        """The label this model's answers are filed under, apart from the GPT-5.4 track."""
-        return "ollama-" + re.sub(r"[^a-z0-9.]+", "-", self.model.lower()).strip("-")
+        """The label this model's answers are filed under, apart from the GPT-5.4 track.
+
+        Answers over ``ingest()`` packs are a track of their own, with their own
+        contexts, answers, calibration, run logs and tracked records, so a pair
+        over one kind of pack never counts with the other's baselines or A/A
+        checks. The saved ``store()`` packs keep the original label.
+        """
+        label = "ollama-" + re.sub(r"[^a-z0-9.]+", "-", self.model.lower()).strip("-")
+        return label if self.contexts == "store" else f"{label}-{self.contexts}"
 
     def body(self, prompt: str, limit: int) -> dict:
         return {"model": self.model, "messages": [{"role": "user", "content": prompt}],

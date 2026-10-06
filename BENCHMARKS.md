@@ -1800,6 +1800,53 @@ The same smoke sample, answered twice on identical contexts, gave differently
 worded answers for 18 of 20 questions and one flipped verdict, so seeded runs of
 the hosted model do not repeat exactly (#118).
 
+### Answers over `ingest()` packs
+
+The saved packs that the track replays were built with `store()`, which never
+extracts, so an option that changes extraction, the graph or how extracted
+records are packed reaches none of their contexts. With `--contexts ingest`,
+PRME's arms are answered over packs built through `ingest()` by
+`benchmarks.diagnostics.extracted_packs` instead, on a track of its own. It
+keeps its own contexts and answers under
+`data/ollama-answers-v1/ollama-deepseek-v4.1-flash-cloud-ingest/`, its own
+calibration and run logs, and its own tracked A/A record
+(`benchmarks/results/research/ollama-deepseek-v4.1-flash-cloud-ingest-aa-checks.jsonl`)
+and verdict record (`...-ingest-pair-verdicts.jsonl`). The rule is the same: a
+baseline, an A/A pair on both benchmarks, a variant's first pair and its
+confirmation, and `verdict`. Its results name their track (`context_source`),
+so `compare` never pairs one with a result over the `store()` packs.
+
+```sh
+T="--provider ollama --contexts ingest"
+uv run python -m benchmarks.integrations.gpt54_baselines calibrate $T
+# The baseline: a build made with the defaults, prepared from a commit on main.
+uv run python -m benchmarks.integrations.gpt54_baselines prepare prme --benchmark locomo $T \
+  --packs grounding-locomo-full-control
+uv run python -m benchmarks.integrations.gpt54_baselines run prme --benchmark locomo $T
+uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --benchmark locomo $T --baseline prme
+# A variant: a build made with the ingest() settings it changes, and any retrieval settings it adds.
+uv run python -m benchmarks.integrations.gpt54_baselines prepare prme --variant sentences-fold \
+  --benchmark locomo $T --packs grounding-locomo-full-refs-sentences --set packing.fold_repeated_text=true
+uv run python -m benchmarks.integrations.gpt54_baselines run-pair prme --variant sentences-fold \
+  --benchmark locomo $T --baseline prme
+uv run python -m benchmarks.integrations.gpt54_baselines verdict prme --variant sentences-fold $T
+```
+
+A baseline's build must hold the defaults at the commit that prepares it: its
+engine configuration, apart from extraction and the scoring and packing
+settings applied at replay, must be the one the gate makes there with no
+overrides. A variant's build may be made with the settings it changes, which
+count among its `variant_settings` and apply to its replay as well. It must
+come from the same commit, extraction model, cache, dataset and roles as the
+current baseline's build, so a pair credits it with nothing else, and its
+defaults replay (#139) reads the baseline's build. Every build must come from
+committed code and cover every question. The official LongMemEval-S judge is
+read from `../prism-opt-in-study-2026-09-22/data/opt-in-study/LongMemEval-official`
+beside the main checkout (`PRME_MATRIX_ROOT` moves it): a clone of
+https://github.com/xiaowu0162/LongMemEval at
+`9e0b455f4ef0e2ab8f2e582289761153549043fc`, whose `evaluate_qa.py` the
+registration pins.
+
 ### Run-to-run floor
 
 Two answer runs of the same defaults with the same inputs show how far the
