@@ -2264,8 +2264,10 @@ The published results of every run and pair are next to it. The tracked A/A
 record and verdict record are
 `ollama-deepseek-v4.1-flash-cloud-ingest-aa-checks.jsonl` and
 `ollama-deepseek-v4.1-flash-cloud-ingest-pair-verdicts.jsonl`. This baseline
-holds the old defaults, so a new one is recorded after the flip, and every
-variant on the track counts from zero against it.
+holds the old defaults, so a new one was recorded after the flip at the merge
+commit: `prme@3389586b`, over the two variant builds, LoCoMo 1,190/1,540
+(77.3%) and LongMemEval-S 440/500 (88.0%), complete with nothing unscored.
+Every later variant on the track counts from zero against it.
 
 ## Earlier registered memory-utility comparison
 

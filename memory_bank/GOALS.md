@@ -120,8 +120,8 @@ folding are now defaults. The DeepSeek track over `ingest()` packs (#232)
 answered them as one variant, `prme-sentences-fold`, and `verdict` reads pass
 with its run logs checked. LoCoMo +1.69 and +1.82 points, LongMemEval-S +3.4
 and +4.2, every interval excluding zero (`BENCHMARKS.md`, "Default change:
-claim sentences, speaker references and folding"). A new ingest-track baseline
-for the new defaults comes next. The `store()` track's contexts do not change.
+claim sentences, speaker references and folding"). The ingest track's new
+baseline is `prme@3389586b`: LoCoMo 1,190/1,540, LongMemEval-S 440/500. The `store()` track's contexts do not change.
 
 **Next, in order:**
 
