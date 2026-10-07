@@ -693,7 +693,8 @@ rank fusion session decay when that is set, under the version 17 rules.
 Versions 1 to 17 cannot record a skipped floor; a floor that was applied
 omits the field, so every other receipt keeps its version and bytes. When
 `rrf_recency_boost` or `rrf_tie_break` is set, as both are in `PRMEConfig`'s
-defaults, the receipt is version 19, which
+defaults, the receipt is version 19 (version 22 when folding is also on, as
+it is in `PRMEConfig`'s defaults since 2026-10-06; see below), which
 records them in its scoring settings and requires every score provenance to
 use the same values; it also admits the version 17 and 18 features. Versions
 1 to 18 cannot record either setting, and an unset setting is omitted, so

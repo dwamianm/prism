@@ -14,8 +14,8 @@ This is a conservative English guard, not general coreference resolution. It
 does not disambiguate several quoted speakers inside one event or equal names
 belonging to different people.
 
-`enable_speaker_references` (default false) is the one exception, and the
-caller opts into it. When a turn names its speaker (`ingest(speaker=...)`), a
+`enable_speaker_references` (on by default since 2026-10-06) is the one
+exception. When a turn names its speaker (`ingest(speaker=...)`), a
 first-person singular reference in its claims (`I`, `me`, `my`, `mine`,
 `myself`) binds to an entity with that speaker's name and type `person`, the
 same node that other mentions of the name use. The claim keeps the literal
@@ -23,9 +23,14 @@ pronoun as its subject or object, and its `speaker_reference` metadata names
 the speaker and which of the two it bound. A speaker's claims then connect
 across messages, so a repeated claim can merge (#209) and a named update can
 supersede the value it replaces. Turns without a speaker, and plural,
-second-person and third-person references, stay local to their message. The
-option is off by default because only the caller knows that the named speaker,
-and not someone the turn quotes, is who says `I`.
+second-person and third-person references, stay local to their message. It
+became a default together with `enable_claim_sentence_text` and
+`packing.fold_repeated_text`, after the three passed the default-change rule
+on the DeepSeek answer track over `ingest()` packs (`BENCHMARKS.md`, "Default
+change: claim sentences, speaker references and folding"). Only the caller
+knows that the named speaker, and not someone the turn quotes, is who says
+`I`, so set `PRME_ENABLE_SPEAKER_REFERENCES=false` when a speaker's turns
+quote others in the first person.
 
 `enable_speaker_grounding` (default false) makes the same assumption during
 grounding. Grounding requires a claim's subject and object to occur in its

@@ -291,7 +291,7 @@ not which objects are included. The whole-context budget check is unchanged.
 Packing a trigger's nearest turns right after the trigger instead was measured
 and rejected: it lost LongMemEval-S evidence (see `docs/PACKING.md`).
 
-**Folded repeated text (opt-in).** `ingest()` keeps a turn's own record beside
+**Folded repeated text (a `PRMEConfig` default since 2026-10-06).** `ingest()` keeps a turn's own record beside
 the claims extracted from it, and claims from one sentence share that sentence
 as their text, so the algorithm above can include one sentence several times.
 With `PackingConfig.fold_repeated_text` on, which applies only to the reader
@@ -303,8 +303,8 @@ same tags and, where it shows them, the same event time, validity window and
 speaker, so no text, date or state leaves the context. Objects a repack must
 keep, such as the operands of a temporal relation, are never folded, an
 included member of an `"adjacent"` session window is never removed, and folded
-objects are recorded as excluded. With the setting off, the default, the
-algorithm above is unchanged.
+objects are recorded as excluded. With the setting off, the `PackingConfig`
+field default, the algorithm above is unchanged.
 
 The packing algorithm is deterministic. Given the same input list and budget, it MUST produce the same bundle.
 

@@ -354,11 +354,13 @@ message without `enable_claim_sentence_text`. A reader context can therefore
 show one sentence several times. In the chat probe one context showed "I'm a
 data analyst at Northwind, and my manager Priya keeps asking me for weekly
 dashboards." five times: once in its turn and once for each of four claims.
-The opt-in `fold_repeated_text` setting packs each source text once:
+The `fold_repeated_text` setting packs each source text once. `PRMEConfig`
+turns it on by default since 2026-10-06, and a `PackingConfig` built in code
+leaves it off. To turn it off and keep the other defaults:
 
 ```python
 config = config.model_copy(update={
-    "packing": config.packing.model_copy(update={"fold_repeated_text": True})
+    "packing": config.packing.model_copy(update={"fold_repeated_text": False})
 })
 ```
 
@@ -372,16 +374,14 @@ config = config.model_copy(update={
   hypothetical claim, a claim dated apart from its message and another
   speaker's record all stay, so no text, date or state leaves the context.
 - Only the reader format folds, because its lines carry no record identity.
-  `PackingConfig` refuses the setting with the auditable and compact formats,
-  and packing ignores it there if a `model_copy` sets it anyway. Records that
-  a repack must keep, such as the operands of a temporal relation, are never
-  folded, and a packed member of an `"adjacent"` session window is never
-  removed.
+  The auditable and compact formats ignore the setting, and their receipts
+  omit it. Records that a repack must keep, such as the operands of a
+  temporal relation, are never folded, and a packed member of an
+  `"adjacent"` session window is never removed.
 - `store()` keeps one record per message, so its records share no source
   event and fold nothing.
-- The equivalent environment setting is
-  `PRME_PACKING__FOLD_REPEATED_TEXT=true`. Receipts record the setting in
-  schema version 22.
+- The environment setting is `PRME_PACKING__FOLD_REPEATED_TEXT`, and `false`
+  turns it off. Receipts record the setting in schema version 22.
 
 On the offline evidence gate at 4K, over `ingest()` packs of all of LoCoMo,
 folding packed all annotated evidence for more questions in every build:
@@ -494,11 +494,6 @@ PRME_PACKING__CONTEXT_FORMAT=auditable
 PRME_PACKING__MULTIPATH_ORDERING=balanced
 ```
 
-The auditable format ignores folding. To keep the reader format without it,
-set `PRME_PACKING__FOLD_REPEATED_TEXT=false`. To go back to the `ingest()`
-defaults from before 2026-10-06, set `PRME_ENABLE_CLAIM_SENTENCE_TEXT=false`
-and `PRME_ENABLE_SPEAKER_REFERENCES=false`.
-
 or, in code:
 
 ```python
@@ -519,8 +514,17 @@ never applies it and its receipts omit it. With these three settings the
 offline evidence gate reproduces every saved 2026-09-23 LoCoMo and
 LongMemEval-S context byte for byte.
 
-Retrievals with the default settings produce version 19 receipts (rank
-fusion with its recency boost, tie-break and session decay, described below). Weighted retrievals in the
+The auditable format ignores folding. To keep the reader format without it,
+set `PRME_PACKING__FOLD_REPEATED_TEXT=false`. To go back to the `ingest()`
+behavior of v0.13.0, set `PRME_ENABLE_CLAIM_SENTENCE_TEXT=false`,
+`PRME_ENABLE_SPEAKER_REFERENCES=false` and `PRME_ENABLE_CLAIM_MERGE=false`.
+The first two restore the `ingest()` defaults from before 2026-10-06, and the
+third turns off the merging of repeated extracted claims (#209), which came
+after v0.13.0.
+
+Retrievals with the default settings produce version 22 receipts (rank
+fusion with its recency boost, tie-break and session decay, and folding,
+described below), or version 19 with `PRME_PACKING__FOLD_REPEATED_TEXT=false`. Weighted retrievals in the
 auditable or compact format produce version 12 receipts with explicit ordering,
 context-guidance, context-format, and episode-routing policies and the same
 score-replay and execution requirements. Version 9 records the explicit
@@ -582,7 +586,8 @@ retrieval with `scoring.rrf_recency_boost` or `scoring.rrf_tie_break` set (the
 defaults set both) emits version 19, which records them in its scoring
 settings and saved factors, requires every score provenance to use the same
 values, and also admits the version 17 and 18 features, so default retrievals
-write version 19. Versions 1 to 18 cannot record either setting, and unset
+wrote version 19 until folding became a default on 2026-10-06; they now write
+version 22 (below). Versions 1 to 18 cannot record either setting, and unset
 settings are omitted, so no earlier receipt changes. A weighted retrieval with
 `scoring.recency_time="event_time"` emits version 20 in any context format,
 which records the setting and requires every score provenance to use it.

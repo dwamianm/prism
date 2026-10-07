@@ -7,8 +7,9 @@ pack is deterministic and shows what PRME builds from correct extraction
 output. It does not measure extraction quality.
 
 The messages name their subject. First-person references such as "I" and "my"
-stay local to one message by design (docs/ENTITY-IDENTITY.md), so a first-person
-chat would not connect across sessions today.
+stay local to one message unless the turn names its speaker
+(docs/ENTITY-IDENTITY.md), and these turns name none, so a first-person chat
+connects across sessions only when it passes ``ingest(speaker=...)``.
 
     uv run python -m web.demo ./my_memories_demo
     PRME_CHAT_DATA_DIR=./my_memories_demo uv run python -m web.server

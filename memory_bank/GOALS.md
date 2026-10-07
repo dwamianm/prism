@@ -1,19 +1,21 @@
 # PRME goals and production handoff
 
-**Status:** active handoff, 2026-09-23; see "Current state (2026-10-05)" for
+**Status:** active handoff, 2026-09-23; see "Current state (2026-10-06)" for
 the latest work.
 
-**Production baseline:** released v0.12.0 at `aaa2e4e`; the subsequent GPT-5.4
-benchmark evidence is integrated into `main` without product-code or default
-changes.
+**Production baseline:** released v0.13.0 at `34b3d29` (2026-09-25). `main`
+has unreleased changes since, including the `ingest()` and reader context
+defaults of 2026-10-06 (see the [changelog](../CHANGELOG.md)).
 
 **Research record:** [research agenda](../docs/RESEARCH-AGENDA.md)
 
-## Current state (2026-10-05)
+## Current state (2026-10-06)
 
 The release is v0.13.0. The retrieval defaults changed on 2026-09-25 (#177,
-#187), and the DeepSeek defaults baseline is `prme@d811e3ed` (LoCoMo
-1250/1540, LongMemEval-S 453/500). Every variant counts from zero against it.
+#187), and the DeepSeek defaults baseline on the `store()` track is
+`prme@d811e3ed` (LoCoMo 1250/1540, LongMemEval-S 453/500). Every variant on
+that track counts from zero against it. The `ingest()` track has its own
+baseline (below).
 
 **Focus: benchmarks that test extracted memory.** The saved benchmark packs
 were built with `store()`, which never extracts, so the evidence gate could not
@@ -121,40 +123,35 @@ answered them as one variant, `prme-sentences-fold`, and `verdict` reads pass
 with its run logs checked. LoCoMo +1.69 and +1.82 points, LongMemEval-S +3.4
 and +4.2, every interval excluding zero (`BENCHMARKS.md`, "Default change:
 claim sentences, speaker references and folding"). The ingest track's new
-baseline is `prme@3389586b`: LoCoMo 1,190/1,540, LongMemEval-S 440/500. The `store()` track's contexts do not change.
+baseline is `prme@3389586b`: LoCoMo 1,190/1,540, LongMemEval-S 440/500.
+`store()` records share no source event, so the new defaults should leave the
+`store()` track's contexts unchanged; that has not been checked on its saved
+archive, which is on the answering machine.
 
 **Next, in order:**
 
-1. Answer runs over `ingest()` packs, so that `enable_claim_sentence_text`
-   and `packing.fold_repeated_text` can become defaults. The DeepSeek answer
-   track replays the saved GPT-5.4 run, whose packs were built with `store()`
-   (`benchmarks/integrations/run_gpt54_comparison.py`). It cannot see an
-   option that only changes `ingest()`, and folding should change nothing in
-   `store()` packs, whose records share no source event. A default change
-   first needs harness support for `ingest()` packs and an `ingest()` build
-   of all of LongMemEval-S, which the owner stopped at 34 of 500 (ask before
-   resuming). Then a new A/A pair, because the Ollama server is now 0.34.4,
-   and the paired runs in `CLAUDE.md`.
-2. Grounding still discards claims that refer through a third-person pronoun
+1. Grounding still discards claims that refer through a third-person pronoun
    ("she got engaged to her boyfriend Tom") or through a neighboring sentence
    ("Green tea now."). Speaker grounding gains no evidence even with folding
    on, so more claims are not a retrieval gain by themselves; recover these
    for the graph's links and supersedence, and check the gate. The intention
    check also discards "I, hoping to visit, this summer": its predicate
    pattern matches "hope" but not "hoping".
-3. #91 on LongMemEval-S: build the slice with the window and resolution and
+2. #91 on LongMemEval-S: build the slice with the window and resolution and
    compare it with `ingest-baseline-lme-deepseek-r2`. It uses Ollama cloud
    calls, so confirm with the owner first.
-4. #91: resolve relative dates in fact text more often, and run the authored
+3. #91: resolve relative dates in fact text more often, and run the authored
    negation and condition probes with resolution on. The chat probe also
    dated "May 4", said in April 2026, as 2025-05-04, "I signed up for the
    Cherry Creek Half Marathon on May 17!" on the race date instead of the
    message date, and "Two weeks in at Brightpath" two weeks after the message.
-5. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
+4. Jev graph organization, opt-in proposals only (#220 to #223). The conv-26
    pack has 576 entities, half with no edge, and "Mel" and "Melanie" are
    separate nodes.
-6. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
-   (failing simulation check) and the recency and temporal scoring bugs.
+5. The audit backlog, especially #173 and #174 (HTTP API exposure), #171
+   (the deterministic simulation check for consolidation and remention, which
+   failed 9 of 17 runs on `main` on 2026-10-06) and the recency and temporal
+   scoring bugs.
 
 **Known flaky test:** `tests/test_extraction_workflow.py::
 test_heartbeat_keeps_long_running_provider_work_owned` fails intermittently on
@@ -192,6 +189,11 @@ branch and subsequent production merges. The safe promoted surface includes:
   replaced score ordering with balanced ordering), with the auditable and
   compact formats, score and density ordering and the weighted formula still
   available explicitly;
+- a claim's own sentences as its text, a named speaker's I, me and my bound
+  to the speaker's entity, and each source text packed once in reader
+  contexts, as defaults since 2026-10-06 (adopted on the DeepSeek track over
+  `ingest()` packs), and repeated extracted claims merged into one current
+  record (#209);
 - tenant-bound HTTP/MCP access, workspace/lease isolation, PostgreSQL parity,
   deterministic rebuild and recovery paths;
 - durable profile staging/recovery, shared temporal-parser locking, and typed

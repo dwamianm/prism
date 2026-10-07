@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrade notes
+
+- **`ingest()` and reader context defaults.** Four defaults changed after
+  v0.13.0 (all under Changed). An install upgrading from v0.13.0 gets:
+  - claims whose text is their own sentences instead of the whole message
+    (`enable_claim_sentence_text=True`);
+  - a named speaker's I, me and my bound to that speaker's entity, so a
+    speaker's claims connect across messages
+    (`enable_speaker_references=True`). Only the caller knows that the named
+    speaker, and not someone the turn quotes, is who says I, so set
+    `PRME_ENABLE_SPEAKER_REFERENCES=false` when a speaker's turns quote others
+    in the first person;
+  - each source text packed once in reader contexts
+    (`packing.fold_repeated_text=True`);
+  - an exactly repeated extracted claim merged into one current record that
+    supersedes the earlier copies (`enable_claim_merge=True`, #209).
+
+  The `ingest()` settings apply to messages ingested after the upgrade, and
+  records stored earlier keep their text, but a repeated claim ingested
+  afterwards also supersedes a matching copy stored before it. Folding acts
+  when a context is packed, so reader contexts over existing `ingest()` stores
+  change too. `store()` is unchanged. To restore the v0.13.0 behavior, set
+  `PRME_ENABLE_CLAIM_SENTENCE_TEXT=false`,
+  `PRME_ENABLE_SPEAKER_REFERENCES=false`, `PRME_ENABLE_CLAIM_MERGE=false` and
+  `PRME_PACKING__FOLD_REPEATED_TEXT=false`. `docs/PACKING.md` ("Default
+  retrieval settings") has the details.
+- **Receipts.** Default retrievals write receipt schema version 22, or 19 with
+  `PRME_PACKING__FOLD_REPEATED_TEXT=false`. Earlier releases cannot read
+  version 22 receipts. Stored receipts keep their bytes and replay unchanged.
+
 ### Added
 
 - Opt-in repository coding memory through a local Docker MCP service, with
@@ -14,24 +44,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   configuration, and an isolated local-model experiment harness. The first
   four-task development pilot passed 2/8 runs with memory versus 0/8 without;
   both gains repeated one task and do not establish general coding improvement.
-  See [coding memory](docs/CODING-MEMORY.md).
+  Automatic use is shelved after the final registered study stopped as
+  inconclusive after a grader defect (#208): ordinary coding tasks no longer
+  recall or capture memory, and the commands stay available for explicit
+  manual use. See [coding memory](docs/CODING-MEMORY.md).
+- Add `packing.fold_repeated_text` (`PRME_PACKING__FOLD_REPEATED_TEXT`, reader
+  format only; #231), which packs each source text once and is a default since
+  2026-10-06 (see Changed). `ingest()` keeps a turn's own record beside the
+  claims extracted from it, so a context could show one sentence several
+  times. With the setting on, a record whose text a packed record from the
+  same source event already shows is left out unless its line shows another
+  date, tag or speaker, and its budget goes to other records. Retrieval
+  receipts record the setting in schema version 22, and other receipts keep
+  their version and bytes. On the offline evidence gate over `ingest()` packs
+  of all of LoCoMo, it raised the share of questions with all annotated
+  evidence packed by 4.7 points with the defaults of the time and by 2.8 with
+  speaker references and claim sentences.
+- Add opt-in windowed extraction (`enable_windowed_extraction`, with
+  `extraction_window_turns`, default 4; #218, part of #91). `ingest()` shows
+  the extractor the preceding turns of the same session, so it can read what
+  the new turn refers to. Only the new turn is extracted: grounding still
+  checks each claim against it alone, and the evidence quote stays a span of
+  it. A turn without a session gets no window. Providers receive the new
+  `context` argument only when a window exists, so a provider written for the
+  earlier signature keeps working while the option is off.
+- Add opt-in self-contained fact text (`enable_fact_text_resolution`; #219,
+  part of #91). `ingest()` asks the extractor for each fact's text with a
+  pronoun for a named person replaced by the name and a relative date by the
+  date it means. A deterministic check keeps that text only when those
+  replacements are its sole changes to whole sentences of the new turn;
+  otherwise the fact keeps its source passage, which stays its evidence either
+  way. An accepted text records grounding method `resolved_text_v1` and lists
+  each replacement in `metadata.resolution`. With the option off, the prompt,
+  the response schema and saved extraction output are unchanged. On the
+  offline evidence gate over all of LoCoMo, a window of 4 turns with
+  resolution raised evidence recall by 1.6 points, and the share of questions
+  with all evidence packed by 1.0 point, which is not clearly above zero
+  (#225).
+- Add opt-in speaker grounding (`enable_speaker_grounding`, #230). In a turn
+  that names its speaker, the speaker's own I, me, my, mine or myself counts as
+  a mention of the speaker when grounding checks that a claim's subject and
+  object occur in its quoted sentences, so a claim such as "Dana, lives in,
+  Denver" for "I live in Denver" is no longer discarded. Extractions checked
+  this way record grounding policy `speech_act_v12`. On all of LoCoMo it kept
+  10,599 claims instead of 7,136, but the extra claims restate turns that
+  retrieval already reaches: with the current defaults it lowered the share of
+  questions with all evidence packed by 0.8 points on the offline evidence
+  gate, so it stays off.
+- Add a browser memory explorer (`web/`, #211). From a source checkout,
+  `uv run --extra api python -m web.server` serves a read-only interface beside
+  the HTTP API, with filters, source evidence, each extracted claim's subject,
+  predicate and object (#226), and a relationship map. Its server adds a paged
+  one-hop endpoint, `GET /v1/explorer/nodes/{id}/connections`, that checks
+  owner and scope before paging. It needs no frontend build, keeps the API's
+  authentication and loopback default, and opens the pack in
+  `PRME_CHAT_DATA_DIR`, the folder `examples/chat.py` uses; a missing folder
+  stops it with an error instead of creating an empty pack.
+  `uv run python -m web.demo ./my_memories_demo` builds a small connected demo
+  pack through the real `ingest()` pipeline with scripted extraction output,
+  so it needs no model or network.
 - `benchmarks.diagnostics.extracted_packs` builds LoCoMo and LongMemEval-S
   memory packs through `ingest()` with an Ollama extraction model (local by
   default; an Ollama cloud model with `--cloud`), and the offline evidence gate
   replays them with `gate --packs` (#102, part of #91). Until now the gate
   could replay only packs built with `store()`, which never runs extraction, so
   it could not measure changes to extraction or the graph.
-- Opt-in `packing.fold_repeated_text` (`PRME_PACKING__FOLD_REPEATED_TEXT=true`,
-  reader format only) packs each source text once. `ingest()` keeps a turn's
-  own record beside the claims extracted from it, so a context could show one
-  sentence several times. With the setting on, a record whose text a packed
-  record from the same source event already shows is left out unless its line
-  shows another date, tag or speaker, and its budget goes to other records.
-  Retrieval receipts record the setting in schema version 22, and other
-  receipts keep their version and bytes. On the offline evidence gate over
-  `ingest()` packs of all of LoCoMo, it raised the share of questions with all
-  annotated evidence packed by 4.7 points with the defaults and by 2.8 with
-  speaker references and claim sentences.
+- Add a DeepSeek answer track over packs built through `ingest()` (#232).
+  `benchmarks.integrations.gpt54_baselines prepare --contexts ingest --packs
+  LABEL` answers an `extracted_packs` build instead of the saved `store()`
+  packs, which cannot show an option that only changes `ingest()`. The track
+  keeps its own contexts, answers, run logs, A/A checks and verdicts,
+  `compare` refuses to pair results from the two tracks, and the
+  default-change rule applies to it unchanged. The 2026-10-06 default change
+  passed on it, and its baseline for the new defaults, `prme@3389586b`, scores
+  LoCoMo 1,190/1,540 (77.3%) and LongMemEval-S 440/500 (88.0%) (#234). Its
+  scores are reported separately from the `store()` track's.
+- Add a fixed development slice, `benchmarks/slices/dev-v1.json` (#224): three
+  LoCoMo conversations (466 questions) and 42 LongMemEval-S questions, chosen
+  by rules in `benchmarks.diagnostics.dev_slice` and tagged from committed
+  answer runs as stable failures, stable passes or noisy. `gate --slice` and
+  `extracted_packs build --slice` work on the slice alone for quick
+  iteration; the full benchmarks stay the gates before a merge or a default
+  change.
+- Add a chat probe (`benchmarks/diagnostics/chat_probe.py`, #226). A 54-turn
+  scripted chat with an answer key goes through `ingest()` in about three
+  minutes, and the report counts repeated claim text, unlinked entities and the
+  key's links, and checks whether the answers to 18 probe questions reach the
+  reader's context.
+- The offline evidence gate reports each LoCoMo speaker separately (#217, part
+  of #84), and `gate-compare` compares two replays of built packs (#225).
 
 ### Changed
 
@@ -40,9 +141,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to the speaker's entity (`enable_speaker_references=True`). The reader
   context packs each source text once (`packing.fold_repeated_text=True` in
   the product packing defaults). Together they passed the default-change
-  rule twice on the DeepSeek answer track over `ingest()` packs: LoCoMo +1.69
-  and +1.82 points, LongMemEval-S +3.4 and +4.2, every interval excluding
-  zero. Folding outside the reader format is ignored instead of refused.
+  rule twice on the DeepSeek answer track over `ingest()` packs (#227, #229,
+  #231, #233): LoCoMo +1.69 and +1.82 points, LongMemEval-S +3.4 and +4.2,
+  every interval excluding zero. Folding outside the reader format is ignored
+  instead of refused.
   Default retrieval receipts are version 22. Set
   `PRME_ENABLE_CLAIM_SENTENCE_TEXT=false`, `PRME_ENABLE_SPEAKER_REFERENCES=false`
   or `PRME_PACKING__FOLD_REPEATED_TEXT=false` to restore the earlier behavior.
@@ -62,6 +164,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   accounting includes the escapes. New contexts containing these characters
   have different rendered bytes; persisted receipt checksums, source text and
   reader-format output remain unchanged. See [packing compatibility](docs/PACKING.md).
+- The extracted-pack builder's cache returns a cached extraction as it was
+  stored (#226). A hit validated the stored result against its source again,
+  which widened evidence quotes and discarded claims the live run had kept:
+  261 claims on 75 replayed turns in the first LongMemEval-S baseline build.
+  The LongMemEval-S slice baseline was rebuilt from the same cache (#228).
+  Since #230 the cache also keeps the provider's parsed output and checks it
+  again on replay, so one set of model calls can be measured under several
+  grounding rules.
+- Benchmark tools find the datasets from any clone or Git worktree instead of
+  the original research machine's absolute path (#214). `PRME_ORIGINAL_ROOT`
+  and `PRME_MATRIX_ROOT` override the two roots, and the registered harness
+  files are unchanged, so they still match their recorded digests.
+- `scripts/download_benchmarks.py` also downloads the LongMemEval-S full
+  history (`longmemeval_s_cleaned.json`, about 265 MB) that the harnesses and
+  the evidence gate read, and verifies both pinned datasets by SHA-256 (#215).
 
 ## [0.13.0] - 2026-09-25
 
