@@ -1,5 +1,11 @@
 # PRME Research Scan: SOTA Memory Systems & Techniques, 2025–2026 (2026-06-11)
 
+> Superseded for current positioning by
+> [PRME Research Scan: Agent Memory, September–October 2026](audit-research-scan-2026-10.md)
+> (2026-10-06). Kept unchanged as the historical record; its 94.7%/89.8% figures
+> and 98% target predate the 2026-09-23 benchmark gap audit and are not today's
+> numbers.
+
 Context: PRME at 94.7% LME / 89.8% LoCoMo with gpt-5-mini; target 98% without a stronger answering model. Blockers: (1) LLM counting/aggregation imprecision, (2) semantic retrieval gap on tangential mentions.
 
 ## Calibration: where PRME actually stands
