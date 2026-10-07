@@ -1,0 +1,45 @@
+{
+  "kind": "prme-four-ticket-validation",
+  "complete": true,
+  "base_commit": "55d3eb61",
+  "checks": [
+    {
+      "kind": "full_regression",
+      "command": ".venv/bin/pytest tests/ -q --disable-warnings --maxfail=1",
+      "exit_code": 0,
+      "passed": 4766,
+      "skipped": 933,
+      "seconds": 578.62,
+      "log_sha256": "e33cee97fdc735fa030c3c70710065bbcdbf0005cabd6ab8027ee2721a8b2b00",
+      "limits": "PRME_TEST_DATABASE_URL unset. The final focused source/replacement tests and successor-edge guard were validated in the latest targeted run below."
+    },
+    {
+      "kind": "latest_duckdb_and_postgres_regression",
+      "command": "PRME_TEST_DATABASE_URL=<isolated-local-test-database> .venv/bin/pytest -q tests/test_evidence_followup_sources_supersedence.py tests/test_evidence_context.py tests/test_reformulation_merge.py tests/test_experimental_retrieval_policies.py tests/test_relevance_records.py tests/test_retrieval_selection.py --disable-warnings --maxfail=1",
+      "exit_code": 0,
+      "passed": 138,
+      "skipped": 1,
+      "seconds": 11.18,
+      "log_sha256": "a1753131c2bc6bd69fcd43f2f37e6c42e640b9df446279684f4bea8115d44279",
+      "limits": "Relevant backend and receipt suite, not the entire PostgreSQL suite. New public pipeline tests use both backend fixtures."
+    },
+    {
+      "kind": "lint",
+      "command": ".venv/bin/ruff check src/ tests/ benchmarks/diagnostics/product_packing.py benchmarks/diagnostics/read_supersedence.py benchmarks/diagnostics/retrieval_four_ticket_report.py",
+      "exit_code": 0
+    },
+    {
+      "kind": "public_api_types",
+      "command": ".venv/bin/mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py",
+      "exit_code": 0
+    },
+    {
+      "kind": "patch_whitespace",
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "benchmark_inputs": "decision.json binds the 13 completed input reports by SHA-256.",
+  "answer_reader_or_judge_runs": 0,
+  "production_defaults_changed": false
+}

@@ -140,6 +140,7 @@ class ScoreAdjustment(BaseModel):
         "evidence_augmentation",
         "current_update",
         "neural_rank_assignment",
+        "source_context",
     ]
     coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
@@ -155,6 +156,8 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("Current-update multiplier must be between one and two")
         if self.kind == "neural_rank_assignment" and self.coefficient < 0:
             raise ValueError("Assigned ranking score must be nonnegative")
+        if self.kind == "source_context" and self.coefficient != 0:
+            raise ValueError("Packing-only source context requires a zero ranking multiplier")
         if self.kind in {"evidence_projection", "evidence_augmentation"} and not (
             0 < self.coefficient <= 1
         ):

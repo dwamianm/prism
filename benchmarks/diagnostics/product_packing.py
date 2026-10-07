@@ -843,6 +843,8 @@ async def _event_sources(engine, case: GateCase, cache: dict) -> dict[str, str]:
         events = await engine.get_events(case.user_id, limit=_ALL_EVENTS)
         cache[case.user_id] = {str(event.id): key for event in events
                                if (key := _source_key(case.benchmark, event.metadata or {})) is not None}
+        cache[(case.user_id, "complete_text")] = {key: event.content for event in events
+                               if (key := _source_key(case.benchmark, event.metadata or {})) is not None}
     return cache[case.user_id]
 
 
@@ -898,10 +900,54 @@ async def _replay_case(engine, packing: PackingConfig, case: GateCase, capture_d
     row["session_context"] = _session_context_observations(packed)
     row["aggregation"] = _aggregation_observations(response.metadata)
     row["channel_limits"] = _channel_limits(packing, widened=row["aggregation"] is not None)
+    row["source_fidelity"] = await source_fidelity(engine, packed, context, packing, case.benchmark)
+    if row["evidence"] is not None:
+        await _event_sources(engine, case, events_cache)
+        complete_sources = {key for key, text in events_cache[(case.user_id, "complete_text")].items()
+                            if text and _in_context(text, context)}
+        row["evidence"]["packed_complete_source_text"] = len(case.evidence & complete_sources)
+        row["evidence"]["all_packed_complete_source_text"] = case.evidence <= complete_sources
+    row["supersedence"] = {
+        "packed_lifecycle_superseded": sum(c.node.lifecycle_state.value == "superseded" for c in packed),
+        "packed_with_pointer": sum(c.node.superseded_by is not None for c in packed),
+        "excluded_by_read_policy": sum(c.reason == "supersedence_filtered" for c in response.excluded),
+    }
     if capture_dir is not None:
         row["capture_sha256"] = _write_capture(capture_dir, case, context,
                                                {"receipt": receipt.model_dump(mode="json")})
     return row
+
+
+async def source_fidelity(engine, packed, context: str, packing: PackingConfig, benchmark: str) -> dict:
+    """Measure complete source turns separately from claim text that cites them.
+
+    The existing evidence-with-text metric credits a claim's own text. It is
+    not a measurement of complete verbatim source retention (#239).
+    """
+    claims = [c for c in packed if c.node.node_type in {
+        NodeType.FACT, NodeType.DECISION, NodeType.PREFERENCE, NodeType.TASK, NodeType.SUMMARY,
+    } and _source_key(benchmark, c.node.metadata or {}) is None
+        and any(ref != c.node.id for ref in c.node.evidence_refs)]
+    ids = sorted({str(ref) for c in claims for ref in c.node.evidence_refs if ref != c.node.id})
+    sources = {n.id: n for n in await engine._graph_store.get_nodes(ids)} if ids else {}
+    packed_ids = {c.node.id for c in packed}
+    missing, unavailable, absent_text, source_tokens = 0, 0, 0, 0
+    used_sources = set()
+    for claim in claims:
+        refs = set(claim.node.evidence_refs) - {claim.node.id}
+        eligible = {ref for ref in refs if ref in sources
+                    and sources[ref].user_id == claim.node.user_id
+                    and sources[ref].scope == claim.node.scope}
+        unavailable += bool(refs - eligible)
+        missing += not refs <= packed_ids
+        absent_text += not refs <= eligible or any(
+            not _in_context(sources[ref].content, context) for ref in eligible)
+        used_sources |= eligible & packed_ids
+    source_tokens = sum(count_tokens(sources[ref].content, packing.tokenizer) for ref in used_sources)
+    return {"packed_claims": len(claims), "claims_missing_source_record": missing,
+            "claims_missing_complete_source_text": absent_text,
+            "claims_with_unavailable_sources": unavailable,
+            "source_text_tokens": source_tokens}
 
 
 
@@ -1298,6 +1344,12 @@ def summarize_gate(rows: list[dict]) -> dict:
         "all_evidence_packed_share": _share(all_packed, len(annotated)),
         "all_evidence_packed_with_text": with_text,
         "all_evidence_packed_with_text_share": _share(with_text, len(annotated)),
+        "all_evidence_packed_complete_source_text_share": _share(
+            sum(e.get("all_packed_complete_source_text", False) for e in annotated), len(annotated))
+            if all("all_packed_complete_source_text" in e for e in annotated) else None,
+        "complete_source_evidence_recall": _share(
+            sum(e.get("packed_complete_source_text", 0) for e in annotated), sum(e["annotated"] for e in annotated))
+            if all("packed_complete_source_text" in e for e in annotated) else None,
         # Annotated turns that a packed extracted record cites (#102); zero for packs of raw turns.
         "evidence_turns_packed_by_extracted": sum(evidence.get("packed_by_extracted", 0) for evidence in annotated),
         "evidence_turns_resolved": sum(evidence["annotated"] - len(evidence["unresolved"]) for evidence in annotated),
@@ -1320,7 +1372,28 @@ def summarize_gate(rows: list[dict]) -> dict:
         "session_context_records": _session_context_summary(rows),
         # Each LoCoMo speaker separately, the split #84 is about.
         "by_speaker": _by_speaker(rows),
+        "source_fidelity": _source_fidelity_summary(rows),
+        "supersedence": _count_observations(rows, "supersedence"),
     }
+
+
+def _count_observations(rows: list[dict], key: str) -> dict | None:
+    if any(key not in row for row in rows):
+        return None
+    total = Counter()
+    for row in rows:
+        total.update(row[key])
+    return dict(total)
+
+
+def _source_fidelity_summary(rows: list[dict]) -> dict | None:
+    total = _count_observations(rows, "source_fidelity")
+    if total is not None:
+        denominator = total.get("packed_claims", 0)
+        for key in ("claims_missing_source_record", "claims_missing_complete_source_text"):
+            total[f"{key}_share"] = _share(total.get(key, 0), denominator)
+        total["source_text_tokens_mean"] = total.get("source_text_tokens", 0) / len(rows)
+    return total
 
 
 def gate_report(rows: list[dict], *, provenance: dict) -> dict:
@@ -1633,7 +1706,16 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
             "aggregation": _compared_aggregation(old, new, keys),
             "query_scoring": _query_scoring(old, new, keys),
             "session_context_records": _session_context_comparison(before, after, name),
+            "source_fidelity": {side: report["benchmarks"][name]["summary"].get("source_fidelity")
+                                for side, report in (("before", before), ("after", after))},
+            "supersedence": {side: report["benchmarks"][name]["summary"].get("supersedence")
+                             for side, report in (("before", before), ("after", after))},
+            "context_tokens": paired(keys, lambda row: row["context_tokens"]),
         }
+        if all("all_packed_complete_source_text" in rows[key]["evidence"]
+               for rows in (old, new) for key in annotated):
+            benchmarks[name]["all_evidence_packed_complete_source_text"] = paired(
+                annotated, lambda row: row["evidence"]["all_packed_complete_source_text"])
     return {
         "kind": f"{GATE_KIND}-comparison", "complete": True, "bootstrap_samples": samples, "bootstrap_seed": 42,
         "interval_note": ("Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, "
@@ -1732,6 +1814,17 @@ def gate_markdown(report: dict) -> str:
                 f"| {_pct(summary['all_evidence_packed_with_text_share'])} "
                 f"| {_rank(summary['evidence_ranks']['median'])} | {_pct(summary['evidence_ranks']['top_25_share'])} "
                 f"| {_pct(summary['projected_accuracy'])} |")
+        fidelity = bench["summary"].get("source_fidelity")
+        if fidelity is not None:
+            lines += ["", f"Source fidelity: {fidelity['claims_missing_source_record']}/"
+                      f"{fidelity['packed_claims']} packed claims lack a source record in the same context "
+                      f"({_pct(fidelity['claims_missing_source_record_share'])}); "
+                      f"{fidelity['claims_missing_complete_source_text']} lack complete source text. "
+                      f"Packed source-text tokens per context: {fidelity['source_text_tokens_mean']:.1f}. "
+                      "Claim totals can change through folding; these rates are not answer accuracy."]
+        complete_source = bench["summary"].get("all_evidence_packed_complete_source_text_share")
+        if complete_source is not None:
+            lines += ["", f"All annotated evidence present as complete source text: {_pct(complete_source)}."]
         session = bench["summary"].get("session_context_records")
         if session is not None:
             lines += ["", f"Packed records through session expansion: {session['reached']} reached "
