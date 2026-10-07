@@ -58,6 +58,20 @@ The default `fastembed` provider runs locally with no API key needed. It downloa
 
 The extraction provider is used by `ingest()` and `ingest_batch()`, and by `retrieve()` only when `PRME_ENABLE_QUERY_REFORMULATION=true`: query reformulation calls the same provider, model, endpoint and credential, with the same timeout. The `store()` method does not call an LLM.
 
+## Extracted claims (`ingest()`)
+
+These settings change what `ingest()` stores from an extraction. They do not affect `store()`, and records stored before a change keep their text.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PRME_ENABLE_CLAIM_MERGE` | `true` | Merge an exactly repeated extracted claim into one current record: the new fact keeps the earlier copies' evidence and supersedes them (issue #209). Quantities, conditional claims, unresolved relative dates and claims that are not observed or asserted stay separate. `false` stores one fact per extraction |
+| `PRME_ENABLE_CLAIM_SENTENCE_TEXT` | `true` | Store a claim's own sentences as its text: the shortest run of whole sentences of its passage that mentions its subject and object, with a following sentence that qualifies it (only if, unless, however). The paragraph stays its `evidence_quote`, so a qualifier elsewhere in the paragraph stays in the evidence but not in the text. `false` gives every claim from a one-paragraph message the whole message as its text. Default since 2026-10-06; provisional |
+| `PRME_ENABLE_SPEAKER_REFERENCES` | `true` | In a turn that names its speaker (`ingest(speaker=...)`), bind I, me, my, mine and myself in its claims to that speaker's entity, so the speaker's claims connect across messages and a repeated or replaced claim can merge with or supersede the earlier one. Plural, second- and third-person references stay local to their message. Only the caller knows that the named speaker, and not someone the turn quotes, is who says I, so set it to `false` when a speaker's turns quote others in the first person. Default since 2026-10-06; provisional. See [entity identity](../docs/ENTITY-IDENTITY.md) |
+| `PRME_ENABLE_SPEAKER_GROUNDING` | `false` | Let a named speaker's own I, me and my count as a mention of the speaker when grounding checks a claim's subject and object, so a claim such as "Dana, lives in, Denver" for "I live in Denver" is kept. It completes the graph, but the extra claims cost evidence on the offline evidence gate, so it stays off. Provisional |
+| `PRME_ENABLE_WINDOWED_EXTRACTION` | `false` | Show the extractor the preceding turns of the same session, so it can read what the new turn refers to (issue #91). Only the new turn is extracted and grounded. Needs a `session_id`; provisional |
+| `PRME_EXTRACTION_WINDOW_TURNS` | `4` | How many preceding turns the window shows, from 0 to 32; 0 turns the window off. Each turn adds prompt tokens to every extraction. Provisional |
+| `PRME_ENABLE_FACT_TEXT_RESOLUTION` | `false` | Ask the extractor for fact text that stands alone: a pronoun for a named person becomes the name and a relative date the date it means (issue #91). A deterministic check keeps that text only when those replacements are its sole changes; otherwise the fact keeps its source passage. Names from earlier turns need `PRME_ENABLE_WINDOWED_EXTRACTION`. Provisional |
+
 ## Scoring Weights
 
 These control the hybrid retrieval scoring formula. The six additive weights must sum to 1.0. The default fusion is `rrf`, which ranks by semantic and lexical rank and does not use the additive weights; set `PRME_SCORING__FUSION=weighted` to score with them. Setting any other `PRME_SCORING__*` variable keeps `rrf` and its recency boost and tie-break unless `PRME_SCORING__FUSION` is set too.
@@ -84,8 +98,8 @@ These control the hybrid retrieval scoring formula. The six additive weights mus
 
 The defaults below are `PRMEConfig`'s, and environment variables that set only
 some of them keep the others. A `PackingConfig` built in code starts from its
-own field defaults instead (`auditable`, `balanced` and no rank fusion session
-decay), which stored receipts and configurations rely on.
+own field defaults instead (`auditable`, `balanced`, no rank fusion session
+decay and no folding), which stored receipts and configurations rely on.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -95,6 +109,7 @@ decay), which stored receipts and configurations rely on.
 | `PRME_PACKING__CONTEXT_FORMAT` | `reader` | `reader` (one plain line per record), `auditable` (one JSON object per record) or `compact`. Answerability and claim verification need `PRME_PACKING__CONTEXT_CITATIONS=true` with `reader` |
 | `PRME_PACKING__MULTIPATH_ORDERING` | `balanced` | Order within the multi-path tier: `balanced`, `score` (briefly the default with the reader format) or `density` |
 | `PRME_PACKING__CONTEXT_CITATIONS` | `false` | Reader format only: add `[m3]` references and fill `context_references` |
+| `PRME_PACKING__FOLD_REPEATED_TEXT` | `true` | Reader format only: pack each source text once. A record is left out when a packed record from one of its source events already shows its text, unless its line shows another date, tag or speaker, and its budget goes to other records; the auditable and compact formats ignore the setting. Default since 2026-10-06. Receipts that record it use schema version 22, and with `false` default retrievals write version 19. See [folding repeated text](../docs/PACKING.md#folding-repeated-text); provisional |
 | `PRME_PACKING__MIN_FIDELITY` | `reference` | Lowest representation a record may fall back to. `full`, `prose` or `structured` keeps the text-free `key_value` and `reference` fallbacks, and blank records, out of every context format |
 | `PRME_PACKING__VECTOR_K` | `500` | Vector search candidates. Count and list questions multiply it by `PRME_PACKING__AGGREGATION_K_MULTIPLIER`, up to `PRME_PACKING__AGGREGATION_K_MAX`. At 500 the saved benchmark packs return nearly every stored turn; the offline evidence gate reports each channel's recall at smaller limits (issue #87) |
 | `PRME_PACKING__LEXICAL_K` | `500` | BM25 search candidates, widened the same way. The entity-name and aggregation keyword scans add hits beyond this limit |

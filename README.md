@@ -104,10 +104,13 @@ state replay is not currently available.
 | Multi-hop | 182 / 282 | 64.5% |
 | Open-domain | 56 / 96 | 58.3% |
 
-Measured on September 25, 2026 with the current retrieval defaults and a
-3,996-token memory-context budget per question. See
-[BENCHMARKS.md](BENCHMARKS.md) for the method, earlier results and
-reproducibility artifacts.
+Measured on September 25, 2026 with the v0.13.0 retrieval defaults and a
+3,996-token memory-context budget per question, over memory packs built with
+`store()`, which never runs extraction. The defaults adopted on October 6
+change what `ingest()` stores and how repeated text is packed, so they were
+measured on a separate track over packs built through `ingest()`. See
+[BENCHMARKS.md](BENCHMARKS.md) for both tracks, the method, earlier results
+and reproducibility artifacts.
 
 ## Installation
 
@@ -192,12 +195,14 @@ checkout, run `uv run --extra api python -m web.server` and open
 | Core memory foundation, through v0.9 | Event sourcing, typed graph, hybrid retrieval, organizer jobs, encryption, CLI, evaluation harness, and index rebuilds |
 | v0.10 | Deterministic vector search, batched ingestion indexing, and context-budget enforcement |
 | v0.11 | Tenant-scoped maintenance, ownership and retrieval-filter fixes, and broader backend CI coverage |
-| v0.12 — current | Durable ingestion and recovery, atomic lifecycle and correction records, scoped workspaces, structured assertion and quantity operations, retrieval receipts, and evaluated ranking profiles |
-| Unreleased, on `main` | Rank fusion with current-state recency, the one-line reader context format and balanced ordering as retrieval defaults; conversation participants with speaker names; refusal of unauthenticated network binds for the HTTP API; an offline evidence gate and paired answer runs for measuring retrieval changes |
+| v0.12 | Durable ingestion and recovery, atomic lifecycle and correction records, scoped workspaces, structured assertion and quantity operations, retrieval receipts, and evaluated ranking profiles |
+| v0.13, current | Rank fusion with current-state recency, the one-line reader context format and balanced ordering as retrieval defaults; conversation participants with speaker names; refusal of unauthenticated network binds for the HTTP API; an offline evidence gate and paired answer runs for measuring retrieval changes |
+| Unreleased, on `main` | A claim's own sentences as its text, a named speaker's I, me and my bound to the speaker, and each source text packed once, as `ingest()` and reader context defaults; repeated extracted claims merged into one current record; a browser memory explorer; benchmark packs built through `ingest()`, with the evidence gate and a DeepSeek answer track over them |
 
 Experimental reranking (including the cross-encoder rank order), temporal-relation
 guidance, model-assisted verification, temporal-first query intent, event-time
-recency for the weighted formula, and session context packing remain opt-in.
+recency for the weighted formula, session context packing, windowed extraction,
+self-contained fact text and speaker grounding remain opt-in.
 Detailed changes are in the [changelog](CHANGELOG.md).
 
 Current work follows [epic #77](https://github.com/dwamianm/prism/issues/77),

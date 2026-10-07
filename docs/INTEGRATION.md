@@ -272,10 +272,13 @@ half of its text starts with its speaker's name.
 
 `ingest()`, `ingest_batch()` (a `"speaker"` key per message), `ingest_fast()` and
 `FastIngestItem` accept the same `speaker`. It stays with the source event and
-its raw note. Claims that `ingest()` extracts do not carry it yet: a
+its raw note. Claims that `ingest()` extracts do not show it yet: a
 participant's first-person claim such as "I moved to Boston" reads like any
 other first-party claim, so follow a claim's `evidence_refs` to its source event
-to see who said it. The extractor applies its generic admission policy to
+to see who said it. With `enable_speaker_references` (on by default since
+2026-10-06), the claim's I, me and my bind to the speaker's entity, and its
+`speaker_reference` metadata names the speaker (see
+[entity identity](ENTITY-IDENTITY.md)). The extractor applies its generic admission policy to
 participants, and the user-only literal recoveries do not run for them.
 
 Use `store_with_receipt()` when the next operation needs the created node ID:
@@ -1066,7 +1069,9 @@ the newer one; `PRME_SCORING__RRF_RECENCY_BOOST` (default 0.25) applies the
 weighted formula's current-state recency to the fused score, and
 `PRME_SCORING__RRF_TIE_BREAK=event_time` (the default) orders equal fused
 scores newest first instead of by node ID. Default retrievals write schema
-version 19 receipts, which record those settings and the decay. Rank fusion
+version 22 receipts, which record those settings, the decay and folded repeated
+text (on by default since 2026-10-06), or version 19 with
+`PRME_PACKING__FOLD_REPEATED_TEXT=false`. Rank fusion
 without the recency settings writes version 16, 17 with the decay or 18 with a
 skipped `min_score`; the reader format with weighted scoring writes version 14,
 and weighted retrievals in the auditable or compact format write version 12. Weighted

@@ -1,6 +1,6 @@
 # PRME roadmap
 
-Updated 2026-09-25. Current package: v0.12.0; `main` has unreleased changes (see the [changelog](CHANGELOG.md)). Product priority: **reliable, measurable AI memory with an excellent developer experience**.
+Updated 2026-10-06. Current package: v0.13.0; `main` has unreleased changes (see the [changelog](CHANGELOG.md)). Product priority: **reliable, measurable AI memory with an excellent developer experience**.
 
 ## Direction
 
@@ -48,13 +48,15 @@ requests, such as a paired answer run before a default changes.
 | 1 | [#81](https://github.com/dwamianm/prism/issues/81) packing order for plain lines | #176 compared balanced and score order on the gate; balanced is the default again since #187 | Open |
 | 2, ranking | [#82](https://github.com/dwamianm/prism/issues/82) reciprocal rank fusion | #112, with a semantic `min_score` (#110, #150), a rank fusion session decay (#111) and a current-state recency boost with an event-time tie-break (#168); the default since #177 | Open |
 | 2 | [#83](https://github.com/dwamianm/prism/issues/83) event-time recency | #186 (opt-in, weighted formula only; it lost LoCoMo evidence on the gate) | Closed |
-| 2 | [#84](https://github.com/dwamianm/prism/issues/84) conversation participants | #190: `speaker` names and the `participant` role | Open |
+| 2 | [#84](https://github.com/dwamianm/prism/issues/84) conversation participants | #190: `speaker` names and the `participant` role; #217 reports each LoCoMo speaker separately on the gate | Open |
 | 2 | [#85](https://github.com/dwamianm/prism/issues/85) temporal intent for questions that name a person | #194: `query_intent_order="temporal_first"` (opt-in) | Open |
 | 2 | [#86](https://github.com/dwamianm/prism/issues/86) session-expansion neighbors in the lowest tier | #197: `session_context_packing` (opt-in) | Open |
 | 2 | [#87](https://github.com/dwamianm/prism/issues/87) bounded candidate generation | #199 measured smaller limits on the gate; they lost LongMemEval-S evidence, so the limits stay at 500 | Open |
 | 2 | [#88](https://github.com/dwamianm/prism/issues/88) cross-encoder rank order | #202: `reranker_prior_weight` (opt-in); no variant beat rank fusion alone on both benchmarks at both 4K and 8K on the gate, so the reranker stays off | Open |
+| 4, write-time facts | [#91](https://github.com/dwamianm/prism/issues/91) self-contained, dated facts from the surrounding conversation | #218 windowed extraction and #219 self-contained fact text (both opt-in); #225 compared them with the `ingest()` baseline on the LoCoMo gate | Open |
 | Measurement | [#95](https://github.com/dwamianm/prism/issues/95) full-context and plain-RAG baselines | #113 added the arms; none has a GPT-5.4 run yet | Open |
 | Measurement | [#96](https://github.com/dwamianm/prism/issues/96) lenient judge score | #181; published for a DeepSeek baseline; the GPT-5.4 pass needs the owner's approval | Closed |
+| Measurement | [#102](https://github.com/dwamianm/prism/issues/102) the gate cannot measure changes made when memories are stored | #212: packs built through `ingest()` and `gate --packs`; #224: a development slice; #232: a DeepSeek answer track over those packs | Open |
 
 The DeepSeek answer track itself (#117) came with a measured run-to-run floor
 (#118), interleaved pairs and an A/A check (#129), a failure policy for looping
@@ -71,11 +73,21 @@ Two default changes passed the default-change rule on 2026-09-25:
   points in both pairs; the LoCoMo differences (+0.5 and -0.2) had intervals
   including zero.
 
-The DeepSeek baseline of the current defaults, `prme@d811e3ed`, scores
-LongMemEval-S 453/500 (90.6%) and LoCoMo 1,250/1,540 (81.2%). The epic's
-checkpoint and exit criteria call for complete runs with the fixed 2026-09-23
-reader (GPT-5.4) and the strict judge. No GPT-5.4 run of the current defaults
-exists, so those criteria are not met.
+On 2026-10-06 a third change, #233, made a claim's own sentences its text
+(#229), bound a named speaker's I, me and my to the speaker (#227) and packed
+each source text once (#231). The three were answered as one variant on the
+DeepSeek track over packs built through `ingest()` (#232), because the saved
+`store()` packs cannot show them: LoCoMo gained 1.69 and 1.82 points and
+LongMemEval-S 3.4 and 4.2, every interval excluding zero.
+
+On the `store()` track, the DeepSeek baseline of the v0.13.0 defaults,
+`prme@d811e3ed`, scores LongMemEval-S 453/500 (90.6%) and LoCoMo 1,250/1,540
+(81.2%). On the `ingest()` track, the baseline of the current defaults,
+`prme@3389586b`, scores LongMemEval-S 440/500 (88.0%) and LoCoMo 1,190/1,540
+(77.3%). The two tracks answer different packs and are reported separately.
+The epic's checkpoint and exit criteria call for complete runs with the fixed
+2026-09-23 reader (GPT-5.4) and the strict judge. No GPT-5.4 run of the
+current defaults exists, so those criteria are not met.
 
 ### Still open under epic #77
 
@@ -86,10 +98,12 @@ exists, so those criteria are not met.
 - [#91](https://github.com/dwamianm/prism/issues/91),
   [#92](https://github.com/dwamianm/prism/issues/92) and
   [#93](https://github.com/dwamianm/prism/issues/93): dated facts extracted at
-  write time, fact-first retrieval, and per-entity topic cards. #91 needs #84,
-  which stays open for searchable speaker names, benchmark packs stored with
-  participants (#102) and its paired answer run; #92 needs #91, and #93 needs
-  both.
+  write time, fact-first retrieval, and per-entity topic cards. #91 has its
+  first opt-in parts and a LoCoMo gate comparison (see the table above), and
+  stays open for the LongMemEval-S comparison and better relative-date
+  resolution. It also needs #84, which stays open for searchable speaker
+  names, benchmark packs stored with participants (#102) and its paired
+  answer run; #92 needs #91, and #93 needs both.
 - [#94](https://github.com/dwamianm/prism/issues/94): optional second-hop
   retrieval for list and multi-hop questions.
 - [#97](https://github.com/dwamianm/prism/issues/97): record the audit in the

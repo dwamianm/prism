@@ -46,8 +46,9 @@ change, a rescheduled visit and two repeated claims. Each message goes through
 the real `ingest()` pipeline; only the model's extraction output is scripted, so
 the pack is deterministic and needs no model or network. It shows what PRME
 builds from correct extraction output and does not measure extraction quality.
-The messages name their subject, because first-person references (`I`, `my`)
-stay local to one message by design (`docs/ENTITY-IDENTITY.md`).
+The messages name their subject: first-person references (`I`, `my`) stay
+local to one message unless the turn names its speaker
+(`docs/ENTITY-IDENTITY.md`), and the demo's turns name none.
 
 ```bash
 uv run python -m web.demo ./my_memories_demo
