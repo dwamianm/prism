@@ -12,7 +12,7 @@ tracks changing claims, and packs relevant memories into a configurable token
 budget. The default backend runs locally in a portable directory; PostgreSQL is
 available for server deployments.
 
-**Current release: v0.13.0.** Python 3.11+, synchronous and async clients, HTTP,
+**Current release: v0.14.0.** Python 3.11+, synchronous and async clients, HTTP,
 MCP, and LangChain/LlamaIndex integrations.
 
 ## Architecture
@@ -196,8 +196,8 @@ checkout, run `uv run --extra api python -m web.server` and open
 | v0.10 | Deterministic vector search, batched ingestion indexing, and context-budget enforcement |
 | v0.11 | Tenant-scoped maintenance, ownership and retrieval-filter fixes, and broader backend CI coverage |
 | v0.12 | Durable ingestion and recovery, atomic lifecycle and correction records, scoped workspaces, structured assertion and quantity operations, retrieval receipts, and evaluated ranking profiles |
-| v0.13, current | Rank fusion with current-state recency, the one-line reader context format and balanced ordering as retrieval defaults; conversation participants with speaker names; refusal of unauthenticated network binds for the HTTP API; an offline evidence gate and paired answer runs for measuring retrieval changes |
-| Unreleased, on `main` | A claim's own sentences as its text, a named speaker's I, me and my bound to the speaker, and each source text packed once, as `ingest()` and reader context defaults; repeated extracted claims merged into one current record; a browser memory explorer; benchmark packs built through `ingest()`, with the evidence gate and a DeepSeek answer track over them |
+| v0.13 | Rank fusion with current-state recency, the one-line reader context format and balanced ordering as retrieval defaults; conversation participants with speaker names; refusal of unauthenticated network binds for the HTTP API; an offline evidence gate and paired answer runs for measuring retrieval changes |
+| v0.14, current | A claim's own sentences as its text, a named speaker's I, me and my bound to the speaker, and each source text packed once, as `ingest()` and reader context defaults; repeated extracted claims merged into one current record; a browser memory explorer; benchmark packs built through `ingest()`, with the evidence gate and a DeepSeek answer track over them |
 
 Experimental reranking (including the cross-encoder rank order), temporal-relation
 guidance, model-assisted verification, temporal-first query intent, event-time
