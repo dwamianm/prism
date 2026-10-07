@@ -608,3 +608,39 @@ pre-guidance behavior. `"all"` also enables experimental current-state and
 personalization guidance; confirmation evidence did not support those prompts
 as defaults. The [confirmation report](../benchmarks/results/research/2026-09-14/CONTEXT-GUIDANCE-CONFIRMATION.md)
 records all transitions and limitations.
+
+## Source co-packing experiment (#239)
+
+`PackingConfig.co_pack_sources` is off by default. When explicitly enabled,
+retrieval resolves derived claims' direct NOTE/EVENT source nodes in one batch,
+checking owner, exact scope, clocks and epistemic/lifecycle eligibility. Missing
+or ineligible sources do not become context. An identity with conflicting source
+snapshots aborts. New source candidates have a packing-only `SOURCE_CONTEXT`
+path and a replayable zero score; they get no independent packing priority.
+Explicit result-count and score bounds apply to them too.
+
+After a claim fits, packing tries each available source at FULL fidelity under
+the same measured whole-context budget. A source that cannot fit is omitted;
+the claim can remain. Sources shared by several claims are packed once, and a
+packed source is rendered immediately after its first surviving claim, across
+section boundaries if necessary. The bundle keeps each node's original section
+and identity. With folding on, a derived record cannot remove its own source
+turn; a source can still absorb a same-tag claim whose complete text it contains.
+Consequently, claim counts can change between arms and the fraction of orphaned
+claims must be read beside absolute counts and complete-source coverage.
+
+Co-packing uses version 23 receipts under either scoring formula, including the
+version 22 features. Its zero-score `source_context` operations and the new
+packing setting are rejected in earlier schemas. Disabled settings are omitted,
+so version 1–22 canonical bytes and checksums remain unchanged. Score replay
+covers the returned source candidates as well as claims. A saved candidate set
+can be repacked without a graph fetch; required cited sources remain packable.
+
+The offline gate reports `source_fidelity` (packed claim counts, missing source
+records, missing complete source text and token cost). Its older evidence-with-
+text metric credits a claim's own text and is not complete-turn retention.
+`all_evidence_packed_complete_source_text_share` and
+`complete_source_evidence_recall` separately check complete immutable turn text
+against the actual rendered context. These are evidence measurements, not
+answer scores. The [four-ticket report](../benchmarks/results/research/2026-10-06/retrieval-four-tickets/REPORT.md)
+records the 4K/8K source and coverage tradeoff; defaults stay unchanged.

@@ -1,5 +1,57 @@
 # Experimental retrieval composition policies
 
+## Evidence follow-up and current replacement suppression (#238, #241)
+
+Both options default to `False` and make no planner or answer-model calls:
+
+```python
+config = PRMEConfig(enable_evidence_followup=True)
+config = PRMEConfig(enable_read_supersedence=True)
+```
+
+`enable_evidence_followup` constructs one query from the original question and
+at most twelve bounded entity/predicate signals from its first five eligible
+ranked records. It reuses the original intent and time analysis, avoiding a
+second dateparser pass, and searches the complete eligible store with thirty
+hits per graph/vector/lexical path. It unions backend paths and takes signal
+maxima for identical snapshots, then ranks with the original question and
+weights. Backend failure preserves round one; conflicting snapshots abort.
+The receipt's extensible execution maps retain the generated query, anchors,
+signals, counts, status and changed identities. No extra query counts as a new
+backend. This policy failed its LoCoMo multi-hop development gate and is not
+recommended as a default.
+
+`enable_read_supersedence` excludes a claim only when a direct pointer or an
+existing `SUPERSEDES` edge identifies an eligible current replacement of the
+same owner, scope and claim type. Edges point from replacement to prior claim.
+Current-state detection uses the existing deterministic query policy; explicit
+mode, historical/aggregation questions and caller-supplied clock bounds preserve
+prior behavior. Replacement validity and epistemic/lifecycle eligibility are
+checked, contested or cyclic replacements do not suppress, and expansions and
+cross-scope hints pass through the same control. Failures propagate instead of
+silently claiming suppression. Exclusions use `supersedence_filtered` and the
+receipt records whether the policy applied and which identities it excluded.
+There is no storage mutation, recency-based truth inference, chain traversal or
+dependent-record cascade. Source turns can still describe prior states.
+
+Default retrieval already filters `SUPERSEDED` and `ARCHIVED` lifecycle states.
+The public raw-turn development packs had no applicable replacement edges, so
+this option changed none of their contexts, including the knowledge-update
+slice. An authored check verified active edge-backed claims are removed while
+historical and explicit contexts and graph nodes are preserved. Neither result
+establishes an answer-quality gain. The [four-ticket report](../benchmarks/results/research/2026-10-06/retrieval-four-tickets/REPORT.md)
+records the slices, gate decisions and remaining limits.
+
+## Source co-packing (#239)
+
+`config.packing.co_pack_sources=True` explicitly enables source resolution and
+co-packing. It defaults to `False`; see [the packing contract](PACKING.md#source-co-packing-experiment-239).
+The experiment improves source-record retention on the examined extraction
+sample but loses LoCoMo evidence at 8K. It is not an answer-quality or default
+promotion result.
+
+## Reranking and model query reformulation
+
 These options expose fixes studied on the examined 500-question LongMemEval-S
 cohort. They require explicit configuration, have no positive untouched answer
 confirmation, and do not change production defaults. The implementation branch

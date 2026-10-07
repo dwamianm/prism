@@ -58,6 +58,9 @@ from prme.retrieval.evidence_context import (
 )
 from prme.retrieval.episode_context import expand_episode_context
 from prme.retrieval.filtering import filter_epistemic
+from prme.retrieval.followup import FOLLOWUP_K, followup_analysis
+from prme.retrieval.supersedence import suppress_replaced_claims
+from prme.retrieval.source_context import prepare_sources
 from prme.retrieval.models import (
     AggregationCoverage,
     AggregationLimitation,
@@ -74,7 +77,7 @@ from prme.retrieval.query_analysis import (
     QueryIntentOrder,
     analyze_query,
 )
-from prme.retrieval.scoring import score_and_rank
+from prme.retrieval.scoring import _is_current_state_query, score_and_rank
 from prme.retrieval.scope import ScopeInput, normalize_scope
 from prme.retrieval.selection import (
     rank_fusion_skips_min_score,
@@ -206,6 +209,8 @@ class RetrievalPipeline:
         query_reformulation_timeout: float | None = None,
         query_intent_order: QueryIntentOrder = "entity_first",
         reranker_prior_weight: float = DEFAULT_RERANKER_PRIOR_WEIGHT,
+        enable_evidence_followup: bool = False,
+        enable_read_supersedence: bool = False,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -215,6 +220,8 @@ class RetrievalPipeline:
         self._pool = pool  # asyncpg.Pool for PostgreSQL mode
         self._scoring_weights = scoring_weights
         self._packing_config = packing_config
+        self._enable_evidence_followup = enable_evidence_followup
+        self._enable_read_supersedence = enable_read_supersedence
         self._epistemic_weights = epistemic_weights
         self._unverified_confidence_threshold = unverified_confidence_threshold
         self._reranker_top_k = reranker_top_k
@@ -298,6 +305,12 @@ class RetrievalPipeline:
         if self._query_intent_order != "entity_first":
             # It decides which questions get temporal scoring (issue #85).
             features["query_intent_classification"] = {"order": self._query_intent_order, "version": 1}
+        if self._enable_evidence_followup:
+            features["evidence_followup"] = {"version": 1, "per_path_limit": FOLLOWUP_K}
+        if self._enable_read_supersedence:
+            features["read_supersedence"] = {"version": 1, "policy": "direct_current_claim"}
+        if self._packing_config.co_pack_sources:
+            features["source_co_packing"] = {"version": 1}
         return features
 
     async def retrieve(
@@ -667,6 +680,40 @@ class RetrievalPipeline:
             ranking_multipliers=ranking_multipliers,
         )
 
+        # One bounded second round, conditioned only on eligible round-one
+        # records. The store remains globally searchable. On backend failure
+        # retain the untouched first round and record a sanitized observation.
+        followup_observation = None
+        if self._enable_evidence_followup:
+            next_analysis, followup_observation = followup_analysis(analysis, scored)
+            if next_analysis is not None:
+                second_diagnostics = CandidateDiagnostics()
+                second, second_counts = await generate_candidates(
+                    next_analysis, graph_store=self._graph_store,
+                    vector_index=self._vector_index, lexical_index=self._lexical_index,
+                    user_id=user_id, scope=normalized_scope,
+                    time_from=effective_time_from, time_to=effective_time_to,
+                    config=candidate_config.model_copy(update={
+                        "vector_k": FOLLOWUP_K, "lexical_k": FOLLOWUP_K,
+                        "graph_max_candidates": FOLLOWUP_K,
+                    }), diagnostics=second_diagnostics, include_pinned=False,
+                )
+                if second_diagnostics.backend_failures or second_diagnostics.embedding_mismatch:
+                    followup_observation.update(status="backend_failed", backend_failures=second_diagnostics.backend_failures)
+                else:
+                    second = _apply_bitemporal_filters(
+                        second, knowledge_at, event_time_from, event_time_to,
+                        effective_time_from, effective_time_to,
+                    )
+                    second, _ = filter_epistemic(second, analysis.retrieval_mode,
+                        unverified_threshold=self._unverified_confidence_threshold)
+                    merged, observation = merge_reformulation_signals(filtered, [second])
+                    scored, traces = score_and_rank(merged, effective_weights,
+                        epistemic_weights=self._epistemic_weights, now=scoring_now,
+                        query_analysis=analysis, ranking_multipliers=ranking_multipliers)
+                    followup_observation.update(status="merged", counts=second_counts, **observation)
+                    candidate_counts["EVIDENCE_FOLLOWUP"] = len(second)
+
         # --- Stage 5a: Neural Reranking (optional) ---
         ranking_policy: RankingPolicy = "score_path_id"
         if self._reranker is not None:
@@ -927,7 +974,32 @@ class RetrievalPipeline:
 
         aggregation_candidate_count = len(scored) if analysis.is_aggregation else 0
 
+        # Apply after all optional expansions so they cannot reintroduce an
+        # obsolete claim. Explicit/historical requests preserve prior evidence.
+        read_suppression = (self._enable_read_supersedence and retrieval_mode == RetrievalMode.DEFAULT
+            and knowledge_at is None and time_from is None and time_to is None
+            and event_time_from is None and event_time_to is None
+            and _is_current_state_query(analysis)
+            and not is_temporal_reasoning_query(query, analysis))
+        if read_suppression:
+            scored, suppressed = await suppress_replaced_claims(scored,
+                graph_store=self._graph_store, user_id=user_id, reference_time=scoring_now,
+                unverified_threshold=self._unverified_confidence_threshold)
+            excluded.extend(suppressed)
+            cross_scope_hints, _ = await suppress_replaced_claims(cross_scope_hints,
+                graph_store=self._graph_store, user_id=user_id, reference_time=scoring_now,
+                unverified_threshold=self._unverified_confidence_threshold)
+
         min_score_skipped = False
+        claim_sources = {}
+        if effective_packing_config.co_pack_sources:
+            scored, claim_sources = await prepare_sources(scored,
+                graph_store=self._graph_store, user_id=user_id, scopes=normalized_scope,
+                retrieval_mode=analysis.retrieval_mode,
+                unverified_confidence_threshold=self._unverified_confidence_threshold,
+                knowledge_at=knowledge_at, event_time_from=event_time_from, event_time_to=event_time_to,
+                time_from=effective_time_from, time_to=effective_time_to)
+            ranking_policy = "score_id"
         hint_floor = min_score
         if effective_weights.fusion == "rrf":
             # A fused score ranks within the pool, so an unrelated memory can
@@ -972,6 +1044,7 @@ class RetrievalPipeline:
             pack_context,
             scored,
             config=effective_packing_config,
+            _claim_sources=claim_sources,
             coverage_notice="\n".join(coverage_notices) or None,
             context_guidance=build_context_guidance(
                 query,
@@ -1076,6 +1149,10 @@ class RetrievalPipeline:
                 **({"query_intent_order": self._query_intent_order}
                    if self._query_intent_order != "entity_first" else {}),
                 "reranker_top_k": self._reranker_top_k,
+                **({"evidence_followup": followup_observation} if followup_observation is not None else {}),
+                **({"read_supersedence": {"applied": read_suppression,
+                      "excluded_ids": [str(c.node_id) for c in excluded if c.reason == "supersedence_filtered"]}}
+                   if self._enable_read_supersedence else {}),
                 **({"reranker_prior_weight": prior_weight}
                    if prior_weight != DEFAULT_RERANKER_PRIOR_WEIGHT else {}),
                 "query_reformulation": {"enabled": self._enable_query_reformulation,

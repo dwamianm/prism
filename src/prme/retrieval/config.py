@@ -598,6 +598,13 @@ class PackingConfig(BaseModel):
     )
     # Omitted when off, so configurations and receipts that do not use it keep
     # their bytes.
+    co_pack_sources: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=("Experimental claim/source co-packing. Resolve eligible direct source turns and try them "
+                     "immediately after a packed claim, at full fidelity within the same token budget. "
+                     "Derived records cannot fold away source turns. Explicit selection bounds still apply."),
+    )
     fold_repeated_text: bool = Field(
         default=False,
         exclude_if=lambda value: not value,

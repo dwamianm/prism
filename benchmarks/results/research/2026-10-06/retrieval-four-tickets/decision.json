@@ -1,0 +1,87 @@
+{
+  "kind": "prme-four-ticket-offline-decision",
+  "complete": true,
+  "inputs_sha256": {
+    "raw-baseline-4k.json": "2a1cd6b03849ec78108e3462ba26aa641233cb2df38f9340251726574ac5d99b",
+    "raw-followup-4k.json": "89b40e347e92a97bad3cdb8fce0b11c70447233683d8d11e32098f98dff43e44",
+    "raw-tight-30-4k.json": "6a37a27f194543186727601f06089090d0878f6c695ebdcb58ad84292a764f4e",
+    "raw-suppression-4k.json": "f1a8e2c599187184ab2baba029e2af847ec8bd961c2c78a2e6f6fdeb95507280",
+    "ingest-locomo-baseline-4k.json": "18b7b7b2bafa3ba5a3d2a60d9a15142d2b367c4f8e37657e7b415e8179804cf6",
+    "ingest-locomo-copack-4k.json": "59d9e45fd7e4d18fc04e31807817a6cebd54ad8dc540638cf50545e626e3a791",
+    "ingest-locomo-baseline-8k.json": "29aef92350ec2ca91750d3ea3efe2cdf625a9ae3e37078bb8208bb5b1217b3cd",
+    "ingest-locomo-copack-8k.json": "81744166e0e09e826995705c3f8d8ad9b6c3dceec7c9c7fdff7d8d691f532a91",
+    "ingest-longmemeval-baseline-4k.json": "8bb903e91d2f97b757a7002250f37c9951b1c2822cbdbcc4e63f9f4d6cd8989f",
+    "ingest-longmemeval-copack-4k.json": "203752330062947da7e886453e2ea8bb78d92514fe621bbbba07167c7ff5319a",
+    "ingest-longmemeval-baseline-8k.json": "f99c334675c3e1c579b7b244461ed49176c134c784d2306b644432371401af3e",
+    "ingest-longmemeval-copack-8k.json": "cb132548d18ee8400c7a2ea9a8cad3ea62fc0913963f598d3745025260c689cf",
+    "authored-supersedence.json": "42fd46bfb01b2b2679be4afae235c671024a93a6bfccc52a04a1516636d87611"
+  },
+  "decisions": {
+    "238": {
+      "offline_gate_passed": false,
+      "multi_hop_evidence_recall": {
+        "queries": 101,
+        "before": 0.7260391640667826,
+        "after": 0.7036651597490576,
+        "delta": -0.02237400431772501,
+        "interval_95": [
+          -0.05134618725030398,
+          0.00456587012084667
+        ],
+        "wins": 4,
+        "losses": 11,
+        "ties": 86
+      },
+      "multi_hop_all_evidence_packed": {
+        "queries": 101,
+        "before": 0.504950495049505,
+        "after": 0.4752475247524752,
+        "delta": -0.0297029702970297,
+        "interval_95": [
+          -0.0891089108910891,
+          0.019801980198019802
+        ],
+        "wins": 2,
+        "losses": 5,
+        "ties": 94
+      },
+      "answer_run": "not_started_offline_gate_failed"
+    },
+    "239": {
+      "source_record_fidelity_improved": true,
+      "evidence_loss_at_a_tested_budget": true,
+      "default_promotion": false,
+      "answer_run": "not_started_mixed_offline_evidence"
+    },
+    "240": {
+      "tight_limit": 30,
+      "generous_vector_lexical_limits": 500,
+      "longmemeval_evidence_recall_delta": -0.06842105263157895,
+      "stop_before_reranking": true,
+      "answer_run": "not_started_tight_limit_gate_failed",
+      "answer_accuracy": null,
+      "correct_abstention": null
+    },
+    "241": {
+      "benchmark_contexts_unchanged": true,
+      "authored_context_state": {
+        "control": {
+          "current_cases": 4,
+          "prior_claims_in_current_context": 4
+        },
+        "suppression": {
+          "current_cases": 4,
+          "prior_claims_in_current_context": 0
+        }
+      },
+      "answer_run": "not_started_no_knowledge_update_slice_effect",
+      "cascade": false
+    }
+  },
+  "limits": [
+    "Examined development slices; no answer-quality claims.",
+    "Extraction sample: one LoCoMo conversation and two legacy LongMemEval-S single-session-user histories.",
+    "Folding changes claim denominators; read absolute counts, source tokens and full-source evidence together.",
+    "Recorded gate latency is descriptive; runs shared the host with other work."
+  ]
+}

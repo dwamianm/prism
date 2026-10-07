@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Explicit experimental evidence-conditioned follow-up retrieval and read-time
+  supersedence suppression, with execution observations and replayable scores
+  (#238, #241). Offline development gates do not establish an answer gain;
+  defaults remain unchanged.
+- Opt-in claim/source co-packing with source-preserving folding and version 23
+  receipts; older canonical receipt bytes remain unchanged (#239). The offline
+  gate now distinguishes cited claim text from complete source-turn retention.
+- Paired development evidence measurements for the 30-per-path candidate cut
+  (#240). LongMemEval-S evidence loss stopped the experiment before reranking
+  or an answer run.
+
 ## [0.14.0] - 2026-10-06
 
 ### Upgrade notes

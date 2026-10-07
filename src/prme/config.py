@@ -706,6 +706,16 @@ class PRMEConfig(_ProjectSettings):
     )
 
     # Multi-query reformulation (issue #43)
+    enable_evidence_followup: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description="One deterministic evidence-conditioned follow-up search (five anchors, 30 hits per path). Experimental; no planner model call.",
+    )
+    enable_read_supersedence: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description="Suppress active claims with an eligible current replacement pointer or SUPERSEDES edge at read time. Experimental; explicit and historical requests retain prior behavior.",
+    )
     enable_query_reformulation: bool = Field(
         default=False,
         description=(

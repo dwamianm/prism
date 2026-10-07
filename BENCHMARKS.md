@@ -238,6 +238,23 @@ beside it (same name, `.md`). For each benchmark and category, the report gives:
 A pack whose records are not all turns (for example one built with extraction)
 still replays; its channel ranks are left out.
 
+Extraction-pack reports also count packed claims missing their source record,
+claims missing complete source text, and the source records' token allocation.
+These are separate from annotated evidence coverage. Complete immutable source
+text for each annotated evidence turn is measured independently of whether a
+derived claim carries its citation. Folding can change claim denominators, so
+compare absolute counts and source-text coverage as well as percentages.
+
+The [2026-10-06 four-ticket report](benchmarks/results/research/2026-10-06/retrieval-four-tickets/REPORT.md)
+records the offline decisions for #238–241. One deterministic follow-up search
+lost LoCoMo multi-hop evidence; a 30-per-path candidate cut lost LongMemEval-S
+evidence and stopped before reranking. Claim/source co-packing improved source
+record fidelity on legacy extraction samples but lost two complete LoCoMo
+contexts at 8K. Read-time supersedence passed authored current-state checks;
+the public slice had no applicable replacement edges and unchanged contexts.
+All new policies remain disabled. These examined slices provide no measured
+answer-quality gain, and no answer reader or judge was run.
+
 The comparison pairs the two runs question by question. It reports wins, losses
 and ties with a paired bootstrap interval. It rejects reports whose questions,
 datasets, archive, tokenizer or projection constants differ. Its intervals
