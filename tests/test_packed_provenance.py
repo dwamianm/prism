@@ -46,4 +46,7 @@ async def test_same_statement_from_different_sources_remains_distinguishable(fre
         records = entries(response.bundle)
         matching = [row for row in records if row["text"] == "I relocated to Oslo."]
         assert {row["source_type"] for row in matching} == {"user_stated", "system_inferred"}
-        assert all(row["epistemic"] == "asserted" for row in matching)
+        assert {(row["source_type"], row["epistemic"]) for row in matching} == {
+            ("user_stated", "asserted"),
+            ("system_inferred", "inferred"),
+        }
