@@ -60,3 +60,69 @@ to manage a separate request key. HTTP exposes `POST /v1/supersedences`; MCP
 exposes `memory_supersede`. New explicit corrections are fully journaled, but
 legacy operations and other historical mutations still prevent a claim of
 complete graph replay.
+
+## Corrections extracted from messages
+
+Fresh `speech_act_v14` ingestion plans additionally recognize a grounded
+`temporal_intent="update"` with negative polarity, even when the extractor omitted
+`replaces_object`. The denied object becomes its target. It retires only known
+positive, observed/asserted claims under the same resolved subject, owner, scope,
+source type and memory type. Optional conditions prevent automatic retirement.
+The prior interval closes at the new source-effective time; an earlier-effective
+historical correction cannot retire a later-effective claim. Publication retains
+all inputs, replacements and outputs in the atomic derivation journal.
+
+Positive updates still require a named, source-supported `replaces_object`.
+Matching preserves the existing predicate equivalence classes, plus one bounded
+transition: `switched_to` may replace positive `uses`/`use` FACT claims. It never
+replaces arbitrary `has`, `owns` or `likes` claims just because their objects match.
+An exact object match or a shorter contiguous whole-word phrase of one to three
+words inside a maximum four-word alphabetic object can identify the target.
+Thus `pump` can identify `insulin pump`, while numeric values and partial-word
+matches are not shortened. Every word in a shortened target must have at least
+three characters. If matching finds more than one distinct prior object, it
+retires none; it does not choose the most recent or highest-ranked pump.
+This is a bounded lexical rule, not general semantic equivalence.
+
+For first-person messages, the caller must establish a shared referent. A named
+speaker works with `enable_speaker_references`. When the author is the memory
+owner and no display name should be bound, explicitly declare that **per message**:
+
+```python
+from prme import NodeType, SourceType
+
+await engine.ingest("I use an insulin pump.", user_id="sam",
+                    first_person_owner=True, wait_for_extraction=True)
+await engine.ingest("I don't use an insulin pump anymore.", user_id="sam",
+                    first_person_owner=True, wait_for_extraction=True)
+response = await engine.retrieve(
+    "What treatment do I use?", user_id="sam",
+    exclude_node_types={NodeType.NOTE, NodeType.ENTITY},
+    source_types={SourceType.USER_STATED},
+)
+```
+
+`first_person_owner` defaults to false and accepts only a boolean. It requires a
+user/human role and cannot be combined with a named speaker. Only singular
+`I`, `me`, `my`, `mine` and `myself` bind; plural and other personal references
+remain event-local. Keep it false for pasted letters or other quoted speakers.
+The declaration spans the whole message; split mixed authorship into separate
+sources before declaring it. A stable owner identity is separate for each owner
+and scope and never retroactively merges old event-local or named identities.
+Python async/sync ingest, per-message batch dictionaries, HTTP `/v1/ingest` and
+MCP `memory_ingest` expose the declaration. The reserved source metadata key is
+`prme_first_person_owner_v1`; pass the argument rather than injecting the key.
+
+Raw source notes and immutable events remain available. A note can contain
+several claims, including an unrelated diagnosis that must survive a treatment
+correction. Use the explicit NOTE filter to leave those sources out of retrieval.
+A surviving claim's evidence sentence can still mention a retired sibling claim:
+filtering notes does not rewrite that sentence or prove every phrase in it is
+current. Inspect structured claim metadata/lifecycle and `get_assertion_state`
+when selecting current state. Ambiguous or unsupported corrections need an
+explicit `supersede` decision rather than automatic retirement.
+
+Saved extractions through v13 and every saved plan retain their recorded rules,
+IDs and checksums. Missing plans for v13 records still prepare v13. No historical
+claims, pronoun identities or notes are automatically migrated. Older releases
+cannot read v14 records/plans; upgrade all readers of a shared store first.

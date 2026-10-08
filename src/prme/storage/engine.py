@@ -1356,6 +1356,7 @@ class MemoryEngine:
         user_id: str,
         role: str = "user",
         speaker: str | None = None,
+        first_person_owner: bool = False,
         session_id: str | None = None,
         metadata: dict | None = None,
         event_time: datetime | None = None,
@@ -1379,6 +1380,10 @@ class MemoryEngine:
             speaker: Optional name of who said this; see ``store()``. It is
                 kept with the source event and its raw note, not with
                 extracted claims.
+            first_person_owner: Explicitly bind singular first-person references
+                in this user/human message to the owner within this scope.
+                Leave false for pasted or quoted first-person text. Cannot
+                be combined with a named speaker.
             session_id: Optional session identifier.
             metadata: Optional structured metadata.
             event_time: Timezone-aware source time. Relative dates in extracted
@@ -1389,8 +1394,12 @@ class MemoryEngine:
             String UUID of the persisted event.
         """
         from prme.ingestion.temporal import validate_source_time
+        from prme.models.owner_reference import attach_owner_reference
 
         validate_source_time(event_time)
+        metadata = attach_owner_reference(
+            metadata, first_person_owner, role=role, speaker=speaker,
+        )
         if self._pipeline is None:
             event_id = await self.store(
                 content,
@@ -1435,7 +1444,7 @@ class MemoryEngine:
 
         Delegates to the IngestionPipeline for sequential batch
         processing. Each message dict must have 'content' and 'role'
-        keys, with optional 'speaker', 'metadata' and timezone-aware
+        keys, with optional 'speaker', 'first_person_owner', 'metadata' and timezone-aware
         'event_time'.
 
         If no pipeline is configured, falls back to sequential store().
@@ -1450,12 +1459,18 @@ class MemoryEngine:
         Returns:
             List of event ID strings, one per message.
         """
-        # Check every message's speaker before the first one is admitted.
+        from prme.models.owner_reference import attach_owner_reference
+
+        # Check every message's attribution before the first one is admitted.
         messages = list(messages)
-        speaker_metadata = []
+        attribution_metadata = []
         for index, msg in enumerate(messages):
             try:
-                speaker_metadata.append(attach_speaker(msg.get("metadata"), msg.get("speaker")))
+                metadata = attach_owner_reference(
+                    msg.get("metadata"), msg.get("first_person_owner", False),
+                    role=msg["role"], speaker=msg.get("speaker"),
+                )
+                attribution_metadata.append(attach_speaker(metadata, msg.get("speaker")))
             except ValueError as exc:
                 raise type(exc)(f"messages[{index}]: {exc}") from exc
         if self._pipeline is None:
@@ -1467,15 +1482,16 @@ class MemoryEngine:
                     session_id=session_id,
                     role=msg["role"],
                     speaker=msg.get("speaker"),
+                    first_person_owner=msg.get("first_person_owner", False),
                     scope=scope,
                     metadata=msg.get("metadata"),
                     event_time=msg.get("event_time"),
                 )
                 event_ids.append(eid)
             return event_ids
-        # The pipeline reads a speaker only through its metadata.
+        # The pipeline reads attribution only through source metadata.
         prepared = [
-            {**msg, "metadata": metadata} for msg, metadata in zip(messages, speaker_metadata)
+            {**msg, "metadata": metadata} for msg, metadata in zip(messages, attribution_metadata)
         ]
         return await self._pipeline.ingest_batch(
             prepared,

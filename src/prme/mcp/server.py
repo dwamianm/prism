@@ -489,6 +489,7 @@ async def memory_ingest(
     metadata: Optional[dict[str, Any]] = None,
     event_time: Optional[AwareDatetime] = None,
     speaker: Optional[str] = None,
+    first_person_owner: StrictBool = False,
 ) -> str:
     """Ingest content with LLM-powered extraction.
 
@@ -506,6 +507,8 @@ async def memory_ingest(
             (another human in the conversation), assistant, tool or system.
             Default: user.
         speaker: Optional name of who said this; see memory_store.
+        first_person_owner: Declare this user/human message's singular first person
+            to be its owner. Leave false for pasted text; cannot combine with speaker.
         scope: Memory scope. One of: personal, project, organisation. Default: personal.
     """
     engine = _get_engine(ctx)
@@ -525,6 +528,7 @@ async def memory_ingest(
             user_id=user_id,
             role=role,
             speaker=speaker,
+            first_person_owner=first_person_owner,
             scope=sc,
             session_id=session_id,
             metadata=metadata,

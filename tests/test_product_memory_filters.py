@@ -37,9 +37,9 @@ async def test_unnamed_first_person_survives_ingestion_and_restart(config, user,
         engine._pipeline._extraction_provider.extract = AsyncMock(return_value=result)
         event = await engine.ingest(message, user_id=user, role="user", wait_for_extraction=True)
         record = await engine.get_extraction(event, user_id=user)
-        assert record.grounding_policy == "speech_act_v13"
+        assert record.grounding_policy == "speech_act_v14"
         plan = await engine._event_store.get_derivation_plan(event, user_id=user)
-        assert plan.materialization_policy == "speech_act_v13"
+        assert plan.materialization_policy == "speech_act_v14"
         nodes = await engine.get_event_nodes(event, user_id=user)
         claims = [node for node in nodes if node.node_type in {NodeType.FACT, NodeType.PREFERENCE}]
         assert len(claims) == 1

@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.14.1); design specs live in `docs/`.
+PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.14.2); design specs live in `docs/`.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ Four storage layers behind a unified retrieval API. The default backend is local
 
 ## Key Design Constraints
 
-- **Append-only**: Events must never be overwritten or deleted except by policy-based archival. Conflicting assertions must not silently overwrite prior ones — use supersedence. Note: store-time supersedence is gated behind `enable_store_supersedence` (default `False`, `src/prme/config.py`); with the default, `store()` does not supersede. Retrieval can present chronological markers and unresolved conflicts; recency alone is not treated as proof of truth or graph-level supersedence. Predicate matching in the supersedence detector is exact-match plus three hardcoded equivalence classes (`src/prme/ingestion/supersedence.py`); paraphrased predicates are not currently superseded.
+- **Append-only**: Events must never be overwritten or deleted except by policy-based archival. Conflicting assertions must not silently overwrite prior ones — use supersedence. Note: store-time supersedence is gated behind `enable_store_supersedence` (default `False`, `src/prme/config.py`); with the default, `store()` does not supersede. Retrieval can present chronological markers and unresolved conflicts; recency alone is not treated as proof of truth or graph-level supersedence. Predicate matching in the supersedence detector is exact-match plus three hardcoded equivalence classes (`src/prme/ingestion/supersedence.py`); fresh v14 ingestion additionally permits the bounded `switched_to` replacement of positive `uses`/`use` facts; arbitrary paraphrased predicates are not superseded.
 - **Deterministic**: Given identical event logs and config, retrieval results must be reproducible. Scoring weights must be configurable and versioned.
 - **Portable artifact**: The memory pack — `memory.duckdb` (event store + graph tables), `vectors.usearch` (USearch index), `lexical_index/` (Tantivy directory), and `manifest.json` (encryption/version metadata) — must be copyable, encryptable, and rebuildable. Derived indexes can be regenerated from the durable graph with `prme rebuild`.
 
@@ -67,8 +67,12 @@ resolution replaces exact complete JSON string values while returning provenance
 it never performs substring or generated-answer rewriting. The reserved metadata
 key is `prme_value_bindings_v1`. See `docs/VALUE-BINDINGS.md`.
 
-Fresh extractions record `grounding_policy="speech_act_v13"`; plans made from
-those records use `speech_act_v13`. V13 adds unnamed I/me/my/mine/myself
+Fresh extractions and plans use `speech_act_v14`, adding bounded explicit
+negative-update correction matching and per-message `first_person_owner=True`
+identity binding. Saved v13 records still prepare v13 and all saved plans retain
+their original checksums. Do not globally merge pronouns, retire raw notes, or
+use arbitrary cross-predicate/ambiguous object matches. See
+`docs/MEMORY-CORRECTIONS.md`. V13 adds unnamed I/me/my/mine/myself
 source matching without binding a name; bare imperatives without a singular
 reference remain unsupported. Saved v11/v12 extractions still prepare v12
 plans, and old plan bytes and sentence selection remain unchanged. V7 recovers an exact decimal from

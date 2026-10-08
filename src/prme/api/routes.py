@@ -282,6 +282,9 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse | JSON
         if value is not None:
             kwargs[name] = value
 
+    if body.first_person_owner:
+        kwargs["first_person_owner"] = True
+
     try:
         event_id = await engine.ingest(**kwargs)
     except (ExtractionError, MaterializationError) as exc:

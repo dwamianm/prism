@@ -188,7 +188,7 @@ class PlanningIndexes:
         provider: EmbeddingProvider,
         *,
         materialization_policy: Literal[
-            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13"
+            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
         ] = (
             "speech_act_v12"
         ),

@@ -16,11 +16,13 @@ But "Sarah works at Google" vs "Sarah works at Meta" with temporal_intent=
 
 from __future__ import annotations
 
+import re
+
 import structlog
 
 from prme.ingestion.graph_writer import GraphWriter
 from prme.storage.graph_store import GraphStore
-from prme.types import LifecycleState
+from prme.types import EpistemicType, LifecycleState, NodeType
 
 logger = structlog.get_logger(__name__)
 
@@ -91,6 +93,73 @@ class SupersedenceDetector:
         self._graph_store = graph_store
         self._graph_writer = graph_writer
 
+    async def detect_explicit_update(
+        self, new_fact_node_id: str, subject_entity_id: str, *, user_id: str,
+        evidence_event_id: str,
+    ) -> list[str]:
+        """V14 correction rule; legacy/direct-store matching remains unchanged.
+
+        Negation targets only known-positive claims of the same predicate.
+        A switch-to action can replace a uses/use claim, but cannot replace
+        owns/likes/has or an arbitrary predicate merely sharing its object.
+        Bounded word matching requires one unambiguous previous object.
+        """
+        new = await self._graph_store.get_node(new_fact_node_id)
+        if new is None or new.user_id != user_id:
+            return []
+        meta = new.metadata or {}
+        if (meta.get("temporal_intent") != "update" or meta.get("condition") is not None
+                or new.epistemic_type not in (EpistemicType.ASSERTED, EpistemicType.OBSERVED)):
+            return []
+        negative = meta.get("polarity") == "negative"
+        target = meta.get("replaces_object") or (meta.get("object") if negative else None)
+        predicate = meta.get("predicate")
+        if not isinstance(target, str) or not target.strip() or not isinstance(predicate, str):
+            return []
+        candidates = []
+        for edge in await self._graph_store.get_edges(source_id=subject_entity_id):
+            if str(edge.target_id) == new_fact_node_id or edge.edge_type.value != "has_fact":
+                continue
+            old = await self._graph_store.get_node(str(edge.target_id))
+            if (old is None or old.user_id != user_id or old.scope != new.scope
+                    or old.source_type != new.source_type or old.node_type != new.node_type
+                    or old.lifecycle_state not in (LifecycleState.TENTATIVE, LifecycleState.STABLE)
+                    or old.epistemic_type not in (EpistemicType.ASSERTED, EpistemicType.OBSERVED)):
+                continue
+            previous = old.metadata or {}
+            if previous.get("condition") is not None:
+                continue
+            old_predicate, old_object = previous.get("predicate"), previous.get("object")
+            if not isinstance(old_predicate, str) or not isinstance(old_object, str):
+                continue
+            same_predicate = _predicates_match(predicate, old_predicate)
+            switch = (meta.get("polarity") == "positive" and new.node_type == NodeType.FACT
+                      and predicate.strip().casefold() == "switched_to"
+                      and old_predicate.strip().casefold() in {"uses", "use"}
+                      and previous.get("polarity") == "positive")
+            if not (same_predicate or switch) or (negative and previous.get("polarity") != "positive"):
+                continue
+            if not _correction_object_matches(target, old_object):
+                continue
+            if not negative and old_object.strip().casefold() == str(meta.get("object", "")).strip().casefold():
+                continue
+            candidates.append(old)
+        # Multiple copies of the same value may retire; different values may
+        # not. "Pump" cannot select between insulin and water pumps.
+        if len({node.metadata["object"].strip().casefold() for node in candidates}) != 1:
+            return []
+        retired = []
+        for old in candidates:
+            # Preserve late-arriving historical corrections without claiming
+            # that they retired state which became effective later.
+            if (new.event_time or new.valid_from) < (old.event_time or old.valid_from):
+                continue
+            await self._graph_writer.supersede(
+                old_node_id=str(old.id), new_node_id=new_fact_node_id, evidence_id=evidence_event_id,
+            )
+            retired.append(str(old.id))
+        return retired
+
     async def detect_and_supersede(
         self,
         new_fact_node_id: str,
@@ -128,8 +197,8 @@ class SupersedenceDetector:
                 "update" or None -> supersedence (default).
                 "assertion" -> contradiction (preserve both).
             replaces_object: When provided, restrict replacement to this
-                explicitly named old value. The LLM ingestion pipeline always
-                requires it; direct callers retain the legacy matching mode.
+                explicitly named old value. Pre-v14 ingestion plans require
+                it; direct callers retain this legacy matching mode.
             polarity: Semantic polarity of the new claim. A known negative
                 update can retire the same positive object; unknown polarity
                 retains the legacy differing-object behavior.
@@ -231,3 +300,17 @@ class SupersedenceDetector:
                         superseded.append(target_id)
 
         return superseded
+
+
+def _correction_object_matches(target: str, old: str) -> bool:
+    if target.strip().casefold() == old.strip().casefold():
+        return True
+    # A bounded source-literal abbreviation, not semantic similarity or a
+    # number/unit alias. Use token boundaries rather than substring matching.
+    short = re.findall(r"\w+", target.casefold())
+    long = re.findall(r"\w+", old.casefold())
+    if not (1 <= len(short) < len(long) <= 4) or not all(token.isalpha() for token in short + long):
+        return False
+    if any(len(token) < 3 for token in short):
+        return False
+    return any(long[i:i + len(short)] == short for i in range(len(long) - len(short) + 1))

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-10-08
+
+### Fixed
+
+- Fresh extraction plans recognize negative-polarity updates without
+  `replaces_object`, retiring the same known-positive prior claim. Bounded,
+  unambiguous whole-word targets can match `pump` to `insulin pump`, and explicit
+  `switched_to` updates can replace positive `uses`/`use` FACT claims. Unrelated
+  predicates, ambiguous objects, numeric shorthand and conditional/speculative
+  updates remain protected; denials never assume unknown prior polarity. Retirement and validity
+  closure use the existing atomic derivation transaction on both backends.
+
+### Added
+
+- Per-message `first_person_owner=True` on async/sync ingest, batch message
+  dictionaries, HTTP and MCP binds singular first-person references to one owner
+  identity per scope without a display name. It requires a user/human role and no
+  named speaker. Leave it false for pasted first-person text.
+- Add the fast, research-only Jev memory-admission assay from PR #244: 40 authored
+  contrast cases, a frozen protocol, cached decisions and reproducible replay. It
+  writes no memory and enables no provider or production policy.
+
+### Upgrade notes
+
+- Fresh extraction records and plans use `speech_act_v14`; older records and
+  saved plans retain their policies and checksums. No old claims, identities or
+  raw notes are migrated. Upgrade all readers before writing v14 records.
+- Raw notes and shared evidence sentences can still contain retired assertions.
+  NOTE exclusion is available from v0.14.1; structured claim state remains the
+  authority for lifecycle. See [correction limits](docs/MEMORY-CORRECTIONS.md).
+  Validation uses scripted provider outputs; the reported Bedrock model was not
+  rerun, and no benchmark answer-quality gain is claimed.
+
 ## [0.14.1] - 2026-10-08
 
 ### Added

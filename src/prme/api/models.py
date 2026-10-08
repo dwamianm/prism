@@ -203,6 +203,8 @@ class IngestRequest(BaseModel):
         default=None,
         description="Optional name of who said this; see POST /v1/store",
     )
+    first_person_owner: bool = Field(default=False, strict=True,
+        description="Declare this user/human message's singular first person to be its owner; omit for pasted text")
     session_id: str | None = None
     metadata: dict[str, Any] | None = None
     event_time: AwareDatetime | None = Field(default=None,

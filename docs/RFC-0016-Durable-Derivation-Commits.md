@@ -193,10 +193,19 @@ Legacy sources are not automatically enrolled in extraction work. Unmanaged or
 ambiguous staging remains conservatively retained; collection only covers the
 explicitly replaced, uniquely owned revision protocol above.
 
-Historical plans through materialization policy `speech_act_v11` keep
-their original behavior. Fresh built-in inference records
-`grounding_policy="speech_act_v11"`, and plans made from those records use
-`speech_act_v12`: relationship
+Historical plans retain their original behavior and checksums. Fresh built-in
+inference and plans record `speech_act_v14`. V14 retains the v13 singular-form
+source matching and adds bounded explicit correction matching and per-message
+caller-declared first-person owner references. Saved v13 records still prepare
+v13; v11/v12 records still prepare v12. Negated updates can target their own object
+without a replacement field; a bounded switch-to rule and unique whole-word
+shorthand can identify an old value. Older-effective corrections cannot retire
+later-effective claims. The immutable plan captures the complete subject
+snapshot, prior claims and fixed replacement edges, and the existing fenced graph
+transaction publishes new claims, retirement, validity closure and receipt
+atomically. It does not retire raw notes or migrate old pronoun identities. See
+[MEMORY-CORRECTIONS.md](MEMORY-CORRECTIONS.md#corrections-extracted-from-messages).
+All current policies preserve these earlier guarantees: relationship
 outputs become source-cited FACT nodes and normal subject/object association
 edges, unresolved personal references remain event-local, and claim polarity and
 explicit conditions are preserved in node metadata. A fact can also carry one

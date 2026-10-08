@@ -358,6 +358,7 @@ async def ingest(
     user_id: str,
     role: str = "user",
     speaker: str | None = None,
+    first_person_owner: bool = False,
     session_id: str | None = None,
     metadata: dict | None = None,
     wait_for_extraction: bool = False,
@@ -375,10 +376,13 @@ Ingest with LLM-powered extraction. Two-phase pipeline:
 | `user_id` | `str` | required | Owner user ID |
 | `role` | `str` | `"user"` | Message role; see `store()` |
 | `speaker` | `str \| None` | `None` | Optional name of who said it; see `store()` |
+| `first_person_owner` | `bool` | `False` | Declare singular first person in this user/human message to be its owner; no named speaker; omit for pasted text |
 | `session_id` | `str \| None` | `None` | Optional session ID |
 | `metadata` | `dict \| None` | `None` | Optional metadata |
 | `wait_for_extraction` | `bool` | `False` | If True, block until extraction completes |
 | `scope` | `Scope` | `Scope.PERSONAL` | Memory scope |
+
+See [automatic correction rules and limits](MEMORY-CORRECTIONS.md#corrections-extracted-from-messages).
 
 **Returns:** `str` — UUID of the persisted event. Falls back to `store()` if no pipeline configured.
 
@@ -398,7 +402,7 @@ async def ingest_batch(
 ) -> list[str]
 ```
 
-Ingest multiple messages sequentially (preserves conversation order). Each dict must have `"content"` and `"role"` keys, with optional `"speaker"`, `"metadata"` and `"event_time"`. Every speaker is checked before the first message is admitted.
+Ingest multiple messages sequentially (preserves conversation order). Each dict must have `"content"` and `"role"` keys, with optional `"speaker"`, `"first_person_owner"`, `"metadata"` and `"event_time"`. Every attribution is checked before the first message is admitted.
 
 **Returns:** `list[str]` — Event IDs, one per message.
 

@@ -17,7 +17,7 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.archive("node-id", user_id="alice"), None)
     assert_type(client.ingest("Alice used Rust yesterday", user_id="alice",
                               event_time=datetime(2024, 3, 10, tzinfo=timezone.utc),
-                              metadata={"source": "import"}), str)
+                              metadata={"source": "import"}, first_person_owner=True), str)
     assert_type(client.store_with_receipt(
         "Alice uses Rust 2024 Edition",
         user_id="alice",
