@@ -606,7 +606,7 @@ class PRMEConfig(_ProjectSettings):
             "Without this option names require literal support; unnamed I/me/my "
             "forms can still ground each other. The model is asked the same "
             "question either way; extractions checked this way record "
-            "grounding policy speech_act_v13. Named binding leaves "
+            "grounding policy speech_act_v14. Named binding leaves "
             "plural references unchanged. Default False: like "
             "enable_speaker_references, it relies on the caller to say that "
             "the named speaker, and not someone the turn quotes, is who says "

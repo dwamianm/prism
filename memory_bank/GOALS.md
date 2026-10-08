@@ -3,7 +3,7 @@
 **Status:** active handoff, 2026-09-23; see "Current state (2026-10-08)" for
 the latest work.
 
-**Production baseline:** released v0.14.1 (tag `v0.14.1`, 2026-10-08), with the
+**Production baseline:** released v0.14.2 (tag `v0.14.2`, 2026-10-08), with the
 `ingest()` and reader context defaults of 2026-10-06 (see the
 [changelog](../CHANGELOG.md)).
 
@@ -11,12 +11,15 @@ the latest work.
 
 ## Current state (2026-10-08)
 
-The release is v0.14.1 (2026-10-08). The retrieval defaults changed on
+The release is v0.14.2 (2026-10-08). The retrieval defaults changed on
 2026-09-25 (#177, #187; released in v0.13.0), and the DeepSeek defaults
 baseline on the `store()` track is `prme@d811e3ed` (LoCoMo 1250/1540,
 LongMemEval-S 453/500). Every variant on that track counts from zero against
 it. The `ingest()` track has its own baseline (below).
 
+v0.14.2 adds bounded grounded correction matching and an opt-in per-message
+owner declaration for first-person references; saved policies and historical
+identities remain unchanged. It does not change retrieval defaults.
 v0.14.1 adds opt-in node/source retrieval filters, unnamed first-person
 source matching and role-aware defaults for new assistant/system stores. It
 preserves historical nodes and plans; consumers of a shared store must upgrade

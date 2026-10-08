@@ -143,7 +143,7 @@ async def test_off_by_default_the_claims_are_discarded(config, user):
         found = await claims(engine, user)
     # The speaker is not passed while the option is off, so older providers keep working.
     assert "speaker" not in mock.call_args.kwargs
-    assert record.grounding_policy == "speech_act_v13"
+    assert record.grounding_policy == "speech_act_v14"
     assert found == []
 
 
@@ -156,7 +156,7 @@ async def test_on_the_speakers_claims_attach_to_their_entity(config, user):
         found = await claims(engine, user)
         names = [node.content for node in await engine.query_nodes(user_id=user, node_type=NodeType.ENTITY)]
     assert mock.call_args.kwargs["speaker"] == "Dana"
-    assert record.grounding_policy == "speech_act_v13"
+    assert record.grounding_policy == "speech_act_v14"
     assert found == [
         ("Dana", "lives_in", "Denver", HOME_QUOTE),
         ("Dana", "partner_of", "Sam", HOME_QUOTE),
@@ -173,5 +173,5 @@ async def test_on_a_turn_without_a_speaker_is_unchanged(config, user):
         record = await engine.get_extraction(event_id, user_id=user)
         found = await claims(engine, user)
     assert "speaker" not in mock.call_args.kwargs
-    assert record.grounding_policy == "speech_act_v13"
+    assert record.grounding_policy == "speech_act_v14"
     assert found == []

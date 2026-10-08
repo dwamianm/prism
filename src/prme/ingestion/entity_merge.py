@@ -37,6 +37,24 @@ class EntityMerger:
         self._graph_store = graph_store
         self._graph_writer = graph_writer
 
+    async def find_or_create_owner_reference(self, user_id: str, *, scope: Scope,
+                                             evidence_event_id: str) -> tuple[str, bool]:
+        """Reuse only this owner's declared singular identity in this scope."""
+        from prme.models.owner_reference import owner_reference_id
+
+        node_id = owner_reference_id(user_id, scope.value)
+        expected = {"entity_type": "person", "identity_status": "owner_reference", "owner_id": user_id}
+        existing = await self._graph_store.get_node(str(node_id), include_superseded=True)
+        if existing is not None:
+            if (existing.user_id != user_id or existing.scope != scope
+                    or existing.node_type != NodeType.ENTITY or existing.metadata != expected
+                    or existing.lifecycle_state not in (LifecycleState.TENTATIVE, LifecycleState.STABLE)):
+                raise ValueError("Owner reference identity is unavailable")
+            return str(node_id), False
+        node = MemoryNode(id=node_id, node_type=NodeType.ENTITY, content="I", user_id=user_id,
+                          scope=scope, metadata=expected, evidence_refs=[UUID(evidence_event_id)])
+        return await self._graph_writer.create_node(node), True
+
     async def find_or_create_entity(
         self,
         name: str,

@@ -182,18 +182,24 @@ This is passage-level coverage, not a semantic deduplication claim. Existing
 committed relationship edges are not automatically rewritten.
 
 LLM ingestion does not treat differing values as inherently contradictory: a
-person can use Python and Rust or like both tea and coffee. Automatic retirement
-requires `temporal_intent="update"`, an explicit `replaces_object` present in the
-source passage, and an observed/asserted fact. Only the named previous object is
-eligible. A known negative update can retire the same known-positive claim, such
-as "no longer uses Python" replacing "uses Python"; unknown historical polarity
-is never guessed. Hypothetical, conditional, inferred, and unverified extractions
-cannot retire existing facts. Unnamed changes remain alongside prior evidence
-until a more informed resolution is available. The lower-level supersedence
-detector retains its explicit caller-driven legacy matching mode.
+person can use Python and Rust or like both tea and coffee. Fresh v14 plans require
+an observed/asserted, unconditional `temporal_intent="update"`. A negative update
+can target its own denied object without `replaces_object`, but only a known-positive
+prior claim of the same predicate is eligible. Positive updates require a
+source-supported `replaces_object`. Matching retains the existing predicate
+classes, with one additional FACT transition from `uses`/`use` to `switched_to`.
+An exact target or bounded alphabetic whole-word shorthand must identify just one
+distinct prior object under the same resolved subject, owner, scope, source type
+and memory type. Ambiguous values, partial words, numeric shorthand and unrelated
+predicates cannot retire state. Hypothetical, conditional, inferred and unverified
+claims remain non-authoritative. No recency or ranking tie-break chooses a target.
+The precise rule and caller-declared first-person ownership are specified in
+[MEMORY-CORRECTIONS.md](MEMORY-CORRECTIONS.md#corrections-extracted-from-messages).
+Earlier ingestion plans and the lower-level caller-driven legacy detector retain
+their original exact-target rules. Raw source notes are not automatically retired.
 
 Newly extracted facts start `valid_from` at their resolved source-effective
-time. A valid explicit update in a `temporal_validity_v7`, `speech_act_v8`, `speech_act_v9`, `speech_act_v10`, `speech_act_v11`, or `speech_act_v12`
+time. A valid explicit update in a `temporal_validity_v7`, `speech_act_v8`, `speech_act_v9`, `speech_act_v10`, `speech_act_v11`, `speech_act_v12`, `speech_act_v13`, or `speech_act_v14`
 plan atomically retires
 the previous claim and closes its half-open interval at the replacement's
 `valid_from`. Existing derivation policies replay unchanged. A legacy row whose
@@ -209,8 +215,8 @@ cannot materialize it under a completed/current predicate such as `uses` or
 `trying_to_set_up` or `plans_to_use`. This lexical boundary does not prove
 general entailment and older extraction plans retain their recorded behavior.
 The same clause check covers completed relationships between components named
-inside the attempted action. Fresh outputs carry extraction grounding policy `speech_act_v13` and prepare
-v13 plans. Previously saved `speech_act_v11` and v12 extractions prepare v12 plans. Saved v10 through v6
+inside the attempted action. Fresh outputs carry extraction grounding policy `speech_act_v14` and prepare
+v14 plans. Saved v13 extractions prepare v13 plans. Previously saved `speech_act_v11` and v12 extractions prepare v12 plans. Saved v10 through v6
 outputs also remain eligible for v12. V8 adds a narrow user-source recovery for
 an omitted exact dimensionless score/count/rating/level. V9 adds bounded
 source-derived quantities on grounded facts and one complete conditional

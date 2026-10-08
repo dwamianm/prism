@@ -25,7 +25,7 @@ class ExtractionRecord(BaseModel):
     grounding_policy: Literal[
         "source_passage_v1", "speech_act_v2", "speech_act_v3", "speech_act_v4",
         "speech_act_v5", "speech_act_v6", "speech_act_v7", "speech_act_v8",
-        "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13"
+        "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
     ] = (
         "source_passage_v1"
     )

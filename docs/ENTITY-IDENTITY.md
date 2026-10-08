@@ -14,7 +14,7 @@ This is a conservative English guard, not general coreference resolution. It
 does not disambiguate several quoted speakers inside one event or equal names
 belonging to different people.
 
-`enable_speaker_references` (on by default since 2026-10-06) is the one
+`enable_speaker_references` (on by default since 2026-10-06) provides a named
 exception. When a turn names its speaker (`ingest(speaker=...)`), a
 first-person singular reference in its claims (`I`, `me`, `my`, `mine`,
 `myself`) binds to an entity with that speaker's name and type `person`, the
@@ -22,7 +22,7 @@ same node that other mentions of the name use. The claim keeps the literal
 pronoun as its subject or object, and its `speaker_reference` metadata names
 the speaker and which of the two it bound. A speaker's claims then connect
 across messages, so a repeated claim can merge (#209) and a named update can
-supersede the value it replaces. Turns without a speaker, and plural,
+supersede the value it replaces. Turns without a speaker or an explicit owner declaration, and plural,
 second-person and third-person references, stay local to their message. It
 became a default together with `enable_claim_sentence_text` and
 `packing.fold_repeated_text`, after the three passed the default-change rule
@@ -31,6 +31,17 @@ change: claim sentences, speaker references and folding"). Only the caller
 knows that the named speaker, and not someone the turn quotes, is who says
 `I`, so set `PRME_ENABLE_SPEAKER_REFERENCES=false` when a speaker's turns
 quote others in the first person.
+
+`ingest(first_person_owner=True)` provides a separate per-message declaration
+for user/human sources with no named speaker. Under fresh v14 plans, singular
+first-person references bind to one deterministic `owner_reference` entity per
+owner and scope. Its content remains `I`; it binds no display name. Claims keep
+their literal references and record `owner_reference` with the owner and bound
+fields. The reserved source metadata key is `prme_first_person_owner_v1`.
+This is caller-declared authorship, not automatic coreference. Leave it false
+for pasted first-person letters; split mixed authorship into separate messages.
+Old unresolved identities and named speaker entities are not merged into this
+identity. See [the correction API](MEMORY-CORRECTIONS.md#corrections-extracted-from-messages).
 
 `enable_speaker_grounding` (default false) makes the same assumption during
 grounding. Grounding requires a claim's subject and object to occur in its
@@ -59,10 +70,10 @@ same response, apart from those event-local personal references. A missing or
 ambiguous reference discards its claim while preserving grounded, closed
 siblings; it never creates or selects an identity to repair model output.
 
-Fresh extractions record `speech_act_v13`, and plans prepared from those
-records use `speech_act_v13`. This preserves v12 qualifier, quantity, speech-act
-and source-effective validity rules and adds unnamed singular-form matching
-for admission and sentence selection. Saved v11 and v12 extractions keep their
+Fresh extractions and plans record `speech_act_v14`. V14 preserves v13
+unnamed singular-form matching and earlier qualifier, quantity, speech-act and
+source-effective validity rules, and adds explicit owner references and bounded
+correction matching. Saved v13 records still prepare v13 plans. Saved v11 and v12 extractions keep their
 v12 plan behavior; saved v12 plans retain literal-only unnamed matching.
 Saved v10 through v6 records also prepare v12, v5 records prepare v11, v4 prepare v10, v3
 prepare v9, and v2 prepare v8. A v12 extraction record also prepares v12.

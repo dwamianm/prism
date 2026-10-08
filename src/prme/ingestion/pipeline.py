@@ -522,8 +522,8 @@ class IngestionPipeline:
                 content_hash=event.content_hash,
                 provider=self._extraction_provider.provider_name,
                 model=self._extraction_provider.model_name,
-                # v13 also admits unnamed first-person singular forms without binding a name.
-                grounding_policy="speech_act_v13",
+                # v14 adds explicit correction and caller-declared owner-reference planning.
+                grounding_policy="speech_act_v14",
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
@@ -575,8 +575,8 @@ class IngestionPipeline:
         event: Event,
         *,
         materialization_policy: Literal[
-            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13"
-        ] = "speech_act_v13",
+            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
+        ] = "speech_act_v14",
     ) -> DerivationPlan:
         """Prepare fixed graph/index inputs without publishing any artifacts."""
         from prme.ingestion.planning import PlanningGraph, PlanningIndexes, PlanningQueue
@@ -585,12 +585,18 @@ class IngestionPipeline:
         result = ExtractionResult.model_validate_json(result.model_dump_json())
         graph = PlanningGraph(self._graph_store, event)
         indexes = PlanningIndexes(graph)
-        current_policy = materialization_policy in {"speech_act_v12", "speech_act_v13"}
+        current_policy = materialization_policy in {"speech_act_v12", "speech_act_v13", "speech_act_v14"}
+        from prme.models.owner_reference import OWNER_REFERENCE_KEY
+        owner_reference = (materialization_policy == "speech_act_v14"
+                           and event.role.casefold() in {"user", "human"}
+                           and (event.metadata or {}).get(OWNER_REFERENCE_KEY) is True)
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
             merge_claims=self._merge_repeated_claims and current_policy,
-            first_person_forms=materialization_policy == "speech_act_v13",
+            first_person_forms=materialization_policy in {"speech_act_v13", "speech_act_v14"},
+            explicit_corrections=materialization_policy == "speech_act_v14",
+            owner_reference=owner_reference,
             speaker=(metadata_speaker(event.metadata)
                      if self._bind_speaker_references and current_policy else None),
             sentence_text=self._claim_sentence_text and current_policy,
@@ -607,6 +613,7 @@ class IngestionPipeline:
         *, graph_store, writer, vector_index, lexical_index, write_queue,
         merge_claims: bool = False, speaker: str | None = None, sentence_text: bool = False,
         grounding_speaker: str | None = None, first_person_forms: bool = False,
+        explicit_corrections: bool = False, owner_reference: bool = False,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
@@ -636,15 +643,22 @@ class IngestionPipeline:
                 (speaker, "person", None) if bound else (entity.name, entity.entity_type, entity.description)
             )
 
-            entity_id, is_new = await entity_merger.find_or_create_entity(
-                name=name,
-                entity_type=entity_type,
-                user_id=event.user_id,
-                description=description,
-                session_id=event.session_id,
-                evidence_event_id=event_id,
-                scope=entity_scope,
-            )
+            owner_bound = owner_reference and _speaker_reference(entity.name, entity.entity_type)
+            if owner_bound:
+                entity_id, is_new = await entity_merger.find_or_create_owner_reference(
+                    event.user_id, scope=entity_scope, evidence_event_id=event_id,
+                )
+                name, description = "I", None
+            else:
+                entity_id, is_new = await entity_merger.find_or_create_entity(
+                    name=name,
+                    entity_type=entity_type,
+                    user_id=event.user_id,
+                    description=description,
+                    session_id=event.session_id,
+                    evidence_event_id=event_id,
+                    scope=entity_scope,
+                )
             entity_refs.add(entity.name, entity.entity_type, entity_id)
 
             # Reuse does not update the durable entity description. Do not
@@ -772,6 +786,13 @@ class IngestionPipeline:
                 if bound_fields:
                     # The literal pronoun stays in subject/object; this names who it is.
                     fact_metadata["speaker_reference"] = {"speaker": speaker, "fields": bound_fields}
+            if owner_reference:
+                owner_fields = [field for field, value, kind in (
+                    ("subject", fact.subject, fact.subject_entity_type),
+                    ("object", fact.object, fact.object_entity_type),
+                ) if _speaker_reference(value, kind)]
+                if owner_fields:
+                    fact_metadata["owner_reference"] = {"user_id": event.user_id, "fields": owner_fields}
             if fact.condition is not None:
                 fact_metadata["condition"] = fact.condition
                 fact_metadata["condition_state"] = "unknown"
@@ -886,10 +907,15 @@ class IngestionPipeline:
                 for copy in copies:
                     await writer.supersede(str(copy.id), fact_node_id, evidence_id=event_id)
 
-                # Different values can coexist. Ingestion only retires an
-                # explicitly named previous value for a nonconditional
-                # update; a hypothetical future must not replace reality.
-                if (
+                # Different values can coexist. V14 additionally recognizes
+                # negative updates without a separate replacement field.
+                # Earlier policies retain their exact replacement rule.
+                if explicit_corrections:
+                    await supersedence_detector.detect_explicit_update(
+                        fact_node_id, subject_entity_id, user_id=event.user_id,
+                        evidence_event_id=event_id,
+                    )
+                elif (
                     fact.temporal_intent == "update"
                     and fact.replaces_object
                     and fact_epistemic_type in (EpistemicType.OBSERVED, EpistemicType.ASSERTED)
@@ -983,9 +1009,11 @@ class IngestionPipeline:
                     event_id, user_id=event.user_id
                 )
                 materialization_policy: Literal[
-                    "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13"
+                    "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
                 ] = (
-                    "speech_act_v13"
+                    "speech_act_v14"
+                    if extraction is not None and extraction.grounding_policy == "speech_act_v14"
+                    else "speech_act_v13"
                     if extraction is not None and extraction.grounding_policy == "speech_act_v13"
                     else "speech_act_v12"
                     if extraction is not None
