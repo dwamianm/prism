@@ -522,8 +522,8 @@ class IngestionPipeline:
                 content_hash=event.content_hash,
                 provider=self._extraction_provider.provider_name,
                 model=self._extraction_provider.model_name,
-                # v12 admits a named speaker's own I, me and my as a mention of them.
-                grounding_policy="speech_act_v11" if speaker is None else "speech_act_v12",
+                # v13 also admits unnamed first-person singular forms without binding a name.
+                grounding_policy="speech_act_v13",
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
@@ -575,8 +575,8 @@ class IngestionPipeline:
         event: Event,
         *,
         materialization_policy: Literal[
-            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12"
-        ] = "speech_act_v12",
+            "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13"
+        ] = "speech_act_v13",
     ) -> DerivationPlan:
         """Prepare fixed graph/index inputs without publishing any artifacts."""
         from prme.ingestion.planning import PlanningGraph, PlanningIndexes, PlanningQueue
@@ -585,11 +585,12 @@ class IngestionPipeline:
         result = ExtractionResult.model_validate_json(result.model_dump_json())
         graph = PlanningGraph(self._graph_store, event)
         indexes = PlanningIndexes(graph)
-        current_policy = materialization_policy == "speech_act_v12"
+        current_policy = materialization_policy in {"speech_act_v12", "speech_act_v13"}
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
             merge_claims=self._merge_repeated_claims and current_policy,
+            first_person_forms=materialization_policy == "speech_act_v13",
             speaker=(metadata_speaker(event.metadata)
                      if self._bind_speaker_references and current_policy else None),
             sentence_text=self._claim_sentence_text and current_policy,
@@ -605,7 +606,7 @@ class IngestionPipeline:
         self, result: ExtractionResult, event: Event, event_id: str, scope: Scope,
         *, graph_store, writer, vector_index, lexical_index, write_queue,
         merge_claims: bool = False, speaker: str | None = None, sentence_text: bool = False,
-        grounding_speaker: str | None = None,
+        grounding_speaker: str | None = None, first_person_forms: bool = False,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
@@ -736,7 +737,8 @@ class IngestionPipeline:
             # Without an accepted resolution, the claim's own sentences can be
             # its text; the paragraph stays its evidence.
             sentences = (
-                claim_sentences(fact_content, fact.subject, fact.object, speaker=grounding_speaker)
+                claim_sentences(fact_content, fact.subject, fact.object, speaker=grounding_speaker,
+                                first_person_forms=first_person_forms)
                 if sentence_text and resolution is None else None
             )
 
@@ -981,9 +983,11 @@ class IngestionPipeline:
                     event_id, user_id=event.user_id
                 )
                 materialization_policy: Literal[
-                    "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12"
+                    "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13"
                 ] = (
-                    "speech_act_v12"
+                    "speech_act_v13"
+                    if extraction is not None and extraction.grounding_policy == "speech_act_v13"
+                    else "speech_act_v12"
                     if extraction is not None
                     and extraction.grounding_policy in {
                         "speech_act_v6",

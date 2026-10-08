@@ -286,6 +286,8 @@ class RetrievalFilters(BaseModel):
     event_time_from: AwareDatetime | None = None
     event_time_to: AwareDatetime | None = None
     include_cross_scope: bool = True
+    exclude_node_types: list[NodeType] | None = None
+    source_types: list[SourceType] | None = None
 
 
 class RetrieveRequest(BaseModel):

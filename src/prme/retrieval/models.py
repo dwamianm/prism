@@ -698,6 +698,8 @@ class RetrievalMetadata(BaseModel):
 class FilterMetadata(BaseModel):
     """Metadata about active filters for debugging and explainability."""
 
+    exclude_node_types: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
+    source_types: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
     scope_filter: list[str] | None = Field(
         default=None, description="Active scope filter values"
     )

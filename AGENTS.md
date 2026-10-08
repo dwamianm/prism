@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.14.0); design specs live in `docs/`.
+PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.14.1); design specs live in `docs/`.
 
 ## Architecture
 
@@ -67,8 +67,11 @@ resolution replaces exact complete JSON string values while returning provenance
 it never performs substring or generated-answer rewriting. The reserved metadata
 key is `prme_value_bindings_v1`. See `docs/VALUE-BINDINGS.md`.
 
-Fresh built-in extractions record `grounding_policy="speech_act_v11"`; plans
-made from those records use `speech_act_v12`. V7 recovers an exact decimal from
+Fresh extractions record `grounding_policy="speech_act_v13"`; plans made from
+those records use `speech_act_v13`. V13 adds unnamed I/me/my/mine/myself
+source matching without binding a name; bare imperatives without a singular
+reference remain unsupported. Saved v11/v12 extractions still prepare v12
+plans, and old plan bytes and sentence selection remain unchanged. V7 recovers an exact decimal from
 its source phrase when provider JSON used a float, without converting or trusting
 that float, and rejects approximation or range cues from surrounding evidence.
 V8 can additionally recover a user-authored, sentence-level exact numeric

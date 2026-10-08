@@ -24,7 +24,7 @@ import json
 import logging
 import time
 import uuid
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Protocol
@@ -57,7 +57,7 @@ from prme.retrieval.evidence_context import (
     project_evidence_context,
 )
 from prme.retrieval.episode_context import expand_episode_context
-from prme.retrieval.filtering import filter_epistemic
+from prme.retrieval.filtering import filter_candidate_types, filter_epistemic, normalize_type_filters
 from prme.retrieval.models import (
     AggregationCoverage,
     AggregationLimitation,
@@ -94,6 +94,7 @@ from prme.types import (
     RepresentationLevel,
     RetrievalMode,
     Scope,
+    SourceType,
     has_memory_text,
 )
 
@@ -317,6 +318,8 @@ class RetrievalPipeline:
         limit: int | None = None,
         max_per_source: int | None = None,
         max_per_evidence: int | None = None,
+        exclude_node_types: Collection[NodeType] | None = None,
+        source_types: Collection[SourceType] | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         ranking_profile: dict | None = None,
@@ -365,6 +368,10 @@ class RetrievalPipeline:
                 passage and evidence set.
             max_per_evidence: Optional maximum results with the same exact
                 nonempty evidence set, including differently worded siblings.
+            exclude_node_types: Node types to omit from primary results,
+                packed context and supplementary hints, before result limiting.
+            source_types: Optional provenance allowlist. None allows all source
+                types; an empty collection allows none. Applies in either mode.
             weights: Override default scoring weights for this request.
             ranking_multipliers: Explicit bounded adjustment after query-specific
                 weight redistribution, before reranking and session expansion.
@@ -384,6 +391,7 @@ class RetrievalPipeline:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
         validate_selection(min_score, limit, max_per_source, max_per_evidence)
+        exclude_node_types, source_types = normalize_type_filters(exclude_node_types, source_types)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
         execution_features = self.execution_features()
@@ -650,11 +658,15 @@ class RetrievalPipeline:
             effective_time_from, effective_time_to,
         )
 
+        candidates, type_excluded = filter_candidate_types(candidates, exclude_node_types, source_types)
+
         # --- Stage 4: Epistemic Filtering ---
         filtered, excluded = filter_epistemic(
             candidates, analysis.retrieval_mode,
             unverified_threshold=self._unverified_confidence_threshold,
         )
+
+        excluded.extend(type_excluded)
 
         # --- Stage 5: Scoring + Ranking ---
         # Capture a single timestamp so all candidates in this retrieval
@@ -740,6 +752,8 @@ class RetrievalPipeline:
                             expanded, knowledge_at, event_time_from, event_time_to,
                             effective_time_from, effective_time_to,
                         )
+                        expanded, type_excluded = filter_candidate_types(expanded, exclude_node_types, source_types)
+                        excluded.extend(type_excluded)
                         expanded, late_excluded = filter_epistemic(
                             expanded,
                             analysis.retrieval_mode,
@@ -805,6 +819,7 @@ class RetrievalPipeline:
                     config=effective_packing_config,
                     scopes=normalized_scope,
                     retrieval_mode=analysis.retrieval_mode,
+                    exclude_node_types=exclude_node_types, source_types=source_types,
                     unverified_confidence_threshold=(
                         self._unverified_confidence_threshold
                     ),
@@ -835,6 +850,7 @@ class RetrievalPipeline:
                     config=effective_packing_config,
                     scopes=normalized_scope,
                     retrieval_mode=analysis.retrieval_mode,
+                    exclude_node_types=exclude_node_types, source_types=source_types,
                     unverified_confidence_threshold=(
                         self._unverified_confidence_threshold
                     ),
@@ -852,6 +868,10 @@ class RetrievalPipeline:
                     "Evidence augmentation failed; continuing without augmentation",
                     exc_info=True,
                 )
+
+        # Enforce consumer filters after episode/projection/augmentation stages too.
+        scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types)
+        excluded.extend(type_excluded)
 
         # --- Cross-Scope Hint Generation ---
         # When scope is active and include_cross_scope=True, run a secondary
@@ -903,6 +923,7 @@ class RetrievalPipeline:
                     hint_candidates, knowledge_at, event_time_from, event_time_to,
                     effective_time_from, effective_time_to,
                 )
+                hint_candidates, _ = filter_candidate_types(hint_candidates, exclude_node_types, source_types)
                 hint_candidates, _ = filter_epistemic(
                     hint_candidates,
                     analysis.retrieval_mode,
@@ -1063,6 +1084,10 @@ class RetrievalPipeline:
                 "event_time_from": event_time_from.isoformat() if event_time_from else None,
                 "event_time_to": event_time_to.isoformat() if event_time_to else None,
                 "include_cross_scope": include_cross_scope,
+                **({"exclude_node_types": sorted(value.value for value in exclude_node_types)}
+                   if exclude_node_types is not None else {}),
+                **({"source_types": sorted(value.value for value in source_types)}
+                   if source_types is not None else {}),
                 "epistemic_weights": {key: value for key, value in self._epistemic_weights.items()}
                     if self._epistemic_weights is not None else None,
                 "unverified_confidence_threshold": self._unverified_confidence_threshold,
@@ -1192,6 +1217,8 @@ class RetrievalPipeline:
         # Build filter metadata for debugging/explainability.
         filter_meta = FilterMetadata(
             scope_filter=[s.value for s in normalized_scope] if normalized_scope else None,
+            exclude_node_types=sorted(value.value for value in exclude_node_types) if exclude_node_types is not None else None,
+            source_types=sorted(value.value for value in source_types) if source_types is not None else None,
             time_from=effective_time_from,
             time_to=effective_time_to,
             cross_scope_enabled=include_cross_scope and normalized_scope is not None,

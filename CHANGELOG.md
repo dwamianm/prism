@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-08
+
+### Added
+
+- Add explicit `retrieve()` filters `exclude_node_types` and `source_types`
+  across the async engine, synchronous client, HTTP API and MCP. Consumers can
+  exclude raw NOTE messages and bare ENTITY nodes and allow only USER_STATED
+  provenance. Filters apply before ranking and result limiting and to packed
+  context, session expansion, evidence projection/augmentation and cross-scope
+  hints, in both retrieval modes. An empty source allowlist returns no results;
+  invalid enum values fail before pending materialization work is drained.
+  Active filters are recorded in retrieval receipts and filter metadata.
+
+### Fixed
+
+- Accept unnamed first-person singular forms (`I`, `me`, `my`, `mine`,
+  `myself`) as source mentions of each other. This keeps claims from "My name
+  is Sam" and preferences from "Call me Sam" without enabling named-speaker
+  grounding or binding those references to a personal name. Admission still
+  requires source evidence and object support; bare imperatives without a
+  first-person reference remain unsupported.
+- Default new assistant/system direct stores and raw-source notes to INFERRED
+  instead of node-based ASSERTED or OBSERVED. Explicit epistemic assignments
+  take precedence. INFERRED remains eligible in DEFAULT mode; the source
+  allowlist can exclude generated content entirely.
+- Keep derived claims when evidence projection encounters a source excluded
+  by the request's node or source filters, instead of replacing them with an
+  ineligible raw note.
+
+### Validation
+
+- The information-accumulation simulation now checks that its complete
+  assistant-authored microservices decision reaches packed reader context.
+  The new INFERRED default moved it below the old top-five keyword check while
+  retaining its source text; no ranking weights or admission rules were relaxed.
+
+### Upgrade notes
+
+- Raw user notes still use their existing modality default, so questions and
+  hypotheticals may remain ASSERTED notes. Excluding NOTE nodes is opt-in;
+  retrieval defaults and historical rows are not automatically rewritten.
+  Source filters do not prove that pasted first-person text describes its owner
+  or repair older extracted claims. USER_STATED includes participant roles.
+- Fresh extraction records and prepared plans use `speech_act_v13` for unnamed
+  first-person support. Saved v11/v12 extractions retain v12 plan behavior;
+  earlier plans preserve their policy, IDs and checksums. Earlier releases
+  cannot read the new v13 records and plans. Upgrade every consumer of a shared
+  store before ingesting with v0.14.1.
+- These changes address the PRME-side reports from Kio's KAK-1114 investigation.
+  [The integration reference](docs/INTEGRATION.md#consumer-node-and-source-filters)
+  includes the filter call and its limits. Extraction behavior was verified with
+  scripted provider outputs; the reported live Bedrock model was not rerun.
+
 ## [0.14.0] - 2026-10-06
 
 ### Upgrade notes
@@ -1670,7 +1723,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.14.1...HEAD
+[0.14.1]: https://github.com/dwamianm/prism/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/dwamianm/prism/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/dwamianm/prism/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/dwamianm/prism/compare/v0.11.0...v0.12.0

@@ -80,6 +80,15 @@ classification infallible. See the
 [local extraction diagnostics](../benchmarks/results/extraction/2026-09-13/README.md).
 The prompt does not evaluate conditions or automatically reclassify saved records.
 
+New direct stores and raw-source notes from assistant/system roles infer
+`INFERRED`, including EVENT nodes, unless the caller supplies an explicit
+epistemic type. Existing nodes retain their labels. Raw user notes still default
+to `ASSERTED` regardless of question or hypothetical syntax; ingestion modality
+validation applies to derived claims. Consumers can exclude NOTE/ENTITY nodes
+and allow only selected source types across all retrieval result paths using
+[explicit retrieval filters](INTEGRATION.md#consumer-node-and-source-filters).
+`INFERRED` itself remains eligible in DEFAULT retrieval.
+
 ### Source support in PRME ingestion
 
 Extraction requests an exact `evidence_quote` for each fact and relationship. Validation requires
@@ -103,6 +112,13 @@ sentence of the paragraph is then absent from the content, though it stays in
 the evidence. With the setting off, the content is the whole passage, and
 because a chat message is usually one paragraph, every claim from it shares
 the message as its content.
+Fresh `speech_act_v13` extraction admits unnamed first-person singular forms
+(`I`, `me`, `my`, `mine`, `myself`) as source mentions of each other without
+binding a personal name. V13 plans use that rule for claim sentence selection;
+older plans preserve their recorded behavior. Bare imperatives without a
+first-person reference remain unsupported. This is source membership, not owner
+attribution for pasted or quoted first-person text.
+
 Custom providers that omit citations use the complete message as support and
 must still supply source-supported subject and object values. This deliberately
 rejects unsupported paraphrased object values.
@@ -193,8 +209,8 @@ cannot materialize it under a completed/current predicate such as `uses` or
 `trying_to_set_up` or `plans_to_use`. This lexical boundary does not prove
 general entailment and older extraction plans retain their recorded behavior.
 The same clause check covers completed relationships between components named
-inside the attempted action. Fresh built-in outputs carry extraction grounding
-policy `speech_act_v11` before they may prepare a v12 plan. Saved v10 through v6
+inside the attempted action. Fresh outputs carry extraction grounding policy `speech_act_v13` and prepare
+v13 plans. Previously saved `speech_act_v11` and v12 extractions prepare v12 plans. Saved v10 through v6
 outputs also remain eligible for v12. V8 adds a narrow user-source recovery for
 an omitted exact dimensionless score/count/rating/level. V9 adds bounded
 source-derived quantities on grounded facts and one complete conditional

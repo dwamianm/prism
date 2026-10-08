@@ -24,10 +24,13 @@ def infer_epistemic_type(
     node_type: NodeType,
     content: str | None = None,
     metadata: dict | None = None,
+    *,
+    role: str | None = None,
 ) -> EpistemicType:
     """Infer the best-guess epistemic type from node context.
 
-    Heuristics based on node_type:
+    Heuristics based on role and node_type:
+    - Assistant/system roles -> INFERRED, regardless of node type
     - SUMMARY nodes -> INFERRED (system-generated)
     - EVENT nodes -> OBSERVED (direct user input)
     - All other nodes -> ASSERTED (extracted from text)
@@ -37,12 +40,15 @@ def infer_epistemic_type(
 
     Args:
         node_type: The type of the memory node.
+        role: Optional source role; assistant/system output defaults to INFERRED.
         content: Optional node content (reserved for future heuristics).
         metadata: Optional metadata dict (reserved for future heuristics).
 
     Returns:
         The inferred EpistemicType.
     """
+    if role is not None and role.lower() in {"assistant", "system"}:
+        return EpistemicType.INFERRED
     if node_type == NodeType.SUMMARY:
         return EpistemicType.INFERRED
     if node_type == NodeType.EVENT:

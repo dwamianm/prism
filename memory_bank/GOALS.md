@@ -1,21 +1,27 @@
 # PRME goals and production handoff
 
-**Status:** active handoff, 2026-09-23; see "Current state (2026-10-06)" for
+**Status:** active handoff, 2026-09-23; see "Current state (2026-10-08)" for
 the latest work.
 
-**Production baseline:** released v0.14.0 (tag `v0.14.0`, 2026-10-06), with the
+**Production baseline:** released v0.14.1 (tag `v0.14.1`, 2026-10-08), with the
 `ingest()` and reader context defaults of 2026-10-06 (see the
 [changelog](../CHANGELOG.md)).
 
 **Research record:** [research agenda](../docs/RESEARCH-AGENDA.md)
 
-## Current state (2026-10-06)
+## Current state (2026-10-08)
 
-The release is v0.14.0 (2026-10-06). The retrieval defaults changed on
+The release is v0.14.1 (2026-10-08). The retrieval defaults changed on
 2026-09-25 (#177, #187; released in v0.13.0), and the DeepSeek defaults
 baseline on the `store()` track is `prme@d811e3ed` (LoCoMo 1250/1540,
 LongMemEval-S 453/500). Every variant on that track counts from zero against
 it. The `ingest()` track has its own baseline (below).
+
+v0.14.1 adds opt-in node/source retrieval filters, unnamed first-person
+source matching and role-aware defaults for new assistant/system stores. It
+preserves historical nodes and plans; consumers of a shared store must upgrade
+before writing the new v13 extraction/plan records. This patch has component
+and backend regression evidence, not a new live-model answer benchmark.
 
 **Focus: benchmarks that test extracted memory.** The saved benchmark packs
 were built with `store()`, which never extracts, so the evidence gate could not

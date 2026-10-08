@@ -25,7 +25,7 @@ import threading
 import warnings
 import weakref
 from datetime import datetime
-from collections.abc import Coroutine, Iterator, Sequence
+from collections.abc import Collection, Coroutine, Iterator, Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 from uuid import UUID
 
@@ -380,6 +380,8 @@ class MemoryClient:
         limit: int | None = None,
         max_per_source: int | None = None,
         max_per_evidence: int | None = None,
+        exclude_node_types: Collection[NodeType] | None = None,
+        source_types: Collection[SourceType] | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         min_fidelity: RepresentationLevel | None = None,
@@ -407,6 +409,7 @@ class MemoryClient:
                 min_score=min_score, limit=limit,
                 max_per_source=max_per_source,
                 max_per_evidence=max_per_evidence,
+                exclude_node_types=exclude_node_types, source_types=source_types,
                 weights=weights, ranking_multipliers=ranking_multipliers, min_fidelity=min_fidelity,
                 retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope,
             )

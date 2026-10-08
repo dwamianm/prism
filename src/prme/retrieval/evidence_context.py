@@ -9,13 +9,14 @@ policy requires a model call.
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from prme.retrieval.config import PackingConfig
-from prme.retrieval.filtering import filter_epistemic
+from prme.retrieval.filtering import filter_candidate_types, filter_epistemic
 from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment, rank_fusion_relevance
-from prme.types import NodeType, RetrievalMode, Scope
+from prme.types import NodeType, RetrievalMode, Scope, SourceType
 
 if TYPE_CHECKING:
     from prme.models.nodes import MemoryNode
@@ -66,6 +67,8 @@ async def _source_groups(
     event_time_to: datetime | None,
     time_from: datetime | None,
     time_to: datetime | None,
+    exclude_node_types: Collection[NodeType] | None = None,
+    source_types: Collection[SourceType] | None = None,
 ) -> list[tuple[list[RetrievalCandidate], list[MemoryNode]]]:
     groups: dict[tuple[str, ...], list[RetrievalCandidate]] = {}
     for candidate in scored:
@@ -105,6 +108,7 @@ async def _source_groups(
         if not eligible:
             continue
         shells = [RetrievalCandidate(node=node) for node in eligible]
+        shells, _ = filter_candidate_types(shells, exclude_node_types, source_types)
         shells, _ = filter_epistemic(
             shells,
             retrieval_mode,
@@ -131,12 +135,14 @@ async def project_evidence_context(
     event_time_to: datetime | None = None,
     time_from: datetime | None = None,
     time_to: datetime | None = None,
+    exclude_node_types: Collection[NodeType] | None = None,
+    source_types: Collection[SourceType] | None = None,
 ) -> list[RetrievalCandidate]:
     """Replace top exact evidence groups with bounded direct source nodes.
 
     A direct source is a visible node whose own ID occurs in the group's exact
     ``evidence_refs`` set. Sources must retain the anchor's owner and scope and
-    pass the request's temporal and epistemic filters. If no eligible source is
+    pass the request's temporal, epistemic and consumer type filters. If no eligible source is
     available, the original group is left unchanged.
     """
     top_k = config.evidence_projection_top_k
@@ -158,6 +164,7 @@ async def project_evidence_context(
         event_time_to=event_time_to,
         time_from=time_from,
         time_to=time_to,
+        exclude_node_types=exclude_node_types, source_types=source_types,
     )
     for members, eligible in source_groups:
         anchor = members[0]
@@ -239,6 +246,8 @@ async def augment_evidence_context(
     event_time_to: datetime | None = None,
     time_from: datetime | None = None,
     time_to: datetime | None = None,
+    exclude_node_types: Collection[NodeType] | None = None,
+    source_types: Collection[SourceType] | None = None,
 ) -> list[RetrievalCandidate]:
     """Add bounded direct sources without discarding ranked derived claims."""
     top_k = config.evidence_augmentation_top_k
@@ -260,6 +269,7 @@ async def augment_evidence_context(
         event_time_to=event_time_to,
         time_from=time_from,
         time_to=time_to,
+        exclude_node_types=exclude_node_types, source_types=source_types,
     )
     if not source_groups:
         return scored

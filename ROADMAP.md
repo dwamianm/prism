@@ -1,6 +1,6 @@
 # PRME roadmap
 
-Updated 2026-10-06. Current package: v0.14.0 (see the [changelog](CHANGELOG.md)). Product priority: **reliable, measurable AI memory with an excellent developer experience**.
+Updated 2026-10-08. Current package: v0.14.1 (see the [changelog](CHANGELOG.md)). Product priority: **reliable, measurable AI memory with an excellent developer experience**.
 
 ## Direction
 

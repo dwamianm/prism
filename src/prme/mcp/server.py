@@ -318,6 +318,8 @@ async def memory_retrieve(
     limit: Optional[int] = None,
     max_per_source: Optional[int] = None,
     max_per_evidence: Optional[int] = None,
+    exclude_node_types: Optional[list[NodeType]] = None,
+    source_types: Optional[list[SourceType]] = None,
     token_budget: Optional[int] = None,
     ranking_multipliers: Optional[RankingMultipliers] = None,
     reference_time: Optional[AwareDatetime] = None,
@@ -349,6 +351,8 @@ async def memory_retrieve(
             passage and evidence set. Use 1 for source-diverse results.
         max_per_evidence: Optional maximum results sharing one exact nonempty
             evidence set, including differently worded extracted siblings.
+        exclude_node_types: Node types to omit from results and packed context.
+        source_types: Provenance allowlist; an empty list returns no memories.
         token_budget: Maximum packed context tokens.
         scope: One scope or a nonempty list of scopes.
         ranking_multipliers: Explicit bounded ranking trial; does not activate a profile.
@@ -414,6 +418,13 @@ async def memory_retrieve(
             kwargs["min_fidelity"] = RepresentationLevel(min_fidelity)
         if mode is not None:
             kwargs["retrieval_mode"] = RetrievalMode(mode)
+        from prme.retrieval.filtering import normalize_type_filters
+
+        excluded_types, allowed_sources = normalize_type_filters(exclude_node_types, source_types)
+        if excluded_types is not None:
+            kwargs["exclude_node_types"] = excluded_types
+        if allowed_sources is not None:
+            kwargs["source_types"] = allowed_sources
         from prme.retrieval.selection import validate_selection
         validate_selection(min_score, limit, max_per_source, max_per_evidence)
         if token_budget is not None and token_budget < 0:

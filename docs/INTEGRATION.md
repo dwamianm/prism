@@ -227,7 +227,7 @@ truth judgment or calibrated confidence model.
 | `scope` | `Scope` | `Scope.PERSONAL` | Memory scope |
 | `metadata` | `dict \| None` | `None` | Optional structured metadata |
 | `confidence` | `float \| None` | `None` | Confidence 0.0-1.0. If None, derived from confidence matrix |
-| `epistemic_type` | `EpistemicType \| None` | `None` | If None, inferred from node_type |
+| `epistemic_type` | `EpistemicType \| None` | `None` | If None, assistant/system roles infer `INFERRED`; other roles infer from node_type |
 | `source_type` | `SourceType \| None` | `None` | If None, inferred from node_type + role: `"user"` and `"participant"` select `USER_STATED`, `"assistant"` and `"system"` select `SYSTEM_INFERRED`, `"tool"` selects `TOOL_OUTPUT` |
 | `event_time` | `datetime \| None` | `None` | Timezone-aware source event time; remains separate from admission and validity |
 | `valid_from` | `datetime \| None` | `None` | Timezone-aware inclusive validity start; omission uses admission time |
@@ -404,6 +404,41 @@ Ingest multiple messages sequentially (preserves conversation order). Each dict 
 
 ---
 
+#### Consumer node and source filters
+
+`retrieve()` on the async engine and synchronous client accepts
+`exclude_node_types` and `source_types`. Filters apply within generated
+candidates before scoring and limiting, and to session expansion, supplementary
+evidence, packed context and cross-scope hints. They apply in DEFAULT and
+EXPLICIT modes. `source_types=None` allows all provenance types; an empty
+collection allows none. Invalid enum values fail before pending work is drained.
+Receipts record active filters in `execution.parameters`, and responses expose
+them in `filter_metadata`.
+
+```python
+from prme import NodeType, SourceType
+
+response = await engine.retrieve(
+    "What should I know about my coverage?",
+    user_id="member",
+    exclude_node_types={NodeType.NOTE, NodeType.ENTITY},
+    source_types={SourceType.USER_STATED},
+)
+```
+
+This retrieves source-supported derived claims without serving raw messages or
+bare entities. Raw NOTE messages still use node-based modality defaults: a
+question or hypothetical may be labelled ASSERTED. These controls do not perform
+sentence classification or semantic entailment, repair older extracted claims,
+or prove that pasted text describes its owner. `USER_STATED` includes `user`,
+`human` and `participant` roles, so it is not an exact owner-authorship filter.
+
+New direct stores and raw notes from assistant/system roles default to INFERRED
+and SYSTEM_INFERRED; caller-supplied epistemic types win. INFERRED remains
+eligible in DEFAULT mode, so use the source allowlist to exclude generated
+content entirely. Existing nodes and saved direct-store snapshots retain their
+original labels; no historical records are rewritten.
+
 #### `engine.retrieve()`
 
 ```python
@@ -416,6 +451,8 @@ async def retrieve(
     time_from: datetime | None = None,
     time_to: datetime | None = None,
     token_budget: int | None = None,
+    exclude_node_types: Collection[NodeType] | None = None,
+    source_types: Collection[SourceType] | None = None,
     weights: ScoringWeights | None = None,
     min_fidelity: RepresentationLevel | None = None,
     include_cross_scope: bool = True,
@@ -432,6 +469,8 @@ Hybrid retrieval through the 6-stage pipeline.
 | `time_from` | `datetime \| None` | `None` | Start of temporal window |
 | `time_to` | `datetime \| None` | `None` | End of temporal window |
 | `token_budget` | `int \| None` | `None` | Override default token budget (default: 4096) |
+| `exclude_node_types` | `Collection[NodeType] \| None` | `None` | Omit selected node types before result limiting and packing |
+| `source_types` | `Collection[SourceType] \| None` | `None` | Provenance allowlist; empty means no results |
 | `weights` | `ScoringWeights \| None` | `None` | Override scoring weights |
 | `min_fidelity` | `RepresentationLevel \| None` | `None` | Override minimum representation level. `STRUCTURED`, `PROSE` or `FULL` keeps text-free `KEY_VALUE` and `REFERENCE` fallbacks, and blank records, out of the context |
 | `include_cross_scope` | `bool` | `True` | Include cross-scope hints when scope is filtered |
@@ -1599,7 +1638,7 @@ otherwise grounded fact remains. Ranges, approximations, scientific notation,
 locale decimal commas, and phrases with multiple numbers are not typed. No
 currency inference or unit conversion occurs.
 
-Fresh `speech_act_v11` extraction can also recover one leading exact measure
+V11 and later extraction can also recover one leading exact measure
 from a user-authored first-person completed action in a bounded verb lexicon,
 such as `I just ran 5 kilometers`. It retains the source phrase as the object and
 uses the same validators; modals, negations, examples, questions, conditions,
