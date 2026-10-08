@@ -1,0 +1,730 @@
+{
+  "schema_version": 1,
+  "kind": "jev-owner-memory-admission-development",
+  "created_at": "2026-10-08T18:25:56.338061+00:00",
+  "commit": "c3365104f37f9b788035c72f235cbba8c0d9e4bc",
+  "model": "jev-1.13.0",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "questions": {
+    "supported": {
+      "type": "noul",
+      "instructions": "Does `source` establish all of `claim` exactly as written, preserving attribution, negation, timing, conditions and whether an action occurred?",
+      "criteria": {
+        "true": "The entire claim follows from this source alone. A request to be called a name or to change answer style supports that preference.",
+        "false": "Any material part is unsupported, misattributed, contradicted, hypothetical, conditional, a question, or changed from an attempt or intention into a completed action."
+      }
+    },
+    "owner_attributed": {
+      "type": "noul",
+      "instructions": "Does `source` attribute `claim` to its user-author, rather than another person, an example, pasted document or quoted speaker?",
+      "criteria": {
+        "true": "Plain first-person statements and requests about the author's own name or answer preferences. A quoted phrase is allowed if the author explicitly endorses it as describing them.",
+        "false": "Another person, quoted or pasted text, sample text, or insufficient evidence of attribution to the author. Possessive 'my' does not make a brother's or colleague's property the author's property."
+      }
+    },
+    "kind": {
+      "type": "choice",
+      "instructions": "What kind of memory does `claim` express, assuming only for this question that it is supported?",
+      "criteria": {
+        "fact": "An attribute, state or completed event.",
+        "preference": "A desired name, answer style, like or dislike.",
+        "decision": "An explicit choice or commitment.",
+        "other": "None of these or insufficient information."
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "health-1",
+      "family": "health",
+      "source": "What does my plan cover for breast cancer treatment?",
+      "role": "user",
+      "claim": "I have breast cancer.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "breast cancer",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "What does my plan cover for breast cancer treatment?"
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "health-2",
+      "family": "health",
+      "source": "I have breast cancer.",
+      "role": "user",
+      "claim": "I have breast cancer.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "breast cancer",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I have breast cancer."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "health-3",
+      "family": "health",
+      "source": "What will having a baby cost under my plan?",
+      "role": "user",
+      "claim": "I am having a baby.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "baby",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "What will having a baby cost under my plan?"
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "health-4",
+      "family": "health",
+      "source": "I am having a baby.",
+      "role": "user",
+      "claim": "I am having a baby.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "baby",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I am having a baby."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "cost-1",
+      "family": "cost",
+      "source": "Hypothetically, if I had a $4,000 surgery, how much would I pay?",
+      "role": "user",
+      "claim": "I had a $4,000 surgery.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "$4,000 surgery",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "Hypothetically, if I had a $4,000 surgery, how much would I pay?"
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "cost-2",
+      "family": "cost",
+      "source": "I had a $4,000 surgery.",
+      "role": "user",
+      "claim": "I had a $4,000 surgery.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "$4,000 surgery",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I had a $4,000 surgery."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "cost-3",
+      "family": "cost",
+      "source": "Suppose I paid $200 for therapy.",
+      "role": "user",
+      "claim": "I paid $200 for therapy.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "$200 for therapy",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "Suppose I paid $200 for therapy."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "cost-4",
+      "family": "cost",
+      "source": "I paid $200 for therapy.",
+      "role": "user",
+      "claim": "I paid $200 for therapy.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "$200 for therapy",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I paid $200 for therapy."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "name-1",
+      "family": "name",
+      "source": "My name is Sam.",
+      "role": "user",
+      "claim": "My name is Sam.",
+      "fact": {
+        "subject": "I",
+        "predicate": "name",
+        "object": "Sam",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "My name is Sam."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "name-2",
+      "family": "name",
+      "source": "Call me Sam.",
+      "role": "user",
+      "claim": "I prefer to be called Sam.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers_to_be_called",
+        "object": "Sam",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "Call me Sam."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "name-3",
+      "family": "name",
+      "source": "Should I call myself Sam?",
+      "role": "user",
+      "claim": "I prefer to be called Sam.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers_to_be_called",
+        "object": "Sam",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "Should I call myself Sam?"
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "name-4",
+      "family": "name",
+      "source": "My brother's name is Sam.",
+      "role": "user",
+      "claim": "My name is Sam.",
+      "fact": {
+        "subject": "I",
+        "predicate": "name",
+        "object": "Sam",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "My brother's name is Sam."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "preference-1",
+      "family": "preference",
+      "source": "I prefer short answers.",
+      "role": "user",
+      "claim": "I prefer short answers.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers",
+        "object": "short answers",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I prefer short answers."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "preference-2",
+      "family": "preference",
+      "source": "Please call me Sam, and keep answers short.",
+      "role": "user",
+      "claim": "I prefer short answers.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers",
+        "object": "short",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "Please call me Sam, and keep answers short."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "preference-3",
+      "family": "preference",
+      "source": "Would I prefer short answers?",
+      "role": "user",
+      "claim": "I prefer short answers.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers",
+        "object": "short answers",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "Would I prefer short answers?"
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "preference-4",
+      "family": "preference",
+      "source": "My colleague prefers short answers.",
+      "role": "user",
+      "claim": "I prefer short answers.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers",
+        "object": "short answers",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "My colleague prefers short answers."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "quotation-1",
+      "family": "quotation",
+      "source": "Here is a letter from my doctor: \"I have asthma.\"",
+      "role": "user",
+      "claim": "I have asthma.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "asthma",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "Here is a letter from my doctor: \"I have asthma.\""
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "quotation-2",
+      "family": "quotation",
+      "source": "I have asthma.",
+      "role": "user",
+      "claim": "I have asthma.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "asthma",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I have asthma."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "quotation-3",
+      "family": "quotation",
+      "source": "Example form: \"My name is Sam.\" This is sample text.",
+      "role": "user",
+      "claim": "My name is Sam.",
+      "fact": {
+        "subject": "I",
+        "predicate": "name",
+        "object": "Sam",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "Example form: \"My name is Sam.\" This is sample text."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "quotation-4",
+      "family": "quotation",
+      "source": "My name is Sam. This is my actual name.",
+      "role": "user",
+      "claim": "My name is Sam.",
+      "fact": {
+        "subject": "I",
+        "predicate": "name",
+        "object": "Sam",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "My name is Sam. This is my actual name."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "role-1",
+      "family": "role",
+      "source": "I have asthma.",
+      "role": "assistant",
+      "claim": "I have asthma.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "asthma",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I have asthma."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "role-2",
+      "family": "role",
+      "source": "I have asthma.",
+      "role": "user",
+      "claim": "I have asthma.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "asthma",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I have asthma."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "role-3",
+      "family": "role",
+      "source": "I prefer short answers.",
+      "role": "system",
+      "claim": "I prefer short answers.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers",
+        "object": "short answers",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I prefer short answers."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "role-4",
+      "family": "role",
+      "source": "I prefer short answers.",
+      "role": "user",
+      "claim": "I prefer short answers.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers",
+        "object": "short answers",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I prefer short answers."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "attempt-1",
+      "family": "attempt",
+      "source": "I tried to install Redis, but installation failed.",
+      "role": "user",
+      "claim": "I installed Redis.",
+      "fact": {
+        "subject": "I",
+        "predicate": "installed",
+        "object": "Redis",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I tried to install Redis, but installation failed."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "attempt-2",
+      "family": "attempt",
+      "source": "I installed Redis yesterday.",
+      "role": "user",
+      "claim": "I installed Redis yesterday.",
+      "fact": {
+        "subject": "I",
+        "predicate": "installed",
+        "object": "Redis",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I installed Redis yesterday."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "attempt-3",
+      "family": "attempt",
+      "source": "I plan to adopt Ruff next month.",
+      "role": "user",
+      "claim": "I adopted Ruff.",
+      "fact": {
+        "subject": "I",
+        "predicate": "adopted",
+        "object": "Ruff",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I plan to adopt Ruff next month."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "attempt-4",
+      "family": "attempt",
+      "source": "I decided to adopt Ruff.",
+      "role": "user",
+      "claim": "I decided to adopt Ruff.",
+      "fact": {
+        "subject": "I",
+        "predicate": "decided_to_adopt",
+        "object": "Ruff",
+        "fact_type": "decision",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I decided to adopt Ruff."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "polarity-1",
+      "family": "polarity",
+      "source": "I do not use Redis.",
+      "role": "user",
+      "claim": "I use Redis.",
+      "fact": {
+        "subject": "I",
+        "predicate": "uses",
+        "object": "Redis",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I do not use Redis."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "polarity-2",
+      "family": "polarity",
+      "source": "I use Redis.",
+      "role": "user",
+      "claim": "I use Redis.",
+      "fact": {
+        "subject": "I",
+        "predicate": "uses",
+        "object": "Redis",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I use Redis."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "polarity-3",
+      "family": "polarity",
+      "source": "I no longer live in Oslo.",
+      "role": "user",
+      "claim": "I live in Oslo.",
+      "fact": {
+        "subject": "I",
+        "predicate": "lives_in",
+        "object": "Oslo",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I no longer live in Oslo."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "polarity-4",
+      "family": "polarity",
+      "source": "I live in Oslo.",
+      "role": "user",
+      "claim": "I live in Oslo.",
+      "fact": {
+        "subject": "I",
+        "predicate": "lives_in",
+        "object": "Oslo",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I live in Oslo."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "mixed-1",
+      "family": "mixed",
+      "source": "I live in Oslo. What does my plan cover for cancer?",
+      "role": "user",
+      "claim": "I live in Oslo.",
+      "fact": {
+        "subject": "I",
+        "predicate": "lives_in",
+        "object": "Oslo",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I live in Oslo."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "mixed-2",
+      "family": "mixed",
+      "source": "I live in Oslo. What does my plan cover for cancer?",
+      "role": "user",
+      "claim": "I have cancer.",
+      "fact": {
+        "subject": "I",
+        "predicate": "has",
+        "object": "cancer",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "What does my plan cover for cancer?"
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "mixed-3",
+      "family": "mixed",
+      "source": "If I move to Oslo, my costs will change. I prefer short answers.",
+      "role": "user",
+      "claim": "I prefer short answers.",
+      "fact": {
+        "subject": "I",
+        "predicate": "prefers",
+        "object": "short answers",
+        "fact_type": "preference",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I prefer short answers."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "mixed-4",
+      "family": "mixed",
+      "source": "If I move to Oslo, my costs will change. I prefer short answers.",
+      "role": "user",
+      "claim": "I live in Oslo.",
+      "fact": {
+        "subject": "I",
+        "predicate": "lives_in",
+        "object": "Oslo",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "If I move to Oslo, my costs will change."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "evidence-1",
+      "family": "evidence",
+      "source": "My name is Sam.",
+      "role": "user",
+      "claim": "My name is Sam.",
+      "fact": {
+        "subject": "I",
+        "predicate": "name",
+        "object": "Sam",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "My name is Sam."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "evidence-2",
+      "family": "evidence",
+      "source": "My name is Sam.",
+      "role": "user",
+      "claim": "My name is Sam.",
+      "fact": {
+        "subject": "I",
+        "predicate": "name",
+        "object": "Sam",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "My name is Alex."
+      },
+      "expected_admit": false
+    },
+    {
+      "id": "evidence-3",
+      "family": "evidence",
+      "source": "I use Redis.",
+      "role": "user",
+      "claim": "I use Redis.",
+      "fact": {
+        "subject": "I",
+        "predicate": "uses",
+        "object": "Redis",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I use Redis."
+      },
+      "expected_admit": true
+    },
+    {
+      "id": "evidence-4",
+      "family": "evidence",
+      "source": "I use Redis.",
+      "role": "user",
+      "claim": "I use PostgreSQL.",
+      "fact": {
+        "subject": "I",
+        "predicate": "uses",
+        "object": "PostgreSQL",
+        "fact_type": "fact",
+        "epistemic_type": "asserted",
+        "polarity": "positive",
+        "evidence_quote": "I use PostgreSQL."
+      },
+      "expected_admit": false
+    }
+  ],
+  "implementation_sha256": "3b57e85b2d4529d8da9cdbfa11dd547a7276c3a2496711f439e5382dc2e13cc0",
+  "threshold": 0.9,
+  "concurrency": 4,
+  "timeout_seconds": 30,
+  "max_requests": 40,
+  "attempts_per_case": 1,
+  "screening_gate": {
+    "max_false_admissions": 0,
+    "min_valid_retention": 0.9,
+    "min_supported_kind_accuracy": 0.9
+  },
+  "limits": "Authored development contrasts, not held-out accuracy or a default-promotion gate. No memory writes or reader/judge calls."
+}

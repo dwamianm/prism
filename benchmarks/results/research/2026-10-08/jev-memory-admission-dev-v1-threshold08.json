@@ -1,0 +1,463 @@
+{
+  "registration_sha256": "3fdf2e9c8eb0732e9281e5b88651e1832f80f7249b58f7cfe155e1aad3604cbe",
+  "threshold": 0.8,
+  "exploratory_threshold": true,
+  "local_support_validator": {
+    "tp": 20,
+    "fp": 12,
+    "fn": 0,
+    "tn": 8,
+    "false_admissions": 12,
+    "valid_claims_lost": 0,
+    "valid_retention": 1.0,
+    "false_admission_rate": 0.6
+  },
+  "jev_gate": {
+    "tp": 19,
+    "fp": 0,
+    "fn": 1,
+    "tn": 20,
+    "false_admissions": 0,
+    "valid_claims_lost": 1,
+    "valid_retention": 0.95,
+    "false_admission_rate": 0.0
+  },
+  "provider_errors_or_missing": 0,
+  "abstentions": 1,
+  "supported_kind_correct": 20,
+  "supported_kind_total": 20,
+  "screening_passed": true,
+  "by_family": {
+    "attempt": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    },
+    "cost": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    },
+    "evidence": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    },
+    "health": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    },
+    "mixed": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    },
+    "name": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 1,
+      "valid_retention": 0.5,
+      "false_admission_rate": 0.0
+    },
+    "polarity": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    },
+    "preference": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    },
+    "quotation": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    },
+    "role": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "false_admissions": 0,
+      "valid_claims_lost": 0,
+      "valid_retention": 1.0,
+      "false_admission_rate": 0.0
+    }
+  },
+  "latency_seconds": {
+    "median": 0.14304437499959022,
+    "p95": 0.339197665998654
+  },
+  "usage": {
+    "input_tokens": 26161,
+    "output_tokens": 3298
+  },
+  "cases": [
+    {
+      "id": "health-1",
+      "family": "health",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "health-2",
+      "family": "health",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "health-3",
+      "family": "health",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "health-4",
+      "family": "health",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "cost-1",
+      "family": "cost",
+      "expected_admit": false,
+      "local_admit": false,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "cost-2",
+      "family": "cost",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "cost-3",
+      "family": "cost",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "cost-4",
+      "family": "cost",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "name-1",
+      "family": "name",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "name-2",
+      "family": "name",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "name-3",
+      "family": "name",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "name-4",
+      "family": "name",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "preference-1",
+      "family": "preference",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "preference-2",
+      "family": "preference",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "preference-3",
+      "family": "preference",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "preference-4",
+      "family": "preference",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "quotation-1",
+      "family": "quotation",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "quotation-2",
+      "family": "quotation",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "quotation-3",
+      "family": "quotation",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "quotation-4",
+      "family": "quotation",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "role-1",
+      "family": "role",
+      "expected_admit": false,
+      "local_admit": false,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "role-2",
+      "family": "role",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "role-3",
+      "family": "role",
+      "expected_admit": false,
+      "local_admit": false,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "role-4",
+      "family": "role",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "attempt-1",
+      "family": "attempt",
+      "expected_admit": false,
+      "local_admit": false,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "attempt-2",
+      "family": "attempt",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "attempt-3",
+      "family": "attempt",
+      "expected_admit": false,
+      "local_admit": false,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "attempt-4",
+      "family": "attempt",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "polarity-1",
+      "family": "polarity",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "polarity-2",
+      "family": "polarity",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "polarity-3",
+      "family": "polarity",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "polarity-4",
+      "family": "polarity",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "mixed-1",
+      "family": "mixed",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "mixed-2",
+      "family": "mixed",
+      "expected_admit": false,
+      "local_admit": true,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "mixed-3",
+      "family": "mixed",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "mixed-4",
+      "family": "mixed",
+      "expected_admit": false,
+      "local_admit": false,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "evidence-1",
+      "family": "evidence",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "evidence-2",
+      "family": "evidence",
+      "expected_admit": false,
+      "local_admit": false,
+      "jev_gate_admit": false,
+      "provider_error": false
+    },
+    {
+      "id": "evidence-3",
+      "family": "evidence",
+      "expected_admit": true,
+      "local_admit": true,
+      "jev_gate_admit": true,
+      "provider_error": false
+    },
+    {
+      "id": "evidence-4",
+      "family": "evidence",
+      "expected_admit": false,
+      "local_admit": false,
+      "jev_gate_admit": false,
+      "provider_error": false
+    }
+  ],
+  "limits": "Authored development contrasts, not held-out accuracy or a default-promotion gate. No memory writes or reader/judge calls."
+}

@@ -1,0 +1,1285 @@
+{
+  "registration_sha256": "3fdf2e9c8eb0732e9281e5b88651e1832f80f7249b58f7cfe155e1aad3604cbe",
+  "results": {
+    "health-1": {
+      "request_sha256": "91381952ecb9e84858caa8f6b38842e79cd6daa7d90bbcca1e972c566be74f68",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.09
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.68
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "other": 0.0,
+              "decision": 0.0,
+              "fact": 1.0,
+              "preference": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 658,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.339197665998654
+    },
+    "health-3": {
+      "request_sha256": "68a343c9f5bb8204469492961f9792bcce785682924f8b3ff3db208100b8351f",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.74
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 0.94,
+            "probabilities": {
+              "fact": 0.95,
+              "preference": 0.0,
+              "decision": 0.04,
+              "other": 0.01
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 659,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.3376169999992271
+    },
+    "health-4": {
+      "request_sha256": "ed12fc2eb28189c864d866c4957a6d9f988e0d935a3790d49724f0ffb7250aba",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 0.99,
+            "probabilities": {
+              "fact": 0.99,
+              "decision": 0.0,
+              "preference": 0.0,
+              "other": 0.01
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 651,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.35216324999964854
+    },
+    "cost-2": {
+      "request_sha256": "915f20f86959c41808d6f16215eefe77771e0ffb69b8c1704af36b2f8f72d38a",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 666,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.13154866699915146
+    },
+    "cost-1": {
+      "request_sha256": "582401980df55449ada6e66c3083d58fa2f72760d294348a3250b30820a1e543",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.29
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "decision": 0.0,
+              "fact": 1.0,
+              "preference": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 692,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.14567766599975585
+    },
+    "cost-3": {
+      "request_sha256": "d594e221e83327e644507fed0cab511a36d3247fa2daf755900e46f8836d96eb",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.09
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.61
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "decision": 0.0,
+              "fact": 1.0,
+              "other": 0.0,
+              "preference": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 664,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.13972245799959637
+    },
+    "health-2": {
+      "request_sha256": "88c198c3085466608d6500a277c19f233e2aeed071a8bee1ccf7e6ab39b40eee",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.93
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.5611297079994984
+    },
+    "cost-4": {
+      "request_sha256": "356a92b6ed737d6524fee0aa786306f5dc012d375879e21bcb5e54d24bcab925",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "other": 0.0,
+              "decision": 0.0,
+              "fact": 1.0,
+              "preference": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 660,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.18188995799937402
+    },
+    "name-2": {
+      "request_sha256": "a7dd286d8899cff9db8475355d61e08c54034b01e3432a99c0c789faa014677d",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.73
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 0.0,
+              "preference": 1.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.16287062499941385
+    },
+    "name-1": {
+      "request_sha256": "e4f036aca3ca50932e49032909ea58ac27aced798098b2c03b872a9869bda03d",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.17654429200047161
+    },
+    "name-3": {
+      "request_sha256": "49607244b31aeb9c4a7d8b56e1ffe78ac785d26a7534f3759093275b3289dc94",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.48
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 0.0,
+              "preference": 1.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 652,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.1437913749996369
+    },
+    "preference-1": {
+      "request_sha256": "1f373a7dffd8ee16c794c09c2ee817bd1b34370e50100999caa132995a01c4a3",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 0.0,
+              "preference": 1.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.11791654199987534
+    },
+    "preference-2": {
+      "request_sha256": "94478b1b7e9a53aa9945e94e92a725e9c4bb08d12db6b72f011a6d460ca5c2fa",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.86
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 0.0,
+              "preference": 1.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 658,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.1272002080004313
+    },
+    "name-4": {
+      "request_sha256": "00769925139d46ae68af21130d843cf243c5c83ae2e53efd5872fb2cdad106d7",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0,
+              "fact": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 652,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.13944904200070596
+    },
+    "preference-3": {
+      "request_sha256": "06e0110ebd0c03944edc75017567aa06f1c3fb87737f21c1ce7a9455ef4b2499",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.43
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 0.0,
+              "preference": 1.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 650,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.13448420799977612
+    },
+    "preference-4": {
+      "request_sha256": "51238ac08ddcb8806ec88468238007a69ad5ad7225c9d459d2c6657968467187",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 0.0,
+              "preference": 1.0,
+              "other": 0.0,
+              "decision": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 650,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.12780899999961548
+    },
+    "quotation-1": {
+      "request_sha256": "d8e5621ba752f58a01b8b5467a648658797371177c8d511c389df0b8b8acb21b",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.21
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.11
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "other": 0.0,
+              "preference": 0.0,
+              "decision": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 663,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.13571212500028196
+    },
+    "quotation-2": {
+      "request_sha256": "9771a66e14eaae0335f3dfdf371a1276b92724cf7a3b1904f7da0e4cfc9e781b",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 645,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.1453656250014319
+    },
+    "quotation-3": {
+      "request_sha256": "48a8e73ffb1cb6efd3d935daeb88aeeb5dccc7c8f5bf57244361cd20e137439a",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.38
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 666,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.12039891699896543
+    },
+    "quotation-4": {
+      "request_sha256": "5f801eb2ec2b03e08f30edd8179ee420c77882187ae10114dd27606fa944ea95",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "other": 0.0,
+              "decision": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 660,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.13789345800068986
+    },
+    "role-1": {
+      "request_sha256": "9771a66e14eaae0335f3dfdf371a1276b92724cf7a3b1904f7da0e4cfc9e781b",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 645,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.1284814999999071
+    },
+    "role-3": {
+      "request_sha256": "1f373a7dffd8ee16c794c09c2ee817bd1b34370e50100999caa132995a01c4a3",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 0.0,
+              "preference": 1.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.11940683399916452
+    },
+    "role-2": {
+      "request_sha256": "9771a66e14eaae0335f3dfdf371a1276b92724cf7a3b1904f7da0e4cfc9e781b",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "decision": 0.0,
+              "preference": 0.0,
+              "fact": 1.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 645,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.191433459000109
+    },
+    "role-4": {
+      "request_sha256": "1f373a7dffd8ee16c794c09c2ee817bd1b34370e50100999caa132995a01c4a3",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "other": 0.0,
+              "decision": 0.0,
+              "preference": 1.0,
+              "fact": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.14821733299868356
+    },
+    "attempt-1": {
+      "request_sha256": "07f52bb67080d442e120f3646864c9c69813121155e2ac9978452bc3c1b4dc02",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.8
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "decision": 0.0,
+              "other": 0.0,
+              "preference": 0.0,
+              "fact": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 657,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.1470652500011056
+    },
+    "attempt-2": {
+      "request_sha256": "8793a78bec43087bbf54d0de44829844124d590dc4fc1c27787b94db1c45f093",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.1422082919998502
+    },
+    "attempt-3": {
+      "request_sha256": "7192ea573fbe80888f0d7e120d122fe6ae759b0dff302297beac4f7d7896e9df",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.7
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "decision": 0.0,
+              "fact": 1.0,
+              "other": 0.0,
+              "preference": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 656,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.14092820899895742
+    },
+    "attempt-4": {
+      "request_sha256": "3614f1a847b95e660def322e0349533eb05a375700fd0e0c1a6f0b49f136960b",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "decision",
+            "confidence": 1.0,
+            "probabilities": {
+              "other": 0.0,
+              "fact": 0.0,
+              "preference": 0.0,
+              "decision": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 654,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.14304437499959022
+    },
+    "polarity-1": {
+      "request_sha256": "51933b6737c820f8f942864dbf34b72496e1b97ab26be54777b58f647b4c12c2",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.73
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 0.96,
+            "probabilities": {
+              "fact": 0.97,
+              "preference": 0.0,
+              "decision": 0.03,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 649,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.13431683300041186
+    },
+    "polarity-2": {
+      "request_sha256": "7aaf34e49e46ecc66a4eb0c0f69e1a8ff4bfed297f5c7217ccabbb1a69bf98fd",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 0.92,
+            "probabilities": {
+              "other": 0.0,
+              "decision": 0.06,
+              "preference": 0.0,
+              "fact": 0.9400000000000001
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 645,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.17803104199992958
+    },
+    "polarity-3": {
+      "request_sha256": "da63fdac9228fe269598d704c5f9f00bc1e8c36a2b5b5ec75b5c1ead638d97be",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.54
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 652,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.14618562500072585
+    },
+    "polarity-4": {
+      "request_sha256": "934c98f7d9a1320d132c355e46aec3eb0185efd2a46140d6a51bc754c488d580",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "other": 0.0,
+              "decision": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.12454904100013664
+    },
+    "mixed-2": {
+      "request_sha256": "9f1e90e3456f2ce830cdf01db692d5caf385f7454a3befd130fa540310844b90",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.42
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 658,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.1291752910001378
+    },
+    "mixed-1": {
+      "request_sha256": "431929da9598ad84b98ec0da89a81469ec52f15326fef198acee8f8cc5871b4c",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "decision": 0.0,
+              "preference": 0.0,
+              "other": 0.0,
+              "fact": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 656,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.21737058300095669
+    },
+    "mixed-3": {
+      "request_sha256": "46c1b65d87955cccbf7c9f7628949b2e18b75c2b5bfbf53efd4f92e86639f4dd",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "preference",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 0.0,
+              "preference": 1.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 659,
+          "output_tokens": 84
+        }
+      },
+      "elapsed_seconds": 0.1466433750010765
+    },
+    "mixed-4": {
+      "request_sha256": "ee08e85ac722bda32555837b095ed672ad7a8c731999cc788ac1badc78e78794",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.45
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "preference": 0.0,
+              "decision": 0.0,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 665,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.1241980840004544
+    },
+    "evidence-3": {
+      "request_sha256": "7aaf34e49e46ecc66a4eb0c0f69e1a8ff4bfed297f5c7217ccabbb1a69bf98fd",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 0.95,
+            "probabilities": {
+              "preference": 0.0,
+              "decision": 0.04,
+              "other": 0.0,
+              "fact": 0.96
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 645,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.12746949999927892
+    },
+    "evidence-2": {
+      "request_sha256": "b453f038d51333facba36b2445604fccb73d140afeb65403be603818af1088f2",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.76
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.6
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "other": 0.0,
+              "decision": 0.0,
+              "preference": 0.0,
+              "fact": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.15187333300127648
+    },
+    "evidence-1": {
+      "request_sha256": "e4f036aca3ca50932e49032909ea58ac27aced798098b2c03b872a9869bda03d",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 1.0,
+            "probabilities": {
+              "fact": 1.0,
+              "decision": 0.0,
+              "other": 0.0,
+              "preference": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 648,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.1811110840008041
+    },
+    "evidence-4": {
+      "request_sha256": "109a82964165b7df7e49768a934b80f818f2258a72cccc2d9832737f8c01e881",
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "supported": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "owner_attributed": {
+            "type": "noul",
+            "noul": 0.24
+          },
+          "kind": {
+            "type": "choice",
+            "choice": "fact",
+            "confidence": 0.93,
+            "probabilities": {
+              "fact": 0.95,
+              "preference": 0.0,
+              "decision": 0.05,
+              "other": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 649,
+          "output_tokens": 82
+        }
+      },
+      "elapsed_seconds": 0.13307183399956557
+    }
+  }
+}
