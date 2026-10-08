@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by the request's node or source filters, instead of replacing them with an
   ineligible raw note.
 
+### Validation
+
+- The information-accumulation simulation now checks that its complete
+  assistant-authored microservices decision reaches packed reader context.
+  The new INFERRED default moved it below the old top-five keyword check while
+  retaining its source text; no ranking weights or admission rules were relaxed.
+
 ### Upgrade notes
 
 - Raw user notes still use their existing modality default, so questions and

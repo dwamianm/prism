@@ -167,9 +167,13 @@ def generate_accumulation_scenario(
         SimCheckpoint(
             day=90,
             query="What tools and technologies do we use?",
-            expected_keywords=["microservices"],
+            expected_keywords=[],
             excluded_keywords=[],
-            description="Technology decisions should be retrievable mid-timeline",
+            description="Technology decisions should reach the reader mid-timeline",
+            # This seeded decision is assistant-authored. Its INFERRED label can
+            # lower its rank; availability requires the complete decision in
+            # packed context without requiring an assistant claim in the top five.
+            context_keywords=["We decided to use microservices architecture"],
         ),
         SimCheckpoint(
             day=120,
