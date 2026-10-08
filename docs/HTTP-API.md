@@ -377,3 +377,26 @@ A key is scoped to the node's owner within its memory namespace. The response
 contains the current node, including any changes made since the original call.
 Without a key, each call is a separate confirmation. See
 [confirmation and retry semantics](REINFORCEMENT.md).
+
+## Consumer node and provenance filters
+
+`POST /v1/retrieve` accepts `filters.exclude_node_types` and
+`filters.source_types` as enum lists. For example:
+
+```json
+{
+  "query": "What should I know about my coverage?",
+  "user_id": "member",
+  "filters": {
+    "exclude_node_types": ["note", "entity"],
+    "source_types": ["user_stated"]
+  }
+}
+```
+
+MCP `memory_retrieve` accepts the same lists as direct tool arguments. Filters
+apply in both retrieval modes, before result limiting and context packing, and
+to supplementary hints and expanded context. Omitting `source_types` allows
+all sources; `[]` returns none. An unknown enum is rejected. The filters do not
+classify question sentences or prove that pasted user text describes its owner;
+see [the Python contract and limitations](INTEGRATION.md#consumer-node-and-source-filters).

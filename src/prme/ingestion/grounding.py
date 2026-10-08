@@ -58,7 +58,9 @@ def names_speaker(value: str, speaker: str | None) -> bool:
     return speaker is not None and value.strip().casefold() == speaker.strip().casefold()
 
 
-def mentioned_or_spoken(value: str, text: str, speaker: str | None = None) -> bool:
+def mentioned_or_spoken(
+    value: str, text: str, speaker: str | None = None, *, first_person_forms: bool = True
+) -> bool:
     """A mention of ``value``, or of the speaker by their own I, me or my.
 
     A turn's speaker writes "I live in Denver" and "my sister Rachel", so an
@@ -66,14 +68,19 @@ def mentioned_or_spoken(value: str, text: str, speaker: str | None = None) -> bo
     neither need occur in the claim's sentence. With ``speaker``, the turn's
     named speaker (enable_speaker_grounding), a value that is the speaker's
     name or a first-person singular reference is mentioned by any first-person
-    singular reference. Without it this is :func:`_mentioned`. "We" and "our"
+    singular reference. Without a speaker, first-person singular forms still
+    mention each other without binding a name. ``first_person_forms=False``
+    preserves saved plans' literal-only unnamed behavior. "We" and "our"
     stay unmatched: they include others.
     """
+    is_first_person = value.strip().casefold() in _FIRST_PERSON_SINGULAR
+    if first_person_forms and is_first_person:
+        return _FIRST_PERSON_SINGULAR_RE.search(text) is not None
     if _mentioned(value, text):
         return True
     if speaker is None:
         return False
-    refers_to_speaker = names_speaker(value, speaker) or value.strip().casefold() in _FIRST_PERSON_SINGULAR
+    refers_to_speaker = names_speaker(value, speaker) or is_first_person
     return refers_to_speaker and _FIRST_PERSON_SINGULAR_RE.search(text) is not None
 
 
@@ -409,7 +416,8 @@ _SENTENCE_END_RE = re.compile(r"[.!?](?:[\"')\]]*)?(?=\s+|$)|\n\s*\n")
 
 
 def claim_sentences(
-    passage: str, subject: str, object_value: str, *, speaker: str | None = None
+    passage: str, subject: str, object_value: str, *, speaker: str | None = None,
+    first_person_forms: bool = True,
 ) -> str | None:
     """Return a claim's own sentences within its supporting passage.
 
@@ -434,7 +442,8 @@ def claim_sentences(
     for first in range(len(sentences)):
         for last in range(first, len(sentences)):
             text = passage[sentences[first][0]:sentences[last][1]]
-            if mentioned_or_spoken(subject, text, speaker) and mentioned_or_spoken(object_value, text, speaker):
+            if (mentioned_or_spoken(subject, text, speaker, first_person_forms=first_person_forms)
+                    and mentioned_or_spoken(object_value, text, speaker, first_person_forms=first_person_forms)):
                 if best is None or len(text) < len(best):
                     best = text
                 break

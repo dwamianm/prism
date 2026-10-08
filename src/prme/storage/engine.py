@@ -27,7 +27,7 @@ import hashlib
 import json
 import logging
 import warnings
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Collection, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
@@ -732,7 +732,7 @@ class MemoryEngine:
             confidence: Initial confidence score. If None, derived from
                 the (epistemic_type, source_type) confidence matrix.
             epistemic_type: Epistemic classification. If None, inferred
-                from node_type via heuristic.
+                from role and node_type via heuristic.
             source_type: Source provenance type. If None, inferred from
                 node_type and role via heuristic.
             event_time: Optional timezone-aware datetime of when the event
@@ -770,7 +770,7 @@ class MemoryEngine:
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
 
         if epistemic_type is None:
-            epistemic_type = infer_epistemic_type(node_type)
+            epistemic_type = infer_epistemic_type(node_type, content=materialized_content, role=role)
         if epistemic_type == EpistemicType.CONDITIONAL:
             node_metadata = dict(metadata or {})
             condition = node_metadata.get("condition")
@@ -1636,7 +1636,7 @@ class MemoryEngine:
             if direct is not None:
                 node = direct.node
             else:
-                epistemic_type = infer_epistemic_type(NodeType.NOTE)
+                epistemic_type = infer_epistemic_type(NodeType.NOTE, content=event.content, role=event.role)
                 source_type = infer_source_type(NodeType.NOTE, role=event.role)
                 confidence = self._confidence_matrix.lookup_with_fallback(epistemic_type, source_type)
                 node = MemoryNode(
@@ -1838,6 +1838,8 @@ class MemoryEngine:
         limit: int | None = None,
         max_per_source: int | None = None,
         max_per_evidence: int | None = None,
+        exclude_node_types: Collection[NodeType] | None = None,
+        source_types: Collection[SourceType] | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         min_fidelity: RepresentationLevel | None = None,
@@ -1888,6 +1890,10 @@ class MemoryEngine:
             max_per_evidence: Optional maximum results with the same exact
                 nonempty evidence set. Use 1 for one ranked representative per
                 cited source group, including differently worded siblings.
+            exclude_node_types: Node types to omit from primary results,
+                packed context and supplementary hints, before result limiting.
+            source_types: Optional provenance allowlist. None allows all source
+                types; an empty collection allows none. Applies in either mode.
             weights: Override default scoring weights.
             ranking_multipliers: Explicit request-only adjustment for full-pipeline
                 trials; does not activate or persist a learned profile.
@@ -1907,6 +1913,9 @@ class MemoryEngine:
             NotImplementedError: If no retrieval pipeline is configured.
         """
         validate_selection(min_score, limit, max_per_source, max_per_evidence)
+        from prme.retrieval.filtering import normalize_type_filters
+
+        exclude_node_types, source_types = normalize_type_filters(exclude_node_types, source_types)
         scope = normalize_scope(scope)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
@@ -1975,6 +1984,7 @@ class MemoryEngine:
             min_score=min_score, limit=limit,
             max_per_source=max_per_source,
             max_per_evidence=max_per_evidence,
+            exclude_node_types=exclude_node_types, source_types=source_types,
             weights=weights,
             ranking_multipliers=ranking_multipliers,
             ranking_profile=profile_application,

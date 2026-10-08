@@ -110,6 +110,7 @@ class DerivationPlan(BaseModel):
         "speech_act_v10",
         "speech_act_v11",
         "speech_act_v12",
+        "speech_act_v13",
     ] = "relationship_claims_v3"
     id: UUID = Field(default_factory=uuid4)
     event_id: UUID

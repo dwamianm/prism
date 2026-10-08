@@ -36,7 +36,14 @@ quote others in the first person.
 grounding. Grounding requires a claim's subject and object to occur in its
 quoted sentences, and an extractor writes the speaker into a claim as their
 name ("Dana, lives in, Denver" for "I live in Denver") or as `I` ("Rachel, is
-sister of, I" for "my sister Rachel"), so grounding discards both. With the
+sister of, I" for "my sister Rachel"), so grounding discards a name absent from its evidence. Fresh extraction also
+accepts an unnamed first-person singular subject (`I`, `me`, `my`, `mine`,
+`myself`) when any of those forms occurs in its cited sentence. For example,
+`I / name / Sam` is supported by "My name is Sam", and a preference
+`I / wants_to_be_called / Sam` by "Call me Sam". This binds no personal name
+and keeps the reference event-local. It does not infer a missing first-person
+subject in "keep answers short", bind plural references, or establish that
+pasted first-person text belongs to the memory owner. With the
 option, in a turn that names its speaker, the speaker's own first-person
 singular reference (`I`, `me`, `my`, `mine`, `myself`) counts as a mention of
 a claim value that is the speaker's name or one of those references. That
@@ -45,18 +52,18 @@ choice of `enable_claim_sentence_text`. The model is asked the same question eit
 A first-person attempt or intention ("I'm trying to set up ESLint") still
 needs a predicate that keeps it when the claim names the speaker, and a claim
 naming the speaker covers the speaker's `I` clause, so recovery adds no
-duplicate for it. Turns without a speaker, and plural references, are
-unchanged.
+duplicate for it. Plural references are unchanged.
 
 Built-in extraction keeps only claims whose named references resolve within the
 same response, apart from those event-local personal references. A missing or
 ambiguous reference discards its claim while preserving grounded, closed
 siblings; it never creates or selects an identity to repair model output.
 
-Fresh built-in extractions record `speech_act_v11`, or `speech_act_v12` when
-`enable_speaker_grounding` checked them against a named speaker; derivations
-prepared from those records identify qualifier-aware, quantity-preserving,
-speech-act-preserving, and source-effective validity rules as `speech_act_v12`.
+Fresh extractions record `speech_act_v13`, and plans prepared from those
+records use `speech_act_v13`. This preserves v12 qualifier, quantity, speech-act
+and source-effective validity rules and adds unnamed singular-form matching
+for admission and sentence selection. Saved v11 and v12 extractions keep their
+v12 plan behavior; saved v12 plans retain literal-only unnamed matching.
 Saved v10 through v6 records also prepare v12, v5 records prepare v11, v4 prepare v10, v3
 prepare v9, and v2 prepare v8. A v12 extraction record also prepares v12.
 Legacy `source_passage_v1` extraction records prepare missing plans under

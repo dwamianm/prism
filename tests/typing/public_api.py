@@ -5,6 +5,7 @@ from typing import assert_type
 from uuid import UUID
 
 from prme import AliasProposalInboxItem, AliasProposalReviewResult, AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, MemoryValueBinding, ProductAlignmentCandidate, ProductCandidateEntity, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievedValueBinding, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, RetrievalResponse, Scope, StoreReceipt, ToolArgumentBindingUse, ToolArgumentResolution, ablate_context, assess_context_presence, evaluate_full_retrieval
+from prme import NodeType, SourceType
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
@@ -41,6 +42,9 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])
     assert_type(client.retrieve("preferences", user_id="alice",
                                 retrieval_mode=RetrievalMode.EXPLICIT), RetrievalResponse)
+    assert_type(client.retrieve("preferences", user_id="alice",
+                                exclude_node_types={NodeType.NOTE, NodeType.ENTITY},
+                                source_types={SourceType.USER_STATED}), RetrievalResponse)
     response = client.retrieve("Rust", user_id="alice")
     assert_type(response.bundle.value_bindings(), tuple[RetrievedValueBinding, ...])
     resolution = response.bundle.resolve_tool_arguments(
