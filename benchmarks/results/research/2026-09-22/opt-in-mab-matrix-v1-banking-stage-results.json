@@ -1,0 +1,1703 @@
+{
+  "registration_sha256": "bebbfd4d11c9db100e6614e364484f4411c750a43464ce310ab55ad66ff68268",
+  "tasks": {
+    "banking": {
+      "arms": {
+        "baseline": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 97,
+          "metrics": {
+            "exact_match": 0.97,
+            "f1": 0.97,
+            "substring_exact_match": 0.97,
+            "rougeL_f1": 0.97,
+            "rougeL_recall": 0.97,
+            "rougeLsum_f1": 0.97,
+            "rougeLsum_recall": 0.97
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 97
+            }
+          },
+          "context_tokens": {
+            "mean": 3947.92,
+            "p50": 3948.5,
+            "p95": 3995.0
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.09908050830767025,
+              "p50": 0.08687810400442686,
+              "p95": 0.1408739291509846
+            },
+            "immediate_repeat": {
+              "mean": 0.09553113286878215,
+              "p50": 0.08429287499166094,
+              "p95": 0.1552424148991122
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_session_decay": 3793,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412774,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "4c5b1b31d6058786afafe0383b5ea08963a8060f3a5e43eeb81f5d04437ee6cc",
+          "artifact_manifest_sha256": "ad9e843a3c7535f8c5bd96c84bd4f3ef1029bd61975c8510734427fc2c7a1640"
+        },
+        "episode_routing": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 96,
+          "metrics": {
+            "exact_match": 0.96,
+            "f1": 0.96,
+            "substring_exact_match": 0.96,
+            "rougeL_f1": 0.96,
+            "rougeL_recall": 0.96,
+            "rougeLsum_f1": 0.96,
+            "rougeLsum_recall": 0.96
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 96
+            }
+          },
+          "context_tokens": {
+            "mean": 3949.42,
+            "p50": 3948.5,
+            "p95": 3996.0
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.12072776201821397,
+              "p50": 0.11767449948820285,
+              "p95": 0.19299443123309173
+            },
+            "immediate_repeat": {
+              "mean": 0.11765648334985598,
+              "p50": 0.11269704200094566,
+              "p95": 0.1863324149089749
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_episode_decay": 567,
+            "score_operation_session_decay": 3749,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412939,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "23fa0586d5575ec656d677f289ecb7ea0c97cffef75c18024f6815d62e49ebb3",
+          "artifact_manifest_sha256": "7f1cb962d9d9c9d6fd7818a56a794f28be26f459b3f9019595e967bc59000b97"
+        },
+        "evidence_augmentation": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 98,
+          "metrics": {
+            "exact_match": 0.98,
+            "f1": 0.98,
+            "substring_exact_match": 0.98,
+            "rougeL_f1": 0.98,
+            "rougeL_recall": 0.98,
+            "rougeLsum_f1": 0.98,
+            "rougeLsum_recall": 0.98
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 98
+            }
+          },
+          "context_tokens": {
+            "mean": 3948.47,
+            "p50": 3948.0,
+            "p95": 3995.0
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.09465369417070178,
+              "p50": 0.08502683350525331,
+              "p95": 0.13050863778917118
+            },
+            "immediate_repeat": {
+              "mean": 0.08891736092162318,
+              "p50": 0.08051231250283308,
+              "p95": 0.12647759554529328
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_session_decay": 3793,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412840,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "5c1f2e4019462763bc8bb73f48b6402b596c5e67f321c011dd58463c28a4064a",
+          "artifact_manifest_sha256": "910ed029c1017714a25c2af5d11c9fc1716e64106703bb619c94052b96b41bd6"
+        },
+        "evidence_projection": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 98,
+          "metrics": {
+            "exact_match": 0.98,
+            "f1": 0.98,
+            "substring_exact_match": 0.98,
+            "rougeL_f1": 0.98,
+            "rougeL_recall": 0.98,
+            "rougeLsum_f1": 0.98,
+            "rougeLsum_recall": 0.98
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 98
+            }
+          },
+          "context_tokens": {
+            "mean": 3953.68,
+            "p50": 3956.0,
+            "p95": 3995.0
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.10041197750135325,
+              "p50": 0.09384089549712371,
+              "p95": 0.1454951628067647
+            },
+            "immediate_repeat": {
+              "mean": 0.09861768418020801,
+              "p50": 0.08813754199945834,
+              "p95": 0.14587467709061455
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_evidence_projection": 5000,
+            "score_operation_session_decay": 3793,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 413257,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "37fcd6303471229e98b2de7a1b4da5bb55aeb833c30245e1c9c7dfbb15efe2e9",
+          "artifact_manifest_sha256": "6fb145da3cd0139998a1c74fd0cfc6d55e04a802a788df80232ddf69ab25b9dd"
+        },
+        "episode_augmentation": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 96,
+          "metrics": {
+            "exact_match": 0.96,
+            "f1": 0.96,
+            "substring_exact_match": 0.96,
+            "rougeL_f1": 0.96,
+            "rougeL_recall": 0.96,
+            "rougeLsum_f1": 0.96,
+            "rougeLsum_recall": 0.96
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 96
+            }
+          },
+          "context_tokens": {
+            "mean": 3947.84,
+            "p50": 3947.0,
+            "p95": 3994.05
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.12256421705998946,
+              "p50": 0.12422716700530145,
+              "p95": 0.19633472019922918
+            },
+            "immediate_repeat": {
+              "mean": 0.11629678663070081,
+              "p50": 0.11879208350728732,
+              "p95": 0.18421711632981896
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_episode_decay": 567,
+            "score_operation_session_decay": 3749,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412781,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "a0bc5608a413852fdf8a700fdf198be3bc0ba945b48fa9aaf66e900652fbc09f",
+          "artifact_manifest_sha256": "a6dfdf2d7a692fb77e9f8fa5ca3f94456b794c4d306cbd7330a332877dda68c5"
+        },
+        "episode_projection": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 95,
+          "metrics": {
+            "exact_match": 0.95,
+            "f1": 0.95,
+            "substring_exact_match": 0.95,
+            "rougeL_f1": 0.95,
+            "rougeL_recall": 0.95,
+            "rougeLsum_f1": 0.95,
+            "rougeLsum_recall": 0.95
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 95
+            }
+          },
+          "context_tokens": {
+            "mean": 3953.6,
+            "p50": 3958.0,
+            "p95": 3995.05
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.10400470745255007,
+              "p50": 0.0951650829956634,
+              "p95": 0.14152963781671132
+            },
+            "immediate_repeat": {
+              "mean": 0.10242277041863418,
+              "p50": 0.09181266649102326,
+              "p95": 0.13933526635955784
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_evidence_projection": 5000,
+            "score_operation_episode_decay": 567,
+            "score_operation_session_decay": 3749,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 413263,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "d8c006de71489c50a57ed4cb1f1f29cc067267514607eb5086dcc9444411b75c",
+          "artifact_manifest_sha256": "c0abe0760436d0ff8dc3632cfc44c90d5809a515b891c73c9e73752f4b230b47"
+        },
+        "reranker": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 95,
+          "metrics": {
+            "exact_match": 0.95,
+            "f1": 0.95,
+            "substring_exact_match": 0.95,
+            "rougeL_f1": 0.95,
+            "rougeL_recall": 0.95,
+            "rougeLsum_f1": 0.95,
+            "rougeLsum_recall": 0.95
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 95
+            }
+          },
+          "context_tokens": {
+            "mean": 3950.12,
+            "p50": 3957.5,
+            "p95": 3995.05
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.21304562130913837,
+              "p50": 0.17394170850457158,
+              "p95": 0.278768336054054
+            },
+            "immediate_repeat": {
+              "mean": 0.16136390002007828,
+              "p50": 0.1509307089872891,
+              "p95": 0.23424422440875786
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_neural_blend": 8001,
+            "score_operation_session_decay": 6035,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412891,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "750410b429f83d08fe5a5f97ea9feb8e8b1b78ab43db8795bdbabd8046906899",
+          "artifact_manifest_sha256": "cc9cdc069c0f89c0e1cba291d96ef322c52b166ad1f112344bb1a5dbc12c26b0"
+        },
+        "query_reformulation": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 95,
+          "metrics": {
+            "exact_match": 0.95,
+            "f1": 0.95,
+            "substring_exact_match": 0.95,
+            "rougeL_f1": 0.95,
+            "rougeL_recall": 0.95,
+            "rougeLsum_f1": 0.95,
+            "rougeLsum_recall": 0.95
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 95
+            }
+          },
+          "context_tokens": {
+            "mean": 3953.3,
+            "p50": 3960.5,
+            "p95": 3996.0
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 4.2753150854597335,
+              "p50": 3.8955222289951053,
+              "p95": 7.027753582707373
+            },
+            "immediate_repeat": {
+              "mean": 4.227517564168665,
+              "p50": 3.7055971669906285,
+              "p95": 7.7388113101013
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_session_decay": 3667,
+            "reformulation_calls": 200,
+            "nonempty_reformulations": 200
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 413380,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "8e76e09409df6fcabf0deb21e830d5c9c589a6cb4fa2405c4aa0c37a7b839db0",
+          "artifact_manifest_sha256": "146e3656b6f1d2f54b5f0582c7a4a36007239ce47e56e0f7be52271c994567b5"
+        },
+        "reranker_reformulation": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 96,
+          "metrics": {
+            "exact_match": 0.96,
+            "f1": 0.96,
+            "substring_exact_match": 0.96,
+            "rougeL_f1": 0.96,
+            "rougeL_recall": 0.96,
+            "rougeLsum_f1": 0.96,
+            "rougeLsum_recall": 0.96
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 96
+            }
+          },
+          "context_tokens": {
+            "mean": 3948.76,
+            "p50": 3956.5,
+            "p95": 3994.05
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 4.204109051209816,
+              "p50": 4.149056791997282,
+              "p95": 7.09959426218993
+            },
+            "immediate_repeat": {
+              "mean": 4.089484039129165,
+              "p50": 3.963802541504265,
+              "p95": 6.16460486670985
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_neural_blend": 7930,
+            "score_operation_session_decay": 6035,
+            "reformulation_calls": 200,
+            "nonempty_reformulations": 200
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412802,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "49e4f0c92c86db76718918cf4e88fe7939cfae076c57b8e3313ce7883a7e31d9",
+          "artifact_manifest_sha256": "d8315517b082ef62f93bf129db22cc7933ad060df4285f0b5def43aa2f29837e"
+        },
+        "temporal_relations": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 95,
+          "metrics": {
+            "exact_match": 0.95,
+            "f1": 0.95,
+            "substring_exact_match": 0.95,
+            "rougeL_f1": 0.95,
+            "rougeL_recall": 0.95,
+            "rougeLsum_f1": 0.95,
+            "rougeLsum_recall": 0.95
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 95
+            }
+          },
+          "context_tokens": {
+            "mean": 3947.92,
+            "p50": 3948.5,
+            "p95": 3995.0
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.1324422407799284,
+              "p50": 0.08044262499606702,
+              "p95": 0.16074033304612384
+            },
+            "immediate_repeat": {
+              "mean": 0.11227063625032314,
+              "p50": 0.07506658299826086,
+              "p95": 0.16397590626293096
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_session_decay": 3793,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0,
+            "temporal_unsupported": 2
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412774,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "d54ea7eda30de448cdf5df79f700739763a8d8e27d4db95c28901107ae1b732b",
+          "artifact_manifest_sha256": "9f35c10c4638a0d93d342fa86164307935cf24ed14c02add56a6bae21921e9c0"
+        },
+        "temporal_episode": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 97,
+          "metrics": {
+            "exact_match": 0.97,
+            "f1": 0.97,
+            "substring_exact_match": 0.97,
+            "rougeL_f1": 0.97,
+            "rougeL_recall": 0.97,
+            "rougeLsum_f1": 0.97,
+            "rougeLsum_recall": 0.97
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 97
+            }
+          },
+          "context_tokens": {
+            "mean": 3949.42,
+            "p50": 3948.5,
+            "p95": 3996.0
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 52.21829470800003,
+              "p50": 52.21829470800003,
+              "p95": 52.21829470800003
+            },
+            "first_per_query": {
+              "mean": 0.1251500045810826,
+              "p50": 0.08973787548893597,
+              "p95": 0.1738094151762197
+            },
+            "immediate_repeat": {
+              "mean": 0.1264620087496587,
+              "p50": 0.08371516701299697,
+              "p95": 0.16295921251003165
+            }
+          },
+          "ingestion_summed_seconds": 52.21829470800003,
+          "ingestion_kind": "reused_native_master",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_episode_decay": 567,
+            "score_operation_session_decay": 3749,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0,
+            "temporal_unsupported": 2
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412939,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "552e62cb84624499c24823fe1f538d811c7d92ea21adb944f876bc6605202198",
+          "artifact_manifest_sha256": "47516a00f9504259446a9e88f879e3b32e3e10e4a1d77efc5ee3baacee0a99b7"
+        },
+        "fresh_baseline": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 97,
+          "metrics": {
+            "exact_match": 0.97,
+            "f1": 0.97,
+            "substring_exact_match": 0.97,
+            "rougeL_f1": 0.97,
+            "rougeL_recall": 0.97,
+            "rougeLsum_f1": 0.97,
+            "rougeLsum_recall": 0.97
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 97
+            }
+          },
+          "context_tokens": {
+            "mean": 3949.4,
+            "p50": 3951.0,
+            "p95": 3995.05
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 499.6144827500102,
+              "p50": 499.6144827500102,
+              "p95": 499.6144827500102
+            },
+            "first_per_query": {
+              "mean": 0.09311178039992228,
+              "p50": 0.08205389601062052,
+              "p95": 0.16647497737576486
+            },
+            "immediate_repeat": {
+              "mean": 0.08485009210853604,
+              "p50": 0.07692752149887383,
+              "p95": 0.16047458332759562
+            }
+          },
+          "ingestion_summed_seconds": 499.6144827500102,
+          "ingestion_kind": "fresh_direct_store",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_session_decay": 3793,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412920,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "4c5b1b31d6058786afafe0383b5ea08963a8060f3a5e43eeb81f5d04437ee6cc",
+          "artifact_manifest_sha256": "363b4f58a386f5293e5ca515c2a1c590e4df8bb7de008fc8b979ca19dc18b857"
+        },
+        "store_supersedence": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 98,
+          "metrics": {
+            "exact_match": 0.98,
+            "f1": 0.98,
+            "substring_exact_match": 0.98,
+            "rougeL_f1": 0.98,
+            "rougeL_recall": 0.98,
+            "rougeLsum_f1": 0.98,
+            "rougeLsum_recall": 0.98
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 98
+            }
+          },
+          "context_tokens": {
+            "mean": 3949.65,
+            "p50": 3948.5,
+            "p95": 3995.0
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 488.34656783301034,
+              "p50": 488.34656783301034,
+              "p95": 488.34656783301034
+            },
+            "first_per_query": {
+              "mean": 0.10955508628860117,
+              "p50": 0.08870145799301099,
+              "p95": 0.19199716841249026
+            },
+            "immediate_repeat": {
+              "mean": 0.10366183242993429,
+              "p50": 0.08468512498075143,
+              "p95": 0.18247836251393887
+            }
+          },
+          "ingestion_summed_seconds": 488.34656783301034,
+          "ingestion_kind": "fresh_direct_store",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5803,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "lifecycle_superseded": 94,
+            "events": 5897,
+            "superseded_pointers": 94
+          },
+          "activation": {
+            "supersedence_checks": 5897,
+            "conflict_flags": 0,
+            "score_operation_session_decay": 3779,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412939,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "c69138f4aa557931344c726839c3e17fba56152ad87b63164c5e426a40366b72",
+          "artifact_manifest_sha256": "ee720e1c57563017e18ecd0705e1f1f850386776c90250f2a30542e44b342ac1"
+        },
+        "qa_pairing": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 98,
+          "metrics": {
+            "exact_match": 0.98,
+            "f1": 0.98,
+            "substring_exact_match": 0.98,
+            "rougeL_f1": 0.98,
+            "rougeL_recall": 0.98,
+            "rougeLsum_f1": 0.98,
+            "rougeLsum_recall": 0.98
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 98
+            }
+          },
+          "context_tokens": {
+            "mean": 3949.4,
+            "p50": 3951.0,
+            "p95": 3995.05
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 475.40691983301076,
+              "p50": 475.40691983301076,
+              "p95": 475.40691983301076
+            },
+            "first_per_query": {
+              "mean": 0.11103835660935146,
+              "p50": 0.09639366649207659,
+              "p95": 0.2044613330523134
+            },
+            "immediate_repeat": {
+              "mean": 0.10490935119101778,
+              "p50": 0.08540768749662675,
+              "p95": 0.18910942296643035
+            }
+          },
+          "ingestion_summed_seconds": 475.40691983301076,
+          "ingestion_kind": "fresh_direct_store",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 0,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "conflict_flags": 0,
+            "score_operation_session_decay": 3793,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412920,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "7f0383e2ec43ad5ac526e1a143eaf30483a06c93d2c5d241bf63b6f41111ac6a",
+          "artifact_manifest_sha256": "a6ea30e5d1b4a02665b339fa3ab24be73907491cac585beda6364281d41499ae"
+        },
+        "surprise_gating": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 98,
+          "metrics": {
+            "exact_match": 0.98,
+            "f1": 0.98,
+            "substring_exact_match": 0.98,
+            "rougeL_f1": 0.98,
+            "rougeL_recall": 0.98,
+            "rougeLsum_f1": 0.98,
+            "rougeLsum_recall": 0.98
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 98
+            }
+          },
+          "context_tokens": {
+            "mean": 3948.91,
+            "p50": 3951.0,
+            "p95": 3994.05
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 499.25497195799835,
+              "p50": 499.25497195799835,
+              "p95": 499.25497195799835
+            },
+            "first_per_query": {
+              "mean": 0.09465059624082642,
+              "p50": 0.08256018751126248,
+              "p95": 0.1659743795127724
+            },
+            "immediate_repeat": {
+              "mean": 0.08806060834991512,
+              "p50": 0.07808514600037597,
+              "p95": 0.15880913299333768
+            }
+          },
+          "ingestion_summed_seconds": 499.25497195799835,
+          "ingestion_kind": "fresh_direct_store",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5897,
+            "qa_pairs": 0,
+            "novelty_scores": 5897,
+            "events": 5897,
+            "superseded_pointers": 0
+          },
+          "activation": {
+            "novelty_calls": 5897,
+            "conflict_flags": 0,
+            "score_operation_session_decay": 3882,
+            "reformulation_calls": 0,
+            "nonempty_reformulations": 0
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412868,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "fd04b1df6cec51b400e75e873cf0b5a08f22413f5d95cfba6f6acafcf4e5aaa8",
+          "artifact_manifest_sha256": "e6fd9c93cce37836da08f6c2012c25712cff2e245f0ae1dd0b39d4b657679dcc"
+        },
+        "full_feature_exploratory": {
+          "status": "complete_verified",
+          "total": 100,
+          "correct": 97,
+          "metrics": {
+            "exact_match": 0.97,
+            "f1": 0.97,
+            "substring_exact_match": 0.97,
+            "rougeL_f1": 0.97,
+            "rougeL_recall": 0.97,
+            "rougeLsum_f1": 0.97,
+            "rougeLsum_recall": 0.97
+          },
+          "context_scores": {
+            "0": {
+              "total": 100,
+              "correct": 97
+            }
+          },
+          "context_tokens": {
+            "mean": 3945.88,
+            "p50": 3945.0,
+            "p95": 3991.05
+          },
+          "latency_seconds": {
+            "ingestion": {
+              "mean": 496.93701837499975,
+              "p50": 496.93701837499975,
+              "p95": 496.93701837499975
+            },
+            "first_per_query": {
+              "mean": 4.065496032120718,
+              "p50": 3.9006416040065233,
+              "p95": 6.136484260096038
+            },
+            "immediate_repeat": {
+              "mean": 4.249344197509926,
+              "p50": 3.7978218129865127,
+              "p95": 7.18210754583997
+            }
+          },
+          "ingestion_summed_seconds": 496.93701837499975,
+          "ingestion_kind": "fresh_direct_store",
+          "monetary_cost": null,
+          "inventory": {
+            "nodes": 5897,
+            "lifecycle_tentative": 5803,
+            "qa_pairs": 0,
+            "novelty_scores": 5897,
+            "lifecycle_superseded": 94,
+            "events": 5897,
+            "superseded_pointers": 94
+          },
+          "activation": {
+            "novelty_calls": 5897,
+            "supersedence_checks": 5897,
+            "conflict_flags": 0,
+            "score_operation_neural_blend": 8089,
+            "score_operation_episode_decay": 496,
+            "score_operation_session_decay": 5895,
+            "reformulation_calls": 200,
+            "nonempty_reformulations": 200,
+            "temporal_unsupported": 2
+          },
+          "reader_usage": {
+            "calls": 100,
+            "input_tokens": 412490,
+            "output_tokens": 200,
+            "http_attempts": 100,
+            "transient_http_errors": 0
+          },
+          "evidence_omissions": null,
+          "evidence_annotation_limit": "These prepared tasks have no matched source-turn labels; answer overlap is not evidence completeness.",
+          "configuration_sha256": "1acd219c7a39081d4d2a5f2f9b435a2490ae4e6785fcb625c4430039041ea769",
+          "artifact_manifest_sha256": "f42d11fdbf59b75dae3def8edf86a0598ae6ee81240c9ea33f477e9966afbeac"
+        }
+      },
+      "comparisons": {
+        "episode_routing": {
+          "difference": -0.01,
+          "wins": 0,
+          "losses": 1,
+          "question_ci95": [
+            -0.03,
+            0.0
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00034"
+          ],
+          "wins_detail": [],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "evidence_augmentation": {
+          "difference": 0.01,
+          "wins": 1,
+          "losses": 0,
+          "question_ci95": [
+            0.0,
+            0.03
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [],
+          "wins_detail": [
+            "q00046"
+          ],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "evidence_projection": {
+          "difference": 0.01,
+          "wins": 2,
+          "losses": 1,
+          "question_ci95": [
+            -0.02,
+            0.04
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00034"
+          ],
+          "wins_detail": [
+            "q00046",
+            "q00098"
+          ],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "episode_augmentation": {
+          "difference": -0.01,
+          "wins": 0,
+          "losses": 1,
+          "question_ci95": [
+            -0.03,
+            0.0
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00034"
+          ],
+          "wins_detail": [],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "episode_projection": {
+          "difference": -0.02,
+          "wins": 1,
+          "losses": 3,
+          "question_ci95": [
+            -0.06,
+            0.02
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 0.625,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00000",
+            "q00034",
+            "q00071"
+          ],
+          "wins_detail": [
+            "q00098"
+          ],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "reranker": {
+          "difference": -0.02,
+          "wins": 1,
+          "losses": 3,
+          "question_ci95": [
+            -0.06,
+            0.02
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 0.625,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00011",
+            "q00034",
+            "q00044"
+          ],
+          "wins_detail": [
+            "q00098"
+          ],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "query_reformulation": {
+          "difference": -0.02,
+          "wins": 0,
+          "losses": 2,
+          "question_ci95": [
+            -0.05,
+            0.0
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 0.5,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00028",
+            "q00034"
+          ],
+          "wins_detail": [],
+          "changed_contexts": 84,
+          "unchanged_input_score_disagreements": 2,
+          "holm_adjusted_p": 1.0
+        },
+        "reranker_reformulation": {
+          "difference": -0.01,
+          "wins": 1,
+          "losses": 2,
+          "question_ci95": [
+            -0.05,
+            0.02
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00034",
+            "q00071"
+          ],
+          "wins_detail": [
+            "q00098"
+          ],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "temporal_relations": {
+          "difference": -0.02,
+          "wins": 0,
+          "losses": 2,
+          "question_ci95": [
+            -0.05,
+            0.0
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 0.5,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00028",
+            "q00034"
+          ],
+          "wins_detail": [],
+          "changed_contexts": 0,
+          "unchanged_input_score_disagreements": 2,
+          "holm_adjusted_p": 1.0
+        },
+        "temporal_episode": {
+          "difference": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "question_ci95": [
+            0.0,
+            0.0
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [],
+          "wins_detail": [],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "store_supersedence": {
+          "difference": 0.01,
+          "wins": 1,
+          "losses": 0,
+          "question_ci95": [
+            0.0,
+            0.03
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "fresh_baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [],
+          "wins_detail": [
+            "q00046"
+          ],
+          "changed_contexts": 87,
+          "unchanged_input_score_disagreements": 0,
+          "holm_adjusted_p": 1.0
+        },
+        "qa_pairing": {
+          "difference": 0.01,
+          "wins": 1,
+          "losses": 0,
+          "question_ci95": [
+            0.0,
+            0.03
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "fresh_baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [],
+          "wins_detail": [
+            "q00046"
+          ],
+          "changed_contexts": 0,
+          "unchanged_input_score_disagreements": 1,
+          "holm_adjusted_p": 1.0
+        },
+        "surprise_gating": {
+          "difference": 0.01,
+          "wins": 1,
+          "losses": 0,
+          "question_ci95": [
+            0.0,
+            0.03
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "fresh_baseline",
+          "exploratory": false,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [],
+          "wins_detail": [
+            "q00046"
+          ],
+          "changed_contexts": 62,
+          "unchanged_input_score_disagreements": 1,
+          "holm_adjusted_p": 1.0
+        },
+        "full_feature_exploratory": {
+          "difference": 0.0,
+          "wins": 2,
+          "losses": 2,
+          "question_ci95": [
+            -0.04,
+            0.04
+          ],
+          "source_context_cluster_ci95": null,
+          "source_contexts": 1,
+          "cluster_inference_limit": "No between-source interval with one context; few clusters remain weak external evidence.",
+          "discordant_exact_two_sided_p": 1.0,
+          "control": "fresh_baseline",
+          "exploratory": true,
+          "promotion_status": "opt_in_only_pending_untouched_confirmation",
+          "losses_detail": [
+            "q00034",
+            "q00071"
+          ],
+          "wins_detail": [
+            "q00046",
+            "q00098"
+          ],
+          "changed_contexts": 100,
+          "unchanged_input_score_disagreements": 0
+        }
+      },
+      "metric": "exact_match"
+    },
+    "eventqa": {
+      "arms": {
+        "baseline": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_routing": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "evidence_augmentation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "evidence_projection": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_augmentation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_projection": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "reranker": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "query_reformulation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "reranker_reformulation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "temporal_relations": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "temporal_episode": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "fresh_baseline": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "store_supersedence": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "qa_pairing": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "surprise_gating": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "full_feature_exploratory": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        }
+      },
+      "comparisons": {},
+      "metric": "substring_exact_match"
+    },
+    "conflict": {
+      "arms": {
+        "baseline": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_routing": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "evidence_augmentation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "evidence_projection": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_augmentation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_projection": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "reranker": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "query_reformulation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "reranker_reformulation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "temporal_relations": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "temporal_episode": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "fresh_baseline": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "store_supersedence": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "qa_pairing": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "surprise_gating": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "full_feature_exploratory": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        }
+      },
+      "comparisons": {},
+      "metric": "substring_exact_match"
+    },
+    "detective": {
+      "arms": {
+        "baseline": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_routing": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "evidence_augmentation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "evidence_projection": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_augmentation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "episode_projection": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "reranker": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "query_reformulation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "reranker_reformulation": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "temporal_relations": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "temporal_episode": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "fresh_baseline": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "store_supersedence": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "qa_pairing": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "surprise_gating": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        },
+        "full_feature_exploratory": {
+          "status": "not_complete_or_not_started",
+          "answer_metrics": null
+        }
+      },
+      "comparisons": {},
+      "metric": "exact_match"
+    }
+  },
+  "classification": "Inspected development; no default promotion",
+  "analyzed_at": "2026-09-23T12:15:45.290788+00:00",
+  "analysis_sha256": "a9a2a1c5cc8e586e428ea5c1d52a05838293d5618984a50ef1e6d1cd8a1eaabd"
+}
