@@ -1,0 +1,8 @@
+{
+  "started_at": "2026-09-23T10:39:47.226372+00:00",
+  "name": "opt-in-mab-matrix-v1",
+  "registration_sha256": "bebbfd4d11c9db100e6614e364484f4411c750a43464ce310ab55ad66ff68268",
+  "combination_status": "unavailable_incomplete_individual_comparisons",
+  "combination_alias": null,
+  "default_changes": false
+}

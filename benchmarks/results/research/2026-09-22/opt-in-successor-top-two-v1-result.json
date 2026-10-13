@@ -1,0 +1,10 @@
+{
+  "plan_sha256": "5d7b7d0060a00a93bc4953cb7d008dd526c10d0c565acc7aed8bf531914b3636",
+  "selected_at": "2026-09-23T09:02:44.774709+00:00",
+  "source_analysis_sha256": "54d9b80375c7f2f7349c8ae9f54b86603c953861c78189ba054ae178957e96d8",
+  "selected_individuals": null,
+  "original_gated_selection": null,
+  "classification": "Exploratory outcome-selected development combination; no default promotion",
+  "status": "unavailable_incomplete_individual_comparisons",
+  "answer_metrics": null
+}
