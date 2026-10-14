@@ -140,6 +140,47 @@ from prme.storage.durable_queue import DurableMaterializationQueue
 
 logger = logging.getLogger(__name__)
 
+# The nodes the derived search indexes hold, in rebuild order: every active
+# node of every owner, by id. Callers skip rows without indexable content.
+# rebuild_indexes() and the startup load of a single-file pack's in-memory
+# lexical index share this selection, so both build the same documents.
+_INDEXED_STATES = tuple(state.value for state in ACTIVE_LIFECYCLE_STATES)
+_INDEXED_NODES_SQL = (
+    "SELECT id, content, user_id, node_type, scope FROM nodes "
+    f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({', '.join('?' for _ in _INDEXED_STATES)}) "
+    "ORDER BY id"
+)
+
+
+def _indexable_content(content: str | None) -> bool:
+    """Blank content cannot be embedded, so neither search index holds it."""
+    return bool(content and content.strip())
+
+
+def _load_lexical_from_graph(
+    conn: duckdb.DuckDBPyConnection, lexical_index: LexicalIndex, *, page_size: int = 1024,
+) -> int:
+    """Fill a single-file pack's in-memory lexical index from its graph.
+
+    Uses the same nodes, fields and order as rebuild_indexes(), reading them
+    in pages so a large pack is never loaded at once, and commits once.
+    Startup only, on the main connection before the engine serves reads.
+    """
+    def documents():
+        with conn.cursor() as reader:
+            reader.execute(_INDEXED_NODES_SQL, list(_INDEXED_STATES))
+            while page := reader.fetchmany(page_size):
+                for node_id, content, user_id, node_type, scope in page:
+                    if _indexable_content(content):
+                        yield str(node_id), content, user_id, node_type, scope
+
+    rows = documents()
+    try:
+        return lexical_index.load_documents(rows)
+    finally:
+        # Close the cursor now rather than when the generator is collected.
+        rows.close()
+
 
 class MemoryEngine:
     """Unified memory interface. Single entry point for all storage operations.
@@ -296,19 +337,42 @@ class MemoryEngine:
     async def _create_duckdb(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
     ) -> "MemoryEngine":
-        """Create a MemoryEngine backed by DuckDB (file-based)."""
+        """Create a MemoryEngine backed by DuckDB (file-based).
+
+        With ``config.pack_path`` set, the pack is a single DuckDB file: the
+        vector snapshot and the manifest are tables inside it, and the
+        lexical index is rebuilt in memory from the graph before the engine
+        serves any read. Otherwise the pack is the directory layout of
+        ``db_path``, ``vector_path`` and ``lexical_path``.
+        """
         from pathlib import Path
 
         from prme.storage.encryption import EncryptionError, EncryptionProvider
 
-        fresh_namespace_pack = not (Path(config.db_path).exists() or Path(config.db_path + ".enc").exists())
+        single_file = config.single_file_pack
+        if (
+            single_file
+            and config.encryption_enabled
+            and config.encryption_key
+            and config.encryption_key.get_secret_value()
+        ):
+            # File-level Fernet encryption would leave the pack in clear text
+            # while it is open. Refuse before any file is touched.
+            raise ValueError("Single-file packs do not support encryption yet; see issue #247")
+        db_path = config.pack_path if config.pack_path is not None else config.db_path
+
+        if single_file:
+            fresh_namespace_pack = not Path(db_path).exists()
+        else:
+            fresh_namespace_pack = not (Path(config.db_path).exists() or Path(config.db_path + ".enc").exists())
 
         # A fresh configured pack must work through either public client.
         # Prepare all directories before opening/decrypting storage so a path
         # collision fails without touching existing pack contents.
-        Path(config.db_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(config.vector_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(config.lexical_path).mkdir(parents=True, exist_ok=True)
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        if not single_file:
+            Path(config.vector_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(config.lexical_path).mkdir(parents=True, exist_ok=True)
 
         async with AsyncExitStack() as startup:
             encryption_provider: EncryptionProvider | None = None
@@ -329,6 +393,9 @@ class MemoryEngine:
             # A wrong key before any successful decryption leaves files alone.
             startup.callback(restore_encryption)
             # --- Decrypt memory pack if encryption is enabled (issue #14) ---
+            # Never true for a single-file pack (refused above), so such a
+            # pack has no encryption provider: the Fernet close, atexit and
+            # lock paths cannot run against the unused directory paths.
             if (
                 config.encryption_enabled
                 and config.encryption_key
@@ -369,8 +436,8 @@ class MemoryEngine:
             # Open DuckDB connection
             # Apply at instance creation: SET would silently change another
             # engine sharing this database. DuckDB rejects conflicting opens.
-            conn = (duckdb.connect(config.db_path) if config.duckdb_threads is None
-                    else duckdb.connect(config.db_path, config={"threads": config.duckdb_threads}))
+            conn = (duckdb.connect(db_path) if config.duckdb_threads is None
+                    else duckdb.connect(db_path, config={"threads": config.duckdb_threads}))
             startup.callback(conn.close)
             if config.namespace_id is not None:
                 from prme.storage.namespace_identity import bind_namespace
@@ -393,10 +460,17 @@ class MemoryEngine:
             if embedding_provider is None:
                 embedding_provider = create_embedding_provider(config.embedding)
 
-            # Create vector index
+            if single_file:
+                # Record or check the pack's self-description before vector
+                # recovery, so a model mismatch is reported first.
+                from prme.storage.pack_manifest import ensure_pack_manifest
+                ensure_pack_manifest(conn, embedding_provider, scoring_version=config.scoring.version_id)
+
+            # Create vector index. A single-file pack keeps its snapshot in
+            # the vector_snapshot table instead of a file.
             vector_index = VectorIndex(
                 conn,
-                config.vector_path,
+                None if single_file else config.vector_path,
                 embedding_provider,
                 conn_lock,
                 save_interval=config.vector_save_interval,
@@ -405,14 +479,17 @@ class MemoryEngine:
 
             startup.push_async_callback(vector_index.close)
 
-            # Create lexical index
+            # Create lexical index. A single-file pack holds it in memory and
+            # rebuilds it from the graph here, before any read.
             lexical_index = LexicalIndex(
-                config.lexical_path,
+                None if single_file else config.lexical_path,
                 commit_interval=config.lexical_commit_interval,
                 commit_max_delay_s=config.lexical_commit_max_delay_s,
             )
 
             startup.push_async_callback(lexical_index.close)
+            if single_file:
+                _load_lexical_from_graph(conn, lexical_index)
 
             # Create and start write queue
             write_queue = WriteQueue(maxsize=config.write_queue_size)
@@ -2773,7 +2850,9 @@ class MemoryEngine:
 
         This delivers the rebuildability claim while staying bounded and
         non-destructive: it touches only the *derived* search artifacts
-        (``vectors.usearch`` and the lexical index directory). The event log
+        (``vectors.usearch`` and the lexical index directory; in a single-file
+        pack, the ``vector_snapshot`` row and the in-memory lexical index,
+        after which the manifest names the rebuilding model). The event log
         and the graph nodes/edges -- the durable source of truth -- are never
         modified, so a rebuild is safe to re-run and idempotent. It is the
         clean recovery path for index corruption, embedding-model migration,
@@ -2804,8 +2883,6 @@ class MemoryEngine:
                 "rebuild_indexes is only supported on the DuckDB backend"
             )
 
-        active_states = [s.value for s in ACTIVE_LIFECYCLE_STATES]
-
         # Clear both derived indexes first (serialized through the write
         # queue like every other index mutation). After this point the
         # indexes are empty; the re-index loop below repopulates them.
@@ -2822,7 +2899,6 @@ class MemoryEngine:
         nodes_skipped = 0
         total_active = 0
         offset = 0
-        placeholders = ", ".join("?" for _ in active_states)
 
         while True:
             # Page through active nodes in deterministic id order. Reading
@@ -2834,13 +2910,9 @@ class MemoryEngine:
             # backend above, so direct SQL is safe here.
             async with self._event_store._conn_lock:
                 rows = await run_to_completion(
-                    lambda ph=placeholders, off=offset: self._conn.execute(
-                        "SELECT id, content, user_id, node_type, scope "
-                        "FROM nodes "
-                        f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({ph}) "
-                        "ORDER BY id "
-                        "LIMIT ? OFFSET ?",
-                        [*active_states, batch_size, off],
+                    lambda off=offset: self._conn.execute(
+                        _INDEXED_NODES_SQL + " LIMIT ? OFFSET ?",
+                        [*_INDEXED_STATES, batch_size, off],
                     ).fetchall(),
                 )
             if not rows:
@@ -2854,7 +2926,7 @@ class MemoryEngine:
                 node_type = row[3]
                 scope = row[4]
 
-                if not content or not content.strip():
+                if not _indexable_content(content):
                     # Empty content cannot be embedded; skip but count it so
                     # the caller can reconcile against total node counts.
                     nodes_skipped += 1
@@ -2886,6 +2958,15 @@ class MemoryEngine:
             lambda: self._lexical_index.flush(),
             label="rebuild.flush.lexical",
         )
+        if self._config.single_file_pack:
+            # Every vector now comes from the configured model, so the
+            # manifest names it (and stops warning about an earlier one).
+            from prme.storage.pack_manifest import record_pack_embedding
+
+            async with self._event_store._conn_lock:
+                await run_to_completion(
+                    record_pack_embedding, self._conn, self._vector_index._provider,
+                )
 
         logger.info(
             "rebuild_indexes.complete",

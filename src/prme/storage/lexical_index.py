@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Iterable
 
 import tantivy
 from prme.models.derivation import DerivationPlan
@@ -42,7 +43,10 @@ class LexicalIndex:
     immediate-searchability behavior).
 
     Args:
-        index_path: Directory path for the persistent tantivy index.
+        index_path: Directory path for the persistent tantivy index, or None
+            for an index held only in memory. A single-file pack keeps no
+            tantivy state and fills the in-memory index from its graph with
+            ``load_documents()`` on open.
         commit_interval: Documents to buffer before committing (>=1).
         commit_max_delay_s: Max seconds a document may stay uncommitted
             before a commit is forced on the next index/search call. 0
@@ -51,7 +55,7 @@ class LexicalIndex:
 
     def __init__(
         self,
-        index_path: str,
+        index_path: str | None,
         commit_interval: int = 64,
         commit_max_delay_s: float = 2.0,
     ) -> None:
@@ -79,8 +83,11 @@ class LexicalIndex:
         )
         self._schema = schema_builder.build()
 
-        # Create or open persistent index
-        self._index = tantivy.Index(self._schema, path=index_path)
+        # Create or open persistent index, or create an in-memory one
+        self._index = (
+            tantivy.Index(self._schema) if index_path is None
+            else tantivy.Index(self._schema, path=index_path)
+        )
         # All searches explicitly reload below. Tantivy's default OnCommit
         # reader adds a delayed callback that can recreate .tantivy-meta.lock
         # after close(), racing pack removal/move/encryption (#71). Manual
@@ -252,6 +259,39 @@ class LexicalIndex:
         """Commit any buffered documents so they become searchable."""
         async with self._write_lock:
             await run_to_completion(self._commit_locked)
+
+    def load_documents(self, rows: Iterable[tuple[str, str, str, str, str | None]]) -> int:
+        """Add many documents with one writer and a single commit.
+
+        Fields are node ID, content, owner, node type and optional scope, as
+        for ``index()``. This is synchronous and takes no lock: it is meant
+        for startup, before the index serves any read, such as opening a
+        single-file pack. ``rows`` may be a generator, so a large graph can
+        be read in pages. Returns the number of documents added.
+        """
+        self._commit_locked()
+        writer = self._ensure_writer()
+        added = 0
+        try:
+            for node_id, content, user_id, node_type, scope in rows:
+                fields = {"node_id": [node_id], "content": [content],
+                          "user_id": [user_id], "node_type": [node_type]}
+                if scope is not None:
+                    fields["scope"] = [scope]
+                writer.add_document(tantivy.Document(**fields))
+                added += 1
+            if added:
+                writer.commit()
+                self._index.reload()
+        except BaseException:
+            writer.rollback()
+            raise
+        finally:
+            self._writer = None
+            self._uncommitted = 0
+            self._oldest_uncommitted_at = None
+            writer.wait_merging_threads()
+        return added
 
     async def stage(self, plan: DerivationPlan, *, fence: DuckDBStageFence | None = None) -> None:
         """Commit missing prepared documents once, rejecting identity conflicts.

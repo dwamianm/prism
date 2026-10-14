@@ -153,14 +153,53 @@ def config_from_directory(directory: str) -> PRMEConfig:
     )
 
 
+PACK_SUFFIX = ".prme"
+"""File name suffix that MemoryClient reads as a single-file memory pack."""
+
+
+def config_from_pack(path: str) -> PRMEConfig:
+    """Create a PRMEConfig for the single-file memory pack at *path*.
+
+    Creates the parent directory if it doesn't exist. The pack file itself
+    is created when an engine first opens it.
+
+    Args:
+        path: Path to the pack file, conventionally ending in ``.prme``.
+
+    Returns:
+        A PRMEConfig with pack_path set to the absolute path of *path*.
+    """
+    abs_path = os.path.abspath(path)
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    return PRMEConfig(pack_path=abs_path)
+
+
+def _is_pack_file(path: str) -> bool:
+    """Return True when *path* names a single-file pack rather than a directory.
+
+    A name ending in ``.prme`` selects a single-file pack unless it is an
+    existing directory, so a directory pack that happens to use the suffix
+    keeps opening as before.
+    """
+    return os.fspath(path).endswith(PACK_SUFFIX) and not os.path.isdir(path)
+
+
 class MemoryClient:
     """Synchronous wrapper around :class:`~prme.storage.engine.MemoryEngine`.
 
     Manages its own event loop on a dedicated daemon thread so it works
     regardless of whether the caller is already inside an async context.
 
+    A path ending in ``.prme`` that is not an existing directory opens a
+    single-file memory pack instead (see :func:`config_from_pack`): one
+    DuckDB file that also holds the vector snapshot and the pack manifest,
+    with the lexical index rebuilt in memory on open. Every other path is a
+    pack directory (see :func:`config_from_directory`).
+
     Args:
-        directory: Path to the memory directory. Created if it doesn't exist.
+        directory: Path to the memory directory, created if it doesn't
+            exist, or to a single-file pack ending in ``.prme``, created
+            (with its parent directory) if it doesn't exist.
         config: Optional PRMEConfig override. When provided, *directory* is
             ignored and the config is used as-is.
         embedding_provider: Optional caller-owned embedding implementation.
@@ -173,6 +212,9 @@ class MemoryClient:
         with MemoryClient("./my_memories") as client:
             client.store("Alice prefers dark mode", user_id="alice")
             response = client.retrieve("preferences?", user_id="alice")
+
+        with MemoryClient("./memories.prme") as client:  # one file
+            client.store("Alice prefers dark mode", user_id="alice")
     """
 
     def __init__(
@@ -185,7 +227,10 @@ class MemoryClient:
         # A failed constructor must not leave a usable client or emit a
         # destructor error that hides the original configuration failure.
         self._closed = True
-        self._config = config or config_from_directory(directory)
+        if config is None:
+            config = (config_from_pack(directory) if _is_pack_file(directory)
+                      else config_from_directory(directory))
+        self._config = config
 
         # Spin up a dedicated event loop on a daemon thread.
         self._loop = asyncio.new_event_loop()

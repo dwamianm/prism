@@ -414,6 +414,25 @@ class PRMEConfig(_ProjectSettings):
     db_path: str = Field(
         default="./memory.duckdb", description="Path to DuckDB database file"
     )
+    pack_path: str | None = Field(
+        default=None,
+        description="Path to a single-file memory pack (a .prme file). When set, the pack is "
+                    "one DuckDB database that also holds the vector snapshot and the pack "
+                    "manifest, and the lexical index is rebuilt in memory on open; db_path, "
+                    "vector_path and lexical_path are then ignored. None (default) keeps the "
+                    "directory layout. Cannot be combined with database_url.",
+    )
+
+    @field_validator("pack_path", mode="before")
+    @classmethod
+    def validate_pack_path(cls, value):
+        # An empty value means not set, as it does for database_url. A blank
+        # path must never reach duckdb.connect(), which would open a
+        # throwaway in-memory database instead of a pack.
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     duckdb_threads: int | None = Field(
         default=None, ge=1,
         description="Optional DuckDB worker-thread count per open database. None preserves "
@@ -952,11 +971,25 @@ class PRMEConfig(_ProjectSettings):
                 )
         return self
 
+    @model_validator(mode="after")
+    def _validate_pack_path(self) -> PRMEConfig:
+        if self.single_file_pack and self.backend == "postgres":
+            raise ValueError(
+                "pack_path selects a local single-file pack and cannot be combined "
+                "with database_url; set only one of them"
+            )
+        return self
+
     @property
     def backend(self) -> str:
         """Return 'postgres' when database_url is set, else 'duckdb'."""
         url = self.database_url
         return "postgres" if url and url.get_secret_value() else "duckdb"
+
+    @property
+    def single_file_pack(self) -> bool:
+        """Return True when pack_path selects a single-file memory pack."""
+        return self.pack_path is not None
 
     model_config = {
         "env_prefix": "PRME_",

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
         NamespaceMemory,
         WorkspaceError,
     )
-    from prme.client import MemoryClient, config_from_directory
+    from prme.client import MemoryClient, config_from_directory, config_from_pack
     from prme.ingestion.pipeline import IngestionPipeline
     from prme.retrieval.models import RetrievalResponse
     from prme.retrieval.pipeline import RetrievalPipeline
@@ -176,6 +176,10 @@ def __getattr__(name: str):
         from prme.client import config_from_directory
 
         return config_from_directory
+    if name == "config_from_pack":
+        from prme.client import config_from_pack
+
+        return config_from_pack
     if name == "IngestionPipeline":
         from prme.ingestion.pipeline import IngestionPipeline
 
@@ -309,4 +313,5 @@ __all__ = [
     "evaluate_full_retrieval",
     "rank_product_alignment_candidates",
     "config_from_directory",
+    "config_from_pack",
 ]
