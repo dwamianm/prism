@@ -371,3 +371,173 @@ async def test_the_window_and_resolution_reach_the_provider_and_the_cache_key(tm
     # Each different request is a miss and reaches the model as ingest() sends it; the repeat is a hit.
     assert calls == [{}, {"context": ["Caroline: hi"]}, {"context": ["Caroline: hi"], "resolve": resolve}]
     assert (cache.misses, cache.hits) == (3, 1)
+
+
+class ScriptedBatches:
+    """A batched model (#254): one entry per turn, with each known sentence's claim."""
+
+    def __init__(self, fail=None):
+        self.calls = []
+        self.fail = fail
+
+    async def extract_batch(self, turns):
+        from prme.ingestion.errors import ExtractionError
+
+        self.calls.append([(turn.role, turn.speaker, turn.content) for turn in turns])
+        if self.fail is not None and self.fail(turns):
+            raise ExtractionError("scripted failure", reason_code="ValidationError")
+        entries = []
+        for turn in turns:
+            entry = {"turn": turn.index, "entities": [], "facts": []}
+            for text, (subject, predicate, obj) in CLAIMS.items():
+                if turn.content.endswith(text):
+                    entry["entities"] = [{"name": subject, "entity_type": "person"}]
+                    entry["facts"] = [{"subject": subject, "subject_entity_type": "person", "predicate": predicate,
+                                       "object": obj, "polarity": "positive", "epistemic_type": "observed",
+                                       "evidence_quote": text}]
+            entries.append(entry)
+        return {"turns": entries}
+
+    def prepare(self, engine):
+        async def single(content, **_):
+            raise AssertionError("a batched build extracted one turn alone")
+
+        engine._pipeline._extraction_provider.extract = single
+        engine._pipeline._extraction_provider.extract_batch = self.extract_batch
+
+
+def _batched_config(pack):
+    return build_config(pack, {"extraction_batch_target_tokens": 512}, model="local-model")
+
+
+async def test_a_batched_build_extracts_each_session_at_once_and_logs_its_calls_once(
+        tmp_path, locomo, mock_embeddings):
+    folder = tmp_path / "build" / "locomo" / "conv-1"
+    model = ScriptedBatches()
+    manifest = await build_unit(folder, locomo, _batched_config, prepare=model.prepare)
+    assert model.calls == [[(turn["role"], turn["speaker"], turn["content"]) for turn in locomo.turns]]
+    logged = [json.loads(line) for line in (folder / "turns.jsonl").read_text().splitlines()]
+    # One line per turn, with no calls of its own, then the session's line, which holds them.
+    assert [row.get("key") for row in logged] == ["D1:1", "D1:2", "D1:3", None]
+    assert all(row["calls"] == 0 and row["status"] == "complete" for row in logged[:3])
+    assert logged[3]["keys"] == ["D1:1", "D1:2", "D1:3"] and logged[3]["session_id"] == locomo.turns[0]["session_id"]
+    assert manifest["logged_turns"] == 3 and manifest["extraction_status"] == {"complete": 3}
+    assert (manifest["batches"], manifest["turns_per_batch"], manifest["single_turn_batches"]) == (1, 3.0, 0)
+    assert (manifest["turns_without_entry"], manifest["response_claims"], manifest["saved_claims"]) == (0, 2, 2)
+    assert (manifest["claims"], manifest["turns_with_claims"], manifest["evidence_claim_coverage"]) == (2, 2, 1.0)
+    # A complete pack is never ingested again.
+    assert await build_unit(folder, locomo, _batched_config, prepare=model.prepare) == manifest
+    assert len(model.calls) == 1
+
+
+async def test_a_batched_build_replays_its_requests_from_the_shared_cache(tmp_path, longmemeval, mock_embeddings):
+    build = tmp_path / "build"
+    cache = ExtractionCache(build / "extraction-cache")
+    model = ScriptedBatches()
+    first = await build_unit(build / "longmemeval" / "q1", longmemeval["q1"], _batched_config,
+                             prepare=model.prepare, cache=cache)
+    # Each session is one request, and a session's user and assistant turns share it.
+    assert model.calls == [
+        [("user", None, "Jordan moved to Denver last spring."), ("assistant", None, "Denver is a lovely city.")],
+        [("user", None, "Hello.")]]
+    second = await build_unit(build / "longmemeval" / "q2_abs", longmemeval["q2_abs"], _batched_config,
+                              prepare=model.prepare, cache=cache)
+    # The shared session's request is replayed from the cache and its turns get the same records.
+    assert len(model.calls) == 2 and (first["cache_hits"], second["cache_hits"]) == (0, 1)
+    assert first["claims"] == second["claims"] == 1
+    assert len(list((build / "extraction-cache").rglob("*.batch.json"))) == 2
+
+
+async def test_a_split_request_replays_the_same_halves_from_the_cache(tmp_path, locomo, mock_embeddings):
+    build = tmp_path / "build"
+    cache = ExtractionCache(build / "extraction-cache")
+    model = ScriptedBatches(fail=lambda turns: len(turns) > 1)
+    manifest = await build_unit(build / "locomo" / "conv-1", locomo, _batched_config, prepare=model.prepare,
+                                cache=cache)
+    assert [len(call) for call in model.calls] == [3, 1, 2, 1, 1]
+    assert manifest["claims"] == 2 and (manifest["batches"], manifest["single_turn_batches"]) == (3, 3)
+    replayed = await build_unit(build / "locomo" / "conv-2", locomo, _batched_config, prepare=model.prepare,
+                                cache=cache)
+    assert len(model.calls) == 5 and replayed["cache_hits"] == 5
+    assert (replayed["claims"], replayed["batches"]) == (2, 3)
+
+
+async def test_a_timed_out_request_is_split_but_not_kept_for_a_rebuild(tmp_path, locomo, mock_embeddings):
+    from prme.ingestion.errors import ExtractionError
+
+    cache = ExtractionCache(tmp_path / "extraction-cache")
+    model = ScriptedBatches()
+    answer = model.extract_batch
+
+    async def slow_when_long(turns):
+        if len(turns) > 1:
+            model.calls.append([(turn.role, turn.speaker, turn.content) for turn in turns])
+            raise ExtractionError("scripted timeout", reason_code="TimeoutError")
+        return await answer(turns)
+
+    model.extract_batch = slow_when_long
+    manifest = await build_unit(tmp_path / "locomo" / "conv-1", locomo, _batched_config, prepare=model.prepare,
+                                cache=cache)
+    assert [len(call) for call in model.calls] == [3, 1, 2, 1, 1] and manifest["claims"] == 2
+    assert not list(cache.folder.rglob("*.batch-failed.json"))
+
+
+async def test_a_batched_build_stops_only_at_a_sessions_end(tmp_path, longmemeval, mock_embeddings):
+    folder = tmp_path / "longmemeval" / "q1"
+    model = ScriptedBatches()
+    # One new turn is asked for, but the first session has two, and it is never cut.
+    assert await build_unit(folder, longmemeval["q1"], _batched_config, prepare=model.prepare, max_turns=1) is None
+    assert [len(call) for call in model.calls] == [2]
+    manifest = await build_unit(folder, longmemeval["q1"], _batched_config, prepare=model.prepare)
+    assert [len(call) for call in model.calls] == [2, 1] and manifest["extraction_status"] == {"complete": 3}
+
+
+async def test_a_turn_without_an_entry_and_a_dropped_claim_are_counted(tmp_path, locomo, mock_embeddings):
+    model = ScriptedBatches()
+    answer = model.extract_batch
+
+    async def leave_out_the_last_and_name_the_speaker(turns):
+        response = await answer(turns)
+        entries = response["turns"][:-1]
+        # The model wrote the speaker's name where the turn says it: grounding drops it.
+        entries[0]["facts"].append({"subject": "Melanie", "predicate": "likes", "object": "sunsets",
+                                    "polarity": "positive", "epistemic_type": "observed",
+                                    "evidence_quote": "Caroline paints sunsets over the lake."})
+        return {"turns": entries, "notes": "anything else the model returned"}
+
+    model.extract_batch = leave_out_the_last_and_name_the_speaker
+    manifest = await build_unit(tmp_path / "locomo" / "conv-1", locomo, _batched_config, prepare=model.prepare)
+    assert (manifest["turns_without_entry"], manifest["response_claims"], manifest["saved_claims"]) == (1, 3, 2)
+    assert manifest["extraction_status"] == {"complete": 3}
+
+
+def test_a_build_summary_totals_its_complete_packs(tmp_path):
+    from benchmarks.diagnostics.extracted_packs import KIND, SCHEMA_VERSION, build_summary
+
+    folder = tmp_path / "batched"
+    (folder / "locomo").mkdir(parents=True)
+    (folder / "build.json").write_text(json.dumps({
+        "label": "batched", "overrides": {"extraction_batch_target_tokens": 512}, "model": {"model": "m"},
+        "server_versions": ["0.34.4"], "provenance": {"commit": "c"},
+        "started_at": "2026-10-15T00:00:00+00:00", "finished_at": "2026-10-15T01:00:00+00:00"}))
+    for unit, numbers in (("conv-1", (10, 4, 1000, 100, 30.0, 12, 8, 5, 4, 2)),
+                          ("conv-2", (30, 6, 3000, 300, 90.0, 24, 22, 15, 11, 3))):
+        turns, calls, prompt, completion, seconds, claims, with_claims, annotated, cited, batches = numbers
+        (folder / "locomo" / unit).mkdir()
+        (folder / "locomo" / unit / "manifest.json").write_text(json.dumps({
+            "kind": KIND, "schema_version": SCHEMA_VERSION, "turns": turns, "calls": calls,
+            "prompt_tokens": prompt, "completion_tokens": completion, "seconds": seconds, "cache_hits": 0,
+            "dollars": 0, "claims": claims, "turns_with_claims": with_claims, "annotated_evidence_turns": annotated,
+            "annotated_evidence_turns_with_claims": cited, "batches": batches, "single_turn_batches": 1,
+            "turns_without_entry": 0, "response_claims": claims + 2, "saved_claims": claims}))
+    summary = build_summary(folder, "locomo")
+    assert (summary["packs"], summary["turns"], summary["calls"], summary["prompt_tokens"],
+            summary["completion_tokens"]) == (2, 40, 10, 4000, 400)
+    assert (summary["seconds"], summary["wall_seconds"], summary["claims"], summary["claims_per_turn"]) == (
+        120.0, 3600.0, 36, 0.9)
+    assert (summary["turns_with_claims"], summary["turns_with_claims_share"]) == (30, 0.75)
+    assert (summary["annotated_evidence_turns"], summary["annotated_evidence_turns_with_claims"],
+            summary["evidence_claim_coverage"]) == (20, 15, 0.75)
+    assert (summary["batches"], summary["single_turn_batches"], summary["turns_without_entry"]) == (5, 2, 0)
+    assert (summary["response_claims"], summary["saved_claims"], summary["overrides"]) == (
+        40, 36, {"extraction_batch_target_tokens": 512})

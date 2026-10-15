@@ -15,12 +15,14 @@ import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
+import hashlib
+from html import escape
 import json
 import re
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 import structlog
-from pydantic import Field, SecretStr, ValidationError, ValidationInfo, model_validator
+from pydantic import BaseModel, Field, SecretStr, ValidationError, ValidationInfo, field_validator, model_validator
 
 from prme.ingestion.schema import (
     ExtractedEntity,
@@ -977,6 +979,8 @@ _ROLE_EXTRACTION_GUIDANCE = {
         "or examples into claims."
     ),
 }
+# The policy for any other role, such as a participant in the conversation.
+_DEFAULT_ROLE_GUIDANCE = "Extract only durable, source-supported state; omit examples and presentation text."
 
 _ASSISTANT_EXTRACTION_SYSTEM_PROMPT = """\
 You extract durable conversational memory from one historical assistant message.
@@ -1040,10 +1044,7 @@ def _extraction_prompt_for_role(
     if normalized == "assistant":
         prompt = _ASSISTANT_EXTRACTION_SYSTEM_PROMPT
     else:
-        policy = _ROLE_EXTRACTION_GUIDANCE.get(
-            normalized,
-            "Extract only durable, source-supported state; omit examples and presentation text.",
-        )
+        policy = _ROLE_EXTRACTION_GUIDANCE.get(normalized, _DEFAULT_ROLE_GUIDANCE)
         prompt = f"{EXTRACTION_SYSTEM_PROMPT}\nSOURCE MESSAGE ROLE: {normalized or 'unknown'}\n{policy}"
     if windowed:
         prompt = f"{prompt}\n{_WINDOW_GUIDANCE}"
@@ -1102,6 +1103,231 @@ def validate_raw_output(
     })
 
 
+# --- Batched extraction (#254) ---------------------------------------------
+
+
+@dataclass(frozen=True)
+class BatchTurn:
+    """One turn of a batched extraction request (extraction_batch_target_tokens, #254).
+
+    ``index`` is the turn's 1-based position in the request, which every
+    extracted claim cites. ``speaker`` is the turn's named speaker, when it
+    has one, and ``time`` its source time.
+    """
+
+    index: int
+    role: str
+    content: str
+    speaker: str | None = None
+    time: datetime | None = None
+
+
+# The assistant admission rules of _ASSISTANT_EXTRACTION_SYSTEM_PROMPT, as one
+# turn's policy within a batch. Keep the two in step.
+_BATCH_ASSISTANT_GUIDANCE = (
+    "Admit only an explicit commitment or promise the assistant makes, an action it "
+    "explicitly says it completed, and concrete user, project, task or conversation state "
+    "it explicitly attributes. \"I scheduled the meeting\" is a completed action and \"I "
+    "will send the agenda tomorrow\" is a commitment, and both must be extracted with the "
+    "literal subject I. Do not catalog generic knowledge, explanations, examples, advice, "
+    "book or product descriptions, or standalone recommendations: an assistant turn that "
+    "only answers a question, explains a topic or lists suggestions gets empty lists. A "
+    "restatement is system-inferred evidence, not user corroboration."
+)
+
+# Added to the general extraction rules for a batched request. One prompt
+# serves every batch, whatever roles it holds, so each turn's own role policy
+# is stated for the model to apply to that turn's claims, and the checks that
+# follow use each turn's own role too.
+_BATCH_GUIDANCE = f"""\
+BATCHED TURNS: The next message holds turns of one conversation, oldest first. Each \
+turn is wrapped as <turn index="N" role="ROLE" time="TIME" speaker="NAME">TEXT</turn>; \
+speaker appears only when the turn names one.
+- Return "turns": one entry for every turn, in order. Set each entry's "turn" to that \
+turn's index and give it only the entities, facts and relationships that turn itself \
+states. A turn that states nothing durable gets an entry with empty lists.
+- Copy every evidence_quote verbatim from the TEXT of the turn its entry names, never \
+from another turn and never from a <turn> tag.
+- Read each turn with the turns around it to see who or what it refers to, but do not \
+extract a claim that only another turn supports. A reply such as "Yes, the first one" \
+states nothing by itself.
+- The speaker attribute names who wrote the turn, so you can tell whom each I refers to. \
+Subjects, objects and endpoints are still copied from the evidence_quote: where the turn says \
+I, me, my, you or we, write that word, never the speaker's or anyone's name. In \
+<turn index="4" role="user" speaker="Ann">I ran a race.</turn> the subject is "I", not "Ann"; \
+ingestion links each I to its turn's speaker.
+- Leave out summaries.
+TURN ROLE POLICIES: apply each turn's own role policy to the claims in its entry.
+- user turns: {_ROLE_EXTRACTION_GUIDANCE["user"]}
+- assistant turns: {_BATCH_ASSISTANT_GUIDANCE}
+- system turns: {_ROLE_EXTRACTION_GUIDANCE["system"]}
+- tool turns: {_ROLE_EXTRACTION_GUIDANCE["tool"]}
+- any other role, such as participant: {_DEFAULT_ROLE_GUIDANCE}
+"""
+
+BATCH_EXTRACTION_SYSTEM_PROMPT = f"{EXTRACTION_SYSTEM_PROMPT}\n{_BATCH_GUIDANCE}"
+
+
+def _batch_turns_message(turns: Sequence[BatchTurn]) -> str:
+    """The turns as one message, each wrapped with its index, role, time and speaker.
+
+    The text inside a tag is the turn's content, unchanged, so an evidence
+    quote copied from it is a span of the source event.
+    """
+    blocks = []
+    for turn in turns:
+        attributes = f'index="{turn.index}" role="{escape(turn.role.strip().casefold() or "unknown")}"'
+        if turn.time is not None:
+            moment = turn.time.astimezone(timezone.utc) if turn.time.tzinfo is not None else turn.time
+            attributes += f' time="{moment.isoformat(timespec="minutes")}"'
+        if turn.speaker:
+            attributes += f' speaker="{escape(turn.speaker)}"'
+        blocks.append(f"<turn {attributes}>\n{turn.content}\n</turn>")
+    return "Turns of one conversation, oldest first:\n\n" + "\n\n".join(blocks)
+
+
+def batch_request_messages(turns: Sequence[BatchTurn]) -> list[dict[str, str]]:
+    """The chat messages of a batched extraction request, as the provider sends them.
+
+    The same turns always give the same messages, so their digest identifies
+    the request (``ExtractionBatchRecord.request_sha256``) and a benchmark
+    cache can key on them.
+    """
+    return [
+        {"role": "system", "content": BATCH_EXTRACTION_SYSTEM_PROMPT},
+        # Historical text to inspect, as for a single turn: an assistant
+        # turn is never sent as an assistant chat message.
+        {"role": "user", "content": _batch_turns_message(turns)},
+    ]
+
+
+def batch_request_sha256(turns: Sequence[BatchTurn]) -> str:
+    return hashlib.sha256(json.dumps(batch_request_messages(turns)).encode()).hexdigest()
+
+
+# Receives the parsed output of each attempt of a batched call, before any check.
+_RAW_BATCH_OUTPUT: ContextVar[list[dict[str, Any]] | None] = ContextVar(
+    "prme_extraction_raw_batch_output", default=None
+)
+
+
+def _admitted_items(items: Any, model: type) -> list[Any]:
+    """Drop the malformed items of one list, as discard_malformed_claims does for one turn."""
+    if not isinstance(items, list):
+        return []
+    admitted = []
+    for item in items:
+        try:
+            model.model_validate(item)
+        except (ValidationError, TypeError):
+            continue
+        admitted.append(item)
+    return admitted
+
+
+# The docstrings of the two models below are the schema descriptions the model reads.
+class _BatchTurnExtraction(BaseModel):
+    """The entities, facts and relationships that one turn itself states, citing that turn's index."""
+
+    turn: int = Field(description="The index of the turn this entry extracts")
+    entities: list[ExtractedEntity] = Field(default_factory=list)
+    facts: list[_CitedFact] = Field(default_factory=list)
+    relationships: list[_CitedRelationship] = Field(default_factory=list)
+
+    @field_validator("entities", "facts", "relationships", mode="before")
+    @classmethod
+    def drop_malformed_items(cls, items: Any, info: ValidationInfo) -> list[Any]:
+        # One malformed claim must not fail the whole batch. The kept raw
+        # output still holds it, and the per-turn check discards it there.
+        model = {"entities": ExtractedEntity, "facts": _CitedFact, "relationships": _CitedRelationship}
+        return _admitted_items(items, model[info.field_name])
+
+
+class _BatchExtractionResult(BaseModel):
+    """What each turn of the conversation states, one entry per turn."""
+
+    turns: list[_BatchTurnExtraction] = Field(
+        description="One entry for every turn of the message, in order, each citing its turn's index"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def keep_raw_output(cls, value: Any) -> Any:
+        raw_output = _RAW_BATCH_OUTPUT.get()
+        if raw_output is not None and isinstance(value, dict):
+            raw_output.append(copy.deepcopy(value))
+        return value
+
+
+def validate_batch_output(
+    raw: Any, turns: Sequence[BatchTurn], *, speakers: dict[int, str | None] | None = None,
+) -> dict[int, ExtractionResult]:
+    """Split a batched response by cited turn and check each part as a single turn's output (#254).
+
+    ``raw`` is the provider's parsed output before any check. Each entry's
+    claims are checked against the text of the turn it cites, under that
+    turn's role, exactly as :func:`validate_raw_output` checks one turn: an
+    evidence quote must be a span of that turn, so a claim that only another
+    turn supports is rejected. An entry that cites a turn outside the batch
+    is dropped, entries citing the same turn are joined, and a turn without
+    an entry gets an empty result. ``speakers`` names, by index, the turns'
+    speakers for grounding (enable_speaker_grounding). The checks are
+    deterministic, so the same response gives the same results on replay.
+
+    Raises ExtractionError with reason ValidationError when the response as
+    a whole does not have the batch shape.
+    """
+    speakers = speakers or {}
+    if isinstance(raw, BaseModel):
+        raw = raw.model_dump(mode="json")
+    try:
+        parsed = _BatchExtractionResult.model_validate(raw)
+    except ValidationError as exc:
+        raise ExtractionError("Batched extraction output does not have one entry per turn",
+                              reason_code="ValidationError") from exc
+    by_index = {turn.index: turn for turn in turns}
+    parts: dict[int, dict[str, list]] = {
+        index: {"entities": [], "facts": [], "relationships": []} for index in by_index
+    }
+    for entry, raw_entry in zip(parsed.turns, raw["turns"], strict=True):
+        if entry.turn not in by_index:
+            logger.warning("extraction_batch_entry_discarded", turn=entry.turn,
+                           reason="Entry cites a turn outside the batch")
+            continue
+        part = parts[entry.turn]
+        part["entities"].extend(_admitted_items(raw_entry.get("entities"), ExtractedEntity))
+        for name in ("facts", "relationships"):
+            items = raw_entry.get(name)
+            part[name].extend(items if isinstance(items, list) else [])
+    missing = sorted(set(by_index) - {entry.turn for entry in parsed.turns})
+    if missing:
+        # Each still gets a result, an empty one, as a turn that states nothing.
+        logger.warning("extraction_batch_turns_missing", turns=missing, batch_turns=len(by_index))
+    results: dict[int, ExtractionResult] = {}
+    for index, part in parts.items():
+        turn = by_index[index]
+        try:
+            results[index] = validate_raw_output(part, turn.content, role=turn.role, speaker=speakers.get(index))
+        except ValidationError as exc:
+            raise ExtractionError("Batched extraction output failed a turn's checks",
+                                  reason_code="ValidationError") from exc
+    return results
+
+
+def batch_response_fields(raw: dict[str, Any]) -> dict[str, Any]:
+    """The part of a batched response that its turns are checked from (#254).
+
+    Keeps each entry's turn, entities, facts and relationships as the model
+    wrote them, and drops anything else the model returned beside them, so a
+    saved response holds no text the checks never read.
+    """
+    entries = raw.get("turns") if isinstance(raw, dict) else None
+    return {"turns": [
+        {key: entry[key] for key in ("turn", "entities", "facts", "relationships") if key in entry}
+        for entry in (entries if isinstance(entries, list) else []) if isinstance(entry, dict)
+    ]}
+
+
 @runtime_checkable
 class ExtractionProvider(Protocol):
     """Protocol for LLM-powered structured extraction.
@@ -1143,6 +1369,26 @@ class ExtractionProvider(Protocol):
 
         Returns:
             ExtractionResult with entities, facts, relationships, and summary.
+        """
+        ...
+
+
+@runtime_checkable
+class BatchExtractionProvider(Protocol):
+    """A provider that can also extract several turns in one call (#254).
+
+    Kept apart from :class:`ExtractionProvider` so a provider written
+    against that protocol still satisfies it. Batched extraction
+    (``extraction_batch_target_tokens``) needs this method.
+    """
+
+    async def extract_batch(self, turns: Sequence[BatchTurn]) -> dict[str, Any]:
+        """Return the parsed response to one batched request, before any check.
+
+        The response has one entry per turn under ``"turns"``, each citing
+        its turn's ``index``; :func:`validate_batch_output` splits and checks
+        it. Raise ExtractionError when the call fails or its output does not
+        parse; a ValidationError reason lets the caller ask again in halves.
         """
         ...
 
@@ -1311,6 +1557,57 @@ class InstructorExtractionProvider:
                 "extraction_failed",
                 provider=self._provider_string,
                 content_length=len(content),
+                error_type=type(exc).__name__,
+            )
+            reason = extraction_failure_code(exc)
+            raise ExtractionError(f"Extraction failed ({reason})", reason_code=reason) from exc
+
+    async def extract_batch(self, turns: Sequence[BatchTurn]) -> dict[str, Any]:
+        """Extract several turns of one session in one call (#254).
+
+        Sends :func:`batch_request_messages` and returns the parsed output,
+        before any check, of the attempt that parsed. A batch of several turns
+        is asked once: when its output fails validation, ingestion asks again
+        in halves instead. A single turn keeps the configured retries.
+
+        Raises ExtractionError on provider failure, timeout or output that
+        does not parse, with the same sanitized reason codes as extract().
+        """
+        if not turns:
+            raise ValueError("A batched extraction needs at least one turn")
+        try:
+            client = self._ensure_client()
+            create_kwargs: dict = {
+                "response_model": _BatchExtractionResult,
+                "messages": batch_request_messages(turns),
+                "max_retries": self._max_retries if len(turns) == 1 else 1,
+                "temperature": self._temperature,
+            }
+            if self._reasoning_effort is not None:
+                create_kwargs["reasoning_effort"] = self._reasoning_effort
+            model_id = self._resolve_model_id()
+            if model_id:
+                create_kwargs["model"] = model_id
+            # No validation context is passed: Instructor would apply it to
+            # the messages as a template. Each turn is checked afterwards.
+            raw: list[dict[str, Any]] = []
+            token = _RAW_BATCH_OUTPUT.set(raw)
+            try:
+                await asyncio.wait_for(client.create(**create_kwargs), timeout=self._timeout)
+            finally:
+                _RAW_BATCH_OUTPUT.reset(token)
+            if not raw:
+                raise ExtractionError("Batched extraction returned no parsed output",
+                                      reason_code="ValidationError")
+            return raw[-1]
+        except ExtractionError:
+            raise
+        except Exception as exc:
+            logger.error(
+                "extraction_failed",
+                provider=self._provider_string,
+                turns=len(turns),
+                content_length=sum(len(turn.content) for turn in turns),
                 error_type=type(exc).__name__,
             )
             reason = extraction_failure_code(exc)

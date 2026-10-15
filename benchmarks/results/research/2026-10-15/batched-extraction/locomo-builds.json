@@ -1,0 +1,420 @@
+{
+  "kind": "batched-extraction-locomo-builds",
+  "issue": 254,
+  "builds": {
+    "ingest-baseline-locomo-deepseek-2026-10-15": {
+      "summary": {
+        "label": "ingest-baseline-locomo-deepseek-2026-10-15",
+        "benchmark": "locomo",
+        "overrides": {},
+        "model": "deepseek-v4.1-flash:cloud",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "58caddb1a88dd60d51fc97c15742aee6ec8cf34a",
+        "packs": 10,
+        "turns": 5882,
+        "calls": 5882,
+        "prompt_tokens": 30273687,
+        "completion_tokens": 3462521,
+        "seconds": 13971.416215393992,
+        "wall_seconds": 1628.644389,
+        "cache_hits": 0,
+        "dollars": 0,
+        "claims": 7217,
+        "claims_per_turn": 1.226963617817069,
+        "turns_with_claims": 4689,
+        "turns_with_claims_share": 0.7971778306698402,
+        "annotated_evidence_turns": 1423,
+        "annotated_evidence_turns_with_claims": 1145,
+        "evidence_claim_coverage": 0.8046380885453268
+      },
+      "build": {
+        "label": "ingest-baseline-locomo-deepseek-2026-10-15",
+        "benchmark": "locomo",
+        "overrides": {},
+        "started_at": "2026-10-15T17:17:32.788618+00:00",
+        "finished_at": "2026-10-15T17:44:41.433007+00:00",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "58caddb1a88dd60d51fc97c15742aee6ec8cf34a",
+        "dirty": false,
+        "model": {
+          "provider": "ollama_cloud",
+          "model": "deepseek-v4.1-flash:cloud",
+          "resolved_model": "deepseek-v4.1-flash:cloud",
+          "model_digest_sha256": null,
+          "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "remote_host": "https://ollama.com",
+          "remote_model": "deepseek-v4.1-flash",
+          "api_base_url": "http://127.0.0.1:11434"
+        }
+      },
+      "build_json_sha256": "33f76415e6b0c64929b7c8257cf65b4974b3bef00079fa5f4cad53248f39fdea",
+      "manifest_sha256": {
+        "conv-26": "807908678c41c3c91e2778815047a69486d932672d71fed42fe5dc3dfb2d2b1e",
+        "conv-30": "d8804836358e1e0fea2e40bae2491e32d40b00c326f409541983051b0eb3fa21",
+        "conv-41": "c019f1fb0232cdb64ecbb410a2f483dda8f3b634484ca6ba05192976a0b8e1a9",
+        "conv-42": "aa68277ecf81a979fb21691b489f7912588919454afa34899e4439cb0c2506bf",
+        "conv-43": "42bee83c82f6fed9916fd5322bbc1ee354606e466f2201cc3d796ec55ae73ed3",
+        "conv-44": "ac2b5d6cd231995085611555261511c02ee03464f6cdfae9d24d7da83081d5f9",
+        "conv-47": "b81ee7b0d6f77953877bf542e2fd79ad81a706402a4e8a6d5de00b8b3bd82b2e",
+        "conv-48": "87b6f7187d54faef32773bff420f6b4d29f092cf57e149a0e2211051ae036f4a",
+        "conv-49": "0bd330db40df06a49737d62c8035d15907c50d96d48a60af7f519ce8557ca1fb",
+        "conv-50": "e57aa7bb2a61500465dc270cb93fd6b5a15308dfddd5aaec9e8c7845900dbcbc"
+      }
+    },
+    "ingest-baseline-locomo-deepseek-2026-10-15-repeat": {
+      "summary": {
+        "label": "ingest-baseline-locomo-deepseek-2026-10-15-repeat",
+        "benchmark": "locomo",
+        "overrides": {},
+        "model": "deepseek-v4.1-flash:cloud",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "58caddb1a88dd60d51fc97c15742aee6ec8cf34a",
+        "packs": 10,
+        "turns": 5882,
+        "calls": 5882,
+        "prompt_tokens": 30273687,
+        "completion_tokens": 3479920,
+        "seconds": 14167.043223994044,
+        "wall_seconds": 1658.325265,
+        "cache_hits": 0,
+        "dollars": 0,
+        "claims": 7195,
+        "claims_per_turn": 1.2232233934036043,
+        "turns_with_claims": 4707,
+        "turns_with_claims_share": 0.8002380142808568,
+        "annotated_evidence_turns": 1423,
+        "annotated_evidence_turns_with_claims": 1157,
+        "evidence_claim_coverage": 0.8130709768095573
+      },
+      "build": {
+        "label": "ingest-baseline-locomo-deepseek-2026-10-15-repeat",
+        "benchmark": "locomo",
+        "overrides": {},
+        "started_at": "2026-10-15T17:45:02.114966+00:00",
+        "finished_at": "2026-10-15T18:12:40.440231+00:00",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "58caddb1a88dd60d51fc97c15742aee6ec8cf34a",
+        "dirty": false,
+        "model": {
+          "provider": "ollama_cloud",
+          "model": "deepseek-v4.1-flash:cloud",
+          "resolved_model": "deepseek-v4.1-flash:cloud",
+          "model_digest_sha256": null,
+          "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "remote_host": "https://ollama.com",
+          "remote_model": "deepseek-v4.1-flash",
+          "api_base_url": "http://127.0.0.1:11434"
+        }
+      },
+      "build_json_sha256": "ef175c8a718874f4d39ab919f52a391c997be0491fe3638d0409a9d8ecd456d1",
+      "manifest_sha256": {
+        "conv-26": "194aefe7098412c6d6f3aab5b93a495af57299241fc5505bdad4281badbbc849",
+        "conv-30": "cb6d41868355595b1d9d4879c47fa5a883cb516e2e17c607ef2ab3c4435013f7",
+        "conv-41": "aff1c464b3b3880f5964f6068ecfc2d2ab755140cd0b78aa852683335b3be0af",
+        "conv-42": "e9f07458b6c3c071cc9f84c0b9fb662065fb9da5ec74c6b62b5dc7cb814b5e9b",
+        "conv-43": "338e7b5776d17beeb3b862a5950821129249406cc921f879cc7c7b3666154df1",
+        "conv-44": "86987da314cd8d04898aafe8c73254826f726af49ed6f40df7fda7bf43e21f4f",
+        "conv-47": "d72fa4813a38eb51369ef95b66f0e469ef63203ca7c3ba3597a37eca6b9a533f",
+        "conv-48": "f00f51b2936882527badb1e5cfea197e17f370d5f7225eda147caea7ca686fdd",
+        "conv-49": "853265cd4f8650ee0aec6b728f29f8ae54069578ad405562df4d1cdd50b48ce5",
+        "conv-50": "4f8a9231636a257a919937e74421fa8de02bc4d540f348a98270c3bb4aec040d"
+      }
+    },
+    "batch-512-locomo-deepseek": {
+      "summary": {
+        "label": "batch-512-locomo-deepseek",
+        "benchmark": "locomo",
+        "overrides": {
+          "extraction_batch_target_tokens": 512
+        },
+        "model": "deepseek-v4.1-flash:cloud",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+        "packs": 10,
+        "turns": 5882,
+        "calls": 690,
+        "prompt_tokens": 4469423,
+        "completion_tokens": 1499161,
+        "seconds": 8719.13705637303,
+        "wall_seconds": 1184.494414,
+        "cache_hits": 0,
+        "dollars": 0,
+        "claims": 5339,
+        "claims_per_turn": 0.9076844610676641,
+        "turns_with_claims": 3221,
+        "turns_with_claims_share": 0.5476028561713703,
+        "annotated_evidence_turns": 1423,
+        "annotated_evidence_turns_with_claims": 1191,
+        "evidence_claim_coverage": 0.8369641602248771,
+        "batches": 690,
+        "single_turn_batches": 15,
+        "turns_without_entry": 0,
+        "response_claims": 7633,
+        "saved_claims": 5523
+      },
+      "build": {
+        "label": "batch-512-locomo-deepseek",
+        "benchmark": "locomo",
+        "overrides": {
+          "extraction_batch_target_tokens": 512
+        },
+        "started_at": "2026-10-15T18:57:46.868288+00:00",
+        "finished_at": "2026-10-15T19:17:31.362702+00:00",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+        "dirty": false,
+        "model": {
+          "provider": "ollama_cloud",
+          "model": "deepseek-v4.1-flash:cloud",
+          "resolved_model": "deepseek-v4.1-flash:cloud",
+          "model_digest_sha256": null,
+          "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "remote_host": "https://ollama.com",
+          "remote_model": "deepseek-v4.1-flash",
+          "api_base_url": "http://127.0.0.1:11434"
+        }
+      },
+      "build_json_sha256": "aefeebf366d2db169b9bb1ea51a05a10f17aa7b8271ecd70233616f89fc2d0e7",
+      "manifest_sha256": {
+        "conv-26": "9c836ad64c2a8d962913e0ba9817e5b99a83bb192cc28646dda4744eabd2f18f",
+        "conv-30": "c484d07e355f7637eaa159d6acdf83498ddac24d0121df086d0fa252dbd93922",
+        "conv-41": "51942ef564e6879a6a733affe0c5acecd9245ee65d5521679b704314a181d2af",
+        "conv-42": "607d2e110f2e2bed72decfccb3505d8e4735c7d3fbdc152c0eea16e8596ac651",
+        "conv-43": "fea82263c68dbe1787ec71d164e47feec913b58c114d7602b28ca6ed3683f786",
+        "conv-44": "2f3e586916c967c01884076b704b08dbe8cbdceded3b69b4daa433343fb04ec7",
+        "conv-47": "a9f39e5af1b2ac2b30a43b174f6885c9712d1b86ae26b34985b334c7730c18ee",
+        "conv-48": "6a33ef90f1aeaa0a5589eecb219e65f8460b171a31c9e221ce049dba096bda8a",
+        "conv-49": "6721448645a89f0e16b5bae267794b1be17493b11d3636a09b24d22265e50e74",
+        "conv-50": "0a19f38462e12dfc43f9c5a02b37460b6233db80f192f3eccba37522f5e6f175"
+      }
+    },
+    "batch-2048-locomo-deepseek": {
+      "summary": {
+        "label": "batch-2048-locomo-deepseek",
+        "benchmark": "locomo",
+        "overrides": {
+          "extraction_batch_target_tokens": 2048
+        },
+        "model": "deepseek-v4.1-flash:cloud",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+        "packs": 10,
+        "turns": 5882,
+        "calls": 275,
+        "prompt_tokens": 2074461,
+        "completion_tokens": 1293116,
+        "seconds": 6247.882994707998,
+        "wall_seconds": 771.445785,
+        "cache_hits": 0,
+        "dollars": 0,
+        "claims": 4579,
+        "claims_per_turn": 0.7784767086025162,
+        "turns_with_claims": 2904,
+        "turns_with_claims_share": 0.4937096225773546,
+        "annotated_evidence_turns": 1423,
+        "annotated_evidence_turns_with_claims": 1168,
+        "evidence_claim_coverage": 0.8208011243851019,
+        "batches": 275,
+        "single_turn_batches": 2,
+        "turns_without_entry": 0,
+        "response_claims": 6343,
+        "saved_claims": 4689
+      },
+      "build": {
+        "label": "batch-2048-locomo-deepseek",
+        "benchmark": "locomo",
+        "overrides": {
+          "extraction_batch_target_tokens": 2048
+        },
+        "started_at": "2026-10-15T19:17:35.693112+00:00",
+        "finished_at": "2026-10-15T19:30:27.138897+00:00",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+        "dirty": false,
+        "model": {
+          "provider": "ollama_cloud",
+          "model": "deepseek-v4.1-flash:cloud",
+          "resolved_model": "deepseek-v4.1-flash:cloud",
+          "model_digest_sha256": null,
+          "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "remote_host": "https://ollama.com",
+          "remote_model": "deepseek-v4.1-flash",
+          "api_base_url": "http://127.0.0.1:11434"
+        }
+      },
+      "build_json_sha256": "84a3ffe6a3c2c7524e1b6255e27efd802a40f9095e5bf3b7460f73a18e23fe55",
+      "manifest_sha256": {
+        "conv-26": "d3cec45871a86118d5cb8d29dc5dd39cdb856b14866c9a707214338a5d43b43b",
+        "conv-30": "1c6648347deb0bf62cf20bee07414f96f3fe913d3501b7ce597249aa78e84673",
+        "conv-41": "b9da0c74b0c6ac6713d91e453a889f671fbeb69a546cb0a4c80fd30a8804ec91",
+        "conv-42": "4091a61ea9cedc664cfdb33d5bc042c761d8d82ce52f50672d731075ec21ef66",
+        "conv-43": "bb205238bc91f428819b6c489526c84d7b8d0b3e830b67aee704fda39ee1042b",
+        "conv-44": "1dc2fd25cd061800f97a479e08191c37e28ac78a7230404881323b9ed1d2fe6d",
+        "conv-47": "89cea90b89c9601185f6c9be114f8320ccc199c55093585d7a93cc715d26c6ab",
+        "conv-48": "f0afcb883f41802cfbb36c4126bea43c495158cbcaccea75e024d6e11014637c",
+        "conv-49": "d32e8f04100bcd1c0c3055a7a7270cc262b04023652965f081d554377f49286c",
+        "conv-50": "19ab5d27543913ba89fc8f09058777255005e626857ae307f3f00e2480f08a6e"
+      }
+    },
+    "batch-8192-locomo-deepseek": {
+      "summary": {
+        "label": "batch-8192-locomo-deepseek",
+        "benchmark": "locomo",
+        "overrides": {
+          "extraction_batch_target_tokens": 8192
+        },
+        "model": "deepseek-v4.1-flash:cloud",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+        "packs": 10,
+        "turns": 5882,
+        "calls": 272,
+        "prompt_tokens": 2057148,
+        "completion_tokens": 1311161,
+        "seconds": 7609.782372248992,
+        "wall_seconds": 874.737982,
+        "cache_hits": 0,
+        "dollars": 0,
+        "claims": 4640,
+        "claims_per_turn": 0.7888473308398504,
+        "turns_with_claims": 2941,
+        "turns_with_claims_share": 0.5,
+        "annotated_evidence_turns": 1423,
+        "annotated_evidence_turns_with_claims": 1171,
+        "evidence_claim_coverage": 0.8229093464511595,
+        "batches": 272,
+        "single_turn_batches": 0,
+        "turns_without_entry": 0,
+        "response_claims": 6410,
+        "saved_claims": 4744
+      },
+      "build": {
+        "label": "batch-8192-locomo-deepseek",
+        "benchmark": "locomo",
+        "overrides": {
+          "extraction_batch_target_tokens": 8192
+        },
+        "started_at": "2026-10-15T19:30:29.727721+00:00",
+        "finished_at": "2026-10-15T19:45:04.465703+00:00",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+        "dirty": false,
+        "model": {
+          "provider": "ollama_cloud",
+          "model": "deepseek-v4.1-flash:cloud",
+          "resolved_model": "deepseek-v4.1-flash:cloud",
+          "model_digest_sha256": null,
+          "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "remote_host": "https://ollama.com",
+          "remote_model": "deepseek-v4.1-flash",
+          "api_base_url": "http://127.0.0.1:11434"
+        }
+      },
+      "build_json_sha256": "76cd16c74563df06f2504ad80f44198c8ef949703f63923e07d4ae641ff4e0f6",
+      "manifest_sha256": {
+        "conv-26": "ea840f0af06455c1c6095049eedb4ebb21efafb61f36715b6603d222ae500536",
+        "conv-30": "3f2ebc119156c2517ef5626c515ba6d0c18acf8068d82104e3b3b7c6fa344098",
+        "conv-41": "dc122fce20863471f3217e3496ac3530c9ca655807c4b74e0414789372d0c112",
+        "conv-42": "aada5d70570359958255b6527ab37968cf0a486bf7bb5edb4fa0e9d78fbde0a8",
+        "conv-43": "89b4c0c2191d7fcc592b1553f367f18c9121c105f91b72d7ee8c99cba259a926",
+        "conv-44": "19dbc40b5c297405b93a17bbd4f515ded89725d60d43c5307a102b881e3fb366",
+        "conv-47": "d3a46cd392881c5736a590743063de437934b31ecc8069b057ba722583afe3a3",
+        "conv-48": "92fdd290fc0adb25d168bc59f261ba0c59aa74d1b5ccb2ac8f1ab772e40bc34f",
+        "conv-49": "34406119becb4a93e9288c87fef03236ec7cf33e181480b6a6d9b9afc440dc94",
+        "conv-50": "b0f1c606e8268f8e70bfcc00d4ca4e3988337740dcfab92f9adc07d95bba7c57"
+      }
+    },
+    "batch-1-ablation-locomo-deepseek": {
+      "summary": {
+        "label": "batch-1-ablation-locomo-deepseek",
+        "benchmark": "locomo",
+        "overrides": {
+          "extraction_batch_target_tokens": 1
+        },
+        "model": "deepseek-v4.1-flash:cloud",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+        "packs": 10,
+        "turns": 5882,
+        "calls": 5885,
+        "prompt_tokens": 34450373,
+        "completion_tokens": 2229149,
+        "seconds": 15004.561667506983,
+        "wall_seconds": 1770.186269,
+        "cache_hits": 0,
+        "dollars": 0,
+        "claims": 8044,
+        "claims_per_turn": 1.3675620537232234,
+        "turns_with_claims": 3789,
+        "turns_with_claims_share": 0.6441686501190071,
+        "annotated_evidence_turns": 1423,
+        "annotated_evidence_turns_with_claims": 1288,
+        "evidence_claim_coverage": 0.9051300070274069,
+        "batches": 5882,
+        "single_turn_batches": 5882,
+        "turns_without_entry": 0,
+        "response_claims": 12554,
+        "saved_claims": 9053
+      },
+      "build": {
+        "label": "batch-1-ablation-locomo-deepseek",
+        "benchmark": "locomo",
+        "overrides": {
+          "extraction_batch_target_tokens": 1
+        },
+        "started_at": "2026-10-15T20:27:49.348290+00:00",
+        "finished_at": "2026-10-15T20:57:19.534559+00:00",
+        "server_versions": [
+          "0.40.4"
+        ],
+        "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+        "dirty": false,
+        "model": {
+          "provider": "ollama_cloud",
+          "model": "deepseek-v4.1-flash:cloud",
+          "resolved_model": "deepseek-v4.1-flash:cloud",
+          "model_digest_sha256": null,
+          "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "remote_host": "https://ollama.com",
+          "remote_model": "deepseek-v4.1-flash",
+          "api_base_url": "http://127.0.0.1:11434"
+        }
+      },
+      "build_json_sha256": "81e72f836dafd0966535de17ec58108af5c16fa7ee12a04b57ee67669f28696d",
+      "manifest_sha256": {
+        "conv-26": "3a6db50d15cf60ff95c041bed931e783c4b228f7627ec64a8a60d27f8471642d",
+        "conv-30": "9f07e334f53bd16c030f79546384578ce27aa1c9f8b07dccd06d4ba44a559f5b",
+        "conv-41": "c90c638ebfa72b5b1df11fc9bb851a6a3d524b4c2ddaafb18964a6d219808d90",
+        "conv-42": "030c46d93d664a6df86938c0f124d2199e900908670dc8e2121b88d51c9cbe29",
+        "conv-43": "417b8f5a221ef077d85db7da5105039151a69c12790f5ef4b2d8a9355ceccaa3",
+        "conv-44": "d234d3ecfce7aff9855cbdc7401f50096df7aee925293bd98a7091cfb1561056",
+        "conv-47": "bba0495578698c6fb7852e4e6ae31fff10b82b3c510f4f1f17b8e39c738f12e2",
+        "conv-48": "45001abccfdb4813b4bc032761abeca303677f522225fbf635cff1d0782b9704",
+        "conv-49": "6ebc051b29fa2b750bf4bb3d9453f7407ce976e6ca16522c0a7c25aae84a41d0",
+        "conv-50": "c561419eb3b3fcb8e522b98880069060976485f42bc638c1f15b43d9d608aa17"
+      }
+    }
+  }
+}

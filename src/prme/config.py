@@ -633,6 +633,34 @@ class PRMEConfig(_ProjectSettings):
             "4,096-token context (BENCHMARKS.md, \"Speaker grounding\")."
         ),
     )
+    extraction_batch_target_tokens: int = Field(
+        default=0,
+        ge=0,
+        le=65536,
+        # Left out of the serialized configuration at zero, so the defaults'
+        # recorded identity (an ingest() build's engine_config, the answer
+        # track's settings) does not change because this option exists.
+        exclude_if=lambda value: value == 0,
+        description=(
+            "[HYPOTHESIS] When above zero, ingest() extracts several turns of a "
+            "session in one model call (#254). The worker takes the session's "
+            "pending extraction jobs in the order they were ingested and adds "
+            "turns while the sum of their text tokens (cl100k_base) stays within "
+            "this target. A turn larger than the target, or without a "
+            "session_id, goes alone, and a batch never crosses a session. Each "
+            "turn is sent with its index, role, time and speaker, every claim "
+            "cites its turn, and each turn's claims are checked against that "
+            "turn alone and saved as its own extraction record. A response that "
+            "fails validation, or a request that times out or is refused as too "
+            "large, is asked again as two halves; extraction.timeout applies to "
+            "each request, so allow for the batch's size. With "
+            "wait_for_extraction=False, ingest() queues the turn: the queue is "
+            "extracted 30 seconds later, or sooner by a waiting ingest(), "
+            "ingest_batch(), process_extractions() or the engine's close. "
+            "Cannot be combined with enable_windowed_extraction or "
+            "enable_fact_text_resolution. Default 0: one call per turn."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(
@@ -980,6 +1008,20 @@ class PRMEConfig(_ProjectSettings):
                     f"confidence_overrides key '{key}' must be "
                     f"'epistemic_type:source_type' format"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_extraction_batching(self) -> PRMEConfig:
+        if self.extraction_batch_target_tokens > 0 and (
+            (self.enable_windowed_extraction and self.extraction_window_turns > 0)
+            or self.enable_fact_text_resolution
+        ):
+            # A batch shows the model its session's turns itself, and the
+            # batched request does not ask for resolved fact text (#254).
+            raise ValueError(
+                "extraction_batch_target_tokens cannot be combined with "
+                "enable_windowed_extraction or enable_fact_text_resolution"
+            )
         return self
 
     @model_validator(mode="after")

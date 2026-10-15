@@ -668,6 +668,77 @@ close to repeatable but not guaranteed to be, so two builds of the same code
 can differ slightly, and the LoCoMo and LongMemEval-S baselines use different
 extraction models.
 
+#### Batched extraction (#254)
+
+`--set extraction_batch_target_tokens=N` builds packs with batched extraction:
+one model call extracts several turns of a session, up to N tokens of turn
+text, and every claim cites its turn and is checked against that turn alone.
+The build ingests each session's turns with `ingest_batch()`, which extracts
+them before the next session starts, so the batches depend only on the
+sessions and come out the same in a rebuild.
+
+```sh
+# All of LoCoMo at one batch size, with the DeepSeek extraction model of the
+# ingest-baseline-locomo-deepseek build (#91).
+uv run python -m benchmarks.diagnostics.extracted_packs build --benchmark locomo \
+  --label batch-512-locomo-deepseek --model deepseek-v4.1-flash:cloud --cloud --jobs 10 \
+  --set extraction_batch_target_tokens=512
+uv run python -m benchmarks.diagnostics.extracted_packs summary --label batch-512-locomo-deepseek
+uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo \
+  --packs data/extracted-packs-v1/batch-512-locomo-deepseek --output /tmp/gate-batch-512.json
+```
+
+- A session's model calls, prompt and completion tokens and seconds are
+  logged once, on a line of their own in `turns.jsonl`, and its turns' lines
+  carry none of them, so nothing is counted twice. A cache hit counts a whole
+  request here, where a per-turn build counts one per turn.
+- Each manifest also reports the saved requests whose responses its turns
+  came from (`batches`, `turns_per_batch`, `single_turn_batches`), the turns
+  the model gave no entry (`turns_without_entry`), which are saved as
+  stating nothing, and the facts and relationships the model wrote for its
+  turns (`response_claims`) next to those the per-turn checks kept
+  (`saved_claims`). A batch shows the model each turn's speaker, so a model
+  that writes the speaker's name where the turn says I loses that claim to
+  grounding, and the difference shows how many claims grounding dropped.
+- `summary` totals a build's complete packs: calls, prompt and completion
+  tokens, seconds summed over the packs, wall time from `build.json`'s start
+  and finish, claims per turn, turns with at least one claim, annotated
+  evidence turns that a claim cites, and the batch counts above.
+- `--max-turns` stops a batched pack at the end of the session in which it
+  reached that many new turns, so a resumed build composes the batches an
+  uninterrupted one does. A build resumed after it stopped in the middle of
+  a split request can compose its remaining turns differently.
+- The cache keys a batched request by the model and the full request: its
+  system prompt and every turn as sent (`<key>.batch.json`). A rebuild of the
+  same build therefore replays every request. A request of several turns
+  whose response failed validation, and was asked again in halves, is kept as
+  `<key>.batch-failed.json`, so the rebuild asks for the same halves. A
+  request that timed out is not kept, so a rebuild asks for it again.
+- The option cannot be combined with `enable_windowed_extraction` or
+  `enable_fact_text_resolution`.
+- First results, on all of LoCoMo with `deepseek-v4.1-flash:cloud` on Ollama
+  0.40.4 (2026-10-15,
+  `benchmarks/results/research/2026-10-15/batched-extraction/`). The sizes
+  were fixed before any build. Against a per-turn build of `main` with the
+  same model:
+
+  | Build | Model calls | Prompt tokens | All evidence packed | Change (questions 95%, conversations 95%) |
+  |---|---:|---:|---:|---|
+  | Per turn | 5,882 | 30.3 M | 81.6% | |
+  | Per turn, built again | 5,882 | 30.3 M | 81.5% | -0.1 (-0.9 to +0.8, -0.6 to +0.6) |
+  | Batch 512 | 690 | 4.5 M | 83.3% | +1.8 (+0.4 to +3.1, +0.7 to +2.9) |
+  | Batch 2,048 | 275 | 2.1 M | 84.0% | +2.5 (+1.1 to +3.8, +1.2 to +3.7) |
+  | Batch 8,192 | 272 | 2.1 M | 83.7% | +2.1 (+0.7 to +3.5, +1.0 to +3.1) |
+  | Batch format, one turn per call | 5,885 | 34.5 M | 82.2% | +0.7 (-0.5 to +1.9, -0.7 to +1.8) |
+
+  The second per-turn build is the first measurement of build-to-build
+  noise. The one-turn control, added after the three sizes, shows that the
+  gain comes from extracting a session's turns together rather than from
+  showing the speaker. Batched builds save fewer claims (0.8 to 0.9 per turn
+  instead of 1.2), mostly on turns that hold no evidence. This is the offline
+  gate, not an answer score; the option stays off until the `ingest()`
+  answer track says otherwise. The LongMemEval-S step is in the same note.
+
 ### Development slice
 
 Building packs for every question after each change is too slow to iterate

@@ -321,6 +321,25 @@ grounded structured output rather than the raw SDK response. Provider or schema
 changes require an explicit revision identity; they must not overwrite the
 existing `EXTRACTION_VALIDATED` operation. A cache hit is not graph completion.
 
+Batched extraction (#254, opt-in through `extraction_batch_target_tokens`)
+keeps this boundary per source. The worker that holds the claim of a
+session's first pending job sends one request for that turn and the
+session's next pending turns. In one transaction, fenced by its own claim as
+`record_extraction` is, it saves an `EXTRACTION_BATCH_RECORDED` operation (the
+request's turns with their content hashes, the digest of the messages sent,
+and the parsed response before any check, limited to each entry's turn,
+entities, facts and relationships) and each turn's own `EXTRACTION_VALIDATED`
+record, checked against that turn alone, whose `batch_id` names the batch.
+The batch operation is the one durable record that keeps model output
+grounding may reject; the per-source boundary stays the grounded
+`ExtractionRecord`. A turn that already has a record keeps it. The
+other turns' jobs stay pending behind the claimed one in work order, so
+none can be claimed while it runs; each is later claimed, planned and
+published on its own and loads its saved record, so work order, leases,
+retries, plans and receipts stay per source. A request half of a split one
+may leave out the claimed job's turn; it is still saved under that claim.
+Neither operation type needs a schema change on either backend.
+
 ### Prepared derivation
 
 An immutable `DERIVATION_PREPARED` operation records:

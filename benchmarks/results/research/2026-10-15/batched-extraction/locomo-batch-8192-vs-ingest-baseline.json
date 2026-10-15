@@ -1,0 +1,1109 @@
+{
+  "kind": "offline-evidence-gate-comparison",
+  "complete": true,
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "interval_note": "Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, so they are narrower than conversation-level intervals.",
+  "before": {
+    "provenance": {
+      "commit": "58caddb1a88dd60d51fc97c15742aee6ec8cf34a",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.14.2",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "pack_path": null,
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time"
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "fold_repeated_text": true,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_claim_merge": true,
+        "enable_windowed_extraction": false,
+        "extraction_window_turns": 4,
+        "enable_fact_text_resolution": false,
+        "enable_speaker_references": true,
+        "enable_claim_sentence_text": true,
+        "enable_speaker_grounding": false,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "reranker_prior_weight": 0.3,
+        "reranker_policy": "legacy",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {},
+      "retrieval_timing": "after-warm-up-v1",
+      "packs": {
+        "path": "/Users/dwamianm/Sites/prism/data/extracted-packs-v1/ingest-baseline-locomo-deepseek-2026-10-15",
+        "build_sha256": "33f76415e6b0c64929b7c8257cf65b4974b3bef00079fa5f4cad53248f39fdea",
+        "build": "ingest-baseline-locomo-deepseek-2026-10-15",
+        "model": "deepseek-v4.1-flash:cloud",
+        "packs": {
+          "conv-26": "8cb5f977dd8251177b349afd1481545bf2131903aa3ddb0e29fc1aa79b22aacc",
+          "conv-30": "51df6a31ce59227c19c44a337fe09f018ae52917566d8e6b2d9cc72f4bfd6bcc",
+          "conv-41": "792087af00273cfdb1d9d2e476b5475a6201446bb814ef4316375fe6bd6b65f7",
+          "conv-42": "08fd7cd79bae30101cdda0c24bdb1d508d55942b5201b4fc3dd985e366c68dee",
+          "conv-43": "c76e708e3e5c4cd58b36088769e08458a4798ff208bcde8a7fc73eb0a569a528",
+          "conv-44": "1661db510cc133b1766bd6b2ec8b9c6a1466c2179579303faf44f9b78a8823c0",
+          "conv-47": "933e2b05b0c5448366bd8a891a6b37df75567085d9e006ce8cc5f4acdb9af03a",
+          "conv-48": "3c72665b35ff0331ba31358663d2239c3b1e2af4da009ca655e6f17358436f37",
+          "conv-49": "1acc7d092bfc971d4caa5506bd70a9afd58465066fc3077f8a5142757efeb5af",
+          "conv-50": "8bc07d25c478ff3946eabc0180102b09ef2ea7f8fbf7c875212337ee9d41749c"
+        },
+        "evidence_claim_coverage": {
+          "locomo": {
+            "annotated_evidence_turns": 1423,
+            "with_claims": 1145,
+            "share": 0.8046380885453268
+          }
+        }
+      },
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+      }
+    },
+    "started_at": "2026-10-15T17:45:03.881019+00:00",
+    "load_average": {
+      "start": [
+        7.365234375,
+        7.083984375,
+        6.4091796875
+      ],
+      "end": [
+        7.7333984375,
+        8.1123046875,
+        7.51171875
+      ]
+    }
+  },
+  "after": {
+    "provenance": {
+      "commit": "93935a165257a96bcf6613df6dc7e9316c545b22",
+      "dirty": false,
+      "worktree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.14.2",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "pack_path": null,
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time"
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "fold_repeated_text": true,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "reinforce_similarity_threshold": null,
+        "enable_claim_merge": true,
+        "enable_windowed_extraction": false,
+        "extraction_window_turns": 4,
+        "enable_fact_text_resolution": false,
+        "enable_speaker_references": true,
+        "enable_claim_sentence_text": true,
+        "enable_speaker_grounding": false,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "reranker_prior_weight": 0.3,
+        "reranker_policy": "legacy",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {},
+      "retrieval_timing": "after-warm-up-v1",
+      "packs": {
+        "path": "/Users/dwamianm/Sites/prism/data/extracted-packs-v1/batch-8192-locomo-deepseek",
+        "build_sha256": "76cd16c74563df06f2504ad80f44198c8ef949703f63923e07d4ae641ff4e0f6",
+        "build": "batch-8192-locomo-deepseek",
+        "model": "deepseek-v4.1-flash:cloud",
+        "packs": {
+          "conv-26": "64937ea255a806bbce6d4982509a91666b875de770f3a0c6910b7645c8f3aaff",
+          "conv-30": "d3228f46f8e0e7ed157a49e51ad9f6e647cc3d795dd911d51792184c31ecbd66",
+          "conv-41": "042d6e634e45b3a6f391a2fa9a40edb60245d519550a2175f6b7bb9b2ce3f493",
+          "conv-42": "54a3b8aa5864d295907eef60ab144445349f25f81710f6794f5576d247c439c8",
+          "conv-43": "8acf67e18192fbdbd053b4762733c9fdbf2455d753fda3fe28af44a1600b2a63",
+          "conv-44": "4606b37ecbb5efb2bd4400a9bbd05046abba0007444806a145564e9bcfc8aca6",
+          "conv-47": "db8b2059a0fe21da0bfa4874fecc4c6812110ee063c0a03440db3436f4b9bb03",
+          "conv-48": "bb4da13a5db4794690ae8dc18142020ee972497a4772c51365b0587a96f7ae2d",
+          "conv-49": "183fa3db7446c7b4e8aa9de293bd532e8a4ab3396fb24d6f93483a11d861a429",
+          "conv-50": "dd771304573effe7a4ae4729a242b24266cd87b3269c8614fa3084d7debf41f2"
+        },
+        "evidence_claim_coverage": {
+          "locomo": {
+            "annotated_evidence_turns": 1423,
+            "with_claims": 1171,
+            "share": 0.8229093464511595
+          }
+        }
+      },
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+      }
+    },
+    "started_at": "2026-10-15T20:05:02.651488+00:00",
+    "load_average": {
+      "start": [
+        4.30078125,
+        4.466796875,
+        5.40673828125
+      ],
+      "end": [
+        5.51806640625,
+        5.05517578125,
+        5.21533203125
+      ]
+    }
+  },
+  "projection": {
+    "label": "Planning estimate, not an answer score.",
+    "method": "Each question takes the saved GPT-5.4 run's accuracy on questions whose annotated evidence was all packed, or partly missing: per category for LoCoMo, pooled for LongMemEval-S. Questions that retrieval cannot move (no resolvable annotation, or abstention) keep their category's measured rate.",
+    "calibration": "At the saved run's evidence states the projection reproduces 985/1,540 and 430/500 by construction; LongMemEval-S category values are pooled estimates. The audit's re-pack simulator, using the same LoCoMo rates, reproduced the real packed sets with mean Jaccard 0.83 and projected 63.3% against 64.0% measured (memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md, section 1).",
+    "limits": [
+      "It ignores distractor effects: added or reordered context can change answers without changing evidence coverage.",
+      "It relies on the datasets' evidence annotations, which have gaps; equivalent evidence can exist elsewhere.",
+      "Its conditional accuracies come from one reader and one strict judge (GPT-5.4).",
+      "All 2,040 questions have already been examined, so this is a development gate. Publication claims need fresh or held-out data."
+    ],
+    "conditional_accuracy": {
+      "locomo": {
+        "single-hop": {
+          "all_packed": [
+            600,
+            657
+          ],
+          "missing": [
+            30,
+            183
+          ]
+        },
+        "temporal": {
+          "all_packed": [
+            216,
+            252
+          ],
+          "missing": [
+            10,
+            68
+          ]
+        },
+        "multi-hop": {
+          "all_packed": [
+            37,
+            45
+          ],
+          "missing": [
+            42,
+            233
+          ]
+        },
+        "open-domain": {
+          "all_packed": [
+            22,
+            29
+          ],
+          "missing": [
+            19,
+            60
+          ]
+        }
+      },
+      "longmemeval": {
+        "*": {
+          "all_packed": [
+            385,
+            403
+          ],
+          "missing": [
+            21,
+            67
+          ]
+        }
+      }
+    },
+    "unscored_accuracy": {
+      "locomo": {
+        "multi-hop": [
+          1,
+          4
+        ],
+        "open-domain": [
+          7,
+          7
+        ],
+        "single-hop": [
+          0,
+          1
+        ],
+        "temporal": [
+          1,
+          1
+        ]
+      },
+      "longmemeval": {
+        "knowledge-update": [
+          4,
+          6
+        ],
+        "multi-session": [
+          9,
+          12
+        ],
+        "single-session-user": [
+          6,
+          6
+        ],
+        "temporal-reasoning": [
+          5,
+          6
+        ]
+      }
+    },
+    "measured_accuracy": {
+      "locomo": [
+        985,
+        1540
+      ],
+      "longmemeval": [
+        430,
+        500
+      ]
+    }
+  },
+  "benchmarks": {
+    "locomo": {
+      "all_evidence_packed": {
+        "queries": 1536,
+        "before": 0.8157552083333334,
+        "after": 0.8365885416666666,
+        "delta": 0.020833333333333332,
+        "interval_95": [
+          0.007161458333333333,
+          0.034505208333333336
+        ],
+        "wins": 71,
+        "losses": 39,
+        "ties": 1426
+      },
+      "all_evidence_packed_with_text": {
+        "queries": 1536,
+        "before": 0.8157552083333334,
+        "after": 0.8365885416666666,
+        "delta": 0.020833333333333332,
+        "interval_95": [
+          0.007161458333333333,
+          0.034505208333333336
+        ],
+        "wins": 71,
+        "losses": 39,
+        "ties": 1426
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "before": 0.8728589317609188,
+        "after": 0.8923908507220173,
+        "delta": 0.01953191896109853,
+        "interval_95": [
+          0.00828636063011063,
+          0.030397445436507936
+        ],
+        "wins": 99,
+        "losses": 62,
+        "ties": 1375
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "before": 0.958984375,
+        "after": 0.9850260416666666,
+        "delta": 0.026041666666666668,
+        "interval_95": [
+          0.018229166666666668,
+          0.034505208333333336
+        ],
+        "wins": 41,
+        "losses": 1,
+        "ties": 1494
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "before": 0.7591764842565696,
+        "after": 0.7739128969019125,
+        "delta": 0.014736412645342823,
+        "interval_95": [
+          0.005365609717433911,
+          0.024067160711096207
+        ],
+        "wins": 71,
+        "losses": 39,
+        "ties": 1430
+      },
+      "gained_all_evidence_among_candidates": [
+        "conv-26-q0015",
+        "conv-26-q0048",
+        "conv-26-q0069",
+        "conv-41-q0003",
+        "conv-41-q0008",
+        "conv-41-q0010",
+        "conv-41-q0028",
+        "conv-41-q0044",
+        "conv-41-q0045",
+        "conv-41-q0064",
+        "conv-42-q0000",
+        "conv-42-q0059",
+        "conv-42-q0072",
+        "conv-42-q0081",
+        "conv-43-q0026",
+        "conv-44-q0003",
+        "conv-44-q0027",
+        "conv-44-q0031",
+        "conv-44-q0033",
+        "conv-44-q0052",
+        "conv-44-q0057",
+        "conv-47-q0002",
+        "conv-47-q0019",
+        "conv-47-q0033",
+        "conv-48-q0023",
+        "conv-48-q0041",
+        "conv-48-q0048",
+        "conv-48-q0081",
+        "conv-48-q0082",
+        "conv-48-q0086",
+        "conv-49-q0001",
+        "conv-49-q0007",
+        "conv-49-q0019",
+        "conv-49-q0020",
+        "conv-49-q0032",
+        "conv-49-q0050",
+        "conv-49-q0051",
+        "conv-49-q0054",
+        "conv-49-q0077",
+        "conv-50-q0023",
+        "conv-50-q0058"
+      ],
+      "lost_all_evidence_among_candidates": [
+        "conv-44-q0051"
+      ],
+      "gained_all_evidence": [
+        "conv-26-q0001",
+        "conv-26-q0013",
+        "conv-26-q0051",
+        "conv-26-q0078",
+        "conv-26-q0089",
+        "conv-30-q0003",
+        "conv-30-q0004",
+        "conv-30-q0029",
+        "conv-30-q0056",
+        "conv-30-q0072",
+        "conv-41-q0002",
+        "conv-41-q0021",
+        "conv-41-q0047",
+        "conv-41-q0072",
+        "conv-41-q0110",
+        "conv-41-q0131",
+        "conv-42-q0008",
+        "conv-42-q0051",
+        "conv-42-q0068",
+        "conv-42-q0071",
+        "conv-42-q0083",
+        "conv-42-q0119",
+        "conv-42-q0171",
+        "conv-42-q0173",
+        "conv-43-q0036",
+        "conv-43-q0062",
+        "conv-43-q0107",
+        "conv-43-q0129",
+        "conv-43-q0160",
+        "conv-43-q0175",
+        "conv-43-q0176",
+        "conv-44-q0002",
+        "conv-44-q0036",
+        "conv-44-q0057",
+        "conv-44-q0081",
+        "conv-44-q0095",
+        "conv-44-q0111",
+        "conv-47-q0020",
+        "conv-47-q0026",
+        "conv-47-q0041",
+        "conv-47-q0049",
+        "conv-47-q0088",
+        "conv-47-q0141",
+        "conv-47-q0147",
+        "conv-48-q0011",
+        "conv-48-q0015",
+        "conv-48-q0065",
+        "conv-48-q0068",
+        "conv-48-q0080",
+        "conv-48-q0141",
+        "conv-48-q0175",
+        "conv-48-q0179",
+        "conv-49-q0000",
+        "conv-49-q0002",
+        "conv-49-q0006",
+        "conv-49-q0022",
+        "conv-49-q0041",
+        "conv-49-q0045",
+        "conv-49-q0055",
+        "conv-49-q0062",
+        "conv-49-q0072",
+        "conv-49-q0081",
+        "conv-49-q0088",
+        "conv-49-q0112",
+        "conv-49-q0145",
+        "conv-50-q0067",
+        "conv-50-q0070",
+        "conv-50-q0080",
+        "conv-50-q0088",
+        "conv-50-q0103",
+        "conv-50-q0144"
+      ],
+      "lost_all_evidence": [
+        "conv-26-q0011",
+        "conv-26-q0043",
+        "conv-26-q0047",
+        "conv-26-q0056",
+        "conv-26-q0139",
+        "conv-30-q0002",
+        "conv-30-q0023",
+        "conv-30-q0075",
+        "conv-30-q0081",
+        "conv-41-q0040",
+        "conv-41-q0124",
+        "conv-42-q0005",
+        "conv-42-q0022",
+        "conv-42-q0030",
+        "conv-42-q0061",
+        "conv-42-q0098",
+        "conv-42-q0184",
+        "conv-43-q0060",
+        "conv-43-q0061",
+        "conv-43-q0065",
+        "conv-44-q0017",
+        "conv-44-q0018",
+        "conv-44-q0105",
+        "conv-47-q0012",
+        "conv-47-q0027",
+        "conv-48-q0025",
+        "conv-48-q0090",
+        "conv-49-q0024",
+        "conv-49-q0054",
+        "conv-49-q0060",
+        "conv-49-q0110",
+        "conv-49-q0123",
+        "conv-50-q0005",
+        "conv-50-q0011",
+        "conv-50-q0030",
+        "conv-50-q0031",
+        "conv-50-q0043",
+        "conv-50-q0048",
+        "conv-50-q0068"
+      ],
+      "all_evidence_packed_by_category": {
+        "multi-hop": {
+          "queries": 282,
+          "before": 0.4787234042553192,
+          "after": 0.5070921985815603,
+          "delta": 0.028368794326241134,
+          "interval_95": [
+            -0.01773049645390071,
+            0.07446808510638298
+          ],
+          "wins": 26,
+          "losses": 18,
+          "ties": 238
+        },
+        "open-domain": {
+          "queries": 92,
+          "before": 0.5652173913043478,
+          "after": 0.5760869565217391,
+          "delta": 0.010869565217391304,
+          "interval_95": [
+            -0.021739130434782608,
+            0.043478260869565216
+          ],
+          "wins": 2,
+          "losses": 1,
+          "ties": 89
+        },
+        "single-hop": {
+          "queries": 841,
+          "before": 0.9239001189060642,
+          "after": 0.9476813317479191,
+          "delta": 0.023781212841854936,
+          "interval_95": [
+            0.008323424494649227,
+            0.03804994054696789
+          ],
+          "wins": 32,
+          "losses": 12,
+          "ties": 797
+        },
+        "temporal": {
+          "queries": 321,
+          "before": 0.9003115264797508,
+          "after": 0.9096573208722741,
+          "delta": 0.009345794392523364,
+          "interval_95": [
+            -0.01557632398753894,
+            0.03426791277258567
+          ],
+          "wins": 11,
+          "losses": 8,
+          "ties": 302
+        }
+      },
+      "context": {
+        "before": {
+          "questions": 1540,
+          "contexts_matching_saved": 0,
+          "records_per_context": 96.1896103896104,
+          "memory_text_share": 0.952395725460527,
+          "records_without_text": 0,
+          "candidates_mean": 929.6844155844155
+        },
+        "after": {
+          "questions": 1540,
+          "contexts_matching_saved": 0,
+          "records_per_context": 88.3948051948052,
+          "memory_text_share": 0.944829211012468,
+          "records_without_text": 0,
+          "candidates_mean": 857.0772727272728
+        }
+      },
+      "retrieval_seconds": {
+        "before": {
+          "p50": 0.41185056249923946,
+          "p95": 0.6004221725994284
+        },
+        "after": {
+          "p50": 0.32394487550118356,
+          "p95": 0.4565764107503128
+        }
+      },
+      "reranking_seconds": {
+        "before": null,
+        "after": null
+      },
+      "aggregation": {
+        "before": {
+          "questions": 41,
+          "filled_widened_limit": 41,
+          "paths_at_limit": {
+            "GRAPH": 41,
+            "LEXICAL_AGG": 41,
+            "VECTOR": 41
+          }
+        },
+        "after": {
+          "questions": 41,
+          "filled_widened_limit": 32,
+          "paths_at_limit": {
+            "GRAPH": 4,
+            "LEXICAL_AGG": 41,
+            "VECTOR": 32
+          }
+        }
+      },
+      "query_scoring": {
+        "temporal_affinity_varies_by_category": {
+          "questions": {
+            "multi-hop": 282,
+            "open-domain": 96,
+            "single-hop": 841,
+            "temporal": 321
+          },
+          "before": {
+            "multi-hop": 0,
+            "open-domain": 0,
+            "single-hop": 0,
+            "temporal": 0
+          },
+          "after": {
+            "multi-hop": 0,
+            "open-domain": 0,
+            "single-hop": 0,
+            "temporal": 0
+          }
+        },
+        "entered_current_state_path": [
+          "conv-41-q0023",
+          "conv-41-q0028",
+          "conv-41-q0029",
+          "conv-41-q0032",
+          "conv-41-q0036",
+          "conv-41-q0037",
+          "conv-41-q0044",
+          "conv-41-q0057",
+          "conv-42-q0030",
+          "conv-42-q0046",
+          "conv-42-q0063",
+          "conv-42-q0067",
+          "conv-42-q0070",
+          "conv-42-q0081",
+          "conv-42-q0082",
+          "conv-42-q0092",
+          "conv-42-q0115",
+          "conv-42-q0163",
+          "conv-42-q0164",
+          "conv-43-q0061",
+          "conv-43-q0124",
+          "conv-43-q0128",
+          "conv-43-q0169",
+          "conv-50-q0076"
+        ],
+        "left_current_state_path": [],
+        "current_state_path_unknown": 0
+      },
+      "session_context_records": {
+        "before": {
+          "all": {
+            "reached": 23334,
+            "added": 725,
+            "promoted": 12540,
+            "reached_share": 0.15752166986201496,
+            "added_share": 0.004894283476898982,
+            "promoted_share": 0.08465422731077688
+          },
+          "multi-hop": {
+            "reached": 4369,
+            "added": 99,
+            "promoted": 2368,
+            "reached_share": 0.16063681153025958,
+            "added_share": 0.003639973527465255,
+            "promoted_share": 0.08706522538421943
+          },
+          "open-domain": {
+            "reached": 1374,
+            "added": 48,
+            "promoted": 759,
+            "reached_share": 0.14248677797365966,
+            "added_share": 0.004977704034014311,
+            "promoted_share": 0.0787099450378513
+          },
+          "single-hop": {
+            "reached": 12621,
+            "added": 370,
+            "promoted": 6733,
+            "reached_share": 0.1599477866348993,
+            "added_share": 0.004689064341566654,
+            "promoted_share": 0.08532829786964401
+          },
+          "temporal": {
+            "reached": 4970,
+            "added": 208,
+            "promoted": 2680,
+            "reached_share": 0.15347084980237155,
+            "added_share": 0.006422924901185771,
+            "promoted_share": 0.08275691699604742
+          }
+        },
+        "after": {
+          "all": {
+            "reached": 40334,
+            "added": 499,
+            "promoted": 26138,
+            "reached_share": 0.29629466384579217,
+            "added_share": 0.003665667606958157,
+            "promoted_share": 0.1920104607428303
+          },
+          "multi-hop": {
+            "reached": 7537,
+            "added": 66,
+            "promoted": 5090,
+            "reached_share": 0.301118657610867,
+            "added_share": 0.0026368357970435476,
+            "promoted_share": 0.20335597283260087
+          },
+          "open-domain": {
+            "reached": 2392,
+            "added": 45,
+            "promoted": 1583,
+            "reached_share": 0.277655252466628,
+            "added_share": 0.00522344747533372,
+            "promoted_share": 0.18374927452118398
+          },
+          "single-hop": {
+            "reached": 22358,
+            "added": 240,
+            "promoted": 14082,
+            "reached_share": 0.3043726856893923,
+            "added_share": 0.00326726203441516,
+            "promoted_share": 0.19170659986930952
+          },
+          "temporal": {
+            "reached": 8047,
+            "added": 148,
+            "promoted": 5383,
+            "reached_share": 0.27722465290936027,
+            "added_share": 0.005098701209219003,
+            "promoted_share": 0.1854480311434182
+          }
+        }
+      }
+    }
+  },
+  "inputs": {
+    "before_sha256": "0c35bc3fcaf7f6d6e7abb87959c7e5f9ffb1fb6c480777585a075425c0f5a681",
+    "after_sha256": "dc0fd1dd2d3dc779439684a660d392017e4d7b84f8c12438dae7eaecaad5ae5c"
+  }
+}
