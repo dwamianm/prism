@@ -46,6 +46,7 @@ import json
 import math
 from pathlib import Path
 import random
+import re
 import shutil
 import statistics
 import sys
@@ -88,6 +89,11 @@ THRESHOLDS = tuple(band.low for band in BANDS)
 FLOOR = THRESHOLDS[0]
 # Similarities are rounded before banding, so a stored value always lands in the band it shows.
 SIMILARITY_DIGITS = 6
+# Descriptive only: a line this short is a greeting, a thanks or a reply such
+# as "Thanks so much, Nate!". Counted after the "(time) Speaker:" label that
+# opens a LoCoMo turn.
+SHORT_WORDS = 6
+_TURN_LABEL = re.compile(r"\s*\([^()]*\)\s*[^:]{1,40}:\s*")
 SAMPLE_SIZES = {"0.90-0.95": 17, "0.95-0.97": 17, "0.97-1.00": 16}
 SAMPLE_SEED = 255
 
@@ -314,11 +320,20 @@ def pair_id(pair: Mapping) -> str:
     return f"{pair['unit']}:{pair['a']}:{pair['b']}"
 
 
+def _words(text: str) -> int:
+    """Words in a claim's text after a leading "(time) Speaker:" turn label."""
+    label = _TURN_LABEL.match(text)
+    return len(text[label.end() if label else 0:].split())
+
+
 def unit_counts(claims: PackClaims, pairs: Sequence[Mapping], same_subject: int) -> dict:
     """What step 1 reports for one pack: its claims and its pairs at or above each threshold."""
     def at_or_above(selected: Callable[[Mapping], bool]) -> dict[str, int]:
         return {threshold_key(t): sum(pair["similarity"] >= t and selected(pair) for pair in pairs)
                 for t in THRESHOLDS}
+
+    def short(pair: Mapping) -> bool:
+        return max(_words(claims.texts[pair["a"]]), _words(claims.texts[pair["b"]])) <= SHORT_WORDS
 
     return {
         "pack_sha256": claims.pack_sha256, **claims.counts, "subjects": len(claims.subject_names),
@@ -326,6 +341,8 @@ def unit_counts(claims: PackClaims, pairs: Sequence[Mapping], same_subject: int)
         "pairs_at_or_above": at_or_above(lambda pair: True),
         "identical_text_at_or_above": at_or_above(lambda pair: pair["identical_text"]),
         "same_source_at_or_above": at_or_above(lambda pair: pair["same_source"]),
+        # Pairs from different turns whose two lines are both short (SHORT_WORDS).
+        "short_other_turns_at_or_above": at_or_above(lambda pair: not pair["same_source"] and short(pair)),
     }
 
 
@@ -376,15 +393,24 @@ def labeling_sheet(pairs_doc: Mapping, packs: Mapping[str, PackClaims], *, sizes
             "seed": seed, "sizes": dict(sizes), "pairs_sha256": digest(pairs_doc["pairs"]), "pairs": rows}
 
 
+CODE_KEYS = ("commit", "dirty", "worktree_sha256")
+
+
+def code_state() -> dict:
+    """The commit this step runs and whether the working tree differs from it, as the gate records them."""
+    from benchmarks.retrieval_eval import provenance
+
+    state = provenance(product_packing.gate_config(Path("{pack}")))
+    return {key: state[key] for key in CODE_KEYS}
+
+
 def collect_pairs(packs: Path, benchmark: str, *, scratch: Path) -> tuple[dict, dict[str, PackClaims]]:
     """Step 1 over every complete pack of a build; each pack is read from a verified scratch copy."""
     from benchmarks.diagnostics.longmemeval_s_compact import _clone_pack
-    from benchmarks.retrieval_eval import provenance
 
     built = extracted_packs.built_units(packs / benchmark)
     if not built:
         raise ValueError(f"No complete {benchmark} pack under {packs / benchmark}")
-    code = provenance(product_packing.gate_config(Path("{pack}")))
     record = json.loads((packs / "build.json").read_text())
     read: dict[str, PackClaims] = {}
     units, pairs, embeddings = {}, [], set()
@@ -405,8 +431,7 @@ def collect_pairs(packs: Path, benchmark: str, *, scratch: Path) -> tuple[dict, 
     if len(embeddings) != 1:
         raise ValueError(f"The packs' claim vectors do not share one embedding: {sorted(embeddings)}")
     return {
-        "kind": PAIRS_KIND, "schema_version": SCHEMA_VERSION, "benchmark": benchmark,
-        "code": {key: code[key] for key in ("commit", "dirty", "worktree_sha256")},
+        "kind": PAIRS_KIND, "schema_version": SCHEMA_VERSION, "benchmark": benchmark, "code": code_state(),
         "build": {"path": str(packs), "build_sha256": extracted_packs.build_digest(packs),
                   "label": record.get("label"), "model": record.get("model", {}).get("model")},
         "embedding": {**json.loads(embeddings.pop()), "source": "each pack's stored claim vectors"},
@@ -693,7 +718,7 @@ def build_report(pairs_doc: Mapping, sheet: Mapping, contexts: Mapping) -> dict:
     for question in contexts["questions"]:
         rows.append({
             "question_id": question["question_id"], "unit": question["unit"], "category": question["category"],
-            "context_tokens": question["context_tokens"],
+            "context_sha256": question["context_sha256"], "context_tokens": question["context_tokens"],
             "record_tokens": sum(cost for _, cost in question["records"]),
             "records": len(question["records"]),
             "claims": sum(node_id in claims[question["unit"]] for node_id, _ in question["records"]),
@@ -706,7 +731,9 @@ def build_report(pairs_doc: Mapping, sheet: Mapping, contexts: Mapping) -> dict:
         "decision_rule": DECISION_RULE, "reading": READING, "labeling_rule": LABELING_RULE,
         "inputs": {"pairs_sha256": digest(pairs_doc), "labels_sha256": digest(sheet),
                    "contexts_sha256": digest(contexts)},
-        "code": pairs_doc["code"], "build": pairs_doc["build"], "embedding": pairs_doc["embedding"],
+        "code": {"pairs": pairs_doc["code"],
+                 "replay": {key: contexts["gate"]["provenance"][key] for key in CODE_KEYS}},
+        "build": pairs_doc["build"], "embedding": pairs_doc["embedding"],
         "contexts": {"tokenizer": contexts["tokenizer"], "token_budget": contexts["token_budget"],
                      "overhead_tokens": contexts["overhead_tokens"], "gate": contexts["gate"],
                      "questions": len(rows),
@@ -745,12 +772,12 @@ def _label_table(bands: Mapping[str, Mapping]) -> list[str]:
 def report_markdown(report: Mapping) -> str:
     decision, labels, shares, contexts = report["decision"], report["labels"], report["shares"], report["contexts"]
     keys = [threshold_key(t) for t in THRESHOLDS]
-    commit = (report["code"]["commit"] or "")[:8]
+    code = ", ".join(f"{step} `{(state['commit'] or '')[:8]}`{' with uncommitted changes' if state['dirty'] else ''}"
+                     for step, state in report["code"].items())
     second = decision["condition_2"]
     lines = [
         f"# Paraphrased duplicate claims in `ingest()` packs ({report['benchmark']}, #255)", "",
-        f"Build `{report['build']['label']}` ({report['build']['model']}), measured with code `{commit}`"
-        f"{' and uncommitted changes' if report['code']['dirty'] else ''}. Similarity: cosine of "
+        f"Build `{report['build']['label']}` ({report['build']['model']}). Code by step: {code}. Similarity: cosine of "
         f"{report['embedding']['source']} ({report['embedding']['model']}, {report['embedding']['dimension']} "
         f"dimensions). Tokens: the packer's own counts with `{contexts['tokenizer']}`, budget "
         f"{contexts['token_budget']} less {contexts['overhead_tokens']} reserved. No model calls.", "",
@@ -768,23 +795,24 @@ def report_markdown(report: Mapping) -> str:
         f"{contexts['context_tokens_mean']:.0f} context tokens "
         f"and {contexts['record_tokens_mean']:.0f} record tokens on average.", "",
         "## Pairs of current claims with one subject", "",
+        f"The last three columns break down the pairs at or above {keys[0]}. Short lines have {SHORT_WORDS} words "
+        "or fewer after the turn's time and speaker.", "",
         "| Pack | Current claims | Paired claims | Same-subject pairs | At or above " + " | ".join(keys)
-        + " | Identical text, 0.90 | Same source turn, 0.90 |",
-        "|---|---:|---:|---:|" + "---:|" * len(keys) + "---:|---:|",
+        + " | From one turn | Identical text | From other turns, both lines short |",
+        "|---|---:|---:|---:|" + "---:|" * len(keys) + "---:|---:|---:|",
     ]
+    columns = [("current_claims", None), ("paired_claims", None), ("same_subject_pairs", None),
+               *(("pairs_at_or_above", key) for key in keys), ("same_source_at_or_above", keys[0]),
+               ("identical_text_at_or_above", keys[0]), ("short_other_turns_at_or_above", keys[0])]
     units = report["pairs"]["units"]
+
+    def cell(counts: Mapping, name: str, key: str | None) -> int:
+        return counts[name] if key is None else counts[name][key]
+
     for unit, counts in units.items():
-        lines.append(f"| {unit} | {counts['current_claims']} | {counts['paired_claims']} | "
-                     f"{counts['same_subject_pairs']} | "
-                     + " | ".join(str(counts["pairs_at_or_above"][key]) for key in keys)
-                     + f" | {counts['identical_text_at_or_above'][keys[0]]} | "
-                     f"{counts['same_source_at_or_above'][keys[0]]} |")
-    lines.append(f"| All | {sum(c['current_claims'] for c in units.values())} | "
-                 f"{sum(c['paired_claims'] for c in units.values())} | "
-                 f"{sum(c['same_subject_pairs'] for c in units.values())} | "
-                 + " | ".join(str(report["pairs"]["at_or_above"][key]) for key in keys)
-                 + f" | {sum(c['identical_text_at_or_above'][keys[0]] for c in units.values())} | "
-                 f"{sum(c['same_source_at_or_above'][keys[0]] for c in units.values())} |")
+        lines.append(f"| {unit} | " + " | ".join(str(cell(counts, *column)) for column in columns) + " |")
+    lines.append("| All | " + " | ".join(str(sum(cell(counts, *column) for counts in units.values()))
+                                         for column in columns) + " |")
     lines += ["", "## Labeled sample", "", "Every pair:", "", *_label_table(labels["all"]["bands"]), "",
               "Pairs whose texts differ (identical text set aside):", "",
               *_label_table(labels["paraphrases"]["bands"]), "",
@@ -854,6 +882,7 @@ def replay_main(args: argparse.Namespace) -> None:
 
 def report_main(args: argparse.Namespace) -> None:
     report = build_report(_read_json(args.pairs), _read_json(args.labels), _read_json(args.contexts))
+    report["code"]["report"] = code_state()
     _write_json(args.output, report)
     markdown = report_markdown(report)
     args.output.with_suffix(".md").write_text(markdown)

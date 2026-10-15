@@ -92,7 +92,15 @@ def test_pairs_need_a_shared_subject_and_appear_once_whatever_they_share():
     counts = pc.unit_counts(claims, pairs, same_subject)
     assert counts["pairs_at_or_above"] == {"0.90": 2, "0.95": 2, "0.97": 1}
     assert counts["identical_text_at_or_above"] == {"0.90": 1, "0.95": 1, "0.97": 1}
+    # Only a-b comes from two turns, and both its lines are short.
+    assert counts["short_other_turns_at_or_above"] == {"0.90": 1, "0.95": 1, "0.97": 0}
     assert counts["subjects"] == 4
+
+
+def test_short_lines_are_counted_after_the_turns_time_and_speaker():
+    assert pc._words("(1:56 pm on 8 May, 2023) Caroline: Thanks so much, Nate!") == 4
+    assert pc._words("I said (quietly) hi: there") == 5
+    assert pc._words("") == 0
 
 
 def test_the_sample_is_stratified_reproducible_and_keeps_its_total_when_a_band_runs_short():
