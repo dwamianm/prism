@@ -13,6 +13,13 @@ my_memories/
 
 This directory is portable — you can copy, backup, or encrypt it as a single unit.
 
+A pack can instead be one file, as an opt-in: a single-file pack (`memories.prme`)
+is one DuckDB database that holds the same data plus the vector snapshot and a
+pack manifest, and rebuilds its lexical index in memory on open. Give
+`MemoryClient` or `prme init` a path ending in `.prme`, or set `PRME_PACK_PATH`.
+`prme migrate ./my_memories ./memories.prme` copies an existing directory pack
+into one. See [single-file packs](../docs/INTEGRATION.md#single-file-packs).
+
 ### Initialization
 
 ```bash
@@ -35,6 +42,14 @@ Copy the entire directory while the engine is closed:
 
 ```bash
 cp -r ./my_memories ./my_memories_backup
+```
+
+A single-file pack is copied the same way, as one file. While its engine is
+open, DuckDB keeps recent changes in `memories.prme.wal` beside it, so copy the
+file after the engine closes:
+
+```bash
+cp ./memories.prme ./memories_backup.prme
 ```
 
 Or export as JSON:
@@ -92,7 +107,7 @@ Tables are created automatically on first connection. The PostgreSQL backend pro
 
 ## Encryption at Rest
 
-PRME can encrypt the memory pack at rest using Fernet (AES-128-CBC + HMAC-SHA256) with PBKDF2 key derivation.
+PRME can encrypt the memory pack at rest. A directory pack uses Fernet (AES-128-CBC + HMAC-SHA256) with PBKDF2 key derivation, as described below. A single-file pack uses DuckDB's native encryption instead; see [Single-file packs](#single-file-packs).
 
 ### Enabling Encryption
 
@@ -109,6 +124,8 @@ export PRME_ENCRYPTION_KEY=ZmVybmV0LWtleS1oZXJlLTQ0LWNoYXJzLWJhc2U2NA==
 
 ### How It Works
 
+For a directory pack:
+
 1. **On startup** (`MemoryEngine.create()`): Decrypts `.enc` files in the memory directory
 2. **During operation**: Data is unencrypted in memory and on disk
 3. **On shutdown** (`engine.close()`): Encrypts database, vector index, and lexical index files
@@ -117,20 +134,34 @@ Encrypted files have the `.enc` extension. A `manifest.json` records encryption 
 
 ### Key Derivation
 
-If the encryption key is a passphrase (not a 44-char Fernet key), PRME derives the key using:
+If the encryption key is a passphrase (not a 44-char Fernet key), PRME derives the key for a directory pack using:
 
 - Algorithm: PBKDF2-HMAC-SHA256
 - Iterations: 600,000
 - Salt: randomly generated, stored in the encrypted file header
 
+Prefix the key with `raw_key:` to mark a raw Fernet key, or with `passphrase:` to derive a key even from a value that looks like a Fernet key.
+
 ### Lock/Unlock
 
-You can encrypt/decrypt without closing the engine:
+You can encrypt/decrypt a directory pack without closing the engine:
 
 ```python
 engine.lock()    # Encrypt memory pack
 engine.unlock()  # Decrypt memory pack
 ```
+
+For a single-file pack, both raise `RuntimeError`: DuckDB keeps such a pack encrypted at all times.
+
+### Single-file packs
+
+A single-file pack (`PRME_PACK_PATH`, or a path ending in `.prme`) is encrypted by DuckDB itself when `PRME_ENCRYPTION_ENABLED` and `PRME_ENCRYPTION_KEY` are set, so it is never in clear text on disk, even while the engine runs:
+
+- DuckDB encrypts the file and its write-ahead log with AES-256-GCM. It does not encrypt its temporary files by default, even for an encrypted database, so PRME turns on DuckDB's `temp_file_encryption` and keeps those files in a `memories.prme.tmp` directory beside the pack, which can appear while the pack is open
+- A passphrase is turned into the DuckDB key with PBKDF2-HMAC-SHA256 (600,000 iterations) and the fixed salt `prme-single-file-pack-v1`, because a salt cannot be stored inside a file that needs the key to open. The same passphrase therefore gives the same key for every pack, so use a strong passphrase and do not reuse it across packs. A raw key is used as given
+- A missing key, a wrong key, or encryption configured for an unencrypted pack raises `EncryptionError` and leaves the file unchanged
+- An encrypted pack can be open in only one engine per process
+- `prme migrate ./my_memories ./memories.prme`, with the key configured, copies a Fernet-encrypted directory pack into a natively encrypted single-file pack and leaves the directory in place, encrypted
 
 ## Production Checklist
 

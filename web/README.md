@@ -25,8 +25,8 @@ folder used by `examples/chat.py`. When that is set, the explorer opens
 `memory.duckdb`, `vectors.usearch` and `lexical_index` inside it, so it shows the
 same memories as the chat example. The folder must already exist; the server
 stops with an error instead of creating an empty pack at a mistyped path. Without
-`PRME_CHAT_DATA_DIR` (or the paths below), PRME's defaults create a new pack in the
-current directory.
+`PRME_CHAT_DATA_DIR` (or the paths below, or `PRME_PACK_PATH`), PRME's defaults
+create a new pack in the current directory.
 
 To open a particular local pack, set its paths. Each one set this way wins over
 `PRME_CHAT_DATA_DIR`:
@@ -37,6 +37,10 @@ PRME_VECTOR_PATH=/absolute/path/to/pack/vectors.usearch \
 PRME_LEXICAL_PATH=/absolute/path/to/pack/lexical_index \
 uv run python -m web.server --port 8080
 ```
+
+A single-file pack opens with `PRME_PACK_PATH=/absolute/path/to/memories.prme`
+instead. When it is set, it takes the place of the three paths above and of the
+pack folder in `PRME_CHAT_DATA_DIR`.
 
 ### Demo pack
 

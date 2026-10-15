@@ -24,7 +24,7 @@ python -m prme.mcp --db-path ./my_memories
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--db-path` | Current directory | Path to the memory directory |
+| `--db-path` | Current directory | Path to the memory directory, or to a single-file pack when the name ends in `.prme` |
 | `--transport` | `stdio` | Transport protocol: `stdio`, or `streamable-http` (listens on `127.0.0.1:8000` only and requires `PRME_MCP_USER_KEYS`). `sse` is rejected. |
 
 ## Client Configuration
@@ -222,7 +222,7 @@ Resources provide read-only data access:
 The MCP server wraps the PRME `MemoryEngine` directly. When the server starts:
 
 1. It reads configuration from environment variables (`PRME_*` prefix)
-2. The `--db-path` flag sets `PRME_DB_PATH`, `PRME_VECTOR_PATH`, and `PRME_LEXICAL_PATH`
+2. The `--db-path` flag sets `PRME_DB_PATH`, `PRME_VECTOR_PATH`, and `PRME_LEXICAL_PATH` for a directory, and clears `PRME_PACK_PATH` so an ambient single-file pack cannot replace it; for a path ending in `.prme` it sets `PRME_PACK_PATH` instead
 3. A `MemoryEngine` is initialized with the configuration
 4. Tools and resources delegate to engine methods
 5. On shutdown, the engine is closed cleanly

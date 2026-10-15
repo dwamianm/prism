@@ -89,6 +89,13 @@ initialized project whose database disappears is not recreated as empty memory.
 Existing legacy packs require an explicit import procedure, which is not yet
 provided; do not copy them into a generated project directory.
 
+With `MemoryWorkspace(..., single_file_packs=True)` (also accepted by `open()`),
+each namespace pack is one file, `packs/<namespace UUID>/memory.prme`, instead
+of the directory layout (issue #247). The registry does not record which layout
+a workspace uses, so pass the flag the same way every time the workspace is
+opened. In directory mode the workspace clears an inherited `pack_path`, so a
+`PRME_PACK_PATH` in the environment cannot point every namespace at one file.
+
 Close the workspace before copying the entire directory, including its registry
 and packs. Reopening that copy preserves namespace IDs, sources and histories.
 Copying one pack into a differently registered project is rejected. Registry

@@ -330,4 +330,4 @@ debt = engine.materialization_debt
 await engine.close()
 ```
 
-Encrypts the memory pack if encryption is enabled, then closes all backends.
+Closes all backends, then, for a directory pack with encryption enabled, encrypts its files again. A single-file pack (`pack_path`) is encrypted by DuckDB the whole time it is open, so `close()` has nothing to encrypt; `lock()` and `unlock()` raise `RuntimeError` for such a pack.

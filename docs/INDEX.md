@@ -106,6 +106,11 @@ comparison that led to it.
 [Resource control for multiple local packs](LOCAL-RESOURCES.md) covers one pack per
 project, DuckDB worker counts and sharing an embedding provider.
 
+[Single-file packs](INTEGRATION.md#single-file-packs) covers the opt-in `.prme`
+layout, its native encryption, `prme compact` and `prme migrate`. The
+[RFC-0014 amendment](RFC-0014-Portability-Sync-and-Federation.md#single-file-pack-amendment-2026-10-14)
+records its format and rebuild-on-open behavior.
+
 [PostgreSQL vector eligibility and search mode](POSTGRES-VECTOR-SEARCH.md) explains
 exact vector search under owner, scope, lifecycle and validity filters, and the
 approximate mode's recall tradeoff.
