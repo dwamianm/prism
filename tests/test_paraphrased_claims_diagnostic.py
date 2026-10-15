@@ -409,22 +409,39 @@ async def test_a_built_pack_yields_its_paraphrase_pair_and_the_gate_contexts_tha
     assert set(written["code"]) == {"pairs", "replay", "report"} and output.with_suffix(".md").is_file()
     with pytest.raises(SystemExit, match="overwrite one of its inputs"):
         pc.main(["report", *arguments, "--output", str(files["pairs"])])
-    # A labeled sheet is never replaced by a new, empty one.
-    with pytest.raises(SystemExit, match="would discard its labels"):
-        pc.main(["pairs", "--packs", str(build), "--output", str(tmp_path / "again.json"),
-                 "--sheet", str(files["labels"])])
+    # A labeled sheet is never replaced: not by a new sheet, nor by the pairs or contexts output.
+    for arguments, message in (
+            (["pairs", "--output", str(tmp_path / "again.json"), "--sheet", str(files["labels"])],
+             "would discard its labels"),
+            (["pairs", "--output", str(files["labels"])], "holds a labeling sheet"),
+            (["pairs", "--output", str(tmp_path / "same.json"), "--sheet", str(tmp_path / "same.json")],
+             "two different files"),
+            (["replay", "--output", str(files["labels"])], "holds a labeling sheet")):
+        with pytest.raises(SystemExit, match=message):
+            pc.main([arguments[0], "--packs", str(build), *arguments[1:]])
+    # A reading that could not be estimated is named beside the decision.
+    report["decision"]["readings_undetermined"] = ["a reading"]
+    assert "Could not be estimated: a reading." in pc.report_markdown(report)
 
-    # Only current claims with a current subject edge are read: on a copy, retire one claim, close
-    # another's validity and close the third's HAS_FACT edge.
-    copy = tmp_path / "changed-pack"
-    shutil.copytree(build / "locomo" / "conv-1" / "pack", copy)
+    # Only current claims with a current subject edge are read. On one copy, retire one claim by its
+    # lifecycle state alone, mark another superseded by a successor alone and close the third's validity;
+    # on another, close one claim's HAS_FACT edge.
+    pack = build / "locomo" / "conv-1" / "pack"
     first, second, third = packs["conv-1"].ids
-    with duckdb.connect(str(copy / "memory.duckdb")) as db:
-        db.execute("UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ? WHERE id = ?", [second, first])
-        db.execute("UPDATE nodes SET valid_to = now() WHERE id = ?", [second])
-        db.execute("UPDATE edges SET valid_to = now() WHERE target_id = ? AND edge_type = 'has_fact'", [third])
-    changed = pc.read_pack(copy, unit="conv-1", user_id="conv-1", benchmark="locomo", pack_sha256="changed")
-    assert changed.ids == () and changed.counts["current_claims"] == 1 and changed.counts["without_subject"] == 1
+    for name, statements, current, without_subject in (
+            ("retired", [("UPDATE nodes SET lifecycle_state = 'superseded' WHERE id = ?", [first]),
+                         ("UPDATE nodes SET superseded_by = ? WHERE id = ?", [third, second]),
+                         ("UPDATE nodes SET valid_to = now() WHERE id = ?", [third])], 0, 0),
+            ("no-subject", [("UPDATE edges SET valid_to = now() WHERE target_id = ? AND edge_type = 'has_fact'",
+                             [first])], 3, 1)):
+        copy = tmp_path / name
+        shutil.copytree(pack, copy)
+        with duckdb.connect(str(copy / "memory.duckdb")) as db:
+            for statement, parameters in statements:
+                db.execute(statement, parameters)
+        changed = pc.read_pack(copy, unit="conv-1", user_id="conv-1", benchmark="locomo", pack_sha256=name)
+        assert (changed.counts["current_claims"], changed.counts["without_subject"]) == (current, without_subject)
+        assert len(changed.ids) == current - without_subject and first not in changed.ids
 
 
 def test_a_step_outside_a_git_checkout_is_refused(monkeypatch):

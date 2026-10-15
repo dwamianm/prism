@@ -515,8 +515,8 @@ def check_labels(sheet: Mapping, pairs_doc: Mapping) -> list[Mapping]:
         raise ValueError(f"The sheet must be drawn with seed {SAMPLE_SEED} and sizes {SAMPLE_SIZES}")
     if sheet.get("pairs_sha256") != digest(pairs_doc["pairs"]):
         raise ValueError("The sheet was drawn from other pairs")
-    expected = [pair_id(pair) for pair in sample_pairs(pairs_doc["pairs"], SAMPLE_SIZES, SAMPLE_SEED)]
-    if [row["id"] for row in sheet["pairs"]] != expected:
+    expected = [pair_id(pair) for pair in sample_pairs(pairs_doc["pairs"])]
+    if [row["id"] for row in sheet.get("pairs") or []] != expected:
         raise ValueError("The sheet's pairs are not the sample its seed draws")
     by_id = {pair_id(pair): pair for pair in pairs_doc["pairs"]}
     for row in sheet["pairs"]:
@@ -844,7 +844,8 @@ def report_markdown(report: Mapping) -> str:
         + (f"holds in {', '.join(second['bands_meeting_rule'])}." if second["holds"] else "fails.")
         + " " + ("Readings that would change the decision: " + "; ".join(decision["readings_that_change_the_decision"])
                  + "." if decision["readings_that_change_the_decision"]
-                 else "None of the other readings below changes the decision."),
+                 else "None of the other readings below changes the decision.")
+        + ("".join(f" Could not be estimated: {name}." for name in decision["readings_undetermined"])),
         "",
         f"Contexts: {contexts['questions']} questions, {contexts['records_mean']:.1f} packed records per context, "
         f"{contexts['claims_mean']:.1f} of them current claims with a subject entity, "
@@ -928,9 +929,22 @@ def _write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
 
 
+def _keep_labels(path: Path) -> None:
+    """Refuse to write over a labeling sheet, whose labels are the one input that cannot be rebuilt."""
+    try:
+        kind = json.loads(path.read_bytes()).get("kind") if path.is_file() else None
+    except (ValueError, AttributeError):
+        kind = None
+    if kind == LABELS_KIND:
+        raise SystemExit(f"{path} holds a labeling sheet; writing there would discard its labels")
+
+
 def pairs_main(args: argparse.Namespace) -> None:
     if args.sheet is not None and args.sheet.exists():
         raise SystemExit(f"{args.sheet} exists; a new sheet would discard its labels")
+    if args.sheet is not None and args.output.resolve() == args.sheet.resolve():
+        raise SystemExit("The pairs and the sheet need two different files")
+    _keep_labels(args.output)
     with tempfile.TemporaryDirectory(prefix="prme-paraphrased-claims-") as scratch:
         pairs_doc, packs = collect_pairs(args.packs, args.benchmark, scratch=Path(scratch))
     _write_json(args.output, pairs_doc)
@@ -940,6 +954,7 @@ def pairs_main(args: argparse.Namespace) -> None:
 
 
 def replay_main(args: argparse.Namespace) -> None:
+    _keep_labels(args.output)
     product_packing._quiet_offline_cli()
     last_done = 0
 
