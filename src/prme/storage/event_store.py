@@ -15,7 +15,7 @@ import duckdb
 
 from prme.models import Event, MemoryNode, ProcessingStatus
 from prme.models.direct_store import DirectStoreRecord, direct_store_operation_id
-from prme.models.extraction import ExtractionRecord, extraction_operation_id
+from prme.models.extraction import ExtractionBatchRecord, ExtractionRecord, extraction_operation_id
 from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.storage._threading import run_to_completion
 from prme.storage.fast_ingest import (
@@ -25,8 +25,13 @@ from prme.storage.fast_ingest import (
     replay_fast_ingest,
     validate_fast_ingest_record,
 )
-from prme.storage.extraction_work import ExtractionWorkRepository, insert_duck_work, validate_duck_claim
-from prme.models.extraction_work import ExtractionClaim
+from prme.storage.extraction_work import (
+    ExtractionWorkRepository,
+    duck_claim_row,
+    insert_duck_work,
+    validate_duck_claim,
+)
+from prme.models.extraction_work import ExtractionClaim, StaleExtractionClaimError
 from prme.types import Scope
 
 # Explicit column list used in all SELECT queries to avoid positional
@@ -191,6 +196,84 @@ class EventStore:
             validate_duck_claim(self._conn, str(record.event_id), record.user_id, claim)
             self._conn.execute("COMMIT")
             return saved
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
+    async def get_extraction_batch(self, batch_id: str, *, user_id: str) -> ExtractionBatchRecord | None:
+        """Read a batched extraction request and its response through its owner (#254)."""
+        async with self._conn_lock:
+            return await run_to_completion(self._get_extraction_batch_sync, str(batch_id), user_id)
+
+    def _get_extraction_batch_sync(self, batch_id: str, user_id: str) -> ExtractionBatchRecord | None:
+        row = self._conn.execute(
+            "SELECT o.payload FROM operations o JOIN events e ON o.target_id = e.id::VARCHAR "
+            "WHERE o.id = ? AND e.user_id = ? AND o.op_type = 'EXTRACTION_BATCH_RECORDED'",
+            [str(UUID(batch_id)), user_id],
+        ).fetchone()
+        if row is None:
+            return None
+        batch = ExtractionBatchRecord.model_validate_json(json.loads(row[0])["batch"])
+        if str(batch.id) != str(UUID(batch_id)) or batch.user_id != user_id:
+            raise ValueError("Extraction batch record does not match its identity")
+        return batch
+
+    async def record_extraction_batch(self, batch: ExtractionBatchRecord, records: Sequence[ExtractionRecord], *,
+                                      claim: ExtractionClaim | None = None) -> None:
+        """Save a batched request, its response and each turn's checked extraction together (#254).
+
+        It is written under the lease of the job whose worker sent the
+        request, whose claim is checked before and after as
+        record_extraction checks a turn's own. The other turns' jobs are
+        pending behind that job in work order, so none of them can be claimed
+        while it runs; each loads its record when its turn comes. A turn that
+        already has a record keeps it.
+        """
+        batch = ExtractionBatchRecord.model_validate_json(batch.model_dump_json())
+        records = [ExtractionRecord.model_validate_json(record.model_dump_json()) for record in records]
+        async with self._conn_lock:
+            await run_to_completion(self._record_extraction_batch_sync, batch, records, claim)
+
+    def _record_extraction_batch_sync(self, batch: ExtractionBatchRecord, records: list[ExtractionRecord],
+                                      claim: ExtractionClaim | None) -> None:
+        head = str(batch.head_event_id)
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            validate_duck_claim(self._conn, head, batch.user_id, claim)
+            sender = self._conn.execute("SELECT user_id, scope FROM events WHERE id = ?", [head]).fetchone()
+            if sender is None or tuple(sender) != (batch.user_id, batch.scope.value):
+                raise ValueError("Extraction batch does not match the job that sent it")
+            if {str(record.event_id) for record in records} != {str(turn.event_id) for turn in batch.turns}:
+                raise ValueError("A batched extraction saves one record for each of its turns")
+            for record in records:
+                source = self._conn.execute(
+                    "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(record.event_id)],
+                ).fetchone()
+                if source is None:
+                    raise ValueError("Extraction requires a matching persisted source event")
+                record.verify_source(*source)
+                batch.verify_turn(record.event_id, *source)
+                if record.batch_id != batch.id:
+                    raise ValueError("Extraction record does not name its batch")
+                if claim is None and duck_claim_row(self._conn, str(record.event_id)) is not None:
+                    # Managed work is written only under a claim that orders it.
+                    raise StaleExtractionClaimError("Extraction work requires a claim")
+            self._conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                "VALUES (?, 'EXTRACTION_BATCH_RECORDED', ?, ?, 'extraction', ?, ?) ON CONFLICT (id) DO NOTHING",
+                [str(batch.id), head, json.dumps({"batch": batch.model_dump_json()}),
+                 batch.scope.value, batch.created_at],
+            )
+            for record in records:
+                self._conn.execute(
+                    "INSERT INTO operations (id, op_type, target_id, payload, actor_id, "
+                    "namespace_id, created_at) VALUES (?, 'EXTRACTION_VALIDATED', ?, ?, ?, ?, ?) "
+                    "ON CONFLICT (id) DO NOTHING",
+                    [record.operation_id, str(record.event_id), record.model_dump_json(),
+                     "extraction", record.scope.value, record.created_at],
+                )
+            validate_duck_claim(self._conn, head, batch.user_id, claim)
+            self._conn.execute("COMMIT")
         except BaseException:
             self._conn.execute("ROLLBACK")
             raise

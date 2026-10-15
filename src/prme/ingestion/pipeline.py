@@ -58,6 +58,36 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 
+# The admission validator that fresh extractions record. v14 adds explicit
+# correction and caller-declared owner-reference planning.
+_GROUNDING_POLICY: Literal["speech_act_v14"] = "speech_act_v14"
+
+# Batched extraction (extraction_batch_target_tokens, #254). Seconds after an
+# ingest() that does not wait before the queued turns of its owner and scope
+# are extracted, unless a waiting ingest(), ingest_batch(),
+# process_extractions() or the engine's close extracts them sooner.
+BATCH_FLUSH_SECONDS = 30.0
+# Pending turns a batch looks at after its first; the token target ends a
+# batch long before this.
+_BATCH_SCAN_LIMIT = 1000
+# Failures that mean a batched response arrived but did not validate as a
+# whole: unparseable, truncated or wrongly shaped output.
+_VALIDATION_FAILURES = frozenset({
+    "ValidationError", "AsyncValidationError", "IncompleteOutputException", "ResponseParsingError",
+    "JSONDecodeError",
+})
+# Failures a batch of several turns is asked again in halves for. A batch that
+# takes longer than the provider's timeout, or that the provider refuses as too
+# large, most likely does so because of its size, and asking the same batch
+# again would fail the same way. A connection, rate-limit or server failure is
+# not split: it would most likely fail both halves too, so it follows the
+# per-turn retry policy at once.
+_HALVABLE_FAILURES = _VALIDATION_FAILURES | {"TimeoutError", "BadRequestError"}
+
+
+class BatchSplitStopped(ExtractionError):
+    """A single turn of a split request timed out or was refused, so the rest of the split is not asked."""
+
 # Fact type to NodeType mapping
 _FACT_TYPE_TO_NODE_TYPE: dict[str, NodeType] = {
     "decision": NodeType.DECISION,
@@ -147,7 +177,16 @@ class IngestionPipeline:
         bind_speaker_references: bool = False,
         claim_sentence_text: bool = False,
         speaker_grounding: bool = False,
+        extraction_batch_target_tokens: int = 0,
     ) -> None:
+        if extraction_batch_target_tokens > 0:
+            from prme.ingestion.extraction import BatchExtractionProvider
+
+            if extraction_window_turns > 0 or resolve_fact_text:
+                raise ValueError("Batched extraction cannot be combined with the extraction window "
+                                 "or fact text resolution")
+            if not isinstance(extraction_provider, BatchExtractionProvider):
+                raise ValueError("Batched extraction needs a provider with extract_batch()")
         self._event_store = event_store
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -168,6 +207,12 @@ class IngestionPipeline:
         self._claim_sentence_text = claim_sentence_text
         # Let a named speaker's own I, me and my ground a claim about them, by name or as I.
         self._speaker_grounding = speaker_grounding
+        # Extract several turns of a session per model call (#254). Zero, the
+        # default, extracts each turn in its own call as soon as it is ingested.
+        self._batch_target_tokens = max(0, extraction_batch_target_tokens)
+        self._batch_flush_seconds = BATCH_FLUSH_SECONDS
+        # One pending flush per owner and scope, armed by ingest() without waiting.
+        self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
@@ -224,10 +269,42 @@ class IngestionPipeline:
 
         Returns:
             String UUID of the persisted event.
+
+        With extraction_batch_target_tokens above zero (#254), Phase 2 runs
+        in batches: a waiting call extracts every queued turn of its owner
+        and scope up to and including this one, and a call that does not
+        wait queues the turn for the flush :meth:`_arm_flush` schedules.
         """
         validate_source_time(event_time)
 
         # --- Phase 1: Persist event immediately ---
+        event, event_id = await self._append_event(content, user_id=user_id, role=role, session_id=session_id,
+                                                   metadata=metadata, event_time=event_time, scope=scope)
+
+        # --- Phase 2: Extract and materialize ---
+        if self._batch_target_tokens > 0:
+            if wait_for_extraction:
+                through = await self._event_store.extraction_work.work_order(user_id=user_id, event_id=event_id)
+                await self._flush(user_id, scope, through=through, wait_for=[event_id])
+            else:
+                self._arm_flush(user_id, scope)
+            return str(event.id)
+        task = asyncio.create_task(
+            self._extract_and_materialize(event, event_id, scope, raise_errors=wait_for_extraction)
+        )
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
+        if wait_for_extraction:
+            await task
+
+        return str(event.id)
+
+    async def _append_event(
+        self, content: str, *, user_id: str, role: str, session_id: str | None, metadata: dict | None,
+        event_time: datetime | None, scope: Scope,
+    ) -> tuple[Event, str]:
+        """Phase 1: persist the event and its durable extraction job; returns it and its stored ID."""
         event = Event(
             content=content,
             user_id=user_id,
@@ -253,18 +330,7 @@ class IngestionPipeline:
             role=role,
             session_id=session_id,
         )
-
-        # --- Phase 2: Extract and materialize ---
-        task = asyncio.create_task(
-            self._extract_and_materialize(event, event_id, scope, raise_errors=wait_for_extraction)
-        )
-        self._background_tasks.add(task)
-        task.add_done_callback(self._background_tasks.discard)
-
-        if wait_for_extraction:
-            await task
-
-        return str(event.id)
+        return event, event_id
 
     async def ingest_batch(
         self,
@@ -290,7 +356,16 @@ class IngestionPipeline:
 
         Returns:
             List of event ID strings, one per message.
+
+        With extraction_batch_target_tokens above zero (#254), every message
+        is persisted first and the batch's end is a flush point: its turns,
+        and any queued before them, are extracted in batches, awaited when
+        ``wait_for_extraction`` is set and in the background otherwise. A
+        failed extraction is then raised after every message is persisted.
         """
+        if self._batch_target_tokens > 0:
+            return await self._ingest_batch_batched(messages, user_id=user_id, session_id=session_id,
+                                                    wait_for_extraction=wait_for_extraction, scope=scope)
         event_ids: list[str] = []
         for msg in messages:
             event_id = await self.ingest(
@@ -306,24 +381,171 @@ class IngestionPipeline:
             event_ids.append(event_id)
         return event_ids
 
-    async def _extract_and_materialize(
-        self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL,
-        *, retry_attempt: int = 0, raise_errors: bool = False, claim: ExtractionClaim | None = None,
-    ) -> None:
+    async def _ingest_batch_batched(
+        self, messages: list[dict], *, user_id: str, session_id: str | None, wait_for_extraction: bool,
+        scope: Scope,
+    ) -> list[str]:
+        for msg in messages:
+            validate_source_time(msg.get("event_time"))
+        event_ids = []
+        try:
+            for msg in messages:
+                event, _ = await self._append_event(msg["content"], user_id=user_id, role=msg["role"],
+                                                    session_id=session_id, metadata=msg.get("metadata"),
+                                                    event_time=msg.get("event_time"), scope=scope)
+                event_ids.append(str(event.id))
+        except BaseException:
+            # The messages saved before the failure are still extracted.
+            if event_ids:
+                self._arm_flush(user_id, scope)
+            raise
+        if not event_ids:
+            return event_ids
+        through = await self._event_store.extraction_work.work_order(user_id=user_id, event_id=event_ids[-1])
+        if wait_for_extraction:
+            await self._flush(user_id, scope, through=through, wait_for=event_ids)
+        else:
+            self._spawn(self._flush(user_id, scope, through=through))
+        return event_ids
+
+    def _scope_lock(self, user_id: str, scope: Scope) -> asyncio.Lock:
         # Avoid turning ordinary concurrent in-process ingestion into a busy
         # error. Database claims remain the cross-worker ownership boundary.
-        key = (event.user_id, scope)
+        key = (user_id, scope)
         lock = self._scope_locks.get(key)
         if lock is None:
             lock = asyncio.Lock()
             self._scope_locks[key] = lock
-        async with lock:
+        return lock
+
+    async def _extract_and_materialize(
+        self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL,
+        *, retry_attempt: int = 0, raise_errors: bool = False, claim: ExtractionClaim | None = None,
+        through: int | None = None,
+    ) -> None:
+        async with self._scope_lock(event.user_id, scope):
             await self._run_extraction(event, event_id, scope, retry_attempt=retry_attempt,
-                                       raise_errors=raise_errors, claim=claim)
+                                       raise_errors=raise_errors, claim=claim, through=through)
+
+    def _spawn(self, coroutine) -> asyncio.Task:
+        """Run background extraction work that shutdown drains, logging a failure it did not handle."""
+        async def run() -> None:
+            try:
+                await coroutine
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.error("ingestion.background_extraction_failed", error_type=type(exc).__name__)
+
+        task = asyncio.create_task(run())
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
+
+    def _arm_flush(self, user_id: str, scope: Scope) -> None:
+        """Extract the owner's queued turns in this scope after BATCH_FLUSH_SECONDS (#254).
+
+        An ingest() that does not wait queues its turn, so turns that arrive
+        together can share a request. The first such turn arms one flush;
+        turns that arrive before it fires join it, and the next turn after it
+        arms the next. So no queued turn waits longer than the delay, while a
+        caller that ingests a session's turns and then flushes them itself,
+        with a waiting ingest(), ingest_batch() or process_extractions(),
+        decides how they are batched, independent of timing. The engine's
+        close extracts what an armed flush was still waiting for; a turn
+        queued when the process stops stays pending, durably, until the
+        next flush of its owner and scope or process_extractions().
+        """
+        scope = Scope(scope)
+        key = (user_id, scope)
+        armed = self._flush_timers.get(key)
+        if self._closing or (armed is not None and not armed.done()):
+            return
+
+        async def fire() -> None:
+            await asyncio.sleep(self._batch_flush_seconds)
+            if self._flush_timers.get(key) is asyncio.current_task():
+                del self._flush_timers[key]
+            self._spawn(self._flush(user_id, scope))
+
+        self._flush_timers[key] = asyncio.create_task(fire())
+
+    async def _flush(self, user_id: str, scope: Scope, *, through: int | None = None,
+                     wait_for: list[str] | None = None) -> None:
+        """Extract the queued turns of one owner and scope, several per call (#254).
+
+        Processes the jobs queued at or before work order ``through`` (by
+        default, every job queued when the flush begins) in work order, under
+        the scope lock, so no turn ingested later joins one of its batches.
+        Each job is claimed and published on its own, as without batching;
+        the first job of a batch sends the request, and the jobs after it
+        load the extraction records it saved. A job whose extraction fails
+        stops the flush, since later jobs wait behind it, and its retry
+        flushes again. The jobs in ``wait_for`` are the caller's: a failure
+        of one of them is raised, as a waiting ingest() raises its own.
+
+        A flush that leaves jobs it was meant to process, because another
+        worker still holds an earlier one, a terminal failure ended a retry
+        or a claim met a write conflict, arms the next flush, so they do not
+        wait for the owner's next ingest().
+        """
+        scope = Scope(scope)
+        wait_for = wait_for or []
+        waiting = set(wait_for)
+        work = self._event_store.extraction_work
+        async with self._scope_lock(user_id, scope):
+            if through is None:
+                through = await work.work_order(user_id=user_id)
+            try:
+                while through is not None:
+                    claim = await work.claim(user_id=user_id, scope=scope.value, through_order=through,
+                                             lease_seconds=self._extraction_lease_seconds)
+                    if claim is None:
+                        break
+                    event = await self._event_store.get(str(claim.event_id))
+                    if event is None or event.user_id != user_id:
+                        raise RuntimeError("Claimed extraction source is unavailable")
+                    await self._run_extraction(event, str(event.id), event.scope, claim=claim,
+                                               raise_errors=str(event.id) in waiting, through=through)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # A caller's own failure is raised, and the jobs left behind it
+                # still get a flush.
+                await self._arm_if_unfinished(user_id, scope, through)
+                raise
+            await self._arm_if_unfinished(user_id, scope, through)
+            for event_id in wait_for:
+                status = await work.status(event_id, user_id=user_id)
+                if status is not None and status.status == "complete":
+                    continue
+                # Not reached by the flush: it waits behind earlier work, or
+                # failed before. Claim it as a waiting ingest() does, which
+                # raises when it still cannot run.
+                event = await self._event_store.get(event_id)
+                if event is None:
+                    raise RuntimeError("Extraction source is unavailable")
+                await self._run_extraction(event, event_id, event.scope, raise_errors=True, through=through)
+
+    async def _arm_if_unfinished(self, user_id: str, scope: Scope, through: int | None) -> None:
+        """Arm the next flush when jobs at or before ``through`` are still unfinished (#254)."""
+        if through is None:
+            return
+        try:
+            unfinished = await self._event_store.extraction_work.pending_count(
+                user_id=user_id, scope=scope.value, through_order=through)
+        except Exception as exc:
+            # The store that failed this check would fail the flush too; the
+            # next ingest() or process_extractions() picks the work up.
+            logger.error("ingestion.extraction_flush_check_failed", error_type=type(exc).__name__)
+            return
+        if unfinished:
+            self._arm_flush(user_id, scope)
 
     async def _run_extraction(
         self, event: Event, event_id: str, scope: Scope = Scope.PERSONAL,
         *, retry_attempt: int = 0, raise_errors: bool = False, claim: ExtractionClaim | None = None,
+        through: int | None = None,
     ) -> None:
         """Run LLM extraction, validate grounding, and materialize results.
 
@@ -360,7 +582,7 @@ class IngestionPipeline:
         try:
             plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
             if plan is None:
-                result = await self._extract_or_load(event, claim=claim)
+                result = await self._extract_or_load(event, claim=claim, through=through)
                 await self._materialize(result, event, event_id, scope, claim=claim)
             else:
                 await self._publish_plan(plan, claim=claim)
@@ -411,6 +633,7 @@ class IngestionPipeline:
                                 retry_attempt=1,
                                 raise_errors=raise_errors,
                                 claim=recovered,
+                                through=through,
                             )
                             return
                     # A successor may have won the reclaim race, or the one
@@ -449,10 +672,14 @@ class IngestionPipeline:
             raise ValueError("Extraction processing requires user_id and nonnegative finite bounds")
         started, processed = time.monotonic(), 0
         work = self._event_store.extraction_work
+        # Batched extraction (#254) is a flush: it takes the jobs queued when
+        # it begins, so a turn ingested meanwhile never joins its batches.
+        through = await work.work_order(user_id=user_id) if self._batch_target_tokens > 0 else None
         for _ in range(limit):
             if (time.monotonic() - started) * 1000 >= budget_ms:
                 break
-            claim = await work.claim(user_id=user_id, lease_seconds=self._extraction_lease_seconds)
+            claim = await work.claim(user_id=user_id, lease_seconds=self._extraction_lease_seconds,
+                                     through_order=through)
             if claim is None:
                 break
             event = await self._event_store.get(str(claim.event_id))
@@ -460,7 +687,7 @@ class IngestionPipeline:
                 raise RuntimeError("Claimed extraction source is unavailable")
             try:
                 await self._extract_and_materialize(event, str(event.id), event.scope,
-                                                    claim=claim, raise_errors=True)
+                                                    claim=claim, raise_errors=True, through=through)
             except ExtractionError:
                 continue
             status = await work.status(str(event.id), user_id=user_id)
@@ -488,14 +715,20 @@ class IngestionPipeline:
         earlier = [item for item in recent if str(item.id) != str(event.id)]
         return [item for item in reversed(earlier[: self._extraction_window_turns]) if item.content]
 
-    async def _extract_or_load(self, event: Event, *, claim: ExtractionClaim | None = None) -> ExtractionResult:
+    async def _extract_or_load(self, event: Event, *, claim: ExtractionClaim | None = None,
+                               through: int | None = None) -> ExtractionResult:
         """Reuse durable validated output after downstream failure or restart.
 
         This saves inference results, not graph completion. It does not make
         materialization safe to replay after an interrupted graph write.
+        With batched extraction, a turn whose output a batch already saved
+        loads it here like any saved output, and a turn without one sends a
+        batch (``through`` bounds the turns it may carry).
         """
         saved = await self._event_store.get_extraction(str(event.id), user_id=event.user_id)
-        if saved is None:
+        if saved is None and self._batch_target_tokens > 0:
+            saved = await self._extract_in_batch(event, claim=claim, through=through)
+        elif saved is None:
             window = await self._extraction_window(event)
             # A turn's speaker labels it, so the extractor can tell who said
             # what; a turn whose text already names its speaker is unchanged.
@@ -524,8 +757,7 @@ class IngestionPipeline:
                 content_hash=event.content_hash,
                 provider=self._extraction_provider.provider_name,
                 model=self._extraction_provider.model_name,
-                # v14 adds explicit correction and caller-declared owner-reference planning.
-                grounding_policy="speech_act_v14",
+                grounding_policy=_GROUNDING_POLICY,
                 result=result.model_dump(mode="json"),
             )
             saved = await self._write_queue.submit(
@@ -534,6 +766,158 @@ class IngestionPipeline:
             )
         saved.verify_source(event.user_id, event.scope.value, event.content_hash)
         return ExtractionResult.model_validate(saved.result)
+
+    async def _extract_in_batch(self, head: Event, *, claim: ExtractionClaim | None,
+                                through: int | None) -> ExtractionRecord:
+        """Extract ``head`` in one request with the queued turns of its session after it (#254).
+
+        The request's turns follow event time, and their order in the queue
+        breaks ties. Every turn's checked output is saved as its own
+        extraction record, under ``head``'s claim; ``head``'s record is
+        returned. A failure is raised only when ``head`` got no record, so a
+        turn whose part of a split request failed waits for its own job,
+        when it sends a request of its own.
+        """
+        events = await self._batch_events(head, through)
+        events.sort(key=lambda item: item.event_time or item.timestamp)
+        failure: ExtractionError | None = None
+        try:
+            await self._request_batch(head, events, claim=claim)
+        except ExtractionError as exc:
+            failure = exc
+        saved = await self._event_store.get_extraction(str(head.id), user_id=head.user_id)
+        if saved is None:
+            raise failure or ExtractionError("Batched extraction saved no output for this turn",
+                                             event_id=str(head.id), reason_code="ExtractionError")
+        if failure is not None:
+            # Part of a split request failed; its turns send their own requests later.
+            logger.warning("ingestion.extraction_batch_part_failed", event_id=str(head.id),
+                           reason=failure.reason_code)
+        return saved
+
+    async def _batch_events(self, head: Event, through: int | None) -> list[Event]:
+        """``head`` and the queued turns of its session that fit with it, in queue order.
+
+        Turns are added while the sum of their text tokens stays within the
+        target. The first that does not fit ends the batch, so a turn larger
+        than the target goes alone. A turn without a session goes alone, and
+        a turn whose output is already saved needs no request.
+        """
+        from prme.retrieval.tokenization import count_tokens
+
+        events = [head]
+        if not head.session_id:
+            return events
+        used = count_tokens(head.content)
+        pending = await self._event_store.extraction_work.pending_in_session(
+            str(head.id), user_id=head.user_id, through_order=through, limit=_BATCH_SCAN_LIMIT,
+        )
+        for event_id in pending:
+            if used >= self._batch_target_tokens:
+                break
+            event = await self._event_store.get(event_id)
+            if (event is None or event.user_id != head.user_id or event.scope != head.scope
+                    or event.session_id != head.session_id):
+                continue
+            if await self._event_store.get_extraction(event_id, user_id=head.user_id) is not None:
+                continue
+            tokens = count_tokens(event.content)
+            if used + tokens > self._batch_target_tokens:
+                break
+            events.append(event)
+            used += tokens
+        return events
+
+    async def _request_batch(self, head: Event, events: list[Event], *,
+                             claim: ExtractionClaim | None) -> None:
+        """Send one batched request and save each turn's output, or ask again in halves.
+
+        A response that fails validation as a whole, or a request that times
+        out or is refused as too large (``_HALVABLE_FAILURES``), is asked
+        again as two halves, recursively, so one bad turn does not fail its
+        neighbors. A batch of n turns whose responses keep failing validation
+        makes at most 2n - 1 requests. A single turn that times out or is
+        refused points at the provider rather than at the batch's size, so
+        it stops the whole split (``BatchSplitStopped``): a provider that does
+        not answer costs about log2(n) + 1 requests, not 2n - 1. A single
+        turn that still fails is raised, and so is any other failure. Each
+        request that succeeds is saved at once, with its turns' records.
+        """
+        from prme.ingestion.extraction import (
+            BatchTurn,
+            batch_request_sha256,
+            batch_response_fields,
+            validate_batch_output,
+        )
+        from prme.models.extraction import ExtractionBatchRecord, ExtractionBatchTurn
+
+        turns = [
+            BatchTurn(index=index, role=event.role, content=event.content,
+                      speaker=metadata_speaker(event.metadata), time=event.event_time or event.timestamp)
+            for index, event in enumerate(events, start=1)
+        ]
+        try:
+            async with self._extraction_semaphore:
+                raw = await self._extraction_provider.extract_batch(turns)
+            if hasattr(raw, "model_dump"):
+                raw = raw.model_dump(mode="json")
+            # The speaker is shown to the model either way; grounding accepts
+            # the speaker's own I, me and my only with speaker grounding on.
+            speakers = {turn.index: turn.speaker for turn in turns} if self._speaker_grounding else {}
+            results = validate_batch_output(raw, turns, speakers=speakers)
+        except ExtractionError as exc:
+            if len(events) == 1 and exc.reason_code in _HALVABLE_FAILURES - _VALIDATION_FAILURES:
+                raise BatchSplitStopped(str(exc), event_id=exc.event_id, reason_code=exc.reason_code) from exc
+            if len(events) == 1 or exc.reason_code not in _HALVABLE_FAILURES:
+                raise
+            logger.warning("ingestion.extraction_batch_halved", event_id=str(head.id), turns=len(events),
+                           reason=exc.reason_code)
+            middle = len(events) // 2
+            failure: ExtractionError | None = None
+            for half in (events[:middle], events[middle:]):
+                try:
+                    await self._request_batch(head, half, claim=claim)
+                except BatchSplitStopped:
+                    raise
+                except ExtractionError as half_failure:
+                    if half_failure.reason_code not in _HALVABLE_FAILURES:
+                        raise
+                    failure = failure or half_failure
+            if failure is not None:
+                raise failure
+            return
+        batch = ExtractionBatchRecord(
+            user_id=head.user_id, scope=head.scope, session_id=head.session_id, head_event_id=head.id,
+            provider=self._extraction_provider.provider_name, model=self._extraction_provider.model_name,
+            request_sha256=batch_request_sha256(turns),
+            turns=tuple(
+                ExtractionBatchTurn(index=turn.index, event_id=event.id, role=event.role, speaker=turn.speaker,
+                                    event_time=turn.time, content_hash=event.content_hash)
+                for turn, event in zip(turns, events, strict=True)
+            ),
+            response=batch_response_fields(raw),
+        )
+        records = []
+        for turn, event in zip(turns, events, strict=True):
+            # The same checks a single turn's output gets, against this turn alone.
+            speaker = turn.speaker if self._speaker_grounding else None
+            result = validate_grounding(results[turn.index], event.content, speaker=speaker)
+            result = self._check_resolved_text(result, event, [])
+            records.append(ExtractionRecord(
+                event_id=event.id, user_id=event.user_id, scope=event.scope,
+                content_hash=event.content_hash,
+                provider=self._extraction_provider.provider_name,
+                model=self._extraction_provider.model_name,
+                grounding_policy=_GROUNDING_POLICY,
+                result=result.model_dump(mode="json"),
+                batch_id=batch.id,
+            ))
+        await self._write_queue.submit(
+            lambda: self._event_store.record_extraction_batch(batch, records, claim=claim),
+            label=f"extraction.batch:{batch.id}",
+        )
+        logger.info("ingestion.extraction_batch_saved", event_id=str(head.id), batch_id=str(batch.id),
+                    turns=len(events))
 
     def _check_resolved_text(self, result: ExtractionResult, event: Event, window: list[Event]) -> ExtractionResult:
         """Keep each fact's resolved text only when it passes its check (#91).
@@ -1162,6 +1546,11 @@ class IngestionPipeline:
 
         async def _retry() -> None:
             await asyncio.sleep(delay)
+            if self._batch_target_tokens > 0:
+                # The jobs queued behind this one wait for it, so its retry
+                # flushes the queue from it on (#254).
+                await self._flush(event.user_id, scope)
+                return
             await self._extract_and_materialize(event, event_id, scope, retry_attempt=attempt)
 
         task = asyncio.create_task(_retry())
@@ -1196,6 +1585,17 @@ class IngestionPipeline:
                 *self._retry_tasks.values(), return_exceptions=True
             )
         self._retry_tasks.clear()
+
+        # A flush still waiting for its delay runs now, so the turns it waited
+        # for are extracted within the drain timeout below, as a background
+        # extraction is without batching (#254).
+        for key, timer in list(self._flush_timers.items()):
+            if not timer.done():
+                timer.cancel()
+                self._spawn(self._flush(*key))
+        if self._flush_timers:
+            await asyncio.gather(*self._flush_timers.values(), return_exceptions=True)
+        self._flush_timers.clear()
 
         # Drain background extraction tasks with a timeout
         bg_tasks = list(self._background_tasks)

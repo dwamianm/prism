@@ -686,6 +686,7 @@ class MemoryEngine:
                 bind_speaker_references=config.enable_speaker_references,
                 claim_sentence_text=config.enable_claim_sentence_text,
                 speaker_grounding=config.enable_speaker_grounding,
+                extraction_batch_target_tokens=config.extraction_batch_target_tokens,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -835,6 +836,7 @@ class MemoryEngine:
                 bind_speaker_references=config.enable_speaker_references,
                 claim_sentence_text=config.enable_claim_sentence_text,
                 speaker_grounding=config.enable_speaker_grounding,
+                extraction_batch_target_tokens=config.extraction_batch_target_tokens,
             )
 
             startup.push_async_callback(pipeline.shutdown)

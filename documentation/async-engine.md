@@ -114,6 +114,13 @@ may compute new embeddings. It does not preempt live or completed work, or repea
 the model's extraction. Legacy sources without work records are not automatically
 enrolled.
 
+With `PRME_EXTRACTION_BATCH_TARGET_TOKENS` above zero, extraction runs in
+batches of a session's turns (see
+[batched extraction](../docs/INTEGRATION.md#batched-extraction)):
+`ingest(wait_for_extraction=False)` queues the turn, a waiting `ingest()`
+extracts the queue through its own turn, and `ingest_batch()` saves every
+message before extracting them together.
+
 With `wait_for_extraction=True`, failure raises `ExtractionError`; its `event_id`
 identifies the persisted source and `reason_code` gives the sanitized failure
 category when available. Import it from `prme`. A successful empty extraction

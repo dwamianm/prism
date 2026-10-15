@@ -151,10 +151,18 @@ class ExtractionWorkRepository:
         return ExtractionStatus(**row)
 
     async def claim(self, *, user_id: str, event_id: str | None = None,
-                    lease_seconds: float = 300, ignore_schedule: bool = False) -> ExtractionClaim | None:
+                    lease_seconds: float = 300, ignore_schedule: bool = False,
+                    scope: str | None = None, through_order: int | None = None) -> ExtractionClaim | None:
+        """Claim the next eligible job, or ``event_id`` when it is eligible.
+
+        ``scope`` and ``through_order`` narrow the choice to one scope and to
+        jobs queued at or before that work order; batched extraction (#254)
+        uses them to process exactly the jobs that were queued when a flush
+        began.
+        """
         try:
             return await self._claim(user_id=user_id, event_id=event_id, lease_seconds=lease_seconds,
-                                     ignore_schedule=ignore_schedule)
+                                     ignore_schedule=ignore_schedule, scope=scope, through_order=through_order)
         except duckdb.TransactionException as exc:
             # Another connection may still be finishing an expired worker's
             # transaction. Treat its write conflict like PostgreSQL SKIP LOCKED.
@@ -163,7 +171,8 @@ class ExtractionWorkRepository:
             return None
 
     async def _claim(self, *, user_id: str, event_id: str | None,
-                     lease_seconds: float, ignore_schedule: bool) -> ExtractionClaim | None:
+                     lease_seconds: float, ignore_schedule: bool,
+                     scope: str | None = None, through_order: int | None = None) -> ExtractionClaim | None:
         if not user_id or not math.isfinite(lease_seconds) or lease_seconds <= 0:
             raise ValueError("Extraction claims require an owner and a positive finite lease")
         async with self.session(transaction=True) as session:
@@ -173,6 +182,12 @@ class ExtractionWorkRepository:
             if event_id is not None:
                 specific = " AND w.event_id = $3"
                 params.append(str(UUID(event_id)))
+            if scope is not None:
+                params.append(scope)
+                specific += f" AND e.scope = ${len(params)}"
+            if through_order is not None:
+                params.append(through_order)
+                specific += f" AND w.work_order <= ${len(params)}"
             due = "" if ignore_schedule else " AND w.next_attempt_at <= $2"
             lock = " FOR UPDATE OF w SKIP LOCKED" if session.postgres else ""
             rows = await session.fetch(
@@ -286,6 +301,64 @@ class ExtractionWorkRepository:
                 str(UUID(event_id)), now, user_id,
             )
             return bool(rows)
+
+    async def work_order(self, *, user_id: str, event_id: str | None = None) -> int | None:
+        """The append-time work order of ``event_id``'s job, or of the owner's last job.
+
+        Batched extraction (#254) bounds a flush with it, so a flush processes
+        the jobs queued when it began and no turn ingested later.
+        """
+        if not user_id:
+            raise ValueError("Extraction work order requires user_id")
+        async with self.session() as session:
+            if event_id is not None:
+                rows = await session.fetch(
+                    "SELECT w.work_order FROM event_extractions w JOIN events e ON e.id = w.event_id "
+                    "WHERE w.event_id = $1 AND e.user_id = $2", str(UUID(event_id)), user_id,
+                )
+            else:
+                rows = await session.fetch(
+                    "SELECT max(w.work_order) AS work_order FROM event_extractions w "
+                    "JOIN events e ON e.id = w.event_id WHERE e.user_id = $1", user_id,
+                )
+        return rows[0]["work_order"] if rows else None
+
+    async def pending_count(self, *, user_id: str, scope: str, through_order: int) -> int:
+        """Unfinished jobs of one owner and scope queued at or before ``through_order`` (#254)."""
+        if not user_id:
+            raise ValueError("Pending work requires user_id")
+        async with self.session() as session:
+            rows = await session.fetch(
+                "SELECT count(*) AS pending FROM event_extractions w JOIN events e ON e.id = w.event_id "
+                "WHERE e.user_id = $1 AND e.scope = $2 AND w.work_order <= $3 "
+                "AND w.status IN ('pending', 'running')", user_id, scope, through_order,
+            )
+        return rows[0]["pending"]
+
+    async def pending_in_session(self, event_id: str, *, user_id: str, through_order: int | None = None,
+                                 limit: int = 1000) -> list[str]:
+        """Pending jobs queued after ``event_id``'s in its session and scope, oldest first (#254).
+
+        These are the turns a batched request sent by ``event_id``'s worker
+        can carry. A source without a session has none.
+        """
+        if not user_id or limit < 1:
+            raise ValueError("Pending session work requires user_id and a positive limit")
+        params: list = [str(UUID(event_id)), user_id]
+        bound = ""
+        if through_order is not None:
+            params.append(through_order)
+            bound = f" AND w.work_order <= ${len(params)}"
+        async with self.session() as session:
+            rows = await session.fetch(
+                "SELECT w.event_id FROM event_extractions head JOIN events he ON he.id = head.event_id "
+                "JOIN events e ON e.user_id = he.user_id AND e.scope = he.scope AND e.session_id = he.session_id "
+                "JOIN event_extractions w ON w.event_id = e.id "
+                "WHERE head.event_id = $1 AND he.user_id = $2 AND w.status = 'pending' "
+                "AND w.work_order > head.work_order" + bound + f" ORDER BY w.work_order LIMIT {int(limit)}",
+                *params,
+            )
+        return [str(row["event_id"]) for row in rows]
 
     async def counts(self, *, user_id: str) -> tuple[int, int]:
         if not user_id:

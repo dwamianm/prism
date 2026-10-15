@@ -9,6 +9,8 @@ by background (or awaitable) extraction and materialization.
 
 from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.extraction import (
+    BatchExtractionProvider,
+    BatchTurn,
     ExtractionProvider,
     InstructorExtractionProvider,
     create_extraction_provider,
@@ -25,6 +27,8 @@ from prme.ingestion.schema import (
 from prme.ingestion.supersedence import SupersedenceDetector
 
 __all__ = [
+    "BatchExtractionProvider",
+    "BatchTurn",
     "EntityMerger",
     "ExtractedEntity",
     "ExtractedFact",

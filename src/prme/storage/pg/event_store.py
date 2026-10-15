@@ -16,7 +16,7 @@ import asyncpg
 
 from prme.models import Event, MemoryNode, ProcessingStatus
 from prme.models.direct_store import DirectStoreRecord, direct_store_operation_id
-from prme.models.extraction import ExtractionRecord, extraction_operation_id
+from prme.models.extraction import ExtractionBatchRecord, ExtractionRecord, extraction_operation_id
 from prme.models.derivation import DerivationPlan, DerivationReceipt, derivation_operation_id
 from prme.types import Scope
 from prme.storage.extraction_work import ExtractionWorkRepository, validate_pg_claim
@@ -27,7 +27,7 @@ from prme.storage.fast_ingest import (
     replay_fast_ingest,
     validate_fast_ingest_record,
 )
-from prme.models.extraction_work import ExtractionClaim
+from prme.models.extraction_work import ExtractionClaim, StaleExtractionClaimError
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +165,74 @@ class PgEventStore:
                 raise ValueError("Extraction operation ID conflicts with another operation")
             await validate_pg_claim(conn, str(record.event_id), record.user_id, claim)
             return saved
+
+    async def get_extraction_batch(self, batch_id: str, *, user_id: str) -> ExtractionBatchRecord | None:
+        """Read a batched extraction request and its response through its owner (#254)."""
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT o.payload FROM operations o JOIN events e ON o.target_id = e.id::text "
+                "WHERE o.id = $1 AND e.user_id = $2 AND o.op_type = 'EXTRACTION_BATCH_RECORDED'",
+                str(UUID(str(batch_id))), user_id,
+            )
+        if row is None:
+            return None
+        payload = row["payload"]
+        payload = json.loads(payload) if isinstance(payload, str) else payload
+        batch = ExtractionBatchRecord.model_validate_json(payload["batch"])
+        if str(batch.id) != str(UUID(str(batch_id))) or batch.user_id != user_id:
+            raise ValueError("Extraction batch record does not match its identity")
+        return batch
+
+    async def record_extraction_batch(self, batch: ExtractionBatchRecord, records: Sequence[ExtractionRecord], *,
+                                      claim: ExtractionClaim | None = None) -> None:
+        """Save a batched request, its response and each turn's checked extraction together (#254).
+
+        Written under the lease of the job whose worker sent the request, as
+        in the DuckDB store; a turn that already has a record keeps it.
+        """
+        batch = ExtractionBatchRecord.model_validate_json(batch.model_dump_json())
+        records = [ExtractionRecord.model_validate_json(record.model_dump_json()) for record in records]
+        head = str(batch.head_event_id)
+        if {str(record.event_id) for record in records} != {str(turn.event_id) for turn in batch.turns}:
+            raise ValueError("A batched extraction saves one record for each of its turns")
+        async with self._pool.acquire() as conn, conn.transaction():
+            sender = await conn.fetchrow("SELECT user_id, scope FROM events WHERE id = $1", head)
+            if sender is None or (sender["user_id"], sender["scope"]) != (batch.user_id, batch.scope.value):
+                raise ValueError("Extraction batch does not match the job that sent it")
+            # Source rows first, then the work row, in record_extraction's order.
+            for record in records:
+                source = await conn.fetchrow(
+                    "SELECT user_id, scope, content_hash FROM events WHERE id = $1 FOR UPDATE", str(record.event_id),
+                )
+                if source is None:
+                    raise ValueError("Extraction requires a matching persisted source event")
+                record.verify_source(source["user_id"], source["scope"], source["content_hash"])
+                batch.verify_turn(record.event_id, source["user_id"], source["scope"], source["content_hash"])
+                if record.batch_id != batch.id:
+                    raise ValueError("Extraction record does not name its batch")
+                if claim is None and await conn.fetchval(
+                        "SELECT 1 FROM event_extractions WHERE event_id = $1", str(record.event_id)):
+                    # Managed work is written only under a claim that orders it.
+                    raise StaleExtractionClaimError("Extraction work requires a claim")
+            await validate_pg_claim(conn, head, batch.user_id, claim)
+            await conn.execute(
+                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                "VALUES ($1, 'EXTRACTION_BATCH_RECORDED', $2, $3::jsonb, 'extraction', $4, $5) "
+                "ON CONFLICT (id) DO NOTHING",
+                # Kept as a JSON string inside JSONB, as prepared plans are,
+                # so the saved response keeps its exact serialization.
+                str(batch.id), head, json.dumps({"batch": batch.model_dump_json()}),
+                batch.scope.value, batch.created_at,
+            )
+            for record in records:
+                await conn.execute(
+                    "INSERT INTO operations (id, op_type, target_id, payload, actor_id, "
+                    "namespace_id, created_at) VALUES ($1, 'EXTRACTION_VALIDATED', $2, $3::jsonb, $4, $5, $6) "
+                    "ON CONFLICT (id) DO NOTHING",
+                    record.operation_id, str(record.event_id), record.model_dump_json(),
+                    "extraction", record.scope.value, record.created_at,
+                )
+            await validate_pg_claim(conn, head, batch.user_id, claim)
 
     async def append(self, event: Event, *, defer_materialization: bool = False,
                      defer_extraction: bool = False, store_node: MemoryNode | None = None) -> str:

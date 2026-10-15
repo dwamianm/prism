@@ -178,6 +178,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_speaker_grounding is true",
         bool,
     ),
+    "extraction_batch_target_tokens": (
+        "extraction_batch_target_tokens",
+        "extraction_batch_target_tokens > 0",
+        lambda value: value > 0,
+    ),
     "novelty_high_threshold": (
         "enable_surprise_gating",
         "enable_surprise_gating is true",
