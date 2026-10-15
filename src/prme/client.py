@@ -174,7 +174,7 @@ def config_from_pack(path: str) -> PRMEConfig:
     return PRMEConfig(pack_path=abs_path)
 
 
-def _is_pack_file(path: str) -> bool:
+def is_pack_file(path: str) -> bool:
     """Return True when *path* names a single-file pack rather than a directory.
 
     A name ending in ``.prme`` selects a single-file pack unless it is an
@@ -228,7 +228,7 @@ class MemoryClient:
         # destructor error that hides the original configuration failure.
         self._closed = True
         if config is None:
-            config = (config_from_pack(directory) if _is_pack_file(directory)
+            config = (config_from_pack(directory) if is_pack_file(directory)
                       else config_from_directory(directory))
         self._config = config
 

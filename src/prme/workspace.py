@@ -121,14 +121,25 @@ class MemoryWorkspace:
     file lock. Each instance belongs to one event loop. Names are case-sensitive
     application keys, not paths or authorization grants. Registry names/IDs are
     plaintext metadata even when the individual packs use encryption.
+
+    Each namespace's pack lives in ``packs/<namespace id>/``: the directory
+    layout by default, or one ``memory.prme`` file with
+    ``single_file_packs=True``. The registry does not record the layout, so
+    reopen a workspace with the same setting; an initialized namespace whose
+    pack is not found in the requested layout is refused, never recreated.
     """
 
+    # Workspaces that do not run __init__ (PostgreSQL) never use local packs.
+    _single_file_packs = False
+
     def __init__(self, directory: str | Path, *, config: PRMEConfig | None = None,
-                 embedding_provider: EmbeddingProvider | None = None, max_open: int = 4):
+                 embedding_provider: EmbeddingProvider | None = None, max_open: int = 4,
+                 single_file_packs: bool = False):
         self._config = (config or PRMEConfig()).model_copy(deep=True)
         if self._config.backend != "duckdb" or self._config.namespace_id is not None:
             raise ValueError("Workspace requires local configuration without a preselected namespace_id")
         self._directory = Path(directory).resolve()
+        self._single_file_packs = bool(single_file_packs)
         self._initialize_state(embedding_provider, max_open)
 
     def _initialize_state(self, embedding_provider, max_open):
@@ -150,8 +161,9 @@ class MemoryWorkspace:
     @asynccontextmanager
     async def open(cls, directory: str | Path, *, config: PRMEConfig | None = None,
                    embedding_provider: EmbeddingProvider | None = None,
-                   max_open: int = 4) -> AsyncIterator[MemoryWorkspace]:
-        async with cls(directory, config=config, embedding_provider=embedding_provider, max_open=max_open) as workspace:
+                   max_open: int = 4, single_file_packs: bool = False) -> AsyncIterator[MemoryWorkspace]:
+        async with cls(directory, config=config, embedding_provider=embedding_provider, max_open=max_open,
+                       single_file_packs=single_file_packs) as workspace:
             yield workspace
 
     @classmethod
@@ -247,8 +259,15 @@ class MemoryWorkspace:
         for path in directory.rglob("*"):
             if path.is_symlink():
                 raise WorkspaceError("Namespace packs must not contain symbolic links")
+        if self._single_file_packs:
+            return self._config.model_copy(update={
+                "namespace_id": namespace.id, "pack_path": str(directory / "memory.prme"),
+            }, deep=True)
+        # A pack_path from the workspace configuration would take the place
+        # of every namespace's directory, so the directory layout clears it.
         return self._config.model_copy(update={
-            "namespace_id": namespace.id, "db_path": str(directory / "memory.duckdb"),
+            "namespace_id": namespace.id, "pack_path": None,
+            "db_path": str(directory / "memory.duckdb"),
             "vector_path": str(directory / "vectors.usearch"),
             "lexical_path": str(directory / "lexical_index"),
         }, deep=True)
@@ -257,7 +276,11 @@ class MemoryWorkspace:
         config = self._pack_config(namespace)
         initialized = self._registry.execute("SELECT initialized FROM namespaces WHERE id = ?",
                                              [str(namespace.id)]).fetchone()[0]
-        if initialized and not (Path(config.db_path).exists() or Path(config.db_path + ".enc").exists()):
+        if config.single_file_pack:
+            present = Path(config.pack_path).exists()
+        else:
+            present = Path(config.db_path).exists() or Path(config.db_path + ".enc").exists()
+        if initialized and not present:
             raise WorkspaceError("Initialized namespace database is missing; restore its pack before opening")
         engine = await MemoryEngine.create(config, embedding_provider=self._provider)
         try:
