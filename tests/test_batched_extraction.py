@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import time
 from argparse import Namespace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,6 +10,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
+from structlog.testing import capture_logs
 
 from prme import MemoryEngine, PRMEConfig
 from prme.ingestion.errors import ExtractionError
@@ -23,7 +25,7 @@ from prme.ingestion.extraction import (
 )
 from prme.ingestion.pipeline import IngestionPipeline
 from prme.ingestion.schema import ExtractionResult
-from prme.types import LifecycleState, NodeType
+from prme.types import LifecycleState, NodeType, Scope
 from tests import test_durable_ingestion
 
 config = test_durable_ingestion.config
@@ -72,6 +74,20 @@ class ScriptedBatches:
 
     def contents(self):
         return [[content for *_, content in call] for call in self.calls]
+
+
+class SlowBatches(ScriptedBatches):
+    """A batched model that takes ``delay`` seconds to answer each request."""
+
+    def __init__(self, delay, **kwargs):
+        super().__init__(**kwargs)
+        self.delay = delay
+        self.started = []
+
+    async def extract_batch(self, turns):
+        self.started.append([turn.content for turn in turns])
+        await asyncio.sleep(self.delay)
+        return await super().extract_batch(turns)
 
 
 def batched(base, tokens=512):
@@ -341,6 +357,200 @@ class TestSessions:
         assert model.contents() == [["One.", "Two."]]
         async with MemoryEngine.open(batched(config)) as engine:
             assert await statuses(engine, user, event_ids) == ["complete"] * 2
+
+
+def scaled_close(pipeline, monkeypatch, *, timeout, cap=None, drain=0.05):
+    """The close's usual drain, the extraction timeout and the close's cap, scaled down from 10, 30 and 300 seconds."""
+    shutdown = pipeline.shutdown
+    monkeypatch.setattr(pipeline, "shutdown", lambda: shutdown(drain_timeout=drain))
+    pipeline._extraction_timeout = timeout
+    if cap is not None:
+        pipeline._batch_close_seconds = cap
+    return pipeline
+
+
+class TestClosing:
+    """The engine's close waits for the batches of queued turns, within a cap (#258)."""
+
+    TEXTS = ["Caroline paints sunsets over the lake.", "Two."]
+
+    async def ingest_queued(self, engine, user):
+        return [await engine.ingest(text, user_id=user, session_id="s1", event_time=T0 + timedelta(minutes=minutes))
+                for minutes, text in enumerate(self.TEXTS)]
+
+    async def test_a_close_waits_for_a_batch_that_takes_longer_than_the_usual_drain(self, config, user,
+                                                                                     monkeypatch):
+        # The request takes six times the usual drain, and less than its own timeout.
+        model = SlowBatches(delay=0.3)
+        async with MemoryEngine.open(batched(config)) as engine:
+            scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            event_ids = await self.ingest_queued(engine, user)
+            assert model.calls == []
+        assert model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+            assert await claims_by_event(engine, user) == {event_ids[0]: self.TEXTS[0]}
+
+    async def test_a_close_also_waits_for_a_flush_already_running(self, config, user, monkeypatch):
+        model = SlowBatches(delay=0.3)
+        async with MemoryEngine.open(batched(config)) as engine:
+            scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            # ingest_batch() without waiting starts its flush at once.
+            event_ids = await engine.ingest_batch([message(text, minutes=n) for n, text in enumerate(self.TEXTS)],
+                                                  user_id=user, session_id="s1")
+        assert model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+
+    async def test_a_close_waits_no_longer_than_its_cap(self, config, user, monkeypatch):
+        # A provider that does not answer within the test: the cap ends the wait.
+        model = SlowBatches(delay=60.0)
+        async with MemoryEngine.open(batched(config)) as engine:
+            scaled_close(install(engine, model), monkeypatch, timeout=5.0, cap=0.3)
+            event_ids = await self.ingest_queued(engine, user)
+            started = time.monotonic()
+        assert time.monotonic() - started < 5.0
+        assert model.started == [self.TEXTS] and model.calls == []
+        async with MemoryEngine.open(batched(config)) as engine:
+            # The turns stay queued, durably, for the next flush of their owner and scope.
+            assert await statuses(engine, user, event_ids) == ["pending"] * 2
+            install(engine, ScriptedBatches())
+            assert (await engine.process_extractions(user_id=user)).processed == 2
+
+    async def test_the_close_allows_the_timeout_for_each_queued_request(self, config, user):
+        model = ScriptedBatches()
+        long = "Jordan moved to Denver last spring. " + "The weather there was mild and sunny. " * 8
+        queue = [("Short one.", "a"), (long, "a"), ("Short two.", "a"), ("B one.", "b"), ("Short three.", "a"),
+                 ("Alone.", None)]
+        async with MemoryEngine.open(batched(config, tokens=24)) as engine:
+            pipeline = install(engine, model)
+            for minutes, (text, session) in enumerate(queue):
+                await engine.ingest(text, user_id=user, session_id=session, event_time=T0 + timedelta(minutes=minutes))
+            key = (user, Scope.PERSONAL)
+            # As the flush composes them: the long turn goes alone and ends the batch before it,
+            # the next short turn of its session starts another, and a turn without a session goes alone.
+            assert await pipeline._queued_requests(user, Scope.PERSONAL, limit=100) == 5
+            assert await pipeline._queued_requests(user, Scope.PERSONAL, limit=2) == 2
+            pipeline._extraction_timeout = 30.0
+            assert await pipeline._drain_seconds(10.0, [key, key]) == 10.0 + 5 * 30.0
+            pipeline._batch_close_seconds = 100.0
+            assert await pipeline._drain_seconds(10.0, [key]) == 100.0
+            # The usual drain, never less, and nothing longer without a flush to wait for.
+            assert await pipeline._drain_seconds(120.0, [key]) == 120.0
+            assert await pipeline._drain_seconds(10.0, []) == 10.0
+            assert (await engine.process_extractions(user_id=user)).processed == len(queue)
+            assert model.contents() == [["Short one."], [long], ["Short two.", "Short three."], ["B one."],
+                                        ["Alone."]]
+            assert await pipeline._drain_seconds(10.0, [key]) == 10.0
+
+    async def test_without_batching_the_close_keeps_the_usual_drain(self, config, user):
+        async with MemoryEngine.open(config) as engine:
+            assert await engine._pipeline._drain_seconds(10.0, [(user, Scope.PERSONAL)]) == 10.0
+
+    async def test_the_flushes_run_while_their_requests_are_counted(self, config, user, monkeypatch):
+        model, happened = SlowBatches(delay=0.1), []
+        answer = model.extract_batch
+
+        async def extract_batch(turns):
+            happened.append("request sent")
+            return await answer(turns)
+
+        model.extract_batch = extract_batch
+        async with MemoryEngine.open(batched(config)) as engine:
+            pipeline = scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            count = pipeline._drain_seconds
+
+            async def slow_count(*args):
+                await asyncio.sleep(0.5)
+                happened.append("count done")
+                return await count(*args)
+
+            monkeypatch.setattr(pipeline, "_drain_seconds", slow_count)
+            event_ids = await self.ingest_queued(engine, user)
+        assert happened == ["request sent", "count done"] and model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+
+    async def test_counting_is_part_of_the_wait_and_never_passes_the_cap(self, config, user, monkeypatch):
+        model = SlowBatches(delay=60.0)
+        with capture_logs() as logs:
+            async with MemoryEngine.open(batched(config)) as engine:
+                pipeline = scaled_close(install(engine, model), monkeypatch, timeout=5.0, cap=0.3)
+
+                async def endless_count(*args):
+                    await asyncio.sleep(60.0)
+
+                monkeypatch.setattr(pipeline, "_drain_seconds", endless_count)
+                event_ids = await self.ingest_queued(engine, user)
+                started = time.monotonic()
+            assert time.monotonic() - started < 5.0
+        assert [entry["log_level"] for entry in logs
+                if entry["event"] == "ingestion.extraction_close_count_timed_out"] == ["warning"]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["pending"] * 2
+
+    async def test_a_retry_that_wakes_after_the_close_starts_nothing(self, config, user):
+        model = ScriptedBatches()
+        async with MemoryEngine.open(batched(config)) as engine:
+            pipeline = install(engine, model)
+            pipeline._retry_delays = (0.3,)
+            event_ids = await self.ingest_queued(engine, user)
+            head = await engine._event_store.get(event_ids[0])
+            pipeline._schedule_retry(head, event_ids[0], attempt=1, scope=Scope.PERSONAL)
+            # As if a later retry of the same turn had replaced it: the close does not cancel it.
+            stray = pipeline._retry_tasks.pop(event_ids[0])
+        assert model.contents() == [self.TEXTS]
+        await asyncio.wait_for(stray, timeout=5.0)
+        assert not pipeline._flushing and not pipeline._background_tasks
+        assert model.contents() == [self.TEXTS]
+
+    async def test_a_retry_flush_running_at_close_is_waited_for(self, config, user, monkeypatch):
+        model = SlowBatches(delay=0.3)
+        answer, attempts = model.extract_batch, []
+
+        async def fail_once_then_answer_slowly(turns):
+            attempts.append([turn.content for turn in turns])
+            if len(attempts) == 1:
+                raise ExtractionError("scripted failure", reason_code="RateLimitError")
+            return await answer(turns)
+
+        model.extract_batch = fail_once_then_answer_slowly
+        async with MemoryEngine.open(batched(config)) as engine:
+            pipeline = scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            pipeline._retry_delays = (0.2, 0.2, 0.2)
+            event_ids = await engine.ingest_batch([message(text, minutes=n) for n, text in enumerate(self.TEXTS)],
+                                                  user_id=user, session_id="s1")
+            # Close once the retry's flush has sent its request.
+            for _ in range(300):
+                if model.started:
+                    break
+                await asyncio.sleep(0.01)
+            assert len(attempts) == 2 and model.started == [self.TEXTS]
+        # The retry's request was answered, not cancelled and sent again by the close's own flush.
+        assert model.started == [self.TEXTS] and model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+
+
+def test_a_client_close_waits_for_the_batched_close(config, user, monkeypatch):
+    from prme.client import MemoryClient
+
+    # Scaled down from 30 seconds and the five-minute cap.
+    monkeypatch.setattr("prme.client._CLOSE_SECONDS", 0.05)
+    monkeypatch.setattr("prme.ingestion.pipeline.BATCH_CLOSE_SECONDS", 5.0)
+    model = SlowBatches(delay=0.3)
+    client = MemoryClient(config=batched(config))
+    install(client._engine, model)
+    event_id = client._run(client._engine.ingest(TestClosing.TEXTS[0], user_id=user, session_id="s1",
+                                                 event_time=T0))
+    client.close()
+    assert model.contents() == [TestClosing.TEXTS[:1]]
+
+    async def status():
+        async with MemoryEngine.open(batched(config)) as engine:
+            return await statuses(engine, user, [event_id])
+
+    assert asyncio.run(status()) == ["complete"]
 
 
 class TestFailures:

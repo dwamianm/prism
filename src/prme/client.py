@@ -94,6 +94,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Seconds close() waits for the engine to close. With batched extraction the
+# engine's close can also wait up to BATCH_CLOSE_SECONDS for queued batches
+# (#258), and close() allows for that too.
+_CLOSE_SECONDS = 30.0
+
 _LIVE_CLIENTS: weakref.WeakSet[Any] = weakref.WeakSet()
 _LIVE_CLIENTS_LOCK = threading.Lock()
 _EARLY_SHUTDOWN_REGISTERED = False
@@ -1057,14 +1062,20 @@ class MemoryClient:
         # Close the engine on the background loop. Capture an encryption
         # failure so the pack-is-plaintext signal is not lost, but still
         # finish tearing down the loop/thread before re-raising it.
+        from prme.ingestion.pipeline import BATCH_CLOSE_SECONDS
         from prme.storage.encryption import EncryptionError
 
+        timeout = _CLOSE_SECONDS
+        if self._config.extraction_batch_target_tokens > 0:
+            # Giving up early would leave the engine half closed, and an
+            # encrypted directory pack unencrypted.
+            timeout += BATCH_CLOSE_SECONDS
         encryption_error: EncryptionError | None = None
         try:
             future = asyncio.run_coroutine_threadsafe(
                 self._engine.close(), self._loop
             )
-            future.result(timeout=30)
+            future.result(timeout=timeout)
         except EncryptionError as exc:
             encryption_error = exc
         except Exception:

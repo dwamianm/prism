@@ -131,6 +131,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- With batched extraction on (#254), the engine's close now waits longer for
+  the batches of turns that `ingest()` queued without waiting (#258): the
+  usual drain time (10 seconds) plus `extraction.timeout` for each request
+  their flushes send, five minutes at most, instead of the 10 seconds alone,
+  which a batched request could outlast. It also waits for a retry's flush
+  that is already running, and `MemoryClient.close()` waits that much longer
+  too, so it no longer leaves such a close unfinished after 30 seconds. A
+  turn still queued after that stays pending as before; opening an engine
+  still never starts model work. The documentation says what this means for
+  an MCP stdio session, whose server closes its engine when the session
+  ends, and for a process manager's stop timeout. Without batching, the
+  close is unchanged.
 - Require `duckdb>=1.4.0` (previously `>=1.2.0`). DuckDB 1.4.0 is the first
   release with native database encryption, which single-file packs use.
 - `rebuild_indexes()` (`prme rebuild`) gives lexical documents to the same

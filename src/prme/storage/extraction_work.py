@@ -335,6 +335,22 @@ class ExtractionWorkRepository:
             )
         return rows[0]["pending"]
 
+    async def unfinished(self, *, user_id: str, scope: str, limit: int = 1000) -> list[str]:
+        """Unfinished jobs of one owner and scope, oldest first (#258).
+
+        The engine's close counts from them the batched requests that its
+        flush of this owner and scope sends.
+        """
+        if not user_id or limit < 1:
+            raise ValueError("Unfinished work requires user_id and a positive limit")
+        async with self.session() as session:
+            rows = await session.fetch(
+                "SELECT w.event_id FROM event_extractions w JOIN events e ON e.id = w.event_id "
+                "WHERE e.user_id = $1 AND e.scope = $2 AND w.status IN ('pending', 'running') "
+                f"ORDER BY w.work_order LIMIT {int(limit)}", user_id, scope,
+            )
+        return [str(row["event_id"]) for row in rows]
+
     async def pending_in_session(self, event_id: str, *, user_id: str, through_order: int | None = None,
                                  limit: int = 1000) -> list[str]:
         """Pending jobs queued after ``event_id``'s in its session and scope, oldest first (#254).

@@ -119,7 +119,10 @@ batches of a session's turns (see
 [batched extraction](../docs/INTEGRATION.md#batched-extraction)):
 `ingest(wait_for_extraction=False)` queues the turn, a waiting `ingest()`
 extracts the queue through its own turn, and `ingest_batch()` saves every
-message before extracting them together.
+message before extracting them together. `close()` extracts the turns still
+queued, waiting the usual 10 seconds plus the extraction timeout for each
+batched request they need, five minutes at most; a turn still queued after
+that stays pending until `process_extractions()` or the owner's next flush.
 
 With `wait_for_extraction=True`, failure raises `ExtractionError`; its `event_id`
 identifies the persisted source and `reason_code` gives the sanitized failure
