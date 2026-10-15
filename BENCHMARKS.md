@@ -694,12 +694,18 @@ uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo 
   request here, where a per-turn build counts one per turn.
 - Each manifest also reports the saved requests whose responses its turns
   came from (`batches`, `turns_per_batch`, `single_turn_batches`), the turns
-  the model gave no entry (`turns_without_entry`), which are saved as
-  stating nothing, and the facts and relationships the model wrote for its
-  turns (`response_claims`) next to those the per-turn checks kept
-  (`saved_claims`). A batch shows the model each turn's speaker, so a model
-  that writes the speaker's name where the turn says I loses that claim to
-  grounding, and the difference shows how many claims grounding dropped.
+  a response gave no entry that one more request asked for alone
+  (`turns_asked_again`, #260; that request counts among the batches and its
+  calls among the session's calls), the turns the model gave no entry and
+  that were not asked again, or that the request asking again left out too
+  (`turns_without_entry`), which are saved as stating nothing, and the facts
+  and relationships the model wrote for its turns (`response_claims`) next
+  to those the per-turn checks kept (`saved_claims`). `turns_per_batch`
+  counts each turn once, under the request it was saved from. Builds from
+  before #260 asked no turn again, so their counts compare directly. A batch
+  shows the model each turn's speaker, so a model that writes the speaker's
+  name where the turn says I loses that claim to grounding, and the
+  difference shows how many claims grounding dropped.
 - `summary` totals a build's complete packs: calls, prompt and completion
   tokens, seconds summed over the packs, wall time from `build.json`'s start
   and finish, claims per turn, turns with at least one claim, annotated
@@ -710,7 +716,10 @@ uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo 
   a split request can compose its remaining turns differently.
 - The cache keys a batched request by the model and the full request: its
   system prompt and every turn as sent (`<key>.batch.json`). A rebuild of the
-  same build therefore replays every request. A request of several turns
+  same build therefore replays every request, a request for turns left out
+  included. A rebuild from a cache filled before #260 sends that request,
+  which is not cached yet, for any response that left out a turn; no
+  response did in the LoCoMo builds of 2026-10-15. A request of several turns
   whose response failed validation, and was asked again in halves, is kept as
   `<key>.batch-failed.json`, so the rebuild asks for the same halves. A
   request that timed out is not kept, so a rebuild asks for it again.

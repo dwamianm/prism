@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 from uuid import UUID, uuid5
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from prme.types import Scope
 
@@ -90,6 +90,13 @@ class ExtractionBatchRecord(BaseModel):
     response again, turn by turn, without a model call; the benchmark pack
     builder reads it to count the turns and claims a model left out or
     grounding dropped.
+
+    ``turns_asked_again`` lists, by index, the turns the response gave no
+    entry, which one more request of their own asked for again (#260). This
+    record saves no extraction record for them; the records that request
+    saves name its own batch. It is left out when empty, so a batch record
+    without it keeps its exact bytes, and code from before #260 cannot read
+    a batch record that sets it.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -106,12 +113,30 @@ class ExtractionBatchRecord(BaseModel):
     request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     turns: tuple[ExtractionBatchTurn, ...] = Field(min_length=1)
     response: dict[str, Any]
+    turns_asked_again: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
     created_at: AwareDatetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @model_validator(mode="after")
+    def _check_turn_indices(self) -> "ExtractionBatchRecord":
+        # Turns are numbered from 1 in request order, so an index names one turn.
+        if [turn.index for turn in self.turns] != list(range(1, len(self.turns) + 1)):
+            raise ValueError("A batch's turns are numbered 1, 2, 3 and on, in order")
+        asked = self.turns_asked_again
+        if list(asked) != sorted(set(asked)) or not set(asked) < {turn.index for turn in self.turns}:
+            # A response that gives no turn an entry is saved as it is: asking
+            # for every turn again would repeat the same request.
+            raise ValueError("Turns asked again must be some of the batch's turns, in order, once each")
+        return self
 
     @property
     def id(self) -> UUID:
         return extraction_batch_id(self.head_event_id, [turn.event_id for turn in self.turns],
                                    self.request_sha256)
+
+    @property
+    def saved_turns(self) -> tuple[ExtractionBatchTurn, ...]:
+        """The turns whose extraction records this batch saves: those not asked again (#260)."""
+        return tuple(turn for turn in self.turns if turn.index not in self.turns_asked_again)
 
     def verify_turn(self, event_id: UUID | str, user_id: str, scope: str, content_hash: str) -> None:
         """Check that a source event is one of this request's turns, unchanged."""

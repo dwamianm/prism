@@ -1259,6 +1259,28 @@ class _BatchExtractionResult(BaseModel):
         return value
 
 
+def _parse_batch_output(raw: Any) -> tuple[Any, _BatchExtractionResult]:
+    """A batched response as a dict and as parsed, or ExtractionError when it lacks the batch shape."""
+    if isinstance(raw, BaseModel):
+        raw = raw.model_dump(mode="json")
+    try:
+        return raw, _BatchExtractionResult.model_validate(raw)
+    except ValidationError as exc:
+        raise ExtractionError("Batched extraction output does not have one entry per turn",
+                              reason_code="ValidationError") from exc
+
+
+def batch_turns_without_entry(raw: Any, turns: Sequence[BatchTurn]) -> list[int]:
+    """The indices of the batch's turns that a response gives no entry, in order (#260).
+
+    An entry that cites a turn outside the batch covers none. Raises
+    ExtractionError when the response as a whole does not have the batch
+    shape, as :func:`validate_batch_output` does.
+    """
+    _, parsed = _parse_batch_output(raw)
+    return sorted({turn.index for turn in turns} - {entry.turn for entry in parsed.turns})
+
+
 def validate_batch_output(
     raw: Any, turns: Sequence[BatchTurn], *, speakers: dict[int, str | None] | None = None,
 ) -> dict[int, ExtractionResult]:
@@ -1278,13 +1300,7 @@ def validate_batch_output(
     a whole does not have the batch shape.
     """
     speakers = speakers or {}
-    if isinstance(raw, BaseModel):
-        raw = raw.model_dump(mode="json")
-    try:
-        parsed = _BatchExtractionResult.model_validate(raw)
-    except ValidationError as exc:
-        raise ExtractionError("Batched extraction output does not have one entry per turn",
-                              reason_code="ValidationError") from exc
+    raw, parsed = _parse_batch_output(raw)
     by_index = {turn.index: turn for turn in turns}
     parts: dict[int, dict[str, list]] = {
         index: {"entities": [], "facts": [], "relationships": []} for index in by_index
@@ -1299,10 +1315,9 @@ def validate_batch_output(
         for name in ("facts", "relationships"):
             items = raw_entry.get(name)
             part[name].extend(items if isinstance(items, list) else [])
-    missing = sorted(set(by_index) - {entry.turn for entry in parsed.turns})
-    if missing:
-        # Each still gets a result, an empty one, as a turn that states nothing.
-        logger.warning("extraction_batch_turns_missing", turns=missing, batch_turns=len(by_index))
+    # A turn without an entry still gets a result, an empty one, as a turn
+    # that states nothing. Ingestion asks for such turns again first (#260)
+    # and warns about those it saves that way.
     results: dict[int, ExtractionResult] = {}
     for index, part in parts.items():
         turn = by_index[index]

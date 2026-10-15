@@ -795,8 +795,9 @@ class IngestionPipeline:
         breaks ties. Every turn's checked output is saved as its own
         extraction record, under ``head``'s claim; ``head``'s record is
         returned. A failure is raised only when ``head`` got no record, so a
-        turn whose part of a split request failed waits for its own job,
-        when it sends a request of its own.
+        turn whose part of a split request failed, or whose request asking
+        again for the turns a response left out failed (#260), waits for its
+        own job, when it sends a request of its own.
         """
         events = await self._batch_events(head, through)
         events.sort(key=lambda item: item.event_time or item.timestamp)
@@ -810,7 +811,8 @@ class IngestionPipeline:
             raise failure or ExtractionError("Batched extraction saved no output for this turn",
                                              event_id=str(head.id), reason_code="ExtractionError")
         if failure is not None:
-            # Part of a split request failed; its turns send their own requests later.
+            # Part of a split request, or the request asking again for turns
+            # a response left out, failed; its turns send their own requests later.
             logger.warning("ingestion.extraction_batch_part_failed", event_id=str(head.id),
                            reason=failure.reason_code)
         return saved
@@ -851,7 +853,7 @@ class IngestionPipeline:
         return events
 
     async def _request_batch(self, head: Event, events: list[Event], *,
-                             claim: ExtractionClaim | None) -> None:
+                             claim: ExtractionClaim | None, ask_again: bool = True) -> None:
         """Send one batched request and save each turn's output, or ask again in halves.
 
         A response that fails validation as a whole, or a request that times
@@ -864,11 +866,21 @@ class IngestionPipeline:
         not answer costs about log2(n) + 1 requests, not 2n - 1. A single
         turn that still fails is raised, and so is any other failure. Each
         request that succeeds is saved at once, with its turns' records.
+
+        A response that gives some of its turns no entry is saved without
+        their records, naming them in ``turns_asked_again``, and then one
+        more request asks for those turns alone (#260). With ``ask_again``
+        off, as for that request and the halves it may be split into, a turn
+        left out is saved as stating nothing, so each response is asked
+        again at most once. A response that gives none of its turns an entry
+        is saved that way too: asking for all of them would repeat the same
+        request.
         """
         from prme.ingestion.extraction import (
             BatchTurn,
             batch_request_sha256,
             batch_response_fields,
+            batch_turns_without_entry,
             validate_batch_output,
         )
         from prme.models.extraction import ExtractionBatchRecord, ExtractionBatchTurn
@@ -887,6 +899,7 @@ class IngestionPipeline:
             # the speaker's own I, me and my only with speaker grounding on.
             speakers = {turn.index: turn.speaker for turn in turns} if self._speaker_grounding else {}
             results = validate_batch_output(raw, turns, speakers=speakers)
+            without_entry = batch_turns_without_entry(raw, turns)
         except ExtractionError as exc:
             if len(events) == 1 and exc.reason_code in _HALVABLE_FAILURES - _VALIDATION_FAILURES:
                 raise BatchSplitStopped(str(exc), event_id=exc.event_id, reason_code=exc.reason_code) from exc
@@ -898,7 +911,7 @@ class IngestionPipeline:
             failure: ExtractionError | None = None
             for half in (events[:middle], events[middle:]):
                 try:
-                    await self._request_batch(head, half, claim=claim)
+                    await self._request_batch(head, half, claim=claim, ask_again=ask_again)
                 except BatchSplitStopped:
                     raise
                 except ExtractionError as half_failure:
@@ -908,6 +921,9 @@ class IngestionPipeline:
             if failure is not None:
                 raise failure
             return
+        # Turns left out are asked again unless this request already asks
+        # again, or the response gives no turn an entry (#260).
+        missing = without_entry if ask_again and len(without_entry) < len(turns) else []
         batch = ExtractionBatchRecord(
             user_id=head.user_id, scope=head.scope, session_id=head.session_id, head_event_id=head.id,
             provider=self._extraction_provider.provider_name, model=self._extraction_provider.model_name,
@@ -918,9 +934,13 @@ class IngestionPipeline:
                 for turn, event in zip(turns, events, strict=True)
             ),
             response=batch_response_fields(raw),
+            turns_asked_again=tuple(missing),
         )
         records = []
         for turn, event in zip(turns, events, strict=True):
+            if turn.index in missing:
+                # Saved by the request that asks for it again, below.
+                continue
             # The same checks a single turn's output gets, against this turn alone.
             speaker = turn.speaker if self._speaker_grounding else None
             result = validate_grounding(results[turn.index], event.content, speaker=speaker)
@@ -940,6 +960,16 @@ class IngestionPipeline:
         )
         logger.info("ingestion.extraction_batch_saved", event_id=str(head.id), batch_id=str(batch.id),
                     turns=len(events))
+        if missing:
+            # The turns' records are saved after the others', so a failure of
+            # this request costs only them; their own jobs ask for them later.
+            logger.warning("ingestion.extraction_batch_turns_asked_again", event_id=str(head.id),
+                           batch_id=str(batch.id), turns=len(missing))
+            await self._request_batch(head, [events[index - 1] for index in missing], claim=claim,
+                                      ask_again=False)
+        elif without_entry:
+            logger.warning("ingestion.extraction_batch_turns_missing", event_id=str(head.id),
+                           batch_id=str(batch.id), turns=without_entry, batch_turns=len(turns))
 
     def _check_resolved_text(self, result: ExtractionResult, event: Event, window: list[Event]) -> ExtractionResult:
         """Keep each fact's resolved text only when it passes its check (#91).

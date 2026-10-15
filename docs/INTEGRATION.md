@@ -1283,10 +1283,21 @@ config = PRMEConfig(extraction_batch_target_tokens=512)
   of n turns whose responses keep failing validation makes at most 2n - 1
   requests. A single turn that times out or is refused stops the split, so a
   provider that does not answer costs about log2(n) + 1 timeouts per attempt.
-  A connection, rate-limit or server failure is not split. A turn the model
-  gives no entry is saved as stating nothing, and a warning names it.
+  A connection, rate-limit or server failure is not split.
   `extraction.timeout` applies to each request, so raise it for large
   targets; the benchmark pack builder uses 180 seconds.
+- **Turns left out.** When a response gives some of its turns no entry,
+  the other turns' records are saved first, and one more request then asks
+  for the turns left out, alone, with the same checks (#260). The first
+  request's batch record names them in `turns_asked_again`, and their
+  records name the new request's batch. That request is never followed by
+  another, so a turn it leaves out too is saved as stating nothing, with a
+  warning. A response that gives none of its turns an entry is saved that
+  way at once, since asking for all of them would send the same request. If
+  the request for the turns left out fails, the others keep their records,
+  and each of those turns asks again when its own job runs. Records saved
+  before this change are kept as they are: a turn saved as stating nothing
+  is not asked again on replay or `prme rebuild`.
 - **When it runs.** `ingest(wait_for_extraction=False)` queues the turn. A
   waiting `ingest()` extracts the queue of its owner and scope up to and
   including its own turn, `ingest_batch()` extracts its messages and any
@@ -1302,11 +1313,12 @@ config = PRMEConfig(extraction_batch_target_tokens=512)
   each request their flushes send, counted as the flushes compose them
   while they run, and never more than five minutes in all, counting
   included. That allows one request per batch, so a batch asked again in
-  halves, or a provider that does not answer, can still run out of time. A
-  turn still queued then stays pending, durably, until the next flush of
-  its owner and scope or `process_extractions()`. Opening an engine never
-  starts model work, so nothing extracts it at the next open.
-  `MemoryClient.close()` waits for this longer close as well.
+  halves, the request for turns a response left out (above), or a provider
+  that does not answer, can still run out of time. A turn still queued then
+  stays pending, durably, until the next flush of its owner and scope or
+  `process_extractions()`. Opening an engine never starts model work, so
+  nothing extracts it at the next open. `MemoryClient.close()` waits for
+  this longer close as well.
 - **Stopping the process.** A process stopped before the close finishes
   leaves its queued turns pending too, and the turn it was extracting stays
   leased until `extraction.lease_seconds` (5 minutes by default) runs out;

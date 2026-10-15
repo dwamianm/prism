@@ -492,12 +492,17 @@ async def test_a_batched_build_stops_only_at_a_sessions_end(tmp_path, longmemeva
     assert [len(call) for call in model.calls] == [2, 1] and manifest["extraction_status"] == {"complete": 3}
 
 
-async def test_a_turn_without_an_entry_and_a_dropped_claim_are_counted(tmp_path, locomo, mock_embeddings):
+@pytest.mark.parametrize("left_out_again", [False, True])
+async def test_a_turn_without_an_entry_and_a_dropped_claim_are_counted(tmp_path, locomo, mock_embeddings,
+                                                                      left_out_again):
     model = ScriptedBatches()
     answer = model.extract_batch
 
     async def leave_out_the_last_and_name_the_speaker(turns):
         response = await answer(turns)
+        if len(turns) == 1:
+            # The request for the turn left out (#260): answered, or left out again.
+            return {"turns": [] if left_out_again else response["turns"]}
         entries = response["turns"][:-1]
         # The model wrote the speaker's name where the turn says it: grounding drops it.
         entries[0]["facts"].append({"subject": "Melanie", "predicate": "likes", "object": "sunsets",
@@ -507,8 +512,79 @@ async def test_a_turn_without_an_entry_and_a_dropped_claim_are_counted(tmp_path,
 
     model.extract_batch = leave_out_the_last_and_name_the_speaker
     manifest = await build_unit(tmp_path / "locomo" / "conv-1", locomo, _batched_config, prepare=model.prepare)
-    assert (manifest["turns_without_entry"], manifest["response_claims"], manifest["saved_claims"]) == (1, 3, 2)
+    assert [len(call) for call in model.calls] == [3, 1]
+    # A turn asked again counts as without an entry only when the request for it left it out too.
+    assert (manifest["turns_asked_again"], manifest["turns_without_entry"]) == (1, int(left_out_again))
+    assert (manifest["response_claims"], manifest["saved_claims"]) == (3, 2)
+    # Each turn counts once, under the request it was saved from: two turns, then one.
+    assert (manifest["batches"], manifest["single_turn_batches"], manifest["turns_per_batch"]) == (2, 1, 1.5)
     assert manifest["extraction_status"] == {"complete": 3}
+
+
+class ScriptedClient:
+    """A batched model behind the provider's own client, so the builder counts its calls (#260).
+
+    It leaves out the second turn of every request of several turns, as a
+    model can in a long list, and answers a request for that turn alone.
+    """
+
+    def __init__(self):
+        self.requests = []
+
+    def prepare(self, engine):
+        import re
+        from types import SimpleNamespace
+
+        provider = engine._pipeline._extraction_provider
+        client = provider._ensure_client()
+
+        async def create(*, response_model, messages, **_):
+            turns = re.findall(r'<turn index="(\d+)"[^>]*>\n(.*?)\n</turn>', messages[1]["content"], re.S)
+            self.requests.append([text for _, text in turns])
+            entries = []
+            for index, text in turns:
+                entry = {"turn": int(index), "entities": [], "facts": []}
+                for sentence, (subject, predicate, obj) in CLAIMS.items():
+                    if text.endswith(sentence):
+                        entry["entities"] = [{"name": subject, "entity_type": "person"}]
+                        entry["facts"] = [{"subject": subject, "subject_entity_type": "person",
+                                           "predicate": predicate, "object": obj, "polarity": "positive",
+                                           "epistemic_type": "observed", "evidence_quote": sentence}]
+                if len(turns) == 1 or int(index) != 2:
+                    entries.append(entry)
+            client.hooks.emit_completion_response(
+                SimpleNamespace(usage=SimpleNamespace(prompt_tokens=100, completion_tokens=10)))
+            return response_model.model_validate({"turns": entries})
+
+        async def single(content, **_):
+            raise AssertionError("a batched build extracted one turn alone")
+
+        client.create = create
+        provider.extract = single
+
+
+async def test_a_request_for_a_turn_left_out_is_counted_cached_and_replayed(tmp_path, locomo, mock_embeddings):
+    build = tmp_path / "build"
+    cache = ExtractionCache(build / "extraction-cache")
+    model = ScriptedClient()
+    first = await build_unit(build / "locomo" / "conv-1", locomo, _batched_config, prepare=model.prepare, cache=cache)
+    texts = [turn["content"] for turn in locomo.turns]
+    # One more request asked for the turn the response left out, alone.
+    assert model.requests == [texts, texts[1:2]]
+    session = json.loads((build / "locomo" / "conv-1" / "turns.jsonl").read_text().splitlines()[-1])
+    # The build reports both requests as model calls.
+    assert (session["calls"], session["prompt_tokens"], session["cache_hits"]) == (2, 200, 0)
+    assert (first["calls"], first["batches"], first["turns_asked_again"], first["turns_without_entry"]) == (2, 2, 1, 0)
+    # The turn's claim was saved from the answer to that request.
+    assert (first["claims"], first["evidence_claim_coverage"]) == (2, 1.0)
+    # A rebuild from the cache replays both requests, the second keyed like any other, without a model call.
+    replayed = await build_unit(build / "locomo" / "conv-2", locomo, _batched_config, prepare=model.prepare,
+                                cache=cache)
+    assert len(model.requests) == 2 and (replayed["calls"], replayed["cache_hits"]) == (0, 2)
+    same = ("claims", "turns_with_claims", "batches", "turns_asked_again", "turns_without_entry", "saved_claims",
+            "response_claims")
+    assert {key: replayed[key] for key in same} == {key: first[key] for key in same}
+    assert len(list(cache.folder.rglob("*.batch.json"))) == 2
 
 
 def test_a_build_summary_totals_its_complete_packs(tmp_path):
@@ -539,5 +615,7 @@ def test_a_build_summary_totals_its_complete_packs(tmp_path):
     assert (summary["annotated_evidence_turns"], summary["annotated_evidence_turns_with_claims"],
             summary["evidence_claim_coverage"]) == (20, 15, 0.75)
     assert (summary["batches"], summary["single_turn_batches"], summary["turns_without_entry"]) == (5, 2, 0)
+    # Manifests from before #260 asked no turn again.
+    assert summary["turns_asked_again"] == 0
     assert (summary["response_claims"], summary["saved_claims"], summary["overrides"]) == (
         40, 36, {"extraction_batch_target_tokens": 512})
