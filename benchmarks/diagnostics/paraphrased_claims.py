@@ -56,6 +56,7 @@ import duckdb
 import numpy as np
 
 from benchmarks.diagnostics import extracted_packs, product_packing
+from benchmarks.diagnostics.product_packing import _pct, _share
 from prme.ingestion.claim_merge import _normalize
 from prme.models.nodes import MemoryNode
 from prme.retrieval.models import RetrievalCandidate
@@ -212,7 +213,9 @@ def _stored_vectors(rows: Iterable[tuple], wanted: set[str]) -> tuple[dict[str, 
 
 def read_pack(pack: Path, *, unit: str, user_id: str, benchmark: str, pack_sha256: str) -> PackClaims:
     """Read a pack's current claims, their subjects and their stored vectors, without opening an engine."""
-    graph = object.__new__(DuckPGQGraphStore)  # only its row conversion is used
+    # Only the store's row conversion is used. It reads SELECT * by column
+    # position, as the store's own queries do, so it follows the table layout.
+    graph = object.__new__(DuckPGQGraphStore)
     types = [kind.value for kind in CLAIM_TYPES]
     states = [state.value for state in ACTIVE_LIFECYCLE_STATES]
     with duckdb.connect(str(pack / "memory.duckdb"), read_only=True) as db:
@@ -341,6 +344,7 @@ def unit_counts(claims: PackClaims, pairs: Sequence[Mapping], same_subject: int)
         "pairs_at_or_above": at_or_above(lambda pair: True),
         "identical_text_at_or_above": at_or_above(lambda pair: pair["identical_text"]),
         "same_source_at_or_above": at_or_above(lambda pair: pair["same_source"]),
+        "identical_same_source_at_or_above": at_or_above(lambda pair: pair["identical_text"] and pair["same_source"]),
         # Pairs from different turns whose two lines are both short (SHORT_WORDS).
         "short_other_turns_at_or_above": at_or_above(lambda pair: not pair["same_source"] and short(pair)),
     }
@@ -374,11 +378,10 @@ def digest(value: object) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def labeling_sheet(pairs_doc: Mapping, packs: Mapping[str, PackClaims], *, sizes: Mapping[str, int] = SAMPLE_SIZES,
-                   seed: int = SAMPLE_SEED) -> dict:
-    """The sampled pairs with what a labeler needs to read, and empty labels."""
+def labeling_sheet(pairs_doc: Mapping, packs: Mapping[str, PackClaims]) -> dict:
+    """The registered sample's pairs with what a labeler needs to read, and empty labels."""
     rows = []
-    for pair in sample_pairs(pairs_doc["pairs"], sizes, seed):
+    for pair in sample_pairs(pairs_doc["pairs"]):
         claims = packs[pair["unit"]]
         rows.append({
             "id": pair_id(pair), "unit": pair["unit"], "band": pair["band"], "similarity": pair["similarity"],
@@ -390,7 +393,8 @@ def labeling_sheet(pairs_doc: Mapping, packs: Mapping[str, PackClaims], *, sizes
         })
     return {"kind": LABELS_KIND, "schema_version": SCHEMA_VERSION, "benchmark": pairs_doc["benchmark"],
             "labeling_rule": LABELING_RULE, "labels": list(LABELS), "differences": list(DIFFERENCES),
-            "seed": seed, "sizes": dict(sizes), "pairs_sha256": digest(pairs_doc["pairs"]), "pairs": rows}
+            "seed": SAMPLE_SEED, "sizes": dict(SAMPLE_SIZES), "pairs_sha256": digest(pairs_doc["pairs"]),
+            "pairs": rows}
 
 
 CODE_KEYS = ("commit", "dirty", "worktree_sha256")
@@ -401,6 +405,8 @@ def code_state() -> dict:
     from benchmarks.retrieval_eval import provenance
 
     state = provenance(product_packing.gate_config(Path("{pack}")))
+    if state["commit"] is None:
+        raise ValueError("Run from a git checkout so the report names its commit")
     return {key: state[key] for key in CODE_KEYS}
 
 
@@ -500,17 +506,16 @@ def _texts_differ(pair: Mapping) -> bool:
 PAIR_SETS: dict[str, Callable[[Mapping], bool]] = {"all": _every, "paraphrases": _texts_differ}
 
 
-def _share(numerator: float, denominator: float) -> float | None:
-    return numerator / denominator if denominator else None
-
-
 def check_labels(sheet: Mapping, pairs_doc: Mapping) -> list[Mapping]:
-    """The labeled sample, refused unless it is the seed's sample of these pairs and every row is labeled."""
+    """The labeled sample, refused unless it is the registered seed's sample of these pairs, all labeled."""
     if sheet.get("kind") != LABELS_KIND or sheet.get("schema_version") != SCHEMA_VERSION:
         raise ValueError("Not a paraphrased claim labeling sheet")
-    if sheet["pairs_sha256"] != digest(pairs_doc["pairs"]):
+    if (sheet.get("seed"), sheet.get("sizes")) != (SAMPLE_SEED, SAMPLE_SIZES):
+        # Another seed or other sizes would let a sample be drawn again until it suits.
+        raise ValueError(f"The sheet must be drawn with seed {SAMPLE_SEED} and sizes {SAMPLE_SIZES}")
+    if sheet.get("pairs_sha256") != digest(pairs_doc["pairs"]):
         raise ValueError("The sheet was drawn from other pairs")
-    expected = [pair_id(pair) for pair in sample_pairs(pairs_doc["pairs"], sheet["sizes"], sheet["seed"])]
+    expected = [pair_id(pair) for pair in sample_pairs(pairs_doc["pairs"], SAMPLE_SIZES, SAMPLE_SEED)]
     if [row["id"] for row in sheet["pairs"]] != expected:
         raise ValueError("The sheet's pairs are not the sample its seed draws")
     by_id = {pair_id(pair): pair for pair in pairs_doc["pairs"]}
@@ -622,13 +627,16 @@ def _mean(values: Iterable[float | None]) -> float | None:
     return None if None in values else statistics.fmean(values)
 
 
+def _per_context(tokens: float | None, total: int) -> float | None:
+    """One context's share; an empty context packs nothing, so its share is 0."""
+    return None if tokens is None else _share(tokens, total) or 0.0
+
+
 def share_summary(rows: Sequence[Mapping], key: str, name: str) -> dict:
     """The token share of packed pairs over every question, at one threshold, for one pair set."""
     counts = [row["thresholds"][key][name] for row in rows]
     context_tokens = sum(row["context_tokens"] for row in rows)
-    shares = [count["tokens"] / row["context_tokens"] for count, row in zip(counts, rows)]
-    adjusted = [None if count["adjusted_tokens"] is None else count["adjusted_tokens"] / row["context_tokens"]
-                for count, row in zip(counts, rows)]
+    shares = [_per_context(count["tokens"], row["context_tokens"]) for count, row in zip(counts, rows)]
     adjusted_tokens = [count["adjusted_tokens"] for count in counts]
     return {
         "questions": len(rows),
@@ -638,27 +646,68 @@ def share_summary(rows: Sequence[Mapping], key: str, name: str) -> dict:
         "share_mean": statistics.fmean(shares),
         "share_median": statistics.median(shares),
         "share_max": max(shares),
-        "adjusted_share_mean": _mean(adjusted),
+        "adjusted_share_mean": _mean(_per_context(count["adjusted_tokens"], row["context_tokens"])
+                                     for count, row in zip(counts, rows)),
         "pooled_share": _share(sum(count["tokens"] for count in counts), context_tokens),
         "adjusted_pooled_share": None if None in adjusted_tokens else _share(sum(adjusted_tokens), context_tokens),
         # The other denominator: the packed records' own line costs, without the context's framing.
         "record_tokens_share_mean": statistics.fmean(
-            _share(count["tokens"], row["record_tokens"]) or 0.0 for count, row in zip(counts, rows)),
-        "adjusted_record_tokens_share_mean": _mean(
-            None if count["adjusted_tokens"] is None else _share(count["adjusted_tokens"], row["record_tokens"]) or 0.0
-            for count, row in zip(counts, rows)),
+            _per_context(count["tokens"], row["record_tokens"]) for count, row in zip(counts, rows)),
+        "adjusted_record_tokens_share_mean": _mean(_per_context(count["adjusted_tokens"], row["record_tokens"])
+                                                   for count, row in zip(counts, rows)),
     }
 
 
-def _at_least(value: float | None, rule: float) -> bool:
-    return value is not None and value >= rule
+def wilson_interval(successes: int, trials: int, z: float = 1.959964) -> tuple[float, float] | None:
+    """The Wilson score interval of a proportion (95% by default); None without trials."""
+    if not trials:
+        return None
+    centre = (successes + z * z / 2) / (trials + z * z)
+    half = z * math.sqrt(successes * (trials - successes) / trials + z * z / 4) / (trials + z * z)
+    return max(0.0, centre - half), min(1.0, centre + half)
+
+
+def sampling_error(bands: Mapping[str, Mapping], questions: Sequence[Mapping], partners: Mapping) -> dict:
+    """How far each condition could move within the labels' sampling error. Not part of the rule.
+
+    Each band's same-fact rate and its share with number, date and negation
+    pairs set aside get a Wilson 95% interval, and condition 1's adjusted
+    share is computed again with every band's rate at its lower and at its
+    upper limit at once.
+    """
+    limits = {}
+    for name, band in bands.items():
+        kept = band["labeled"] - sum(band["differ_only_in"].values())
+        limits[name] = {"same_fact_rate": wilson_interval(band["same_fact"], band["labeled"]),
+                        "same_fact_share_set_aside": wilson_interval(band["same_fact"], kept)}
+
+    def adjusted_at(side: int) -> float | None:
+        rates = {name: None if band["same_fact_rate"] is None else band["same_fact_rate"][side]
+                 for name, band in limits.items()}
+        return _mean(_per_context(_duplicates(question, partners, FLOOR, rates, paraphrases=False)["adjusted_tokens"],
+                                  question["context_tokens"]) for question in questions)
+
+    return {
+        "interval": "Wilson score, 95%", "bands": limits,
+        "adjusted_share_mean_at_lower_limits": adjusted_at(0),
+        "adjusted_share_mean_at_upper_limits": adjusted_at(1),
+        "bands_meeting_rule_at_upper_limits": [
+            name for name, band in limits.items()
+            if band["same_fact_share_set_aside"] is not None
+            and band["same_fact_share_set_aside"][1] >= SAME_FACT_RULE],
+    }
+
+
+def _at_least(value: float | None, rule: float) -> bool | None:
+    return None if value is None else value >= rule
 
 
 def decide(shares: Mapping[str, Mapping], labels: Mapping) -> dict:
     """Apply #255's rule as ``READING`` reads it, and again under each reading it does not use.
 
     Every reading gives condition 1 a token share and condition 2 the bands
-    that meet the 95% rule.
+    that meet the 95% rule. A reading whose share cannot be estimated, for a
+    band with pairs but no labels, decides nothing; the rule itself refuses.
     """
     floor = shares[threshold_key(FLOOR)]
 
@@ -668,9 +717,11 @@ def decide(shares: Mapping[str, Mapping], labels: Mapping) -> dict:
     def reading(share: float | None, bands: list[str]) -> dict:
         first, second = _at_least(share, TOKEN_SHARE_RULE), bool(bands)
         return {"share": share, "condition_1": first, "bands_meeting_rule": bands, "condition_2": second,
-                "follow_up": first and second}
+                "follow_up": None if first is None else first and second}
 
     adjusted = floor["all"]["adjusted_share_mean"]
+    if adjusted is None:
+        raise ValueError("A band with pairs has no labeled pair, so condition 1 cannot be read")
     primary = reading(adjusted, meeting("all"))
     other = {
         "condition 1 on the upper bound (every pair at or above 0.90 counted as the same fact)":
@@ -694,7 +745,8 @@ def decide(shares: Mapping[str, Mapping], labels: Mapping) -> dict:
         else "close the issue with the numbers",
         "other_readings": other,
         "readings_that_change_the_decision": [name for name, values in other.items()
-                                              if values["follow_up"] != primary["follow_up"]],
+                                              if values["follow_up"] not in (None, primary["follow_up"])],
+        "readings_undetermined": [name for name, values in other.items() if values["follow_up"] is None],
     }
 
 
@@ -709,6 +761,8 @@ def build_report(pairs_doc: Mapping, sheet: Mapping, contexts: Mapping, *,
     measured = {unit: counts["pack_sha256"] for unit, counts in pairs_doc["units"].items()}
     if replayed != measured:
         raise ValueError("The contexts were replayed over other packs than the pairs were read from")
+    if not contexts["questions"]:
+        raise ValueError("The contexts file holds no question")
     labels = check_labels(sheet, pairs_doc)
     summary = label_summary(labels, pairs_doc["pairs"])
     rates = {name: {band: values["same_fact_rate"] for band, values in summary[name]["bands"].items()}
@@ -725,6 +779,9 @@ def build_report(pairs_doc: Mapping, sheet: Mapping, contexts: Mapping, *,
             "claims": sum(node_id in claims[question["unit"]] for node_id, _ in question["records"]),
             "thresholds": question_counts(question, partners, rates),
         })
+    if not any(row["claims"] for row in rows):
+        # Receipts and pairs that name records differently would otherwise read as no duplicates at all.
+        raise ValueError("No packed record is a current claim of the pairs file")
     shares = {threshold_key(t): {name: share_summary(rows, threshold_key(t), name) for name in PAIR_SETS}
               for t in THRESHOLDS}
     return {
@@ -746,15 +803,14 @@ def build_report(pairs_doc: Mapping, sheet: Mapping, contexts: Mapping, *,
                             for name, keep in PAIR_SETS.items()},
                   "at_or_above": {threshold_key(t): sum(pair["similarity"] >= t for pair in pairs_doc["pairs"])
                                   for t in THRESHOLDS}},
-        "labels": summary, "shares": shares, "decision": decide(shares, summary), "questions": rows,
+        "sample": {"seed": sheet["seed"], "sizes": sheet["sizes"], "labeled": len(labels)},
+        "labels": summary, "shares": shares, "decision": decide(shares, summary),
+        "sampling_error": sampling_error(summary["all"]["bands"], contexts["questions"], partners),
+        "questions": rows,
     }
 
 
 # Markdown --------------------------------------------------------------------
-
-def _pct(value: float | None) -> str:
-    return "n/a" if value is None else f"{100 * value:.1f}%"
-
 
 def _label_table(bands: Mapping[str, Mapping]) -> list[str]:
     lines = ["| Band | Pairs | Labeled | Same fact | Different | Only a number | Only a date | Only a negation "
@@ -795,25 +851,33 @@ def report_markdown(report: Mapping) -> str:
         f"{contexts['context_tokens_mean']:.0f} context tokens "
         f"and {contexts['record_tokens_mean']:.0f} record tokens on average.", "",
         "## Pairs of current claims with one subject", "",
-        f"The last three columns break down the pairs at or above {keys[0]}. Short lines have {SHORT_WORDS} words "
+        f"The last four columns break down the pairs at or above {keys[0]}. A short line has {SHORT_WORDS} words "
         "or fewer after the turn's time and speaker.", "",
-        "| Pack | Current claims | Paired claims | Same-subject pairs | At or above " + " | ".join(keys)
-        + " | From one turn | Identical text | From other turns, both lines short |",
-        "|---|---:|---:|---:|" + "---:|" * len(keys) + "---:|---:|---:|",
     ]
-    columns = [("current_claims", None), ("paired_claims", None), ("same_subject_pairs", None),
-               *(("pairs_at_or_above", key) for key in keys), ("same_source_at_or_above", keys[0]),
-               ("identical_text_at_or_above", keys[0]), ("short_other_turns_at_or_above", keys[0])]
+    floor = keys[0]
+    columns: list[tuple[str, Callable[[Mapping], int]]] = [
+        ("Current claims", lambda counts: counts["current_claims"]),
+        ("Paired claims", lambda counts: counts["paired_claims"]),
+        ("Same-subject pairs", lambda counts: counts["same_subject_pairs"]),
+        *((f"At or above {key}" if key == floor else key,
+           lambda counts, key=key: counts["pairs_at_or_above"][key]) for key in keys),
+        ("From one turn", lambda counts: counts["same_source_at_or_above"][floor]),
+        ("Of those, identical text", lambda counts: counts["identical_same_source_at_or_above"][floor]),
+        ("From two turns", lambda counts: counts["pairs_at_or_above"][floor] - counts["same_source_at_or_above"][floor]),
+        ("Of those, both lines short", lambda counts: counts["short_other_turns_at_or_above"][floor]),
+    ]
     units = report["pairs"]["units"]
-
-    def cell(counts: Mapping, name: str, key: str | None) -> int:
-        return counts[name] if key is None else counts[name][key]
-
+    lines += ["| Pack | " + " | ".join(name for name, _ in columns) + " |",
+              "|---|" + "---:|" * len(columns)]
     for unit, counts in units.items():
-        lines.append(f"| {unit} | " + " | ".join(str(cell(counts, *column)) for column in columns) + " |")
-    lines.append("| All | " + " | ".join(str(sum(cell(counts, *column) for counts in units.values()))
-                                         for column in columns) + " |")
-    lines += ["", "## Labeled sample", "", "Every pair:", "", *_label_table(labels["all"]["bands"]), "",
+        lines.append(f"| {unit} | " + " | ".join(str(value(counts)) for _, value in columns) + " |")
+    lines.append("| All | " + " | ".join(str(sum(value(counts) for counts in units.values()))
+                                         for _, value in columns) + " |")
+    sample = report["sample"]
+    lines += ["", "## Labeled sample", "",
+              f"{sample['labeled']} pairs drawn with seed {sample['seed']} and band sizes "
+              + ", ".join(f"{size} from {band}" for band, size in sample["sizes"].items()) + ".", "",
+              "Every pair:", "", *_label_table(labels["all"]["bands"]), "",
               "Pairs whose texts differ (identical text set aside):", "",
               *_label_table(labels["paraphrases"]["bands"]), "",
               "## Packed tokens", "",
@@ -834,10 +898,25 @@ def report_markdown(report: Mapping) -> str:
               "| Reading | Token share | Condition 1 | Bands at 95% or more | Condition 2 | Follow-up |",
               "|---|---:|---|---|---|---|"]
     for name, reading in decision["other_readings"].items():
-        lines.append(f"| {name} | {_pct(reading['share'])} | {'holds' if reading['condition_1'] else 'fails'} | "
+        first = {None: "n/a", True: "holds", False: "fails"}[reading["condition_1"]]
+        verdict = {None: "undetermined", True: "yes", False: "no"}[reading["follow_up"]]
+        lines.append(f"| {name} | {_pct(reading['share'])} | {first} | "
                      f"{', '.join(reading['bands_meeting_rule']) or 'none'} | "
-                     f"{'holds' if reading['condition_2'] else 'fails'} | {'yes' if reading['follow_up'] else 'no'} |")
-    lines += ["", "## How the rule is read", "", report["reading"], "", "## Labeling rule", "",
+                     f"{'holds' if reading['condition_2'] else 'fails'} | {verdict} |")
+    error = report["sampling_error"]
+    lines += ["", "## Sampling error", "",
+              "Not part of the rule. Each band's labels with a Wilson 95% interval, and condition 1's adjusted share "
+              "with every band's same-fact rate at its lower or its upper limit at once.", "",
+              "| Band | Same-fact rate | Same fact, number, date and negation pairs set aside |", "|---|---|---|"]
+    for name, band in error["bands"].items():
+        lines.append(f"| {name} | " + " | ".join(
+            "n/a" if limits is None else f"{_pct(limits[0])} to {_pct(limits[1])}"
+            for limits in (band["same_fact_rate"], band["same_fact_share_set_aside"])) + " |")
+    upper_bands = ", ".join(error["bands_meeting_rule_at_upper_limits"]) or "none"
+    lines += ["", f"Condition 1 at the lower limits: {_pct(error['adjusted_share_mean_at_lower_limits'])}; at the "
+              f"upper limits: {_pct(error['adjusted_share_mean_at_upper_limits'])}. Bands whose upper limit reaches "
+              f"95%: {upper_bands}.",
+              "", "## How the rule is read", "", report["reading"], "", "## Labeling rule", "",
               report["labeling_rule"], ""]
     return "\n".join(lines)
 
@@ -877,14 +956,16 @@ def replay_main(args: argparse.Namespace) -> None:
 
 
 def report_main(args: argparse.Namespace) -> None:
-    raw = {name: path.read_bytes() for name, path in
-           (("pairs", args.pairs), ("labels", args.labels), ("contexts", args.contexts))}
+    paths = {"pairs": args.pairs, "labels": args.labels, "contexts": args.contexts}
+    written = {args.output.resolve(), args.output.with_suffix(".md").resolve()}
+    if written & {path.resolve() for path in paths.values()}:
+        raise SystemExit("The report would overwrite one of its inputs")
+    raw = {name: path.read_bytes() for name, path in paths.items()}
     report = build_report(*(json.loads(data) for data in raw.values()),
                           inputs={f"{name}_sha256": hashlib.sha256(data).hexdigest() for name, data in raw.items()})
     report["code"]["report"] = code_state()
-    _write_json(args.output, report)
     markdown = report_markdown(report)
-    args.output.with_suffix(".md").write_text(markdown)
+    product_packing._write_report(args.output, report, markdown)
     print(markdown)
 
 
@@ -897,13 +978,15 @@ def main(argv: list[str] | None = None) -> None:
     pairs.add_argument("--packs", type=Path, required=True,
                        help="A build folder from benchmarks.diagnostics.extracted_packs")
     pairs.add_argument("--benchmark", choices=extracted_packs.BENCHMARKS, default="locomo")
-    pairs.add_argument("--output", type=Path, required=True, help="JSON file of the pairs at 0.90 or above")
-    pairs.add_argument("--sheet", type=Path,
+    pairs.add_argument("--output", type=product_packing._json_output, required=True,
+                       help="JSON file of the pairs at 0.90 or above")
+    pairs.add_argument("--sheet", type=product_packing._json_output,
                        help="New JSON labeling sheet with the stratified sample (contains benchmark text)")
     replay = commands.add_parser("replay", help="Replay the evidence gate's contexts and keep their packed records")
     replay.add_argument("--packs", type=Path, required=True)
     replay.add_argument("--benchmark", choices=extracted_packs.BENCHMARKS, default="locomo")
-    replay.add_argument("--output", type=Path, required=True, help="JSON file of each context's packed records")
+    replay.add_argument("--output", type=product_packing._json_output, required=True,
+                        help="JSON file of each context's packed records")
     replay.add_argument("--gate-output", type=product_packing._json_output,
                         help="Also write the gate's own report here, with a Markdown summary beside it")
     report = commands.add_parser("report", help="Apply the #255 decision rule to the pairs, labels and contexts")

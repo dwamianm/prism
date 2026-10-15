@@ -2,7 +2,9 @@
 import hashlib
 import json
 import math
+import shutil
 
+import duckdb
 import numpy as np
 import pytest
 
@@ -55,13 +57,12 @@ def _pairs(bands: dict[str, int], unit: str = "conv-1") -> list[dict]:
             for name, count in bands.items() for index in range(count)]
 
 
-def _sheet(pairs: list[dict], *, sizes: dict | None = None, seed: int = 7) -> dict:
-    sizes = sizes or pc.SAMPLE_SIZES
+def _sheet(pairs: list[dict]) -> dict:
     rows = [{"id": pc.pair_id(pair), "unit": pair["unit"], "band": pair["band"], "similarity": pair["similarity"],
              "identical_text": pair["identical_text"], "label": "same_fact", "difference": None,
-             "reason": "Both say the same thing."} for pair in pc.sample_pairs(pairs, sizes, seed)]
-    return {"kind": pc.LABELS_KIND, "schema_version": pc.SCHEMA_VERSION, "seed": seed, "sizes": sizes,
-            "pairs_sha256": pc.digest(pairs), "pairs": rows}
+             "reason": "Both say the same thing."} for pair in pc.sample_pairs(pairs)]
+    return {"kind": pc.LABELS_KIND, "schema_version": pc.SCHEMA_VERSION, "seed": pc.SAMPLE_SEED,
+            "sizes": dict(pc.SAMPLE_SIZES), "pairs_sha256": pc.digest(pairs), "pairs": rows}
 
 
 def test_bands_include_their_lower_edge_and_rounding_decides_the_edge():
@@ -136,8 +137,14 @@ def test_labels_must_be_the_seeds_sample_and_each_needs_a_label_and_a_one_line_r
     refused(lambda s: s["pairs"][0].update(reason="two\nlines"), "one-line reason")
     refused(lambda s: s["pairs"][0].update(similarity=0.99), "band or similarity")
     refused(lambda s: s["pairs"].reverse(), "not the sample its seed draws")
-    refused(lambda s: s.update(seed=8), "not the sample its seed draws")
+    # A sample drawn again with another seed or other sizes is refused, even when it matches its own seed.
+    redrawn = [pc.pair_id(pair) for pair in pc.sample_pairs(pairs, seed=8)]
+    refused(lambda s: (s.update(seed=8), [row.update(id=new) for row, new in zip(s["pairs"], redrawn)]),
+            "must be drawn with seed 255")
+    refused(lambda s: s.update(sizes={"0.90-0.95": 50, "0.95-0.97": 0, "0.97-1.00": 0}), "must be drawn with seed")
+    refused(lambda s: s.pop("seed"), "must be drawn with seed")
     refused(lambda s: s.update(pairs_sha256="0" * 64), "drawn from other pairs")
+    refused(lambda s: s.pop("pairs_sha256"), "drawn from other pairs")
     sheet["pairs"][0].update(label="different_facts", difference="number")
     assert pc.check_labels(sheet, doc)[0]["difference"] == "number"
 
@@ -177,6 +184,9 @@ def test_shares_are_averaged_over_questions_and_the_pooled_share_is_reported_bes
     assert summary["adjusted_pooled_share"] == pytest.approx(15 / 400)
     assert summary["record_tokens_share_mean"] == pytest.approx((30 / 90) / 2)
     assert summary["questions_with_a_packed_pair"] == 1 and summary["records_mean"] == 0.5
+    # An empty context packs nothing, so its share is 0 rather than a division by zero.
+    empty = pc.share_summary([_row(0, 0, 0.0, 0)], "0.90", "all")
+    assert (empty["share_mean"], empty["adjusted_share_mean"], empty["pooled_share"]) == (0.0, 0.0, None)
 
 
 def _labels(rows_by_band: dict[str, list[tuple[str, str | None]]], identical: bool = False) -> list[dict]:
@@ -201,13 +211,14 @@ def test_label_bands_set_aside_number_date_and_negation_pairs_and_weigh_bands_by
     assert weighted["0.97"] == 1.0
 
 
-def _shares(adjusted: float, upper: float, paraphrases: float | None = None) -> dict:
+def _shares(adjusted: float | None, upper: float, paraphrases: float | None | str = "same") -> dict:
+    """Shares at 0.90 for both pair sets; paraphrases take the adjusted share unless given one."""
     def reading(value: float | None, share: float) -> dict:
         return {"share_mean": share, "adjusted_share_mean": value, "adjusted_pooled_share": value,
                 "adjusted_record_tokens_share_mean": value}
 
     return {"0.90": {"all": reading(adjusted, upper),
-                     "paraphrases": reading(adjusted if paraphrases is None else paraphrases, upper)}}
+                     "paraphrases": reading(adjusted if paraphrases == "same" else paraphrases, upper)}}
 
 
 def _band_summary(meets: dict[str, bool]) -> dict:
@@ -228,6 +239,55 @@ def test_the_decision_needs_both_conditions_and_names_readings_that_would_change
     nothing_meets = {"all": _band_summary(dict.fromkeys(meets, False)),
                      "paraphrases": _band_summary(dict.fromkeys(meets, False))}
     assert not pc.decide(_shares(0.06, 0.08), nothing_meets)["follow_up"]
+    # Exactly 5% is enough.
+    assert pc.decide(_shares(0.05, 0.08), labels)["condition_1"]["holds"]
+
+
+def test_a_share_that_cannot_be_estimated_decides_nothing():
+    meets = {"0.90-0.95": False, "0.95-0.97": False, "0.97-1.00": True}
+    labels = {"all": _band_summary(meets), "paraphrases": _band_summary(meets)}
+    with pytest.raises(ValueError, match="cannot be read"):
+        pc.decide(_shares(None, 0.08), labels)
+    decision = pc.decide(_shares(0.06, 0.08, paraphrases=None), labels)
+    name = "both conditions with identical-text pairs set aside"
+    assert decision["other_readings"][name]["follow_up"] is None
+    assert decision["readings_undetermined"] == [name] and decision["readings_that_change_the_decision"] == []
+
+
+def test_a_band_meets_the_rule_at_exactly_95_percent_and_wilson_limits_bound_each_rate():
+    nineteen = _labels({"0.97-1.00": [("same_fact", None)] * 19 + [("different_facts", None)]})
+    assert pc.label_summary(nineteen, _pairs({"0.97-1.00": 20}))["all"]["bands"]["0.97-1.00"]["meets_rule"]
+    low, high = pc.wilson_interval(0, 17)
+    assert low == pytest.approx(0.0, abs=1e-12) and high == pytest.approx(0.1843, abs=1e-4)
+    assert pc.wilson_interval(12, 13) == pytest.approx((0.6669, 0.9863), abs=1e-4)
+    assert pc.wilson_interval(0, 0) is None
+
+
+def test_sampling_error_recomputes_the_adjusted_share_at_each_limit():
+    pairs = [{"unit": "u", "a": "x", "b": "y", "similarity": 0.91, "identical_text": False}]
+    question = {"unit": "u", "records": [["x", 10], ["y", 10]], "context_tokens": 100}
+    bands = pc.label_summary(_labels({"0.90-0.95": [("different_facts", None)] * 4}), _pairs({"0.90-0.95": 4}))
+    error = pc.sampling_error(bands["all"]["bands"], [question], pc.partner_index(pairs))
+    upper = pc.wilson_interval(0, 4)[1]
+    assert error["adjusted_share_mean_at_lower_limits"] == 0.0
+    assert error["adjusted_share_mean_at_upper_limits"] == pytest.approx(20 * upper / 100)
+    assert error["bands_meeting_rule_at_upper_limits"] == []
+
+
+def test_stored_vectors_take_the_latest_key_and_refuse_mixed_or_malformed_embeddings():
+    def row(node, key, vector, model="m"):
+        return node, key, model, "1", len(vector), np.asarray(vector, dtype="<f4").tobytes()
+
+    vectors, embedding, several = pc._stored_vectors(
+        [row("a", 2, [0, 1]), row("a", 1, [1, 0]), row("b", 3, [3, 4]), row("other", 4, [1, 1])], {"a", "b"})
+    assert several == 1 and embedding == {"model": "m", "version": "1", "dimension": 2}
+    assert vectors["a"] == pytest.approx([0, 1]) and vectors["b"] == pytest.approx([0.6, 0.8])
+    with pytest.raises(ValueError, match="more than one embedding"):
+        pc._stored_vectors([row("a", 1, [1, 0]), row("b", 2, [1, 0], model="n")], {"a", "b"})
+    with pytest.raises(ValueError, match="malformed"):
+        pc._stored_vectors([row("a", 1, [0, 0])], {"a"})
+    with pytest.raises(ValueError, match="malformed"):
+        pc._stored_vectors([("a", 1, "m", "1", 3, np.zeros(2, dtype="<f4").tobytes())], {"a"})
 
 
 # End to end over a pack built through ingest() ----------------------------------
@@ -324,17 +384,51 @@ async def test_a_built_pack_yields_its_paraphrase_pair_and_the_gate_contexts_tha
     assert report["questions"][0]["claims"] == 3
     assert report["labels"]["all"]["bands"]["0.95-0.97"]["meets_rule"]
     assert "**Decision:" in pc.report_markdown(report)
+    assert report["sample"] == {"seed": 255, "sizes": pc.SAMPLE_SIZES, "labeled": 1}
+    assert report["sampling_error"]["bands"]["0.95-0.97"]["same_fact_rate"][1] == 1.0
     with pytest.raises(ValueError, match="other packs"):
         pc.build_report({**pairs_doc, "units": {"conv-1": {**counts, "pack_sha256": "0" * 64}}}, sheet, contexts)
+    with pytest.raises(ValueError, match="no question"):
+        pc.build_report(pairs_doc, sheet, {**contexts, "questions": []})
+    # Receipts that name records differently from the pairs file would read as no duplicates at all.
+    renamed = [{**question, "records": [[f"x-{node_id}", cost] for node_id, cost in question["records"]]}
+               for question in contexts["questions"]]
+    with pytest.raises(ValueError, match="No packed record is a current claim"):
+        pc.build_report(pairs_doc, sheet, {**contexts, "questions": renamed})
 
     # The command line records each input file's digest and the code that wrote the report.
     files = {name: tmp_path / f"{name}.json" for name in ("pairs", "labels", "contexts")}
     for name, value in zip(files, (pairs_doc, sheet, contexts)):
         files[name].write_text(json.dumps(value))
+    arguments = [item for name, path in files.items() for item in (f"--{name}", str(path))]
     output = tmp_path / "out" / "report.json"
-    pc.main(["report", *(item for name, path in files.items() for item in (f"--{name}", str(path))),
-             "--output", str(output)])
+    pc.main(["report", *arguments, "--output", str(output)])
     written = json.loads(output.read_text())
     assert written["inputs"] == {f"{name}_sha256": hashlib.sha256(path.read_bytes()).hexdigest()
                                  for name, path in files.items()}
     assert set(written["code"]) == {"pairs", "replay", "report"} and output.with_suffix(".md").is_file()
+    with pytest.raises(SystemExit, match="overwrite one of its inputs"):
+        pc.main(["report", *arguments, "--output", str(files["pairs"])])
+    # A labeled sheet is never replaced by a new, empty one.
+    with pytest.raises(SystemExit, match="would discard its labels"):
+        pc.main(["pairs", "--packs", str(build), "--output", str(tmp_path / "again.json"),
+                 "--sheet", str(files["labels"])])
+
+    # Only current claims with a current subject edge are read: on a copy, retire one claim, close
+    # another's validity and close the third's HAS_FACT edge.
+    copy = tmp_path / "changed-pack"
+    shutil.copytree(build / "locomo" / "conv-1" / "pack", copy)
+    first, second, third = packs["conv-1"].ids
+    with duckdb.connect(str(copy / "memory.duckdb")) as db:
+        db.execute("UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ? WHERE id = ?", [second, first])
+        db.execute("UPDATE nodes SET valid_to = now() WHERE id = ?", [second])
+        db.execute("UPDATE edges SET valid_to = now() WHERE target_id = ? AND edge_type = 'has_fact'", [third])
+    changed = pc.read_pack(copy, unit="conv-1", user_id="conv-1", benchmark="locomo", pack_sha256="changed")
+    assert changed.ids == () and changed.counts["current_claims"] == 1 and changed.counts["without_subject"] == 1
+
+
+def test_a_step_outside_a_git_checkout_is_refused(monkeypatch):
+    monkeypatch.setattr("benchmarks.retrieval_eval.provenance", lambda config: {
+        "commit": None, "dirty": False, "worktree_sha256": "0" * 64})
+    with pytest.raises(ValueError, match="git checkout"):
+        pc.code_state()
