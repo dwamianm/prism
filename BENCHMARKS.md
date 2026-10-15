@@ -1204,6 +1204,41 @@ Reports in `benchmarks/results/research/2026-10-05/`: `locomo-full-fold-defaults
 The conversation-level intervals resample the ten conversations (4,000
 samples).
 
+### Paraphrased duplicate claims (#255)
+
+Claim merge (#209) retires only exact repeats of a claim, and folding covers
+only records of one source turn. #255 measured how much packed context goes
+to current claims of one subject that restate each other, with no model
+calls: `benchmarks.diagnostics.paraphrased_claims` pairs the claims by the
+cosine of the vectors each pack stored, labels a stratified sample of 50
+pairs by hand, and counts the pairs whose two claims the gate's own replay
+packs together. The decision rule was fixed in the issue before measuring.
+
+On the ten LoCoMo packs of `ingest-baseline-locomo-deepseek-2026-10-15`
+(`main` `58caddb1`, current defaults; LongMemEval-S has no current `ingest()`
+packs on this machine), 11,173 of 626,146 same-subject pairs reach a cosine of
+0.90. The last column counts pairs at or above each band's lower edge; the
+adjusted share weights each pair by its band's labeled same-fact rate:
+
+| Band | Pairs | Labeled same fact, date pairs set aside | Packed tokens from that edge up: upper bound / adjusted |
+|---|---:|---|---:|
+| [0.90, 0.95) | 7,988 | 0 of 11 | 8.9% / 3.0% |
+| [0.95, 0.97) | 1,259 | 1 of 6 | 5.4% / 3.0% |
+| [0.97, 1.00] | 1,926 | 12 of 13 (92.3%) | 3.2% / 2.7% |
+
+Both conditions fail (less than 5% of packed tokens; no band at 95%), so the
+numbers close the issue and no packing-time fold is proposed. Every same-fact
+pair in the sample came from one turn: 12 identical lines, which
+`fold_repeated_text` folds when their dates and tags match, and one longer
+line of the same turn. Every pair from two turns was two different facts:
+greetings and thanks such as "Thanks, Nate!" on two days, which make up 8,415
+of the 9,549 pairs at or above 0.90 from two turns. Fifty labels cannot
+exclude either threshold on their own (with every band's rate at its Wilson
+95% upper limit, the adjusted share would be 6.4%), but none of the 37 pairs
+from two turns was the same fact. The labels, the reasons, the sensitivity of
+the top band to one label and the commands are in
+`benchmarks/results/research/2026-10-15/PARAPHRASED-DUPLICATE-CLAIMS.md`.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
