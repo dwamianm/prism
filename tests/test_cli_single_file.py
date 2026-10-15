@@ -13,6 +13,7 @@ import argparse
 import json
 import logging
 import os
+import stat
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -23,6 +24,7 @@ import pytest
 
 from prme import MemoryClient, MemoryEngine, PRMEConfig, __version__
 from prme.cli import (
+    _encryption_key,
     build_parser,
     cmd_compact,
     cmd_doctor,
@@ -42,8 +44,10 @@ from prme.storage.pack_tools import (
     open_pack_read_only,
 )
 from tests.test_durable_ingestion import MockEmbeddingProvider
+from tests.test_single_file_pack import OtherModel
 
 USER = "alice"
+PASSPHRASE = "correct horse battery staple"
 REFERENCE_TIME = datetime(2026, 10, 1, tzinfo=timezone.utc)
 MEMORIES = (
     "Alice drinks green tea every morning",
@@ -306,6 +310,17 @@ async def test_engine_commands_open_a_pack_file(tmp_path, capsys):
     assert not (tmp_path / "absent.prme").exists()
 
 
+async def test_a_directory_target_ignores_an_ambient_pack_path(tmp_path, monkeypatch, capsys):
+    directory = tmp_path / "pack"
+    async with MemoryEngine.open(directory_config(directory)) as engine:
+        await store_all(engine, MEMORIES[:2])
+    ambient = tmp_path / "ambient.prme"
+    monkeypatch.setenv("PRME_PACK_PATH", str(ambient))
+    await cmd_info(args(db_path=str(directory / "memory.duckdb"), format="json"))
+    assert json.loads(capsys.readouterr().out)["node_count"] == 2
+    assert not ambient.exists()
+
+
 # --- compact --------------------------------------------------------------
 
 
@@ -411,6 +426,38 @@ async def test_cmd_compact_reports_sizes(tmp_path, capsys):
     assert f"Size after:   {pack.stat().st_size:,} bytes" in out
 
 
+async def test_compact_through_a_symbolic_link_compacts_the_file_it_names(tmp_path):
+    real = tmp_path / "store" / "memories.prme"
+    await make_pack(real)
+    link = tmp_path / "link.prme"
+    link.symlink_to(real)
+    counts = table_counts(real)
+
+    # The write-ahead log that matters is the one beside the real file.
+    wal = Path(f"{real}.wal")
+    wal.write_bytes(b"")
+    with pytest.raises(PackInUseError, match="write-ahead log"):
+        compact_pack(link)
+    wal.unlink()
+
+    result = compact_pack(link)
+    assert result["path"] == str(real)
+    assert result["bytes_after"] == real.stat().st_size
+    # The link still names the pack, which now holds the compacted copy.
+    assert link.is_symlink() and os.readlink(link) == str(real)
+    assert table_counts(link) == counts
+    assert os.listdir(real.parent) == ["memories.prme"]
+    assert sorted(os.listdir(tmp_path)) == ["link.prme", "store"]
+
+
+async def test_compact_keeps_the_pack_file_mode(tmp_path):
+    pack = tmp_path / "memories.prme"
+    await make_pack(pack, MEMORIES[:2])
+    pack.chmod(0o600)
+    compact_pack(pack)
+    assert stat.S_IMODE(pack.stat().st_mode) == 0o600
+
+
 # --- migrate --------------------------------------------------------------
 
 
@@ -470,6 +517,26 @@ async def test_migrate_restores_vectors_a_legacy_pack_kept_only_in_its_snapshot_
         assert conn.execute("SELECT count(*) FROM vector_payloads").fetchone() == (len(MEMORIES),)
     async with MemoryEngine.open(pack_config(pack)) as engine:
         assert await read_back(engine) == expected
+
+
+async def test_migrate_records_the_model_that_built_the_vectors(tmp_path, monkeypatch, caplog):
+    directory = tmp_path / "pack"
+    async with MemoryEngine.open(directory_config(directory)) as engine:
+        await store_all(engine)
+    # Migrated under another model of the same dimension, the new pack still
+    # names the model of its vectors, and the mismatch is reported.
+    monkeypatch.setattr("prme.storage.engine.create_embedding_provider", lambda _: OtherModel())
+    pack = tmp_path / "memories.prme"
+    with caplog.at_level(logging.WARNING, logger="prme.storage.pack_manifest"):
+        await migrate_directory_pack(directory, pack)
+    with open_pack_read_only(pack) as conn:
+        assert conn.execute(
+            "SELECT embedding_model, embedding_version, embedding_dim FROM prme_manifest"
+        ).fetchall() == [
+            (MockEmbeddingProvider.model_name, MockEmbeddingProvider.model_version, MockEmbeddingProvider.dimension),
+        ]
+    assert f"built with embedding model {MockEmbeddingProvider.model_name}" in caplog.text
+    assert f"configured model is {OtherModel.model_name}" in caplog.text
 
 
 async def test_migrate_refuses_without_changing_anything(tmp_path):
@@ -570,9 +637,77 @@ async def test_cmd_migrate_reports_counts(tmp_path, capsys):
     assert "Encrypted:     no" in out
 
 
+# --- Encryption keys --------------------------------------------------------
+
+
+def test_configured_key_is_read_from_the_environment_then_dotenv(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    # PRME settings are case-insensitive in .env as in the environment.
+    (tmp_path / ".env").write_text(f"PRME_ENCRYPTION_ENABLED=true\nprme_encryption_key={PASSPHRASE}\n")
+    pack = str(tmp_path / "memories.prme")
+    assert _encryption_key(args(encryption_key=None), pack) == PASSPHRASE
+    # A directory pack's database never takes the configured key.
+    assert _encryption_key(args(encryption_key=None), str(tmp_path / "pack" / "memory.duckdb")) is None
+    # A key on the command line wins, and an empty one means no key.
+    assert _encryption_key(args(encryption_key="another key"), pack) == "another key"
+    assert _encryption_key(args(encryption_key=""), pack) is None
+    # The environment outranks .env.
+    monkeypatch.setenv("PRME_ENCRYPTION_ENABLED", "false")
+    assert _encryption_key(args(encryption_key=None), pack) is None
+
+
+async def test_configured_key_opens_a_pack_file_but_not_a_directory_database(tmp_path, monkeypatch, capsys):
+    directory = tmp_path / "pack"
+    async with MemoryEngine.open(directory_config(directory)) as engine:
+        await store_all(engine, MEMORIES[:2])
+    secret = tmp_path / "secret.prme"
+    encrypted = PRMEConfig(pack_path=str(secret), encryption_enabled=True, encryption_key=PASSPHRASE)
+    async with MemoryEngine.open(encrypted) as engine:
+        await store_all(engine, MEMORIES[:2])
+    monkeypatch.setenv("PRME_ENCRYPTION_ENABLED", "true")
+    monkeypatch.setenv("PRME_ENCRYPTION_KEY", PASSPHRASE)
+
+    await cmd_compact(args(pack=str(secret), encryption_key=None, format="json"))
+    assert json.loads(capsys.readouterr().out)["encrypted"] is True
+    await cmd_doctor(args(directory=str(secret), encryption_key=None))
+    assert "tables, encrypted)" in capsys.readouterr().out
+    # For a directory pack the settings mean file-level encryption, so its
+    # plain memory.duckdb is compacted without a key.
+    await cmd_compact(args(pack=str(directory / "memory.duckdb"), encryption_key=None, format="json"))
+    assert json.loads(capsys.readouterr().out)["encrypted"] is False
+
+
+def test_an_empty_encryption_key_means_no_key(tmp_path, monkeypatch, capsys):
+    pack = tmp_path / "memories.prme"
+    with MemoryClient(str(pack)) as client:
+        client.store(MEMORIES[0], user_id=USER)
+    monkeypatch.setenv("PRME_ENCRYPTION_ENABLED", "true")
+    monkeypatch.setenv("PRME_ENCRYPTION_KEY", PASSPHRASE)
+    monkeypatch.setattr(sys, "argv", ["prme", "compact", str(pack), "--encryption-key", "", "--format", "json"])
+    main()
+    assert json.loads(capsys.readouterr().out)["encrypted"] is False
+
+
+async def test_an_invalid_unrelated_setting_does_not_stop_compact_or_doctor(tmp_path, monkeypatch, capsys):
+    pack = tmp_path / "memories.prme"
+    await make_pack(pack, MEMORIES[:2])
+    monkeypatch.setenv("PRME_DUCKDB_THREADS", "0")
+    with pytest.raises(ValueError):
+        PRMEConfig()
+    await cmd_compact(args(pack=str(pack), encryption_key=None, format="json"))
+    assert json.loads(capsys.readouterr().out)["encrypted"] is False
+    await cmd_doctor(args(directory=str(pack), encryption_key=None))
+    out = capsys.readouterr().out
+    assert "[FAIL]" not in out and " 0 failures" in out
+
+
 # --- prme-mcp --db-path ---------------------------------------------------
 
-STORAGE_VARIABLES = ("PRME_PACK_PATH", "PRME_DB_PATH", "PRME_VECTOR_PATH", "PRME_LEXICAL_PATH")
+# _use_db_path sets these in os.environ itself, so each test registers them
+# with monkeypatch to have them restored afterwards.
+STORAGE_VARIABLES = (
+    "PRME_PACK_PATH", "PRME_DB_PATH", "PRME_VECTOR_PATH", "PRME_LEXICAL_PATH", "PRME_DATABASE_URL",
+)
 
 
 def test_mcp_db_path_selects_a_single_file_pack_or_a_directory(tmp_path, monkeypatch):
@@ -607,3 +742,18 @@ def test_mcp_db_path_selects_a_single_file_pack_or_a_directory(tmp_path, monkeyp
     legacy.mkdir()
     server._use_db_path(str(legacy))
     assert not PRMEConfig().single_file_pack
+
+
+def test_mcp_db_path_pack_ignores_an_ambient_database_url(tmp_path, monkeypatch):
+    server = pytest.importorskip("prme.mcp.server")
+    monkeypatch.chdir(tmp_path)
+    for name in STORAGE_VARIABLES:
+        monkeypatch.setenv(name, "unused")
+        monkeypatch.delenv(name)
+    monkeypatch.setenv("PRME_DATABASE_URL", "postgresql://prme@localhost/prme")
+
+    pack = tmp_path / "memories.prme"
+    server._use_db_path(str(pack))
+    config = PRMEConfig()
+    assert config.single_file_pack and config.pack_path == str(pack)
+    assert config.backend == "duckdb"

@@ -26,6 +26,7 @@ from contextlib import AsyncExitStack
 import hashlib
 import json
 import logging
+import os
 import warnings
 from collections.abc import AsyncIterator, Collection, Sequence
 from contextlib import asynccontextmanager
@@ -239,14 +240,22 @@ def _connect_single_file_pack(
     DuckDB instance, because DuckDB accepts a key only through ATTACH.
     Opening an encrypted pack without its key or with a wrong key, or a
     plain pack with a key, raises ``EncryptionError`` and leaves the file
-    as it was.
+    as it was. An encrypted pack that another engine in this process has
+    open raises ``PackInUseError``.
     """
+    # DuckDB tells two opens of one file apart by the path string, both in
+    # its guard against attaching a file twice and in its cache of open
+    # databases, and it keeps the write-ahead log beside the path it was
+    # given. Open the real file, so two spellings of one pack (relative and
+    # absolute, or through a symbolic link) meet the same guard or share one
+    # instance, and the log stays beside the pack itself.
+    real_path = os.path.realpath(path)
     try:
         # Apply at instance creation: SET would silently change another
         # engine sharing this database. DuckDB rejects conflicting opens.
         if key is None:
-            return (duckdb.connect(path) if threads is None
-                    else duckdb.connect(path, config={"threads": threads}))
+            return (duckdb.connect(real_path) if threads is None
+                    else duckdb.connect(real_path, config={"threads": threads}))
         settings: dict[str, Any] = {} if threads is None else {"threads": threads}
         # DuckDB encrypts the attached file and its WAL with the key, but it
         # writes temporary files in clear text unless temp_file_encryption
@@ -254,11 +263,11 @@ def _connect_single_file_pack(
         # DuckDB does for a database file, not in the working directory it
         # uses for an in-memory database.
         database = duckdb.connect(":memory:", config={
-            **settings, "temp_directory": f"{path}.tmp", "temp_file_encryption": True,
+            **settings, "temp_directory": f"{real_path}.tmp", "temp_file_encryption": True,
         })
         try:
             database.execute(
-                f"ATTACH {_sql_literal(path)} AS {_PACK_DATABASE} "
+                f"ATTACH {_sql_literal(real_path)} AS {_PACK_DATABASE} "
                 f"(ENCRYPTION_KEY {_sql_literal(key)})"
             )
             database.execute(f"USE {_PACK_DATABASE}")
@@ -284,6 +293,15 @@ def _connect_single_file_pack(
             error = EncryptionError(
                 f"The memory pack at {path} is not encrypted, but encryption_enabled "
                 "and encryption_key are set; open it without them"
+            )
+        elif "Unique file handle conflict" in message:
+            # Imported here: pack_tools imports this module.
+            from prme.storage.pack_tools import PackInUseError
+
+            error = PackInUseError(
+                f"The memory pack at {path} is already open in this process; an "
+                "encrypted single-file pack can be open in one engine per process, "
+                "so close the other engine first"
             )
         elif leaks_key:
             error = EncryptionError(f"Could not open the memory pack at {path}")
@@ -456,7 +474,8 @@ class MemoryEngine:
         vector snapshot and the manifest are tables inside it, and the
         lexical index is rebuilt in memory from the graph before the engine
         serves any read. With encryption configured, DuckDB encrypts that
-        file, its write-ahead log and temporary files natively. Otherwise the
+        file and its write-ahead log natively, and the engine turns on
+        DuckDB's temporary-file encryption as well. Otherwise the
         pack is the directory layout of ``db_path``, ``vector_path`` and
         ``lexical_path``, with file-level Fernet encryption when configured.
         """
@@ -611,7 +630,7 @@ class MemoryEngine:
 
             startup.push_async_callback(lexical_index.close)
             if single_file:
-                _load_lexical_from_graph(conn, lexical_index)
+                await run_to_completion(_load_lexical_from_graph, conn, lexical_index)
 
             # Create and start write queue
             write_queue = WriteQueue(maxsize=config.write_queue_size)

@@ -150,6 +150,9 @@ def config_from_directory(directory: str) -> PRMEConfig:
         db_path=os.path.join(abs_dir, "memory.duckdb"),
         vector_path=os.path.join(abs_dir, "vectors.usearch"),
         lexical_path=lexical_dir,
+        # The directory is the target: an ambient pack path must not take
+        # its place.
+        pack_path=None,
     )
 
 
@@ -171,7 +174,9 @@ def config_from_pack(path: str) -> PRMEConfig:
     """
     abs_path = os.path.abspath(path)
     os.makedirs(os.path.dirname(abs_path), exist_ok=True)
-    return PRMEConfig(pack_path=abs_path)
+    # The pack is the target: an ambient database_url must not redirect it
+    # to PostgreSQL, and cannot be combined with pack_path.
+    return PRMEConfig(database_url=None, pack_path=abs_path)
 
 
 def is_pack_file(path: str) -> bool:

@@ -29,10 +29,11 @@ Single-file packs, below, do not have this window.
 Single-file packs (issue #247)
 ------------------------------
 A single-file pack (``pack_path``) is encrypted by DuckDB itself: the engine
-attaches the file with ``ENCRYPTION_KEY``, and DuckDB encrypts the file, its
-write-ahead log and the engine's temporary files with AES-256 (GCM by
-default). The pack is therefore never in clear text on disk, even while the
-engine runs. DuckDB does not document how it turns the key string into its
+attaches the file with ``ENCRYPTION_KEY``, and DuckDB encrypts the file and
+its write-ahead log with AES-256 (GCM by default). DuckDB 1.4 does not
+encrypt its spill files on its own, so the engine also turns on
+``temp_file_encryption`` and keeps those files beside the pack. The pack is
+therefore never in clear text on disk, even while the engine runs. DuckDB does not document how it turns the key string into its
 data key, so PRME derives the key it hands over with :func:`derive_pack_key`,
 which accepts the same key forms as :class:`EncryptionProvider`.
 

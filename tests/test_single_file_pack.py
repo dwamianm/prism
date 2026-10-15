@@ -6,12 +6,14 @@ vector payloads and snapshot, and the manifest. The lexical index is rebuilt
 in memory from the graph on open. These tests check that the file is all
 there is at rest, that reopening or copying it preserves retrieval receipts,
 that a damaged vector snapshot is restored from the durable payloads, that
-the lexical index after open equals a rebuild, and that the configuration
-guards hold. Directory packs are covered by their existing tests.
+the lexical index after open equals a rebuild, that an open that only reads
+leaves the file unchanged, and that the configuration guards hold. Directory
+packs are covered by their existing tests.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import shutil
@@ -23,7 +25,7 @@ import duckdb
 import pytest
 
 from prme import MemoryClient, MemoryEngine, PRMEConfig, __version__
-from prme.client import config_from_pack
+from prme.client import config_from_directory, config_from_pack
 from prme.models.nodes import MemoryNode
 from prme.storage.embedding import EmbeddingVersionMismatchError
 from prme.storage.lexical_index import LexicalIndex
@@ -196,6 +198,41 @@ def test_config_from_pack_creates_only_the_parent(tmp_path):
     assert config.single_file_pack
     assert pack.parent.is_dir()
     assert not pack.exists()
+
+
+def test_a_pack_path_opens_its_pack_despite_an_ambient_database_url(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRME_DATABASE_URL", "postgresql://prme@localhost/prme")
+    pack = tmp_path / "memories.prme"
+    config = config_from_pack(str(pack))
+    assert config.database_url is None and config.backend == "duckdb"
+    with MemoryClient(str(pack)) as client:
+        client.store(MEMORIES[0], user_id=USER)
+    assert os.listdir(tmp_path) == ["memories.prme"]
+
+
+def test_a_directory_opens_as_a_directory_pack_despite_an_ambient_pack_path(tmp_path, monkeypatch):
+    ambient = tmp_path / "ambient.prme"
+    monkeypatch.setenv("PRME_PACK_PATH", str(ambient))
+    directory = tmp_path / "pack"
+    assert config_from_directory(str(directory)).pack_path is None
+    with MemoryClient(str(directory)) as client:
+        assert not client._config.single_file_pack
+        client.store(MEMORIES[0], user_id=USER)
+    assert {"memory.duckdb", "vectors.usearch", "lexical_index"} <= set(os.listdir(directory))
+    assert not ambient.exists()
+
+
+async def test_two_spellings_of_a_plain_pack_share_one_database(tmp_path):
+    # DuckDB shares a database between engines only when they name it by the
+    # same path, so a pack is opened by its real path.
+    pack = tmp_path / "memories.prme"
+    link = tmp_path / "link.prme"
+    link.symlink_to(pack)
+    async with MemoryEngine.open(pack_config(pack)) as first:
+        async with MemoryEngine.open(pack_config(link)) as second:
+            await first.store(MEMORIES[0], user_id=USER)
+            assert second._conn.execute("SELECT count(*) FROM nodes").fetchone() == (1,)
+    assert sorted(os.listdir(tmp_path)) == ["link.prme", "memories.prme"]
 
 
 # --- Vector snapshot ------------------------------------------------------
@@ -390,11 +427,19 @@ async def test_manifest_describes_the_pack(tmp_path, caplog):
     assert first["scoring_version"] == config.scoring.version_id
     assert first["created_at"] <= first["updated_at"]
 
-    # Reopening keeps the record and refreshes the update time.
+    # Reopening with the same PRME version leaves the record as it is.
+    async with MemoryEngine.open(config):
+        pass
+    assert manifest_row(pack) == first
+
+    # Another PRME version records itself and the time when it opens the pack.
+    with duckdb.connect(str(pack)) as conn:
+        conn.execute("UPDATE prme_manifest SET prme_version = '0.0.1'")
     async with MemoryEngine.open(config):
         pass
     second = manifest_row(pack)
-    assert second["updated_at"] >= first["updated_at"]
+    assert second["prme_version"] == __version__
+    assert second["updated_at"] > first["updated_at"]
     assert {**second, "updated_at": None} == {**first, "updated_at": None}
 
     # Another model still opens the pack, with a warning naming both models,
@@ -411,6 +456,69 @@ async def test_manifest_describes_the_pack(tmp_path, caplog):
         async with MemoryEngine.open(config, embedding_provider=OtherModel()):
             pass
     assert "Memory pack was built with" not in caplog.text
+
+
+async def test_a_pack_without_a_manifest_records_the_model_of_its_vectors(tmp_path, caplog):
+    # A directory pack's database has vectors but no manifest. Opened as a
+    # single-file pack under another model of the same dimension, it records
+    # the model most of its vectors were built with, not the configured one.
+    directory = tmp_path / "pack"
+    directory_config = PRMEConfig(
+        db_path=str(directory / "memory.duckdb"),
+        vector_path=str(directory / "vectors.usearch"),
+        lexical_path=str(directory / "lexical_index"),
+    )
+    async with MemoryEngine.open(directory_config) as engine:
+        await store_all(engine, MEMORIES[:2])
+    async with MemoryEngine.open(directory_config, embedding_provider=OtherModel()) as engine:
+        await store_all(engine, MEMORIES[2:3])
+    pack = tmp_path / "copy.prme"
+    shutil.copyfile(directory / "memory.duckdb", pack)
+
+    with caplog.at_level(logging.WARNING, logger="prme.storage.pack_manifest"):
+        async with MemoryEngine.open(pack_config(pack), embedding_provider=OtherModel()):
+            pass
+    model = MockEmbeddingProvider()
+    recorded = manifest_row(pack)
+    assert (recorded["embedding_model"], recorded["embedding_version"], recorded["embedding_dim"]) == (
+        model.model_name, model.model_version, model.dimension,
+    )
+    assert f"built with embedding model {model.model_name}" in caplog.text
+    assert f"configured model is {OtherModel.model_name}" in caplog.text
+
+
+# --- An open that only reads ---------------------------------------------
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+async def test_an_open_that_only_reads_leaves_the_file_unchanged(tmp_path):
+    pack = tmp_path / "memories.prme"
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        await store_all(engine)
+    # The first open after a session that handed out vector keys moves the
+    # key sequence past them once. Later opens that only read write nothing.
+    async with MemoryEngine.open(pack_config(pack)):
+        pass
+    settled = digest(pack)
+    for _ in range(2):
+        async with MemoryEngine.open(pack_config(pack)) as engine:
+            assert all((await lexical_hits(engine)).values())
+            assert all((await vector_hits(engine)).values())
+        assert digest(pack) == settled
+
+    # A retrieval saves its receipt, which is a real write, and nothing else.
+    manifest, snapshot = manifest_row(pack), snapshot_row(pack)
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        response = await engine.retrieve("tea", user_id=USER, reference_time=REFERENCE_TIME)
+        assert response.metadata.receipt_persisted
+    assert (manifest_row(pack), snapshot_row(pack)) == (manifest, snapshot)
+    with duckdb.connect(str(pack)) as conn:
+        assert conn.execute(
+            "SELECT target_id FROM operations WHERE op_type = 'RETRIEVAL_REQUEST'"
+        ).fetchall() == [(str(response.metadata.request_id),)]
 
 
 # --- Configuration guards ------------------------------------------------

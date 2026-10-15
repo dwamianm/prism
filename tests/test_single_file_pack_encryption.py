@@ -4,8 +4,9 @@ With ``encryption_enabled`` and ``encryption_key`` set, a single-file pack is
 encrypted by DuckDB itself: the engine attaches the file to a private
 in-memory DuckDB instance with a key from ``derive_pack_key()``. These tests
 check that the pack round-trips with its key and opens from a copy, that it
-does not open without its key, with a wrong key or as a plain pack with a
-key, and that such a failure leaves the file and its WAL unchanged. They also
+does not open without its key, with a wrong key, as a plain pack with a key
+or a second time in one process, and that such a failure leaves the file and
+its WAL unchanged. They also
 check that stored text is not in clear text in the file or its WAL while the
 engine runs, that rebuilds, ingestion and the derivation stage fences work on
 the attached pack, and that the key derivation is stable. Directory packs
@@ -33,6 +34,7 @@ from prme.storage.encryption import (
     EncryptionProvider,
     derive_pack_key,
 )
+from prme.storage.pack_tools import PackInUseError
 from tests import test_derivation_ingestion, test_durable_ingestion, test_obsolete_derivation_staging
 from tests.test_derivation_planning import extraction
 from tests.test_durable_ingestion import MockEmbeddingProvider
@@ -266,6 +268,36 @@ async def test_malformed_raw_key_is_refused_before_any_file_is_touched(tmp_path)
     with pytest.raises(ValueError, match="32 url-safe base64-encoded bytes"):
         await MemoryEngine.create(encrypted_config(pack, key="raw_key:too-short"))
     assert not pack.parent.exists()
+
+
+async def test_a_second_engine_on_an_open_encrypted_pack_is_refused(encrypted_pack, monkeypatch):
+    # DuckDB attaches an encrypted file to one instance per process, and it
+    # tells files apart by their paths. Every spelling of the pack, absolute,
+    # relative or through a symbolic link, is refused while it is open, so no
+    # second engine writes to it unseen.
+    link = encrypted_pack.parent / "link.prme"
+    link.symlink_to(encrypted_pack)
+    monkeypatch.chdir(encrypted_pack.parent)
+    async with MemoryEngine.open(encrypted_config(encrypted_pack)) as engine:
+        for spelling in (encrypted_pack, Path(encrypted_pack.name), link):
+            with pytest.raises(PackInUseError, match="already open in this process"):
+                await MemoryEngine.create(encrypted_config(spelling))
+        await engine.store("Alice adopted a grey cat", user_id=USER)
+    async with MemoryEngine.open(encrypted_config(link)) as engine:
+        assert node_count(engine) == len(MEMORIES) + 1
+    assert sorted(os.listdir(encrypted_pack.parent)) == ["link.prme", "memories.prme"]
+
+
+async def test_an_open_that_only_reads_leaves_an_encrypted_pack_unchanged(encrypted_pack):
+    # The first open after the session that wrote the pack moves its vector
+    # key sequence past the keys handed out; later opens that only read
+    # write nothing.
+    async with MemoryEngine.open(encrypted_config(encrypted_pack)):
+        pass
+    before = digest(encrypted_pack)
+    async with MemoryEngine.open(encrypted_config(encrypted_pack)) as engine:
+        assert all((await vector_hits(engine)).values())
+    assert digest(encrypted_pack) == before
 
 
 # --- Key derivation ----------------------------------------------------------

@@ -928,9 +928,10 @@ class PRMEConfig(_ProjectSettings):
             "encryption_key is set, a directory pack keeps Fernet file "
             "encryption: its files are encrypted on close() and decrypted "
             "on create(). A single-file pack (pack_path) uses DuckDB native "
-            "encryption instead, AES-256-GCM over the file, its WAL and "
-            "temporary files, so it is not in clear text on disk even while "
-            "open. Default False for backward compatibility."
+            "encryption instead, AES-256-GCM over the file and its WAL, and "
+            "PRME turns on DuckDB's temporary-file encryption as well, so the "
+            "pack is not in clear text on disk even while open. Default False "
+            "for backward compatibility."
         ),
     )
     encryption_key: SecretStr | None = Field(

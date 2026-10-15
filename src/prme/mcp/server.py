@@ -1826,10 +1826,12 @@ def _use_db_path(db_path: str) -> None:
     single-file pack: PRME_PACK_PATH names it and only its parent directory
     is created, because the engine creates the file on first open.
     PRME_DB_PATH, PRME_VECTOR_PATH and PRME_LEXICAL_PATH are left alone; a
-    pack path overrides them. Any other path is a pack directory, created
-    with its lexical index directory as before, and PRME_PACK_PATH is set
-    empty, which means unset and outranks a .env file, so a pack path
-    configured elsewhere cannot take the directory's place.
+    pack path overrides them. PRME_DATABASE_URL is set empty, which means
+    unset, because a database URL cannot be combined with a pack path and
+    must not redirect the pack to PostgreSQL. Any other path is a pack
+    directory, created with its lexical index directory as before, and
+    PRME_PACK_PATH is set empty, which means unset and outranks a .env file,
+    so a pack path configured elsewhere cannot take the directory's place.
     """
     from prme.client import is_pack_file
 
@@ -1837,6 +1839,7 @@ def _use_db_path(db_path: str) -> None:
     if is_pack_file(target):
         os.makedirs(os.path.dirname(target), exist_ok=True)
         os.environ["PRME_PACK_PATH"] = target
+        os.environ["PRME_DATABASE_URL"] = ""
         return
     os.makedirs(target, exist_ok=True)
     lexical_dir = os.path.join(target, "lexical_index")

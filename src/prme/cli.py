@@ -92,8 +92,10 @@ async def _create_engine(db_path: str) -> Any:
     db_dir = os.path.dirname(abs_path)
     config = PRMEConfig(
         # A positional local artifact is the command's target. Ambient settings
-        # must not silently redirect inspection or maintenance to PostgreSQL.
+        # must not silently redirect inspection or maintenance to PostgreSQL
+        # or to a single-file pack.
         database_url=None,
+        pack_path=None,
         db_path=abs_path,
         vector_path=os.path.join(db_dir, "vectors.usearch"),
         lexical_path=os.path.join(db_dir, "lexical_index"),
@@ -751,7 +753,7 @@ async def cmd_compact(args: argparse.Namespace) -> None:
     from prme.storage.pack_tools import compact_pack
 
     # Runs on this thread, so an interrupt reaches the cleanup of its copy.
-    result = compact_pack(args.pack, encryption_key=_encryption_key(args))
+    result = compact_pack(args.pack, encryption_key=_encryption_key(args, args.pack))
     if args.format == "json":
         print(json.dumps(result, indent=2))
     else:
@@ -770,7 +772,9 @@ async def cmd_migrate(args: argparse.Namespace) -> None:
         # in these commands; any other name would open as a directory pack.
         print(f"Error: the new pack's name must end in {PACK_SUFFIX}: {args.pack}", file=sys.stderr)
         sys.exit(1)
-    result = await migrate_directory_pack(args.directory, args.pack, encryption_key=_encryption_key(args))
+    result = await migrate_directory_pack(
+        args.directory, args.pack, encryption_key=_encryption_key(args, args.pack),
+    )
     if args.format == "json":
         print(json.dumps(result, indent=2))
     else:
@@ -950,18 +954,34 @@ async def _verify_extraction_provider(
     return False, f"{provider} verification failed (HTTP {response.status_code})"
 
 
-def _encryption_key(args: argparse.Namespace) -> str | None:
-    """Return the key for an encrypted pack named on the command line.
+def _encryption_key(args: argparse.Namespace, target: str) -> str | None:
+    """Return the key for the encrypted pack *target* named on the command line.
 
-    ``--encryption-key`` wins. Otherwise the configured PRME_ENCRYPTION_KEY
-    applies when PRME_ENCRYPTION_ENABLED is true, as when an engine opens a
-    pack, so the key can stay out of the command line.
+    ``--encryption-key`` wins, and an empty one means no key. Otherwise, when
+    *target* is a single-file pack, PRME_ENCRYPTION_KEY applies when
+    PRME_ENCRYPTION_ENABLED is true, as when an engine opens the pack, so the
+    key can stay out of the command line. A directory pack's memory.duckdb
+    never takes it, because there it configures file-level encryption, not
+    DuckDB's. Only those two settings are read, from the environment and
+    then from a .env file in the working directory, so an invalid setting
+    elsewhere does not stop the command.
     """
-    if getattr(args, "encryption_key", None):
-        return args.encryption_key
-    config = PRMEConfig(database_url=None)
-    key = config.encryption_key.get_secret_value() if config.encryption_key else ""
-    return key if config.encryption_enabled and key else None
+    explicit = getattr(args, "encryption_key", None)
+    if explicit is not None:
+        return explicit or None
+    from prme.client import is_pack_file
+
+    if not is_pack_file(target):
+        return None
+    from dotenv import dotenv_values
+
+    # PRME settings are case-insensitive, and the environment outranks .env.
+    settings = {name.upper(): value for name, value in dotenv_values(".env").items()}
+    settings.update((name.upper(), value) for name, value in os.environ.items())
+    # The values a PRMEConfig boolean reads as true.
+    enabled = (settings.get("PRME_ENCRYPTION_ENABLED") or "").lower() in {"1", "on", "t", "true", "y", "yes"}
+    key = settings.get("PRME_ENCRYPTION_KEY") or ""
+    return key if enabled and key else None
 
 
 def _check_pack_file(path: str, encryption_key: str | None, ok, warn, fail) -> None:
@@ -975,7 +995,8 @@ def _check_pack_file(path: str, encryption_key: str | None, ok, warn, fail) -> N
         print(f"\n  Run 'prme init {path}' to create it.")
         sys.exit(1)
     ok(f"Memory pack file exists ({os.path.getsize(path):,} bytes)")
-    if os.path.lexists(path + ".wal"):
+    # DuckDB keeps the log beside the real file, which an engine opens.
+    if os.path.lexists(os.path.realpath(path) + ".wal"):
         warn("Write-ahead log present: the pack is open elsewhere or was not closed cleanly")
 
     with ExitStack() as stack:
@@ -1063,7 +1084,7 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
 
     if is_pack_file(directory):
         # 1-4. A single-file pack holds its indexes and manifest in one file.
-        _check_pack_file(directory, _encryption_key(args), ok, warn, fail)
+        _check_pack_file(directory, _encryption_key(args, directory), ok, warn, fail)
     else:
         # 1. Directory exists
         if os.path.isdir(directory):
@@ -1217,8 +1238,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     db_path_help = "Path to a directory pack's DuckDB file (memory.duckdb) or a single-file pack (.prme)"
     encryption_key_help = (
-        "Key of an encrypted pack, in any form PRME_ENCRYPTION_KEY takes "
-        "(default: PRME_ENCRYPTION_KEY when PRME_ENCRYPTION_ENABLED is true)"
+        "Key of an encrypted pack, in any form PRME_ENCRYPTION_KEY takes; an empty "
+        "key means none (default for a .prme pack: PRME_ENCRYPTION_KEY when "
+        "PRME_ENCRYPTION_ENABLED is true)"
     )
 
     # Common arguments factory

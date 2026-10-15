@@ -78,6 +78,9 @@ class VectorIndex:
         # remaining pending writes on close(). Set to 1 for save-per-insert.
         self._save_interval = max(1, save_interval)
         self._unsaved_inserts = 0
+        # Single-file packs: True while the vector_snapshot row differs from
+        # the native index, so save() writes the row only when it changed.
+        self._snapshot_dirty = False
 
         # Create metadata table and sequence in DuckDB
         self._init_metadata_table()
@@ -182,6 +185,7 @@ class VectorIndex:
             "SELECT ndim, vector_count, data FROM vector_snapshot WHERE singleton"
         ).fetchone()
         if row is None:
+            self._snapshot_dirty = True
             return
         ndim, vector_count, data = row
         try:
@@ -192,6 +196,7 @@ class VectorIndex:
                 "from their saved payloads", exc_info=True,
             )
             self._index = self._new_index()
+            self._snapshot_dirty = True
             return
         if self._index.ndim != ndim or len(self._index) != vector_count:
             logger.warning(
@@ -199,6 +204,7 @@ class VectorIndex:
                 "count; restoring vectors from their saved payloads",
             )
             self._index = self._new_index()
+            self._snapshot_dirty = True
         elif len(self._index) == 0:
             # As with the snapshot file, an empty snapshot is replaced by a
             # fresh index with the configured geometry.
@@ -284,7 +290,11 @@ class VectorIndex:
             "AND database_name = current_database()"
         ).fetchone()
         next_key = max(max_key + 1, start, (last or 0) + 1)
-        self._conn.execute(f"CREATE OR REPLACE SEQUENCE vector_key_seq START {int(next_key)}")
+        # A sequence not used since it was created or rebased, and starting
+        # at that key already, is left alone: replacing it would change
+        # nothing but the database file.
+        if last is not None or next_key != start:
+            self._conn.execute(f"CREATE OR REPLACE SEQUENCE vector_key_seq START {int(next_key)}")
         for key in orphan_keys:
             self._index.remove(key)
         if restored or orphan_keys:
@@ -312,6 +322,7 @@ class VectorIndex:
                 "INSERT OR REPLACE INTO vector_snapshot VALUES (true, current_timestamp, ?, ?, ?)",
                 [self._index.ndim, len(self._index), self._index.save()],
             )
+            self._snapshot_dirty = False
             return
         parent = os.path.dirname(os.path.abspath(self._index_path))
         descriptor, temporary = tempfile.mkstemp(prefix=".prme-vector-", dir=parent)
@@ -526,6 +537,7 @@ class VectorIndex:
     def _add_vector(self, key: int, vector: np.ndarray) -> None:
         """Add a durable vector to the native index with debounced snapshots."""
         self._index.add(key, vector)
+        self._snapshot_dirty = True
 
         # Persist to disk on the debounce interval only. Remaining
         # unsaved inserts are flushed by save()/close(). The counter is
@@ -600,6 +612,7 @@ class VectorIndex:
             # deleting metadata and making the leftover vector undiscoverable.
             if self._index.contains(key):
                 self._index.remove(key)
+                self._snapshot_dirty = True
 
         self._conn.execute("BEGIN TRANSACTION")
         try:
@@ -777,14 +790,19 @@ class VectorIndex:
     async def save(self) -> None:
         """Persist the USearch snapshot, flushing pending inserts.
 
-        Always writes the index regardless of the debounce counter, then
-        resets it. Runs off the event loop under the write lock, and also
-        under the connection lock when the snapshot is a database row.
+        Writes the index regardless of the debounce counter, then resets
+        it; a snapshot row is written only when the index changed since it
+        was last saved. Runs off the event loop under the write lock, and
+        also under the connection lock when the snapshot is a database row.
         """
         async with self._write_lock:
             if self._index_path is None:
-                async with self._conn_lock:
-                    await run_to_completion(self._save_snapshot)
+                # A snapshot row that already matches the index is not
+                # written again, so an open that only reads leaves the pack
+                # file unchanged.
+                if self._snapshot_dirty:
+                    async with self._conn_lock:
+                        await run_to_completion(self._save_snapshot)
             else:
                 await run_to_completion(self._save_snapshot)
             self._unsaved_inserts = 0
@@ -813,6 +831,7 @@ class VectorIndex:
             metric="cos",
             dtype="f32",
         )
+        self._snapshot_dirty = True
         self._conn.execute("BEGIN TRANSACTION")
         try:
             self._conn.execute("DELETE FROM vector_staging")

@@ -18,6 +18,7 @@ key never appears in a log or error message.
 from __future__ import annotations
 
 import os
+import shutil
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -37,7 +38,8 @@ _PACK = "prme_pack"
 
 
 class PackInUseError(RuntimeError):
-    """A pack has a write-ahead log beside it, so it may be open elsewhere."""
+    """A pack may be open elsewhere: a write-ahead log is beside it, or an
+    engine in this process has the encrypted pack open."""
 
 
 def _secret(value: str | SecretStr | None) -> str | None:
@@ -186,7 +188,9 @@ def open_pack_read_only(
     encrypted pack needs its *encryption_key*, the passphrase or raw key an
     engine would use.
     """
-    with _read_only(os.path.abspath(os.fspath(path)), _duckdb_key(_secret(encryption_key))) as conn:
+    # The real path, as an engine opens it: DuckDB tells attached files apart
+    # by their path strings.
+    with _read_only(os.path.realpath(os.fspath(path)), _duckdb_key(_secret(encryption_key))) as conn:
         yield conn
 
 
@@ -246,17 +250,21 @@ def compact_pack(
     read-only source keeps that lock until the rename, so no other process
     can write to the pack in between. Within one process, close every engine
     that uses the pack first. An encrypted pack needs its *encryption_key*,
-    and the copy is encrypted with the same key and cipher.
+    and the copy is encrypted with the same key and cipher. A *path* that is
+    a symbolic link compacts the file it points to and stays a link, and
+    the compacted file keeps the original's permission bits.
 
     Returns:
-        The pack's absolute path, its size in bytes before and after, and
-        whether it is encrypted.
+        The pack's real path, with symbolic links resolved, its size in
+        bytes before and after, and whether it is encrypted.
 
     Raises:
         FileNotFoundError: No file exists at *path*.
         PackInUseError: A write-ahead log is beside the pack.
     """
-    target = os.path.abspath(os.fspath(path))
+    # The real file: its write-ahead log is beside it, an engine attaches it
+    # by this path, and the rename below must replace it rather than a link.
+    target = os.path.realpath(os.fspath(path))
     if not os.path.isfile(target):
         raise FileNotFoundError(f"Memory pack not found: {target}")
     _refuse_write_ahead_log(target)
@@ -268,6 +276,8 @@ def compact_pack(
         with _instance(target, key) as conn:
             _attach(conn, target, _SOURCE, key=key, read_only=True)
             _copy_database(conn, _SOURCE, temporary, key)
+            # DuckDB creates the copy with default permissions; keep the pack's.
+            shutil.copymode(target, temporary)
             if os.name == "nt":
                 # Windows cannot rename a file over one that is still open.
                 conn.execute(f"DETACH {_identifier(_SOURCE)}")
@@ -382,7 +392,8 @@ async def migrate_directory_pack(
     )
     folder = os.path.dirname(target)
     os.makedirs(folder, exist_ok=True)
-    temporary = os.path.join(folder, f".{os.path.basename(target)}.{uuid.uuid4().hex}.migrate")
+    # The new file is attached and opened by its real path, as any pack is.
+    temporary = os.path.join(os.path.realpath(folder), f".{os.path.basename(target)}.{uuid.uuid4().hex}.migrate")
     pack_config = PRMEConfig(
         database_url=None, namespace_id=None, pack_path=temporary,
         encryption_enabled=key is not None, encryption_key=passphrase,
