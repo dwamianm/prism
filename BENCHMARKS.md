@@ -265,10 +265,13 @@ With the defaults before 2026-09-25 (`--set 'scoring.fusion="weighted"'
 --set 'packing.context_format="auditable"' --set
 'packing.multipath_ordering="balanced"'`) the gate reproduces every saved
 context (same `context_sha256`; the report lists any mismatch) and these
-baselines. The current defaults (rank fusion with a 0.25 current-state recency
-boost and an event-time tie-break, the reader format, balanced order and a 0.6
-rank fusion session decay) reproduce none of them, by design. Neither do the
-same settings with score order (`--set 'packing.multipath_ordering="score"'`),
+baselines. On LongMemEval-S, code since `538a2c6b` (2026-09-25) differs on one
+question, `06db6396`, measured on 2026-10-14: every context format now escapes
+the U+2028 that one of its stored turns holds, which the saved context has
+raw. The current defaults (rank fusion with a 0.25 current-state recency boost
+and an event-time tie-break, the reader format, balanced order and a 0.6 rank
+fusion session decay) reproduce none of them, by design. Neither do the same
+settings with score order (`--set 'packing.multipath_ordering="score"'`),
 the defaults between the two 2026-09-25 changes:
 
 | | LoCoMo, previous defaults | LoCoMo, current defaults | LoCoMo, score order | LongMemEval-S, previous defaults | LongMemEval-S, current defaults | LongMemEval-S, score order |
@@ -467,7 +470,11 @@ All inputs are local and gitignored. Keep every one of them:
 - the LoCoMo packs that `locomo/prepared.json` names, in
   `../prism-locomo-baseline-2026-09-22/data/`;
 - the 2026-09-22 LongMemEval-S control captures and packs, in
-  `../prism-opt-in-study-2026-09-22/data/opt-in-study/opt-in-successor-v2/baseline/`;
+  `../prism-opt-in-study-2026-09-22/data/opt-in-study/opt-in-successor-v2/baseline/`,
+  or, where they are missing, the regenerated controls that `--lme-captures`
+  replays and the 2026-09-17 master packs in the main checkout's
+  `data/benchmarks/longmemeval-s-prme-baseline-v1/` that they are cloned from
+  (see [Regenerated LongMemEval-S controls](#regenerated-longmemeval-s-controls-2026-10-14));
 - both datasets under the main checkout's `data/benchmarks/`.
 
 The main checkout is the one holding `data/` and `.env`. `benchmarks/checkout.py`
@@ -480,7 +487,8 @@ import rather than edited. Set `PRME_ORIGINAL_ROOT` or `PRME_MATRIX_ROOT` when a
 checkout sits somewhere git cannot relate, such as an unpacked archive.
 
 Removing either of those two checkouts deletes the gate's baseline, and the
-packs cannot be rebuilt byte for byte. Before replaying, the gate checks the
+packs cannot be rebuilt byte for byte; only the LongMemEval-S controls can be
+regenerated, from the master packs (below). Before replaying, the gate checks the
 dataset checksums, the archive's manifest of saved contexts, each LongMemEval-S
 capture, and each pack's tree identity. Saved packs are never opened in place:
 each is copied to a temporary directory first, because retrieval writes
@@ -494,6 +502,82 @@ instead of `retrieve()`: the same stored turns, ranked by that index alone (or b
 reciprocal rank fusion of both, k=60) and packed in rank order as plain lines.
 It accepts only `packing.token_budget` and `packing.overhead_tokens` overrides,
 and its reports compare with PRME reports through `gate-compare`.
+
+### Regenerated LongMemEval-S controls (2026-10-14)
+
+The 2026-09-22 LongMemEval-S control captures and packs that the saved
+contexts name are not on the current machine, so `gate --lme-captures` replays
+regenerated equivalents instead.
+
+The opt-in study's `baseline` arm, which made those controls, never stored
+anything itself. For each question it cloned the 2026-09-17 master pack from
+`data/benchmarks/longmemeval-s-prme-baseline-v1/packs/<question>` (the GPT-5.4
+baseline's `store()` pack), required the clone to equal the master's saved
+identity, and ran one cold and one warm `retrieve()`
+(`run_opt_in_interactions.capture`). Those master packs are in the main
+checkout's `data/`, and on 2026-10-14 all 500 matched the identities that
+their saved captures record.
+
+`benchmarks.diagnostics.lme_control_captures build` runs the same capture
+function over the same master packs. Its two retrievals use the gate's own
+settings: the current defaults, with organizer maintenance off. It never calls
+`store()` or `ingest()`, its worker processes refuse every outbound network
+connection, and only the local query embedding runs. The 2026-10-14 build
+took 84 seconds with 12 worker processes, from `main` at `5e4c3ae6` with this
+driver and the gate option applied as a patch. It wrote
+`data/opt-in-study/lme-controls-regenerated-2026-10-14/baseline/<question>/`
+(`pack/` and `capture.json`: 9.6 GB of packs, cloned copy-on-write, and 1.6 GB
+of captures) and the root's `manifest.json`, which records each capture's
+sha256, each pack's tree identity, the master pack each was cloned from, the
+code and the library versions. The tracked copy,
+[`lme-control-captures-manifest.json`](benchmarks/results/research/2026-10-14/lme-control-captures-manifest.json),
+has the same bytes (sha256 `0103b9509a35cc8cb79614c3e6f3def4a8216f8528da4e7533867b1b37e6bb4f`),
+and [the build report](benchmarks/results/research/2026-10-14/LME-CONTROL-CAPTURES-REGENERATED.md)
+has the checks and gate numbers.
+
+These are equivalents, not the original bytes. Each clone equals its master
+pack byte for byte, so the stored records are the ones the original controls
+held; only the receipts of the two new retrievals are new. For that reason the
+saved contexts' `source_capture_sha256` (the lost capture file's digest) and
+`artifact_checksum` (the lost control pack's identity after the study's own
+two retrievals) cannot match a regenerated capture, and the gate does not
+check them for a regenerated root. It checks instead that the root's manifest
+is complete and covers the dataset's questions in order, that each capture and
+each pack copy equals the manifest, and that each capture's input pack equals
+its master pack's saved identity, which the study required of every control
+clone and which the master's own saved capture must also record where it is on
+the machine. Any mismatch stops the replay.
+
+With the settings before 2026-09-25 (`--set 'scoring.fusion="weighted"' --set
+'packing.context_format="auditable"' --set
+'packing.multipath_ordering="balanced"'`), the gate code from just before
+`538a2c6b` reproduces all 500 saved 2026-09-23 contexts from the regenerated
+controls. `main` (adding `--set packing.fold_repeated_text=false`) reproduces
+499: since `538a2c6b` (2026-09-25) every context format escapes U+2028, which
+one stored turn of question `06db6396` contains, and a fresh clone of that
+master pack gives the same context. Both runs match the previous-defaults
+column above: 23.9 records per context, 32% memory text, all evidence packed
+for 403 of 470 questions, 86.0% projected. Under the epic #77 rules the
+regenerated controls are therefore the same LongMemEval-S baseline, not a new
+one. The DeepSeek answer track's `prepare prme` still reads the 2026-09-22
+captures and does not take `--lme-captures`; its code and records are
+unchanged.
+
+To replay them, add `--lme-captures` with the root:
+
+```sh
+uv run python -m benchmarks.diagnostics.product_packing gate --benchmark longmemeval \
+  --lme-captures data/opt-in-study/lme-controls-regenerated-2026-10-14/baseline \
+  --output /tmp/gate-lme.json
+```
+
+Without `--benchmark`, LoCoMo replays its saved packs as before. The report's
+`provenance.lme_captures` names the root, its manifest digest and the checks
+above, and the Markdown summary says the controls are regenerated. "Saved
+contexts reproduced" still compares with the saved 2026-09-23 contexts.
+`gate-compare` refuses to pair reports that replayed different controls (two
+roots with different manifests, or a root and the 2026-09-22 captures).
+`--lme-captures` cannot be combined with `--packs`.
 
 ### Packs built through `ingest()` (#102)
 

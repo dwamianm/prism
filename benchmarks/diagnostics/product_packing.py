@@ -24,7 +24,9 @@ same stored turns instead of ``retrieve()``, and
 GPT-5.4 baseline arms. ``gate --packs`` replays LoCoMo or LongMemEval-S packs
 that ``benchmarks.diagnostics.extracted_packs`` built through ``ingest()`` instead of
 the saved run, and credits an evidence turn that a packed extracted record
-cites (#102).
+cites (#102). ``gate --lme-captures`` replays LongMemEval-S control captures that
+``benchmarks.diagnostics.lme_control_captures`` regenerated from the 2026-09-17
+master packs, in place of the 2026-09-22 captures the saved contexts name.
 """
 from __future__ import annotations
 
@@ -331,7 +333,7 @@ class GateCase:
     user_id: str
     reference_time: datetime
     pack: Path
-    pack_sha256: str  # tree identity the saved run recorded for the pack
+    pack_sha256: str  # tree identity the saved run, or a regenerated control manifest, recorded for the pack
     saved_context_sha256: str
     evidence: frozenset[str] | None  # None when the question has no evidence annotation
     unresolved: tuple[str, ...] = ()  # annotations that name no stored turn
@@ -438,23 +440,130 @@ def _locomo_cases(archive: Path) -> list[GateCase]:
     return cases
 
 
-def _longmemeval_cases(archive: Path) -> list[GateCase]:
+def _capture_manifest(root: Path) -> tuple[dict, str]:
+    """A regenerated control root's manifest and the sha256 of its bytes."""
+    from benchmarks.diagnostics import lme_control_captures
+
+    path = root / "manifest.json"
+    if not path.is_file():
+        raise ValueError(f"No regenerated LongMemEval-S control captures at {root}: {path.name} is missing. Build "
+                         "them with python -m benchmarks.diagnostics.lme_control_captures build")
+    raw = path.read_bytes()
+    manifest = json.loads(raw)
+    if (manifest.get("kind") != lme_control_captures.KIND
+            or manifest.get("schema_version") != lme_control_captures.SCHEMA_VERSION
+            or manifest.get("complete") is not True):
+        raise ValueError(f"{path} is not a complete LongMemEval-S control capture manifest")
+    if manifest["dataset"]["sha256"] != _harness().lme.DATASET_SHA256:
+        raise ValueError(f"The control captures at {root} were made for a different LongMemEval-S dataset")
+    return manifest, hashlib.sha256(raw).hexdigest()
+
+
+def _master_captures(manifest: dict) -> Path:
+    """Where the master packs' own saved captures sit, if this machine has them."""
+    return _harness().ORIGINAL / manifest["source"]["root"] / "captures"
+
+
+def _regenerated_controls(root: Path, question_ids: list[str]) -> dict[str, tuple[Path, dict, str]]:
+    """Each question's pack, receipt user and reference time, and pack identity from a regenerated control root.
+
+    ``lme_control_captures`` cloned every pack from its 2026-09-17 master pack and
+    retrieved again, so no capture can match the saved contexts'
+    ``source_capture_sha256`` or ``artifact_checksum``: those name the lost
+    2026-09-22 capture and that control pack after its own retrievals. Instead
+    each capture and pack must equal the root's manifest, and each capture's
+    input pack the master pack's saved identity, which the 2026-09-22 study
+    required of every control clone. Where the master packs' own captures are
+    on this machine, they must name that identity too.
+    """
+    manifest, _ = _capture_manifest(root)
+    entries = {row["question_id"]: row for row in manifest["cases"]}
+    if list(entries) != question_ids:
+        raise ValueError(f"The control captures at {root} do not cover the LongMemEval-S questions in dataset order")
+    masters = _master_captures(manifest)
+    controls = {}
+    for question_id, entry in entries.items():
+        path = root / question_id / "capture.json"
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != entry["capture_sha256"]:
+            raise ValueError(f"The control capture for {question_id} differs from {root / 'manifest.json'}")
+        capture = json.loads(raw)
+        if capture["input_pack"]["tree_sha256"] != entry["master_pack_tree_sha256"]:
+            raise ValueError(f"The control pack for {question_id} was not cloned from its master pack")
+        if capture["final_pack"]["tree_sha256"] != entry["pack_tree_sha256"]:
+            raise ValueError(f"The control capture for {question_id} names a pack other than its manifest's")
+        saved = masters / f"{question_id}.json"
+        if saved.is_file():
+            master = saved.read_bytes()
+            if (hashlib.sha256(master).hexdigest() != entry["master_capture_sha256"]
+                    or json.loads(master)["pack"]["tree_sha256"] != entry["master_pack_tree_sha256"]):
+                raise ValueError(f"The master capture for {question_id} differs from {root / 'manifest.json'}")
+        receipt = capture["retrievals"][0]["receipt"]
+        controls[question_id] = (path.parent / "pack", {key: receipt[key] for key in ("user_id", "reference_time")},
+                                 entry["pack_tree_sha256"])
+    return controls
+
+
+def _lme_captures_provenance(root: Path, cases: list[GateCase]) -> dict:
+    """Which regenerated control root the LongMemEval-S replay read, and what was checked against what."""
+    manifest, digest = _capture_manifest(root)
+    replayed = [case.question_id for case in cases if case.benchmark == "longmemeval"]
+    masters = _master_captures(manifest)
+    return {
+        "path": str(root), "manifest_sha256": digest, "label": manifest["label"],
+        "built_at": manifest["built_at"], "commit": manifest["code"]["commit"],
+        "master_packs": manifest["source"]["root"], "questions": len(replayed),
+        # Loading refuses any capture whose input pack differs from its master.
+        "inputs_matching_master_identity": len(replayed),
+        "master_captures_checked": sum((masters / f"{question_id}.json").is_file() for question_id in replayed),
+        "not_applicable": ["source_capture_sha256", "artifact_checksum"],
+    }
+
+
+def check_lme_captures(captures: Path | None, benchmarks: Iterable[str], packs: Path | None) -> None:
+    """Regenerated control captures replace only the saved run's LongMemEval-S controls."""
+    if captures is None:
+        return
+    if packs is not None:
+        raise ValueError("Replay either built packs or regenerated LongMemEval-S control captures, not both")
+    if "longmemeval" not in set(benchmarks):
+        raise ValueError("Regenerated control captures replace the LongMemEval-S controls; include the "
+                         "longmemeval benchmark")
+
+
+def _longmemeval_cases(archive: Path, captures: Path | None = None) -> list[GateCase]:
+    """The saved run's LongMemEval-S questions and control packs.
+
+    With ``captures``, each question's capture and pack come from that
+    regenerated control root instead of the 2026-09-22 capture the saved
+    context names; the saved context still supplies the context to match.
+    """
     gpt54 = _harness()
     if gpt54.digest(gpt54.LONGMEM) != gpt54.lme.DATASET_SHA256:
         raise ValueError("The LongMemEval-S dataset differs from the saved run")
     folder = archive / "longmemeval"
     questions = gpt54.question_rows("longmemeval")
     _, manifest = _prepared(folder, len(questions))
+    controls = (None if captures is None
+                else _regenerated_controls(captures, [question["question_id"] for question in questions]))
     cases = []
     for question in questions:
         saved = _saved_context(folder, question["question_id"], manifest)
-        # The saved context points at its 2026-09-22 control capture, which holds
-        # the receipt and sits next to the pack that produced the context.
-        capture = Path(saved["source_capture"])
-        raw = capture.read_bytes()
-        if hashlib.sha256(raw).hexdigest() != saved["source_capture_sha256"]:
-            raise ValueError(f"The control capture for {question['question_id']} differs from the archive")
-        receipt = json.loads(raw)["retrievals"][0]["receipt"]
+        if controls is None:
+            # The saved context points at its 2026-09-22 control capture, which holds
+            # the receipt and sits next to the pack that produced the context.
+            capture = Path(saved["source_capture"])
+            if not capture.is_file():
+                raise ValueError(f"The 2026-09-22 control capture for {question['question_id']} is not at {capture}. "
+                                 "Pass --lme-captures with a root that benchmarks.diagnostics.lme_control_captures "
+                                 "regenerated (BENCHMARKS.md, \"Regenerated LongMemEval-S controls\")")
+            raw = capture.read_bytes()
+            if hashlib.sha256(raw).hexdigest() != saved["source_capture_sha256"]:
+                raise ValueError(f"The control capture for {question['question_id']} differs from the archive")
+            receipt = json.loads(raw)["retrievals"][0]["receipt"]
+            pack, pack_sha256 = capture.parent / "pack", saved["artifact_checksum"]
+        else:
+            pack, receipt, pack_sha256 = controls[question["question_id"]]
         turns = {_turn_key(session_id, position, index): turn
                  for position, (session_id, session) in enumerate(
                      zip(question["haystack_session_ids"], question["haystack_sessions"], strict=True))
@@ -468,7 +577,7 @@ def _longmemeval_cases(archive: Path) -> list[GateCase]:
             benchmark="longmemeval", question_id=question["question_id"], category=question["question_type"],
             question=question["question"], user_id=receipt["user_id"],
             reference_time=datetime.fromisoformat(receipt["reference_time"]),
-            pack=_pack_dir(capture.parent / "pack"), pack_sha256=saved["artifact_checksum"],
+            pack=_pack_dir(pack), pack_sha256=pack_sha256,
             saved_context_sha256=saved["context_sha256"], evidence=wanted or None,
             unresolved=tuple(sorted(key for key in wanted if not turns[key]["content"].strip())),
         ))
@@ -1347,10 +1456,12 @@ def gate_report(rows: list[dict], *, provenance: dict) -> dict:
 async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path | None = None,
                    overrides: dict | None = None, capture_dir: Path | None = None, plain: str | None = None,
                    progress: Callable[[int], None] | None = None, packs: Path | None = None,
-                   dev_slice: Path | None = None) -> dict:
+                   dev_slice: Path | None = None, lme_captures: Path | None = None) -> dict:
     """Replay the saved run's packs, or with ``packs`` a build from ``extracted_packs`` (#102).
 
     ``dev_slice`` replays only a committed development slice's questions (``dev_slice.py``).
+    ``lme_captures`` replays LongMemEval-S from a root that ``lme_control_captures``
+    regenerated, in place of the 2026-09-22 control captures.
     """
     from benchmarks.retrieval_eval import provenance
 
@@ -1362,6 +1473,7 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     selected = [name for name in GATE_BENCHMARKS if name in requested]
     if packs is not None and archive is not None:
         raise ValueError("Replay either built packs or a saved archive, not both")
+    check_lme_captures(lme_captures, selected, packs)
     gpt54 = _harness()
     archive = archive or default_archive()
     # Record the code that runs before replaying; this also rejects bad overrides.
@@ -1369,7 +1481,7 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
     run_provenance = provenance(config)
     if run_provenance["commit"] is None:
         raise ValueError("Run the gate from a git checkout so the report names its commit")
-    loaders = {"locomo": _locomo_cases, "longmemeval": _longmemeval_cases}
+    loaders = {"locomo": _locomo_cases, "longmemeval": lambda folder: _longmemeval_cases(folder, lme_captures)}
     started_at, started, load_at_start = gpt54.utc(), time.perf_counter(), os.getloadavg()
     if packs is not None:
         cases = [case for name in selected for case in _built_cases(packs, name)]
@@ -1391,6 +1503,8 @@ async def run_gate(benchmarks: Iterable[str] = GATE_BENCHMARKS, *, archive: Path
         **(_built_provenance(packs, cases) if packs is not None else {"archive": {
             "path": str(archive),
             "prepared_sha256": {name: gpt54.digest(archive / name / "prepared.json") for name in selected}}}),
+        # Which LongMemEval-S control captures were replayed; absent means the 2026-09-22 ones.
+        **({"lme_captures": _lme_captures_provenance(lme_captures, cases)} if lme_captures is not None else {}),
         "datasets": {name: datasets[name] for name in selected},
         **({"slice": chosen} if chosen is not None else {}),
     })
@@ -1514,6 +1628,23 @@ _COMPARED_INPUTS = {
 }
 
 
+def _lme_controls_label(report: dict) -> str:
+    captures = report["provenance"].get("lme_captures")
+    if captures is None:
+        return "the 2026-09-22 control captures that the saved archive names"
+    return f"the regenerated captures at {captures['path']} (manifest sha256 {captures['manifest_sha256']})"
+
+
+def _check_lme_controls(before: dict, after: dict) -> None:
+    """Both reports must have replayed the same LongMemEval-S control captures, matched by manifest digest."""
+    digests = [(report["provenance"].get("lme_captures") or {}).get("manifest_sha256") for report in (before, after)]
+    if digests[0] != digests[1]:
+        raise ValueError(f"The reports replayed different LongMemEval-S control captures: before used "
+                         f"{_lme_controls_label(before)}, after used {_lme_controls_label(after)}. Compare only "
+                         "reports that replayed the same captures, either the same --lme-captures manifest on both "
+                         "sides or the saved archive's captures on both.")
+
+
 def _query_scoring(old: dict, new: dict, keys: list) -> dict | None:
     """Temporal affinity and current-state changes between two PRME replays (issue #85).
 
@@ -1593,6 +1724,7 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
     for label, value in _COMPARED_INPUTS.items():
         if value(before) != value(after):
             raise ValueError(f"The reports use different {label}")
+    _check_lme_controls(before, after)
     for key, row in old.items():
         if _labels(row) != _labels(new[key]):
             raise ValueError(f"{key[1]}: category or evidence annotation differs between reports")
@@ -1662,10 +1794,14 @@ def _run_label(provenance: dict) -> str:
         commit += " with uncommitted changes"
     overrides = provenance.get("overrides")
     setting = f"overrides `{json.dumps(overrides, sort_keys=True)}`" if overrides else "current defaults"
+    captures = provenance.get("lme_captures")
+    controls = ("" if captures is None else
+                f", LongMemEval-S controls regenerated at `{captures['path']}` "
+                f"(manifest `{captures['manifest_sha256'][:12]}`)")
     if provenance.get("plain"):
         return f"{commit}, plain {provenance['plain']} baseline (no PRME retrieval), " + (
-            setting if overrides else "default budget")
-    return f"{commit}, {setting}"
+            setting if overrides else "default budget") + controls
+    return f"{commit}, {setting}{controls}"
 
 
 def _projection_note(projection: dict) -> list[str]:
@@ -1703,6 +1839,16 @@ def gate_markdown(report: dict) -> str:
     elif report["provenance"].get("overrides") and not changed:
         lines += ["", "**Every context matches the saved run, so these overrides changed nothing the reader "
                   "sees.** Check the setting names. Changes that act when memories are stored need new packs."]
+    captures = report["provenance"].get("lme_captures")
+    if captures is not None:
+        lines += ["", f"**Regenerated LongMemEval-S controls.** The LongMemEval-S captures and packs come from "
+                  f"`{captures['path']}` (manifest sha256 `{captures['manifest_sha256']}`), not from the 2026-09-22 "
+                  "originals: each pack is a clone of its 2026-09-17 master pack with two new retrieval receipts. "
+                  f"The input pack of {captures['inputs_matching_master_identity']} of {captures['questions']} "
+                  "captures equals its master pack's saved identity "
+                  f"({captures['master_captures_checked']} also checked against the master captures on this "
+                  "machine), so the saved contexts' `source_capture_sha256` and `artifact_checksum` do not apply. "
+                  "Saved contexts are still compared."]
     lines += ["", "| Benchmark | Questions | Saved contexts reproduced | Candidates per question "
               "| Retrieval p50 / p95 | Records per context | Memory text share | Records without text "
               "| All evidence packed | Median evidence rank | Projected accuracy |",
@@ -1999,12 +2145,17 @@ def gate_main(argv: list[str]) -> None:
     parser.add_argument("--slice", dest="dev_slice", type=Path, nargs="?", const=_default_slice(),
                         help="Replay only a committed development slice's questions (default file: "
                              "benchmarks/slices/dev-v1.json)")
+    parser.add_argument("--lme-captures", type=Path,
+                        help="A root from benchmarks.diagnostics.lme_control_captures: replay its regenerated "
+                             "LongMemEval-S control captures and packs, checked against the root's manifest.json, "
+                             "instead of the 2026-09-22 captures the saved contexts name")
     args = parser.parse_args(argv)
     try:
         overrides = parse_overrides(args.overrides)
         gate_config(Path("{pack}"), overrides)
         if args.plain:
             check_plain(args.plain, overrides)
+        check_lme_captures(args.lme_captures, args.benchmark or GATE_BENCHMARKS, args.packs)
     except ValueError as exc:
         parser.error(str(exc))
     _quiet_offline_cli()
@@ -2018,7 +2169,7 @@ def gate_main(argv: list[str]) -> None:
 
     report = asyncio.run(run_gate(args.benchmark or GATE_BENCHMARKS, archive=args.archive, overrides=overrides,
                                   capture_dir=args.capture_dir, plain=args.plain, progress=progress,
-                                  packs=args.packs, dev_slice=args.dev_slice))
+                                  packs=args.packs, dev_slice=args.dev_slice, lme_captures=args.lme_captures))
     markdown = gate_markdown(report)
     _write_report(args.output, report, markdown)
     print(markdown)
