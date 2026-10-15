@@ -1,5 +1,7 @@
 """Durable, source-bound record of a validated model extraction."""
 
+import hashlib
+import json
 from datetime import datetime, timezone
 from typing import Any, Literal
 from uuid import UUID, uuid5
@@ -17,6 +19,13 @@ class ExtractionRecord(BaseModel):
     version 1. ``grounding_policy`` records which admission validator produced
     it; omitted legacy values retain ``source_passage_v1``. Provider
     credentials and raw provider responses are excluded.
+
+    ``batch_id`` names the :class:`ExtractionBatchRecord` whose request asked
+    for this source together with other turns of its session
+    (``extraction_batch_target_tokens``, #254); that record, not this one,
+    keeps the request's unchecked response. ``batch_id`` is left out when
+    unset, so a record extracted on its own keeps its exact bytes. A release
+    before #254 cannot read a record that sets it.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -37,6 +46,7 @@ class ExtractionRecord(BaseModel):
     model: str
     result: dict[str, Any]
     created_at: AwareDatetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    batch_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @property
     def operation_id(self) -> str:
@@ -49,3 +59,69 @@ class ExtractionRecord(BaseModel):
 
 def extraction_operation_id(event_id: UUID | str) -> str:
     return str(uuid5(UUID(str(event_id)), "prme:validated-extraction:v1"))
+
+
+class ExtractionBatchTurn(BaseModel):
+    """One source turn of a batched extraction request, as the model saw it."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    index: int = Field(ge=1)
+    event_id: UUID
+    role: str
+    speaker: str | None = None
+    event_time: AwareDatetime
+    content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ExtractionBatchRecord(BaseModel):
+    """One batched extraction request and the response it got (#254).
+
+    With ``extraction_batch_target_tokens`` above zero, one model call
+    extracts several turns of a session. This record keeps that request,
+    as the turns it carried and the digest of the exact messages sent, and
+    ``response``, the model's parsed output before any check, limited to
+    each entry's turn, entities, facts and relationships. Unlike an
+    :class:`ExtractionRecord`, it therefore holds claims that grounding
+    rejected. Each turn's checked share of it is saved once as that turn's
+    own :class:`ExtractionRecord`, whose ``batch_id`` names this record, so
+    materialization, replanning and a restart read the per-turn records and
+    never ask the model again. ``validate_batch_output`` can check the
+    response again, turn by turn, without a model call; the benchmark pack
+    builder reads it to count the turns and claims a model left out or
+    grounding dropped.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    user_id: str = Field(min_length=1)
+    scope: Scope
+    session_id: str | None = None
+    # The job whose worker sent the request, under whose lease it was saved.
+    # It is not among the turns of a split request's half that left it out.
+    head_event_id: UUID
+    provider: str
+    model: str
+    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    turns: tuple[ExtractionBatchTurn, ...] = Field(min_length=1)
+    response: dict[str, Any]
+    created_at: AwareDatetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @property
+    def id(self) -> UUID:
+        return extraction_batch_id(self.head_event_id, [turn.event_id for turn in self.turns],
+                                   self.request_sha256)
+
+    def verify_turn(self, event_id: UUID | str, user_id: str, scope: str, content_hash: str) -> None:
+        """Check that a source event is one of this request's turns, unchanged."""
+        turn = next((turn for turn in self.turns if str(turn.event_id) == str(UUID(str(event_id)))), None)
+        if turn is None or (self.user_id, self.scope.value, turn.content_hash) != (user_id, scope, content_hash):
+            raise ValueError("Extraction batch does not match its immutable source")
+
+
+def extraction_batch_id(head_event_id: UUID | str, event_ids, request_sha256: str) -> UUID:
+    """Identity of a batched request: the same turns asked the same way share it."""
+    members = json.dumps([str(UUID(str(event_id))) for event_id in event_ids] + [request_sha256])
+    return uuid5(UUID(str(head_event_id)),
+                 "prme:extraction-batch:v1:" + hashlib.sha256(members.encode()).hexdigest())

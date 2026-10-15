@@ -398,6 +398,8 @@ Ingest with LLM-powered extraction. Two-phase pipeline:
 | `scope` | `Scope` | `Scope.PERSONAL` | Memory scope |
 
 See [automatic correction rules and limits](MEMORY-CORRECTIONS.md#corrections-extracted-from-messages).
+With `extraction_batch_target_tokens` set, extraction runs in batches of a
+session's turns; see [batched extraction](#batched-extraction).
 
 **Returns:** `str` — UUID of the persisted event. Falls back to `store()` if no pipeline configured.
 
@@ -417,7 +419,7 @@ async def ingest_batch(
 ) -> list[str]
 ```
 
-Ingest multiple messages sequentially (preserves conversation order). Each dict must have `"content"` and `"role"` keys, with optional `"speaker"`, `"first_person_owner"`, `"metadata"` and `"event_time"`. Every attribution is checked before the first message is admitted.
+Ingest multiple messages sequentially (preserves conversation order). Each dict must have `"content"` and `"role"` keys, with optional `"speaker"`, `"first_person_owner"`, `"metadata"` and `"event_time"`. Every attribution is checked before the first message is admitted. With [batched extraction](#batched-extraction), every message is saved first and then the messages are extracted together in batches; a failed extraction is raised after all of them are saved.
 
 **Returns:** `list[str]` — Event IDs, one per message.
 
@@ -1303,6 +1305,68 @@ reasoning effort to `"none"`, preventing thinking traces from exhausting the
 structured response window. Ollama also uses its constrained JSON output mode
 instead of requiring a tool-call envelope. Other providers retain their native default.
 Benchmark before increasing either setting.
+
+### Batched extraction
+
+`extraction_batch_target_tokens` (`PRME_EXTRACTION_BATCH_TARGET_TOKENS`,
+default 0) lets one model call extract several turns of a session (#254). It
+is off by default, and at 0 `ingest()` makes one call per turn as before.
+
+```python
+config = PRMEConfig(extraction_batch_target_tokens=512)
+```
+
+- **Composition.** The worker takes the session's pending extraction jobs in
+  the order they were ingested and adds turns while the sum of their text
+  tokens (`cl100k_base`) stays within the target. A turn larger than the
+  target, or one without a `session_id`, goes alone, and a batch never
+  crosses a session.
+- **Request and grounding.** Each turn is sent with its index, role, time
+  and, when it has one, its speaker. Every extracted claim cites its turn and
+  is checked against that turn alone, under that turn's role policy (the
+  assistant admission rules apply to assistant turns). Its evidence quote
+  must be a span of the cited turn that names its subject and object, so a
+  claim that only another turn supports is rejected, and a claim citing a
+  turn outside the batch is dropped. The rest of a claim, such as its
+  predicate, is model output, as for a single turn, and the turns of a
+  batch can affect how the model reads each other; a turn from a tool or
+  another person shares the request with the turns around it.
+- **Records.** The request and its response are saved once, as an
+  `EXTRACTION_BATCH_RECORDED` operation that keeps each entry's turn,
+  entities, facts and relationships before any check, so it also holds
+  claims that grounding rejected. Each turn keeps its own extraction record,
+  which names the batch in `batch_id`. Each turn's job is still claimed,
+  published and retried on its own, and a restart, replay or `prme rebuild`
+  reads the saved records without calling the model. A PRME release from
+  before this option cannot read a record that names a batch.
+- **Failures.** A response that fails validation as a whole (unparseable,
+  truncated or wrongly shaped), and a request that times out or that the
+  provider refuses as too large, are asked again as two halves, recursively,
+  before a single turn is marked failed under the usual retry policy. A batch
+  of n turns whose responses keep failing validation makes at most 2n - 1
+  requests. A single turn that times out or is refused stops the split, so a
+  provider that does not answer costs about log2(n) + 1 timeouts per attempt.
+  A connection, rate-limit or server failure is not split. A turn the model
+  gives no entry is saved as stating nothing, and a warning names it.
+  `extraction.timeout` applies to each request, so raise it for large
+  targets; the benchmark pack builder uses 180 seconds.
+- **When it runs.** `ingest(wait_for_extraction=False)` queues the turn. A
+  waiting `ingest()` extracts the queue of its owner and scope up to and
+  including its own turn, `ingest_batch()` extracts its messages and any
+  queued before them once all are saved, and `process_extractions()` and the
+  engine's close extract the queue too. Otherwise the queue is extracted 30
+  seconds after its first turn, and a flush that leaves work behind another
+  worker's job arms the next. The engine's close gives its flush the usual
+  drain time (10 seconds by default); a turn still queued when that ends, or
+  when the process stops, stays pending, durably, until the next flush of
+  its owner and scope or `process_extractions()`. For batches that do not
+  depend on timing, ingest a session's turns and then flush them with one
+  of these calls, or pass them to `ingest_batch()`.
+- **Limits.** It cannot be combined with `enable_windowed_extraction` or
+  `enable_fact_text_resolution`. A custom extraction provider needs an
+  `extract_batch(turns)` method (`prme.ingestion.BatchExtractionProvider`).
+  No benefit has been measured yet; see `BENCHMARKS.md` for building
+  benchmark packs with it.
 
 ### VisionConfig
 

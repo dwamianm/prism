@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add opt-in batched extraction (`extraction_batch_target_tokens`, default 0;
+  #254). With a target above zero, `ingest()` extracts several turns of a
+  session in one model call: the worker takes the session's pending
+  extraction jobs in the order they were ingested and adds turns while their
+  text stays within the target, counted in tokens. A turn larger than the
+  target, or without a session, goes alone, and a batch never crosses a
+  session. Each turn is sent with its index, role, time and speaker, every
+  claim cites its turn, and each turn's claims are checked against that turn
+  alone under its own role, so a quote from another turn is rejected as
+  before and claim merge, supersedence, derivation plans and receipts see one
+  extraction record per turn. The request and its parsed response are saved
+  once (an `EXTRACTION_BATCH_RECORDED` operation) and each turn's record names
+  it (`ExtractionRecord.batch_id`), so a restart, a replay and `prme rebuild`
+  never call the model; a release from before this option cannot read a
+  record that names a batch. A response that fails validation, and a request
+  that times out or is refused as too large, are asked again as two halves,
+  recursively, before a turn is marked failed under the usual retry policy.
+  `ingest(wait_for_extraction=False)` queues the turn: a waiting
+  `ingest()`, `ingest_batch()`, `process_extractions()` or the engine's close
+  extracts the queue, and otherwise it is extracted 30 seconds after the
+  first queued turn. The option cannot be combined with
+  `enable_windowed_extraction` or `enable_fact_text_resolution`. At 0 nothing
+  changes: one call per turn, the same records, plans and receipts, and the
+  serialized configuration leaves the option out, so recorded configurations
+  keep their identity. `benchmarks.diagnostics.extracted_packs` builds
+  batched packs with `--set extraction_batch_target_tokens=N`, and its new
+  `summary` command totals a build. No benefit has been measured yet.
 - Add visual memory, phase 1 of [RFC-0018](docs/RFC-0018-Visual-Memory.md):
   `MemoryEngine.observe()`, `MemoryClient.observe()` and
   `prme observe <db_path> <file>...` turn a photo or a saved video into

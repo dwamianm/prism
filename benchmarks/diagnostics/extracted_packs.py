@@ -36,6 +36,12 @@ Choices, and why:
   extraction left unfinished and then skips the turns it already holds. A
   resumed build must use the same commit, working tree, settings and model,
   or it is refused.
+- A build with ``--set extraction_batch_target_tokens=N`` (#254) extracts
+  several turns of a session per model call. It ingests each session's turns
+  together with ``ingest_batch()``, which extracts them in batches before the
+  next session starts, so the batches depend on the sessions alone and not
+  on timing. Its calls, tokens and seconds are logged once per session, and
+  its manifests count the batches.
 - LongMemEval-S histories share sessions, so the same turn recurs across
   questions. A build keeps each model response in a cache keyed by the model,
   role, prompt and text, so an identical turn is extracted once and gets the
@@ -46,10 +52,12 @@ Layout under ``<root>/<label>/``: ``build.json`` (benchmark, commit,
 configuration, model identity, and every Ollama server version seen),
 ``extraction-cache/``, and per conversation or question
 ``<benchmark>/<id>/pack/`` (the memory pack), ``turns.jsonl`` (one line per
-turn ingested: event, extraction status, seconds, model calls and tokens) and,
-once complete, ``manifest.json`` (counts, the share of annotated evidence turns
-that at least one extracted record cites, and the pack's tree identity). Packs
-contain benchmark text, so the default root is the ignored ``data/``.
+turn ingested: event, extraction status, seconds, model calls and tokens; in a
+batched build, one more line per session holds them) and, once complete,
+``manifest.json`` (counts, the share of annotated evidence turns that at least
+one extracted record cites, and the pack's tree identity). ``summary`` totals
+a build's complete packs. Packs contain benchmark text, so the default root is
+the ignored ``data/``.
 """
 from __future__ import annotations
 
@@ -274,6 +282,12 @@ class ExtractionCache:
     claims the live run kept. They were checked without a speaker, so a call
     with one ignores them and asks the model again. Entries are written
     atomically, so parallel builds can share the folder.
+
+    A batched request (extraction_batch_target_tokens, #254) is keyed by the
+    model and the full request, its system prompt and every turn as sent
+    (``<key>.batch.json``). The entry is the parsed response, before any
+    check, which ingestion checks turn by turn as it checks a live one, so
+    a rebuild of the same build replays every batch without a model call.
     """
 
     def __init__(self, folder: Path) -> None:
@@ -355,6 +369,49 @@ class ExtractionCache:
             return result
 
         provider.extract = cached
+        if callable(getattr(provider, "extract_batch", None)):
+            self._wrap_batches(provider)
+
+    @staticmethod
+    def _batch_key(provider, turns) -> str:
+        from prme.ingestion.extraction import batch_request_messages
+
+        parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
+                 "batch", batch_request_messages(turns)]
+        return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
+
+    def _wrap_batches(self, provider) -> None:
+        from prme.ingestion.errors import ExtractionError
+        from prme.ingestion.pipeline import _VALIDATION_FAILURES
+
+        extract_batch = provider.extract_batch
+
+        async def cached(turns):
+            key = self._batch_key(provider, turns)
+            path = self.folder / key[:2] / f"{key}.batch.json"
+            failed = self.folder / key[:2] / f"{key}.batch-failed.json"
+            if path.exists():
+                self.hits += 1
+                return json.loads(path.read_bytes())
+            if failed.exists():
+                # Replays the split this request led to, so a rebuild asks for the same halves.
+                self.hits += 1
+                raise ExtractionError("Cached batched extraction failure",
+                                      reason_code=json.loads(failed.read_bytes())["reason_code"])
+            self.misses += 1
+            try:
+                raw = await extract_batch(turns)
+            except ExtractionError as exc:
+                # Only a response that failed validation and split its request
+                # is kept. A single turn's failure is retried, and a timeout or
+                # transport failure may not repeat, so a rebuild asks again.
+                if len(turns) > 1 and exc.reason_code in _VALIDATION_FAILURES:
+                    self._write(failed, json.dumps({"reason_code": exc.reason_code}))
+                raise
+            self._write(path, json.dumps(raw))
+            return raw
+
+        provider.extract_batch = cached
 
 
 async def _stored_events(engine, benchmark: str, user_id: str) -> dict[str, str]:
@@ -431,9 +488,136 @@ async def _pack_summary(engine, user_id: str, events: dict[str, str], annotated:
     }
 
 
+def _session_runs(turns) -> list[tuple[str, list[dict]]]:
+    """Consecutive turns of the same session, in source order."""
+    runs: list[tuple[str, list[dict]]] = []
+    for turn in turns:
+        if runs and runs[-1][0] == turn["session_id"]:
+            runs[-1][1].append(turn)
+        else:
+            runs.append((turn["session_id"], [turn]))
+    return runs
+
+
+async def _ingest_sessions(engine, unit: Unit, stored: dict[str, str], log, usage: _Usage, hits: ExtractionCache,
+                           *, max_turns: int | None = None, progress=None) -> bool:
+    """A batched build's ingestion (extraction_batch_target_tokens, #254): a session at a time.
+
+    ``ingest_batch()`` persists the session's new turns and only then
+    extracts them, so each batch is composed from whole sessions, whatever
+    the timing, and a rebuild composes the same batches. Model calls, tokens
+    and seconds are counted once, on one line per session; the session's
+    turn lines carry none of them. Returns False when the pack stops: at the
+    end of the session in which it reached ``max_turns`` new turns, so a
+    session is never cut and a resumed build composes the batches an
+    uninterrupted one does, or when a turn's extraction still fails after
+    its retries, which pauses the pack there as a per-turn build does.
+    """
+    added, position = 0, 0
+    for session_id, run in _session_runs(unit.turns):
+        position += len(run)
+        new = [turn for turn in run if turn["key"] not in stored]
+        if not new:
+            continue
+        if max_turns is not None and added >= max_turns:
+            print(f"{unit.unit_id}: stopped after {added} new turns, at a session's end",
+                  file=sys.stderr, flush=True)
+            return False
+        added += len(new)
+        before, hits_before, unreproduced_before = usage.snapshot(), hits.hits, hits.unreproduced
+        started, error = time.perf_counter(), None
+        try:
+            await engine.ingest_batch([{key: turn[key] for key in ("content", "role", "speaker", "metadata",
+                                                                     "event_time")} for turn in new],
+                                      user_id=unit.user_id, session_id=session_id, wait_for_extraction=True)
+        except Exception as exc:
+            # Every turn is saved before extraction runs, so a failed extraction is retried below.
+            error = f"{type(exc).__name__}: {exc}"
+        current = await _stored_events(engine, unit.benchmark, unit.user_id)
+        if any(turn["key"] not in current for turn in new):
+            raise ValueError(f"{unit.unit_id}: session {session_id} was not saved: {error}")
+        stored.update({turn["key"]: current[turn["key"]] for turn in new})
+
+        async def statuses() -> dict[str, str]:
+            found = {}
+            for turn in new:
+                status = await engine.extraction_status(stored[turn["key"]], user_id=unit.user_id)
+                found[turn["key"]] = "missing" if status is None else status.status
+            return found
+
+        status_by_key = await statuses()
+        unfinished = [key for key, status in status_by_key.items() if status != "complete"]
+        if unfinished:
+            # The first unfinished turn holds back the rest. Retry it after
+            # its delays, then finish the turns behind it in one pass.
+            await _retry_turn(engine, unit.user_id, stored[unfinished[0]])
+            await engine.process_extractions(user_id=unit.user_id, limit=len(new), budget_ms=_ALL)
+            status_by_key = await statuses()
+        seconds = time.perf_counter() - started
+        calls, prompt_tokens, completion_tokens = (now - then for now, then in zip(usage.snapshot(), before))
+        for turn in new:
+            status = status_by_key[turn["key"]]
+            log.write(json.dumps({"key": turn["key"], "event_id": stored[turn["key"]], "role": turn["role"],
+                                  "status": status, "error": None if status == "complete" else error,
+                                  "seconds": 0.0, "calls": 0, "prompt_tokens": 0, "completion_tokens": 0,
+                                  "cache_hits": 0, "cache_unreproduced": 0, "session_id": session_id}) + "\n")
+        log.write(json.dumps({"session_id": session_id, "keys": [turn["key"] for turn in new], "error": error,
+                              "seconds": seconds, "calls": calls, "prompt_tokens": prompt_tokens,
+                              "completion_tokens": completion_tokens, "cache_hits": hits.hits - hits_before,
+                              "cache_unreproduced": hits.unreproduced - unreproduced_before}) + "\n")
+        log.flush()
+        failed = [key for key in status_by_key if status_by_key[key] != "complete"]
+        if failed:
+            print(f"{unit.unit_id}: paused at {failed[0]}, whose extraction failed: {error}",
+                  file=sys.stderr, flush=True)
+            return False
+        if progress is not None:
+            for number in range(position - len(run) + 1, position + 1):
+                progress(unit.unit_id, number, len(unit.turns))
+    return True
+
+
+async def _batch_summary(engine, user_id: str, events: dict[str, str]) -> dict:
+    """What a batched pack's saved requests show about what was lost between model and graph.
+
+    ``turns_without_entry`` counts turns the model gave no entry, which are
+    saved as stating nothing. ``response_claims`` counts the facts and
+    relationships the model wrote for the pack's turns, and ``saved_claims``
+    those the per-turn checks kept, so the difference shows how many
+    grounding dropped (a recovered claim counts on the saved side only).
+    """
+    batches: dict = {}
+    saved_claims = 0
+    for event_id in events.values():
+        record = await engine.get_extraction(event_id, user_id=user_id)
+        if record is None or record.batch_id is None:
+            continue
+        saved_claims += len(record.result.get("facts", [])) + len(record.result.get("relationships", []))
+        if record.batch_id not in batches:
+            batches[record.batch_id] = await engine._event_store.get_extraction_batch(
+                str(record.batch_id), user_id=user_id)
+    def cited(entry: dict) -> int | None:
+        try:
+            return int(entry.get("turn"))
+        except (TypeError, ValueError):
+            return None
+
+    turns = sum(len(batch.turns) for batch in batches.values())
+    without_entry = response_claims = 0
+    for batch in batches.values():
+        entries = batch.response["turns"]
+        without_entry += len({turn.index for turn in batch.turns} - {cited(entry) for entry in entries})
+        response_claims += sum(len(items) for entry in entries for name in ("facts", "relationships")
+                               if isinstance(items := entry.get(name), list))
+    return {"batches": len(batches), "turns_per_batch": turns / len(batches) if batches else None,
+            "single_turn_batches": sum(len(batch.turns) == 1 for batch in batches.values()),
+            "turns_without_entry": without_entry, "response_claims": response_claims, "saved_claims": saved_claims}
+
+
 def _log_totals(path: Path) -> dict:
     rows = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
-    return {"logged_turns": len(rows), "seconds": sum(row["seconds"] for row in rows),
+    # A batched build's session lines hold its calls and tokens and name no single turn.
+    return {"logged_turns": sum("key" in row for row in rows), "seconds": sum(row["seconds"] for row in rows),
             "calls": sum(row["calls"] for row in rows),
             "prompt_tokens": sum(row["prompt_tokens"] for row in rows),
             "completion_tokens": sum(row["completion_tokens"] for row in rows),
@@ -460,7 +644,10 @@ async def build_unit(folder: Path, unit: Unit, config_for, *, progress=None, pre
     (pack / "lexical_index").mkdir(parents=True, exist_ok=True)
     log_path = folder / "turns.jsonl"
     keys = [turn["key"] for turn in unit.turns]
-    async with MemoryEngine.open(config_for(pack)) as engine:
+    config = config_for(pack)
+    # Batched extraction (#254) ingests and extracts a session at a time.
+    batched = config.extraction_batch_target_tokens > 0
+    async with MemoryEngine.open(config) as engine:
         if prepare is not None:
             prepare(engine)
         usage = _Usage(engine)
@@ -475,6 +662,10 @@ async def build_unit(folder: Path, unit: Unit, config_for, *, progress=None, pre
         await _finish_extractions(engine, unit.user_id, stored.values())
         added = 0
         with log_path.open("a") as log:
+            # A batched build ingests whole sessions here, so the loop below finds every turn stored.
+            if batched and not await _ingest_sessions(engine, unit, stored, log, usage, hits,
+                                                      max_turns=max_turns, progress=progress):
+                return None
             for number, turn in enumerate(unit.turns, start=1):
                 if turn["key"] in stored:
                     continue
@@ -520,6 +711,8 @@ async def build_unit(folder: Path, unit: Unit, config_for, *, progress=None, pre
             return None
         await _drain_sources(engine, unit.user_id)
         summary = await _pack_summary(engine, unit.user_id, stored, unit.annotated)
+        if batched:
+            summary.update(await _batch_summary(engine, unit.user_id, stored))
     manifest = {
         "kind": KIND, "schema_version": SCHEMA_VERSION, "benchmark": unit.benchmark, "unit_id": unit.unit_id,
         **({"conversation_id": unit.unit_id} if unit.benchmark == "locomo" else {"question_id": unit.unit_id}),
@@ -667,6 +860,50 @@ def build_digest(folder: Path) -> str:
     return hashlib.sha256((folder / "build.json").read_bytes()).hexdigest()
 
 
+def build_summary(folder: Path, benchmark: str) -> dict:
+    """Totals over a build's complete packs, for comparing builds such as #254's batch sizes.
+
+    Calls, tokens and seconds are the packs' logged totals; ``seconds`` sums
+    the packs' own times, which overlap when packs are built in parallel.
+    ``wall_seconds`` runs from the build's start to its finish, so it also
+    counts any time between a stopped build and its resumption; it is None
+    until every pack is complete. Claims are the packs' current extracted
+    records, and the evidence counts are annotated evidence turns that at
+    least one of them cites. A batched build also totals its requests,
+    those that carried one turn, the turns the model gave no entry, and the
+    claims the model wrote and those the checks kept (``_batch_summary``).
+    """
+    record = json.loads((folder / "build.json").read_text())
+    manifests = list(built_units(folder / benchmark).values())
+
+    def total(key: str):
+        return sum(manifest.get(key) or 0 for manifest in manifests)
+
+    def share(part: str, whole: str):
+        return total(part) / total(whole) if total(whole) else None
+
+    started, finished = record.get("started_at"), record.get("finished_at")
+    summary = {
+        "label": record.get("label"), "benchmark": benchmark, "overrides": record.get("overrides"),
+        "model": (record.get("model") or {}).get("model"), "server_versions": record.get("server_versions"),
+        "commit": (record.get("provenance") or {}).get("commit"), "packs": len(manifests),
+        "turns": total("turns"), "calls": total("calls"), "prompt_tokens": total("prompt_tokens"),
+        "completion_tokens": total("completion_tokens"), "seconds": total("seconds"),
+        "wall_seconds": ((datetime.fromisoformat(finished) - datetime.fromisoformat(started)).total_seconds()
+                         if started and finished else None),
+        "cache_hits": total("cache_hits"), "dollars": total("dollars"),
+        "claims": total("claims"), "claims_per_turn": share("claims", "turns"),
+        "turns_with_claims": total("turns_with_claims"), "turns_with_claims_share": share("turns_with_claims", "turns"),
+        "annotated_evidence_turns": total("annotated_evidence_turns"),
+        "annotated_evidence_turns_with_claims": total("annotated_evidence_turns_with_claims"),
+        "evidence_claim_coverage": share("annotated_evidence_turns_with_claims", "annotated_evidence_turns"),
+    }
+    if any("batches" in manifest for manifest in manifests):
+        summary.update({key: total(key) for key in ("batches", "single_turn_batches", "turns_without_entry",
+                                                     "response_claims", "saved_claims")})
+    return summary
+
+
 def _default_slice() -> Path:
     from benchmarks.diagnostics import dev_slice
 
@@ -696,10 +933,23 @@ def main(argv: list[str] | None = None) -> None:
     command.add_argument("--jobs", type=int, default=1, help="Packs built at the same time")
     command.add_argument("--shard", type=_shard, metavar="K/N", help="Build every Nth pack from the Kth")
     command.add_argument("--max-turns", type=int,
-                         help="Stop each pack after this many new turns; a later build resumes it")
+                         help="Stop each pack after this many new turns, or a batched build at the end of "
+                              "that session; a later build resumes it")
     command.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
                          help="Build setting: a dotted key and a JSON value, as for the gate")
+    report = commands.add_parser("summary", help="Totals over a build's complete packs: calls, tokens, time, "
+                                                 "claims and annotated evidence turns cited")
+    report.add_argument("--label", required=True)
+    report.add_argument("--benchmark", choices=BENCHMARKS, default="locomo")
+    report.add_argument("--root", type=Path, default=None,
+                        help="Where the builds live; the main checkout's data/extracted-packs-v1 by default")
     args = parser.parse_args(argv)
+    if args.command == "summary":
+        folder = (default_root() if args.root is None else args.root) / args.label
+        if not (folder / "build.json").is_file():
+            parser.error(f"No build at {folder}")
+        print(json.dumps(build_summary(folder, args.benchmark), indent=2))
+        return
     try:
         overrides = parse_overrides(args.overrides)
         build_config(Path("{pack}"), overrides, model=args.model)

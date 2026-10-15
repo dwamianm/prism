@@ -1,0 +1,455 @@
+{
+  "kind": "gate-conversation-intervals",
+  "samples": 2000,
+  "seed": 42,
+  "comparisons": [
+    {
+      "after": "locomo-ingest-baseline-repeat-gate.json",
+      "before": "locomo-ingest-baseline-gate.json",
+      "inputs": {
+        "after_sha256": "d26cde2d65354cd0e09331fa3fd3469d30348c454cb23310432fd87bedaaa0c7",
+        "before_sha256": "0c35bc3fcaf7f6d6e7abb87959c7e5f9ffb1fb6c480777585a075425c0f5a681"
+      },
+      "all_evidence_packed": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8157552083333334,
+        "after": 0.8151041666666666,
+        "delta": -0.0006510416666666666,
+        "wins": 22,
+        "losses": 23,
+        "ties": 1491,
+        "interval_95": [
+          -0.006234413965087282,
+          0.006253908692933083
+        ]
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8728589317609188,
+        "after": 0.8756143282817347,
+        "delta": 0.002755396520815929,
+        "wins": 39,
+        "losses": 29,
+        "ties": 1468,
+        "interval_95": [
+          -0.002074326527606846,
+          0.007660955464056968
+        ]
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.958984375,
+        "after": 0.9596354166666666,
+        "delta": 0.0006510416666666666,
+        "wins": 1,
+        "losses": 0,
+        "ties": 1535,
+        "interval_95": [
+          0.0,
+          0.0021645021645021645
+        ]
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "groups": 10,
+        "before": 0.7591764842565696,
+        "after": 0.758585513657792,
+        "delta": -0.0005909705987776286,
+        "wins": 22,
+        "losses": 23,
+        "ties": 1495,
+        "interval_95": [
+          -0.00395156853130433,
+          0.003603432748579548
+        ]
+      }
+    },
+    {
+      "after": "locomo-batch-512-gate.json",
+      "before": "locomo-ingest-baseline-gate.json",
+      "inputs": {
+        "after_sha256": "469dfb168644369a1debd650a4533c0a1440a4141e31032f5259e06608dbb2b5",
+        "before_sha256": "0c35bc3fcaf7f6d6e7abb87959c7e5f9ffb1fb6c480777585a075425c0f5a681"
+      },
+      "all_evidence_packed": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8157552083333334,
+        "after": 0.8333333333333334,
+        "delta": 0.017578125,
+        "wins": 72,
+        "losses": 45,
+        "ties": 1419,
+        "interval_95": [
+          0.006920415224913495,
+          0.028985507246376812
+        ]
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8728589317609188,
+        "after": 0.8902080870829359,
+        "delta": 0.017349155322017164,
+        "wins": 95,
+        "losses": 64,
+        "ties": 1377,
+        "interval_95": [
+          0.01104565075856942,
+          0.023651196102358517
+        ]
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.958984375,
+        "after": 0.98046875,
+        "delta": 0.021484375,
+        "wins": 34,
+        "losses": 1,
+        "ties": 1501,
+        "interval_95": [
+          0.013779527559055118,
+          0.029228855721393034
+        ]
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "groups": 10,
+        "before": 0.7591764842565696,
+        "after": 0.7717588927273193,
+        "delta": 0.012582408470749741,
+        "wins": 72,
+        "losses": 45,
+        "ties": 1423,
+        "interval_95": [
+          0.005882410378826794,
+          0.019887005441587034
+        ]
+      }
+    },
+    {
+      "after": "locomo-batch-2048-gate.json",
+      "before": "locomo-ingest-baseline-gate.json",
+      "inputs": {
+        "after_sha256": "8a56e1264557a5aaa86adedc69c40367632026360a2d2ff6dcefb5209b16e4d6",
+        "before_sha256": "0c35bc3fcaf7f6d6e7abb87959c7e5f9ffb1fb6c480777585a075425c0f5a681"
+      },
+      "all_evidence_packed": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8157552083333334,
+        "after": 0.8404947916666666,
+        "delta": 0.024739583333333332,
+        "wins": 80,
+        "losses": 42,
+        "ties": 1414,
+        "interval_95": [
+          0.011804384485666104,
+          0.037086985839514496
+        ]
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8728589317609188,
+        "after": 0.8948313187540766,
+        "delta": 0.021972386993157844,
+        "wins": 109,
+        "losses": 68,
+        "ties": 1359,
+        "interval_95": [
+          0.01203177923889221,
+          0.031132609187599004
+        ]
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.958984375,
+        "after": 0.9837239583333334,
+        "delta": 0.024739583333333332,
+        "wins": 39,
+        "losses": 1,
+        "ties": 1496,
+        "interval_95": [
+          0.015345268542199489,
+          0.03403465346534654
+        ]
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "groups": 10,
+        "before": 0.7591764842565696,
+        "after": 0.7770477979099026,
+        "delta": 0.017871313653332978,
+        "wins": 80,
+        "losses": 42,
+        "ties": 1418,
+        "interval_95": [
+          0.00901711591498606,
+          0.026349840506335338
+        ]
+      }
+    },
+    {
+      "after": "locomo-batch-8192-gate.json",
+      "before": "locomo-ingest-baseline-gate.json",
+      "inputs": {
+        "after_sha256": "dc0fd1dd2d3dc779439684a660d392017e4d7b84f8c12438dae7eaecaad5ae5c",
+        "before_sha256": "0c35bc3fcaf7f6d6e7abb87959c7e5f9ffb1fb6c480777585a075425c0f5a681"
+      },
+      "all_evidence_packed": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8157552083333334,
+        "after": 0.8365885416666666,
+        "delta": 0.020833333333333332,
+        "wins": 71,
+        "losses": 39,
+        "ties": 1426,
+        "interval_95": [
+          0.01051939513477975,
+          0.030683403068340307
+        ]
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8728589317609188,
+        "after": 0.8923908507220173,
+        "delta": 0.01953191896109853,
+        "wins": 99,
+        "losses": 62,
+        "ties": 1375,
+        "interval_95": [
+          0.013677112467567675,
+          0.02469161734219877
+        ]
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.958984375,
+        "after": 0.9850260416666666,
+        "delta": 0.026041666666666668,
+        "wins": 41,
+        "losses": 1,
+        "ties": 1494,
+        "interval_95": [
+          0.016293279022403257,
+          0.03626595030221625
+        ]
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "groups": 10,
+        "before": 0.7591764842565696,
+        "after": 0.7739128969019125,
+        "delta": 0.014736412645342823,
+        "wins": 71,
+        "losses": 39,
+        "ties": 1430,
+        "interval_95": [
+          0.008006756445175905,
+          0.02129110535216467
+        ]
+      }
+    },
+    {
+      "after": "locomo-batch-8192-gate.json",
+      "before": "locomo-batch-2048-gate.json",
+      "inputs": {
+        "after_sha256": "dc0fd1dd2d3dc779439684a660d392017e4d7b84f8c12438dae7eaecaad5ae5c",
+        "before_sha256": "8a56e1264557a5aaa86adedc69c40367632026360a2d2ff6dcefb5209b16e4d6"
+      },
+      "all_evidence_packed": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8404947916666666,
+        "after": 0.8365885416666666,
+        "delta": -0.00390625,
+        "wins": 12,
+        "losses": 18,
+        "ties": 1506,
+        "interval_95": [
+          -0.012468827930174564,
+          0.004839685420447671
+        ]
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8948313187540766,
+        "after": 0.8923908507220173,
+        "delta": -0.0024404680320593147,
+        "wins": 25,
+        "losses": 26,
+        "ties": 1485,
+        "interval_95": [
+          -0.008740578884033188,
+          0.00372849986562416
+        ]
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.9837239583333334,
+        "after": 0.9850260416666666,
+        "delta": 0.0013020833333333333,
+        "wins": 2,
+        "losses": 0,
+        "ties": 1534,
+        "interval_95": [
+          0.0,
+          0.0030656039239730227
+        ]
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "groups": 10,
+        "before": 0.7770477979099026,
+        "after": 0.7739128969019125,
+        "delta": -0.0031349010079901557,
+        "wins": 12,
+        "losses": 18,
+        "ties": 1510,
+        "interval_95": [
+          -0.008983279794588,
+          0.0028148312004422195
+        ]
+      }
+    },
+    {
+      "after": "locomo-batch-1-ablation-gate.json",
+      "before": "locomo-ingest-baseline-gate.json",
+      "inputs": {
+        "after_sha256": "6255b5dd2869f218c7cbc6e0a88527a1a0a0562343e7fbd9baaea3955eda9b14",
+        "before_sha256": "0c35bc3fcaf7f6d6e7abb87959c7e5f9ffb1fb6c480777585a075425c0f5a681"
+      },
+      "all_evidence_packed": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8157552083333334,
+        "after": 0.822265625,
+        "delta": 0.006510416666666667,
+        "wins": 48,
+        "losses": 38,
+        "ties": 1450,
+        "interval_95": [
+          -0.006707317073170732,
+          0.01756511205330103
+        ]
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8728589317609188,
+        "after": 0.8765767730121687,
+        "delta": 0.0037178412512499687,
+        "wins": 67,
+        "losses": 60,
+        "ties": 1409,
+        "interval_95": [
+          -0.006564587675698787,
+          0.010341884265079518
+        ]
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.958984375,
+        "after": 0.97265625,
+        "delta": 0.013671875,
+        "wins": 22,
+        "losses": 1,
+        "ties": 1513,
+        "interval_95": [
+          0.007586206896551724,
+          0.02030812324929972
+        ]
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "groups": 10,
+        "before": 0.7591764842565696,
+        "after": 0.7633960259536509,
+        "delta": 0.00421954169708118,
+        "wins": 48,
+        "losses": 38,
+        "ties": 1454,
+        "interval_95": [
+          -0.00462800939694745,
+          0.011402388009453826
+        ]
+      }
+    },
+    {
+      "after": "locomo-batch-2048-gate.json",
+      "before": "locomo-batch-1-ablation-gate.json",
+      "inputs": {
+        "after_sha256": "8a56e1264557a5aaa86adedc69c40367632026360a2d2ff6dcefb5209b16e4d6",
+        "before_sha256": "6255b5dd2869f218c7cbc6e0a88527a1a0a0562343e7fbd9baaea3955eda9b14"
+      },
+      "all_evidence_packed": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.822265625,
+        "after": 0.8404947916666666,
+        "delta": 0.018229166666666668,
+        "wins": 53,
+        "losses": 25,
+        "ties": 1458,
+        "interval_95": [
+          0.001875,
+          0.03318903318903319
+        ]
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8765767730121687,
+        "after": 0.8948313187540766,
+        "delta": 0.018254545741907872,
+        "wins": 78,
+        "losses": 40,
+        "ties": 1418,
+        "interval_95": [
+          0.006842610254735841,
+          0.02825925925925926
+        ]
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.97265625,
+        "after": 0.9837239583333334,
+        "delta": 0.011067708333333334,
+        "wins": 17,
+        "losses": 0,
+        "ties": 1519,
+        "interval_95": [
+          0.0043397396156230625,
+          0.01911262798634812
+        ]
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "groups": 10,
+        "before": 0.7633960259536509,
+        "after": 0.7770477979099026,
+        "delta": 0.013651771956251798,
+        "wins": 53,
+        "losses": 25,
+        "ties": 1462,
+        "interval_95": [
+          0.002303952509812826,
+          0.023915660609914006
+        ]
+      }
+    }
+  ]
+}
