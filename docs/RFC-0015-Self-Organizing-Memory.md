@@ -803,3 +803,18 @@ Retired external-index entries are evicted after commit and remain repairable by
 compaction.
 
 *End of RFC-0015*
+
+
+## Visual memory organizer jobs (2026-10-15)
+
+[RFC-0018](RFC-0018-Visual-Memory.md) is a Draft design, with a feasibility spike
+measured on 2026-10-15, for adding images and video as memory sources. Because an
+observation is text with provenance, the organizer works on it unchanged. RFC-0018
+adds no job for repeated descriptions: its keyframe policy drops repeats before
+admission.
+
+Two organizer additions for visual memory are deferred and are not defined here. One
+is a summarization job that collapses a run of observations from one session into a
+Summary node with the frames as evidence. The other is a thumbnail retention policy:
+an archival policy with a TTL that deletes thumbnails and never touches the event
+log. The job set in Section 5.3 and the rest of this RFC do not change.

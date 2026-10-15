@@ -94,6 +94,7 @@ Defines capabilities that require a fully operational Tier 0–3 system as a pre
 - RFC-0012: Memory Branching and Simulation
 - RFC-0013: Intent and Goal Memory
 - RFC-0014: Portability, Sync, and Federation
+- RFC-0018: Visual Memory from Images and Video
 
 > **Note:** The emotional signal tracking concept from the original RFC-0013 has been removed from this suite. Text-derived emotional inference was determined to be epistemically unsound, privacy-threatening, and technically infeasible under the determinism requirements of this suite. It is not addressed in any revised RFC.
 
@@ -198,3 +199,13 @@ This suite is informed by and distinct from:
 ---
 
 *End of RFC-0000*
+
+
+## Visual memory (2026-10-15)
+
+[RFC-0018](RFC-0018-Visual-Memory.md) is a Draft design, with a feasibility spike
+measured on 2026-10-15, for adding images and video as memory sources. Under it, a
+vision model describes each keyframe once, at admission, and the description is
+recorded as an ordinary event, so the principles in Section 6 and the conformance
+levels in Section 8 do not change. Like the other Tier 4 capabilities it is
+optional, and the design keeps it off by default.

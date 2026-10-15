@@ -31,7 +31,10 @@ The [2026-09-17 competitive landscape snapshot](COMPETITIVE-LANDSCAPE-2026-09-17
 records PRME's point-in-time position against direct and adjacent memory
 products, including source URLs, adoption metadata, benchmark boundaries, and
 the source revision evaluated. Future reviews create new dated snapshots rather
-than rewriting this reference.
+than rewriting this reference. The
+[2026-10-15 visual memory addendum](COMPETITIVE-LANDSCAPE-2026-10-15-VISUAL-MEMORY.md)
+records, for images and video only, what the same products offered when
+RFC-0018 was drafted.
 
 Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
 [custom embedding providers](CUSTOM-EMBEDDINGS.md), and
@@ -159,6 +162,7 @@ approximate mode's recall tradeoff.
 | RFC-0012 | Memory Branching and Simulation | Draft | [RFC-0012-Memory-Branching-and-Simulation.md](RFC-0012-Memory-Branching-and-Simulation.md) |
 | RFC-0013 | Intent and Goal Memory | Draft | [RFC-0013-Intent-and-Goal-Memory.md](RFC-0013-Intent-and-Goal-Memory.md) |
 | RFC-0014 | Portability, Sync, and Federation | Draft | [RFC-0014-Portability-Sync-and-Federation.md](RFC-0014-Portability-Sync-and-Federation.md) |
+| RFC-0018 | Visual Memory from Images and Video | Draft; feasibility spike measured 2026-10-15 | [RFC-0018-Visual-Memory.md](RFC-0018-Visual-Memory.md) |
 
 ---
 
@@ -195,6 +199,7 @@ RFC-0001
     │                                                     RFC-0012
     │                                                     RFC-0013
     │                                                     RFC-0014
+    │                                                     RFC-0018
 ```
 
 ---
@@ -209,7 +214,7 @@ An implementation claiming conformance at a given tier MUST satisfy all requirem
 | Tier 1 | + RFC-0002, 0003, 0004 | Persistent, epistemically-typed, namespace-isolated storage. |
 | Tier 2 | + RFC-0005, 0006 | Hybrid retrieval with context-efficient bundling. |
 | Tier 3 | + RFC-0007, 0008, 0009, 0015 | Adaptive lifecycle: decay, confidence evolution, feedback, self-organizing execution. |
-| Tier 4 | + Any of RFC-0010–0014 | Advanced capabilities. Each is independently optional. |
+| Tier 4 | + Any of RFC-0010–0014, RFC-0018 | Advanced capabilities. Each is independently optional. |
 
 A system claiming "Tier 2 conformance" has implemented Tiers 0, 1, and 2 — not merely RFC-0002.
 

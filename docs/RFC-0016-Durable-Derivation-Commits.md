@@ -498,3 +498,19 @@ collection. Discard and collection receipts preserve their history; collection
 retains ambiguous or mismatched inputs and never deletes a published graph node.
 They have no automatic scheduler. See [RFC-0015](RFC-0015-Self-Organizing-Memory.md)
 and the [profile guide](ENTITY-PROFILES.md) for the public contract.
+
+## Visual memory extraction (2026-10-15)
+
+[RFC-0018](RFC-0018-Visual-Memory.md) is a Draft design, with a feasibility spike
+measured on 2026-10-15, for adding images and video as memory sources. When
+extraction runs over an observation, RFC-0018 treats it as ordinary derivation work:
+the description is the source event, and the extraction work, saved output, prepared
+plan and commit are those described above.
+
+The spike found that one failed extraction leaves every later observation in the
+same session pending behind it until it is retried. In the first run, 32 of 53
+admissions raised extraction errors: one failure and 31 pending behind it. RFC-0018
+therefore specifies that `observe()` retries a failed extraction as the extracted-pack
+builder (`benchmarks/diagnostics/extracted_packs.py`) does, with `retry_extraction`
+and then `process_extractions`. These are the owner-scoped calls this RFC already
+defines, and nothing in this RFC changes.

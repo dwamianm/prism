@@ -381,3 +381,21 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 ---
 
 *End of RFC-0001*
+
+
+## Visual memory observations (2026-10-15)
+
+[RFC-0018](RFC-0018-Visual-Memory.md) is a Draft design, with a feasibility spike
+measured on 2026-10-15, for adding images and video as memory sources. Under it, an
+observation made from a keyframe or a photo is an ordinary Event (Section 3). Its
+`content` is the vision model's text description. Its role is `TOOL`, so its source
+type is `TOOL_OUTPUT` (Sections 6 and 7) and an observed fact is not recorded as
+something the owner stated. Its `metadata` carries the modality, the source file, the
+frame time, the SHA-256 of the frame, the thumbnail path, the vision model and the
+description prompt version.
+
+The design introduces no new node type, edge type or Event field. Fact and Entity
+records that extraction derives from an observation cite its event in `evidence_ids`
+(`evidence_refs` on PRME's graph nodes), so provenance leads from a derived record to
+the observation event, its capture time and its thumbnail. The definitions in this
+document do not change.

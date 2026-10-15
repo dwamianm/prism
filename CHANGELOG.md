@@ -93,6 +93,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MemoryWorkspace.open()`, keeps each namespace's pack in one `memory.prme`
   file; the registry does not record the layout, so pass the flag
   consistently.
+- Add a research-only feasibility spike for images and video as memory
+  sources: the package `benchmarks/vision/`, which describes video and photo
+  keyframes with a local vision model and admits the descriptions as events,
+  and the draft [RFC-0018](docs/RFC-0018-Visual-Memory.md) that follows from
+  it. The measurements are reported in
+  `benchmarks/results/research/2026-10-15/VISUAL-MEMORY-SPIKE.md`. Nothing
+  under `src/prme/` changed: the engine, its configuration and its defaults
+  behave as before, and there is no visual memory feature.
 
 ### Changed
 

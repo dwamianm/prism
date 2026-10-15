@@ -1,0 +1,212 @@
+{
+  "run": "spike-1",
+  "finished_at": "2026-10-15T14:24:28-05:00",
+  "commit": "58caddb1",
+  "ollama_version": "0.40.4",
+  "settings": {
+    "run": "spike-1",
+    "sources": "meeting,photos,tahoe",
+    "fps": 1.0,
+    "change_threshold": 0.55,
+    "max_gap": 30.0,
+    "repeat_similarity": 0.85,
+    "cap": 40,
+    "mode": "ingest",
+    "vision_model": "qwen3.5:9b",
+    "extract_model": "prme-qwen3.5:35b-a3b-8k",
+    "reader_model": "qwen3.5:9b",
+    "judge_model": "qwen3.5:9b",
+    "token_budget": 4000
+  },
+  "frames": {
+    "meeting": {
+      "frames": 220,
+      "keyframes": 13,
+      "keyframe_times_s": [
+        0.0,
+        15.0,
+        45.0,
+        46.0,
+        55.0,
+        75.0,
+        92.0,
+        102.0,
+        107.0,
+        115.0,
+        145.0,
+        175.0,
+        200.0
+      ],
+      "change_median": 0.165,
+      "change_max": 3.82
+    },
+    "tahoe": {
+      "frames": 120,
+      "keyframes": 40,
+      "keyframe_times_s": [
+        0.0,
+        3.0,
+        6.0,
+        9.0,
+        12.0,
+        18.0,
+        21.0,
+        24.0,
+        27.0,
+        30.0,
+        36.0,
+        39.0,
+        42.0,
+        45.0,
+        47.0,
+        53.0,
+        55.0,
+        57.0,
+        60.0,
+        62.0,
+        66.0,
+        69.0,
+        71.0,
+        73.0,
+        75.0,
+        80.0,
+        82.0,
+        84.0,
+        87.0,
+        89.0,
+        93.0,
+        95.0,
+        98.0,
+        100.0,
+        102.0,
+        107.0,
+        109.0,
+        111.0,
+        113.0,
+        115.0
+      ],
+      "change_median": 0.479,
+      "change_max": 0.846
+    },
+    "photos": {
+      "photos": 5
+    },
+    "described": 58,
+    "unique_after_description": 53
+  },
+  "describe": {
+    "calls": 58,
+    "fresh": 58,
+    "seconds": {
+      "n": 58,
+      "mean": 5.24,
+      "median": 4.88,
+      "min": 4.13,
+      "max": 10.59
+    },
+    "prompt_tokens": {
+      "n": 58,
+      "mean": 1096.22,
+      "median": 1080.0,
+      "min": 594,
+      "max": 2660
+    },
+    "eval_tokens": {
+      "n": 58,
+      "mean": 102.86,
+      "median": 95.0,
+      "min": 75,
+      "max": 155
+    }
+  },
+  "build": {
+    "mode": "ingest",
+    "observations": 53,
+    "errors": 32,
+    "seconds": {
+      "n": 21,
+      "mean": 27.02,
+      "median": 29.72,
+      "min": 5.82,
+      "max": 38.85
+    }
+  },
+  "pack": {
+    "events": 53,
+    "nodes": {
+      "decision": 3,
+      "entity": 56,
+      "fact": 52
+    },
+    "edges": {
+      "has_fact": 55,
+      "mentions": 17,
+      "supersedes": 6
+    },
+    "pack_bytes": 14081769,
+    "thumbnail_bytes": 503707
+  },
+  "questions": {
+    "total": 24,
+    "retrieval_hits": 24,
+    "correct": 22,
+    "unresolved": 0,
+    "context_tokens": {
+      "n": 24,
+      "mean": 3642.92,
+      "median": 3897.5,
+      "min": 1585,
+      "max": 3900
+    },
+    "retrieval_seconds": {
+      "n": 24,
+      "mean": 0.22,
+      "median": 0.14,
+      "min": 0.09,
+      "max": 0.48
+    },
+    "by_source": {
+      "meeting": {
+        "questions": 16,
+        "retrieval_hits": 16,
+        "correct": 14
+      },
+      "photos": {
+        "questions": 7,
+        "retrieval_hits": 7,
+        "correct": 7
+      },
+      "tahoe": {
+        "questions": 1,
+        "retrieval_hits": 1,
+        "correct": 1
+      }
+    },
+    "by_kind": {
+      "single_fact": {
+        "questions": 16,
+        "correct": 16
+      },
+      "latest_value": {
+        "questions": 2,
+        "correct": 0
+      },
+      "earlier_value": {
+        "questions": 2,
+        "correct": 2
+      },
+      "chart": {
+        "questions": 2,
+        "correct": 2
+      },
+      "aggregation": {
+        "questions": 1,
+        "correct": 1
+      },
+      "scene": {
+        "questions": 1,
+        "correct": 1
+      }
+    }
+  }
+}
