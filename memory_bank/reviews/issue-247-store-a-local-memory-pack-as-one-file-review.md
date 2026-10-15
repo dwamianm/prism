@@ -136,6 +136,6 @@ Attacked hardest and held: `--lme-captures` cannot let a pair or verdict through
 ## Checks
 
 - `uv run ruff check src/ tests/ benchmarks/integrations/gpt54_baselines.py`: clean.
-- Full suite on the first snapshot: 5068 passed, 984 skipped, 1 deselected (the MCP test that segfaults intermittently on `main`, deselected as in PR #248). On the second snapshot: 5071 passed, 2 failed, both the flag assertions that D1 predicted could fail by chance under the multithreaded writer. The run on the final snapshot is recorded in the pull request.
+- Full suite on the first snapshot: 5068 passed, 984 skipped, 1 deselected (the MCP test that segfaults intermittently on `main`, deselected as in PR #248). On the second snapshot: 5071 passed, 2 failed, both the flag assertions that D1 predicted could fail by chance under the multithreaded writer. On the one-thread snapshot and again on the committed tree: 5075 passed, 984 skipped, 1 deselected, no failures.
 - Offline evidence gate over the saved store() packs, `main` against this branch: `context_sha256` identical for all 1,540 LoCoMo and all 500 LongMemEval-S questions (the latter replayed from the regenerated controls with `--lme-captures`); `gate-compare` reports no change on any metric.
 - No paid API or Ollama call was made.
