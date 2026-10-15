@@ -121,6 +121,18 @@ recency boost misses most current-state and knowledge-update questions) and
 [#198](https://github.com/dwamianm/prism/issues/198) (rank fusion over bounded
 candidate lists drops evidence that only one channel finds).
 
+## Visual memory (draft design)
+
+[RFC-0018](docs/RFC-0018-Visual-Memory.md) is a draft design for images and
+video as memory sources. A feasibility spike on local models, run on 2026-10-15,
+is reported in
+[VISUAL-MEMORY-SPIKE.md](benchmarks/results/research/2026-10-15/VISUAL-MEMORY-SPIKE.md);
+nothing under `src/prme/` changed and no visual memory feature exists. The RFC
+has three phases: files and photos first, then live screen, then camera and
+wearables. Phase 1 is the next step: `observe()` and `prme observe` for saved
+video and photos, off by default, and a benchmark on real recordings before any
+default changes.
+
 ## Earlier evidence-led delivery
 
 Historical milestones below provide context, not current acceptance criteria. This

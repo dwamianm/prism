@@ -230,6 +230,10 @@ better ranking, the context budget, and dated facts extracted at write time for
 multi-hop and list questions. See the [roadmap](ROADMAP.md) for what has been
 delivered and what is still open.
 
+Images and video as memory sources are a draft design,
+[RFC-0018](docs/RFC-0018-Visual-Memory.md), with a measured feasibility spike;
+the engine does not read images or video today.
+
 ## Documentation
 
 - [Developer guides](documentation/README.md) and [configuration reference](documentation/configuration.md)

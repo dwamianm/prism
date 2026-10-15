@@ -609,3 +609,19 @@ cleared for every namespace. Directory packs keep opening as before.
 The single-file format is opt-in, and new packs keep the directory layout.
 Making the single file the default for new packs is a separate decision, out of
 scope for issue #247.
+
+## Visual memory evidence amendment (2026-10-15)
+
+[RFC-0018](RFC-0018-Visual-Memory.md) is a Draft design, with a feasibility spike
+measured on 2026-10-15, for adding images and video as memory sources. Under it, the
+pack holds one small thumbnail per observation (JPEG, 320 pixels wide, about 20 KB),
+named by the SHA-256 of the keyframe: the file `frames/<sha256>.jpg` in a directory
+pack, and a row of a `blobs` table keyed by the same hash in a single-file pack (see
+the single-file pack amendment above). Thumbnails inherit the pack's encryption. Raw
+frames and videos stay outside the pack, referenced by path and hash in the
+observation event's metadata.
+
+The pack therefore stays small and copyable, and `prme rebuild` needs no media,
+because the descriptions are durable events. A pack that never used `observe()` is
+byte-for-byte what it is today. This amendment changes no sync, merge or federation
+rule in this RFC.

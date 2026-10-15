@@ -504,3 +504,33 @@ activation. Any candidate needs separate registration, full-cohort regression
 and untouched confirmation before default promotion. These examined failures
 cannot serve as confirmation, and recovered answers cannot simply be added to
 430. The earlier Ollama confirmation remains a separate protocol and finding.
+
+## 2026-10-15: visual memory spike
+
+A feasibility spike tested whether PRME can remember what a video or a photo
+showed, with the provenance, timing and retrieval it has for text, using only
+local models. The
+[report](../benchmarks/results/research/2026-10-15/VISUAL-MEMORY-SPIKE.md) and
+the code in `benchmarks/vision/` are the evidence, and
+[RFC-0018](RFC-0018-Visual-Memory.md) is the draft design that follows from
+them. Nothing under `src/prme/` changed and no visual memory feature exists.
+
+Three runs over a 24-question set (a synthetic meeting recording, five photos
+and a real aerial video) each scored 22 of 24, with the evidence in the 4K
+context for all 24. The facts-first description prompt fixed the two
+latest-value questions that the narrated prompt missed; the score stayed at 22
+because two other questions were missed, a shortened answer and an aerial scene
+description, which the report attributes to reader behavior, not retrieval.
+Admitting the same descriptions with `store()` scored the same as `ingest()` on
+the 17 event pack, at 0.08 s instead of 20 s per observation. Keyframe
+selection needed two levels: pixel change alone could not separate a slide whose
+text changed from camera shake on text with a comfortable margin, and a repeat
+filter on the descriptions dropped 41 of 58 described frames without dropping
+any whose quoted text changed.
+
+Boundaries: 17 events fit in one context, so retrieval was not stressed; the
+corpus is synthetic apart from one photo and one video; one 9B model was both
+reader and judge; and there is no audio. Next is RFC-0018 phase 1 (`observe()`
+and `prme observe` for saved video and photos, off by default), then a
+benchmark with real recordings and annotated questions, run under the DeepSeek
+track rules with its own baseline, before any default changes.

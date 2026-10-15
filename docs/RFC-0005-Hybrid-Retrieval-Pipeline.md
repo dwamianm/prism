@@ -1101,3 +1101,18 @@ prefer the graph row. Final score ties use node ID with C collation before the
 limit. Duplicate source/index copies therefore cannot consume slots intended
 for other matching memories. This corrects candidate completeness and stable
 selection; it does not change PostgreSQL's existing `plainto_tsquery` semantics.
+
+## Visual memory retrieval (2026-10-15)
+
+[RFC-0018](RFC-0018-Visual-Memory.md) is a Draft design, with a feasibility spike
+measured on 2026-10-15, for adding images and video as memory sources. Under it, an
+observation is an event whose content is a text description, so it reaches Stage 2
+through the existing paths in Section 4: lexical search over the description, vector
+similarity under the pack's existing text embedding model and, when extraction runs,
+graph traversal from the entities extraction derives from it. Recency and time
+windows read its `event_time`, and packing and receipts treat it as any text record.
+
+A second vector index built with an image-text model, for image-to-frame queries and
+"have I seen this before" lookups, is deferred. RFC-0018 names it as later work, and
+this RFC does not specify it. The stages, scoring and determinism rules in this RFC
+do not change.

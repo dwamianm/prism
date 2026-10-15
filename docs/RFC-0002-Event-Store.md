@@ -503,3 +503,17 @@ Before this RFC progresses to Experimental status, implementers MUST publish:
 ---
 
 *End of RFC-0002*
+
+
+## Visual memory admission (2026-10-15)
+
+[RFC-0018](RFC-0018-Visual-Memory.md) is a Draft design, with a feasibility spike
+measured on 2026-10-15, for adding images and video as memory sources. It relies on
+this RFC's append-only log. Under it, the vision model is called once, at admission,
+like extraction, and its description is recorded as the event's `content`. A rebuild
+or replay reads that content and never calls the vision model.
+
+A different vision model or description prompt version produces new observation
+events beside the existing ones, and an existing observation is never rewritten, as
+the append-only rule in this RFC requires. The event schema, operation types,
+integrity chain and compaction rules do not change.

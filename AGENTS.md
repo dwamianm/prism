@@ -246,7 +246,7 @@ unreplayed.
 
 ## RFCs
 
-Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0017). See `docs/INDEX.md` for the full listing. Key RFCs include:
+Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0018). See `docs/INDEX.md` for the full listing. Key RFCs include:
 
 - **RFC-0000** — Suite overview
 - **RFC-0001** — Core data model

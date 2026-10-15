@@ -37,7 +37,7 @@ retrieval, packing, receipts or the organizer do.
 A frame becomes memory the way a message does. A capture layer turns a video,
 a photo, a screen or a camera into keyframes. A local vision model writes a
 plain-text description of each keyframe that quotes visible text verbatim. That
-description is admitted as an event through `ingest()`, with the capture clock
+description is admitted as an event through `ingest()` or `store()`, with the capture clock
 as `event_time`, role `tool`, and metadata that names the source, the frame
 time, the frame's SHA-256, the vision model and the prompt version. Extraction,
 the graph, supersedence, the organizer, retrieval, packing and receipts then
@@ -279,6 +279,10 @@ into a Summary node with the frames as evidence.
   keyframe; an eight-hour screen day at one keyframe per 20 seconds is 1,440
   vision calls. Whether the keyframe policy cuts that enough on real sessions
   is unknown until phase 2 captures some.
+- Thumbnails in sync. RFC-0014's sync carries event and operation logs, not
+  media. Whether a synced pack carries its thumbnails, re-derives nothing (the
+  descriptions are events, so retrieval works without them) and shows "frame
+  not available" for provenance, or fetches them lazily, is undecided.
 - Audio. Meetings are mostly speech. Transcription is a separate source with
   the same event shape and belongs in its own RFC, but a meeting recording
   without it answers far fewer questions than one with it.
