@@ -1,0 +1,228 @@
+{
+  "run": "phase1-store",
+  "finished_at": "2026-10-15T16:20:28-05:00",
+  "commit": "606e5db3",
+  "ollama_version": "0.40.4",
+  "settings": {
+    "run": "phase1-store",
+    "sources": "meeting,photos,tahoe",
+    "fps": 1.0,
+    "change_threshold": 0.55,
+    "max_gap": 30.0,
+    "repeat_similarity": 0.93,
+    "mode": "store",
+    "vision_model": "qwen3.5:9b",
+    "extract_model": "prme-qwen3.5:35b-a3b-8k",
+    "reader_model": "qwen3.5:9b",
+    "judge_model": "qwen3.5:9b",
+    "token_budget": 4000
+  },
+  "vision_config": {
+    "enabled": true,
+    "provider": "ollama",
+    "model": "qwen3.5:9b",
+    "base_url": "http://127.0.0.1:11434",
+    "timeout": 180.0,
+    "describe_prompt_version": 2,
+    "extract": false,
+    "extraction_retry_delays": [
+      5.0,
+      15.0,
+      60.0
+    ],
+    "fps": 1.0,
+    "frame_width": 1280,
+    "change_threshold": 0.55,
+    "max_gap_seconds": 30.0,
+    "repeat_similarity": 0.93,
+    "thumbnail_width": 320,
+    "keep_thumbnails": true
+  },
+  "frames": {
+    "meeting.mp4": {
+      "frames": 220,
+      "keyframes": 13,
+      "described": 13,
+      "repeats_dropped": 3,
+      "admitted": 10,
+      "keyframe_times_s": [
+        0.0,
+        15.0,
+        45.0,
+        46.0,
+        55.0,
+        75.0,
+        92.0,
+        102.0,
+        107.0,
+        115.0,
+        145.0,
+        175.0,
+        200.0
+      ],
+      "change_median": 0.165,
+      "change_max": 3.82
+    },
+    "Tahoe Day.mov": {
+      "frames": 120,
+      "keyframes": 48,
+      "described": 48,
+      "repeats_dropped": 47,
+      "admitted": 1,
+      "keyframe_times_s": [
+        0.0,
+        3.0,
+        6.0,
+        9.0,
+        12.0,
+        15.0,
+        18.0,
+        21.0,
+        24.0,
+        27.0,
+        30.0,
+        33.0,
+        36.0,
+        39.0,
+        42.0,
+        45.0,
+        47.0,
+        50.0,
+        53.0,
+        55.0,
+        57.0,
+        60.0,
+        62.0,
+        64.0,
+        66.0,
+        69.0,
+        71.0,
+        73.0,
+        75.0,
+        78.0,
+        80.0,
+        82.0,
+        84.0,
+        87.0,
+        89.0,
+        91.0,
+        93.0,
+        95.0,
+        98.0,
+        100.0,
+        102.0,
+        104.0,
+        107.0,
+        109.0,
+        111.0,
+        113.0,
+        115.0,
+        118.0
+      ],
+      "change_median": 0.479,
+      "change_max": 0.846
+    },
+    "photos": {
+      "photos": 5,
+      "admitted": 5
+    },
+    "described": 66,
+    "unique_after_description": 16
+  },
+  "describe": {
+    "calls": 66,
+    "fresh": 8,
+    "seconds": {
+      "n": 8,
+      "mean": 6.17,
+      "median": 5.15,
+      "min": 4.84,
+      "max": 13.66
+    }
+  },
+  "build": {
+    "mode": "store",
+    "observations": 16,
+    "errors": 0,
+    "seconds": {
+      "n": 16,
+      "mean": 0.1,
+      "median": 0.08,
+      "min": 0.06,
+      "max": 0.21
+    }
+  },
+  "pack": {
+    "events": 16,
+    "nodes": {
+      "note": 16
+    },
+    "edges": {},
+    "pack_bytes": 8446261,
+    "thumbnails": 16,
+    "thumbnail_bytes": 123271
+  },
+  "questions": {
+    "total": 24,
+    "retrieval_hits": 24,
+    "correct": 22,
+    "unresolved": 0,
+    "context_tokens": {
+      "n": 24,
+      "mean": 1877.33,
+      "median": 1857.0,
+      "min": 1857,
+      "max": 1919
+    },
+    "retrieval_seconds": {
+      "n": 24,
+      "mean": 0.08,
+      "median": 0.07,
+      "min": 0.03,
+      "max": 0.22
+    },
+    "by_source": {
+      "meeting": {
+        "questions": 16,
+        "retrieval_hits": 16,
+        "correct": 15
+      },
+      "photos": {
+        "questions": 7,
+        "retrieval_hits": 7,
+        "correct": 7
+      },
+      "tahoe": {
+        "questions": 1,
+        "retrieval_hits": 1,
+        "correct": 0
+      }
+    },
+    "by_kind": {
+      "single_fact": {
+        "questions": 16,
+        "correct": 15
+      },
+      "latest_value": {
+        "questions": 2,
+        "correct": 2
+      },
+      "earlier_value": {
+        "questions": 2,
+        "correct": 2
+      },
+      "chart": {
+        "questions": 2,
+        "correct": 2
+      },
+      "aggregation": {
+        "questions": 1,
+        "correct": 1
+      },
+      "scene": {
+        "questions": 1,
+        "correct": 0
+      }
+    }
+  }
+}

@@ -162,7 +162,7 @@ approximate mode's recall tradeoff.
 | RFC-0012 | Memory Branching and Simulation | Draft | [RFC-0012-Memory-Branching-and-Simulation.md](RFC-0012-Memory-Branching-and-Simulation.md) |
 | RFC-0013 | Intent and Goal Memory | Draft | [RFC-0013-Intent-and-Goal-Memory.md](RFC-0013-Intent-and-Goal-Memory.md) |
 | RFC-0014 | Portability, Sync, and Federation | Draft | [RFC-0014-Portability-Sync-and-Federation.md](RFC-0014-Portability-Sync-and-Federation.md) |
-| RFC-0018 | Visual Memory from Images and Video | Draft; feasibility spike measured 2026-10-15 | [RFC-0018-Visual-Memory.md](RFC-0018-Visual-Memory.md) |
+| RFC-0018 | Visual Memory from Images and Video | Phase 1 implemented (`observe()`, `prme observe`, off by default); spike measured 2026-10-15; real-recording benchmark open | [RFC-0018-Visual-Memory.md](RFC-0018-Visual-Memory.md) |
 
 ---
 

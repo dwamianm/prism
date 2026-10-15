@@ -230,9 +230,12 @@ better ranking, the context budget, and dated facts extracted at write time for
 multi-hop and list questions. See the [roadmap](ROADMAP.md) for what has been
 delivered and what is still open.
 
-Images and video as memory sources are a draft design,
-[RFC-0018](docs/RFC-0018-Visual-Memory.md), with a measured feasibility spike;
-the engine does not read images or video today.
+Images and video as memory sources are
+[RFC-0018](docs/RFC-0018-Visual-Memory.md). Its phase 1 is implemented and
+off by default: with `vision.enabled` set, `MemoryClient.observe()` and
+`prme observe` turn a photo or a saved video into dated observation events
+described by a local vision model, with a thumbnail of each keyframe kept in
+the pack for provenance. The benchmark with real recordings is still open.
 
 ## Documentation
 

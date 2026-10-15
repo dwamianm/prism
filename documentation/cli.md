@@ -205,6 +205,37 @@ prme search ./memory.duckdb "What programming languages does Alice use?"
 prme search ./memory.duckdb "recent decisions" --user-id alice --format json
 ```
 
+## Visual Memory
+
+### prme observe
+
+Remember what photos and videos showed (RFC-0018, phase 1).
+
+```bash
+prme observe <db_path> <file>... --user-id ID [--captured-at ISO8601] [--session-id ID]
+             [--scope {personal,project,org}] [--model NAME] [--base-url URL]
+             [--extract | --no-extract] [--no-thumbnails] [--format {table,json}]
+```
+
+Each file is observed in turn: a photo becomes one observation event, a video
+one per keyframe that changed and whose description does not repeat the
+previous kept frame's. The command turns `vision.enabled` on for its own run;
+every other vision setting comes from `PRME_VISION_*` unless a flag overrides
+it, and extraction (on by default) sends each description to the configured
+extraction provider (`PRME_EXTRACTION_*`), which may be a hosted API; the
+command names the provider it will use in its output.
+`--captured-at` is the capture clock for every file given (a video's start);
+without it the photo's EXIF time, the video's container time or the file time
+stands in. A frame already observed for the owner by the same model and prompt
+is skipped, so a second run over the same files adds nothing. Video needs
+`ffmpeg`; a local Ollama server serving the vision model (`qwen3.5:9b` by
+default) must be running. The command exits 1 when any file fails.
+
+```bash
+prme observe ./memory.duckdb ~/Pictures/receipt.jpg --user-id alice --no-extract
+prme observe ./memories.prme meeting.mp4 --user-id alice --captured-at 2026-10-14T10:00:00-07:00 --format json
+```
+
 ## Maintenance
 
 ### prme organize

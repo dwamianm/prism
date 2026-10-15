@@ -582,7 +582,9 @@ ending in `.prme` that is not an existing directory is a single-file pack.
 `prme init <pack.prme>` creates exactly that one file, encrypted when
 encryption is configured, and writes no `.env.example` beside it; it prints a
 hint instead. `prme doctor <pack.prme>` checks the file, the required tables
-(`events`, `nodes`, `prme_manifest` and `vector_snapshot`) and the manifest,
+(`events`, `nodes`, `prme_manifest` and `vector_snapshot`; a pack that has
+observed images or video also holds the optional `blobs` table of RFC-0018,
+copied like every other table) and the manifest,
 and warns about a WAL beside the file and about a missing or stale vector
 snapshot. `prme doctor`, `prme compact` and `prme migrate` take the key of an
 encrypted pack with `--encryption-key`, where an empty value means no key.
