@@ -9,6 +9,7 @@ among the engines of a process that open the same single-file pack.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import threading
 import time
@@ -18,8 +19,22 @@ import tantivy
 from prme.models.derivation import DerivationPlan
 from prme.models.profile import ProfilePublication
 from prme.storage._threading import run_to_completion
+
 from prme.storage.derivation_staging import DuckDBStageFence
 from prme.types import NodeType
+
+logger = logging.getLogger(__name__)
+
+# Every Tantivy writer indexes on one thread, so a batch's documents land in
+# one segment in the order they were added. With several threads the split
+# between segments depends on scheduling, and tied BM25 hits come back in
+# segment order, so two builds of the same documents could cut differently
+# at lexical_k. One thread keeps every batch, startup load and purge
+# deterministic; a batch holds at most a few hundred documents, and the
+# single-threaded startup load of 100,000 documents is measured in
+# RFC-0014 (#247).
+_WRITER_THREADS = 1
+_WRITER_HEAP = 50_000_000
 
 # Which graph nodes get a lexical document (issue #247). Extraction gives
 # each entity node it creates a vector but no lexical document. Every other
@@ -163,11 +178,21 @@ class LexicalIndex:
         self._writer: tantivy.IndexWriter | None = None
         self._uncommitted = 0
         self._oldest_uncommitted_at: float | None = None
+        # Whether a deleted document still counts in an in-memory index's
+        # BM25 statistics. Tantivy keeps a deleted document in its segment's
+        # term frequencies and length totals until a merge rewrites the
+        # segment, so a session that evicted documents would score the
+        # survivors differently from the fresh index the next open of a
+        # single-file pack builds from the graph. ``_purge_locked`` rebuilds
+        # the in-memory index from its live documents before the next search
+        # once a deletion left such a marker (#247). A directory index keeps
+        # its markers on disk, as any Tantivy index does.
+        self._stale_markers = False
 
     def _ensure_writer(self) -> "tantivy.IndexWriter":
         """Return the batch writer, creating it on the first add of a batch."""
         if self._writer is None:
-            self._writer = self._index.writer(heap_size=50_000_000)
+            self._writer = self._index.writer(heap_size=_WRITER_HEAP, num_threads=_WRITER_THREADS)
         return self._writer
 
     def _do_index(
@@ -183,7 +208,6 @@ class LexicalIndex:
         Adds the document to the long-lived writer and commits only when
         the batch interval or time delay threshold is reached.
         """
-        writer = self._ensure_writer()
         doc_fields: dict = {
             "node_id": [node_id],
             "content": [content],
@@ -192,7 +216,10 @@ class LexicalIndex:
         }
         if scope is not None:
             doc_fields["scope"] = [scope]
-        writer.add_document(tantivy.Document(**doc_fields))
+        # Build the document first, so a bad field leaves no idle writer behind.
+        document = tantivy.Document(**doc_fields)
+        writer = self._ensure_writer()
+        writer.add_document(document)
 
         self._uncommitted += 1
         if self._oldest_uncommitted_at is None:
@@ -267,6 +294,12 @@ class LexicalIndex:
             self._uncommitted = 0
             self._oldest_uncommitted_at = None
             writer.wait_merging_threads()
+        # A replaced document's old version counts beside the new one until
+        # the next flush or search rebuilds an in-memory index.
+        if self._index_path is None:
+            searcher = self._index.searcher()
+            if any(searcher.doc_freq("node_id", node_id) > 1 for node_id, _document in documents):
+                self._stale_markers = True
 
     async def replace_many(self, replacements: tuple[tuple[str, str, str, str, str | None], ...]) -> None:
         """Atomically publish a bounded batch of exact replacement documents.
@@ -315,10 +348,88 @@ class LexicalIndex:
                 self._do_replace if replace else self._do_index, node_id, content, user_id, node_type, scope
             )
 
+    def _marker_remains(self, node_id: str) -> bool:
+        """Whether an in-memory index still counts a deleted ``node_id`` in its statistics.
+
+        ``doc_freq`` reads the segment's term dictionary, which a deletion
+        does not rewrite, so it is positive exactly while the marker stays.
+        A segment whose every document is deleted is dropped at the commit,
+        which is why a document that was alone in its segment leaves none.
+        """
+        return self._index_path is None and self._index.searcher().doc_freq("node_id", node_id) > 0
+
+    def _purge_locked(self) -> None:
+        """Rebuild an in-memory index from its live documents, dropping deleted-document markers.
+
+        Must be called with ``_write_lock`` held. The documents are re-added
+        in ``node_id`` order, the order a single-file pack's open and
+        ``rebuild_indexes`` use, into a fresh index that replaces the old one
+        in one assignment, so a concurrent search sees either the old index
+        or the complete new one. Every field is stored, so the rebuilt index
+        holds the same documents; its statistics then count live documents
+        alone, as a fresh build's do. The cost is one pass over the live
+        documents (RFC-0014 records the measurements), paid once before the
+        first search after a deletion left a marker. A rebuild that fails
+        is logged and the old index serves on with its stale statistics,
+        which beats failing every search until a restart.
+        """
+        if not self._stale_markers:
+            return
+        self._commit_locked()
+        # An idle writer left on the old index would add later documents to
+        # an index nothing searches, so none survives the swap.
+        writer, self._writer = self._writer, None
+        if writer is not None:
+            writer.rollback()
+            writer.wait_merging_threads()
+        self._index.reload()
+        try:
+            searcher = self._index.searcher()
+            hits = searcher.search(tantivy.Query.all_query(), limit=max(1, searcher.num_docs)).hits
+            documents = sorted((searcher.doc(address).to_dict() for _score, address in hits),
+                               key=lambda fields: fields["node_id"][0])
+            fresh = tantivy.Index(self._schema)
+            fresh.config_reader(reload_policy="Manual")
+            writer = fresh.writer(heap_size=_WRITER_HEAP, num_threads=_WRITER_THREADS)
+            try:
+                for fields in documents:
+                    writer.add_document(tantivy.Document(**fields))
+                writer.commit()
+                fresh.reload()
+            finally:
+                writer.wait_merging_threads()
+        except Exception:
+            logger.warning("lexical.purge_failed", exc_info=True)
+            self._stale_markers = False
+            return
+        self._index = fresh
+        self._stale_markers = False
+
+    def _prepare_search_locked(self) -> None:
+        """Commit buffered documents, then drop any deleted-document markers of an in-memory index."""
+        self._commit_locked()
+        self._purge_locked()
+
     async def flush(self) -> None:
         """Commit any buffered documents so they become searchable."""
         async with self._write_lock:
             await run_to_completion(self._commit_locked)
+
+    async def settle(self) -> None:
+        """Rebuild an in-memory index into one segment in ``node_id`` order.
+
+        ``rebuild_indexes`` adds documents in batches, which leaves several
+        segments whose order Tantivy's merges decide, so tied scores could
+        come back in another order than after an open, which loads every
+        document in one batch. Settling makes a rebuilt single-file pack
+        read exactly like a reopened one. A directory index keeps its
+        segments, so this does nothing for it.
+        """
+        if self._index_path is not None:
+            return
+        async with self._write_lock:
+            self._stale_markers = True
+            await run_to_completion(self._prepare_search_locked)
 
     def load_documents(self, rows: Iterable[tuple[str, str, str, str, str | None]]) -> int:
         """Add many documents with one writer and a single commit.
@@ -555,9 +666,11 @@ class LexicalIndex:
             Results are ordered by descending BM25 score.
         """
         # Flush buffered writes so search reflects everything indexed so
-        # far (batched commits would otherwise hide recent documents).
-        if self._uncommitted > 0:
-            await self.flush()
+        # far (batched commits would otherwise hide recent documents), and
+        # drop deleted-document markers so the scores are a fresh build's.
+        if self._uncommitted > 0 or self._stale_markers:
+            async with self._write_lock:
+                await run_to_completion(self._prepare_search_locked)
         return await run_to_completion(
             self._do_search, query_text, user_id, node_type, limit, scope
         )
@@ -577,13 +690,17 @@ class LexicalIndex:
         # add of the same document.
         if self._uncommitted > 0:
             self._commit_locked()
-        writer = self._index.writer(heap_size=50_000_000)
+        writer = self._index.writer(heap_size=_WRITER_HEAP, num_threads=_WRITER_THREADS)
         try:
             writer.delete_documents_by_term("node_id", node_id)
             writer.commit()
             self._index.reload()
         finally:
             writer.wait_merging_threads()
+        # The next flush or search rebuilds an in-memory index whose
+        # statistics still count the deleted document.
+        if self._marker_remains(node_id):
+            self._stale_markers = True
 
     async def delete_profile_stage(self, plan: ProfilePublication, *, fence) -> None:
         """Delete one exact abandoned document under its preparation fence."""
@@ -637,13 +754,15 @@ class LexicalIndex:
         self._writer = None
         self._uncommitted = 0
         self._oldest_uncommitted_at = None
-        writer = self._index.writer(heap_size=50_000_000)
+        writer = self._index.writer(heap_size=_WRITER_HEAP, num_threads=_WRITER_THREADS)
         try:
             writer.delete_all_documents()
             writer.commit()
             self._index.reload()
         finally:
             writer.wait_merging_threads()
+        # Segments with no live document are dropped at the commit.
+        self._stale_markers = False
 
     async def clear(self) -> None:
         """Delete every document, leaving an empty index.

@@ -42,6 +42,7 @@ from prme.models.derivation import DerivationPlan
 from prme.models.extraction_work import ExtractionClaim, ExtractionProcessingResult
 from prme.models.entity_identity import unresolved_personal_reference
 from prme.storage._threading import run_async_to_completion
+from prme.storage.index_eviction import evict_from_indexes
 from prme.storage.lexical_index import has_lexical_document
 from prme.models.nodes import MemoryNode
 from prme.models.speaker import metadata_speaker, speaker_labeled
@@ -958,30 +959,49 @@ class IngestionPipeline:
             await index_new_node(fact_node_id, node_type, fact_scope, fact_content, fact_content, "fact")
 
     async def _publish_plan(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> None:
-        """Stage saved inputs and publish once; never delete shared retry artifacts."""
+        """Stage saved inputs and publish once; never delete shared retry artifacts.
+
+        After the commit, the nodes the plan replaced leave the search
+        indexes, so the only documents removed are those of retired nodes.
+        """
         receipt = await self._event_store.get_derivation_receipt(str(plan.event_id), user_id=plan.user_id)
         if receipt is not None:
             if receipt.plan_checksum != plan.checksum:
                 raise ValueError("Derivation receipt conflicts with the requested plan")
-            return
-        if getattr(self._graph_store, "_conn", None) is not None:
-            from prme.storage.derivation_staging import DuckDBStageFence
-            fence = DuckDBStageFence(self._graph_store._conn, self._graph_store._conn_lock, plan, claim)
-            for embedding in plan.embeddings:
+        else:
+            if getattr(self._graph_store, "_conn", None) is not None:
+                from prme.storage.derivation_staging import DuckDBStageFence
+                fence = DuckDBStageFence(self._graph_store._conn, self._graph_store._conn_lock, plan, claim)
+                for embedding in plan.embeddings:
+                    await self._write_queue.submit(
+                        lambda item=embedding: self._vector_index.stage(item, user_id=plan.user_id, fence=fence),
+                        label=f"derivation.vector:{embedding.node_id}",
+                    )
+                # Numerical vector payloads are already durable; keep native file
+                # snapshots debounced. Lexical publication is one committed batch.
                 await self._write_queue.submit(
-                    lambda item=embedding: self._vector_index.stage(item, user_id=plan.user_id, fence=fence),
-                    label=f"derivation.vector:{embedding.node_id}",
+                    lambda: self._lexical_index.stage(plan, fence=fence), label=f"derivation.lexical:{plan.id}",
                 )
-            # Numerical vector payloads are already durable; keep native file
-            # snapshots debounced. Lexical publication is one committed batch.
+            # PostgreSQL writes its prepared vector/lexical columns in this same
+            # graph transaction. No provider call is permitted inside the commit.
             await self._write_queue.submit(
-                lambda: self._lexical_index.stage(plan, fence=fence), label=f"derivation.lexical:{plan.id}",
+                lambda: self._graph_store.commit_derivation(plan, claim=claim), label=f"derivation.commit:{plan.id}",
             )
-        # PostgreSQL writes its prepared vector/lexical columns in this same
-        # graph transaction. No provider call is permitted inside the commit.
-        await self._write_queue.submit(
-            lambda: self._graph_store.commit_derivation(plan, claim=claim), label=f"derivation.commit:{plan.id}",
-        )
+        # The committed plan retired every node it replaced, such as the
+        # earlier copies of a repeated claim. Evict them from the search
+        # indexes as the engine's supersede() does, so the indexes hold the
+        # documents a rebuild or the open of a single-file pack would build
+        # from the graph (#247). The eviction is idempotent and best effort:
+        # a failure is logged and the index_compaction organizer job, or
+        # prme rebuild, removes what it left. The same backstops repair a
+        # process that stopped between the commit and this step, because a
+        # managed extraction's completed work row ends its retry before it
+        # gets here; the receipt branch above evicts only for the unmanaged
+        # callers that publish a committed plan again.
+        for edge in plan.replacements:
+            await evict_from_indexes(
+                self._write_queue, self._lexical_index, self._vector_index, str(edge.target_id),
+            )
 
     async def _materialize(
         self, result: ExtractionResult, event: Event, event_id: str,

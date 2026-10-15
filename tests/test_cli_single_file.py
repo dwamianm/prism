@@ -37,6 +37,7 @@ from prme.cli import (
     cmd_stats,
     main,
 )
+from prme.storage.encryption import EncryptionError
 from prme.storage.pack_tools import (
     PackInUseError,
     compact_pack,
@@ -573,6 +574,45 @@ async def test_migrate_refuses_without_changing_anything(tmp_path):
     assert os.listdir(encrypted) == ["memory.duckdb.enc"]
 
     assert sorted(os.listdir(tmp_path)) == ["empty", "encrypted", "pack", "taken.prme"]
+
+
+async def test_migrate_converts_an_encrypted_directory_pack_with_its_key(tmp_path):
+    directory = tmp_path / "pack"
+    legacy = PRMEConfig(
+        db_path=str(directory / "memory.duckdb"), vector_path=str(directory / "vectors.usearch"),
+        lexical_path=str(directory / "lexical_index"), encryption_enabled=True, encryption_key=PASSPHRASE,
+    )
+    async with MemoryEngine.open(legacy) as engine:
+        await store_all(engine)
+        expected = await read_back(engine)
+    listing = sorted(os.listdir(directory))
+    # The directory pack is encrypted at rest with Fernet, file by file.
+    assert {"memory.duckdb.enc", "vectors.usearch.enc", "manifest.json"} <= set(listing)
+    assert "memory.duckdb" not in listing
+
+    pack = tmp_path / "memories.prme"
+    with pytest.raises(ValueError, match="encrypted; give its encryption key"):
+        await migrate_directory_pack(directory, pack)
+    assert not pack.exists()
+    result = await migrate_directory_pack(directory, pack, encryption_key=PASSPHRASE)
+    assert result["encrypted"] is True and result["vectors"] == result["nodes"] == len(MEMORIES)
+    # The source keeps its layout, encrypted again by the close that migration made, and nothing
+    # but the new pack is left beside it: no temporary pack, write-ahead log or spill directory.
+    assert sorted(os.listdir(directory)) == listing
+    assert sorted(os.listdir(tmp_path)) == ["memories.prme", "pack"]
+
+    # The new pack uses DuckDB's native encryption under the same key.
+    with pytest.raises(EncryptionError, match="is encrypted; give its encryption key"):
+        with open_pack_read_only(pack):
+            pass
+    with open_pack_read_only(pack, encryption_key=PASSPHRASE) as conn:
+        assert conn.execute("SELECT count(*) FROM nodes").fetchone() == (len(MEMORIES),)
+    async with MemoryEngine.open(PRMEConfig(pack_path=str(pack), encryption_enabled=True,
+                                            encryption_key=PASSPHRASE)) as engine:
+        assert await read_back(engine) == expected
+    # The legacy directory pack still opens and serves the same results.
+    async with MemoryEngine.open(legacy) as engine:
+        assert await read_back(engine) == expected
 
 
 async def test_failed_migration_leaves_no_file_behind(tmp_path, monkeypatch):

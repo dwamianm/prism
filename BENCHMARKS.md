@@ -559,9 +559,9 @@ master pack gives the same context. Both runs match the previous-defaults
 column above: 23.9 records per context, 32% memory text, all evidence packed
 for 403 of 470 questions, 86.0% projected. Under the epic #77 rules the
 regenerated controls are therefore the same LongMemEval-S baseline, not a new
-one. The DeepSeek answer track's `prepare prme` still reads the 2026-09-22
-captures and does not take `--lme-captures`; its code and records are
-unchanged.
+one. The answer tracks' `prepare` takes `--lme-captures` too (below), so a
+machine without the 2026-09-22 captures can prepare LongMemEval-S contexts
+from the regenerated controls; the answering code and records are unchanged.
 
 To replay them, add `--lme-captures` with the root:
 
@@ -578,6 +578,22 @@ contexts reproduced" still compares with the saved 2026-09-23 contexts.
 `gate-compare` refuses to pair reports that replayed different controls (two
 roots with different manifests, or a root and the 2026-09-22 captures).
 `--lme-captures` cannot be combined with `--packs`.
+
+The answer tracks' `prepare` takes the same option for a LongMemEval-S arm,
+on either provider:
+
+```sh
+uv run python -m benchmarks.integrations.gpt54_baselines prepare prme --benchmark longmemeval \
+  --provider ollama --lme-captures data/opt-in-study/lme-controls-regenerated-2026-10-14/baseline
+```
+
+It applies to `prepare` alone, on `--benchmark longmemeval`, and never with
+`--packs`. The gate reads a control capture for its `user_id` and
+`reference_time` only, so the contexts are the ones the saved controls give.
+`prepared.json` records the root and its manifest digest under
+`provenance.lme_captures`; a variant's defaults replay reads the same root,
+and `prepare` refuses a variant whose two replays read different controls
+(#139).
 
 ### Packs built through `ingest()` (#102)
 

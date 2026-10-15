@@ -28,7 +28,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import duckdb
@@ -44,7 +44,7 @@ from prme.storage.embedding import EmbeddingVersionMismatchError
 from prme.storage.lexical_index import LexicalIndex, has_lexical_document
 from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.pack_manifest import PACK_FORMAT_VERSION
-from prme.types import NodeType, Scope
+from prme.types import LifecycleState, NodeType, Scope
 from tests.test_durable_ingestion import MockEmbeddingProvider
 
 USER = "alice"
@@ -578,6 +578,93 @@ async def test_in_memory_lexical_index_supports_every_write_path():
     await index.close()
 
 
+async def test_an_in_memory_index_drops_deleted_document_markers_before_the_next_search(tmp_path):
+    """Tantivy keeps a deleted document in its segment's BM25 statistics until a merge (#247)."""
+    # Loaded in one batch by the single-threaded writer, so the documents share one segment and a
+    # deletion always leaves a marker behind.
+    rows = [(f"n{number:02d}", f"memory {number}: {MEMORIES[number % len(MEMORIES)]}", USER, "fact", "personal")
+            for number in range(40)]
+
+    def fresh(documents):
+        index = LexicalIndex(None)
+        index.load_documents(documents)
+        return index
+
+    async def scores(index):
+        # Sorted, because tied documents come back in segment order, which no build fixes.
+        return {query: sorted((hit["node_id"], hit["score"]) for hit in await index.search(query, USER, limit=50))
+                for query in QUERIES}
+
+    index = fresh(rows)
+    before = index._index
+    await index.delete_by_node_id("n00")
+    assert index._stale_markers is True
+    # The next search rebuilds the index from its live documents, so it scores as a fresh build does.
+    assert await scores(index) == await scores(fresh(rows[1:]))
+    assert index._stale_markers is False and index._index is not before
+    assert index._index.searcher().doc_freq("node_id", "n00") == 0
+    await index.close()
+
+    # A document that was alone in its segment leaves no marker, so nothing is rebuilt.
+    lone = LexicalIndex(None)
+    await lone.index("n99", "a lone late memory about tea", USER, "fact", "personal")
+    await lone.flush()
+    settled = lone._index
+    await lone.delete_by_node_id("n99")
+    assert lone._stale_markers is False
+    await lone.search("tea", USER, limit=5)
+    assert lone._index is settled
+    await lone.close()
+
+    # A directory index is never rebuilt: its markers stay on disk until Tantivy merges them, as
+    # they always have, so it reads the same before and after a restart.
+    (tmp_path / "lexical").mkdir()
+    on_disk = LexicalIndex(str(tmp_path / "lexical"))
+    on_disk.load_documents(rows)
+    await on_disk.delete_by_node_id("n00")
+    assert on_disk._stale_markers is False
+    await on_disk.close()
+
+
+async def test_a_failed_rebuild_keeps_the_old_index_and_warns(monkeypatch, caplog):
+    rows = [(f"n{number:02d}", f"memory {number}: {MEMORIES[number % len(MEMORIES)]}", USER, "fact", "personal")
+            for number in range(10)]
+    index = LexicalIndex(None)
+    index.load_documents(rows)
+    await index.delete_by_node_id("n00")
+    assert index._stale_markers is True
+    before = index._index
+
+    def refuse(*_args, **_kwargs):
+        raise RuntimeError("authored rebuild failure")
+
+    # A rebuild that cannot even create its index leaves the old one serving, once, with a warning.
+    monkeypatch.setattr(tantivy, "Index", refuse)
+    with caplog.at_level(logging.WARNING, logger="prme.storage.lexical_index"):
+        hits = await index.search("tea", USER, limit=50)
+    assert hits and index._index is before and index._stale_markers is False
+    assert [record.getMessage() for record in caplog.records] == ["lexical.purge_failed"]
+    caplog.clear()
+    assert await index.search("tea", USER, limit=50) == hits and caplog.records == []
+    await index.close()
+
+
+async def test_two_loads_of_the_same_documents_rank_ties_alike():
+    """Tied BM25 hits come back in segment order, so a load must put documents in segments the same way
+    every time; with several writer threads it did not, and lexical_k could cut a different set (#247)."""
+    rows = [(f"n{number:04d}", "the same memory about tea", USER, "fact", "personal") for number in range(2000)]
+
+    async def top(index):
+        return [hit["node_id"] for hit in await index.search("tea", USER, limit=50)]
+
+    first, second = LexicalIndex(None), LexicalIndex(None)
+    first.load_documents(rows)
+    second.load_documents(iter(rows))
+    assert await top(first) == await top(second) == [row[0] for row in rows[:50]]
+    await first.close()
+    await second.close()
+
+
 def test_an_in_memory_index_lock_serializes_tasks_on_different_event_loops():
     # Engines on several event loops can share an in-memory index, so its
     # lock must make a task on one loop wait for a holder on another.
@@ -614,27 +701,44 @@ def test_an_in_memory_index_lock_serializes_tasks_on_different_event_loops():
 
 # Two sentences each, so that a claim's text (its own sentence) differs from
 # its message and no two documents tie on BM25.
+PUPPY = ("adopted", "a puppy named Oscar")
 INGESTED = {
-    "Caroline paints sunsets over the lake. The weather was mild.": ("paints", "sunsets"),
-    "Caroline adopted a puppy named Oscar in May. He sleeps all day.": ("adopted", "a puppy named Oscar"),
+    "Caroline paints sunsets over the lake. The weather was mild.": (("paints", "sunsets"),),
+    "Caroline adopted a puppy named Oscar in May. He sleeps all day.": (PUPPY,),
 }
 INGESTED_QUERIES = ("Caroline", "sunsets over the lake", "puppy", "weather")
 
 
-async def scripted_extraction(content, *, role=None):
-    """One person entity and one grounded claim for each known message."""
-    predicate, obj = INGESTED[content]
-    return ExtractionResult.model_validate({
-        "entities": [{"name": "Caroline", "entity_type": "person"}],
-        "facts": [{"subject": "Caroline", "subject_entity_type": "person", "predicate": predicate,
-                   "object": obj, "object_entity_type": None, "polarity": "positive",
-                   "evidence_quote": content}],
-    })
+def scripted(claims: dict[str, tuple[tuple[str, str], ...]]):
+    """An extraction of one person entity and the given (predicate, object) claims for each known message."""
+    async def extract(content, *, role=None):
+        return ExtractionResult.model_validate({
+            "entities": [{"name": "Caroline", "entity_type": "person"}],
+            "facts": [{"subject": "Caroline", "subject_entity_type": "person", "predicate": predicate,
+                       "object": obj, "object_entity_type": None, "polarity": "positive",
+                       "evidence_quote": content} for predicate, obj in claims[content]],
+        })
+    return extract
+
+
+scripted_extraction = scripted(INGESTED)
+
+
+async def ingest_all(engine: MemoryEngine, messages, *, start: int = 0) -> None:
+    """Ingest the messages in order, then index their notes as retrieval otherwise would."""
+    for number, message in enumerate(messages, start):
+        await engine.ingest(message, user_id=USER, session_id=f"s{number}", wait_for_extraction=True)
+    await engine.process_pending(user_id=USER)
 
 
 async def lexical_state(engine: MemoryEngine) -> tuple:
     """Every document in the lexical index, and the scored hits per query."""
-    await engine._lexical_index.flush()
+    # Searching first commits buffered documents and, in memory, drops the
+    # markers of deleted ones, so the documents are read from the index that
+    # answered the queries.
+    scored = {query: sorted((hit["node_id"], hit["score"])
+                            for hit in await engine._lexical_index.search(query, USER, limit=50))
+              for query in INGESTED_QUERIES}
     index = engine._lexical_index._index
     index.reload()
     searcher = index.searcher()
@@ -643,9 +747,6 @@ async def lexical_state(engine: MemoryEngine) -> tuple:
         tuple(sorted((field, tuple(values)) for field, values in searcher.doc(address).to_dict().items()))
         for _score, address in hits
     )
-    scored = {query: sorted((hit["node_id"], hit["score"])
-                            for hit in await engine._lexical_index.search(query, USER, limit=50))
-              for query in INGESTED_QUERIES}
     return documents, scored
 
 
@@ -663,9 +764,7 @@ async def test_an_ingested_pack_keeps_its_lexical_index_across_reopen_and_rebuil
     config = layout_config(tmp_path, layout)
     async with MemoryEngine.open(config) as engine:
         engine._pipeline._extraction_provider.extract = scripted_extraction
-        for message in INGESTED:
-            await engine.ingest(message, user_id=USER, wait_for_extraction=True)
-        await engine.process_pending(user_id=USER)
+        await ingest_all(engine, INGESTED)
         nodes = await engine.query_nodes(user_id=USER)
         assert sorted(node.node_type.value for node in nodes) == ["entity", "fact", "fact", "note", "note"]
         [entity] = [str(node.id) for node in nodes if node.node_type == NodeType.ENTITY]
@@ -692,6 +791,161 @@ async def test_an_ingested_pack_keeps_its_lexical_index_across_reopen_and_rebuil
         assert await ranked_ids(engine) == rankings
         # Rebuilding re-embeds every node, the entity included.
         assert entity in {hit["node_id"] for hit in await engine._vector_index.search("Caroline", USER, k=50)}
+
+
+# The same claim stated twice: with enable_claim_merge (the default) the second
+# statement becomes the current record and retires the first (#209).
+REPEATED = {
+    "Caroline adopted a puppy named Oscar in May. He sleeps all day.": (PUPPY,),
+    "Caroline adopted a puppy named Oscar, as I said. He is tiny.": (PUPPY,),
+}
+repeated_extraction = scripted(REPEATED)
+
+
+async def retired_claim(engine: MemoryEngine) -> tuple[MemoryNode, str]:
+    """The one merged claim and the id of the copy it retired."""
+    [current] = [node for node in await engine.query_nodes(user_id=USER)
+                 if node.node_type == NodeType.FACT and node.metadata.get("merged_claim_ids")]
+    [retired] = current.metadata["merged_claim_ids"]
+    previous = await engine.get_node(retired, include_superseded=True)
+    assert previous.lifecycle_state == LifecycleState.SUPERSEDED
+    return current, retired
+
+
+async def lexical_node_ids(engine: MemoryEngine) -> set[str]:
+    documents, _scored = await lexical_state(engine)
+    return {dict(document)["node_id"][0] for document in documents}
+
+
+def vector_rows(engine: MemoryEngine, node_id: str) -> int:
+    return engine._conn.execute("SELECT count(*) FROM vector_metadata WHERE node_id = ?", [node_id]).fetchone()[0]
+
+
+@pytest.mark.parametrize("layout", ["directory", "single-file"])
+async def test_a_claim_that_ingest_supersedes_leaves_both_indexes_at_once(tmp_path, layout):
+    config = layout_config(tmp_path, layout)
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = repeated_extraction
+        await ingest_all(engine, REPEATED)
+        nodes = await engine.query_nodes(user_id=USER)
+        current, retired = await retired_claim(engine)
+
+        # The derivation commit that retired the earlier copy evicted it from
+        # the lexical index and the vector index, as supersede() does, so the
+        # session's indexes hold what a rebuild builds from the graph.
+        documents, scored = ingested = await lexical_state(engine)
+        indexed = {dict(document)["node_id"][0] for document in documents}
+        assert str(current.id) in indexed and retired not in indexed
+        assert retired not in {node_id for hits in scored.values() for node_id, _score in hits}
+        assert vector_rows(engine, retired) == 0
+        rankings = await ranked_ids(engine)
+        assert all(rankings.values())
+        assert retired not in {node_id for ranked in rankings.values() for node_id, _score in ranked}
+
+    async with MemoryEngine.open(config) as engine:
+        # A reopen (which rebuilds a single-file pack's lexical index) and a
+        # rebuild hold the same documents, scores and rankings as the session.
+        assert await lexical_state(engine) == ingested
+        assert await ranked_ids(engine) == rankings
+        summary = await engine.rebuild_indexes()
+        assert summary == {"nodes_indexed": len(nodes), "nodes_skipped": 0, "total_active": len(nodes)}
+        assert await lexical_state(engine) == ingested
+        assert await ranked_ids(engine) == rankings
+
+
+# Several claims, which a reopen loads in one batch into one Tantivy segment,
+# then a restatement that retires the first claim (#209). Notes are indexed
+# too, so the reopened index holds 16 documents.
+SETTLED = {
+    "Caroline adopted a puppy named Oscar in May. He sleeps all day.": (PUPPY,),
+    "Caroline paints sunsets over the lake. The weather was mild.": (("paints", "sunsets"),),
+    "Caroline moved to Lisbon last spring. The flat is small.": (("moved_to", "Lisbon"),),
+    "Caroline runs along the river on Sundays. The path is long.": (("runs", "along the river"),),
+    "Caroline plays the cello in a quartet. They rehearse on Mondays.": (("plays", "the cello"),),
+    "Caroline grows tomatoes on her balcony. The harvest was small.": (("grows", "tomatoes"),),
+    "Caroline teaches chemistry at the college. Her classes fill up.": (("teaches", "chemistry"),),
+    "Caroline collects old maps of the coast. The oldest is from 1790.": (("collects", "old maps"),),
+}
+RESTATED = {"Caroline adopted a puppy named Oscar, as I said. He is tiny.": (PUPPY,)}
+
+
+@pytest.mark.parametrize("layout", ["directory", "single-file"])
+async def test_an_eviction_from_a_reopened_pack_keeps_the_scores_of_the_next_open(tmp_path, layout):
+    """Tantivy keeps a deleted document in its segment's BM25 statistics until a merge.
+
+    A reopened single-file pack loads its documents in one batch, so they
+    share one segment; evicting one must not leave the session scoring the
+    survivors differently from the next open or a rebuild (#247).
+    """
+    config = layout_config(tmp_path, layout)
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = scripted({**SETTLED, **RESTATED})
+        await ingest_all(engine, SETTLED)
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = scripted({**SETTLED, **RESTATED})
+        await ingest_all(engine, RESTATED, start=len(SETTLED))
+        _current, retired = await retired_claim(engine)
+        if layout == "single-file":
+            # The retired copy's document shared a segment, so its marker is in the statistics.
+            assert engine._lexical_index._stale_markers is True
+        session = await lexical_state(engine), await ranked_ids(engine)
+        assert engine._lexical_index._stale_markers is False
+        assert retired not in {dict(document)["node_id"][0] for document in session[0][0]}
+    async with MemoryEngine.open(config) as engine:
+        reopened = await lexical_state(engine), await ranked_ids(engine)
+        await engine.rebuild_indexes()
+        rebuilt = await lexical_state(engine), await ranked_ids(engine)
+        segments_after_rebuild = engine._lexical_index._index.searcher().num_segments
+    # The same documents everywhere, and a restart changes neither scores nor rankings.
+    assert session[0][0] == reopened[0][0] == rebuilt[0][0]
+    assert reopened == session
+    if layout == "single-file":
+        # The in-memory index rebuilt itself after the eviction, so it scores as a fresh build does,
+        # and a rebuild ends in the one id-ordered segment an open loads, so ties order alike too.
+        assert rebuilt == session
+        assert segments_after_rebuild == 1
+    # A directory index keeps Tantivy's markers on disk, so its scores can differ from a rebuild
+    # until a merge, as they always could; a restart changes nothing, which is what is asserted.
+
+
+async def test_a_failed_eviction_leaves_the_retired_copy_for_compaction(tmp_path, caplog):
+    config = layout_config(tmp_path, "single-file")
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = repeated_extraction
+        first, second = REPEATED
+        await ingest_all(engine, [first])
+        broken = AsyncMock(side_effect=OSError("authored index failure"))
+        with patch.object(engine._lexical_index, "delete_by_node_id", broken), \
+                caplog.at_level(logging.WARNING, logger="prme.storage.index_eviction"):
+            await ingest_all(engine, [second], start=1)
+        # The derivation committed and retired the earlier copy; only its eviction failed, and was logged.
+        _current, retired = await retired_claim(engine)
+        assert broken.await_count == 1
+        assert [record.node_id for record in caplog.records if record.getMessage() == "evict.index_failed"] == [retired]
+        # Its lexical document stayed, and so did its vector metadata, the anchor compaction reads.
+        assert retired in await lexical_node_ids(engine)
+        assert vector_rows(engine, retired) == 1
+        result = await engine.organize(user_id=USER, jobs=["index_compaction"], budget_ms=5000)
+        assert result.per_job["index_compaction"].nodes_modified == 1
+        assert retired not in await lexical_node_ids(engine)
+        assert vector_rows(engine, retired) == 0
+
+
+async def test_publishing_a_committed_plan_again_evicts_what_it_replaced(tmp_path):
+    config = layout_config(tmp_path, "single-file")
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = repeated_extraction
+        first, second = REPEATED
+        await ingest_all(engine, [first])
+        event_id = await engine.ingest(second, user_id=USER, session_id="s1", wait_for_extraction=True)
+        _current, retired = await retired_claim(engine)
+        # Put the retired copy's document back, as a stop between the commit and the eviction leaves it.
+        await engine._lexical_index.index(retired, first, USER, NodeType.FACT.value, Scope.PERSONAL.value)
+        assert retired in await lexical_node_ids(engine)
+        plan = await engine._event_store.get_derivation_plan(event_id, user_id=USER)
+        assert [str(edge.target_id) for edge in plan.replacements] == [retired]
+        await engine._pipeline._publish_plan(plan)
+        assert retired not in await lexical_node_ids(engine)
 
 
 async def test_a_directly_stored_entity_keeps_its_lexical_document(tmp_path):
