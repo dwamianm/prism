@@ -1122,17 +1122,34 @@ the LoCoMo source above held 827 of its 1,413 active nodes in its Tantivy
 index, and so does the migrated pack. Because `prme rebuild` follows the same
 rule, rebuilding a pack built with `ingest()`, a directory pack included, no
 longer adds lexical documents for its extracted entities, which keep their
-vectors. BM25 results can still differ in two cases:
+vectors. A node a session retires leaves both indexes when it is retired,
+whether the engine's `supersede()`, `archive()` or `resolve_contradiction()`
+retired it or the derivation commit of `ingest()` replaced it, as with an
+earlier copy of a repeated claim; the eviction is best effort, and the
+`index_compaction` organizer job retries what it left. A pack whose claims
+`ingest()` retired before this change keeps their entries until
+`index_compaction` or `prme rebuild` removes them (a single-file pack's open
+drops the lexical ones). Tantivy keeps a deleted document in its segment's
+BM25 statistics until a merge, so a single-file pack's in-memory index
+rebuilds itself from its live documents before the next search after such a
+deletion (one pass over the live documents: 12 ms for 1,413 documents and
+0.88 s for 100,000, measured on 2026-10-15), and a session, a reopen and a
+rebuild give the same documents and scores. BM25 results can still differ in
+two cases:
 
-1. A reopen drops Tantivy's deleted-document markers from nodes archived or
-   superseded during the session, and the documents of nodes that `ingest()`
-   superseded, such as an earlier copy of a repeated claim, which stay in the
-   index until the `index_compaction` organizer job removes them. Either can
-   move BM25 scores slightly.
-2. Tied BM25 scores can come back in a different order than from a directory
-   index, even one just rebuilt with `prme rebuild`, and `lexical_k` cuts
-   candidates in Tantivy's order, so a tie can reach the final ranks. Two opens
-   of the same `.prme` file give the same order.
+1. A directory pack keeps Tantivy's deleted-document markers on disk, so it
+   scores the same before and after a restart but can differ slightly from a
+   `prme rebuild` until Tantivy merges the segment.
+2. Tied BM25 scores come back in Tantivy's segment order, and `lexical_k` cuts
+   candidates in that order, so a tie can reach the final ranks. A single-file
+   pack's open and its in-memory rebuild add documents in `id` order on one
+   writer thread into one segment (measured up to 100,000 documents), so two
+   opens of the same `.prme` file give the same order, and so does
+   `prme rebuild` on a single-file pack, which ends by settling the index into
+   that one segment. A session that only added documents holds them in write
+   order across several segments, as a directory index does (`prme rebuild`
+   on a directory pack commits in batches and so makes several segments), so
+   their tie order can differ from the next open's.
 
 Directory-pack retrieval is unchanged, except after `prme rebuild` on a pack
 built with `ingest()`: on the LoCoMo half of the offline evidence gate (1,540

@@ -50,6 +50,7 @@ from prme.models import (
 from prme.models.provenance import NodeProvenance
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.storage.index_eviction import delete_from_indexes
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.models.relevance import (
     AnswerCitationRecord,
@@ -2974,21 +2975,20 @@ class MemoryEngine:
         await self._evict_from_indexes(node_id)
 
     async def _delete_from_indexes(self, node_id: str) -> None:
-        """Delete lexical first, retaining vector metadata as a retry anchor."""
-        await self._write_queue.submit(
-            lambda: self._lexical_index.delete_by_node_id(node_id),
-            label=f"evict.lexical:{node_id}",
-        )
-        await self._write_queue.submit(
-            lambda: self._vector_index.delete_by_node_id(node_id),
-            label=f"evict.vector:{node_id}",
-        )
+        """Delete lexical first, retaining vector metadata as a retry anchor.
+
+        The ingestion pipeline evicts the nodes a derivation replaces through
+        the same helper (``prme.storage.index_eviction``).
+        """
+        await delete_from_indexes(self._write_queue, self._lexical_index, self._vector_index, node_id)
 
     async def _evict_from_indexes(self, node_id: str) -> None:
         """Best-effort lifecycle eviction; compaction retries remaining drift.
 
         A lexical failure retains vector metadata so maintenance can discover
         the unfinished deletion. Retired graph state already prevents retrieval.
+        This mirrors ``index_eviction.evict_from_indexes`` but goes through
+        ``_delete_from_indexes``, which tests replace to inject a failure.
         """
         try:
             await self._delete_from_indexes(node_id)
@@ -3119,6 +3119,13 @@ class MemoryEngine:
         await self._write_queue.submit(
             lambda: self._lexical_index.flush(),
             label="rebuild.flush.lexical",
+        )
+        # A single-file pack's in-memory index ends in the one id-ordered
+        # segment an open loads, so a rebuilt pack reads like a reopened one,
+        # tied scores included. A directory index keeps its segments.
+        await self._write_queue.submit(
+            lambda: self._lexical_index.settle(),
+            label="rebuild.settle.lexical",
         )
         if self._config.single_file_pack:
             # Every vector now comes from the configured model, so the

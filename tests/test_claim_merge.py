@@ -129,3 +129,23 @@ async def test_setting_off_keeps_one_record_per_extraction(config, user):
         await say(engine, user, "My name is Alex.", session="s0")
         await say(engine, user, "Hi, my name is Alex!", session="s1", hours=1)
         assert len(await facts(engine, user)) == 2
+
+
+async def test_retired_copies_leave_the_search_indexes_when_the_derivation_commits(config, user):
+    """The earlier copy is evicted from both indexes at the commit that retires it, not left for compaction (#247)."""
+    texts = ["My name is Alex.", "Hi, my name is Alex!"]
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = extractor(*[[claim(text)] for text in texts])
+        for number, text in enumerate(texts):
+            await say(engine, user, text, session=f"s{number}", hours=number)
+        [current] = await facts(engine, user)
+        [previous] = current.metadata["merged_claim_ids"]
+        hits = {hit["node_id"] for hit in await engine._lexical_index.search("Alex", user, limit=50)}
+        assert str(current.id) in hits
+        if engine._conn is not None:
+            # The Tantivy index holds documents alone, so the retired copy is gone from it. PostgreSQL
+            # searches the nodes table, and retrieval hides retired nodes when it hydrates the hits.
+            assert previous not in hits
+        # Nothing of the retired copy is left for delete_by_node_id to remove.
+        assert await engine._vector_index.delete_by_node_id(previous) == 0
+        assert await engine._vector_index.delete_by_node_id(str(current.id)) == 1

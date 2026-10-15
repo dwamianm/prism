@@ -58,6 +58,15 @@ of their own, with their own contexts, answers, calibration, run logs and A/A
 and verdict records under the same rules, and every result names it
 (``context_source``), so ``compare`` never pairs it with the other track.
 
+``prepare --lme-captures ROOT`` replays LongMemEval-S from a root of
+regenerated control captures (``benchmarks.diagnostics.lme_control_captures``)
+in place of the 2026-09-22 captures the saved contexts name, where those are
+not on the machine. The gate reads a capture for its ``user_id`` and
+``reference_time`` alone, so the contexts are the ones the saved controls
+give; a variant's defaults replay reads the same root, and ``prepared.json``
+records it under ``provenance.lme_captures``. It applies to ``prepare`` on
+``--benchmark longmemeval``, on either provider, and never with ``--packs``.
+
 On this track a variant is answered only by ``run-pair``, together with a fresh
 answer run of the current baseline of the defaults, in one session and
 interleaved question by question, so drift and the time of day reach both sides
@@ -295,7 +304,8 @@ _SPLIT_INTERVALS = ("interval_95_conversations", "interval_95_questions")
 # each answered on its own. The default-change rule's A/A margin counts its difference with the A/A pairs' (#144).
 SEQUENTIAL_REPEAT = ("2026-09-24", "prme", "prme@46647825")
 # What a variant's replay and the defaults' replay at its commit must share, so the two differ by settings alone (#139).
-_REPLAY_INPUTS = ("commit", "dirty", "worktree_sha256", "python", "dependencies", "archive", "datasets")
+# The LongMemEval-S controls count: both read the 2026-09-22 captures, or both the same regenerated root.
+_REPLAY_INPUTS = ("commit", "dirty", "worktree_sha256", "python", "dependencies", "archive", "datasets", "lme_captures")
 # Since when every variant pair must record the defaults' text at the variant's commit (#139). Every variant pair on
 # record started before it: the last, pair 2 of prme-reader-rrf, at 14:35 UTC that day. That variant was prepared at
 # 7b36b2b7, and between the prme@46647825 baseline's commit and 7b36b2b7 only this module's answering and pairing code
@@ -535,7 +545,8 @@ def _context_source(packs: Path, build: dict, defaults: Path | None) -> dict:
 
 
 def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None = None,
-            overrides: dict | None = None, progress=None, packs: Path | None = None) -> dict:
+            overrides: dict | None = None, progress=None, packs: Path | None = None,
+            lme_captures: Path | None = None) -> dict:
     """Write every question's context and a manifest. No model calls.
 
     With ``packs``, an ingest() build of the benchmark (``extracted_packs``),
@@ -547,8 +558,19 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
     apply to its replay too; its defaults replay reads the current baseline's
     packs, and the two builds must differ in nothing else
     (``_check_same_extraction``, #139).
+
+    With ``lme_captures``, LongMemEval-S is replayed from a root of regenerated
+    control captures (``benchmarks.diagnostics.lme_control_captures``) in place
+    of the 2026-09-22 captures the saved contexts name, where those are not on
+    the machine (BENCHMARKS.md, "Regenerated LongMemEval-S controls"). The
+    gate reads a capture for its ``user_id`` and ``reference_time`` alone, so
+    the contexts are the ones the saved controls would give; the arm's replay
+    and a variant's defaults replay both read the root, and the manifest
+    records it with its manifest digest under ``provenance.lme_captures``.
     """
     _check_arm(arm, benchmark)
+    # Regenerated controls replace the LongMemEval-S captures only, and never those of a build.
+    gate.check_lme_captures(lme_captures, [benchmark], packs)
     _, questions = registered_protocol(benchmark)
     folder = data / arm / benchmark
     if folder.exists():
@@ -598,11 +620,11 @@ def prepare(arm: str, benchmark: str, *, data: Path = DATA, archive: Path | None
     if arm == "full-context":
         entries, extra = _prepare_full_context(folder, benchmark, questions)
     else:
-        entries, extra = _prepare_replay(folder, arm, benchmark, archive, replayed, progress, packs)
+        entries, extra = _prepare_replay(folder, arm, benchmark, archive, replayed, progress, packs, lme_captures)
     if [entry["question_id"] for entry in entries] != [question["question_id"] for question in questions]:
         raise ValueError("Prepared contexts do not cover the registered questions in order")
     if is_variant(arm):
-        entries, extra = _replay_defaults(folder, benchmark, archive, entries, extra, progress, defaults)
+        entries, extra = _replay_defaults(folder, benchmark, archive, entries, extra, progress, defaults, lme_captures)
     commit = extra["provenance"].get("commit")
     if later:
         _check_baseline_name(arm, benchmark, commit, data)
@@ -856,12 +878,13 @@ def _prepare_full_context(folder: Path, benchmark: str, questions: list[dict]) -
 
 
 def _prepare_replay(folder: Path, arm: str, benchmark: str, archive: Path | None, overrides: dict | None,
-                    progress, packs: Path | None = None) -> tuple[list[dict], dict]:
+                    progress, packs: Path | None = None, lme_captures: Path | None = None) -> tuple[list[dict], dict]:
     """Contexts from the evidence gate's replay of the saved packs, or of ``packs``: PRME's retrieve() or a plain
-    ranking."""
+    ranking. ``lme_captures`` replays LongMemEval-S from regenerated controls."""
     method = None if is_prme(arm) else arm.removeprefix("plain-")
     report = asyncio.run(gate.run_gate(benchmark, archive=archive, overrides=overrides, packs=packs,
-                                       capture_dir=folder / "contexts", plain=method, progress=progress))
+                                       capture_dir=folder / "contexts", plain=method, progress=progress,
+                                       lme_captures=lme_captures))
     report_path = folder / "gate.json"
     gate._write_report(report_path, report, gate.gate_markdown(report))
     entries = [{"question_id": row["question_id"], "path": f"contexts/{benchmark}/{row['question_id']}.json",
@@ -887,7 +910,7 @@ def _prepare_replay(folder: Path, arm: str, benchmark: str, archive: Path | None
 
 
 def _replay_defaults(folder: Path, benchmark: str, archive: Path | None, entries: list[dict], extra: dict,
-                     progress, packs: Path | None = None) -> tuple[list[dict], dict]:
+                     progress, packs: Path | None = None, lme_captures: Path | None = None) -> tuple[list[dict], dict]:
     """A variant's entries with the hash of the defaults' context text at the same commit, from a second replay.
 
     The variant's pairs read their before side from a baseline that may have
@@ -898,11 +921,14 @@ def _replay_defaults(folder: Path, benchmark: str, archive: Path | None, entries
     run, writing no captures, and keeps its report as ``defaults-gate.json``.
     Each entry gains ``defaults_text_sha256``, which ``compare`` and
     ``run_pair`` read against the baseline's text (#139). A variant over
-    ingest() packs replays the defaults over the baseline's ``packs``.
+    ingest() packs replays the defaults over the baseline's ``packs``, and
+    one replayed from regenerated LongMemEval-S controls (``lme_captures``)
+    replays the defaults from the same root.
     """
     print(f"Replaying the defaults at this commit as well, so compare can tell the variant's own {benchmark} context "
           "changes from other code's (#139)", file=sys.stderr, flush=True)
-    report = asyncio.run(gate.run_gate(benchmark, archive=archive, packs=packs, progress=progress))
+    report = asyncio.run(gate.run_gate(benchmark, archive=archive, packs=packs, progress=progress,
+                                       lme_captures=lme_captures))
     changed = [name for name in _REPLAY_INPUTS if report["provenance"].get(name) != extra["provenance"].get(name)]
     if changed:
         raise ValueError(f"The {', '.join(changed)} changed between the variant's replay and the defaults' replay, so "
@@ -1918,7 +1944,7 @@ def _check_defaults_replayed(baseline: dict, folder: Path, variant: dict) -> Non
                          "gate report it kept (defaults-gate.json), so it is not shown to be the defaults' at its "
                          "commit. Prepare the variant again under a new name with the same settings (#139).")
     if changed:
-        inputs = tuple(key for key in ("dirty", "python", "dependencies", "archive", "datasets")
+        inputs = tuple(key for key in ("dirty", "python", "dependencies", "archive", "datasets", "lme_captures")
                        if baseline["provenance"].get(key) != variant["provenance"].get(key))
         raise _other_code_refusal(changed, len(defaults), baseline["arm"], baseline["provenance"].get("commit"),
                                   variant["arm"], variant["provenance"].get("commit"), inputs)
@@ -4182,6 +4208,8 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
         parser.error("--packs applies to prepare on --contexts ingest only")
     if command == "prepare" and args.contexts == "ingest" and args.packs is None:
         parser.error("prepare on --contexts ingest needs --packs, the ingest() build to replay")
+    if args.lme_captures is not None and command != "prepare":
+        parser.error("--lme-captures applies to prepare only, which replays the LongMemEval-S controls")
     # Commands that read or record results rather than answering an arm.
     reading = {"calibrate", "compare", "record-aa-check"}
     if command in reading:
@@ -4245,6 +4273,8 @@ def _check_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
         arm = arm_name(args.arm, args.variant)
         overrides = gate.parse_overrides(args.overrides)
         _check_arm(arm, benchmark)
+        # Regenerated controls replace the LongMemEval-S captures only, and never those of a build.
+        gate.check_lme_captures(args.lme_captures, [benchmark], args.packs)
         # A variant over ingest() packs may change settings through its build alone, which prepare checks.
         if command == "prepare" and not (args.packs and is_variant(arm) and not overrides):
             _check_overrides(arm, overrides)
@@ -4283,6 +4313,13 @@ def main(argv: list[str] | None = None) -> None:
                              "arm and no --variant, the baseline is paired with itself: the A/A check.")
     parser.add_argument("--archive", type=Path,
                         help="Saved 2026-09-23 run archive (default: the main checkout's data/gpt54-comparison-v1)")
+    parser.add_argument("--lme-captures", type=Path, metavar="ROOT",
+                        help="prepare on --benchmark longmemeval only, on either provider: replay the regenerated "
+                             "LongMemEval-S control captures under ROOT (benchmarks.diagnostics.lme_control_captures) "
+                             "in place of the "
+                             "2026-09-22 captures the saved contexts name, where those are not on this machine "
+                             "(BENCHMARKS.md, \"Regenerated LongMemEval-S controls\"). Not with --packs. The "
+                             "prepared manifest records the root and its manifest digest.")
     parser.add_argument("--contexts", choices=ollama_answers.CONTEXT_SOURCES,
                         help="ollama provider only: which packs the track's contexts come from, the saved run's "
                              "store() packs (default) or packs built through ingest(), which prepare reads with "
@@ -4379,7 +4416,7 @@ def main(argv: list[str] | None = None) -> None:
                 parser.error("--packs names a build folder under data/extracted-packs-v1")
             packs = extracted_packs.default_root() / args.packs
         prepared = prepare(arm, benchmark, data=data, archive=args.archive, overrides=overrides or None,
-                           progress=progress, packs=packs)
+                           progress=progress, packs=packs, lme_captures=args.lme_captures)
         print(json.dumps({key: prepared[key] for key in ("arm", "benchmark", "questions", "context_budget",
                                                          "contexts_matching_saved_run") if key in prepared}))
     elif args.command == "estimate":

@@ -1133,6 +1133,74 @@ async def test_an_unfinished_later_baseline_is_finished_or_given_up_on_record(ha
     assert (result["run_log"]["runs_started"], result["run_log"]["prepared_again"]) == (2, 1)
 
 
+@pytest.mark.usefixtures("mock_embeddings")
+async def test_prepare_replays_regenerated_longmemeval_controls_for_the_arm_and_the_defaults(harness, monkeypatch):
+    """prepare --lme-captures replays the regenerated controls in both replays and records them (#247)."""
+    pack = harness["root"] / "pack"
+    identity = await make_gate_pack(pack)
+    case = dataclasses.replace(gate_case(pack, identity), benchmark="longmemeval", question_id="q1")
+    roots = []
+
+    def controls(archive, captures=None):
+        roots.append(captures)
+        return [case]
+
+    def provenance(root, cases):
+        # What _lme_captures_provenance reads from a regenerated root's manifest, for this fabricated root.
+        return {"path": str(root), "manifest_sha256": "a" * 64, "label": "regenerated", "built_at": "2026-10-14",
+                "commit": "c0ffee", "master_packs": "data/benchmarks/longmemeval-s-prme-baseline-v1",
+                "questions": len(cases), "inputs_matching_master_identity": len(cases),
+                "master_captures_checked": len(cases), "not_applicable": ["source_capture_sha256", "artifact_checksum"]}
+
+    monkeypatch.setattr(gate, "_longmemeval_cases", controls)
+    monkeypatch.setattr(gate, "_lme_captures_provenance", provenance)
+    (harness["archive"] / "longmemeval").mkdir()
+    (harness["archive"] / "longmemeval" / "prepared.json").write_text("{}")
+    root = harness["root"] / "regenerated" / "baseline"
+    fusion = gate.parse_overrides(['scoring.fusion="weighted"'])
+
+    # The variant's replay and the defaults' replay both read the root, and the manifest records it.
+    prepared = await asyncio.to_thread(baselines.prepare, "prme-weighted", "longmemeval", data=harness["data"],
+                                       archive=harness["archive"], overrides=fusion, lme_captures=root)
+    assert roots == [root, root]
+    assert prepared["provenance"]["lme_captures"] == provenance(root, [case])
+    kept = json.loads((arm_folder(harness, "prme-weighted", "longmemeval") / "defaults-gate.json").read_text())
+    assert kept["provenance"]["lme_captures"] == prepared["provenance"]["lme_captures"]
+    assert [entry["question_id"] for entry in prepared["contexts"]] == ["q1"]
+    # Without the option, the saved run's captures are read, as before.
+    await asyncio.to_thread(baselines.prepare, "prme", "longmemeval", data=harness["data"], archive=harness["archive"])
+    assert roots[2:] == [None]
+    # Regenerated controls replace the LongMemEval-S captures only, and never those of a build, and prepare
+    # refuses before it writes anything.
+    with pytest.raises(ValueError, match="include the longmemeval benchmark"):
+        baselines.prepare("prme-small", "locomo", data=harness["data"], archive=harness["archive"],
+                          overrides=gate.parse_overrides(["packing.token_budget=2048"]), lme_captures=root)
+    with pytest.raises(ValueError, match="not both"):
+        baselines.prepare("prme-small", "longmemeval", data=harness["data"], packs=harness["root"] / "build",
+                          overrides=gate.parse_overrides(["packing.token_budget=2048"]), lme_captures=root)
+    assert not arm_folder(harness, "prme-small", "longmemeval").exists()
+    assert not arm_folder(harness, "prme-small", "locomo").exists()
+
+    # The two replays must read the same controls, or the defaults' text would not show the variant's own changes.
+    replay = gate.run_gate
+
+    async def other_controls(*args, **kwargs):
+        report = await replay(*args, **kwargs)
+        if kwargs.get("capture_dir") is None:
+            provenance = report["provenance"]
+            report = {**report, "provenance": {**provenance, "lme_captures": {**provenance["lme_captures"],
+                                                                              "manifest_sha256": "b" * 64}}}
+        return report
+
+    monkeypatch.setattr(gate, "run_gate", other_controls)
+    with pytest.raises(ValueError, match="The lme_captures changed between the variant's replay and the defaults' "
+                                         "replay"):
+        await asyncio.to_thread(baselines.prepare, "prme-small", "longmemeval", data=harness["data"],
+                                archive=harness["archive"], overrides=gate.parse_overrides(["packing.token_budget=2048"]),
+                                lme_captures=root)
+    assert not (arm_folder(harness, "prme-small", "longmemeval") / "prepared.json").exists()
+
+
 def test_arm_names_are_checked():
     assert baselines.arm_name("prme", "rrf-k30") == "prme-rrf-k30" and baselines.is_prme("prme-rrf-k30")
     for arm, variant in (("prme", "RRF"), ("prme", "../x"), ("plain-rrf", "x"), ("prme", "")):
@@ -1176,6 +1244,13 @@ def test_arm_names_are_checked():
     ["run-pair", "--benchmark", "locomo", "--provider", "ollama", "--baseline", "prme"],
     ["compare", "--before", "a.json", "--after", "b.json", "--baseline", "prme"],
     ["prepare", "prme", "--benchmark", "locomo", "--provider", "ollama", "--baseline", "prme"],
+    # Regenerated LongMemEval-S controls: prepare only, LongMemEval-S only, never with a build (#247).
+    ["prepare", "prme", "--benchmark", "locomo", "--provider", "ollama", "--lme-captures", "root"],
+    ["prepare", "full-context", "--lme-captures", "root"],
+    ["prepare", "prme", "--benchmark", "longmemeval", "--provider", "ollama", "--contexts", "ingest", "--packs", "b",
+     "--lme-captures", "root"],
+    ["run", "prme", "--benchmark", "longmemeval", "--provider", "ollama", "--lme-captures", "root"],
+    ["compare", "--before", "a.json", "--after", "b.json", "--lme-captures", "root"],
 ])
 def test_cli_refuses_invalid_ollama_prme_and_compare_arguments(argv, monkeypatch):
     for name in ("run", "run_pair", "calibrate", "prepare", "compare"):
@@ -1199,9 +1274,13 @@ def test_cli_prepares_the_defaults_only_from_main_and_variants_anywhere(monkeypa
                     "--set", 'scoring.fusion="rrf"'])
     monkeypatch.setattr(baselines, "_on_main", lambda: True)
     baselines.main(["prepare", "prme", "--benchmark", "longmemeval", "--provider", "ollama"])
-    assert [(arm, kwargs["data"], kwargs["overrides"]) for arm, kwargs in seen] == [
-        ("prme-rrf", baselines.data_root(OLLAMA_MODEL), {"scoring": {"fusion": "rrf"}}),
-        ("prme", baselines.data_root(OLLAMA_MODEL), None)]
+    # Regenerated LongMemEval-S controls reach prepare as the root to replay (#247).
+    baselines.main(["prepare", "prme", "--benchmark", "longmemeval", "--provider", "ollama",
+                    "--lme-captures", "/regenerated/baseline"])
+    assert [(arm, kwargs["data"], kwargs["overrides"], kwargs["lme_captures"]) for arm, kwargs in seen] == [
+        ("prme-rrf", baselines.data_root(OLLAMA_MODEL), {"scoring": {"fusion": "rrf"}}, None),
+        ("prme", baselines.data_root(OLLAMA_MODEL), None, None),
+        ("prme", baselines.data_root(OLLAMA_MODEL), None, Path("/regenerated/baseline"))]
 
 
 def answered(data: Path, benchmark: str, commit: str | None, arm: str = "prme", *, at: str | None = None) -> None:

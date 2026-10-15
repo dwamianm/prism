@@ -382,21 +382,49 @@ extracted entities; those entities keep their vectors.
 
 A single-file pack's lexical index after every open therefore holds the
 documents the write path gave the pack before close, which are also the
-documents `prme rebuild` produces. Reopening drops two things a session can
-leave in the index: Tantivy's deleted-document markers from nodes archived or
-superseded during the session, and the documents of nodes that `ingest()`
-superseded, such as an earlier copy of a repeated claim, which the write path
-keeps until `index_compaction` removes them. Either can move BM25 scores
-slightly. Otherwise the same indexes serve the same data, rebuilds keep `id`
-order, and `vector_exact_search` stays on by default; the difference that
-remains between the two layouts is described after the migration paragraph
-below. `tests/test_single_file_pack.py` checks that the file is the whole pack
-at rest, that reopening or copying it gives identical retrieval receipts, that
-a missing, stale, unreadable or miscounted snapshot row is restored from the
-payloads, that vector removals count toward the save interval and survive a
-crash, that the lexical index after open equals a rebuild, that a pack built
-with `ingest()` keeps its lexical documents and retrieval rankings across a
-reopen and a rebuild in either layout, and that engines in one process share a
+documents `prme rebuild` produces. A node a session retires leaves both
+indexes when it is retired: the engine's `supersede()`, `archive()` and
+`resolve_contradiction()` and the organizer's jobs evict it, and so does the
+derivation commit of `ingest()` for every node it replaces, such as an earlier
+copy of a repeated claim (`prme.storage.index_eviction`, #247). Before that
+change those copies stayed in the indexes until `index_compaction` removed
+them, so BM25 results over a pack built with `ingest()` could change across a
+restart; a pack built before it keeps such entries until `index_compaction`
+or `prme rebuild` removes them (a single-file pack's open drops the lexical
+ones). The eviction is best effort, and `index_compaction` retries what it
+left. Tantivy keeps a deleted document in its segment's BM25 statistics until
+a merge rewrites the segment, so an in-memory index rebuilds itself from its
+live documents, in `id` order, before the first search after a deletion left
+such a marker (`LexicalIndex.search`); a single-file session, a reopen and a
+rebuild then give the same documents and scores, and the same rankings apart
+from the tie order described after the migration paragraph below
+(`tests/test_single_file_pack.py`). The rebuild is one pass over the live
+documents, with the index's single-threaded writer: measured on 2026-10-15
+with 20-word documents, 12 ms for 1,413 documents, 88 ms for 10,000 and
+0.88 s for 100,000, against a startup load of 8 ms, 44 ms and 0.44 s for the
+same documents. A rebuild that fails is logged (`lexical.purge_failed`) and
+the old index serves on with its stale statistics. Every Tantivy writer PRME
+creates indexes on one thread, so a batch's documents land in one segment in
+the order they were added and two loads of the same documents put tied
+scores in the same order; with several threads the split between segments
+depended on scheduling, and two opens of one `.prme` file could cut a
+different set of tied hits at `lexical_k`. A directory pack keeps the
+deleted-document markers on disk, as it always has: it scores the same before
+and after a restart, and can differ slightly from a `prme rebuild` until
+Tantivy merges the segment. The same indexes serve the same data, rebuilds
+keep `id` order, and `vector_exact_search` stays on by default; the
+difference that remains between the two layouts is described after the
+migration paragraph below. `tests/test_single_file_pack.py` checks that the
+file is the whole pack at rest, that reopening or copying it gives identical
+retrieval receipts, that a missing, stale, unreadable or miscounted snapshot
+row is restored from the payloads, that vector removals count toward the save
+interval and survive a crash, that the lexical index after open equals a
+rebuild, that a pack built with `ingest()` keeps its lexical documents and
+retrieval rankings across a reopen and a rebuild in either layout, that a
+claim `ingest()` retires leaves both indexes at the commit and a reopened pack
+scores like the next open after such an eviction, that a failed eviction or
+in-memory rebuild is logged and repaired or survived, that two loads of the
+same documents order ties alike, and that engines in one process share a
 pack's lexical index.
 
 Storing the vector snapshot but rebuilding the lexical index follows
@@ -525,8 +553,15 @@ Retrieval from a single-file pack and from a directory pack holding the same
 data can differ in one way: BM25 scores that tie can come back in a different
 order from the in-memory index than from a directory index, even one just
 rebuilt with `prme rebuild`, and `lexical_k` cuts the candidates in Tantivy's
-order, so a tie can reach the final ranks. Two opens of the same `.prme` file
-give the same order. A pack migrated from a directory pack built with
+order, so a tie can reach the final ranks. Tied hits come back in segment
+order, and a single-file pack's open loads every document into one segment in
+`id` order on one writer thread (one segment up to at least 100,000 documents,
+measured on 2026-10-15), so two opens of the same `.prme` file give the same
+order; `prme rebuild` on a single-file pack ends by settling its in-memory
+index into that one segment (`LexicalIndex.settle`), so a rebuilt pack reads
+like a reopened one. A session that only added documents holds them in write
+order across several segments, as a directory index does, so its tie order
+can differ from the next open's. A pack migrated from a directory pack built with
 `ingest()` holds the same lexical documents as its source, since both follow
 the write path's policy (see above): the LoCoMo source held 827 of its 1,413
 active nodes in its Tantivy index, its 586 extracted entity nodes having none,

@@ -104,9 +104,9 @@ retrieval settings"): it must reproduce the saved 2026-09-23 contexts for all
 - With the current defaults, `main` and branch `feat/single-file-pack` give
   identical `context_sha256` values for all 500 questions (445 of 470 annotated
   questions with all evidence packed, 94.7%).
-- Still open: the DeepSeek answer track's `prepare prme` does not take
-  `--lme-captures`, so it cannot prepare LongMemEval-S contexts on this machine
-  until it learns the option.
+- Closed with #247: the answer tracks' `prepare` takes `--lme-captures`, so
+  LongMemEval-S contexts can be prepared on this machine from the regenerated
+  controls (BENCHMARKS.md, "Regenerated LongMemEval-S controls").
 
 ## Consequence for the DeepSeek track
 
