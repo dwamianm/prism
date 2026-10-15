@@ -42,7 +42,9 @@ class VectorIndex:
 
     Args:
         conn: DuckDB connection for metadata storage.
-        index_path: File path for persisting the USearch index.
+        index_path: File path for persisting the USearch index, or None to
+            keep the snapshot in the ``vector_snapshot`` table of the same
+            DuckDB database (single-file packs).
         embedding_provider: Provider for generating text embeddings.
     """
 
@@ -52,7 +54,7 @@ class VectorIndex:
     def __init__(
         self,
         conn: duckdb.DuckDBPyConnection,
-        index_path: str,
+        index_path: str | None,
         embedding_provider: EmbeddingProvider,
         conn_lock: asyncio.Lock | None = None,
         save_interval: int = 64,
@@ -74,8 +76,12 @@ class VectorIndex:
         # save, so saving on every insert is O(N^2) total write volume.
         # We save only once every ``save_interval`` inserts and flush any
         # remaining pending writes on close(). Set to 1 for save-per-insert.
+        # In a single-file pack, removals count toward the interval too.
         self._save_interval = max(1, save_interval)
         self._unsaved_inserts = 0
+        # Single-file packs: True while the vector_snapshot row differs from
+        # the native index, so save() writes the row only when it changed.
+        self._snapshot_dirty = False
 
         # Create metadata table and sequence in DuckDB
         self._init_metadata_table()
@@ -86,7 +92,9 @@ class VectorIndex:
             metric="cos",
             dtype="f32",
         )
-        if os.path.exists(index_path):
+        if index_path is None:
+            self._load_stored_snapshot()
+        elif os.path.exists(index_path):
             self._index.load(index_path)
             # Discarding an empty loaded native object is lossless; durable
             # payload recovery below repopulates a fresh index when metadata
@@ -146,6 +154,68 @@ class VectorIndex:
             CREATE INDEX IF NOT EXISTS idx_vector_user
             ON vector_metadata (user_id)
         """)
+        if self._index_path is None:
+            # A single-file pack keeps the USearch snapshot as one row in the
+            # same database. Like the file it replaces, it is derived data:
+            # startup recovery reconciles it against vector_payloads.
+            self._conn.execute("""
+                CREATE TABLE IF NOT EXISTS vector_snapshot (
+                    singleton BOOLEAN PRIMARY KEY CHECK (singleton),
+                    saved_at TIMESTAMPTZ,
+                    ndim INTEGER NOT NULL,
+                    vector_count BIGINT NOT NULL,
+                    data BLOB NOT NULL
+                )
+            """)
+
+    def _new_index(self) -> Index:
+        """Return an empty USearch index with the configured geometry."""
+        return Index(ndim=self._provider.dimension, metric="cos", dtype="f32")
+
+    def _load_stored_snapshot(self) -> None:
+        """Load the snapshot row of a single-file pack when it is usable.
+
+        A missing row, a blob USearch cannot read, or a blob that disagrees
+        with its own recorded dimension or count leaves an empty index;
+        startup recovery then restores every vector from its durable payload.
+        A readable snapshot whose dimension differs from the configured model
+        is loaded as the snapshot file is, so the pack still opens and
+        ``prme rebuild`` can re-embed it with the new model.
+        """
+        row = self._conn.execute(
+            "SELECT ndim, vector_count, data FROM vector_snapshot WHERE singleton"
+        ).fetchone()
+        if row is None:
+            self._snapshot_dirty = True
+            return
+        ndim, vector_count, data = row
+        try:
+            self._index.load(data)
+        except Exception:
+            logger.warning(
+                "Stored vector snapshot could not be read; restoring vectors "
+                "from their saved payloads", exc_info=True,
+            )
+            self._index = self._new_index()
+            self._snapshot_dirty = True
+            return
+        if self._index.ndim != ndim or len(self._index) != vector_count:
+            logger.warning(
+                "Stored vector snapshot does not match its recorded dimension or "
+                "count; restoring vectors from their saved payloads",
+            )
+            self._index = self._new_index()
+            self._snapshot_dirty = True
+        elif len(self._index) == 0:
+            # As with the snapshot file, an empty snapshot is replaced by a
+            # fresh index with the configured geometry.
+            self._index = self._new_index()
+        elif ndim != self._provider.dimension:
+            logger.warning(
+                "Stored vector snapshot has dimension %d but the configured "
+                "embedding model has dimension %d; run prme rebuild to re-embed "
+                "the pack with the configured model", ndim, self._provider.dimension,
+            )
 
     def _recover_vectors(self) -> None:
         """Reconcile the snapshot against durable metadata before serving reads.
@@ -221,7 +291,11 @@ class VectorIndex:
             "AND database_name = current_database()"
         ).fetchone()
         next_key = max(max_key + 1, start, (last or 0) + 1)
-        self._conn.execute(f"CREATE OR REPLACE SEQUENCE vector_key_seq START {int(next_key)}")
+        # A sequence not used since it was created or rebased, and starting
+        # at that key already, is left alone: replacing it would change
+        # nothing but the database file.
+        if last is not None or next_key != start:
+            self._conn.execute(f"CREATE OR REPLACE SEQUENCE vector_key_seq START {int(next_key)}")
         for key in orphan_keys:
             self._index.remove(key)
         if restored or orphan_keys:
@@ -238,7 +312,19 @@ class VectorIndex:
             )
 
     def _save_snapshot(self) -> None:
-        """Replace the last complete snapshot only after the new file is written."""
+        """Replace the last complete snapshot only after the new file is written.
+
+        In a single-file pack the snapshot is the ``vector_snapshot`` row,
+        replaced by one statement on the pack's connection. Callers after
+        startup hold ``_conn_lock`` for that reason.
+        """
+        if self._index_path is None:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO vector_snapshot VALUES (true, current_timestamp, ?, ?, ?)",
+                [self._index.ndim, len(self._index), self._index.save()],
+            )
+            self._snapshot_dirty = False
+            return
         parent = os.path.dirname(os.path.abspath(self._index_path))
         descriptor, temporary = tempfile.mkstemp(prefix=".prme-vector-", dir=parent)
         os.close(descriptor)
@@ -452,13 +538,19 @@ class VectorIndex:
     def _add_vector(self, key: int, vector: np.ndarray) -> None:
         """Add a durable vector to the native index with debounced snapshots."""
         self._index.add(key, vector)
+        self._snapshot_dirty = True
+        self._count_unsaved_changes(1)
 
-        # Persist to disk on the debounce interval only. Remaining
-        # unsaved inserts are flushed by save()/close(). The counter is
-        # reset in a finally so a failed save does not re-trigger on every
-        # subsequent insert (the vector is already in the in-memory index
-        # and will be persisted by the next interval save or by close()).
-        self._unsaved_inserts += 1
+    def _count_unsaved_changes(self, count: int) -> None:
+        """Count native index changes and save the snapshot on the interval.
+
+        Persist on the debounce interval only. Remaining unsaved changes are
+        flushed by save()/close(). The counter is reset in a finally so a
+        failed save does not re-trigger on every subsequent change (the
+        change is already in the in-memory index and will be persisted by
+        the next interval save or by close()).
+        """
+        self._unsaved_inserts += count
         if self._unsaved_inserts >= self._save_interval:
             try:
                 self._save_snapshot()
@@ -492,8 +584,10 @@ class VectorIndex:
 
         Used to evict superseded, archived, or rolled-back content so the
         vector keys no longer inflate the per-search candidate scan and the
-        HNSW index does not grow without bound. The index is persisted after
-        a removal so the deletion survives a restart.
+        HNSW index does not grow without bound. The deletion survives a
+        restart: the index file is saved after each removal, while a
+        single-file pack counts removals toward ``save_interval`` and its
+        startup recovery drops snapshot keys whose metadata is gone.
 
         Args:
             node_id: UUID string of the node whose vectors to remove.
@@ -520,12 +614,15 @@ class VectorIndex:
             return 0
 
         keys = [row[0] for row in rows]
+        removed = 0
         for key in keys:
             # Missing native keys are harmless drift. A genuine native removal
             # error must preserve the durable retry anchor instead of silently
             # deleting metadata and making the leftover vector undiscoverable.
             if self._index.contains(key):
                 self._index.remove(key)
+                self._snapshot_dirty = True
+                removed += 1
 
         self._conn.execute("BEGIN TRANSACTION")
         try:
@@ -541,10 +638,17 @@ class VectorIndex:
         except BaseException:
             self._conn.execute("ROLLBACK")
             raise
-        # Persist immediately so the removal is not lost if the process
-        # exits before the next debounced save.
-        self._save_snapshot()
-        self._unsaved_inserts = 0
+        if self._index_path is None:
+            # A single-file pack rewrites its whole snapshot row on every
+            # save, so a removal counts toward the save interval as an insert
+            # does. A snapshot saved before the removal still holds the key,
+            # and startup recovery removes it because its metadata is gone.
+            self._count_unsaved_changes(removed)
+        else:
+            # Persist immediately so the removal is not lost if the process
+            # exits before the next debounced save.
+            self._save_snapshot()
+            self._unsaved_inserts = 0
         return len(keys)
 
     async def search(
@@ -701,13 +805,23 @@ class VectorIndex:
         ]
 
     async def save(self) -> None:
-        """Persist the USearch index to disk, flushing pending inserts.
+        """Persist the USearch snapshot, flushing pending inserts.
 
-        Always writes the index regardless of the debounce counter, then
-        resets it. Runs off the event loop under the write lock.
+        Writes the index regardless of the debounce counter, then resets
+        it; a snapshot row is written only when the index changed since it
+        was last saved. Runs off the event loop under the write lock, and
+        also under the connection lock when the snapshot is a database row.
         """
         async with self._write_lock:
-            await run_to_completion(self._save_snapshot)
+            if self._index_path is None:
+                # A snapshot row that already matches the index is not
+                # written again, so an open that only reads leaves the pack
+                # file unchanged.
+                if self._snapshot_dirty:
+                    async with self._conn_lock:
+                        await run_to_completion(self._save_snapshot)
+            else:
+                await run_to_completion(self._save_snapshot)
             self._unsaved_inserts = 0
 
     async def clear(self) -> None:
@@ -734,11 +848,16 @@ class VectorIndex:
             metric="cos",
             dtype="f32",
         )
+        self._snapshot_dirty = True
         self._conn.execute("BEGIN TRANSACTION")
         try:
             self._conn.execute("DELETE FROM vector_staging")
             self._conn.execute("DELETE FROM vector_payloads")
             self._conn.execute("DELETE FROM vector_metadata")
+            if self._index_path is None:
+                # Drop the stored snapshot with the vectors it describes; the
+                # save below then records the empty index.
+                self._conn.execute("DELETE FROM vector_snapshot")
             self._conn.execute("COMMIT")
         except BaseException:
             self._conn.execute("ROLLBACK")

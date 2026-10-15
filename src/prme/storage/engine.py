@@ -26,11 +26,12 @@ from contextlib import AsyncExitStack
 import hashlib
 import json
 import logging
+import os
 import warnings
 from collections.abc import AsyncIterator, Collection, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import UUID, uuid4
 
 import duckdb
@@ -92,7 +93,12 @@ from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.embedding import EmbeddingProvider, create_embedding_provider, validate_embedding_provider, encode_texts
 from prme.storage.encryption import EncryptionError
 from prme.storage.event_store import EventStore
-from prme.storage.lexical_index import LexicalIndex
+from prme.storage.lexical_index import (
+    LEXICAL_DOCUMENT_SQL,
+    LexicalIndex,
+    acquire_pack_lexical_index,
+    release_pack_lexical_index,
+)
 from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
@@ -139,6 +145,180 @@ from prme.organizer.maintenance import MaintenanceRunner
 from prme.storage.durable_queue import DurableMaterializationQueue
 
 logger = logging.getLogger(__name__)
+
+# The nodes the derived search indexes hold, in rebuild order: every active
+# node of every owner, by id. Callers skip rows without indexable content.
+# Each node gets a vector; the last column says whether it also gets a
+# lexical document under the write path's policy (LEXICAL_DOCUMENT_SQL).
+# rebuild_indexes() and the startup load of a single-file pack's in-memory
+# lexical index share this selection, so both build the same documents.
+_INDEXED_STATES = tuple(state.value for state in ACTIVE_LIFECYCLE_STATES)
+_INDEXED_NODES_SQL = (
+    f"SELECT id, content, user_id, node_type, scope, {LEXICAL_DOCUMENT_SQL} FROM nodes "
+    f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({', '.join('?' for _ in _INDEXED_STATES)}) "
+    "ORDER BY id"
+)
+
+
+def _indexable_content(content: str | None) -> bool:
+    """Blank content cannot be embedded, so neither search index holds it."""
+    return bool(content and content.strip())
+
+
+def _load_lexical_from_graph(
+    conn: duckdb.DuckDBPyConnection, lexical_index: LexicalIndex, *, page_size: int = 1024,
+) -> int:
+    """Fill a single-file pack's in-memory lexical index from its graph.
+
+    Uses the same documents, fields and order as rebuild_indexes(), reading
+    them in pages so a large pack is never loaded at once, and commits once.
+    Startup only, on the opening engine's main connection before any engine
+    serves reads from the index.
+    """
+    def documents():
+        with conn.cursor() as reader:
+            reader.execute(_INDEXED_NODES_SQL, list(_INDEXED_STATES))
+            while page := reader.fetchmany(page_size):
+                for node_id, content, user_id, node_type, scope, lexical in page:
+                    if lexical and _indexable_content(content):
+                        yield str(node_id), content, user_id, node_type, scope
+
+    rows = documents()
+    try:
+        return lexical_index.load_documents(rows)
+    finally:
+        # Close the cursor now rather than when the generator is collected.
+        rows.close()
+
+
+# The name of an encrypted single-file pack inside the private in-memory
+# DuckDB instance that attaches it. "memory" is that instance's own database.
+_PACK_DATABASE = "pack"
+
+
+def _sql_literal(value: str) -> str:
+    """Quote *value* as a SQL string literal; ATTACH options take no parameters."""
+    return "'" + value.replace("'", "''") + "'"
+
+
+class _PackConnection:
+    """The engine connection of an encrypted single-file pack.
+
+    DuckDB opens an encrypted file only through ATTACH, so the engine
+    attaches the pack to a private in-memory DuckDB instance and selects it
+    with USE. USE applies to one connection, and ``cursor()`` opens another
+    connection to the instance, which starts in the in-memory database where
+    none of the pack's tables are. This wrapper selects the pack on every
+    cursor it returns, so the startup readers and the stage fences that work
+    on cursors see the pack, and passes everything else to the connection.
+    """
+
+    __slots__ = ("_connection",)
+
+    def __init__(self, connection: duckdb.DuckDBPyConnection) -> None:
+        self._connection = connection
+
+    def cursor(self) -> duckdb.DuckDBPyConnection:
+        cursor = self._connection.cursor()
+        try:
+            cursor.execute(f"USE {_PACK_DATABASE}")
+        except BaseException:
+            cursor.close()
+            raise
+        return cursor
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._connection, name)
+
+    def __enter__(self) -> "_PackConnection":
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self._connection.close()
+
+
+def _connect_single_file_pack(
+    path: str, key: str | None, *, threads: int | None,
+) -> duckdb.DuckDBPyConnection:
+    """Open a single-file pack, encrypted by DuckDB when *key* is set.
+
+    *key* is the key from ``derive_pack_key()``, never the configured
+    secret. Without a key the pack is opened as an ordinary DuckDB file.
+    With one, the pack is attached with that key to a private in-memory
+    DuckDB instance, because DuckDB accepts a key only through ATTACH.
+    Opening an encrypted pack without its key or with a wrong key, or a
+    plain pack with a key, raises ``EncryptionError`` and leaves the file
+    as it was. An encrypted pack that another engine in this process has
+    open raises ``PackInUseError``.
+    """
+    # DuckDB tells two opens of one file apart by the path string, both in
+    # its guard against attaching a file twice and in its cache of open
+    # databases, and it keeps the write-ahead log beside the path it was
+    # given. Open the real file, so two spellings of one pack (relative and
+    # absolute, or through a symbolic link) meet the same guard or share one
+    # instance, and the log stays beside the pack itself.
+    real_path = os.path.realpath(path)
+    try:
+        # Apply at instance creation: SET would silently change another
+        # engine sharing this database. DuckDB rejects conflicting opens.
+        if key is None:
+            return (duckdb.connect(real_path) if threads is None
+                    else duckdb.connect(real_path, config={"threads": threads}))
+        settings: dict[str, Any] = {} if threads is None else {"threads": threads}
+        # DuckDB encrypts the attached file and its WAL with the key, but it
+        # writes temporary files in clear text unless temp_file_encryption
+        # is on (measured with duckdb 1.4.4). Keep them beside the pack, as
+        # DuckDB does for a database file, not in the working directory it
+        # uses for an in-memory database.
+        database = duckdb.connect(":memory:", config={
+            **settings, "temp_directory": f"{real_path}.tmp", "temp_file_encryption": True,
+        })
+        try:
+            database.execute(
+                f"ATTACH {_sql_literal(real_path)} AS {_PACK_DATABASE} "
+                f"(ENCRYPTION_KEY {_sql_literal(key)})"
+            )
+            database.execute(f"USE {_PACK_DATABASE}")
+        except BaseException:
+            database.close()
+            raise
+        # The wrapper stands in for the connection everywhere the engine
+        # passes one.
+        return cast(duckdb.DuckDBPyConnection, _PackConnection(database))
+    except duckdb.Error as exc:
+        message = str(exc)
+        leaks_key = key is not None and key in message
+        if "Wrong encryption key" in message:
+            error = EncryptionError(
+                f"Wrong encryption key for the memory pack at {path}; the pack was not changed"
+            )
+        elif "Cannot open encrypted database" in message:
+            error = EncryptionError(
+                f"The memory pack at {path} is encrypted; set encryption_enabled "
+                "and encryption_key to open it"
+            )
+        elif "is not encrypted" in message:
+            error = EncryptionError(
+                f"The memory pack at {path} is not encrypted, but encryption_enabled "
+                "and encryption_key are set; open it without them"
+            )
+        elif "Unique file handle conflict" in message:
+            # Imported here: pack_tools imports this module.
+            from prme.storage.pack_tools import PackInUseError
+
+            error = PackInUseError(
+                f"The memory pack at {path} is already open in this process; an "
+                "encrypted single-file pack can be open in one engine per process, "
+                "so close the other engine first"
+            )
+        elif leaks_key:
+            error = EncryptionError(f"Could not open the memory pack at {path}")
+        else:
+            raise
+        if leaks_key:
+            # Only an error that quotes the ATTACH statement carries the key.
+            raise error from None
+        raise error from exc
 
 
 class MemoryEngine:
@@ -296,19 +476,52 @@ class MemoryEngine:
     async def _create_duckdb(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
     ) -> "MemoryEngine":
-        """Create a MemoryEngine backed by DuckDB (file-based)."""
+        """Create a MemoryEngine backed by DuckDB (file-based).
+
+        With ``config.pack_path`` set, the pack is a single DuckDB file: the
+        vector snapshot and the manifest are tables inside it, and the
+        lexical index is rebuilt in memory from the graph before the engine
+        serves any read; engines in one process that open the same pack
+        share that index. With encryption configured, DuckDB encrypts that
+        file and its write-ahead log natively, and the engine turns on
+        DuckDB's temporary-file encryption as well. Otherwise the
+        pack is the directory layout of ``db_path``, ``vector_path`` and
+        ``lexical_path``, with file-level Fernet encryption when configured.
+        """
         from pathlib import Path
 
         from prme.storage.encryption import EncryptionError, EncryptionProvider
 
-        fresh_namespace_pack = not (Path(config.db_path).exists() or Path(config.db_path + ".enc").exists())
+        single_file = config.single_file_pack
+        encryption_requested = bool(
+            config.encryption_enabled
+            and config.encryption_key
+            and config.encryption_key.get_secret_value()
+        )
+        pack_key: str | None = None
+        if single_file and encryption_requested:
+            # File-level Fernet encryption would leave the pack in clear text
+            # while it is open, so DuckDB encrypts the pack itself. Derive
+            # its key before any file is touched; a malformed key changes
+            # nothing.
+            from prme.storage.encryption import derive_pack_key
+
+            assert config.encryption_key is not None
+            pack_key = derive_pack_key(config.encryption_key.get_secret_value())
+        db_path = config.pack_path if config.pack_path is not None else config.db_path
+
+        if single_file:
+            fresh_namespace_pack = not Path(db_path).exists()
+        else:
+            fresh_namespace_pack = not (Path(config.db_path).exists() or Path(config.db_path + ".enc").exists())
 
         # A fresh configured pack must work through either public client.
         # Prepare all directories before opening/decrypting storage so a path
         # collision fails without touching existing pack contents.
-        Path(config.db_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(config.vector_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(config.lexical_path).mkdir(parents=True, exist_ok=True)
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        if not single_file:
+            Path(config.vector_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(config.lexical_path).mkdir(parents=True, exist_ok=True)
 
         async with AsyncExitStack() as startup:
             encryption_provider: EncryptionProvider | None = None
@@ -329,11 +542,12 @@ class MemoryEngine:
             # A wrong key before any successful decryption leaves files alone.
             startup.callback(restore_encryption)
             # --- Decrypt memory pack if encryption is enabled (issue #14) ---
-            if (
-                config.encryption_enabled
-                and config.encryption_key
-                and config.encryption_key.get_secret_value()
-            ):
+            # Directory packs only. DuckDB encrypts a single-file pack as its
+            # connection opens below, so such a pack has no Fernet provider:
+            # the Fernet close, atexit and lock paths cannot run against the
+            # unused directory paths.
+            if encryption_requested and not single_file:
+                assert config.encryption_key is not None
                 encryption_provider = EncryptionProvider(
                     config.encryption_key.get_secret_value()
                 )
@@ -367,10 +581,13 @@ class MemoryEngine:
             needs_encryption = encryption_provider is not None
 
             # Open DuckDB connection
-            # Apply at instance creation: SET would silently change another
-            # engine sharing this database. DuckDB rejects conflicting opens.
-            conn = (duckdb.connect(config.db_path) if config.duckdb_threads is None
-                    else duckdb.connect(config.db_path, config={"threads": config.duckdb_threads}))
+            if single_file:
+                conn = _connect_single_file_pack(db_path, pack_key, threads=config.duckdb_threads)
+            else:
+                # Apply at instance creation: SET would silently change another
+                # engine sharing this database. DuckDB rejects conflicting opens.
+                conn = (duckdb.connect(db_path) if config.duckdb_threads is None
+                        else duckdb.connect(db_path, config={"threads": config.duckdb_threads}))
             startup.callback(conn.close)
             if config.namespace_id is not None:
                 from prme.storage.namespace_identity import bind_namespace
@@ -393,10 +610,17 @@ class MemoryEngine:
             if embedding_provider is None:
                 embedding_provider = create_embedding_provider(config.embedding)
 
-            # Create vector index
+            if single_file:
+                # Record or check the pack's self-description before vector
+                # recovery, so a model mismatch is reported first.
+                from prme.storage.pack_manifest import ensure_pack_manifest
+                ensure_pack_manifest(conn, embedding_provider, scoring_version=config.scoring.version_id)
+
+            # Create vector index. A single-file pack keeps its snapshot in
+            # the vector_snapshot table instead of a file.
             vector_index = VectorIndex(
                 conn,
-                config.vector_path,
+                None if single_file else config.vector_path,
                 embedding_provider,
                 conn_lock,
                 save_interval=config.vector_save_interval,
@@ -405,14 +629,23 @@ class MemoryEngine:
 
             startup.push_async_callback(vector_index.close)
 
-            # Create lexical index
-            lexical_index = LexicalIndex(
-                config.lexical_path,
-                commit_interval=config.lexical_commit_interval,
-                commit_max_delay_s=config.lexical_commit_max_delay_s,
-            )
-
-            startup.push_async_callback(lexical_index.close)
+            # Create lexical index. A single-file pack holds it in memory,
+            # shared by every engine in this process that opens the pack and
+            # built from the graph by the first of them, before any read.
+            if single_file:
+                lexical_index = await acquire_pack_lexical_index(
+                    db_path, lambda index: _load_lexical_from_graph(conn, index),
+                    commit_interval=config.lexical_commit_interval,
+                    commit_max_delay_s=config.lexical_commit_max_delay_s,
+                )
+                startup.push_async_callback(release_pack_lexical_index, lexical_index)
+            else:
+                lexical_index = LexicalIndex(
+                    config.lexical_path,
+                    commit_interval=config.lexical_commit_interval,
+                    commit_max_delay_s=config.lexical_commit_max_delay_s,
+                )
+                startup.push_async_callback(lexical_index.close)
 
             # Create and start write queue
             write_queue = WriteQueue(maxsize=config.write_queue_size)
@@ -2773,7 +3006,9 @@ class MemoryEngine:
 
         This delivers the rebuildability claim while staying bounded and
         non-destructive: it touches only the *derived* search artifacts
-        (``vectors.usearch`` and the lexical index directory). The event log
+        (``vectors.usearch`` and the lexical index directory; in a single-file
+        pack, the ``vector_snapshot`` row and the in-memory lexical index,
+        after which the manifest names the rebuilding model). The event log
         and the graph nodes/edges -- the durable source of truth -- are never
         modified, so a rebuild is safe to re-run and idempotent. It is the
         clean recovery path for index corruption, embedding-model migration,
@@ -2784,6 +3019,10 @@ class MemoryEngine:
         are re-indexed, matching the visibility contract that vector and
         lexical search already enforce (issue #38) -- superseded, archived,
         and deprecated nodes are intentionally left out of the indexes.
+        Lexical documents follow the write path's policy
+        (``has_lexical_document`` in ``prme.storage.lexical_index``): an
+        entity node that extraction created gets a vector but no lexical
+        document, as it did when it was ingested (issue #247).
 
         Nodes are processed in deterministic ``id`` order so that, combined
         with exact vector search (``vector_exact_search``), two rebuilds from
@@ -2794,17 +3033,15 @@ class MemoryEngine:
                 Bounds peak memory on large packs; does not affect results.
 
         Returns:
-            A summary dict with counts: ``nodes_indexed`` (rows written to
-            both indexes), ``nodes_skipped`` (active rows with empty content,
-            which cannot be embedded), and ``total_active`` (active rows
-            seen).
+            A summary dict with counts: ``nodes_indexed`` (rows given a
+            vector, and a lexical document under that policy),
+            ``nodes_skipped`` (active rows with empty content, which cannot
+            be embedded), and ``total_active`` (active rows seen).
         """
         if self._conn is None:
             raise RuntimeError(
                 "rebuild_indexes is only supported on the DuckDB backend"
             )
-
-        active_states = [s.value for s in ACTIVE_LIFECYCLE_STATES]
 
         # Clear both derived indexes first (serialized through the write
         # queue like every other index mutation). After this point the
@@ -2822,7 +3059,6 @@ class MemoryEngine:
         nodes_skipped = 0
         total_active = 0
         offset = 0
-        placeholders = ", ".join("?" for _ in active_states)
 
         while True:
             # Page through active nodes in deterministic id order. Reading
@@ -2834,13 +3070,9 @@ class MemoryEngine:
             # backend above, so direct SQL is safe here.
             async with self._event_store._conn_lock:
                 rows = await run_to_completion(
-                    lambda ph=placeholders, off=offset: self._conn.execute(
-                        "SELECT id, content, user_id, node_type, scope "
-                        "FROM nodes "
-                        f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({ph}) "
-                        "ORDER BY id "
-                        "LIMIT ? OFFSET ?",
-                        [*active_states, batch_size, off],
+                    lambda off=offset: self._conn.execute(
+                        _INDEXED_NODES_SQL + " LIMIT ? OFFSET ?",
+                        [*_INDEXED_STATES, batch_size, off],
                     ).fetchall(),
                 )
             if not rows:
@@ -2853,8 +3085,9 @@ class MemoryEngine:
                 user_id = row[2]
                 node_type = row[3]
                 scope = row[4]
+                lexical = row[5]
 
-                if not content or not content.strip():
+                if not _indexable_content(content):
                     # Empty content cannot be embedded; skip but count it so
                     # the caller can reconcile against total node counts.
                     nodes_skipped += 1
@@ -2866,12 +3099,13 @@ class MemoryEngine:
                     ),
                     label=f"rebuild.vector:{node_id}",
                 )
-                await self._write_queue.submit(
-                    lambda nid=node_id, c=content, uid=user_id, nt=node_type, sc=scope: (
-                        self._lexical_index.index(nid, c, uid, nt, sc)
-                    ),
-                    label=f"rebuild.lexical:{node_id}",
-                )
+                if lexical:
+                    await self._write_queue.submit(
+                        lambda nid=node_id, c=content, uid=user_id, nt=node_type, sc=scope: (
+                            self._lexical_index.index(nid, c, uid, nt, sc)
+                        ),
+                        label=f"rebuild.lexical:{node_id}",
+                    )
                 nodes_indexed += 1
 
             offset += batch_size
@@ -2886,6 +3120,15 @@ class MemoryEngine:
             lambda: self._lexical_index.flush(),
             label="rebuild.flush.lexical",
         )
+        if self._config.single_file_pack:
+            # Every vector now comes from the configured model, so the
+            # manifest names it (and stops warning about an earlier one).
+            from prme.storage.pack_manifest import record_pack_embedding
+
+            async with self._event_store._conn_lock:
+                await run_to_completion(
+                    record_pack_embedding, self._conn, self._vector_index._provider,
+                )
 
         logger.info(
             "rebuild_indexes.complete",
@@ -3713,11 +3956,12 @@ class MemoryEngine:
 
         Idempotent — safe to call multiple times.
 
-        When encryption at rest is enabled, the memory pack is re-encrypted
-        after all backends are closed. If that encryption fails the pack is
-        left plaintext on disk, so this method fails closed: it logs at ERROR
-        and raises ``EncryptionError`` rather than returning silently (issue
-        #37).
+        When encryption at rest is enabled for a directory pack, the memory
+        pack is re-encrypted after all backends are closed (a single-file
+        pack is encrypted by DuckDB throughout). If that encryption fails the
+        pack is left plaintext on disk, so this method fails closed: it logs
+        at ERROR and raises ``EncryptionError`` rather than returning
+        silently (issue #37).
 
         Raises:
             EncryptionError: If re-encrypting the memory pack on close fails.
@@ -3755,7 +3999,12 @@ class MemoryEngine:
             logger.warning("Error closing vector index", exc_info=True)
 
         try:
-            await self._lexical_index.close()
+            if self._config.single_file_pack:
+                # Other engines may share a single-file pack's index; the
+                # last engine to release it closes it.
+                await release_pack_lexical_index(self._lexical_index)
+            else:
+                await self._lexical_index.close()
         except Exception:
             logger.warning("Error closing lexical index", exc_info=True)
 
@@ -3884,6 +4133,15 @@ class MemoryEngine:
                 "Encrypted %d memory pack files", len(encrypted_files)
             )
 
+    def _refuse_single_file_lock(self, action: str) -> None:
+        """lock() and unlock() move directory pack files in and out of Fernet."""
+        if self._config.single_file_pack:
+            raise RuntimeError(
+                f"Cannot {action}: a single-file pack has no file-level encryption. "
+                "With encryption_enabled and encryption_key set, DuckDB keeps it "
+                "encrypted on disk at all times."
+            )
+
     def lock(self) -> None:
         """Encrypt all memory pack files without closing the engine.
 
@@ -3892,8 +4150,10 @@ class MemoryEngine:
         calling this if backends hold file locks.
 
         Raises:
-            RuntimeError: If encryption is not configured.
+            RuntimeError: If encryption is not configured, or the pack is a
+                single-file pack, which has no file-level encryption.
         """
+        self._refuse_single_file_lock("lock")
         if self._encryption_provider is None:
             raise RuntimeError(
                 "Cannot lock: encryption is not configured. "
@@ -3908,10 +4168,12 @@ class MemoryEngine:
         Should be called before opening backends that need the files.
 
         Raises:
-            RuntimeError: If encryption is not configured.
+            RuntimeError: If encryption is not configured, or the pack is a
+                single-file pack, which has no file-level encryption.
         """
         from pathlib import Path
 
+        self._refuse_single_file_lock("unlock")
         if self._encryption_provider is None:
             raise RuntimeError(
                 "Cannot unlock: encryption is not configured. "

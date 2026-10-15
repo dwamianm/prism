@@ -414,6 +414,25 @@ class PRMEConfig(_ProjectSettings):
     db_path: str = Field(
         default="./memory.duckdb", description="Path to DuckDB database file"
     )
+    pack_path: str | None = Field(
+        default=None,
+        description="Path to a single-file memory pack (a .prme file). When set, the pack is "
+                    "one DuckDB database that also holds the vector snapshot and the pack "
+                    "manifest, and the lexical index is rebuilt in memory on open; db_path, "
+                    "vector_path and lexical_path are then ignored. None (default) keeps the "
+                    "directory layout. Cannot be combined with database_url.",
+    )
+
+    @field_validator("pack_path", mode="before")
+    @classmethod
+    def validate_pack_path(cls, value):
+        # An empty value means not set, as it does for database_url. A blank
+        # path must never reach duckdb.connect(), which would open a
+        # throwaway in-memory database instead of a pack.
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     duckdb_threads: int | None = Field(
         default=None, ge=1,
         description="Optional DuckDB worker-thread count per open database. None preserves "
@@ -799,7 +818,9 @@ class PRMEConfig(_ProjectSettings):
             "disk. The index is rewritten in full on each save, so saving on "
             "every insert makes ingestion O(N^2) in write volume. Any "
             "pending writes are always flushed on close(). Set to 1 to save "
-            "after every insert (legacy behavior)."
+            "after every insert (legacy behavior). In a single-file pack, "
+            "removals count toward the interval too; a directory pack saves "
+            "its index file after every removal."
         ),
     )
     vector_exact_search: bool = Field(
@@ -906,8 +927,12 @@ class PRMEConfig(_ProjectSettings):
         default=False,
         description=(
             "Master toggle for encryption at rest. When True and "
-            "encryption_key is set, memory pack files are encrypted "
-            "on close() and decrypted on create(). Default False "
+            "encryption_key is set, a directory pack keeps Fernet file "
+            "encryption: its files are encrypted on close() and decrypted "
+            "on create(). A single-file pack (pack_path) uses DuckDB native "
+            "encryption instead, AES-256-GCM over the file and its WAL, and "
+            "PRME turns on DuckDB's temporary-file encryption as well, so the "
+            "pack is not in clear text on disk even while open. Default False "
             "for backward compatibility."
         ),
     )
@@ -915,7 +940,12 @@ class PRMEConfig(_ProjectSettings):
         default=None,
         description=(
             "Encryption passphrase (or raw key) for at-rest encryption. "
-            "Used with PBKDF2-HMAC-SHA256 to derive a Fernet key. Prefix "
+            "For a directory pack it is used with PBKDF2-HMAC-SHA256 to "
+            "derive a Fernet key, with a random salt per file. For a "
+            "single-file pack it becomes the DuckDB encryption key: a raw "
+            "key is used as given, and a passphrase is derived with "
+            "PBKDF2-HMAC-SHA256 and a fixed PRME salt, because the salt "
+            "cannot be stored inside the encrypted file. Prefix "
             "with 'raw_key:' to supply a raw Fernet key explicitly or "
             "'passphrase:' to force derivation; an unprefixed value is "
             "auto-detected for backward compatibility. None disables "
@@ -952,11 +982,25 @@ class PRMEConfig(_ProjectSettings):
                 )
         return self
 
+    @model_validator(mode="after")
+    def _validate_pack_path(self) -> PRMEConfig:
+        if self.single_file_pack and self.backend == "postgres":
+            raise ValueError(
+                "pack_path selects a local single-file pack and cannot be combined "
+                "with database_url; set only one of them"
+            )
+        return self
+
     @property
     def backend(self) -> str:
         """Return 'postgres' when database_url is set, else 'duckdb'."""
         url = self.database_url
         return "postgres" if url and url.get_secret_value() else "duckdb"
+
+    @property
+    def single_file_pack(self) -> bool:
+        """Return True when pack_path selects a single-file memory pack."""
+        return self.pack_path is not None
 
     model_config = {
         "env_prefix": "PRME_",

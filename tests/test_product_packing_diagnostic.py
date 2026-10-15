@@ -15,9 +15,9 @@ import pytest
 from benchmarks.diagnostics import product_packing
 from benchmarks.diagnostics.product_packing import (
     GATE_CONDITIONAL_ACCURACY, GATE_MEASURED_ACCURACY, GATE_UNSCORED_ACCURACY, GateCase, _locomo_cases,
-    _longmemeval_cases, _source_key, compare, compare_gates, comparison_markdown, gate_config, gate_main,
-    gate_markdown, gate_report, main, measure, pack_identity, pack_records, parse_overrides, plain_ranking,
-    plain_record, projected_correct, replay_gate, run_gate, summarize_gate,
+    _longmemeval_cases, _source_key, check_lme_captures, compare, compare_gates, comparison_markdown, gate_config,
+    gate_main, gate_markdown, gate_report, main, measure, pack_identity, pack_records, parse_overrides,
+    plain_ranking, plain_record, projected_correct, replay_gate, run_gate, summarize_gate,
 )
 from benchmarks.evidence import reciprocal_rank_fusion
 from prme import MemoryEngine, NodeType
@@ -984,6 +984,169 @@ def test_loaders_verify_the_archive_and_resolve_annotations(tmp_path, monkeypatc
                                        "source_turn_index": 0}) == "s-b#1#0"
     assert _source_key("longmemeval", {"source_session_id": "s-b"}) is None
     assert _source_key("locomo", {"source_dialog_id": "D1:1"}) == "D1:1"
+
+
+# Regenerated LongMemEval-S controls (--lme-captures) ---------------------------
+
+@pytest.fixture
+def regenerated_controls(tmp_path, monkeypatch):
+    """A saved run whose 2026-09-22 control captures are gone, and a regenerated root that replaces them."""
+    from benchmarks.integrations import run_gpt54_comparison as gpt54
+    from benchmarks.integrations.gpt54_budget import digest
+
+    dataset = tmp_path / "longmemeval_s.json"
+    dataset.write_text(json.dumps([
+        {"question_id": "q1", "question_type": "multi-session", "question": "How long did I wait?",
+         "haystack_session_ids": ["s-a", "s-b"],
+         "haystack_sessions": [[{"role": "user", "content": "Hello."}],
+                               [{"role": "user", "content": "It took a year.", "has_answer": True}]]},
+        {"question_id": "q2_abs", "question_type": "temporal-reasoning", "question": "When?",
+         "haystack_session_ids": ["s-c"], "haystack_sessions": [[{"role": "user", "content": "x"}]]},
+    ]))
+    monkeypatch.setattr(gpt54, "LONGMEM", dataset)
+    monkeypatch.setattr(gpt54.lme, "DATASET_SHA256", digest(dataset))
+    archive = tmp_path / "archive"
+    contexts = archive / "longmemeval" / "contexts"
+    contexts.mkdir(parents=True)
+    master = tmp_path / "master"
+    (master / "captures").mkdir(parents=True)
+    root = tmp_path / "regenerated" / "baseline"
+    saved, cases = [], []
+    for question_id in ("q1", "q2_abs"):
+        context = contexts / f"{question_id}.json"
+        context.write_text(json.dumps({
+            "context_sha256": f"saved-{question_id}", "artifact_checksum": "lost", "source_capture_sha256": "lost",
+            "source_capture": str(tmp_path / "opt-in-successor-v2" / question_id / "capture.json")}))
+        saved.append({"question_id": question_id, "sha256": digest(context)})
+        (root / question_id / "pack").mkdir(parents=True)
+        (root / question_id / "pack" / "memory.duckdb").write_bytes(b"")
+        capture = root / question_id / "capture.json"
+        capture.write_text(json.dumps({
+            "input_pack": {"tree_sha256": f"master-{question_id}"},
+            "final_pack": {"tree_sha256": f"final-{question_id}"},
+            "retrievals": [{"receipt": {"user_id": "longmemeval-s-baseline",
+                                        "reference_time": "2023-05-30T10:18:00Z"}}]}))
+        master_capture = master / "captures" / f"{question_id}.json"
+        master_capture.write_text(json.dumps({"pack": {"tree_sha256": f"master-{question_id}"}}))
+        cases.append({"question_id": question_id, "capture_sha256": digest(capture),
+                      "pack_tree_sha256": f"final-{question_id}", "master_pack_tree_sha256": f"master-{question_id}",
+                      "master_capture_sha256": digest(master_capture)})
+    (archive / "longmemeval" / "prepared.json").write_text(json.dumps({"complete": True, "contexts": saved}))
+    manifest = {"kind": "prme-lme-control-captures", "schema_version": 1, "complete": True, "label": "regenerated",
+                "built_at": "2026-10-14T00:00:00+00:00", "code": {"commit": "c0ffee"},
+                "dataset": {"sha256": digest(dataset)}, "source": {"root": str(master)}, "cases": cases}
+    (root / "manifest.json").write_text(json.dumps(manifest))
+    return archive, root, manifest, master
+
+
+def test_regenerated_lme_controls_replace_the_missing_2026_09_22_captures(regenerated_controls):
+    archive, root, _, _ = regenerated_controls
+    with pytest.raises(ValueError, match="is not at .*Pass --lme-captures"):
+        _longmemeval_cases(archive)
+    answered, abstention = _longmemeval_cases(archive, root)
+    assert answered.pack == root / "q1" / "pack" and answered.pack_sha256 == "final-q1"
+    # The saved context still decides whether a replay reproduced it.
+    assert answered.saved_context_sha256 == "saved-q1" and answered.user_id == "longmemeval-s-baseline"
+    assert answered.reference_time == datetime(2023, 5, 30, 10, 18, tzinfo=timezone.utc)
+    assert answered.evidence == {"s-b#1#0"} and abstention.evidence is None
+    provenance = product_packing._lme_captures_provenance(root, [answered, abstention])
+    assert provenance["manifest_sha256"] == hashlib.sha256((root / "manifest.json").read_bytes()).hexdigest()
+    assert (provenance["questions"], provenance["inputs_matching_master_identity"],
+            provenance["master_captures_checked"]) == (2, 2, 2)
+    assert provenance["not_applicable"] == ["source_capture_sha256", "artifact_checksum"]
+
+
+@pytest.mark.parametrize("mutation,message", [
+    ("capture", "control capture for q1 differs from"),
+    ("input_pack", "was not cloned from its master pack"),
+    ("final_pack", "names a pack other than its manifest's"),
+    ("master", "master capture for q1 differs"),
+    ("incomplete", "is not a complete LongMemEval-S control capture manifest"),
+    ("order", "do not cover the LongMemEval-S questions in dataset order"),
+    ("dataset", "made for a different LongMemEval-S dataset"),
+    ("missing", "No regenerated LongMemEval-S control captures"),
+])
+def test_regenerated_lme_controls_fail_loudly_on_any_mismatch(regenerated_controls, mutation, message):
+    archive, root, manifest, master = regenerated_controls
+    capture = root / "q1" / "capture.json"
+    if mutation == "capture":
+        capture.write_text(capture.read_text() + " ")
+    elif mutation in {"input_pack", "final_pack"}:
+        value = json.loads(capture.read_text())
+        value[mutation]["tree_sha256"] = "other"
+        capture.write_text(json.dumps(value))
+        manifest["cases"][0]["capture_sha256"] = hashlib.sha256(capture.read_bytes()).hexdigest()
+    elif mutation == "master":
+        (master / "captures" / "q1.json").write_text(json.dumps({"pack": {"tree_sha256": "other"}}))
+    elif mutation == "incomplete":
+        manifest["complete"] = False
+    elif mutation == "order":
+        manifest["cases"].reverse()
+    elif mutation == "dataset":
+        manifest["dataset"]["sha256"] = "0" * 64
+    if mutation == "missing":
+        (root / "manifest.json").unlink()
+    else:
+        (root / "manifest.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match=message):
+        _longmemeval_cases(archive, root)
+
+
+def test_a_master_capture_missing_from_this_machine_is_not_counted(regenerated_controls):
+    archive, root, _, master = regenerated_controls
+    (master / "captures" / "q1.json").unlink()
+    cases = _longmemeval_cases(archive, root)
+    assert product_packing._lme_captures_provenance(root, cases)["master_captures_checked"] == 1
+
+
+def lme_controls(report, manifest_sha256, path="/regenerated"):
+    """A copy of a report that replayed regenerated LongMemEval-S controls with this manifest."""
+    report = deepcopy(report)
+    report["provenance"]["lme_captures"] = {
+        "path": path, "manifest_sha256": manifest_sha256, "label": "regenerated", "built_at": "2026-10-14",
+        "commit": "c0ffee", "master_packs": "data/benchmarks/longmemeval-s-prme-baseline-v1", "questions": 2,
+        "inputs_matching_master_identity": 2, "master_captures_checked": 2,
+        "not_applicable": ["source_capture_sha256", "artifact_checksum"]}
+    return report
+
+
+def test_comparison_refuses_reports_that_replayed_different_lme_controls():
+    saved = gate_fixture([gate_row(f"q{n}", "multi-session", all_packed=True, benchmark="longmemeval")
+                          for n in range(2)])
+    # The same manifest compares wherever its root sits.
+    assert compare_gates(lme_controls(saved, "a" * 64), lme_controls(saved, "a" * 64, "/moved"),
+                         samples=20)["complete"]
+    assert compare_gates(saved, saved, samples=20)["complete"]
+    with pytest.raises(ValueError, match="different LongMemEval-S control captures: before used the regenerated "
+                                         "captures at /regenerated"):
+        compare_gates(lme_controls(saved, "a" * 64), lme_controls(saved, "b" * 64))
+    with pytest.raises(ValueError, match="before used the 2026-09-22 control captures that the saved archive names"):
+        compare_gates(saved, lme_controls(saved, "a" * 64))
+
+
+def test_gate_reports_name_the_regenerated_lme_controls():
+    saved = gate_fixture([gate_row("q1", "multi-session", all_packed=True, benchmark="longmemeval")])
+    regenerated = lme_controls(saved, "a" * 64)
+    label = "LongMemEval-S controls regenerated at `/regenerated` (manifest `aaaaaaaaaaaa`)"
+    markdown = gate_markdown(regenerated)
+    assert label in markdown and "**Regenerated LongMemEval-S controls.**" in markdown
+    assert "The input pack of 2 of 2 captures equals its master pack's saved identity" in markdown
+    assert "Regenerated LongMemEval-S" not in gate_markdown(saved)
+    assert comparison_markdown(compare_gates(regenerated, regenerated, samples=20)).count(label) == 2
+
+
+def test_lme_captures_replace_only_the_saved_runs_longmemeval_controls(tmp_path, capsys):
+    check_lme_captures(None, ["locomo"], tmp_path)
+    check_lme_captures(tmp_path, ["longmemeval"], None)
+    with pytest.raises(ValueError, match="not both"):
+        check_lme_captures(tmp_path, ["longmemeval"], tmp_path)
+    with pytest.raises(ValueError, match="include the longmemeval benchmark"):
+        check_lme_captures(tmp_path, ["locomo"], None)
+    for argv in (["--benchmark", "locomo"], ["--benchmark", "longmemeval", "--packs", str(tmp_path)]):
+        with pytest.raises(SystemExit):
+            gate_main(["--output", str(tmp_path / "gate.json"), "--lme-captures", str(tmp_path), *argv])
+    errors = capsys.readouterr().err
+    assert "include the longmemeval benchmark" in errors and "not both" in errors
 
 
 # Plain RAG reference ----------------------------------------------------------

@@ -224,14 +224,28 @@ linkage
 
 # 9. Portability Model
 
-Artifact Structure:
+Artifact Structure (updated 2026-10-14 to the implemented layouts):
+
+Directory pack (the default):
 
     memory_pack/
-      events.duckdb
-      graph.kuzu/
-      vectors.bin
-      hnsw.idx
-      manifest.json
+      memory.duckdb      event log, graph, vector metadata and payloads
+      vectors.usearch    USearch HNSW snapshot
+      lexical_index/     Tantivy full-text index
+      manifest.json      encryption metadata, only when encryption is on
+
+Single-file pack (opt-in):
+
+    memories.prme        one DuckDB database with the same tables, plus
+                         vector_snapshot (the USearch snapshot) and
+                         prme_manifest (format, PRME, embedding and
+                         scoring versions); the Tantivy index is held in
+                         memory and rebuilt from the graph on open
+
+In both layouts the derived indexes can be regenerated from the durable
+graph with `prme rebuild`. The RFC-0014 single-file pack amendment
+(2026-10-14) specifies the single-file format, its native DuckDB
+encryption, `prme compact` and `prme migrate`.
 
 Features: - Copyable - Encryptable - Versionable - Rebuildable
 

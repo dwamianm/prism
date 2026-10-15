@@ -42,6 +42,7 @@ from prme.models.derivation import DerivationPlan
 from prme.models.extraction_work import ExtractionClaim, ExtractionProcessingResult
 from prme.models.entity_identity import unresolved_personal_reference
 from prme.storage._threading import run_async_to_completion
+from prme.storage.lexical_index import has_lexical_document
 from prme.models.nodes import MemoryNode
 from prme.models.speaker import metadata_speaker, speaker_labeled
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
@@ -634,6 +635,25 @@ class IngestionPipeline:
         from prme.ingestion.entity_references import EntityReferences
         entity_refs = EntityReferences[str]()
 
+        async def index_new_node(node_id: str, node_type: NodeType, node_scope: Scope,
+                                 vector_text: str, lexical_text: str, kind: str) -> None:
+            """Index a node this derivation creates (not tracked for rollback).
+
+            Every such node gets a vector; the shared lexical policy, which
+            rebuild_indexes() and single-file packs follow too, decides
+            whether it also gets a lexical document.
+            """
+            await write_queue.submit(
+                lambda: vector_index.index(node_id, vector_text, event.user_id),
+                label=f"vector.{kind}:{node_id}",
+            )
+            if has_lexical_document(node_type.value, derived=True):
+                await write_queue.submit(
+                    lambda: lexical_index.index(node_id, lexical_text, event.user_id,
+                                                node_type.value, node_scope.value),
+                    label=f"lexical.{kind}:{node_id}",
+                )
+
         # --- Entities ---
         for entity in _entities_with_unresolved_references(result):
             entity_scope = scope
@@ -670,16 +690,12 @@ class IngestionPipeline:
                 await graph_store.get_node(entity_id)
                 continue
 
-            # Index entity in vector store (not tracked for rollback)
+            # The entity's vector embeds its description too; its node
+            # content, and so any lexical document, is the name.
             entity_text = name
             if description:
                 entity_text = f"{name}: {description}"
-            await write_queue.submit(
-                lambda eid=entity_id, txt=entity_text, uid=event.user_id: (
-                    vector_index.index(eid, txt, uid)
-                ),
-                label=f"vector.entity:{entity_id}",
-            )
+            await index_new_node(entity_id, NodeType.ENTITY, entity_scope, entity_text, name, "entity")
 
         # Provider type labels for a pronoun can be absent or inconsistent.
         # When its name maps to exactly one event-local identity, register each
@@ -939,19 +955,7 @@ class IngestionPipeline:
                     provenance_event_id=event.id,
                 ))
 
-            # Index fact in vector and lexical stores (not tracked for rollback)
-            await write_queue.submit(
-                lambda fid=fact_node_id, fc=fact_content, uid=event.user_id: (
-                    vector_index.index(fid, fc, uid)
-                ),
-                label=f"vector.fact:{fact_node_id}",
-            )
-            await write_queue.submit(
-                lambda fid=fact_node_id, fc=fact_content, uid=event.user_id, nt=node_type.value, sc=fact_scope.value: (
-                    lexical_index.index(fid, fc, uid, nt, sc)
-                ),
-                label=f"lexical.fact:{fact_node_id}",
-            )
+            await index_new_node(fact_node_id, node_type, fact_scope, fact_content, fact_content, "fact")
 
     async def _publish_plan(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> None:
         """Stage saved inputs and publish once; never delete shared retry artifacts."""

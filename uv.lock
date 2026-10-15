@@ -2485,7 +2485,7 @@ requires-dist = [
     { name = "asyncpg", marker = "extra == 'postgres'", specifier = ">=0.29.0" },
     { name = "cryptography", specifier = ">=43.0" },
     { name = "dateparser", specifier = ">=1.2" },
-    { name = "duckdb", specifier = ">=1.2.0" },
+    { name = "duckdb", specifier = ">=1.4.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115" },
     { name = "fastembed", specifier = ">=0.7.4" },
     { name = "filelock", specifier = ">=3.16" },

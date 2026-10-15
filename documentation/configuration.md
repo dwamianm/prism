@@ -32,7 +32,11 @@ For store-only usage (no LLM), no configuration is needed.
 | `PRME_DB_PATH` | `./memory.duckdb` | DuckDB database file |
 | `PRME_VECTOR_PATH` | `./vectors.usearch` | usearch HNSW index file |
 | `PRME_LEXICAL_PATH` | `./lexical_index` | Tantivy full-text index directory |
+| `PRME_PACK_PATH` | `None` | Opt-in single-file pack, conventionally a `.prme` file: one DuckDB database that also holds the vector snapshot and the pack manifest, with the lexical index rebuilt in memory on open. When set, `PRME_DB_PATH`, `PRME_VECTOR_PATH` and `PRME_LEXICAL_PATH` are ignored. It cannot be combined with `PRME_DATABASE_URL`, and an empty value means unset. See [single-file packs](../docs/INTEGRATION.md#single-file-packs) |
 | `PRME_DATABASE_URL` | `None` | PostgreSQL URL (overrides DuckDB) |
+
+Without `PRME_PACK_PATH`, a local pack is the directory layout of the three
+paths above, which is the default.
 
 ## Embedding
 
@@ -158,8 +162,20 @@ decay and no folding), which stored receipts and configurations rely on.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PRME_ENCRYPTION_ENABLED` | `false` | Enable encryption at rest |
-| `PRME_ENCRYPTION_KEY` | `None` | Passphrase or Fernet key |
+| `PRME_ENCRYPTION_ENABLED` | `false` | Enable encryption at rest. Takes effect only with `PRME_ENCRYPTION_KEY` set |
+| `PRME_ENCRYPTION_KEY` | `None` | Passphrase or raw key. The `raw_key:` prefix marks a raw Fernet key and `passphrase:` forces derivation; an unprefixed 44-character url-safe base64 value is read as a raw Fernet key, and anything else as a passphrase |
+
+A directory pack uses Fernet file encryption. A single-file pack
+(`PRME_PACK_PATH`) uses DuckDB's native encryption instead: DuckDB encrypts the
+file and its write-ahead log with AES-256-GCM, and PRME turns on DuckDB's
+`temp_file_encryption`, which is off by default even for an encrypted
+database, with temporary files in `<pack>.tmp` beside the pack. For a
+single-file pack, a passphrase becomes the DuckDB key through
+PBKDF2-HMAC-SHA256 (600,000 iterations) with the fixed salt
+`prme-single-file-pack-v1`, so the same passphrase gives the same key for every
+pack; a raw key is used as given. A missing or wrong key, or encryption
+configured for an unencrypted pack, raises `EncryptionError` and leaves the
+file unchanged.
 
 See [Deployment](deployment.md#encryption-at-rest) for details.
 

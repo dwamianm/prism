@@ -62,15 +62,24 @@ Query → intent, entity, and time analysis
 - **Workspaces:** `MemoryWorkspace` manages named local packs or PostgreSQL
   schemas with identity checks and scoped leases.
 
-A local memory pack contains:
+A local memory pack is a directory by default, or one file when you opt in:
 
 ```text
-my_memories/
+my_memories/            # directory pack (the default)
 ├── memory.duckdb
 ├── vectors.usearch
 ├── lexical_index/
-└── manifest.json
+└── manifest.json       # only when encryption is on
+
+memories.prme           # single-file pack (opt-in)
 ```
+
+Giving `MemoryClient` a path that ends in `.prme`, or setting `PRME_PACK_PATH`,
+selects the single-file layout: one DuckDB file holds the event log, the graph,
+the vector snapshot and a pack manifest, and the lexical index is rebuilt in
+memory when the pack opens. `prme migrate` copies a directory pack into a new
+`.prme` file, and [single-file packs](docs/INTEGRATION.md#single-file-packs)
+covers encryption, compaction and how retrieval compares across the layouts.
 
 Search indexes can be regenerated from the durable graph with `prme rebuild`.
 Event time, ingestion time, and validity time remain distinct. The `knowledge_at`
@@ -167,13 +176,23 @@ prme init ./my_memories
 prme doctor ./my_memories
 prme search ./my_memories/memory.duckdb "Alice's preferences" --user-id alice
 prme organize ./my_memories/memory.duckdb --user-id alice
+prme compact ./my_memories/memory.duckdb
+prme migrate ./my_memories ./memories.prme
 ```
+
+`prme compact` rewrites a closed pack file to give back the space DuckDB never
+returns, and `prme migrate` copies a directory pack into a new single-file pack,
+leaving the directory in place. Every command that takes `memory.duckdb` also
+takes a `.prme` file, and `prme init ./memories.prme` creates one. See the
+[CLI reference](documentation/cli.md).
 
 For a local assistant, install the MCP extra and run with a fixed owner:
 
 ```bash
 PRME_MCP_USER_ID=alice prme-mcp --db-path ./my_memories
 ```
+
+`--db-path` also accepts a single-file pack, such as `./memories.prme`.
 
 The HTTP extra provides a FastAPI service via `python -m prme.api`, which binds to
 `127.0.0.1` and refuses a network bind without API credentials (see

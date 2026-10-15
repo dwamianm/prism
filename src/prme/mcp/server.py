@@ -1819,6 +1819,37 @@ mcp = create_mcp_server()
 # ---------------------------------------------------------------------------
 
 
+def _use_db_path(db_path: str) -> None:
+    """Point PRME's storage settings at the ``--db-path`` target.
+
+    A path ending in ``.prme`` that is not an existing directory is a
+    single-file pack: PRME_PACK_PATH names it and only its parent directory
+    is created, because the engine creates the file on first open.
+    PRME_DB_PATH, PRME_VECTOR_PATH and PRME_LEXICAL_PATH are left alone; a
+    pack path overrides them. PRME_DATABASE_URL is set empty, which means
+    unset, because a database URL cannot be combined with a pack path and
+    must not redirect the pack to PostgreSQL. Any other path is a pack
+    directory, created with its lexical index directory as before, and
+    PRME_PACK_PATH is set empty, which means unset and outranks a .env file,
+    so a pack path configured elsewhere cannot take the directory's place.
+    """
+    from prme.client import is_pack_file
+
+    target = os.path.abspath(db_path)
+    if is_pack_file(target):
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        os.environ["PRME_PACK_PATH"] = target
+        os.environ["PRME_DATABASE_URL"] = ""
+        return
+    os.makedirs(target, exist_ok=True)
+    lexical_dir = os.path.join(target, "lexical_index")
+    os.makedirs(lexical_dir, exist_ok=True)
+    os.environ["PRME_DB_PATH"] = os.path.join(target, "memory.duckdb")
+    os.environ["PRME_VECTOR_PATH"] = os.path.join(target, "vectors.usearch")
+    os.environ["PRME_LEXICAL_PATH"] = lexical_dir
+    os.environ["PRME_PACK_PATH"] = ""
+
+
 def main():
     """Run the PRME MCP server."""
     parser = argparse.ArgumentParser(
@@ -1828,7 +1859,10 @@ def main():
     parser.add_argument(
         "--db-path",
         default=None,
-        help="Path to the memory directory (default: current directory)",
+        help=(
+            "Path to the memory directory, or to a single-file pack ending in .prme "
+            "(default: current directory)"
+        ),
     )
     parser.add_argument(
         "--transport",
@@ -1840,13 +1874,7 @@ def main():
 
     # Configure PRME paths from --db-path
     if args.db_path:
-        db_dir = os.path.abspath(args.db_path)
-        os.makedirs(db_dir, exist_ok=True)
-        lexical_dir = os.path.join(db_dir, "lexical_index")
-        os.makedirs(lexical_dir, exist_ok=True)
-        os.environ["PRME_DB_PATH"] = os.path.join(db_dir, "memory.duckdb")
-        os.environ["PRME_VECTOR_PATH"] = os.path.join(db_dir, "vectors.usearch")
-        os.environ["PRME_LEXICAL_PATH"] = lexical_dir
+        _use_db_path(args.db_path)
 
     config = PRMEConfig()
     if args.transport == "sse":

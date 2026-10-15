@@ -121,13 +121,25 @@ Query → Analysis → Candidate Generation → Epistemic Filtering → Scoring 
 
 ### Memory Pack (portable artifact — DuckDB mode only)
 
-In DuckDB mode, all state lives in these files, copyable as a unit:
+In DuckDB mode, a pack is a directory by default, and all state lives in these files, copyable as a unit:
 
 | File | Backend | Purpose |
 |---|---|---|
 | `memory.duckdb` | EventStore + GraphStore | Event log, graph nodes/edges, operations |
 | `vectors.usearch` | VectorIndex | HNSW vector index |
 | `lexical_index/` | LexicalIndex | Tantivy full-text index directory |
+| `manifest.json` | Encryption | List of encrypted files and key derivation settings, written only when encryption is on |
+
+A single-file pack ([opt-in](#single-file-packs)) is one DuckDB file, conventionally ending in `.prme`. It holds the same durable tables as `memory.duckdb`; the derived indexes and the manifest move inside it:
+
+| In the `.prme` file | Backend | Purpose |
+|---|---|---|
+| Every table of `memory.duckdb` | EventStore + GraphStore + VectorIndex | Event log, graph nodes/edges, operations, and per-vector metadata and float payloads (`vector_metadata`, `vector_payloads`) |
+| `vector_snapshot` | VectorIndex | One row with the USearch snapshot (`data`), `ndim`, `vector_count` and `saved_at`, in place of `vectors.usearch` |
+| `prme_manifest` | MemoryEngine | One row describing the pack: `format_version` (currently 1), `prme_version`, `embedding_model`, `embedding_version`, `embedding_dim`, `scoring_version`, `created_at` and `updated_at` |
+| (none) | LexicalIndex | Tantivy index held in memory and rebuilt from active `nodes` on open, in place of `lexical_index/` |
+
+A single-file pack has no `manifest.json`; DuckDB encrypts the file itself when encryption is on.
 
 In PostgreSQL mode, all data lives in a single database. The memory pack portability story (RFC-0014) applies to DuckDB mode.
 
@@ -929,6 +941,10 @@ config = PRMEConfig(
     vector_path="./vectors.usearch",        # PRME_VECTOR_PATH
     lexical_path="./lexical_index",         # PRME_LEXICAL_PATH
 
+    # Single-file pack (opt-in; when set, the three paths above are ignored,
+    # and it cannot be combined with database_url). See "Single-file packs".
+    pack_path=None,                         # PRME_PACK_PATH
+
     # Nested configs (see below)
     embedding=EmbeddingConfig(...),
     extraction=ExtractionConfig(...),
@@ -959,6 +975,202 @@ config = PRMEConfig(
 
 **Environment variable prefix:** `PRME_`
 **Nested delimiter:** `__` (e.g., `PRME_EMBEDDING__DIMENSION=384`)
+
+### Single-file packs
+
+A local pack can also be one file. This layout is opt-in: directory packs remain
+the default, and their layout and behavior are unchanged. Give `MemoryClient` a
+path that ends in `.prme`, or set `pack_path` (`PRME_PACK_PATH`):
+
+```python
+from prme import MemoryClient, MemoryEngine, config_from_pack
+
+# A path ending in .prme opens a single-file pack, creating it if needed.
+with MemoryClient("./memories.prme") as client:
+    client.store("Alice prefers dark mode", user_id="alice")
+
+# The same pack through the async engine.
+config = config_from_pack("./memories.prme")  # PRMEConfig(pack_path=<absolute path>)
+assert config.single_file_pack
+engine = await MemoryEngine.create(config)
+```
+
+A `.prme` path that names an existing directory still opens as a directory pack,
+and `config_from_directory()` always selects one, even with `PRME_PACK_PATH`
+set. `config_from_pack()` creates the parent directory and ignores a
+`PRME_DATABASE_URL` from the environment; the file itself is created when an
+engine first opens it. While `pack_path` is set, `db_path`, `vector_path` and
+`lexical_path` are ignored, and combining it with `database_url` fails
+validation. An empty value, such as `PRME_PACK_PATH=`, means unset. The tables
+inside the file are listed under Memory Pack in
+[Section 2](#2-architecture-overview).
+
+On open, before it serves any read, the engine:
+
+1. Writes the `prme_manifest` row of a pack that has none, naming the embedding
+   model most of its stored vectors were built with, or the configured model
+   when it has no vectors. A reopen updates `prme_version` and `updated_at` only
+   when another PRME version first opens the pack, such as after an upgrade. It
+   logs a warning, without refusing to open, when the configured embedding
+   model's name or dimension differs from the recorded one.
+2. Loads the USearch index from the `vector_snapshot` row and reconciles it
+   against `vector_payloads` and `vector_metadata` exactly as it reconciles a
+   `vectors.usearch` file. When the row is missing, unreadable or inconsistent
+   with its recorded dimension or count, every vector is restored from its
+   payload.
+3. Builds the in-memory Tantivy index from active `nodes` with the same
+   documents, fields and `id` order as `prme rebuild`, which gives lexical
+   documents to the same nodes as the write path (see **Retrieval** below).
+   Engines in one process that open the same pack share this index: the first
+   one builds it, and it is dropped when the last one closes.
+
+The snapshot row is rewritten on close when the vector index changed, and after
+every `vector_save_interval` changes to the vector index, where an addition and
+a removal each count as one. Each save rewrites the whole snapshot (about
+168 MB per 100,000 384-dimension vectors), so a large index may want a rarer
+interval. A directory pack's `vectors.usearch` is also saved after every
+removal; the row is not, so archiving many nodes does not rewrite the snapshot
+once per node. A removal the row does not show yet survives a crash, because
+the next open drops snapshot keys whose vector metadata is gone. An open that
+only reads therefore leaves the file byte-identical, except that the first open
+after a session that added vectors moves the vector key sequence past them
+once; `retrieve()` saves its receipt, which is a write. `prme rebuild` rebuilds
+both indexes and records the rebuilding embedding model in the manifest. While
+a pack is open, DuckDB keeps `memories.prme.wal` beside it, and if DuckDB spills
+to disk, its temporary files go to a `memories.prme.tmp` directory beside it,
+for a plain and an encrypted pack alike. The pack is one file at rest, so copy
+it after its engine closes.
+
+**Encryption.** With `encryption_enabled=True` and an `encryption_key`, a
+single-file pack uses DuckDB's native encryption instead of Fernet file
+encryption. DuckDB encrypts the file and its write-ahead log with AES-256-GCM.
+It does not encrypt its temporary files by default, even for an encrypted
+database, so PRME turns on DuckDB's `temp_file_encryption` for an encrypted
+pack and sets its `temp_directory` to `memories.prme.tmp`. Stored text
+therefore does not appear in clear on disk while the engine runs.
+
+`encryption_key` takes the same forms as for a directory pack. A raw key, which
+is a 44-character url-safe base64 Fernet key or any value with the `raw_key:`
+prefix, reaches DuckDB as its 32 bytes in hex and does not depend on a salt.
+Any other value, or one with the `passphrase:` prefix, is a passphrase: PRME
+derives a 32-byte key from it with PBKDF2-HMAC-SHA256 (600,000 iterations) and
+the fixed, versioned salt `prme-single-file-pack-v1`. A per-pack salt cannot be
+stored inside a file that needs the key to open, so identical passphrases give
+identical keys across packs; each guess still costs the full iteration count.
+Use a strong passphrase, and do not reuse it across packs.
+
+An encrypted pack cannot be opened without its key. A missing key, a wrong
+key, or encryption configured for an unencrypted pack raises `EncryptionError`:
+the pack is neither opened nor encrypted, the file and any WAL beside it stay
+byte-identical, and the message never contains the key. An encrypted pack can
+be open in only one engine per process; a second open raises `PackInUseError`,
+whatever spelling of the path it uses. Engines that open the same plain pack in
+one process share one DuckDB instance and one in-memory lexical index, so a
+node stored through one engine is found by lexical search through the others
+at once, as engines on one directory pack share its on-disk index. This holds
+for `MemoryClient` objects too, although each runs its engine on its own event
+loop. The first engine's `lexical_commit_interval` and
+`lexical_commit_max_delay_s` apply to the shared index. Each engine still keeps
+its own vector index, so vector search through one engine finds a vector added
+through another only after it reopens the pack, as on a directory pack.
+`engine.lock()` and `engine.unlock()`
+belong to Fernet directory packs and raise `RuntimeError` for a single-file
+pack.
+
+**Compaction.** DuckDB never shrinks a database file: deleted rows and replaced
+snapshot rows leave free blocks behind. `prme compact ./memories.prme` copies
+the pack with `COPY FROM DATABASE` into a fresh hidden file beside it, keeping
+its storage version and, for an encrypted pack, its key and cipher, then
+replaces the original with one rename and reports the size before and after. A
+failure leaves the original untouched. Through a symbolic link, the file the
+link names is compacted and the link stays, and the new file keeps the pack's
+permission bits. Close the pack first: compaction refuses
+a pack with `memories.prme.wal` beside it, DuckDB's file lock refuses one that
+another process has open, and in the same process every engine that uses it
+must be closed. Rows, node IDs and vector keys do not change, so
+`prme compact ./my_memories/memory.duckdb` compacts a directory pack's database
+too. On a copy of a LoCoMo benchmark pack measured on 2026-10-14, compaction
+took a 743.5 MiB `memory.duckdb` to 510.5 MiB in 1.0 s, with identical
+retrieval results. The live data is about 510 MiB, of which 492.7 MiB is 404
+stored retrieval receipts (`RETRIEVAL_REQUEST` rows in `operations.payload`, up
+to 2.4 MiB each). How large stored receipts should be is a separate matter.
+
+**Migration.** `prme migrate ./my_memories ./memories.prme` copies a directory
+pack into a new single-file pack and leaves the directory in place. The new
+name must end in `.prme`, and migration never overwrites an existing file. The
+directory pack is opened once with an engine and copied through that engine's
+connection, so a legacy Fernet-encrypted directory pack migrates with its key
+and is encrypted again when that engine closes. The copy is built in a hidden
+temporary file, opened once as a single-file pack to write its vector snapshot
+and manifest, checked for both, and only then moved into place, so a failure
+never leaves a partial pack. With a key, the new pack is encrypted natively
+under that key, even when the directory pack was not encrypted; without one,
+it is not encrypted. The LoCoMo benchmark pack above, with 1,413 nodes, 556
+edges, 419 events and 1,413 vectors, migrated into a 521.5 MiB `.prme` file in
+1.4 s. Directory packs keep opening as before, so migration is never required.
+
+**Retrieval.** A single-file pack is searched with the same indexes, scoring
+and packing as a directory pack, and vector hits are identical. The write
+path, `prme rebuild` and the open of a single-file pack give lexical documents
+to the same nodes (`has_lexical_document` in `prme.storage.lexical_index`):
+every active node with content gets one, except an entity node that
+extraction created, which gets only a vector. An entity stored directly with
+`store()` gets both. A reopen therefore keeps the lexical documents of a
+single-file pack's active nodes, and a pack migrated from a directory pack
+built with `ingest()` holds the same documents as its source:
+the LoCoMo source above held 827 of its 1,413 active nodes in its Tantivy
+index, and so does the migrated pack. Because `prme rebuild` follows the same
+rule, rebuilding a pack built with `ingest()`, a directory pack included, no
+longer adds lexical documents for its extracted entities, which keep their
+vectors. BM25 results can still differ in two cases:
+
+1. A reopen drops Tantivy's deleted-document markers from nodes archived or
+   superseded during the session, and the documents of nodes that `ingest()`
+   superseded, such as an earlier copy of a repeated claim, which stay in the
+   index until the `index_compaction` organizer job removes them. Either can
+   move BM25 scores slightly.
+2. Tied BM25 scores can come back in a different order than from a directory
+   index, even one just rebuilt with `prme rebuild`, and `lexical_k` cuts
+   candidates in Tantivy's order, so a tie can reach the final ranks. Two opens
+   of the same `.prme` file give the same order.
+
+Directory-pack retrieval is unchanged, except after `prme rebuild` on a pack
+built with `ingest()`: on the LoCoMo half of the offline evidence gate (1,540
+questions), contexts from directory packs were byte-identical with and without
+single-file pack support. That gate ran before the lexical policy above was
+shared. The LongMemEval-S half could not be run, because its saved control
+captures were not present on the machine that ran the gate. See the
+[RFC-0014 amendment](RFC-0014-Portability-Sync-and-Federation.md#single-file-pack-amendment-2026-10-14)
+for details.
+
+**Tools.** Every `prme` command that takes a `db_path` also opens a `.prme`
+file, among them `prme rebuild`, `prme export` and `prme info`.
+`prme init ./memories.prme` creates exactly that one file, encrypted when
+encryption is configured, and writes no `.env.example` beside it; it prints a
+hint instead. `prme doctor ./memories.prme` checks the file, its required
+tables and its manifest, and warns about a WAL beside it and about a missing or
+stale vector snapshot. `prme doctor`, `prme compact` and `prme migrate` take
+`--encryption-key KEY`, where an empty value means no key. Without it, for a
+`.prme` pack, they use `PRME_ENCRYPTION_KEY` when `PRME_ENCRYPTION_ENABLED` is
+true, which is where `prme info` and the other commands always read the key;
+they read only those two settings, from the environment or a `.env` file. A
+directory pack's `memory.duckdb` never takes them, because for a directory pack
+they configure Fernet file encryption. See the
+[CLI reference](../documentation/cli.md).
+
+`prme-mcp --db-path ./memories.prme` serves a single-file pack by setting
+`PRME_PACK_PATH`, and sets `PRME_DATABASE_URL` to an empty value so a database
+URL from the environment cannot redirect it; given a directory, it sets
+`PRME_PACK_PATH` to an empty value, so a pack path from the environment or a
+`.env` file cannot take the directory's place. `MemoryWorkspace(..., single_file_packs=True)`, which
+`MemoryWorkspace.open()` also accepts, keeps each namespace's pack in one
+`memory.prme` file. The registry does not record the layout, so pass the same
+setting every time the workspace opens; an initialized namespace whose pack is
+missing in the requested layout is refused rather than recreated. In the
+directory layout, a `pack_path` in the workspace configuration is cleared for
+every namespace. `prme.client.is_pack_file(path)` reports whether a path
+selects a single-file pack. Native encryption needs DuckDB 1.4.0 or later, and
+PRME requires `duckdb>=1.4.0`.
 
 ### EmbeddingConfig
 
@@ -1763,7 +1975,7 @@ config = PRMEConfig(database_url="postgresql://user:pass@host:5432/dbname")
 config = PRMEConfig()  # auto-reads PRME_DATABASE_URL
 ```
 
-When `database_url` is set, `config.backend` returns `"postgres"` and all file-path settings (`db_path`, `vector_path`, `lexical_path`) are ignored.
+When `database_url` is set, `config.backend` returns `"postgres"` and all file-path settings (`db_path`, `vector_path`, `lexical_path`) are ignored. The single-file `pack_path` setting is the exception: combining it with `database_url` fails validation.
 
 ### Schema
 

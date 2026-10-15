@@ -4,9 +4,14 @@ Provides command-line tools for inspecting, querying, and managing
 memory packs. Uses argparse (no external dependencies) and handles
 async engine lifecycle internally.
 
+Every command that takes <db_path> accepts a directory pack's DuckDB file
+(memory.duckdb) or a single-file pack (a file ending in .prme).
+
 Commands:
-    prme init [directory]    -- Initialize a new memory directory
-    prme doctor [directory]  -- Check memory pack health
+    prme init [path]         -- Initialize a memory directory or a .prme pack
+    prme doctor [path]       -- Check memory pack health
+    prme compact <pack>      -- Rewrite a closed pack file to give back space
+    prme migrate <dir> <pack.prme> -- Copy a directory pack into a .prme pack
     prme config-audit        -- Inspect provisional configuration policies
     prme info <db_path>      -- Show memory pack info
     prme nodes <db_path>     -- List nodes with filters
@@ -49,14 +54,23 @@ from prme.types import EdgeType, LifecycleState, NodeType, Scope
 # ---------------------------------------------------------------------------
 
 
+def _single_file_config(path: str) -> PRMEConfig:
+    """Configure an engine for the single-file pack at absolute *path*."""
+    # As for a directory pack below, the positional path is the command's
+    # target: an ambient database_url must not redirect it to PostgreSQL.
+    return PRMEConfig(database_url=None, pack_path=path)
+
+
 async def _create_engine(db_path: str) -> Any:
     """Create a MemoryEngine from a database path.
 
-    Resolves the db_path to an absolute path and configures the engine
-    with collocated vector/lexical index paths.
+    Resolves the db_path to an absolute path. A path ending in ``.prme``
+    that is not a directory opens a single-file pack; any other path is a
+    directory pack's DuckDB file, with its vector and lexical indexes beside
+    it.
 
     Args:
-        db_path: Path to the DuckDB database file.
+        db_path: Path to the DuckDB database file or the single-file pack.
 
     Returns:
         An initialized MemoryEngine.
@@ -64,6 +78,7 @@ async def _create_engine(db_path: str) -> Any:
     Raises:
         SystemExit: If the database file does not exist.
     """
+    from prme.client import is_pack_file
     from prme.storage.engine import MemoryEngine
 
     abs_path = os.path.abspath(db_path)
@@ -71,11 +86,16 @@ async def _create_engine(db_path: str) -> Any:
         print(f"Error: database file not found: {abs_path}", file=sys.stderr)
         sys.exit(1)
 
+    if is_pack_file(abs_path):
+        return await MemoryEngine.create(_single_file_config(abs_path))
+
     db_dir = os.path.dirname(abs_path)
     config = PRMEConfig(
         # A positional local artifact is the command's target. Ambient settings
-        # must not silently redirect inspection or maintenance to PostgreSQL.
+        # must not silently redirect inspection or maintenance to PostgreSQL
+        # or to a single-file pack.
         database_url=None,
+        pack_path=None,
         db_path=abs_path,
         vector_path=os.path.join(db_dir, "vectors.usearch"),
         lexical_path=os.path.join(db_dir, "lexical_index"),
@@ -724,13 +744,97 @@ async def cmd_export(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Pack file maintenance commands
+# ---------------------------------------------------------------------------
+
+
+async def cmd_compact(args: argparse.Namespace) -> None:
+    """Rewrite a closed pack file into a fresh copy that holds only live data."""
+    from prme.storage.pack_tools import compact_pack
+
+    # Runs on this thread, so an interrupt reaches the cleanup of its copy.
+    result = compact_pack(args.pack, encryption_key=_encryption_key(args, args.pack))
+    if args.format == "json":
+        print(json.dumps(result, indent=2))
+    else:
+        print(f"Compacted memory pack: {result['path']}")
+        print(f"  Size before:  {result['bytes_before']:,} bytes")
+        print(f"  Size after:   {result['bytes_after']:,} bytes")
+
+
+async def cmd_migrate(args: argparse.Namespace) -> None:
+    """Copy a directory pack into a new single-file pack."""
+    from prme.client import PACK_SUFFIX
+    from prme.storage.pack_tools import migrate_directory_pack
+
+    if not args.pack.endswith(PACK_SUFFIX):
+        # Only a .prme name opens as a single-file pack in MemoryClient and
+        # in these commands; any other name would open as a directory pack.
+        print(f"Error: the new pack's name must end in {PACK_SUFFIX}: {args.pack}", file=sys.stderr)
+        sys.exit(1)
+    result = await migrate_directory_pack(
+        args.directory, args.pack, encryption_key=_encryption_key(args, args.pack),
+    )
+    if args.format == "json":
+        print(json.dumps(result, indent=2))
+    else:
+        print(f"Migrated memory pack: {result['source']}")
+        print(f"  New pack:      {result['destination']}")
+        print(f"  Nodes:         {result['nodes']}")
+        print(f"  Edges:         {result['edges']}")
+        print(f"  Events:        {result['events']}")
+        print(f"  Vectors:       {result['vectors']}")
+        print(f"  Size before:   {result['bytes_before']:,} bytes (directory pack files)")
+        print(f"  Size after:    {result['bytes_after']:,} bytes")
+        print(f"  Encrypted:     {'yes' if result['encrypted'] else 'no'}")
+        print("  The directory pack was left in place.")
+
+
+# ---------------------------------------------------------------------------
 # Init and Doctor commands
 # ---------------------------------------------------------------------------
 
 
+async def _init_pack_file(path: str) -> None:
+    """Create the single-file pack at absolute *path*, or check an existing one."""
+    from prme.storage.engine import MemoryEngine
+
+    # One open and close writes the schema, the vector snapshot and the
+    # manifest into a new file. An existing pack is opened and checked; a
+    # file that is not a pack fails to open and is left as it is.
+    engine = await MemoryEngine.create(_single_file_config(path))
+    await engine.close()
+
+    # No .env.example is written for a single-file pack. The pack is meant to
+    # be one file that can be copied on its own; a sidecar file would break
+    # that, would collide when several packs share a directory, and would not
+    # be read from there anyway, because settings come from the environment
+    # and from a .env file in the working directory. A hint is printed instead.
+    print(f"Initialized PRME memory pack: {path}")
+    print()
+    print("  File:")
+    print(f"    Pack:        {path}")
+    print()
+    print("  Next steps:")
+    print("    1. Configure PRME with PRME_ environment variables or a .env file in the")
+    print("       directory you run from (prme init <directory> writes an annotated")
+    print("       .env.example to start from)")
+    print("    2. Use PRME in your code:")
+    print()
+    print("       from prme import MemoryClient")
+    print()
+    print(f'       with MemoryClient("{path}") as client:')
+    print('           client.store("hello world", user_id="me")')
+    print()
+
+
 async def cmd_init(args: argparse.Namespace) -> None:
-    """Initialize a new memory directory."""
-    from prme.client import config_from_directory
+    """Initialize a new memory directory or single-file pack."""
+    from prme.client import is_pack_file, config_from_directory
+
+    if is_pack_file(args.directory):
+        await _init_pack_file(os.path.abspath(args.directory))
+        return
 
     directory = os.path.abspath(args.directory)
     config = config_from_directory(directory)
@@ -850,9 +954,106 @@ async def _verify_extraction_provider(
     return False, f"{provider} verification failed (HTTP {response.status_code})"
 
 
+def _encryption_key(args: argparse.Namespace, target: str) -> str | None:
+    """Return the key for the encrypted pack *target* named on the command line.
+
+    ``--encryption-key`` wins, and an empty one means no key. Otherwise, when
+    *target* is a single-file pack, PRME_ENCRYPTION_KEY applies when
+    PRME_ENCRYPTION_ENABLED is true, as when an engine opens the pack, so the
+    key can stay out of the command line. A directory pack's memory.duckdb
+    never takes it, because there it configures file-level encryption, not
+    DuckDB's. Only those two settings are read, from the environment and
+    then from a .env file in the working directory, so an invalid setting
+    elsewhere does not stop the command.
+    """
+    explicit = getattr(args, "encryption_key", None)
+    if explicit is not None:
+        return explicit or None
+    from prme.client import is_pack_file
+
+    if not is_pack_file(target):
+        return None
+    from dotenv import dotenv_values
+
+    # PRME settings are case-insensitive, and the environment outranks .env.
+    settings = {name.upper(): value for name, value in dotenv_values(".env").items()}
+    settings.update((name.upper(), value) for name, value in os.environ.items())
+    # The values a PRMEConfig boolean reads as true.
+    enabled = (settings.get("PRME_ENCRYPTION_ENABLED") or "").lower() in {"1", "on", "t", "true", "y", "yes"}
+    key = settings.get("PRME_ENCRYPTION_KEY") or ""
+    return key if enabled and key else None
+
+
+def _check_pack_file(path: str, encryption_key: str | None, ok, warn, fail) -> None:
+    """Run the storage checks of ``prme doctor`` on a single-file pack."""
+    from contextlib import ExitStack
+
+    from prme.storage.pack_tools import open_pack_read_only
+
+    if not os.path.isfile(path):
+        fail(f"Memory pack file not found: {path}")
+        print(f"\n  Run 'prme init {path}' to create it.")
+        sys.exit(1)
+    ok(f"Memory pack file exists ({os.path.getsize(path):,} bytes)")
+    # DuckDB keeps the log beside the real file, which an engine opens.
+    if os.path.lexists(os.path.realpath(path) + ".wal"):
+        warn("Write-ahead log present: the pack is open elsewhere or was not closed cleanly")
+
+    with ExitStack() as stack:
+        try:
+            conn = stack.enter_context(open_pack_read_only(path, encryption_key=encryption_key))
+        except Exception as e:
+            fail(f"DuckDB cannot open: {e}")
+            return
+        tables = {row[0] for row in conn.execute("SHOW TABLES").fetchall()}
+        missing = [name for name in ("events", "nodes", "prme_manifest", "vector_snapshot")
+                   if name not in tables]
+        if missing:
+            fail(f"DuckDB schema incomplete (missing: {', '.join(missing)})")
+            return
+        (encrypted,) = conn.execute(
+            "SELECT encrypted FROM duckdb_databases() WHERE database_name = current_database()"
+        ).fetchone()
+        ok(f"DuckDB database valid ({len(tables)} tables{', encrypted' if encrypted else ''})")
+
+        manifest = conn.execute(
+            "SELECT format_version, prme_version, embedding_model, embedding_version, "
+            "embedding_dim, created_at, updated_at FROM prme_manifest WHERE singleton"
+        ).fetchone()
+        if manifest is None:
+            warn("Pack manifest missing (it will be written on the next open)")
+        else:
+            format_version, prme_version, model, model_version, dimension, created, updated = manifest
+            ok("Pack manifest present")
+            print(f"           Format version:   {format_version}")
+            print(f"           PRME version:     {prme_version}")
+            print(f"           Embedding model:  {model} (version {model_version}, {dimension} dimensions)")
+            print(f"           Created:          {created.isoformat(timespec='seconds')}")
+            print(f"           Updated:          {updated.isoformat(timespec='seconds')}")
+
+        snapshot = conn.execute(
+            "SELECT vector_count, octet_length(data) FROM vector_snapshot WHERE singleton"
+        ).fetchone()
+        if snapshot is None:
+            warn("Vector snapshot missing (it will be rebuilt from vector payloads on open)")
+            return
+        stored, size = snapshot
+        if {"vector_metadata", "vector_payloads"} <= tables:
+            (expected,) = conn.execute(
+                "SELECT count(*) FROM vector_metadata JOIN vector_payloads USING (vector_key)"
+            ).fetchone()
+            if stored != expected:
+                warn(f"Vector snapshot holds {stored} vectors but the pack has {expected} "
+                     "(it will be reconciled on open)")
+                return
+        ok(f"Vector snapshot stored ({stored} vectors, {size:,} bytes)")
+
+
 async def cmd_doctor(args: argparse.Namespace) -> None:
     """Check memory pack health."""
     import duckdb as _duckdb
+
+    from prme.client import is_pack_file
 
     directory = os.path.abspath(args.directory)
     db_path = os.path.join(directory, "memory.duckdb")
@@ -881,41 +1082,45 @@ async def cmd_doctor(args: argparse.Namespace) -> None:
     print(f"Checking memory pack: {directory}")
     print()
 
-    # 1. Directory exists
-    if os.path.isdir(directory):
-        ok("Memory directory exists")
+    if is_pack_file(directory):
+        # 1-4. A single-file pack holds its indexes and manifest in one file.
+        _check_pack_file(directory, _encryption_key(args, directory), ok, warn, fail)
     else:
-        fail(f"Memory directory not found: {directory}")
-        print(f"\n  Run 'prme init {directory}' to create it.")
-        sys.exit(1)
+        # 1. Directory exists
+        if os.path.isdir(directory):
+            ok("Memory directory exists")
+        else:
+            fail(f"Memory directory not found: {directory}")
+            print(f"\n  Run 'prme init {directory}' to create it.")
+            sys.exit(1)
 
-    # 2. DuckDB file
-    if os.path.exists(db_path):
-        try:
-            conn = _duckdb.connect(db_path, read_only=True)
-            tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
-            conn.close()
-            if "events" in tables and "nodes" in tables:
-                ok(f"DuckDB database valid ({len(tables)} tables)")
-            else:
-                fail(f"DuckDB schema incomplete (tables: {tables})")
-        except Exception as e:
-            fail(f"DuckDB cannot open: {e}")
-    else:
-        warn("DuckDB file not found (will be created on first use)")
+        # 2. DuckDB file
+        if os.path.exists(db_path):
+            try:
+                conn = _duckdb.connect(db_path, read_only=True)
+                tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
+                conn.close()
+                if "events" in tables and "nodes" in tables:
+                    ok(f"DuckDB database valid ({len(tables)} tables)")
+                else:
+                    fail(f"DuckDB schema incomplete (tables: {tables})")
+            except Exception as e:
+                fail(f"DuckDB cannot open: {e}")
+        else:
+            warn("DuckDB file not found (will be created on first use)")
 
-    # 3. Vector index
-    if os.path.exists(vector_path):
-        size = os.path.getsize(vector_path)
-        ok(f"Vector index exists ({size:,} bytes)")
-    else:
-        warn("Vector index not found (will be created on first use)")
+        # 3. Vector index
+        if os.path.exists(vector_path):
+            size = os.path.getsize(vector_path)
+            ok(f"Vector index exists ({size:,} bytes)")
+        else:
+            warn("Vector index not found (will be created on first use)")
 
-    # 4. Lexical index
-    if os.path.isdir(lexical_path) and os.listdir(lexical_path):
-        ok("Lexical index exists")
-    else:
-        warn("Lexical index not found (will be created on first use)")
+        # 4. Lexical index
+        if os.path.isdir(lexical_path) and os.listdir(lexical_path):
+            ok("Lexical index exists")
+        else:
+            warn("Lexical index not found (will be created on first use)")
 
     # 5. LLM provider (advisory)
     from dotenv import dotenv_values
@@ -1031,9 +1236,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
+    db_path_help = "Path to a directory pack's DuckDB file (memory.duckdb) or a single-file pack (.prme)"
+    encryption_key_help = (
+        "Key of an encrypted pack, in any form PRME_ENCRYPTION_KEY takes; an empty "
+        "key means none (default for a .prme pack: PRME_ENCRYPTION_KEY when "
+        "PRME_ENCRYPTION_ENABLED is true)"
+    )
+
     # Common arguments factory
     def add_common(sub: argparse.ArgumentParser) -> None:
-        sub.add_argument("db_path", help="Path to DuckDB database file")
+        sub.add_argument("db_path", help=db_path_help)
         sub.add_argument(
             "--format",
             choices=["table", "json"],
@@ -1191,18 +1403,63 @@ def build_parser() -> argparse.ArgumentParser:
 
     # export
     p_export = subparsers.add_parser("export", help="Export memory pack as JSON")
-    p_export.add_argument("db_path", help="Path to DuckDB database file")
+    p_export.add_argument("db_path", help=db_path_help)
     p_export.set_defaults(func=cmd_export)
+
+    # compact
+    p_compact = subparsers.add_parser(
+        "compact",
+        help="Rewrite a closed pack file into a fresh copy that holds only live data",
+    )
+    p_compact.add_argument(
+        "pack",
+        help="Single-file pack (.prme) or directory pack DuckDB file (memory.duckdb) to compact",
+    )
+    p_compact.add_argument("--encryption-key", help=encryption_key_help)
+    p_compact.add_argument(
+        "--format",
+        choices=["table", "json"],
+        default="table",
+        help="Output format (default: table)",
+    )
+    p_compact.set_defaults(func=cmd_compact)
+
+    # migrate
+    p_migrate = subparsers.add_parser(
+        "migrate",
+        help="Copy a directory pack into a new single-file pack, leaving the directory in place",
+    )
+    p_migrate.add_argument("directory", help="Memory directory to copy")
+    p_migrate.add_argument("pack", help="New single-file pack to create; must end in .prme and not exist")
+    p_migrate.add_argument(
+        "--encryption-key",
+        help=(
+            "Key of an encrypted directory pack, in any form PRME_ENCRYPTION_KEY takes; "
+            "the new pack is encrypted with it whenever a key is given "
+            "(default: PRME_ENCRYPTION_KEY when PRME_ENCRYPTION_ENABLED is true)"
+        ),
+    )
+    p_migrate.add_argument(
+        "--format",
+        choices=["table", "json"],
+        default="table",
+        help="Output format (default: table)",
+    )
+    p_migrate.set_defaults(func=cmd_migrate)
 
     # init
     p_init = subparsers.add_parser(
-        "init", help="Initialize a new memory directory"
+        "init", help="Initialize a new memory directory or single-file pack"
     )
     p_init.add_argument(
         "directory",
         nargs="?",
         default=".",
-        help="Directory to initialize (default: current directory)",
+        metavar="path",
+        help=(
+            "Directory to initialize, or a single-file pack to create when the "
+            "path ends in .prme (default: current directory)"
+        ),
     )
     p_init.set_defaults(func=cmd_init)
 
@@ -1214,8 +1471,13 @@ def build_parser() -> argparse.ArgumentParser:
         "directory",
         nargs="?",
         default=".",
-        help="Memory directory to check (default: current directory)",
+        metavar="path",
+        help=(
+            "Memory directory, or single-file pack ending in .prme, to check "
+            "(default: current directory)"
+        ),
     )
+    p_doctor.add_argument("--encryption-key", help=encryption_key_help)
     p_doctor.add_argument(
         "--verify-extraction",
         action="store_true",
