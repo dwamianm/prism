@@ -117,6 +117,124 @@ class ExtractionConfig(_ProjectSettings):
     }
 
 
+class VisionConfig(_ProjectSettings):
+    """Visual memory: images and video as observation events (RFC-0018, phase 1).
+
+    ``observe()`` and ``prme observe`` turn a photo or a saved video into
+    keyframes, ask a local vision model for a facts-first description of each,
+    and admit every description as an ordinary event with the capture clock as
+    its ``event_time``. Everything here is off by default: a pack that never
+    observes is byte for byte what it is without this configuration.
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description=(
+            "Allow observe() to describe images and video with a vision model. "
+            "Off by default; observe() raises VisionDisabledError until it is on. "
+            "prme observe turns it on for its own run."
+        ),
+    )
+    provider: str = Field(
+        default="ollama",
+        description="Vision provider. 'ollama' (a local server by default) is the only one in this release.",
+    )
+    model: str = Field(
+        default="qwen3.5:9b",
+        description="Vision model that describes each keyframe; recorded on every observation",
+    )
+    base_url: str | None = Field(
+        default=None,
+        description="Vision endpoint; None uses OLLAMA_HOST or http://127.0.0.1:11434",
+    )
+    timeout: float = Field(
+        default=180.0, gt=0, allow_inf_nan=False,
+        description="Seconds per description call",
+    )
+    describe_prompt_version: Literal[2] = Field(
+        default=2,
+        description=(
+            "Version of the description prompt, recorded on every observation. "
+            "Version 2 (facts-first: a scene line, then one standalone sentence per "
+            "fact with visible text quoted verbatim) is the only one implemented; "
+            "the narrated version 1 of the spike produced no whiteboard facts."
+        ),
+    )
+    extract: bool = Field(
+        default=True,
+        description=(
+            "[HYPOTHESIS] Admit each description with ingest() (extraction, entity "
+            "and fact nodes, supersedence between dated values) rather than store() "
+            "(one note per keyframe). With ingest() the description text goes to "
+            "the configured extraction provider (PRME_EXTRACTION_*), which may be "
+            "a hosted API; the vision model itself runs locally. The spike found no "
+            "answer-accuracy difference on a 17 event pack and about a 250x "
+            "admission cost difference; the default keeps the graph structure "
+            "until a larger benchmark decides."
+        ),
+    )
+    extraction_retry_delays: list[float] = Field(
+        default=[5.0, 15.0, 60.0],
+        description=(
+            "Seconds to wait before each retry of a failed extraction during "
+            "observe(); one failure leaves every later observation in the "
+            "session pending, so the failed one is retried before going on"
+        ),
+    )
+    fps: float = Field(
+        default=1.0, gt=0, allow_inf_nan=False,
+        description="Frames sampled per second of video before keyframe selection",
+    )
+    frame_width: int = Field(
+        default=1280, ge=64,
+        description="Width in pixels that video frames are decoded at (height keeps the aspect ratio)",
+    )
+    change_threshold: float = Field(
+        default=0.55, ge=0.0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] Keyframe pixel-change score at or above which a frame "
+            "starts a new keyframe. On the spike corpus a same-layout slide whose "
+            "text changed scored about 0.7, any other scene change above 2.3, "
+            "camera shake and exposure noise at most 0.37"
+        ),
+    )
+    max_gap_seconds: float = Field(
+        default=30.0, gt=0, allow_inf_nan=False,
+        description="A keyframe is kept at least this often regardless of change (heartbeat)",
+    )
+    repeat_similarity: float = Field(
+        default=0.93, ge=0.0, le=1.0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] A described frame whose quoted text is the same set as "
+            "the previous kept frame's, and whose description embedding has at "
+            "least this cosine similarity to it, is dropped as a repeat"
+        ),
+    )
+    thumbnail_width: int = Field(
+        default=320, ge=16,
+        description="Width in pixels of the evidence thumbnail kept for each observation",
+    )
+    keep_thumbnails: bool = Field(
+        default=True,
+        description=(
+            "Keep a JPEG thumbnail of each observed keyframe in the pack's blobs "
+            "table, keyed frames/<frame sha256>.jpg, so a fact can show the frame "
+            "it came from. Raw media always stays outside the pack"
+        ),
+    )
+
+    @field_validator("extraction_retry_delays")
+    @classmethod
+    def validate_retry_delays(cls, value: list[float]) -> list[float]:
+        if any(delay < 0 for delay in value):
+            raise ValueError("extraction_retry_delays must not be negative")
+        return value
+
+    model_config = {
+        "env_prefix": "PRME_VISION_",
+    }
+
+
 class EmbeddingConfig(_ProjectSettings):
     """Configuration for the embedding provider."""
 
@@ -507,6 +625,11 @@ class PRMEConfig(_ProjectSettings):
         description="Self-organizing memory configuration (RFC-0015)",
     )
     mcp: MCPConfig = Field(default_factory=MCPConfig)
+
+    vision: VisionConfig = Field(
+        default_factory=VisionConfig,
+        description="Visual memory from images and video (RFC-0018); off by default",
+    )
 
     api: APIConfig = Field(
         default_factory=APIConfig,

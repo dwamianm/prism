@@ -130,6 +130,8 @@ In DuckDB mode, a pack is a directory by default, and all state lives in these f
 | `lexical_index/` | LexicalIndex | Tantivy full-text index directory |
 | `manifest.json` | Encryption | List of encrypted files and key derivation settings, written only when encryption is on |
 
+A pack that has observed images or video ([RFC-0018](RFC-0018-Visual-Memory.md)) also holds a `blobs` table inside `memory.duckdb` with one JPEG thumbnail per observed keyframe, keyed `frames/<frame sha256>.jpg`. It is created on first use, so a pack that never observes has no such table; it inherits the file's encryption, is copied by `prme migrate` and `prme compact`, and is left alone by `prme rebuild`.
+
 A single-file pack ([opt-in](#single-file-packs)) is one DuckDB file, conventionally ending in `.prme`. It holds the same durable tables as `memory.duckdb`; the derived indexes and the manifest move inside it:
 
 | In the `.prme` file | Backend | Purpose |
@@ -137,6 +139,7 @@ A single-file pack ([opt-in](#single-file-packs)) is one DuckDB file, convention
 | Every table of `memory.duckdb` | EventStore + GraphStore + VectorIndex | Event log, graph nodes/edges, operations, and per-vector metadata and float payloads (`vector_metadata`, `vector_payloads`) |
 | `vector_snapshot` | VectorIndex | One row with the USearch snapshot (`data`), `ndim`, `vector_count` and `saved_at`, in place of `vectors.usearch` |
 | `prme_manifest` | MemoryEngine | One row describing the pack: `format_version` (currently 1), `prme_version`, `embedding_model`, `embedding_version`, `embedding_dim`, `scoring_version`, `created_at` and `updated_at` |
+| `blobs` (only after `observe()`) | MemoryEngine | Observation thumbnails, keyed `frames/<frame sha256>.jpg`, as in a directory pack's `memory.duckdb` |
 | (none) | LexicalIndex | Tantivy index held in memory and rebuilt from active `nodes` on open, in place of `lexical_index/` |
 
 A single-file pack has no `manifest.json`; DuckDB encrypts the file itself when encryption is on.
@@ -417,6 +420,66 @@ async def ingest_batch(
 Ingest multiple messages sequentially (preserves conversation order). Each dict must have `"content"` and `"role"` keys, with optional `"speaker"`, `"first_person_owner"`, `"metadata"` and `"event_time"`. Every attribution is checked before the first message is admitted.
 
 **Returns:** `list[str]` — Event IDs, one per message.
+
+---
+
+#### `engine.observe()`
+
+```python
+async def observe(
+    self,
+    source: str | os.PathLike[str] | bytes,
+    *,
+    user_id: str,
+    captured_at: datetime | None = None,
+    source_name: str | None = None,
+    session_id: str | None = None,
+    metadata: dict | None = None,
+    scope: Scope = Scope.PERSONAL,
+) -> list[str]
+```
+
+Remember what a photo or a saved video showed ([RFC-0018](RFC-0018-Visual-Memory.md),
+phase 1). Needs `vision.enabled` (`PRME_VISION__ENABLED=true`), a vision model
+the configured provider can reach (a local Ollama server serving `qwen3.5:9b`
+by default) and, for video, `ffmpeg` on the path. A photo becomes one
+observation event; a video becomes one per keyframe that changed (pixel change,
+or a heartbeat every `max_gap_seconds`) and whose description does not repeat
+the previous kept frame's. Each event has role `tool`, the capture clock as
+`event_time` (`captured_at`, else the photo's EXIF time or the video's container
+time, else the file time; a video frame adds its offset), session
+`video:<file>` or `photo:<file>` unless `session_id` is given, and metadata:
+`modality` (`photo` or `video_frame`), `source_file`, `source_path`,
+`source_sha256`, `frame_index`, `frame_time_s`, `frame_sha256`, `thumbnail`
+(the blob key `frames/<frame sha256>.jpg`, or `None` without thumbnails),
+`vision_model`, `describe_prompt_version` and `capture_clock` (`given`, `exif`,
+`container`, `file` or `now`). Caller `metadata` is kept under its own keys;
+those names are reserved. With `vision.extract` (the default) the description
+goes through `ingest()` with extraction, and a failed extraction is retried
+before the next frame; otherwise through `store()`. With extraction, the
+description text goes to the configured extraction provider
+(`PRME_EXTRACTION_*`), which may be a hosted API; the vision model itself runs
+locally by default. A frame already observed for `user_id` in that scope by the
+same model and prompt (found by the source file's hash and the frame time) is
+skipped, and its stored description seeds the repeat filter, so observing the
+same file twice adds nothing. Raises `prme.vision.VisionDisabledError` while
+vision is off, `UnsupportedSourceError` for a file that is neither an image nor
+a video (a HEIC, HEIF or AVIF photo needs the `pillow-heif` package),
+`FrameDecodeError` when `ffmpeg` is missing or fails, `VisionError` when the
+model cannot be reached before the first frame, and `ObservationError` when a
+keyframe was not admitted or the model or the pack failed part way; its
+`report.event_ids` lists the events the run did admit.
+`prme.vision.observe_source()` returns the per-frame report behind the same
+arguments and raises `ObservationError` only for a failure that stops the run.
+Calls on one engine run one at a time.
+
+**Returns:** `list[str]` — Event IDs of the observations this call admitted.
+
+`engine.get_blob(key)` returns the thumbnail bytes for an observation's
+`metadata["thumbnail"]`, or `None`. Thumbnails live in a `blobs` table of the
+pack's DuckDB database in both layouts (see Memory Pack in
+[Section 2](#2-architecture-overview)). `observe()` needs a local DuckDB pack
+in this release; the PostgreSQL backend is not supported.
 
 ---
 
@@ -1240,6 +1303,39 @@ reasoning effort to `"none"`, preventing thinking traces from exhausting the
 structured response window. Ollama also uses its constrained JSON output mode
 instead of requiring a tool-call envelope. Other providers retain their native default.
 Benchmark before increasing either setting.
+
+### VisionConfig
+
+```python
+from prme.config import VisionConfig
+
+VisionConfig(
+    enabled=False,                       # PRME_VISION_ENABLED; observe() refuses until True
+    provider="ollama",                   # PRME_VISION_PROVIDER; the only provider in this release
+    model="qwen3.5:9b",                  # PRME_VISION_MODEL
+    base_url=None,                       # PRME_VISION_BASE_URL; OLLAMA_HOST or the local server
+    timeout=180.0,                       # PRME_VISION_TIMEOUT, seconds per description
+    describe_prompt_version=2,           # recorded on every observation; only 2 exists
+    extract=True,                        # ingest() with extraction, or store() when False [HYPOTHESIS]
+    extraction_retry_delays=[5.0, 15.0, 60.0],  # waits before each extraction retry
+    fps=1.0,                             # frames sampled per second of video
+    frame_width=1280,                    # decoded frame width
+    change_threshold=0.55,               # keyframe pixel-change score [HYPOTHESIS]
+    max_gap_seconds=30.0,                # heartbeat keyframe at least this often
+    repeat_similarity=0.93,              # description repeat filter [HYPOTHESIS]
+    thumbnail_width=320,
+    keep_thumbnails=True,                # blobs table rows keyed frames/<sha256>.jpg
+)
+```
+
+Visual memory ([RFC-0018](RFC-0018-Visual-Memory.md)) is off by default: a pack
+that never observes is byte for byte what it is without this configuration.
+Nested under `PRMEConfig.vision`, so `PRME_VISION__ENABLED=true` and
+`PRME_VISION_ENABLED=true` both work. The vision model runs locally by default
+and is called once per keyframe, at admission; its description is the event's
+content and is never recomputed by a rebuild or a replay. A new model or prompt
+version produces new observations beside the old ones. The thresholds were
+measured on the spike corpus and are provisional.
 
 ### ScoringWeights
 

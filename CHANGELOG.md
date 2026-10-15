@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add visual memory, phase 1 of [RFC-0018](docs/RFC-0018-Visual-Memory.md):
+  `MemoryEngine.observe()`, `MemoryClient.observe()` and
+  `prme observe <db_path> <file>...` turn a photo or a saved video into
+  observation events. Video is sampled with `ffmpeg`, a keyframe is kept on
+  pixel change or every `max_gap_seconds`, a local vision model (Ollama,
+  `qwen3.5:9b` by default) writes a facts-first description of each keyframe
+  that quotes visible text verbatim, a description that repeats the previous
+  kept frame's (same quoted text, embedding cosine at or above
+  `repeat_similarity`) is dropped, and each remaining description is admitted
+  as an event of role `tool` with the capture clock as `event_time` and
+  metadata naming the source, the frame time, the frame's SHA-256, the
+  thumbnail, the vision model and the prompt version. With `vision.extract`
+  (on) the description goes through `ingest()` and a failed extraction is
+  retried before the next frame; otherwise through `store()`. A frame already
+  observed for the owner by the same model and prompt is skipped. Everything
+  is behind the new `VisionConfig` (`vision`, `PRME_VISION_*`), off by default,
+  so a pack that never observes is unchanged; `observe()` raises
+  `VisionDisabledError` until `vision.enabled` is set, and `prme observe` sets
+  it for its own run; it raises `ObservationError`, with the per-frame report
+  attached, when a keyframe was not admitted or the model or the pack failed
+  part way. `observe()` needs a local DuckDB pack; the PostgreSQL backend is
+  not supported in this release. The spike pipeline moved from `benchmarks/vision/spike.py`
+  into `src/prme/vision/`; the harness now drives the engine. `numpy` and
+  `pillow`, already installed through `fastembed`, are declared dependencies.
+- Keep a JPEG thumbnail of each observed keyframe in a `blobs` table of the
+  pack's DuckDB database, in both layouts, keyed `frames/<frame sha256>.jpg`
+  and read back with `get_blob()`. The table inherits the pack's encryption,
+  is copied by `prme migrate` and `prme compact`, is left alone by
+  `prme rebuild`, and is created on first use.
 - Add opt-in single-file memory packs (#247). Set `pack_path`
   (`PRME_PACK_PATH`), call `prme.client.config_from_pack()`, or give
   `MemoryClient` a path that ends in `.prme` and is not an existing directory;

@@ -389,6 +389,12 @@ class MemoryEngine:
 
         self._closed = False
 
+        # Visual memory (RFC-0018): the vision provider is built on first
+        # observe(), and observe() calls on one engine run one at a time so the
+        # already-observed check and the admission of a frame are not raced.
+        self._vision_provider_instance: Any = None
+        self._observe_lock = asyncio.Lock()
+
         # Session turn tracking for automatic Q-A pairing.
         # Maps (user_id, session_id, scope) ->
         # ((role, speaker), content, node_type, scope). When consecutive
@@ -2039,6 +2045,151 @@ class MemoryEngine:
         configured timeouts. Failed counts are terminal jobs needing retry.
         """
         return await self._pipeline.process_extractions(user_id=user_id, limit=limit, budget_ms=budget_ms)
+
+    # ------------------------------------------------------------------
+    # Visual memory (RFC-0018, phase 1)
+    # ------------------------------------------------------------------
+
+    async def observe(
+        self,
+        source: "str | os.PathLike[str] | bytes",
+        *,
+        user_id: str,
+        captured_at: datetime | None = None,
+        source_name: str | None = None,
+        session_id: str | None = None,
+        metadata: dict | None = None,
+        scope: Scope = Scope.PERSONAL,
+    ) -> list[str]:
+        """Remember what an image or a video showed; return the observation event ids.
+
+        A photo becomes one observation; a video becomes one per keyframe
+        that changed (pixel change plus a heartbeat) and whose description
+        does not repeat the previous kept frame's. A local vision model
+        writes a facts-first description of each keyframe, quoting visible
+        text verbatim, and that description is admitted as an ordinary
+        event: role ``tool``, the capture clock as ``event_time``
+        (``captured_at``, else the photo's EXIF time or the video's
+        container time, else the file time; a video frame adds its offset),
+        session ``video:<file>`` or ``photo:<file>`` unless *session_id* is
+        given, and metadata naming the source file and path, the source and
+        frame SHA-256, the frame time, the thumbnail key, the vision model
+        and the prompt version. With ``vision.extract`` (the default) the
+        description goes through ``ingest()`` with extraction, and a failed
+        extraction is retried before the next frame; otherwise through
+        ``store()``. A JPEG thumbnail of each admitted keyframe is kept in
+        the pack's ``blobs`` table under ``frames/<frame sha256>.jpg``
+        (``get_blob()``); raw media stays outside the pack. A frame already
+        observed for *user_id* by the same model and prompt is skipped, so
+        observing the same file twice adds nothing.
+
+        Requires ``vision.enabled`` (``PRME_VISION__ENABLED=true``), a local
+        DuckDB pack and, for video, ``ffmpeg`` on the path. Raises
+        :class:`prme.vision.VisionDisabledError` while vision is off,
+        :class:`prme.vision.UnsupportedSourceError` for a file that is
+        neither an image nor a video, :class:`prme.vision.VisionError` when
+        the vision model cannot be reached, and
+        :class:`prme.vision.ObservationError` when any keyframe's admission
+        failed; its ``report.event_ids`` lists the events the run did admit.
+        Use :func:`prme.vision.observe_source` for the per-frame report.
+        """
+        from prme.vision.errors import ObservationError
+        from prme.vision.observe import observe_source
+
+        report = await observe_source(
+            self, source, user_id=user_id, captured_at=captured_at, source_name=source_name,
+            session_id=session_id, metadata=metadata, scope=scope,
+        )
+        if report.failed:
+            failed = [record for record in report.observations if record.error]
+            first = failed[0]
+            where = f"frame {first.index}" + (f" at {first.time_s:.1f}s" if first.time_s is not None else "")
+            raise ObservationError(
+                f"{report.failed} of {report.keyframes} keyframes of {report.source} were not admitted "
+                f"({where}: {first.error}); {report.admitted} were",
+                report=report,
+            )
+        return report.event_ids
+
+    def vision_provider(self) -> Any:
+        """The configured vision provider, built on first use from ``config.vision``."""
+        if self._vision_provider_instance is None:
+            from prme.vision.provider import create_vision_provider
+
+            self._vision_provider_instance = create_vision_provider(self._config.vision)
+        return self._vision_provider_instance
+
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        """Embed *texts* with the pack's own embedding provider (the repeat filter uses it)."""
+        provider = getattr(self._vector_index, "_provider", None)
+        if provider is None:
+            raise RuntimeError("This engine's vector index exposes no embedding provider")
+        return await encode_texts(provider, texts)
+
+    @property
+    def supports_blobs(self) -> bool:
+        """Whether this backend can keep pack-resident blobs such as thumbnails (local DuckDB packs)."""
+        return self._conn is not None
+
+    async def put_blob(self, key: str, media_type: str, data: bytes) -> bool:
+        """Store a blob in the pack under *key*; return True when it is new.
+
+        Keys name their content, so an existing blob under *key* is kept.
+        The table is created on the first write, so a pack without blobs
+        keeps its schema as it is.
+        """
+        from prme.storage.blobs import put_blob
+
+        if self._conn is None:
+            raise RuntimeError("Blobs need a local DuckDB pack; this engine has no DuckDB connection")
+        async with self._event_store._conn_lock:
+            return await run_to_completion(put_blob, self._conn, key, media_type, data)
+
+    async def get_blob(self, key: str) -> bytes | None:
+        """Return the blob stored under *key*, such as an observation's thumbnail, or None."""
+        from prme.storage.blobs import get_blob
+
+        if self._conn is None:
+            return None
+        async with self._event_store._conn_lock:
+            found = await run_to_completion(get_blob, self._conn, key)
+        return None if found is None else found[1]
+
+    async def find_observation(
+        self, *, user_id: str, scope: Scope, source_sha256: str, frame_time_s: float | None,
+        vision_model: str, describe_prompt_version: int,
+    ) -> str | None:
+        """Return the id of *user_id*'s observation of this frame by this model and prompt, if any.
+
+        A frame is identified by its source file's hash and its time inside
+        the source (None for a photo), not by the decoded pixels, which can
+        differ between decoders. Only local DuckDB packs are checked; another
+        backend returns None.
+        """
+        if self._conn is None:
+            return None
+
+        def query() -> str | None:
+            # The owner's tool events are filtered first; the JSON reads run
+            # over those only. Large packs could index these keys later.
+            time_clause = ("json_extract_string(metadata, '$.frame_time_s') IS NULL" if frame_time_s is None
+                           else "TRY_CAST(json_extract_string(metadata, '$.frame_time_s') AS DOUBLE) = ?")
+            params: list[Any] = [user_id, scope.value, source_sha256, vision_model, str(describe_prompt_version)]
+            if frame_time_s is not None:
+                params.append(float(frame_time_s))
+            row = self._conn.execute(
+                "SELECT id FROM events WHERE user_id = ? AND scope = ? AND role = 'tool' "
+                "AND metadata IS NOT NULL "
+                "AND json_extract_string(metadata, '$.source_sha256') = ? "
+                "AND json_extract_string(metadata, '$.vision_model') = ? "
+                "AND json_extract_string(metadata, '$.describe_prompt_version') = ? "
+                f"AND {time_clause} ORDER BY timestamp LIMIT 1",
+                params,
+            ).fetchone()
+            return None if row is None else str(row[0])
+
+        async with self._event_store._conn_lock:
+            return await run_to_completion(query)
 
     async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
         """Read durable source materialization status within one user's events.

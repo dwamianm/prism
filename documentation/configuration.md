@@ -62,6 +62,33 @@ The default `fastembed` provider runs locally with no API key needed. It downloa
 
 The extraction provider is used by `ingest()` and `ingest_batch()`, and by `retrieve()` only when `PRME_ENABLE_QUERY_REFORMULATION=true`: query reformulation calls the same provider, model, endpoint and credential, with the same timeout. The `store()` method does not call an LLM.
 
+## Visual memory (RFC-0018)
+
+Off by default. `observe()` and `prme observe` describe photos and videos with a
+local vision model and store the descriptions as events; nothing here changes a
+pack that never observes.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PRME_VISION__ENABLED` | `false` | Allow `observe()`; `prme observe` turns it on for its own run |
+| `PRME_VISION__PROVIDER` | `ollama` | Vision provider (the only one in this release) |
+| `PRME_VISION__MODEL` | `qwen3.5:9b` | Vision model, recorded on every observation |
+| `PRME_VISION__BASE_URL` | `None` | Endpoint; defaults to `OLLAMA_HOST` or the local server |
+| `PRME_VISION__TIMEOUT` | `180.0` | Seconds per description call |
+| `PRME_VISION__EXTRACT` | `true` | Admit descriptions with `ingest()` and extraction by the configured extraction provider (which may be a hosted API); `false` uses `store()` |
+| `PRME_VISION__EXTRACTION_RETRY_DELAYS` | `[5.0, 15.0, 60.0]` | Waits before each retry of a failed extraction |
+| `PRME_VISION__FPS` | `1.0` | Frames sampled per second of video |
+| `PRME_VISION__FRAME_WIDTH` | `1280` | Decoded frame width in pixels |
+| `PRME_VISION__CHANGE_THRESHOLD` | `0.55` | Pixel-change score that starts a keyframe |
+| `PRME_VISION__MAX_GAP_SECONDS` | `30.0` | A keyframe at least this often (heartbeat) |
+| `PRME_VISION__REPEAT_SIMILARITY` | `0.93` | Description cosine similarity, with the same quoted text, that drops a repeat |
+| `PRME_VISION__THUMBNAIL_WIDTH` | `320` | Thumbnail width in pixels |
+| `PRME_VISION__KEEP_THUMBNAILS` | `true` | Keep a thumbnail per observation in the pack's `blobs` table |
+
+Video needs `ffmpeg` on the path; images do not. A HEIC, HEIF or AVIF photo
+needs the `pillow-heif` package. `observe()` needs a local DuckDB pack; the
+PostgreSQL backend is not supported in this release.
+
 ## Extracted claims (`ingest()`)
 
 These settings change what `ingest()` stores from an extraction. They do not affect `store()`, and records stored before a change keep their text.

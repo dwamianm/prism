@@ -1,6 +1,6 @@
 # RFC-0018: Visual Memory from Images and Video
 
-**Status:** Draft; feasibility spike measured 2026-10-15 (`benchmarks/vision/`)
+**Status:** Phase 1 implemented (2026-10-15; `src/prme/vision/`, off by default); feasibility spike measured 2026-10-15 (`benchmarks/vision/`); the real-recording benchmark of phase 1 is open
 **Date:** 2026-10-15
 **Depends on:** RFC-0001, RFC-0002, RFC-0005, RFC-0014, RFC-0015, RFC-0016
 
@@ -134,10 +134,17 @@ order, each cheaper than the next stage it protects:
 The pixel filter is the weak point. A handheld camera on text can produce
 noise close to a real text change, and a slow pan over scenery produces a
 keyframe every few seconds that the repeat filter later drops at the cost of
-one vision call each. A middle stage, cheap OCR or an image-embedding
-similarity check between the pixel filter and the vision model, is the first
-improvement to try. All thresholds are configuration, named in `VisionConfig`
-below, and every kept and dropped frame is logged with its score.
+one vision call each. The phase 1 tests measured two more cases: a change of
+a few characters on a same-layout slide in a thin font scores only about 0.2
+(the spike's whiteboard change, in a heavy marker font with a strikethrough,
+scored 0.7), so the heartbeat is what catches it; and because the score is
+contrast-normalized, a low-contrast frame such as pale text on a saturated
+background reads its own camera shake as a change (0.57 to 0.67 measured),
+which costs vision calls that the repeat filter then absorbs. A middle
+stage, cheap OCR or an image-embedding similarity check between the pixel
+filter and the vision model, is the first improvement to try. All thresholds
+are configuration, named in `VisionConfig` below, and every kept and dropped
+frame is logged with its score.
 
 ## Description prompt
 
@@ -154,9 +161,18 @@ version 1's "Video frame at 00:03 of ..." prefix was extracted as a fact.
 ## Evidence thumbnails and raw media
 
 The pack keeps one thumbnail per observation, 320 pixels wide, JPEG, about
-20 KB, named by the frame's SHA-256. In a directory pack it lives under
-`frames/`; in a single-file pack (RFC-0014 amendment) it is a row in a `blobs`
-table keyed by the same hash. Raw frames and videos stay outside the pack,
+20 KB, named by the frame's SHA-256. It is a row in a `blobs` table of the
+pack's DuckDB database in both layouts, a directory pack's `memory.duckdb`
+and a single-file pack alike, keyed `frames/<sha256>.jpg`
+(`src/prme/storage/blobs.py`; `metadata.thumbnail` holds the key and
+`get_blob()` returns the bytes). The draft had a `frames/` directory for the
+directory pack; phase 1 put the thumbnails inside the database in both
+layouts because a directory pack's encryption is file-level Fernet over the
+database and the indexes, so loose files beside them would need their own
+encryption path, and because `prme migrate` and `prme compact` then carry
+the thumbnails with every other table while `prme rebuild` never touches
+them. The table is created on first use, so a pack that never observes keeps
+its schema byte for byte. Raw frames and videos stay outside the pack,
 referenced by path and hash in metadata. The pack therefore stays small and
 copyable, `prme rebuild` needs no media (descriptions are the durable events),
 and provenance can still show the frame. A TTL on thumbnails is an organizer
@@ -202,47 +218,85 @@ The capture layer filters before anything is admitted:
 ## Public surface
 
 ```python
-client.observe(path_or_bytes, *, user_id, captured_at=None, source=None,
+client.observe(source, *, user_id, captured_at=None, source_name=None,
                session_id=None, metadata=None, scope=Scope.PERSONAL) -> list[str]
+client.get_blob(key) -> bytes | None
 ```
 
-`observe()` accepts an image or a video. It runs the keyframe policy, the
-vision provider and admission, and returns the observation event ids. The CLI
-mirrors it: `prme observe <file>... [--user-id] [--captured-at]`. Whether
-admission is `ingest()` or `store()` is `VisionConfig.extract`; the spike found
-no accuracy difference on a small pack and a 250x cost difference, so the
-default is a decision for phase 1, taken with a larger pack. When extraction
-runs, a failed extraction is retried as the extracted-pack builder retries
-(`retry_extraction`, then `process_extractions`), because one failure leaves
-every later observation in the session pending.
+`observe()` accepts an image or a video, as a path or as bytes
+(`source_name` names bytes). It runs the keyframe policy, the vision
+provider and admission, and returns the observation event ids; the async
+engine has the same method, and `prme.vision.observe_source()` returns the
+per-frame report behind it (every keyframe decision with its score, every
+description, repeat and admission). `captured_at` is the capture clock, the
+video's start; omitted, the photo's EXIF time or the video container's
+creation time stands in, else the file time, and `metadata.capture_clock`
+says which. A frame already observed for the owner by the same model and
+prompt is skipped, so observing the same file twice adds nothing. The CLI
+mirrors it: `prme observe <db_path> <file>... --user-id <owner>
+[--captured-at] [--no-extract] [--model] [--format json]`; the command turns
+`vision.enabled` on for its own run, because the command is the explicit
+request. Whether admission is `ingest()` or `store()` is
+`VisionConfig.extract`; the spike found no accuracy difference on a small
+pack and a 250x cost difference, and phase 1 keeps `extract=True`, tagged
+`[HYPOTHESIS]`, because the graph structure (dated fact records that
+supersede one another, entities, provenance from a fact to a frame) is the
+position this RFC takes; the larger benchmark below decides it. When
+extraction runs, a failed extraction is retried as the extracted-pack builder
+retries (`retry_extraction`, then `process_extractions`, after each delay in
+`extraction_retry_delays`), because one failure leaves every later
+observation in the session pending. A failure that never recovers still
+leaves the event and returns its id; the per-frame report says
+`extraction: failed`.
 
 ```python
-class VisionConfig(_ProjectSettings):
+class VisionConfig(_ProjectSettings):          # PRMEConfig.vision; PRME_VISION_*
     enabled: bool = False
     provider: str = "ollama"
     model: str = "qwen3.5:9b"
     base_url: str | None = None
-    describe_prompt_version: int = 2
-    extract: bool = True  # ingest() with extraction, or store() when False
+    timeout: float = 180.0
+    describe_prompt_version: Literal[2] = 2
+    extract: bool = True  # [HYPOTHESIS] ingest() with extraction, or store() when False
+    extraction_retry_delays: list[float] = [5.0, 15.0, 60.0]
     fps: float = 1.0
-    change_threshold: float = 0.55
+    frame_width: int = 1280
+    change_threshold: float = 0.55  # [HYPOTHESIS]
     max_gap_seconds: float = 30.0
-    repeat_similarity: float = 0.93
+    repeat_similarity: float = 0.93  # [HYPOTHESIS]
     thumbnail_width: int = 320
     keep_thumbnails: bool = True
 ```
 
 Everything is off by default. A pack that never used `observe()` is
-byte-for-byte what it is today. This follows the epic #77 rule that new
-behavior goes behind an explicit option first.
+byte-for-byte what it is today, and `observe()` raises `VisionDisabledError`
+until `vision.enabled` is set. This follows the epic #77 rule that new
+behavior goes behind an explicit option first. Vision models run locally by
+default; Ollama is the only provider in this release, and with `extract` on
+the description text goes to the configured extraction provider, as any
+`ingest()` text does. `observe()` needs a local DuckDB pack in this release:
+the thumbnails and the already-observed check (keyed by the owner, the scope,
+the source file's hash, the frame time, the model and the prompt version, so
+it does not depend on the decoder's pixels) use the pack's DuckDB connection,
+and the PostgreSQL backend is refused. `observe()` raises `ObservationError`
+when a keyframe was not admitted or the model or the pack failed part way,
+with the per-frame report attached so the events admitted before the failure
+are not lost. Calls on one engine run one at a time.
 
 ## Phases
 
-1. **Files and photos.** `observe()` and `prme observe` for saved video and
-   photos; the spike pipeline moved into `src/prme/vision/` with tests over the
-   synthetic corpus; thumbnails in both pack layouts. Benchmark: the spike
-   corpus grown into a recorded-meeting set with annotated questions, run
-   under the DeepSeek track's rules with a visual baseline of its own.
+1. **Files and photos.** Implemented on 2026-10-15: `observe()` and
+   `prme observe` for saved video and photos; the spike pipeline moved into
+   `src/prme/vision/` (`frames.py`, `keyframes.py`, `describe.py`,
+   `provider.py`, `repeat.py`, `observe.py`) with tests over synthetic slides
+   and a synthetic video (`tests/test_vision_keyframes.py`,
+   `tests/test_vision_observe.py`; the video tests need `ffmpeg`, which CI
+   installs); thumbnails in both pack layouts through the `blobs` table.
+   `benchmarks/vision/spike.py` now drives the engine, so a run there
+   measures the product path over the spike corpus. **Still open:** the
+   benchmark, the spike corpus grown into a recorded-meeting set with
+   annotated questions, run under the DeepSeek track's rules with a visual
+   baseline of its own, and with it the `extract` default decision.
 2. **Live screen.** An external capture process (event-driven: app switch,
    click, typing pause, like Screenpipe's) feeds `observe()` through the HTTP
    API, with the application and password-field filters above. If it is used

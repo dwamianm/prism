@@ -512,8 +512,9 @@ showed, with the provenance, timing and retrieval it has for text, using only
 local models. The
 [report](../benchmarks/results/research/2026-10-15/VISUAL-MEMORY-SPIKE.md) and
 the code in `benchmarks/vision/` are the evidence, and
-[RFC-0018](RFC-0018-Visual-Memory.md) is the draft design that follows from
-them. Nothing under `src/prme/` changed and no visual memory feature exists.
+[RFC-0018](RFC-0018-Visual-Memory.md) is the design that follows from them;
+its phase 1 (`observe()`, `prme observe`, `src/prme/vision/`, off by default)
+was implemented later the same day.
 
 Three runs over a 24-question set (a synthetic meeting recording, five photos
 and a real aerial video) each scored 22 of 24, with the evidence in the 4K
@@ -530,7 +531,7 @@ any whose quoted text changed.
 
 Boundaries: 17 events fit in one context, so retrieval was not stressed; the
 corpus is synthetic apart from one photo and one video; one 9B model was both
-reader and judge; and there is no audio. Next is RFC-0018 phase 1 (`observe()`
-and `prme observe` for saved video and photos, off by default), then a
-benchmark with real recordings and annotated questions, run under the DeepSeek
-track rules with its own baseline, before any default changes.
+reader and judge; and there is no audio. RFC-0018 phase 1 (`observe()` and
+`prme observe` for saved video and photos, off by default) is implemented; next
+is a benchmark with real recordings and annotated questions, run under the
+DeepSeek track rules with its own baseline, before any default changes.

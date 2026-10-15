@@ -39,6 +39,9 @@ EXPECTED_HYPOTHESES = {
     "organizer.consolidation_similarity_threshold",
     "organizer.consolidation_preserve_recent_days",
     "organizer.consolidation_min_confidence_preserve",
+    "vision.extract",
+    "vision.change_threshold",
+    "vision.repeat_similarity",
     "enable_qa_pairing",
     "enable_windowed_extraction",
     "extraction_window_turns",
@@ -91,6 +94,10 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
     assert settings["enable_qa_pairing"].effective is False
     assert settings["novelty_high_threshold"].effective is False
     assert settings["query_reformulation_count"].effective is False
+    # Visual memory is off by default, so its provisional thresholds are dormant.
+    for name in ("vision.extract", "vision.change_threshold", "vision.repeat_similarity"):
+        assert settings[name].effective is False
+    assert settings["vision.repeat_similarity"].environment_variable == "PRME_VISION__REPEAT_SIMILARITY"
     assert settings["organizer.promotion_evidence_count"].environment_variable == (
         "PRME_ORGANIZER__PROMOTION_EVIDENCE_COUNT"
     )
