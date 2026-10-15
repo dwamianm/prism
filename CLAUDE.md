@@ -8,12 +8,12 @@ PRME (Portable Relational Memory Engine) is a local-first, embeddable memory sub
 
 ## Architecture
 
-Four storage layers behind a unified retrieval API. The default backend is local DuckDB-based; a PostgreSQL backend (`src/prme/storage/pg/`) is also wired and selected when `database_url` is set. A local pack is a directory of files by default; an opt-in single-file pack (`pack_path` / `PRME_PACK_PATH`, or a `MemoryClient` path ending in `.prme`; issue #247) keeps the whole pack in one DuckDB file, with the USearch snapshot in a `vector_snapshot` table and the Tantivy index held in memory and rebuilt from the graph on open, so the "persisted to" locations below describe directory packs.
+Four storage layers behind a unified retrieval API. The default backend is local DuckDB-based; a PostgreSQL backend (`src/prme/storage/pg/`) is also wired and selected when `database_url` is set. A local pack is a directory of files by default; an opt-in single-file pack (`pack_path` / `PRME_PACK_PATH`, or a `MemoryClient` path ending in `.prme`; issue #247) keeps the whole pack in one DuckDB file, with the USearch snapshot in a `vector_snapshot` table and the Tantivy index held in memory, rebuilt from the graph on open and shared by every engine in the process that opens the pack, so the "persisted to" locations below describe directory packs.
 
 - **Event Store (DuckDB)** — Append-only immutable event log. All derived structures must be rebuildable from this log.
 - **Graph Store (DuckDB)** — Typed nodes (Entity, Event, Fact, Decision, Preference, Task, Summary) and typed edges with temporal validity windows (`valid_from`/`valid_to`), confidence scores, and provenance references. Implemented in `src/prme/storage/duckpgq_graph.py` using DuckDB tables with recursive CTEs for traversal (DuckPGQ SQL/PGQ is not available on the supported DuckDB build, so recursive CTEs are the only code path — there is no Kùzu dependency).
 - **Vector Index (USearch HNSW)** — Approximate nearest neighbor search via the `usearch` library (`src/prme/storage/vector_index.py`), persisted to `vectors.usearch`, with versioned embeddings (model name, version, dimension tracked per embedding).
-- **Lexical Index (Tantivy)** — BM25 full-text search via `tantivy-py` (`src/prme/storage/lexical_index.py`), persisted to a `lexical_index/` directory, over event content, facts, and summaries.
+- **Lexical Index (Tantivy)** — BM25 full-text search via `tantivy-py` (`src/prme/storage/lexical_index.py`), persisted to a `lexical_index/` directory, over event content, facts, and summaries. Entity nodes that extraction creates get a vector but no lexical document; the ingestion write path, `rebuild_indexes` (`prme rebuild`) and a single-file pack's open share that rule (`has_lexical_document` and `LEXICAL_DOCUMENT_SQL` in that module), so change it only there.
 
 ## Key Design Constraints
 

@@ -93,7 +93,12 @@ from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.embedding import EmbeddingProvider, create_embedding_provider, validate_embedding_provider, encode_texts
 from prme.storage.encryption import EncryptionError
 from prme.storage.event_store import EventStore
-from prme.storage.lexical_index import LexicalIndex
+from prme.storage.lexical_index import (
+    LEXICAL_DOCUMENT_SQL,
+    LexicalIndex,
+    acquire_pack_lexical_index,
+    release_pack_lexical_index,
+)
 from prme.storage.schema import initialize_database
 from prme.storage.vector_index import VectorIndex
 from prme.storage.write_queue import NoOpWriteQueue, WriteQueue
@@ -143,11 +148,13 @@ logger = logging.getLogger(__name__)
 
 # The nodes the derived search indexes hold, in rebuild order: every active
 # node of every owner, by id. Callers skip rows without indexable content.
+# Each node gets a vector; the last column says whether it also gets a
+# lexical document under the write path's policy (LEXICAL_DOCUMENT_SQL).
 # rebuild_indexes() and the startup load of a single-file pack's in-memory
 # lexical index share this selection, so both build the same documents.
 _INDEXED_STATES = tuple(state.value for state in ACTIVE_LIFECYCLE_STATES)
 _INDEXED_NODES_SQL = (
-    "SELECT id, content, user_id, node_type, scope FROM nodes "
+    f"SELECT id, content, user_id, node_type, scope, {LEXICAL_DOCUMENT_SQL} FROM nodes "
     f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({', '.join('?' for _ in _INDEXED_STATES)}) "
     "ORDER BY id"
 )
@@ -163,16 +170,17 @@ def _load_lexical_from_graph(
 ) -> int:
     """Fill a single-file pack's in-memory lexical index from its graph.
 
-    Uses the same nodes, fields and order as rebuild_indexes(), reading them
-    in pages so a large pack is never loaded at once, and commits once.
-    Startup only, on the main connection before the engine serves reads.
+    Uses the same documents, fields and order as rebuild_indexes(), reading
+    them in pages so a large pack is never loaded at once, and commits once.
+    Startup only, on the opening engine's main connection before any engine
+    serves reads from the index.
     """
     def documents():
         with conn.cursor() as reader:
             reader.execute(_INDEXED_NODES_SQL, list(_INDEXED_STATES))
             while page := reader.fetchmany(page_size):
-                for node_id, content, user_id, node_type, scope in page:
-                    if _indexable_content(content):
+                for node_id, content, user_id, node_type, scope, lexical in page:
+                    if lexical and _indexable_content(content):
                         yield str(node_id), content, user_id, node_type, scope
 
     rows = documents()
@@ -473,7 +481,8 @@ class MemoryEngine:
         With ``config.pack_path`` set, the pack is a single DuckDB file: the
         vector snapshot and the manifest are tables inside it, and the
         lexical index is rebuilt in memory from the graph before the engine
-        serves any read. With encryption configured, DuckDB encrypts that
+        serves any read; engines in one process that open the same pack
+        share that index. With encryption configured, DuckDB encrypts that
         file and its write-ahead log natively, and the engine turns on
         DuckDB's temporary-file encryption as well. Otherwise the
         pack is the directory layout of ``db_path``, ``vector_path`` and
@@ -620,17 +629,23 @@ class MemoryEngine:
 
             startup.push_async_callback(vector_index.close)
 
-            # Create lexical index. A single-file pack holds it in memory and
-            # rebuilds it from the graph here, before any read.
-            lexical_index = LexicalIndex(
-                None if single_file else config.lexical_path,
-                commit_interval=config.lexical_commit_interval,
-                commit_max_delay_s=config.lexical_commit_max_delay_s,
-            )
-
-            startup.push_async_callback(lexical_index.close)
+            # Create lexical index. A single-file pack holds it in memory,
+            # shared by every engine in this process that opens the pack and
+            # built from the graph by the first of them, before any read.
             if single_file:
-                await run_to_completion(_load_lexical_from_graph, conn, lexical_index)
+                lexical_index = await acquire_pack_lexical_index(
+                    db_path, lambda index: _load_lexical_from_graph(conn, index),
+                    commit_interval=config.lexical_commit_interval,
+                    commit_max_delay_s=config.lexical_commit_max_delay_s,
+                )
+                startup.push_async_callback(release_pack_lexical_index, lexical_index)
+            else:
+                lexical_index = LexicalIndex(
+                    config.lexical_path,
+                    commit_interval=config.lexical_commit_interval,
+                    commit_max_delay_s=config.lexical_commit_max_delay_s,
+                )
+                startup.push_async_callback(lexical_index.close)
 
             # Create and start write queue
             write_queue = WriteQueue(maxsize=config.write_queue_size)
@@ -3004,6 +3019,10 @@ class MemoryEngine:
         are re-indexed, matching the visibility contract that vector and
         lexical search already enforce (issue #38) -- superseded, archived,
         and deprecated nodes are intentionally left out of the indexes.
+        Lexical documents follow the write path's policy
+        (``has_lexical_document`` in ``prme.storage.lexical_index``): an
+        entity node that extraction created gets a vector but no lexical
+        document, as it did when it was ingested (issue #247).
 
         Nodes are processed in deterministic ``id`` order so that, combined
         with exact vector search (``vector_exact_search``), two rebuilds from
@@ -3014,10 +3033,10 @@ class MemoryEngine:
                 Bounds peak memory on large packs; does not affect results.
 
         Returns:
-            A summary dict with counts: ``nodes_indexed`` (rows written to
-            both indexes), ``nodes_skipped`` (active rows with empty content,
-            which cannot be embedded), and ``total_active`` (active rows
-            seen).
+            A summary dict with counts: ``nodes_indexed`` (rows given a
+            vector, and a lexical document under that policy),
+            ``nodes_skipped`` (active rows with empty content, which cannot
+            be embedded), and ``total_active`` (active rows seen).
         """
         if self._conn is None:
             raise RuntimeError(
@@ -3066,6 +3085,7 @@ class MemoryEngine:
                 user_id = row[2]
                 node_type = row[3]
                 scope = row[4]
+                lexical = row[5]
 
                 if not _indexable_content(content):
                     # Empty content cannot be embedded; skip but count it so
@@ -3079,12 +3099,13 @@ class MemoryEngine:
                     ),
                     label=f"rebuild.vector:{node_id}",
                 )
-                await self._write_queue.submit(
-                    lambda nid=node_id, c=content, uid=user_id, nt=node_type, sc=scope: (
-                        self._lexical_index.index(nid, c, uid, nt, sc)
-                    ),
-                    label=f"rebuild.lexical:{node_id}",
-                )
+                if lexical:
+                    await self._write_queue.submit(
+                        lambda nid=node_id, c=content, uid=user_id, nt=node_type, sc=scope: (
+                            self._lexical_index.index(nid, c, uid, nt, sc)
+                        ),
+                        label=f"rebuild.lexical:{node_id}",
+                    )
                 nodes_indexed += 1
 
             offset += batch_size
@@ -3978,7 +3999,12 @@ class MemoryEngine:
             logger.warning("Error closing vector index", exc_info=True)
 
         try:
-            await self._lexical_index.close()
+            if self._config.single_file_pack:
+                # Other engines may share a single-file pack's index; the
+                # last engine to release it closes it.
+                await release_pack_lexical_index(self._lexical_index)
+            else:
+                await self._lexical_index.close()
         except Exception:
             logger.warning("Error closing lexical index", exc_info=True)
 

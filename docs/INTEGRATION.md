@@ -1019,20 +1019,27 @@ On open, before it serves any read, the engine:
    with its recorded dimension or count, every vector is restored from its
    payload.
 3. Builds the in-memory Tantivy index from active `nodes` with the same
-   selection, fields and `id` order as `prme rebuild`.
+   documents, fields and `id` order as `prme rebuild`, which gives lexical
+   documents to the same nodes as the write path (see **Retrieval** below).
+   Engines in one process that open the same pack share this index: the first
+   one builds it, and it is dropped when the last one closes.
 
 The snapshot row is rewritten on close when the vector index changed, and after
-every `vector_save_interval` vector additions. Each save rewrites the whole
-snapshot (about 168 MB per 100,000 384-dimension vectors), so a large index may
-want a rarer interval. An open that only reads therefore leaves the file
-byte-identical, except that the first open after a session that added vectors
-moves the vector key sequence past them once; `retrieve()` saves its receipt,
-which is a write. `prme rebuild` rebuilds both indexes and records the
-rebuilding embedding model in the manifest. While a pack is open, DuckDB keeps
-`memories.prme.wal` beside it, and if DuckDB spills to disk, its temporary
-files go to a `memories.prme.tmp` directory beside it, for a plain and an
-encrypted pack alike. The pack is one file at rest, so copy it after its
-engine closes.
+every `vector_save_interval` changes to the vector index, where an addition and
+a removal each count as one. Each save rewrites the whole snapshot (about
+168 MB per 100,000 384-dimension vectors), so a large index may want a rarer
+interval. A directory pack's `vectors.usearch` is also saved after every
+removal; the row is not, so archiving many nodes does not rewrite the snapshot
+once per node. A removal the row does not show yet survives a crash, because
+the next open drops snapshot keys whose vector metadata is gone. An open that
+only reads therefore leaves the file byte-identical, except that the first open
+after a session that added vectors moves the vector key sequence past them
+once; `retrieve()` saves its receipt, which is a write. `prme rebuild` rebuilds
+both indexes and records the rebuilding embedding model in the manifest. While
+a pack is open, DuckDB keeps `memories.prme.wal` beside it, and if DuckDB spills
+to disk, its temporary files go to a `memories.prme.tmp` directory beside it,
+for a plain and an encrypted pack alike. The pack is one file at rest, so copy
+it after its engine closes.
 
 **Encryption.** With `encryption_enabled=True` and an `encryption_key`, a
 single-file pack uses DuckDB's native encryption instead of Fernet file
@@ -1058,10 +1065,15 @@ the pack is neither opened nor encrypted, the file and any WAL beside it stay
 byte-identical, and the message never contains the key. An encrypted pack can
 be open in only one engine per process; a second open raises `PackInUseError`,
 whatever spelling of the path it uses. Engines that open the same plain pack in
-one process share one DuckDB instance, but each keeps its own in-memory lexical
-index, so a node stored through one engine is not found by lexical search
-through another until that engine reopens the pack; engines on one directory
-pack share its on-disk index instead. `engine.lock()` and `engine.unlock()`
+one process share one DuckDB instance and one in-memory lexical index, so a
+node stored through one engine is found by lexical search through the others
+at once, as engines on one directory pack share its on-disk index. This holds
+for `MemoryClient` objects too, although each runs its engine on its own event
+loop. The first engine's `lexical_commit_interval` and
+`lexical_commit_max_delay_s` apply to the shared index. Each engine still keeps
+its own vector index, so vector search through one engine finds a vector added
+through another only after it reopens the pack, as on a directory pack.
+`engine.lock()` and `engine.unlock()`
 belong to Fernet directory packs and raise `RuntimeError` for a single-file
 pack.
 
@@ -1098,26 +1110,36 @@ edges, 419 events and 1,413 vectors, migrated into a 521.5 MiB `.prme` file in
 1.4 s. Directory packs keep opening as before, so migration is never required.
 
 **Retrieval.** A single-file pack is searched with the same indexes, scoring
-and packing as a directory pack, and vector hits are identical. Lexical results
-can differ in three cases:
+and packing as a directory pack, and vector hits are identical. The write
+path, `prme rebuild` and the open of a single-file pack give lexical documents
+to the same nodes (`has_lexical_document` in `prme.storage.lexical_index`):
+every active node with content gets one, except an entity node that
+extraction created, which gets only a vector. An entity stored directly with
+`store()` gets both. A reopen therefore keeps the lexical documents of a
+single-file pack's active nodes, and a pack migrated from a directory pack
+built with `ingest()` holds the same documents as its source:
+the LoCoMo source above held 827 of its 1,413 active nodes in its Tantivy
+index, and so does the migrated pack. Because `prme rebuild` follows the same
+rule, rebuilding a pack built with `ingest()`, a directory pack included, no
+longer adds lexical documents for its extracted entities, which keep their
+vectors. BM25 results can still differ in two cases:
 
-1. The lexical index after every open equals the state `prme rebuild`
-   produces, so BM25 results for a pack built with `ingest()` can differ
-   slightly after a reopen from those just before close.
-2. For the same reason, a pack migrated from a directory pack built with
-   `ingest()` can find lexical matches its source did not: the LoCoMo source
-   above held 827 of its 1,413 active nodes in its Tantivy index, while the
-   migrated pack indexes every active node.
-3. Tied BM25 scores can come back in a different order than from a directory
+1. A reopen drops Tantivy's deleted-document markers from nodes archived or
+   superseded during the session, and the documents of nodes that `ingest()`
+   superseded, such as an earlier copy of a repeated claim, which stay in the
+   index until the `index_compaction` organizer job removes them. Either can
+   move BM25 scores slightly.
+2. Tied BM25 scores can come back in a different order than from a directory
    index, even one just rebuilt with `prme rebuild`, and `lexical_k` cuts
    candidates in Tantivy's order, so a tie can reach the final ranks. Two opens
    of the same `.prme` file give the same order.
 
-Directory-pack retrieval is unchanged: on the LoCoMo half of the offline
-evidence gate (1,540 questions), contexts from directory packs were
-byte-identical with and without single-file pack support. The LongMemEval-S
-half could not be run, because its saved control captures were not present on
-the machine that ran the gate. See the
+Directory-pack retrieval is unchanged, except after `prme rebuild` on a pack
+built with `ingest()`: on the LoCoMo half of the offline evidence gate (1,540
+questions), contexts from directory packs were byte-identical with and without
+single-file pack support. That gate ran before the lexical policy above was
+shared. The LongMemEval-S half could not be run, because its saved control
+captures were not present on the machine that ran the gate. See the
 [RFC-0014 amendment](RFC-0014-Portability-Sync-and-Federation.md#single-file-pack-amendment-2026-10-14)
 for details.
 

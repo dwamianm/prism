@@ -818,7 +818,9 @@ class PRMEConfig(_ProjectSettings):
             "disk. The index is rewritten in full on each save, so saving on "
             "every insert makes ingestion O(N^2) in write volume. Any "
             "pending writes are always flushed on close(). Set to 1 to save "
-            "after every insert (legacy behavior)."
+            "after every insert (legacy behavior). In a single-file pack, "
+            "removals count toward the interval too; a directory pack saves "
+            "its index file after every removal."
         ),
     )
     vector_exact_search: bool = Field(

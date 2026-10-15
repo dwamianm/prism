@@ -3,32 +3,45 @@
 A pack opened through ``pack_path``, or through ``MemoryClient`` with a path
 ending in ``.prme``, is one DuckDB file holding the event log, the graph, the
 vector payloads and snapshot, and the manifest. The lexical index is rebuilt
-in memory from the graph on open. These tests check that the file is all
-there is at rest, that reopening or copying it preserves retrieval receipts,
-that a damaged vector snapshot is restored from the durable payloads, that
-the lexical index after open equals a rebuild, that an open that only reads
-leaves the file unchanged, and that the configuration guards hold. Directory
-packs are covered by their existing tests.
+in memory from the graph on open and shared by the engines of a process that
+open the pack. These tests check that the file is all there is at rest, that
+reopening or copying it preserves retrieval receipts, that a damaged vector
+snapshot is restored from the durable payloads, that vector removals count
+toward the snapshot interval and survive a crash, that the lexical index after
+open equals a rebuild and, for a pack built with ingest(), the index the write
+path built, that engines share the lexical index, that an open that only
+reads leaves the file unchanged, and that the configuration guards hold.
+Directory packs are covered by their existing tests.
 """
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import os
 import shutil
+import subprocess
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import Mock
 from uuid import uuid4
 
 import duckdb
 import pytest
+import tantivy
 
 from prme import MemoryClient, MemoryEngine, PRMEConfig, __version__
 from prme.client import config_from_directory, config_from_pack
+from prme.ingestion.schema import ExtractionResult
 from prme.models.nodes import MemoryNode
+from prme.storage import lexical_index as lexical_module
 from prme.storage.embedding import EmbeddingVersionMismatchError
-from prme.storage.lexical_index import LexicalIndex
+from prme.storage.lexical_index import LexicalIndex, has_lexical_document
 from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.pack_manifest import PACK_FORMAT_VERSION
 from prme.types import NodeType, Scope
@@ -71,6 +84,21 @@ def mock_embeddings(monkeypatch):
 
 def pack_config(path: Path, **overrides) -> PRMEConfig:
     return PRMEConfig(pack_path=str(path), **overrides)
+
+
+def directory_config(directory: Path, **overrides) -> PRMEConfig:
+    return PRMEConfig(
+        db_path=str(directory / "memory.duckdb"),
+        vector_path=str(directory / "vectors.usearch"),
+        lexical_path=str(directory / "lexical_index"),
+        **overrides,
+    )
+
+
+def layout_config(tmp_path: Path, layout: str, **overrides) -> PRMEConfig:
+    if layout == "single-file":
+        return pack_config(tmp_path / "memories.prme", **overrides)
+    return directory_config(tmp_path / "pack", **overrides)
 
 
 async def store_all(engine: MemoryEngine, memories=MEMORIES) -> None:
@@ -235,6 +263,111 @@ async def test_two_spellings_of_a_plain_pack_share_one_database(tmp_path):
     assert sorted(os.listdir(tmp_path)) == ["link.prme", "memories.prme"]
 
 
+# --- One lexical index per pack in a process ------------------------------
+
+
+def shared_index_holders(pack: Path) -> int | None:
+    entry = lexical_module._pack_indexes.get(os.path.realpath(pack))
+    return None if entry is None else entry.holders
+
+
+async def contents_found(engine: MemoryEngine, query: str) -> set[str]:
+    lexical = {hit["content"] for hit in await engine._lexical_index.search(query, USER, limit=50)}
+    response = await engine.retrieve(query, user_id=USER, reference_time=REFERENCE_TIME)
+    retrieved = {item.node.content for item in response.results}
+    return lexical & retrieved
+
+
+async def test_engines_on_one_plain_pack_share_its_lexical_index(tmp_path):
+    pack = tmp_path / "memories.prme"
+    link = tmp_path / "link.prme"
+    link.symlink_to(pack)
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        await store_all(engine, MEMORIES[:2])
+
+    first = await MemoryEngine.create(pack_config(pack))
+    second = await MemoryEngine.create(pack_config(link))
+    try:
+        assert first._lexical_index is second._lexical_index
+        assert shared_index_holders(pack) == 2
+        # Both engines see what the first one loaded, and a node stored
+        # through one engine is found through the other without a reopen.
+        assert await contents_found(second, "tea") == {MEMORIES[0]}
+        await first.store("Alice adopted a grey cat named Pepper", user_id=USER)
+        assert await contents_found(second, "grey cat Pepper") == {"Alice adopted a grey cat named Pepper"}
+
+        # Closing one engine keeps the index of the other.
+        await first.close()
+        assert shared_index_holders(pack) == 1
+        await second.store("Pepper sleeps on the piano", user_id=USER)
+        assert await contents_found(second, "piano") == {"Pepper sleeps on the piano"}
+    finally:
+        await first.close()
+        await second.close()
+    # The last engine to close releases the pack's index.
+    assert shared_index_holders(pack) is None
+
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        assert await contents_found(engine, "piano") == {"Pepper sleeps on the piano"}
+    assert shared_index_holders(pack) is None
+
+
+async def test_engines_on_different_packs_keep_their_own_lexical_index(tmp_path):
+    async with MemoryEngine.open(pack_config(tmp_path / "a.prme")) as first:
+        async with MemoryEngine.open(pack_config(tmp_path / "b.prme")) as second:
+            assert first._lexical_index is not second._lexical_index
+            await first.store(MEMORIES[0], user_id=USER)
+            assert await first._lexical_index.search("tea", USER)
+            assert await second._lexical_index.search("tea", USER) == []
+    assert lexical_module._pack_indexes == {}
+
+
+async def test_a_failed_open_releases_the_shared_lexical_index(tmp_path, monkeypatch):
+    pack = tmp_path / "memories.prme"
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        await store_all(engine, MEMORIES[:2])
+
+    def broken_load(conn, index):
+        raise RuntimeError("load failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("prme.storage.engine._load_lexical_from_graph", broken_load)
+        with pytest.raises(RuntimeError, match="load failed"):
+            await MemoryEngine.create(pack_config(pack))
+    assert shared_index_holders(pack) is None
+
+    # A later open loads the index afresh. An open that fails after taking
+    # the index releases it too, and the engine already holding it keeps it.
+    def broken_provider(config):
+        raise RuntimeError("provider failed")
+
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        assert await contents_found(engine, "tea") == {MEMORIES[0]}
+        with monkeypatch.context() as patch:
+            patch.setattr("prme.ingestion.extraction.create_extraction_provider", broken_provider)
+            with pytest.raises(RuntimeError, match="provider failed"):
+                await MemoryEngine.create(pack_config(pack))
+        assert shared_index_holders(pack) == 1
+        await engine.store("Pepper sleeps on the piano", user_id=USER)
+        assert await contents_found(engine, "piano") == {"Pepper sleeps on the piano"}
+    assert shared_index_holders(pack) is None
+
+
+def test_clients_on_one_pack_share_its_lexical_index_across_event_loops(tmp_path):
+    # Each MemoryClient runs its engine on its own event loop, and both
+    # write to the shared index at the same time.
+    pack = tmp_path / "memories.prme"
+    with MemoryClient(str(pack)) as first, MemoryClient(str(pack)) as second:
+        assert first._engine._lexical_index is second._engine._lexical_index
+        writes = [((first, second)[number % 2], text) for number, text in enumerate(MEMORIES)]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            list(pool.map(lambda write: write[0].store(write[1], user_id=USER), writes))
+        for client in (first, second):
+            hits = client._run(client._engine._lexical_index.search("tea Bob violin standup peanuts", USER, limit=50))
+            assert {hit["content"] for hit in hits} == set(MEMORIES)
+    assert shared_index_holders(pack) is None
+
+
 # --- Vector snapshot ------------------------------------------------------
 
 
@@ -297,6 +430,92 @@ async def test_model_with_another_dimension_opens_and_rebuilds(tmp_path, caplog)
     assert manifest_row(pack)["embedding_dim"] == SmallModel.dimension
 
 
+@pytest.mark.parametrize("layout", ["directory", "single-file"])
+async def test_removals_count_toward_the_snapshot_interval_only_in_a_single_file_pack(tmp_path, monkeypatch, layout):
+    # A single-file pack rewrites its whole snapshot row on each save, so a
+    # removal counts toward vector_save_interval as an addition does. The
+    # snapshot file of a directory pack is still saved after every removal.
+    single = layout == "single-file"
+    async with MemoryEngine.open(layout_config(tmp_path, layout, vector_save_interval=3)) as engine:
+        receipts = [await engine.store_with_receipt(text, user_id=USER) for text in MEMORIES]
+        vectors = engine._vector_index
+        assert vectors._unsaved_inserts == 0
+        snapshot = Mock(wraps=vectors._save_snapshot)
+        monkeypatch.setattr(vectors, "_save_snapshot", snapshot)
+
+        for receipt in receipts[:2]:
+            await engine.archive(str(receipt.node_id), user_id=USER)
+        assert snapshot.call_count == (0 if single else 2)
+        assert vectors._unsaved_inserts == (2 if single else 0)
+        assert vectors._snapshot_dirty
+
+        await engine.archive(str(receipts[2].node_id), user_id=USER)
+        assert snapshot.call_count == (1 if single else 3)
+        assert vectors._unsaved_inserts == 0
+        if single:
+            assert engine._conn.execute("SELECT vector_count FROM vector_snapshot").fetchone() == (3,)
+        assert {hit["node_id"] for hit in await vectors.search("tea", USER, k=50)} == {
+            str(receipt.node_id) for receipt in receipts[3:]
+        }
+
+
+CRASH_AFTER_REMOVALS = '''
+import asyncio, hashlib, os, sys
+from prme import MemoryEngine, PRMEConfig
+import prme.storage.engine as module
+
+class Provider:
+    model_name = "durability-test"
+    model_version = "1"
+    dimension = 384
+    async def embed(self, texts):
+        return [[hashlib.sha256(t.encode()).digest()[i % 32] / 255 for i in range(384)] for t in texts]
+
+async def main():
+    config = PRMEConfig.model_validate_json(sys.argv[1])
+    module.create_embedding_provider = lambda _: Provider()
+    engine = await MemoryEngine.create(config)
+    for node_id in sys.argv[2].split(","):
+        await engine.archive(node_id, user_id=sys.argv[3])
+    # The removals are below the save interval: nothing saved the snapshot.
+    assert engine._vector_index._unsaved_inserts == len(sys.argv[2].split(","))
+    os._exit(42)
+
+asyncio.run(main())
+'''
+
+
+async def test_removals_not_yet_in_the_snapshot_survive_a_crash(tmp_path, caplog):
+    pack = tmp_path / "memories.prme"
+    config = pack_config(pack)
+    async with MemoryEngine.open(config) as engine:
+        receipts = [await engine.store_with_receipt(text, user_id=USER) for text in MEMORIES]
+    assert snapshot_row(pack)[:2] == (MockEmbeddingProvider.dimension, len(MEMORIES))
+    removed = [str(receipt.node_id) for receipt in receipts[:3]]
+    kept = {str(receipt.node_id) for receipt in receipts[3:]}
+
+    # The process exits without closing the engine, so the stored snapshot
+    # still holds the removed vectors while their metadata is gone.
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+    completed = await asyncio.to_thread(
+        subprocess.run,
+        [sys.executable, "-c", CRASH_AFTER_REMOVALS, config.model_dump_json(), ",".join(removed), USER],
+        capture_output=True, env=env, timeout=60,
+    )
+    assert completed.returncode == 42, completed.stderr.decode()
+    assert snapshot_row(pack)[:2] == (MockEmbeddingProvider.dimension, len(MEMORIES))
+
+    with caplog.at_level(logging.INFO, logger="prme.storage.vector_index"):
+        async with MemoryEngine.open(config) as engine:
+            assert len(engine._vector_index._index) == len(kept)
+            hits = {hit["node_id"] for query in QUERIES
+                    for hit in await engine._vector_index.search(query, USER, k=50)}
+            assert hits == kept
+    assert "vector_index.recovered" in caplog.messages
+    assert snapshot_row(pack)[:2] == (MockEmbeddingProvider.dimension, len(kept))
+
+
 # --- Lexical index and rebuild -------------------------------------------
 
 
@@ -357,6 +576,140 @@ async def test_in_memory_lexical_index_supports_every_write_path():
     assert await index.search("tea", USER, limit=10) == []
     assert index.load_documents(iter(())) == 0
     await index.close()
+
+
+def test_an_in_memory_index_lock_serializes_tasks_on_different_event_loops():
+    # Engines on several event loops can share an in-memory index, so its
+    # lock must make a task on one loop wait for a holder on another.
+    index = LexicalIndex(None)
+    held, waiting, release = threading.Event(), threading.Event(), threading.Event()
+    order = []
+
+    async def holder():
+        async with index._write_lock:
+            held.set()
+            await asyncio.to_thread(release.wait, 5)
+            order.append("holder")
+
+    async def waiter():
+        await asyncio.to_thread(held.wait, 5)
+        assert index._write_lock.locked()
+        waiting.set()
+        async with index._write_lock:
+            order.append("waiter")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(asyncio.run, holder())
+        second = pool.submit(asyncio.run, waiter())
+        assert waiting.wait(5)
+        time.sleep(0.05)
+        release.set()
+        first.result(5)
+        second.result(5)
+    assert order == ["holder", "waiter"]
+    assert not index._write_lock.locked()
+
+
+# --- Lexical documents of an ingest() pack --------------------------------
+
+# Two sentences each, so that a claim's text (its own sentence) differs from
+# its message and no two documents tie on BM25.
+INGESTED = {
+    "Caroline paints sunsets over the lake. The weather was mild.": ("paints", "sunsets"),
+    "Caroline adopted a puppy named Oscar in May. He sleeps all day.": ("adopted", "a puppy named Oscar"),
+}
+INGESTED_QUERIES = ("Caroline", "sunsets over the lake", "puppy", "weather")
+
+
+async def scripted_extraction(content, *, role=None):
+    """One person entity and one grounded claim for each known message."""
+    predicate, obj = INGESTED[content]
+    return ExtractionResult.model_validate({
+        "entities": [{"name": "Caroline", "entity_type": "person"}],
+        "facts": [{"subject": "Caroline", "subject_entity_type": "person", "predicate": predicate,
+                   "object": obj, "object_entity_type": None, "polarity": "positive",
+                   "evidence_quote": content}],
+    })
+
+
+async def lexical_state(engine: MemoryEngine) -> tuple:
+    """Every document in the lexical index, and the scored hits per query."""
+    await engine._lexical_index.flush()
+    index = engine._lexical_index._index
+    index.reload()
+    searcher = index.searcher()
+    hits = searcher.search(tantivy.Query.all_query(), limit=max(1, searcher.num_docs)).hits
+    documents = sorted(
+        tuple(sorted((field, tuple(values)) for field, values in searcher.doc(address).to_dict().items()))
+        for _score, address in hits
+    )
+    scored = {query: sorted((hit["node_id"], hit["score"])
+                            for hit in await engine._lexical_index.search(query, USER, limit=50))
+              for query in INGESTED_QUERIES}
+    return documents, scored
+
+
+async def ranked_ids(engine: MemoryEngine) -> dict:
+    return {
+        query: [(str(item.node.id), item.composite_score) for item in (await engine.retrieve(
+            query, user_id=USER, reference_time=REFERENCE_TIME,
+        )).results]
+        for query in INGESTED_QUERIES
+    }
+
+
+@pytest.mark.parametrize("layout", ["directory", "single-file"])
+async def test_an_ingested_pack_keeps_its_lexical_index_across_reopen_and_rebuild(tmp_path, layout):
+    config = layout_config(tmp_path, layout)
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = scripted_extraction
+        for message in INGESTED:
+            await engine.ingest(message, user_id=USER, wait_for_extraction=True)
+        await engine.process_pending(user_id=USER)
+        nodes = await engine.query_nodes(user_id=USER)
+        assert sorted(node.node_type.value for node in nodes) == ["entity", "fact", "fact", "note", "note"]
+        [entity] = [str(node.id) for node in nodes if node.node_type == NodeType.ENTITY]
+
+        ingested = await lexical_state(engine)
+        rankings = await ranked_ids(engine)
+        # The write path gives the extracted entity a vector but no lexical
+        # document, and every other node both.
+        documents, _scored = ingested
+        indexed = {dict(document)["node_id"][0] for document in documents}
+        assert indexed == {str(node.id) for node in nodes} - {entity}
+        assert entity in {hit["node_id"] for hit in await engine._vector_index.search("Caroline", USER, k=50)}
+        assert all(rankings.values())
+
+    async with MemoryEngine.open(config) as engine:
+        # A single-file pack rebuilds its lexical index on open; it holds the
+        # documents the write path built, so rankings do not move.
+        assert await lexical_state(engine) == ingested
+        assert await ranked_ids(engine) == rankings
+
+        summary = await engine.rebuild_indexes()
+        assert summary == {"nodes_indexed": len(nodes), "nodes_skipped": 0, "total_active": len(nodes)}
+        assert await lexical_state(engine) == ingested
+        assert await ranked_ids(engine) == rankings
+        # Rebuilding re-embeds every node, the entity included.
+        assert entity in {hit["node_id"] for hit in await engine._vector_index.search("Caroline", USER, k=50)}
+
+
+async def test_a_directly_stored_entity_keeps_its_lexical_document(tmp_path):
+    # store() gives every node a lexical document, an entity included; only
+    # the entities that extraction creates have none.
+    assert has_lexical_document(NodeType.ENTITY.value, derived=False)
+    assert not has_lexical_document(NodeType.ENTITY.value, derived=True)
+    assert all(has_lexical_document(node_type.value, derived=True)
+               for node_type in NodeType if node_type != NodeType.ENTITY)
+    pack = tmp_path / "memories.prme"
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        receipt = await engine.store_with_receipt("Caroline", user_id=USER, node_type=NodeType.ENTITY)
+        stored = await lexical_state(engine)
+        assert str(receipt.node_id) in {hit["node_id"] for hit in await engine._lexical_index.search("Caroline", USER)}
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        assert await lexical_state(engine) == stored
+        await engine.rebuild_indexes()
+        assert await lexical_state(engine) == stored
 
 
 # --- Layout equivalence ----------------------------------------------------

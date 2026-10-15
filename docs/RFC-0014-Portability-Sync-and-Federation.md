@@ -328,10 +328,16 @@ refusing to open, when the configured embedding model's name or dimension
 differs from the recorded one. `rebuild_indexes` (`prme rebuild`)
 re-embeds every vector and then records the rebuilding model. `vector_snapshot`
 holds the USearch snapshot as one row of `saved_at`, `ndim`, `vector_count` and
-the serialized index in `data`. It is written wherever the snapshot file was
-written, after every `vector_save_interval` additions and on close, except
-that a close writes it only when the index changed since the last save; each
-write replaces the row with one statement on the pack's connection. With that,
+the serialized index in `data`. It is written after every
+`vector_save_interval` changes to the vector index, where an addition and a
+removal each count as one, and on close, except that a close writes it only
+when the index changed since the last save; each write replaces the row with
+one statement on the pack's connection. A snapshot file is also written after
+every removal. The row is not, because each write rewrites the whole blob, so
+bulk archival would rewrite it once per node. A removal that the row does not
+show yet survives a crash: its `vector_metadata` and `vector_payloads` rows are
+already deleted, and startup recovery drops every snapshot key without
+metadata, as it does for a snapshot file. With that,
 and with the startup rebase of the vector key sequence run only when it would
 change the sequence, an open that only reads leaves the file byte-identical,
 apart from the first open after a session that added vectors. A retrieval
@@ -346,29 +352,52 @@ blob that disagrees with its own recorded dimension or count leaves an empty
 index that recovery refills from the payloads. A readable snapshot whose
 dimension differs from the configured model is loaded as a snapshot file would
 be, so the pack still opens and `prme rebuild` can re-embed it. The engine then
-fills an in-memory Tantivy index from active `nodes` with the same selection,
-fields and `id` order as `rebuild_indexes`, skipping blank content.
-`lexical_commit_interval` and `lexical_commit_max_delay_s` keep their meaning
-for visibility batching inside the process. The committed node row becomes the
+fills an in-memory Tantivy index from active `nodes` with the same documents,
+fields and `id` order as `rebuild_indexes`, skipping blank content. Every
+engine in the process that opens the pack, named by its real path, shares
+that one index (`acquire_pack_lexical_index` in
+`src/prme/storage/lexical_index.py`): the first engine builds it, an engine
+that opens the pack during that build waits for it, and the last engine to
+close drops it. `lexical_commit_interval` and `lexical_commit_max_delay_s`
+keep their meaning for visibility batching inside the process, as configured
+for the engine that built the index. The committed node row becomes the
 durable record of a lexical publication. RFC-0016 staging keeps its fence and
 identity checks, and a crash loses only in-memory state that the next open
 rebuilds.
 
-A single-file pack's lexical index after every open therefore equals the state
-`prme rebuild` produces. For packs built with `store()`, that is also the state
-before close. For packs built with `ingest()`, the incremental write path gives
-entity nodes a vector but no lexical document, while a rebuild indexes them, so
-BM25 results after a reopen can differ slightly from those just before close.
-Directory packs show the same difference only after `prme rebuild`. Reopening
-also drops Tantivy's deleted-document markers left by nodes archived or
-superseded during the session. Otherwise the same indexes serve the same data,
-rebuilds keep `id` order, and `vector_exact_search` stays on by default; the
-differences that remain between the two layouts are described after the
-migration paragraph below. `tests/test_single_file_pack.py` checks that the
-file is the whole pack at rest, that reopening or copying it gives identical
-retrieval receipts, that a missing, stale, unreadable or miscounted snapshot
-row is restored from the payloads, and that the lexical index after open
-equals a rebuild.
+The incremental write path, `rebuild_indexes` and the open of a single-file
+pack give lexical documents to the same nodes, through one definition in
+`src/prme/storage/lexical_index.py` (`has_lexical_document`, and
+`LEXICAL_DOCUMENT_SQL` for the same rule in SQL). Every active node with
+content gets a vector and a lexical document, except an entity node that a
+journaled derivation created (its identity is recorded in
+`derivation_artifact_owners`): extraction gives such an entity a vector but no
+lexical document. An entity stored directly with `store()` gets both.
+Previously `rebuild_indexes` indexed every active node, so a single-file pack
+built with `ingest()` held more lexical documents after a reopen than before
+close, and BM25 and fused results could change across a restart with an
+identical event log. `prme rebuild` on a pack built with `ingest()`, a
+directory pack included, therefore no longer adds lexical documents for its
+extracted entities; those entities keep their vectors.
+
+A single-file pack's lexical index after every open therefore holds the
+documents the write path gave the pack before close, which are also the
+documents `prme rebuild` produces. Reopening drops two things a session can
+leave in the index: Tantivy's deleted-document markers from nodes archived or
+superseded during the session, and the documents of nodes that `ingest()`
+superseded, such as an earlier copy of a repeated claim, which the write path
+keeps until `index_compaction` removes them. Either can move BM25 scores
+slightly. Otherwise the same indexes serve the same data, rebuilds keep `id`
+order, and `vector_exact_search` stays on by default; the difference that
+remains between the two layouts is described after the migration paragraph
+below. `tests/test_single_file_pack.py` checks that the file is the whole pack
+at rest, that reopening or copying it gives identical retrieval receipts, that
+a missing, stale, unreadable or miscounted snapshot row is restored from the
+payloads, that vector removals count toward the save interval and survive a
+crash, that the lexical index after open equals a rebuild, that a pack built
+with `ingest()` keeps its lexical documents and retrieval rankings across a
+reopen and a rebuild in either layout, and that engines in one process share a
+pack's lexical index.
 
 Storing the vector snapshot but rebuilding the lexical index follows
 measurements taken on 2026-10-14 with duckdb 1.4.4, usearch 2.26.2 and tantivy
@@ -433,10 +462,15 @@ DuckDB tells files apart by their path strings, so the engine opens a pack by
 its real path, and two spellings of one pack (relative and absolute, or
 through a symbolic link) meet that limit or share an instance like one
 spelling. Engines in one process that open the same plain pack share one
-DuckDB instance, as they do for a `memory.duckdb`, but each keeps its own
-in-memory Tantivy index: a node stored through one is not found by lexical
-search through another until that engine reopens the pack, while engines on a
-directory pack share its on-disk index. Directory packs keep Fernet
+DuckDB instance, as they do for a `memory.duckdb`, and one in-memory Tantivy
+index (see above), so a node stored through one engine is found by lexical
+search through the others at once, as engines on a directory pack share its
+on-disk index. Each `MemoryClient` runs its engine on its own event loop, so
+the shared index takes a write lock that waits on any loop. Each engine still
+keeps its own USearch index, so vector search through one engine finds a
+vector added through another only after it reopens the pack, on either
+layout. Sharing applies to encrypted packs too, but such a pack can be open in
+only one engine per process. Directory packs keep Fernet
 encryption, and legacy encrypted directory packs still open. Native encryption
 needs DuckDB 1.4.0 or later, so PRME now requires `duckdb>=1.4.0`.
 
@@ -488,21 +522,23 @@ nodes, 556 edges, 419 events and 1,413 vectors, migrated into a 521.5 MiB
 `.prme` file in 1.4 s.
 
 Retrieval from a single-file pack and from a directory pack holding the same
-data can differ in two ways. First, a pack migrated from a directory pack built
-with `ingest()` can index more nodes lexically than its source did, because its
-lexical index is rebuilt from every active node, as `prme rebuild` does, while
-the incremental write path leaves entity nodes out of a directory pack's index
-(see above). The LoCoMo source held 827 of its 1,413 active nodes in its
-Tantivy index, so lexical results from the migrated pack can differ from the
-source's. Vector hits are identical. Second, BM25 scores that tie can come
-back in a different order from the in-memory index than from a directory
-index, even one just rebuilt with `prme rebuild`, and `lexical_k` cuts the
-candidates in Tantivy's order, so a tie can reach the final ranks. Two opens of
-the same `.prme` file give the same order. Directory-pack retrieval is
-unchanged: on the LoCoMo half of the offline evidence gate (1,540 questions),
+data can differ in one way: BM25 scores that tie can come back in a different
+order from the in-memory index than from a directory index, even one just
+rebuilt with `prme rebuild`, and `lexical_k` cuts the candidates in Tantivy's
+order, so a tie can reach the final ranks. Two opens of the same `.prme` file
+give the same order. A pack migrated from a directory pack built with
+`ingest()` holds the same lexical documents as its source, since both follow
+the write path's policy (see above): the LoCoMo source held 827 of its 1,413
+active nodes in its Tantivy index, its 586 extracted entity nodes having none,
+and the policy selects exactly those 827 nodes from its graph. Vector hits are
+identical. Before that policy was shared, the migrated pack indexed all 1,413
+nodes. Directory-pack retrieval is
+unchanged, except after `prme rebuild` on a pack built with `ingest()` (see
+above): on the LoCoMo half of the offline evidence gate (1,540 questions),
 the contexts from directory packs were byte-identical with and without
-single-file pack support. The LongMemEval-S half could not be run, because its
-saved control captures were not present on the machine that ran the gate.
+single-file pack support. That gate ran before the lexical policy was shared.
+The LongMemEval-S half could not be run, because its saved control captures
+were not present on the machine that ran the gate.
 
 Every `prme` command that takes a `db_path` also opens a `.prme` file, among
 them `prme rebuild`, `prme export` and `prme info`. The public

@@ -29,12 +29,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reconciled on open against `vector_payloads` exactly as the snapshot file is,
   and hold its Tantivy index in memory, rebuilt from active graph nodes in `id`
   order before the engine serves any read. After every open the lexical index
-  equals the state `prme rebuild` produces, so for packs built with `ingest()`
-  BM25 results after a reopen can differ slightly from those just before close,
-  and a pack migrated from such a directory pack can find lexical matches its
-  source did not. Tied BM25 scores can also come back in a different order
-  than from a directory index. Vector hits are identical, and directory-pack
-  retrieval is unchanged.
+  holds the documents the write path gave the pack, which `prme rebuild` also
+  produces (see Changed), so a pack built with `ingest()`, or migrated from
+  such a directory pack, keeps its lexical documents across a reopen. Tied
+  BM25 scores can come back in a different order than from a directory index.
+  Engines in one process that open the same pack, `MemoryClient` objects on
+  their own event loops included, share one in-memory lexical index, so a node
+  stored through one is found by BM25 through the others without a reopen; the
+  last engine to close releases it. Vector removals count toward
+  `vector_save_interval` as additions do, instead of rewriting the whole
+  snapshot row after each removal; a removal not yet saved survives a crash
+  because the next open drops snapshot keys whose metadata is gone. A directory
+  pack still saves `vectors.usearch` after every removal. Vector hits are
+  identical, and directory-pack retrieval is unchanged apart from
+  `prme rebuild`.
 - Encrypt single-file packs with DuckDB's native encryption. DuckDB encrypts
   the file and its write-ahead log with AES-256-GCM; it leaves temporary files
   in clear text by default even for an encrypted database, so PRME turns on
@@ -90,6 +98,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Require `duckdb>=1.4.0` (previously `>=1.2.0`). DuckDB 1.4.0 is the first
   release with native database encryption, which single-file packs use.
+- `rebuild_indexes()` (`prme rebuild`) gives lexical documents to the same
+  nodes as the write path, through one definition shared with ingestion and
+  the open of a single-file pack (`has_lexical_document` and
+  `LEXICAL_DOCUMENT_SQL` in `prme.storage.lexical_index`): every active node
+  with content, except an entity node that extraction created, which keeps its
+  vector but gets no lexical document. Previously a rebuild indexed every
+  active node, so `prme rebuild` on a pack built with `ingest()`, directory
+  packs included, added a lexical document for each extracted entity that the
+  pack never had before; it no longer does. An entity stored directly with
+  `store()` keeps its lexical document. (#247)
 
 ## [0.14.2] - 2026-10-08
 

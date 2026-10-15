@@ -1,20 +1,78 @@
 """Lexical index wrapping tantivy-py for BM25 full-text search.
 
 Provides async LexicalIndex that indexes text content with English
-stemming and returns BM25-ranked results scoped by user_id.
+stemming and returns BM25-ranked results scoped by user_id. Also defines
+which graph nodes get a lexical document, and shares one in-memory index
+among the engines of a process that open the same single-file pack.
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
+import threading
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 import tantivy
 from prme.models.derivation import DerivationPlan
 from prme.models.profile import ProfilePublication
 from prme.storage._threading import run_to_completion
 from prme.storage.derivation_staging import DuckDBStageFence
+from prme.types import NodeType
+
+# Which graph nodes get a lexical document (issue #247). Extraction gives
+# each entity node it creates a vector but no lexical document. Every other
+# node gets both, an entity stored directly with store() included. The
+# ingestion write path asks has_lexical_document(), and rebuild_indexes()
+# and the startup load of a single-file pack select their documents with
+# LEXICAL_DOCUMENT_SQL, so all three build the same index.
+_DERIVED_TYPES_WITHOUT_LEXICAL_DOCUMENT = frozenset({NodeType.ENTITY.value})
+
+
+def has_lexical_document(node_type: str, *, derived: bool) -> bool:
+    """Whether a node of ``node_type`` gets a lexical document.
+
+    ``derived`` means a journaled derivation, such as ``ingest()``
+    extraction, created the node and reserved its identity in
+    ``derivation_artifact_owners``.
+    """
+    return not (derived and node_type in _DERIVED_TYPES_WITHOUT_LEXICAL_DOCUMENT)
+
+
+# has_lexical_document() as a SQL condition on a row of the ``nodes`` table.
+LEXICAL_DOCUMENT_SQL = (
+    "NOT (nodes.node_type IN ("
+    + ", ".join(f"'{node_type}'" for node_type in sorted(_DERIVED_TYPES_WITHOUT_LEXICAL_DOCUMENT))
+    + ") AND EXISTS (SELECT 1 FROM derivation_artifact_owners artifact "
+    "WHERE artifact.node_id = CAST(nodes.id AS VARCHAR)))"
+)
+
+
+class _AnyLoopLock:
+    """An async lock that tasks on any event loop in the process can share.
+
+    ``asyncio.Lock`` serves a single event loop, but an in-memory index can
+    be shared by engines on several loops (each ``MemoryClient`` runs its
+    own). A waiter here polls a ``threading.Lock``, sleeping briefly between
+    attempts, so it never blocks its loop or occupies a worker thread. A
+    holder runs one bounded index operation, so waits are short.
+    """
+
+    _POLL_SECONDS = 0.001
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+
+    def locked(self) -> bool:
+        return self._lock.locked()
+
+    async def __aenter__(self) -> None:
+        while not self._lock.acquire(blocking=False):
+            await asyncio.sleep(self._POLL_SECONDS)
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        self._lock.release()
 
 
 class LexicalIndex:
@@ -46,7 +104,8 @@ class LexicalIndex:
         index_path: Directory path for the persistent tantivy index, or None
             for an index held only in memory. A single-file pack keeps no
             tantivy state and fills the in-memory index from its graph with
-            ``load_documents()`` on open.
+            ``load_documents()`` on open; see
+            ``acquire_pack_lexical_index()``.
         commit_interval: Documents to buffer before committing (>=1).
         commit_max_delay_s: Max seconds a document may stay uncommitted
             before a commit is forced on the next index/search call. 0
@@ -60,7 +119,8 @@ class LexicalIndex:
         commit_max_delay_s: float = 2.0,
     ) -> None:
         self._index_path = index_path
-        self._write_lock = asyncio.Lock()
+        # Engines on different event loops can share an in-memory index.
+        self._write_lock = _AnyLoopLock() if index_path is None else asyncio.Lock()
         self._commit_interval = max(1, commit_interval)
         self._commit_max_delay_s = max(0.0, commit_max_delay_s)
 
@@ -605,3 +665,90 @@ class LexicalIndex:
         transparently recreates the writer.
         """
         await self.flush()
+
+
+class _PackIndex:
+    """The shared in-memory lexical index of one open single-file pack."""
+
+    __slots__ = ("key", "index", "holders", "commit_interval", "commit_max_delay_s", "load_lock")
+
+    def __init__(self, key: str, commit_interval: int, commit_max_delay_s: float) -> None:
+        self.key = key
+        self.index: LexicalIndex | None = None
+        self.holders = 0
+        self.commit_interval = commit_interval
+        self.commit_max_delay_s = commit_max_delay_s
+        # Held by the worker thread that loads the index, so an engine that
+        # opens the pack meanwhile waits for that load instead of repeating it.
+        self.load_lock = threading.Lock()
+
+
+# Open single-file packs by real path. The lock guards the registry and the
+# holder counts; it is never held while an index loads or closes.
+_pack_indexes: dict[str, _PackIndex] = {}
+_pack_indexes_lock = threading.Lock()
+
+
+def _load_pack_index(entry: _PackIndex, load: Callable[[LexicalIndex], object]) -> LexicalIndex:
+    with entry.load_lock:
+        if entry.index is None:
+            index = LexicalIndex(
+                None, commit_interval=entry.commit_interval, commit_max_delay_s=entry.commit_max_delay_s,
+            )
+            # A failed load leaves no index, so the next engine loads afresh.
+            load(index)
+            entry.index = index
+        return entry.index
+
+
+async def _release_pack_index(entry: _PackIndex) -> None:
+    with _pack_indexes_lock:
+        entry.holders -= 1
+        last = entry.holders == 0
+        if last and _pack_indexes.get(entry.key) is entry:
+            del _pack_indexes[entry.key]
+    if last and entry.index is not None:
+        await entry.index.close()
+
+
+async def acquire_pack_lexical_index(
+    pack_path: str,
+    load: Callable[[LexicalIndex], object],
+    *,
+    commit_interval: int = 64,
+    commit_max_delay_s: float = 2.0,
+) -> LexicalIndex:
+    """Return the in-memory lexical index of a single-file pack.
+
+    Every engine in this process that opens the pack shares one index, so a
+    document indexed through one engine is found through the others at once,
+    as with a directory pack's on-disk index. Packs are told apart by their
+    real path, so two spellings of one pack share an index. The first engine
+    creates the index with its commit settings and fills it with
+    ``load(index)``; an engine that opens the pack during that load waits
+    for it, and if the load fails, the next engine loads a fresh index. Each
+    acquisition must be matched by one ``release_pack_lexical_index()``.
+    """
+    key = os.path.realpath(pack_path)
+    with _pack_indexes_lock:
+        entry = _pack_indexes.get(key)
+        if entry is None:
+            entry = _pack_indexes[key] = _PackIndex(key, commit_interval, commit_max_delay_s)
+        entry.holders += 1
+    try:
+        return await run_to_completion(_load_pack_index, entry, load)
+    except BaseException:
+        await _release_pack_index(entry)
+        raise
+
+
+async def release_pack_lexical_index(index: LexicalIndex) -> None:
+    """Release one engine's hold on a pack's shared lexical index.
+
+    The last release removes the pack from the registry and closes the index.
+    """
+    with _pack_indexes_lock:
+        entry = next((entry for entry in _pack_indexes.values() if entry.index is index), None)
+    if entry is None:
+        raise ValueError("This lexical index is not held for an open single-file pack")
+    await _release_pack_index(entry)

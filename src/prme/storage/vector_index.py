@@ -76,6 +76,7 @@ class VectorIndex:
         # save, so saving on every insert is O(N^2) total write volume.
         # We save only once every ``save_interval`` inserts and flush any
         # remaining pending writes on close(). Set to 1 for save-per-insert.
+        # In a single-file pack, removals count toward the interval too.
         self._save_interval = max(1, save_interval)
         self._unsaved_inserts = 0
         # Single-file packs: True while the vector_snapshot row differs from
@@ -538,13 +539,18 @@ class VectorIndex:
         """Add a durable vector to the native index with debounced snapshots."""
         self._index.add(key, vector)
         self._snapshot_dirty = True
+        self._count_unsaved_changes(1)
 
-        # Persist to disk on the debounce interval only. Remaining
-        # unsaved inserts are flushed by save()/close(). The counter is
-        # reset in a finally so a failed save does not re-trigger on every
-        # subsequent insert (the vector is already in the in-memory index
-        # and will be persisted by the next interval save or by close()).
-        self._unsaved_inserts += 1
+    def _count_unsaved_changes(self, count: int) -> None:
+        """Count native index changes and save the snapshot on the interval.
+
+        Persist on the debounce interval only. Remaining unsaved changes are
+        flushed by save()/close(). The counter is reset in a finally so a
+        failed save does not re-trigger on every subsequent change (the
+        change is already in the in-memory index and will be persisted by
+        the next interval save or by close()).
+        """
+        self._unsaved_inserts += count
         if self._unsaved_inserts >= self._save_interval:
             try:
                 self._save_snapshot()
@@ -578,8 +584,10 @@ class VectorIndex:
 
         Used to evict superseded, archived, or rolled-back content so the
         vector keys no longer inflate the per-search candidate scan and the
-        HNSW index does not grow without bound. The index is persisted after
-        a removal so the deletion survives a restart.
+        HNSW index does not grow without bound. The deletion survives a
+        restart: the index file is saved after each removal, while a
+        single-file pack counts removals toward ``save_interval`` and its
+        startup recovery drops snapshot keys whose metadata is gone.
 
         Args:
             node_id: UUID string of the node whose vectors to remove.
@@ -606,6 +614,7 @@ class VectorIndex:
             return 0
 
         keys = [row[0] for row in rows]
+        removed = 0
         for key in keys:
             # Missing native keys are harmless drift. A genuine native removal
             # error must preserve the durable retry anchor instead of silently
@@ -613,6 +622,7 @@ class VectorIndex:
             if self._index.contains(key):
                 self._index.remove(key)
                 self._snapshot_dirty = True
+                removed += 1
 
         self._conn.execute("BEGIN TRANSACTION")
         try:
@@ -628,10 +638,17 @@ class VectorIndex:
         except BaseException:
             self._conn.execute("ROLLBACK")
             raise
-        # Persist immediately so the removal is not lost if the process
-        # exits before the next debounced save.
-        self._save_snapshot()
-        self._unsaved_inserts = 0
+        if self._index_path is None:
+            # A single-file pack rewrites its whole snapshot row on every
+            # save, so a removal counts toward the save interval as an insert
+            # does. A snapshot saved before the removal still holds the key,
+            # and startup recovery removes it because its metadata is gone.
+            self._count_unsaved_changes(removed)
+        else:
+            # Persist immediately so the removal is not lost if the process
+            # exits before the next debounced save.
+            self._save_snapshot()
+            self._unsaved_inserts = 0
         return len(keys)
 
     async def search(
