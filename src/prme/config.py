@@ -925,16 +925,24 @@ class PRMEConfig(_ProjectSettings):
         default=False,
         description=(
             "Master toggle for encryption at rest. When True and "
-            "encryption_key is set, memory pack files are encrypted "
-            "on close() and decrypted on create(). Default False "
-            "for backward compatibility."
+            "encryption_key is set, a directory pack keeps Fernet file "
+            "encryption: its files are encrypted on close() and decrypted "
+            "on create(). A single-file pack (pack_path) uses DuckDB native "
+            "encryption instead, AES-256-GCM over the file, its WAL and "
+            "temporary files, so it is not in clear text on disk even while "
+            "open. Default False for backward compatibility."
         ),
     )
     encryption_key: SecretStr | None = Field(
         default=None,
         description=(
             "Encryption passphrase (or raw key) for at-rest encryption. "
-            "Used with PBKDF2-HMAC-SHA256 to derive a Fernet key. Prefix "
+            "For a directory pack it is used with PBKDF2-HMAC-SHA256 to "
+            "derive a Fernet key, with a random salt per file. For a "
+            "single-file pack it becomes the DuckDB encryption key: a raw "
+            "key is used as given, and a passphrase is derived with "
+            "PBKDF2-HMAC-SHA256 and a fixed PRME salt, because the salt "
+            "cannot be stored inside the encrypted file. Prefix "
             "with 'raw_key:' to supply a raw Fernet key explicitly or "
             "'passphrase:' to force derivation; an unprefixed value is "
             "auto-detected for backward compatibility. None disables "

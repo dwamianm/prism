@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Database",
 ]
 dependencies = [
-    "duckdb>=1.2.0",
+    "duckdb>=1.4.0",
     "usearch>=2.26.2",
     "tantivy>=0.22.0",
     "pydantic>=2.12",

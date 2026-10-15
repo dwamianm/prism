@@ -30,7 +30,7 @@ import warnings
 from collections.abc import AsyncIterator, Collection, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import UUID, uuid4
 
 import duckdb
@@ -180,6 +180,119 @@ def _load_lexical_from_graph(
     finally:
         # Close the cursor now rather than when the generator is collected.
         rows.close()
+
+
+# The name of an encrypted single-file pack inside the private in-memory
+# DuckDB instance that attaches it. "memory" is that instance's own database.
+_PACK_DATABASE = "pack"
+
+
+def _sql_literal(value: str) -> str:
+    """Quote *value* as a SQL string literal; ATTACH options take no parameters."""
+    return "'" + value.replace("'", "''") + "'"
+
+
+class _PackConnection:
+    """The engine connection of an encrypted single-file pack.
+
+    DuckDB opens an encrypted file only through ATTACH, so the engine
+    attaches the pack to a private in-memory DuckDB instance and selects it
+    with USE. USE applies to one connection, and ``cursor()`` opens another
+    connection to the instance, which starts in the in-memory database where
+    none of the pack's tables are. This wrapper selects the pack on every
+    cursor it returns, so the startup readers and the stage fences that work
+    on cursors see the pack, and passes everything else to the connection.
+    """
+
+    __slots__ = ("_connection",)
+
+    def __init__(self, connection: duckdb.DuckDBPyConnection) -> None:
+        self._connection = connection
+
+    def cursor(self) -> duckdb.DuckDBPyConnection:
+        cursor = self._connection.cursor()
+        try:
+            cursor.execute(f"USE {_PACK_DATABASE}")
+        except BaseException:
+            cursor.close()
+            raise
+        return cursor
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._connection, name)
+
+    def __enter__(self) -> "_PackConnection":
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self._connection.close()
+
+
+def _connect_single_file_pack(
+    path: str, key: str | None, *, threads: int | None,
+) -> duckdb.DuckDBPyConnection:
+    """Open a single-file pack, encrypted by DuckDB when *key* is set.
+
+    *key* is the key from ``derive_pack_key()``, never the configured
+    secret. Without a key the pack is opened as an ordinary DuckDB file.
+    With one, the pack is attached with that key to a private in-memory
+    DuckDB instance, because DuckDB accepts a key only through ATTACH.
+    Opening an encrypted pack without its key or with a wrong key, or a
+    plain pack with a key, raises ``EncryptionError`` and leaves the file
+    as it was.
+    """
+    try:
+        # Apply at instance creation: SET would silently change another
+        # engine sharing this database. DuckDB rejects conflicting opens.
+        if key is None:
+            return (duckdb.connect(path) if threads is None
+                    else duckdb.connect(path, config={"threads": threads}))
+        settings: dict[str, Any] = {} if threads is None else {"threads": threads}
+        # DuckDB encrypts the attached file and its WAL with the key, but it
+        # writes temporary files in clear text unless temp_file_encryption
+        # is on (measured with duckdb 1.4.4). Keep them beside the pack, as
+        # DuckDB does for a database file, not in the working directory it
+        # uses for an in-memory database.
+        database = duckdb.connect(":memory:", config={
+            **settings, "temp_directory": f"{path}.tmp", "temp_file_encryption": True,
+        })
+        try:
+            database.execute(
+                f"ATTACH {_sql_literal(path)} AS {_PACK_DATABASE} "
+                f"(ENCRYPTION_KEY {_sql_literal(key)})"
+            )
+            database.execute(f"USE {_PACK_DATABASE}")
+        except BaseException:
+            database.close()
+            raise
+        # The wrapper stands in for the connection everywhere the engine
+        # passes one.
+        return cast(duckdb.DuckDBPyConnection, _PackConnection(database))
+    except duckdb.Error as exc:
+        message = str(exc)
+        leaks_key = key is not None and key in message
+        if "Wrong encryption key" in message:
+            error = EncryptionError(
+                f"Wrong encryption key for the memory pack at {path}; the pack was not changed"
+            )
+        elif "Cannot open encrypted database" in message:
+            error = EncryptionError(
+                f"The memory pack at {path} is encrypted; set encryption_enabled "
+                "and encryption_key to open it"
+            )
+        elif "is not encrypted" in message:
+            error = EncryptionError(
+                f"The memory pack at {path} is not encrypted, but encryption_enabled "
+                "and encryption_key are set; open it without them"
+            )
+        elif leaks_key:
+            error = EncryptionError(f"Could not open the memory pack at {path}")
+        else:
+            raise
+        if leaks_key:
+            # Only an error that quotes the ATTACH statement carries the key.
+            raise error from None
+        raise error from exc
 
 
 class MemoryEngine:
@@ -342,23 +455,31 @@ class MemoryEngine:
         With ``config.pack_path`` set, the pack is a single DuckDB file: the
         vector snapshot and the manifest are tables inside it, and the
         lexical index is rebuilt in memory from the graph before the engine
-        serves any read. Otherwise the pack is the directory layout of
-        ``db_path``, ``vector_path`` and ``lexical_path``.
+        serves any read. With encryption configured, DuckDB encrypts that
+        file, its write-ahead log and temporary files natively. Otherwise the
+        pack is the directory layout of ``db_path``, ``vector_path`` and
+        ``lexical_path``, with file-level Fernet encryption when configured.
         """
         from pathlib import Path
 
         from prme.storage.encryption import EncryptionError, EncryptionProvider
 
         single_file = config.single_file_pack
-        if (
-            single_file
-            and config.encryption_enabled
+        encryption_requested = bool(
+            config.encryption_enabled
             and config.encryption_key
             and config.encryption_key.get_secret_value()
-        ):
+        )
+        pack_key: str | None = None
+        if single_file and encryption_requested:
             # File-level Fernet encryption would leave the pack in clear text
-            # while it is open. Refuse before any file is touched.
-            raise ValueError("Single-file packs do not support encryption yet; see issue #247")
+            # while it is open, so DuckDB encrypts the pack itself. Derive
+            # its key before any file is touched; a malformed key changes
+            # nothing.
+            from prme.storage.encryption import derive_pack_key
+
+            assert config.encryption_key is not None
+            pack_key = derive_pack_key(config.encryption_key.get_secret_value())
         db_path = config.pack_path if config.pack_path is not None else config.db_path
 
         if single_file:
@@ -393,14 +514,12 @@ class MemoryEngine:
             # A wrong key before any successful decryption leaves files alone.
             startup.callback(restore_encryption)
             # --- Decrypt memory pack if encryption is enabled (issue #14) ---
-            # Never true for a single-file pack (refused above), so such a
-            # pack has no encryption provider: the Fernet close, atexit and
-            # lock paths cannot run against the unused directory paths.
-            if (
-                config.encryption_enabled
-                and config.encryption_key
-                and config.encryption_key.get_secret_value()
-            ):
+            # Directory packs only. DuckDB encrypts a single-file pack as its
+            # connection opens below, so such a pack has no Fernet provider:
+            # the Fernet close, atexit and lock paths cannot run against the
+            # unused directory paths.
+            if encryption_requested and not single_file:
+                assert config.encryption_key is not None
                 encryption_provider = EncryptionProvider(
                     config.encryption_key.get_secret_value()
                 )
@@ -434,10 +553,13 @@ class MemoryEngine:
             needs_encryption = encryption_provider is not None
 
             # Open DuckDB connection
-            # Apply at instance creation: SET would silently change another
-            # engine sharing this database. DuckDB rejects conflicting opens.
-            conn = (duckdb.connect(db_path) if config.duckdb_threads is None
-                    else duckdb.connect(db_path, config={"threads": config.duckdb_threads}))
+            if single_file:
+                conn = _connect_single_file_pack(db_path, pack_key, threads=config.duckdb_threads)
+            else:
+                # Apply at instance creation: SET would silently change another
+                # engine sharing this database. DuckDB rejects conflicting opens.
+                conn = (duckdb.connect(db_path) if config.duckdb_threads is None
+                        else duckdb.connect(db_path, config={"threads": config.duckdb_threads}))
             startup.callback(conn.close)
             if config.namespace_id is not None:
                 from prme.storage.namespace_identity import bind_namespace
@@ -3794,11 +3916,12 @@ class MemoryEngine:
 
         Idempotent — safe to call multiple times.
 
-        When encryption at rest is enabled, the memory pack is re-encrypted
-        after all backends are closed. If that encryption fails the pack is
-        left plaintext on disk, so this method fails closed: it logs at ERROR
-        and raises ``EncryptionError`` rather than returning silently (issue
-        #37).
+        When encryption at rest is enabled for a directory pack, the memory
+        pack is re-encrypted after all backends are closed (a single-file
+        pack is encrypted by DuckDB throughout). If that encryption fails the
+        pack is left plaintext on disk, so this method fails closed: it logs
+        at ERROR and raises ``EncryptionError`` rather than returning
+        silently (issue #37).
 
         Raises:
             EncryptionError: If re-encrypting the memory pack on close fails.
@@ -3965,6 +4088,15 @@ class MemoryEngine:
                 "Encrypted %d memory pack files", len(encrypted_files)
             )
 
+    def _refuse_single_file_lock(self, action: str) -> None:
+        """lock() and unlock() move directory pack files in and out of Fernet."""
+        if self._config.single_file_pack:
+            raise RuntimeError(
+                f"Cannot {action}: a single-file pack has no file-level encryption. "
+                "With encryption_enabled and encryption_key set, DuckDB keeps it "
+                "encrypted on disk at all times."
+            )
+
     def lock(self) -> None:
         """Encrypt all memory pack files without closing the engine.
 
@@ -3973,8 +4105,10 @@ class MemoryEngine:
         calling this if backends hold file locks.
 
         Raises:
-            RuntimeError: If encryption is not configured.
+            RuntimeError: If encryption is not configured, or the pack is a
+                single-file pack, which has no file-level encryption.
         """
+        self._refuse_single_file_lock("lock")
         if self._encryption_provider is None:
             raise RuntimeError(
                 "Cannot lock: encryption is not configured. "
@@ -3989,10 +4123,12 @@ class MemoryEngine:
         Should be called before opening backends that need the files.
 
         Raises:
-            RuntimeError: If encryption is not configured.
+            RuntimeError: If encryption is not configured, or the pack is a
+                single-file pack, which has no file-level encryption.
         """
         from pathlib import Path
 
+        self._refuse_single_file_lock("unlock")
         if self._encryption_provider is None:
             raise RuntimeError(
                 "Cannot unlock: encryption is not configured. "

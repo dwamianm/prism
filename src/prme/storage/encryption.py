@@ -1,8 +1,10 @@
 """Encryption at rest for PRME memory packs.
 
-Provides transparent file-level encryption using Fernet (AES-128-CBC with
-HMAC) from the ``cryptography`` library. Key derivation from passphrases
-uses PBKDF2-HMAC-SHA256 with a random 16-byte salt.
+Directory packs use transparent file-level encryption with Fernet
+(AES-128-CBC with HMAC) from the ``cryptography`` library. Key derivation
+from passphrases uses PBKDF2-HMAC-SHA256 with a random 16-byte salt.
+Single-file packs use DuckDB's native encryption instead; see the last
+section.
 
 Encrypted files use the ``.enc`` extension and store:
     [16-byte salt][ciphertext (Fernet token)]
@@ -22,9 +24,26 @@ but a hard crash (``SIGKILL``, power loss, OOM) leaves the pack plaintext on
 disk until the next clean ``close()`` re-encrypts it. File writes here are
 atomic (temp file + ``os.replace``) so a crash never leaves a truncated or
 partial file, but it cannot eliminate the plaintext-at-rest window itself.
-Eliminating that window entirely would require native database encryption
-(e.g. DuckDB ``ATTACH ... (ENCRYPTION_KEY ...)``); that is a separate,
-format-changing effort tracked apart from this lifecycle hardening.
+Single-file packs, below, do not have this window.
+
+Single-file packs (issue #247)
+------------------------------
+A single-file pack (``pack_path``) is encrypted by DuckDB itself: the engine
+attaches the file with ``ENCRYPTION_KEY``, and DuckDB encrypts the file, its
+write-ahead log and the engine's temporary files with AES-256 (GCM by
+default). The pack is therefore never in clear text on disk, even while the
+engine runs. DuckDB does not document how it turns the key string into its
+data key, so PRME derives the key it hands over with :func:`derive_pack_key`,
+which accepts the same key forms as :class:`EncryptionProvider`.
+
+A passphrase is derived with PBKDF2-HMAC-SHA256 and the same iteration count
+as for a directory pack, but with a fixed, versioned salt
+(``_PACK_KEY_SALT``) instead of a random salt per file. The salt cannot live
+inside the encrypted file, because the key is needed to open the file. Each
+guess at a passphrase still costs the full iteration count, but identical
+passphrases give identical keys across packs, so one guess can be tested
+against many packs and a dictionary of derived keys can be computed in
+advance. A raw key is used as given and does not depend on the salt.
 
 See RFC-0014 Section 10 for security requirements.
 """
@@ -47,10 +66,41 @@ logger = logging.getLogger(__name__)
 _PBKDF2_ITERATIONS = 600_000
 _SALT_LENGTH = 16
 _ENC_EXTENSION = ".enc"
+_RAW_KEY_PREFIX = "raw_key:"
+_PASSPHRASE_PREFIX = "passphrase:"
+# Salt for single-file pack passphrases. It is fixed because it cannot be
+# stored in the encrypted file (see the module docstring). Changing it makes
+# every existing encrypted single-file pack unreadable, so a new derivation
+# needs a new versioned value and a way to tell the versions apart.
+_PACK_KEY_SALT = b"prme-single-file-pack-v1"
 
 
 class EncryptionError(Exception):
     """Raised when encryption or decryption fails."""
+
+
+def _parse_key(key: str) -> tuple[bytes | None, str | None]:
+    """Resolve a key string to ``(raw Fernet key, None)`` or ``(None, passphrase)``.
+
+    Applies the string rules documented on :class:`EncryptionProvider`, so
+    directory and single-file packs read a configured key the same way.
+    """
+    if key.startswith(_RAW_KEY_PREFIX):
+        # Explicit raw key -- no derivation, no guessing.
+        return key[len(_RAW_KEY_PREFIX):].encode("ascii"), None
+    if key.startswith(_PASSPHRASE_PREFIX):
+        # Explicit passphrase -- always derive, even if it is base64.
+        return None, key[len(_PASSPHRASE_PREFIX):]
+    # Backward-compatible auto-detection: a 44-char valid url-safe base64
+    # string (32 decoded bytes) is a raw Fernet key; otherwise it is a
+    # passphrase.
+    try:
+        decoded = base64.urlsafe_b64decode(key)
+        if len(decoded) == 32 and len(key) == 44:
+            return key.encode("ascii"), None
+    except Exception:
+        pass
+    return None, key
 
 
 class EncryptionProvider:
@@ -80,8 +130,8 @@ class EncryptionProvider:
                ambiguity going forward.
     """
 
-    _RAW_KEY_PREFIX = "raw_key:"
-    _PASSPHRASE_PREFIX = "passphrase:"
+    _RAW_KEY_PREFIX = _RAW_KEY_PREFIX
+    _PASSPHRASE_PREFIX = _PASSPHRASE_PREFIX
 
     def __init__(self, key: bytes | str | None = None) -> None:
         if key is None:
@@ -94,24 +144,7 @@ class EncryptionProvider:
             # Raw Fernet key
             self._fernet_key = key
         elif isinstance(key, str):
-            if key.startswith(self._RAW_KEY_PREFIX):
-                # Explicit raw key -- no derivation, no guessing.
-                self._fernet_key = key[len(self._RAW_KEY_PREFIX):].encode("ascii")
-            elif key.startswith(self._PASSPHRASE_PREFIX):
-                # Explicit passphrase -- always derive, even if it is base64.
-                self._passphrase = key[len(self._PASSPHRASE_PREFIX):]
-            else:
-                # Backward-compatible auto-detection: a 44-char valid
-                # url-safe base64 string (32 decoded bytes) is a raw Fernet
-                # key; otherwise it is a passphrase.
-                try:
-                    decoded = base64.urlsafe_b64decode(key)
-                    if len(decoded) == 32 and len(key) == 44:
-                        self._fernet_key = key.encode("ascii")
-                    else:
-                        self._passphrase = key
-                except Exception:
-                    self._passphrase = key
+            self._fernet_key, self._passphrase = _parse_key(key)
 
     @staticmethod
     def derive_key(passphrase: str, salt: bytes | None = None) -> tuple[bytes, bytes]:
@@ -330,6 +363,46 @@ class EncryptionProvider:
                 decrypted.append(dec_path)
         logger.info("Decrypted %d files in %s", len(decrypted), dir_path)
         return decrypted
+
+
+def derive_pack_key(key: str) -> str:
+    """Return the DuckDB encryption key for a single-file pack.
+
+    Accepts every string form :class:`EncryptionProvider` accepts. A raw
+    Fernet key (the ``raw_key:`` prefix, or an unprefixed 44-character
+    url-safe base64 string) gives its 32 decoded bytes. A passphrase (the
+    ``passphrase:`` prefix, or any other string) is derived with
+    PBKDF2-HMAC-SHA256 over the fixed single-file pack salt, so the same
+    passphrase opens the pack wherever it is copied.
+
+    Args:
+        key: The configured encryption key or passphrase.
+
+    Returns:
+        The 32-byte key as 64 lowercase hex characters, the form the engine
+        passes to DuckDB as the pack's ``ENCRYPTION_KEY``.
+
+    Raises:
+        ValueError: If the key or passphrase is empty, or a raw key does not
+            decode to 32 bytes.
+    """
+    if not key:
+        raise ValueError("Encryption key or passphrase must not be empty")
+    fernet_key, passphrase = _parse_key(key)
+    if passphrase is not None:
+        if not passphrase:
+            raise ValueError("Encryption passphrase must not be empty")
+        fernet_key, _ = EncryptionProvider.derive_key(passphrase, salt=_PACK_KEY_SALT)
+    assert fernet_key is not None
+    try:
+        raw_key = base64.urlsafe_b64decode(fernet_key)
+    except ValueError:
+        raw_key = b""
+    if len(raw_key) != 32:
+        raise ValueError(
+            "A raw encryption key must be 32 url-safe base64-encoded bytes, as a Fernet key is"
+        )
+    return raw_key.hex()
 
 
 def write_manifest(

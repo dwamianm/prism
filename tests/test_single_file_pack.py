@@ -322,6 +322,56 @@ async def test_in_memory_lexical_index_supports_every_write_path():
     await index.close()
 
 
+# --- Layout equivalence ----------------------------------------------------
+
+
+async def ranked_contents(engine: MemoryEngine) -> dict:
+    """Ranking and scores per query, keyed by text rather than node id.
+
+    Two packs built from the same events have different node ids, so the
+    comparison between layouts reads the ranked texts. Scores are rounded
+    because the two packs stored their events a few milliseconds apart.
+    """
+    return {
+        query: [
+            (item.node.content, round(item.composite_score, 6))
+            for item in (await engine.retrieve(
+                query, user_id=USER, reference_time=REFERENCE_TIME,
+            )).results
+        ]
+        for query in QUERIES
+    }
+
+
+async def test_directory_and_single_file_packs_rank_the_same_events_alike(tmp_path):
+    directory = tmp_path / "directory-pack"
+    pack = tmp_path / "single.prme"
+    directory_config = PRMEConfig(
+        db_path=str(directory / "memory.duckdb"),
+        vector_path=str(directory / "vectors.usearch"),
+        lexical_path=str(directory / "lexical_index"),
+    )
+
+    async with MemoryEngine.open(directory_config) as engine:
+        await store_all(engine)
+        directory_fresh = await ranked_contents(engine)
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        await store_all(engine)
+        single_fresh = await ranked_contents(engine)
+    assert all(single_fresh.values())
+    assert single_fresh == directory_fresh
+
+    # After a reopen the directory pack reads its persisted indexes and the
+    # single-file pack rebuilds its lexical index; for a store() pack both
+    # hold the same documents, so the ranking does not move.
+    async with MemoryEngine.open(directory_config) as engine:
+        directory_reopened = await ranked_contents(engine)
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        single_reopened = await ranked_contents(engine)
+    assert directory_reopened == directory_fresh
+    assert single_reopened == single_fresh
+
+
 # --- Manifest -------------------------------------------------------------
 
 
@@ -375,16 +425,11 @@ def test_pack_path_excludes_database_url(tmp_path):
     assert not PRMEConfig(pack_path="").single_file_pack
 
 
-async def test_encryption_is_refused_before_opening(tmp_path):
-    pack = tmp_path / "new" / "memories.prme"
-    config = pack_config(pack, encryption_enabled=True, encryption_key="a passphrase")
-    with pytest.raises(ValueError) as raised:
-        await MemoryEngine.create(config)
-    assert str(raised.value) == "Single-file packs do not support encryption yet; see issue #247"
-    assert not pack.parent.exists()
-
+async def test_key_without_encryption_enabled_requests_no_encryption(tmp_path):
+    # Encrypted single-file packs are covered by test_single_file_pack_encryption.
     # A key that is not enabled requests no encryption, as for directory packs,
     # and no file-level encryption or exit handler is wired for the pack.
+    pack = tmp_path / "new" / "memories.prme"
     async with MemoryEngine.open(pack_config(pack, encryption_key="a passphrase")) as engine:
         await engine.store(MEMORIES[0], user_id=USER)
         assert engine._encryption_provider is None
