@@ -716,10 +716,28 @@ uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo 
   request that timed out is not kept, so a rebuild asks for it again.
 - The option cannot be combined with `enable_windowed_extraction` or
   `enable_fact_text_resolution`.
-- No benefit has been measured yet. #254 fixes the measurement: choose the
-  sizes before any build (for example 512, 2,048 and 8,192), report each next
-  to `ingest-baseline-locomo-deepseek`, including the sizes that lose, and
-  pair the gate with the baseline question by question.
+- First results, on all of LoCoMo with `deepseek-v4.1-flash:cloud` on Ollama
+  0.40.4 (2026-10-15,
+  `benchmarks/results/research/2026-10-15/batched-extraction/`). The sizes
+  were fixed before any build. Against a per-turn build of `main` with the
+  same model:
+
+  | Build | Model calls | Prompt tokens | All evidence packed | Change (questions 95%, conversations 95%) |
+  |---|---:|---:|---:|---|
+  | Per turn | 5,882 | 30.3 M | 81.6% | |
+  | Per turn, built again | 5,882 | 30.3 M | 81.5% | -0.1 (-0.9 to +0.8, -0.6 to +0.6) |
+  | Batch 512 | 690 | 4.5 M | 83.3% | +1.8 (+0.4 to +3.1, +0.7 to +2.9) |
+  | Batch 2,048 | 275 | 2.1 M | 84.0% | +2.5 (+1.1 to +3.8, +1.2 to +3.7) |
+  | Batch 8,192 | 272 | 2.1 M | 83.7% | +2.1 (+0.7 to +3.5, +1.0 to +3.1) |
+  | Batch format, one turn per call | 5,885 | 34.5 M | 82.2% | +0.7 (-0.5 to +1.9, -0.7 to +1.8) |
+
+  The second per-turn build is the first measurement of build-to-build
+  noise. The one-turn control, added after the three sizes, shows that the
+  gain comes from extracting a session's turns together rather than from
+  showing the speaker. Batched builds save fewer claims (0.8 to 0.9 per turn
+  instead of 1.2), mostly on turns that hold no evidence. This is the offline
+  gate, not an answer score; the option stays off until the `ingest()`
+  answer track says otherwise. The LongMemEval-S step is in the same note.
 
 ### Development slice
 

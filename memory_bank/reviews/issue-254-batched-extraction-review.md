@@ -284,4 +284,5 @@ claims on 25 turns. No more model runs were made. These numbers are a parse chec
 | Adversarial 2 (asking again), 4 | Follow-ups #260, #258 |
 | Adversarial 3 (speaker shown), 5, 6 | Accepted as recorded |
 | Acceptance criteria 1 to 4 | Met and tested |
-| Acceptance criterion 5 (LoCoMo cost and coverage report) | Open: the owner's measurement |
+| Acceptance criterion 5 (LoCoMo cost and coverage report) | Met: `benchmarks/results/research/2026-10-15/batched-extraction/BATCHED-EXTRACTION.md` (all three sizes, a repeat per-turn build and a one-turn control) |
+| Issue step 4 (LongMemEval-S) | In progress: the 42-question development slice first, by the owner's choice |
