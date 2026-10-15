@@ -326,3 +326,15 @@ async def test_a_built_pack_yields_its_paraphrase_pair_and_the_gate_contexts_tha
     assert "**Decision:" in pc.report_markdown(report)
     with pytest.raises(ValueError, match="other packs"):
         pc.build_report({**pairs_doc, "units": {"conv-1": {**counts, "pack_sha256": "0" * 64}}}, sheet, contexts)
+
+    # The command line records each input file's digest and the code that wrote the report.
+    files = {name: tmp_path / f"{name}.json" for name in ("pairs", "labels", "contexts")}
+    for name, value in zip(files, (pairs_doc, sheet, contexts)):
+        files[name].write_text(json.dumps(value))
+    output = tmp_path / "out" / "report.json"
+    pc.main(["report", *(item for name, path in files.items() for item in (f"--{name}", str(path))),
+             "--output", str(output)])
+    written = json.loads(output.read_text())
+    assert written["inputs"] == {f"{name}_sha256": hashlib.sha256(path.read_bytes()).hexdigest()
+                                 for name, path in files.items()}
+    assert set(written["code"]) == {"pairs", "replay", "report"} and output.with_suffix(".md").is_file()

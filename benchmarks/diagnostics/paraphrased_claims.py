@@ -698,8 +698,9 @@ def decide(shares: Mapping[str, Mapping], labels: Mapping) -> dict:
     }
 
 
-def build_report(pairs_doc: Mapping, sheet: Mapping, contexts: Mapping) -> dict:
-    """Steps 1 to 3 and the decision, from the three inputs."""
+def build_report(pairs_doc: Mapping, sheet: Mapping, contexts: Mapping, *,
+                 inputs: Mapping[str, str] | None = None) -> dict:
+    """Steps 1 to 3 and the decision, from the three inputs; ``inputs`` names their files' digests."""
     if pairs_doc.get("kind") != PAIRS_KIND or contexts.get("kind") != CONTEXTS_KIND:
         raise ValueError("Pass a pairs file from the pairs step and a contexts file from the replay step")
     if pairs_doc["benchmark"] != contexts["benchmark"]:
@@ -729,8 +730,7 @@ def build_report(pairs_doc: Mapping, sheet: Mapping, contexts: Mapping) -> dict:
     return {
         "kind": REPORT_KIND, "schema_version": SCHEMA_VERSION, "benchmark": pairs_doc["benchmark"], "issue": 255,
         "decision_rule": DECISION_RULE, "reading": READING, "labeling_rule": LABELING_RULE,
-        "inputs": {"pairs_sha256": digest(pairs_doc), "labels_sha256": digest(sheet),
-                   "contexts_sha256": digest(contexts)},
+        "inputs": dict(inputs or {}),
         "code": {"pairs": pairs_doc["code"],
                  "replay": {key: contexts["gate"]["provenance"][key] for key in CODE_KEYS}},
         "build": pairs_doc["build"], "embedding": pairs_doc["embedding"],
@@ -849,10 +849,6 @@ def _write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
 
 
-def _read_json(path: Path) -> dict:
-    return json.loads(path.read_text())
-
-
 def pairs_main(args: argparse.Namespace) -> None:
     if args.sheet is not None and args.sheet.exists():
         raise SystemExit(f"{args.sheet} exists; a new sheet would discard its labels")
@@ -881,7 +877,10 @@ def replay_main(args: argparse.Namespace) -> None:
 
 
 def report_main(args: argparse.Namespace) -> None:
-    report = build_report(_read_json(args.pairs), _read_json(args.labels), _read_json(args.contexts))
+    raw = {name: path.read_bytes() for name, path in
+           (("pairs", args.pairs), ("labels", args.labels), ("contexts", args.contexts))}
+    report = build_report(*(json.loads(data) for data in raw.values()),
+                          inputs={f"{name}_sha256": hashlib.sha256(data).hexdigest() for name, data in raw.items()})
     report["code"]["report"] = code_state()
     _write_json(args.output, report)
     markdown = report_markdown(report)
