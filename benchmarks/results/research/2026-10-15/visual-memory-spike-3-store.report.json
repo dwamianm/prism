@@ -1,0 +1,200 @@
+{
+  "run": "spike-3-store",
+  "finished_at": "2026-10-15T14:47:38-05:00",
+  "commit": "58caddb1",
+  "ollama_version": "0.40.4",
+  "settings": {
+    "run": "spike-3-store",
+    "sources": "meeting,photos,tahoe",
+    "fps": 1.0,
+    "change_threshold": 0.55,
+    "max_gap": 30.0,
+    "repeat_similarity": 0.93,
+    "cap": 40,
+    "mode": "store",
+    "vision_model": "qwen3.5:9b",
+    "extract_model": "prme-qwen3.5:35b-a3b-8k",
+    "reader_model": "qwen3.5:9b",
+    "judge_model": "qwen3.5:9b",
+    "token_budget": 4000
+  },
+  "frames": {
+    "meeting": {
+      "frames": 220,
+      "keyframes": 13,
+      "keyframe_times_s": [
+        0.0,
+        15.0,
+        45.0,
+        46.0,
+        55.0,
+        75.0,
+        92.0,
+        102.0,
+        107.0,
+        115.0,
+        145.0,
+        175.0,
+        200.0
+      ],
+      "change_median": 0.165,
+      "change_max": 3.82
+    },
+    "tahoe": {
+      "frames": 120,
+      "keyframes": 40,
+      "keyframe_times_s": [
+        0.0,
+        3.0,
+        6.0,
+        9.0,
+        12.0,
+        18.0,
+        21.0,
+        24.0,
+        27.0,
+        30.0,
+        36.0,
+        39.0,
+        42.0,
+        45.0,
+        47.0,
+        53.0,
+        55.0,
+        57.0,
+        60.0,
+        62.0,
+        66.0,
+        69.0,
+        71.0,
+        73.0,
+        75.0,
+        80.0,
+        82.0,
+        84.0,
+        87.0,
+        89.0,
+        93.0,
+        95.0,
+        98.0,
+        100.0,
+        102.0,
+        107.0,
+        109.0,
+        111.0,
+        113.0,
+        115.0
+      ],
+      "change_median": 0.479,
+      "change_max": 0.846
+    },
+    "photos": {
+      "photos": 5
+    },
+    "described": 58,
+    "unique_after_description": 17
+  },
+  "describe": {
+    "calls": 58,
+    "fresh": 0,
+    "seconds": null,
+    "prompt_tokens": {
+      "n": 58,
+      "mean": 1158.31,
+      "median": 1142.0,
+      "min": 657,
+      "max": 2723
+    },
+    "eval_tokens": {
+      "n": 58,
+      "mean": 122.4,
+      "median": 125.0,
+      "min": 61,
+      "max": 148
+    }
+  },
+  "build": {
+    "mode": "store",
+    "observations": 17,
+    "errors": 0,
+    "seconds": {
+      "n": 17,
+      "mean": 0.08,
+      "median": 0.07,
+      "min": 0.07,
+      "max": 0.14
+    }
+  },
+  "pack": {
+    "events": 17,
+    "nodes": {
+      "note": 17
+    },
+    "edges": {},
+    "pack_bytes": 7796245,
+    "thumbnail_bytes": 132094
+  },
+  "questions": {
+    "total": 24,
+    "retrieval_hits": 24,
+    "correct": 22,
+    "unresolved": 0,
+    "context_tokens": {
+      "n": 24,
+      "mean": 2005.33,
+      "median": 1985.0,
+      "min": 1985,
+      "max": 2047
+    },
+    "retrieval_seconds": {
+      "n": 24,
+      "mean": 0.04,
+      "median": 0.03,
+      "min": 0.03,
+      "max": 0.15
+    },
+    "by_source": {
+      "meeting": {
+        "questions": 16,
+        "retrieval_hits": 16,
+        "correct": 15
+      },
+      "photos": {
+        "questions": 7,
+        "retrieval_hits": 7,
+        "correct": 7
+      },
+      "tahoe": {
+        "questions": 1,
+        "retrieval_hits": 1,
+        "correct": 0
+      }
+    },
+    "by_kind": {
+      "single_fact": {
+        "questions": 16,
+        "correct": 15
+      },
+      "latest_value": {
+        "questions": 2,
+        "correct": 2
+      },
+      "earlier_value": {
+        "questions": 2,
+        "correct": 2
+      },
+      "chart": {
+        "questions": 2,
+        "correct": 2
+      },
+      "aggregation": {
+        "questions": 1,
+        "correct": 1
+      },
+      "scene": {
+        "questions": 1,
+        "correct": 0
+      }
+    }
+  }
+}

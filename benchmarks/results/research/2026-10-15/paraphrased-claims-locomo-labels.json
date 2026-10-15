@@ -1,0 +1,2565 @@
+{
+  "kind": "prme-paraphrased-claim-labels",
+  "schema_version": 1,
+  "benchmark": "locomo",
+  "labeling_rule": "Same fact: both records state the same proposition about the same subject: one event or occurrence, state, attribute, relationship, preference or plan. Wording, word order, a name in place of I, hedges and filler do not matter, and neither does the date a line shows when both dates refer to the same occurrence or state. A record that says everything the other says and adds detail is still the same fact, because the other line adds nothing beside it. Where a line leaves a reference open (it, that, there), the claim's subject, predicate and object and its source turn decide what it refers to. Different facts: each record states something the other does not: another event, or the same kind of event on another occasion; another object, attribute, person, place, amount, time or polarity; or a detail on each side that the other lacks. A different-fact pair is also marked with the one thing that alone separates it, if there is one: number (the same proposition with another count or amount), date (the same kind of event or statement on another date or occasion) or negation (one record denies what the other asserts).",
+  "labels": [
+    "same_fact",
+    "different_facts"
+  ],
+  "differences": [
+    "number",
+    "date",
+    "negation"
+  ],
+  "seed": 255,
+  "sizes": {
+    "0.90-0.95": 17,
+    "0.95-0.97": 17,
+    "0.97-1.00": 16
+  },
+  "pairs_sha256": "74c495c3015b265a1ba8b6db51efbde68a71a3a2325fac55d76d2174b31695f0",
+  "pairs": [
+    {
+      "id": "conv-26:41d18302-ea8c-4b1f-bdf8-c169b4cf20f1:a095754a-7ec2-4993-8a99-2764e4583f5b",
+      "unit": "conv-26",
+      "band": "0.90-0.95",
+      "similarity": 0.905881,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Caroline"
+      ],
+      "a": {
+        "node_id": "41d18302-ea8c-4b1f-bdf8-c169b4cf20f1",
+        "node_type": "fact",
+        "line": "- \"(1:56 pm on 8 May, 2023) Caroline: Thanks, Melanie!\"",
+        "subjects": [
+          "Caroline"
+        ],
+        "predicate": "thanks",
+        "object": "Melanie",
+        "polarity": "positive",
+        "event_time": "2023-05-08T13:56:00+00:00",
+        "source_turns": [
+          "D1:13"
+        ],
+        "speakers": [
+          "Caroline"
+        ]
+      },
+      "b": {
+        "node_id": "a095754a-7ec2-4993-8a99-2764e4583f5b",
+        "node_type": "fact",
+        "line": "- \"(4:33 pm on 12 July, 2023) Caroline: Glad it helped ya, Melanie!\"",
+        "subjects": [
+          "Caroline"
+        ],
+        "predicate": "glad_helped",
+        "object": "Melanie",
+        "polarity": "positive",
+        "event_time": "2023-07-12T16:33:00+00:00",
+        "source_turns": [
+          "D7:27"
+        ],
+        "speakers": [
+          "Caroline"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Different remarks to Melanie on different days: thanks and glad it helped."
+    },
+    {
+      "id": "conv-26:52b6ddf4-c49b-4c62-b209-ba85f6f38f4f:a35f68ec-f561-4130-a493-a489e7687908",
+      "unit": "conv-26",
+      "band": "0.90-0.95",
+      "similarity": 0.915276,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Melanie"
+      ],
+      "a": {
+        "node_id": "52b6ddf4-c49b-4c62-b209-ba85f6f38f4f",
+        "node_type": "fact",
+        "line": "- \"(8:18 pm on 6 July, 2023) Melanie: Glad you have support, Caroline!\"",
+        "subjects": [
+          "Melanie"
+        ],
+        "predicate": "expresses_gladness_for",
+        "object": "Caroline",
+        "polarity": "positive",
+        "event_time": "2023-07-06T20:18:00+00:00",
+        "source_turns": [
+          "D6:16"
+        ],
+        "speakers": [
+          "Melanie"
+        ]
+      },
+      "b": {
+        "node_id": "a35f68ec-f561-4130-a493-a489e7687908",
+        "node_type": "fact",
+        "line": "- \"(1:14 pm on 25 May, 2023) Caroline: Thanks, Melanie!\"",
+        "subjects": [
+          "Melanie"
+        ],
+        "predicate": "offered_kind_words_to",
+        "object": "Caroline",
+        "polarity": "positive",
+        "event_time": "2023-05-25T13:14:00+00:00",
+        "source_turns": [
+          "D2:16"
+        ],
+        "speakers": [
+          "Caroline"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Melanie is glad Caroline has support in one line; Caroline thanks Melanie in the other."
+    },
+    {
+      "id": "conv-30:36071e92-ed3d-4a9f-bb68-960302ed56d3:3c79bf37-a82e-4562-be83-849b27d8ad2d",
+      "unit": "conv-30",
+      "band": "0.90-0.95",
+      "similarity": 0.906402,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Gina"
+      ],
+      "a": {
+        "node_id": "36071e92-ed3d-4a9f-bb68-960302ed56d3",
+        "node_type": "fact",
+        "line": "- \"(10:43 am on 4 February, 2023) Gina: Absolutely Jon.\"",
+        "subjects": [
+          "Gina"
+        ],
+        "predicate": "encourages",
+        "object": "Jon",
+        "polarity": "positive",
+        "event_time": "2023-02-04T10:43:00+00:00",
+        "source_turns": [
+          "D4:18"
+        ],
+        "speakers": [
+          "Gina"
+        ]
+      },
+      "b": {
+        "node_id": "3c79bf37-a82e-4562-be83-849b27d8ad2d",
+        "node_type": "fact",
+        "line": "- \"(11:24 am on 25 April, 2023) Gina: Yeah Jon!\"",
+        "subjects": [
+          "Gina"
+        ],
+        "predicate": "addresses",
+        "object": "Jon",
+        "polarity": "positive",
+        "event_time": "2023-04-25T11:24:00+00:00",
+        "source_turns": [
+          "D5:21",
+          "D10:6"
+        ],
+        "speakers": [
+          "Gina"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Gina agrees with Jon on two occasions, in February and April."
+    },
+    {
+      "id": "conv-41:5626a7f7-b394-4783-8f54-b0afb035f063:82accf9d-9e43-4170-8aae-de1614654202",
+      "unit": "conv-41",
+      "band": "0.90-0.95",
+      "similarity": 0.913312,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Maria"
+      ],
+      "a": {
+        "node_id": "5626a7f7-b394-4783-8f54-b0afb035f063",
+        "node_type": "fact",
+        "line": "- \"(12:21 am on 27 June, 2023) Maria: Thanks, John!\"",
+        "subjects": [
+          "Maria"
+        ],
+        "predicate": "will_speak_to",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2023-06-27T00:21:00+00:00",
+        "source_turns": [
+          "D20:17"
+        ],
+        "speakers": [
+          "Maria"
+        ]
+      },
+      "b": {
+        "node_id": "82accf9d-9e43-4170-8aae-de1614654202",
+        "node_type": "fact",
+        "line": "- \"(6:13 pm on 10 April, 2023) John: Thanks, Maria.\"",
+        "subjects": [
+          "Maria"
+        ],
+        "predicate": "kind_words_mean_a_lot_to",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2023-04-10T18:13:00+00:00",
+        "source_turns": [
+          "D11:3"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Maria thanks John in one line and John thanks Maria in the other, on different days."
+    },
+    {
+      "id": "conv-41:c22df2bf-6bb7-4c8d-ab39-8f1176ae5e22:e5f7a476-4db8-4047-a67c-8ac72acf3e71",
+      "unit": "conv-41",
+      "band": "0.90-0.95",
+      "similarity": 0.919502,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "c22df2bf-6bb7-4c8d-ab39-8f1176ae5e22",
+        "node_type": "fact",
+        "line": "- \"(3:34 pm on 17 July, 2023) John: Yep, Maria!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "addresses",
+        "object": "Maria",
+        "polarity": "positive",
+        "event_time": "2023-07-17T15:34:00+00:00",
+        "source_turns": [
+          "D24:15"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "e5f7a476-4db8-4047-a67c-8ac72acf3e71",
+        "node_type": "fact",
+        "line": "- \"(3:18 pm on 4 May, 2023) John: Hey Maria!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "greeted",
+        "object": "Maria",
+        "polarity": "positive",
+        "event_time": "2023-05-04T15:18:00+00:00",
+        "source_turns": [
+          "D13:1"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Different remarks to Maria on different days: an agreement (Yep) and a greeting (Hey)."
+    },
+    {
+      "id": "conv-42:1ffd2b4c-4ea5-4306-ae6a-35fbb7d48c47:6d23b32d-9a45-4419-8080-ea81a1eb37c4",
+      "unit": "conv-42",
+      "band": "0.90-0.95",
+      "similarity": 0.913656,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Joanna"
+      ],
+      "a": {
+        "node_id": "1ffd2b4c-4ea5-4306-ae6a-35fbb7d48c47",
+        "node_type": "fact",
+        "line": "- \"(2:01 pm on 21 October, 2022) Joanna: Thanks! I'll see you around!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "said",
+        "object": "Thanks! I'll see you around!",
+        "polarity": "positive",
+        "event_time": "2022-10-21T14:01:00+00:00",
+        "source_turns": [
+          "D24:18"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "b": {
+        "node_id": "6d23b32d-9a45-4419-8080-ea81a1eb37c4",
+        "node_type": "fact",
+        "line": "- \"(11:15 am on 6 October, 2022) Joanna: Sure thing! Bye for now!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "said",
+        "object": "Sure thing! Bye for now!",
+        "polarity": "positive",
+        "event_time": "2022-10-06T11:15:00+00:00",
+        "source_turns": [
+          "D22:23"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Two farewells on different days, one with thanks and one with an agreement."
+    },
+    {
+      "id": "conv-43:55db9af3-6535-4777-8a7e-4c66f3c0a13d:8905eac0-db4b-4a3c-8c35-eaa4a33b9d95",
+      "unit": "conv-43",
+      "band": "0.90-0.95",
+      "similarity": 0.908563,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "55db9af3-6535-4777-8a7e-4c66f3c0a13d",
+        "node_type": "fact",
+        "line": "- \"(3:37 pm on 16 December, 2023) John: Hey Tim!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "talked_to",
+        "object": "Tim",
+        "polarity": "positive",
+        "event_time": "2023-12-16T15:37:00+00:00",
+        "source_turns": [
+          "D24:2"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "8905eac0-db4b-4a3c-8c35-eaa4a33b9d95",
+        "node_type": "fact",
+        "line": "- \"(7:48 pm on 21 May, 2023) John: Hey Tim, nice to meet you!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "meets",
+        "object": "Tim",
+        "polarity": "positive",
+        "event_time": "2023-05-21T19:48:00+00:00",
+        "source_turns": [
+          "D1:1"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "A December greeting and the first-meeting greeting in May, which also says they have just met."
+    },
+    {
+      "id": "conv-44:7141bb60-76a6-4f86-87cd-0e86d7f3c892:bf2d5199-4f6e-45ff-869d-9965caee9abb",
+      "unit": "conv-44",
+      "band": "0.90-0.95",
+      "similarity": 0.936523,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Andrew"
+      ],
+      "a": {
+        "node_id": "7141bb60-76a6-4f86-87cd-0e86d7f3c892",
+        "node_type": "fact",
+        "line": "- \"(5:41 pm on 3 May, 2023) Andrew: Hey Audrey!\"",
+        "subjects": [
+          "Andrew"
+        ],
+        "predicate": "glad_to_hear_from",
+        "object": "Audrey",
+        "polarity": "positive",
+        "event_time": "2023-05-03T17:41:00+00:00",
+        "source_turns": [
+          "D4:2"
+        ],
+        "speakers": [
+          "Andrew"
+        ]
+      },
+      "b": {
+        "node_id": "bf2d5199-4f6e-45ff-869d-9965caee9abb",
+        "node_type": "fact",
+        "line": "- \"(4:18 pm on 4 October, 2023) Andrew: Hi Audrey!\"",
+        "subjects": [
+          "Andrew"
+        ],
+        "predicate": "greeted",
+        "object": "Audrey",
+        "polarity": "positive",
+        "event_time": "2023-10-04T16:18:00+00:00",
+        "source_turns": [
+          "D21:1"
+        ],
+        "speakers": [
+          "Andrew"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Andrew greets Audrey on two occasions, in May and October."
+    },
+    {
+      "id": "conv-47:0e2edda0-d7dc-4228-acd1-139f73d2108f:bd5e9c2f-533e-4b53-aaac-3b2c5aeb9476",
+      "unit": "conv-47",
+      "band": "0.90-0.95",
+      "similarity": 0.911932,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "James"
+      ],
+      "a": {
+        "node_id": "0e2edda0-d7dc-4228-acd1-139f73d2108f",
+        "node_type": "fact",
+        "line": "- \"(12:40 am on 27 March, 2022) James: Nice one, John!\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "praised",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2022-03-27T00:40:00+00:00",
+        "source_turns": [
+          "D3:14"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "b": {
+        "node_id": "bd5e9c2f-533e-4b53-aaac-3b2c5aeb9476",
+        "node_type": "fact",
+        "line": "- \"(12:37 am on 31 October, 2022) James: Thanks, John!\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "thanks",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2022-10-31T00:37:00+00:00",
+        "source_turns": [
+          "D29:14"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Different remarks to John on different days: praise (Nice one) and thanks."
+    },
+    {
+      "id": "conv-47:226409c3-5982-41c2-8ae6-e879bfeee5c7:7c9acdcb-962d-42c1-a8f4-c78e64e64be6",
+      "unit": "conv-47",
+      "band": "0.90-0.95",
+      "similarity": 0.914256,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "226409c3-5982-41c2-8ae6-e879bfeee5c7",
+        "node_type": "fact",
+        "line": "- \"(8:56 pm on 20 September, 2022) John: Woohoo, congrats James!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "congratulates",
+        "object": "James",
+        "polarity": "positive",
+        "event_time": "2022-09-20T20:56:00+00:00",
+        "source_turns": [
+          "D25:5"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "7c9acdcb-962d-42c1-a8f4-c78e64e64be6",
+        "node_type": "fact",
+        "line": "- \"(8:56 pm on 20 September, 2022) James: Way to go, John! Congrats on achieving that major career milestone.\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "achieved",
+        "object": "major career milestone",
+        "polarity": "positive",
+        "event_time": "2022-09-20T20:56:00+00:00",
+        "source_turns": [
+          "D25:8"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "John congratulates James in one line; James congratulates John on a career milestone in the other."
+    },
+    {
+      "id": "conv-47:54ec692e-c830-4184-a837-540e191c7d43:ea647472-dbdc-4a76-8c93-a287574d0324",
+      "unit": "conv-47",
+      "band": "0.90-0.95",
+      "similarity": 0.94377,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "54ec692e-c830-4184-a837-540e191c7d43",
+        "node_type": "fact",
+        "line": "- \"(9:49 am on 22 July, 2022) John: This is awesome, James!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "addressed",
+        "object": "James",
+        "polarity": "positive",
+        "event_time": "2022-07-22T09:49:00+00:00",
+        "source_turns": [
+          "D17:23"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "ea647472-dbdc-4a76-8c93-a287574d0324",
+        "node_type": "fact",
+        "line": "- \"(12:37 am on 31 October, 2022) John: Awesome, James!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "requests_to_be_kept_posted",
+        "object": "James",
+        "polarity": "positive",
+        "event_time": "2022-10-31T00:37:00+00:00",
+        "source_turns": [
+          "D29:13"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "John tells James something is awesome on two occasions, in July and October."
+    },
+    {
+      "id": "conv-47:8fabbe96-5399-4b22-8ab3-2785cfaffd3a:b2db62da-d414-4e39-80b0-b1a2e2c57ae8",
+      "unit": "conv-47",
+      "band": "0.90-0.95",
+      "similarity": 0.909127,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "8fabbe96-5399-4b22-8ab3-2785cfaffd3a",
+        "node_type": "preference",
+        "line": "- \"(9:49 am on 22 July, 2022) John: This is awesome, James!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "evaluates",
+        "object": "This is awesome",
+        "polarity": "positive",
+        "event_time": "2022-07-22T09:49:00+00:00",
+        "source_turns": [
+          "D17:23"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "b2db62da-d414-4e39-80b0-b1a2e2c57ae8",
+        "node_type": "fact",
+        "line": "- \"(7:01 pm on 4 May, 2022) John: Hey James!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "greeted",
+        "object": "James",
+        "polarity": "positive",
+        "event_time": "2022-05-04T19:01:00+00:00",
+        "source_turns": [
+          "D9:1"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Different remarks to James on different days: a reaction (This is awesome) and a greeting."
+    },
+    {
+      "id": "conv-47:9b918b93-1efd-47b9-b661-b88a6843b847:d711f716-442c-4291-a229-2b3c36e8b844",
+      "unit": "conv-47",
+      "band": "0.90-0.95",
+      "similarity": 0.940309,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "9b918b93-1efd-47b9-b661-b88a6843b847",
+        "node_type": "fact",
+        "line": "- \"(7:01 pm on 4 May, 2022) John: Thanks!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "expressed_gratitude",
+        "object": "Thanks",
+        "polarity": "positive",
+        "event_time": "2022-05-04T19:01:00+00:00",
+        "source_turns": [
+          "D9:25"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "d711f716-442c-4291-a229-2b3c36e8b844",
+        "node_type": "fact",
+        "line": "- \"(5:00 pm on 11 May, 2022) John: Thanks, James! Appreciate it.\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "appreciates",
+        "object": "it",
+        "polarity": "positive",
+        "event_time": "2022-05-11T17:00:00+00:00",
+        "source_turns": [
+          "D11:19"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "John thanks James on two occasions a week apart; Appreciate it restates the thanks."
+    },
+    {
+      "id": "conv-48:88210839-3ba8-4954-8c3b-60db63390b04:cf33c0fa-f70a-46de-a78b-c5919bc053da",
+      "unit": "conv-48",
+      "band": "0.90-0.95",
+      "similarity": 0.922779,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Jolene"
+      ],
+      "a": {
+        "node_id": "88210839-3ba8-4954-8c3b-60db63390b04",
+        "node_type": "preference",
+        "line": "- \"(2:18 pm on 12 September, 2023) Jolene: Thanks, Deb!\"",
+        "subjects": [
+          "Jolene"
+        ],
+        "predicate": "appreciates_support_of",
+        "object": "Deb",
+        "polarity": "positive",
+        "event_time": "2023-09-12T14:18:00+00:00",
+        "source_turns": [
+          "D27:11"
+        ],
+        "speakers": [
+          "Jolene"
+        ]
+      },
+      "b": {
+        "node_id": "cf33c0fa-f70a-46de-a78b-c5919bc053da",
+        "node_type": "fact",
+        "line": "- \"(4:50 pm on 25 February, 2023) Jolene: Thanks, Deb.\"",
+        "subjects": [
+          "Jolene"
+        ],
+        "predicate": "grateful_to",
+        "object": "Deb",
+        "polarity": "positive",
+        "event_time": "2023-02-25T16:50:00+00:00",
+        "source_turns": [
+          "D7:15",
+          "D7:23"
+        ],
+        "speakers": [
+          "Jolene"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Jolene thanks Deb on two occasions, in February and September."
+    },
+    {
+      "id": "conv-49:8eac529d-c6a0-46ba-b84d-618908c076db:d8a77b9d-fe36-4eb9-926f-f013bcb7a531",
+      "unit": "conv-49",
+      "band": "0.90-0.95",
+      "similarity": 0.919035,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Sam"
+      ],
+      "a": {
+        "node_id": "8eac529d-c6a0-46ba-b84d-618908c076db",
+        "node_type": "fact",
+        "line": "- \"(3:55 pm on 6 June, 2023) Sam: Hey Evan, thanks!\"",
+        "subjects": [
+          "Sam"
+        ],
+        "predicate": "thanks",
+        "object": "Evan",
+        "polarity": "positive",
+        "event_time": "2023-06-06T15:55:00+00:00",
+        "source_turns": [
+          "D3:8"
+        ],
+        "speakers": [
+          "Sam"
+        ]
+      },
+      "b": {
+        "node_id": "d8a77b9d-fe36-4eb9-926f-f013bcb7a531",
+        "node_type": "preference",
+        "line": "- \"(4:20 pm on 15 August, 2023) Sam: Thanks, Evan.\"",
+        "subjects": [
+          "Sam"
+        ],
+        "predicate": "appreciates",
+        "object": "Evan",
+        "polarity": "positive",
+        "event_time": "2023-08-15T16:20:00+00:00",
+        "source_turns": [
+          "D7:16"
+        ],
+        "speakers": [
+          "Sam"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Sam thanks Evan on two occasions, in June and August; the Hey is filler."
+    },
+    {
+      "id": "conv-50:15a389fb-d5b9-4349-a0a4-9d1bebdf4f10:4267482d-c172-4aaa-8d0d-37ce57331d08",
+      "unit": "conv-50",
+      "band": "0.90-0.95",
+      "similarity": 0.914221,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Calvin"
+      ],
+      "a": {
+        "node_id": "15a389fb-d5b9-4349-a0a4-9d1bebdf4f10",
+        "node_type": "fact",
+        "line": "- \"(11:50 am on 16 May, 2023) Calvin: Sure thing, Dave!\"",
+        "subjects": [
+          "Calvin"
+        ],
+        "predicate": "will_keep_posted",
+        "object": "Dave",
+        "polarity": "positive",
+        "event_time": "2023-05-16T11:50:00+00:00",
+        "source_turns": [
+          "D6:13"
+        ],
+        "speakers": [
+          "Calvin"
+        ]
+      },
+      "b": {
+        "node_id": "4267482d-c172-4aaa-8d0d-37ce57331d08",
+        "node_type": "fact",
+        "line": "- \"(10:54 am on 17 November, 2023) Calvin: Thanks, Dave!\"",
+        "subjects": [
+          "Calvin"
+        ],
+        "predicate": "will_catch",
+        "object": "Dave",
+        "polarity": "positive",
+        "event_time": "2023-11-17T10:54:00+00:00",
+        "source_turns": [
+          "D30:22"
+        ],
+        "speakers": [
+          "Calvin"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Different remarks to Dave on different days: an agreement (Sure thing) and thanks."
+    },
+    {
+      "id": "conv-50:73a1c339-4b9d-4ace-a843-4ec9409cdf03:b17ec8b1-484a-4dda-89c6-99d19767fac9",
+      "unit": "conv-50",
+      "band": "0.90-0.95",
+      "similarity": 0.912203,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Calvin"
+      ],
+      "a": {
+        "node_id": "73a1c339-4b9d-4ace-a843-4ec9409cdf03",
+        "node_type": "fact",
+        "line": "- \"(5:46 pm on 2 November, 2023) Calvin: Cool logo, Dave!\"",
+        "subjects": [
+          "Calvin"
+        ],
+        "predicate": "addressed",
+        "object": "Dave",
+        "polarity": "positive",
+        "event_time": "2023-11-02T17:46:00+00:00",
+        "source_turns": [
+          "D6:3",
+          "D12:5",
+          "D15:8",
+          "D16:18",
+          "D26:9",
+          "D28:23"
+        ],
+        "speakers": [
+          "Calvin"
+        ]
+      },
+      "b": {
+        "node_id": "b17ec8b1-484a-4dda-89c6-99d19767fac9",
+        "node_type": "fact",
+        "line": "- \"(5:46 pm on 2 November, 2023) Calvin: Wow Dave!\"",
+        "subjects": [
+          "Calvin"
+        ],
+        "predicate": "addressed",
+        "object": "Dave",
+        "polarity": "positive",
+        "event_time": "2023-11-02T17:46:00+00:00",
+        "source_turns": [
+          "D28:5",
+          "D28:25"
+        ],
+        "speakers": [
+          "Calvin"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Two different remarks to Dave in one session: a compliment on a logo and a bare Wow."
+    },
+    {
+      "id": "conv-30:2281262a-47ad-4020-b648-fad5d87aa07c:65c0b11c-dda9-4053-a6be-ed9ade63db41",
+      "unit": "conv-30",
+      "band": "0.95-0.97",
+      "similarity": 0.95362,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Gina"
+      ],
+      "a": {
+        "node_id": "2281262a-47ad-4020-b648-fad5d87aa07c",
+        "node_type": "fact",
+        "line": "- \"(1:26 pm on 3 April, 2023) Gina: Thanks, Jon!\"",
+        "subjects": [
+          "Gina"
+        ],
+        "predicate": "thanks",
+        "object": "Jon",
+        "polarity": "positive",
+        "event_time": "2023-04-03T13:26:00+00:00",
+        "source_turns": [
+          "D8:22"
+        ],
+        "speakers": [
+          "Gina"
+        ]
+      },
+      "b": {
+        "node_id": "65c0b11c-dda9-4053-a6be-ed9ade63db41",
+        "node_type": "fact",
+        "line": "- \"(9:32 am on 8 February, 2023) Jon: Thanks, Gina!\"",
+        "subjects": [
+          "Gina"
+        ],
+        "predicate": "gave_pep_talk_to",
+        "object": "Jon",
+        "polarity": "positive",
+        "event_time": "2023-02-08T09:32:00+00:00",
+        "source_turns": [
+          "D5:22"
+        ],
+        "speakers": [
+          "Jon"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Gina thanks Jon in one line and Jon thanks Gina in the other, on different days."
+    },
+    {
+      "id": "conv-41:60edcd71-bf3e-4205-a7da-a0a1435d1cc9:8dd79e56-d424-4ad9-8a4c-ab6ec5135b9b",
+      "unit": "conv-41",
+      "band": "0.95-0.97",
+      "similarity": 0.950827,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "60edcd71-bf3e-4205-a7da-a0a1435d1cc9",
+        "node_type": "fact",
+        "line": "- \"(3:18 pm on 4 May, 2023) John: Thanks, Maria!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "thanks",
+        "object": "Maria",
+        "polarity": "positive",
+        "event_time": "2023-05-04T15:18:00+00:00",
+        "source_turns": [
+          "D13:7"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "8dd79e56-d424-4ad9-8a4c-ab6ec5135b9b",
+        "node_type": "fact",
+        "line": "- \"(3:18 pm on 4 May, 2023) John: Awesome, Maria!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "praises",
+        "object": "Maria",
+        "polarity": "positive",
+        "event_time": "2023-05-04T15:18:00+00:00",
+        "source_turns": [
+          "D13:21"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Two different remarks to Maria in one session: thanks and praise."
+    },
+    {
+      "id": "conv-42:0cfa1ddf-620e-4220-af1e-02f3302834fa:6b3dcbab-74a0-44d9-904c-6046d1bdbf8e",
+      "unit": "conv-42",
+      "band": "0.95-0.97",
+      "similarity": 0.956811,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Joanna"
+      ],
+      "a": {
+        "node_id": "0cfa1ddf-620e-4220-af1e-02f3302834fa",
+        "node_type": "fact",
+        "line": "- \"(2:01 pm on 23 January, 2022) Joanna: Thanks, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-01-23T14:01:00+00:00",
+        "source_turns": [
+          "D2:5",
+          "D2:9",
+          "D2:27"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "b": {
+        "node_id": "6b3dcbab-74a0-44d9-904c-6046d1bdbf8e",
+        "node_type": "fact",
+        "line": "- \"(6:03 pm on 5 September, 2022) Joanna: Thanks, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-09-05T18:03:00+00:00",
+        "source_turns": [
+          "D20:16"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Joanna thanks Nate on two occasions, in January and September."
+    },
+    {
+      "id": "conv-42:14ec84ff-eaa3-474c-b2d9-4b216a3ff604:a639ad3d-5d4f-483c-b6a1-f25b4576e4cb",
+      "unit": "conv-42",
+      "band": "0.95-0.97",
+      "similarity": 0.96436,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Joanna"
+      ],
+      "a": {
+        "node_id": "14ec84ff-eaa3-474c-b2d9-4b216a3ff604",
+        "node_type": "fact",
+        "line": "- \"(12:06 am on 11 November, 2022) Joanna: Woohoo, thanks Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-11-11T00:06:00+00:00",
+        "source_turns": [
+          "D3:3",
+          "D4:14",
+          "D4:18",
+          "D7:10",
+          "D9:9",
+          "D9:17",
+          "D10:15",
+          "D17:18",
+          "D18:15",
+          "D19:12",
+          "D21:3",
+          "D22:21",
+          "D26:5",
+          "D26:19",
+          "D28:22",
+          "D29:3"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "b": {
+        "node_id": "a639ad3d-5d4f-483c-b6a1-f25b4576e4cb",
+        "node_type": "fact",
+        "line": "- \"(2:34 pm on 10 July, 2022) Joanna: Thanks, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-07-10T14:34:00+00:00",
+        "source_turns": [
+          "D17:10",
+          "D17:20"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Joanna thanks Nate on two occasions, in July and November; the Woohoo is filler."
+    },
+    {
+      "id": "conv-42:8686056c-aad2-4d89-b30b-3fe1fa569545:b7af2284-48e2-46d1-9df0-f75a34ec8a2c",
+      "unit": "conv-42",
+      "band": "0.95-0.97",
+      "similarity": 0.969241,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Joanna"
+      ],
+      "a": {
+        "node_id": "8686056c-aad2-4d89-b30b-3fe1fa569545",
+        "node_type": "fact",
+        "line": "- \"(1:43 pm on 24 March, 2022) Joanna: Thanks Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-03-24T13:43:00+00:00",
+        "source_turns": [
+          "D6:4",
+          "D6:6",
+          "D6:12"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "b": {
+        "node_id": "b7af2284-48e2-46d1-9df0-f75a34ec8a2c",
+        "node_type": "fact",
+        "line": "- \"(6:12 pm on 14 August, 2022) Joanna: Thanks, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-08-14T18:12:00+00:00",
+        "source_turns": [
+          "D18:13"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Joanna thanks Nate on two occasions, in March and August."
+    },
+    {
+      "id": "conv-42:8686056c-aad2-4d89-b30b-3fe1fa569545:eb8a64c8-b600-42d4-9603-2b24f1c8b2a4",
+      "unit": "conv-42",
+      "band": "0.95-0.97",
+      "similarity": 0.967072,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Joanna"
+      ],
+      "a": {
+        "node_id": "8686056c-aad2-4d89-b30b-3fe1fa569545",
+        "node_type": "fact",
+        "line": "- \"(1:43 pm on 24 March, 2022) Joanna: Thanks Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-03-24T13:43:00+00:00",
+        "source_turns": [
+          "D6:4",
+          "D6:6",
+          "D6:12"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "b": {
+        "node_id": "eb8a64c8-b600-42d4-9603-2b24f1c8b2a4",
+        "node_type": "fact",
+        "line": "- \"(2:12 pm on 5 June, 2022) Joanna: Thanks, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-06-05T14:12:00+00:00",
+        "source_turns": [
+          "D15:3",
+          "D15:11"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Joanna thanks Nate on two occasions, in March and June."
+    },
+    {
+      "id": "conv-42:96adfd51-a9f0-4d6f-b272-54ffa12f699c:faf2cbba-a105-4848-9d12-27c20b4715a3",
+      "unit": "conv-42",
+      "band": "0.95-0.97",
+      "similarity": 0.962458,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Joanna"
+      ],
+      "a": {
+        "node_id": "96adfd51-a9f0-4d6f-b272-54ffa12f699c",
+        "node_type": "fact",
+        "line": "- \"(6:59 pm on 18 March, 2022) Joanna: Thanks so much, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-03-18T18:59:00+00:00",
+        "source_turns": [
+          "D5:3",
+          "D5:17"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "b": {
+        "node_id": "faf2cbba-a105-4848-9d12-27c20b4715a3",
+        "node_type": "preference",
+        "line": "- \"(3:00 pm on 25 May, 2022) Joanna: Thanks, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "appreciates_support_from",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-05-25T15:00:00+00:00",
+        "source_turns": [
+          "D13:22"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Joanna thanks Nate on two occasions, in March and May."
+    },
+    {
+      "id": "conv-43:98b8bf2e-db49-4a18-8abf-febfa394ae13:b4f8cb66-c238-4fb6-b02b-0b3c8d581214",
+      "unit": "conv-43",
+      "band": "0.95-0.97",
+      "similarity": 0.963296,
+      "same_source": true,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "98b8bf2e-db49-4a18-8abf-febfa394ae13",
+        "node_type": "fact",
+        "line": "- \"(10:29 am on 9 August, 2023) John: Books can be so captivating, taking us on such incredible journeys!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "stated",
+        "object": "Books can be so captivating, taking us on such incredible journeys!",
+        "polarity": "positive",
+        "event_time": "2023-08-09T10:29:00+00:00",
+        "source_turns": [
+          "D5:14"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "b4f8cb66-c238-4fb6-b02b-0b3c8d581214",
+        "node_type": "fact",
+        "line": "- \"(10:29 am on 9 August, 2023) John: Books can be so captivating, taking us on such incredible journeys! What's the name of it?\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "asked",
+        "object": "What's the name of it?",
+        "polarity": "positive",
+        "event_time": "2023-08-09T10:29:00+00:00",
+        "source_turns": [
+          "D5:14"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Same turn; the second line repeats the first sentence and adds a question."
+    },
+    {
+      "id": "conv-47:25acfe50-083d-4197-a498-1639f71b30a5:50a30fab-e9be-474a-958b-5434657f841a",
+      "unit": "conv-47",
+      "band": "0.95-0.97",
+      "similarity": 0.95796,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "James"
+      ],
+      "a": {
+        "node_id": "25acfe50-083d-4197-a498-1639f71b30a5",
+        "node_type": "fact",
+        "line": "- \"(6:53 pm on 1 September, 2022) John: Thanks, James, for the support.\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "provided_support_to",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2022-09-01T18:53:00+00:00",
+        "source_turns": [
+          "D22:16"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "50a30fab-e9be-474a-958b-5434657f841a",
+        "node_type": "preference",
+        "line": "- \"(6:53 pm on 1 September, 2022) James: I appreciate your support.\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "appreciates",
+        "object": "your support",
+        "polarity": "positive",
+        "event_time": "2022-09-01T18:53:00+00:00",
+        "source_turns": [
+          "D22:3"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "John thanks James for his support in one line; James thanks John for his in the other."
+    },
+    {
+      "id": "conv-47:aaba41d2-adb1-4fcd-a76e-4b34844e5366:ad1efc78-1ff5-4259-a0ef-ecb1e4170c5c",
+      "unit": "conv-47",
+      "band": "0.95-0.97",
+      "similarity": 0.951998,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "James"
+      ],
+      "a": {
+        "node_id": "aaba41d2-adb1-4fcd-a76e-4b34844e5366",
+        "node_type": "fact",
+        "line": "- \"(2:36 pm on 29 April, 2022) James: Hey John!\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "greeted",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2022-04-29T14:36:00+00:00",
+        "source_turns": [
+          "D8:1"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "b": {
+        "node_id": "ad1efc78-1ff5-4259-a0ef-ecb1e4170c5c",
+        "node_type": "fact",
+        "line": "- \"(5:13 pm on 9 July, 2022) James: Hey John!\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "greets",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2022-07-09T17:13:00+00:00",
+        "source_turns": [
+          "D16:1"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Two separate greetings, in April and July; only the occasion differs."
+    },
+    {
+      "id": "conv-48:ceea9f32-a9c0-43a1-8fd5-eee85a5e4013:d7792bf2-c114-47c4-b218-a55dfffe7d7f",
+      "unit": "conv-48",
+      "band": "0.95-0.97",
+      "similarity": 0.96095,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Deborah"
+      ],
+      "a": {
+        "node_id": "ceea9f32-a9c0-43a1-8fd5-eee85a5e4013",
+        "node_type": "fact",
+        "line": "- \"(9:11 am on 21 August, 2023) Deborah: Yeah, Jolene.\"",
+        "subjects": [
+          "Deborah"
+        ],
+        "predicate": "addressed",
+        "object": "Jolene",
+        "polarity": "positive",
+        "event_time": "2023-08-21T09:11:00+00:00",
+        "source_turns": [
+          "D20:10"
+        ],
+        "speakers": [
+          "Deborah"
+        ]
+      },
+      "b": {
+        "node_id": "d7792bf2-c114-47c4-b218-a55dfffe7d7f",
+        "node_type": "fact",
+        "line": "- \"(9:11 am on 21 August, 2023) Deborah: Hey Jolene!\"",
+        "subjects": [
+          "Deborah"
+        ],
+        "predicate": "messaged",
+        "object": "Jolene",
+        "polarity": "positive",
+        "event_time": "2023-08-21T09:11:00+00:00",
+        "source_turns": [
+          "D20:2"
+        ],
+        "speakers": [
+          "Deborah"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Two different remarks to Jolene in one session: a greeting and a bare Yeah."
+    },
+    {
+      "id": "conv-49:08c4cfdb-8b86-4c6e-b234-f812d9ff9cc3:cc36e8db-754c-4485-b47e-eafdc68a76e5",
+      "unit": "conv-49",
+      "band": "0.95-0.97",
+      "similarity": 0.957538,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Sam"
+      ],
+      "a": {
+        "node_id": "08c4cfdb-8b86-4c6e-b234-f812d9ff9cc3",
+        "node_type": "fact",
+        "line": "- \"(9:13 pm on 9 November, 2023) Sam: Thanks, Evan!\"",
+        "subjects": [
+          "Sam"
+        ],
+        "predicate": "appreciates_support_from",
+        "object": "Evan",
+        "polarity": "positive",
+        "event_time": "2023-11-09T21:13:00+00:00",
+        "source_turns": [
+          "D12:7",
+          "D16:3"
+        ],
+        "speakers": [
+          "Sam"
+        ]
+      },
+      "b": {
+        "node_id": "cc36e8db-754c-4485-b47e-eafdc68a76e5",
+        "node_type": "fact",
+        "line": "- \"(8:57 pm on 6 October, 2023) Sam: Thanks, Evan!\"",
+        "subjects": [
+          "Sam"
+        ],
+        "predicate": "thanks",
+        "object": "Evan",
+        "polarity": "positive",
+        "event_time": "2023-10-06T20:57:00+00:00",
+        "source_turns": [
+          "D11:19"
+        ],
+        "speakers": [
+          "Sam"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Sam thanks Evan on two occasions, in October and November."
+    },
+    {
+      "id": "conv-49:67c862e0-c50b-4fe3-9602-f2d7e3600938:c287d2cf-149f-49af-a2c1-16c0c685f034",
+      "unit": "conv-49",
+      "band": "0.95-0.97",
+      "similarity": 0.950589,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Evan"
+      ],
+      "a": {
+        "node_id": "67c862e0-c50b-4fe3-9602-f2d7e3600938",
+        "node_type": "fact",
+        "line": "- \"(7:30 pm on 21 November, 2023) Evan: Thanks, Sam.\"",
+        "subjects": [
+          "Evan"
+        ],
+        "predicate": "thanks",
+        "object": "Sam",
+        "polarity": "positive",
+        "event_time": "2023-11-21T19:30:00+00:00",
+        "source_turns": [
+          "D17:28"
+        ],
+        "speakers": [
+          "Evan"
+        ]
+      },
+      "b": {
+        "node_id": "c287d2cf-149f-49af-a2c1-16c0c685f034",
+        "node_type": "fact",
+        "line": "- \"(7:30 pm on 21 November, 2023) Evan: Yeah, Sam.\"",
+        "subjects": [
+          "Evan"
+        ],
+        "predicate": "addressed",
+        "object": "Sam",
+        "polarity": "positive",
+        "event_time": "2023-11-21T19:30:00+00:00",
+        "source_turns": [
+          "D17:12"
+        ],
+        "speakers": [
+          "Evan"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Two different remarks to Sam in one session: thanks and a bare Yeah."
+    },
+    {
+      "id": "conv-50:3ff33815-c5e0-4604-9093-f298a69e2c24:f01a0b31-49d1-4a4a-87ae-bc13dd598470",
+      "unit": "conv-50",
+      "band": "0.95-0.97",
+      "similarity": 0.961034,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Dave"
+      ],
+      "a": {
+        "node_id": "3ff33815-c5e0-4604-9093-f298a69e2c24",
+        "node_type": "fact",
+        "line": "- \"(10:49 am on 29 October, 2023) Dave: Thanks, Calvin!\"",
+        "subjects": [
+          "Dave"
+        ],
+        "predicate": "thanked",
+        "object": "Calvin",
+        "polarity": "positive",
+        "event_time": "2023-10-29T10:49:00+00:00",
+        "source_turns": [
+          "D13:5",
+          "D19:7",
+          "D22:5",
+          "D27:8"
+        ],
+        "speakers": [
+          "Dave"
+        ]
+      },
+      "b": {
+        "node_id": "f01a0b31-49d1-4a4a-87ae-bc13dd598470",
+        "node_type": "fact",
+        "line": "- \"(10:56 am on 13 September, 2023) Dave: Thanks, Calvin!\"",
+        "subjects": [
+          "Dave"
+        ],
+        "predicate": "thanks",
+        "object": "Calvin",
+        "polarity": "positive",
+        "event_time": "2023-09-13T10:56:00+00:00",
+        "source_turns": [
+          "D18:16"
+        ],
+        "speakers": [
+          "Dave"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Dave thanks Calvin on two occasions, in September and October."
+    },
+    {
+      "id": "conv-50:50c29b08-3c86-4c3f-a92c-881bd79cbf8b:92518a6d-15ae-4f58-9665-d544b99dc7bb",
+      "unit": "conv-50",
+      "band": "0.95-0.97",
+      "similarity": 0.960039,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Calvin"
+      ],
+      "a": {
+        "node_id": "50c29b08-3c86-4c3f-a92c-881bd79cbf8b",
+        "node_type": "fact",
+        "line": "- \"(10:56 am on 13 September, 2023) Calvin: Thanks, Dave!\"",
+        "subjects": [
+          "Calvin"
+        ],
+        "predicate": "thankful_to",
+        "object": "Dave",
+        "polarity": "positive",
+        "event_time": "2023-09-13T10:56:00+00:00",
+        "source_turns": [
+          "D18:3"
+        ],
+        "speakers": [
+          "Calvin"
+        ]
+      },
+      "b": {
+        "node_id": "92518a6d-15ae-4f58-9665-d544b99dc7bb",
+        "node_type": "fact",
+        "line": "- \"(10:54 am on 17 November, 2023) Calvin: Thanks, Dave!\"",
+        "subjects": [
+          "Calvin"
+        ],
+        "predicate": "thanked",
+        "object": "Dave",
+        "polarity": "positive",
+        "event_time": "2023-11-17T10:54:00+00:00",
+        "source_turns": [
+          "D6:11",
+          "D14:6",
+          "D24:11",
+          "D30:4"
+        ],
+        "speakers": [
+          "Calvin"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Calvin thanks Dave on two occasions, in September and November."
+    },
+    {
+      "id": "conv-50:992be9ee-bf51-4a77-bfb1-a2511e9083ee:bc16588a-4ddc-486f-8e2a-1645d5e9d544",
+      "unit": "conv-50",
+      "band": "0.95-0.97",
+      "similarity": 0.956898,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Dave"
+      ],
+      "a": {
+        "node_id": "992be9ee-bf51-4a77-bfb1-a2511e9083ee",
+        "node_type": "fact",
+        "line": "- \"(5:22 pm on 11 August, 2023) Dave: Thanks, Calvin!\"",
+        "subjects": [
+          "Dave"
+        ],
+        "predicate": "thanks",
+        "object": "Calvin",
+        "polarity": "positive",
+        "event_time": "2023-08-11T17:22:00+00:00",
+        "source_turns": [
+          "D13:11"
+        ],
+        "speakers": [
+          "Dave"
+        ]
+      },
+      "b": {
+        "node_id": "bc16588a-4ddc-486f-8e2a-1645d5e9d544",
+        "node_type": "fact",
+        "line": "- \"(1:16 pm on 3 May, 2023) Dave: Thanks, Calvin!\"",
+        "subjects": [
+          "Dave"
+        ],
+        "predicate": "thanks",
+        "object": "Calvin",
+        "polarity": "positive",
+        "event_time": "2023-05-03T13:16:00+00:00",
+        "source_turns": [
+          "D5:7"
+        ],
+        "speakers": [
+          "Dave"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Dave thanks Calvin on two occasions, in May and August."
+    },
+    {
+      "id": "conv-50:bc16588a-4ddc-486f-8e2a-1645d5e9d544:f01a0b31-49d1-4a4a-87ae-bc13dd598470",
+      "unit": "conv-50",
+      "band": "0.95-0.97",
+      "similarity": 0.955718,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Dave"
+      ],
+      "a": {
+        "node_id": "bc16588a-4ddc-486f-8e2a-1645d5e9d544",
+        "node_type": "fact",
+        "line": "- \"(1:16 pm on 3 May, 2023) Dave: Thanks, Calvin!\"",
+        "subjects": [
+          "Dave"
+        ],
+        "predicate": "thanks",
+        "object": "Calvin",
+        "polarity": "positive",
+        "event_time": "2023-05-03T13:16:00+00:00",
+        "source_turns": [
+          "D5:7"
+        ],
+        "speakers": [
+          "Dave"
+        ]
+      },
+      "b": {
+        "node_id": "f01a0b31-49d1-4a4a-87ae-bc13dd598470",
+        "node_type": "fact",
+        "line": "- \"(10:56 am on 13 September, 2023) Dave: Thanks, Calvin!\"",
+        "subjects": [
+          "Dave"
+        ],
+        "predicate": "thanks",
+        "object": "Calvin",
+        "polarity": "positive",
+        "event_time": "2023-09-13T10:56:00+00:00",
+        "source_turns": [
+          "D18:16"
+        ],
+        "speakers": [
+          "Dave"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Dave thanks Calvin on two occasions, in May and September."
+    },
+    {
+      "id": "conv-41:229c294d-34e4-4844-8250-d2d9852bf3c2:3f4983db-8139-45a6-9f52-c656ab1ec5c6",
+      "unit": "conv-41",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "229c294d-34e4-4844-8250-d2d9852bf3c2",
+        "node_type": "fact",
+        "line": "- \"(1:17 pm on 28 January, 2023) John: Wow, Maria.\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "asks_about_most_impactful_moment",
+        "object": "Maria",
+        "polarity": "positive",
+        "event_time": "2023-01-28T13:17:00+00:00",
+        "source_turns": [
+          "D5:9"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "3f4983db-8139-45a6-9f52-c656ab1ec5c6",
+        "node_type": "fact",
+        "line": "- \"(1:17 pm on 28 January, 2023) John: Wow, Maria.\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "imagines_rewarding",
+        "object": "Maria",
+        "polarity": "positive",
+        "event_time": "2023-01-28T13:17:00+00:00",
+        "source_turns": [
+          "D5:9"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-41:849e5e31-120b-4037-8589-b3793266acb6:b0e8f772-c546-4eeb-be29-a1a1874e4f86",
+      "unit": "conv-41",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "Maria"
+      ],
+      "a": {
+        "node_id": "849e5e31-120b-4037-8589-b3793266acb6",
+        "node_type": "fact",
+        "line": "- \"(6:13 pm on 10 April, 2023) Maria: We organized a meal for the shelter residents and I helped with getting everything ready.\"",
+        "subjects": [
+          "Maria"
+        ],
+        "predicate": "helped_with",
+        "object": "getting everything ready",
+        "polarity": "positive",
+        "event_time": "2023-04-10T18:13:00+00:00",
+        "source_turns": [
+          "D11:16"
+        ],
+        "speakers": [
+          "Maria"
+        ]
+      },
+      "b": {
+        "node_id": "b0e8f772-c546-4eeb-be29-a1a1874e4f86",
+        "node_type": "fact",
+        "line": "- \"(6:13 pm on 10 April, 2023) Maria: We organized a meal for the shelter residents and I helped with getting everything ready.\"",
+        "subjects": [
+          "Maria"
+        ],
+        "predicate": "organized",
+        "object": "a meal for the shelter residents",
+        "polarity": "positive",
+        "event_time": "2023-04-10T18:13:00+00:00",
+        "source_turns": [
+          "D11:16"
+        ],
+        "speakers": [
+          "Maria"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-41:8d3fd192-e644-4bd2-b03d-0d106ccb50ea:9687a27e-30d4-4472-b2c5-dc18cef610a5",
+      "unit": "conv-41",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "8d3fd192-e644-4bd2-b03d-0d106ccb50ea",
+        "node_type": "fact",
+        "line": "- \"(7:06 pm on 9 January, 2023) John: I felt relieved and grateful to make it through without incident.\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "felt",
+        "object": "relieved and grateful",
+        "polarity": "positive",
+        "event_time": "2023-01-09T19:06:00+00:00",
+        "source_turns": [
+          "D4:8"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "9687a27e-30d4-4472-b2c5-dc18cef610a5",
+        "node_type": "fact",
+        "line": "- \"(7:06 pm on 9 January, 2023) John: I felt relieved and grateful to make it through without incident.\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "made_it_through",
+        "object": "without incident",
+        "polarity": "positive",
+        "event_time": "2023-01-09T19:06:00+00:00",
+        "source_turns": [
+          "D4:8"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-42:196a9c07-affd-43cc-9854-b94495f48a67:b5637612-8dbb-4b24-a4f6-a725f23507e7",
+      "unit": "conv-42",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "Nate"
+      ],
+      "a": {
+        "node_id": "196a9c07-affd-43cc-9854-b94495f48a67",
+        "node_type": "fact",
+        "line": "- \"(5:54 pm on 9 November, 2022) Nate: Thanks Joanna!\"",
+        "subjects": [
+          "Nate"
+        ],
+        "predicate": "thanks",
+        "object": "Joanna",
+        "polarity": "positive",
+        "event_time": "2022-11-09T17:54:00+00:00",
+        "source_turns": [
+          "D28:17"
+        ],
+        "speakers": [
+          "Nate"
+        ]
+      },
+      "b": {
+        "node_id": "b5637612-8dbb-4b24-a4f6-a725f23507e7",
+        "node_type": "fact",
+        "line": "- \"(5:54 pm on 9 November, 2022) Nate: Thanks Joanna!\"",
+        "subjects": [
+          "Nate"
+        ],
+        "predicate": "appreciates_support_from",
+        "object": "Joanna",
+        "polarity": "positive",
+        "event_time": "2022-11-09T17:54:00+00:00",
+        "source_turns": [
+          "D28:17"
+        ],
+        "speakers": [
+          "Nate"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-42:6cac93a3-7676-432a-8faf-5b91b90adba4:a4ab7ef2-dae5-4a1f-ba6c-e6f0ebe0020d",
+      "unit": "conv-42",
+      "band": "0.97-1.00",
+      "similarity": 0.977484,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Joanna"
+      ],
+      "a": {
+        "node_id": "6cac93a3-7676-432a-8faf-5b91b90adba4",
+        "node_type": "fact",
+        "line": "- \"(7:44 pm on 21 April, 2022) Joanna: Hey Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "knows",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-04-21T19:44:00+00:00",
+        "source_turns": [
+          "D9:1"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "b": {
+        "node_id": "a4ab7ef2-dae5-4a1f-ba6c-e6f0ebe0020d",
+        "node_type": "fact",
+        "line": "- \"(6:44 pm on 17 April, 2022) Joanna: Yeah, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "addressed",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-04-17T18:44:00+00:00",
+        "source_turns": [
+          "D8:12"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "label": "different_facts",
+      "difference": null,
+      "reason": "Different remarks to Nate on different days: a greeting and an agreement (Yeah)."
+    },
+    {
+      "id": "conv-42:96adfd51-a9f0-4d6f-b272-54ffa12f699c:ba98101b-130d-4425-92e2-821c32ff4419",
+      "unit": "conv-42",
+      "band": "0.97-1.00",
+      "similarity": 0.970213,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Joanna"
+      ],
+      "a": {
+        "node_id": "96adfd51-a9f0-4d6f-b272-54ffa12f699c",
+        "node_type": "fact",
+        "line": "- \"(6:59 pm on 18 March, 2022) Joanna: Thanks so much, Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "thanks",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-03-18T18:59:00+00:00",
+        "source_turns": [
+          "D5:3",
+          "D5:17"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "b": {
+        "node_id": "ba98101b-130d-4425-92e2-821c32ff4419",
+        "node_type": "fact",
+        "line": "- \"(7:44 pm on 21 April, 2022) Joanna: Thanks Nate!\"",
+        "subjects": [
+          "Joanna"
+        ],
+        "predicate": "will_let_know",
+        "object": "Nate",
+        "polarity": "positive",
+        "event_time": "2022-04-21T19:44:00+00:00",
+        "source_turns": [
+          "D8:22",
+          "D9:17"
+        ],
+        "speakers": [
+          "Joanna"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Joanna thanks Nate on two occasions, in March and April."
+    },
+    {
+      "id": "conv-43:0de82b6f-fe9e-481e-ab43-ea354d9d3944:cb78688b-c361-452d-bb9e-b2cf8f180a7d",
+      "unit": "conv-43",
+      "band": "0.97-1.00",
+      "similarity": 0.974794,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "Tim"
+      ],
+      "a": {
+        "node_id": "0de82b6f-fe9e-481e-ab43-ea354d9d3944",
+        "node_type": "fact",
+        "line": "- \"(9:52 am on 1 December, 2023) Tim: Hey John!\"",
+        "subjects": [
+          "Tim"
+        ],
+        "predicate": "chatted_with",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2023-12-01T09:52:00+00:00",
+        "source_turns": [
+          "D20:1"
+        ],
+        "speakers": [
+          "Tim"
+        ]
+      },
+      "b": {
+        "node_id": "cb78688b-c361-452d-bb9e-b2cf8f180a7d",
+        "node_type": "fact",
+        "line": "- \"(3:35 pm on 26 December, 2023) Tim: Hey John!\"",
+        "subjects": [
+          "Tim"
+        ],
+        "predicate": "greets",
+        "object": "John",
+        "polarity": "positive",
+        "event_time": "2023-12-26T15:35:00+00:00",
+        "source_turns": [
+          "D26:2"
+        ],
+        "speakers": [
+          "Tim"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "Two separate greetings, on 1 and 26 December; only the occasion differs."
+    },
+    {
+      "id": "conv-43:6a29086d-4cb3-4319-b831-a9b4d26312c3:df5692ac-7196-4156-a4b5-967d703424ae",
+      "unit": "conv-43",
+      "band": "0.97-1.00",
+      "similarity": 0.980392,
+      "same_source": false,
+      "identical_text": false,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "6a29086d-4cb3-4319-b831-a9b4d26312c3",
+        "node_type": "fact",
+        "line": "- \"(3:36 pm on 11 November, 2023) John: Thanks!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "expresses_gratitude",
+        "object": "Thanks!",
+        "polarity": "positive",
+        "event_time": "2023-11-11T15:36:00+00:00",
+        "source_turns": [
+          "D17:19"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "df5692ac-7196-4156-a4b5-967d703424ae",
+        "node_type": "fact",
+        "line": "- \"(11:41 am on 6 November, 2023) John: Thanks!\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "expressed_gratitude",
+        "object": "Thanks!",
+        "polarity": "positive",
+        "event_time": "2023-11-06T11:41:00+00:00",
+        "source_turns": [
+          "D16:16"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "different_facts",
+      "difference": "date",
+      "reason": "John says Thanks on two occasions, on 6 and 11 November."
+    },
+    {
+      "id": "conv-44:8c694d16-5263-4005-82f7-b4851ba4a164:b7ad6c28-14d3-4d5a-890b-cef28132ba3f",
+      "unit": "conv-44",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "we"
+      ],
+      "a": {
+        "node_id": "8c694d16-5263-4005-82f7-b4851ba4a164",
+        "node_type": "fact",
+        "line": "- [2023-11-22 09:02] \"So we got some essentials for their comfort and entertainment, like a bed, toys, and some puppy pads just in case.\"",
+        "subjects": [
+          "we"
+        ],
+        "predicate": "got",
+        "object": "a bed, toys, and some puppy pads just in case",
+        "polarity": "positive",
+        "event_time": "2023-11-22T09:02:00+00:00",
+        "source_turns": [
+          "D28:12"
+        ],
+        "speakers": [
+          "Andrew"
+        ]
+      },
+      "b": {
+        "node_id": "b7ad6c28-14d3-4d5a-890b-cef28132ba3f",
+        "node_type": "fact",
+        "line": "- [2023-11-22 09:02] \"So we got some essentials for their comfort and entertainment, like a bed, toys, and some puppy pads just in case.\"",
+        "subjects": [
+          "we"
+        ],
+        "predicate": "got_essentials_for",
+        "object": "their comfort and entertainment",
+        "polarity": "positive",
+        "event_time": "2023-11-22T09:02:00+00:00",
+        "source_turns": [
+          "D28:12"
+        ],
+        "speakers": [
+          "Andrew"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-47:118e5e3d-e0f2-4cf1-af72-5a7678d3decb:3dce23f1-dfa4-46ab-ad9b-4a72d61b5214",
+      "unit": "conv-47",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "John"
+      ],
+      "a": {
+        "node_id": "118e5e3d-e0f2-4cf1-af72-5a7678d3decb",
+        "node_type": "fact",
+        "line": "- \"(9:16 am on 10 August, 2022) John: Lately, I've been playing some different genres like strategy and RPG games instead of my usual shooters.\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "plays",
+        "object": "strategy",
+        "polarity": "positive",
+        "event_time": "2022-08-10T09:16:00+00:00",
+        "source_turns": [
+          "D19:3"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "b": {
+        "node_id": "3dce23f1-dfa4-46ab-ad9b-4a72d61b5214",
+        "node_type": "fact",
+        "line": "- \"(9:16 am on 10 August, 2022) John: Lately, I've been playing some different genres like strategy and RPG games instead of my usual shooters.\"",
+        "subjects": [
+          "John"
+        ],
+        "predicate": "plays",
+        "object": "shooters",
+        "polarity": "negative",
+        "event_time": "2022-08-10T09:16:00+00:00",
+        "source_turns": [
+          "D19:3"
+        ],
+        "speakers": [
+          "John"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-47:31737fdf-16ca-4049-8625-13e2fccb12f0:4e3a0e28-fbe8-4293-a1ef-1318f508a01c",
+      "unit": "conv-47",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "James"
+      ],
+      "a": {
+        "node_id": "31737fdf-16ca-4049-8625-13e2fccb12f0",
+        "node_type": "fact",
+        "line": "- \"(2:14 pm on 13 October, 2022) James: I put in so much effort and it paid off - now, I'm ready to make more games in different genres and test out new ideas.\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "ready_to_make",
+        "object": "more games in different genres",
+        "polarity": "positive",
+        "event_time": "2022-10-13T14:14:00+00:00",
+        "source_turns": [
+          "D27:8"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "b": {
+        "node_id": "4e3a0e28-fbe8-4293-a1ef-1318f508a01c",
+        "node_type": "fact",
+        "line": "- \"(2:14 pm on 13 October, 2022) James: I put in so much effort and it paid off - now, I'm ready to make more games in different genres and test out new ideas.\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "effort_paid_off",
+        "object": "paid off",
+        "polarity": "positive",
+        "event_time": "2022-10-13T14:14:00+00:00",
+        "source_turns": [
+          "D27:8"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-47:5ada5e79-8762-4ce4-88dd-cb729ec9e9ad:fd5c08bd-af1f-49a4-bfca-c8984a069a7d",
+      "unit": "conv-47",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "James"
+      ],
+      "a": {
+        "node_id": "5ada5e79-8762-4ce4-88dd-cb729ec9e9ad",
+        "node_type": "fact",
+        "line": "- \"(5:13 pm on 9 July, 2022) James: I plan to return on July 20, I’ll definitely bring you some kind of souvenir!\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "plans_to_return",
+        "object": "July 20",
+        "polarity": "positive",
+        "event_time": "2022-07-09T17:13:00+00:00",
+        "source_turns": [
+          "D16:13"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "b": {
+        "node_id": "fd5c08bd-af1f-49a4-bfca-c8984a069a7d",
+        "node_type": "fact",
+        "line": "- \"(5:13 pm on 9 July, 2022) James: I plan to return on July 20, I’ll definitely bring you some kind of souvenir!\"",
+        "subjects": [
+          "James"
+        ],
+        "predicate": "plans_to_bring",
+        "object": "some kind of souvenir",
+        "polarity": "positive",
+        "event_time": "2022-07-09T17:13:00+00:00",
+        "source_turns": [
+          "D16:13"
+        ],
+        "speakers": [
+          "James"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-48:15b95943-8d5a-40a8-9519-114451027f16:9e8317f9-88d7-4211-84c1-ca534bde61cf",
+      "unit": "conv-48",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "They"
+      ],
+      "a": {
+        "node_id": "15b95943-8d5a-40a8-9519-114451027f16",
+        "node_type": "fact",
+        "line": "- [2023-07-09 19:37] \"They aim to cultivate self-awareness, promote mental and emotional well-being, and help individuals find inner peace.\"",
+        "subjects": [
+          "They"
+        ],
+        "predicate": "aim_to_cultivate",
+        "object": "self-awareness",
+        "polarity": "positive",
+        "event_time": "2023-07-09T19:37:00+00:00",
+        "source_turns": [
+          "D15:13"
+        ],
+        "speakers": [
+          "Deborah"
+        ]
+      },
+      "b": {
+        "node_id": "9e8317f9-88d7-4211-84c1-ca534bde61cf",
+        "node_type": "fact",
+        "line": "- [2023-07-09 19:37] \"They aim to cultivate self-awareness, promote mental and emotional well-being, and help individuals find inner peace.\"",
+        "subjects": [
+          "They"
+        ],
+        "predicate": "aim_to_help",
+        "object": "individuals find inner peace",
+        "polarity": "positive",
+        "event_time": "2023-07-09T19:37:00+00:00",
+        "source_turns": [
+          "D15:13"
+        ],
+        "speakers": [
+          "Deborah"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-48:6a7838fa-8f42-4b36-9730-906c10104720:dd9387ea-eb9e-4787-93f9-5401412d0e21",
+      "unit": "conv-48",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "This ring"
+      ],
+      "a": {
+        "node_id": "6a7838fa-8f42-4b36-9730-906c10104720",
+        "node_type": "fact",
+        "line": "- [2023-02-25 16:50] \"This ring on his hand is just a decoration, not a wedding ring.\"",
+        "subjects": [
+          "This ring"
+        ],
+        "predicate": "is",
+        "object": "just a decoration, not a wedding ring",
+        "polarity": "negative",
+        "event_time": "2023-02-25T16:50:00+00:00",
+        "source_turns": [
+          "D7:7"
+        ],
+        "speakers": [
+          "Jolene"
+        ]
+      },
+      "b": {
+        "node_id": "dd9387ea-eb9e-4787-93f9-5401412d0e21",
+        "node_type": "fact",
+        "line": "- [2023-02-25 16:50] \"This ring on his hand is just a decoration, not a wedding ring.\"",
+        "subjects": [
+          "This ring"
+        ],
+        "predicate": "on",
+        "object": "his hand",
+        "polarity": "positive",
+        "event_time": "2023-02-25T16:50:00+00:00",
+        "source_turns": [
+          "D7:7"
+        ],
+        "speakers": [
+          "Jolene"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-49:103d5e33-294f-435f-916b-f425963bee9d:7626dd5b-0618-4957-b2d8-8b0de08a5e32",
+      "unit": "conv-49",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "yoga"
+      ],
+      "a": {
+        "node_id": "103d5e33-294f-435f-916b-f425963bee9d",
+        "node_type": "preference",
+        "line": "- [2023-12-05 20:16] \"Yoga's a great choice, it's done wonders for my flexibility and stress levels.\"",
+        "subjects": [
+          "yoga"
+        ],
+        "predicate": "is",
+        "object": "a great choice",
+        "polarity": "positive",
+        "event_time": "2023-12-05T20:16:00+00:00",
+        "source_turns": [
+          "D18:8"
+        ],
+        "speakers": [
+          "Sam"
+        ]
+      },
+      "b": {
+        "node_id": "7626dd5b-0618-4957-b2d8-8b0de08a5e32",
+        "node_type": "fact",
+        "line": "- [2023-12-05 20:16] \"Yoga's a great choice, it's done wonders for my flexibility and stress levels.\"",
+        "subjects": [
+          "yoga"
+        ],
+        "predicate": "done_wonders_for",
+        "object": "my flexibility and stress levels",
+        "polarity": "positive",
+        "event_time": "2023-12-05T20:16:00+00:00",
+        "source_turns": [
+          "D18:8"
+        ],
+        "speakers": [
+          "Sam"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical line from one turn."
+    },
+    {
+      "id": "conv-50:b78d42f8-6c99-46a8-bec7-4dc57092b125:f1fe3446-9ac0-47af-b957-80db374aa0c7",
+      "unit": "conv-50",
+      "band": "0.97-1.00",
+      "similarity": 1.0,
+      "same_source": true,
+      "identical_text": true,
+      "subjects": [
+        "red car"
+      ],
+      "a": {
+        "node_id": "b78d42f8-6c99-46a8-bec7-4dc57092b125",
+        "node_type": "fact",
+        "line": "- [2023-11-02 17:46] \"[Image: a photo of a red car with a black engine and a red hood]\"",
+        "subjects": [
+          "red car"
+        ],
+        "predicate": "has_hood",
+        "object": "red hood",
+        "polarity": "positive",
+        "event_time": "2023-11-02T17:46:00+00:00",
+        "source_turns": [
+          "D28:18"
+        ],
+        "speakers": [
+          "Dave"
+        ]
+      },
+      "b": {
+        "node_id": "f1fe3446-9ac0-47af-b957-80db374aa0c7",
+        "node_type": "fact",
+        "line": "- [2023-11-02 17:46] \"[Image: a photo of a red car with a black engine and a red hood]\"",
+        "subjects": [
+          "red car"
+        ],
+        "predicate": "has_engine",
+        "object": "black engine",
+        "polarity": "positive",
+        "event_time": "2023-11-02T17:46:00+00:00",
+        "source_turns": [
+          "D28:18"
+        ],
+        "speakers": [
+          "Dave"
+        ]
+      },
+      "label": "same_fact",
+      "difference": null,
+      "reason": "Identical image caption from one turn."
+    }
+  ]
+}
