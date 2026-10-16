@@ -27,6 +27,16 @@ OLLAMA_URL="http://127.0.0.1:11434"
 PACKS="${PACKS:-$PRISM/data/extracted-packs-v1}"
 RESULTS_DIR="${RESULTS_DIR:-$PRISM/data/full-benchmark-${COMMIT:0:8}}"
 
+# Persistent homes for the two model files a long run reads. fastembed (the
+# embedding model) and tiktoken (the packing tokenizer) keep them under $TMPDIR
+# by default, and macOS clears old files there overnight. On 2026-10-06 that
+# stalled a build: every pack it opened afterwards failed to load the embedding
+# model. Exported, so every script and every uv run below inherits them. Neither
+# path is part of a build's recorded config.
+FASTEMBED_CACHE_PATH="${FASTEMBED_CACHE_PATH:-$HOME/.cache/fastembed}"
+TIKTOKEN_CACHE_DIR="${TIKTOKEN_CACHE_DIR:-$HOME/.cache/tiktoken}"
+export FASTEMBED_CACHE_PATH TIKTOKEN_CACHE_DIR
+
 # Build labels. "defaults" batch at 2,048 tokens (the v0.15.0 default);
 # "per-turn" set extraction_batch_target_tokens=0 (one call per turn).
 LOCOMO_DEFAULTS="${LOCOMO_DEFAULTS:-full-defaults-locomo-deepseek-${COMMIT:0:8}}"

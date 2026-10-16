@@ -1,7 +1,8 @@
 #!/bin/bash
 # Check that this machine is ready for the full benchmark. Changes nothing,
-# except that the last check downloads the embedding model into the Hugging
-# Face cache if it is missing (the builds and the gate run offline later).
+# except that the last two checks download the embedding model and the packing
+# tokenizer into their cache folders (settings.sh) if they are missing, since
+# the builds and the gate run offline later.
 # Run it until every line says PASS (WARN lines need a person to look).
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -84,7 +85,8 @@ check_file "$PRISM/data/benchmarks/locomo/locomo10.json" "$LOCOMO_SHA256" "LoCoM
 check_file "$PRISM/data/benchmarks/longmemeval/longmemeval_s_cleaned.json" "$LME_SHA256" "LongMemEval-S dataset"
 check_file "$JUDGE" "$JUDGE_SHA256" "official LongMemEval judge"
 
-# The clone's environment and the embedding model.
+# The clone's environment, the embedding model and the packing tokenizer. Both
+# model files live in the cache folders that settings.sh exports, not in $TMPDIR.
 if [ -d "$PRISM/.venv" ]; then
   embed=$(cd "$PRISM" && uv run --no-sync python -c "
 import asyncio
@@ -92,8 +94,18 @@ from prme.config import PRMEConfig
 from prme.storage.embedding import create_embedding_provider
 provider = create_embedding_provider(PRMEConfig(_env_file=None).embedding)
 print(provider.model_name, len(asyncio.run(provider.embed(['warm up']))[0]))" 2>/dev/null | tail -1)
-  if [ "$embed" = "BAAI/bge-small-en-v1.5 384" ]; then pass "embedding model is cached ($embed)"
-  else fail "embedding model check printed '$embed'; run uv sync in $PRISM and try again"; fi
+  if [ "$embed" = "BAAI/bge-small-en-v1.5 384" ] && [ -n "$(ls -A "$FASTEMBED_CACHE_PATH" 2>/dev/null)" ]; then
+    pass "embedding model is cached ($embed, in $FASTEMBED_CACHE_PATH)"
+  else fail "embedding model check printed '$embed' or $FASTEMBED_CACHE_PATH is empty; run uv sync in $PRISM and try again"; fi
+  tokenizer=$(cd "$PRISM" && uv run --no-sync python -c "
+from prme.config import PRMEConfig
+from prme.retrieval.tokenization import count_tokens
+name = PRMEConfig(_env_file=None).packing.tokenizer
+assert count_tokens('warm up', name) > 0
+print(name)" 2>/dev/null | tail -1)
+  if [ -n "$tokenizer" ] && [ -n "$(ls -A "$TIKTOKEN_CACHE_DIR" 2>/dev/null)" ]; then
+    pass "packing tokenizer is cached ($tokenizer, in $TIKTOKEN_CACHE_DIR)"
+  else fail "tokenizer check printed '$tokenizer' or $TIKTOKEN_CACHE_DIR is empty; run uv sync in $PRISM and try again"; fi
 else
   fail "no .venv in $PRISM; run: cd $PRISM && uv sync --dev --extra api --extra mcp"
 fi
