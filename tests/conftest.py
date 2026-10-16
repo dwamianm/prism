@@ -25,6 +25,23 @@ from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.schema import initialize_database
 
 
+@pytest.fixture(autouse=True)
+def _one_extraction_call_per_turn(monkeypatch):
+    """Extract one turn per model call unless a test sets a batch target.
+
+    Batched extraction is the default (``extraction_batch_target_tokens``,
+    #254), but most tests fake the per-turn ``extract()`` call and count its
+    calls, and a batched request goes to ``extract_batch()`` instead, which
+    their fakes leave pointing at the real provider. One call per turn is
+    still supported, so those tests keep testing it. The batched path, the
+    default included, is covered in ``test_batched_extraction.py``, whose
+    configurations set the target themselves, and a test that checks the
+    defaults removes this variable first. Configurations isolated from the
+    environment, such as the evidence gate's, keep the default.
+    """
+    monkeypatch.setenv("PRME_EXTRACTION_BATCH_TARGET_TOKENS", "0")
+
+
 @pytest.fixture
 def isolated_tmp_dir():
     """Create an isolated temporary directory for each test.

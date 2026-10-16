@@ -68,6 +68,19 @@ class ExtractionConfig(_ProjectSettings):
         allow_inf_nan=False,
         description="Seconds per extraction call, and per opt-in query reformulation call",
     )
+    batch_timeout: float = Field(
+        default=180.0,
+        gt=0,
+        allow_inf_nan=False,
+        description=(
+            "Seconds per batched extraction call (extraction_batch_target_tokens, "
+            "#254). A batched call returns the claims of every turn it holds, so "
+            "it takes longer than one turn's call: at the default target of 2,048 "
+            "tokens, deepseek-v4.1-flash:cloud took 23 to 27 seconds per call on "
+            "average, and the builds behind the default used 180 seconds. A call "
+            "that times out is asked again as two halves."
+        ),
+    )
     temperature: float = Field(
         default=0.0,
         ge=0.0,
@@ -757,13 +770,9 @@ class PRMEConfig(_ProjectSettings):
         ),
     )
     extraction_batch_target_tokens: int = Field(
-        default=0,
+        default=2048,
         ge=0,
         le=65536,
-        # Left out of the serialized configuration at zero, so the defaults'
-        # recorded identity (an ingest() build's engine_config, the answer
-        # track's settings) does not change because this option exists.
-        exclude_if=lambda value: value == 0,
         description=(
             "[HYPOTHESIS] When above zero, ingest() extracts several turns of a "
             "session in one model call (#254). The worker takes the session's "
@@ -775,13 +784,21 @@ class PRMEConfig(_ProjectSettings):
             "cites its turn, and each turn's claims are checked against that "
             "turn alone and saved as its own extraction record. A response that "
             "fails validation, or a request that times out or is refused as too "
-            "large, is asked again as two halves; extraction.timeout applies to "
-            "each request, so allow for the batch's size. With "
+            "large, is asked again as two halves; extraction.batch_timeout "
+            "applies to each request, so allow for the batch's size. With "
             "wait_for_extraction=False, ingest() queues the turn: the queue is "
             "extracted 30 seconds later, or sooner by a waiting ingest(), "
             "ingest_batch(), process_extractions() or the engine's close. "
             "Cannot be combined with enable_windowed_extraction or "
-            "enable_fact_text_resolution. Default 0: one call per turn."
+            "enable_fact_text_resolution; when either is on and this option is "
+            "not set, it is 0. 0 extracts each turn in its own call. Default "
+            "2048 (owner's decision, 2026-10-16): on the offline evidence gate "
+            "over ingest() packs, 2,048 cut model calls by 95% on LoCoMo and by "
+            "84% on a 42-question LongMemEval-S slice, and all evidence packed "
+            "went from 81.6% to 84.0% on LoCoMo and from 34/38 to 35/38 on the "
+            "slice. The DeepSeek answer track, which the default-change rule "
+            "asks for, has not been run "
+            "(benchmarks/results/research/2026-10-15/batched-extraction/)."
         ),
     )
     enable_qa_pairing: bool = Field(
@@ -1139,6 +1156,11 @@ class PRMEConfig(_ProjectSettings):
             (self.enable_windowed_extraction and self.extraction_window_turns > 0)
             or self.enable_fact_text_resolution
         ):
+            if "extraction_batch_target_tokens" not in self.model_fields_set:
+                # Batching is the default (#254), so turning on either option
+                # turns batching off rather than failing.
+                self.extraction_batch_target_tokens = 0
+                return self
             # A batch shows the model its session's turns itself, and the
             # batched request does not ask for resolved fact text (#254).
             raise ValueError(

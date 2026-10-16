@@ -321,7 +321,8 @@ grounded structured output rather than the raw SDK response. Provider or schema
 changes require an explicit revision identity; they must not overwrite the
 existing `EXTRACTION_VALIDATED` operation. A cache hit is not graph completion.
 
-Batched extraction (#254, opt-in through `extraction_batch_target_tokens`)
+Batched extraction (#254, `extraction_batch_target_tokens`, on by default
+since 2026-10-16)
 keeps this boundary per source. The worker that holds the claim of a
 session's first pending job sends one request for that turn and the
 session's next pending turns. In one transaction, fenced by its own claim as

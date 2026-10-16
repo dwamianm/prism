@@ -65,17 +65,21 @@ def _by_path(config: PRMEConfig):
     return report, {item.path: item for item in report.settings}
 
 
-def test_default_hypothesis_audit_is_complete_and_reports_dormant_features():
+def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monkeypatch):
+    monkeypatch.delenv("PRME_EXTRACTION_BATCH_TARGET_TOKENS")
     report, settings = _by_path(PRMEConfig())
 
     assert set(settings) == EXPECTED_HYPOTHESES
     assert report.hypothesis_count == len(EXPECTED_HYPOTHESES)
-    # Speaker references, claim sentence text and folding became defaults together, so they apply.
-    assert report.effective_count == 18
+    # Speaker references, claim sentence text and folding became defaults together, so they apply,
+    # and batched extraction became a default later (#254).
+    assert report.effective_count == 19
     assert report.customized_count == 0
     for name in ("enable_speaker_references", "enable_claim_sentence_text", "packing.fold_repeated_text"):
         setting = settings[name]
         assert (setting.effective, setting.value, setting.default, setting.customized) == (True, True, True, False)
+    batching = settings["extraction_batch_target_tokens"]
+    assert (batching.effective, batching.value, batching.default, batching.customized) == (True, 2048, 2048, False)
     assert settings["scoring.current_update_multiplier"].effective is True
     # Rank fusion, its recency boost and its session decay are the defaults, so their provisional values apply
     # and are the defaults the audit reports, not customizations.
@@ -131,7 +135,8 @@ def test_folding_is_effective_only_in_the_reader_format():
     assert (off["packing.fold_repeated_text"].value, off["packing.fold_repeated_text"].effective) == (True, False)
 
 
-def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
+def test_hypothesis_audit_resolves_feature_gates_and_custom_values(monkeypatch):
+    monkeypatch.delenv("PRME_EXTRACTION_BATCH_TARGET_TOKENS")
     config = PRMEConfig(
         packing=PackingConfig(
             episode_context_top_k=2,
@@ -145,7 +150,7 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values():
     report, settings = _by_path(config)
 
     # A PackingConfig built in code has no rank fusion session decay and does not fold, which the audit reports.
-    assert report.effective_count == 28
+    assert report.effective_count == 29
     assert report.customized_count == 6
     assert settings["packing.fold_repeated_text"].customized is True
     assert settings["packing.session_context_rank_fusion_score_decay"].value is None

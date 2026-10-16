@@ -349,7 +349,9 @@ async def test_a_built_pack_yields_its_paraphrase_pair_and_the_gate_contexts_tha
     def prepare(engine):
         engine._pipeline._extraction_provider.extract = scripted.extract
 
-    await build_unit(build / "locomo" / "conv-1", unit, lambda pack: build_config(pack, model="local-model"),
+    # The scripted model fakes the per-turn extract() call, so the build extracts one turn per call (#254).
+    per_turn = {"extraction_batch_target_tokens": 0}
+    await build_unit(build / "locomo" / "conv-1", unit, lambda pack: build_config(pack, per_turn, model="local-model"),
                      prepare=prepare)
     scratch = tmp_path / "scratch"
     scratch.mkdir()

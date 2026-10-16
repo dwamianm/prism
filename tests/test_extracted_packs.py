@@ -98,7 +98,9 @@ def _scripted(extract):
 
 
 def _config(pack):
-    return build_config(pack, model="local-model")
+    # The scripted model fakes the per-turn extract() call, so these builds extract one turn per call;
+    # the batched builds, the default since #254, use _batched_config.
+    return build_config(pack, {"extraction_batch_target_tokens": 0}, model="local-model")
 
 
 def test_turns_keep_the_harness_text_and_make_the_first_speaker_the_owner(locomo):
@@ -144,6 +146,8 @@ def test_builds_extract_only_on_an_ollama_model_and_on_a_cloud_model_only_when_a
     assert (config.extraction.provider, config.extraction.model, config.extraction.base_url) == (
         "ollama", "local-model", "http://127.0.0.1:11434/v1")
     assert config.extraction.api_key is None and config.organizer.opportunistic_enabled is False
+    # A build batches by default (#254), with the builder's timeout for each batched request.
+    assert (config.extraction_batch_target_tokens, config.extraction.batch_timeout) == (2048, 180.0)
 
 
 def test_a_resumed_build_must_match_the_recorded_code_settings_and_model():

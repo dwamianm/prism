@@ -217,7 +217,7 @@ class IngestionPipeline:
         # default, extracts each turn in its own call as soon as it is ingested.
         self._batch_target_tokens = max(0, extraction_batch_target_tokens)
         self._batch_flush_seconds = BATCH_FLUSH_SECONDS
-        # The provider's timeout for one request, extraction.timeout (#258).
+        # The provider's timeout for one batched request, extraction.batch_timeout (#258).
         # The engine's close allows it for each batched request queued turns
         # still need, up to BATCH_CLOSE_SECONDS in all.
         self._extraction_timeout = extraction_timeout

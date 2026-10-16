@@ -398,8 +398,9 @@ Ingest with LLM-powered extraction. Two-phase pipeline:
 | `scope` | `Scope` | `Scope.PERSONAL` | Memory scope |
 
 See [automatic correction rules and limits](MEMORY-CORRECTIONS.md#corrections-extracted-from-messages).
-With `extraction_batch_target_tokens` set, extraction runs in batches of a
-session's turns; see [batched extraction](#batched-extraction).
+By default, extraction runs in batches of a session's turns
+(`extraction_batch_target_tokens=2048`); see
+[batched extraction](#batched-extraction).
 
 **Returns:** `str` — UUID of the persisted event. Falls back to `store()` if no pipeline configured.
 
@@ -1284,6 +1285,7 @@ ExtractionConfig(
     model="gpt-4o-mini",                 # PRME_EXTRACTION_MODEL
     max_retries=3,                       # PRME_EXTRACTION_MAX_RETRIES
     timeout=30.0,                        # PRME_EXTRACTION_TIMEOUT
+    batch_timeout=180.0,                 # PRME_EXTRACTION_BATCH_TIMEOUT
     temperature=0.0,                     # PRME_EXTRACTION_TEMPERATURE
     reasoning_effort=None,               # PRME_EXTRACTION_REASONING_EFFORT
     api_key=None,                        # PRME_EXTRACTION_API_KEY
@@ -1309,12 +1311,25 @@ Benchmark before increasing either setting.
 ### Batched extraction
 
 `extraction_batch_target_tokens` (`PRME_EXTRACTION_BATCH_TARGET_TOKENS`,
-default 0) lets one model call extract several turns of a session (#254). It
-is off by default, and at 0 `ingest()` makes one call per turn as before.
+default 2048) lets one model call extract several turns of a session (#254).
+At 0, `ingest()` makes one call per turn, as releases before this default
+did.
 
 ```python
-config = PRMEConfig(extraction_batch_target_tokens=512)
+config = PRMEConfig(extraction_batch_target_tokens=0)  # one call per turn
 ```
+
+The default is the owner's decision of 2026-10-16. On the offline evidence
+gate over `ingest()` packs built with `deepseek-v4.1-flash:cloud`, a target
+of 2,048 cut model calls by 95% on LoCoMo and by 84% on a 42-question
+LongMemEval-S slice, and all evidence packed went from 81.6% to 84.0% on
+LoCoMo and from 34/38 to 35/38 on the slice. The DeepSeek answer track,
+which the project's default-change rule asks for, has not been run, and all
+500 LongMemEval-S questions have not been built
+(`benchmarks/results/research/2026-10-15/batched-extraction/BATCHED-EXTRACTION.md`).
+Turning on `enable_windowed_extraction` or `enable_fact_text_resolution`
+turns batching off unless `extraction_batch_target_tokens` is also set, in
+which case the configuration is refused.
 
 - **Composition.** The worker takes the session's pending extraction jobs in
   the order they were ingested and adds turns while the sum of their text
@@ -1347,8 +1362,9 @@ config = PRMEConfig(extraction_batch_target_tokens=512)
   requests. A single turn that times out or is refused stops the split, so a
   provider that does not answer costs about log2(n) + 1 timeouts per attempt.
   A connection, rate-limit or server failure is not split.
-  `extraction.timeout` applies to each request, so raise it for large
-  targets; the benchmark pack builder uses 180 seconds.
+  `extraction.batch_timeout` (180 seconds by default) applies to each
+  batched request, so raise it for large targets or slow models;
+  `extraction.timeout` still applies to a turn's own call.
 - **Turns left out.** When a response gives some of its turns no entry,
   the other turns' records are saved first, and one more request then asks
   for the turns left out, alone, with the same checks (#260). The first
@@ -1361,7 +1377,9 @@ config = PRMEConfig(extraction_batch_target_tokens=512)
   and each of those turns asks again when its own job runs. Records saved
   before this change are kept as they are: a turn saved as stating nothing
   is not asked again on replay or `prme rebuild`.
-- **When it runs.** `ingest(wait_for_extraction=False)` queues the turn. A
+- **When it runs.** `ingest(wait_for_extraction=False)` queues the turn, so
+  with the default its claims can appear up to 30 seconds later than with one
+  call per turn. A
   waiting `ingest()` extracts the queue of its owner and scope up to and
   including its own turn, `ingest_batch()` extracts its messages and any
   queued before them once all are saved, and `process_extractions()` and the
@@ -1372,7 +1390,7 @@ config = PRMEConfig(extraction_batch_target_tokens=512)
   pass them to `ingest_batch()`.
 - **Closing.** The engine's close waits for the batches of queued turns
   (#258), including those of flushes already running, a retry's among
-  them: the usual drain time (10 seconds) plus `extraction.timeout` for
+  them: the usual drain time (10 seconds) plus `extraction.batch_timeout` for
   each request their flushes send, counted as the flushes compose them
   while they run, and never more than five minutes in all, counting
   included. That allows one request per batch, so a batch asked again in
