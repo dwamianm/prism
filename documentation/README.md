@@ -15,6 +15,7 @@ Complete guide to integrating PRME (Portable Relational Memory Engine) into your
 | [HTTP API](http-api.md) | REST API for language-agnostic integration |
 | [Configuration](configuration.md) | Environment variables, scoring weights, and tuning |
 | [Deployment](deployment.md) | PostgreSQL backend, encryption at rest, production setup |
+| [Benchmarks](benchmarks.md) | LoCoMo and LongMemEval-S results, the strict judge, and published vendor results |
 
 ## Architecture Overview
 
