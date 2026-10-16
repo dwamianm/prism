@@ -19,6 +19,7 @@ Commands:
     prme node <db_path> <id> -- Show single node detail
     prme chain <db_path> <id> -- Show supersedence chain
     prme search <db_path> <q> -- Run retrieval query
+    prme observe <db_path> <file>... -- Remember what photos and videos showed (RFC-0018)
     prme organize <db_path>  -- Run organizer jobs
     prme profile-jobs <db_path> -- Inspect owned profile preparations
     prme process-profiles <db_path> -- Resume owned profile preparations
@@ -61,7 +62,7 @@ def _single_file_config(path: str) -> PRMEConfig:
     return PRMEConfig(database_url=None, pack_path=path)
 
 
-async def _create_engine(db_path: str) -> Any:
+async def _create_engine(db_path: str, *, vision_overrides: dict[str, Any] | None = None) -> Any:
     """Create a MemoryEngine from a database path.
 
     Resolves the db_path to an absolute path. A path ending in ``.prme``
@@ -71,6 +72,10 @@ async def _create_engine(db_path: str) -> Any:
 
     Args:
         db_path: Path to the DuckDB database file or the single-file pack.
+        vision_overrides: Optional VisionConfig fields that replace the
+            configured ones, on top of ``PRME_VISION_*`` and
+            ``PRME_VISION__*`` from the environment (``prme observe`` turns
+            vision on for its own run).
 
     Returns:
         An initialized MemoryEngine.
@@ -87,19 +92,21 @@ async def _create_engine(db_path: str) -> Any:
         sys.exit(1)
 
     if is_pack_file(abs_path):
-        return await MemoryEngine.create(_single_file_config(abs_path))
-
-    db_dir = os.path.dirname(abs_path)
-    config = PRMEConfig(
-        # A positional local artifact is the command's target. Ambient settings
-        # must not silently redirect inspection or maintenance to PostgreSQL
-        # or to a single-file pack.
-        database_url=None,
-        pack_path=None,
-        db_path=abs_path,
-        vector_path=os.path.join(db_dir, "vectors.usearch"),
-        lexical_path=os.path.join(db_dir, "lexical_index"),
-    )
+        config = _single_file_config(abs_path)
+    else:
+        db_dir = os.path.dirname(abs_path)
+        config = PRMEConfig(
+            # A positional local artifact is the command's target. Ambient settings
+            # must not silently redirect inspection or maintenance to PostgreSQL
+            # or to a single-file pack.
+            database_url=None,
+            pack_path=None,
+            db_path=abs_path,
+            vector_path=os.path.join(db_dir, "vectors.usearch"),
+            lexical_path=os.path.join(db_dir, "lexical_index"),
+        )
+    if vision_overrides:
+        config = config.model_copy(update={"vision": config.vision.model_copy(update=vision_overrides)})
     return await MemoryEngine.create(config)
 
 
@@ -494,6 +501,87 @@ async def cmd_search(args: argparse.Namespace) -> None:
         await engine.close()
 
 
+async def cmd_observe(args: argparse.Namespace) -> None:
+    """Remember what photos and videos showed (RFC-0018, phase 1).
+
+    Each file is observed in turn: a photo becomes one observation event, a
+    video one per keyframe that changed and whose description does not
+    repeat the previous kept frame's. The command turns ``vision.enabled``
+    on for its own run, because the command itself is the explicit request;
+    every other vision setting comes from the environment
+    (``PRME_VISION_*``) unless a flag overrides it. Extraction, when on, uses
+    the configured extraction provider (``PRME_EXTRACTION_*``).
+    """
+    from prme.vision.errors import VisionError
+    from prme.vision.observe import observe_source
+
+    overrides: dict[str, Any] = {"enabled": True}
+    if args.model:
+        overrides["model"] = args.model
+    if args.base_url:
+        overrides["base_url"] = args.base_url
+    if args.extract is not None:
+        overrides["extract"] = args.extract
+    if args.no_thumbnails:
+        overrides["keep_thumbnails"] = False
+    captured_at = None
+    if args.captured_at:
+        captured_at = datetime.fromisoformat(args.captured_at)
+        if captured_at.tzinfo is None:
+            # The clock becomes every observation's event_time, so it must be
+            # unambiguous; the local timezone is the honest reading of a bare
+            # wall-clock time typed at the terminal.
+            captured_at = captured_at.astimezone()
+    scope = Scope(args.scope)
+
+    engine = await _create_engine(args.db_path, vision_overrides=overrides)
+    extraction = engine._config.extraction
+    admission = (f"ingest() with extraction by {extraction.provider}/{extraction.model}"
+                 if engine._config.vision.extract else "store(), no extraction")
+    reports: list[dict[str, Any]] = []
+    failures = 0
+    try:
+        for path in args.files:
+            try:
+                report = await observe_source(
+                    engine, path, user_id=args.user_id, captured_at=captured_at,
+                    session_id=args.session_id, scope=scope,
+                )
+            except (VisionError, FileNotFoundError, ValueError) as exc:
+                failures += 1
+                partial = getattr(exc, "report", None)
+                entry: dict[str, Any] = {"source": path, "error": f"{type(exc).__name__}: {exc}"}
+                if partial is not None:
+                    entry["event_ids"] = partial.event_ids
+                reports.append(entry)
+                print(f"Error: {path}: {exc}", file=sys.stderr)
+                continue
+            failures += int(report.failed > 0)
+            reports.append(report.to_dict() if args.format == "json" else report.summary())
+            if args.format != "json":
+                print(f"{report.source} ({report.kind}, {report.vision_model}, prompt v{report.describe_prompt_version})")
+                print(f"  Capture clock:    {report.captured_at.isoformat()} ({report.capture_clock})")
+                print(f"  Frames sampled:   {report.frames}")
+                print(f"  Keyframes:        {report.keyframes}")
+                print(f"  Described:        {report.described}")
+                print(f"  Repeats dropped:  {report.repeats_dropped}")
+                print(f"  Already observed: {report.already_observed}")
+                print(f"  Admitted:         {report.admitted} ({admission})")
+                print(f"  Failed:           {report.failed}")
+                for record in report.observations:
+                    if record.status == "admitted":
+                        when = f"t={record.time_s:.1f}s " if record.time_s is not None else ""
+                        print(f"    {when}event {record.event_id}: {_truncate(record.description or '', 90)}")
+                    elif record.error:
+                        print(f"    frame {record.index}: {record.status}: {record.error}")
+    finally:
+        await engine.close()
+    if args.format == "json":
+        print(json.dumps(reports, indent=2, default=str))
+    if failures:
+        sys.exit(1)
+
+
 async def cmd_organize(args: argparse.Namespace) -> None:
     """Run the organizer with optional job selection and budget."""
     engine = await _create_engine(args.db_path)
@@ -862,6 +950,12 @@ async def cmd_init(args: argparse.Namespace) -> None:
                 "# Encryption at rest (optional). Both are required to enable it.\n"
                 "# PRME_ENCRYPTION_ENABLED=true\n"
                 "# PRME_ENCRYPTION_KEY=your-secret-key\n"
+                "\n"
+                "# Visual memory (optional; RFC-0018). observe() and prme observe describe\n"
+                "# photos and videos with a local vision model served by Ollama.\n"
+                "# PRME_VISION__ENABLED=true\n"
+                "# PRME_VISION__MODEL=qwen3.5:9b\n"
+                "# PRME_VISION__EXTRACT=true\n"
             )
 
     print(f"Initialized PRME memory directory: {directory}")
@@ -1359,6 +1453,40 @@ def build_parser() -> argparse.ArgumentParser:
     p_search.add_argument("query", help="Query text")
     p_search.add_argument("--user-id", help="User ID for scoping (default: _cli)")
     p_search.set_defaults(func=cmd_search)
+
+    # observe
+    p_observe = subparsers.add_parser(
+        "observe",
+        help="Remember what photos and videos showed: describe keyframes with a vision model and store them as events",
+    )
+    p_observe.add_argument("db_path", help=db_path_help)
+    p_observe.add_argument("files", nargs="+", help="Image or video files to observe, in order")
+    p_observe.add_argument("--user-id", required=True, type=owner, help="Owner of the observations")
+    p_observe.add_argument(
+        "--captured-at",
+        help=(
+            "Capture clock as an ISO 8601 datetime (a video's start), used for every file given; "
+            "omit to read it from the photo's EXIF data, the video container or the file time"
+        ),
+    )
+    p_observe.add_argument("--session-id", help="Session id for every observation (default: video:<file> or photo:<file>)")
+    p_observe.add_argument("--scope", choices=[s.value for s in Scope], default=Scope.PERSONAL.value,
+                           help="Scope of the observations (default: personal)")
+    p_observe.add_argument("--model", help="Vision model (default: PRME_VISION_MODEL or qwen3.5:9b)")
+    p_observe.add_argument("--base-url", help="Vision endpoint (default: PRME_VISION_BASE_URL, OLLAMA_HOST or the local server)")
+    extract_group = p_observe.add_mutually_exclusive_group()
+    extract_group.add_argument("--extract", dest="extract", action="store_true", default=None,
+                               help="Admit descriptions with ingest() and extraction (default: PRME_VISION_EXTRACT, on)")
+    extract_group.add_argument("--no-extract", dest="extract", action="store_false",
+                               help="Admit descriptions with store(): one note per keyframe, no model extraction")
+    p_observe.add_argument("--no-thumbnails", action="store_true", help="Keep no thumbnails in the pack")
+    p_observe.add_argument(
+        "--format",
+        choices=["table", "json"],
+        default="table",
+        help="Output format (default: table); json includes every keyframe decision and its score",
+    )
+    p_observe.set_defaults(func=cmd_observe)
 
     # organize
     p_organize = subparsers.add_parser("organize", help="Run the organizer")

@@ -518,6 +518,43 @@ class MemoryClient:
             )
         )
 
+    def observe(
+        self,
+        source: str | os.PathLike[str] | bytes,
+        *,
+        user_id: str,
+        captured_at: datetime | None = None,
+        source_name: str | None = None,
+        session_id: str | None = None,
+        metadata: dict | None = None,
+        scope: Scope = Scope.PERSONAL,
+    ) -> list[str]:
+        """Remember what a photo or a saved video showed; return the observation event ids.
+
+        Needs ``vision.enabled`` (``PRME_VISION__ENABLED=true``) and a vision
+        model the configured provider can reach (a local Ollama server by
+        default); video also needs ``ffmpeg``. ``captured_at`` is the
+        timezone-aware capture clock (the video's start); omitted, the
+        photo's EXIF time, the video's container time or the file time
+        stands in. See :meth:`MemoryEngine.observe` for the event shape
+        (RFC-0018).
+        """
+        return self._run(
+            self._engine.observe(
+                source,
+                user_id=user_id,
+                captured_at=captured_at,
+                source_name=source_name,
+                session_id=session_id,
+                metadata=metadata,
+                scope=scope,
+            )
+        )
+
+    def get_blob(self, key: str) -> bytes | None:
+        """Return a blob the pack keeps, such as an observation's thumbnail (``metadata["thumbnail"]``)."""
+        return self._run(self._engine.get_blob(key))
+
     def promote(
         self, node_id: str, *, user_id: str | None = None,
         request_id: str | UUID | None = None, actor_id: str | None = None,

@@ -211,6 +211,38 @@ event_ids = client.ingest_batch(
 )
 ```
 
+## observe()
+
+```python
+def observe(
+    self,
+    source: str | os.PathLike[str] | bytes,
+    *,
+    user_id: str,
+    captured_at: datetime | None = None,
+    source_name: str | None = None,
+    session_id: str | None = None,
+    metadata: dict | None = None,
+    scope: Scope = Scope.PERSONAL,
+) -> list[str]
+```
+
+Remember what a photo or a saved video showed (RFC-0018, phase 1). Off by
+default: the client's configuration needs `vision.enabled`
+(`PRME_VISION__ENABLED=true`), a vision model the configured provider can reach
+(a local Ollama server by default) and, for video, `ffmpeg`. Returns the ids
+of the observation events, one per photo or per kept keyframe; each has role
+`tool`, the capture clock as `event_time` and metadata naming the source, the
+frame, the thumbnail and the vision model. `client.get_blob(event.metadata["thumbnail"])`
+returns the keyframe thumbnail.
+
+```python
+ids = client.observe("~/Pictures/receipt.jpg", user_id="alice",
+                     captured_at=datetime(2026, 10, 12, 8, 41, tzinfo=timezone.utc))
+event = client.get_event(ids[0], user_id="alice")
+thumbnail = client.get_blob(event.metadata["thumbnail"])  # JPEG bytes
+```
+
 ## get_node()
 
 Get a single node by ID.

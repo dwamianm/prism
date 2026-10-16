@@ -208,6 +208,22 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_query_reformulation is true",
         bool,
     ),
+    # Visual memory (RFC-0018) does nothing until vision.enabled is set.
+    "vision.extract": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.change_threshold": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.repeat_similarity": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
 }
 
 

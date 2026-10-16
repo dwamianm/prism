@@ -37,6 +37,10 @@ def consume(client: MemoryClient) -> None:
         FastIngestItem(content="reply", role="participant", speaker="Melanie"),
         {"content": "second", "scope": Scope.PROJECT},
     ], user_id="alice", request_id="47ad2465-9d6d-4e8a-bd64-d4ff27ad1eae"), list[str])
+    assert_type(client.observe("whiteboard.jpg", user_id="alice",
+                               captured_at=datetime(2026, 10, 14, 10, tzinfo=timezone.utc)), list[str])
+    assert_type(client.observe(b"\xff\xd8\xff", user_id="alice", source_name="frame.jpg"), list[str])
+    assert_type(client.get_blob("frames/abc.jpg"), bytes | None)
     assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | None)
     assert_type(client.get_relevance("feedback-id", user_id="alice"), RelevanceRecord | None)
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])

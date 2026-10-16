@@ -1,10 +1,19 @@
-"""Visual memory spike (exploration, 2026-10-15).
+"""Visual memory harness (spike 2026-10-15; RFC-0018 phase 1 harness since).
 
-Pipeline: video frames -> keyframes (perceptual hash) -> local vision model
-descriptions -> PRME events (``ingest()`` with extraction, or ``store()``) ->
-questions answered by a local reader over ``retrieve()`` context -> local
-judge. Every model call goes to the local Ollama server; nothing is billed.
-Raw outputs live under ``benchmarks/vision/runs/`` (ignored by git).
+Pipeline: video and photo sources -> ``MemoryEngine.observe()`` (keyframes,
+local vision model descriptions, repeat filter, admission through
+``ingest()`` with extraction or ``store()``) -> questions answered by a local
+reader over ``retrieve()`` context -> local judge. Every model call goes to
+the local Ollama server; nothing is billed. Raw outputs live under
+``benchmarks/vision/runs/`` (ignored by git).
+
+The spike's own pipeline code moved into ``src/prme/vision/`` with RFC-0018
+phase 1; this harness drives that code through the engine, so a run here
+measures the product path. Two things stay here because they are
+measurement tools, not product behavior: the describe cache (keyed by the
+frame's SHA-256, the vision model and the prompt version, so a second run
+with another ``--mode`` or extraction model pays nothing for descriptions)
+and the question set with its reader and judge.
 
 Usage::
 
@@ -12,10 +21,6 @@ Usage::
     uv run python -m benchmarks.vision.spike keyframes --run spike-1 --sources meeting,tahoe
     uv run python -m benchmarks.vision.spike run --run spike-1 --sources meeting,photos,tahoe \\
         --mode ingest --vision-model qwen3.5:9b --extract-model prme-qwen3.5:35b-a3b-8k
-
-The describe cache under ``runs/_describe_cache`` is keyed by the frame's
-SHA-256, the vision model and the prompt version, so a second run with another
-``--mode`` or extraction model pays nothing for descriptions.
 """
 from __future__ import annotations
 
@@ -23,22 +28,25 @@ import argparse
 import asyncio
 import hashlib
 import json
-import re
 import shutil
 import statistics
 import subprocess
+import tempfile
 import time
-from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import duckdb
 import httpx
-import numpy as np
 import ollama
-from PIL import Image, ImageFilter
 
 from benchmarks.vision import corpus as corpus_module
+from prme.config import VisionConfig
+from prme.vision.describe import DESCRIBE_PROMPT_VERSION
+from prme.vision.frames import decode_video_frames
+from prme.vision.keyframes import select_keyframes
+from prme.vision.observe import ObservationReport, observe_source
+from prme.vision.provider import OllamaVisionProvider
 
 RUNS = Path(__file__).resolve().parent / "runs"
 CACHE = RUNS / "_describe_cache"
@@ -46,272 +54,119 @@ QUESTIONS = Path(__file__).resolve().parent / "questions.json"
 OLLAMA_HOST = "http://127.0.0.1:11434"
 USER_ID = "viewer"
 
-# Version 1 asked for a narrated description ("the slide says ..."). Extraction then recorded the
-# narration as the claim and produced no fact about what the slide said. Version 2 asks for the
-# facts the image states as standalone sentences with their subject named, after a short scene line.
-DESCRIBE_PROMPT_VERSION = 2
-DESCRIBE_PROMPT = """You are the eyes of a personal memory system. {kind_hint}
-Write two parts in plain English with no headings, no bullet points and no commentary.
-Part 1, one or two sentences: what kind of image this is and what it shows: the place, any people and what they are doing, the objects and the colors.
-Part 2, the facts the image states, one sentence per fact. Each sentence must make sense on its own, so name its subject (for example: The store's total is "$8.40".). Quote visible text exactly as written, including numbers, dates, names and prices, inside double quotes. If a value is crossed out and replaced, say which value is crossed out and which is current. Read every value off any chart or table as its own sentence. If the image has no text, state three to five facts about what is visible. Do not guess at anything you cannot see."""
-KIND_HINTS = {"video_frame": "The image is one frame of a video recording; say that it is a video frame.",
-              "photo": "The image is a photo from the person's camera roll; say that it is a photo."}
-RETRY_DELAYS = (5.0, 15.0, 60.0)
-
 READER_SYSTEM = ("You answer questions from a personal memory. Use only the memory context. "
                  "If the context does not contain the answer, reply exactly: I don't know. "
                  "Answer in one short sentence.")
 
 
-@dataclass
-class Observation:
-    source: str
-    label: str
-    kind: str  # video_frame | photo
-    path: str
-    time_s: float | None
-    event_time: str
-    sha256: str
+class CachingVisionProvider:
+    """The Ollama vision provider with a description cache on disk.
 
-
-def sha256_of(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def extract_frames(video: Path, out: Path, fps: float, width: int = 1280) -> list[Path]:
-    out.mkdir(parents=True, exist_ok=True)
-    if not any(out.glob("*.jpg")):
-        subprocess.run(["ffmpeg", "-y", "-v", "error", "-hwaccel", "videotoolbox", "-i", str(video),
-                        "-vf", f"fps={fps},scale={width}:-2", "-q:v", "3", str(out / "%05d.jpg")], check=True)
-    return sorted(out.glob("*.jpg"))
-
-
-SIGNATURE_SIZE = (320, 180)
-SIGNATURE_MARGIN = 12
-
-
-def frame_signature(path: Path) -> np.ndarray:
-    """A small grayscale copy, blurred a little so sub-pixel camera shake does not read as change."""
-    image = Image.open(path).convert("L").resize(SIGNATURE_SIZE, Image.Resampling.BOX)
-    return np.asarray(image.filter(ImageFilter.GaussianBlur(2)), dtype=np.float32)
-
-
-def _aligned(reference: np.ndarray, candidate: np.ndarray) -> np.ndarray:
-    """Shift ``candidate`` by the whole-pixel translation that best matches ``reference`` (phase correlation)."""
-    cross = np.fft.fft2(reference - reference.mean()) * np.conj(np.fft.fft2(candidate - candidate.mean()))
-    cross /= np.abs(cross) + 1e-6
-    peak = np.fft.ifft2(cross).real
-    dy, dx = (int(value) for value in np.unravel_index(np.argmax(peak), peak.shape))
-    if dy > reference.shape[0] // 2:
-        dy -= reference.shape[0]
-    if dx > reference.shape[1] // 2:
-        dx -= reference.shape[1]
-    return np.roll(candidate, (dy, dx), axis=(0, 1))
-
-
-def frame_change(reference: np.ndarray, candidate: np.ndarray) -> float:
-    """How much the candidate differs from the reference after alignment and contrast normalization.
-
-    The value is the largest block-mean absolute difference between the two z-scored images over a
-    13x37 grid, so a change confined to one line of text still registers while exposure drift and a
-    few pixels of shake do not. Measured on the spike corpus: same-layout slides whose text changed
-    scored about 0.7, any other scene change above 2.3, shake and exposure noise at most 0.37, and
-    consecutive seconds of a slow aerial pan about 0.5.
+    Cache entries are keyed by the frame's SHA-256, the model and the prompt
+    version, as the spike's were, so the ``v2`` entries written by the spike
+    runs are reused as long as the prompt text is unchanged.
     """
-    margin = SIGNATURE_MARGIN
-    a = reference[margin:-margin, margin:-margin]
-    b = _aligned(reference, candidate)[margin:-margin, margin:-margin]
-    a = (a - a.mean()) / (a.std() + 1e-6)
-    b = (b - b.mean()) / (b.std() + 1e-6)
-    difference = np.abs(a - b)
-    rows, cols = 13, 37
-    block_h, block_w = difference.shape[0] // rows, difference.shape[1] // cols
-    blocks = difference[: block_h * rows, : block_w * cols].reshape(rows, block_h, cols, block_w).mean(axis=(1, 3))
-    return float(blocks.max())
+
+    def __init__(self, model: str, *, host: str) -> None:
+        self._inner = OllamaVisionProvider(model, base_url=host)
+        self._folder = CACHE / model.replace(":", "_") / f"v{DESCRIBE_PROMPT_VERSION}"
+        self._folder.mkdir(parents=True, exist_ok=True)
+        self.records: list[dict] = []
+
+    @property
+    def model_name(self) -> str:
+        return self._inner.model_name
+
+    async def describe(self, image: bytes, *, prompt: str) -> str:
+        sha = hashlib.sha256(image).hexdigest()
+        cached = self._folder / f"{sha}.json"
+        if cached.exists():
+            record = json.loads(cached.read_text())
+            self.records.append({**record, "cached": True})
+            return record["text"]
+        started = time.perf_counter()
+        text = await self._inner.describe(image, prompt=prompt)
+        record = {"text": text, "seconds": round(time.perf_counter() - started, 2), "model": self.model_name,
+                  "prompt_version": DESCRIBE_PROMPT_VERSION}
+        cached.write_text(json.dumps(record, indent=2) + "\n")
+        self.records.append({**record, "cached": False})
+        return text
 
 
-def select_keyframes(frames: list[Path], *, fps: float, threshold: float, max_gap: float,
-                     cap: int) -> tuple[list[int], list[dict]]:
-    """Keep a frame when it changed from the last kept frame by ``threshold`` or more, or when
-    ``max_gap`` seconds passed since the last kept frame (a heartbeat; the description step drops
-    frames whose description repeats the previous kept one). ``cap`` subsamples evenly."""
-    kept, log = [], []
-    last_signature, last_time = None, None
-    for index, frame in enumerate(frames):
-        time_s = index / fps
-        signature = frame_signature(frame)
-        change = None if last_signature is None else round(frame_change(last_signature, signature), 3)
-        keep = last_signature is None or change >= threshold or (time_s - last_time) >= max_gap
-        log.append({"index": index, "time_s": time_s, "change": change, "kept": keep})
-        if keep:
-            kept.append(index)
-            last_signature, last_time = signature, time_s
-    if len(kept) > cap:
-        step = len(kept) / cap
-        kept = [kept[int(position * step)] for position in range(cap)]
-        for entry in log:
-            entry["kept"] = entry["index"] in kept
-    return kept, log
+def vision_config(args: argparse.Namespace) -> VisionConfig:
+    return VisionConfig(enabled=True, model=args.vision_model, base_url=OLLAMA_HOST,
+                        extract=args.mode == "ingest", fps=args.fps, change_threshold=args.change_threshold,
+                        max_gap_seconds=args.max_gap, repeat_similarity=args.repeat_similarity)
 
 
-def thumbnail(path: Path, target: Path, width: int = 320) -> Path:
-    image = Image.open(path).convert("RGB")
-    image.thumbnail((width, width))
-    image.save(target, quality=80)
-    return target
-
-
-def describe(client: ollama.Client, model: str, path: Path, sha: str, kind: str) -> dict:
-    folder = CACHE / model.replace(":", "_") / f"v{DESCRIBE_PROMPT_VERSION}"
-    folder.mkdir(parents=True, exist_ok=True)
-    cached = folder / f"{sha}.json"
-    if cached.exists():
-        return {**json.loads(cached.read_text()), "cached": True}
-    started = time.perf_counter()
-    prompt = DESCRIBE_PROMPT.format(kind_hint=KIND_HINTS[kind])
-    response = client.chat(model=model, messages=[{"role": "user", "content": prompt, "images": [str(path)]}],
-                           think=False, options={"temperature": 0, "seed": 0})
-    record = {"text": response["message"]["content"].strip(), "seconds": round(time.perf_counter() - started, 2),
-              "prompt_tokens": response.get("prompt_eval_count"), "eval_tokens": response.get("eval_count"),
-              "model": model, "prompt_version": DESCRIBE_PROMPT_VERSION}
-    cached.write_text(json.dumps(record, indent=2) + "\n")
-    return {**record, "cached": False}
-
-
-def gather_observations(run: Path, manifest: dict, sources: list[str], *, fps: float, threshold: int,
-                        max_gap: float, cap: int) -> tuple[list[Observation], dict]:
-    observations, stats = [], {}
-    for name in ("meeting", "tahoe"):
-        if name not in sources:
-            continue
-        info = manifest[name]
-        video = Path(info["path"])
-        frames = extract_frames(video, run / "frames" / name, fps)
-        kept, log = select_keyframes(frames, fps=fps, threshold=threshold, max_gap=max_gap, cap=cap)
-        (run / f"keyframes_{name}.json").write_text(json.dumps(log, indent=1) + "\n")
-        start = datetime.fromisoformat(info["start"])
-        for index in kept:
-            time_s = index / fps
-            observations.append(Observation(source=name, label=video.name, kind="video_frame", path=str(frames[index]),
-                                            time_s=time_s, event_time=(start + timedelta(seconds=time_s)).isoformat(),
-                                            sha256=sha256_of(frames[index])))
-        changes = [entry["change"] for entry in log if entry["change"] is not None]
-        stats[name] = {"frames": len(frames), "keyframes": len(kept), "keyframe_times_s": [index / fps for index in kept],
-                       "change_median": round(statistics.median(changes), 3) if changes else None,
-                       "change_max": max(changes) if changes else None}
-    if "photos" in sources:
-        for photo in manifest["photos"]:
-            path = Path(photo["path"])
-            observations.append(Observation(source="photos", label=path.name, kind="photo", path=str(path), time_s=None,
-                                            event_time=photo["taken"], sha256=sha256_of(path)))
-        stats["photos"] = {"photos": len(manifest["photos"])}
-    return observations, stats
-
-
-QUOTE_RE = re.compile(r'"([^"]{1,200})"')
-REPEAT_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"  # the pack's own default text embedding
-_embedder = None
-
-
-def description_vector(text: str) -> np.ndarray:
-    global _embedder
-    if _embedder is None:
-        from fastembed import TextEmbedding
-
-        _embedder = TextEmbedding(REPEAT_EMBEDDING_MODEL)
-    vector = np.asarray(next(iter(_embedder.embed([text]))), dtype=np.float32)
-    return vector / (np.linalg.norm(vector) + 1e-9)
-
-
-def repeat_similarity(previous: tuple[str, np.ndarray] | None, current: tuple[str, np.ndarray]) -> float | None:
-    """Cosine similarity of the two descriptions when their quoted text is the same set, else None.
-
-    Any difference in quoted text keeps the frame, so a whiteboard with one changed value is never
-    dropped. Measured on the spike corpus with the 9B model: the same whiteboard described twice
-    scored 0.985, the same lake from the air described in new words 0.94 to 0.975, and two slides
-    with different text 0.87 to 0.96 (those differ in quoted text, so the gate alone rejects them).
-    Word overlap was tried first and failed: the same whiteboard overlapped only 0.61.
-    """
-    if previous is None:
-        return None
-    if set(QUOTE_RE.findall(previous[0])) != set(QUOTE_RE.findall(current[0])):
-        return None
-    return float(np.dot(previous[1], current[1]))
-
-
-def content_for(observation: Observation, description: str) -> str:
-    """The event text is the description alone. Version 1 prefixed the source and frame time, and
-    extraction turned that prefix into facts such as "Video frame at 00:03 of Tahoe Day.mov."; the
-    source and time live in the event's metadata and event_time instead."""
-    return description
-
-
-def engine_config(pack: Path, extract_model: str):
+def engine_config(pack: Path, extract_model: str, vision: VisionConfig):
     """Production retrieval defaults, isolated from .env, extracting through the local Ollama server."""
     from benchmarks.diagnostics.extracted_packs import build_config
 
-    return build_config(pack, model=extract_model)
+    return build_config(pack, model=extract_model).model_copy(update={"vision": vision})
 
 
-async def retry_extraction(engine, event_id: str) -> str:
-    """Retry one event's extraction after each delay in RETRY_DELAYS; returns its final status."""
-    status = await engine.extraction_status(event_id, user_id=USER_ID)
-    for delay in RETRY_DELAYS:
-        if status is not None and status.status == "complete":
-            break
-        await asyncio.sleep(delay)
-        await engine.retry_extraction(event_id, user_id=USER_ID)
-        await engine.process_extractions(user_id=USER_ID, limit=1, budget_ms=10 ** 9)
-        status = await engine.extraction_status(event_id, user_id=USER_ID)
-    return "missing" if status is None else status.status
+def sources_of(manifest: dict, sources: list[str]) -> list[tuple[str, Path, datetime]]:
+    """(source name, path, capture clock) for every file the run observes, in order."""
+    entries: list[tuple[str, Path, datetime]] = []
+    for name in ("meeting", "tahoe"):
+        if name in sources:
+            info = manifest[name]
+            entries.append((name, Path(info["path"]), datetime.fromisoformat(info["start"])))
+    if "photos" in sources:
+        for photo in manifest["photos"]:
+            entries.append(("photos", Path(photo["path"]), datetime.fromisoformat(photo["taken"])))
+    return entries
 
 
-async def build_pack(run: Path, observations: list[Observation], descriptions: list[dict], *, mode: str,
-                     extract_model: str) -> list[dict]:
-    from prme.ingestion.pipeline import ExtractionError
+def keyframes_only(run: Path, entries: list[tuple[str, Path, datetime]], args: argparse.Namespace) -> dict:
+    """Decode and select keyframes without a model call, and write the decision log per video."""
+    stats: dict[str, dict] = {}
+    for name, path, _ in entries:
+        if name == "photos":
+            stats.setdefault("photos", {"photos": 0})["photos"] += 1
+            continue
+        with tempfile.TemporaryDirectory(prefix="prme-keyframes-") as tmp:
+            frames = decode_video_frames(path, Path(tmp), fps=args.fps, width=1280)
+            decisions = select_keyframes(frames, fps=args.fps, threshold=args.change_threshold, max_gap=args.max_gap)
+        (run / f"keyframes_{name}.json").write_text(json.dumps([d.to_dict() for d in decisions], indent=1) + "\n")
+        changes = [d.change for d in decisions if d.change is not None]
+        stats[name] = {"frames": len(decisions), "keyframes": sum(1 for d in decisions if d.kept),
+                       "keyframe_times_s": [d.time_s for d in decisions if d.kept],
+                       "change_median": round(statistics.median(changes), 3) if changes else None,
+                       "change_max": max(changes) if changes else None}
+    return stats
+
+
+async def build_pack(run: Path, entries: list[tuple[str, Path, datetime]], args: argparse.Namespace,
+                     ) -> tuple[list[ObservationReport], list[dict]]:
     from prme.storage.engine import MemoryEngine
 
     pack = run / "pack"
     if pack.exists():
         shutil.rmtree(pack)
     (pack / "lexical_index").mkdir(parents=True)
-    (pack / "frames").mkdir()
-    records = []
-    async with MemoryEngine.open(engine_config(pack, extract_model)) as engine:
-        for observation, description in zip(observations, descriptions, strict=True):
-            thumbnail(Path(observation.path), pack / "frames" / f"{observation.sha256}.jpg")
-            metadata = {"modality": observation.kind, "source_file": observation.label,
-                        "frame_time_s": observation.time_s, "frame_sha256": observation.sha256,
-                        "thumbnail": f"frames/{observation.sha256}.jpg", "vision_model": description["model"],
-                        "describe_prompt_version": description["prompt_version"]}
-            content = content_for(observation, description["text"])
-            event_time = datetime.fromisoformat(observation.event_time)
-            session = (f"video:{observation.label}" if observation.kind == "video_frame"
-                       else f"photo:{observation.label}")
-            started, error, event_id, status = time.perf_counter(), None, None, "complete"
-            try:
-                if mode == "ingest":
-                    event_id = await engine.ingest(content, user_id=USER_ID, role="tool", session_id=session,
-                                                   metadata=metadata, event_time=event_time, wait_for_extraction=True)
-                else:
-                    event_id = await engine.store(content, user_id=USER_ID, role="tool", session_id=session,
-                                                  metadata=metadata, event_time=event_time)
-            except ExtractionError as exc:
-                # The event is saved before extraction runs. Retry like the extracted-pack builder
-                # does, because one failed extraction leaves every later one pending behind it.
-                error, event_id = f"{type(exc).__name__}: {exc}", exc.event_id
-                status = await retry_extraction(engine, str(event_id)) if event_id else "missing"
-            except Exception as exc:  # noqa: BLE001 - the spike records every failure and goes on
-                error, status = f"{type(exc).__name__}: {exc}", "failed"
-            records.append({**asdict(observation), "event_id": str(event_id) if event_id else None,
-                            "seconds": round(time.perf_counter() - started, 2), "error": error, "status": status,
-                            "content": content})
-            print(f"  {mode} {observation.source} {observation.label} t={observation.time_s} "
-                  f"{records[-1]['seconds']}s{' ERROR ' + error + ' -> ' + status if error else ''}", flush=True)
+    provider = CachingVisionProvider(args.vision_model, host=OLLAMA_HOST)
+    reports: list[ObservationReport] = []
+    async with MemoryEngine.open(engine_config(pack, args.extract_model, vision_config(args))) as engine:
+        # The harness owns the provider so descriptions are cached across runs.
+        engine._vision_provider_instance = provider
+        for name, path, start in entries:
+            report = await observe_source(engine, path, user_id=USER_ID, captured_at=start)
+            reports.append(report)
+            (run / f"keyframes_{name}.json").write_text(
+                json.dumps([d.to_dict() for d in report.keyframe_log], indent=1) + "\n")
+            for record in report.observations:
+                print(f"  {args.mode} {name} {report.source} t={record.time_s} {record.status}"
+                      f" describe={record.describe_seconds}s admit={record.admit_seconds}s"
+                      f" similarity={record.similarity}"
+                      f"{' ERROR ' + record.error if record.error else ''}"
+                      f" {(record.description or '')[:80]!r}", flush=True)
     with (run / "observations.jsonl").open("w") as handle:
-        for record in records:
-            handle.write(json.dumps(record) + "\n")
-    return records
+        for report in reports:
+            for record in report.observations:
+                handle.write(json.dumps({"source": report.source, "kind": report.kind, **record.to_dict()}) + "\n")
+    return reports, provider.records
 
 
 def pack_stats(pack: Path) -> dict:
@@ -321,12 +176,14 @@ def pack_stats(pack: Path) -> dict:
         edges = conn.execute("SELECT edge_type, count(*) FROM edges GROUP BY 1 ORDER BY 1").fetchall()
         events = conn.execute("SELECT count(*) FROM events").fetchone()[0]
         sample = conn.execute("SELECT node_type, content FROM nodes ORDER BY node_type, content LIMIT 120").fetchall()
+        tables = {row[0] for row in conn.execute("SHOW TABLES").fetchall()}
+        thumbs = conn.execute("SELECT count(*), coalesce(sum(size), 0) FROM blobs").fetchone() if "blobs" in tables else (0, 0)
     finally:
         conn.close()
     files = [path for path in pack.rglob("*") if path.is_file()]
-    thumbs = sum(path.stat().st_size for path in (pack / "frames").glob("*.jpg"))
     return {"events": events, "nodes": dict(nodes), "edges": dict(edges), "pack_bytes": sum(p.stat().st_size for p in files),
-            "thumbnail_bytes": thumbs, "node_sample": [{"type": kind, "content": content} for kind, content in sample]}
+            "thumbnails": thumbs[0], "thumbnail_bytes": int(thumbs[1]),
+            "node_sample": [{"type": kind, "content": content} for kind, content in sample]}
 
 
 def chat(client: ollama.Client, model: str, messages: list[dict], num_ctx: int | None = None) -> str:
@@ -355,22 +212,21 @@ def judge_answer(client: ollama.Client, model: str, question: dict, answer: str)
     return None, verdict
 
 
-async def ask(run: Path, questions: list[dict], *, extract_model: str, reader_model: str, judge_model: str,
-              token_budget: int) -> list[dict]:
+async def ask(run: Path, questions: list[dict], args: argparse.Namespace) -> list[dict]:
     from prme.storage.engine import MemoryEngine
 
     client = ollama.Client(host=OLLAMA_HOST)
     results = []
-    async with MemoryEngine.open(engine_config(run / "pack", extract_model)) as engine:
+    async with MemoryEngine.open(engine_config(run / "pack", args.extract_model, vision_config(args))) as engine:
         for question in questions:
             started = time.perf_counter()
-            response = await engine.retrieve(question["question"], user_id=USER_ID, token_budget=token_budget)
+            response = await engine.retrieve(question["question"], user_id=USER_ID, token_budget=args.token_budget)
             context = response.bundle.render()
             retrieval_seconds = round(time.perf_counter() - started, 3)
             lowered = context.lower()
             hit = any(needle in lowered for needle in question["needles"])
-            answer = read_answer(client, reader_model, context, question["question"])
-            correct, verdict = judge_answer(client, judge_model, question, answer)
+            answer = read_answer(client, args.reader_model, context, question["question"])
+            correct, verdict = judge_answer(client, args.judge_model, question, answer)
             results.append({**question, "retrieval_hit": hit, "answer": answer, "correct": correct, "verdict": verdict,
                             "context_tokens": response.bundle.tokens_used, "retrieval_seconds": retrieval_seconds,
                             "context": context})
@@ -383,6 +239,7 @@ async def ask(run: Path, questions: list[dict], *, extract_model: str, reader_mo
 
 
 def summarize(values: list[float]) -> dict | None:
+    values = [value for value in values if value is not None]
     if not values:
         return None
     return {"n": len(values), "mean": round(statistics.mean(values), 2), "median": round(statistics.median(values), 2),
@@ -396,7 +253,26 @@ def ollama_version() -> str | None:
         return None
 
 
-def write_report(run: Path, args: argparse.Namespace, frame_stats: dict, descriptions: list[dict], records: list[dict],
+def frame_stats_of(reports: list[ObservationReport]) -> dict:
+    stats: dict[str, dict] = {}
+    for report in reports:
+        if report.kind == "photo":
+            bucket = stats.setdefault("photos", {"photos": 0, "admitted": 0})
+            bucket["photos"] += 1
+            bucket["admitted"] += report.admitted
+            continue
+        changes = [d.change for d in report.keyframe_log if d.change is not None]
+        stats[report.source] = {"frames": report.frames, "keyframes": report.keyframes, "described": report.described,
+                                "repeats_dropped": report.repeats_dropped, "admitted": report.admitted,
+                                "keyframe_times_s": [d.time_s for d in report.keyframe_log if d.kept],
+                                "change_median": round(statistics.median(changes), 3) if changes else None,
+                                "change_max": max(changes) if changes else None}
+    stats["described"] = sum(report.described for report in reports)
+    stats["unique_after_description"] = sum(report.admitted for report in reports)
+    return stats
+
+
+def write_report(run: Path, args: argparse.Namespace, reports: list[ObservationReport], descriptions: list[dict],
                  stats: dict, results: list[dict]) -> dict:
     by_source: dict[str, dict] = {}
     for result in results:
@@ -410,18 +286,20 @@ def write_report(run: Path, args: argparse.Namespace, frame_stats: dict, descrip
         bucket["questions"] += 1
         bucket["correct"] += int(bool(result["correct"]))
     fresh = [d for d in descriptions if not d.get("cached")]
+    records = [record for report in reports for record in report.observations]
+    frame_stats = frame_stats_of(reports)
     report = {
         "run": run.name, "finished_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "commit": subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip(),
         "ollama_version": ollama_version(),
         "settings": {key: value for key, value in vars(args).items() if key != "command"},
+        "vision_config": vision_config(args).model_dump(),
         "frames": frame_stats,
         "describe": {"calls": len(descriptions), "fresh": len(fresh),
-                     "seconds": summarize([d["seconds"] for d in fresh]),
-                     "prompt_tokens": summarize([d["prompt_tokens"] for d in descriptions if d.get("prompt_tokens")]),
-                     "eval_tokens": summarize([d["eval_tokens"] for d in descriptions if d.get("eval_tokens")])},
-        "build": {"mode": args.mode, "observations": len(records), "errors": sum(1 for r in records if r["error"]),
-                  "seconds": summarize([r["seconds"] for r in records if not r["error"]])},
+                     "seconds": summarize([d["seconds"] for d in fresh])},
+        "build": {"mode": args.mode, "observations": sum(r.admitted for r in reports),
+                  "errors": sum(1 for r in records if r.error),
+                  "seconds": summarize([r.admit_seconds for r in records if r.status == "admitted"])},
         "pack": {key: value for key, value in stats.items() if key != "node_sample"},
         "questions": {"total": len(results), "retrieval_hits": sum(int(r["retrieval_hit"]) for r in results),
                       "correct": sum(int(bool(r["correct"])) for r in results),
@@ -431,17 +309,20 @@ def write_report(run: Path, args: argparse.Namespace, frame_stats: dict, descrip
                       "by_source": by_source, "by_kind": by_kind},
     }
     (run / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-    lines = [f"# Visual memory spike: {run.name}", "",
+    lines = [f"# Visual memory run: {run.name}", "",
              f"Commit `{report['commit']}`, Ollama {report['ollama_version']}, finished {report['finished_at']}.", "",
              "## Settings", "", "```json", json.dumps(report["settings"], indent=2), "```", "",
-             "## Frames and keyframes", "", "| Source | Frames | Keyframes | Median change | Max change |", "|---|---|---|---|---|"]
+             "## Frames and keyframes", "",
+             "| Source | Frames | Keyframes | Described | Repeats dropped | Admitted | Median change | Max change |",
+             "|---|---|---|---|---|---|---|---|"]
     for name, info in frame_stats.items():
         if isinstance(info, dict) and "frames" in info:
-            lines.append(f"| {name} | {info['frames']} | {info['keyframes']} | {info['change_median']} | {info['change_max']} |")
+            lines.append(f"| {name} | {info['frames']} | {info['keyframes']} | {info['described']} | "
+                         f"{info['repeats_dropped']} | {info['admitted']} | {info['change_median']} | {info['change_max']} |")
         elif isinstance(info, dict):
-            lines.append(f"| {name} | {info['photos']} photos | {info['photos']} | | |")
+            lines.append(f"| {name} | {info['photos']} photos | {info['photos']} | {info['photos']} | 0 | {info['admitted']} | | |")
     lines.append(f"\nDescribed {frame_stats.get('described')} images; {frame_stats.get('unique_after_description')} "
-                 "left after dropping repeated descriptions.")
+                 "admitted after dropping repeated descriptions.")
     lines += ["", "## Describe calls (local vision model)", "", "```json",
               json.dumps(report["describe"], indent=2), "```", "",
               f"## Pack build ({args.mode})", "", "```json", json.dumps({**report["build"], **report["pack"]}, indent=2),
@@ -469,20 +350,21 @@ def load_manifest(run: Path) -> dict:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
+    defaults = VisionConfig()
     for name in ("corpus", "keyframes", "run"):
         command = sub.add_parser(name)
         command.add_argument("--run", required=True)
         command.add_argument("--sources", default="meeting,photos,tahoe")
-        command.add_argument("--fps", type=float, default=1.0)
-        command.add_argument("--change-threshold", type=float, default=0.55,
+        command.add_argument("--fps", type=float, default=defaults.fps)
+        command.add_argument("--change-threshold", type=float, default=defaults.change_threshold,
                              help="frame_change() at or above this starts a new keyframe")
-        command.add_argument("--max-gap", type=float, default=30.0, help="heartbeat keyframe every this many seconds")
-        command.add_argument("--repeat-similarity", type=float, default=0.93,
+        command.add_argument("--max-gap", type=float, default=defaults.max_gap_seconds,
+                             help="heartbeat keyframe every this many seconds")
+        command.add_argument("--repeat-similarity", type=float, default=defaults.repeat_similarity,
                              help="description cosine similarity at or above this, with the same quoted text, "
                                   "drops a frame as a repeat of the previous kept frame")
-        command.add_argument("--cap", type=int, default=40, help="most keyframes kept per video")
         command.add_argument("--mode", choices=("ingest", "store"), default="ingest")
-        command.add_argument("--vision-model", default="qwen3.5:9b")
+        command.add_argument("--vision-model", default=defaults.model)
         command.add_argument("--extract-model", default="prme-qwen3.5:35b-a3b-8k")
         command.add_argument("--reader-model", default="qwen3.5:9b")
         command.add_argument("--judge-model", default="qwen3.5:9b")
@@ -494,40 +376,17 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "corpus":
         print(json.dumps(manifest, indent=2))
         return
-    sources = args.sources.split(",")
-    observations, frame_stats = gather_observations(run, manifest, sources, fps=args.fps, threshold=args.change_threshold,
-                                                    max_gap=args.max_gap, cap=args.cap)
-    print(json.dumps(frame_stats, indent=2))
+    entries = sources_of(manifest, args.sources.split(","))
     if args.command == "keyframes":
+        print(json.dumps(keyframes_only(run, entries, args), indent=2))
         return
-    client = ollama.Client(host=OLLAMA_HOST)
-    descriptions, unique, dropped = [], [], []
-    previous: dict[str, tuple[str, np.ndarray] | None] = {}
-    for observation in observations:
-        description = describe(client, args.vision_model, Path(observation.path), observation.sha256, observation.kind)
-        descriptions.append(description)
-        current = (description["text"], description_vector(description["text"]))
-        similarity = repeat_similarity(previous.get(observation.source), current)
-        duplicate = similarity is not None and similarity >= args.repeat_similarity
-        print(f"  describe {observation.source} t={observation.time_s} {observation.label}: "
-              f"{description['seconds']}s{' (cached)' if description['cached'] else ''}"
-              f" similarity={'none' if similarity is None else round(similarity, 3)}"
-              f"{' DUPLICATE' if duplicate else ''} {description['text'][:80]!r}", flush=True)
-        if duplicate:
-            dropped.append({**asdict(observation), "similarity": round(similarity, 4)})
-            continue
-        previous[observation.source] = current
-        unique.append((observation, description))
-    frame_stats["described"] = len(descriptions)
-    frame_stats["unique_after_description"] = len(unique)
-    (run / "dropped_duplicates.json").write_text(json.dumps(dropped, indent=1) + "\n")
-    records = asyncio.run(build_pack(run, [o for o, _ in unique], [d for _, d in unique], mode=args.mode,
-                                     extract_model=args.extract_model))
+    reports, descriptions = asyncio.run(build_pack(run, entries, args))
+    print(json.dumps(frame_stats_of(reports), indent=2))
     stats = pack_stats(run / "pack")
+    sources = args.sources.split(",")
     questions = [q for q in json.loads(QUESTIONS.read_text()) if q["source"] in sources]
-    results = asyncio.run(ask(run, questions, extract_model=args.extract_model, reader_model=args.reader_model,
-                              judge_model=args.judge_model, token_budget=args.token_budget))
-    report = write_report(run, args, frame_stats, descriptions, records, stats, results)
+    results = asyncio.run(ask(run, questions, args))
+    report = write_report(run, args, reports, descriptions, stats, results)
     print(json.dumps({"describe": report["describe"], "build": report["build"], "questions": report["questions"]}, indent=2))
     print(f"report: {run / 'REPORT.md'}")
 

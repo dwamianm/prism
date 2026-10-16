@@ -1,8 +1,10 @@
 # Visual memory spike (2026-10-15)
 
-**Status:** Exploration. Nothing in `src/prme/` changed. The code is `benchmarks/vision/`
-(`corpus.py`, `spike.py`, `questions.json`); raw outputs are in the ignored `benchmarks/vision/runs/`.
-The design that follows from it is RFC-0018 (`docs/RFC-0018-Visual-Memory.md`).
+**Status:** Exploration; the numbers below are from the spike's own pipeline code. Nothing in
+`src/prme/` changed for the spike. The code was `benchmarks/vision/` (`corpus.py`, `spike.py`,
+`questions.json`); raw outputs are in the ignored `benchmarks/vision/runs/`. The design that follows
+from it is RFC-0018 (`docs/RFC-0018-Visual-Memory.md`), whose phase 1 later the same day moved the
+pipeline into `src/prme/vision/` and turned `spike.py` into a harness over `MemoryEngine.observe()`.
 
 **Question:** can PRME remember what a video or a photo showed, with the same provenance,
 timing and retrieval it has for text, using only local models?
@@ -117,6 +119,22 @@ Per-run detail: `visual-memory-spike-{1,2,3-store}.REPORT.md` and `.report.json`
    2026-10-14 and the slide is about the future. The reader also dropped "10:00" from a
    one-sentence answer and the judge scored that as wrong; the time was in the context.
 
+## Phase 1 product path check (2026-10-15, later the same day)
+
+After RFC-0018 phase 1 moved the pipeline into `src/prme/vision/`, the harness was run again
+over the same corpus and questions through `MemoryEngine.observe()` with `store()` admission
+(`visual-memory-phase1-store.REPORT.md` and `.report.json` beside this file; Ollama 0.40.4,
+the same `qwen3.5:9b` reader and judge, the same prompt version 2, on the uncommitted phase 1
+tree over base commit `606e5db3`). It reproduces run 3: 24 of 24 questions had their evidence
+in context and 22 of 24 were judged correct, with the same two misses (the shortened next-sync
+answer without "10:00", and "I don't know" for the aerial scene). Two differences are by design.
+The product has no per-video keyframe cap, so all 50 aerial keyframes were described (66 in
+total, 8 of them fresh calls at 6.2 s mean, the rest from the spike's cache) and 49 were dropped
+as repeats; and the repeat filter now normalizes quoted text (case, dashes, surrounding
+punctuation), so the whiteboard quoted as "3-Nov" and "3 Nov" counted as the same set and one
+more heartbeat frame was dropped: 16 observations instead of 17. The 16 thumbnails (123 KB)
+are rows of the pack's `blobs` table rather than files under `frames/`.
+
 ## Limits of this spike
 
 - Seventeen events fit in one context. Retrieval was never stressed, so nothing here
@@ -135,13 +153,14 @@ Per-run detail: `visual-memory-spike-{1,2,3-store}.REPORT.md` and `.report.json`
 
 - RFC-0018 phase 1: `observe()` and `prme observe` for files and photos, behind
   `VisionConfig.enabled = False`, with the retry loop and the two-level keyframe policy;
-  thumbnails in both pack layouts.
+  thumbnails in both pack layouts. Done later the same day; see the section above.
 - A benchmark with real recordings and annotated questions before any default changes;
   run under the DeepSeek track rules with its own baseline.
 - An issue for month-day resolution to the past year (finding 6), with the run 2 pack as
   evidence.
 - Normalize quoted text (case, hyphens, punctuation) in the repeat filter: the crossed-out
-  "3-Nov" versus "3 Nov" kept three extra whiteboard frames in run 2.
+  "3-Nov" versus "3 Nov" kept three extra whiteboard frames in run 2. Done in phase 1
+  (`prme.vision.describe.normalize_quote`).
 - Decide whether extraction runs on observations by default or only on request, given
   finding 2 and the 250x cost difference.
 
