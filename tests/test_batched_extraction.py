@@ -131,6 +131,39 @@ async def drain(pipeline):
         await asyncio.sleep(0)
 
 
+def _version_independent_schema(schema):
+    """``schema`` with pydantic's rendering of a Decimal replaced by a placeholder.
+
+    Pydantic versions render a Decimal field differently (2.12 gives its string
+    form a pattern, 2.14 does not), so the extraction schema's digest would
+    depend on the installed pydantic. The placeholder stands for whatever this
+    pydantic renders for a Decimal, and the Decimal field must still be found.
+    """
+    from decimal import Decimal
+
+    from pydantic import BaseModel
+
+    class Probe(BaseModel):
+        value: Decimal
+
+    decimal = Probe.model_json_schema()["properties"]["value"]["anyOf"]
+    found = []
+
+    def canonical(node):
+        if isinstance(node, dict):
+            if node.get("anyOf") == decimal:
+                found.append(node)
+                node = {**node, "anyOf": "decimal"}
+            return {key: canonical(value) for key, value in node.items()}
+        if isinstance(node, list):
+            return [canonical(value) for value in node]
+        return node
+
+    canonical_schema = canonical(schema)
+    assert len(found) == 1, "the extraction schema's one Decimal field, the quantity value, was not found"
+    return canonical_schema
+
+
 class TestTheDefault:
     async def test_the_default_extracts_a_session_s_turns_in_one_call(self, config, user):
         model = ScriptedBatches()
@@ -215,9 +248,9 @@ class TestTheDefault:
             "participant": "3ff6eab556b708f3eb8a45c2ed4d36df26ab86e8923bc6ea1ff3a45f9fb5aab8",
             "assistant": "a417c9c095da96bbc5cdd786d095fcb29298ef480971bcf5688c78e76a89a0ca",
         }
-        schema = json.dumps(_CitedExtractionResult.model_json_schema(), sort_keys=True)
+        schema = json.dumps(_version_independent_schema(_CitedExtractionResult.model_json_schema()), sort_keys=True)
         assert hashlib.sha256(schema.encode()).hexdigest() == \
-            "97a82e96af1fea0a61bc366b9defe781ca5f9f456f4d593a0fef05ff882b2f4f"
+            "ee5bb429e812a7188f5a61e16b82488f9ca789c5455e6ee5c35fde146d7c22df"
         record = ExtractionRecord(
             event_id=UUID("00000000-0000-4000-8000-000000000254"), user_id="u", scope="personal",
             content_hash="a" * 64, provider="ollama", model="ollama/m", grounding_policy="speech_act_v14",
