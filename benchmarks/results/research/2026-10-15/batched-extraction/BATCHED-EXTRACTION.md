@@ -145,9 +145,45 @@ loses it.
 ## LongMemEval-S (step 4)
 
 All three sizes pass the step 4 rule. The owner chose to build the
-LongMemEval-S development slice first (42 questions; one call per turn and
-the three sizes) before deciding on the full 500. Those results are added
-below when the builds finish.
+LongMemEval-S development slice first (`benchmarks/slices/dev-v1.json`, 42
+questions) before deciding on the full 500: one call per turn at `main`
+`58caddb1`, and the three sizes at `93935a16`, with the same model and server
+as the LoCoMo builds and `--jobs 17`. The gate replayed all four at
+`93935a16` with `--slice`.
+
+| Build | Model calls | Prompt tokens | Completion tokens | Wall time | Claims per turn | Evidence turns with a claim | All evidence packed |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Per turn | 20,227 | 90.6 M | 9.46 M | 107 min | 1.52 | 75/79 | 34/38 (89.5%) |
+| Batch 512 | 11,931 | 73.8 M | 12.46 M | 156 min | 1.88 | 77/79 | 33/38 (86.8%) |
+| Batch 2,048 | 3,154 | 23.1 M | 9.35 M | 100 min | 1.39 | 77/79 | 35/38 (92.1%) |
+| Batch 8,192 | 1,994 | 16.5 M | 8.23 M | 79 min | 1.24 | 77/79 | 36/38 (94.7%) |
+
+Wall time comes from the build driver's log, because a slice build never
+records a finish time. In the per-turn build, 452 repeated turns came from
+its cache and 55 requests were asked again after a timeout or a rejected
+response, so it made 20,227 calls for 20,624 turns.
+
+- LongMemEval-S turns are much longer than LoCoMo's, so many turns are larger
+  than 512 tokens and go alone: 7,289 of the 11,928 requests at 512 held one
+  turn. Batches of 512 saved 41% of the calls but only 19% of the prompt
+  tokens, wrote 32% more completion tokens, and took longer than the per-turn
+  build. At 2,048 and 8,192 the calls fell by 84% and 90% and the prompt
+  tokens by 74% and 82%.
+- The gate moved one or two questions out of 38 annotated ones: at 512 one
+  multi-session question lost part of its evidence, at 2,048 one
+  temporal-reasoning question gained it, and at 8,192 that question and one
+  multi-session question gained it. Every other question tied, and every
+  interval includes zero (`longmemeval-slice-batch-*-vs-ingest-baseline.json`),
+  so the slice shows no loss at 2,048 or 8,192 and cannot show more.
+- As on LoCoMo, no batched request failed or was split, and no turn was left
+  out of a response.
+- Unlike LoCoMo, batches of 512 saved more claims than the per-turn build
+  (1.88 per turn against 1.52), while 2,048 and 8,192 saved fewer.
+
+The slice is a development check and too small for the default-change rule.
+The full 500 questions, and the `ingest()` answer track before any default
+change, are the owner's next decision; the answer track also needs new A/A
+checks, because the Ollama server is now 0.40.4.
 
 ## Files
 
@@ -158,6 +194,10 @@ below when the builds finish.
 - `locomo-<after>-vs-<before>.json` and `.md`: `gate-compare` for each pair.
 - `locomo-conversation-intervals.json` and `conversation_intervals.py`: the
   conversation-level intervals.
+- `longmemeval-slice-builds.json`, `longmemeval-slice-*-gate.json` and
+  `longmemeval-slice-batch-*-vs-ingest-baseline.json`: the same for the
+  LongMemEval-S development slice. Its intervals resample questions, since
+  each question has its own history.
 
 The packs themselves contain benchmark text and stay in the ignored
 `data/extracted-packs-v1/` folder under the labels in `locomo-builds.json`.
