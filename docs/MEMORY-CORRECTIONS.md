@@ -113,6 +113,23 @@ Python async/sync ingest, per-message batch dictionaries, HTTP `/v1/ingest` and
 MCP `memory_ingest` expose the declaration. The reserved source metadata key is
 `prme_first_person_owner_v1`; pass the argument rather than injecting the key.
 
+### Corrections that do not repeat the old value (opt-in)
+
+The rules above need the old value in the correcting message. A user who
+says "I gave you Jo's birthday wrong last time. It's actually March 13" does
+not repeat March 3, and "We're moving to Denver instead" names neither the
+earlier plan's subject nor its predicate. With `enable_extraction_corrections`
+(off by default; needs batched extraction; #277), each batched extraction
+request also shows the model a few stored claims that resemble its turns,
+labeled m1, m2 and on, and a fact may name the one it corrects in
+`replaces_memory`. Ingestion keeps a label only when the request showed it
+and supersedes that claim only when the new fact is an observed or asserted,
+unconditional update and the earlier claim is an active, observed or
+asserted, unconditional claim of the same owner, scope and source type that
+is not effective after it. The choice is saved with the extraction and
+replayed without a model call. See `docs/INTEGRATION.md`, "Corrections named
+during extraction", for the request and its limits.
+
 Raw source notes and immutable events remain available. A note can contain
 several claims, including an unrelated diagnosis that must survive a treatment
 correction. Use the explicit NOTE filter to leave those sources out of retrieval.

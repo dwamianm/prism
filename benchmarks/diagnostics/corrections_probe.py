@@ -27,6 +27,13 @@ still active and can reach the context.
 
     uv run python -m benchmarks.diagnostics.corrections_probe run \\
       --model deepseek-v4.1-flash:cloud --cloud --output /tmp/corrections-v1
+
+``--set`` builds the ingest path with other settings, under its own
+``--label`` so the defaults' build is kept (#277):
+
+    uv run python -m benchmarks.diagnostics.corrections_probe run \\
+      --model deepseek-v4.1-flash:cloud --cloud --label ingest-corrections \\
+      --set enable_extraction_corrections=true --replace --output /tmp/corrections-v1-on
 """
 from __future__ import annotations
 
@@ -40,7 +47,7 @@ import shutil
 from benchmarks.diagnostics import chat_probe
 from benchmarks.diagnostics.chat_probe import CLAIM_TYPES, _claim_line, _quiet_offline_cli, _records, _table
 from benchmarks.diagnostics.extracted_packs import DEFAULT_MODEL
-from benchmarks.diagnostics.product_packing import gate_config
+from benchmarks.diagnostics.product_packing import gate_config, parse_overrides
 from prme import MemoryEngine
 
 KIND = "prme-corrections-probe-report"
@@ -179,23 +186,24 @@ async def build_explicit(pack: Path, conversation: dict) -> None:
 
 async def run(output: Path, *, conversation_path: Path = DEFAULT_CONVERSATION, root: Path | None = None,
               model: str = DEFAULT_MODEL, cloud: bool = False, replace: bool = False, skip_ingest: bool = False,
-              prepare=None, overrides: dict | None = None) -> dict:
+              prepare=None, overrides: dict | None = None, label: str = INGEST_LABEL) -> dict:
     """Build both paths, measure them and write the report to ``output``.
 
-    ``prepare`` and ``overrides`` are passed to the ingest build, for tests.
+    ``overrides`` are the ingest build's settings and ``label`` its folder.
+    ``prepare`` is passed to the ingest build, for tests.
     """
     conversation = chat_probe.load_conversation(conversation_path)
     cases = load_cases(conversation)
     root = chat_probe.default_root() if root is None else root
     paths = {}
     if not skip_ingest:
-        build = await chat_probe.build(INGEST_LABEL, conversation_path=conversation_path, root=root, model=model,
+        build = await chat_probe.build(label, conversation_path=conversation_path, root=root, model=model,
                                        cloud=cloud, speaker=True, replace=replace, prepare=prepare,
                                        overrides=overrides)
-        folder = root / conversation["name"] / INGEST_LABEL
+        folder = root / conversation["name"] / label
         paths["ingest"] = await path_report(folder / "pack", conversation, cases, output / "contexts" / "ingest",
                                             overrides)
-        paths["ingest"]["build"] = {**build["build"], "settings": build["settings"]}
+        paths["ingest"]["build"] = {**build["build"], "settings": build["settings"], "label": label}
         paths["ingest"]["model"] = json.loads((folder / "build.json").read_text())["model"]
     explicit = root / conversation["name"] / EXPLICIT_LABEL
     if explicit.exists():
@@ -253,12 +261,18 @@ def main(argv: list[str] | None = None) -> None:
     command.add_argument("--model", default=DEFAULT_MODEL, help="An Ollama model tag for extraction")
     command.add_argument("--cloud", action="store_true",
                          help="Accept an Ollama cloud model: Ollama's hosted service receives the turns")
-    command.add_argument("--replace", action="store_true", help="Delete earlier builds of this conversation first")
+    command.add_argument("--replace", action="store_true",
+                         help="Delete this label's earlier ingest build and the explicit build first")
+    command.add_argument("--label", default=INGEST_LABEL, help="Folder name of the ingest build")
+    command.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
+                         help="A setting for the ingest build, such as enable_extraction_corrections=true")
     command.add_argument("--skip-ingest", action="store_true", help="Run only the explicit path, with no model")
     args = parser.parse_args(argv)
     _quiet_offline_cli()
+    overrides = parse_overrides(args.overrides)
     report = asyncio.run(run(args.output, conversation_path=args.conversation, root=args.root, model=args.model,
-                             cloud=args.cloud, replace=args.replace, skip_ingest=args.skip_ingest))
+                             cloud=args.cloud, replace=args.replace, skip_ingest=args.skip_ingest,
+                             overrides=overrides, label=args.label))
     print(report_markdown(report))
 
 

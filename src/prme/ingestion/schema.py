@@ -220,6 +220,24 @@ class ExtractedFact(BaseModel):
     resolution: SkipJsonSchema[dict | None] = Field(
         default=None, exclude_if=lambda value: value is None,
     )
+    # The label of an earlier memory this fact corrects (#277). Hidden from
+    # the model's schema unless enable_extraction_corrections shows it earlier
+    # memories, and left out of saved output when unset, so extraction
+    # without the option is unchanged.
+    replaces_memory: SkipJsonSchema[str | None] = Field(
+        default=None, exclude_if=lambda value: value is None,
+    )
+    # Set by ingestion when replaces_memory names a memory its request
+    # showed: that memory's node ID. Never model output.
+    replaces_node_id: SkipJsonSchema[str | None] = Field(
+        default=None, exclude_if=lambda value: value is None,
+    )
+
+    @field_validator("replaces_memory", mode="before")
+    @classmethod
+    def ignore_malformed_memory_label(cls, value: object) -> str | None:
+        # A malformed label must not cost the claim it is attached to.
+        return value if isinstance(value, str) else None
 
     @field_validator("epistemic_type")
     @classmethod

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `enable_extraction_corrections` (#277), off by default. With batched
+  extraction, each request also shows the model a few stored claims of the
+  same owner and scope that resemble its turns, labeled m1, m2 and on, and an
+  extracted fact may name the one it corrects (`replaces_memory`). Ingestion
+  keeps a label only when the request showed it, saves the matched node ID
+  with the extraction record, and supersedes that claim only when the new
+  fact is an observed or asserted, unconditional update and the earlier claim
+  is an active, observed or asserted, unconditional claim of the same owner,
+  scope and source type that is not effective after it. This lets a
+  correction that does not repeat the old value retire it. With the option
+  off, requests, schemas and saved records keep their bytes. The corrections
+  probe takes `--set` and `--label` to build such a variant.
+
 ## [0.15.0] - 2026-10-16
 
 ### Added

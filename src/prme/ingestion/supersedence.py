@@ -43,6 +43,24 @@ for canonical, equivalents in PREDICATE_EQUIVALENCES.items():
         _PREDICATE_TO_CANONICAL[equiv.lower()] = canonical.lower()
 
 
+# Extracted claim types a correction may name and retire (#277).
+CLAIM_NODE_TYPES = (NodeType.FACT, NodeType.DECISION, NodeType.PREFERENCE)
+
+
+def correctable_claim(node) -> bool:
+    """An active, observed or asserted, unconditional extracted claim (#277).
+
+    The claims a batched request may show as earlier memories, and the only
+    ones a named correction may retire.
+    """
+    meta = node.metadata or {}
+    return (node.node_type in CLAIM_NODE_TYPES
+            and node.lifecycle_state in (LifecycleState.TENTATIVE, LifecycleState.STABLE)
+            and node.epistemic_type in (EpistemicType.ASSERTED, EpistemicType.OBSERVED)
+            and meta.get("condition") is None
+            and isinstance(meta.get("predicate"), str))
+
+
 def _predicates_match(pred_a: str, pred_b: str) -> bool:
     """Check if two predicates match (exact or equivalence class).
 
@@ -159,6 +177,41 @@ class SupersedenceDetector:
             )
             retired.append(str(old.id))
         return retired
+
+    async def apply_named_correction(
+        self, new_fact_node_id: str, old_node_id: str, *, user_id: str, evidence_event_id: str,
+    ) -> list[str]:
+        """Retire the earlier claim the extractor named as corrected (#277).
+
+        With enable_extraction_corrections the extractor saw ``old_node_id``
+        among the earlier memories its request showed and named it in
+        ``replaces_memory``, so no predicate, object or subject has to match
+        here: the model paired them. These checks are the ones it is not
+        trusted with. The new claim must be an observed or asserted update
+        without a condition. The earlier one must still be a correctable
+        claim of the same owner, scope and source type, and not effective
+        after the new one. Anything else leaves both claims as they are.
+        """
+        if new_fact_node_id == old_node_id:
+            return []
+        new = await self._graph_store.get_node(new_fact_node_id)
+        old = await self._graph_store.get_node(old_node_id)
+        if new is None or old is None or new.user_id != user_id or old.user_id != user_id:
+            return []
+        meta = new.metadata or {}
+        if (meta.get("temporal_intent") != "update" or meta.get("condition") is not None
+                or new.node_type not in CLAIM_NODE_TYPES
+                or new.epistemic_type not in (EpistemicType.ASSERTED, EpistemicType.OBSERVED)):
+            return []
+        if not correctable_claim(old) or old.scope != new.scope or old.source_type != new.source_type:
+            return []
+        # Arrival order is not authority: a late historical claim retires nothing later.
+        if (new.event_time or new.valid_from) < (old.event_time or old.valid_from):
+            return []
+        await self._graph_writer.supersede(
+            old_node_id=str(old.id), new_node_id=new_fact_node_id, evidence_id=evidence_event_id,
+        )
+        return [str(old.id)]
 
     async def detect_and_supersede(
         self,

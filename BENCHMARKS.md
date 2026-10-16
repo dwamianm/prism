@@ -1045,6 +1045,54 @@ committed, so its provenance records a dirty tree
   sees depends on order and dates more than on selection. This is one
   examined chat, too small for intervals; it shows behavior, not accuracy.
 
+#### With `enable_extraction_corrections` (#277)
+
+The same chat, model and server, with the ingest path built with the option
+on under its own label (results in
+`benchmarks/results/research/2026-10-16/corrections-v1-extraction-corrections/`):
+
+```sh
+uv run python -m benchmarks.diagnostics.corrections_probe run \
+  --model deepseek-v4.1-flash:cloud --cloud --label ingest-corrections \
+  --set enable_extraction_corrections=true --replace --output /tmp/corrections-v1-on
+```
+
+It made 15 extraction calls with 95,018 prompt tokens, against 16 and 93,151
+for the defaults; the first turn's request showed no memories, so it matched
+the defaults build's cached request.
+
+| Case | Defaults | Option on |
+|---|---|---|
+| Changed plan: Austin, then Denver | `I planning_to_move_to Austin` stays active; nothing superseded | `I planning_to_move_to Austin` superseded by the Denver claim. The context is unchanged: the Austin claim did not reach it before either, and the Austin message still does |
+| Wrong fact fixed: March 3, then March 13 | `Jo birthday March 3` stays active; the context shows that claim first, then its message, then the correction | `Jo birthday March 3` superseded by March 13. Its claim line leaves the context, which shows the message that said March 3, then the correction |
+| Conflict in one session: black, oat milk | Both claims active | Both claims active; no memory named |
+| Control: nurse | Kept | Kept |
+
+- Across 16 requests, 73 earlier memories were shown (up to 5 per turn), and
+  the model named three, all in the two correcting turns. All three passed
+  the checks.
+- The probe counts the extracted claims whose text has only the old value:
+  1 of 2 superseded in both cases. The other in the changed-plan case is "I
+  turned down the Austin job", extracted from the correcting message itself
+  (again as a negated claim); the other in the birthday case is
+  `Jo is_sister_of my`, whose text is the sentence that gave March 3. Neither
+  states the old value as current, and both stay active.
+- One retirement outside the cases: the model named "A hospital there
+  offered me a day-shift position." as replaced by "I turned down the Austin
+  job", and it was superseded. The offer did happen; whether turning it down
+  retires it is a judgment call. The message that stated it stays a record.
+- The source messages that stated the old values stay records by design, so
+  the old values still reach the contexts through them, in date order before
+  the correction.
+- With the option off, the defaults build rebuilt at this change from the
+  extraction cache (no model call) gave the same records, edges and contexts
+  as the published defaults results. A rebuild of the variant from the cache
+  (no model call) repeated its results exactly.
+- Built at `6fe8cbd7` with this change not yet committed, so its provenance
+  records a dirty tree; the committed code is the code that ran. One
+  examined chat; it shows behavior, not accuracy, and the default is
+  unchanged.
+
 ### Speaker references (`enable_speaker_references`)
 
 With the option on, a first-person singular reference in a claim from a turn

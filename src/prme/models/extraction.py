@@ -74,6 +74,15 @@ class ExtractionBatchTurn(BaseModel):
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+class ExtractionBatchMemory(BaseModel):
+    """An earlier claim a batched request showed the model (enable_extraction_corrections, #277)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    label: str = Field(pattern=r"^m[1-9][0-9]*$")
+    node_id: UUID
+
+
 class ExtractionBatchRecord(BaseModel):
     """One batched extraction request and the response it got (#254).
 
@@ -97,6 +106,11 @@ class ExtractionBatchRecord(BaseModel):
     saves name its own batch. It is left out when empty, so a batch record
     without it keeps its exact bytes, and code from before #260 cannot read
     a batch record that sets it.
+
+    ``memories`` lists, by label, the earlier claims the request showed the
+    model, so that each turn's ``replaces_memory`` can be traced to the
+    claim it named (enable_extraction_corrections, #277). It is left out
+    when empty, like ``turns_asked_again``.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -114,6 +128,7 @@ class ExtractionBatchRecord(BaseModel):
     turns: tuple[ExtractionBatchTurn, ...] = Field(min_length=1)
     response: dict[str, Any]
     turns_asked_again: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
+    memories: tuple[ExtractionBatchMemory, ...] = Field(default=(), exclude_if=lambda value: not value)
     created_at: AwareDatetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @model_validator(mode="after")

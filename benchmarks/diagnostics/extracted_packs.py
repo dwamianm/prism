@@ -381,11 +381,13 @@ class ExtractionCache:
             self._wrap_batches(provider)
 
     @staticmethod
-    def _batch_key(provider, turns) -> str:
+    def _batch_key(provider, turns, memories=()) -> str:
         from prme.ingestion.extraction import batch_request_messages
 
+        # Earlier memories (enable_extraction_corrections, #277) are part of
+        # the messages; a request without them keeps the key it had before.
         parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
-                 "batch", batch_request_messages(turns)]
+                 "batch", batch_request_messages(turns, memories)]
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
 
     def _wrap_batches(self, provider) -> None:
@@ -394,8 +396,8 @@ class ExtractionCache:
 
         extract_batch = provider.extract_batch
 
-        async def cached(turns):
-            key = self._batch_key(provider, turns)
+        async def cached(turns, **extra):
+            key = self._batch_key(provider, turns, extra.get("memories", ()))
             path = self.folder / key[:2] / f"{key}.batch.json"
             failed = self.folder / key[:2] / f"{key}.batch-failed.json"
             if path.exists():
@@ -408,7 +410,7 @@ class ExtractionCache:
                                       reason_code=json.loads(failed.read_bytes())["reason_code"])
             self.misses += 1
             try:
-                raw = await extract_batch(turns)
+                raw = await extract_batch(turns, **extra)
             except ExtractionError as exc:
                 # Only a response that failed validation and split its request
                 # is kept. A single turn's failure is retried, and a timeout or
