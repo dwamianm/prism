@@ -34,9 +34,18 @@ All source/answer records are retained locally under `data/gpt54-comparison-v1/`
 public reports contain their checksums. The completed run must not be rerun or
 overwritten as part of verification.
 
-These GPT-5.4 numbers stay the published reference. New answer runs use the
-[DeepSeek answer track](#deepseek-answer-track-through-ollama), which is reported
-separately and is not comparable with them.
+These GPT-5.4 numbers were the published reference until 2026-10-16. New
+answer runs use the [DeepSeek answer track](#deepseek-answer-track-through-ollama),
+which is reported separately and is not comparable with them.
+
+**Removed from the public benchmarks page on 2026-10-16.** The run measured the
+v0.12.0 retrieval defaults, which changed on 2026-09-25, and it was never rerun
+on the newer defaults, so `documentation/benchmarks.md` and
+prismemory.com/benchmarks now report the DeepSeek baselines of the current
+defaults instead (`prme@d811e3ed` over `store()` packs and `prme@3389586b` over
+`ingest()` packs). This run's results, report and checksums stay here unchanged.
+A GPT-5.4 run of the current defaults would give a reader matched with Zep's
+published runs; it needs the owner's approval of the spend.
 
 ## Strict and lenient LoCoMo judges
 
@@ -1509,7 +1518,9 @@ registered prompts, question sets and official LongMemEval-S judge as the GPT-5.
 track, and it keeps its own contexts, answers and results.
 
 **The two tracks are not comparable.** The GPT-5.4 numbers (LongMemEval-S 86.0%,
-LoCoMo 64.0%) stay the published reference. A DeepSeek score is compared only
+LoCoMo 64.0%) were the published reference until 2026-10-16, when the public
+benchmarks page moved to this track's baselines
+([above](#latest-complete-gpt-54-defaults-2026-09-23)). A DeepSeek score is compared only
 with another DeepSeek score from the same model identity and settings:
 
 1. Record a DeepSeek baseline for the current defaults (the `prme` arm) on both
