@@ -42,9 +42,19 @@ steps 1 to 7, with these changes:
 2. Install Ollama **0.40.4**, the version the first machine ran the slice
    builds with, not the 0.34.4 that `machine/setup.sh` pins. Either edit
    `OLLAMA_VERSION` in `setup.sh` first, or install 0.40.4 by hand from
-   https://github.com/ollama/ollama/releases/tag/v0.40.4. Run
+   https://github.com/ollama/ollama/releases/tag/v0.40.4 (check the zip against
+   the digest in that release's `sha256sum.txt`). Run
    `machine/setup.sh --skip-models`, then `ollama pull deepseek-v4.1-flash:cloud`.
    The local `qwen3.5` models are not needed for this run.
+
+   If another Ollama version is already running, stop it before replacing the
+   app. The 0.34.4 app refused `osascript -e 'quit app "Ollama"'` ("User
+   canceled", error -128), and `setup.sh --install-ollama` quits the app with
+   that same command and carries on if it fails. Stop the app with
+   `pkill -TERM -f "[O]llama.app/Contents/MacOS/Ollama"` instead (the bracket
+   keeps the command from matching itself); the server stops with it. Move the
+   old app aside rather than deleting it, open the new one, and check that
+   `curl -s http://127.0.0.1:11434/api/version` answers 0.40.4.
 3. In the Ollama app's Settings, turn **automatic updates off**. The answer
    track compares only runs answered on the same server version, so an update
    in the middle invalidates the pairs answered so far.
@@ -94,10 +104,11 @@ steps 1 to 7, with these changes:
 
    It checks the tools, free disk, the commit, that no paid API key is set,
    the Ollama version, the model and its ID (`e04da138...`), that the model
-   answers, the three checksums, and the embedding model (which it downloads
-   into the Hugging Face cache if missing, since the builds and the gate run
-   offline). It cannot see the Ollama app's update setting, so it always
-   prints one `WARN` about it.
+   answers, the three checksums, and the embedding model and the packing
+   tokenizer (which it downloads into `~/.cache/fastembed` and
+   `~/.cache/tiktoken` if missing, since the builds and the gate run offline).
+   It cannot see the Ollama app's update setting, so it always prints one
+   `WARN` about it.
 
 ## C. Run the builds
 
@@ -109,6 +120,12 @@ This creates the worktree `~/Sites/prism-full-benchmark` at the pinned commit
 `d810ee5552e388f85aac62f4cf8c6c6038f0b1c8`, syncs it, and starts
 `run-builds.sh` detached under `caffeinate`, so closing the terminal does not
 stop it and the Mac does not sleep. Keep the Mac on power and online.
+
+The scripts keep the embedding model and the tokenizer file in
+`~/.cache/fastembed` and `~/.cache/tiktoken` (`settings.sh`), not in the
+default folders under `$TMPDIR`, which macOS clears overnight. A build stalled
+that way on 2026-10-06: every pack it opened afterwards failed to load the
+embedding model.
 
 - Progress: `scripts/full-benchmark/status.sh` (packs complete per build, and
   the driver log). The driver log is
@@ -157,6 +174,9 @@ Two checks fix the order:
 
 ```sh
 cd ~/Sites/prism-full-benchmark
+# The cache folders the build scripts use (settings.sh). prepare replays
+# retrieval offline, so it needs the embedding model and the tokenizer there.
+export FASTEMBED_CACHE_PATH="$HOME/.cache/fastembed" TIKTOKEN_CACHE_DIR="$HOME/.cache/tiktoken"
 T="--provider ollama --contexts ingest"
 B=benchmarks.integrations.gpt54_baselines
 
