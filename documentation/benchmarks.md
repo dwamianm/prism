@@ -23,26 +23,21 @@ The full research record, with every run, pair and default change, is in
 
 ## Results
 
-All PRME results below use the strict LoCoMo judge and a memory context of at
+The PRME result below uses the strict LoCoMo judge and a memory context of at
 most 3,996 tokens per question.
 
 | Run | LoCoMo, categories 1 to 4 | LongMemEval-S |
 |---|---:|---:|
 | Retrieval defaults of 2026-09-25, `prme@d811e3ed` ([LoCoMo](../benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@d811e3ed-locomo-result.json), [LongMemEval-S](../benchmarks/results/research/2026-09-25/ollama-deepseek-v4.1-flash-cloud-prme@d811e3ed-longmemeval-result.json)) | **1,250/1,540 (81.2%)**, 95% interval 79.2% to 83.1% | **453/500 (90.6%)**, 95% interval 88.0% to 93.0% |
-| GPT-5.4 reference, retrieval defaults before 2026-09-25 ([report](../benchmarks/results/research/2026-09-23/GPT54-DEFAULT-BENCHMARK-COMPARISON.md)) | 985/1,540 (64.0%), 95% interval 61.6% to 66.4% | 430/500 (86.0%), 95% interval 82.8% to 89.0% |
 
-- The first row uses `deepseek-v4.1-flash:cloud` through Ollama as both reader
-  and judge. It measures the retrieval defaults adopted on 2026-09-25: rank
-  fusion with a current-state recency boost, the reader context format and
-  balanced ordering.
-- The second row uses `gpt-5.4-2026-03-05` with medium reasoning as reader and
-  judge, over the retrieval defaults that came before. No GPT-5.4 run of the
-  newer defaults exists yet.
-- The two rows used different models, so they are not comparable with each
-  other. Each row is a complete run: all 2,040 questions were answered and
-  judged, and no question was left unscored.
+- The run uses `deepseek-v4.1-flash:cloud` through Ollama as both reader and
+  judge. It measures the retrieval defaults adopted on 2026-09-25: rank fusion
+  with a current-state recency boost, the reader context format and balanced
+  ordering.
+- It is a complete run: all 2,040 questions were answered and judged, and no
+  question was left unscored.
 
-Both runs store each conversation turn with the public `store()` API and answer
+The run stores each conversation turn with the public `store()` API and answer
 each question from one public `retrieve()` call. Results for memory built with
 `ingest()`, which extracts claims with a model, are on their own track in
 [BENCHMARKS.md](../BENCHMARKS.md#answers-over-ingest-packs). No answer run of
@@ -76,8 +71,8 @@ tables use other labels for the same numbers.
   The reader sees only the packed context, which is at most 3,996 tokens.
 - **Reader and judge.** LongMemEval-S uses its pinned official reader template
   and its official category judge prompts. LoCoMo uses the registered reader
-  and judge templates in
-  [`run_gpt54_comparison.py`](../benchmarks/integrations/run_gpt54_comparison.py).
+  and judge templates in the
+  [benchmark harness](../benchmarks/integrations/run_gpt54_comparison.py).
   The judge must answer yes or no. There is no partial credit.
 - **Failures.** Each request gets at most four identical attempts, and only for
   transient HTTP errors. A truncated response, an unreadable verdict or a
@@ -113,16 +108,19 @@ says instead:
 ([Mem0 evaluation code](https://github.com/mem0ai/mem0/blob/aae5989e78a6188b3b047c104d960c9ad0927e75/evaluation/metrics/llm_judge.py),
 [Hindsight's Agent Memory Benchmark](https://github.com/vectorize-io/agent-memory-benchmark/blob/aef3702e0586a959c845cc2c61f10d5e8ff0f94a/src/memory_bench/dataset/locomo.py).)
 
-An example from the GPT-5.4 run:
+An example from the DeepSeek run `prme@46647825`, where both judges graded the
+same answer:
 
 - Question: What has Melanie painted?
 - Reference: Horse, sunset, sunrise
-- Answer from PRME's context: Melanie has painted sunsets, a sunflower still life, and
-  likely a horse painting.
+- Answer, shortened: landscapes and still life, a sunflower painting, a sunset
+  with a palm tree, a sunset with a pink sky, and animals (for example, a
+  horse).
 
-The strict judge scored this wrong: the answer misses the sunrise and adds a
-painting that is not in the reference. Under the "be generous" prompt, an answer
-that touches on the same topic counts as correct.
+The strict judge answered no: the reference needs a sunrise, and the answer has
+none. The "be generous" judge labeled the same answer CORRECT and gave this
+reason: "The generated answer includes horse, sunset, and sunrise (implied by
+sunsets), matching the gold answer's topics."
 
 ### What the lenient judge adds
 
@@ -172,7 +170,6 @@ their own.
 | System | LoCoMo | LongMemEval-S | Answer model | LoCoMo judge | Memory context per question |
 |---|---:|---:|---|---|---|
 | PRME, defaults of 2026-09-25 | 81.2% | 90.6% | `deepseek-v4.1-flash:cloud` | Strict, prompt published | At most 3,996 tokens |
-| PRME, GPT-5.4 reference | 64.0% | 86.0% | GPT-5.4, medium reasoning | Strict, prompt published | At most 3,996 tokens |
 | [Zep](https://www.getzep.com/research/) | 94.7% | 90.2% | GPT-5.4, medium reasoning | GPT-5.4 with chain-of-thought grading; prompt not published | Median 5,760 (LoCoMo) and 4,408 (LongMemEval) |
 | [Hindsight](https://hindsight.vectorize.io/blog/2026/03/23/agent-memory-benchmark) | 92.0% | 94.6% | Gemini 3.1 Pro preview | Gemini 2.5 Flash Lite, told to "be generous" | Mean 36,235 (LoCoMo) and 43,625 (LongMemEval) |
 | [Mem0](https://docs.mem0.ai/core-concepts/memory-evaluation), managed platform | 92.5% | 94.4% | Not named | Not named on the results page; Mem0's published LoCoMo evaluation code tells `gpt-4o-mini` to "be generous" | Mean 6,956 (LoCoMo) and 6,787 (LongMemEval) |
