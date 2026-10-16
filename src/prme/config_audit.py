@@ -183,6 +183,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "extraction_batch_target_tokens > 0",
         lambda value: value > 0,
     ),
+    "enable_extraction_corrections": (
+        "enable_extraction_corrections",
+        "enable_extraction_corrections is true",
+        bool,
+    ),
     "novelty_high_threshold": (
         "enable_surprise_gating",
         "enable_surprise_gating is true",

@@ -50,6 +50,7 @@ EXPECTED_HYPOTHESES = {
     "enable_claim_sentence_text",
     "enable_speaker_grounding",
     "extraction_batch_target_tokens",
+    "enable_extraction_corrections",
     "novelty_high_threshold",
     "novelty_low_threshold",
     "novelty_salience_boost",
