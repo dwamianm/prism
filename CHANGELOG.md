@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-16
+
 ### Added
 
 - Add batched extraction (`extraction_batch_target_tokens`; #254), on by
@@ -226,6 +228,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   packs included, added a lexical document for each extracted entity that the
   pack never had before; it no longer does. An entity stored directly with
   `store()` keeps its lexical document. (#247)
+
+### Upgrade notes
+
+- `ingest()` now batches extraction by default
+  (`extraction_batch_target_tokens=2048`). Extraction records written this
+  way name their batch, and a PRME release from before 0.15.0 cannot read
+  them, so upgrade every reader of a shared store before writing with this
+  release, or set `extraction_batch_target_tokens=0` to keep one call per
+  turn. The default rests on the offline evidence gate alone; the DeepSeek
+  answer track has not been run for it.
+- `ingest(wait_for_extraction=False)` can show a turn's claims up to 30
+  seconds later than before, unless a waiting `ingest()`, `ingest_batch()`,
+  `process_extractions()` or the engine's close extracts it first. A process
+  manager's stop timeout should allow for the longer close.
+- Raise `extraction.batch_timeout` for slow models or large targets, and
+  check that a local model's context window holds a batch: at 2,048 tokens a
+  request holds about 7,500 prompt tokens and its response about 4,700.
+- DuckDB 1.4.0 or later is required.
+- `prme rebuild` no longer gives an entity node that extraction created a
+  lexical document, matching the write path.
+- Single-file packs (`.prme`) and visual memory are opt-in and new in this
+  release; directory packs and stores that never observe are unchanged.
 
 ## [0.14.2] - 2026-10-08
 
@@ -1976,7 +2000,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.14.2...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/dwamianm/prism/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/dwamianm/prism/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/dwamianm/prism/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/dwamianm/prism/compare/v0.13.0...v0.14.0
