@@ -737,7 +737,13 @@ uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo 
   showing the speaker. Batched builds save fewer claims (0.8 to 0.9 per turn
   instead of 1.2), mostly on turns that hold no evidence. This is the offline
   gate, not an answer score; the option stays off until the `ingest()`
-  answer track says otherwise. The LongMemEval-S step is in the same note.
+  answer track says otherwise. On the 42-question LongMemEval-S development
+  slice, with much longer turns, batches of 2,048 and 8,192 cut calls by 84%
+  and 90% and prompt tokens by 74% and 82%, and all evidence packed went from
+  34/38 to 35/38 and 36/38; batches of 512 saved only 19% of the prompt
+  tokens and lost one question (33/38). Every slice interval includes zero,
+  so the slice shows no loss at 2,048 or 8,192 and nothing more; the same
+  note has the details.
 
 ### Development slice
 
