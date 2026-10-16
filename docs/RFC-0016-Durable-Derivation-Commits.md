@@ -341,6 +341,14 @@ retries, plans and receipts stay per source. A request half of a split one
 may leave out the claimed job's turn; it is still saved under that claim.
 Neither operation type needs a schema change on either backend.
 
+With `enable_extraction_corrections` (#277), a request may also show the
+model earlier claims, by label. The batch operation then lists them in
+`memories` (label and node ID, left out when empty), the digest covers the
+message that shows them, and each turn's record keeps, per fact, the label
+the model named and the node ID ingestion matched to it (`replaces_memory`,
+`replaces_node_id`, left out when unset). Planning reads that node ID from the
+saved record, so a replan repeats the correction without a model call.
+
 A turn a response gives no entry is not saved from that response (#260).
 The batch operation names it in `turns_asked_again` and saves the other
 turns' records, and then one more request, under the same claim, asks for

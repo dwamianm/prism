@@ -34,7 +34,7 @@ from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import claim_sentences, validate_grounding
 from prme.ingestion.schema import ExtractedEntity, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
-from prme.ingestion.supersedence import SupersedenceDetector
+from prme.ingestion.supersedence import SupersedenceDetector, correctable_claim
 from prme.models.edges import MemoryEdge
 from prme.models.events import Event
 from prme.models.extraction import ExtractionRecord
@@ -88,6 +88,11 @@ _VALIDATION_FAILURES = frozenset({
 # not split: it would most likely fail both halves too, so it follows the
 # per-turn retry policy at once.
 _HALVABLE_FAILURES = _VALIDATION_FAILURES | {"TimeoutError", "BadRequestError"}
+# Earlier claims a batched request shows (enable_extraction_corrections, #277):
+# the vector hits read per turn, the claims kept per turn, and in all.
+_CORRECTION_SEARCH_K = 40
+_CORRECTION_MEMORIES_PER_TURN = 5
+_CORRECTION_MEMORIES = 20
 
 
 class BatchSplitStopped(ExtractionError):
@@ -98,6 +103,32 @@ _FACT_TYPE_TO_NODE_TYPE: dict[str, NodeType] = {
     "decision": NodeType.DECISION,
     "preference": NodeType.PREFERENCE,
 }
+
+
+def _correction_targets(result: ExtractionResult, memories=()) -> ExtractionResult:
+    """Each fact's correction target, from the labels its request showed (#277).
+
+    ``replaces_node_id`` is never taken from the model: it is the node of the
+    shown memory whose label the fact names, or None. Without ``memories``
+    the labels are dropped too, so a request that showed none saves what it
+    saved before enable_extraction_corrections existed.
+    """
+    nodes = {memory.label: memory.node_id for memory in memories}
+    facts = []
+    for fact in result.facts:
+        label = ((fact.replaces_memory or "").strip() or None) if memories else None
+        target = nodes.get(label) if label else None
+        if (fact.replaces_memory, fact.replaces_node_id) != (label, target):
+            fact = fact.model_copy(update={"replaces_memory": label, "replaces_node_id": target})
+        facts.append(fact)
+    return result.model_copy(update={"facts": facts})
+
+
+def _claim_line(node: MemoryNode) -> str:
+    """A stored claim as subject, predicate and object, with not for a denied one."""
+    meta = node.metadata or {}
+    denied = "not " if meta.get("polarity") == "negative" else ""
+    return f"{meta.get('subject')} {denied}{meta.get('predicate')} {meta.get('object')}"
 
 
 _FIRST_PERSON_SINGULAR = frozenset({"i", "me", "my", "mine", "myself"})
@@ -184,7 +215,10 @@ class IngestionPipeline:
         speaker_grounding: bool = False,
         extraction_batch_target_tokens: int = 0,
         extraction_timeout: float = 30.0,
+        extraction_corrections: bool = False,
     ) -> None:
+        if extraction_corrections and extraction_batch_target_tokens <= 0:
+            raise ValueError("Extraction corrections need batched extraction")
         if extraction_batch_target_tokens > 0:
             from prme.ingestion.extraction import BatchExtractionProvider
 
@@ -222,6 +256,8 @@ class IngestionPipeline:
         # still need, up to BATCH_CLOSE_SECONDS in all.
         self._extraction_timeout = extraction_timeout
         self._batch_close_seconds = BATCH_CLOSE_SECONDS
+        # Show each batched request earlier claims it may correct (#277).
+        self._extraction_corrections = extraction_corrections
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -772,6 +808,8 @@ class IngestionPipeline:
                 )
             result = validate_grounding(result, event.content, speaker=speaker)
             result = self._check_resolved_text(result, event, window)
+            # This request showed no earlier memories, so no fact names one.
+            result = _correction_targets(result)
             record = ExtractionRecord(
                 event_id=event.id, user_id=event.user_id, scope=event.scope,
                 content_hash=event.content_hash,
@@ -883,16 +921,20 @@ class IngestionPipeline:
             batch_turns_without_entry,
             validate_batch_output,
         )
-        from prme.models.extraction import ExtractionBatchRecord, ExtractionBatchTurn
+        from prme.models.extraction import ExtractionBatchMemory, ExtractionBatchRecord, ExtractionBatchTurn
 
         turns = [
             BatchTurn(index=index, role=event.role, content=event.content,
                       speaker=metadata_speaker(event.metadata), time=event.event_time or event.timestamp)
             for index, event in enumerate(events, start=1)
         ]
+        memories = await self._correction_memories(events)
+        # Named only when there are memories, so a provider written before
+        # enable_extraction_corrections keeps working while it is off.
+        extra = {"memories": memories} if memories else {}
         try:
             async with self._extraction_semaphore:
-                raw = await self._extraction_provider.extract_batch(turns)
+                raw = await self._extraction_provider.extract_batch(turns, **extra)
             if hasattr(raw, "model_dump"):
                 raw = raw.model_dump(mode="json")
             # The speaker is shown to the model either way; grounding accepts
@@ -927,7 +969,7 @@ class IngestionPipeline:
         batch = ExtractionBatchRecord(
             user_id=head.user_id, scope=head.scope, session_id=head.session_id, head_event_id=head.id,
             provider=self._extraction_provider.provider_name, model=self._extraction_provider.model_name,
-            request_sha256=batch_request_sha256(turns),
+            request_sha256=batch_request_sha256(turns, memories),
             turns=tuple(
                 ExtractionBatchTurn(index=turn.index, event_id=event.id, role=event.role, speaker=turn.speaker,
                                     event_time=turn.time, content_hash=event.content_hash)
@@ -935,6 +977,8 @@ class IngestionPipeline:
             ),
             response=batch_response_fields(raw),
             turns_asked_again=tuple(missing),
+            memories=tuple(ExtractionBatchMemory(label=memory.label, node_id=memory.node_id)
+                           for memory in memories),
         )
         records = []
         for turn, event in zip(turns, events, strict=True):
@@ -945,6 +989,7 @@ class IngestionPipeline:
             speaker = turn.speaker if self._speaker_grounding else None
             result = validate_grounding(results[turn.index], event.content, speaker=speaker)
             result = self._check_resolved_text(result, event, [])
+            result = _correction_targets(result, memories)
             records.append(ExtractionRecord(
                 event_id=event.id, user_id=event.user_id, scope=event.scope,
                 content_hash=event.content_hash,
@@ -970,6 +1015,51 @@ class IngestionPipeline:
         elif without_entry:
             logger.warning("ingestion.extraction_batch_turns_missing", event_id=str(head.id),
                            batch_id=str(batch.id), turns=without_entry, batch_turns=len(turns))
+
+    async def _correction_memories(self, events: list[Event]):
+        """Earlier claims a batched request shows the model (enable_extraction_corrections, #277).
+
+        For each turn in order, the claims nearest its text in the vector
+        index, of its owner and scope, that a correction could retire
+        (:func:`correctable_claim`) and that are not effective after the
+        turn: up to ``_CORRECTION_MEMORIES_PER_TURN`` per turn and
+        ``_CORRECTION_MEMORIES`` in all, labeled m1, m2 and on in that order.
+        The request's own turns have no claims yet, so a correction in the
+        same request as the claim it corrects is not covered. Empty when
+        the option is off.
+        """
+        from prme.ingestion.extraction import CorrectionMemory
+
+        if not self._extraction_corrections:
+            return []
+        chosen: dict[str, MemoryNode] = {}
+        for event in events:
+            moment = event.event_time or event.timestamp
+            hits = await self._vector_index.search(
+                event.content, event.user_id, k=_CORRECTION_SEARCH_K, scope=[event.scope.value],
+            )
+            shown = 0
+            for hit in hits:
+                if shown >= _CORRECTION_MEMORIES_PER_TURN or len(chosen) >= _CORRECTION_MEMORIES:
+                    break
+                node_id = str(hit["node_id"])
+                if node_id in chosen:
+                    shown += 1
+                    continue
+                node = await self._graph_store.get_node(node_id)
+                if (node is None or (node.user_id, node.scope) != (event.user_id, event.scope)
+                        or not correctable_claim(node) or (node.event_time or node.valid_from) > moment):
+                    continue
+                chosen[node_id] = node
+                shown += 1
+        return [
+            CorrectionMemory(
+                label=f"m{number}", node_id=str(node.id), claim=_claim_line(node), text=node.content,
+                time=node.event_time or node.valid_from,
+                speaker=((node.metadata or {}).get("speaker_reference") or {}).get("speaker"),
+            )
+            for number, node in enumerate(chosen.values(), start=1)
+        ]
 
     def _check_resolved_text(self, result: ExtractionResult, event: Event, window: list[Event]) -> ExtractionResult:
         """Keep each fact's resolved text only when it passes its check (#91).
@@ -1384,6 +1474,15 @@ class IngestionPipeline:
                         replaces_object=fact.replaces_object,
                         polarity=fact.polarity,
                     )
+
+            # A correction the extractor named among the earlier claims its
+            # request showed (enable_extraction_corrections, #277). It needs
+            # no shared subject, so it does not wait for one.
+            if explicit_corrections and fact.replaces_node_id:
+                await supersedence_detector.apply_named_correction(
+                    fact_node_id, fact.replaces_node_id, user_id=event.user_id,
+                    evidence_event_id=event_id,
+                )
 
             if object_entity_id:
                 await writer.create_edge(MemoryEdge(

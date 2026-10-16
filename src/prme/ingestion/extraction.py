@@ -1186,23 +1186,87 @@ def _batch_turns_message(turns: Sequence[BatchTurn]) -> str:
     return "Turns of one conversation, oldest first:\n\n" + "\n\n".join(blocks)
 
 
-def batch_request_messages(turns: Sequence[BatchTurn]) -> list[dict[str, str]]:
+@dataclass(frozen=True)
+class CorrectionMemory:
+    """An earlier stored claim shown with a batched request (enable_extraction_corrections, #277).
+
+    ``label`` (m1, m2, ...) is how the model names it; ``node_id`` never
+    reaches the model. ``claim`` is the claim's subject, predicate and
+    object as one line, ``text`` its stored text, and ``speaker`` who said
+    it, when known.
+    """
+
+    label: str
+    node_id: str
+    claim: str
+    text: str
+    time: datetime | None = None
+    speaker: str | None = None
+
+
+# Shown with earlier memories (#277). Ingestion keeps a label only when the
+# request showed it, and supersedes that claim only after its own checks.
+_CORRECTIONS_GUIDANCE = """\
+EARLIER MEMORIES: a message before the turns lists claims stored from earlier \
+conversation, each with a label such as m1, its date and, when known, who said it. \
+They are for reference only: never extract a claim from them and never copy an \
+evidence_quote from them.
+- When a fact you extract from a turn corrects or replaces one of them as the current \
+state, set that fact's replaces_memory to the memory's label and its temporal_intent to \
+"update". The turn must say that the earlier value was wrong, has changed, was given up \
+or no longer holds (for example "actually", "instead", "change of plans", "no longer", \
+"not anymore" or "I got that wrong"), and both must be about the same thing.
+- A value that can be true at the same time as the memory does not replace it: liking \
+tea does not replace liking coffee, and a second job does not replace the first. A \
+repeated or reworded statement of the same value does not replace it either.
+- Leave replaces_memory null when unsure, and for every fact that replaces none of them.
+"""
+
+
+def _memories_message(memories: Sequence[CorrectionMemory]) -> str:
+    """The earlier memories as one reference message, one labeled line each."""
+    lines = []
+    for memory in memories:
+        details = []
+        if memory.time is not None:
+            moment = memory.time.astimezone(timezone.utc) if memory.time.tzinfo is not None else memory.time
+            details.append(moment.date().isoformat())
+        if memory.speaker:
+            details.append(f"said by {memory.speaker}")
+        text = " ".join(memory.text.split())
+        if len(text) > _MEMORY_TEXT_CHARS:
+            text = text[:_MEMORY_TEXT_CHARS].rstrip() + "..."
+        prefix = f"[{memory.label}] ({', '.join(details)}) " if details else f"[{memory.label}] "
+        lines.append(f'{prefix}{memory.claim}. Text: "{text}"')
+    return "Earlier memories, for reference only:\n\n" + "\n".join(lines)
+
+
+# A memory's text is shown up to this many characters.
+_MEMORY_TEXT_CHARS = 300
+
+
+def batch_request_messages(
+    turns: Sequence[BatchTurn], memories: Sequence[CorrectionMemory] = (),
+) -> list[dict[str, str]]:
     """The chat messages of a batched extraction request, as the provider sends them.
 
     The same turns always give the same messages, so their digest identifies
     the request (``ExtractionBatchRecord.request_sha256``) and a benchmark
-    cache can key on them.
+    cache can key on them. Earlier ``memories`` (#277) add their guidance and
+    a reference message; without them the request is unchanged.
     """
-    return [
-        {"role": "system", "content": BATCH_EXTRACTION_SYSTEM_PROMPT},
-        # Historical text to inspect, as for a single turn: an assistant
-        # turn is never sent as an assistant chat message.
-        {"role": "user", "content": _batch_turns_message(turns)},
-    ]
+    system = f"{BATCH_EXTRACTION_SYSTEM_PROMPT}\n{_CORRECTIONS_GUIDANCE}" if memories else BATCH_EXTRACTION_SYSTEM_PROMPT
+    messages = [{"role": "system", "content": system}]
+    if memories:
+        messages.append({"role": "user", "content": _memories_message(memories)})
+    # Historical text to inspect, as for a single turn: an assistant
+    # turn is never sent as an assistant chat message.
+    messages.append({"role": "user", "content": _batch_turns_message(turns)})
+    return messages
 
 
-def batch_request_sha256(turns: Sequence[BatchTurn]) -> str:
-    return hashlib.sha256(json.dumps(batch_request_messages(turns)).encode()).hexdigest()
+def batch_request_sha256(turns: Sequence[BatchTurn], memories: Sequence[CorrectionMemory] = ()) -> str:
+    return hashlib.sha256(json.dumps(batch_request_messages(turns, memories)).encode()).hexdigest()
 
 
 # Receives the parsed output of each attempt of a batched call, before any check.
@@ -1257,6 +1321,34 @@ class _BatchExtractionResult(BaseModel):
         if raw_output is not None and isinstance(value, dict):
             raw_output.append(copy.deepcopy(value))
         return value
+
+
+# The schema of a request that shows earlier memories (#277). Only the schema
+# differs: every fact already keeps replaces_memory, so the response is
+# checked by the same code as any other.
+class _CorrectingCitedFact(_CitedFact):
+    replaces_memory: str | None = Field(
+        default=None,
+        description=(
+            "Label of the one earlier memory, such as m1, that this fact corrects or "
+            "replaces as the current state, when the turn says the earlier value was "
+            "wrong, changed or no longer holds. Null otherwise."
+        ),
+    )
+
+
+class _CorrectingBatchTurnExtraction(_BatchTurnExtraction):
+    """The entities, facts and relationships that one turn itself states, citing that turn's index."""
+
+    facts: list[_CorrectingCitedFact] = Field(default_factory=list)  # type: ignore[assignment]
+
+
+class _CorrectingBatchExtractionResult(_BatchExtractionResult):
+    """What each turn of the conversation states, one entry per turn."""
+
+    turns: list[_CorrectingBatchTurnExtraction] = Field(  # type: ignore[assignment]
+        description="One entry for every turn of the message, in order, each citing its turn's index"
+    )
 
 
 def _parse_batch_output(raw: Any) -> tuple[Any, _BatchExtractionResult]:
@@ -1404,6 +1496,12 @@ class BatchExtractionProvider(Protocol):
         its turn's ``index``; :func:`validate_batch_output` splits and checks
         it. Raise ExtractionError when the call fails or its output does not
         parse; a ValidationError reason lets the caller ask again in halves.
+
+        With enable_extraction_corrections (#277), ingestion also passes
+        ``memories=``, earlier claims to show as :func:`batch_request_messages`
+        does, and each fact may name one of them in ``replaces_memory``. It
+        is passed only when there are memories to show, so a provider
+        without the parameter works while the option is off.
         """
         ...
 
@@ -1581,13 +1679,17 @@ class InstructorExtractionProvider:
             reason = extraction_failure_code(exc)
             raise ExtractionError(f"Extraction failed ({reason})", reason_code=reason) from exc
 
-    async def extract_batch(self, turns: Sequence[BatchTurn]) -> dict[str, Any]:
+    async def extract_batch(
+        self, turns: Sequence[BatchTurn], *, memories: Sequence[CorrectionMemory] = (),
+    ) -> dict[str, Any]:
         """Extract several turns of one session in one call (#254).
 
         Sends :func:`batch_request_messages` and returns the parsed output,
         before any check, of the attempt that parsed. A batch of several turns
         is asked once: when its output fails validation, ingestion asks again
         in halves instead. A single turn keeps the configured retries.
+        Earlier ``memories`` (#277) are shown for reference, and the schema
+        then lets each fact name the one it corrects.
 
         Raises ExtractionError on provider failure, timeout or output that
         does not parse, with the same sanitized reason codes as extract().
@@ -1597,8 +1699,8 @@ class InstructorExtractionProvider:
         try:
             client = self._ensure_client()
             create_kwargs: dict = {
-                "response_model": _BatchExtractionResult,
-                "messages": batch_request_messages(turns),
+                "response_model": _CorrectingBatchExtractionResult if memories else _BatchExtractionResult,
+                "messages": batch_request_messages(turns, memories),
                 "max_retries": self._max_retries if len(turns) == 1 else 1,
                 "temperature": self._temperature,
             }

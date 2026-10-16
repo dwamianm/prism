@@ -1418,6 +1418,50 @@ which case the configuration is refused.
   No benefit has been measured yet; see `BENCHMARKS.md` for building
   benchmark packs with it.
 
+### Corrections named during extraction
+
+`enable_extraction_corrections` (`PRME_ENABLE_EXTRACTION_CORRECTIONS`, default
+`False`; #277) lets `ingest()` apply a correction that does not repeat the old
+value, such as "I gave you Jo's birthday wrong last time. It's actually March
+13." It needs batched extraction (`extraction_batch_target_tokens` above
+zero); with batching off the configuration is refused.
+
+```python
+config = PRMEConfig(enable_extraction_corrections=True)
+```
+
+- **Request.** For each turn of a batched request, ingestion finds the stored
+  claims of the same owner and scope nearest its text in the vector index and
+  keeps those a correction could retire: active facts, decisions and
+  preferences that are observed or asserted, have no condition, and are not
+  effective after the turn. Up to 5 per turn and 20 per request are shown to
+  the model as labeled earlier memories (m1, m2 and on), with their claim,
+  text, date and, when known, speaker. The model is told they are for
+  reference only and may set a fact's `replaces_memory` to the label of the
+  one it corrects, only when the turn says the earlier value was wrong, has
+  changed or no longer holds. Node IDs never reach the model. The memories
+  ride on the existing request, so the number of model calls does not
+  change; each turn's search embeds its text once.
+- **Checks.** Ingestion keeps a label only when the request showed it and
+  saves that memory's node ID with the turn's extraction record
+  (`replaces_node_id`); the batch operation lists the labels it showed
+  (`memories`). When the turn's plan is prepared, the named claim is
+  superseded only when the new fact is an observed or asserted update
+  (`temporal_intent="update"`) without a condition, and the earlier claim is
+  still a correctable claim of the same owner, scope and source type that is
+  not effective after the new one. No subject, predicate or object has to
+  match: the model paired them. Nothing is deleted, and the retired claim
+  stays in history as with `supersede()`.
+- **Replay.** The decision is saved with the extraction, so a restart, a
+  replan or a rebuild repeats it without a model call.
+- **Limits.** A correction in the same batched request as the claim it
+  corrects is not covered, because that claim does not exist yet when the
+  request is sent. The source message that stated the old value stays a
+  record by design and can still reach the context. A custom batched
+  provider receives `memories=` only while there are memories to show. One
+  examined chat is the only measurement so far (`BENCHMARKS.md`,
+  "Corrections probe").
+
 ### VisionConfig
 
 ```python

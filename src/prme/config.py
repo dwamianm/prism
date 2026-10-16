@@ -801,6 +801,26 @@ class PRMEConfig(_ProjectSettings):
             "(benchmarks/results/research/2026-10-15/batched-extraction/)."
         ),
     )
+    enable_extraction_corrections: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, each batched extraction request also "
+            "shows the model a few active claims of the same owner and scope "
+            "that resemble its turns, labeled m1, m2 and on, and a fact may "
+            "name the one it corrects (#277). Ingestion keeps a label only "
+            "when the request showed it and supersedes that claim only when "
+            "the new fact is an observed or asserted update without a "
+            "condition, and the earlier claim is active, observed or "
+            "asserted, unconditional, of the same source type and not later "
+            "than the new one. Nothing is deleted. This lets a correction "
+            "that does not repeat the old value (\"It's actually March 13\") "
+            "retire it. The claims ride on the existing request, so the "
+            "number of model calls does not change, and the decision is saved "
+            "with the extraction. Needs extraction_batch_target_tokens above "
+            "zero. A correction in the same request as the claim it corrects "
+            "is not covered. Default False."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(
@@ -1167,6 +1187,13 @@ class PRMEConfig(_ProjectSettings):
                 "extraction_batch_target_tokens cannot be combined with "
                 "enable_windowed_extraction or enable_fact_text_resolution"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_extraction_corrections(self) -> PRMEConfig:
+        if self.enable_extraction_corrections and self.extraction_batch_target_tokens <= 0:
+            # Earlier claims are shown only with a batched request (#277).
+            raise ValueError("enable_extraction_corrections needs extraction_batch_target_tokens above zero")
         return self
 
     @model_validator(mode="after")

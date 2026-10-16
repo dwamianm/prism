@@ -694,6 +694,7 @@ class MemoryEngine:
                 speaker_grounding=config.enable_speaker_grounding,
                 extraction_batch_target_tokens=config.extraction_batch_target_tokens,
                 extraction_timeout=config.extraction.batch_timeout,
+                extraction_corrections=config.enable_extraction_corrections,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -845,6 +846,7 @@ class MemoryEngine:
                 speaker_grounding=config.enable_speaker_grounding,
                 extraction_batch_target_tokens=config.extraction_batch_target_tokens,
                 extraction_timeout=config.extraction.batch_timeout,
+                extraction_corrections=config.enable_extraction_corrections,
             )
 
             startup.push_async_callback(pipeline.shutdown)
