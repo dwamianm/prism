@@ -133,9 +133,27 @@ When it is done, `data/full-benchmark-d810ee55/` holds, per build,
 Run these from the worktree, one at a time, and read each output before the
 next. The rules in `CLAUDE.md` ("Epic #77 work rules") decide what counts;
 `BENCHMARKS.md` ("Answers over `ingest()` packs", "Interleaved A/A check")
-explains each command. These steps have not been tried on a fresh machine,
-so expect a refusal to name a missing file or condition; fix it rather than
-working around it.
+explains each command. The order below follows the checks in
+`benchmarks/integrations/gpt54_baselines.py`, but the steps have not been run
+end to end on a fresh machine, so expect a refusal to name a missing file or
+condition; fix it rather than working around it.
+
+Two checks fix the order:
+
+- A variant's `prepare` replays the defaults over the packs of the current
+  baseline, which is the baseline whose own answer run completed last. So each
+  baseline must be prepared and answered with `run` before the per-turn
+  variant is prepared. Done earlier, `prepare` stops with "has a complete
+  answer run on this track" on a fresh machine. On a machine that already has
+  an `ingest()` baseline from an older commit (for example `prme@3389586b` on
+  the machine that ran the 2026-10-06 ingest answer track), it checks the
+  per-turn packs against that older baseline's packs and refuses them because
+  the commits differ.
+- `prepare` refuses a tree with changes. A new result file under
+  `benchmarks/results/research/` does not count, so answering the baselines is
+  fine. A change to a tracked file does: the first A/A `run-pair` appends to
+  the tracked A/A record, and `compare` appends to the tracked verdict record.
+  So every preparation comes before the first A/A pair.
 
 ```sh
 cd ~/Sites/prism-full-benchmark
@@ -145,33 +163,36 @@ B=benchmarks.integrations.gpt54_baselines
 # 1. The judge calibration for this model and settings.
 uv run python -m $B calibrate $T
 
-# 2. All four preparations first: prepare needs a clean committed tree, and
-#    the answer runs below write tracked result files.
+# 2. The two baseline preparations (the batched defaults). Note the baseline
+#    arm name that prepare reports for each benchmark (prme or prme@<commit>)
+#    and use it as <baseline> for that benchmark below.
 uv run python -m $B prepare prme --benchmark locomo $T --packs full-defaults-locomo-deepseek-d810ee55
 uv run python -m $B prepare prme --benchmark longmemeval $T --packs full-defaults-lme-deepseek-d810ee55
+
+# 3. The defaults baseline on each benchmark.
+uv run python -m $B run prme --benchmark locomo $T
+uv run python -m $B run prme --benchmark longmemeval $T
+
+# 4. The two variant preparations (one call per turn), now that both baselines
+#    are answered. Finish both before the first A/A pair.
 uv run python -m $B prepare prme --variant per-turn --benchmark locomo $T \
   --packs full-per-turn-locomo-deepseek-d810ee55 --set extraction_batch_target_tokens=0
 uv run python -m $B prepare prme --variant per-turn --benchmark longmemeval $T \
   --packs full-per-turn-lme-deepseek-d810ee55 --set extraction_batch_target_tokens=0
 
-# 3. The defaults baseline on each benchmark. Note the baseline arm name it
-#    reports (prme or prme@<commit>) and use it as <baseline> below.
-uv run python -m $B run prme --benchmark locomo $T
-uv run python -m $B run prme --benchmark longmemeval $T
-
-# 4. The A/A check on both benchmarks (Ollama 0.40.4 is a new condition).
+# 5. The A/A check on both benchmarks (Ollama 0.40.4 is a new condition).
 uv run python -m $B run-pair prme --benchmark locomo $T --baseline <baseline>
 uv run python -m $B run-pair prme --benchmark longmemeval $T --baseline <baseline>
 
-# 5. The variant's first pair on both benchmarks, then compare each pair's two
+# 6. The variant's first pair on both benchmarks, then compare each pair's two
 #    published results (the files run-pair wrote under benchmarks/results/research/).
 uv run python -m $B run-pair prme --variant per-turn --benchmark locomo $T --baseline <baseline>
 uv run python -m $B run-pair prme --variant per-turn --benchmark longmemeval $T --baseline <baseline>
 uv run python -m $B compare --before <defaults side> --after <variant side>
 
-# 6. The confirmation: the same run-pair commands again start a fresh pair. Compare them too.
+# 7. The confirmation: the same run-pair commands again start a fresh pair. Compare them too.
 
-# 7. The decision, from the pairs compare recorded.
+# 8. The decision, from the pairs compare recorded.
 uv run python -m $B verdict prme --variant per-turn $T
 ```
 
