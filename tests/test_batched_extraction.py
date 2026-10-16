@@ -132,14 +132,25 @@ async def drain(pipeline):
 
 
 class TestTheDefault:
-    async def test_each_turn_is_extracted_alone_and_its_record_is_unchanged(self, config, user):
+    async def test_the_default_extracts_a_session_s_turns_in_one_call(self, config, user):
+        model = ScriptedBatches()
+        default = config.model_copy(update={"extraction_batch_target_tokens":
+                                            PRMEConfig.model_fields["extraction_batch_target_tokens"].default})
+        async with MemoryEngine.open(default) as engine:
+            install(engine, model)
+            await engine.ingest_batch([message("First."), message("Second.", minutes=1)],
+                                      user_id=user, session_id="s1", wait_for_extraction=True)
+            assert model.contents() == [["First.", "Second."]]
+            assert await batch_operations(engine, user) == 1
+
+    async def test_at_zero_each_turn_is_extracted_alone_and_its_record_is_unchanged(self, config, user):
         calls = []
 
         async def extract(content, *, role="user"):
             calls.append(content)
             return ExtractionResult()
 
-        async with MemoryEngine.open(config) as engine:
+        async with MemoryEngine.open(batched(config, 0)) as engine:
             engine._pipeline._extraction_provider.extract = extract
             engine._pipeline._extraction_provider.extract_batch = AsyncMock(side_effect=AssertionError("batched"))
             event_ids = await engine.ingest_batch([message("First."), message("Second.", minutes=1)],
@@ -151,27 +162,43 @@ class TestTheDefault:
                 assert set(json.loads(record.model_dump_json())) == RECORD_KEYS
             assert await batch_operations(engine, user) == 0
 
-    def test_the_default_configuration_keeps_its_identity(self):
+    def test_the_default_target_is_part_of_the_configuration_s_identity(self, monkeypatch):
         from benchmarks.diagnostics.product_packing import gate_config
         from benchmarks.integrations.gpt54_baselines import _check_defaults_build, variant_settings
         from benchmarks.retrieval_eval import provenance
 
-        assert "extraction_batch_target_tokens" not in PRMEConfig(_env_file=None).model_dump(mode="json")
+        monkeypatch.delenv("PRME_EXTRACTION_BATCH_TARGET_TOKENS", raising=False)
+        default = PRMEConfig(_env_file=None)
+        assert default.extraction_batch_target_tokens == 2048
+        assert default.extraction.batch_timeout == 180.0
+        assert default.model_dump(mode="json")["extraction_batch_target_tokens"] == 2048
+        # One call per turn is recorded as a setting, so a dump read back keeps it.
+        per_turn = PRMEConfig(_env_file=None, extraction_batch_target_tokens=0)
+        assert per_turn.model_dump(mode="json")["extraction_batch_target_tokens"] == 0
+        assert PRMEConfig(_env_file=None, **per_turn.model_dump()).extraction_batch_target_tokens == 0
         # What an ingest() build records as its engine configuration.
         defaults = provenance(gate_config(Path("{pack}")))["engine_config"]
-        assert "extraction_batch_target_tokens" not in defaults
-        assert PRMEConfig(_env_file=None, extraction_batch_target_tokens=0).model_dump() == \
-            PRMEConfig(_env_file=None).model_dump()
-        assert gate_config(Path("{pack}"), {"extraction_batch_target_tokens": 512}).model_dump(
-            mode="json")["extraction_batch_target_tokens"] == 512
-        # The answer track sees no new setting in the defaults, and the one a batched build sets.
+        assert defaults["extraction_batch_target_tokens"] == 2048
+        # The answer track sees no setting in the defaults, and one call per turn as a variant's.
         assert variant_settings({}) == {}
-        assert variant_settings({"extraction_batch_target_tokens": 512}) == {"extraction_batch_target_tokens": 512}
-        # An ingest() baseline built before the option existed still holds this commit's defaults.
-        _check_defaults_build(Path("built-before"), {"provenance": {"engine_config": defaults}})
-        with pytest.raises(ValueError, match="extraction_batch_target_tokens"):
-            _check_defaults_build(Path("batched"), {"provenance": {"engine_config": {
-                **defaults, "extraction_batch_target_tokens": 512}}})
+        assert variant_settings({"extraction_batch_target_tokens": 0}) == {"extraction_batch_target_tokens": 0}
+        _check_defaults_build(Path("batched"), {"provenance": {"engine_config": defaults}})
+        # An ingest() baseline built one call per turn, before or after the option existed, no longer
+        # holds the defaults.
+        before = {key: value for key, value in defaults.items() if key != "extraction_batch_target_tokens"}
+        for engine_config in (before, {**defaults, "extraction_batch_target_tokens": 0}):
+            with pytest.raises(ValueError, match="extraction_batch_target_tokens"):
+                _check_defaults_build(Path("per-turn"), {"provenance": {"engine_config": engine_config}})
+
+    def test_the_window_or_resolution_turns_the_default_off(self, monkeypatch):
+        monkeypatch.delenv("PRME_EXTRACTION_BATCH_TARGET_TOKENS", raising=False)
+        for other in ({"enable_windowed_extraction": True, "extraction_window_turns": 3},
+                      {"enable_fact_text_resolution": True}):
+            assert PRMEConfig(_env_file=None, **other).extraction_batch_target_tokens == 0
+            monkeypatch.setenv("PRME_EXTRACTION_BATCH_TARGET_TOKENS", "512")
+            with pytest.raises(ValidationError, match="cannot be combined"):
+                PRMEConfig(_env_file=None, **other)
+            monkeypatch.delenv("PRME_EXTRACTION_BATCH_TARGET_TOKENS")
 
     def test_the_single_turn_request_and_record_keep_their_bytes(self):
         import hashlib

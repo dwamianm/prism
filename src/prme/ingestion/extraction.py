@@ -1426,6 +1426,8 @@ class InstructorExtractionProvider:
         max_retries: Number of instructor retries for schema validation failures.
         timeout: Timeout in seconds per extraction call.
         temperature: Sampling temperature passed to the provider.
+        batch_timeout: Timeout in seconds per batched extraction call
+            (extract_batch, #254). None uses ``timeout``.
     """
 
     def __init__(
@@ -1439,11 +1441,13 @@ class InstructorExtractionProvider:
         reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         api_key: SecretStr | None = None,
         base_url: str | None = None,
+        batch_timeout: float | None = None,
     ) -> None:
         self._provider_string = provider_string
         self._model = model
         self._max_retries = max_retries
         self._timeout = timeout
+        self._batch_timeout = timeout if batch_timeout is None else batch_timeout
         self._temperature = temperature
         self._reasoning_effort = (
             "none" if reasoning_effort is None and self.provider_name == "ollama"
@@ -1608,7 +1612,7 @@ class InstructorExtractionProvider:
             raw: list[dict[str, Any]] = []
             token = _RAW_BATCH_OUTPUT.set(raw)
             try:
-                await asyncio.wait_for(client.create(**create_kwargs), timeout=self._timeout)
+                await asyncio.wait_for(client.create(**create_kwargs), timeout=self._batch_timeout)
             finally:
                 _RAW_BATCH_OUTPUT.reset(token)
             if not raw:
@@ -1653,4 +1657,5 @@ def create_extraction_provider(
         reasoning_effort=config.reasoning_effort,
         api_key=config.api_key,
         base_url=config.base_url,
+        batch_timeout=config.batch_timeout,
     )

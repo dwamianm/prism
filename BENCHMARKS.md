@@ -673,6 +673,10 @@ extraction models.
 `--set extraction_batch_target_tokens=N` builds packs with batched extraction:
 one model call extracts several turns of a session, up to N tokens of turn
 text, and every claim cites its turn and is checked against that turn alone.
+Since 2026-10-16 the defaults batch at 2,048 (the owner's decision on the
+gate results below, without the answer track), so a build with no `--set`
+batches, and `--set extraction_batch_target_tokens=0` builds one call per
+turn, as the `ingest-baseline-*` builds before that date did.
 The build ingests each session's turns with `ingest_batch()`, which extracts
 them before the next session starts, so the batches depend only on the
 sessions and come out the same in a rebuild.

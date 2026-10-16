@@ -162,8 +162,11 @@ async def test_build_ingests_both_sides_measures_the_pack_and_rebuilds_from_the_
         engine._pipeline._extraction_provider.extract = scripted.extract
 
     root = tmp_path / "builds"
+    # The scripted model fakes the per-turn extract() call, so the builds extract one turn per call
+    # rather than in batches, the default since #254.
+    per_turn = {"extraction_batch_target_tokens": 0}
     report = await chat_probe.build("defaults", conversation_path=path, root=root, model="local-model",
-                                    prepare=prepare)
+                                    overrides=per_turn, prepare=prepare)
     assert [(content, role) for content, role in scripted.calls] == [
         (HOME, "user"), (ECHO, "assistant"), (NURSE, "user")]
     folder = root / "tiny" / "defaults"
@@ -183,10 +186,11 @@ async def test_build_ingests_both_sides_measures_the_pack_and_rebuilds_from_the_
     assert json.loads((folder / "report.json").read_text())["summary"] == report["summary"]
 
     with pytest.raises(ValueError, match="--replace"):
-        await chat_probe.build("defaults", conversation_path=path, root=root, model="local-model", prepare=prepare)
+        await chat_probe.build("defaults", conversation_path=path, root=root, model="local-model",
+                               overrides=per_turn, prepare=prepare)
     # The same settings again repeat the cached extraction without asking the model.
     again = await chat_probe.build("defaults", conversation_path=path, root=root, model="local-model",
-                                   prepare=prepare, replace=True, organize=True)
+                                   overrides=per_turn, prepare=prepare, replace=True, organize=True)
     assert len(scripted.calls) == 3
     assert [json.loads(line)["cache_hits"] for line in (folder / "turns.jsonl").read_text().splitlines()] == [1, 1, 1]
     assert again["graph"]["claims"]["active"] == report["graph"]["claims"]["active"]

@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add opt-in batched extraction (`extraction_batch_target_tokens`, default 0;
-  #254). With a target above zero, `ingest()` extracts several turns of a
+- Add batched extraction (`extraction_batch_target_tokens`; #254), on by
+  default (see Changed). With a target above zero, `ingest()` extracts several turns of a
   session in one model call: the worker takes the session's pending
   extraction jobs in the order they were ingested and adds turns while their
   text stays within the target, counted in tokens. A turn larger than the
@@ -31,11 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   extracts the queue, and otherwise it is extracted 30 seconds after the
   first queued turn. The option cannot be combined with
   `enable_windowed_extraction` or `enable_fact_text_resolution`. At 0 nothing
-  changes: one call per turn, the same records, plans and receipts, and the
-  serialized configuration leaves the option out, so recorded configurations
-  keep their identity. `benchmarks.diagnostics.extracted_packs` builds
-  batched packs with `--set extraction_batch_target_tokens=N`, and its new
-  `summary` command totals a build. No benefit has been measured yet.
+  changes: one call per turn, with the same records, plans and receipts as
+  before. `benchmarks.diagnostics.extracted_packs` builds packs at any
+  target with `--set extraction_batch_target_tokens=N`, and its new
+  `summary` command totals a build.
 - Add visual memory, phase 1 of [RFC-0018](docs/RFC-0018-Visual-Memory.md):
   `MemoryEngine.observe()`, `MemoryClient.observe()` and
   `prme observe <db_path> <file>...` turn a photo or a saved video into
@@ -160,9 +159,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Batched extraction is on by default: `extraction_batch_target_tokens`
+  defaults to 2048 instead of 0 (#254), so `ingest()` extracts up to 2,048
+  tokens of a session's turns in one model call. This is the owner's
+  decision of 2026-10-16, made without the DeepSeek answer track that the
+  project's default-change rule asks for. On the offline evidence gate over
+  `ingest()` packs built with `deepseek-v4.1-flash:cloud`, 2,048 cut model
+  calls by 95% on LoCoMo (5,882 to 275) and by 84% on a 42-question
+  LongMemEval-S slice (20,227 to 3,154), and all evidence packed went from
+  81.6% to 84.0% on LoCoMo (interval above zero) and from 34/38 to 35/38 on
+  the slice (interval includes zero). All 500 LongMemEval-S questions have
+  not been built. What changes for callers:
+  - A batched request has its own timeout, the new `extraction.batch_timeout`
+    (`PRME_EXTRACTION_BATCH_TIMEOUT`, 180 seconds), because it returns every
+    turn's claims; on the builds above, a request took 23 to 27 seconds on
+    average, close to the 30-second `extraction.timeout`, which still applies
+    to a turn's own call. The engine's close counts `batch_timeout` for each
+    queued request, five minutes at most as before.
+  - `ingest(wait_for_extraction=False)` queues the turn, so its claims can
+    appear up to 30 seconds later unless a waiting `ingest()`,
+    `ingest_batch()`, `process_extractions()` or the close extracts it first.
+  - Turning on `enable_windowed_extraction` or `enable_fact_text_resolution`
+    turns batching off unless `extraction_batch_target_tokens` is also set;
+    an explicit target with either option is still refused.
+  - The serialized configuration now always includes
+    `extraction_batch_target_tokens`, so the defaults' recorded identity
+    changes: an `ingest()` build made with the defaults batches, and the
+    `ingest()` answer track needs a new defaults baseline.
+  - Set `extraction_batch_target_tokens=0`
+    (`PRME_EXTRACTION_BATCH_TARGET_TOKENS=0`) to extract one turn per call
+    as before.
 - With batched extraction on (#254), the engine's close now waits longer for
   the batches of turns that `ingest()` queued without waiting (#258): the
-  usual drain time (10 seconds) plus `extraction.timeout` for each request
+  usual drain time (10 seconds) plus `extraction.batch_timeout` for each request
   their flushes send, five minutes at most, instead of the 10 seconds alone,
   which a batched request could outlast. It also waits for a retry's flush
   that is already running, and `MemoryClient.close()` waits that much longer

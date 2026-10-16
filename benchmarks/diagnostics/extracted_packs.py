@@ -36,8 +36,10 @@ Choices, and why:
   extraction left unfinished and then skips the turns it already holds. A
   resumed build must use the same commit, working tree, settings and model,
   or it is refused.
-- A build with ``--set extraction_batch_target_tokens=N`` (#254) extracts
-  several turns of a session per model call. It ingests each session's turns
+- A build with batched extraction (#254), the default since 2026-10-16
+  (``extraction_batch_target_tokens=2048``; ``--set
+  extraction_batch_target_tokens=N`` picks another target and ``=0`` one call
+  per turn), extracts several turns of a session per model call. It ingests each session's turns
   together with ``ingest_batch()``, which extracts them in batches before the
   next session starts, so the batches depend on the sessions alone and not
   on timing. Its calls, tokens and seconds are logged once per session, and
@@ -162,7 +164,8 @@ def build_config(pack: Path, overrides: dict | None = None, *, model: str = DEFA
     config = gate_config(pack, overrides)
     with patch.dict(os.environ, {}, clear=True):
         extraction = ExtractionConfig(_env_file=None, provider="ollama", model=model,  # type: ignore[call-arg]
-                                      base_url=endpoint, timeout=TIMEOUT_SECONDS)
+                                      base_url=endpoint, timeout=TIMEOUT_SECONDS,
+                                      batch_timeout=TIMEOUT_SECONDS)
     return config.model_copy(update={"extraction": extraction})
 
 
