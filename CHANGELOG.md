@@ -160,6 +160,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- With batched extraction on (#254), the engine's close now waits longer for
+  the batches of turns that `ingest()` queued without waiting (#258): the
+  usual drain time (10 seconds) plus `extraction.timeout` for each request
+  their flushes send, five minutes at most, instead of the 10 seconds alone,
+  which a batched request could outlast. It also waits for a retry's flush
+  that is already running, and `MemoryClient.close()` waits that much longer
+  too, so it no longer leaves such a close unfinished after 30 seconds. A
+  turn still queued after that stays pending as before; opening an engine
+  still never starts model work. The documentation says what this means for
+  an MCP stdio session, whose server closes its engine when the session
+  ends, and for a process manager's stop timeout. Without batching, the
+  close is unchanged.
+- With batched extraction on (#254), a turn a response gives no entry is now
+  asked for again before it is saved (#260), instead of being saved as
+  stating nothing. The other turns' records are saved first, then one more
+  request asks for the turns left out alone, with the same per-turn checks.
+  The first request's batch record names them in its new
+  `turns_asked_again` field, which is left out when empty, so batch records
+  without it keep their bytes; their records name the new request's batch.
+  That request is never followed by another, and a response that leaves out
+  every turn of its request is saved as before. Records already saved are
+  kept, so replay and `prme rebuild` still make no model call. The pack
+  builder counts the extra requests among its calls and batches, caches and
+  replays them like any other request, and reports `turns_asked_again`
+  beside `turns_without_entry`. Without batching nothing changes.
 - Require `duckdb>=1.4.0` (previously `>=1.2.0`). DuckDB 1.4.0 is the first
   release with native database encryption, which single-file packs use.
 - `rebuild_indexes()` (`prme rebuild`) gives lexical documents to the same

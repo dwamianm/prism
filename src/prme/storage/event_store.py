@@ -227,7 +227,8 @@ class EventStore:
         record_extraction checks a turn's own. The other turns' jobs are
         pending behind that job in work order, so none of them can be claimed
         while it runs; each loads its record when its turn comes. A turn that
-        already has a record keeps it.
+        already has a record keeps it. A turn the batch names as asked again
+        (#260) gets no record here; the request that asks for it saves one.
         """
         batch = ExtractionBatchRecord.model_validate_json(batch.model_dump_json())
         records = [ExtractionRecord.model_validate_json(record.model_dump_json()) for record in records]
@@ -243,8 +244,9 @@ class EventStore:
             sender = self._conn.execute("SELECT user_id, scope FROM events WHERE id = ?", [head]).fetchone()
             if sender is None or tuple(sender) != (batch.user_id, batch.scope.value):
                 raise ValueError("Extraction batch does not match the job that sent it")
-            if {str(record.event_id) for record in records} != {str(turn.event_id) for turn in batch.turns}:
-                raise ValueError("A batched extraction saves one record for each of its turns")
+            if {str(record.event_id) for record in records} != {str(turn.event_id) for turn in batch.saved_turns}:
+                # A turn asked again (#260) is saved by the request that asks for it.
+                raise ValueError("A batched extraction saves one record for each of its turns not asked again")
             for record in records:
                 source = self._conn.execute(
                     "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(record.event_id)],

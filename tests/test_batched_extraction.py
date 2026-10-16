@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import time
 from argparse import Namespace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,6 +10,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
+from structlog.testing import capture_logs
 
 from prme import MemoryEngine, PRMEConfig
 from prme.ingestion.errors import ExtractionError
@@ -23,7 +25,7 @@ from prme.ingestion.extraction import (
 )
 from prme.ingestion.pipeline import IngestionPipeline
 from prme.ingestion.schema import ExtractionResult
-from prme.types import LifecycleState, NodeType
+from prme.types import LifecycleState, NodeType, Scope
 from tests import test_durable_ingestion
 
 config = test_durable_ingestion.config
@@ -72,6 +74,20 @@ class ScriptedBatches:
 
     def contents(self):
         return [[content for *_, content in call] for call in self.calls]
+
+
+class SlowBatches(ScriptedBatches):
+    """A batched model that takes ``delay`` seconds to answer each request."""
+
+    def __init__(self, delay, **kwargs):
+        super().__init__(**kwargs)
+        self.delay = delay
+        self.started = []
+
+    async def extract_batch(self, turns):
+        self.started.append([turn.content for turn in turns])
+        await asyncio.sleep(self.delay)
+        return await super().extract_batch(turns)
 
 
 def batched(base, tokens=512):
@@ -343,6 +359,200 @@ class TestSessions:
             assert await statuses(engine, user, event_ids) == ["complete"] * 2
 
 
+def scaled_close(pipeline, monkeypatch, *, timeout, cap=None, drain=0.05):
+    """The close's usual drain, the extraction timeout and the close's cap, scaled down from 10, 30 and 300 seconds."""
+    shutdown = pipeline.shutdown
+    monkeypatch.setattr(pipeline, "shutdown", lambda: shutdown(drain_timeout=drain))
+    pipeline._extraction_timeout = timeout
+    if cap is not None:
+        pipeline._batch_close_seconds = cap
+    return pipeline
+
+
+class TestClosing:
+    """The engine's close waits for the batches of queued turns, within a cap (#258)."""
+
+    TEXTS = ["Caroline paints sunsets over the lake.", "Two."]
+
+    async def ingest_queued(self, engine, user):
+        return [await engine.ingest(text, user_id=user, session_id="s1", event_time=T0 + timedelta(minutes=minutes))
+                for minutes, text in enumerate(self.TEXTS)]
+
+    async def test_a_close_waits_for_a_batch_that_takes_longer_than_the_usual_drain(self, config, user,
+                                                                                     monkeypatch):
+        # The request takes six times the usual drain, and less than its own timeout.
+        model = SlowBatches(delay=0.3)
+        async with MemoryEngine.open(batched(config)) as engine:
+            scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            event_ids = await self.ingest_queued(engine, user)
+            assert model.calls == []
+        assert model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+            assert await claims_by_event(engine, user) == {event_ids[0]: self.TEXTS[0]}
+
+    async def test_a_close_also_waits_for_a_flush_already_running(self, config, user, monkeypatch):
+        model = SlowBatches(delay=0.3)
+        async with MemoryEngine.open(batched(config)) as engine:
+            scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            # ingest_batch() without waiting starts its flush at once.
+            event_ids = await engine.ingest_batch([message(text, minutes=n) for n, text in enumerate(self.TEXTS)],
+                                                  user_id=user, session_id="s1")
+        assert model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+
+    async def test_a_close_waits_no_longer_than_its_cap(self, config, user, monkeypatch):
+        # A provider that does not answer within the test: the cap ends the wait.
+        model = SlowBatches(delay=60.0)
+        async with MemoryEngine.open(batched(config)) as engine:
+            scaled_close(install(engine, model), monkeypatch, timeout=5.0, cap=0.3)
+            event_ids = await self.ingest_queued(engine, user)
+            started = time.monotonic()
+        assert time.monotonic() - started < 5.0
+        assert model.started == [self.TEXTS] and model.calls == []
+        async with MemoryEngine.open(batched(config)) as engine:
+            # The turns stay queued, durably, for the next flush of their owner and scope.
+            assert await statuses(engine, user, event_ids) == ["pending"] * 2
+            install(engine, ScriptedBatches())
+            assert (await engine.process_extractions(user_id=user)).processed == 2
+
+    async def test_the_close_allows_the_timeout_for_each_queued_request(self, config, user):
+        model = ScriptedBatches()
+        long = "Jordan moved to Denver last spring. " + "The weather there was mild and sunny. " * 8
+        queue = [("Short one.", "a"), (long, "a"), ("Short two.", "a"), ("B one.", "b"), ("Short three.", "a"),
+                 ("Alone.", None)]
+        async with MemoryEngine.open(batched(config, tokens=24)) as engine:
+            pipeline = install(engine, model)
+            for minutes, (text, session) in enumerate(queue):
+                await engine.ingest(text, user_id=user, session_id=session, event_time=T0 + timedelta(minutes=minutes))
+            key = (user, Scope.PERSONAL)
+            # As the flush composes them: the long turn goes alone and ends the batch before it,
+            # the next short turn of its session starts another, and a turn without a session goes alone.
+            assert await pipeline._queued_requests(user, Scope.PERSONAL, limit=100) == 5
+            assert await pipeline._queued_requests(user, Scope.PERSONAL, limit=2) == 2
+            pipeline._extraction_timeout = 30.0
+            assert await pipeline._drain_seconds(10.0, [key, key]) == 10.0 + 5 * 30.0
+            pipeline._batch_close_seconds = 100.0
+            assert await pipeline._drain_seconds(10.0, [key]) == 100.0
+            # The usual drain, never less, and nothing longer without a flush to wait for.
+            assert await pipeline._drain_seconds(120.0, [key]) == 120.0
+            assert await pipeline._drain_seconds(10.0, []) == 10.0
+            assert (await engine.process_extractions(user_id=user)).processed == len(queue)
+            assert model.contents() == [["Short one."], [long], ["Short two.", "Short three."], ["B one."],
+                                        ["Alone."]]
+            assert await pipeline._drain_seconds(10.0, [key]) == 10.0
+
+    async def test_without_batching_the_close_keeps_the_usual_drain(self, config, user):
+        async with MemoryEngine.open(config) as engine:
+            assert await engine._pipeline._drain_seconds(10.0, [(user, Scope.PERSONAL)]) == 10.0
+
+    async def test_the_flushes_run_while_their_requests_are_counted(self, config, user, monkeypatch):
+        model, happened = SlowBatches(delay=0.1), []
+        answer = model.extract_batch
+
+        async def extract_batch(turns):
+            happened.append("request sent")
+            return await answer(turns)
+
+        model.extract_batch = extract_batch
+        async with MemoryEngine.open(batched(config)) as engine:
+            pipeline = scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            count = pipeline._drain_seconds
+
+            async def slow_count(*args):
+                await asyncio.sleep(0.5)
+                happened.append("count done")
+                return await count(*args)
+
+            monkeypatch.setattr(pipeline, "_drain_seconds", slow_count)
+            event_ids = await self.ingest_queued(engine, user)
+        assert happened == ["request sent", "count done"] and model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+
+    async def test_counting_is_part_of_the_wait_and_never_passes_the_cap(self, config, user, monkeypatch):
+        model = SlowBatches(delay=60.0)
+        with capture_logs() as logs:
+            async with MemoryEngine.open(batched(config)) as engine:
+                pipeline = scaled_close(install(engine, model), monkeypatch, timeout=5.0, cap=0.3)
+
+                async def endless_count(*args):
+                    await asyncio.sleep(60.0)
+
+                monkeypatch.setattr(pipeline, "_drain_seconds", endless_count)
+                event_ids = await self.ingest_queued(engine, user)
+                started = time.monotonic()
+            assert time.monotonic() - started < 5.0
+        assert [entry["log_level"] for entry in logs
+                if entry["event"] == "ingestion.extraction_close_count_timed_out"] == ["warning"]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["pending"] * 2
+
+    async def test_a_retry_that_wakes_after_the_close_starts_nothing(self, config, user):
+        model = ScriptedBatches()
+        async with MemoryEngine.open(batched(config)) as engine:
+            pipeline = install(engine, model)
+            pipeline._retry_delays = (0.3,)
+            event_ids = await self.ingest_queued(engine, user)
+            head = await engine._event_store.get(event_ids[0])
+            pipeline._schedule_retry(head, event_ids[0], attempt=1, scope=Scope.PERSONAL)
+            # As if a later retry of the same turn had replaced it: the close does not cancel it.
+            stray = pipeline._retry_tasks.pop(event_ids[0])
+        assert model.contents() == [self.TEXTS]
+        await asyncio.wait_for(stray, timeout=5.0)
+        assert not pipeline._flushing and not pipeline._background_tasks
+        assert model.contents() == [self.TEXTS]
+
+    async def test_a_retry_flush_running_at_close_is_waited_for(self, config, user, monkeypatch):
+        model = SlowBatches(delay=0.3)
+        answer, attempts = model.extract_batch, []
+
+        async def fail_once_then_answer_slowly(turns):
+            attempts.append([turn.content for turn in turns])
+            if len(attempts) == 1:
+                raise ExtractionError("scripted failure", reason_code="RateLimitError")
+            return await answer(turns)
+
+        model.extract_batch = fail_once_then_answer_slowly
+        async with MemoryEngine.open(batched(config)) as engine:
+            pipeline = scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            pipeline._retry_delays = (0.2, 0.2, 0.2)
+            event_ids = await engine.ingest_batch([message(text, minutes=n) for n, text in enumerate(self.TEXTS)],
+                                                  user_id=user, session_id="s1")
+            # Close once the retry's flush has sent its request.
+            for _ in range(300):
+                if model.started:
+                    break
+                await asyncio.sleep(0.01)
+            assert len(attempts) == 2 and model.started == [self.TEXTS]
+        # The retry's request was answered, not cancelled and sent again by the close's own flush.
+        assert model.started == [self.TEXTS] and model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+
+
+def test_a_client_close_waits_for_the_batched_close(config, user, monkeypatch):
+    from prme.client import MemoryClient
+
+    # Scaled down from 30 seconds and the five-minute cap.
+    monkeypatch.setattr("prme.client._CLOSE_SECONDS", 0.05)
+    monkeypatch.setattr("prme.ingestion.pipeline.BATCH_CLOSE_SECONDS", 5.0)
+    model = SlowBatches(delay=0.3)
+    client = MemoryClient(config=batched(config))
+    install(client._engine, model)
+    event_id = client._run(client._engine.ingest(TestClosing.TEXTS[0], user_id=user, session_id="s1",
+                                                 event_time=T0))
+    client.close()
+    assert model.contents() == [TestClosing.TEXTS[:1]]
+
+    async def status():
+        async with MemoryEngine.open(batched(config)) as engine:
+            return await statuses(engine, user, [event_id])
+
+    assert asyncio.run(status()) == ["complete"]
+
+
 class TestFailures:
     async def test_a_batch_that_fails_validation_is_asked_again_in_halves(self, config, user):
         def broken(turns):
@@ -402,23 +612,160 @@ class TestFailures:
         assert len(model.calls) == 1
 
 
-async def test_rebuild_of_a_batched_pack_reproduces_it_without_a_model_call(tmp_path, monkeypatch):
-    from prme.cli import cmd_rebuild
+def named(logs, event):
+    return [entry for entry in logs if entry["event"] == event]
 
+
+def leaving_out(model, text, *, times=None):
+    """``model``, leaving out of its responses the entry of the turn ``text``, ``times`` times or always."""
+    answer, left_out = model.extract_batch, []
+
+    async def extract_batch(turns):
+        response = await answer(turns)
+        indices = {turn.index for turn in turns if turn.content == text}
+        if indices and (times is None or len(left_out) < times):
+            left_out.append(indices)
+            response["turns"] = [entry for entry in response["turns"] if entry["turn"] not in indices]
+        return response
+
+    model.extract_batch = extract_batch
+    return model
+
+
+class TestTurnsLeftOut:
+    """A turn a response gives no entry is asked for again, alone, before it is saved (#260)."""
+
+    TEXTS = ["Caroline paints sunsets over the lake.", "Melanie adopted a puppy named Oscar.", "Thanks, that sounds fun."]
+
+    async def ingest(self, engine, user):
+        return await engine.ingest_batch([message(text, minutes=n) for n, text in enumerate(self.TEXTS)],
+                                         user_id=user, session_id="s1", wait_for_extraction=True)
+
+    async def batches(self, engine, user, event_ids):
+        records = [await engine.get_extraction(event_id, user_id=user) for event_id in event_ids]
+        return records, {record.event_id: await engine._event_store.get_extraction_batch(
+            str(record.batch_id), user_id=user) for record in records}
+
+    async def test_one_more_request_asks_for_the_turn_and_its_claims_are_saved_under_it(self, config, user):
+        model = leaving_out(ScriptedBatches(), self.TEXTS[1], times=1)
+        async with MemoryEngine.open(batched(config)) as engine:
+            install(engine, model)
+            with capture_logs() as logs:
+                event_ids = await self.ingest(engine, user)
+            # Exactly one more request, for the turn left out, alone.
+            assert model.contents() == [self.TEXTS, [self.TEXTS[1]]]
+            # The turn is reported as asked again, not as saved stating nothing.
+            assert [entry["turns"] for entry in named(logs, "ingestion.extraction_batch_turns_asked_again")] == [1]
+            assert named(logs, "ingestion.extraction_batch_turns_missing") == []
+            assert await statuses(engine, user, event_ids) == ["complete"] * 3
+            assert await claims_by_event(engine, user) == {event_ids[0]: self.TEXTS[0], event_ids[1]: self.TEXTS[1]}
+            records, batches = await self.batches(engine, user, event_ids)
+            first, again = batches[records[0].event_id], batches[records[1].event_id]
+            # The first request's record names the turn asked again and saves only the others' records.
+            assert first.turns_asked_again == (2,)
+            assert [str(turn.event_id) for turn in first.saved_turns] == [event_ids[0], event_ids[2]]
+            assert records[0].batch_id == records[2].batch_id == first.id != records[1].batch_id == again.id
+            assert [(turn.index, str(turn.event_id)) for turn in again.turns] == [(1, event_ids[1])]
+            assert again.turns_asked_again == () and [entry["turn"] for entry in again.response["turns"]] == [1]
+            assert again.head_event_id == first.head_event_id == records[0].event_id
+            assert [len(record.result["facts"]) for record in records] == [1, 1, 0]
+            assert await batch_operations(engine, user) == 2
+            # The record of a request that asked no turn again keeps the bytes it had before.
+            assert "turns_asked_again" in first.model_dump_json()
+            assert "turns_asked_again" not in again.model_dump_json()
+
+    async def test_a_turn_left_out_again_is_saved_as_stating_nothing(self, config, user):
+        model = leaving_out(ScriptedBatches(), self.TEXTS[1])
+        async with MemoryEngine.open(batched(config)) as engine:
+            install(engine, model)
+            with capture_logs() as logs:
+                event_ids = await self.ingest(engine, user)
+            # The request for the turn is not followed by another.
+            assert model.contents() == [self.TEXTS, [self.TEXTS[1]]]
+            assert [entry["turns"] for entry in named(logs, "ingestion.extraction_batch_turns_missing")] == [[1]]
+            assert await statuses(engine, user, event_ids) == ["complete"] * 3
+            assert await claims_by_event(engine, user) == {event_ids[0]: self.TEXTS[0]}
+            records, batches = await self.batches(engine, user, event_ids)
+            assert records[1].result["facts"] == [] and batches[records[1].event_id].response == {"turns": []}
+
+    async def test_a_response_that_leaves_out_every_turn_is_not_asked_again(self, config, user):
+        async def nothing(turns):
+            model.calls.append([(turn.index, turn.role, turn.speaker, turn.content) for turn in turns])
+            return {"turns": []}
+
+        model = ScriptedBatches()
+        model.extract_batch = nothing
+        async with MemoryEngine.open(batched(config)) as engine:
+            install(engine, model)
+            with capture_logs() as logs:
+                event_ids = await self.ingest(engine, user)
+            # Asking for every turn again would send the same request.
+            assert model.contents() == [self.TEXTS]
+            assert named(logs, "ingestion.extraction_batch_turns_asked_again") == []
+            assert [entry["turns"] for entry in named(logs, "ingestion.extraction_batch_turns_missing")] == [[1, 2, 3]]
+            records, batches = await self.batches(engine, user, event_ids)
+            assert {record.batch_id for record in records} == {records[0].batch_id}
+            assert batches[records[0].event_id].turns_asked_again == ()
+            assert all(record.result["facts"] == [] for record in records)
+
+    async def test_a_failed_request_for_the_turn_keeps_the_others_and_the_turn_asks_later(self, config, user):
+        def fail_the_request_for_the_turn(turns):
+            asked = [turn.content for turn in turns]
+            return "RateLimitError" if asked == [self.TEXTS[1]] and model.contents().count(asked) == 1 else None
+
+        model = leaving_out(ScriptedBatches(fail=fail_the_request_for_the_turn), self.TEXTS[1], times=1)
+        async with MemoryEngine.open(batched(config)) as engine:
+            install(engine, model)
+            event_ids = await self.ingest(engine, user)
+            # The other turns' records were saved first; the turn's own job then asked for it.
+            assert model.contents() == [self.TEXTS, [self.TEXTS[1]], [self.TEXTS[1]]]
+            assert await statuses(engine, user, event_ids) == ["complete"] * 3
+            assert await claims_by_event(engine, user) == {event_ids[0]: self.TEXTS[0], event_ids[1]: self.TEXTS[1]}
+            records, batches = await self.batches(engine, user, event_ids)
+            assert batches[records[0].event_id].turns_asked_again == (2,)
+            assert batches[records[1].event_id].head_event_id == records[1].event_id
+
+    async def test_a_turn_left_out_of_one_half_of_a_split_request_is_asked_again(self, config, user):
+        texts = [*self.TEXTS, "Jordan moved to Denver last spring."]
+        model = leaving_out(ScriptedBatches(fail=lambda turns: "ValidationError" if len(turns) == 4 else None),
+                            texts[3], times=1)
+        async with MemoryEngine.open(batched(config)) as engine:
+            install(engine, model)
+            event_ids = await engine.ingest_batch([message(text, minutes=n) for n, text in enumerate(texts)],
+                                                  user_id=user, session_id="s1", wait_for_extraction=True)
+            assert model.contents() == [texts, texts[:2], texts[2:], [texts[3]]]
+            assert await statuses(engine, user, event_ids) == ["complete"] * 4
+            assert set((await claims_by_event(engine, user)).values()) == {texts[0], texts[1], texts[3]}
+
+
+def directory_pack(tmp_path, monkeypatch):
+    """A batched directory pack, as `prme rebuild` reads one."""
     monkeypatch.setattr("prme.storage.engine.create_embedding_provider",
                         lambda _: test_durable_ingestion.MockEmbeddingProvider())
     (tmp_path / "lexical_index").mkdir()
-    pack = PRMEConfig(_env_file=None, db_path=str(tmp_path / "memory.duckdb"),
+    return PRMEConfig(_env_file=None, db_path=str(tmp_path / "memory.duckdb"),
                       vector_path=str(tmp_path / "vectors.usearch"), lexical_path=str(tmp_path / "lexical_index"),
                       organizer={"opportunistic_enabled": False}, extraction_batch_target_tokens=512)
 
-    async def snapshot(engine):
-        nodes = await engine.query_nodes(user_id="u", lifecycle_states=list(LifecycleState), limit=1000)
-        retrieved = await engine.retrieve("Who adopted a puppy?", user_id="u")
-        return (sorted((str(node.id), node.node_type.value, node.content, node.lifecycle_state.value,
-                        [str(ref) for ref in node.evidence_refs]) for node in nodes),
-                [(str(result.node.id), round(result.composite_score, 9)) for result in retrieved.results])
 
+async def snapshot(engine):
+    nodes = await engine.query_nodes(user_id="u", lifecycle_states=list(LifecycleState), limit=1000)
+    retrieved = await engine.retrieve("Who adopted a puppy?", user_id="u")
+    return (sorted((str(node.id), node.node_type.value, node.content, node.lifecycle_state.value,
+                    [str(ref) for ref in node.evidence_refs]) for node in nodes),
+            [(str(result.node.id), round(result.composite_score, 9)) for result in retrieved.results])
+
+
+def forbid_model_calls(monkeypatch):
+    for name in ("extract", "extract_batch"):
+        monkeypatch.setattr(InstructorExtractionProvider, name,
+                            AsyncMock(side_effect=AssertionError("the model was called")))
+
+
+async def test_rebuild_of_a_batched_pack_reproduces_it_without_a_model_call(tmp_path, monkeypatch):
+    from prme.cli import cmd_rebuild
+
+    pack = directory_pack(tmp_path, monkeypatch)
     async with MemoryEngine.open(pack) as engine:
         install(engine, ScriptedBatches())
         await engine.ingest_batch([message("Caroline paints sunsets over the lake.", speaker="Caroline"),
@@ -431,9 +778,7 @@ async def test_rebuild_of_a_batched_pack_reproduces_it_without_a_model_call(tmp_
         before = await snapshot(engine)
     assert len([node for node in before[0] if node[1] == "fact"]) == 3
 
-    for name in ("extract", "extract_batch"):
-        monkeypatch.setattr(InstructorExtractionProvider, name,
-                            AsyncMock(side_effect=AssertionError("prme rebuild called the model")))
+    forbid_model_calls(monkeypatch)
     await cmd_rebuild(Namespace(db_path=pack.db_path, batch_size=2, format="json"))
     async with MemoryEngine.open(pack) as engine:
         assert await snapshot(engine) == before
@@ -442,6 +787,43 @@ async def test_rebuild_of_a_batched_pack_reproduces_it_without_a_model_call(tmp_
             replayed = await engine._pipeline._extract_or_load(event)
             assert replayed.model_dump(mode="json") == (await engine.get_extraction(
                 str(event.id), user_id="u")).result
+
+
+async def test_a_turn_a_pack_from_before_260_saved_as_stating_nothing_is_never_asked_again(tmp_path, monkeypatch):
+    from prme.cli import cmd_rebuild
+
+    pack = directory_pack(tmp_path, monkeypatch)
+    texts = TestTurnsLeftOut.TEXTS
+    with monkeypatch.context() as before_260:
+        # #254 saved a turn its response left out as stating nothing, and asked for no turn again.
+        before_260.setattr("prme.ingestion.extraction.batch_turns_without_entry", lambda raw, turns: [])
+        async with MemoryEngine.open(pack) as engine:
+            pipeline = install(engine, leaving_out(ScriptedBatches(), texts[1]))
+            event_ids = [await engine.ingest(text, user_id="u", session_id="s1",
+                                             event_time=T0 + timedelta(minutes=minutes))
+                         for minutes, text in enumerate(texts)]
+            # The first job's request saves every turn's record, and the process stops before the rest publish.
+            assert (await engine.process_extractions(user_id="u", limit=1)).processed == 1
+            for timer in pipeline._flush_timers.values():
+                timer.cancel()
+            await asyncio.gather(*pipeline._flush_timers.values(), return_exceptions=True)
+            pipeline._flush_timers.clear()
+
+    forbid_model_calls(monkeypatch)
+    async with MemoryEngine.open(pack) as engine:
+        record = await engine.get_extraction(event_ids[1], user_id="u")
+        batch = await engine._event_store.get_extraction_batch(str(record.batch_id), user_id="u")
+        assert batch.turns_asked_again == () and [entry["turn"] for entry in batch.response["turns"]] == [1, 3]
+        # This release publishes the saved records as they are.
+        result = await engine.process_extractions(user_id="u")
+        assert (result.processed, result.pending, result.failed) == (2, 0, 0)
+        assert await engine.get_extraction(event_ids[1], user_id="u") == record and record.result["facts"] == []
+        assert await claims_by_event(engine, "u") == {event_ids[0]: texts[0]}
+        await engine.process_pending(user_id="u", budget_ms=60_000)
+        before = await snapshot(engine)
+    await cmd_rebuild(Namespace(db_path=pack.db_path, batch_size=2, format="json"))
+    async with MemoryEngine.open(pack) as engine:
+        assert await snapshot(engine) == before
 
 
 class TestTheRequest:
@@ -596,6 +978,70 @@ class TestTheBatchRecord:
             await store.record_extraction_batch(again, records(again), claim=claim)
             assert (await store.get_extraction_batch(str(batch.id), user_id=user)).response == {"turns": []}
             assert [await store.get_extraction(str(event.id), user_id=user) for event in events] == saved
+
+    async def test_a_turn_asked_again_gets_no_record_from_it(self, config, user):
+        from prme.models import Event
+        from prme.models.extraction import ExtractionBatchRecord, ExtractionBatchTurn, ExtractionRecord
+
+        async with MemoryEngine.open(batched(config)) as engine:
+            store, work = engine._event_store, engine._event_store.extraction_work
+            events = [Event(content=text, user_id=user, role="user", session_id="s1",
+                            event_time=T0 + timedelta(minutes=n)) for n, text in enumerate(["One.", "Two."])]
+            for event in events:
+                await store.append(event, defer_extraction=True)
+            claim = await work.claim(user_id=user, event_id=str(events[0].id))
+            batch = ExtractionBatchRecord(
+                user_id=user, scope=events[0].scope, session_id="s1", head_event_id=events[0].id, provider="p",
+                model="m", request_sha256="0" * 64, response={"turns": [{"turn": 1}]}, turns_asked_again=(2,),
+                turns=tuple(ExtractionBatchTurn(index=n, event_id=event.id, role="user", event_time=event.event_time,
+                                                content_hash=event.content_hash)
+                            for n, event in enumerate(events, start=1)))
+            records = [ExtractionRecord(
+                event_id=event.id, user_id=user, scope=event.scope, content_hash=event.content_hash, provider="p",
+                model="m", grounding_policy="speech_act_v14", result=ExtractionResult().model_dump(mode="json"),
+                batch_id=batch.id) for event in events]
+            with pytest.raises(ValueError, match="not asked again"):
+                await store.record_extraction_batch(batch, records, claim=claim)
+            await store.record_extraction_batch(batch, records[:1], claim=claim)
+            assert (await store.get_extraction_batch(str(batch.id), user_id=user)).turns_asked_again == (2,)
+            assert await store.get_extraction(str(events[1].id), user_id=user) is None
+
+    def test_turns_asked_again_are_some_of_its_turns_and_left_out_when_none(self):
+        from uuid import UUID
+
+        from prme.models.extraction import ExtractionBatchRecord, ExtractionBatchTurn
+
+        turns = tuple(ExtractionBatchTurn(index=n, event_id=UUID(f"00000000-0000-4000-8000-00000000026{n}"),
+                                          role="user", event_time=T0, content_hash="a" * 64) for n in (1, 2, 3))
+        fields = dict(user_id="u", scope="personal", head_event_id=turns[0].event_id, provider="p", model="m",
+                      request_sha256="0" * 64, turns=turns, response={"turns": []},
+                      created_at=datetime(2026, 10, 15, tzinfo=timezone.utc))
+        # A batch record as #254 wrote it keeps its bytes and identity: these are the bytes
+        # and the identity #254's own model gives this record.
+        written_by_254 = (
+            '{"schema_version":1,"user_id":"u","scope":"personal","session_id":null,'
+            '"head_event_id":"00000000-0000-4000-8000-000000000261","provider":"p","model":"m",'
+            '"request_sha256":"' + "0" * 64 + '","turns":['
+            + ",".join('{"index":%d,"event_id":"00000000-0000-4000-8000-00000000026%d","role":"user",'
+                       '"speaker":null,"event_time":"2023-05-08T13:56:00Z","content_hash":"%s"}' % (n, n, "a" * 64)
+                       for n in (1, 2, 3))
+            + '],"response":{"turns":[]},"created_at":"2026-10-15T00:00:00Z"}')
+        before = ExtractionBatchRecord(**fields)
+        assert before.model_dump_json() == written_by_254 and before.turns_asked_again == ()
+        assert str(before.id) == "6d19f9b1-6b59-5c5a-8115-4cc1a9dc4f32"
+        assert ExtractionBatchRecord.model_validate_json(written_by_254) == before
+        assert before.saved_turns == turns
+        asked = ExtractionBatchRecord(**fields, turns_asked_again=(1, 3))
+        assert asked.id == before.id and [turn.index for turn in asked.saved_turns] == [2]
+        assert json.loads(asked.model_dump_json())["turns_asked_again"] == [1, 3]
+        for wrong in ((1, 2, 3), (4,), (3, 1), (2, 2)):
+            with pytest.raises(ValidationError):
+                ExtractionBatchRecord(**fields, turns_asked_again=wrong)
+        # An index names one turn: turns are numbered 1, 2, 3 and on, in order.
+        for order in ((2, 1, 3), (1, 1, 3), (1, 2, 4)):
+            renumbered = tuple(turn.model_copy(update={"index": index}) for turn, index in zip(turns, order))
+            with pytest.raises(ValidationError):
+                ExtractionBatchRecord(**{**fields, "turns": renumbered})
 
 
 class TestIsolationAndLiveness:

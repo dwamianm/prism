@@ -340,6 +340,15 @@ retries, plans and receipts stay per source. A request half of a split one
 may leave out the claimed job's turn; it is still saved under that claim.
 Neither operation type needs a schema change on either backend.
 
+A turn a response gives no entry is not saved from that response (#260).
+The batch operation names it in `turns_asked_again` and saves the other
+turns' records, and then one more request, under the same claim, asks for
+the turns left out alone; their records name that request's batch. That
+request is not followed by another, so a turn it leaves out too is saved as
+stating nothing. Like any request, it is identified by its own turns and
+messages, so a replayed or cached build asks it the same way. A turn
+already saved as stating nothing keeps that record, as any saved turn does.
+
 ### Prepared derivation
 
 An immutable `DERIVATION_PREPARED` operation records:

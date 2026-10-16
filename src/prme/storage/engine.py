@@ -693,6 +693,7 @@ class MemoryEngine:
                 claim_sentence_text=config.enable_claim_sentence_text,
                 speaker_grounding=config.enable_speaker_grounding,
                 extraction_batch_target_tokens=config.extraction_batch_target_tokens,
+                extraction_timeout=config.extraction.timeout,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -843,6 +844,7 @@ class MemoryEngine:
                 claim_sentence_text=config.enable_claim_sentence_text,
                 speaker_grounding=config.enable_speaker_grounding,
                 extraction_batch_target_tokens=config.extraction_batch_target_tokens,
+                extraction_timeout=config.extraction.timeout,
             )
 
             startup.push_async_callback(pipeline.shutdown)

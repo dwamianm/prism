@@ -165,6 +165,16 @@ Ingest content with LLM-powered entity/fact extraction. Requires an LLM API key.
 
 Returns JSON: `{"event_id": "..."}`
 
+With `PRME_EXTRACTION_BATCH_TARGET_TOKENS` above zero, this tool only queues
+the message for [batched extraction](../docs/INTEGRATION.md#batched-extraction).
+The queue is extracted 30 seconds later, by `memory_process_extractions`, or
+when the server closes its engine at the end of a stdio session. That close
+waits for the queued batches for up to five minutes, but the client may stop
+the server sooner. The rest then stays queued until a later session flushes
+the owner's queue in that scope or calls `memory_process_extractions`. Call
+`memory_process_extractions` before ending a session to extract its last
+messages while it is open.
+
 ### memory_organize
 
 Run maintenance jobs (promotion, decay, deduplication, etc.).

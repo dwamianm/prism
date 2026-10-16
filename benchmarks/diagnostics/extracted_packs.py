@@ -288,6 +288,11 @@ class ExtractionCache:
     (``<key>.batch.json``). The entry is the parsed response, before any
     check, which ingestion checks turn by turn as it checks a live one, so
     a rebuild of the same build replays every batch without a model call.
+    The request for the turns a response left out (#260) is a request like
+    any other: the same cached response leaves out the same turns, so the
+    rebuild asks for them the same way and replays that request too. A
+    cache filled before #260 does not hold that request, so a rebuild from
+    it calls the model for each response that left out a turn.
     """
 
     def __init__(self, folder: Path) -> None:
@@ -580,11 +585,14 @@ async def _ingest_sessions(engine, unit: Unit, stored: dict[str, str], log, usag
 async def _batch_summary(engine, user_id: str, events: dict[str, str]) -> dict:
     """What a batched pack's saved requests show about what was lost between model and graph.
 
-    ``turns_without_entry`` counts turns the model gave no entry, which are
-    saved as stating nothing. ``response_claims`` counts the facts and
-    relationships the model wrote for the pack's turns, and ``saved_claims``
-    those the per-turn checks kept, so the difference shows how many
-    grounding dropped (a recovered claim counts on the saved side only).
+    ``turns_asked_again`` counts turns a response gave no entry, which one
+    more request asked for alone (#260); that request is one of the
+    ``batches``. ``turns_without_entry`` counts turns the model gave no entry
+    and that were not asked again, which are saved as stating nothing.
+    ``response_claims`` counts the facts and relationships the model wrote
+    for the pack's turns, and ``saved_claims`` those the per-turn checks
+    kept, so the difference shows how many grounding dropped (a recovered
+    claim counts on the saved side only).
     """
     batches: dict = {}
     saved_claims = 0
@@ -602,15 +610,18 @@ async def _batch_summary(engine, user_id: str, events: dict[str, str]) -> dict:
         except (TypeError, ValueError):
             return None
 
-    turns = sum(len(batch.turns) for batch in batches.values())
+    # The turns each request saved, so a turn asked again counts once.
+    turns = sum(len(batch.saved_turns) for batch in batches.values())
     without_entry = response_claims = 0
     for batch in batches.values():
         entries = batch.response["turns"]
-        without_entry += len({turn.index for turn in batch.turns} - {cited(entry) for entry in entries})
+        without_entry += len({turn.index for turn in batch.turns} - {cited(entry) for entry in entries}
+                             - set(batch.turns_asked_again))
         response_claims += sum(len(items) for entry in entries for name in ("facts", "relationships")
                                if isinstance(items := entry.get(name), list))
     return {"batches": len(batches), "turns_per_batch": turns / len(batches) if batches else None,
             "single_turn_batches": sum(len(batch.turns) == 1 for batch in batches.values()),
+            "turns_asked_again": sum(len(batch.turns_asked_again) for batch in batches.values()),
             "turns_without_entry": without_entry, "response_claims": response_claims, "saved_claims": saved_claims}
 
 
@@ -870,8 +881,9 @@ def build_summary(folder: Path, benchmark: str) -> dict:
     until every pack is complete. Claims are the packs' current extracted
     records, and the evidence counts are annotated evidence turns that at
     least one of them cites. A batched build also totals its requests,
-    those that carried one turn, the turns the model gave no entry, and the
-    claims the model wrote and those the checks kept (``_batch_summary``).
+    those that carried one turn, the turns asked again and those the model
+    gave no entry, and the claims the model wrote and those the checks kept
+    (``_batch_summary``). A build from before #260 has no turns asked again.
     """
     record = json.loads((folder / "build.json").read_text())
     manifests = list(built_units(folder / benchmark).values())
@@ -899,8 +911,8 @@ def build_summary(folder: Path, benchmark: str) -> dict:
         "evidence_claim_coverage": share("annotated_evidence_turns_with_claims", "annotated_evidence_turns"),
     }
     if any("batches" in manifest for manifest in manifests):
-        summary.update({key: total(key) for key in ("batches", "single_turn_batches", "turns_without_entry",
-                                                     "response_claims", "saved_claims")})
+        summary.update({key: total(key) for key in ("batches", "single_turn_batches", "turns_asked_again",
+                                                     "turns_without_entry", "response_claims", "saved_claims")})
     return summary
 
 

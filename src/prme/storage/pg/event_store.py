@@ -188,13 +188,15 @@ class PgEventStore:
         """Save a batched request, its response and each turn's checked extraction together (#254).
 
         Written under the lease of the job whose worker sent the request, as
-        in the DuckDB store; a turn that already has a record keeps it.
+        in the DuckDB store; a turn that already has a record keeps it, and a
+        turn asked again (#260) gets its record from the request that asks.
         """
         batch = ExtractionBatchRecord.model_validate_json(batch.model_dump_json())
         records = [ExtractionRecord.model_validate_json(record.model_dump_json()) for record in records]
         head = str(batch.head_event_id)
-        if {str(record.event_id) for record in records} != {str(turn.event_id) for turn in batch.turns}:
-            raise ValueError("A batched extraction saves one record for each of its turns")
+        if {str(record.event_id) for record in records} != {str(turn.event_id) for turn in batch.saved_turns}:
+            # A turn asked again (#260) is saved by the request that asks for it.
+            raise ValueError("A batched extraction saves one record for each of its turns not asked again")
         async with self._pool.acquire() as conn, conn.transaction():
             sender = await conn.fetchrow("SELECT user_id, scope FROM events WHERE id = $1", head)
             if sender is None or (sender["user_id"], sender["scope"]) != (batch.user_id, batch.scope.value):

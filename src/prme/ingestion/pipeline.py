@@ -67,6 +67,11 @@ _GROUNDING_POLICY: Literal["speech_act_v14"] = "speech_act_v14"
 # are extracted, unless a waiting ingest(), ingest_batch(),
 # process_extractions() or the engine's close extracts them sooner.
 BATCH_FLUSH_SECONDS = 30.0
+# The longest the engine's close waits for the batches of queued turns (#258).
+# It allows the usual drain time plus the extraction timeout for each request
+# their flushes send, up to this, so a close cannot hang on a provider that
+# does not answer.
+BATCH_CLOSE_SECONDS = 300.0
 # Pending turns a batch looks at after its first; the token target ends a
 # batch long before this.
 _BATCH_SCAN_LIMIT = 1000
@@ -178,6 +183,7 @@ class IngestionPipeline:
         claim_sentence_text: bool = False,
         speaker_grounding: bool = False,
         extraction_batch_target_tokens: int = 0,
+        extraction_timeout: float = 30.0,
     ) -> None:
         if extraction_batch_target_tokens > 0:
             from prme.ingestion.extraction import BatchExtractionProvider
@@ -211,8 +217,15 @@ class IngestionPipeline:
         # default, extracts each turn in its own call as soon as it is ingested.
         self._batch_target_tokens = max(0, extraction_batch_target_tokens)
         self._batch_flush_seconds = BATCH_FLUSH_SECONDS
+        # The provider's timeout for one request, extraction.timeout (#258).
+        # The engine's close allows it for each batched request queued turns
+        # still need, up to BATCH_CLOSE_SECONDS in all.
+        self._extraction_timeout = extraction_timeout
+        self._batch_close_seconds = BATCH_CLOSE_SECONDS
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
+        # The owner and scope of each flush running in the background.
+        self._flushing: dict[asyncio.Task, tuple[str, Scope]] = {}
         self._scope_locks: weakref.WeakValueDictionary[tuple[str, Scope], asyncio.Lock] = weakref.WeakValueDictionary()
 
         # Bound concurrent background extraction tasks. Without this an
@@ -405,7 +418,7 @@ class IngestionPipeline:
         if wait_for_extraction:
             await self._flush(user_id, scope, through=through, wait_for=event_ids)
         else:
-            self._spawn(self._flush(user_id, scope, through=through))
+            self._spawn_flush(user_id, scope, through=through)
         return event_ids
 
     def _scope_lock(self, user_id: str, scope: Scope) -> asyncio.Lock:
@@ -442,6 +455,12 @@ class IngestionPipeline:
         task.add_done_callback(self._background_tasks.discard)
         return task
 
+    def _spawn_flush(self, user_id: str, scope: Scope, *, through: int | None = None) -> None:
+        """Flush in the background, as a task the engine's close waits for (#254, #258)."""
+        task = self._spawn(self._flush(user_id, scope, through=through))
+        self._flushing[task] = (user_id, Scope(scope))
+        task.add_done_callback(lambda done: self._flushing.pop(done, None))
+
     def _arm_flush(self, user_id: str, scope: Scope) -> None:
         """Extract the owner's queued turns in this scope after BATCH_FLUSH_SECONDS (#254).
 
@@ -452,9 +471,10 @@ class IngestionPipeline:
         caller that ingests a session's turns and then flushes them itself,
         with a waiting ingest(), ingest_batch() or process_extractions(),
         decides how they are batched, independent of timing. The engine's
-        close extracts what an armed flush was still waiting for; a turn
-        queued when the process stops stays pending, durably, until the
-        next flush of its owner and scope or process_extractions().
+        close extracts what an armed flush was still waiting for, within the
+        drain time :meth:`_drain_seconds` gives it; a turn still queued when
+        that ends, or when the process stops, stays pending, durably, until
+        the next flush of its owner and scope or process_extractions().
         """
         scope = Scope(scope)
         key = (user_id, scope)
@@ -466,7 +486,7 @@ class IngestionPipeline:
             await asyncio.sleep(self._batch_flush_seconds)
             if self._flush_timers.get(key) is asyncio.current_task():
                 del self._flush_timers[key]
-            self._spawn(self._flush(user_id, scope))
+            self._spawn_flush(user_id, scope)
 
         self._flush_timers[key] = asyncio.create_task(fire())
 
@@ -775,8 +795,9 @@ class IngestionPipeline:
         breaks ties. Every turn's checked output is saved as its own
         extraction record, under ``head``'s claim; ``head``'s record is
         returned. A failure is raised only when ``head`` got no record, so a
-        turn whose part of a split request failed waits for its own job,
-        when it sends a request of its own.
+        turn whose part of a split request failed, or whose request asking
+        again for the turns a response left out failed (#260), waits for its
+        own job, when it sends a request of its own.
         """
         events = await self._batch_events(head, through)
         events.sort(key=lambda item: item.event_time or item.timestamp)
@@ -790,7 +811,8 @@ class IngestionPipeline:
             raise failure or ExtractionError("Batched extraction saved no output for this turn",
                                              event_id=str(head.id), reason_code="ExtractionError")
         if failure is not None:
-            # Part of a split request failed; its turns send their own requests later.
+            # Part of a split request, or the request asking again for turns
+            # a response left out, failed; its turns send their own requests later.
             logger.warning("ingestion.extraction_batch_part_failed", event_id=str(head.id),
                            reason=failure.reason_code)
         return saved
@@ -801,7 +823,9 @@ class IngestionPipeline:
         Turns are added while the sum of their text tokens stays within the
         target. The first that does not fit ends the batch, so a turn larger
         than the target goes alone. A turn without a session goes alone, and
-        a turn whose output is already saved needs no request.
+        a turn whose output is already saved needs no request. The engine's
+        close counts requests by the same rule (:meth:`_queued_requests`), so
+        a change here belongs there too.
         """
         from prme.retrieval.tokenization import count_tokens
 
@@ -829,7 +853,7 @@ class IngestionPipeline:
         return events
 
     async def _request_batch(self, head: Event, events: list[Event], *,
-                             claim: ExtractionClaim | None) -> None:
+                             claim: ExtractionClaim | None, ask_again: bool = True) -> None:
         """Send one batched request and save each turn's output, or ask again in halves.
 
         A response that fails validation as a whole, or a request that times
@@ -842,11 +866,21 @@ class IngestionPipeline:
         not answer costs about log2(n) + 1 requests, not 2n - 1. A single
         turn that still fails is raised, and so is any other failure. Each
         request that succeeds is saved at once, with its turns' records.
+
+        A response that gives some of its turns no entry is saved without
+        their records, naming them in ``turns_asked_again``, and then one
+        more request asks for those turns alone (#260). With ``ask_again``
+        off, as for that request and the halves it may be split into, a turn
+        left out is saved as stating nothing, so each response is asked
+        again at most once. A response that gives none of its turns an entry
+        is saved that way too: asking for all of them would repeat the same
+        request.
         """
         from prme.ingestion.extraction import (
             BatchTurn,
             batch_request_sha256,
             batch_response_fields,
+            batch_turns_without_entry,
             validate_batch_output,
         )
         from prme.models.extraction import ExtractionBatchRecord, ExtractionBatchTurn
@@ -865,6 +899,7 @@ class IngestionPipeline:
             # the speaker's own I, me and my only with speaker grounding on.
             speakers = {turn.index: turn.speaker for turn in turns} if self._speaker_grounding else {}
             results = validate_batch_output(raw, turns, speakers=speakers)
+            without_entry = batch_turns_without_entry(raw, turns)
         except ExtractionError as exc:
             if len(events) == 1 and exc.reason_code in _HALVABLE_FAILURES - _VALIDATION_FAILURES:
                 raise BatchSplitStopped(str(exc), event_id=exc.event_id, reason_code=exc.reason_code) from exc
@@ -876,7 +911,7 @@ class IngestionPipeline:
             failure: ExtractionError | None = None
             for half in (events[:middle], events[middle:]):
                 try:
-                    await self._request_batch(head, half, claim=claim)
+                    await self._request_batch(head, half, claim=claim, ask_again=ask_again)
                 except BatchSplitStopped:
                     raise
                 except ExtractionError as half_failure:
@@ -886,6 +921,9 @@ class IngestionPipeline:
             if failure is not None:
                 raise failure
             return
+        # Turns left out are asked again unless this request already asks
+        # again, or the response gives no turn an entry (#260).
+        missing = without_entry if ask_again and len(without_entry) < len(turns) else []
         batch = ExtractionBatchRecord(
             user_id=head.user_id, scope=head.scope, session_id=head.session_id, head_event_id=head.id,
             provider=self._extraction_provider.provider_name, model=self._extraction_provider.model_name,
@@ -896,9 +934,13 @@ class IngestionPipeline:
                 for turn, event in zip(turns, events, strict=True)
             ),
             response=batch_response_fields(raw),
+            turns_asked_again=tuple(missing),
         )
         records = []
         for turn, event in zip(turns, events, strict=True):
+            if turn.index in missing:
+                # Saved by the request that asks for it again, below.
+                continue
             # The same checks a single turn's output gets, against this turn alone.
             speaker = turn.speaker if self._speaker_grounding else None
             result = validate_grounding(results[turn.index], event.content, speaker=speaker)
@@ -918,6 +960,16 @@ class IngestionPipeline:
         )
         logger.info("ingestion.extraction_batch_saved", event_id=str(head.id), batch_id=str(batch.id),
                     turns=len(events))
+        if missing:
+            # The turns' records are saved after the others', so a failure of
+            # this request costs only them; their own jobs ask for them later.
+            logger.warning("ingestion.extraction_batch_turns_asked_again", event_id=str(head.id),
+                           batch_id=str(batch.id), turns=len(missing))
+            await self._request_batch(head, [events[index - 1] for index in missing], claim=claim,
+                                      ask_again=False)
+        elif without_entry:
+            logger.warning("ingestion.extraction_batch_turns_missing", event_id=str(head.id),
+                           batch_id=str(batch.id), turns=without_entry, batch_turns=len(turns))
 
     def _check_resolved_text(self, result: ExtractionResult, event: Event, window: list[Event]) -> ExtractionResult:
         """Keep each fact's resolved text only when it passes its check (#91).
@@ -1548,8 +1600,11 @@ class IngestionPipeline:
             await asyncio.sleep(delay)
             if self._batch_target_tokens > 0:
                 # The jobs queued behind this one wait for it, so its retry
-                # flushes the queue from it on (#254).
-                await self._flush(event.user_id, scope)
+                # flushes the queue from it on (#254), as a background flush
+                # that the engine's close waits for like any other (#258).
+                # A retry the close did not cancel starts nothing after it.
+                if not self._closing:
+                    self._spawn_flush(event.user_id, scope)
                 return
             await self._extract_and_materialize(event, event_id, scope, retry_attempt=attempt)
 
@@ -1562,6 +1617,70 @@ class IngestionPipeline:
 
         task.add_done_callback(discard)
 
+    async def _drain_seconds(self, drain_timeout: float, keys: list[tuple[str, Scope]]) -> float:
+        """How long the engine's close waits for background extraction (#258).
+
+        Without batching, or with no flush to wait for, it is
+        ``drain_timeout``. A flush sends its batched requests one after
+        another, each allowed the provider's timeout, so the close also
+        allows that timeout for each request the flushes of these owners and
+        scopes send before any split, counted by :meth:`_queued_requests`,
+        up to BATCH_CLOSE_SECONDS in all.
+        """
+        if self._batch_target_tokens <= 0 or not keys:
+            return drain_timeout
+        cap = max(drain_timeout, self._batch_close_seconds)
+        seconds, requests = drain_timeout, 0
+        try:
+            for user_id, scope in dict.fromkeys(keys):
+                if seconds >= cap:
+                    break
+                # Counting stops once the cap is reached.
+                limit = (math.ceil((cap - seconds) / self._extraction_timeout)
+                         if self._extraction_timeout > 0 else _BATCH_SCAN_LIMIT)
+                queued = await self._queued_requests(user_id, scope, limit=limit)
+                requests += queued
+                seconds += queued * self._extraction_timeout
+        except Exception as exc:
+            # The store that failed this count would fail the flush too.
+            logger.error("ingestion.extraction_close_count_failed", error_type=type(exc).__name__)
+        seconds = min(cap, seconds)
+        logger.info("ingestion.extraction_close_drain", seconds=seconds, batched_requests=requests)
+        return seconds
+
+    async def _queued_requests(self, user_id: str, scope: Scope, *, limit: int) -> int:
+        """The batched requests a flush of this owner and scope sends, before any split (#258).
+
+        Counted as :meth:`_batch_events` composes them: in work order, a
+        turn joins the request its session has open while their text stays
+        within the target; one that does not fit, or has no session, starts
+        a request, and one whose output is already saved needs none.
+        Counting stops at ``limit``.
+        """
+        from prme.retrieval.tokenization import count_tokens
+
+        requests = 0
+        # The tokens of the request each session has open.
+        open_requests: dict[str, int] = {}
+        work = self._event_store.extraction_work
+        for event_id in await work.unfinished(user_id=user_id, scope=Scope(scope).value, limit=_BATCH_SCAN_LIMIT):
+            if requests >= limit:
+                break
+            if await self._event_store.get_extraction(event_id, user_id=user_id) is not None:
+                continue
+            event = await self._event_store.get(event_id)
+            if event is None:
+                continue
+            tokens = count_tokens(event.content)
+            used = open_requests.get(event.session_id) if event.session_id else None
+            if used is not None and used < self._batch_target_tokens and used + tokens <= self._batch_target_tokens:
+                open_requests[event.session_id] = used + tokens
+                continue
+            requests += 1
+            if event.session_id:
+                open_requests[event.session_id] = tokens
+        return requests
+
     async def shutdown(self, drain_timeout: float = 10.0) -> None:
         """Drain pending background tasks then shut down.
 
@@ -1570,6 +1689,12 @@ class IngestionPipeline:
         the engine closes.  Any tasks still running after the timeout
         are cancelled.  Retry tasks are cancelled immediately since
         their long sleep delays make draining impractical.
+
+        With batched extraction (#258), the flushes of queued turns get
+        longer: *drain_timeout* plus the extraction timeout for each request
+        they send first (:meth:`_drain_seconds`). The flushes start before
+        their requests are counted, and the count is part of the wait, which
+        never passes BATCH_CLOSE_SECONDS in all.
 
         Args:
             drain_timeout: Maximum seconds to wait for background tasks.
@@ -1587,15 +1712,29 @@ class IngestionPipeline:
         self._retry_tasks.clear()
 
         # A flush still waiting for its delay runs now, so the turns it waited
-        # for are extracted within the drain timeout below, as a background
-        # extraction is without batching (#254).
-        for key, timer in list(self._flush_timers.items()):
-            if not timer.done():
-                timer.cancel()
-                self._spawn(self._flush(*key))
+        # for are extracted within the drain below, as a background
+        # extraction is without batching (#254). The drain allows for their
+        # batched requests and those of the flushes already running (#258).
+        waiting = [key for key, timer in self._flush_timers.items() if not timer.done()]
+        for key in waiting:
+            self._flush_timers[key].cancel()
         if self._flush_timers:
             await asyncio.gather(*self._flush_timers.values(), return_exceptions=True)
         self._flush_timers.clear()
+        for key in waiting:
+            self._spawn_flush(*key)
+        if self._batch_target_tokens > 0:
+            # The flushes run while their requests are counted, and the count
+            # is part of the wait, so the whole wait stays within the cap.
+            started = time.monotonic()
+            cap = max(drain_timeout, self._batch_close_seconds)
+            try:
+                budget = await asyncio.wait_for(
+                    self._drain_seconds(drain_timeout, list(self._flushing.values())), timeout=cap)
+            except asyncio.TimeoutError:
+                logger.warning("ingestion.extraction_close_count_timed_out", seconds=cap)
+                budget = cap
+            drain_timeout = max(0.0, budget - (time.monotonic() - started))
 
         # Drain background extraction tasks with a timeout
         bg_tasks = list(self._background_tasks)
