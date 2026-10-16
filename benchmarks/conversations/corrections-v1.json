@@ -1,0 +1,79 @@
+{
+  "kind": "prme-chat-probe",
+  "schema_version": 1,
+  "name": "corrections-v1",
+  "description": "A scripted first-person chat between Riley and an assistant over four sessions, written to show what PRME stores and returns when a user corrects themselves: a changed plan (Austin, then Denver), a wrong fact fixed in a later session (Jo's birthday, March 3 then March 13) and two conflicting statements in one session (black coffee, oat milk). Riley being a nurse is a control fact that no correction touches.",
+  "owner": "corrections-v1-riley",
+  "user_name": "Riley",
+  "reference_time": "2026-05-10T12:00:00+00:00",
+  "sessions": [
+    {
+      "id": "s1-intro",
+      "start": "2026-03-02T18:00:00+00:00",
+      "turns": [
+        {"role": "user", "text": "Hi, I'm Riley. I work as an ER nurse in Seattle, mostly night shifts."},
+        {"role": "assistant", "text": "Nice to meet you, Riley. Night shifts in an ER sound intense. How can I help?"},
+        {"role": "user", "text": "Big news: I'm planning to move to Austin this summer. A hospital there offered me a day-shift position."},
+        {"role": "assistant", "text": "Congratulations! Day shifts could be a real change of pace."},
+        {"role": "user", "text": "Also, my sister Jo's birthday is March 3. Can you remind me to send her something before then?"},
+        {"role": "assistant", "text": "Of course. I'll keep your sister's birthday in mind so you can plan a gift."}
+      ]
+    },
+    {
+      "id": "s2-coffee",
+      "start": "2026-03-20T08:00:00+00:00",
+      "turns": [
+        {"role": "user", "text": "I'm trying to cut back on sugar. I drink my coffee black, always have."},
+        {"role": "assistant", "text": "That makes cutting sugar easier. Any other habits you want to change?"},
+        {"role": "user", "text": "Not really. Though honestly, I take oat milk in my coffee every morning."},
+        {"role": "assistant", "text": "Got it. Let me know if you want ideas for lower-sugar breakfasts."}
+      ]
+    },
+    {
+      "id": "s3-update",
+      "start": "2026-04-14T19:30:00+00:00",
+      "turns": [
+        {"role": "user", "text": "Change of plans: I turned down the Austin job. We're moving to Denver instead, and I start at a hospital there in July."},
+        {"role": "assistant", "text": "That's a big decision. Do you want help planning the move?"},
+        {"role": "user", "text": "Yes, soon. And sorry, I gave you Jo's birthday wrong last time. It's actually March 13."},
+        {"role": "assistant", "text": "Thanks for the correction. I'll remember that."}
+      ]
+    },
+    {
+      "id": "s4-later",
+      "start": "2026-05-05T07:15:00+00:00",
+      "turns": [
+        {"role": "user", "text": "Work has been busy. I'm still on night shifts at the ER until the move."},
+        {"role": "assistant", "text": "Hang in there. July is not far off."}
+      ]
+    }
+  ],
+  "key": {
+    "entities": [
+      {"id": "riley", "names": ["Riley"], "owner": true},
+      {"id": "jo", "names": ["Jo"]}
+    ],
+    "links": [
+      {"id": "sister", "between": ["riley", "jo"], "label": "Jo is Riley's sister"}
+    ],
+    "repeats": [],
+    "probes": [
+      {"id": "move-city", "question": "Where is Riley moving?", "all_of": ["Denver"], "stale": ["Austin"]},
+      {"id": "jo-birthday", "question": "When is Jo's birthday?", "all_of": ["March 13"], "stale": ["March 3"]},
+      {"id": "coffee", "question": "How does Riley take coffee?", "all_of": ["black", "oat milk"]},
+      {"id": "job", "question": "What does Riley do for work?", "all_of": ["nurse"]}
+    ],
+    "corrections": [
+      {"id": "move", "kind": "changed mind", "label": "Riley plans to move to Austin, then chooses Denver",
+       "old": ["Austin"], "new": ["Denver"], "probe": "move-city"},
+      {"id": "birthday", "kind": "wrong fact fixed later",
+       "label": "Jo's birthday is given as March 3, then corrected to March 13 in a later session",
+       "old": ["March 3"], "new": ["March 13"], "probe": "jo-birthday"},
+      {"id": "coffee", "kind": "conflict in one session",
+       "label": "Riley says black coffee and oat milk in the same session", "values": ["black", "oat milk"],
+       "probe": "coffee"},
+      {"id": "job", "kind": "control", "label": "Riley is a nurse; no correction touches it",
+       "values": ["nurse"], "probe": "job"}
+    ]
+  }
+}

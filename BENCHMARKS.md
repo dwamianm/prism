@@ -969,6 +969,73 @@ probes test the context rather than a reader's answer. It is for seeing what
 ingestion builds and for measuring a change to it, not for claims about
 accuracy.
 
+### Corrections probe: what a correction stores and returns
+
+`benchmarks.diagnostics.corrections_probe` shows what PRME stores and what
+`retrieve()` returns when a user corrects themselves. Its chat,
+`benchmarks/conversations/corrections-v1.json`, is 16 turns between "Riley"
+and an assistant over four dated sessions, in the chat probe's format, with
+three cases and a control: a changed plan (moving to Austin, then Denver), a
+wrong fact fixed in a later session (Jo's birthday, March 3, then "It's
+actually March 13"), two conflicting statements in one session (black coffee,
+oat milk), and Riley being a nurse, which no correction touches. The same
+information goes in two ways:
+
+- `ingest`: the whole chat through `ingest()` with the current defaults
+  (batched extraction, claim sentences, speaker references, folding), the
+  owner named as the speaker of their turns, through the chat probe's build.
+- `explicit`: the application stores one short fact per statement with
+  `store()` and calls `supersede()` for the two corrections, as
+  [explicit memory corrections](docs/MEMORY-CORRECTIONS.md) shows. No model
+  is called. The conflicting statements stay as two facts.
+
+```sh
+uv run python -m benchmarks.diagnostics.corrections_probe run \
+  --model deepseek-v4.1-flash:cloud --cloud --output /tmp/corrections-v1
+# The explicit path alone, with no model.
+uv run python -m benchmarks.diagnostics.corrections_probe run --skip-ingest --output /tmp/corrections-v1
+```
+
+For each path and case the report lists the records that mention the case's
+values with their lifecycle state, the supersedes and contradicts edges between
+them, and the record lines of the probe question's rendered context that
+mention each value, in order. First results on 2026-10-16, v0.15.0 defaults,
+`deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.4), 16 extraction calls,
+93,151 prompt tokens, built at `2bcb793c` with this probe's files not yet
+committed, so its provenance records a dirty tree
+(`benchmarks/results/research/2026-10-16/corrections-v1/`):
+
+| Case | `ingest()` path | Explicit `supersede()` path |
+|---|---|---|
+| Changed plan: Austin, then Denver | Denver stored as a decision; the Austin claim stays active and nothing is superseded. The context shows the Denver claim first, then the Austin message, then the change-of-plans message | Austin superseded by Denver; the context shows only Denver |
+| Wrong fact fixed: March 3, then March 13 | Both birthday claims stay active and nothing is superseded. The context shows March 3 first (the claim, then its message), then the correcting message | March 3 superseded by March 13; the context shows only March 13 |
+| Conflict in one session: black, oat milk | Both claims active, no contradicts edge; the context shows both messages, oat milk first | Both facts active; the context shows both, oat milk first |
+| Control: nurse | Kept and in the context | Kept and in the context |
+
+- Through `ingest()` the defaults supersede nothing in this chat. The two
+  corrections are positive updates, and a positive update retires an earlier
+  claim only when extraction names a `replaces_object`
+  ([corrections extracted from messages](docs/MEMORY-CORRECTIONS.md)).
+  Extraction marked both new claims as updates (`temporal_intent="update"`)
+  but named no `replaces_object`, and it wrote the Denver claim with the
+  subject "We", not Riley. The source messages stay records by design, so the
+  old values also reach the context through the messages that stated them.
+- The explicit path behaves as documented: the old values are retired, kept
+  in history, and left out of default retrieval.
+- Neither path marks the coffee statements as conflicting.
+- Two claims carry a wrong year: "I start at a hospital there in July", said
+  on 2026-04-14, is dated 2025-07-14, and "Jo's birthday is March 3" is dated
+  2025-03-03. The same kind of dating error is noted for the chat probe in
+  `memory_bank/GOALS.md` (#91).
+- Extraction also wrote "I turned down the Austin job" as a negated claim
+  ("NOT turned_down"), the opposite of what Riley said. As a negative update
+  it could retire only a known positive claim about "the Austin job", and
+  there was none.
+- The pack is small (54 records, 19 of them in every context at 4,096
+  tokens), so nearly every record reaches every context, and what the reader
+  sees depends on order and dates more than on selection. This is one
+  examined chat, too small for intervals; it shows behavior, not accuracy.
+
 ### Speaker references (`enable_speaker_references`)
 
 With the option on, a first-person singular reference in a claim from a turn
