@@ -1,18 +1,24 @@
 # PRME goals and production handoff
 
-**Status:** active handoff, 2026-09-23; see "Current state (2026-10-08)" for
+**Status:** active handoff, 2026-09-23; see "Current state (2026-10-16)" for
 the latest work.
 
-**Production baseline:** released v0.14.2 (tag `v0.14.2`, 2026-10-08), with the
-`ingest()` and reader context defaults of 2026-10-06 (see the
-[changelog](../CHANGELOG.md)).
+**Production baseline:** released v0.15.0 (tag `v0.15.0`, 2026-10-16), with the
+`ingest()` and reader context defaults of 2026-10-06 and batched extraction
+by default (see the [changelog](../CHANGELOG.md)).
 
 **Research record:** [research agenda](../docs/RESEARCH-AGENDA.md)
 
-## Current state (2026-10-08)
+## Current state (2026-10-16)
 
-The release is v0.14.2 (2026-10-08). The retrieval defaults changed on
-2026-09-25 (#177, #187; released in v0.13.0), and the DeepSeek defaults
+The release is v0.15.0 (2026-10-16). It makes batched extraction the
+`ingest()` default (`extraction_batch_target_tokens=2048`, #254, on the
+offline evidence gate alone, without the answer track), and adds opt-in
+single-file packs (#247) and visual memory phase 1 (RFC-0018). The `ingest()`
+answer track needs a new defaults baseline for it.
+
+The retrieval defaults changed on 2026-09-25 (#177, #187; released in
+v0.13.0), and the DeepSeek defaults
 baseline on the `store()` track is `prme@d811e3ed` (LoCoMo 1250/1540,
 LongMemEval-S 453/500). Every variant on that track counts from zero against
 it. The `ingest()` track has its own baseline (below).
