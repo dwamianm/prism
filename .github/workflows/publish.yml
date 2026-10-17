@@ -1,0 +1,73 @@
+name: Publish to PyPI
+
+# Uploads a GitHub release's own wheel and source archive to PyPI through
+# trusted publishing (OpenID Connect), so no PyPI token is stored anywhere.
+# Nothing is rebuilt: the files are the ones attached to the release, checked
+# against its SHA256SUMS and its tag. PyPI accepts uploads from this workflow
+# only when it runs in the `pypi` environment of dwamianm/prism (the prme
+# project's Publishing settings on PyPI).
+#
+# Publishing a release runs it. To publish an existing release again, run it
+# by hand with the tag. Files PyPI already has are skipped, and PyPI never
+# accepts changed files for a version it has, so a bad upload needs a new
+# version.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, for example v0.15.0
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pypi-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/prme/
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Download the release's wheel, source archive and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([a-z0-9.]*)$ ]]; then
+            echo "::error::$TAG is not a release tag like v0.15.0"
+            exit 1
+          fi
+          version="${TAG#v}"
+          mkdir dist
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist \
+            --pattern "prme-${version}-py3-none-any.whl" \
+            --pattern "prme-${version}.tar.gz" \
+            --pattern SHA256SUMS
+
+      - name: Check both files against the release's SHA256SUMS
+        working-directory: dist
+        run: |
+          version="${TAG#v}"
+          for file in "prme-${version}-py3-none-any.whl" "prme-${version}.tar.gz"; do
+            test -f "$file" || { echo "::error::$TAG has no $file"; exit 1; }
+            grep -F "  ${file}" SHA256SUMS | sha256sum --check --strict -
+          done
+          rm SHA256SUMS
+          ls -l
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/
+          skip-existing: true
