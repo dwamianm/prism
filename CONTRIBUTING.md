@@ -101,6 +101,18 @@ Explain *what* changed and *why*, not *how*.
 - Update documentation if behavior changes
 - Link to relevant issues if applicable
 
+## Releases
+
+A release is a GitHub release whose tag is the version (for example `v0.15.0`)
+and whose assets include the wheel, the source archive and `SHA256SUMS`.
+Publishing the release runs `.github/workflows/publish.yml`, which checks both
+files against `SHA256SUMS` and the tag and uploads them to
+[PyPI](https://pypi.org/project/prme/) through trusted publishing, so no PyPI
+token is stored anywhere. To publish an existing release again, run the
+workflow by hand with its tag (Actions, Publish to PyPI, Run workflow). Files
+PyPI already has are skipped. PyPI never accepts changed files for a version it
+already has, so fix a bad upload with a new version.
+
 ## Reporting Bugs
 
 Open a [GitHub Issue](https://github.com/dwamianm/prism/issues) with:
