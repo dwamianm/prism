@@ -98,6 +98,10 @@ class ScriptedExtraction:
     async def extract(self, content, *, role=None):
         return ExtractionResult.model_validate(self._by_text[content])
 
+    async def extract_batch(self, turns, **_):
+        # Batched extraction is the default (#254); its response has one entry per turn.
+        return {"turns": [{"turn": turn.index, **self._by_text[turn.content]} for turn in turns]}
+
 
 async def build(target: Path) -> None:
     target = target.resolve()
@@ -110,8 +114,11 @@ async def build(target: Path) -> None:
         organizer={"opportunistic_enabled": False},
     )
     async with MemoryEngine.open(config) as engine:
-        # Keep the configured provider's identity; only its model call is scripted.
-        engine._pipeline._extraction_provider.extract = ScriptedExtraction().extract
+        # Keep the configured provider's identity; only its model calls are scripted,
+        # per message and batched, so no setting can reach a real model.
+        scripted = ScriptedExtraction()
+        engine._pipeline._extraction_provider.extract = scripted.extract
+        engine._pipeline._extraction_provider.extract_batch = scripted.extract_batch
         for day, session, role, text, _, _ in MESSAGES:
             when = datetime.fromisoformat(day).replace(hour=9, tzinfo=timezone.utc)
             await engine.ingest(text, user_id=OWNER, session_id=session, role=role,
