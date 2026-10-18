@@ -21,6 +21,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   correction that does not repeat the old value retire it. With the option
   off, requests, schemas and saved records keep their bytes. The corrections
   probe takes `--set` and `--label` to build such a variant.
+- Add `embedding.threads` (`PRME_EMBEDDING__THREADS`) and
+  `FastEmbedProvider(threads=...)`, the ONNX Runtime thread count of a
+  `fastembed` model. The default, `None`, keeps ONNX Runtime's own choice of
+  one thread per core the machine shows, which ignores a container's CPU
+  limit; nothing changes unless it is set. On an 18-core machine one thread
+  embedded a short text with 4.9 ms of CPU against 42.5 ms by default, in
+  about the same wall time, and gave bit-identical vectors for 300 texts.
+
+### Changed
+
+- Retrieval does less work and returns the same results, contexts and
+  receipts. `FastEmbedProvider.model_version` reads fastembed's package
+  metadata once per process instead of on every access, and the PostgreSQL
+  vector index reads the provider's identity once per search instead of once
+  per returned row. `pack_context` no longer renders and counts the whole
+  context for every candidate it tries: it counts each record line once and
+  adds the lines up, which gives the same count under every encoding that
+  tiktoken 0.12 provides (any other encoding is still counted whole). On a
+  store of 3,435 LoCoMo turns, the median retrieval went from 202 ms to 88 ms
+  on PostgreSQL and from 268 ms to 217 ms on DuckDB, and packing from 58 ms to
+  14 ms and from 64 ms to 23 ms. A test packs 255 cases, including scenarios
+  from the packing tests, against digests that the earlier implementation
+  wrote.
 
 ## [0.15.0] - 2026-10-16
 

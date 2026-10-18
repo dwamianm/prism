@@ -82,3 +82,43 @@ async def test_search_empty(vector_index):
     uid = f"user-{uuid.uuid4().hex[:8]}"
     results = await vector_index.search("nonexistent query", uid, k=5)
     assert results == []
+
+
+class CountingProvider(MockEmbeddingProvider):
+    """Counts reads of its identity, which a search compares with every stored row."""
+
+    def __init__(self):
+        self.reads = 0
+
+    @property
+    def model_version(self) -> str:
+        self.reads += 1
+        return "mock-v1"
+
+
+async def test_search_reads_the_provider_identity_once(vector_index, graph_store, pg_pool):
+    from prme.storage.embedding import EmbeddingVersionMismatchError
+    from prme.storage.pg.vector_index import PgVectorIndex
+
+    provider = CountingProvider()
+    index = PgVectorIndex(pg_pool, provider)
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    for number in range(6):
+        node = MemoryNode(user_id=uid, node_type=NodeType.FACT, scope=Scope.PERSONAL,
+                          content=f"Fact number {number} about telescopes")
+        await graph_store.create_node(node)
+        await index.index(str(node.id), node.content, uid)
+    [vector] = await provider.embed(["telescopes"])
+
+    provider.reads = 0
+    assert len(await index.search_by_vector(vector, uid, k=10)) == 6
+    assert provider.reads == 1
+    # A search that returns no rows has nothing to compare.
+    assert await index.search_by_vector(vector, uid + "-nobody", k=10) == []
+    assert provider.reads == 1
+
+    async with pg_pool.acquire() as conn:
+        await conn.execute("UPDATE nodes SET embedding_version = 'mock-v0' WHERE user_id = $1 "
+                           "AND id = (SELECT id FROM nodes WHERE user_id = $1 ORDER BY id DESC LIMIT 1)", uid)
+    with pytest.raises(EmbeddingVersionMismatchError):
+        await index.search_by_vector(vector, uid, k=10)

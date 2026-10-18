@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from prme.config import EmbeddingConfig, PRMEConfig
-from prme.storage.embedding import FastEmbedProvider
+from prme.storage.embedding import FastEmbedProvider, create_embedding_provider
 
 
 def test_fastembed_dimension_is_inferred_from_model_name():
@@ -61,3 +61,25 @@ def test_direct_fastembed_provider_infers_dimension_without_loading_model():
 def test_direct_fastembed_provider_rejects_invalid_dimension(dimension):
     with pytest.raises(ValueError, match="positive integer"):
         FastEmbedProvider(dimension=dimension)
+
+
+def test_fastembed_threads_default_to_the_runtime_choice():
+    config = EmbeddingConfig()
+
+    assert config.threads is None
+    assert create_embedding_provider(config)._provider._threads is None
+
+
+def test_fastembed_threads_reach_the_provider(monkeypatch):
+    monkeypatch.setenv("PRME_EMBEDDING__THREADS", "2")
+    config = PRMEConfig(_env_file=None).embedding
+
+    assert config.threads == 2
+    assert create_embedding_provider(config)._provider._threads == 2
+    assert create_embedding_provider(EmbeddingConfig(threads=1))._provider._threads == 1
+
+
+@pytest.mark.parametrize("threads", [True, 0, -3])
+def test_fastembed_threads_must_be_a_positive_integer(threads):
+    with pytest.raises(ValueError):
+        EmbeddingConfig(threads=threads)

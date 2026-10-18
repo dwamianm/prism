@@ -59,6 +59,20 @@ def fastembed_model_dimension(model_name: str) -> int:
     )
 
 
+@lru_cache(maxsize=None)
+def _fastembed_version() -> str:
+    """The installed fastembed version, read from package metadata once per process.
+
+    Each read locates the distribution and parses its metadata file, and the
+    version is read for every search, receipt and stored vector. The fastembed
+    a process has loaded cannot change while it runs.
+    """
+    try:
+        return f"fastembed-{importlib.metadata.version('fastembed')}"
+    except importlib.metadata.PackageNotFoundError:
+        return "fastembed-unknown"
+
+
 @runtime_checkable
 class EmbeddingProvider(Protocol):
     """Protocol for embedding text into dense vectors.
@@ -189,6 +203,8 @@ class FastEmbedProvider:
         model_name: HuggingFace model identifier. Defaults to 'BAAI/bge-small-en-v1.5'.
         cache_dir: Optional directory for cached model files.
         dimension: Vector dimension for the chosen model. Defaults to 384.
+        threads: Optional ONNX Runtime thread count for the model. None keeps
+            ONNX Runtime's default, one thread per core the machine shows.
     """
 
     def __init__(
@@ -197,6 +213,7 @@ class FastEmbedProvider:
         *,
         cache_dir: str | None = None,
         dimension: int | None = None,
+        threads: int | None = None,
     ) -> None:
         self._model_name = model_name
         self._cache_dir = cache_dir
@@ -204,11 +221,16 @@ class FastEmbedProvider:
             isinstance(dimension, bool) or not isinstance(dimension, int) or dimension < 1
         ):
             raise ValueError("FastEmbed dimension must be a positive integer")
+        if threads is not None and (
+            isinstance(threads, bool) or not isinstance(threads, int) or threads < 1
+        ):
+            raise ValueError("FastEmbed threads must be a positive integer")
         self._dimension = (
             dimension
             if dimension is not None
             else fastembed_model_dimension(model_name)
         )
+        self._threads = threads
         self._model: TextEmbedding | None = None  # Lazy-initialized
         self._initialization_lock = threading.Lock()
 
@@ -220,10 +242,7 @@ class FastEmbedProvider:
     @property
     def model_version(self) -> str:
         """Return the fastembed library version as the model version."""
-        try:
-            return f"fastembed-{importlib.metadata.version('fastembed')}"
-        except importlib.metadata.PackageNotFoundError:
-            return "fastembed-unknown"
+        return _fastembed_version()
 
     @property
     def dimension(self) -> int:
@@ -249,6 +268,8 @@ class FastEmbedProvider:
             kwargs: dict = {"model_name": self._model_name}
             if self._cache_dir is not None:
                 kwargs["cache_dir"] = self._cache_dir
+            if self._threads is not None:
+                kwargs["threads"] = self._threads
             self._model = TextEmbedding(**kwargs)
 
     def _embed_sync(self, texts: list[str]) -> list[list[float]]:
@@ -496,6 +517,7 @@ def create_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
         provider = FastEmbedProvider(
             model_name=config.model_name,
             dimension=config.dimension,
+            threads=config.threads,
         )
     elif config.provider == "openai":
         provider = OpenAIEmbeddingProvider(

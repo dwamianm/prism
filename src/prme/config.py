@@ -275,6 +275,21 @@ class EmbeddingConfig(_ProjectSettings):
         default=None,
         description="API key for API-based embedding providers (e.g., OpenAI)",
     )
+    threads: int | None = Field(
+        default=None, ge=1,
+        description=(
+            "Optional ONNX Runtime thread count for the fastembed model. None "
+            "preserves ONNX Runtime's default of one thread per core the machine "
+            "shows, which ignores a container's CPU limit. Other providers ignore it."
+        ),
+    )
+
+    @field_validator("threads", mode="before")
+    @classmethod
+    def validate_threads(cls, value):
+        if isinstance(value, bool):
+            raise ValueError("threads must be a positive integer or None")
+        return value
 
     @model_validator(mode="before")
     @classmethod

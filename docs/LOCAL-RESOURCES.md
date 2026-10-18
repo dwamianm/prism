@@ -26,6 +26,15 @@ preserves DuckDB's default. This setting applies when opening a local engine;
 PostgreSQL ignores it. It controls DuckDB workers, not embedding inference,
 Tantivy, USearch, Python workers, total process memory or all native threads.
 
+Embedding inference has its own setting. `embedding.threads`
+(`PRME_EMBEDDING__THREADS`) sets the ONNX Runtime threads of a `fastembed`
+model when it loads, and a caller-owned `FastEmbedProvider(threads=1)` takes the
+same value. The default is `None`, which keeps ONNX Runtime's choice of one
+thread per core the machine shows; that choice does not follow a container's
+CPU limit or CPU affinity, and its threads spin between requests. The setting
+changes how many threads compute each vector, not the model or the version
+recorded with each vector.
+
 Concurrent engines opening the same file must use matching thread settings,
 including matching explicit/default choices. DuckDB rejects conflicting opens
 without changing the already-open engine. Close all connections before changing
