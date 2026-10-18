@@ -38,12 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per returned row. `pack_context` no longer renders and counts the whole
   context for every candidate it tries: it counts each record line once and
   adds the lines up, which gives the same count under every encoding that
-  tiktoken 0.12 provides (any other encoding is still counted whole). On a
-  store of 3,435 LoCoMo turns, the median retrieval went from 202 ms to 88 ms
-  on PostgreSQL and from 268 ms to 217 ms on DuckDB, and packing from 58 ms to
-  14 ms and from 64 ms to 23 ms. A test packs 255 cases, including scenarios
-  from the packing tests, against digests that the earlier implementation
-  wrote.
+  tiktoken 0.12 provides. Any other encoding, or a tiktoken build that splits
+  a few probe lines differently, is still counted whole, with a warning
+  logged once. On a store of 3,435 LoCoMo turns, the median retrieval went
+  from 202 ms to 88 ms on PostgreSQL and from 268 ms to 217 ms on DuckDB, and
+  packing from 58 ms to 14 ms and from 64 ms to 23 ms. A test packs 260
+  cases, including scenarios from the packing tests, against digests that
+  the earlier implementation wrote.
 
 ## [0.15.0] - 2026-10-16
 

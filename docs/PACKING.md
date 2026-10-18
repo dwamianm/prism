@@ -59,8 +59,10 @@ and count it again for each candidate. Each record is one line that starts and
 ends with punctuation, and under every encoding that tiktoken 0.12 provides no
 token spans two such lines, so packing counts each line once and adds the lines
 up (`prme.retrieval.tokenization.counts_lines_independently`). Under an encoding
-it does not recognize, packing renders and counts the whole context for each
-candidate, as before. Both give the same contexts, counts and receipts.
+it does not recognize, or a tiktoken build that splits a few probe lines
+differently, packing renders and counts the whole context for each candidate, as
+before, and logs a warning once. Both give the same contexts, counts and
+receipts.
 
 For stores with many short records, opt into the compact renderer:
 

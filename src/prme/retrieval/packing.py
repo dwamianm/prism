@@ -314,19 +314,16 @@ class _ContextTokens:
         self._lines: dict[UUID, tuple[int, int, bool]] = {}
         self._fixed: dict[str, int] = {}
 
-    def measure(self, candidate: RetrievalCandidate, entry: str, entry_tokens: int) -> None:
+    def measure(self, candidate: RetrievalCandidate, entry: str, entry_cost: int) -> None:
         """Record ``entry``, the line ``candidate`` renders to at its current level."""
         if not self._by_line:
             return
         if entry[:1] not in LINE_STARTS or entry[-1:] not in LINE_ENDS:
             self._by_line = False
             return
-        speaker = (
-            self._format == "reader"
-            and _reader_speaker(candidate.node, candidate.rendered_text or "") is not None
-        )
+        speaker = self._format == "reader" and _shows_speaker(candidate)
         self._lines[candidate.node.id] = (
-            count_tokens(entry + "\n", self._tokenizer), entry_tokens, speaker,
+            count_tokens(entry + "\n", self._tokenizer), entry_cost, speaker,
         )
 
     def total(
@@ -339,7 +336,7 @@ class _ContextTokens:
             tokens = with_newline = last = 0
             speaker = False
             for section, candidates in sections.items():
-                tokens += self._fixed_tokens(f"[{section}]\n")
+                tokens += self._fixed_tokens(_section_line(section) + "\n")
                 for candidate in candidates:
                     with_newline, last, shows = self._lines[candidate.node.id]
                     tokens += with_newline
@@ -918,10 +915,15 @@ def _reader_speaker(node: MemoryNode, text: str) -> str | None:
 def reader_shows_speaker(sections: dict[str, list[RetrievalCandidate]]) -> bool:
     """Whether any packed reader line shows a speaker label."""
     return any(
-        _reader_speaker(candidate.node, candidate.rendered_text or "") is not None
+        _shows_speaker(candidate)
         for candidates in sections.values()
         for candidate in candidates
     )
+
+
+def _shows_speaker(candidate: RetrievalCandidate) -> bool:
+    """Whether the candidate's reader line, at its current text, shows a speaker label."""
+    return _reader_speaker(candidate.node, candidate.rendered_text or "") is not None
 
 
 def reader_text(text: str) -> str:
@@ -1092,7 +1094,7 @@ def _render_sections(
         speaker_header=bool(speaker_header),
     )
     for section, candidates in sections.items():
-        parts.append(f"[{section}]")
+        parts.append(_section_line(section))
         parts.extend(
             _render_context_entry(
                 c,
@@ -1102,6 +1104,10 @@ def _render_sections(
             for c in candidates
         )
     return "\n".join(parts)
+
+
+def _section_line(section: str) -> str:
+    return f"[{section}]"
 
 
 def _context_head(

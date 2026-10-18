@@ -214,6 +214,9 @@ def _configs(scenario: str) -> Iterator[tuple[str, PackingConfig, dict]]:
         yield "product-notice", PRODUCT_PACKING.model_copy(update={"token_budget": 900}), notice
         yield "product-guidance", PRODUCT_PACKING.model_copy(update={"token_budget": 900}), guidance
         yield "product-both", PRODUCT_PACKING.model_copy(update={"token_budget": 600}), {**notice, **guidance}
+        # A notice that alone exceeds the budget packs nothing.
+        yield "product-long-notice", PRODUCT_PACKING.model_copy(update={"token_budget": 120}), {
+            "coverage_notice": "Coverage: semantic candidates only; not exhaustive. " * 20}
         yield "reader-citations", PRODUCT_PACKING.model_copy(
             update={"context_citations": True, "token_budget": 800}), guidance
         yield "reader-unfolded", PRODUCT_PACKING.model_copy(
@@ -350,6 +353,71 @@ def test_each_line_of_a_context_counts_on_its_own(encoding):
         whole = count_tokens("\n".join(chunk), encoding)
         by_line = sum(count_tokens(line + "\n", encoding) for line in chunk[:-1]) + count_tokens(chunk[-1], encoding)
         assert whole == by_line, chunk
+
+
+def _whole_context_calls(monkeypatch) -> list[str]:
+    """Record every text packing counts that holds a section line, which only a whole context does."""
+    from prme.retrieval import packing
+
+    calls = []
+    real = packing.count_tokens
+    monkeypatch.setattr(packing, "count_tokens",
+                        lambda text, encoding: (calls.append(text) if "\n[" in text else None) or real(text, encoding))
+    return calls
+
+
+@pytest.mark.parametrize("prefix", ["\n", "//"])
+@pytest.mark.parametrize("tokenizer", ["cl100k_base", "o200k_base"])
+def test_a_record_line_of_another_shape_counts_the_whole_context(prefix, tokenizer, monkeypatch):
+    """A line that may join the one before it, as a diagnostic's patched renderer could write.
+
+    Counted line by line, a line that starts with a newline (or, under
+    o200k_base, with a slash) would miss tokens that span two lines.
+    """
+    from prme.retrieval import packing
+
+    original = packing._render_entry
+    monkeypatch.setattr(packing, "_render_entry",
+                        lambda candidate: (prefix if candidate.node.id.int % 2 else "") + original(candidate))
+    calls = _whole_context_calls(monkeypatch)
+    candidates = varied()
+    for budget in (400, 1200, 3000):
+        bundle = pack_context(candidates, PackingConfig(token_budget=budget, tokenizer=tokenizer))
+        assert bundle.included_count and prefix in bundle.rendered_context
+        assert bundle.tokens_used == count_tokens(bundle.rendered_context, tokenizer)
+    assert calls
+
+
+def test_a_format_header_of_another_shape_counts_the_whole_context(monkeypatch):
+    from prme.retrieval import packing
+
+    for name in ("_READER_HEADER", "_READER_HEADER_WITH_SPEAKERS"):
+        monkeypatch.setattr(packing, name, getattr(packing, name) + " Then a space ")
+    calls = _whole_context_calls(monkeypatch)
+    bundle = pack_context(varied(), PRODUCT_PACKING.model_copy(update={"token_budget": 900}))
+    assert "Then a space \n[" in bundle.rendered_context
+    assert bundle.tokens_used == count_tokens(bundle.rendered_context)
+    assert calls
+
+
+def test_a_tiktoken_build_that_joins_lines_counts_the_whole_context(monkeypatch, caplog):
+    """The pattern string alone does not show how a tiktoken build applies it."""
+    from prme.retrieval import tokenization
+
+    real = tokenization.count_tokens
+    # As if a newline before a section line became part of a longer token.
+    monkeypatch.setattr(tokenization, "count_tokens",
+                        lambda text, encoding="cl100k_base": real(text, encoding) + text.count("\n["))
+    tokenization.counts_lines_independently.cache_clear()
+    try:
+        with caplog.at_level("WARNING", logger="prme.retrieval.tokenization"):
+            assert not tokenization.counts_lines_independently("cl100k_base")
+            assert not tokenization.counts_lines_independently("cl100k_base")
+        assert [record.getMessage() for record in caplog.records] == [
+            "Packing renders and counts the whole context for each candidate under the cl100k_base "
+            "tokenizer, which it has not checked line by line; the counts are the same but packing is slower"]
+    finally:
+        tokenization.counts_lines_independently.cache_clear()
 
 
 def test_an_unknown_encoding_pattern_counts_the_whole_context(monkeypatch):

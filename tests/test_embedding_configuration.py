@@ -83,3 +83,28 @@ def test_fastembed_threads_reach_the_provider(monkeypatch):
 def test_fastembed_threads_must_be_a_positive_integer(threads):
     with pytest.raises(ValueError):
         EmbeddingConfig(threads=threads)
+
+
+def test_fastembed_threads_read_the_standalone_environment_form(monkeypatch):
+    monkeypatch.setenv("PRME_EMBEDDING_THREADS", "3")
+
+    assert EmbeddingConfig(_env_file=None).threads == 3
+
+
+def test_unset_fastembed_threads_leave_configuration_dumps_unchanged():
+    from pathlib import Path
+
+    from benchmarks.diagnostics.product_packing import gate_config
+    from benchmarks.integrations.gpt54_baselines import _check_defaults_build
+    from benchmarks.retrieval_eval import provenance
+
+    assert "threads" not in EmbeddingConfig().model_dump()
+    assert "threads" not in PRMEConfig(_env_file=None).model_dump(mode="json")["embedding"]
+    assert EmbeddingConfig(threads=2).model_dump()["threads"] == 2
+    # An ingest() build recorded before the setting existed still holds the defaults.
+    defaults = provenance(gate_config(Path("{pack}")))["engine_config"]
+    assert "threads" not in defaults["embedding"]
+    _check_defaults_build(Path("recorded"), {"provenance": {"engine_config": defaults}})
+    threaded = {**defaults, "embedding": {**defaults["embedding"], "threads": 1}}
+    with pytest.raises(ValueError, match="embedding"):
+        _check_defaults_build(Path("threaded"), {"provenance": {"engine_config": threaded}})

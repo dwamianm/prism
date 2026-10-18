@@ -277,6 +277,9 @@ class EmbeddingConfig(_ProjectSettings):
     )
     threads: int | None = Field(
         default=None, ge=1,
+        # Unset, it is left out of dumps, so configurations that runs and
+        # builds recorded before the setting existed still compare equal.
+        exclude_if=lambda value: value is None,
         description=(
             "Optional ONNX Runtime thread count for the fastembed model. None "
             "preserves ONNX Runtime's default of one thread per core the machine "
