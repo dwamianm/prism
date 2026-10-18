@@ -1,0 +1,206 @@
+{
+  "kind": "variant-verdict",
+  "arm": "prme-per-turn",
+  "verdict": "fail",
+  "reason": "The first pair failed: No gain on either benchmark whose 95% interval excludes zero. A failed first pair fails the variant, whatever its confirmation shows.",
+  "checked_against_run_logs": true,
+  "variant_settings": {
+    "extraction_batch_target_tokens": 0
+  },
+  "benchmarks": {
+    "locomo": {
+      "baseline": "prme@d810ee55",
+      "baseline_from": "run logs",
+      "contexts_sha256": "ffb68862b2eb25adb791f73a075cf212baee3316e3434ebf30eaf7aa52ffac28",
+      "missing": [
+        "no confirmation of the variant alongside prme@d810ee55 on locomo is in the verdict record"
+      ],
+      "other_baseline_pairs": [],
+      "other_text_pairs": []
+    },
+    "longmemeval": {
+      "baseline": "prme@d810ee55",
+      "baseline_from": "run logs",
+      "contexts_sha256": "830077eeaf788068fe3f2b022ce0d0a9427a45dd33816298c1c2faa83b004f99",
+      "missing": [
+        "no confirmation of the variant alongside prme@d810ee55 on longmemeval is in the verdict record"
+      ],
+      "other_baseline_pairs": [],
+      "other_text_pairs": []
+    }
+  },
+  "first": {
+    "passed": false,
+    "why": "No gain on either benchmark whose 95% interval excludes zero",
+    "benchmarks": {
+      "locomo": {
+        "pair": {
+          "arm": "prme-per-turn",
+          "baseline": "prme@d810ee55",
+          "id": "b2825a4acc76469cb65751d80799961f",
+          "number": 1,
+          "sha256": "f01d217b2090523b51784e44e3f6223bbfc675ead8b69133bb790a66aaf3835c"
+        },
+        "variant_settings": {
+          "extraction_batch_target_tokens": 0
+        },
+        "started_at": "2026-10-18T05:55:56.297560+00:00",
+        "finished_at": "2026-10-18T06:09:32.225168+00:00",
+        "correct": {
+          "after": 1246,
+          "before": 1248
+        },
+        "questions": 1540,
+        "difference": -0.0012987012987012987,
+        "interval_95": [
+          -0.016883116883116882,
+          0.014285714285714285
+        ],
+        "interval_95_conversations": [
+          -0.015405224380442064,
+          0.009821976672805401
+        ],
+        "interval_95_questions": [
+          -0.016883116883116882,
+          0.014285714285714285
+        ],
+        "interval_excludes_zero": false,
+        "outcome": "no difference shown",
+        "margin": {
+          "applies": false,
+          "excluding": [],
+          "largest_aa_difference": null,
+          "from": null,
+          "case": "No accepted A/A pair under this pair's conditions excludes zero on either benchmark, so no margin applies: a gain counts when its 95% interval excludes zero"
+        },
+        "gain_counts": false,
+        "aa_check": {
+          "checks": {
+            "locomo": {
+              "baseline": "prme@d810ee55",
+              "number": 1,
+              "pair_id": "51b22b8a948d40869794302fabd294c8"
+            },
+            "longmemeval": {
+              "baseline": "prme@d810ee55",
+              "number": 1,
+              "pair_id": "7ea8b47afb2b4c78a8bec327bc836b6b"
+            }
+          },
+          "conditions": {
+            "context_budget": 3996,
+            "failure_policy": {
+              "id": "ollama-failure-policy-2026-09-24",
+              "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083"
+            },
+            "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+            "server_versions": [
+              "0.40.4"
+            ],
+            "tokenizer": "cl100k_base"
+          }
+        },
+        "results": {
+          "after": {
+            "path": "2026-10-18/ollama-deepseek-v4.1-flash-cloud-ingest-prme@d810ee55-vs-prme-per-turn-locomo-pair-1-after-result.json",
+            "sha256": "2c8c6d0a32753f332c9fe45386e4170a54bd01b1dded184dd48cdcc168f83903"
+          },
+          "before": {
+            "path": "2026-10-18/ollama-deepseek-v4.1-flash-cloud-ingest-prme@d810ee55-vs-prme-per-turn-locomo-pair-1-before-result.json",
+            "sha256": "a08ed55cf695cc032820d01b320b3ec290c49f025a4903a931083f6feea45945"
+          }
+        },
+        "recorded_at": "2026-10-18T06:09:50.140749+00:00"
+      },
+      "longmemeval": {
+        "pair": {
+          "arm": "prme-per-turn",
+          "baseline": "prme@d810ee55",
+          "id": "c519ff93c6fe4a38a8bf22dcdfca2921",
+          "number": 1,
+          "sha256": "da350f49c3b0d61b2efa88b884eaab77c46b1c15a491d3037ae9c3d46a762961"
+        },
+        "variant_settings": {
+          "extraction_batch_target_tokens": 0
+        },
+        "started_at": "2026-10-18T06:09:57.326006+00:00",
+        "finished_at": "2026-10-18T06:16:34.103246+00:00",
+        "correct": {
+          "after": 453,
+          "before": 442
+        },
+        "questions": 500,
+        "difference": 0.022,
+        "interval_95": [
+          0.0,
+          0.044
+        ],
+        "interval_excludes_zero": false,
+        "outcome": "no difference shown",
+        "margin": {
+          "applies": false,
+          "excluding": [],
+          "largest_aa_difference": null,
+          "from": null,
+          "case": "No accepted A/A pair under this pair's conditions excludes zero on either benchmark, so no margin applies: a gain counts when its 95% interval excludes zero"
+        },
+        "gain_counts": false,
+        "aa_check": {
+          "checks": {
+            "locomo": {
+              "baseline": "prme@d810ee55",
+              "number": 1,
+              "pair_id": "51b22b8a948d40869794302fabd294c8"
+            },
+            "longmemeval": {
+              "baseline": "prme@d810ee55",
+              "number": 1,
+              "pair_id": "7ea8b47afb2b4c78a8bec327bc836b6b"
+            }
+          },
+          "conditions": {
+            "context_budget": 3996,
+            "failure_policy": {
+              "id": "ollama-failure-policy-2026-09-24",
+              "sha256": "983faf86580f5e6833f497590995c27e67ed3bc498242fe8b6c45d7cc043f083"
+            },
+            "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+            "server_versions": [
+              "0.40.4"
+            ],
+            "tokenizer": "cl100k_base"
+          }
+        },
+        "results": {
+          "after": {
+            "path": "2026-10-18/ollama-deepseek-v4.1-flash-cloud-ingest-prme@d810ee55-vs-prme-per-turn-longmemeval-pair-1-after-result.json",
+            "sha256": "93e825de5410c29d258db2e94e863042fbfa10908cdd26e04b73f8485e02eff7"
+          },
+          "before": {
+            "path": "2026-10-18/ollama-deepseek-v4.1-flash-cloud-ingest-prme@d810ee55-vs-prme-per-turn-longmemeval-pair-1-before-result.json",
+            "sha256": "e55569fa6dd78294e4cb100a834047e7d161746c97f3d0e33abc61e452744c38"
+          }
+        },
+        "recorded_at": "2026-10-18T06:16:50.635802+00:00"
+      }
+    }
+  },
+  "confirmation": {
+    "passed": null,
+    "why": "The confirmation is not recorded on both benchmarks",
+    "benchmarks": {
+      "locomo": null,
+      "longmemeval": null
+    }
+  },
+  "record": {
+    "path": "ollama-deepseek-v4.1-flash-cloud-ingest-pair-verdicts.jsonl",
+    "sha256": "49ca347a35ca56e7c263cf49939e43060cee4c633af7fa551ee59e31eeda1e9c"
+  },
+  "aa_record": {
+    "path": "ollama-deepseek-v4.1-flash-cloud-ingest-aa-checks.jsonl",
+    "sha256": "2f37c8d948648966e727180e2961c29d28602740a691ed6869ecf7af50ebe5fd"
+  },
+  "warnings": [],
+  "note": "The default-change rule in CLAUDE.md, applied to the pairs compare recorded in the track's verdict record: the variant passes only when its first pair and its confirmation each show a gain on at least one benchmark whose 95% interval excludes zero and no loss on either whose interval excludes zero. Where an accepted A/A pair under a pair's conditions excluded zero, that pair's gain must also be larger than the largest absolute A/A difference recorded on its benchmark, the #118 repeat included (margin). A failed first pair fails the variant, whatever its confirmation shows, and so does a failed confirmation. A pair compare refused was never recorded and counts as neither, and a new baseline starts the count again (#143). checked_against_run_logs is true only when the track's run logs were on this machine for both benchmarks; the pull request that flips a default cites this output with it true."
+}

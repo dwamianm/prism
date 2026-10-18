@@ -1,6 +1,8 @@
 # Batched extraction: cost and evidence coverage (#254)
 
-Date: 2026-10-15. Issue: #254. Option: `extraction_batch_target_tokens` (default 0, off).
+Date: 2026-10-15, with the full benchmarks of 2026-10-16 to 2026-10-18 added.
+Issue: #254. Option: `extraction_batch_target_tokens` (0, off, when this note
+was written; the default is 2,048 since 2026-10-16, #271).
 
 ## Summary
 
@@ -16,6 +18,19 @@ the model each turn's speaker.
 The gate is a development measure and its projected accuracy is a planning
 estimate, not an answer score. No default changes here. The LongMemEval-S
 step of the issue is below.
+
+**Full benchmarks (2026-10-18).** The owner made batches of 2,048 the
+`ingest()` default on these results (#271). I then built all of LoCoMo and
+all 500 LongMemEval-S questions both ways from one commit, `d810ee55`
+(v0.15.0), and answered them on the `ingest()` answer track with one call per
+turn as the variant. Batching cut model calls by 95% on LoCoMo and 80% on
+LongMemEval-S. On the gate it packed all the evidence for more LoCoMo
+questions (+1.4 points, intervals above zero over questions and over
+conversations) and showed no difference on LongMemEval-S (-0.2 points, -1.5
+to +1.1). On the answer track, one call per turn showed no difference whose
+95% interval excludes zero (LoCoMo -0.13 points, LongMemEval-S +2.2 points,
+0.0 to +4.4), so `verdict` reads `fail` and batching stays the default.
+Details are in "Full benchmarks at `d810ee55`" below.
 
 ## Setup
 
@@ -185,6 +200,134 @@ The full 500 questions, and the `ingest()` answer track before any default
 change, are the owner's next decision; the answer track also needs new A/A
 checks, because the Ollama server is now 0.40.4.
 
+## Full benchmarks at `d810ee55` (2026-10-16 to 2026-10-18)
+
+The owner made batches of 2,048 the `ingest()` default on the results above
+(#271, v0.15.0) and asked for the two steps that decision skipped: all 500
+LongMemEval-S questions and the `ingest()` answer track
+(`memory_bank/HANDOFF-2026-10-16-FULL-BENCHMARK.md`). Both ran on a second
+Mac with `scripts/full-benchmark/`.
+
+- Four builds from a clean worktree at `d810ee55`, `main` on 2026-10-16 with
+  the v0.15.0 code: the defaults, which batch at 2,048, and one call per turn
+  (`--set extraction_batch_target_tokens=0`), on each benchmark. The model
+  and server are the ones above: `deepseek-v4.1-flash:cloud` (`e04da138`)
+  through Ollama 0.40.4, with `--jobs 10` on LoCoMo and `--jobs 17` on
+  LongMemEval-S.
+- The driver ran the builds, gates, comparisons and summaries one after
+  another from 2026-10-16 19:12 UTC to 2026-10-18 04:30 UTC and ended with
+  `ALL DONE`, on Ollama 0.40.4 at its start and its end
+  (`full-benchmark-driver.log`).
+- Gate: `product_packing gate --packs <build>` at `d810ee55` with the current
+  defaults, then `gate-compare` on each benchmark with the per-turn build as
+  the before side and the batched build as the after side.
+- These builds come from another commit than the 2026-10-15 builds, so they
+  are compared only with each other.
+
+### Cost and claims
+
+| Build | Model calls | Prompt tokens | Completion tokens | Wall time | Claims | Claims per turn | Turns with a claim | Evidence turns with a claim |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| LoCoMo, per turn | 5,882 | 30.27 M | 3.41 M | 60.1 min | 6,943 | 1.18 | 4,464 (75.9%) | 1,169/1,423 (82.2%) |
+| LoCoMo, batch 2,048 | 275 | 2.07 M | 1.36 M | 13.1 min | 5,094 | 0.87 | 3,101 (52.7%) | 1,195/1,423 (84.0%) |
+| LongMemEval-S, per turn | 190,018 | 851.08 M | 94.42 M | 16.6 h | 383,106 | 1.55 | 111,492 (45.2%) | 832/886 (93.9%) |
+| LongMemEval-S, batch 2,048 | 37,656 | 276.39 M | 90.40 M | 14.9 h | 276,460 | 1.12 | 103,755 (42.1%) | 837/886 (94.5%) |
+
+LoCoMo has 5,882 turns and LongMemEval-S 246,738.
+
+- Batching cut model calls by 95% on LoCoMo and 80% on LongMemEval-S, prompt
+  tokens by 93% and 68%, and completion tokens by 60% and 4%. Wall time fell
+  by 78% and 10%.
+- In the per-turn LongMemEval-S build, 57,196 repeated turns came from its
+  extraction cache, and it made 190,018 calls for the other 189,542 turns.
+  The batched build had no cache hits and made 37,656 calls for 37,612 saved
+  requests.
+- Neither batched build asked a turn again or left one without an entry
+  (`turns_asked_again` and `turns_without_entry` are 0). 2 of the 275 LoCoMo
+  requests and 3,128 of the 37,612 LongMemEval-S requests held one turn.
+- Per-turn grounding dropped 26% of the facts and relationships the model
+  wrote in the batched LoCoMo build (6,962 written, 5,161 kept) and 29% in
+  the batched LongMemEval-S build (410,419 and 290,760).
+- Each LongMemEval-S build stopped once with one or two packs unfinished, and
+  the driver resumed it after its 15-minute wait, which the wall time
+  includes.
+
+### Offline evidence gate, one call per turn before and batches of 2,048 after
+
+LoCoMo, 1,536 annotated questions; projected accuracy over all 1,540:
+
+| Metric | Per turn | Batch 2,048 | Change | Questions 95% | Conversations 95% |
+|---|---:|---:|---:|---|---|
+| All evidence packed | 82.3% | 83.7% | +1.4 | +0.1 to +2.8 | +0.5 to +2.7 |
+| Evidence recall | 88.2% | 89.3% | +1.1 | -0.0 to +2.1 | +0.3 to +2.0 |
+| All evidence among the candidates | 96.4% | 98.3% | +1.9 | +1.2 to +2.6 | +1.1 to +2.8 |
+| Projected accuracy | 76.4% | 77.5% | +1.1 | +0.2 to +2.0 | +0.4 to +2.0 |
+
+All evidence packed went from 1,264 to 1,286 of 1,536 questions (65 gained,
+43 lost). By category (questions 95%): multi-hop (282) +1.4 (-3.2 to +6.0),
+open-domain (92) -3.3 (-9.8 to +3.3), single-hop (841) +2.4 (+0.8 to +3.9)
+and temporal (321) +0.3 (-1.9 to +2.5). The batched contexts hold fewer
+records (88.6 against 95.2), and all the evidence reaches the candidate list
+for 30 more questions while 1 loses it. The conversation-level intervals come
+from `conversation_intervals.py`, as above. The gain has the direction of the
+2026-10-15 result and is smaller (+1.4 against +2.5 points at 2,048, from
+another commit); both exclude zero at both levels.
+
+LongMemEval-S, 470 annotated questions; projected accuracy over all 500;
+intervals resample questions:
+
+| Metric | Per turn | Batch 2,048 | Change | Questions 95% |
+|---|---:|---:|---:|---|
+| All evidence packed | 97.0% | 96.8% | -0.2 | -1.5 to +1.1 |
+| Evidence recall | 98.4% | 97.9% | -0.4 | -1.3 to +0.4 |
+| All evidence among the candidates | 100.0% | 100.0% | 0.0 | 0.0 to 0.0 |
+| Projected accuracy | 92.8% | 92.7% | -0.1 | -0.9 to +0.6 |
+
+All evidence packed went from 456 to 455 of 470 questions (4 gained, 5
+lost), and every interval includes zero, by category too: the largest moves
+are single-session-user (-3.1, -7.8 to 0.0, 2 lost) and
+single-session-assistant (+1.8, 0.0 to +5.4, 1 gained). Here the batched
+contexts hold more records (46.2 against 42.0). Both builds put all the
+evidence among the candidates for every annotated question, so the gate can
+only move packing on this benchmark.
+
+### `ingest()` answer track
+
+The default-change rule in `CLAUDE.md` applies, with the batched defaults as
+the baseline and one call per turn as the variant, `prme-per-turn`
+(`extraction_batch_target_tokens=0`, over the per-turn builds). Reader and
+judge are `deepseek-v4.1-flash:cloud` (`e04da138`) through Ollama 0.40.4 at
+every start and finish, with the amended failure policy (#132) and the 4K
+budget. Ollama 0.40.4 is a new condition for the track, so a new A/A pair on
+both benchmarks came before the variant's pair.
+
+| Run | LoCoMo | LongMemEval-S |
+|---|---|---|
+| Baseline `prme@d810ee55`, over the batched builds | 1,248/1,540 (81.0%) | 451/500 (90.2%) |
+| A/A pair 1, the baseline against itself | 1,264 to 1,252, -0.78 points (-1.95 to +0.26) | 450 to 452, +0.4 (-1.2 to +2.0) |
+| First pair, the baseline (before) against one call per turn (after) | 1,248 to 1,246, -0.13 (-1.69 to +1.43) | 442 to 453, +2.2 (0.0 to +4.4) |
+
+`verdict prme --variant per-turn --provider ollama --contexts ingest` reads
+`fail` with `checked_against_run_logs: true`: neither benchmark shows a gain
+whose 95% interval excludes zero, and a failed first pair fails the variant,
+so no confirmation was answered. One call per turn did not beat batching, and
+batching stays the default. That is not evidence that batching answers
+better: on LongMemEval-S one call per turn answered 11 more questions, with
+an interval that reaches 0.0, and on LoCoMo the gate's gain for batching did
+not show as an answer gain. `BENCHMARKS.md` ("One call per turn against the
+batched default") has the full record.
+
+### Limits of the full run
+
+- One build of each kind. Extraction at temperature 0 does not repeat
+  exactly; two per-turn LoCoMo builds of 2026-10-15 differed by -0.1 points.
+- The gate projects with the saved GPT-5.4 run's rates, and the answer track
+  uses DeepSeek. The answer numbers are not comparable with the GPT-5.4
+  results, the `store()` track, or the `ingest()` track's 2026-10-06 runs,
+  which used other builds and Ollama 0.34.4.
+- One pair on each benchmark decides the verdict, as the rule says. The
+  LongMemEval-S interval's lower end is exactly zero.
+
 ## Files
 
 - `locomo-builds.json`: every build's `summary` totals, its commit, settings,
@@ -198,6 +341,24 @@ checks, because the Ollama server is now 0.40.4.
   `longmemeval-slice-batch-*-vs-ingest-baseline.json`: the same for the
   LongMemEval-S development slice. Its intervals resample questions, since
   each question has its own history.
+- The full builds at `d810ee55`, from `data/full-benchmark-d810ee55/` on the
+  second Mac, renamed to this folder's pattern. Their labels are
+  `full-defaults-locomo-deepseek-d810ee55`,
+  `full-per-turn-locomo-deepseek-d810ee55`,
+  `full-defaults-lme-deepseek-d810ee55` and
+  `full-per-turn-lme-deepseek-d810ee55`.
+  `locomo-full-<build>-gate.json` and `longmemeval-full-<build>-gate.json`,
+  with their `.md`, are the gate reports.
+  `<benchmark>-full-defaults-vs-full-per-turn.json` and `.md` are
+  `gate-compare`, one call per turn before and batched after (`inputs` names
+  each report by its sha256). `<benchmark>-full-<build>-summary.json` are the
+  `extracted_packs summary` totals, with the commit, settings, model and
+  server versions, and `full-benchmark-driver.log` is the driver's log.
+  `locomo-conversation-intervals.json` has the LoCoMo pair too.
+- The answer track's results and the `verdict` output are in
+  `benchmarks/results/research/2026-10-18/`, and its A/A and verdict record
+  lines in the track's records (`BENCHMARKS.md`).
 
 The packs themselves contain benchmark text and stay in the ignored
-`data/extracted-packs-v1/` folder under the labels in `locomo-builds.json`.
+`data/extracted-packs-v1/` folder under the labels in `locomo-builds.json`;
+the full builds' packs stay on the second Mac under their labels.

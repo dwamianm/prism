@@ -758,14 +758,38 @@ uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo 
   gain comes from extracting a session's turns together rather than from
   showing the speaker. Batched builds save fewer claims (0.8 to 0.9 per turn
   instead of 1.2), mostly on turns that hold no evidence. This is the offline
-  gate, not an answer score; the option stays off until the `ingest()`
-  answer track says otherwise. On the 42-question LongMemEval-S development
-  slice, with much longer turns, batches of 2,048 and 8,192 cut calls by 84%
-  and 90% and prompt tokens by 74% and 82%, and all evidence packed went from
-  34/38 to 35/38 and 36/38; batches of 512 saved only 19% of the prompt
-  tokens and lost one question (33/38). Every slice interval includes zero,
-  so the slice shows no loss at 2,048 or 8,192 and nothing more; the same
-  note has the details.
+  gate, not an answer score; the owner made 2,048 the default on it, and the
+  answer track came afterwards (below). On the 42-question LongMemEval-S
+  development slice, with much longer turns, batches of 2,048 and 8,192 cut
+  calls by 84% and 90% and prompt tokens by 74% and 82%, and all evidence
+  packed went from 34/38 to 35/38 and 36/38; batches of 512 saved only 19% of
+  the prompt tokens and lost one question (33/38). Every slice interval
+  includes zero, so the slice shows no loss at 2,048 or 8,192 and nothing
+  more; the same note has the details.
+- Full results, on all of LoCoMo and all 500 LongMemEval-S questions, with
+  the same model and server on a second Mac (2026-10-16 to 2026-10-18; the
+  same folder, files `*-full-*`). All four builds come from one commit,
+  `d810ee55` (the v0.15.0 code): the defaults, which batch at 2,048, and one
+  call per turn (`--set extraction_batch_target_tokens=0`). The gate compares
+  them with one call per turn as the before side:
+
+  | Benchmark | Build | Model calls | Prompt tokens | Wall time | All evidence packed | Change (questions 95%, conversations 95%) |
+  |---|---|---:|---:|---:|---:|---|
+  | LoCoMo | Per turn | 5,882 | 30.3 M | 60 min | 82.3% | |
+  | LoCoMo | Batch 2,048 | 275 | 2.1 M | 13 min | 83.7% | +1.4 (+0.1 to +2.8, +0.5 to +2.7) |
+  | LongMemEval-S | Per turn | 190,018 | 851.1 M | 16.6 h | 97.0% | |
+  | LongMemEval-S | Batch 2,048 | 37,656 | 276.4 M | 14.9 h | 96.8% | -0.2 (-1.5 to +1.1, questions only) |
+
+  Batching cut calls by 95% and 80% and prompt tokens by 93% and 68%. It
+  packed all the evidence for more LoCoMo questions, with both intervals
+  above zero, and showed no difference on LongMemEval-S, where both builds
+  put all the evidence among the candidates for every annotated question.
+  These builds come from another commit than the 2026-10-15 ones, so they are
+  compared only with each other. On the `ingest()` answer track one call per
+  turn did not beat batching
+  ([below](#one-call-per-turn-against-the-batched-default-2026-10-18)), so
+  batching stays the default. The note's "Full benchmarks at `d810ee55`"
+  section has the claims, the categories and the limits.
 
 ### Development slice
 
@@ -2619,6 +2643,83 @@ holds the old defaults, so a new one was recorded after the flip at the merge
 commit: `prme@3389586b`, over the two variant builds, LoCoMo 1,190/1,540
 (77.3%) and LongMemEval-S 440/500 (88.0%), complete with nothing unscored.
 Every later variant on the track counts from zero against it.
+
+### One call per turn against the batched default (2026-10-18)
+
+v0.15.0 made batched extraction the `ingest()` default
+(`extraction_batch_target_tokens=2048`, #271) on the offline evidence gate
+alone ("Batched extraction (#254)"). This is the answer track that decision
+skipped, over `ingest()` packs, with the batched defaults as the baseline and
+one call per turn as the variant `prme-per-turn`. It ran on a second Mac from
+a clean worktree at `d810ee55`, `main` on 2026-10-16 with the v0.15.0 code
+(`memory_bank/HANDOFF-2026-10-16-FULL-BENCHMARK.md`), over the four full
+builds of that section.
+
+- The baseline `prme@d810ee55` read the defaults over
+  `full-defaults-locomo-deepseek-d810ee55` and
+  `full-defaults-lme-deepseek-d810ee55`: LoCoMo 1,248/1,540 (81.0%, 95%
+  interval 79.1% to 83.0%) and LongMemEval-S 451/500 (90.2%, 87.6% to
+  92.8%), both complete.
+- The variant read `full-per-turn-locomo-deepseek-d810ee55` and
+  `full-per-turn-lme-deepseek-d810ee55`, built from the same commit, model
+  and datasets with `extraction_batch_target_tokens=0`, which it also sets
+  for its replay (`variant_settings`). Its context text differs from the
+  defaults' on all 1,540 and all 500 questions, its context text hashes
+  (`contexts_sha256`) are `ffb68862` on LoCoMo and `830077ee` on
+  LongMemEval-S, and `changed_by_other_code` is 0 on both.
+- Every run used `deepseek-v4.1-flash:cloud` (model identity `e04da138`), the
+  amended failure policy (#132) and the 4K budget. Every start and finish
+  recorded Ollama 0.40.4. The judge calibration passed on its first attempt.
+  All 20,400 reader and judge calls returned HTTP 200 on their first attempt;
+  no answer or verdict was asked again or normalized, and no question was
+  truncated or left without a verdict.
+- Ollama 0.40.4 is a new server version on this track (the 2026-10-06 runs
+  recorded 0.34.4), so one A/A pair on each benchmark came before the variant
+  pair. Both are the first accepted A/A pairs under these conditions in the
+  A/A record, and neither interval excludes zero, so no extra margin applies.
+  Both variant pairs relied on them (`aa_check`).
+
+| Pair | Benchmark | Defaults (before) | After | Change (points) | 95% interval | Conversations 95% | Questions 95% | Gained / lost |
+|---|---|---:|---:|---:|---|---|---|---:|
+| A/A pair 1 | LoCoMo | 1,264 | 1,252 (defaults again) | -0.78 | -1.95 to +0.26 | -1.82 to 0.00 | -1.95 to +0.26 | 30 / 42 |
+| A/A pair 1 | LongMemEval-S | 450 | 452 (defaults again) | +0.40 | -1.20 to +2.00 | - | - | 9 / 7 |
+| first (pair 1) | LoCoMo | 1,248 | 1,246 (one call per turn) | -0.13 | -1.69 to +1.43 | -1.54 to +0.98 | -1.69 to +1.43 | 77 / 79 |
+| first (pair 1) | LongMemEval-S | 442 | 453 (one call per turn) | +2.20 | 0.00 to +4.40 | - | - | 22 / 11 |
+
+`verdict prme --variant per-turn --provider ollama --contexts ingest`, run on
+the machine that answered the pairs, reads `fail` with
+`checked_against_run_logs: true` and no warnings: "The first pair failed: No
+gain on either benchmark whose 95% interval excludes zero. A failed first pair
+fails the variant, whatever its confirmation shows." The output is in
+`benchmarks/results/research/2026-10-18/ollama-deepseek-v4.1-flash-cloud-ingest-prme-per-turn-verdict.json`,
+next to the published results of every run and pair. The two A/A lines and
+the four verdict lines of these pairs are in
+`ollama-deepseek-v4.1-flash-cloud-ingest-aa-checks.jsonl` and
+`ollama-deepseek-v4.1-flash-cloud-ingest-pair-verdicts.jsonl` as that machine
+recorded them.
+
+The variant is one call per turn, so `fail` means it did not beat the batched
+default under the rule, and batching stays the default. No confirmation pair
+was answered, since a failed first pair fails the variant. The pair does not
+show that batching answers better either: on LongMemEval-S one call per turn
+answered 11 more questions, with an interval whose lower end is 0.0, and on
+LoCoMo the two differ by 2 questions, so the gate's LoCoMo gain for batching
+did not show as an answer gain. By LongMemEval-S type, one call per turn
+gained most on multi-session (109 to 113 of 133) and
+single-session-assistant (52 to 55 of 56) questions. By LoCoMo category, it
+gained on temporal questions (249 to 263 of 321) and lost on the other three,
+most on multi-hop (187 to 179 of 282). These are counts only; the rule reads
+overall accuracy.
+
+Every arm prepared with these settings or this context text, and every pair
+answered with them (#130): `prme-per-turn` was prepared once per benchmark
+and answered in pair 1 on each; no arm was prepared again and no pair was
+given up, and `verdict` lists no pair alongside another baseline or on other
+context text. `prme@d810ee55` holds the v0.15.0 defaults and is the track's
+current baseline: later `ingest()` variants are answered alongside it and
+count from zero, under the A/A checks above. Its numbers are not comparable
+with `prme@3389586b` (per-turn builds, Ollama 0.34.4), with the `store()`
+track or with the GPT-5.4 results.
 
 ## Earlier registered memory-utility comparison
 
