@@ -325,6 +325,7 @@ def test_bundles_match_the_implementation_before_line_counts():
                          ids=["product", "rank fusion", "weighted"])
 @pytest.mark.parametrize("budget", [150, 600, 4096])
 def test_receipts_keep_their_bytes(scoring, budget, monkeypatch):
+    """Line counting writes every receipt byte that whole-context counting writes."""
     ranked = score_and_rank(_settled(varied()), scoring, now=NOW)[0]
     packing = PRODUCT_PACKING.model_copy(update={"token_budget": budget})
     policy = "score_id" if scoring.fusion == "rrf" else "score_path_id"

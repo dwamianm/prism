@@ -105,6 +105,8 @@ def test_unset_fastembed_threads_leave_configuration_dumps_unchanged():
     defaults = provenance(gate_config(Path("{pack}")))["engine_config"]
     assert "threads" not in defaults["embedding"]
     _check_defaults_build(Path("recorded"), {"provenance": {"engine_config": defaults}})
+    # A build made with a thread count set records it and is refused, deliberately:
+    # identical vectors across thread counts were measured on one machine only.
     threaded = {**defaults, "embedding": {**defaults["embedding"], "threads": 1}}
     with pytest.raises(ValueError, match="embedding"):
         _check_defaults_build(Path("threaded"), {"provenance": {"engine_config": threaded}})

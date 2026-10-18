@@ -1107,6 +1107,7 @@ def _render_sections(
 
 
 def _section_line(section: str) -> str:
+    """The line that starts a section of the rendered context."""
     return f"[{section}]"
 
 
