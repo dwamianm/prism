@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+# A newer push to the same pull request cancels the run still in progress, so
+# a rebased Dependabot branch or a quick follow-up commit does not pay for two
+# full runs. Runs on main always finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Dependabot's pull requests test one Python version instead of every version
+# in the matrix, and skip the simulations job, to save Actions minutes on
+# dependency bumps. The full matrix still runs on main after the merge.
 jobs:
   test-duckdb:
     runs-on: ubuntu-latest
@@ -13,7 +23,7 @@ jobs:
       UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ${{ fromJSON(github.event.pull_request.user.login == 'dependabot[bot]' && '["3.12"]' || '["3.11", "3.12", "3.13"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -43,7 +53,7 @@ jobs:
       UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ${{ fromJSON(github.event.pull_request.user.login == 'dependabot[bot]' && '["3.12"]' || '["3.11", "3.12", "3.13"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -110,6 +120,7 @@ jobs:
           PY
 
   simulations:
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     env:
       UV_PYTHON: "3.13"
@@ -148,7 +159,7 @@ jobs:
       UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       matrix:
-        python-version: ["3.11", "3.13"]
+        python-version: ${{ fromJSON(github.event.pull_request.user.login == 'dependabot[bot]' && '["3.13"]' || '["3.11", "3.13"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
