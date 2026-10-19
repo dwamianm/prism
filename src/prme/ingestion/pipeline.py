@@ -1469,7 +1469,9 @@ class IngestionPipeline:
             if sentence_text and distinct_text and resolution is None:
                 if fact_content in claim_texts:
                     # Another claim of this message already has this text.
-                    fact_content = _claim_statement(fact, speaker)
+                    # A carried name stays out of the text: every later claim would then name the
+                    # owner, and a question that names them would match all of them.
+                    fact_content = _claim_statement(fact, None if speaker_carried else speaker)
                     fact_metadata["grounding_method"] = "claim_statement_v1"
                 else:
                     claim_texts.add(fact_content)

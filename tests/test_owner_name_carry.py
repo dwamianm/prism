@@ -4,6 +4,8 @@ Every test runs on DuckDB and, with PRME_TEST_DATABASE_URL set, on PostgreSQL,
 and none calls a model: the extractor answers from a table of recorded results.
 """
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from prme import MemoryEngine, PRMEConfig
@@ -20,6 +22,7 @@ CASEY = "Hello, I am Casey Lee. I work at Brightpath."
 PREFERENCE = "I prefer trains to flights."
 WEEKEND = "On weekends I am learning Rust."
 THANKS = "Thanks, that helps."
+BOTH = "I prefer trains and I avoid flights."
 
 
 def result(entities, subject, predicate, obj, quote, object_type=None):
@@ -44,6 +47,13 @@ RESULTS = {
     "Alex Rivera sent the report.": result([person("Alex Rivera")], "Alex Rivera", "sent", "the report",
                                           "Alex Rivera sent the report.", "concept"),
     THANKS: ExtractionResult(),
+    # Two claims cite the same sentence, so the second gets a statement of its own.
+    BOTH: ExtractionResult.model_validate({
+        "entities": [{"name": "trains", "entity_type": "concept"}, {"name": "flights", "entity_type": "concept"}],
+        "facts": [{"subject": "I", "predicate": "prefers", "object": "trains", "object_entity_type": "concept",
+                   "polarity": "positive", "evidence_quote": BOTH},
+                  {"subject": "I", "predicate": "avoids", "object": "flights", "object_entity_type": "concept",
+                   "polarity": "positive", "evidence_quote": BOTH}]}),
 }
 
 
@@ -133,6 +143,15 @@ class TestCarry:
         assert old_subject.content == "Alex Rivera"
         assert old_node.metadata["speaker_reference"]["speaker"] == "Alex Rivera"
 
+    async def test_a_carried_name_stays_out_of_the_text_of_later_claims(self, config, user):
+        async with MemoryEngine.open(on(config)) as engine:
+            chat = Chat(engine)
+            await chat.say(INTRODUCTION, user)
+            later = await chat.say(BOTH, user)
+        assert [name for name, _, _ in subjects(later)] == ["Alex Rivera", "Alex Rivera"]
+        assert sorted(node.content for node, _ in later) == [BOTH, "The speaker avoids flights."]
+        assert {node.metadata["speaker_reference"]["basis"] for node, _ in later} == {"owner_name"}
+
     async def test_the_extractor_is_asked_exactly_as_without_the_option(self, config, user):
         async with MemoryEngine.open(on(config)) as engine:
             chat = Chat(engine)
@@ -147,6 +166,29 @@ class TestCarry:
         assert [call[2] for call in plain.requests] == [{}] * 2
 
 
+class TestBatchedExtraction:
+    async def test_it_carries_between_the_turns_of_one_batched_request(self, config, user):
+        async with MemoryEngine.open(config.model_copy(update={"extraction_batch_target_tokens": 2048,
+                                                               "enable_ingest_claim_fixes": True,
+                                                               "enable_owner_name_carry": True})) as engine:
+            requests = []
+
+            async def extract_batch(turns, **options):
+                requests.append([turn.content for turn in turns])
+                return {"turns": [{**RESULTS[turn.content].model_dump(mode="json"), "turn": turn.index}
+                                  for turn in turns]}
+
+            engine._pipeline._extraction_provider.extract_batch = extract_batch
+            start = datetime(2026, 10, 17, 10, 0, tzinfo=timezone.utc)
+            messages = [{"content": content, "role": "user", "event_time": start + timedelta(minutes=index)}
+                        for index, content in enumerate([INTRODUCTION, THANKS, PREFERENCE])]
+            event_ids = await engine.ingest_batch(messages, user_id=user, session_id="s1", wait_for_extraction=True)
+            first = await claims(engine, user, event_ids[0])
+            later = await claims(engine, user, event_ids[2])
+        assert requests == [[INTRODUCTION, THANKS, PREFERENCE]]
+        assert subjects(later)[0][0] == "Alex Rivera" and subjects(later)[0][2] == subjects(first)[0][2]
+
+
 class TestScope:
     """Only the owner's own user turns carry the name."""
 
@@ -159,6 +201,15 @@ class TestScope:
         assert [name for name, _, _ in subjects(later)] == ["I"]
         assert subjects(later)[0][1] == "unresolved_reference"
         assert "speaker_reference" not in later[0][0].metadata
+
+    async def test_a_participants_name_is_not_the_owners(self, config, user):
+        async with MemoryEngine.open(on(config)) as engine:
+            chat = Chat(engine)
+            await chat.say(THANKS, user, role="participant", speaker="Sam")
+            later = await chat.say(PREFERENCE, user)
+            names = await entity_names(engine, user)
+        assert [name for name, _, _ in subjects(later)] == ["I"]
+        assert "Sam" not in names
 
     async def test_another_owner_does_not_get_the_name(self, config, user):
         other = f"{user}-other"
