@@ -38,6 +38,7 @@ from prme.ingestion.grounding import (
     exact_decimal_string_from_quantity_text,
     mentioned_or_spoken,
     names_speaker,
+    plural_first_person_form,
     recover_exact_quantity_from_object,
     recover_exact_quantity_prefix,
     validate_extracted_quantity,
@@ -179,6 +180,8 @@ def _validate_fact_source_support(
     evidence_passage = _supporting_passage(fact.evidence_quote or "", source)
     if claim_passage is None or evidence_passage is None:
         raise ValueError("evidence_quote must be copied verbatim from the source")
+    fact.subject = plural_first_person_form(fact.subject, claim_passage) or fact.subject
+    fact.object = plural_first_person_form(fact.object, claim_passage) or fact.object
     if (
         not mentioned_or_spoken(fact.subject, claim_passage, speaker)
         or not mentioned_or_spoken(fact.object, claim_passage, speaker)
@@ -214,6 +217,12 @@ def _validate_relationship_source_support(
     )
     if claim_passage is None or evidence_passage is None:
         raise ValueError("relationship evidence_quote must be copied verbatim from the source")
+    relationship.source_entity = (
+        plural_first_person_form(relationship.source_entity, claim_passage) or relationship.source_entity
+    )
+    relationship.target_entity = (
+        plural_first_person_form(relationship.target_entity, claim_passage) or relationship.target_entity
+    )
     if (
         not mentioned_or_spoken(relationship.source_entity, claim_passage, speaker)
         or not mentioned_or_spoken(relationship.target_entity, claim_passage, speaker)

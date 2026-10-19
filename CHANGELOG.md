@@ -48,6 +48,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `ingest()` keeps the claim of a plural first-person statement (prism-monorepo
+  issue 258). Given "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped
+  Hiroshima to save time.", Claude Haiku 4.5 returned two facts whose subject
+  was `I`, a word the sentences do not contain, so grounding discarded both and
+  the turn's extraction had empty `facts`. When a built-in provider writes `I`,
+  `me`, `my`, `mine` or `myself` for a claim's subject, object or relationship
+  endpoint and the cited sentences use no singular first-person form but do use
+  the plural counterpart (`we`, `us`, `our`, `ours`, `ourselves`), the claim
+  now keeps the turn's own word. Singular and plural references still do not
+  match each other in grounding, a plural reference still stays local to its
+  message, and saved extraction records are unchanged.
 - PostgreSQL lexical search no longer requires every term of the query
   (prism-monorepo issue 254). A question written as a sentence, such as "what
   coding language is alex learning?", shares only some words with the memory

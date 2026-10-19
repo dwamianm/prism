@@ -84,6 +84,28 @@ def mentioned_or_spoken(
     return refers_to_speaker and _FIRST_PERSON_SINGULAR_RE.search(text) is not None
 
 
+_PLURAL_FIRST_PERSON = {"i": "we", "me": "us", "my": "our", "mine": "ours", "myself": "ourselves"}
+
+
+def plural_first_person_form(value: str, text: str) -> str | None:
+    """The plural form ``text`` uses where a model wrote a singular first-person one.
+
+    A model that reads "We chose Tokyo" as its speaker's own choice writes
+    the subject as I, which the sentence does not contain, so grounding would
+    discard a claim the turn states. When ``value`` is I, me, my, mine or
+    myself, ``text`` has no first-person singular form and has the counterpart
+    (we, us, our, ours or ourselves), that counterpart is returned as the text
+    spells it, so the claim keeps the turn's own plural reference. None
+    otherwise: a singular form that the text uses, or any other value, needs
+    no repair.
+    """
+    counterpart = _PLURAL_FIRST_PERSON.get(value.strip().casefold())
+    if counterpart is None or _FIRST_PERSON_SINGULAR_RE.search(text) is not None:
+        return None
+    found = re.search(r"(?<!\w)" + counterpart + r"(?!\w)", text, re.IGNORECASE)
+    return None if found is None else found.group()
+
+
 _QUANTITY_NUMBER_RE = re.compile(
     r"(?<![\w.])[-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?![\d.,])"
 )
