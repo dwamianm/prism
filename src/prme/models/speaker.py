@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from functools import lru_cache
 from typing import Any
 
@@ -117,6 +117,45 @@ def text_states_speaker(text: str, speaker: str) -> bool:
     return body[:len(speaker) + 1].casefold() == f"{speaker}:".casefold()
 
 
+# "I am Alex Rivera", "I'm Alex", "My name is Alex Rivera", "Call me Alex": the
+# keyword in any case, then up to four capitalized words, so "I am tired" and
+# "I am not Alex" never name anyone.
+_NAME_WORD = r"[A-Z][\w]*(?:['’-]\w+)*"
+_INTRODUCTION_RE = re.compile(
+    rf"(?<!\w)(?i:i\s+am|i['’]m|my\s+name\s+is|call\s+me)\s+(?P<name>{_NAME_WORD}(?:\s+{_NAME_WORD}){{0,3}})"
+)
+
+
+def introduced_speaker(text: str, person_names: Iterable[str]) -> str | None:
+    """Who the text says its speaker is, when a listed person has that name.
+
+    A message that opens "Hi, I am Alex Rivera" names who says its I, me and
+    my. The name counts only when the extraction listed that person, so a
+    phrase such as "I am Canadian" or "I'm Python" never does, and the longest
+    capitalized run that is a listed name wins ("I am Alex Rivera From..."
+    gives Alex Rivera). A possessive ("I am Jordan's partner") is not a
+    name. When the message introduces two different people, none is returned.
+    Returns the listed spelling, or None.
+    """
+    people = {name.strip().casefold(): name.strip() for name in person_names if name.strip()}
+    found: dict[str, str] = {}
+    for match in _INTRODUCTION_RE.finditer(text):
+        words = match.group("name").split()
+        if words[-1].casefold().endswith(("'s", "’s")):
+            continue
+        for length in range(len(words), 0, -1):
+            name = people.get(" ".join(words[:length]).casefold())
+            if name is not None:
+                found[name.casefold()] = name
+                break
+    if len(found) != 1:
+        return None
+    try:
+        return normalize_speaker(next(iter(found.values())))
+    except SpeakerError:
+        return None
+
+
 def speaker_labeled(text: str, speaker: str | None) -> str:
     """Prefix ``Speaker: `` unless there is no speaker or the text already names it."""
     if speaker is None or text_states_speaker(text, speaker):
@@ -129,6 +168,7 @@ __all__ = [
     "SPEAKER_METADATA_KEY",
     "SpeakerError",
     "attach_speaker",
+    "introduced_speaker",
     "metadata_speaker",
     "normalize_speaker",
     "speaker_labeled",

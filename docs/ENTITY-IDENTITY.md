@@ -22,7 +22,15 @@ same node that other mentions of the name use. The claim keeps the literal
 pronoun as its subject or object, and its `speaker_reference` metadata names
 the speaker and which of the two it bound. A speaker's claims then connect
 across messages, so a repeated claim can merge (#209) and a named update can
-supersede the value it replaces. Turns without a speaker or an explicit owner declaration, and plural,
+supersede the value it replaces. A user turn that gives no speaker but says who
+it is ("Hi, I am Alex Rivera", "I'm Alex", "My name is Alex Rivera", "Call me
+Alex") binds the same way when the extraction lists that name as a person; the
+claim's `speaker_reference` metadata then has `"basis": "self_introduction"`.
+That binding is local to the turn that names itself: later turns of the session
+still keep their own `I`, a caller's `speaker` or `first_person_owner` wins, and
+a possessive ("I am Jordan's partner"), a name the extraction did not list as a
+person, and a turn that introduces two different people bind nothing. Turns
+without a speaker or an explicit owner declaration that name no one, and plural,
 second-person and third-person references, stay local to their message. It
 became a default together with `enable_claim_sentence_text` and
 `packing.fold_repeated_text`, after the three passed the default-change rule

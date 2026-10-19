@@ -59,6 +59,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now keeps the turn's own word. Singular and plural references still do not
   match each other in grounding, a plural reference still stays local to its
   message, and saved extraction records are unchanged.
+- `ingest()` links a speaker who introduces themselves to their own entity
+  (prism-monorepo issue 258). A user turn with no `speaker` that says who it is
+  ("Hi, I am Alex Rivera", "I'm Alex Rivera", "My name is Alex Rivera", "Call me
+  Alex") now binds its `I`, `me` and `my` to the person entity of that name, the
+  way a caller-named `speaker` does under `enable_speaker_references`, when the
+  extraction lists the name as a person. The claim's `speaker_reference`
+  metadata has `"basis": "self_introduction"`, and the turn no longer creates a
+  message-local `I` entity. A possessive ("I am Jordan's partner"), a name the
+  extraction did not list as a person, a turn that introduces two different
+  people, an assistant turn, a `speaker` the caller gave, and
+  `first_person_owner=True` bind nothing new. The binding covers that turn
+  only: a later turn that names nobody keeps its own `I`.
 - PostgreSQL lexical search no longer requires every term of the query
   (prism-monorepo issue 254). A question written as a sentence, such as "what
   coding language is alex learning?", shares only some words with the memory

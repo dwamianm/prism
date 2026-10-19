@@ -27,7 +27,7 @@ import dateparser
 from prme._temporal import DATEPARSER_LOCK as _DATEPARSER_LOCK
 import structlog
 
-from prme.epistemic.inference import infer_source_type
+from prme.epistemic.inference import OWNER_ROLES, infer_source_type
 from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
@@ -45,7 +45,7 @@ from prme.storage._threading import run_async_to_completion
 from prme.storage.index_eviction import evict_from_indexes
 from prme.storage.lexical_index import has_lexical_document
 from prme.models.nodes import MemoryNode
-from prme.models.speaker import metadata_speaker, speaker_labeled
+from prme.models.speaker import introduced_speaker, metadata_speaker, speaker_labeled
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
 
 if TYPE_CHECKING:
@@ -137,6 +137,15 @@ _FIRST_PERSON_SINGULAR = frozenset({"i", "me", "my", "mine", "myself"})
 def _speaker_reference(name: str, entity_type: str | None) -> bool:
     """Whether a reference means whoever speaks the turn: I, me, my, mine or myself."""
     return name.strip().casefold() in _FIRST_PERSON_SINGULAR and unresolved_personal_reference(name, entity_type)
+
+
+def _introduced_speaker(event: Event, result: ExtractionResult) -> str | None:
+    """Who a user turn says it is ("I am Alex Rivera"), when the extraction lists that person."""
+    if event.role.casefold() not in OWNER_ROLES:
+        return None
+    return introduced_speaker(
+        event.content, [entity.name for entity in result.entities if entity.entity_type.strip().casefold() == "person"],
+    )
 
 
 def _entities_with_unresolved_references(result: ExtractionResult) -> list[ExtractedEntity]:
@@ -1118,6 +1127,10 @@ class IngestionPipeline:
         owner_reference = (materialization_policy == "speech_act_v14"
                            and event.role.casefold() in {"user", "human"}
                            and (event.metadata or {}).get(OWNER_REFERENCE_KEY) is True)
+        speaker = metadata_speaker(event.metadata) if self._bind_speaker_references and current_policy else None
+        # A turn that says who it is, with no caller-named speaker, names its own I.
+        introduced = (_introduced_speaker(event, result) if self._bind_speaker_references and current_policy
+                      and speaker is None and not owner_reference else None)
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
@@ -1125,8 +1138,7 @@ class IngestionPipeline:
             first_person_forms=materialization_policy in {"speech_act_v13", "speech_act_v14"},
             explicit_corrections=materialization_policy == "speech_act_v14",
             owner_reference=owner_reference,
-            speaker=(metadata_speaker(event.metadata)
-                     if self._bind_speaker_references and current_policy else None),
+            speaker=speaker or introduced, speaker_introduced=introduced is not None,
             sentence_text=self._claim_sentence_text and current_policy,
             grounding_speaker=(metadata_speaker(event.metadata)
                                if self._speaker_grounding and current_policy else None),
@@ -1142,13 +1154,16 @@ class IngestionPipeline:
         merge_claims: bool = False, speaker: str | None = None, sentence_text: bool = False,
         grounding_speaker: str | None = None, first_person_forms: bool = False,
         explicit_corrections: bool = False, owner_reference: bool = False,
+        speaker_introduced: bool = False,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
         ``merge_claims`` folds a repeated claim into one current record (#209).
         ``speaker`` binds first-person singular references to that speaker's
-        entity (enable_speaker_references). ``sentence_text`` stores a claim's
-        own sentences as its text (enable_claim_sentence_text), and with
+        entity (enable_speaker_references); ``speaker_introduced`` says the turn
+        itself gave the name ("I am Alex Rivera") rather than the caller.
+        ``sentence_text`` stores a claim's own sentences as its text
+        (enable_claim_sentence_text), and with
         ``grounding_speaker`` (enable_speaker_grounding) the speaker's own I, me
         or my mentions them there as in grounding. Only current-policy
         plans use these, so a saved extraction replanned under an older
@@ -1329,6 +1344,8 @@ class IngestionPipeline:
                 if bound_fields:
                     # The literal pronoun stays in subject/object; this names who it is.
                     fact_metadata["speaker_reference"] = {"speaker": speaker, "fields": bound_fields}
+                    if speaker_introduced:
+                        fact_metadata["speaker_reference"]["basis"] = "self_introduction"
             if owner_reference:
                 owner_fields = [field for field, value, kind in (
                     ("subject", fact.subject, fact.subject_entity_type),
