@@ -86,8 +86,9 @@ if [ -n "$main" ]; then
     echo "origin/main: ${main:0:8} (as of the last fetch), unchanged since that run; the next trigger will skip"
   else
     total=$(git -C "$PRISM" rev-list --count "$last_commit..$main" 2>/dev/null || echo "?")
-    code=$(git -C "$PRISM" diff --name-only "$last_commit" "$main" -- src benchmarks pyproject.toml uv.lock 2>/dev/null | wc -l | tr -d ' ')
-    echo "origin/main: ${main:0:8} (as of the last fetch), $total commit(s) past that run, $code changed file(s) under src, benchmarks, pyproject.toml or uv.lock; the next trigger will run"
+    code=$(git -C "$PRISM" diff --name-only "$last_commit" "$main" -- src 2>/dev/null | wc -l | tr -d ' ')
+    other=$(git -C "$PRISM" diff --name-only "$last_commit" "$main" -- benchmarks pyproject.toml uv.lock 2>/dev/null | wc -l | tr -d ' ')
+    echo "origin/main: ${main:0:8} (as of the last fetch), $total commit(s) past that run, $code changed file(s) under src (the release rule's test) and $other under benchmarks, pyproject.toml or uv.lock; the next trigger will run"
   fi
 fi
 

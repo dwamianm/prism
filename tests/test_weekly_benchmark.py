@@ -332,15 +332,27 @@ while [ "${1:-}" != "" ] && [ "${1#-}" != "$1" ]; do shift; done
 exec "$@"
 '''
 
+# Free disk is a fact about the machine: a CI runner has about 70 GB and the Mac mini 390 GB. The stand-in reports 200 GB.
+FAKE_DF = '''#!/bin/bash
+echo "Filesystem 1024-blocks Used Available Capacity Mounted on"
+echo "fake 1000000000 1 209715200 1% /"
+'''
+
 COPIED_SCRIPTS = ("settings.sh", "run-builds.sh", "weekly-settings.sh", "weekly-run.sh", "weekly_report.py",
                   "status-weekly.sh", "install-schedule.sh", "uninstall-schedule.sh")
 
 
-def git(cwd, *args):
+def git(cwd, *args, env=None):
     done = subprocess.run(["git", "-C", str(cwd), "-c", "user.name=test", "-c", "user.email=test@example.com", *args],
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, env=env)
     assert done.returncode == 0, done.stderr
     return done.stdout.strip()
+
+
+# What git reads from the machine: a CI runner may set a different identity, default branch or hooks.
+GIT_ENV = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull, "GIT_AUTHOR_NAME": "test",
+           "GIT_AUTHOR_EMAIL": "test@example.com", "GIT_COMMITTER_NAME": "test", "GIT_COMMITTER_EMAIL": "test@example.com",
+           "GIT_TERMINAL_PROMPT": "0"}
 
 
 class Scheduler:
@@ -353,25 +365,32 @@ class Scheduler:
         for name in COPIED_SCRIPTS:
             (self.home / "bin" / name).write_bytes((SCRIPTS / name).read_bytes())
         self.origin = tmp_path / "origin.git"
-        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(self.origin)], check=True)
+        self.git_env = {**os.environ, **GIT_ENV, "HOME": str(tmp_path)}
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(self.origin)], check=True, env=self.git_env)
         self.seed = tmp_path / "seed"
-        subprocess.run(["git", "clone", "-q", str(self.origin), str(self.seed)], check=True, capture_output=True)
-        git(self.seed, "checkout", "-q", "-b", "main")
+        subprocess.run(["git", "clone", "-q", str(self.origin), str(self.seed)], check=True, capture_output=True,
+                       env=self.git_env)
+        git(self.seed, "checkout", "-q", "-b", "main", env=self.git_env)
         self.prism = tmp_path / "prism"
         self.count = 0
         self.advance()
-        subprocess.run(["git", "clone", "-q", str(self.origin), str(self.prism)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-q", str(self.origin), str(self.prism)], check=True, capture_output=True,
+                       env=self.git_env)
         fakes = tmp_path / "fakebin"
         fakes.mkdir()
-        for name, source in (("uv", FAKE_UV), ("curl", FAKE_CURL), ("caffeinate", FAKE_CAFFEINATE)):
+        for name, source in (("uv", FAKE_UV), ("curl", FAKE_CURL), ("caffeinate", FAKE_CAFFEINATE), ("df", FAKE_DF)):
             (fakes / name).write_text(source)
             (fakes / name).chmod(0o755)
         self.uv_log = tmp_path / "uv.log"
         # Names that would match a real process on a busy machine stay unmatched.
-        self.env = {**os.environ, "HOME": str(tmp_path), "SCHEDULER_HOME": str(self.home), "PRISM": str(self.prism),
+        # Nothing comes from the machine running the tests: the stand-in tools first on PATH (uv, curl, caffeinate and df,
+        # so free disk is a fixed 200 GB against the production 120 GB rule), a fixed time zone, git's own configuration
+        # off, and no model, API key or HOME of the real user.
+        self.env = {**os.environ, **GIT_ENV, "HOME": str(tmp_path), "TZ": "UTC", "LC_ALL": "C",
+                    "SCHEDULER_HOME": str(self.home), "PRISM": str(self.prism),
                     "PATH": str(fakes) + os.pathsep + os.environ["PATH"], "FAKE_UV_LOG": str(self.uv_log),
                     "BUSY_PATTERN": "no-such-process-pattern-for-tests", "RETRY_SLEEP": "0", "FETCH_RETRY_SLEEP": "0"}
-        for name in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "PRME_EXTRACTION_API_KEY"):
+        for name in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "PRME_EXTRACTION_API_KEY", "XDG_CONFIG_HOME"):
             self.env.pop(name, None)
         seed_dir = self.prism / "data" / "full-benchmark-d810ee55"
         seed_dir.mkdir(parents=True)
@@ -383,10 +402,10 @@ class Scheduler:
         """A new commit on origin/main; returns its sha."""
         self.count += 1
         (self.seed / "file.txt").write_text("change {}\n".format(self.count))
-        git(self.seed, "add", "file.txt")
-        git(self.seed, "commit", "-q", "-m", "change {}".format(self.count))
-        git(self.seed, "push", "-q", "origin", "main")
-        return git(self.seed, "rev-parse", "HEAD")
+        git(self.seed, "add", "file.txt", env=self.git_env)
+        git(self.seed, "commit", "-q", "-m", "change {}".format(self.count), env=self.git_env)
+        git(self.seed, "push", "-q", "origin", "main", env=self.git_env)
+        return git(self.seed, "rev-parse", "HEAD", env=self.git_env)
 
     def run(self, *args, **env):
         return subprocess.run(["bash", str(self.home / "bin" / "weekly-run.sh"), *args], capture_output=True, text=True,
@@ -542,11 +561,19 @@ class TestWeeklyRun:
             process.wait()
 
     def test_too_little_free_disk_refuses_and_says_why(self, sched):
-        done = sched.run(MIN_FREE_GB="1000000000")
+        done = sched.run(MIN_FREE_GB="1000")
         assert done.returncode == 1
-        assert "refusing to start: only " in sched.schedule_log()
-        assert "a run needs at least 1000000000 GB" in sched.schedule_log()
+        assert "refusing to start: only 200 GB free" in sched.schedule_log()
+        assert "a run needs at least 1000 GB" in sched.schedule_log()
         assert sched.runs() == [] and sched.worktrees() == []
+
+    def test_the_production_rule_is_120_gb_free(self, sched):
+        assert sched.run(MIN_FREE_GB="200").returncode == 0
+        sched.advance()
+        done = sched.run(MIN_FREE_GB="201")
+        assert done.returncode == 1 and "a run needs at least 201 GB" in sched.schedule_log()
+        weekly_settings = (SCRIPTS / "weekly-settings.sh").read_text()
+        assert 'MIN_FREE_GB="${MIN_FREE_GB:-120}"' in weekly_settings
 
     def test_the_oldest_packs_go_before_a_run_refuses_for_disk(self, sched):
         sched.run(KEEP_RUNS="2")
@@ -555,7 +582,7 @@ class TestWeeklyRun:
         sched.run(KEEP_RUNS="2")
         sched.advance()
         first, second = sched.runs()
-        done = sched.run(KEEP_RUNS="2", MIN_FREE_GB="1000000000")
+        done = sched.run(KEEP_RUNS="2", MIN_FREE_GB="1000")
         assert done.returncode == 1
         assert not (sched.home / "packs" / ("weekly-lme-" + first)).exists()
         assert (sched.home / "packs" / ("weekly-lme-" + second)).exists()

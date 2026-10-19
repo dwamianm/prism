@@ -13,11 +13,17 @@ with the previous run, twice a week. The owner approved the machine's use on
   it applies, the mid tier. It does not wait for a full run.
 - A stable release needs the latest scheduled run to show **no loss** against the
   last stable release (the verdict's first line, below).
-- "Latest" means a completed run of the release commit, or of an earlier commit
-  with no change under `src/`, `benchmarks/`, `pyproject.toml` or `uv.lock`
-  between it and the release commit (`status-weekly.sh` counts those files). When
-  the newest run does not cover the release commit, start one by hand with
-  `weekly-run.sh --force` (about 15 hours) or wait for the next trigger.
+- The rule is `CLAUDE.md`, "Stable gate": the run must be of the release commit
+  or of a `main` commit with the same `src/` tree (`status-weekly.sh` counts the
+  files that changed under `src/` since the last completed run, and separately
+  under `benchmarks/`, `pyproject.toml` and `uv.lock`). When the newest run does
+  not cover the release commit, start one by hand with `weekly-run.sh --force`
+  (about 15 hours) or wait for the next trigger.
+- For LoCoMo the rule counts the conversation-level interval too. The report shows
+  only gate-compare's question-level intervals, so before a stable release
+  resample LoCoMo's conversations over the run's two gate reports, as
+  `benchmarks/results/research/2026-10-15/batched-extraction/conversation_intervals.py`
+  did for #254. That is not automated yet.
 - The answer track is not scheduled. It runs on demand, as before, and it still
   decides a default change (`CLAUDE.md`).
 

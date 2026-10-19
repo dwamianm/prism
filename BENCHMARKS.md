@@ -179,7 +179,7 @@ the commands. This page keeps each check's method and measurements.
 | Fast cycle | alpha and beta | 158 to 211 s cold, 25 to 28 s warm | [Fast cycle](#fast-cycle-store-ingest-and-retrieve-in-under-a-minute-prototype) |
 | Offline evidence gate | alpha and beta | 10 min 10 s per side | [Offline evidence gate](#offline-evidence-gate-the-first-gate-for-retrieval-changes) |
 | Mid tier | alpha and beta, for larger changes | 24 to 34 min cold, 11 min warm | [Mid tier](#mid-tier-all-of-locomo-and-a-longmemeval-s-sample-in-under-an-hour) |
-| Scheduled full benchmark | stable | about 16 hours of builds for one run of the defaults (recorded build times) | `scripts/full-benchmark/` |
+| Scheduled full benchmark | stable | about 16 hours of builds for one run of the defaults (recorded build times) | [Scheduled full benchmark](#scheduled-full-benchmark-twice-a-week-on-the-mac-mini-272), `scripts/full-benchmark/` |
 | DeepSeek answer track | stable, on demand for an `ingest()` default | several hours | [DeepSeek answer track through Ollama](#deepseek-answer-track-through-ollama) |
 
 In the alpha and beta channel a default flips on the fast tiers alone. The
@@ -1119,11 +1119,15 @@ evidence packed, all evidence packed with memory text, evidence recall, all
 evidence among the candidates and projected accuracy. Per-category rows and
 retrieval time are listed and not judged.
 
-**Release rule.** An alpha or beta needs the fast tiers (the fast gate, the fast
-cycle and, where it applies, the mid tier). A stable release needs the latest
-scheduled run to show no loss against the last stable release, where "latest"
-means a completed run of the release commit or of an earlier commit with no
-change under `src/`, `benchmarks/`, `pyproject.toml` or `uv.lock` since.
+**Release rule** (`CLAUDE.md`, "Stable gate"). An alpha or beta needs the fast
+tiers (the fast gate, the fast cycle and, where it applies, the mid tier). A
+stable release needs the latest scheduled run to show no loss against the last
+stable release, and the run must be of the release commit or of a `main` commit
+with the same `src/` tree. For LoCoMo that rule counts the conversation-level
+interval as well. The scheduled report shows only `gate-compare`'s question-level
+intervals, so before a stable release resample LoCoMo's conversations over the
+run's two gate reports, as `conversation_intervals.py` did for #254 (not
+automated yet).
 
 **Disk.** A run's packs take about 33 GB. The newest 3 runs keep their packs and
 worktrees, older ones are deleted, reports stay, and a run refuses to start with
