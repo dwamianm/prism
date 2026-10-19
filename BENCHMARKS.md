@@ -2987,7 +2987,7 @@ with another DeepSeek score from the same model identity and settings:
 3. A default changes in a stable release only when the default-change rule in
    the epic #77 work rules in `CLAUDE.md` is met. The alpha and beta channel
    flips defaults on the fast tiers instead, and the stable release audits those
-   flips with this track. That rule includes a confirmation run: run
+   flips with this track. The default-change rule includes a confirmation run: run
    `run-pair` again for the same variant, which starts a new pair with a fresh
    variant run and a fresh defaults run; it must pass the test a second time.
    A variant is what it changes, not its arm name (#130): its settings and
