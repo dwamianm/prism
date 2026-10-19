@@ -112,6 +112,18 @@ sentence of the paragraph is then absent from the content, though it stays in
 the evidence. With the setting off, the content is the whole passage, and
 because a chat message is usually one paragraph, every claim from it shares
 the message as its content.
+With `enable_ingest_claim_fixes` (default `false`), a claim whose sentences are
+already the content of an earlier claim of the same message gets a one-sentence
+statement of its own instead, built from its subject, predicate and object
+(`Alex Rivera partner Jordan.`), with the speaker's name or "the speaker" for a
+first-person singular reference and "the speaker's group" for we, `It is not
+true that ...` for a denial and the condition in parentheses. It records
+`claim_statement_v1` as the grounding method, and the first claim keeps the
+source sentences. The same option lets a built-in provider's claim that writes
+`I` for a plural first-person statement ("We chose Tokyo") keep the claim: the
+subject, object or relationship endpoint becomes the turn's own `we`, `us`,
+`our`, `ours` or `ourselves` when the cited sentences use no singular form.
+Neither change has been through the default-change rule.
 Fresh `speech_act_v13` extraction admits unnamed first-person singular forms
 (`I`, `me`, `my`, `mine`, `myself`) as source mentions of each other without
 binding a personal name. V13 plans use that rule for claim sentence selection;
