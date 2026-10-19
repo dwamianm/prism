@@ -880,9 +880,9 @@ class PRMEConfig(_ProjectSettings):
         ),
     )
     enable_mention_links: bool = Field(
-        default=False,
+        default=True,
         description=(
-            "When True, ingest() links each claim and the raw source note to "
+            "[HYPOTHESIS] When True, ingest() links each claim and the raw source note to "
             "every entity its extraction lists whose name occurs in the text "
             "(a MENTIONS edge marked metadata.basis=text_mention), so the "
             "claims and notes that name an entity are its graph neighbors "
@@ -892,15 +892,16 @@ class PRMEConfig(_ProjectSettings):
             "are made after the derivation commits and after the note exists, "
             "outside the derivation plan, and memories ingested earlier are "
             "not linked. Turn on packing.graph_seed_words with it so a "
-            "question typed in lower case finds the entities. Not yet through "
-            "the default-change rule. Default False."
+            "question typed in lower case finds the entities. False restores "
+            "the links of 0.16.0a2: a claim to its subject and resolved "
+            "object only. Default True since 2026-10-19, in the alpha channel, "
+            "on the fast gate (owner directive of 2026-10-19); the full "
+            "benchmark audit and the default-change rule's DeepSeek answer "
+            "runs are pending."
         ),
     )
     enable_ingest_claim_fixes: bool = Field(
-        default=False,
-        # Unset, it is left out of dumps, so a configuration recorded before
-        # the option existed still compares equal.
-        exclude_if=lambda value: value is False,
+        default=True,
         description=(
             "[HYPOTHESIS] When True, ingest() makes three changes to what a "
             "turn's claims say (prism-monorepo issue 258). (1) A claim that "
@@ -915,17 +916,17 @@ class PRMEConfig(_ProjectSettings):
             "enable_claim_sentence_text, a claim whose sentences are already "
             "an earlier claim's text from the same message gets a one-"
             "sentence statement of its own built from its subject, predicate "
-            "and object, so no two claims of a message share a text. Default "
-            "False: none of it has been through the default-change rule on "
-            "the ingest() answer track, and turning it on by default needs "
-            "that rule."
+            "and object, so no two claims of a message share a text. False "
+            "restores the claims of 0.16.0a2. Default True since 2026-10-19, "
+            "in the alpha channel, on the fast gate together with "
+            "packing.folded_records_keep_rank, which keeps (3) from lowering "
+            "the rank of an answer (owner directive of 2026-10-19); the full "
+            "benchmark audit and the default-change rule's DeepSeek answer "
+            "runs are pending."
         ),
     )
     enable_owner_name_carry: bool = Field(
-        default=False,
-        # Unset, it is left out of dumps, so a configuration recorded before
-        # the option existed still compares equal.
-        exclude_if=lambda value: value is False,
+        default=True,
         description=(
             "[HYPOTHESIS] When True, ingest() keeps the memory owner's name on "
             "their later turns too (prism-monorepo issue 258). A user turn is "
@@ -946,9 +947,11 @@ class PRMEConfig(_ProjectSettings):
             "enable_speaker_references, adds no model call and no extraction "
             "request change, and a failed lookup leaves the turn's I as it "
             "was. It marks only an entity the turn creates, so a person an "
-            "earlier message already named is not marked. Default False: "
-            "it has not been through the default-change rule on the ingest() "
-            "answer track."
+            "earlier message already named is not marked. False restores "
+            "the I entity of each later turn. Default True since 2026-10-19, "
+            "in the alpha channel, on the fast gate (owner directive of "
+            "2026-10-19); the full benchmark audit and the default-change "
+            "rule's DeepSeek answer runs are pending."
         ),
     )
     enable_superseded_source_suppression: bool = Field(

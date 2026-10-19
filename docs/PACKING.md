@@ -410,7 +410,8 @@ change: claim sentences, speaker references and folding").
 
 Two things can move a record down the context while a record that says the
 same thing stays near the top. `packing.folded_records_keep_rank` (default
-`false`, `PRME_PACKING__FOLDED_RECORDS_KEEP_RANK`, a hypothesis) fixes both, and
+`true` in `PRMEConfig` since 2026-10-19, in the alpha channel; `PRME_PACKING__FOLDED_RECORDS_KEEP_RANK=false`
+turns it off; a hypothesis) fixes both, and
 a memory ingested without the claim options is not affected by the first.
 
 - **Claim statements.** With `enable_ingest_claim_fixes` and

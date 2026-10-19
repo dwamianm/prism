@@ -86,6 +86,10 @@ DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
     # references on in PRMEConfig, after the three passed the default-change
     # rule together over ingest() packs.
     "fold_repeated_text": True,
+    # Alpha channel, 2026-10-19: on the fast gate, by the owner's directive. A
+    # PackingConfig built in code keeps their field defaults (off).
+    "graph_seed_words": True,
+    "folded_records_keep_rank": True,
 }
 
 
@@ -525,7 +529,10 @@ class PackingConfig(BaseModel):
             "finds no entity. When True, a word of three or more letters that "
             "is not a common function word also seeds it when it is a whole "
             "word of an entity's name, so alex finds Alex Rivera; the "
-            "capitalized names still match as substrings. Default False."
+            "capitalized names still match as substrings. PRMEConfig sets it "
+            "by default (DEFAULT_PACKING_SETTINGS) since 2026-10-19, in the "
+            "alpha channel, on the fast gate; a PackingConfig built in code "
+            "keeps False. [HYPOTHESIS]"
         ),
     )
     cross_scope_top_n: int = Field(
@@ -657,8 +664,10 @@ class PackingConfig(BaseModel):
             "its own, usually lower, place. When True, it takes the place of "
             "the earliest record it folded, so no text moves down the "
             "context. Memories ingested without the option have no "
-            "statements, so (1) changes nothing for them. Default False. "
-            "[HYPOTHESIS]"
+            "statements, so (1) changes nothing for them. PRMEConfig sets it "
+            "by default (DEFAULT_PACKING_SETTINGS) since 2026-10-19, in the "
+            "alpha channel, on the fast gate; a PackingConfig built in code "
+            "keeps False. [HYPOTHESIS]"
         ),
     )
     episode_context_top_k: int = Field(

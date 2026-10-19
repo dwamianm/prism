@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
+import pytest
+
 from prme import MemoryEngine, PRMEConfig
 from prme.ingestion.schema import ExtractionResult
 from prme.models.nodes import MemoryNode
@@ -161,9 +163,14 @@ class TestFold:
 
 
 class TestOption:
-    def test_it_is_off_by_default_and_left_out_of_dumps(self):
+    def test_it_is_on_in_the_product_defaults_and_off_in_a_bare_packing_config(self, monkeypatch):
+        from tests.conftest import STRUCTURE_OPTIONS
+
+        for name in STRUCTURE_OPTIONS:
+            monkeypatch.delenv(name)
+        # On since 2026-10-19 in the alpha channel (0.16.0a3); the fast gate decided it.
         assert PackingConfig().folded_records_keep_rank is False
-        assert PRMEConfig(_env_file=None).packing.folded_records_keep_rank is False
+        assert PRMEConfig(_env_file=None).packing.folded_records_keep_rank is True
         assert "folded_records_keep_rank" not in PackingConfig().model_dump()
         assert PackingConfig(folded_records_keep_rank=True).model_dump()["folded_records_keep_rank"] is True
 

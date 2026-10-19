@@ -1500,6 +1500,65 @@ memory built before the option was on). An owner who returns to an earlier name
 (A, then B, then A) keeps B. A name is carried within one scope. The offline
 evidence gate was not run: the option changes neither retrieval nor `store()`.
 
+### Structure options on by default (0.16.0a3, 2026-10-19)
+
+By the owner's directive of 2026-10-19 (ship what passes the fast gate, audit on the full benchmark later), the
+alpha channel turns on `enable_ingest_claim_fixes`, `packing.folded_records_keep_rank`, `enable_mention_links`,
+`packing.graph_seed_words` and `enable_owner_name_carry`. The gate ran on `origin/main` at `53c83c9d` (the
+five options merged, plus #307's tooling at `381d4570`, which changes none of these measures), with
+`deepseek-v4.1-flash:cloud`, every extraction replayed from the cache (0 model calls). "Off" is the default
+before this change, "on" sets all five:
+
+```sh
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label off --model deepseek-v4.1-flash:cloud --cloud
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label on --model deepseek-v4.1-flash:cloud --cloud \
+  --set enable_ingest_claim_fixes=true --set enable_mention_links=true --set packing.graph_seed_words=true \
+  --set packing.folded_records_keep_rank=true --set enable_owner_name_carry=true
+```
+
+(The same two builds without `--conversation` give the `chat-v1` side.)
+
+| Measure | defects-v1 off | on | chat-v1 off | on |
+|---|---:|---:|---:|---:|
+| Answers in the top 3 | 5/7 | 7/7 | 14/18 | 14/18 |
+| Answers in the top 5 | 7/7 | 7/7 | 15/18 | 15/18 |
+| Answers in the context | 7/7 | 7/7 | 17/18 | 17/18 |
+| User claims on the named owner | 0 | 12 | 0 | 35 |
+| User claims on "I" or "We" | 17 | 5 | 39 | 3 |
+| Claims whose text repeats another's | 12 | 0 | 39 | 0 |
+| Entities with no link | 7 | 0 | 12 | 0 |
+| Pronoun entities | 6 | 2 | 34 | 14 |
+| Key links linked | 1 | 4 | 4 | 14 |
+| Probes with a stale value in context | 0 | 0 | 3 | 3 |
+| Repeated records in contexts | 0/105 | 0/105 | 18/1638 | 18/1620 |
+
+- **Pass rule.** The defect probes rank the answer in the top 3 for 7 of 7 questions, the chat probe keeps its top 3
+  and top 5 counts (14 and 15), no chat-probe measure is worse in its good direction, the fast cycle has no worse
+  gated measure and the offline gate has no interval below zero. The sub-criterion "named-owner claims exceed
+  first-person claims", which failed in 0.16.0a1 (2 against 15 and 4 against 35), now passes (12 against 5 and 35
+  against 3) with `enable_owner_name_carry`.
+- **Fast cycle** (`python -m benchmarks.fast_cycle run`, committed cache): the defaults before this change pass
+  against the baseline (133 unchanged). With the five on: 0 failed, 49 moved, 84 unchanged. Nine single answer ranks
+  are one or two places lower and are watched, not gated (`coffee`, `language`, `mel-news`, `old-manager`,
+  `race-time`, `running-partner`, `start-date`, `title-now` in `chat-v1` and `learning` in `defects-v1`); answers in
+  the top 3 on `corrections-v1` go from 1 to 3 and on `defects-v1` from 5 to 7.
+- **Offline evidence gate** (`gate --lme-captures ...`, five on against the defaults): no change in any row, 0 wins
+  and 0 losses (LoCoMo all evidence packed 84.0%, projected 77.6%; LongMemEval-S 94.7% and 91.4%), no question lost
+  its candidates. The saved `store()` packs hold no extracted records, so this shows only that plain retrieval is
+  left alone.
+- **Corrections probe, not met.** On the 2026-10-19 live extraction from `data/chat-probe-v1/corrections-v1`, the
+  Austin-to-Denver case shows the old value first with the five on (the new value first with them off), and
+  "old-only lines in the context" falls from 2 to 1 for the birthday case. The fast cycle's committed cache of the same
+  chat does not move ("old value shown first" 1 and 1), so this is one more extraction sample, as
+  the structure ranking branch noted. It is not part of the pass rule and is recorded here as a known weakness.
+- **Baseline refresh.** `benchmarks/fixtures/fast-cycle/baseline-main.json` was taken again with the defaults on
+  (`--stages store,ingest,store-extract`, cache replay), because the five options move 49 of its measures on purpose.
+  The `store-session` stage is not in the baseline: its mean reciprocal rank differs between identical runs
+  (-0.000155 and -0.000594), because memories that share a session break retrieval ties differently from run to
+  run, so it stays a report to read.
+- Not covered: receipts. A retrieval receipt written with these defaults names `graph_seed_words` and
+  `folded_records_keep_rank`; releases before 0.16.0a3 ignore the two fields when they read it.
+
 ### Fast cycle: store, ingest and retrieve in under a minute (prototype)
 
 The multi-day benchmarks cannot check every change. The fast cycle is a

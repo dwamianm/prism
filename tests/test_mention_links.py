@@ -258,9 +258,17 @@ async def test_the_same_entities_seed_the_graph_in_any_case(config, user):
         assert found == {("Alex Rivera", "Japan", "Jordan")}
 
 
-def test_the_options_are_off_by_default_and_leave_default_receipts_alone():
-    assert PRMEConfig().enable_mention_links is False
-    assert PRMEConfig().packing.graph_seed_words is False
+def test_the_options_are_on_in_the_product_defaults_and_off_in_a_bare_packing_config(monkeypatch):
+    from tests.conftest import STRUCTURE_OPTIONS
+
+    for name in STRUCTURE_OPTIONS:
+        monkeypatch.delenv(name)
+    # On since 2026-10-19 in the alpha channel (0.16.0a3); the fast gate decided it.
+    assert PRMEConfig(_env_file=None).enable_mention_links is True
+    assert PRMEConfig(_env_file=None).packing.graph_seed_words is True
+    # A PackingConfig built in code keeps its field default, and an off setting is left out of a dump, so
+    # receipts of retrievals that do not use the option keep their bytes.
+    assert PackingConfig().graph_seed_words is False
     assert "graph_seed_words" not in PackingConfig().model_dump()
     assert PackingConfig(graph_seed_words=True).model_dump()["graph_seed_words"] is True
 

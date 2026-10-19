@@ -168,11 +168,11 @@ Graph traversal MUST respect namespace isolation (RFC-0004, Section 6). Edges th
 **Implementation status (2026-10-19, issue #259):** the seeds are the entity
 nodes the question names. The capitalized names and quoted strings of Stage 1
 match as substrings of an entity's name. With `packing.graph_seed_words`
-(off by default), every other word of the question also seeds the graph when it
+(on in `PRMEConfig` by default since 2026-10-19, in the alpha channel), every other word of the question also seeds the graph when it
 has three or more letters, is not a common function word and is a whole word of
 an entity's name, so `jordan` finds "Jordan" and `alex` finds "Alex Rivera"
 whatever the case the question is typed in; receipts record the option when it
-is on. With `enable_mention_links` (off by default), ingestion links each claim
+is on. With `enable_mention_links` (on by default since 2026-10-19, in the alpha channel), ingestion links each claim
 and the raw source note to every entity its extraction lists whose name occurs
 in the text (a `MENTIONS` edge with `metadata.basis` set to `text_mention`,
 RFC-0003), so the claims and notes that name a seed are its one-hop neighbors;
@@ -341,7 +341,7 @@ anchor policy was `all`.
 ### 4.8 Claim statement folding
 
 **Implementation status (2026-10-19):** with `packing.folded_records_keep_rank`
-(off by default), Stage 5.5e folds each claim statement into the claim it
+(on in `PRMEConfig` by default since 2026-10-19, in the alpha channel), Stage 5.5e folds each claim statement into the claim it
 restates. A statement (`grounding_method` `claim_statement_v1`, RFC-0003) is
 what `enable_ingest_claim_fixes` builds for a claim whose sentences another
 claim of the message already holds. It is short and repeats the names and verbs

@@ -11,6 +11,14 @@ from pydantic import BaseModel, Field, SecretStr
 from prme import PRMEConfig, audit_hypotheses
 from prme.cli import build_parser, cmd_config_audit
 from prme.retrieval.config import PackingConfig, ScoringWeights
+from tests.conftest import STRUCTURE_OPTIONS
+
+
+@pytest.fixture(autouse=True)
+def product_defaults(monkeypatch):
+    """The audit reports the product defaults, which include the structure options (0.16.0a3)."""
+    for name in STRUCTURE_OPTIONS:
+        monkeypatch.delenv(name)
 
 
 EXPECTED_HYPOTHESES = {
@@ -21,6 +29,7 @@ EXPECTED_HYPOTHESES = {
     "packing.session_context_packing",
     "packing.fold_repeated_text",
     "packing.folded_records_keep_rank",
+    "packing.graph_seed_words",
     "packing.cross_scope_top_n",
     "packing.episode_context_top_k",
     "packing.episode_context_local_k",
@@ -53,6 +62,7 @@ EXPECTED_HYPOTHESES = {
     "enable_speaker_grounding",
     "extraction_batch_target_tokens",
     "enable_extraction_corrections",
+    "enable_mention_links",
     "enable_ingest_claim_fixes",
     "enable_owner_name_carry",
     "enable_superseded_source_suppression",
@@ -79,7 +89,7 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert report.hypothesis_count == len(EXPECTED_HYPOTHESES)
     # Speaker references, claim sentence text and folding became defaults together, so they apply,
     # and batched extraction became a default later (#254).
-    assert report.effective_count == 20
+    assert report.effective_count == 25
     assert report.customized_count == 0
     for name in ("enable_speaker_references", "enable_claim_sentence_text", "packing.fold_repeated_text"):
         setting = settings[name]
@@ -108,6 +118,11 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert (term_weights.effective, term_weights.value, term_weights.default, term_weights.customized) == (
         True, True, True, False)
     assert term_weights.environment_variable == "PRME_LEXICAL_TERM_WEIGHTS"
+    # The structure options became defaults in the alpha channel on the fast gate (0.16.0a3, 2026-10-19).
+    for name in ("enable_ingest_claim_fixes", "enable_mention_links", "enable_owner_name_carry",
+                 "packing.graph_seed_words", "packing.folded_records_keep_rank"):
+        setting = settings[name]
+        assert (setting.effective, setting.value, setting.default, setting.customized) == (True, True, True, False), name
     assert settings["novelty_high_threshold"].effective is False
     assert settings["query_reformulation_count"].effective is False
     # Visual memory is off by default, so its provisional thresholds are dormant.
@@ -160,9 +175,12 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values(monkeypatch):
     )
     report, settings = _by_path(config)
 
-    # A PackingConfig built in code has no rank fusion session decay and does not fold, which the audit reports.
-    assert report.effective_count == 30
-    assert report.customized_count == 6
+    # A PackingConfig built in code has no rank fusion session decay, does not fold, and keeps the two structure
+    # options off (graph seed words, folded records keep rank), which the audit reports as customized.
+    assert report.effective_count == 33
+    assert report.customized_count == 8
+    assert settings["packing.graph_seed_words"].customized is True
+    assert settings["packing.folded_records_keep_rank"].effective is False
     assert settings["packing.fold_repeated_text"].customized is True
     assert settings["packing.session_context_rank_fusion_score_decay"].value is None
     assert settings["packing.episode_context_local_k"].effective is True

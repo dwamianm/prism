@@ -87,6 +87,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "packing.fold_repeated_text is true and packing.context_format is 'reader'",
         lambda packing: packing.fold_repeated_text and packing.context_format == "reader",
     ),
+    "packing.graph_seed_words": (
+        "packing.graph_seed_words",
+        "packing.graph_seed_words is true",
+        bool,
+    ),
     "packing.folded_records_keep_rank": (
         "packing.folded_records_keep_rank",
         "packing.folded_records_keep_rank is true",
@@ -196,6 +201,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
     "enable_extraction_corrections": (
         "enable_extraction_corrections",
         "enable_extraction_corrections is true",
+        bool,
+    ),
+    "enable_mention_links": (
+        "enable_mention_links",
+        "enable_mention_links is true",
         bool,
     ),
     "enable_ingest_claim_fixes": (
