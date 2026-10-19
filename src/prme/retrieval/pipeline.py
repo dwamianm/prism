@@ -11,6 +11,7 @@ Chains the stages in sequence:
 5.5b. Session Context Expansion (pull adjacent turns from same session)
 5.5c. Episode Context Expansion (route sessions, then select local evidence)
 5.5d. Evidence Projection (replace derived groups with bounded direct sources)
+5.5e. Claim Statement Folding (opt-in: a statement ranks as the claim it restates)
 6. Context Packing (deterministic priority packing within token budget)
 
 Each retrieval generates a RETRIEVAL_REQUEST operation record with a unique
@@ -38,6 +39,7 @@ from prme.retrieval.candidates import (
     generate_candidates,
     merge_normalized_bm25_hits,
 )
+from prme.retrieval.claim_statements import fold_claim_statements
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
     DEFAULT_RERANKER_PRIOR_WEIGHT,
@@ -875,6 +877,16 @@ class RetrievalPipeline:
                     "Evidence augmentation failed; continuing without augmentation",
                     exc_info=True,
                 )
+
+        # --- Stage 5.5e: Claim Statement Folding ---
+        # A statement ingest() builds for a claim whose sentences another claim
+        # already holds is another way to find that claim, not a record of its
+        # own (opt-in, packing.folded_records_keep_rank).
+        if effective_packing_config.folded_records_keep_rank:
+            scored, folded_statements, folded_ranking = fold_claim_statements(scored)
+            excluded.extend(folded_statements)
+            if folded_ranking:
+                ranking_policy = "score_id"
 
         # Enforce consumer filters after episode/projection/augmentation stages too.
         scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types)
