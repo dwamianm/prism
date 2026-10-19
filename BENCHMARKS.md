@@ -1447,6 +1447,18 @@ DuckDB. The store stage on DuckDB with `--set lexical_term_weights=true` gives
 the same 29 measures as with it off, and both match `baseline-main.json`
 exactly. Tantivy already weights words by BM25.
 
+Offline evidence gate. `gate --set lexical_term_weights=true` on the committed
+branch (`bd95f733`) against the gate run on `main` at `7f9ce556` for the fast
+gate (same machine, the regenerated LongMemEval-S controls): no row of the first
+table changes, with 0 wins, 0 losses and all ties. LoCoMo keeps all evidence
+packed for 84.0% of questions (1,290 of 1,536), evidence recall 89.2% and all
+evidence among the candidates 99.3%; LongMemEval-S 94.7% (445 of 470), 97.3% and
+100.0%. No question lost all its evidence among the candidates, and the
+projected accuracy is unchanged (77.6% and 91.4%). The gate replays saved
+DuckDB packs, where the option does nothing, so this is the expected result and
+shows only that the change loses no retrieval there. The latencies are not
+comparable (the load average was 22.8 to 13.0 during the second run).
+
 What this does not show. The fixture is one made-up user with short, templated
 statements, and the limit was chosen on the same memories as the first 17
 questions. The benefit is for small stores, which is where the dev project and
