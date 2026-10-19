@@ -283,6 +283,13 @@ Expansion remains owner and exact-scope constrained and is filtered
 again before packing. Built-in stores compute bounded neighborhoods in SQL for
 each exact `(session_id, scope)` partition; the behavior does not depend on a
 fixed whole-session read limit.
+With `packing.session_context_skip_entities` (on in `PRMEConfig` by default since
+2026-10-19, in the alpha channel; `PackingConfig` keeps it off), an entity record
+neither triggers an expansion (`session_context_top_k` counts the other records)
+nor receives an inherited score, while the window still counts its position in
+the session. `ingest()` gives an entity the `session_id` of the turn that names
+it, so without this a window holds the entities created beside a claim and each
+takes the full decay of the claim's score above the notes that answer.
 
 ### 4.6 Two-stage episode context
 

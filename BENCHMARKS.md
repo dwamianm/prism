@@ -1666,7 +1666,7 @@ take the places that inheritance gives them (five entities scored 0.5903, above 
 | Option | What it does |
 |---|---|
 | `enable_owner_group_links` | `ingest()` links a claim a user turn states about we, us or our to the owner's entity (`MENTIONS`, `metadata.basis` `group_member`), after the derivation commits. The subject stays the group. |
-| `packing.session_context_skip_entities` | An entity neither starts a session context expansion nor receives an inherited score. |
+| `packing.session_context_skip_entities` | An entity neither starts a session context expansion nor receives an inherited score. On by default since 0.16.0a4. |
 | `scoring.rrf_graph_weight` | The graph path is a third rank fusion list, ranked by hop count (first, second, third), adding `weight / (rrf_k + rank)` before the scale. A saved `graph_rank` makes the score replayable. |
 
 **Dev replay.** `tests/test_graph_fusion.py` replays the saved extraction
@@ -1766,6 +1766,41 @@ below the three tied notes that session context gives 0.6 times the introduction
 `packing.session_context_rank_fusion_score_decay` at 0.5 puts the claim 3rd on the replay (0.455 against 0.391 for the
 notes) with no graph weight at all, and 0.45 does the same. That setting changes every question's neighbors, and the
 offline gate chose 0.6, so it needs all the tiers before anything flips; the replay is the only thing measured here.
+
+### Entity skip on by default (0.16.0a4, 2026-10-19)
+
+By the owner's directive of 2026-10-19, the alpha channel turns on `packing.session_context_skip_entities`, the
+one of the three options of the graph fusion work (#315) that passed every fast tier alone. The other two stay off
+(`scoring.rrf_graph_weight` fails the fast cycle and lowers the mid tier, `enable_owner_group_links` is neutral).
+The gate ran on `origin/main` at `22b7239c` with `deepseek-v4.1-flash:cloud`, every extraction replayed from the
+cache (0 model calls). "Off" is the default before this change, "on" adds the one setting:
+
+```sh
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label off --model deepseek-v4.1-flash:cloud --cloud
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label on --model deepseek-v4.1-flash:cloud --cloud --set packing.session_context_skip_entities=true
+uv run python -m benchmarks.fast_cycle run --label on --out /tmp/on --stages store,ingest,store-extract --set packing.session_context_skip_entities=true
+uv run python -m benchmarks.mid_tier run --label off --out /tmp/mid-off
+uv run python -m benchmarks.mid_tier run --label on --reuse-build off --set packing.session_context_skip_entities=true --out /tmp/mid-on
+uv run python -m benchmarks.mid_tier compare /tmp/mid-off /tmp/mid-on
+```
+
+| Tier | Result with the option on against the defaults |
+|---|---|
+| Defect probes | 7/7 in the top 3 and top 5 on both sides; every measure and every probe rank equal |
+| Chat probe (`chat-v1`) | 14/18 in the top 3 and 15/18 in the top 5 on both sides; every measure and every probe rank equal |
+| Corrections probe | every measure equal; one assistant line moves one place in one unmeasured context |
+| Fast cycle, DuckDB | pass, 168 measures unchanged (exact, cache replay) |
+| Fast cycle, PostgreSQL store stage | 30 measures equal (Rust 1, dog 1, 11 first and 15 in the top 3 on both sides) |
+| Offline evidence gate | no row differs, 0 wins and 0 losses, no question lost its candidates |
+| Mid tier, LoCoMo | evidence in the top 25 +2.1 points (95% questions +1.5 to +2.7, conversations +1.6 to +2.5), 48 wins, 0 losses; all evidence packed +0.1 (-0.4 to +0.5), 7 wins and 6 losses; evidence recall 0.0; projected accuracy 0.0 |
+| Mid tier, LongMemEval-S (12 questions) | unchanged in every measure |
+
+The mid tier ran in 22 minutes for both sides (the warm baseline, then `--reuse-build` for the option). The numbers
+equal the worker's in #315 (+2.1, 48 wins, 0 losses). Not met, recorded plainly: no criterion fails, but all
+evidence packed is not clearly better, and single-hop all evidence packed is 0.4 points lower (-0.8 to +0.0,
+0 wins and 3 losses), so the option moves which records lead the context, not how often a context holds all the
+evidence. It does nothing for a store with no entities or with `session_context_window=0`. The full benchmark
+audit and the default-change rule's answer runs are pending.
 
 ### Fast cycle: store, ingest and retrieve in under a minute (prototype)
 

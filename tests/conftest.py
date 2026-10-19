@@ -48,6 +48,7 @@ STRUCTURE_OPTIONS = (
     "PRME_ENABLE_OWNER_NAME_CARRY",
     "PRME_PACKING__GRAPH_SEED_WORDS",
     "PRME_PACKING__FOLDED_RECORDS_KEEP_RANK",
+    "PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES",
 )
 
 
@@ -56,10 +57,11 @@ def structure_options_off(monkeypatch):
     """Start from the configuration before 0.16.0a3, when none of the structure options was a default.
 
     The alpha channel turned ``enable_ingest_claim_fixes``, ``enable_mention_links``,
-    ``enable_owner_name_carry``, ``packing.graph_seed_words`` and
-    ``packing.folded_records_keep_rank`` on (2026-10-19). Most tests count claims, edges and
-    ranks that those options change, and the off path stays supported, so a test starts with all
-    five off, as the batching variable above starts every test at one call per turn, and turns
+    ``enable_owner_name_carry``, ``packing.graph_seed_words``,
+    ``packing.folded_records_keep_rank`` (0.16.0a3) and
+    ``packing.session_context_skip_entities`` (0.16.0a4) on (2026-10-19). Most tests count
+    claims, edges and ranks that those options change, and the off path stays supported, so a test starts with all
+    six off, as the batching variable above starts every test at one call per turn, and turns
     on what it tests. The tests of the options themselves compare each on against off, and a test
     that checks the defaults removes these variables first (``tests/test_default_structure_options.py``
     runs the issue's repro with the defaults).

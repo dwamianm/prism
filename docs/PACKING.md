@@ -456,6 +456,7 @@ The fold does not change `store()` memories, which have no statements.
 | `packing.multipath_ordering` (`PRME_PACKING__MULTIPATH_ORDERING`) | `balanced` | `balanced` (`score` between the two steps described below) |
 | `packing.session_context_rank_fusion_score_decay` (`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`) | `0.6` | None (0.85, the weighted decay) |
 | `packing.fold_repeated_text` (`PRME_PACKING__FOLD_REPEATED_TEXT`), since 2026-10-06 | `true` | `false` |
+| `packing.session_context_skip_entities` (`PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES`), alpha channel since 0.16.0a4 (2026-10-19) | `true` in `PRMEConfig` | `false` |
 
 The settings changed in two steps on 2026-09-25, and each step passed the
 project's default-change test twice on the DeepSeek answer track. The first
