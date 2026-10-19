@@ -108,13 +108,22 @@ async def test_operator_scan_is_explicit_and_can_cross_tenants(config, user):  #
         ours = (await _daily_sources(engine, user, count=1))[0]
         theirs = (await _daily_sources(engine, other, count=1))[0]
 
-        page = await engine._graph_store.scan_nodes(
-            user_id=None,
-            operator_unscoped=True,
-            limit=10_000,
-        )
+        # The scan is paged in UUID order, and a database shared by a whole test run holds more than one page
+        # of nodes, so read pages until both tenants' nodes are found or the nodes run out.
+        ids: set = set()
+        after_id = None
+        while not {ours.id, theirs.id} <= ids:
+            page = await engine._graph_store.scan_nodes(
+                user_id=None,
+                operator_unscoped=True,
+                after_id=after_id,
+                limit=1_000,
+            )
+            if not page:
+                break
+            ids.update(node.id for node in page)
+            after_id = str(page[-1].id)
 
-        ids = {node.id for node in page}
         assert ours.id in ids and theirs.id in ids
 
 
