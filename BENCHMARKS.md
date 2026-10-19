@@ -869,7 +869,8 @@ one under a new name, for example when a new defaults baseline replaces
 
 The full benchmarks take about two days (a LongMemEval-S build alone is 15 to
 20 hours), and the development slice's LongMemEval-S packs take about 100
-minutes cold. `benchmarks.mid_tier` is the check between the fast-cycle checks
+minutes cold. `benchmarks.mid_tier` is the check between the
+[fast cycle](#fast-cycle-store-ingest-and-retrieve-in-under-a-minute-prototype)
 and the twice-weekly full run: it builds packs through `ingest()` with
 `deepseek-v4.1-flash:cloud` on the local Ollama server, replays them through
 the offline evidence gate and writes one report. It makes no reader or judge
@@ -940,14 +941,15 @@ run); delete them when you no longer need `--reuse-build`.
 
 **Timings** (this Mac, 18 cores, Ollama 0.40.6, other jobs running; the load
 average is the one-minute value at the start and end of the run, and the
-reports give it for every stage):
+reports give it for every stage). The four runs below used `main` at `7f9ce556`
+plus the benchmark code; a later warm run on `975dba21` took 11 min 57 s:
 
 | Run | Whole run | Build LoCoMo | Build LongMemEval-S | Gate LoCoMo | Gate LongMemEval-S | Live calls | Load |
 |---|---:|---:|---:|---:|---:|---:|---|
-| Cold, empty cache (`ec2a7022`) | 24 min 31 s | 15 min 23 s | 24 min 21 s | 3 min 10 s | 10 s | 1,187 | 5.1 to 6.8 |
-| Cold again, empty cache (`eda1bc06`) | 34 min 17 s | 21 min 45 s | 34 min 05 s | 3 min 47 s | 11 s | 1,181 | 5.7 to 23.6, peak 133 |
-| Warm, same prompt (`6d741a9a`) | 11 min 00 s | 6 min 19 s | 10 min 49 s | 4 min 21 s | 12 s | 0 | 3.1 to 20.9 |
-| Reused packs, `--reuse-build` (`eda1bc06`) | 2 min 57 s | none | none | 2 min 57 s | 11 s | 0 | 2.5 to 7.2 |
+| Cold, empty cache | 24 min 31 s | 15 min 23 s | 24 min 21 s | 3 min 10 s | 10 s | 1,187 | 5.1 to 6.8 |
+| Cold again, empty cache | 34 min 17 s | 21 min 45 s | 34 min 05 s | 3 min 47 s | 11 s | 1,181 | 5.7 to 23.6, peak 133 |
+| Warm, same prompt | 11 min 00 s | 6 min 19 s | 10 min 49 s | 4 min 21 s | 12 s | 0 | 3.1 to 20.9 |
+| Reused packs, `--reuse-build` | 2 min 57 s | none | none | 2 min 57 s | 11 s | 0 | 2.5 to 7.2 |
 
 The first cold run's 1,187 calls carried 8.76 million prompt tokens and 3.69
 million completion tokens (about 2,500 completion tokens a second across both
@@ -962,17 +964,23 @@ cloud makes it, not as the number of packs. With 12 LongMemEval-S questions a
 cold run took 25 minutes on a quiet machine and 34 under a load spike, so a
 cloud twice as slow would still finish within the hour.
 
-**Baseline, `main` at `7f9ce556`.** It was run from `6d741a9a`, which adds only
-the benchmark code to `main` (the engine source tree is identical), and it is
-the warm replay of the first cold build above, so it carries no model noise.
-The reports and comparisons named below are in
-`benchmarks/results/research/2026-10-19/mid-tier/`.
+**Baseline.** `main` moved while this was measured, so there are two reports
+in `benchmarks/results/research/2026-10-19/mid-tier/`. `baseline-7f9ce556` is
+`main` when the work began, the warm replay of the first cold build above, and
+the comparisons and timings here are over it. `baseline-975dba21` is `main`
+after the fast cycle, the ingest claim fixes, the mention links and the
+0.16.0a1 release merged, again a warm replay of the same cache: it made no
+model call because the extraction request did not change. It differs from the
+first by 0.1 points or less on every LoCoMo measure and not at all on the
+LongMemEval-S questions (`main-moved-7f9ce556-to-975dba21.md`). The table gives
+the second, which is the one to compare with. Each was run from a commit that
+adds only the benchmark code to `main`, so its engine source tree is `main`'s.
 
 | Measure | LoCoMo, 1,536 questions with evidence | LongMemEval-S, 12 questions |
 |---|---|---|
 | All evidence packed | 1,277 (83.1%); 95% conversations 80.8 to 85.4, questions 81.2 to 84.9 | 12 (100.0%); 95% 75.8 to 100.0 |
 | Evidence recall | 88.9%; conversations 87.3 to 90.7 | 100.0% |
-| Evidence in the first 25 candidates | 70.0%; conversations 67.8 to 72.1 | 100.0% |
+| Evidence in the first 25 candidates | 69.9%; conversations 67.8 to 71.9 | 100.0% |
 | All evidence among the candidates | 1,510 (98.3%) | 12 |
 | Projected accuracy (1,540 and 12 questions) | 77.0%; conversations 75.5 to 78.5 | 95.5% |
 
@@ -988,7 +996,7 @@ packs (the gate's own example) packs all evidence for 91 more LoCoMo questions
 and 2 fewer: all evidence packed +5.8 points (95% conversations +4.7 to +6.8,
 questions +4.6 to +7.0), evidence recall +4.6, projected accuracy +3.7; every
 LoCoMo category gains, multi-hop most (+16.7). The 12 LongMemEval-S questions
-do not move (`2026-10-19/mid-tier/budget-8192-vs-baseline.md`).
+do not move (`budget-8192-vs-baseline.md`, over `baseline-7f9ce556`).
 
 **Model noise.** The second cold build of the same code (`cold-run-2.md`) is
 not the baseline: all evidence packed differs by +0.4 points (95%
