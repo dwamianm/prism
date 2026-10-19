@@ -803,7 +803,7 @@ class MemoryEngine:
                 embedding_provider = create_embedding_provider(config.embedding)
             vector_index = PgVectorIndex(pool, embedding_provider, exact_search=config.vector_exact_search, vector_sql=vector_sql)
             startup.push_async_callback(vector_index.close)
-            lexical_index = PgLexicalIndex(pool)
+            lexical_index = PgLexicalIndex(pool, term_weights=config.lexical_term_weights)
             startup.push_async_callback(lexical_index.close)
 
             # NoOpWriteQueue — PostgreSQL handles multi-writer natively

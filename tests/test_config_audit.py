@@ -42,6 +42,7 @@ EXPECTED_HYPOTHESES = {
     "vision.extract",
     "vision.change_threshold",
     "vision.repeat_similarity",
+    "lexical_term_weights",
     "enable_qa_pairing",
     "enable_windowed_extraction",
     "extraction_window_turns",

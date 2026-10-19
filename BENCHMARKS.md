@@ -1311,6 +1311,150 @@ question (answer in a memory that shares no word with it) falls from 1st to
 5th, so on this fixture and backend the fix is a net loss. Whether that holds
 at scale is for the full benchmarks.
 
+#### Lexical term weights (`lexical_term_weights`)
+
+The any-term word search above lifts the Rust question to 4th but not to 1st,
+and drops the dog question from 1st to 5th. The cause is the words of the
+fixture. "alex" is in 50 of the 75 memories, so it separates none of them. "call" is in four: the three on-call memories and the dashboard
+that "is called" something. "dog" is in none, and the memory about the dog
+says "border collie". The four memories that share "call" become the word
+search's only candidates, and rank fusion gives a memory that both searches
+return more than the vector search's first result: the dashboard memory, at
+vector rank 36 and word rank 4, scored 0.715 against 0.450 for the dog memory
+alone. In the Rust question, the four memories that share "code" ("VS Code", "code
+review", "code examples") are candidates beside the Rust memory, and the Neovim
+memory, first in the vector search, outscores it. A weak word match is not
+harmless under rank fusion, so the fix keeps such matches out of the
+candidates; ranking them lower would not help.
+
+With `lexical_term_weights` on (PostgreSQL only, off by default; the DuckDB
+backend ignores it) a query word weighs ln(N / df), where N is the number of
+the owner's searched memories and df the number that hold the word. A
+memory's evidence is the total weight of the query words it holds, which is
+ln(N / c) for c, the number of memories that would hold those words together
+by chance (document frequencies multiplied). With more than one query word, a
+memory is a candidate only when c is at most 0.2% of N or 2 memories, whichever
+is more. A memory that holds every query word is still returned alone, and a
+one-word query is unchanged. Candidates rank by evidence, then by
+`ts_rank_cd`. Everything comes from the owner's own memories, the work is one
+indexed count per word (as before) and the result is deterministic.
+
+Options I tried on the way, as ranks of the answers over the 17 questions,
+store-v1 and the 28 held-out questions (below), 75 memories on PostgreSQL:
+
+| Rule | Top 1 / top 3 / MRR, 17 questions | Top 1 / top 3 / MRR, 28 questions |
+|---|---:|---:|
+| Off: any word that fewer than half of the memories hold | 8 / 13 / 0.653 | 22 / 25 / 0.836 |
+| Weights, every memory with any word a candidate (no limit on c) | 9 / 15 / 0.702 | 21 / 25 / 0.810 |
+| Weights, c at most 10 memories | 8 / 14 / 0.658 | 22 / 25 / 0.836 |
+| c at most 6 | 9 / 14 / 0.687 | 22 / 25 / 0.842 |
+| c at most 4 | 9 / 14 / 0.687 | 23 / 25 / 0.866 |
+| c at most 3 | 9 / 14 / 0.690 | 24 / 25 / 0.884 |
+| **c at most 2 (chosen)** | **11 / 15 / 0.774** | **24 / 25 / 0.884** |
+| c at most 1.5 | 11 / 15 / 0.774 | 24 / 26 / 0.887 |
+| c at most 1.25 or 1 | 11 / 14 / 0.766 | 24 / 26 / 0.893 |
+
+Weighting alone is not enough: the memories that share a verb stay candidates
+and the weights only reorder them (the second row). The limit on c is what moves
+the dog and Rust questions. For the dog question the three memories that hold
+"alex" and "call" have c = 2.67 and fail it. For the manager and flights
+questions the answers hold a word that only two memories hold ("manager",
+"book") and have c = 1.33, so they pass it. The limit therefore sits between two statistics of this fixture,
+and c from 1.5 to 2.5 gives the same ranks on the 17 questions. I chose 2
+because it reads as a rule (a word that two memories hold always selects) and
+it is inside that range. The 28 questions below were swept too, so they confirm
+the choice and do not test it independently. I did not try a cut relative to
+the best candidate.
+
+Store stage on PostgreSQL, 75 memories (`lexical_term_weights` off and on; the
+`d92901ec` column is the all-words rule before the any-term fix, as in the
+check above). The cell is the rank of the answer among the results:
+
+| Question | `d92901ec` | Off | On |
+|---|---:|---:|---:|
+| what coding language is alex learning? (Rust) | 6 | 4 | **1** |
+| which cities will Alex and jordan visit in Japan? | 14 | 15 | 14 |
+| When is the production cutover? | 2 | 2 | 2 |
+| When is the Japan trip? | 3 | 4 | 4 |
+| Does Alex like pair programming? | 2 | 2 | 2 |
+| Is Alex leading the observability rewrite? | 2 | 2 | 2 |
+| Who is on call the week of 2026-10-26? | 1 | 1 | 1 |
+| Who is Alex's manager? | 1 | 1 | 1 |
+| What is Jordan allergic to? | 1 | 1 | 1 |
+| What is Alex's dog called? | 1 | 5 | **1** |
+| How much is the Japan trip budget? | 1 | 1 | 1 |
+| What is the Datadog dashboard for the migration called? | 2 | 2 | **1** |
+| How many rows does the shipment_events table have? | 1 | 1 | 1 |
+| Why did Alex reject TimescaleDB? | 1 | 1 | 1 |
+| Which gravel race did Alex sign up for? | 1 | 1 | 1 |
+| Which airline did Alex book for the Japan trip? | 2 | 3 | 3 |
+| How does Alex format SQL? | 1 | 1 | 1 |
+| Answers ranked first / in the top 3 | 9 / 15 | 8 / 13 | 11 / 15 |
+| Mean reciprocal rank | 0.710 | 0.653 | 0.774 |
+| Stale value ranked above the answer | 3 | 4 | 4 |
+| Questions with a word candidate | 10 | 17 | 16 |
+
+No question ranks lower with the option on than off. Four rank higher (Rust
+by 3, the dog question by 4, the dashboard question and the Japan cities
+question by 1). The Japan dates and flights questions stay one place below
+`d92901ec`, as with the option off. The dog question has no word candidate
+now: the only words it shares with a memory are "alex" and "call", which many
+memories hold, so the vector search decides, as it did before the any-term fix.
+
+Held-out questions. The 28 questions of
+`benchmarks/fixtures/fast-cycle/store-heldout-v1.json` ask the same 75
+memories in the words of a question (`--store-fixture`, with `--baseline none`).
+I wrote them before the first run with the option on. With the option on the
+answers ranked first rise from 22 to 24, those in the top 3 stay at 25 and the
+reciprocal rank goes from 0.836 to 0.884. Two questions rank higher (the
+Datadog bill, 3rd to 1st, and the Postgres version, 3rd to 1st), none lower.
+
+Larger stores. The same 45 questions, asked after adding memories to the
+store: sentences from this repository's own documentation, 60% with "Alex" in
+front, none holding an answer term. The effect is large where the issue was
+found and fades as the store grows, because a word shared by a larger share of
+the memories is no longer unusual. The limit grows with the store (0.2% of N
+beyond 1,000 memories) so that a word that is rare stays a candidate:
+
+| Memories | Questions | Off: top 1 / top 3 / MRR | On: top 1 / top 3 / MRR |
+|---:|---|---:|---:|
+| 475 | 17 | 8 / 13 / 0.646 | 11 / 15 / 0.772 |
+| 475 | 28 | 23 / 25 / 0.864 | 24 / 26 / 0.887 |
+| 1,975 | 17 | 9 / 13 / 0.656 | 9 / 15 / 0.682 |
+| 1,975 | 28 | 23 / 24 / 0.849 | 23 / 24 / 0.855 |
+| 4,975 | 17 | 9 / 11 / 0.635 | 9 / 11 / 0.642 |
+| 4,975 | 28 | 23 / 24 / 0.840 | 22 / 25 / 0.835 |
+
+At 2,000 or more memories the option is within noise of off, which is neutral
+rather than a gain. A fixed limit of 2 memories at every size, tried first,
+removed the Rust question's word candidate at 1,975 memories and ranked it
+163rd (7th with the option off), so the share of the store is part of the rule.
+
+Time. The word search alone, median of 450 calls of 45 questions at each size,
+off and on, on this laptop:
+
+| Memories | Off | On |
+|---:|---:|---:|
+| 75 | 2.41 ms | 2.44 ms |
+| 475 | 2.43 ms | 2.42 ms |
+| 1,975 | 3.97 ms | 4.01 ms |
+| 4,975 | 7.67 ms | 7.80 ms |
+
+`retrieve()` from end to end (including the query embedding), median over the
+45 questions, was 0.120 s with the option off and 0.125 s on at 4,975 memories.
+
+DuckDB. The store stage on DuckDB with `--set lexical_term_weights=true` gives
+the same 29 measures as with it off, and both match `baseline-main.json`
+exactly. Tantivy already weights words by BM25.
+
+What this does not show. The fixture is one made-up user with short, templated
+statements, and the limit was chosen on the same memories as the first 17
+questions. The benefit is for small stores, which is where the dev project and
+alpha users are. A question whose answer shares only a word that many
+memories hold now leaves the order to the vector search. The mechanism changes
+which candidates the word search returns for PostgreSQL only; no answer run
+with a reader and a judge has been done, so the default stays off.
+
 **Refresh.** Run these when the extraction prompt, the model, a conversation or
 the store fixture changes; the tests fail while the committed baseline names an
 older conversation or fixture.

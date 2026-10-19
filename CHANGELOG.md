@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `lexical_term_weights` (part of prism-monorepo issue 254), off by default
+  and read by the PostgreSQL backend only. Since the any-term word search
+  (see Fixed), a question that holds the owner's name and a few common words
+  lifts unrelated memories as much as the memory with the rare word: on the
+  fast cycle's 75 memory fixture the Rust question ranks 4th and the dog
+  question fell from 1st to 5th. With the option on, a query word
+  weighs ln(N / df), where N is the number of the owner's searched memories
+  and df the number that hold the word, and a memory is a candidate (with more
+  than one query word) only when the words it holds would be held together by
+  chance by at most 0.2% of the memories, and at least 2 memories. The owner's
+  name or a common verb cannot select candidates, and candidates rank by the
+  weight of the words they hold. A memory that holds every query word is still
+  returned alone, and a one-word query is unchanged. On PostgreSQL, the 75
+  memory fixture goes from 8 answers ranked first and 13 in the top 3 to 11
+  and 15, the Rust question from 4th to 1st and the dog question from 5th to
+  1st, with no question ranked lower. The 28 questions of a second set, written
+  before the first run, go from 22 and 25 to 24 and 25. With 2,000 or more
+  memories the effect is within noise. The search takes the same time within
+  0.2 ms at 5,000 memories. DuckDB ignores the option and its measures are
+  unchanged. The fast cycle also takes `--store-fixture` and ships the second
+  question set as `benchmarks/fixtures/fast-cycle/store-heldout-v1.json`.
+  `BENCHMARKS.md`, "Lexical term weights", has the table.
 - Add the fast cycle (part of prism-monorepo issues 258 and 259;
   `BENCHMARKS.md`, "Fast cycle"): `uv run python -m benchmarks.fast_cycle run
   --label <name> --out <dir>` stores 75 memories with `store()` and asks 17
