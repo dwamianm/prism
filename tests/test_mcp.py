@@ -101,6 +101,15 @@ class TestToolDiscovery:
 
 
 class TestStore:
+    async def test_store_takes_extract(self, session):
+        tools = {tool.name: tool for tool in (await session.list_tools()).tools}
+        assert tools["memory_store"].inputSchema["properties"]["extract"]["anyOf"][0] == {"type": "boolean"}
+        stored = await session.call_tool(
+            "memory_store",
+            {"content": "Raw on purpose.", "user_id": "extract-user", "extract": False},
+        )
+        assert not stored.isError and "event_id" in json.loads(stored.content[0].text)
+
     async def test_store_accepts_typed_value_bindings(self, session):
         source = '{"plan":"Current City: Salt Lake City(Utah)"}'
         result = await session.call_tool("memory_store", {
