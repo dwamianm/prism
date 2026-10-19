@@ -136,9 +136,18 @@ class TestTheGroupsATurnNames:
         ("My best friend Dana and I run.", [("Dana",)]),
         ("It'll be just me and Biscuit.", [("Biscuit",)]),
         ("Me and Jordan went to the store.", [("Jordan",)]),
+        ("Me and Jordan, Sam and Dana went out.", [("Jordan", "Sam", "Dana")]),
         ("She gave the book to Jordan and me.", [("Jordan",)]),
-        # A member without a name.
+        ("Hi, Jordan and I are planning a trip.", [("Jordan",)]),
+        ("On Saturday, Jordan and I hiked.", [("Jordan",)]),
+        # A member after a comma alone starts another clause; one before "and me" counts by itself.
+        ("It'll be just me and Biscuit, Sam can't come.", [("Biscuit",)]),
+        ("I told Sam, Jordan and me to wait.", [("Jordan",)]),
+        # A member without a name: any words after "my" right next to "and I", a known relation further along.
         ("My wife and I went to Paris.", [(None,)]),
+        ("My bandmates and I played a show.", [(None,)]),
+        ("It was me and my bandmates.", [(None,)]),
+        ("After my run, Jordan and I got coffee.", [("Jordan",)]),
         ("Yesterday my partner and I went out.", [(None,)]),
         ("Jordan, my sister and I went out.", [("Jordan", None)]),
         # "and I" that joins two clauses, not a group.

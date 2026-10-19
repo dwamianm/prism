@@ -91,7 +91,8 @@ def group_fields(node: MemoryNode) -> frozenset[str]:
 # speaker plus a list of members joined to "I" or "me": "My partner Jordan and
 # I", "Jordan, Sam and I", "Training update: Mel and I", "just me and Biscuit".
 # A member is a name as written with capitals ("Jordan", "the Smiths"), or a
-# relation without one ("my wife", "my best friend"). "and I" also joins two
+# relation without one ("my wife", "my best friend"; right next to "and I",
+# anything after "my" or "our", as in "my bandmates and I"). "and I" also joins two
 # clauses ("I got the offer from Brightpath and I accepted it"), so the members
 # before it must start a clause: the start of the text, a punctuation mark or a
 # word such as "so" or "when". A list that runs into other words ends at the
@@ -103,11 +104,21 @@ _PRONOUNS = frozenset({
     "i", "me", "my", "mine", "myself", "we", "us", "our", "ours", "ourselves", "you", "your", "yours",
     "he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs", "it", "its",
 })
-# Words that can open the clause a group starts, so they end the members before "and I".
+# Words that can open the clause a group starts, so they end the members before "and I". Greetings and
+# interjections ("Hi, Jordan and I") are never a name either.
 _CLAUSE_WORDS = frozenset({
     "and", "or", "but", "so", "then", "because", "when", "while", "since", "after", "before", "until",
     "once", "if", "that", "where", "now", "today", "tonight", "yesterday", "tomorrow", "also", "both", "plus",
+    "hi", "hey", "hello", "yes", "yeah", "no", "ok", "okay", "well", "oh", "thanks", "sorry", "anyway",
+    "actually", "btw",
 })
+# Words that open a sentence with a capital letter but never name a person ("On Saturday, Jordan and I").
+_FUNCTION_WORDS = frozenset({
+    "on", "in", "at", "for", "with", "from", "to", "by", "of", "about", "during", "over", "into", "around",
+    "last", "next", "this", "every", "each", "some", "all", "just", "only", "even", "maybe", "later", "soon",
+    "here", "there", "what", "who", "how", "why", "which", "please", "not",
+})
+_NOT_NAMES = _PRONOUNS | _DETERMINERS | _CLAUSE_WORDS | _FUNCTION_WORDS
 _BOUNDARY_MARKS = frozenset({".", "!", "?", ":", ";", "(", "[", "{", '"', "“", "”", "—", "–", ","})
 # A member without a name is one of these after "my", "our", "the" or "a" ("my wife", "the kids").
 _RELATIONS = frozenset({
@@ -134,9 +145,9 @@ def _is_word(token: str) -> bool:
 
 
 def _is_name(token: str) -> bool:
-    """A capitalized word that can be part of a name: not I (or I'm), a pronoun, an article or a clause word."""
+    """A capitalized word that can be part of a name: not I (or I'm), a pronoun, an article or a function word."""
     return (_is_word(token) and token[0].isupper() and re.split(r"['’]", token)[0] != "I"
-            and _fold(token) not in _PRONOUNS | _DETERMINERS | _CLAUSE_WORDS)
+            and _fold(token) not in _NOT_NAMES)
 
 
 def _is_lower(token: str) -> bool:
@@ -148,10 +159,22 @@ def _is_boundary(tokens: list[str], index: int) -> bool:
     return index < 0 or tokens[index] in _BOUNDARY_MARKS or _fold(tokens[index]) in _CLAUSE_WORDS
 
 
-def _item_before(tokens: list[str], end: int) -> tuple[str | None, int] | None:
+def _relation(words: list[str], determiner: str | None, *, joined: bool) -> bool:
+    """Whether ``determiner`` and ``words`` name a member without a name ("my wife", "the kids").
+
+    Right next to "and I" or "me and" (``joined``), "my" or "our" with any words is one ("my bandmates and
+    I"); further along a list a known relation is needed, since "after my run, Jordan and I" lists no run.
+    """
+    if not words or determiner is None:
+        return False
+    return (joined and determiner in {"my", "our"}) or bool(_RELATIONS & {_fold(word) for word in words})
+
+
+def _item_before(tokens: list[str], end: int, *, joined: bool = False) -> tuple[str | None, int] | None:
     """The member that ends at ``tokens[end]``, read right to left, and the index where it starts.
 
-    The member's name, or None for a relation without one ("my wife").
+    The member's name, or None for a relation without one ("my wife"). ``joined`` says the member is
+    the one right before "and I".
     """
     index = end
     names: list[str] = []
@@ -164,9 +187,9 @@ def _item_before(tokens: list[str], end: int) -> tuple[str | None, int] | None:
            and _fold(tokens[index]) not in _DETERMINERS):
         relation.insert(0, tokens[index])
         index -= 1
-    determiner = index >= 0 and _fold(tokens[index]) in _DETERMINERS
+    determiner = _fold(tokens[index]) if index >= 0 and _fold(tokens[index]) in _DETERMINERS else None
     name = " ".join(names) or None
-    if relation and determiner and _RELATIONS & {_fold(word) for word in relation}:
+    if _relation(relation, determiner, joined=joined and not names):
         return name, index
     if names and not relation and determiner:
         return name, index
@@ -176,20 +199,23 @@ def _item_before(tokens: list[str], end: int) -> tuple[str | None, int] | None:
 
 
 def _members_before(tokens: list[str], conjunction: int, *, clause_start: bool) -> tuple[str | None, ...] | None:
-    """The members listed before the "and" at ``conjunction``, the longest list that can start there."""
+    """The members listed before the "and" at ``conjunction``, the longest list that starts a clause.
+
+    Without ``clause_start`` ("Jordan and me"), the one member right before "and" counts wherever it is.
+    """
     end = conjunction - 1
     if end >= 0 and tokens[end] == ",":
         end -= 1  # "Jordan, Sam, and I"
     members: list[str | None] = []
     found = None
     while end >= 0:
-        item = _item_before(tokens, end)
+        item = _item_before(tokens, end, joined=not members)
         if item is None:
             break
         name, start = item
         members.insert(0, name)
         before = start - 1
-        if not clause_start or _is_boundary(tokens, before):
+        if _is_boundary(tokens, before) or (not clause_start and len(members) == 1):
             found = tuple(members)
         if before >= 0 and (tokens[before] == "," or _fold(tokens[before]) == "and"):
             end = before - 1
@@ -200,10 +226,13 @@ def _members_before(tokens: list[str], conjunction: int, *, clause_start: bool) 
     return found
 
 
-def _item_after(tokens: list[str], start: int) -> tuple[str | None, int] | None:
-    """The member that starts at ``tokens[start]``, and the index where it ends."""
+def _item_after(tokens: list[str], start: int, *, joined: bool = False) -> tuple[str | None, int] | None:
+    """The member that starts at ``tokens[start]``, and the index where it ends.
+
+    ``joined`` says the member is the one right after "me and".
+    """
     index = start
-    determiner = index < len(tokens) and _fold(tokens[index]) in _DETERMINERS
+    determiner = _fold(tokens[index]) if index < len(tokens) and _fold(tokens[index]) in _DETERMINERS else None
     if determiner:
         index += 1
     relation: list[str] = []
@@ -211,35 +240,43 @@ def _item_after(tokens: list[str], start: int) -> tuple[str | None, int] | None:
            and _fold(tokens[index]) not in _DETERMINERS):
         relation.append(tokens[index])
         index += 1
-    if relation and not (determiner and _RELATIONS & {_fold(word) for word in relation}):
-        return None
     names: list[str] = []
     while index < len(tokens) and len(names) < _MAX_NAME_WORDS and _is_name(tokens[index]):
         names.append(tokens[index])
         index += 1
-    if not names and not relation:
+    if (relation and not _relation(relation, determiner, joined=joined and not names)) or not (names or relation):
         return None
     return " ".join(names) or None, index - 1
 
 
 def _members_after(tokens: list[str], conjunction: int) -> tuple[str | None, ...] | None:
-    """The members listed after the "and" at ``conjunction`` ("me and Jordan", "me and my wife")."""
+    """The members listed after the "and" at ``conjunction`` ("me and Jordan", "me and my wife").
+
+    A list ends with "and" before its last member ("me and Jordan, Sam and Dana"), so a member after a
+    comma alone starts another clause ("me and Biscuit, Sam can't come") and does not count.
+    """
     members: list[str | None] = []
+    found = None
     start = conjunction + 1
+    joined = True  # the first member follows "me and"
     while start < len(tokens):
-        item = _item_after(tokens, start)
+        item = _item_after(tokens, start, joined=not members)
         if item is None:
             break
         name, end = item
         members.append(name)
+        if joined:
+            found = tuple(members)
         following = end + 1
         if following + 1 < len(tokens) and (tokens[following] == "," or _fold(tokens[following]) == "and"):
             start = following + 1
+            joined = _fold(tokens[following]) == "and"
             if _fold(tokens[start]) == "and" and tokens[following] == ",":
                 start += 1
+                joined = True
             continue
         break
-    return tuple(members) or None
+    return found
 
 
 def named_groups(text: str) -> list[tuple[str | None, ...]]:
