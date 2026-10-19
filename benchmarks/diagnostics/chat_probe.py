@@ -14,7 +14,10 @@ minutes, and reports:
   found once, split across several nodes or missing, what the owner's own
   claims are attached to, and which links of the key a claim connects;
 - retrieval: for each probe question, whether the answer reaches the reader's
-  context and how much of that context repeats a record already in it.
+  context, how much of that context repeats a record already in it and the
+  rank of the first retrieve result that holds the answer. A small chat fits
+  the budget whole, so the context check passes whatever the order; the rank
+  is what shows an answer buried under other records.
 
 Choices, and why:
 
@@ -267,11 +270,32 @@ def graph_report(nodes: list[dict], edges: list[dict], events: dict[str, dict], 
     }
 
 
-def context_report(probe: dict, included: list[dict], context: str, tokens_used: int, token_budget: int) -> dict:
+def answer_rank(probe: dict, ranked: list[dict]) -> int | None:
+    """The 1-based rank of the first retrieve result whose text holds the probe's answer, or None.
+
+    ``ranked`` is the response's ``results`` in the order the product returns
+    them, as dicts with each node's content and type. An entity's text is only
+    its name, which states nothing, so an entity is never the answer, but it
+    still takes its place in the order.
+    """
+    terms = [term.casefold() for term in probe.get("all_of") or probe["any_of"]]
+    every = bool(probe.get("all_of"))
+    for rank, result in enumerate(ranked, start=1):
+        text = result["content"].casefold()
+        if result["type"] != "entity" and (all if every else any)(term in text for term in terms):
+            return rank
+    return None
+
+
+def context_report(probe: dict, included: list[dict], context: str, tokens_used: int, token_budget: int,
+                   ranked: list[dict] | None = None) -> dict:
     """What one probe's context holds: the answer, stale values and repeated records.
 
     Only record lines count, so the format's own header cannot supply a term.
+    The rank reads the retrieve results instead of the context, because a
+    context that holds every record answers any question.
     """
+    ranked = ranked or []
     lines = [line for line in context.splitlines() if line.startswith("- ")]
     lowered = "\n".join(lines).casefold()
     terms = probe.get("all_of") or probe.get("any_of")
@@ -282,6 +306,8 @@ def context_report(probe: dict, included: list[dict], context: str, tokens_used:
     _, repeated_lines = _copies(lines)
     return {
         "id": probe["id"], "question": probe["question"], "answer_in_context": answered, "terms_found": found,
+        "answer_rank": answer_rank(probe, ranked),
+        "top_results": [f"{result['type']}: {result['content'][:120]}" for result in ranked[:5]],
         "stale_in_context": [term for term in probe.get("stale", []) if term.casefold() in lowered],
         "records": len(included), "record_types": dict(sorted(Counter(record["type"] for record in included).items())),
         "distinct_texts": len(set(texts)), "repeated_records": copies,
@@ -289,6 +315,18 @@ def context_report(probe: dict, included: list[dict], context: str, tokens_used:
         "record_lines": len(lines), "repeated_lines": repeated_lines,
         "tokens_used": tokens_used, "token_budget": token_budget,
     }
+
+
+def _rank_cell(probe: dict) -> int | str:
+    """A probe's answer rank for a table; a report from before the rank measure has none."""
+    return "not measured" if "answer_rank" not in probe else probe["answer_rank"] or "none"
+
+
+def _ranked_within(probes: list[dict], limit: int) -> str:
+    if any("answer_rank" not in probe for probe in probes):
+        return "not measured"
+    ranked = sum(probe["answer_rank"] is not None and probe["answer_rank"] <= limit for probe in probes)
+    return f"{ranked}/{len(probes)}"
 
 
 def summary(report: dict) -> dict:
@@ -316,6 +354,8 @@ def summary(report: dict) -> dict:
         "key links linked / via pronoun / not linked / missing": "/".join(
             str(link_status.get(name, 0)) for name in ("linked", "via_pronoun", "not_linked", "entity_missing")),
         "probes with the answer in context": f"{sum(probe['answer_in_context'] for probe in probes)}/{len(probes)}",
+        "probes with the answer ranked in the top 3": _ranked_within(probes, 3),
+        "probes with the answer ranked in the top 5": _ranked_within(probes, 5),
         "probes with a stale value in context": sum(bool(probe["stale_in_context"]) for probe in probes),
         "repeated records in contexts": f"{sum(probe['repeated_records'] for probe in probes)}/{records}",
     }
@@ -356,9 +396,11 @@ async def measure(folder: Path, conversation: dict) -> dict:
             included = [{"content": candidate.node.content, "type": candidate.node.node_type.value}
                         for section in response.bundle.sections.values() for candidate in section]
             context = response.bundle.render()
+            ranked = [{"content": candidate.node.content, "type": candidate.node.node_type.value}
+                      for candidate in response.results]
             (contexts / f"{probe['id']}.txt").write_text(f"Q: {probe['question']}\n\n{context}\n")
             probes.append(context_report(probe, included, context, response.bundle.tokens_used,
-                                         response.bundle.token_budget))
+                                         response.bundle.token_budget, ranked))
     report = {"kind": "prme-chat-probe-report", "schema_version": SCHEMA_VERSION, "label": folder.name,
               "conversation": conversation["name"], "owner": owner, "build": build.get("totals", {}),
               "settings": {name: build.get(name) for name in ("overrides", "speaker", "organize")},
@@ -493,9 +535,10 @@ def report_markdown(report: dict) -> str:
               + (", ".join(entities["with_no_link"]) or "none"),
               "", f"Pronoun entities ({len(entities['pronouns'])}): " + (", ".join(entities["pronouns"]) or "none")]
     lines += ["", "## Probe questions", ""]
-    lines += _table(["Probe", "Answer in context", "Stale value", "Records", "Repeated records", "Tokens"],
+    lines += _table(["Probe", "Answer in context", "Answer rank", "Stale value", "Records", "Repeated records",
+                     "Tokens"],
                     [[probe["question"], "yes" if probe["answer_in_context"] else "no",
-                      ", ".join(probe["stale_in_context"]) or "", probe["records"],
+                      _rank_cell(probe), ", ".join(probe["stale_in_context"]) or "", probe["records"],
                       f"{probe['repeated_records']} ({probe['repeated_share']:.0%})",
                       f"{probe['tokens_used']}/{probe['token_budget']}"] for probe in report["probes"]])
     return "\n".join(lines) + "\n"
@@ -503,12 +546,18 @@ def report_markdown(report: dict) -> str:
 
 def compare_markdown(reports: list[dict]) -> str:
     labels = [report["label"] for report in reports]
-    names = list(reports[0]["summary"])
+    # Every report's measures, so a report from before a measure was added sits beside one with it.
+    names = list(dict.fromkeys(name for report in reports for name in report["summary"]))
     lines = _table(["Measure", *labels], [[name, *(report["summary"].get(name) for report in reports)]
                                           for name in names])
     lines += [""]
     lines += _table(["Probe", *labels], [
         [probe["question"], *("yes" if by_id[probe["id"]]["answer_in_context"] else "no"
+                              for by_id in ({row["id"]: row for row in report["probes"]} for report in reports))]
+        for probe in reports[0]["probes"]])
+    lines += [""]
+    lines += _table(["Probe answer rank", *labels], [
+        [probe["question"], *(_rank_cell(by_id[probe["id"]])
                               for by_id in ({row["id"]: row for row in report["probes"]} for report in reports))]
         for probe in reports[0]["probes"]])
     lines += [""]

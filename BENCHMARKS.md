@@ -947,6 +947,18 @@ change the extraction prompt replays it in seconds without a model call.
 `measure` measures a finished pack again, and the memory explorer opens a pack
 with the owner ID `chat-v1-dana`.
 
+Each probe also reports the rank of its answer: the 1-based place, in the
+results `retrieve()` returned (`RetrievalResponse.results`, in the order the
+product returns them), of the first record whose text holds all of the probe's
+`all_of` terms, or any of its `any_of` terms; none when no result does. An
+entity is never the answer, because its text is only a name, but it still takes
+its place in the order. The summary counts the probes with the answer ranked in
+the top 3 and in the top 5, and `compare` lists each probe's rank. The
+context check passes by default on a short chat, because every record fits the
+4,096-token budget; the rank is what shows an answer buried under other
+records. A report from before 2026-10-19 has no rank, and `compare` shows "not
+measured" for it.
+
 First results on 2026-10-01, `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama
 0.34.4), current defaults against the window with fact text resolution and
 the owner named as the speaker of their turns:
@@ -1001,6 +1013,139 @@ The chat is one examined conversation, too small for intervals, and the
 probes test the context rather than a reader's answer. It is for seeing what
 ingestion builds and for measuring a change to it, not for claims about
 accuracy.
+
+### Fast gate for ingest changes
+
+For monorepo issues #258 and #259 (the speaker's name and the claims of an
+`ingest()` turn, and the links between entities and the graph seeds), the
+owner decided on 2026-10-19 that the default flips on this gate instead of the
+DeepSeek answer track, as batched extraction did (v0.15.0, flipped on the
+offline evidence gate alone). The decision covers those two changes only; the
+default-change rule in `CLAUDE.md` is otherwise unchanged, and the full answer
+track remains the audit after a flip: record a new defaults baseline on it and
+pair later variants with that baseline.
+
+The gate has three steps. Run each with the option off (the current defaults)
+and on. The commands show the on side; the off side is the same command with
+another label and no `--set`. `<key>=<value>` is the change's option. Times
+were measured on 2026-10-19 on a laptop, with `deepseek-v4.1-flash:cloud`
+(`e04da138`, Ollama 0.40.6) through the local Ollama server. Nothing is billed
+per request, but the calls count against the Ollama account's usage limits. A build whose settings leave the extraction prompt
+unchanged replays the shared extraction cache in seconds.
+
+1. **Defect probes**, 22 seconds and 14 model calls per build.
+   `benchmarks/conversations/defects-v1.json` is a 14-turn chat over three
+   dated sessions that holds the repro of both issues (Alex Rivera, the trip
+   to Japan with four cities, a dropped city, a shellfish allergy) and three
+   control topics. Seven probes ask what the issues' users would ask, and
+   each answer must rank in the top 3.
+
+   ```sh
+   uv run python -m benchmarks.diagnostics.chat_probe      --conversation benchmarks/conversations/defects-v1.json      build --label off --model deepseek-v4.1-flash:cloud --cloud
+   uv run python -m benchmarks.diagnostics.chat_probe      --conversation benchmarks/conversations/defects-v1.json      build --label on --set <key>=<value> --model deepseek-v4.1-flash:cloud --cloud
+   uv run python -m benchmarks.diagnostics.chat_probe      --conversation benchmarks/conversations/defects-v1.json compare off on
+   ```
+
+2. **Chat probe**, 83 seconds and 54 model calls per build, on the 54-turn
+   `chat-v1` chat.
+
+   ```sh
+   uv run python -m benchmarks.diagnostics.chat_probe      build --label off --model deepseek-v4.1-flash:cloud --cloud
+   uv run python -m benchmarks.diagnostics.chat_probe      build --label on --set <key>=<value> --model deepseek-v4.1-flash:cloud --cloud
+   uv run python -m benchmarks.diagnostics.chat_probe compare off on
+   ```
+
+3. **Offline evidence gate**, 10 minutes 10 seconds per side, local only. On
+   this machine the gate needs the two inputs described under "Inputs" and
+   "Regenerated LongMemEval-S controls": a link from
+   `../prism-locomo-baseline-2026-09-22` to the main checkout (the LoCoMo
+   packs are in its `data/`, but `locomo/prepared.json` names them under that
+   sibling path), and `--lme-captures`.
+
+   ```sh
+   uv run python -m benchmarks.diagnostics.product_packing gate      --lme-captures data/opt-in-study/lme-controls-regenerated-2026-10-14/baseline      --output /tmp/gate-off.json
+   uv run python -m benchmarks.diagnostics.product_packing gate      --lme-captures data/opt-in-study/lme-controls-regenerated-2026-10-14/baseline      --set <key>=<value> --output /tmp/gate-on.json
+   uv run python -m benchmarks.diagnostics.product_packing gate-compare      /tmp/gate-off.json /tmp/gate-on.json --output /tmp/gate-comparison.json
+   ```
+
+   The gate replays `retrieve()` over the saved `store()` packs, which hold no
+   extracted records, so it cannot see what `ingest()` stores. It checks the
+   other half: a change to retrieval must not lose evidence, and a change that
+   leaves retrieval alone must leave the gate unchanged.
+
+The change passes when all of these hold; any other result goes to the owner
+with the numbers.
+
+- Defect probes: with the option on, the answer ranks in the top 3 for all 7
+  probes ("probes with the answer ranked in the top 3" reads 7/7), and the
+  owner's claims are named: "user claims attached to the named owner" exceeds
+  "user claims attached to a first-person pronoun".
+- Chat probe: no measure is worse with the option on than off. Lower is better
+  for the claims whose text repeats another's, the claims repeating a subject,
+  predicate and object, the claims whose text is the whole message, the claims
+  from assistant turns only, the claims attached to a first-person pronoun,
+  the entities with no link, the pronoun entities, the probes with a stale
+  value and the repeated records. Higher is better for the claims attached to
+  the named owner, the key entities found, the key links linked, and the
+  probes with the answer in context and ranked in the top 3 and top 5. The
+  counts of extraction calls, claims and entities are not judged.
+- Offline gate: no retrieval loss. In `gate-compare`'s first table every
+  "All evidence packed" row, "Evidence recall" and "All evidence among the
+  candidates" show no loss, and no question lost all its evidence among the
+  candidates.
+
+Baseline on 2026-10-19, `main` at `7f9ce556` with the rank measure and the new
+conversation added, which change no ingest or retrieval behavior (so the option
+is off by construction):
+
+| Measure | defects-v1 | chat-v1 |
+|---|---:|---:|
+| Extraction calls | 14 | 54 |
+| Active claims | 24 | 102 |
+| Claims whose text repeats another's | 12 | 39 |
+| Claims whose text is the whole message | 7 | 11 |
+| User claims attached to the named owner | 0 | 0 |
+| User claims attached to a first-person pronoun | 17 | 39 |
+| Pronoun entities | 6 | 34 |
+| Entities with no link | 7 | 12 |
+| Key entities found / split / missing | 9/0/0 | 15/2/0 |
+| Key links linked / via pronoun / not linked / missing | 1/2/6/0 | 4/10/0/0 |
+| Probes with the answer in context | 7/7 | 17/18 |
+| Probes with the answer ranked in the top 3 | 5/7 | 14/18 |
+| Probes with the answer ranked in the top 5 | 7/7 | 15/18 |
+| Probes with a stale value in context | 0 | 3 |
+| Repeated records in contexts | 0/105 | 18/1638 |
+
+The offline gate on the same code: LoCoMo 84.5 records per context, all
+evidence packed for 1,290 of 1,536 questions (84.0%; multi-hop 140 of 282),
+projected accuracy 77.6%; LongMemEval-S 39.9 records per context, 445 of 470
+(94.7%), 91.4%. Retrieval p50 was 0.153 s and 0.163 s. These are the numbers
+recorded above for the current defaults.
+
+What the defect probes show on `main`:
+
+- The speaker stays "I" (#258): none of the 24 claims from Alex's turns is
+  attached to Alex, and 17 hang off an "I" or "We" entity (6 pronoun entities,
+  none resolved to "Alex Rivera"). "My partner Jordan and I are planning a trip
+  to Japan" is stored with that wording, not with a name.
+- The cities are not linked (#259): Tokyo, Kyoto, Kanazawa and Osaka have no
+  link at all, so the four links from Japan to a city read "not linked".
+- One sentence becomes several records with the same text (#258): the trip
+  sentence is stored three times and "I write Go for services and TypeScript
+  for tooling" four times, so 12 claims repeat another's text, and the copies
+  take the first ranks. The cities probe ranks 4 (behind three copies of the
+  trip sentence) and the travel probe 5, so 2 of 7 miss the top 3.
+- A turn that yields no claim (#258) did not reproduce with this model. The
+  issue saw it on Claude Haiku 4.5. DeepSeek stores "We chose Tokyo, Kyoto,
+  Kanazawa, and Osaka." as a decision, and "We dropped Hiroshima to save time."
+  as two, from the same sentences as in the issue, so the conversation text is
+  unchanged. That decision names all four cities, which is why the cities
+  probe ranks 4 and not lower.
+
+The probes need a fresh extraction for each model and prompt, and extraction
+at temperature 0 is close to repeatable but not guaranteed to be, so a single
+baseline build is not a measure of run-to-run noise. Compare builds only when
+both used the same model and Ollama server version (`build.json` records both).
 
 ### Corrections probe: what a correction stores and returns
 
