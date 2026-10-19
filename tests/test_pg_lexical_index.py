@@ -232,19 +232,8 @@ async def test_single_term_scores_are_ts_rank_cd(lexical_index, graph_store, pg_
 
 async def test_retrieve_ranks_the_partly_matching_memory_first(monkeypatch):
     """The issue's three memory repro through retrieve() on PostgreSQL."""
-    import hashlib
-
     from prme.config import PRMEConfig
     from prme.storage.engine import MemoryEngine
-
-    class HashEmbeddingProvider:
-        model_name = "lexical-any-term-test"
-        model_version = "1"
-        dimension = 384  # The dimension of the existing PostgreSQL test schema.
-
-        async def embed(self, texts):
-            return [[hashlib.sha256(text.encode()).digest()[i % 32] / 255
-                     for i in range(self.dimension)] for text in texts]
 
     monkeypatch.setattr("prme.storage.engine.create_embedding_provider",
                         lambda _: HashEmbeddingProvider())
@@ -267,3 +256,197 @@ async def test_retrieve_ranks_the_partly_matching_memory_first(monkeypatch):
             continue
         assert contents[0] == RUST, question
         assert response.results[0].composite_score > response.results[1].composite_score, question
+
+
+# --- Term weights: rare words decide, common words do not select ----------------
+
+STATEMENTS = [
+    "waters the ferns on Sundays", "paints the garden fence white", "keeps a spare umbrella at work",
+    "bakes sourdough every other week", "collects vintage postcards", "walks to the station each morning",
+    "sorts the recycling on Tuesdays", "repairs bicycle tires at home", "tastes every tea in the shop",
+    "folds paper cranes at lunch", "grows basil on the balcony", "stretches before breakfast",
+    "photographs old bridges", "mends socks by lamplight", "brews ginger beer in the cellar",
+    "trims the hedge in spring", "hums while washing dishes", "labels every jar in the pantry",
+    "catalogs seashells from holidays", "swims laps before sunrise", "plants tulips along the path",
+    "polishes brass doorknobs", "knits scarves for the neighbors", "airs the quilts in June",
+    "sketches rooftops from the train", "oils the squeaky gate", "pickles beets in autumn",
+    "feeds sparrows on the windowsill", "dries lavender in bundles", "winds the hallway clock",
+]
+CODE_NOTES = ["Alex reviews code before lunch.", "Alex keeps code snippets in a notebook.",
+              "Alex's code editor is Neovim."]
+CALL_NOTES = ["Alex is on call this week.", "Alex swapped the on-call shift with Priya.",
+              "Priya covers the call rotation.", "The pager app is called Beeper."]
+MANAGER_NOTES = ["Alex's manager is Dana Okafor.", "Dana manages the platform team."]
+
+
+async def _store_alex_notes(graph_store, uid, extra=()):
+    """Forty-odd memories in which "alex" is common, as for the owner of a store."""
+    return await _store_notes(graph_store, uid, [
+        RUST, *CODE_NOTES, *CALL_NOTES, *MANAGER_NOTES, *extra,
+        *(f"Alex {text}." for text in STATEMENTS), "The garden gate is green.", "The river bank is steep."])
+
+
+@pytest.fixture
+async def weighted_index(pg_pool, lexical_index):
+    from prme.storage.pg.lexical_index import PgLexicalIndex
+
+    return PgLexicalIndex(pg_pool, term_weights=True)
+
+
+async def test_term_weights_are_the_config_default_and_off_in_a_bare_index(pg_pool):
+    from prme import PRMEConfig
+    from prme.storage.pg.lexical_index import PgLexicalIndex
+
+    # The config turns them on (alpha channel, 2026-10-19); an index built by hand keeps the any-term search.
+    assert PRMEConfig().lexical_term_weights is True
+    assert PRMEConfig(lexical_term_weights=False).lexical_term_weights is False
+    assert PgLexicalIndex(pg_pool)._term_weights is False
+
+
+async def test_the_question_finds_the_memory_with_the_rare_word_alone(lexical_index, weighted_index, graph_store):
+    """"code" is in three memories and "alex" in most: only "learning" is rare enough."""
+    uid = f"user-{uuid.uuid4()}"
+    ids = await _store_alex_notes(graph_store, uid)
+    question = "what coding language is alex learning?"
+    rows = await weighted_index.search(question, uid, limit=10)
+    assert [row["node_id"] for row in rows] == [ids[RUST]]
+    # Without term weights the memories that share "code" are candidates too.
+    off = await lexical_index.search(question, uid, limit=10)
+    assert {row["node_id"] for row in off} == {ids[RUST], *(ids[text] for text in CODE_NOTES)}
+
+
+async def test_words_that_only_a_few_memories_share_select_nothing(lexical_index, weighted_index, graph_store):
+    """Nothing holds "dog", and "called" is only a verb that four memories use."""
+    uid = f"user-{uuid.uuid4()}"
+    ids = await _store_alex_notes(graph_store, uid)
+    question = "What is Alex's dog called?"
+    assert await weighted_index.search(question, uid, limit=10) == []
+    off = await lexical_index.search(question, uid, limit=10)
+    assert {row["node_id"] for row in off} == {ids[text] for text in CALL_NOTES}
+
+
+async def test_a_word_that_two_memories_hold_selects_them_and_the_name_ranks_them(weighted_index, graph_store):
+    uid = f"user-{uuid.uuid4()}"
+    ids = await _store_alex_notes(graph_store, uid)
+    # No memory holds "nowadays", so none holds every word of the question.
+    rows = await weighted_index.search("Who is Alex's manager nowadays?", uid, limit=10)
+    assert [row["node_id"] for row in rows] == [ids[MANAGER_NOTES[0]], ids[MANAGER_NOTES[1]]]
+    assert rows[0]["score"] > rows[1]["score"]
+    # With every word in one memory, that memory is the only hit.
+    rows = await weighted_index.search("Who is Alex's manager?", uid, limit=10)
+    assert [row["node_id"] for row in rows] == [ids[MANAGER_NOTES[0]]]
+
+
+async def test_one_rare_word_outweighs_two_words_that_eight_memories_hold(lexical_index, weighted_index, graph_store):
+    uid = f"user-{uuid.uuid4()}"
+    both = "A glass vase on the shelf."
+    rare = "The zeppelin is parked in the hangar."
+    ids = await _store_notes(graph_store, uid, [
+        both, rare, *(f"A glass bowl number {n}." for n in range(7)), *(f"A vase of tulips number {n}." for n in range(7)),
+        *(f"Alex {text}." for text in STATEMENTS)])
+    rows = await weighted_index.search("zeppelin glass vase", uid, limit=10)
+    # "glass" and "vase" are in eight memories each, so no memory is a
+    # candidate for one of them alone, and no memory holds all three words.
+    assert [row["node_id"] for row in rows] == [ids[rare], ids[both]]
+    assert rows[0]["score"] > rows[1]["score"]
+    off = await lexical_index.search("zeppelin glass vase", uid, limit=20)
+    assert off[0]["node_id"] == ids[both] and len(off) == 16
+
+
+async def test_a_memory_that_holds_every_word_stays_the_only_hit(weighted_index, graph_store):
+    uid = f"user-{uuid.uuid4()}"
+    ids = await _store_alex_notes(graph_store, uid)
+    rows = await weighted_index.search("alex learning", uid, limit=10)
+    assert [row["node_id"] for row in rows] == [ids[RUST]]
+
+
+async def test_a_query_with_one_word_returns_every_memory_that_holds_it(weighted_index, graph_store, pg_pool):
+    uid = f"user-{uuid.uuid4()}"
+    ids = await _store_alex_notes(graph_store, uid)
+    rows = await weighted_index.search("code", uid, limit=10)
+    assert {row["node_id"] for row in rows} == {ids[text] for text in CODE_NOTES}
+    # The order is ts_rank_cd's, as without term weights.
+    expected = await pg_pool.fetch(
+        "SELECT id::text AS node_id FROM nodes WHERE user_id = $1 AND content_tsv @@ plainto_tsquery('english', 'code') "
+        "ORDER BY ts_rank_cd(content_tsv, plainto_tsquery('english', 'code')) DESC, id::text COLLATE \"C\"", uid)
+    assert [row["node_id"] for row in rows] == [row["node_id"] for row in expected]
+    everyone = await pg_pool.fetchval(
+        "SELECT count(*) FROM nodes WHERE user_id = $1 AND content_tsv @@ plainto_tsquery('english', 'alex')", uid)
+    assert len(await weighted_index.search("alex", uid, limit=100)) == everyone > 30
+
+
+async def test_term_weights_count_only_the_memories_that_are_searched(weighted_index, graph_store):
+    uid = f"user-{uuid.uuid4()}"
+    rust = MemoryNode(user_id=uid, node_type=NodeType.NOTE, scope=Scope.PERSONAL, content=RUST)
+    # An index copy written before the graph row, as in the duplicate test above.
+    await weighted_index.index(str(rust.id), RUST, uid, "note", "personal")
+    await graph_store.create_node(rust)
+    await _store_notes(graph_store, uid, [*CODE_NOTES, *CALL_NOTES, *MANAGER_NOTES,
+                                          *(f"Alex {text}." for text in STATEMENTS)])
+    # Memories that the filters leave out. If they were counted, "learning"
+    # would be in four memories and the Rust memory would not be a candidate.
+    await weighted_index.index(str(uuid.uuid4()), RUST, uid, "event", "personal")
+    for owner, scope in [(uid, Scope.PROJECT), (uid + "-other", Scope.PERSONAL)]:
+        await graph_store.create_node(MemoryNode(user_id=owner, node_type=NodeType.NOTE, scope=scope, content=RUST))
+    rows = await weighted_index.search("what coding language is alex learning?", uid,
+                                       limit=10, node_type="note", scope=["personal"])
+    assert [row["node_id"] for row in rows] == [str(rust.id)]
+
+
+async def test_the_chance_limit_is_a_share_of_the_store_or_two_memories(weighted_index, graph_store, monkeypatch):
+    from prme.storage.pg import lexical_index
+
+    uid = f"user-{uuid.uuid4()}"
+    cellists = ["Alex plays the cello at night.", "Sam plays the cello on Sundays.", "Jo plays the cello in a quartet."]
+    ids = await _store_notes(graph_store, uid, [*cellists, *(f"Alex {text}." for text in STATEMENTS)])
+    # "zzzz" is in no memory, so "cello" is the only searched word. Three of 33
+    # memories hold it: more than the two memories a small store allows.
+    assert await weighted_index.search("cello zzzz", uid, limit=10) == []
+    assert await weighted_index.search("cello", uid, limit=10) != []
+    # A share of the store that allows three memories lets them through.
+    monkeypatch.setattr(lexical_index, "MAX_CHANCE_SHARE", 0.1)
+    rows = await weighted_index.search("cello zzzz", uid, limit=10)
+    assert {row["node_id"] for row in rows} == {ids[text] for text in cellists}
+
+
+class HashEmbeddingProvider:
+    model_name = "lexical-term-weights-test"
+    model_version = "1"
+    dimension = 384  # The dimension of the existing PostgreSQL test schema.
+
+    async def embed(self, texts):
+        import hashlib
+
+        return [[hashlib.sha256(text.encode()).digest()[i % 32] / 255
+                 for i in range(self.dimension)] for text in texts]
+
+
+async def test_retrieve_follows_the_option_on_a_store_where_the_name_is_common(monkeypatch):
+    """Both paths through retrieve(): the question that needs the rare word, and the one that matches only a verb."""
+    from prme.config import PRMEConfig
+    from prme.storage.engine import MemoryEngine
+
+    monkeypatch.setattr("prme.storage.engine.create_embedding_provider", lambda _: HashEmbeddingProvider())
+    uid = f"user-{uuid.uuid4()}"
+    memories = [RUST, *CODE_NOTES, *CALL_NOTES, *MANAGER_NOTES, *(f"Alex {text}." for text in STATEMENTS)]
+    found = {}
+    for option in (False, True):
+        # On is the default, so the engine's wiring of the default is what the second pass tests.
+        config = PRMEConfig(database_url=os.environ["PRME_TEST_DATABASE_URL"],
+                            organizer={"opportunistic_enabled": False},
+                            **({} if option else {"lexical_term_weights": False}))
+        async with MemoryEngine.open(config) as engine:
+            assert engine._lexical_index._term_weights is option
+            if not option:
+                for text in memories:
+                    await engine.store(text, user_id=uid)
+            for question in ("what coding language is alex learning?", "What is Alex's dog called?"):
+                response = await engine.retrieve(question, user_id=uid)
+                found[option, question] = (response.metadata.candidates_generated.get("LEXICAL", 0),
+                                           [item.node.content for item in response.results])
+    rust, dog = "what coding language is alex learning?", "What is Alex's dog called?"
+    # Off: the three memories that share "code" are candidates with the Rust memory, and so are the four that share "call".
+    assert found[False, rust][0] == 4 and found[False, dog][0] == 4
+    # On: the Rust memory is the only candidate, and rank fusion puts it first. The verb selects nothing.
+    assert found[True, rust][0] == 1 and found[True, rust][1][0] == RUST
+    assert found[True, dog][0] == 0
