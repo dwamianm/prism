@@ -51,6 +51,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
      source sentences and the paragraph stays every claim's `evidence_quote`.
      The statement is not source text, so the packed context shows it as its
      own line instead of folding it into the message.
+- Add `extract` to `store()`, `store_with_receipt()`, `POST /v1/store`, the
+  `memory_store` MCP tool and the sync client (#260), and
+  `enable_store_extraction` to set its default (off). `extract=True` saves an
+  extraction job with the stored event and starts the extraction `ingest()`
+  runs in the background, in the same batches, so a stored memory gets
+  entities and claims too. The call still returns at once with the stored
+  node, which keeps its id and content and stays the only note for the text.
+  Extraction over a stored event no longer stops at "Source has legacy
+  derived nodes", which it did for a direct node whose id is not the event's.
+  Without the argument and the setting, `store()` makes no model call, as before.
 - Add a fast gate for ingest changes (part of prism-monorepo issues 258 and
   259; `BENCHMARKS.md`, "Fast gate for ingest changes"). The chat probe takes a
   second conversation, `benchmarks/conversations/defects-v1.json`: 14 turns

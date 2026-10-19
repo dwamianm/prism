@@ -125,6 +125,7 @@ Store a memory node with vector embedding and full-text indexing.
 | `scope` | string | `"personal"` | One of: personal, project, organisation |
 | `role` | string | `"user"` | `user` (the memory's owner), `participant` (another human in the conversation), `assistant`, `tool` or `system` |
 | `speaker` | string | optional | Name of who said it, shown by the reader context |
+| `extract` | boolean | optional | `true` also queues the background extraction `memory_ingest` runs; `false` stores without extraction; omitted follows the server's `enable_store_extraction` setting (off by default) |
 
 Returns JSON: `{"event_id": "...", "node_id": "..."}`
 

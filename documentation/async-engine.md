@@ -42,6 +42,7 @@ async def store(
     source_type: SourceType | None = None,
     event_time: datetime | None = None,
     ttl_days: int | None = ...,
+    extract: bool | None = None,
 ) -> str
 ```
 
@@ -50,6 +51,7 @@ Both the async API and `MemoryClient.store()` accept these explicit controls:
 - `epistemic_type` — override auto-inference (OBSERVED, ASSERTED, INFERRED, etc.)
 - `source_type` — override auto-inference (USER_STATED, SYSTEM_INFERRED, etc.)
 - `ttl_days` — explicit TTL. Use `None` for no TTL. Default (`...`) uses the config's per-type default.
+- `extract` — `True` also queues the background LLM extraction `ingest()` runs once the node is stored, so the text gets entities and claims too; the call does not wait and the node is kept as it is. `False` never extracts. Default (`None`) follows `enable_store_extraction`, which is off.
 - `role` and `speaker` — `role="participant"` marks a human in the conversation other than the memory's owner (`USER_STATED`, like `"user"`), and `speaker` names who said it. The reader context shows the name before the text. See [conversation participants](../docs/INTEGRATION.md).
 
 ## ingest()

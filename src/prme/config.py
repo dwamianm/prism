@@ -675,6 +675,17 @@ class PRMEConfig(_ProjectSettings):
             "Default False for backward compatibility."
         ),
     )
+    enable_store_extraction: bool = Field(
+        default=False,
+        description=(
+            "Whether store() also queues LLM extraction of the stored source when "
+            "the caller does not say (the extract argument, #260). The same "
+            "background extraction as ingest() follows, in the same batches; "
+            "store() still returns at once and keeps its own node. Needs an "
+            "extraction provider, and is skipped without one. Default False: "
+            "store() needs no LLM."
+        ),
+    )
     reinforce_similarity_threshold: float | None = Field(
         default=None,
         description=(

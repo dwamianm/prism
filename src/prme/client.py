@@ -342,6 +342,7 @@ class MemoryClient:
         valid_from: datetime | None = None,
         valid_to: datetime | None = None,
         ttl_days: int | None = ...,
+        extract: bool | None = None,
     ) -> str:
         """Store a memory. Returns the event UUID.
 
@@ -353,6 +354,9 @@ class MemoryClient:
         complete caller-supplied lookup forms for tool boundaries.
         ``speaker`` names who said it (``role="participant"`` marks another
         human in the conversation as a first-party source).
+        ``extract=True`` also queues the background LLM extraction ``ingest()``
+        runs, once the node is stored; omit it to follow
+        ``enable_store_extraction`` (off by default).
         """
         return self._run(
             self._engine.store(
@@ -373,6 +377,7 @@ class MemoryClient:
                 valid_from=valid_from,
                 valid_to=valid_to,
                 ttl_days=ttl_days,
+                extract=extract,
             )
         )
 
@@ -396,6 +401,7 @@ class MemoryClient:
         valid_from: datetime | None = None,
         valid_to: datetime | None = None,
         ttl_days: int | None = ...,
+        extract: bool | None = None,
     ) -> StoreReceipt:
         """Store a memory and return its event, node, and processing status."""
         return self._run(self._engine.store_with_receipt(
@@ -416,6 +422,7 @@ class MemoryClient:
             valid_from=valid_from,
             valid_to=valid_to,
             ttl_days=ttl_days,
+            extract=extract,
         ))
 
     def retrieve(
