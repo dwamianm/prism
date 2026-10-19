@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (see Fixed), a question that holds the owner's name and a few common words
   lifts unrelated memories as much as the memory with the rare word: on the
   fast cycle's 75 memory fixture the Rust question ranks 4th and the dog
-  question fell from 1st to 5th. With the option on, a query word
+  question falls from 1st to 5th. With the option on, a query word
   weighs ln(N / df), where N is the number of the owner's searched memories
   and df the number that hold the word, and a memory is a candidate (with more
   than one query word) only when the words it holds would be held together by
@@ -31,6 +31,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unchanged. The fast cycle also takes `--store-fixture` and ships the second
   question set as `benchmarks/fixtures/fast-cycle/store-heldout-v1.json`.
   `BENCHMARKS.md`, "Lexical term weights", has the table.
+- Add `enable_superseded_source_suppression` (part of prism-monorepo issue
+  270), off by default. `ingest()` keeps a message as a note beside the claims
+  extracted from it, so retiring a claim (a correction, `supersede()`) left
+  the note that stated the old value, and any claim written from the same
+  sentence, active and able to reach the context ahead of the correction.
+  With the option on, default retrieval leaves out a note or claim when a
+  superseded claim that cites one of its source messages was replaced by a
+  record from another message with a different statement and the record's
+  text holds that claim's text; a bare entity name goes when every message
+  that named it does. Nothing is written or deleted, the records stay
+  readable by id, and `RetrievalMode.EXPLICIT` keeps them. The receipt
+  records the option only while it is on. The corrections probe gains two
+  measures, "old-only lines in the context" and "old value shown before the
+  new value".
+
+## [0.16.0a1] - 2026-10-19
+
+This is an alpha. It passed CI and the fast gate for ingest changes, and it has
+not been through the full benchmark. The stable release stays at 0.15.0 until
+the full benchmark audit, so `pip install prme` still installs 0.15.0. Install
+the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
+
+### Added
+
 - Add the fast cycle (part of prism-monorepo issues 258 and 259;
   `BENCHMARKS.md`, "Fast cycle"): `uv run python -m benchmarks.fast_cycle run
   --label <name> --out <dir>` stores 75 memories with `store()` and asks 17
@@ -46,6 +70,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   takes about 3 minutes and a warm one under 30 seconds. The store stage can run
   on PostgreSQL (`--database-url`). It is a regression screen, not an accuracy
   estimate. Nothing in the engine changes.
+- Add `enable_ingest_claim_fixes` (`PRME_ENABLE_INGEST_CLAIM_FIXES`), off by
+  default (prism-monorepo issue 258). With it on, `ingest()` makes three
+  changes to what a turn's claims say, and with it off nothing changes:
+  records, plans, receipts and configuration dumps keep their bytes. It has not
+  been through the default-change rule, so turning it on by default needs that
+  rule on the `ingest()` answer track.
+  1. A claim of a plural first-person statement is kept. Given "We chose Tokyo,
+     Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.", Claude
+     Haiku 4.5 returned two facts whose subject was `I`, a word the sentences
+     do not contain, so grounding discarded both and the turn's extraction had
+     empty `facts`. When a built-in provider writes `I`, `me`, `my`, `mine` or
+     `myself` for a claim's subject, object or relationship endpoint and the
+     cited sentences use no singular first-person form but do use the plural
+     counterpart (`we`, `us`, `our`, `ours`, `ourselves`), the claim keeps the
+     turn's own word. Singular and plural forms still do not match each other
+     in grounding, and a plural reference still stays local to its message.
+     A custom provider is passed `plural_first_person=True` only while the
+     option is on.
+  2. A speaker who introduces themselves is linked to their own entity. A user
+     turn with no `speaker` that says who it is ("Hi, I am Alex Rivera", "I'm
+     Alex Rivera", "My name is Alex Rivera", "Call me Alex") binds its `I`,
+     `me` and `my` to the person entity of that name, the way a caller-named
+     `speaker` does under `enable_speaker_references`, when the extraction
+     lists the name as a person. The claim's `speaker_reference` metadata has
+     `"basis": "self_introduction"`, and the turn no longer creates a
+     message-local `I` entity. A possessive ("I am Jordan's partner"), a name
+     the extraction did not list as a person, a turn that introduces two
+     different people, an assistant turn, a `speaker` the caller gave, and
+     `first_person_owner=True` bind nothing new. The binding covers that turn
+     only: a later turn that names nobody keeps its own `I`.
+  3. With `enable_claim_sentence_text`, no two claims of one message share a
+     text. A claim whose sentences are already the text of an earlier claim of
+     the same message, such as the partner claim and the trip claim of "My
+     partner Jordan and I are planning a trip to Japan.", has a one-sentence
+     statement of its own, "Alex Rivera partner Jordan.", built from its
+     subject, predicate and object (the speaker's name, "the speaker" or "the
+     speaker's group" for a first-person reference, "It is not true that ..."
+     for a denial, the condition in parentheses). It records
+     `claim_statement_v1` as its grounding method. The first claim keeps the
+     source sentences and the paragraph stays every claim's `evidence_quote`.
+     The statement is not source text, so the packed context shows it as its
+     own line instead of folding it into the message.
 - Add `extract` to `store()`, `store_with_receipt()`, `POST /v1/store`, the
   `memory_store` MCP tool and the sync client (#260), and
   `enable_store_extraction` to set its default (off). `extract=True` saves an
@@ -85,9 +151,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   limit; nothing changes unless it is set. On an 18-core machine one thread
   embedded a short text with 4.9 ms of CPU against 42.5 ms by default, in
   about the same wall time, and gave bit-identical vectors for 300 texts.
+- Add `enable_mention_links` and `packing.graph_seed_words` (prism-monorepo
+  issue 259), both off by default, so graph search can find the claims and
+  notes that name an entity. After `ingest()`, the neighborhood of an entity
+  such as Japan or Tokyo was empty, because extraction linked an entity only
+  to the claims it is the subject of (HAS_FACT) and to a claim's resolved
+  object (MENTIONS), and graph search seeded only from the capitalized words
+  of a question. With both off, ingestion, graph candidates and receipts keep
+  the bytes they had.
+  - `enable_mention_links` (`PRME_ENABLE_MENTION_LINKS`) makes `ingest()` add
+    a MENTIONS link from each claim and from the raw source note to every
+    entity its extraction lists whose name occurs in its text as a whole word,
+    ignoring case. That covers a claim whose object text holds a name ("Japan
+    in late March next year") and a note that no claim covers ("We chose
+    Tokyo, Kyoto, Kanazawa, and Osaka."). The edge metadata marks these links
+    `basis: text_mention`, and claim merging ignores them. A name that two
+    listed entities share and a literal I or we are not linked. The links are
+    made after the derivation commits and after the note exists, in either
+    order, and are not part of the derivation plan, so a failure to link never
+    fails an extraction and saved plans keep their bytes. Memories ingested
+    before the option was on keep the links they have.
+  - `packing.graph_seed_words` (`PRME_PACKING__GRAPH_SEED_WORDS`) makes graph
+    candidate generation independent of capital letters. The capitalized names
+    and quoted strings it matched before still match as substrings. Every
+    other word of the question seeds the graph when it has three or more
+    letters, is not a common function word and is a whole word of an entity's
+    name, so `which cities will Alex and jordan visit in Japan?` and the same
+    question with `Jordan` find the same seeds. Receipts record it when it is
+    on.
+  - On the conversation of that issue (stub extraction), with both on, the
+    neighbors within two hops of Tokyo, Japan and Alex Rivera went from 0, 0
+    and 0 to 5, 6 and 3, and `candidates_generated.GRAPH` for the two
+    spellings of the question from 0 and 4 to 11 and 11, on DuckDB and
+    PostgreSQL. Under the default rank fusion a candidate found only through
+    the graph still scores 0 (RFC-0005), so this adds candidates and
+    weighted-score evidence, not a graph channel. Neither option has been
+    through the default-change rule.
 
 ### Changed
 
+- The neighborhood walk (`get_neighborhood`, `get_neighborhood_with_depth`
+  and graph candidates) on DuckDB and PostgreSQL returns the same nodes at the
+  same depths but expands each node once per depth instead of once per path.
+  It followed every simple path, so its work multiplied with each hub entity
+  on the way, which a more densely linked graph makes expensive. On 3,000
+  events over 40 entities in PostgreSQL with links from every claim and note
+  to the entities its text names, graph candidates took a median 1,346 ms with
+  the old walk and 156 ms with this walk, against 148 ms for the old walk
+  without those links. A test checks the walk against a reference
+  breadth-first search on random graphs with cycles, parallel edges and hubs.
 - Retrieval does less work and returns the same results, contexts and
   receipts. `FastEmbedProvider.model_version` reads fastembed's package
   metadata once per process instead of on every access, and the PostgreSQL
@@ -121,6 +233,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   return the same hits and scores as before. In the three memory example from
   the issue, the memory that answers the question went from a lead of 0.008
   to a score of 1.0 against 0.492.
+
+### Upgrade notes
+
+- No default was turned on in this alpha. `enable_ingest_claim_fixes`,
+  `enable_mention_links` and `packing.graph_seed_words` are off. On the fast
+  gate (defect probes and the chat probe, with `deepseek-v4.1-flash:cloud`),
+  the three together did not pass: the answer ranked in the top 3 for 4 of 7
+  defect probes against 5 of 7 with them off, and for 8 of 18 chat probes
+  against 14 of 18. The claim fixes cause the lower ranks, because claims that
+  used to share one text now each show their own. Linking and seed words alone
+  changed no rank. They are still useful to try on a store of your own, and a
+  hosted service can set them through its configuration.
+- `store(extract=True)` and `enable_store_extraction` start a model call in
+  the background for each stored memory. Both are off by default, so `store()`
+  makes no model call unless you ask for one.
+- On PostgreSQL, a multi-word query now also finds memories that share only
+  some of its words (see Fixed). Single-word queries and DuckDB are unchanged.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.15.0] - 2026-10-16
 
@@ -2115,7 +2248,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a1...HEAD
+[0.16.0a1]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0a1
 [0.15.0]: https://github.com/dwamianm/prism/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/dwamianm/prism/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/dwamianm/prism/compare/v0.14.0...v0.14.1

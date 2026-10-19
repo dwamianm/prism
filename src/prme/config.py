@@ -876,6 +876,73 @@ class PRMEConfig(_ProjectSettings):
             "Default False."
         ),
     )
+    enable_mention_links: bool = Field(
+        default=False,
+        description=(
+            "When True, ingest() links each claim and the raw source note to "
+            "every entity its extraction lists whose name occurs in the text "
+            "(a MENTIONS edge marked metadata.basis=text_mention), so the "
+            "claims and notes that name an entity are its graph neighbors "
+            "(#259). A claim whose object text holds a name, and a note no "
+            "claim covers, were unlinked before. A name that two listed "
+            "entities share, and a literal I or we, are not linked. The links "
+            "are made after the derivation commits and after the note exists, "
+            "outside the derivation plan, and memories ingested earlier are "
+            "not linked. Turn on packing.graph_seed_words with it so a "
+            "question typed in lower case finds the entities. Not yet through "
+            "the default-change rule. Default False."
+        ),
+    )
+    enable_ingest_claim_fixes: bool = Field(
+        default=False,
+        # Unset, it is left out of dumps, so a configuration recorded before
+        # the option existed still compares equal.
+        exclude_if=lambda value: value is False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() makes three changes to what a "
+            "turn's claims say (prism-monorepo issue 258). (1) A claim that "
+            "the model writes with I, me or my, where the cited sentences use "
+            "we, us or our and no singular form, keeps the sentences' own "
+            "word instead of being discarded, so \"We chose Tokyo\" is a "
+            "claim about We. (2) A user turn that gives no speaker but says "
+            "who it is (\"I am Alex Rivera\", \"My name is Alex Rivera\") "
+            "binds its I, me and my to that person's entity when the "
+            "extraction lists the person, for that turn only, as "
+            "enable_speaker_references does for a caller's speaker. (3) With "
+            "enable_claim_sentence_text, a claim whose sentences are already "
+            "an earlier claim's text from the same message gets a one-"
+            "sentence statement of its own built from its subject, predicate "
+            "and object, so no two claims of a message share a text. Default "
+            "False: none of it has been through the default-change rule on "
+            "the ingest() answer track, and turning it on by default needs "
+            "that rule."
+        ),
+    )
+    enable_superseded_source_suppression: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, default retrieval leaves out the source "
+            "text of a retired claim (#270). ingest() keeps a message as a "
+            "note beside the claims extracted from it, so retiring a claim "
+            "(a correction, supersede()) leaves the note that stated the old "
+            "value, and any claim written from the same sentence, active and "
+            "able to reach the context ahead of the correction. With this "
+            "option, a note or claim is left out of retrieve() when a "
+            "superseded claim that cites one of its own source messages was "
+            "replaced by a fact, decision, preference, task or note from "
+            "another message with a different statement, and its text holds "
+            "that claim's text. A message that states other things too is "
+            "left out whole; its other claims stay active and can reach the "
+            "context in their own lines. Nothing is written or deleted: the "
+            "records keep their states and stay readable by id, and "
+            "RetrievalMode.EXPLICIT keeps them. A claim whose text a model "
+            "rewrote (enable_fact_text_resolution) does not match its "
+            "message. It acts only on claims that are already retired, so it "
+            "pairs with enable_extraction_corrections or explicit "
+            "supersede(). Each retrieve() reads the owner's superseded "
+            "records once when it has any. Default False."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(

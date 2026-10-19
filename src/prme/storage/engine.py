@@ -695,6 +695,8 @@ class MemoryEngine:
                 extraction_batch_target_tokens=config.extraction_batch_target_tokens,
                 extraction_timeout=config.extraction.batch_timeout,
                 extraction_corrections=config.enable_extraction_corrections,
+                link_mentions=config.enable_mention_links,
+                claim_fixes=config.enable_ingest_claim_fixes,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -726,6 +728,7 @@ class MemoryEngine:
                 query_reformulation_timeout=config.extraction.timeout,
                 temporal_languages=config.temporal_languages,
                 query_intent_order=config.query_intent_order,
+                superseded_source_suppression=config.enable_superseded_source_suppression,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -847,6 +850,8 @@ class MemoryEngine:
                 extraction_batch_target_tokens=config.extraction_batch_target_tokens,
                 extraction_timeout=config.extraction.batch_timeout,
                 extraction_corrections=config.enable_extraction_corrections,
+                link_mentions=config.enable_mention_links,
+                claim_fixes=config.enable_ingest_claim_fixes,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -879,6 +884,7 @@ class MemoryEngine:
                 query_reformulation_timeout=config.extraction.timeout,
                 temporal_languages=config.temporal_languages,
                 query_intent_order=config.query_intent_order,
+                superseded_source_suppression=config.enable_superseded_source_suppression,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -1951,6 +1957,18 @@ class MemoryEngine:
         if node.lifecycle_state not in ACTIVE_LIFECYCLE_STATES:
             # An explicit retirement during a retry must not resurrect data.
             return
+        if direct is None and self._pipeline is not None and self._config.enable_mention_links:
+            # The source's entities may be derived already; link them to this
+            # note (#259). Otherwise the derivation links it when it commits.
+            from prme.ingestion.mention_links import link_event_mentions
+
+            await link_event_mentions(
+                str(event.id), [node], user_id=event.user_id, graph_store=self._graph_store,
+                event_store=self._event_store,
+                create_edge=lambda edge: self._write_queue.submit(
+                    lambda: self._graph_store.create_edge(edge), label=f"materialize.link:{edge.id}",
+                ),
+            )
         # Replace partial writes independently and persist each healthy index.
         # Any failure keeps the durable job pending, even when one search path
         # is already usable. Cancellation still propagates immediately here.

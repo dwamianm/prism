@@ -130,6 +130,15 @@ is not effective after it. The choice is saved with the extraction and
 replayed without a model call. See `docs/INTEGRATION.md`, "Corrections named
 during extraction", for the request and its limits.
 
+A claim that `ingest()` extracted is retired on its own: the note that stated
+the old value, and any claim from the same sentence, stay active and can reach
+`retrieve()` ahead of the correction. With `enable_superseded_source_suppression`
+(off by default; #270), default retrieval leaves out the records whose text
+holds a retired claim's text, when a record from another message replaced it.
+Nothing is deleted or rewritten, the records stay readable by id, and
+`RetrievalMode.EXPLICIT` keeps them. See `docs/INTEGRATION.md`, "Retiring a
+claim's source text from retrieval".
+
 Raw source notes and immutable events remain available. A note can contain
 several claims, including an unrelated diagnosis that must survive a treatment
 correction. Use the explicit NOTE filter to leave those sources out of retrieval.

@@ -1127,11 +1127,12 @@ class PgGraphStore:
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops with their minimum hop distance.
 
-        Single cycle-guarded recursive CTE: each branch carries the array
-        of visited node IDs and refuses to revisit one (preventing
-        A->B->A oscillation), and the outer query collapses paths to one
-        row per node with MIN(depth). Unaccepted alias proposals are excluded
-        unless explicitly requested.
+        Single recursive CTE with one row per (node, depth): UNION drops a
+        row it has already produced, so a node reached by many paths is
+        expanded once per depth instead of once per path, which would
+        multiply with every hub entity on the way. The outer query collapses
+        the rows to one per node with MIN(depth). Unaccepted alias proposals
+        are excluded unless explicitly requested.
         """
         # Build edge filter
         edge_filter_parts: list[str] = []
@@ -1187,38 +1188,24 @@ class PgGraphStore:
                          THEN e.target_id
                          ELSE e.source_id
                     END AS id,
-                    1 AS depth,
-                    ARRAY[$1::uuid,
-                          CASE WHEN e.source_id = $1::uuid
-                               THEN e.target_id
-                               ELSE e.source_id
-                          END] AS path
+                    1 AS depth
                 FROM edges e
                 WHERE (e.source_id = $1::uuid OR e.target_id = $1::uuid)
                     {edge_filter}
 
-                UNION ALL
+                UNION
 
-                -- Recursive case: expand from discovered neighbors,
-                -- skipping nodes already on this branch's path.
+                -- Recursive case: expand from discovered neighbors.
                 SELECT
                     CASE WHEN e.source_id = nb.id
                          THEN e.target_id
                          ELSE e.source_id
                     END AS id,
-                    nb.depth + 1 AS depth,
-                    nb.path || CASE WHEN e.source_id = nb.id
-                                    THEN e.target_id
-                                    ELSE e.source_id
-                               END AS path
+                    nb.depth + 1 AS depth
                 FROM neighborhood nb
                 JOIN edges e ON (e.source_id = nb.id OR e.target_id = nb.id)
                     {edge_filter}
                 WHERE nb.depth < ${max_hops_idx}
-                    AND CASE WHEN e.source_id = nb.id
-                             THEN e.target_id
-                             ELSE e.source_id
-                        END != ALL(nb.path)
             )
             SELECT {_NODE_COLUMNS_QUALIFIED}, nb.min_depth
             FROM (

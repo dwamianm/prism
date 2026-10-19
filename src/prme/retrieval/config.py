@@ -513,6 +513,21 @@ class PackingConfig(BaseModel):
         default=3, ge=1, le=3,
         description="Max hops for graph neighborhood (1-3 per RFC)",
     )
+    # Omitted when off, so configurations and receipts that do not use it keep
+    # their bytes.
+    graph_seed_words: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "Seed graph search from the words of the question, whatever their "
+            "case (#259). Off, only the capitalized names and quoted strings "
+            "of query analysis seed it, so a question typed in lower case "
+            "finds no entity. When True, a word of three or more letters that "
+            "is not a common function word also seeds it when it is a whole "
+            "word of an entity's name, so alex finds Alex Rivera; the "
+            "capitalized names still match as substrings. Default False."
+        ),
+    )
     cross_scope_top_n: int = Field(
         default=5, ge=0,
         description="Top-N threshold for cross-scope hints [HYPOTHESIS]",

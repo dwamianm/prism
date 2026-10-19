@@ -32,6 +32,17 @@ knows that the named speaker, and not someone the turn quotes, is who says
 `I`, so set `PRME_ENABLE_SPEAKER_REFERENCES=false` when a speaker's turns
 quote others in the first person.
 
+With `enable_ingest_claim_fixes` (default `false`), a user turn that gives no
+speaker but says who it is ("Hi, I am Alex Rivera", "I'm Alex", "My name is Alex
+Rivera", "Call me Alex") binds the same way when the extraction lists that name
+as a person; the claim's `speaker_reference` metadata then has
+`"basis": "self_introduction"`. That binding is local to the turn that names
+itself: later turns of the session still keep their own `I`, a caller's `speaker`
+or `first_person_owner` wins, and a possessive ("I am Jordan's partner"), a name
+the extraction did not list as a person, and a turn that introduces two
+different people bind nothing. The option has not been through the default-change
+rule, so turning it on by default needs that rule on the `ingest()` track.
+
 `ingest(first_person_owner=True)` provides a separate per-message declaration
 for user/human sources with no named speaker. Under fresh v14 plans, singular
 first-person references bind to one deterministic `owner_reference` entity per

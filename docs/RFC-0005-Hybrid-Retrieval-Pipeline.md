@@ -165,6 +165,23 @@ min_edge_confidence: Float    -- Minimum edge confidence to follow. Default: 0.4
 
 Graph traversal MUST respect namespace isolation (RFC-0004, Section 6). Edges that cross into restricted namespaces MUST NOT be followed without explicit cross-namespace read permission.
 
+**Implementation status (2026-10-19, issue #259):** the seeds are the entity
+nodes the question names. The capitalized names and quoted strings of Stage 1
+match as substrings of an entity's name. With `packing.graph_seed_words`
+(off by default), every other word of the question also seeds the graph when it
+has three or more letters, is not a common function word and is a whole word of
+an entity's name, so `jordan` finds "Jordan" and `alex` finds "Alex Rivera"
+whatever the case the question is typed in; receipts record the option when it
+is on. With `enable_mention_links` (off by default), ingestion links each claim
+and the raw source note to every entity its extraction lists whose name occurs
+in the text (a `MENTIONS` edge with `metadata.basis` set to `text_mention`,
+RFC-0003), so the claims and notes that name a seed are its one-hop neighbors;
+memories ingested before the option was on keep the links they have. A walk
+expands each node once per depth, not once per path, so hub entities do not
+multiply the work. Under rank fusion a candidate found only through the graph
+still scores 0 (Section 7.2), so these options add candidates and
+weighted-score evidence, not a fused channel.
+
 ### 4.2 Vector Similarity Search
 
 Embed the query using the same model and version recorded in the event store's `embedding_meta.json`. Run an approximate nearest-neighbour search using the HNSW index.

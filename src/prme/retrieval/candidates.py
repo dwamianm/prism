@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -83,6 +84,74 @@ def merge_normalized_bm25_hits(result_sets: list[list[dict]]) -> list[dict]:
     return list(merged.values())
 
 
+# Question words that never name an entity, so a lower-case "will" does not
+# seed the graph from an entity called Will. An entity named by one of these
+# is still found when the question capitalizes it (a proper noun).
+_SEED_STOPWORDS = frozenset({
+    "about", "after", "again", "all", "also", "and", "any", "are", "been", "before",
+    "between", "both", "but", "can", "could", "did", "does", "during", "each", "every",
+    "for", "from", "had", "has", "have", "her", "here", "him", "his", "how", "into",
+    "its", "just", "many", "may", "might", "more", "most", "much", "must", "not", "now",
+    "only", "other", "our", "over", "same", "shall", "should", "some", "still", "such",
+    "than", "that", "the", "their", "them", "then", "there", "these", "they", "this",
+    "those", "through", "was", "were", "what", "when", "where", "which", "who", "whom",
+    "whose", "why", "will", "with", "would", "yes", "you", "your",
+})
+_SEED_WORD_RE = re.compile(r"\w+")
+# A long question cannot multiply the entity lookup.
+_MAX_SEED_TERMS = 32
+
+
+def _seed_terms(query: str) -> list[str]:
+    """Distinct lower-case question words that can name an entity, in order."""
+    terms = dict.fromkeys(
+        word for word in _SEED_WORD_RE.findall(query.lower())
+        if len(word) > 2 and not word.isdigit() and word not in _SEED_STOPWORDS
+    )
+    return list(terms)[:_MAX_SEED_TERMS]
+
+
+async def _find_seed_entities(
+    analysis: QueryAnalysis,
+    graph_store: GraphStore,
+    user_id: str,
+    scope: list[Scope] | None,
+    seed_words: bool = False,
+) -> list[MemoryNode]:
+    """Entity nodes the question names.
+
+    The capitalized names and quoted strings in ``analysis.entities`` match as
+    substrings. With ``seed_words`` (``PackingConfig.graph_seed_words``, #259)
+    every other word of the question also seeds the graph when it is a whole
+    word of an entity's name, so a question typed in lower case ("which cities
+    will alex and jordan visit") finds "Alex Rivera" and "Jordan". The SQL
+    match only narrows the nodes that are hydrated.
+    """
+    scopes = scope if scope else None
+    seeds: dict[str, MemoryNode] = {}
+    if analysis.entities:
+        for node in await graph_store.query_nodes(
+            user_id=user_id,
+            node_type=NodeType.ENTITY,
+            scopes=scopes,
+            content_contains_any=list(analysis.entities),
+        ):
+            seeds[str(node.id)] = node
+    terms = _seed_terms(analysis.query) if seed_words else []
+    if terms:
+        wanted = set(terms)
+        for node in await graph_store.query_nodes(
+            user_id=user_id,
+            node_type=NodeType.ENTITY,
+            scopes=scopes,
+            content_contains_any=terms,
+            limit=200,
+        ):
+            if wanted.intersection(_SEED_WORD_RE.findall(node.content.lower())):
+                seeds.setdefault(str(node.id), node)
+    return list(seeds.values())
+
+
 async def _generate_graph_candidates(
     analysis: QueryAnalysis,
     graph_store: GraphStore,
@@ -95,8 +164,9 @@ async def _generate_graph_candidates(
 ) -> list[dict]:
     """Generate candidates from graph neighborhood traversal.
 
-    Seeds are entity nodes matching extracted entity names (matched in
-    SQL via content LIKE filters). For each seed, runs a single
+    Seeds are the entity nodes the question names (see
+    ``_find_seed_entities``; matched in SQL via content LIKE filters, so only
+    matching entity nodes are hydrated). For each seed, runs a single
     depth-aware neighborhood query to determine per-node hop distances
     for graph_proximity scoring.
 
@@ -105,20 +175,10 @@ async def _generate_graph_candidates(
 
     Returns list of dicts: {node: MemoryNode, graph_proximity: float}.
     """
-    if not analysis.entities:
-        return []
-
-    # Find seed nodes matching extracted entity names. The substring
-    # match is pushed into SQL (LOWER(content) LIKE ...) so only matching
-    # entity nodes are hydrated.
-    all_entity_nodes = await graph_store.query_nodes(
-        user_id=user_id,
-        node_type=NodeType.ENTITY,
-        scopes=scope if scope else None,
-        content_contains_any=list(analysis.entities),
+    seed_nodes = await _find_seed_entities(
+        analysis, graph_store, user_id, scope, config.graph_seed_words,
     )
-
-    seed_ids = [str(node.id) for node in all_entity_nodes]
+    seed_ids = [str(node.id) for node in seed_nodes]
 
     if not seed_ids:
         return []
