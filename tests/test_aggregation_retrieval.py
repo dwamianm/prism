@@ -12,8 +12,10 @@ from __future__ import annotations
 import pytest
 
 from prme import MemoryEngine
+from prme.models import MemoryNode
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.query_analysis import analyze_query
+from prme.types import NodeType
 from tests.test_durable_ingestion import config as engine_config, user  # noqa: F401
 
 
@@ -262,3 +264,86 @@ async def test_non_aggregation_has_no_coverage_marker(engine_config, user):  # n
         assert response.metadata.aggregation_coverage is None
         assert response.bundle.coverage_notice is None
         assert not response.bundle.render().startswith("Aggregation coverage:")
+
+
+@pytest.mark.parametrize(
+    "coffee_count, keyword_limited", [(30, False), (50, True), (51, True)]
+)
+async def test_aggregation_limit_tracks_keywords_not_redundant_pairs(
+    engine_config,  # noqa: F811
+    user,  # noqa: F811
+    coffee_count,
+    keyword_limited,
+):
+    config = engine_config.model_copy(
+        update={
+            "packing": engine_config.packing.model_copy(update={"token_budget": 8_000}),
+        }
+    )
+    async with MemoryEngine.open(config) as engine:
+        nodes = [
+            MemoryNode(
+                node_type=NodeType.NOTE, content=f"{word} note {i}", user_id=user
+            )
+            for word, count in [("coffee", coffee_count), ("drinks", 30)]
+            for i in range(count)
+        ]
+        for node in nodes:
+            await engine._graph_store.create_node(node)
+        if config.database_url:
+            for node in nodes:
+                await engine._lexical_index.index(
+                    str(node.id),
+                    node.content,
+                    user,
+                    node.node_type.value,
+                    node.scope.value,
+                )
+        else:
+            # Seed the actual index once, avoiding a durable-ingestion commit
+            # for every document in this retrieval-only regression.
+            engine._lexical_index.load_documents(
+                (str(n.id), n.content, user, n.node_type.value, n.scope.value)
+                for n in nodes
+            )
+
+        coffee_hits = await engine._lexical_index.search(
+            "coffee", user_id=user, limit=50
+        )
+        drinks_hits = await engine._lexical_index.search(
+            "drinks", user_id=user, limit=50
+        )
+        pair_hits = await engine._lexical_index.search(
+            "coffee drinks", user_id=user, limit=50
+        )
+        assert len(coffee_hits) == min(coffee_count, 50)
+        assert len(drinks_hits) == 30
+        if not config.database_url:
+            # Tantivy's any-term pair reaches its cap even when both keyword
+            # searches fit. PostgreSQL may use its all-term or any-term path.
+            assert len(pair_hits) == 50
+
+        response = await engine.retrieve(
+            "How many coffee drinks?",
+            user_id=user,
+            limit=500,
+            min_score=0.0,
+        )
+        coverage = response.metadata.aggregation_coverage
+        assert coverage is not None
+        assert ("LEXICAL_AGG" in coverage.candidate_limit_paths) is keyword_limited
+        assert coverage.status == (
+            "candidate_limited" if keyword_limited else "semantic_candidates"
+        )
+        assert coverage.exhaustive is False
+        assert "semantic_matching" in coverage.limitations
+        assert ("candidate_limit" in coverage.limitations) is keyword_limited
+
+        receipt = await engine.get_retrieval_receipt(
+            str(response.metadata.request_id),
+            user_id=user,
+        )
+        assert receipt is not None and receipt.execution is not None
+        assert receipt.execution.parameters[
+            "aggregation_coverage"
+        ] == coverage.model_dump(mode="json")
