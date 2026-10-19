@@ -15,6 +15,11 @@ import asyncpg
 
 logger = logging.getLogger(__name__)
 
+# Distinct query terms a search uses, in query order. Each term costs one
+# indexed count and one check per hit, so a pasted paragraph must not multiply
+# the work without bound; 32 terms covers any question.
+MAX_QUERY_TERMS = 32
+
 
 class PgLexicalIndex:
     """Async full-text search index using PostgreSQL tsvector/tsquery.
@@ -84,10 +89,23 @@ class PgLexicalIndex:
         limit: int = 10,
         scope: list[str] | None = None,
     ) -> list[dict]:
-        """Search for documents by text query using ts_rank_cd.
+        """Search for documents that match the query's terms.
 
         Searches across both the ``nodes`` and ``lexical_documents``
         tables, combining results with UNION ALL and deduplicating.
+
+        ``plainto_tsquery`` normalizes the query into terms. When some
+        document contains every term, only such documents are returned, as
+        before. Otherwise a document matches when it contains any term, so a
+        question that no single memory answers word for word still finds the
+        memory that shares the most terms with it. With more than one term, a
+        term found in at least half of the searched documents (the owner's
+        name, say) cannot tell them apart: when some other term matches, such
+        terms do not select candidates, so they do not make every document a
+        candidate, though they still count when ranking.
+        Results rank by the number of distinct terms they match and then by
+        ``ts_rank_cd``; a query with a single term keeps the ``ts_rank_cd``
+        score. Only the first ``MAX_QUERY_TERMS`` distinct terms are used.
 
         Args:
             query_text: Natural language search query.
@@ -102,73 +120,125 @@ class PgLexicalIndex:
         # Both sources use the same parameters and enforce isolation before
         # deduplication. Duplicate copies must not consume the candidate limit.
         params: list = [user_id, query_text]
-        idx = 3
-
-        # Nodes WHERE
-        nodes_conds = [
-            "n.user_id = $1",
-            "n.content_tsv @@ plainto_tsquery('english', $2)",
-        ]
+        filters: list[str] = []
         if node_type is not None:
-            nodes_conds.append(f"n.node_type = ${idx}")
+            filters.append(f"node_type = ${len(params) + 1}")
             params.append(node_type)
-            idx += 1
         if scope is not None and scope:
-            placeholders = ", ".join(f"${idx + i}" for i in range(len(scope)))
-            nodes_conds.append(f"n.scope IN ({placeholders})")
+            placeholders = ", ".join(f"${len(params) + 1 + i}" for i in range(len(scope)))
+            filters.append(f"scope IN ({placeholders})")
             params.extend(scope)
-            idx += len(scope)
-
-        # Docs WHERE (reuses same parameter positions)
-        docs_conds = [
-            "d.user_id = $1",
-            "d.content_tsv @@ plainto_tsquery('english', $2)",
-        ]
-        if node_type is not None:
-            # node_type param was already added at position 3
-            docs_conds.append("d.node_type = $3")
-        if scope is not None and scope:
-            # scope params follow node_type. Compute correct indices.
-            scope_start = 3 + (1 if node_type is not None else 0)
-            placeholders = ", ".join(
-                f"${scope_start + i}" for i in range(len(scope))
-            )
-            docs_conds.append(f"d.scope IN ({placeholders})")
-
-        nodes_where = " AND ".join(nodes_conds)
-        docs_where = " AND ".join(docs_conds)
-
-        limit_idx = idx
+        nodes_where = " AND ".join(["n.user_id = $1", *(f"n.{f}" for f in filters)])
+        docs_where = " AND ".join(["d.user_id = $1", *(f"d.{f}" for f in filters)])
         params.append(limit)
+        limit_idx = len(params)
 
+        def searched_ids(match: str | None = None) -> str:
+            """IDs of the searched documents, narrowed by a tsquery when given."""
+            nodes = f" AND n.content_tsv @@ {match}" if match else ""
+            docs = f" AND d.content_tsv @@ {match}" if match else ""
+            return (f"SELECT n.id::text AS node_id FROM nodes n WHERE {nodes_where}{nodes} "
+                    f"UNION ALL SELECT d.node_id FROM lexical_documents d "
+                    f"WHERE {docs_where}{docs}")
+
+        # plainto_tsquery joins its terms with " & "; a lexeme never contains
+        # a space, so splitting its text on that operator yields the terms.
+        # With more than one term, a term counts as common when it matches at
+        # least half of the searched documents, where the classic BM25
+        # (Robertson-Sparck Jones) inverse document frequency is no longer
+        # positive. Without another matching term, every term is searched.
+        # Common terms still count when ranking the hits: scores add 1 + the
+        # best ts_rank_cd per extra matched query term, so a hit that matches
+        # more terms always ranks higher and a single-term query keeps its
+        # scores. When a hit matches every query term, hits that match fewer
+        # are dropped, which keeps the old all-terms result: under rank fusion
+        # they would otherwise take the next lexical rank, nearly as strong as
+        # the first.
         query = f"""
-            WITH combined AS (
+            WITH query_terms AS (
+                SELECT term FROM (
+                    SELECT operand AS term, min(position) AS position
+                    FROM unnest(string_to_array(
+                        plainto_tsquery('english', $2)::text, ' & '))
+                        WITH ORDINALITY AS operands (operand, position)
+                    GROUP BY operand
+                ) AS distinct_terms
+                ORDER BY position
+                LIMIT {MAX_QUERY_TERMS}
+            ), informative_terms AS (
+                SELECT t.term
+                FROM query_terms t
+                CROSS JOIN LATERAL (
+                    SELECT count(DISTINCT node_id) AS matches
+                    FROM ({searched_ids("t.term::tsquery")}) AS matching
+                ) AS f
+                WHERE (SELECT count(*) FROM query_terms) > 1
+                  AND f.matches > 0
+                  AND 2 * f.matches < (
+                      SELECT count(DISTINCT node_id)
+                      FROM ({searched_ids()}) AS searched)
+            ), search_terms AS (
+                SELECT term::tsquery AS term FROM informative_terms
+                UNION ALL
+                SELECT term::tsquery FROM query_terms
+                WHERE NOT EXISTS (SELECT 1 FROM informative_terms)
+            ), search AS (
+                SELECT
+                    (SELECT string_agg(term::text, ' | ')::tsquery
+                     FROM search_terms) AS query,
+                    string_agg(term, ' | ')::tsquery AS ranking,
+                    count(*) AS terms
+                FROM query_terms
+            ), combined AS (
                 SELECT
                     n.id::text AS node_id,
                     n.content,
-                    ts_rank_cd(n.content_tsv, plainto_tsquery('english', $2)) AS score,
+                    n.content_tsv AS tsv,
                     n.node_type,
                     0 AS source_priority
                 FROM nodes n
                 WHERE {nodes_where}
+                  AND n.content_tsv @@ (SELECT query FROM search)
 
                 UNION ALL
 
                 SELECT
                     d.node_id,
                     d.content,
-                    ts_rank_cd(d.content_tsv, plainto_tsquery('english', $2)) AS score,
+                    d.content_tsv,
                     d.node_type,
                     1 AS source_priority
                 FROM lexical_documents d
                 WHERE {docs_where}
+                  AND d.content_tsv @@ (SELECT query FROM search)
+            ), hits AS (
+                SELECT
+                    c.node_id,
+                    c.content,
+                    c.node_type,
+                    c.source_priority,
+                    ts_rank_cd(c.tsv, (SELECT ranking FROM search))::float8 AS rank,
+                    (SELECT count(*) FROM query_terms t
+                     WHERE c.tsv @@ t.term::tsquery) AS matched_terms
+                FROM combined c
             ), unique_hits AS (
                 SELECT DISTINCT ON (node_id)
-                    node_id, content, score, node_type
-                FROM combined
-                ORDER BY node_id, score DESC, source_priority
+                    node_id, content, node_type, rank, matched_terms
+                FROM hits
+                ORDER BY node_id, matched_terms DESC, rank DESC, source_priority
+            ), scored AS (
+                SELECT
+                    node_id,
+                    content,
+                    node_type,
+                    matched_terms,
+                    max(matched_terms) OVER () AS best_matched,
+                    rank + (matched_terms - 1) * (1 + max(rank) OVER ()) AS score
+                FROM unique_hits
             )
-            SELECT node_id, content, score, node_type FROM unique_hits
+            SELECT node_id, content, score, node_type FROM scored
+            WHERE best_matched < (SELECT terms FROM search)
+               OR matched_terms = (SELECT terms FROM search)
             ORDER BY score DESC, node_id COLLATE "C"
             LIMIT ${limit_idx}
         """

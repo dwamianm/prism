@@ -44,9 +44,8 @@ VECTOR_DOWN = {"VECTOR": "backend_error"}
 QUERY = "telescope lens"
 KWARGS = {"scope": Scope.PROJECT, "include_cross_scope": False, "reference_time": NOW}
 # With the vector path down, only lexical search finds the primary memory, and
-# the hint pass runs only when the primary pass found something. PostgreSQL's
-# plainto_tsquery requires every query word (Tantivy needs any one), so the
-# primary memory contains all of QUERY to be found on both backends.
+# the hint pass runs only when the primary pass found something. The primary
+# memory contains all of QUERY, so both backends find it lexically.
 PRIMARY = "The telescope lens is blue."
 
 

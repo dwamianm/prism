@@ -413,10 +413,8 @@ async def _conflict_retrieval(config, user, scoring):
     config = without_folding(config.model_copy(update={"scoring": scoring}))
     async with MemoryEngine.open(config) as engine:
         # The newest memory is not the update, so the current-update
-        # multiplier does not apply. The update contains every query word:
-        # PostgreSQL's lexical index (plainto_tsquery) requires all of them,
-        # while Tantivy on DuckDB matches any, so the update has a lexical rank
-        # on both backends.
+        # multiplier does not apply. The update contains every query word,
+        # so it has a lexical rank on both backends.
         for text, days in ((OLD_FACT, 30),
                            ("The team switched to a PostgreSQL database, so MySQL is no longer used.", 5),
                            ("The office plants were watered.", 1)):

@@ -1100,7 +1100,28 @@ candidate limit. The highest-scoring copy is retained; equal-scoring copies
 prefer the graph row. Final score ties use node ID with C collation before the
 limit. Duplicate source/index copies therefore cannot consume slots intended
 for other matching memories. This corrects candidate completeness and stable
-selection; it does not change PostgreSQL's existing `plainto_tsquery` semantics.
+selection.
+
+When some document contains every term of the query, only such documents are
+lexical hits, as before. Otherwise a document matches when it contains any term
+(prism-monorepo issue 254): a question such as "what coding language is alex
+learning?" shares only some words with the memory that answers it, so requiring
+every term returned no lexical candidates. `plainto_tsquery` still normalizes
+the query into terms, and only the first 32 distinct terms are used, so a pasted
+paragraph cannot multiply the work. When the query has more than one term, a
+term that matches at least half of the searched documents (the owner's name, for
+example) does not select candidates as long as another term matches, though it
+still counts when they are ranked; this is where the classic Robertson-Sparck
+Jones inverse document frequency stops being positive.
+Otherwise every document naming the owner would become a lexical candidate and,
+under rank fusion, take nearly the same lexical rank as the best match. Hits
+rank by the number of distinct terms they match and then by `ts_rank_cd`: each
+extra matched term adds one plus the best `ts_rank_cd` of the hits, so a query
+with a single term (one lexeme) keeps its `ts_rank_cd` scores. A word that the
+parser splits into several lexemes, such as a hyphenated word or a URL, counts
+as several terms. Tantivy on DuckDB also matches any term, but ranks by BM25
+alone: the common-term rule, the full-match rule and the matched-term tiers
+apply to PostgreSQL only.
 
 ## Visual memory retrieval (2026-10-15)
 
