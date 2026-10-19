@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a1] - 2026-10-19
+
+This is an alpha. It passed CI and the fast gate for ingest changes, and it has
+not been through the full benchmark. The stable release stays at 0.15.0 until
+the full benchmark audit, so `pip install prme` still installs 0.15.0. Install
+the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
+
 ### Added
 
 - Add the fast cycle (part of prism-monorepo issues 258 and 259;
@@ -187,6 +194,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   return the same hits and scores as before. In the three memory example from
   the issue, the memory that answers the question went from a lead of 0.008
   to a score of 1.0 against 0.492.
+
+### Upgrade notes
+
+- No default was turned on in this alpha. `enable_ingest_claim_fixes`,
+  `enable_mention_links` and `packing.graph_seed_words` are off. On the fast
+  gate (defect probes and the chat probe, with `deepseek-v4.1-flash:cloud`),
+  the three together did not pass: the answer ranked in the top 3 for 4 of 7
+  defect probes against 5 of 7 with them off, and for 8 of 18 chat probes
+  against 14 of 18. The claim fixes cause the lower ranks, because claims that
+  used to share one text now each show their own. Linking and seed words alone
+  changed no rank. They are still useful to try on a store of your own, and a
+  hosted service can set them through its configuration.
+- `store(extract=True)` and `enable_store_extraction` start a model call in
+  the background for each stored memory. Both are off by default, so `store()`
+  makes no model call unless you ask for one.
+- On PostgreSQL, a multi-word query now also finds memories that share only
+  some of its words (see Fixed). Single-word queries and DuckDB are unchanged.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.15.0] - 2026-10-16
 
@@ -2181,7 +2209,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a1...HEAD
+[0.16.0a1]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0a1
 [0.15.0]: https://github.com/dwamianm/prism/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/dwamianm/prism/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/dwamianm/prism/compare/v0.14.0...v0.14.1
