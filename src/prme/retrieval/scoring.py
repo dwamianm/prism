@@ -569,6 +569,21 @@ def _competition_ranks(scores: list[float | None]) -> list[int | None]:
     return [None if score is None else first_position[score] for score in scores]
 
 
+def _dense_ranks(scores: list[float | None]) -> list[int | None]:
+    """Rank the present scores in descending order, one rank for each distinct score.
+
+    The graph path scores a candidate by its hop count (1.0, 0.7 or 0.4), so
+    this ranks candidates by hop count. A seed with many neighbors puts all
+    of them at one hop count, and competition ranks would then place the
+    next hop count behind all of them, so the size of a neighborhood, not
+    its distance, would set the gap between the two.
+    """
+    place = {value: rank for rank, value in enumerate(
+        sorted({score for score in scores if score is not None}, reverse=True), start=1,
+    )}
+    return [None if score is None else place[score] for score in scores]
+
+
 def _pool_relative(values: list[float], ranked: list[bool]) -> list[float]:
     """Divide by the largest value among ranked candidates, capped at 1.0.
 
@@ -615,7 +630,9 @@ def _rank_fused_scores(
     it carries that channel's score. Min-max normalization gives the weakest
     lexical hit a score of 0.0, so the path matters. Epistemic, node-type and
     temporal adjustments apply after fusion relative to the pool's largest
-    value. Graph proximity, salience and confidence are not used.
+    value. Salience and confidence are not used, and graph proximity is used
+    only through ``rrf_graph_weight``: with it, the graph path is a third
+    ranked list, ordered by proximity, that adds its weighted reciprocal rank.
 
     On a current-state question, ``rrf_recency_boost`` adds the weighted
     formula's current-state recency, measured from the newest stated time in
@@ -636,6 +653,15 @@ def _rank_fused_scores(
         raise ValueError("Rank fusion requires finite semantic and lexical scores")
     semantic_ranks = _competition_ranks(semantic)
     lexical_ranks = _competition_ranks(lexical)
+    graph_ranks: list[int | None] = [None] * len(candidates)
+    if weights.rrf_graph_weight is not None:
+        graph = [
+            candidate.graph_proximity if "GRAPH" in candidate.paths or candidate.graph_proximity > 0 else None
+            for candidate in candidates
+        ]
+        if any(value is not None and not math.isfinite(value) for value in graph):
+            raise ValueError("Rank fusion requires finite graph proximity")
+        graph_ranks = _dense_ranks(graph)
 
     epistemic = [_epistemic_weight(candidate.node, epistemic_weights) for candidate in candidates]
     node_type = [weights.node_type_boost.get(candidate.node.node_type.value, 1.0)
@@ -646,7 +672,8 @@ def _rank_fused_scores(
         affinity = [_compute_temporal_affinity(candidate, query_analysis) for candidate in candidates]
     else:
         affinity = [0.0] * len(candidates)
-    ranked = [s is not None or lex is not None for s, lex in zip(semantic_ranks, lexical_ranks)]
+    ranked = [s is not None or lex is not None or g is not None
+              for s, lex, g in zip(semantic_ranks, lexical_ranks, graph_ranks)]
     epistemic_factors = _pool_relative(epistemic, ranked)
     node_type_factors = _pool_relative(node_type, ranked)
     temporal_factors = _pool_relative([1.0 + weights.temporal_boost * value for value in affinity], ranked)
@@ -669,6 +696,7 @@ def _rank_fused_scores(
         fusion = RankFusion(
             semantic_rank=semantic_ranks[index],
             lexical_rank=lexical_ranks[index],
+            graph_rank=graph_ranks[index],
             epistemic_factor=epistemic_factors[index],
             node_type_factor=node_type_factors[index],
             temporal_factor=temporal_factors[index],
@@ -685,7 +713,7 @@ def _rank_fused_scores(
             path_score=min(candidate.path_count / 3.0, 1.0),
             temporal_affinity=affinity[index],
             node_type_boost=node_type[index],
-            composite_score=fusion.score(weights.rrf_k),
+            composite_score=fusion.score(weights.rrf_k, weights.rrf_graph_weight),
         ), fusion))
     return scored
 

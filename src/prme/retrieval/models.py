@@ -181,7 +181,10 @@ class RankFusion(BaseModel):
     candidate shares a positive value. ``recency_boost_factor`` is present only
     when ``ScoringWeights.rrf_recency_boost`` applied to the question (the raw
     recency is the trace's ``recency_factor``), and ``tie_break`` exactly when
-    ``ScoringWeights.rrf_tie_break`` is set.
+    ``ScoringWeights.rrf_tie_break`` is set. ``graph_rank`` is the candidate's
+    place among the graph search's results by hop count (1 for one hop, 2 for
+    two, 3 for three); it is present only for such a candidate, and only when
+    ``ScoringWeights.rrf_graph_weight`` is set.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -199,11 +202,21 @@ class RankFusion(BaseModel):
     tie_break: float | None = Field(
         default=None, ge=0, lt=1, allow_inf_nan=False, exclude_if=lambda value: value is None,
     )
+    graph_rank: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
 
-    def score(self, k: int) -> float:
-        """The fused score, scaled so first place on both channels is 1.0."""
+    def score(self, k: int, graph_weight: float | None = None) -> float:
+        """The fused score, scaled so first place on both channels is 1.0.
+
+        A candidate on the graph list adds its weighted reciprocal rank to the
+        sum before the scale, so first place on all three lists scores more
+        than 1.0.
+        """
         fused = sum(1 / (k + rank) for rank in (self.semantic_rank, self.lexical_rank)
                     if rank is not None)
+        if self.graph_rank is not None:
+            if graph_weight is None:
+                raise ValueError("A graph rank needs rrf_graph_weight")
+            fused += graph_weight / (k + self.graph_rank)
         value = (fused * (k + 1) / 2
                  * self.epistemic_factor * self.node_type_factor * self.temporal_factor)
         if self.recency_boost_factor is not None:
@@ -254,6 +267,8 @@ class ScoreProvenance(BaseModel):
                 raise ValueError("A rank fusion recency boost factor requires rrf_recency_boost")
             if (self.rank_fusion.tie_break is not None) != (self.weights.rrf_tie_break is not None):
                 raise ValueError("A rank fusion tie-break is recorded exactly when rrf_tie_break is set")
+            if self.rank_fusion.graph_rank is not None and self.weights.rrf_graph_weight is None:
+                raise ValueError("A rank fusion graph rank requires rrf_graph_weight")
         values = list(self.trace.model_dump().values())
         # Numeric settings only: node-type boosts follow, and fusion is a label.
         values.extend(
@@ -272,7 +287,7 @@ class ScoreProvenance(BaseModel):
         if self.rank_fusion is not None:
             if self.weights.rrf_k is None:
                 raise ValueError("Rank fusion replay requires rrf_k")
-            return self.rank_fusion.score(self.weights.rrf_k)
+            return self.rank_fusion.score(self.weights.rrf_k, self.weights.rrf_graph_weight)
         t, w = self.trace, self.weights
         additive = (w.w_semantic * t.semantic_similarity
                     + w.w_lexical * t.lexical_relevance

@@ -186,7 +186,10 @@ a resolved object receives a MENTIONS link from the claim. With
 receive a MENTIONS link to each entity their extraction lists whose name occurs
 in their text (`metadata.basis` is `text_mention`), made once the derivation has
 committed and the note exists. A name that two listed entities share and a
-literal I or we are not linked. These are retrieval associations, not logical
+literal I or we are not linked. With `enable_owner_group_links` (off by default),
+a claim a `user` turn states about we, us or our also receives a MENTIONS link to
+the entity that carries the owner's name (`metadata.basis` is `group_member`);
+its subject stays the group. These are retrieval associations, not logical
 entailment. Built-in providers must cite and classify
 each relationship. Legacy/custom relationships without classification default
 to UNVERIFIED. Unverified relationship proposals use SYSTEM_INFERRED provenance

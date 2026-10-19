@@ -28,7 +28,7 @@ from prme.retrieval.models import (
     rank_fusion_relevance,
 )
 
-from prme.types import Scope
+from prme.types import NodeType, Scope
 
 if TYPE_CHECKING:
     from prme.models.nodes import MemoryNode
@@ -100,8 +100,13 @@ async def expand_session_context(
     changed = False
     ranking_changed = False
 
-    # Group the top-K candidates by session_id.
-    top_candidates = scored[:top_k]
+    # Group the top-K candidates by session_id. An entity is a name, not a turn, so it
+    # starts no expansion and counts toward no limit when the option keeps it out.
+    skip_entities = config.session_context_skip_entities
+    top_candidates = (
+        [candidate for candidate in scored if candidate.node.node_type != NodeType.ENTITY][:top_k]
+        if skip_entities else scored[:top_k]
+    )
     # A trigger is a strong match in its own right, so it keeps its own place
     # in packing instead of following another trigger.
     trigger_ids = {str(candidate.node.id) for candidate in top_candidates}
@@ -196,6 +201,8 @@ async def expand_session_context(
 
             # A trigger does not provide context evidence for itself.
             if ctx_id == trigger_id:
+                continue
+            if skip_entities and ctx_node.node_type == NodeType.ENTITY:
                 continue
 
             link = (

@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add three options, all off by default, that make the graph count in ranking
+  (prism-monorepo issues 259 and 260). On the hosted dev service (prme
+  0.16.0a3) the note and the claim that answer "which cities will Alex and
+  Jordan visit in Japan?" ranked 11th and 12th of 21 results, though the graph
+  search found 13 candidates. Rank fusion ignored the graph, the three notes of
+  the chat tied at 0.6 times the introduction note's score through session
+  context, entities took the places that inheritance gave them, and the claim
+  "We chose Tokyo, Kyoto, Kanazawa, and Osaka." was attached to the group, not to
+  the owner, so a walk from the owner never reached it.
+  - `enable_owner_group_links` (`PRME_ENABLE_OWNER_GROUP_LINKS`): `ingest()`
+    links a claim a `user` turn states about we, us or our to the owner's
+    entity (a `MENTIONS` edge with `metadata.basis` `group_member`), after the
+    derivation commits and outside the plan. The claim keeps its group subject.
+    It needs `enable_owner_name_carry`, and never invents a name.
+  - `packing.session_context_skip_entities`
+    (`PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES`): an entity neither starts a
+    session context expansion nor receives an inherited score.
+  - `scoring.rrf_graph_weight` (`PRME_SCORING__RRF_GRAPH_WEIGHT`): the graph
+    path becomes a third rank fusion list, ranked by hop count, with a
+    replayable `graph_rank` in the saved score inputs. Receipts that set it are
+    version 19.
+
+  With all three on, the cities claim is 3rd for both spellings of the
+  question on PostgreSQL (12th without them) and no smaller set of them gets it
+  into the top 3. The graph weight is not ready to turn on: it fails the fast
+  cycle (it moves two `chat-v1` answers out of the top 3 at `0.25`, one at
+  `0.15` and `0.1`) and lowers LoCoMo evidence in the top 25 by 5.4 points on the
+  mid tier. The group links change no gated measure. Skipping entities passes
+  the fast tiers and raises LoCoMo evidence in the top 25 by 2.1 points (48
+  wins, no loss), so it is the one to turn on next. With the options off,
+  results, contexts, receipts and configuration dumps keep their bytes.
+  `BENCHMARKS.md` ("Graph fusion") has the measurements.
+
 ## [0.16.0a3] - 2026-10-19
 
 This is an alpha. It passed CI, the fast gate and the fast cycle, and it has not
