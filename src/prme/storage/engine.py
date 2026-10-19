@@ -940,6 +940,7 @@ class MemoryEngine:
         valid_from: datetime | None = None,
         valid_to: datetime | None = None,
         ttl_days: int | None = ...,
+        extract: bool | None = None,
     ) -> str:
         """Store content across all four backends in one call.
 
@@ -991,6 +992,14 @@ class MemoryEngine:
             ttl_days: Time-to-live in days from creation. Ellipsis (default)
                 means look up from organizer config by node_type. None means
                 no TTL. An explicit int overrides the config default.
+            extract: Whether to also queue LLM extraction of the source, the
+                same background extraction ``ingest()`` runs (entities and
+                claims, in the same batches), once the node is stored (#260).
+                The call does not wait for it, and the stored node is kept
+                as it is. ``None`` (default) follows
+                ``config.enable_store_extraction``, which is off, and
+                skips extraction when no pipeline exists. ``True`` without a
+                pipeline raises ``ValueError``; ``False`` never extracts.
 
         Returns:
             String UUID of the created event (source of truth ID).
@@ -999,6 +1008,10 @@ class MemoryEngine:
 
         validate_source_time(event_time)
         validate_validity_window(valid_from, valid_to)
+        if extract is None:
+            extract = self._config.enable_store_extraction and self._pipeline is not None
+        elif extract and self._pipeline is None:
+            raise ValueError("extract=True needs an ingestion pipeline, and this engine has none")
         materialized_content = content if retrieval_content is None else retrieval_content
         from prme.models.value_bindings import attach_value_bindings
 
@@ -1137,7 +1150,7 @@ class MemoryEngine:
         # Acknowledged work retains all explicit node values before graph or
         # index writes. A restart cannot reinterpret a FACT/INSTRUCTION as NOTE.
         await self._write_queue.submit(
-            lambda: self._event_store.append(event, store_node=node),
+            lambda: self._event_store.append(event, store_node=node, defer_extraction=extract),
             label=f"store.event:{event.id}",
         )
         self._materialization_queue.note_added()
@@ -1160,6 +1173,13 @@ class MemoryEngine:
                     event_id=event_id, reason_code=reason,
                 ) from exc
             logger.warning("Indexing pending for stored event %s (%s)", event_id, reason)
+
+        # Step 3.1: Extraction (opt-in, #260). The event's extraction job was
+        # saved with it, so the work survives a restart; this only starts the
+        # background run, as ingest() does, and the node stored above stays as
+        # it is.
+        if extract:
+            self._pipeline.queue_extraction(event, scope)
 
         # Step 3.5: Re-mention reinforcement (opt-in)
         if self._config.reinforce_similarity_threshold is not None:
@@ -1296,6 +1316,7 @@ class MemoryEngine:
         valid_from: datetime | None = None,
         valid_to: datetime | None = None,
         ttl_days: int | None = ...,
+        extract: bool | None = None,
     ) -> StoreReceipt:
         """Store one direct memory and return its source, node, and work status.
 
@@ -1326,6 +1347,7 @@ class MemoryEngine:
             valid_from=valid_from,
             valid_to=valid_to,
             ttl_days=ttl_days,
+            extract=extract,
         )
         try:
             nodes = await self.get_event_nodes(event_id, user_id=user_id)

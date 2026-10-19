@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `extract` to `store()`, `store_with_receipt()`, `POST /v1/store`, the
+  `memory_store` MCP tool and the sync client (#260), and
+  `enable_store_extraction` to set its default (off). `extract=True` saves an
+  extraction job with the stored event and starts the extraction `ingest()`
+  runs in the background, in the same batches, so a stored memory gets
+  entities and claims too. The call still returns at once with the stored
+  node, which keeps its id and content and stays the only note for the text.
+  Extraction over a stored event no longer stops at "Source has legacy
+  derived nodes", which it did for a direct node whose id is not the event's.
+  Without the argument and the setting, `store()` makes no model call, as before.
 - Add `enable_extraction_corrections` (#277), off by default. With batched
   extraction, each request also shows the model a few stored claims of the
   same owner and scope that resemble its turns, labeled m1, m2 and on, and an

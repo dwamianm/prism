@@ -163,6 +163,15 @@ class StoreRequest(BaseModel):
     )
     ttl_days: int | None = Field(default=None, ge=0, strict=True,
                                 description="Omit for configured TTL; null disables TTL; integer overrides it")
+    extract: bool | None = Field(
+        default=None,
+        strict=True,
+        description=(
+            "Also queue LLM extraction of the source in the background, as ingest does: "
+            "entities and claims appear later, and the stored node is kept as it is. "
+            "Omit to follow the server's setting; false stores without extraction"
+        ),
+    )
     metadata: dict[str, Any] | None = Field(
         default=None, description="Optional structured metadata"
     )
