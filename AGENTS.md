@@ -372,11 +372,43 @@ instances omitted during packing. Prioritize answer-blind complementary evidence
 selection, while preserving the negative evidence for blanket episode routing
 and broad session penalties. Retention alone does not prove an answer gain.
 Both cohorts are examined development data; publication claims still need new
-untouched confirmation and relevant backend/regression checks. Retrieval default
-changes for epic #77 follow the DeepSeek default-change rule in `CLAUDE.md`. On
-that track the baseline of the current defaults, `prme@d811e3ed`, scores
+untouched confirmation and relevant backend/regression checks. Default
+changes follow the release channel rule in `CLAUDE.md` (Release channels and
+default changes below): the alpha channel flips them on the fast tiers, and a
+stable release uses the DeepSeek default-change rule. On that track the
+baseline of the current defaults, `prme@d811e3ed`, scores
 LongMemEval-S 453/500 (90.6%) and LoCoMo 1,250/1,540 (81.2%); it is not
 comparable with the GPT-5.4 numbers.
+
+## Release channels and default changes
+
+The owner set two release channels on 2026-10-19 (prism-monorepo issues #271 and
+#272). `CLAUDE.md` ("Release channels and default changes") has the full rule,
+the commands and their measured times. This is the same rule in short, and
+`CONTRIBUTING.md` ("Releases") has the steps to cut and publish a release.
+
+- **Alpha and beta** (`0.16.0a3`, `0.16.0b1`; GitHub prereleases, published to
+  PyPI as prereleases, so `pip install prme` keeps the last stable) are gated by
+  the fast tiers: the defect probes (22 s), the chat probe (83 s) and the
+  corrections probe (about 30 s), the fast cycle `benchmarks.fast_cycle` (158 to
+  211 s cold, 25 to 28 s warm) and the offline evidence gate (about 10 minutes
+  per side). The mid tier `benchmarks.mid_tier` (24 to 34 minutes cold, 11
+  minutes warm) is available for larger changes. A default may flip on that
+  evidence, in the pull request that flips it, when the defect probes rank the
+  answer in the top 3 for 7 of 7 questions, the chat probe's top 3 and top 5
+  counts and every measure are no worse than with the options off, the fast
+  cycle has no worse gated measure and the offline gate has no interval
+  entirely below zero. The pull request cites the numbers and the owner's
+  directive of 2026-10-19.
+- **Stable** (`0.16.0`) needs the latest scheduled full benchmark run (Mac mini,
+  Monday and Thursday at 00:30 local time; issue #272) to show no loss against
+  the previous stable and, for an `ingest()` default, the DeepSeek answer track
+  run on demand. The DeepSeek default-change rule in `CLAUDE.md` is the
+  stable-channel rule: it governs a default flipped in a stable release and the
+  audit of the defaults that went on in alpha.
+- **Both channels:** new behavior ships behind an explicit option, off by
+  default, until it passes its channel's gate. Never run a paid API; use local
+  Ollama DeepSeek only.
 
 ## Configuration Surface
 
@@ -386,7 +418,7 @@ putting WHERE filters on an HNSW query can hide eligible memories. `False` allow
 approximate search and its recall tradeoff. New receipts report the configured
 mode in `execution.features.vector_search.exact`; old receipt bytes remain unchanged.
 
-Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retrieval/config.py` (loaded from `PRME_`-prefixed env vars, `.env`, or direct args). The surface is large (roughly 100 fields across both files). Several parameter defaults are explicitly tagged `[HYPOTHESIS]` in their descriptions; these are reasoned but not yet benchmark-validated and may change. Treat `[HYPOTHESIS]` knobs as provisional and prefer not to depend on their exact values. Notable defaults to be aware of: the rank fusion, reader format, balanced ordering, 0.6 rank fusion session decay and folding retrieval defaults described above; `enable_claim_sentence_text=True` (a claim's text is its own sentences) and `enable_speaker_references=True` (a named speaker's I, me and my bind to the speaker's entity), which became defaults with folding on 2026-10-06 after the three passed the default-change rule together on the DeepSeek track over `ingest()` packs; `enable_claim_merge=True` (#209), which makes `ingest()` merge an exactly repeated extracted claim into one current record that supersedes the earlier copies and does not affect `store()`; `enable_store_supersedence=False`, `enable_surprise_gating=False`, `enable_qa_pairing=False`, and `enable_reranker=False` (on the offline evidence gate, no cross-encoder rank-order variant beat rank fusion alone on both benchmarks at both 4K and 8K, so the reranker stays off; issue #88). Since 2026-10-19, in the alpha channel (0.16.0a2 and 0.16.0a3), `lexical_term_weights` (PostgreSQL only), `enable_ingest_claim_fixes`, `enable_mention_links`, `enable_owner_name_carry`, `packing.graph_seed_words` and `packing.folded_records_keep_rank` are defaults too, turned on by the owner's directive of 2026-10-19 on the fast gate and the fast cycle; the full benchmark audit and the default-change rule's DeepSeek answer runs are pending, `0.15.0` stays the stable release, and each has an environment variable (`PRME_<NAME>=false`, listed in `documentation/configuration.md`) that restores the 0.16.0a1 behavior. QA pairing is an in-process, unreplayed heuristic without registered quality evidence; do not enable it by default until it has source-complete provenance, atomic publication, restart recovery and matched evaluation.
+Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retrieval/config.py` (loaded from `PRME_`-prefixed env vars, `.env`, or direct args). The surface is large (roughly 100 fields across both files). Several parameter defaults are explicitly tagged `[HYPOTHESIS]` in their descriptions; these are reasoned but not yet benchmark-validated and may change. Treat `[HYPOTHESIS]` knobs as provisional and prefer not to depend on their exact values. Notable defaults to be aware of: the rank fusion, reader format, balanced ordering, 0.6 rank fusion session decay and folding retrieval defaults described above; `enable_claim_sentence_text=True` (a claim's text is its own sentences) and `enable_speaker_references=True` (a named speaker's I, me and my bind to the speaker's entity), which became defaults with folding on 2026-10-06 after the three passed the default-change rule together on the DeepSeek track over `ingest()` packs; `enable_claim_merge=True` (#209), which makes `ingest()` merge an exactly repeated extracted claim into one current record that supersedes the earlier copies and does not affect `store()`; `enable_store_supersedence=False`, `enable_surprise_gating=False`, `enable_qa_pairing=False`, and `enable_reranker=False` (on the offline evidence gate, no cross-encoder rank-order variant beat rank fusion alone on both benchmarks at both 4K and 8K, so the reranker stays off; issue #88). Alpha-channel defaults, flipped on the fast tiers by the owner's directive of 2026-10-19 (see Release channels and default changes above): `lexical_term_weights` (PostgreSQL only; since 0.16.0a2), `enable_ingest_claim_fixes`, `enable_mention_links`, `enable_owner_name_carry`, `packing.graph_seed_words` and `packing.folded_records_keep_rank` (since 0.16.0a3) are on. They wait for the stable release's audit, `0.15.0` stays the stable release, and each has an environment variable (`PRME_<NAME>=false`, listed in `documentation/configuration.md`) that restores the behavior before the flip. This list is the record of defaults still waiting for that audit: a flip pull request adds to it, and a stable release moves an audited default into the plain list above. QA pairing is an in-process, unreplayed heuristic without registered quality evidence; do not enable it by default until it has source-complete provenance, atomic publication, restart recovery and matched evaluation.
 
 Explicit `reranker_policy="score_envelope"` and `"anchored_score_envelope"`
 require `enable_reranker=True`; `"legacy"` remains the default policy. They keep
