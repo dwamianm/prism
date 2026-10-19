@@ -2095,6 +2095,129 @@ the timer is set aside, so the number of requests in the hosted service
 depends on how far apart a user's stores are; the options' live runs were taken
 before they were merged, and only replayed on `main`.
 
+### Fast cycle: situating sentences at store time (`store-contextual`)
+
+A memory that does not name its subject ("They chose Tokyo, Kyoto, Kanazawa,
+and Osaka. They dropped Hiroshima to save time.") is found only by a question
+that happens to share its words, so "which cities will Alex and jordan visit in
+Japan?" ranks it 26th of 75 here and 14th of 76 in the console. Contextual
+retrieval writes one short sentence per memory that says who and what it is
+about, from the up to 5 memories before it in the same session and nothing
+else, and stores `retrieval_content = sentence + " " + content`. The node is
+then embedded, word indexed and shown with the sentence; the source event keeps
+the text as sent. The `store-contextual` stage measures whether that is worth
+building. It is opt in and the default run does not use it.
+
+```sh
+# Replay the committed sentences (no model call), beside the plain store stage.
+uv run python -m benchmarks.fast_cycle run --label ctx --out /tmp/ctx --stages store,store-contextual --baseline none
+# Plain against three generations on both fixtures (add --database-url for PostgreSQL).
+uv run python -m benchmarks.fast_cycle.contextual lift --runs 3 --out /tmp/lift
+# Ask the model again (Ollama, deepseek-v4.1-flash:cloud, one request per memory);
+# --update-cache adds only the replies the committed cache does not hold.
+uv run python -m benchmarks.fast_cycle.contextual lift --runs 3 --out /tmp/lift --no-cache --update-cache
+```
+
+The model is `deepseek-v4.1-flash:cloud` through the local Ollama server
+(temperature 0, thinking off), one request per memory with a context. The
+prompts are fixed, short and generic: `situate` asks for one sentence of at
+most 25 words that says who and what topic, `label` for at most 15 words that
+only name the people and the topic and may state no role, relationship, cause
+or date the memory does not. A test checks that neither names a person, place or
+answer of either fixture. The replies are cached per fixture and run in
+`benchmarks/fixtures/fast-cycle/contextual-cache`, so a rerun replays them.
+Ranks are read from each memory's text as sent, never from the sentence, so a
+sentence that holds an answer term cannot answer for another memory.
+
+A second fixture, `store-contextual-v1.json`, guards against overfitting to
+the first: 30 memories of another made-up household in three sessions and 10
+questions, seven of them with an answer in a memory that names neither person
+nor topic, two corrected dates and two controls.
+
+Results on 2026-10-19, DuckDB, three generations each (Ollama 0.40.6). Plain is
+the store stage; the cells for a prompt are runs 1, 2 and 3.
+
+| `store-v1`, 17 questions | Plain | `situate` | `label` |
+|---|---:|---:|---:|
+| "which cities will Alex and jordan visit in Japan?": rank | 26 | 1, 1, 1 | 5, 6, 7 |
+| Answers ranked first | 6 | 6, 6, 7 | 4, 4, 3 |
+| Answers in the top 3 | 14 | 14, 14, 14 | 14, 14, 15 |
+| Mean reciprocal rank | 0.559 | 0.599, 0.587, 0.616 | 0.539, 0.537, 0.511 |
+| Stale value ranked above the answer | 4 | 4, 4, 4 | 4, 4, 3 |
+| Questions that fell by more than one place | | 1, 2, 2 | 1, 1, 1 |
+| Context tokens per question | 1,786 | 2,690, 2,690, 2,774 | 2,283, 2,272, 2,245 |
+
+| `store-contextual-v1`, 10 questions | Plain | `situate` | `label` |
+|---|---:|---:|---:|
+| Answers ranked first | 2 | 4, 4, 3 | 5, 6, 5 |
+| Answers in the top 3 | 7 | 9, 8, 8 | 8, 8, 8 |
+| Mean reciprocal rank | 0.491 | 0.658, 0.637, 0.569 | 0.684, 0.734, 0.684 |
+| Stale value ranked above the answer | 3 | 2, 2, 3 | 3, 2, 2 |
+| Questions that fell by more than one place | | 0, 1, 1 | 1, 1, 1 |
+| Context tokens per question | 620 | 974, 944, 941 | 845, 830, 845 |
+
+On PostgreSQL (the hosted backend) plain ranks the cities question 15th and
+`situate` puts it first in all three runs (`label`: 4, 6, 6). The answers in the
+top 3 go from 13 to 13, 14, 14 (`situate`) and 13, 14, 14 (`label`) of 17, the
+stale value above the answer from 4 to 2, 1, 3 and 3, 2, 2, and on the second
+fixture from 6 to 9, 8, 8 and 8, 8, 8 of 10.
+
+**Invented facts.** I read the sentences of all three generations of both
+prompts on both fixtures (one reader) and counted a sentence that states a
+person, role, relationship or topic that is in neither the memory nor its
+context. `situate`: 7 or 8 of the 61 to 64 sentences on the first fixture in
+each generation and 1 to 4 of 22 to 25 on the second. `label`: 2 to 4 of 54 to
+56 and 0 to 2 of 19. They are misattributions more than inventions: a first-person statement by another speaker given to the owner ("I
+want the cutover moved" by a participant becomes "Alex wants the cutover
+moved"), a link between two memories that the context does not state ("Priya
+Shah's on-call cutover work uses the dashboard", "Ben Alvarez's project"), a
+gender ("his") and a topic taken from the neighboring memory (a gravel race
+filed under the Japan trip).
+
+**Cost.** One request per memory that has a context: about 277 prompt and 14
+completion tokens for `situate` (19,366 and 1,001 for 70 memories) and 293 and 8
+for `label`. On a small hosted model priced at 1 and 5 dollars per million
+input and output tokens that is about 0.00035 dollars a memory for either
+prompt, roughly 35 cents per 1,000 memories. The sentence also rides in the
+stored text, so the context grows by half (1,786 to 2,690 tokens per question
+on the first fixture).
+
+**Reading.** The lift is real where the answer's memory names neither the
+person nor the topic: the cities question goes from 26th (DuckDB) and 15th
+(PostgreSQL) to first, the second fixture's wood from 13th and 14th to 1st to
+3rd, its budget from 4th and 5th to 1st. It does not turn into more answers in
+the top 3 on the first fixture (14 of 17 before and after on DuckDB), and it
+costs elsewhere:
+
+- Every memory of a topic gets the same sentence, so the sentence lifts the
+  siblings of the memory it was meant for as much as that memory, and it dilutes
+  a memory whose only strength was its own words. The dog question (the answer
+  shares no word with the question) falls from 19th to 42nd with `situate`
+  because the sentence for that memory imports "joined Northwind as a backend
+  engineer" from its neighbors; the second fixture's cooking question falls
+  from 3rd to 8th or 9th in two of three generations (9th to 16th and 18th on
+  PostgreSQL).
+- The size of the lift depends on the sentence's wording. `label` writes
+  "Alex and Jordan's Japan trip." for the cities memory and for five other Japan
+  memories, so the cities question reaches only 5th to 7th; `situate` wrote
+  "itinerary", which matches "visit".
+- About 1 in 8 of the `situate` sentences on the first fixture (4% to 16% on
+  the second) state something the context does not, which a reader of the
+  packed context then sees as part of the memory.
+- Run-to-run spread at temperature 0 is small on the first fixture (the cities
+  question is first in every run) and visible on the second (one memory's
+  rank 3, 8, 9 across generations).
+
+I set four conditions before the first run for building this into the engine:
+the cities question inside the top 5, at least 16 of 17 answers in the top 3,
+no question more than one place worse, and no invented facts in the sample. Both
+prompts fail three or four of them, so the engine option was not built. One
+fix cycle was run (`situate` to `label`); it traded the lift for fewer inventions
+and the top 3 did not move, so a third prompt would be tuning to 17 questions.
+A bounded alternative for the cities defect is the entity link of a note to the
+people and places named in its session (prism-monorepo issue 259), which fixes
+the rank without changing the text that is embedded.
+
 ### Corrections probe: what a correction stores and returns
 
 `benchmarks.diagnostics.corrections_probe` shows what PRME stores and what

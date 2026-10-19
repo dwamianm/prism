@@ -1,0 +1,60 @@
+{
+  "kind": "prme-fast-cycle-store",
+  "schema_version": 1,
+  "name": "store-contextual-v1",
+  "description": "30 memories of a second made-up household (Maya Chen and Luis Ortega) in three sessions, with 10 questions. Seven of the questions have an answer in a memory that names neither person nor topic (the budget, the wood, where they cook, the choir's piece, the ticket price, and two corrected dates); two are controls whose memory shares words with the question. It checks that a lift measured on the store-v1 fixture is not the fixture's.",
+  "owner": "maya",
+  "memories": [
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s1-reno", "content": "Maya Chen and Luis Ortega are renovating the kitchen of their house in Portland, Oregon."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s1-reno", "content": "The budget is 32,000 USD with a 10 percent reserve."},
+    {"role": "user", "speaker": null, "node_type": "event", "scope": "personal", "session": "s1-reno", "content": "Work starts on 2027-01-11 and the contractor expects eight weeks."},
+    {"role": "user", "speaker": null, "node_type": "event", "scope": "personal", "session": "s1-reno", "content": "Correction: the start moved from 2027-01-11 to 2027-02-08 because the city permit was late."},
+    {"role": "user", "speaker": null, "node_type": "decision", "scope": "personal", "session": "s1-reno", "content": "They chose white oak and dropped walnut because it cost 4,000 USD more."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s1-reno", "content": "The contractor is Ben Alvarez of Alvarez Build. His crew is four people."},
+    {"role": "user", "speaker": null, "node_type": "preference", "scope": "personal", "session": "s1-reno", "content": "Luis wants an induction cooktop. Maya prefers gas."},
+    {"role": "user", "speaker": null, "node_type": "decision", "scope": "personal", "session": "s1-reno", "content": "They agreed on induction after the electrician confirmed the panel can take it."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s1-reno", "content": "The dishwasher is a 24 inch model from Bosch and arrives on 2027-03-01."},
+    {"role": "user", "speaker": null, "node_type": "note", "scope": "personal", "session": "s1-reno", "content": "The demolition dumpster must be booked a week ahead and the city permit costs 380 USD."},
+    {"role": "user", "speaker": null, "node_type": "decision", "scope": "personal", "session": "s1-reno", "content": "The floor is 12 by 24 inch matte gray porcelain tile."},
+    {"role": "user", "speaker": null, "node_type": "decision", "scope": "personal", "session": "s1-reno", "content": "They will use a hot plate in the garage and eat out for the eight weeks."},
+    {"role": "user", "speaker": null, "node_type": "event", "scope": "personal", "session": "s1-reno", "content": "Maya's brother Tomas offered to help with painting on the weekend of 2027-03-20."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s2-work", "content": "Maya Chen is a veterinary technician at Cedar Animal Hospital."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s2-work", "content": "She works Tuesday to Saturday, 8 am to 4 pm."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s2-work", "content": "Her supervisor is Dr. Rosa Imani."},
+    {"role": "user", "speaker": null, "node_type": "event", "scope": "personal", "session": "s2-work", "content": "She is studying for the dentistry specialty exam on 2027-05-14."},
+    {"role": "user", "speaker": null, "node_type": "note", "scope": "personal", "session": "s2-work", "content": "The clinic switched to a new records system called ClinicFlow in September."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s2-work", "content": "The exam fee is 450 USD and the clinic reimburses half."},
+    {"role": "user", "speaker": null, "node_type": "event", "scope": "personal", "session": "s2-work", "content": "Correction: the exam moved from 2027-05-14 to 2027-06-11 because the testing center closed."},
+    {"role": "user", "speaker": null, "node_type": "decision", "scope": "personal", "session": "s2-work", "content": "Noor agreed to take the Friday shift in March."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s3-choir", "content": "Luis Ortega sings bass in the Willamette Community Choir."},
+    {"role": "user", "speaker": null, "node_type": "event", "scope": "personal", "session": "s3-choir", "content": "Rehearsals are Monday evenings at 7 pm in the church hall."},
+    {"role": "user", "speaker": null, "node_type": "event", "scope": "personal", "session": "s3-choir", "content": "The spring concert is on 2027-04-17."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s3-choir", "content": "They are performing Faure's Requiem and two folk arrangements."},
+    {"role": "user", "speaker": null, "node_type": "instruction", "scope": "personal", "session": "s3-choir", "content": "The director asked for tenors to arrive 15 minutes early."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s3-choir", "content": "Luis is allergic to penicillin."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s3-choir", "content": "Tickets cost 18 USD and Maya has bought four for her family."},
+    {"role": "user", "speaker": null, "node_type": "fact", "scope": "personal", "session": "s3-choir", "content": "Luis runs the 5 km Saturday parkrun in Laurelhurst Park."},
+    {"role": "user", "speaker": null, "node_type": "note", "scope": "personal", "session": "s3-choir", "content": "He wants to be under 24 minutes by June. His best time so far is 25:40."}
+  ],
+  "key": {
+    "entities": [
+      {"id": "maya", "names": ["Maya", "Maya Chen"]},
+      {"id": "luis", "names": ["Luis", "Luis Ortega"]},
+      {"id": "ben", "names": ["Ben", "Ben Alvarez"]},
+      {"id": "rosa", "names": ["Rosa", "Rosa Imani"]},
+      {"id": "cedar", "names": ["Cedar Animal Hospital"]}
+    ],
+    "questions": [
+      {"id": "reno-budget", "question": "What is Maya and Luis's kitchen renovation budget?", "all_of": ["32,000"], "note": "The memory with the figure names neither the kitchen nor Maya."},
+      {"id": "reno-start", "question": "When does the kitchen renovation start?", "any_of": ["2027-02-08"], "stale": ["Work starts on 2027-01-11"], "note": "A corrected date."},
+      {"id": "reno-wood", "question": "Which wood did Maya and Luis pick for the kitchen?", "all_of": ["white oak"], "note": "The memory with the choice names neither the kitchen nor Maya."},
+      {"id": "reno-cooktop", "question": "Did Maya and Luis decide on gas or induction?", "any_of": ["agreed on induction"], "stale": ["Maya prefers gas"], "note": "A changed preference."},
+      {"id": "reno-cooking", "question": "Where will Maya and Luis cook during the renovation?", "all_of": ["hot plate"], "note": "The memory with the answer names neither the renovation nor the kitchen."},
+      {"id": "contractor", "question": "Who is the contractor for the kitchen?", "all_of": ["Ben Alvarez"], "note": "Control: the memory shares words with the question."},
+      {"id": "supervisor", "question": "Who is Maya's supervisor?", "all_of": ["Rosa Imani"], "note": "Control: the memory says her, not Maya, but names supervisor."},
+      {"id": "exam", "question": "When is Maya's specialty exam?", "any_of": ["2027-06-11"], "stale": ["studying for the dentistry specialty exam on 2027-05-14"], "note": "A corrected date."},
+      {"id": "choir-piece", "question": "What is Luis's choir performing?", "all_of": ["Requiem"], "note": "The memory with the piece names neither Luis nor the choir."},
+      {"id": "tickets", "question": "How much are the choir concert tickets?", "all_of": ["18 USD"], "note": "The memory with the price names neither the choir nor the concert."}
+    ]
+  }
+}

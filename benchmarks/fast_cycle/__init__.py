@@ -11,6 +11,8 @@ and results moved the wrong way:
 - ``ingest``: three scripted chats go through ``ingest()`` with extraction by
   a model through Ollama, which an extraction cache replays without a model
   call while the prompt is unchanged (``ingest.py``).
+- ``store-contextual`` (opt in): the store stage with a situating sentence from
+  a model written for each memory, replayed from a cache (``contextual.py``).
 
 Three more stages are opt-in (``--stages``). ``store-extract`` and
 ``store-extract-session`` store the store stage's memories with

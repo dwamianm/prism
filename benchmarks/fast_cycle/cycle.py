@@ -20,12 +20,13 @@ import sys
 import time
 
 from benchmarks.diagnostics.product_packing import _quiet_offline_cli, parse_overrides
-from benchmarks.fast_cycle import compare, ingest, store, store_extract
+from benchmarks.fast_cycle import compare, contextual, ingest, store, store_extract
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_BASELINE = store.FIXTURES / "baseline-main.json"
 STAGES = ("store", "ingest", *compare.STORE_STAGES[1:])
-# The other stages are opt-in: the store-extract ones make a model request per memory on a cold cache.
+# The other stages are opt-in: the store-extract ones make a model request per memory on a cold cache, and
+# store-contextual asks a model for a sentence per memory unless the committed cache holds it.
 DEFAULT_STAGES = ("store", "ingest")
 DATABASE_URL_ENV = "PRME_FAST_CYCLE_DATABASE_URL"
 
@@ -49,7 +50,8 @@ def provenance(overrides: dict) -> dict:
 
 
 async def run_stages(out: Path, *, stages: tuple[str, ...], overrides: dict, model: str, use_cache: bool,
-                     cache_dir: Path, database_url: str | None, store_fixture: Path = store.DEFAULT_FIXTURE) -> dict:
+                     cache_dir: Path, database_url: str | None, store_fixture: Path = store.DEFAULT_FIXTURE,
+                     contextual_options: dict | None = None) -> dict:
     results: dict = {}
     for name in stages:
         work = out / "work" / name
@@ -58,6 +60,9 @@ async def run_stages(out: Path, *, stages: tuple[str, ...], overrides: dict, mod
         if name in ("store", "store-session"):
             results[name] = await store.run(work, fixture_path=store_fixture, overrides=overrides,
                                             database_url=database_url, session_ids=name == "store-session")
+        elif name == "store-contextual":
+            results[name] = await contextual.run(work, overrides=overrides, database_url=database_url,
+                                                 use_cache=use_cache, **(contextual_options or {}))
         elif name in compare.EXTRACT_STAGES:
             results[name] = await store_extract.run(work, cache_dir=cache_dir, use_cache=use_cache, overrides=overrides,
                                                     model=model, session_ids=name == store_extract.SESSION_STAGE)
@@ -99,6 +104,12 @@ def report_markdown(report: dict, rules: dict) -> str:
     if "store-session" in stages:
         lines += [f"Store-session: the same {stages['store-session']['calls']} memories, each stored with its session as "
                   "`session_id`, the control for store-extract-session."]
+    if "store-contextual" in stages:
+        entry, info = stages["store-contextual"], stages["store-contextual"]["contextual"]
+        lines += [f"Store with situating sentences: the same calls with a sentence from `{info['model']}` (prompt "
+                  f"`{info['prompt']}`, run {info['run']}) before {info['sentences']} of {entry['calls']} memories: "
+                  f"{info['model_calls']} model calls and {info['replayed']} replayed from the cache, "
+                  f"fixture `{entry['fixture']}`."]
     for name in compare.EXTRACT_STAGES:
         if name in stages:
             entry = stages[name]
@@ -181,7 +192,16 @@ def build_parser() -> argparse.ArgumentParser:
                      help="A setting for both stages: a dotted key and a JSON value, as for the gate")
     run.add_argument("--stages", default=",".join(DEFAULT_STAGES),
                      help=f"Comma-separated stages to run, of {', '.join(STAGES)} (default: {', '.join(DEFAULT_STAGES)}). "
-                          "The store-extract stages make a model request per memory on a cold cache")
+                          "The store-extract stages make a model request per memory on a cold cache, and "
+                          "store-contextual asks a model for a sentence per memory unless the cache holds it")
+    run.add_argument("--contextual-prompt", choices=sorted(contextual.PROMPTS), default=contextual.DEFAULT_PROMPT,
+                     help="The prompt of the store-contextual stage")
+    run.add_argument("--contextual-run", type=int, default=1, metavar="N",
+                     help="Which generation of the store-contextual stage's sentences to use (default: 1)")
+    run.add_argument("--contextual-fixture", type=Path, default=store.DEFAULT_FIXTURE,
+                     help="The store fixture of the store-contextual stage (default: the store stage's)")
+    run.add_argument("--contextual-cache-dir", type=Path, default=contextual.CACHE_DIR,
+                     help="The committed cache of the model's sentences")
     run.add_argument("--model", default=ingest.DEFAULT_MODEL,
                      help="The Ollama model that extracts in the ingest stage")
     run.add_argument("--baseline", default=str(DEFAULT_BASELINE),
@@ -219,18 +239,24 @@ def main(argv: list[str] | None = None) -> int:
     rules = compare.load_rules()
     database_url = args.database_url or os.environ.get(DATABASE_URL_ENV)
     args.out.mkdir(parents=True, exist_ok=True)
+    contextual_options = {"prompt": args.contextual_prompt, "run_number": args.contextual_run,
+                          "fixture_path": args.contextual_fixture, "cache_dir": args.contextual_cache_dir}
     results = asyncio.run(run_stages(args.out, stages=stages, overrides=overrides, model=args.model,
                                      use_cache=not args.no_cache, cache_dir=args.cache_dir,
-                                     database_url=database_url, store_fixture=args.store_fixture))
+                                     database_url=database_url, store_fixture=args.store_fixture,
+                                     contextual_options=contextual_options))
     report = build_report(args.label, results, overrides, rules)
     (args.out / "report.json").write_text(json.dumps(report, indent=1) + "\n")
     (args.out / "report.md").write_text(report_markdown(report, rules))
     if args.update_cache:
-        for name in (name for name in results if "working_cache" in results[name]):
+        for name in (name for name in results if "working_cache" in results[name] and name != "store-contextual"):
             added = ingest.update_cache(Path(results[name]["working_cache"]), args.cache_dir)
             files, size = ingest.cache_size(args.cache_dir)
             print(f"fast cycle: {name} added {added} extraction responses; the committed cache holds {files} "
                   f"({size} bytes)", file=sys.stderr)
+        if "store-contextual" in results:
+            added = contextual.update_cache(Path(results["store-contextual"]["working_cache"]), args.contextual_cache_dir)
+            print(f"fast cycle: added {added} situating sentences to the committed cache", file=sys.stderr)
     times = ", ".join(f"{name} {report['seconds'][name]:.1f}s" for name in stages)
     print(f"fast cycle: {times}, total {report['seconds']['total']:.1f}s; report in {args.out / 'report.md'}")
     if args.baseline == "none":

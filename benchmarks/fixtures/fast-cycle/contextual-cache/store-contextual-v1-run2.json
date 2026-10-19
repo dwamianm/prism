@@ -1,0 +1,280 @@
+{
+ "kind": "prme-fast-cycle-contextual-cache",
+ "model": "deepseek-v4.1-flash:cloud",
+ "prompt_sha256": {
+  "situate": "6a846e0c05f8dfae6202a1887136b16b4acbd3e35348c108169237cf1f994d8a",
+  "label": "f87387be0bd7fd3df8b758d1545c58ba669e24803da4fd52b2b053cc2583b1e9"
+ },
+ "entries": {
+  "05d99d48c2028815a92e346d800b12d9cb18bce2ab0c22dcf5c3b5307182a6bf": {
+   "raw": "Luis Ortega: Willamette Community Choir schedule.",
+   "prompt_tokens": 225,
+   "completion_tokens": 13
+  },
+  "0939956f3bb2b74dabc8dab0002c5f451741034916035cc2c3efd89f7987afbb": {
+   "raw": "Maya Chen and Luis Ortega's kitchen renovation schedule.",
+   "prompt_tokens": 217,
+   "completion_tokens": 12
+  },
+  "0948ba3e708dc56d48b5d13637e5b28eeb7293f9b9ae6e2cf26e4705d7c3bad1": {
+   "raw": "Maya Chen and Luis Ortega: kitchen renovation budget.",
+   "prompt_tokens": 214,
+   "completion_tokens": 12
+  },
+  "095b45c9bc0c12d6556fa387500f3ee87ea1ceff05d9840a7f67de4bc902c34e": {
+   "raw": "Luis\u2019s parkrun in Laurelhurst Park belongs to the spring concert context.",
+   "prompt_tokens": 247,
+   "completion_tokens": 18
+  },
+  "0c733802a030e45a8383d6413e4634208e504653ff6fddecbbf44ae85ff75492": {
+   "raw": "Maya Chen's work schedule.",
+   "prompt_tokens": 206,
+   "completion_tokens": 8
+  },
+  "16604624631857e3dbd48f15da080a2f31780a6c4ec825277f360d573ad767f7": {
+   "raw": "NONE",
+   "prompt_tokens": 280,
+   "completion_tokens": 3
+  },
+  "229e17c194abbc0ee644a1ffba9a33f092e13df19256d3e8e51a630f336fb1b5": {
+   "raw": "Luis Ortega\u2019s choir topic includes the spring concert date.",
+   "prompt_tokens": 209,
+   "completion_tokens": 14
+  },
+  "2787634ae3ad80b2ce3614868993287bad3ee54e6d338a564fd51191cbdf753c": {
+   "raw": "Maya Chen and Luis Ortega's kitchen renovation budget.",
+   "prompt_tokens": 198,
+   "completion_tokens": 12
+  },
+  "38e5c4c58e29fb905291262def2992b29e249954997ebf872ec2eb635ac27c2a": {
+   "raw": "Luis Ortega\u2019s choir rehearsals are Monday evenings at 7 pm in the church hall.",
+   "prompt_tokens": 194,
+   "completion_tokens": 21
+  },
+  "3b25ed98ac15472ebff320b5331e966f14cd5eb8a9c6bc1a6e3c9d8fb69e1273": {
+   "raw": "Ben Alvarez and his crew are part of Maya Chen and Luis Ortega's kitchen renovation.",
+   "prompt_tokens": 283,
+   "completion_tokens": 18
+  },
+  "4db4d3f4a7eb06551de10d149a74eec5e4898a5a4057427013aa9303473f3d7c": {
+   "raw": "Maya Chen's workplace, Cedar Animal Hospital, changed its records system.",
+   "prompt_tokens": 236,
+   "completion_tokens": 16
+  },
+  "4ee5c9fdc4f8112d5bc9e432c0f49f581ae7d9cfe9becb4739b019b0b356f3b7": {
+   "raw": "Maya Chen and Luis Ortega are discussing the kitchen renovation budget.",
+   "prompt_tokens": 282,
+   "completion_tokens": 14
+  },
+  "4f98d1390963be20bfb7505f0e524a8a4476de03485f4e4b06d4f6055807f993": {
+   "raw": "Maya Chen is studying for the dentistry specialty exam.",
+   "prompt_tokens": 220,
+   "completion_tokens": 12
+  },
+  "5951cb3b66296f32c49d62bbbecf7c29e7e9ed20bc13af88540bc19e9207528b": {
+   "raw": "Maya Chen's supervisor is Dr. Rosa Imani.",
+   "prompt_tokens": 201,
+   "completion_tokens": 13
+  },
+  "5a84c439fddafd210522b15a5a4cc026ae8af105c0230989f8a4330a68b12500": {
+   "raw": "NONE",
+   "prompt_tokens": 271,
+   "completion_tokens": 3
+  },
+  "5cbf4aea9a83e8b9e6fab8bfef66b5a876517f9939d9bf7d9dd9b0e9cbafabb5": {
+   "raw": "Maya bought tickets; topic is the spring concert.",
+   "prompt_tokens": 265,
+   "completion_tokens": 12
+  },
+  "5dd87c50517c3755035879882b7f67dd9ab06ab1e69df47095386dd39a569b45": {
+   "raw": "Maya Chen's dentistry specialty exam.",
+   "prompt_tokens": 268,
+   "completion_tokens": 9
+  },
+  "61ee7a8e73e24897cd16763a82b418bc7a969ba35ff42b8c5acd12cec8a1cfe7": {
+   "raw": "Luis Ortega; penicillin allergy.",
+   "prompt_tokens": 264,
+   "completion_tokens": 8
+  },
+  "6be505432bd8e7cd99e5479cd0a78de887df8485ac5cc8514b380b7d88c2f812": {
+   "raw": "Maya Chen and Luis Ortega's kitchen renovation budget and material choices.",
+   "prompt_tokens": 266,
+   "completion_tokens": 15
+  },
+  "6e9b629dbf418d94926071f8d8f3fc9a8fd3266b67a515f515d3375e27a87501": {
+   "raw": "NONE",
+   "prompt_tokens": 255,
+   "completion_tokens": 3
+  },
+  "73a84d612553c893eae52853b4693d93ffbf4351de5ea20a06b959866b3b9c25": {
+   "raw": "Luis Ortega is in the Willamette Community Choir, which is rehearsing Faure's Requiem.",
+   "prompt_tokens": 239,
+   "completion_tokens": 24
+  },
+  "73ad9197776e38fc3344749962f766a7fea5eb93d906947595da55f2fd0135ea": {
+   "raw": "NONE",
+   "prompt_tokens": 210,
+   "completion_tokens": 3
+  },
+  "866c1ec290f6c2caba0903e59ece8884f3c5a6ab11f4e89120e8e5c29111d031": {
+   "raw": "NONE",
+   "prompt_tokens": 271,
+   "completion_tokens": 3
+  },
+  "88f533225177bac5067edfeb69c26c7022fd15e423741dff5b0173c80f7086de": {
+   "raw": "NONE",
+   "prompt_tokens": 287,
+   "completion_tokens": 3
+  },
+  "8ce65b20b3ece3718041cbde7d58b27b93ae3e33be1324a07eaeeaf4fb53a664": {
+   "raw": "Noor's schedule and shifts at the clinic under Dr. Rosa Imani.",
+   "prompt_tokens": 265,
+   "completion_tokens": 17
+  },
+  "951ca34ceae6cbe11a1357bcdcfff3fe455a44442be4de169f2aea6729483e93": {
+   "raw": "Luis Ortega's choir is performing Faur\u00e9's Requiem and folk arrangements.",
+   "prompt_tokens": 224,
+   "completion_tokens": 18
+  },
+  "9772b9ce1ad90dceb66a8a2c1071559357ecf5ed7a7f38e7379e28ef67cf99ad": {
+   "raw": "Luis Ortega and the Willamette Community Choir; spring concert repertoire.",
+   "prompt_tokens": 240,
+   "completion_tokens": 17
+  },
+  "9ce900a4a197db8d0fc8cf54bb71edae6059d40ec08564a59a8d2bef3005ace8": {
+   "raw": "Luis and Maya disagree on cooktop type for Ben Alvarez's project.",
+   "prompt_tokens": 277,
+   "completion_tokens": 16
+  },
+  "9e771fe6792ede46c69f4f3f5d08c15a1311573327a919ada01996924f4f7d55": {
+   "raw": "Maya Chen's work schedule at Cedar Animal Hospital.",
+   "prompt_tokens": 190,
+   "completion_tokens": 12
+  },
+  "a31b4673469e552f7cffd9edcff5cab857fdc40e4078d39e5e4d5dfadfbc1cc2": {
+   "raw": "NONE",
+   "prompt_tokens": 285,
+   "completion_tokens": 3
+  },
+  "acf8ab62b0d5c773438c387f14886bbaf201e75cf0dc174186951c8e2387e510": {
+   "raw": "The dentistry specialty exam for Dr. Rosa Imani's supervisee moved to 2027-06-11.",
+   "prompt_tokens": 269,
+   "completion_tokens": 24
+  },
+  "b1a23807eb97880312f145b77366eb8a811ab9e384ff9ba4f3fc9cb5caccd3dc": {
+   "raw": "Luis wants to improve his 5 km parkrun time.",
+   "prompt_tokens": 255,
+   "completion_tokens": 14
+  },
+  "b4dba2d0cb339cf4c4135546499973867ba959a11aa30a24e89eeac26d094493": {
+   "raw": "NONE",
+   "prompt_tokens": 281,
+   "completion_tokens": 3
+  },
+  "bc3b13a4c2bba6a6db3fb790187abf280a72779fc1006ce85e153d438126431d": {
+   "raw": "NONE",
+   "prompt_tokens": 296,
+   "completion_tokens": 3
+  },
+  "bf0ce8236bf0e139b87cf95863f2ae3934d2b31175c1ab31ae7d5bacd7b357e7": {
+   "raw": "Maya bought tickets for the spring concert.",
+   "prompt_tokens": 249,
+   "completion_tokens": 10
+  },
+  "c0f27c7f4c197cff09e4d412f64f75330a97a52de995a0b474df456b2d0dd8ae": {
+   "raw": "NONE",
+   "prompt_tokens": 282,
+   "completion_tokens": 3
+  },
+  "cb6b23293e28e9d4aa30c83754ac37930f6249fd3cc77729aacedc9d2919a1e4": {
+   "raw": "Maya Chen is studying for the dentistry specialty exam.",
+   "prompt_tokens": 236,
+   "completion_tokens": 12
+  },
+  "d078ad58c3bb8c54f122faebdc31fa4fa599342cf4ca3c29ee4aa2cd59189dd7": {
+   "raw": "Tomas offered to help with painting.",
+   "prompt_tokens": 298,
+   "completion_tokens": 9
+  },
+  "d1566d0f7a53cda07b974c8bc30a12e9f886bea447f514a4edc98414cda04308": {
+   "raw": "Luis Ortega\u2019s allergy to penicillin.",
+   "prompt_tokens": 248,
+   "completion_tokens": 10
+  },
+  "d3e54d7e969a514608b08418102d3e16a15c8e76b4d7235b89151c03674e3736": {
+   "raw": "NONE",
+   "prompt_tokens": 269,
+   "completion_tokens": 3
+  },
+  "d5a2dd579b211680af5d37688682c3eec298eddb24e7b0a832e51c194c6d39b3": {
+   "raw": "Maya Chen and Luis Ortega's Portland kitchen renovation schedule.",
+   "prompt_tokens": 248,
+   "completion_tokens": 13
+  },
+  "d5b7ee00f5d127bab62d3c0e5daf8dba40c5e197139becedf95246e52f45f85a": {
+   "raw": "NONE",
+   "prompt_tokens": 287,
+   "completion_tokens": 3
+  },
+  "d6a781f7dd8a70aa349962f0e2eddd4dd9b984cd325baf2380b0ae7fd5545f1b": {
+   "raw": "Luis and Maya discussed cooktop preferences.",
+   "prompt_tokens": 293,
+   "completion_tokens": 10
+  },
+  "d86ae9d4b4c7431395c5bef3ad6c8a578f0217a12f66994cc78f7a91b37ef19c": {
+   "raw": "Maya Chen's workplace, Cedar Animal Hospital, uses ClinicFlow.",
+   "prompt_tokens": 252,
+   "completion_tokens": 15
+  },
+  "db2e0eb85c0968965ae767809f1da5131bce64016dfeeea0aa72b4af051d3dfa": {
+   "raw": "Dr. Rosa Imani is Maya Chen's supervisor.",
+   "prompt_tokens": 217,
+   "completion_tokens": 12
+  },
+  "dda98c4d3f2a3473426ecfe2c69ad8e18f0d9f0fd92da6a0d894af9a5f9d9f01": {
+   "raw": "Maya Chen's dentistry specialty exam fee and reimbursement.",
+   "prompt_tokens": 252,
+   "completion_tokens": 12
+  },
+  "dfe6f9ae79fe7fd3659b9e97ab379bf3551e80274bdaf67348e12d73d565526f": {
+   "raw": "Maya Chen and Luis Ortega's kitchen renovation start date.",
+   "prompt_tokens": 264,
+   "completion_tokens": 13
+  },
+  "e2051facab372c6b4d95ea2482f3b2490d3cad405ec63bebeea7fba690456ab6": {
+   "raw": "Ben Alvarez is the contractor for Maya Chen and Luis Ortega's kitchen renovation.",
+   "prompt_tokens": 299,
+   "completion_tokens": 16
+  },
+  "e71375ec3a8d1f2883fee1109cf581232a41182aabf59c5c3111fde3e08c449d": {
+   "raw": "Luis and Maya discussed the cooktop choice.",
+   "prompt_tokens": 292,
+   "completion_tokens": 11
+  },
+  "f10746f43354437c6d58be881b763a5eaedd61871f9d51927aae66a04ee78492": {
+   "raw": "NONE",
+   "prompt_tokens": 285,
+   "completion_tokens": 3
+  },
+  "f41532dfff9209141d8d9fe8a33a7b84d7494dfe806b21b866df4af033c58965": {
+   "raw": "Luis wants to improve his parkrun time.",
+   "prompt_tokens": 271,
+   "completion_tokens": 11
+  },
+  "f7804a2cbc7ff6c71a1a4f7bf2b4f19b99e58d2bca8cf7fde2b012dc82ce0497": {
+   "raw": "Luis and Maya agreed on an induction cooktop for their project.",
+   "prompt_tokens": 276,
+   "completion_tokens": 15
+  },
+  "f888db6a526e02a1cc6f6728358f307311efa71d2456e8d4f23664e1890478eb": {
+   "raw": "Luis runs in Laurelhurst Park.",
+   "prompt_tokens": 263,
+   "completion_tokens": 9
+  },
+  "fdc651f09fbb5a3b2ac2f4804bca5572ad6860b203130c9bc9ee3b887ed4077e": {
+   "raw": "Maya Chen and Luis Ortega: kitchen renovation.",
+   "prompt_tokens": 233,
+   "completion_tokens": 11
+  }
+ }
+}
