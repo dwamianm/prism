@@ -167,6 +167,33 @@ uv run python -m benchmarks.integrations.lenient_judge run \
   --result benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-locomo-result.json
 ```
 
+## Release channels and the benchmark tiers
+
+Since 2026-10-19 a release is gated by one of two sets of checks, by the owner's
+directive. `CLAUDE.md` ("Release channels and default changes") has the rule and
+the commands. This page keeps each check's method and measurements.
+
+| Check | Gates | Measured time | Section |
+|---|---|---|---|
+| Defect probes, chat probe, corrections probe | alpha and beta | 22 s, 83 s, about 30 s | [Fast gate for ingest changes](#fast-gate-for-ingest-changes), [Corrections probe](#corrections-probe-what-a-correction-stores-and-returns) |
+| Fast cycle | alpha and beta | 158 to 211 s cold, 25 to 28 s warm | [Fast cycle](#fast-cycle-store-ingest-and-retrieve-in-under-a-minute-prototype) |
+| Offline evidence gate | alpha and beta | 10 min 10 s per side | [Offline evidence gate](#offline-evidence-gate-the-first-gate-for-retrieval-changes) |
+| Mid tier | alpha and beta, for larger changes | 24 to 34 min cold, 11 min warm | [Mid tier](#mid-tier-all-of-locomo-and-a-longmemeval-s-sample-in-under-an-hour) |
+| Scheduled full benchmark | stable | about 16 hours of builds for one run of the defaults (recorded build times) | `scripts/full-benchmark/` |
+| DeepSeek answer track | stable, on demand for an `ingest()` default | several hours | [DeepSeek answer track through Ollama](#deepseek-answer-track-through-ollama) |
+
+In the alpha and beta channel a default flips on the fast tiers alone. The
+flips so far are `lexical_term_weights` (0.16.0a2) and the five structure
+options ("Structure options on by default (0.16.0a3, 2026-10-19)"). Their
+answer-track audit waits for the stable release.
+
+At a stable release the audit reads a loss, as "One call per turn against the
+batched default (2026-10-18)" did for batched extraction: the baseline is the
+new defaults, built through `ingest()` at the release commit, and the variant is
+the previous behavior (the option off). If `verdict` reads `pass` for the
+variant, the old behavior beat the default, so the default lost. If its first
+pair fails, the default stays.
+
 ## Offline evidence gate: the first gate for retrieval changes
 
 Run this gate on every retrieval, packing or representation change before any
@@ -795,7 +822,8 @@ uv run python -m benchmarks.diagnostics.product_packing gate --benchmark locomo 
 
 Building packs for every question after each change is too slow to iterate
 on, so development uses a fixed slice, `benchmarks/slices/dev-v1.json`, and
-keeps the full benchmarks for the gates before a merge or a default change.
+keeps the full benchmarks for the stable release and for a default flipped in a
+stable release.
 `benchmarks.diagnostics.dev_slice` chose it from the committed DeepSeek
 results by rules that are written down in the module, and `check` confirms
 that the committed file still follows from the files it names:
@@ -1028,8 +1056,9 @@ about ten minutes while other jobs ran; it still finished in 34 minutes.
   the conversation-level intervals both exclude it.
 - It measures evidence coverage, not answers: the projected accuracy is the
   gate's planning estimate from the 2026-09-23 GPT-5.4 run. A change that
-  passes here still needs the full benchmarks, and a default change still needs
-  the answer track under the epic #77 rules.
+  passes here can go out in an alpha or beta; a stable release still needs the
+  full benchmark, and a default flipped in a stable release still needs the
+  answer track under the epic #77 rules.
 - Every one of these questions has been examined before, so the tier is a
   development gate and not publication evidence, like the gate it uses.
 - A `--reuse-build` run shows retrieval and packing only. Cold runs differ from
@@ -1263,10 +1292,12 @@ For monorepo issues #258 and #259 (the speaker's name and the claims of an
 `ingest()` turn, and the links between entities and the graph seeds), the
 owner decided on 2026-10-19 that the default flips on this gate instead of the
 DeepSeek answer track, as batched extraction did (v0.15.0, flipped on the
-offline evidence gate alone). The decision covers those two changes only; the
-default-change rule in `CLAUDE.md` is otherwise unchanged, and the full answer
-track remains the audit after a flip: record a new defaults baseline on it and
-pair later variants with that baseline.
+offline evidence gate alone). The same day the owner made
+this the rule for the alpha and beta channel: any default may flip on the fast
+tiers (this gate, the fast cycle and the offline evidence gate), and the
+DeepSeek default-change rule in `CLAUDE.md` is the stable-channel rule. The full
+answer track is the audit at the stable release: record a new defaults baseline
+on it and pair the previous behavior, and later variants, with that baseline.
 
 The gate has three steps. Run each with the option off (the current defaults)
 and on. The commands show the on side; the off side is the same command with
@@ -1316,13 +1347,14 @@ unchanged replays the shared extraction cache in seconds.
    other half: a change to retrieval must not lose evidence, and a change that
    leaves retrieval alone must leave the gate unchanged.
 
-The change passes when all of these hold; any other result goes to the owner
-with the numbers.
+The change passes when all of these hold. `CLAUDE.md` ("Release channels and
+default changes") adds the fast cycle and says what to do when the rule fails.
 
 - Defect probes: with the option on, the answer ranks in the top 3 for all 7
-  probes ("probes with the answer ranked in the top 3" reads 7/7), and the
-  owner's claims are named: "user claims attached to the named owner" exceeds
-  "user claims attached to a first-person pronoun".
+  probes ("probes with the answer ranked in the top 3" reads 7/7), and, for a
+  change to the speaker's name or to what a claim is attached to, the owner's
+  claims are named: "user claims attached to the named owner" exceeds "user
+  claims attached to a first-person pronoun".
 - Chat probe: no measure is worse with the option on than off. Lower is better
   for the claims whose text repeats another's, the claims repeating a subject,
   predicate and object, the claims whose text is the whole message, the claims
@@ -3008,8 +3040,10 @@ with another DeepSeek score from the same model identity and settings:
    checkout with #139, under a new name with the same settings. With the same
    context text it stays the same variant; if the newer code changed its
    text, it is a new variant with its own first pair and confirmation (#143).
-3. A default changes only when the default-change rule in the epic #77 work
-   rules in `CLAUDE.md` is met. That rule includes a confirmation run: run
+3. A default changes in a stable release only when the default-change rule in
+   the epic #77 work rules in `CLAUDE.md` is met. The alpha and beta channel
+   flips defaults on the fast tiers instead, and the stable release audits those
+   flips with this track. The default-change rule includes a confirmation run: run
    `run-pair` again for the same variant, which starts a new pair with a fresh
    variant run and a fresh defaults run; it must pass the test a second time.
    A variant is what it changes, not its arm name (#130): its settings and
