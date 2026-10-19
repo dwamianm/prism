@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a2] - 2026-10-19
+
+This is an alpha. It passed CI and the fast gate and fast cycle, and it has not
+been through the full benchmark. The stable release stays at 0.15.0 until the
+full benchmark audit, so `pip install prme` still installs 0.15.0. Install the
+alpha with `pip install --pre prme` or `pip install prme==0.16.0a2`.
+
 ### Added
 
 - Add the store-extract stages to the fast cycle (part of prism-monorepo issue
@@ -86,6 +93,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and ships the second question set as
   `benchmarks/fixtures/fast-cycle/store-heldout-v1.json`. `BENCHMARKS.md`,
   "Lexical term weights", has the table.
+
+### Upgrade notes
+
+- One default changed since 0.16.0a1: `lexical_term_weights` is on, and it
+  affects PostgreSQL only (DuckDB ignores it). Word search weighs each query
+  word by how rare it is and keeps weak matches out of the candidates. On the
+  fast cycle's 75 memory fixture it moved the Rust question from 4th to 1st and
+  the dog question from 5th to 1st, with no question ranked lower, and the
+  offline evidence gate did not change. The effect is within noise from about
+  2,000 memories. The default-change rule's DeepSeek answer runs have not been
+  done. Set `PRME_LEXICAL_TERM_WEIGHTS=false` to get the word search of
+  0.16.0a1 back.
+- `enable_superseded_source_suppression` is new and off. `enable_ingest_claim_fixes`,
+  `enable_mention_links`, `packing.graph_seed_words`, `enable_store_extraction`
+  and `enable_extraction_corrections` stay off.
+- The new store-extract stages measured `store(extract=True)` on the fast
+  cycle's 75 memories: answers ranked first went from 6 to 12 and stale values
+  above the answer from 4 to 2, but answers in the top 3 went from 14 to 12,
+  five questions ranked lower, and the context used about twice the tokens. The
+  mid-tier benchmark (all of LoCoMo and 12 LongMemEval-S questions through
+  `ingest()`, evidence coverage only) runs in 25 to 35 minutes cold.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a1] - 2026-10-19
 
@@ -2289,7 +2321,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a1...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a2...HEAD
+[0.16.0a2]: https://github.com/dwamianm/prism/compare/v0.16.0a1...v0.16.0a2
 [0.16.0a1]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0a1
 [0.15.0]: https://github.com/dwamianm/prism/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/dwamianm/prism/compare/v0.14.1...v0.14.2
