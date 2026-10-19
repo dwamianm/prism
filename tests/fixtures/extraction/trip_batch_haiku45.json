@@ -1,0 +1,198 @@
+{
+ "note": "One batched extraction response, recorded once for issue 258 from Claude Haiku 4.5 on Amazon Bedrock (us.anthropic.claude-haiku-4-5-20251001-v1:0), temperature 0, the engine's batched request for these four turns. Kept as the model wrote it, before any check.",
+ "turns": [
+  {
+   "index": 1,
+   "role": "user",
+   "content": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year."
+  },
+  {
+   "index": 2,
+   "role": "assistant",
+   "content": "That is cherry blossom season. Which places are you thinking about?"
+  },
+  {
+   "index": 3,
+   "role": "user",
+   "content": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time."
+  },
+  {
+   "index": 4,
+   "role": "user",
+   "content": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+  }
+ ],
+ "response": {
+  "turns": [
+   {
+    "turn": 1,
+    "entities": [
+     {
+      "name": "Alex Rivera",
+      "entity_type": "person",
+      "scope": "personal"
+     },
+     {
+      "name": "Jordan",
+      "entity_type": "person",
+      "scope": "personal"
+     },
+     {
+      "name": "Japan",
+      "entity_type": "location",
+      "scope": "personal"
+     }
+    ],
+    "facts": [
+     {
+      "subject": "I",
+      "predicate": "planning_trip_to",
+      "object": "Japan in late March next year",
+      "polarity": "positive",
+      "epistemic_type": "observed",
+      "confidence": 0.95,
+      "evidence_quote": "My partner Jordan and I are planning a trip to Japan in late March next year.",
+      "temporal_ref": "late March next year",
+      "scope": "personal"
+     }
+    ],
+    "relationships": [
+     {
+      "source_entity": "I",
+      "target_entity": "Jordan",
+      "relationship_type": "partner",
+      "polarity": "positive",
+      "epistemic_type": "observed",
+      "confidence": 0.95,
+      "evidence_quote": "My partner Jordan and I are planning a trip to Japan in late March next year."
+     }
+    ]
+   },
+   {
+    "turn": 2,
+    "entities": [],
+    "facts": [],
+    "relationships": []
+   },
+   {
+    "turn": 3,
+    "entities": [
+     {
+      "name": "Tokyo",
+      "entity_type": "location",
+      "scope": "personal"
+     },
+     {
+      "name": "Kyoto",
+      "entity_type": "location",
+      "scope": "personal"
+     },
+     {
+      "name": "Kanazawa",
+      "entity_type": "location",
+      "scope": "personal"
+     },
+     {
+      "name": "Osaka",
+      "entity_type": "location",
+      "scope": "personal"
+     },
+     {
+      "name": "Hiroshima",
+      "entity_type": "location",
+      "scope": "personal"
+     }
+    ],
+    "facts": [
+     {
+      "subject": "I",
+      "predicate": "chose_destinations",
+      "object": "Tokyo, Kyoto, Kanazawa, and Osaka",
+      "polarity": "positive",
+      "epistemic_type": "observed",
+      "confidence": 0.95,
+      "evidence_quote": "We chose Tokyo, Kyoto, Kanazawa, and Osaka.",
+      "scope": "personal"
+     },
+     {
+      "subject": "I",
+      "predicate": "dropped_destination",
+      "object": "Hiroshima to save time",
+      "polarity": "positive",
+      "epistemic_type": "observed",
+      "confidence": 0.95,
+      "evidence_quote": "We dropped Hiroshima to save time.",
+      "scope": "personal"
+     }
+    ],
+    "relationships": []
+   },
+   {
+    "turn": 4,
+    "entities": [
+     {
+      "name": "JR Pass",
+      "entity_type": "product",
+      "scope": "personal"
+     },
+     {
+      "name": "shellfish",
+      "entity_type": "concept",
+      "scope": "personal"
+     },
+     {
+      "name": "allergy card",
+      "entity_type": "product",
+      "scope": "personal"
+     }
+    ],
+    "facts": [
+     {
+      "subject": "I",
+      "predicate": "preference",
+      "object": "trains over flights",
+      "polarity": "positive",
+      "fact_type": "preference",
+      "epistemic_type": "observed",
+      "confidence": 0.95,
+      "evidence_quote": "I prefer trains to flights, so I want a JR Pass.",
+      "scope": "personal"
+     },
+     {
+      "subject": "I",
+      "predicate": "wants",
+      "object": "JR Pass",
+      "polarity": "positive",
+      "fact_type": "decision",
+      "epistemic_type": "observed",
+      "confidence": 0.95,
+      "evidence_quote": "I prefer trains to flights, so I want a JR Pass.",
+      "scope": "personal"
+     },
+     {
+      "subject": "Jordan",
+      "predicate": "allergic_to",
+      "object": "shellfish",
+      "polarity": "positive",
+      "epistemic_type": "observed",
+      "confidence": 0.95,
+      "evidence_quote": "Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+      "scope": "personal"
+     },
+     {
+      "subject": "I",
+      "predicate": "needs",
+      "object": "allergy card for restaurants",
+      "polarity": "positive",
+      "fact_type": "decision",
+      "epistemic_type": "observed",
+      "confidence": 0.95,
+      "evidence_quote": "Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+      "scope": "personal"
+     }
+    ],
+    "relationships": []
+   }
+  ]
+ }
+}

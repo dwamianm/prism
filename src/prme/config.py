@@ -850,6 +850,48 @@ class PRMEConfig(_ProjectSettings):
             "is not covered. Default False."
         ),
     )
+    enable_mention_links: bool = Field(
+        default=False,
+        description=(
+            "When True, ingest() links each claim and the raw source note to "
+            "every entity its extraction lists whose name occurs in the text "
+            "(a MENTIONS edge marked metadata.basis=text_mention), so the "
+            "claims and notes that name an entity are its graph neighbors "
+            "(#259). A claim whose object text holds a name, and a note no "
+            "claim covers, were unlinked before. A name that two listed "
+            "entities share, and a literal I or we, are not linked. The links "
+            "are made after the derivation commits and after the note exists, "
+            "outside the derivation plan, and memories ingested earlier are "
+            "not linked. Turn on packing.graph_seed_words with it so a "
+            "question typed in lower case finds the entities. Not yet through "
+            "the default-change rule. Default False."
+        ),
+    )
+    enable_ingest_claim_fixes: bool = Field(
+        default=False,
+        # Unset, it is left out of dumps, so a configuration recorded before
+        # the option existed still compares equal.
+        exclude_if=lambda value: value is False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() makes three changes to what a "
+            "turn's claims say (prism-monorepo issue 258). (1) A claim that "
+            "the model writes with I, me or my, where the cited sentences use "
+            "we, us or our and no singular form, keeps the sentences' own "
+            "word instead of being discarded, so \"We chose Tokyo\" is a "
+            "claim about We. (2) A user turn that gives no speaker but says "
+            "who it is (\"I am Alex Rivera\", \"My name is Alex Rivera\") "
+            "binds its I, me and my to that person's entity when the "
+            "extraction lists the person, for that turn only, as "
+            "enable_speaker_references does for a caller's speaker. (3) With "
+            "enable_claim_sentence_text, a claim whose sentences are already "
+            "an earlier claim's text from the same message gets a one-"
+            "sentence statement of its own built from its subject, predicate "
+            "and object, so no two claims of a message share a text. Default "
+            "False: none of it has been through the default-change rule on "
+            "the ingest() answer track, and turning it on by default needs "
+            "that rule."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(
