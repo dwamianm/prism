@@ -5,7 +5,8 @@ import pytest
 
 from benchmarks.diagnostics import chat_probe
 from benchmarks.diagnostics.chat_probe import (
-    DEFAULT_CONVERSATION, chat_turns, compare_markdown, context_report, graph_report, load_conversation,
+    DEFAULT_CONVERSATION, answer_rank, chat_turns, compare_markdown, context_report, graph_report, load_conversation,
+    report_markdown, summary,
 )
 from prme.ingestion.schema import ExtractionResult
 
@@ -82,6 +83,26 @@ def test_the_committed_conversation_loads_and_every_turn_has_its_own_time_and_ke
     assert turns[0]["metadata"] == {"chat_probe": "chat-v1", "turn_key": "s1-intro#0"}
 
 
+def test_the_defect_conversation_loads_with_the_sentences_of_the_two_issues():
+    path = DEFAULT_CONVERSATION.with_name("defects-v1.json")
+    conversation = load_conversation(path)
+    turns = chat_turns(conversation, speaker=True)
+    assert len(turns) == 14 and [session["id"] for session in conversation["sessions"]] == [
+        "s1-trip", "s2-learning", "s3-work"]
+    assert all(earlier["event_time"] < later["event_time"] for earlier, later in zip(turns, turns[1:]))
+    assert conversation["owner"] == "defects-v1-alex" and conversation["user_name"] == "Alex Rivera"
+    assert {turn["speaker"] for turn in turns if turn["role"] == "user"} == {"Alex Rivera"}
+    assert turns[0]["content"] == ("Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan "
+                                   "in late March next year.")
+    assert turns[2]["content"] == "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time."
+    key = conversation["key"]
+    assert next(entity for entity in key["entities"] if entity.get("owner"))["names"] == ["Alex", "Alex Rivera"]
+    assert key["repeats"] == []
+    probes = {probe["id"]: probe for probe in key["probes"]}
+    assert len(probes) == 7 and probes["cities"]["all_of"] == ["Tokyo", "Kyoto", "Kanazawa", "Osaka"]
+    assert probes["travel"]["any_of"] == ["JR Pass", "trains"]
+
+
 def test_a_key_must_name_one_owner_and_only_listed_entities(tmp_path):
     path = _conversation(tmp_path)
     broken = json.loads(path.read_text())
@@ -151,6 +172,62 @@ def test_context_report_reads_answers_only_from_record_lines():
                           4096)["answer_in_context"] is True
 
 
+def test_answer_rank_is_the_place_of_the_first_result_that_holds_the_answer():
+    ranked = [
+        {"type": "entity", "content": "Sam"},
+        {"type": "note", "content": "We chose Tokyo, Kyoto, and Osaka."},
+        {"type": "fact", "content": "Alex chose Tokyo, Kyoto, Kanazawa, and Osaka."},
+        {"type": "fact", "content": "Sam reviews the runbook."},
+    ]
+    cities = {"id": "cities", "question": "Which cities?", "all_of": ["tokyo", "KYOTO", "Kanazawa", "Osaka"]}
+    assert answer_rank(cities, ranked) == 3
+    # A name alone states nothing, so the entity at rank 1 is skipped but still takes its place.
+    assert answer_rank({"id": "reviewer", "question": "Who?", "all_of": ["Sam"]}, ranked) == 4
+    assert answer_rank({"id": "any", "question": "Where?", "any_of": ["Kanazawa", "Nara"]}, ranked) == 3
+    assert answer_rank({"id": "first", "question": "Where?", "any_of": ["Osaka", "Kanazawa"]}, ranked) == 2
+    assert answer_rank({"id": "none", "question": "Which?", "all_of": ["Nara"]}, ranked) is None
+    assert answer_rank(cities, []) is None
+
+
+def test_the_rank_counts_only_where_the_answer_is_not_just_in_the_context():
+    probe = {"id": "cities", "question": "Which cities?", "all_of": ["Tokyo", "Osaka"]}
+    context = "[stable_facts]\n- \"Alex chose Tokyo and Osaka.\"\n- \"Jordan is allergic to shellfish.\"\n"
+    included = [{"content": "Alex chose Tokyo and Osaka.", "type": "fact"}]
+    ranked = [{"content": f"Record {n}", "type": "fact"} for n in range(1, 7)] + included
+    report = context_report(probe, included, context, 20, 4096, ranked)
+    assert report["answer_in_context"] is True and report["answer_rank"] == 7
+    assert report["top_results"] == [f"fact: Record {n}" for n in range(1, 6)]
+    # Without the retrieve results the context measures stay as they were and the rank is empty.
+    bare = context_report(probe, included, context, 20, 4096)
+    assert bare["answer_in_context"] is True and bare["answer_rank"] is None and bare["top_results"] == []
+
+
+def test_the_summary_counts_the_answers_ranked_in_the_top_three_and_five():
+    def probe(rank, **extra):
+        return {"records": 1, "answer_in_context": True, "stale_in_context": [], "repeated_records": 0,
+                "answer_rank": rank, **extra}
+
+    graph = {"claims": {"active": 0, "distinct_texts": 0, "extra_copies_of_a_text": 0, "extra_copies_of_a_claim": 0,
+                        "text_is_a_whole_message": 0, "from_assistant_turns_only": 0, "user_claim_subjects": {}},
+             "entities": {"active": 0, "with_no_link": [], "pronouns": [], "key": {}}, "links": []}
+    ranks = [1, 3, 4, 5, 6, None]
+    report = {"graph": graph, "probes": [probe(rank) for rank in ranks]}
+    measures = summary(report)
+    assert measures["probes with the answer ranked in the top 3"] == "2/6"
+    assert measures["probes with the answer ranked in the top 5"] == "4/6"
+    assert measures["probes with the answer in context"] == "6/6"
+    # A report written before the rank measure says so instead of counting zero.
+    older = {"graph": graph, "probes": [{key: value for key, value in probe(1).items() if key != "answer_rank"}]}
+    assert summary(older)["probes with the answer ranked in the top 3"] == "not measured"
+    table = compare_markdown([
+        {"label": "old", "summary": summary(older), "graph": graph,
+         "probes": [{"id": "a", "question": "Q?", "answer_in_context": True}]},
+        {"label": "new", "summary": measures, "graph": graph,
+         "probes": [{"id": "a", "question": "Q?", "answer_in_context": True, "answer_rank": 2}]}])
+    assert "| probes with the answer ranked in the top 3 | not measured | 2/6 |" in table
+    assert "| Probe answer rank | old | new |" in table and "| Q? | not measured | 2 |" in table
+
+
 async def test_build_ingests_both_sides_measures_the_pack_and_rebuilds_from_the_cache(
         tmp_path, mock_embeddings, monkeypatch):
     monkeypatch.setattr(chat_probe, "model_identity", lambda model, cloud=False: {
@@ -181,6 +258,12 @@ async def test_build_ingests_both_sides_measures_the_pack_and_rebuilds_from_the_
         "partner": "via_pronoun", "sister": "entity_missing"}
     probes = {probe["id"]: probe for probe in report["probes"]}
     assert probes["job"]["answer_in_context"] and probes["home"]["answer_in_context"]
+    # The rank is a place in the retrieve results, whose nodes the context was packed from.
+    assert all(isinstance(probes[name]["answer_rank"], int) and probes[name]["answer_rank"] >= 1
+               for name in ("job", "home"))
+    assert probes["job"]["top_results"] and "nurse" in " ".join(probes["job"]["top_results"][:5]).casefold()
+    assert report["summary"]["probes with the answer ranked in the top 5"] == "2/2"
+    assert "| Answer rank |" in report_markdown(report)
     assert (folder / "contexts" / "job.txt").read_text().startswith("Q: What does Sam do?")
     assert (folder / "report.md").read_text().startswith("# Chat probe: tiny / defaults")
     assert json.loads((folder / "report.json").read_text())["summary"] == report["summary"]
