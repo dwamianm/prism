@@ -1223,6 +1223,13 @@ and the rank of 9 answers. Eight single ranks are 1 to 2 places lower (not gated
 `title-now` in `chat-v1` and `learning` in `defects-v1`), because a statement
 that names the owner now lifts the claim it restates.
 
+The offline evidence gate, the four options on against the defaults, run on one
+machine one side after the other: no change anywhere. LoCoMo packed all evidence
+for 84.0% of questions before and after (projected accuracy 77.6%) and
+LongMemEval-S for 94.7% (91.4%); every row has 0 wins and 0 losses, and no
+question lost its candidates. That is expected, because the saved `store()`
+packs hold no extracted records and so no statements.
+
 Not met by this change:
 
 - The named owner's claims do not exceed the claims on "I" or "We" (2 against 15
