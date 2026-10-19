@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add a fast gate for ingest changes (part of prism-monorepo issues 258 and
+  259; `BENCHMARKS.md`, "Fast gate for ingest changes"). The chat probe takes a
+  second conversation, `benchmarks/conversations/defects-v1.json`: 14 turns
+  over three sessions that reproduce both issues in 22 seconds and 14 model
+  calls, with 7 probe questions. Every probe now also reports the rank of its
+  answer, the 1-based place of the first `retrieve()` result whose text holds
+  it, because a short chat fits the context whole and passes a context-only
+  check. The summary and `compare` count the probes ranked in the top 3 and in
+  the top 5. The existing measures are unchanged, and a report from before the
+  rank reads "not measured". Nothing in the engine changes.
 - Add `enable_extraction_corrections` (#277), off by default. With batched
   extraction, each request also shows the model a few stored claims of the
   same owner and scope that resemble its turns, labeled m1, m2 and on, and an
