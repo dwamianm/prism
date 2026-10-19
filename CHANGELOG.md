@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `enable_superseded_source_suppression` (part of prism-monorepo issue
+  270), off by default. `ingest()` keeps a message as a note beside the claims
+  extracted from it, so retiring a claim (a correction, `supersede()`) left
+  the note that stated the old value, and any claim written from the same
+  sentence, active and able to reach the context ahead of the correction.
+  With the option on, default retrieval leaves out a note or claim when a
+  superseded claim that cites one of its source messages was replaced by a
+  record from another message with a different statement and the record's
+  text holds that claim's text; a bare entity name goes when every message
+  that named it does. Nothing is written or deleted, the records stay
+  readable by id, and `RetrievalMode.EXPLICIT` keeps them. The receipt
+  records the option only while it is on. The corrections probe gains two
+  measures, "old-only lines in the context" and "old value shown before the
+  new value".
 - Add a fast gate for ingest changes (part of prism-monorepo issues 258 and
   259; `BENCHMARKS.md`, "Fast gate for ingest changes"). The chat probe takes a
   second conversation, `benchmarks/conversations/defects-v1.json`: 14 turns

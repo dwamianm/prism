@@ -1463,6 +1463,45 @@ config = PRMEConfig(enable_extraction_corrections=True)
   examined chat is the only measurement so far (`BENCHMARKS.md`,
   "Corrections probe").
 
+### Retiring a claim's source text from retrieval
+
+`enable_superseded_source_suppression` (`PRME_ENABLE_SUPERSEDED_SOURCE_SUPPRESSION`,
+default `False`; #270) leaves the text a retired claim came from out of default
+retrieval. `ingest()` keeps a message as a note beside the claims extracted
+from it, so a correction that retires the claim "Jo's birthday is March 3"
+(`enable_extraction_corrections`, or `supersede()` on the claim) leaves the
+note that said it, and any claim written from the same sentence, active. They
+reach `retrieve()` and can come before the correction. A value stored with
+`store()` and `supersede()` has no such leftovers, because the retired record
+is the text.
+
+```python
+config = PRMEConfig(enable_superseded_source_suppression=True)
+```
+
+- **Rule.** A note, fact, decision, preference or task is left out of a
+  default-mode `retrieve()` when a superseded claim that cites one of its own
+  source messages was replaced by a fact, decision, preference, task or note
+  from another message, and the record's text holds that claim's text. A bare
+  entity name goes with it when every message that named it goes. The
+  response lists each with the reason `replaced_source:<retired claim id>`.
+- **Not a correction.** A replacement from the same message, one that states
+  the same subject, predicate, object and polarity (a merged duplicate), one
+  with the same text, or a summary does not count.
+- **Nothing is written.** Events, notes and claims keep their states and stay
+  readable by id (`get_event()`, `get_node()`, `get_event_nodes()`);
+  `RetrievalMode.EXPLICIT` keeps the records in its results as it keeps
+  superseded ones. The receipt records the option in its features
+  (`superseded_source_suppression`) and parameters only while it is on.
+- **Limits.** The sentence is the unit: a message that states two things in
+  one sentence loses both when one is retired, and the claims written from
+  that sentence go with it, while a claim from another sentence of the same
+  message stays and can reach the context. A claim whose text a model
+  rewrote (`enable_fact_text_resolution`) does not match its message. It acts
+  only on claims that are already retired, so a correction the extractor does
+  not catch is not helped. It reads the owner's superseded records once per
+  `retrieve()`, and only when there are any.
+
 ### VisionConfig
 
 ```python

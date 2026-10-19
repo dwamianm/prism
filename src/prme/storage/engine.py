@@ -726,6 +726,7 @@ class MemoryEngine:
                 query_reformulation_timeout=config.extraction.timeout,
                 temporal_languages=config.temporal_languages,
                 query_intent_order=config.query_intent_order,
+                superseded_source_suppression=config.enable_superseded_source_suppression,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -879,6 +880,7 @@ class MemoryEngine:
                 query_reformulation_timeout=config.extraction.timeout,
                 temporal_languages=config.temporal_languages,
                 query_intent_order=config.query_intent_order,
+                superseded_source_suppression=config.enable_superseded_source_suppression,
                 temporal_relation_config=config.temporal_relation,
             )
 
