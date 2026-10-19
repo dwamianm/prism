@@ -51,6 +51,7 @@ def store(
     source_type: SourceType | None = None,
     event_time: datetime | None = None,
     ttl_days: int | None = ...,
+    extract: bool | None = None,
 ) -> str  # returns event UUID
 ```
 
@@ -71,6 +72,7 @@ def store(
 | `epistemic_type` | `EpistemicType \| None` | `None` | Override inferred assertion status |
 | `source_type` | `SourceType \| None` | `None` | Override inferred source provenance |
 | `ttl_days` | `int \| None` | `...` | Omit for configured default; `None` disables expiry; an integer sets days |
+| `extract` | `bool \| None` | `None` | `True` also queues the background LLM extraction `ingest()` runs, once the node is stored; `False` never does; `None` follows `enable_store_extraction` (off) |
 
 **Returns:** Event UUID as a string.
 

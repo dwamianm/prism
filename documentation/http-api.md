@@ -83,6 +83,7 @@ Store a memory node.
 | `scope` | string | no | `null` | Scope enum value |
 | `epistemic_type` | string | no | `null` | Epistemic type |
 | `metadata` | object | no | `null` | Arbitrary metadata |
+| `extract` | boolean | no | `null` | `true` also queues the background extraction `POST /v1/ingest` runs, so entities and claims for the text appear later; `false` stores without extraction; omitted follows the server's `enable_store_extraction` setting (off by default). A value that is not a JSON boolean is a 422 |
 
 **Response (200):**
 
@@ -92,6 +93,9 @@ Store a memory node.
   "node_id": "660e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+The reply does not wait for extraction, and the stored node is the only note for
+the text. `GET /v1/events/{event_id}/extraction-status` reports the extraction.
 
 ### POST /v1/ingest
 
