@@ -112,6 +112,7 @@ def store_measures(questions: list[dict], nodes: list[dict], edges: list[dict], 
         "mean_reciprocal_rank": sum(1 / rank for rank in ranks if rank) / count,
         "stale_above_answer": sum(question["stale_above_answer"] for question in questions),
         "stale_in_context": sum(bool(question["stale_in_context"]) for question in questions),
+        "repeated_records_in_contexts": sum(question["repeated_records"] for question in questions),
         **{f"answer_rank:{question['id']}": question["answer_rank"] for question in questions},
     }
 
@@ -158,6 +159,6 @@ async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: di
             "store_seconds": stored, "retrieve_seconds": asked, "measures": measures,
             "questions": [{"id": question["id"], "question": question["question"], **{
                 key: report[key] for key in ("answer_rank", "answer_in_context", "stale_in_context",
-                                             "stale_above_answer", "tokens_used", "lexical_candidates",
-                                             "graph_candidates", "top_results")}}
+                                             "stale_above_answer", "tokens_used", "repeated_records",
+                                             "lexical_candidates", "graph_candidates", "top_results")}}
                           for question, report in zip(fixture["key"]["questions"], questions)]}

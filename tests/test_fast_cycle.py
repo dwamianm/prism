@@ -76,12 +76,13 @@ def test_a_stale_value_above_the_answer_is_counted_only_above_it():
 
 
 def test_the_store_measures_count_ranks_context_and_graph_findings():
-    def question(rank, tokens, *, stale_above=False, stale=False, context=True, words=1, graph=0):
+    def question(rank, tokens, *, stale_above=False, stale=False, context=True, words=1, graph=0, repeated=0):
         return {"answer_rank": rank, "tokens_used": tokens, "stale_above_answer": stale_above, "answer_in_context": context,
-                "stale_in_context": ["x"] if stale else [], "lexical_candidates": words, "graph_candidates": graph}
+                "stale_in_context": ["x"] if stale else [], "lexical_candidates": words, "graph_candidates": graph,
+                "repeated_records": repeated}
 
-    questions = [question(1, 100), question(3, 200, stale_above=True, stale=True), question(None, 300, context=False),
-                 question(26, 400, words=0, graph=2)]
+    questions = [question(1, 100), question(3, 200, stale_above=True, stale=True, repeated=2),
+                 question(None, 300, context=False), question(26, 400, words=0, graph=2, repeated=3)]
     for index, row in enumerate(questions):
         row["id"] = f"q{index}"
     nodes = [{"type": "note", "state": "stable", "content": "a"}] * 4 + [
@@ -97,6 +98,7 @@ def test_the_store_measures_count_ranks_context_and_graph_findings():
     assert (measures["answers_in_top1"], measures["answers_in_top3"], measures["answers_in_context"]) == (1, 2, 3)
     assert measures["mean_reciprocal_rank"] == pytest.approx((1 + 1 / 3 + 1 / 26) / 4)
     assert (measures["stale_above_answer"], measures["stale_in_context"]) == (1, 1)
+    assert measures["repeated_records_in_contexts"] == 5
     assert (measures["questions_with_a_word_candidate"], measures["questions_with_a_graph_candidate"]) == (3, 1)
     assert measures["answer_rank:q2"] is None and measures["answer_rank:q3"] == 26
 
@@ -343,9 +345,12 @@ def test_every_rule_names_a_group_a_direction_and_a_live_tolerance():
 
 def test_the_committed_baseline_covers_every_measure_and_matches_the_committed_fixtures():
     baseline = json.loads(cycle.DEFAULT_BASELINE.read_text())
-    assert baseline["kind"] == compare.REPORT_KIND and set(baseline["stages"]) == {"store", "ingest"}
-    assert baseline["stages"]["store"]["fixture_sha256"] == store.fixture_digest()
-    assert baseline["stages"]["ingest"]["mode"] == "replay"
+    # The session stages and the control are reports to read, not rules to gate, so the baseline leaves them out.
+    assert baseline["kind"] == compare.REPORT_KIND and set(baseline["stages"]) == {"store", "ingest", "store-extract"}
+    for stage in ("store", "store-extract"):
+        assert baseline["stages"][stage]["fixture_sha256"] == store.fixture_digest(), stage
+    assert baseline["stages"]["ingest"]["mode"] == "replay" and baseline["stages"]["store-extract"]["mode"] == "replay"
+    assert baseline["stages"]["store-extract"]["cache_hits"] == baseline["stages"]["store-extract"]["calls"]
     for name, chat in baseline["stages"]["ingest"]["conversations"].items():
         path = ingest.CONVERSATION_DIR / f"{name}.json"
         assert chat["conversation_sha256"] == chat_probe.conversation_digest(path), name

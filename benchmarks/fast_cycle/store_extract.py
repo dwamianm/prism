@@ -167,6 +167,6 @@ async def run(work: Path, *, cache_dir: Path = ingest.CACHE_DIR, use_cache: bool
             "retrieve_seconds": asked, "measures": measures, "working_cache": str(working),
             "questions": [{"id": question["id"], "question": question["question"], **{
                 key: report[key] for key in ("answer_rank", "answer_in_context", "stale_in_context",
-                                             "stale_above_answer", "tokens_used", "lexical_candidates",
-                                             "graph_candidates", "top_results")}}
+                                             "stale_above_answer", "tokens_used", "repeated_records",
+                                             "lexical_candidates", "graph_candidates", "top_results")}}
                           for question, report in zip(fixture["key"]["questions"], questions)]}
