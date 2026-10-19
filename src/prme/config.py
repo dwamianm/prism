@@ -892,6 +892,31 @@ class PRMEConfig(_ProjectSettings):
             "that rule."
         ),
     )
+    enable_superseded_source_suppression: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, default retrieval leaves out the source "
+            "text of a retired claim (#270). ingest() keeps a message as a "
+            "note beside the claims extracted from it, so retiring a claim "
+            "(a correction, supersede()) leaves the note that stated the old "
+            "value, and any claim written from the same sentence, active and "
+            "able to reach the context ahead of the correction. With this "
+            "option, a note or claim is left out of retrieve() when a "
+            "superseded claim that cites one of its own source messages was "
+            "replaced by a fact, decision, preference, task or note from "
+            "another message with a different statement, and its text holds "
+            "that claim's text. A message that states other things too is "
+            "left out whole; its other claims stay active and can reach the "
+            "context in their own lines. Nothing is written or deleted: the "
+            "records keep their states and stay readable by id, and "
+            "RetrievalMode.EXPLICIT keeps them. A claim whose text a model "
+            "rewrote (enable_fact_text_resolution) does not match its "
+            "message. It acts only on claims that are already retired, so it "
+            "pairs with enable_extraction_corrections or explicit "
+            "supersede(). Each retrieve() reads the owner's superseded "
+            "records once when it has any. Default False."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(

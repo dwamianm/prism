@@ -1466,6 +1466,113 @@ the defaults build's cached request.
   examined chat; it shows behavior, not accuracy, and the default is
   unchanged.
 
+#### With `enable_superseded_source_suppression` (#270)
+
+Retiring an extracted claim leaves the note that stated its value, and any
+claim written from the same sentence, active, so the old value kept reaching
+the contexts above (and, for the birthday, still came first). The option
+leaves those records out of default retrieval when a record from another
+message replaced the retired claim (`docs/INTEGRATION.md`, "Retiring a
+claim's source text from retrieval"). It writes nothing: the notes stay
+active, readable by id and in `RetrievalMode.EXPLICIT`. The probe gains two
+measures for it, "old-only lines in the context" (lines with only the old
+value and no "superseded" or "replaced" tag) and "old value shown before the
+new value".
+
+The same chat, model (`e04da138`) and server (Ollama 0.40.6), the ingest path
+rebuilt from the shared extraction cache with no model call, at `d20e64b3`
+with this change not yet committed. Results are in
+`benchmarks/results/research/2026-10-19/corrections-v1-source-suppression/`:
+
+```sh
+uv run python -m benchmarks.diagnostics.corrections_probe run \
+  --model deepseek-v4.1-flash:cloud --cloud --label ingest-corrections \
+  --set enable_extraction_corrections=true --replace --output /tmp/corrections-v1-on
+uv run python -m benchmarks.diagnostics.corrections_probe run \
+  --model deepseek-v4.1-flash:cloud --cloud --label ingest-suppression \
+  --set enable_extraction_corrections=true \
+  --set enable_superseded_source_suppression=true --replace --output /tmp/corrections-v1-suppressed
+```
+
+| Case and measure | Defaults | Suppression only | Corrections | Corrections and suppression |
+|---|---:|---:|---:|---:|
+| Birthday: active records with only the old value | 3 | 3 | 2 | 2 |
+| Birthday: old claims retired, of 2 | 0 | 0 | 1 | 1 |
+| Birthday: old-only lines in the context | 2 | 2 | 1 | **0** |
+| Birthday: old value shown before the new value | yes | yes | yes | **no** |
+| Birthday: first context line shows | old | old | old | **new** |
+| Austin: active records with only the old value | 3 | 3 | 2 | 2 |
+| Austin: old claims retired, of 2 | 0 | 0 | 1 | 1 |
+| Austin: old-only lines in the context | 1 | 1 | 1 | **0** |
+| Austin: old value shown before the new value | no | no | no | no |
+| Coffee: lines with black / oat milk | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 |
+| Control: lines with nurse | 1 | 1 | 1 | 1 |
+
+- Without a retired claim the option does nothing: "suppression only" equals
+  the defaults in every measure, here and on `chat-v1` and `defects-v1`.
+- With both options the March 3 note and the Austin note leave the contexts.
+  The contexts keep the correcting lines. The active-record rows do not
+  change, because the notes stay active.
+- The conflict case is unchanged: black and oat milk each keep two active
+  records and one context line, and no `contradicts` edge. The control fact
+  (nurse) keeps its four records and its line.
+- The bare entity names "Austin", "March 3", "Jo" and "hospital" were folded
+  into the notes' lines before, so they stayed out of the contexts. With the
+  notes gone they would have reached the contexts alone, so an entity name
+  goes when every message that named it goes.
+- The sibling claim "Jo is_sister_of my" has the March 3 sentence as its
+  text and goes with the note. It stays active and can be read by id.
+- The odd retirement of "A hospital there offered me a day-shift position"
+  is not part of this change. It does not affect the Austin result, since the
+  Austin claim itself is retired.
+
+On `chat-v1` (54 turns; 53 model calls for the corrections build, the other
+builds replayed the cache) the second case is the job change from Northwind
+to Brightpath, built with both options. The message "I'm a data analyst at
+Northwind, and my manager Priya keeps asking me for weekly dashboards", its
+claims and its entity names leave the contexts, so the job-title probe no
+longer shows the stale "data analyst". The other probes with a stale value
+are unchanged: "Where does Dana work now?" still shows lines that name
+Northwind in other messages (notice given, Tableau at Northwind), which no
+retired claim covers, and the diet probe still shows "vegetarian", because
+no claim about the diet was retired. The cost is the other half of that
+sentence: "Who was Dana's manager at Northwind?" now ranks its answer 3rd
+instead of 1st, though the answer stays in the context. The build also
+retired two duplicates of Sam's peanut allergy, merged into an identical
+claim; they are not corrections, so no message left a context for them.
+
+| `chat-v1` measure | Defaults | Suppression only | Corrections | Corrections and suppression |
+|---|---:|---:|---:|---:|
+| Probes with a stale value in the context | 3 | 3 | 3 | **2** |
+| Answer in context | 17/18 | 17/18 | 17/18 | 17/18 |
+| Answer ranked in the top 3 | 14/18 | 14/18 | 11/18 | 11/18 |
+| Repeated records in the 18 contexts | 18/1,638 | 18/1,638 | 54/1,530 | 54/1,512 |
+
+The drop in top-3 ranks from the defaults to the corrections columns comes
+from `enable_extraction_corrections`; suppression leaves it as it was. On
+`defects-v1` (13 model calls for the corrections build) every measure is the
+same in all four builds: no stale value, 7/7 answers in the context, 5/7
+ranked in the top 3. In all, 66 local Ollama calls (`deepseek-v4.1-flash:cloud`);
+the corrections-v1 builds used none.
+
+The offline evidence gate (`gate`, then `gate-compare`, over the saved
+`store()` packs and the regenerated LongMemEval-S controls, 13 minutes a side
+at `d20e64b3` with this change not yet committed) is unchanged on every
+measure: LoCoMo all evidence packed 1,290 of 1,536 (84.0%) and LongMemEval-S
+445 of 470 (94.7%), on both sides, with 0 wins and 0 losses on every
+measure and LongMemEval-S knowledge-update still 100%.
+Those packs hold no extracted claims, so there is nothing retired to act on;
+the gate only shows that the option does not disturb a retrieval it has
+nothing to do with (`offline-gate-comparison.md`).
+
+- Cost: each `retrieve()` counts the owner's superseded records, and reads
+  them and their replacements only when there are some. On the `chat-v1`
+  corrections pack the 18 questions took 76.4 ms each against 71.2 ms.
+- One examined chat plus the offline gate, no answer run: it shows behavior,
+  not accuracy, and the default is unchanged. The unit of text is the
+  sentence, so a sentence that states a retired value and something else
+  loses both from default retrieval.
+
 ### Speaker references (`enable_speaker_references`)
 
 With the option on, a first-person singular reference in a claim from a turn

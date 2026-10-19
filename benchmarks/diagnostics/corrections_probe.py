@@ -21,7 +21,9 @@ between them, and the record lines of the probe question's rendered
 ``retrieve()`` context that mention each value, in order. It judges nothing
 beyond those facts: whether the new value is active, how many active records
 still hold only the old value, whether the extracted claims that hold only the
-old value were retired, and which value the context shows first. Source
+old value were retired, which value the context shows first, how many of its
+lines hold only the old value without a "superseded" or "replaced" tag, and
+whether such a line comes before the first line with the new value. Source
 messages stay records by design, so a message that stated the old value is
 still active and can reach the context.
 
@@ -29,11 +31,18 @@ still active and can reach the context.
       --model deepseek-v4.1-flash:cloud --cloud --output /tmp/corrections-v1
 
 ``--set`` builds the ingest path with other settings, under its own
-``--label`` so the defaults' build is kept (#277):
+``--label`` so the defaults' build is kept (#277). With
+``enable_superseded_source_suppression`` (#270) retrieval leaves out the
+source text of a claim that a correction retired, so use it with
+``enable_extraction_corrections``:
 
     uv run python -m benchmarks.diagnostics.corrections_probe run \\
       --model deepseek-v4.1-flash:cloud --cloud --label ingest-corrections \\
       --set enable_extraction_corrections=true --replace --output /tmp/corrections-v1-on
+    uv run python -m benchmarks.diagnostics.corrections_probe run \\
+      --model deepseek-v4.1-flash:cloud --cloud --label ingest-suppression \\
+      --set enable_extraction_corrections=true --set enable_superseded_source_suppression=true \\
+      --replace --output /tmp/corrections-v1-suppressed
 """
 from __future__ import annotations
 
@@ -42,6 +51,7 @@ import asyncio
 from datetime import datetime
 import json
 from pathlib import Path
+import re
 import shutil
 
 from benchmarks.diagnostics import chat_probe
@@ -93,6 +103,18 @@ def _mentions(text: str, values: list[str]) -> list[str]:
     return [value for value in values if value.casefold() in lowered]
 
 
+# The bracketed groups that open a reader line: reference, date, status tags.
+_LINE_OPENING = re.compile(r"- (?:\[[^\]]*\] )*")
+MARKED_REPLACED = ("superseded", "replaced")
+
+
+def _marked_replaced(line: str) -> bool:
+    """Whether a reader line carries a status tag that says it was replaced."""
+    opening = _LINE_OPENING.match(line)
+    tags = re.findall(r"\[([^\]]*)\]", opening.group(0)) if opening else []
+    return any(tag.startswith(MARKED_REPLACED) for tag in tags)
+
+
 def case_report(case: dict, nodes: list[dict], edges: list[dict], context: str) -> dict:
     """What one path stored and retrieved for one case."""
     old, new = case.get("old", []), case.get("new", [])
@@ -121,6 +143,11 @@ def case_report(case: dict, nodes: list[dict], edges: list[dict], context: str) 
         only_old = [record for record in records if not _mentions(record["content"], new)]
         old_claims = [record for record in only_old if record["type"] in CLAIM_TYPES]
         first = next((line for line in shown), None)
+        # Old-only lines that nothing marks as replaced, and whether one is shown before the new value.
+        unmarked = [index for index, line in enumerate(shown)
+                    if _mentions(line["line"], old) and not _mentions(line["line"], new)
+                    and not _marked_replaced(line["line"])]
+        first_new = next((index for index, line in enumerate(shown) if _mentions(line["line"], new)), None)
         report["facts"] = {
             "new_value_active": any(record["state"] in chat_probe.ACTIVE and _mentions(record["content"], new)
                                     for record in records),
@@ -133,6 +160,8 @@ def case_report(case: dict, nodes: list[dict], edges: list[dict], context: str) 
             "context_lines_with_the_new_value": sum(bool(_mentions(line["line"], new)) for line in shown),
             "first_context_line_shows": ("new" if first and _mentions(first["line"], new)
                                          else "old" if first else "neither"),
+            "old_only_lines_in_the_context": len(unmarked),
+            "old_value_shown_before_the_new_value": bool(unmarked) and (first_new is None or unmarked[0] < first_new),
         }
     else:
         report["facts"] = {
@@ -232,8 +261,9 @@ def report_markdown(report: dict) -> str:
                       ""]
         for case in path["cases"]:
             lines += [f"### {case['label']} ({case['kind']})", ""]
-            lines += _table(["Fact", "Value"], [[key.replace("_", " "), json.dumps(value) if isinstance(value, dict)
-                                                 else value] for key, value in case["facts"].items()])
+            lines += _table(["Fact", "Value"], [[key.replace("_", " ").replace("old only", "old-only"),
+                                                 json.dumps(value) if isinstance(value, dict) else value]
+                                                for key, value in case["facts"].items()])
             lines += ["", "Records that mention its values:", ""]
             lines += _table(["Type", "State", "Text", "Replaced by"],
                             [[record["type"], record["state"], record["claim"] or record["content"],
