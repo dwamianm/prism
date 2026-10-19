@@ -1,6 +1,7 @@
 """store() queues the background extraction ingest() runs (#260)."""
 
 import asyncio
+import time
 from unittest.mock import AsyncMock
 
 import httpx
@@ -143,10 +144,11 @@ async def test_stores_of_one_session_share_a_batched_request(config, user):
     model = ScriptedBatches()
     async with MemoryEngine.open(batched) as engine:
         engine._pipeline._extraction_provider.extract_batch = model.extract_batch
-        engine._pipeline._batch_flush_seconds = 0.05
+        # Flushed by hand: a short timer fires between the two stores when the machine is slow.
+        engine._pipeline._batch_flush_seconds = 3600.0
         first = await engine.store("Jordan moved to Denver last spring.", user_id=user, session_id="s1", extract=True)
         second = await engine.store("Caroline paints sunsets over the lake.", user_id=user, session_id="s1", extract=True)
-        await drain(engine._pipeline)
+        assert (await engine.process_extractions(user_id=user)).processed == 2
         assert model.contents() == [["Jordan moved to Denver last spring.", "Caroline paints sunsets over the lake."]]
         for event_id in (first, second):
             assert (await engine.extraction_status(event_id, user_id=user)).status == "complete"
@@ -214,6 +216,17 @@ async def _openapi(app):
         return (await client.get("/openapi.json")).json()
 
 
+def wait_for_extraction(client, event_id, owner, seconds=30.0):
+    """Wait, up to ``seconds``, for the sync client's background extraction of one event."""
+    deadline = time.monotonic() + seconds
+    while True:
+        status = client.extraction_status(event_id, user_id=owner)
+        if status.status == "complete":
+            return
+        assert time.monotonic() < deadline, status
+        time.sleep(0.05)
+
+
 def test_the_sync_client_takes_extract(tmp_path, monkeypatch):
     monkeypatch.setattr("prme.storage.engine.create_embedding_provider",
                         lambda _: test_durable_ingestion.MockEmbeddingProvider())
@@ -225,6 +238,8 @@ def test_the_sync_client_takes_extract(tmp_path, monkeypatch):
         raw = client.store("Raw on purpose.", user_id="alice", extract=False)
         assert client.extraction_status(raw, user_id="alice") is None
         assert client.extraction_status(asked, user_id="alice") is not None
-        client.process_extractions(user_id="alice")
-        assert client.extraction_status(asked, user_id="alice").status == "complete"
+        # The store started the extraction in the background; the client has no handle on it, so
+        # wait for it. Not process_extractions(): the background run claims the job first or
+        # process_extractions() does, and the loser sees it running.
+        wait_for_extraction(client, asked, "alice")
         assert client.extraction_status(raw, user_id="alice") is None
