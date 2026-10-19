@@ -1352,7 +1352,8 @@ uv run python -m benchmarks.fast_cycle compare benchmarks/fixtures/fast-cycle/ba
 ```
 
 `run` judges its own report against the committed baseline when it finishes
-(`--baseline none` skips that, `--stages store` runs one stage) and exits 0 on
+(`--baseline none` skips that, `--stages store` runs one stage; the
+store-extract stages below are opt-in) and exits 0 on
 a pass, 1 when a gated measure got worse by more than its tolerance, and 2
 when the two reports are not comparable (another fixture, chat or backend).
 `--accept <measure>` names a measure whose worsening the change means to cause
@@ -1394,8 +1395,9 @@ first, the context lines and active records that hold only the old value, the
 extracted claims not retired, and the new values that are active.
 
 Every request goes through the extraction cache. The committed cache
-(`benchmarks/fixtures/fast-cycle/extraction-cache`, 84 responses, 113 KB with
-`usage.json`) holds one live run, so a change to what ingestion does with the
+(`benchmarks/fixtures/fast-cycle/extraction-cache`, 166 responses, 314 KB with
+`usage.json`: 84 of the ingest stage and 82 of the store-extract stages) holds
+one live run, so a change to what ingestion does with the
 model's output (claims, entities, links, retrieval) is measured on identical
 model output with no model call. A run works on a copy of the cache, so it
 never writes into the repository. A change to the extraction prompt or the
@@ -1445,8 +1447,10 @@ each answer) are listed and never fail.
   worth repeating once.
 
 Baseline on 2026-10-19 (`benchmarks/fixtures/fast-cycle/baseline-main.json`,
-the engine tree of `origin/main` at `7f9ce556`, DuckDB, from a replay of the
-committed cache):
+the engine tree of `origin/main` at `0622c9f9`, DuckDB, from a replay of the
+committed cache; its 132 store and ingest measures equal the baseline taken at
+`7f9ce556`, so #296, #297 and #299 moved none of them with their options off,
+and it adds the store-extract stage below):
 
 | Measure | store | defects-v1 | corrections-v1 | chat-v1 |
 |---|---:|---:|---:|---:|
@@ -1466,7 +1470,7 @@ committed cache):
 | Answers in the context | 17 of 17 | 7 of 7 | 4 of 4 | 17 of 18 |
 | Stale value in the context | 5 | 0 | 2 | 3 |
 | Stale value ranked above the answer | 4 | | | |
-| Repeated records in the contexts | | 0 | 0 | 72 |
+| Repeated records in the contexts | 0 | 0 | 0 | 72 |
 | Old value shown first / new value active | | | 1 / 2 | |
 
 The `defects-v1` column matches the fast gate's baseline above in the measures
@@ -1498,18 +1502,182 @@ question (answer in a memory that shares no word with it) falls from 1st to
 5th, so on this fixture and backend the fix is a net loss. Whether that holds
 at scale is for the full benchmarks.
 
+#### Lexical term weights (`lexical_term_weights`)
+
+The any-term word search above lifts the Rust question to 4th but not to 1st,
+and drops the dog question from 1st to 5th. The cause is the words of the
+fixture. "alex" is in 50 of the 75 memories, so it separates none of them. "call" is in four: the three on-call memories and the dashboard
+that "is called" something. "dog" is in none, and the memory about the dog
+says "border collie". The four memories that share "call" become the word
+search's only candidates, and rank fusion gives a memory that both searches
+return more than the vector search's first result: the dashboard memory, at
+vector rank 36 and word rank 4, scored 0.715 against 0.450 for the dog memory
+alone. In the Rust question, the four memories that share "code" ("VS Code", "code
+review", "code examples") are candidates beside the Rust memory, and the Neovim
+memory, first in the vector search, outscores it. A weak word match is not
+harmless under rank fusion, so the fix keeps such matches out of the
+candidates; ranking them lower would not help.
+
+With `lexical_term_weights` on (PostgreSQL only; the DuckDB backend ignores
+it) a query word weighs ln(N / df), where N is the number of
+the owner's searched memories and df the number that hold the word. A
+memory's evidence is the total weight of the query words it holds, which is
+ln(N / c) for c, the number of memories that would hold those words together
+by chance (document frequencies multiplied). With more than one query word, a
+memory is a candidate only when c is at most 0.2% of N or 2 memories, whichever
+is more. A memory that holds every query word is still returned alone, and a
+one-word query is unchanged. Candidates rank by evidence, then by
+`ts_rank_cd`. Everything comes from the owner's own memories, the work is one
+indexed count per word (as before) and the result is deterministic. The
+option was added off by default and measured that way (`--set
+lexical_term_weights=true` for the on arm). Since 2026-10-19 it is on by
+default in the alpha channel, on this fast cycle and the offline gate below, by
+the owner's directive that defaults flip on the fast gate and the full
+benchmark audits later; `PRME_LEXICAL_TERM_WEIGHTS=false` (or `--set
+lexical_term_weights=false` for the off arm) restores the any-term search.
+
+Options I tried on the way, as ranks of the answers over the 17 questions,
+store-v1 and the 28 held-out questions (below), 75 memories on PostgreSQL:
+
+| Rule | Top 1 / top 3 / MRR, 17 questions | Top 1 / top 3 / MRR, 28 questions |
+|---|---:|---:|
+| Off: any word that fewer than half of the memories hold | 8 / 13 / 0.653 | 22 / 25 / 0.836 |
+| Weights, every memory with any word a candidate (no limit on c) | 9 / 15 / 0.702 | 21 / 25 / 0.810 |
+| Weights, c at most 10 memories | 8 / 14 / 0.658 | 22 / 25 / 0.836 |
+| c at most 6 | 9 / 14 / 0.687 | 22 / 25 / 0.842 |
+| c at most 4 | 9 / 14 / 0.687 | 23 / 25 / 0.866 |
+| c at most 3 | 9 / 14 / 0.690 | 24 / 25 / 0.884 |
+| **c at most 2 (chosen)** | **11 / 15 / 0.774** | **24 / 25 / 0.884** |
+| c at most 1.5 | 11 / 15 / 0.774 | 24 / 26 / 0.887 |
+| c at most 1.25 or 1 | 11 / 14 / 0.766 | 24 / 26 / 0.893 |
+
+Weighting alone is not enough: the memories that share a verb stay candidates
+and the weights only reorder them (the second row). The limit on c is what moves
+the dog and Rust questions. For the dog question the three memories that hold
+"alex" and "call" have c = 2.67 and fail it. For the manager and flights
+questions the answers hold a word that only two memories hold ("manager",
+"book") and have c = 1.33, so they pass it. The limit therefore sits between two statistics of this fixture,
+and c from 1.5 to 2.5 gives the same ranks on the 17 questions. I chose 2
+because it reads as a rule (a word that two memories hold always selects) and
+it is inside that range. The 28 questions below were swept too, so they confirm
+the choice and do not test it independently. I did not try a cut relative to
+the best candidate.
+
+Store stage on PostgreSQL, 75 memories (`lexical_term_weights` off and on; the
+`d92901ec` column is the all-words rule before the any-term fix, as in the
+check above). The cell is the rank of the answer among the results:
+
+| Question | `d92901ec` | Off | On |
+|---|---:|---:|---:|
+| what coding language is alex learning? (Rust) | 6 | 4 | **1** |
+| which cities will Alex and jordan visit in Japan? | 14 | 15 | 14 |
+| When is the production cutover? | 2 | 2 | 2 |
+| When is the Japan trip? | 3 | 4 | 4 |
+| Does Alex like pair programming? | 2 | 2 | 2 |
+| Is Alex leading the observability rewrite? | 2 | 2 | 2 |
+| Who is on call the week of 2026-10-26? | 1 | 1 | 1 |
+| Who is Alex's manager? | 1 | 1 | 1 |
+| What is Jordan allergic to? | 1 | 1 | 1 |
+| What is Alex's dog called? | 1 | 5 | **1** |
+| How much is the Japan trip budget? | 1 | 1 | 1 |
+| What is the Datadog dashboard for the migration called? | 2 | 2 | **1** |
+| How many rows does the shipment_events table have? | 1 | 1 | 1 |
+| Why did Alex reject TimescaleDB? | 1 | 1 | 1 |
+| Which gravel race did Alex sign up for? | 1 | 1 | 1 |
+| Which airline did Alex book for the Japan trip? | 2 | 3 | 3 |
+| How does Alex format SQL? | 1 | 1 | 1 |
+| Answers ranked first / in the top 3 | 9 / 15 | 8 / 13 | 11 / 15 |
+| Mean reciprocal rank | 0.710 | 0.653 | 0.774 |
+| Stale value ranked above the answer | 3 | 4 | 4 |
+| Questions with a word candidate | 10 | 17 | 16 |
+
+No question ranks lower with the option on than off. Four rank higher (Rust
+by 3, the dog question by 4, the dashboard question and the Japan cities
+question by 1). The Japan dates and flights questions stay one place below
+`d92901ec`, as with the option off. The dog question has no word candidate
+now: the only words it shares with a memory are "alex" and "call", which many
+memories hold, so the vector search decides, as it did before the any-term fix.
+
+Held-out questions. The 28 questions of
+`benchmarks/fixtures/fast-cycle/store-heldout-v1.json` ask the same 75
+memories in the words of a question (`--store-fixture`, with `--baseline none`).
+I wrote them before the first run with the option on. With the option on the
+answers ranked first rise from 22 to 24, those in the top 3 stay at 25 and the
+reciprocal rank goes from 0.836 to 0.884. Two questions rank higher (the
+Datadog bill, 3rd to 1st, and the Postgres version, 3rd to 1st), none lower.
+
+Larger stores. The same 45 questions, asked after adding memories to the
+store: sentences from this repository's own documentation, 60% with "Alex" in
+front, none holding an answer term. The effect is large where the issue was
+found and fades as the store grows, because a word shared by a larger share of
+the memories is no longer unusual. The limit grows with the store (0.2% of N
+beyond 1,000 memories) so that a word that is rare stays a candidate:
+
+| Memories | Questions | Off: top 1 / top 3 / MRR | On: top 1 / top 3 / MRR |
+|---:|---|---:|---:|
+| 475 | 17 | 8 / 13 / 0.646 | 11 / 15 / 0.772 |
+| 475 | 28 | 23 / 25 / 0.864 | 24 / 26 / 0.887 |
+| 1,975 | 17 | 9 / 13 / 0.656 | 9 / 15 / 0.682 |
+| 1,975 | 28 | 23 / 24 / 0.849 | 23 / 24 / 0.855 |
+| 4,975 | 17 | 9 / 11 / 0.635 | 9 / 11 / 0.642 |
+| 4,975 | 28 | 23 / 24 / 0.840 | 22 / 25 / 0.835 |
+
+At 2,000 or more memories the option is within noise of off, which is neutral
+rather than a gain. A fixed limit of 2 memories at every size, tried first,
+removed the Rust question's word candidate at 1,975 memories and ranked it
+163rd (7th with the option off), so the share of the store is part of the rule.
+
+Time. The word search alone, median of 450 calls of 45 questions at each size,
+off and on, on this laptop:
+
+| Memories | Off | On |
+|---:|---:|---:|
+| 75 | 2.41 ms | 2.44 ms |
+| 475 | 2.43 ms | 2.42 ms |
+| 1,975 | 3.97 ms | 4.01 ms |
+| 4,975 | 7.67 ms | 7.80 ms |
+
+`retrieve()` from end to end (including the query embedding), median over the
+45 questions, was 0.120 s with the option off and 0.125 s on at 4,975 memories.
+
+DuckDB. The store stage on DuckDB with the option on gives the same 29
+measures as with it off, and both match `baseline-main.json`
+exactly. Tantivy already weights words by BM25.
+
+Offline evidence gate. `gate --set lexical_term_weights=true` (set explicitly,
+before the flip) on the committed branch (`bd95f733`) against the gate run on `main` at `7f9ce556` for the fast
+gate (same machine, the regenerated LongMemEval-S controls): no row of the first
+table changes, with 0 wins, 0 losses and all ties. LoCoMo keeps all evidence
+packed for 84.0% of questions (1,290 of 1,536), evidence recall 89.2% and all
+evidence among the candidates 99.3%; LongMemEval-S 94.7% (445 of 470), 97.3% and
+100.0%. No question lost all its evidence among the candidates, and the
+projected accuracy is unchanged (77.6% and 91.4%). The gate replays saved
+DuckDB packs, where the option does nothing, so this is the expected result and
+shows only that the change loses no retrieval there. The latencies are not
+comparable (the load average was 22.8 to 13.0 during the second run).
+
+What this does not show. The fixture is one made-up user with short, templated
+statements, and the limit was chosen on the same memories as the first 17
+questions. The benefit is for small stores, which is where the dev project and
+alpha users are. A question whose answer shares only a word that many
+memories hold now leaves the order to the vector search. The mechanism changes
+which candidates the word search returns for PostgreSQL only; no answer run
+with a reader and a judge has been done. The flip to on rests on the fast
+cycle and the offline gate; the full benchmark audit and the default-change
+rule's DeepSeek answer runs are pending.
+
 **Refresh.** Run these when the extraction prompt, the model, a conversation or
 the store fixture changes; the tests fail while the committed baseline names an
 older conversation or fixture.
 
 ```sh
 rm -r benchmarks/fixtures/fast-cycle/extraction-cache
-uv run python -m benchmarks.fast_cycle run --label refresh --out /tmp/refresh --no-cache --update-cache --baseline none
-uv run python -m benchmarks.fast_cycle run --label main --out /tmp/main --baseline none
+uv run python -m benchmarks.fast_cycle run --label refresh --out /tmp/refresh --stages ingest,store-extract,store-extract-session --no-cache --update-cache --baseline none
+uv run python -m benchmarks.fast_cycle run --label main --out /tmp/main --stages store,ingest,store-extract --baseline none
 cp /tmp/main/report.json benchmarks/fixtures/fast-cycle/baseline-main.json
 ```
 
-The first run makes 84 live requests and fills the cache (`--update-cache`
+The first run makes 84 + 75 + 7 live requests and fills the cache (`--update-cache`
 copies the responses it added; it never removes one, so delete the folder
 first for a clean cache). The second replays it, so the baseline is a
 deterministic report. Take the baseline from a checkout of the code it is
@@ -1537,6 +1705,170 @@ server or prompt change.
 - Ranks can differ between machines, CPU architectures or `fastembed`
   versions when two scores nearly tie, so compare reports made on the same
   machine, or refresh the baseline there.
+
+### Store with extraction: does `store(..., extract=True)` help retrieval? (#260)
+
+`store(..., extract=True)` (behind `enable_store_extraction`, off by default)
+saves the memory at once and queues the batched extraction `ingest()` runs, so
+a stored memory also gets entities, claims and links. The hosted service will
+turn it on. Nobody had measured whether it improves what `retrieve()` returns,
+so the fast cycle has three opt-in stages on the store stage's fixture (the same
+75 memories, roles, node types, scopes and metadata, and the same 17 questions):
+
+- `store-extract`: a fresh engine with `enable_store_extraction` on and the
+  ingest stage's extraction (`deepseek-v4.1-flash:cloud` through Ollama,
+  batched at the default 2,048-token target) stores each memory with
+  `extract=True` and no `session_id`, as the store stage does, so every memory
+  is its own extraction request. It then drains the background extraction with
+  `process_extractions()` and asks the questions.
+- `store-extract-session`: the same, with each memory's session (five
+  sessions) as its `session_id`, so the engine can share a request between the
+  memories of a session within the token target. The hosted estimate
+  (prism-monorepo #269) assumes this. It is the best case of the 30 second
+  window; a store a minute apart from the next is a request of its own.
+- `store-session`: the store stage with each memory's session as `session_id`
+  and no extraction, the control for `store-extract-session`.
+
+```sh
+uv run python -m benchmarks.fast_cycle run --label my-change --out /tmp/cycle --stages store,store-extract
+uv run python -m benchmarks.fast_cycle run --label sessions --out /tmp/cycle --stages store,store-session,store-extract-session --baseline none
+```
+
+Choices, and why. The engine's 30 second timer is set aside and the extraction
+is drained by hand, so a run composes the same requests whatever the machine's
+speed (the hosted service lets the timer decide; a store with no `session_id`
+goes alone either way). A stored memory carries the wall-clock time of its
+store and a batched request shows each turn's time to the minute, so the
+extraction cache's key leaves the time out; a replay returns the model's
+recorded answer to the request as it was first sent. The cache keeps responses,
+not usage, so `usage.json` keeps the tokens of each request the model answered
+live, and a replay reports them. The stages are on DuckDB; the stage prints what
+retrieval returns, not what a reader answers.
+
+Result on 2026-10-19 (laptop, DuckDB, Ollama 0.40.6), three live runs of each
+stage, every one with a cold cache (75 and 7 model requests), on `main` at
+`2b0df5c2`. Replaying each run's recorded responses on `main` at `0622c9f9`
+(which adds #296, #299 and #300) and at `975dba21` (which adds #301) gives the
+same measures for `store` and `store-extract`, so the numbers hold for `main`
+as it is. Values are the three
+runs in order, one value when all three are equal:
+
+| Measure | store | store-extract | store-session | store-extract-session |
+|---|---:|---:|---:|---:|
+| Nodes / edges per store call | 1.00 / 0.00 | 5.03, 5.05, 5.03 / 3.52, 3.59, 3.60 | 1.00 / 0.00 | 4.45, 4.59, 4.56 / 2.65, 2.79, 2.71 |
+| Entities made (key entities found of 8) | 0 (0) | 132, 134, 130 (8) | 0 (0) | 128, 133, 136 (8) |
+| Graph candidates per question (questions with any) | 0 (0) | 96.5, 96.5, 97.4 (13) | 0 (0) | 84.4, 82.8, 84.6 (13) |
+| Context tokens per question | 1,786 | 3,695, 3,656, 3,766 | 1,786 | 3,376, 3,347, 3,407 |
+| Answers ranked first | 6 | 12 | 6 | 10 |
+| Answers ranked in the top 3 | 14 | 12 | 14 | 12 |
+| Mean reciprocal rank | 0.559 | 0.728, 0.727, 0.725 | 0.559 | 0.657, 0.664, 0.660 |
+| Stale value ranked above the answer | 4 | 2 | 4 | 3 |
+| Answers in the context / stale value in it | 17 / 5 | 17 / 5 | 17 / 5 | 17 / 5 |
+| Repeated records in the 17 contexts | 0 | 340, 323, 374 | 0 | 204, 187, 187 |
+| Extraction requests | | 75 | | 7 |
+| Extraction tokens | | 462,676; 462,084; 462,093 | | 70,911; 71,108; 71,249 |
+| Stage time: stores, extraction, questions (a busy laptop, two runs at a time) | 7 to 25 s, 0, 1 s | 7 to 22 s, 143 to 204 s, 1 to 3 s | 7 to 28 s, 0, 1 s | 6 to 47 s, 97 to 142 s, 2 to 3 s |
+
+The rank of each answer (the place of the first result that holds it; a star
+marks a stale value ranked above it):
+
+| Question | store | store-extract | store-extract-session |
+|---|---:|---:|---:|
+| what coding language is alex learning? | 3 | 1, 1, 1 | 7, 1, 7 |
+| which cities will Alex and jordan visit in Japan? | 26 | 51, 54, 60 | 39, 41, 38 |
+| When is the production cutover? | 3* | 1, 1, 1 | 3*, 3*, 3* |
+| When is the Japan trip? | 4* | 10*, 13*, 12* | 1, 3, 1 |
+| Does Alex like pair programming? | 2* | 1, 1, 1 | 3*, 4*, 3* |
+| Is Alex leading the observability rewrite? | 3* | 12*, 12*, 11* | 11*, 9*, 10* |
+| What is Alex's dog called? | 19 | 30, 32, 33 | 29, 27, 32 |
+| Which airline did Alex book for the Japan trip? | 3 | 7, 7, 10 | 5, 5, 4 |
+| The dashboard, table size and gravel race questions | 2, 2, 3 | 1, 1, 1 | 1, 1, 1 |
+| The other six questions | 1 | 1 | 1 |
+
+**Verdict: it does not improve the results; it trades them.** Against the
+plain store, `store-extract` ranks the answer first for 12 questions instead of
+6, lifts the mean reciprocal rank from 0.56 to 0.73 and puts a stale value above
+the answer for 2 questions instead of 4. It ranks fewer answers in the top 3
+(12 against 14), and the same five questions fall in all three runs: the Japan
+cities (26th to 51st-60th), the Japan dates (4th to 10th-13th), the
+observability rewrite (3rd to 11th-12th), the dog (19th to 30th-33rd) and the
+flights (3rd to 7th-10th). Six questions improve, six stay equal and five
+get worse. The answer is in the context for all 17 questions either way.
+
+The cost is the reason for the fall. Extraction adds about four records to each
+memory (5.0 nodes per call: 1.8 entities and 2.3 claims on average, 3.6 edges).
+A claim's text is the stored sentence or the sentence that holds it, so the top
+results of a question hold several copies of one sentence: the top five results
+for the Japan cities are the trip sentence five times, and the 17 contexts hold
+340 repeated records against none. They use 3,700 of the 4,096-token budget
+instead of 1,800. The graph channel now finds candidates for 13 questions (none
+before) and all 8 key entities exist, but the answer's rank does not gain from
+it (#299 notes that under the default rank fusion a candidate found only
+through the graph scores 0). Extraction costs 75 model requests and 462,000
+tokens for the 75 memories, about 6,200 tokens each, and 2.4 to 3.4 minutes.
+
+`store-extract-session` is the cheaper way to the same trade: 7 requests and
+71,000 tokens (6.5 times fewer), top 1 for 10 questions, top 3 for 12, a
+reciprocal rank of 0.66 and a stale value above the answer for 3. The session
+also changes the plain store: the control ranks the dog 17th to 21st and every
+other answer as the store stage does, because memories that share a session
+break retrieval ties differently from run to run.
+
+**With the options of #299 and #296** (`enable_mention_links`,
+`packing.graph_seed_words` and `enable_ingest_claim_fixes`, all off by default;
+`--set enable_mention_links=true --set packing.graph_seed_words=true --set
+enable_ingest_claim_fixes=true`). I took three live runs of each stage before
+they were on `main`, on a throwaway merge of the
+`issue-259-entity-links-and-graph-seeds` branch (which contains the
+`issue-258-ingest-names-and-claims` branch) over `2b0df5c2`. Replaying their
+recorded responses on `main` at `0622c9f9` gives the same measures, with every
+request a cache hit:
+
+| Measure | store-extract | store-extract-session |
+|---|---:|---:|
+| Edges per store call | 4.73, 4.97, 4.77 | 3.99, 3.87, 4.08 |
+| Questions with a graph candidate (candidates per question) | 17 (122, 124, 123) | 17 (111, 110, 116) |
+| Answers ranked first / in the top 3 | 8, 9, 9 / 12, 13, 13 | 8, 9, 9 / 13, 12, 14 |
+| Mean reciprocal rank | 0.606, 0.656, 0.646 | 0.603, 0.633, 0.647 |
+| Stale value ranked above the answer | 1 | 3 |
+| Repeated records in the 17 contexts | 73, 72, 78 | 29, 49, 44 |
+| Context tokens per question | about 4,000 | about 3,990 |
+
+The graph channel now finds candidates for all 17 questions, the repeated
+records fall by four fifths, the Japan dates and the cutover rank well (2nd to
+3rd and 1st), and the stale value is above the answer for 1 question. The
+answers ranked first (8 to 9 against 12) and the reciprocal rank (0.61 to 0.66
+against 0.73) fall below the stage without the options, and the Japan cities
+are still 43rd to 45th (25th to 29th with sessions): the memory that holds the
+four cities names neither Japan nor Alex. The compare rules fail this run on
+the context tokens, the answers ranked first and the reciprocal rank. Adding
+#301's `enable_superseded_source_suppression` (on `main` after these runs;
+replayed on `975dba21`) changes nothing for `store-extract`, because nothing is
+retired in these stores, and takes the stale value out of two of the three
+`store-extract-session` contexts.
+
+The runs agree closely (the extraction output of a temperature-0 model moves
+few claims, so most ranks repeat), and a replay of each run's recorded
+responses gives the run's measures again for `store-extract`; for the session
+stage a replay can move one rank (the dog) because of the tie-breaking above.
+
+**Rules.** `store-extract` is in the committed baseline
+(`baseline-main.json`, a replay of the committed cache, so exact). A live
+run uses the `live_by_stage` entry of each measure in `rules.json`, taken from
+these three runs by the rule of the ingest stage (twice the spread, rounded up;
+one for a count that did not move). With them none of the six baseline and
+candidate pairs among the three runs fails. A default run (store and ingest)
+leaves the stage out, and compare says it was not compared. The two session
+stages have no baseline and no tolerance: they are for reading.
+
+**What it cannot show.** One fixture of 75 memories of one user, 17 questions
+and one model; the rank counts every result, so repeated records push answers
+down although the context holds them all (17 of 17); no reader answers, so
+whether a reader would answer better from the larger context is not measured;
+DuckDB only (the hosted service uses PostgreSQL, whose word search differs);
+the timer is set aside, so the number of requests in the hosted service
+depends on how far apart a user's stores are; the options' live runs were taken
+before they were merged, and only replayed on `main`.
 
 ### Corrections probe: what a correction stores and returns
 

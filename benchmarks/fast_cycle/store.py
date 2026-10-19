@@ -112,6 +112,7 @@ def store_measures(questions: list[dict], nodes: list[dict], edges: list[dict], 
         "mean_reciprocal_rank": sum(1 / rank for rank in ranks if rank) / count,
         "stale_above_answer": sum(question["stale_above_answer"] for question in questions),
         "stale_in_context": sum(bool(question["stale_in_context"]) for question in questions),
+        "repeated_records_in_contexts": sum(question["repeated_records"] for question in questions),
         **{f"answer_rank:{question['id']}": question["answer_rank"] for question in questions},
     }
 
@@ -123,8 +124,12 @@ def store_config(pack: Path, overrides: dict | None = None, database_url: str | 
 
 
 async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: dict | None = None,
-              database_url: str | None = None) -> dict:
-    """Store the fixture's memories, ask its questions and return the stage's measures and details."""
+              database_url: str | None = None, session_ids: bool = False) -> dict:
+    """Store the fixture's memories, ask its questions and return the stage's measures and details.
+
+    ``session_ids`` stores each memory under its session as ``session_id`` (the
+    store-session stage), the control for the store-extract variant that does.
+    """
     fixture = load_fixture(fixture_path)
     pack = work / "pack"
     (pack / "lexical_index").mkdir(parents=True, exist_ok=True)
@@ -136,6 +141,7 @@ async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: di
             await engine.store_with_receipt(
                 memory["content"], user_id=owner, role=memory["role"], speaker=memory.get("speaker"),
                 node_type=NodeType(memory["node_type"]), scope=Scope(memory["scope"]),
+                session_id=memory["session"] if session_ids else None,
                 metadata={"source": "synthetic-demo", "session": memory["session"]})
         stored = time.perf_counter() - started
         # Search indexes are written after the node; wait for them as a reader later would.
@@ -148,11 +154,11 @@ async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: di
         asked = time.perf_counter() - asked
     measures = store_measures(questions, nodes, edges, len(fixture["memories"]), fixture["key"]["entities"])
     return {"backend": "postgres" if database_url else "duckdb", "fixture": fixture["name"],
-            "fixture_sha256": fixture_digest(fixture_path), "settings": overrides or {},
+            "fixture_sha256": fixture_digest(fixture_path), "settings": overrides or {}, "session_ids": session_ids,
             "calls": len(fixture["memories"]), "nodes": len(nodes), "edges": len(edges),
             "store_seconds": stored, "retrieve_seconds": asked, "measures": measures,
             "questions": [{"id": question["id"], "question": question["question"], **{
                 key: report[key] for key in ("answer_rank", "answer_in_context", "stale_in_context",
-                                             "stale_above_answer", "tokens_used", "lexical_candidates",
-                                             "graph_candidates", "top_results")}}
+                                             "stale_above_answer", "tokens_used", "repeated_records",
+                                             "lexical_candidates", "graph_candidates", "top_results")}}
                           for question, report in zip(fixture["key"]["questions"], questions)]}

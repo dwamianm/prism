@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add the store-extract stages to the fast cycle (part of prism-monorepo issue
+  260; `BENCHMARKS.md`, "Store with extraction"), opt-in with `--stages`.
+  `store-extract` stores the store stage's 75 memories with `extract=True`
+  (extraction by `deepseek-v4.1-flash:cloud`, drained by hand so the requests do
+  not depend on the 30 second timer) and asks the same 17 questions;
+  `store-extract-session` does so with each memory's session as `session_id`;
+  `store-session` is the control with no extraction. They report the extraction
+  requests and tokens, the entities made, the graph candidates per question and
+  the repeated records in the contexts next to the store measures. The
+  extraction cache leaves a turn's wall-clock time out of its key so a stored
+  memory replays, rules gain per-stage live tolerances (`live_by_stage`), and the
+  committed baseline gains the `store-extract` stage (the committed cache
+  now holds 166 responses). Three live runs on `main`: extraction ranks the
+  answer first for 12 questions instead of 6 and lifts the reciprocal rank from
+  0.56 to 0.73, but ranks 12 answers in the top 3 instead of 14, pushes five
+  questions down, doubles the context tokens and costs 75 requests and 462,000
+  tokens (7 requests and 71,000 tokens with sessions). Nothing in the engine
+  changes.
 - Add `enable_superseded_source_suppression` (part of prism-monorepo issue
   270), off by default. `ingest()` keeps a message as a note beside the claims
   extracted from it, so retiring a claim (a correction, `supersede()`) left
@@ -38,6 +56,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answers (BENCHMARKS.md, "Mid tier"). `extracted_packs build` gains
   `--cache-dir` and `--in-flight` so builds under different labels share one
   extraction cache and several build processes cap their live model calls.
+
+### Changed
+
+- Turn on `lexical_term_weights` by default (part of prism-monorepo issue 254),
+  on PostgreSQL only; DuckDB ignores it. It is on in the alpha channel on the
+  fast cycle and the offline evidence gate, by the owner's directive of
+  2026-10-19 (defaults flip on the fast gate and the full benchmark audits
+  later). The full benchmark audit and the default-change rule's DeepSeek
+  answer runs are pending. `PRME_LEXICAL_TERM_WEIGHTS=false` restores the
+  any-term word search of 0.16.0a1. Since that search (see Fixed under
+  0.16.0a1), a question that holds the owner's name and a few common words
+  lifts unrelated memories as much as the memory with the rare word: on the
+  fast cycle's 75 memory fixture the Rust question ranked 4th and the dog
+  question fell from 1st to 5th. A query word now weighs ln(N / df), where N is
+  the number of the owner's searched memories and df the number that hold the
+  word, and a memory is a candidate (with more than one query word) only when
+  the words it holds would be held together by chance by at most 0.2% of the
+  memories, and at least 2 memories. The owner's name or a common verb cannot
+  select candidates, and candidates rank by the weight of the words they hold.
+  A memory that holds every query word is still returned alone, and a one-word
+  query is unchanged. On PostgreSQL, the 75 memory fixture goes from 8 answers
+  ranked first and 13 in the top 3 to 11 and 15, the Rust question from 4th to
+  1st and the dog question from 5th to 1st, with no question ranked lower. The
+  28 questions of a second set, written before the first run, go from 22 and
+  25 to 24 and 25. With 2,000 or more memories the effect is within noise. The
+  search takes the same time within 0.2 ms at 5,000 memories, and the offline
+  evidence gate shows no change. The fast cycle also takes `--store-fixture`
+  and ships the second question set as
+  `benchmarks/fixtures/fast-cycle/store-heldout-v1.json`. `BENCHMARKS.md`,
+  "Lexical term weights", has the table.
 
 ## [0.16.0a1] - 2026-10-19
 
