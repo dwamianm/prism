@@ -57,7 +57,9 @@ from tests.test_rank_fusion import EXECUTION, PRODUCT, RRF
 DIGESTS = Path(__file__).parent / "fixtures/packing/line-count-digests.json"
 NOW = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
 EVENT = datetime(2023, 5, 8, 13, 56, tzinfo=timezone.utc)
-PRODUCT_PACKING = PackingConfig(**DEFAULT_PACKING_SETTINGS)
+# The saved digests were written before packing.folded_records_keep_rank became a default (0.16.0a3), which
+# moves the place of a record that folds earlier ones; tests/test_claim_statement_fold.py covers that packing.
+PRODUCT_PACKING = PackingConfig(**{**DEFAULT_PACKING_SETTINGS, "folded_records_keep_rank": False})
 
 # Record texts that probe the boundaries between lines: quotes, brackets and
 # slashes at either end, line breaks of every kind, special-token text,
