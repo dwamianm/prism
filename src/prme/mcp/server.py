@@ -171,6 +171,7 @@ async def memory_store(
     epistemic_type: Optional[EpistemicType] = None,
     source_type: Optional[SourceType] = None,
     speaker: Optional[str] = None,
+    extract: Optional[StrictBool] = None,
     ctx: Context = None,
 ) -> str:
     """Store a memory.
@@ -202,6 +203,9 @@ async def memory_store(
         source_type: Optional explicit provenance classification.
         speaker: Optional name of who said this, such as one person in a
             conversation between two people. Shown by the reader context format.
+        extract: Also queue LLM extraction of the source in the background, as
+            memory_ingest does. Omit to follow the server's setting; false
+            stores without extraction.
     """
     engine = _get_engine(ctx)
     try:
@@ -237,6 +241,7 @@ async def memory_store(
             event_time=event_time,
             valid_from=valid_from,
             valid_to=valid_to,
+            extract=extract,
         )
 
         return json.dumps({

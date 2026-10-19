@@ -33,7 +33,7 @@ HTTP 409. The API never turns Jev advice into an automatic merge.
 
 `POST /v1/store` accepts the Python `store()` fields: `content`, `retrieval_content`, `value_bindings`, `role`, `speaker`,
 `user_id`, `session_id`, `node_type`, `scope`, `metadata`, `epistemic_type`, `source_type`,
-`confidence`, `event_time` and `ttl_days`.
+`confidence`, `event_time`, `ttl_days` and `extract`.
 
 ```json
 {
@@ -57,6 +57,14 @@ JSON `null` disables TTL, and a nonnegative integer overrides it. TTL is measure
 from node creation, not the historical event time. Omitted source/epistemic fields
 use the engine's inference rules. Source classification describes provenance;
 it does not independently establish truth.
+
+`extract` is `true`, `false` or omitted. `true` also queues the background
+extraction `POST /v1/ingest` runs, so entities and claims for the source appear
+later (`GET /v1/events/{event_id}/extraction-status` reports it); the reply is
+still the stored `event_id` and `node_id`, and that node is the only note for
+the text. `false` stores without extraction, and omitting it follows the
+server's `enable_store_extraction` setting, off by default. A value that is not
+a JSON boolean is a 422.
 
 When `retrieval_content` is present, PRME retains `content` verbatim in the
 immutable event and uses the compact value for the graph node, vector and lexical

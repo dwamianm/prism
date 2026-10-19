@@ -395,6 +395,23 @@ class IngestionPipeline:
 
         return str(event.id)
 
+    def queue_extraction(self, event: Event, scope: Scope = Scope.PERSONAL) -> None:
+        """Start the background extraction of a saved event that has a durable job (#260).
+
+        The part of Phase 2 of :meth:`ingest` that does not wait, for a source
+        that was saved another way: a ``store()`` that asked for extraction
+        saves its event, its node and its job in one transaction and calls
+        this once its node is in place. Batched, the event joins the flush
+        :meth:`_arm_flush` schedules, 30 seconds after the owner's first queued
+        turn; unbatched, it extracts at once in a background task.
+        """
+        if self._batch_target_tokens > 0:
+            self._arm_flush(event.user_id, scope)
+            return
+        task = asyncio.create_task(self._extract_and_materialize(event, str(event.id), scope))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
     async def _append_event(
         self, content: str, *, user_id: str, role: str, session_id: str | None, metadata: dict | None,
         event_time: datetime | None, scope: Scope,
@@ -1636,7 +1653,11 @@ class IngestionPipeline:
             plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
             if plan is None:
                 existing = await self._graph_store.get_event_nodes(event_id, user_id=event.user_id)
-                if any(node.id != event.id for node in existing):
+                # The source's own node: the raw NOTE, whose id is the event's,
+                # or the node a store() saved with the event (#260).
+                direct = await self._event_store.get_direct_store(event_id, user_id=event.user_id)
+                source_id = direct.node.id if direct is not None else event.id
+                if any(node.id != source_id for node in existing):
                     # Another attempt may have published between the first
                     # plan read and this graph read. Its journal distinguishes
                     # a valid concurrent completion from unjournaled legacy data.
