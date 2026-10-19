@@ -1,0 +1,28 @@
+{
+  "label": "full-per-turn-lme-deepseek-d810ee55",
+  "benchmark": "longmemeval",
+  "overrides": {
+    "extraction_batch_target_tokens": 0
+  },
+  "model": "deepseek-v4.1-flash:cloud",
+  "server_versions": [
+    "0.40.4"
+  ],
+  "commit": "d810ee5552e388f85aac62f4cf8c6c6038f0b1c8",
+  "packs": 500,
+  "turns": 246738,
+  "calls": 190018,
+  "prompt_tokens": 851081364,
+  "completion_tokens": 94419212,
+  "seconds": 935937.9902484841,
+  "wall_seconds": 59913.802022,
+  "cache_hits": 57196,
+  "dollars": 0,
+  "claims": 383106,
+  "claims_per_turn": 1.5526834131751088,
+  "turns_with_claims": 111492,
+  "turns_with_claims_share": 0.4518639204338205,
+  "annotated_evidence_turns": 886,
+  "annotated_evidence_turns_with_claims": 832,
+  "evidence_claim_coverage": 0.9390519187358917
+}

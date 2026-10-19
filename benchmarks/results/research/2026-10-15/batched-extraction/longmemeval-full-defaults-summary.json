@@ -1,0 +1,32 @@
+{
+  "label": "full-defaults-lme-deepseek-d810ee55",
+  "benchmark": "longmemeval",
+  "overrides": {},
+  "model": "deepseek-v4.1-flash:cloud",
+  "server_versions": [
+    "0.40.4"
+  ],
+  "commit": "d810ee5552e388f85aac62f4cf8c6c6038f0b1c8",
+  "packs": 500,
+  "turns": 246738,
+  "calls": 37656,
+  "prompt_tokens": 276387300,
+  "completion_tokens": 90398462,
+  "seconds": 813221.7791829067,
+  "wall_seconds": 53736.289999,
+  "cache_hits": 0,
+  "dollars": 0,
+  "claims": 276460,
+  "claims_per_turn": 1.1204597589345784,
+  "turns_with_claims": 103755,
+  "turns_with_claims_share": 0.42050677236582934,
+  "annotated_evidence_turns": 886,
+  "annotated_evidence_turns_with_claims": 837,
+  "evidence_claim_coverage": 0.9446952595936795,
+  "batches": 37612,
+  "single_turn_batches": 3128,
+  "turns_asked_again": 0,
+  "turns_without_entry": 0,
+  "response_claims": 410419,
+  "saved_claims": 290760
+}

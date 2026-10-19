@@ -1,0 +1,28 @@
+{
+  "label": "full-per-turn-locomo-deepseek-d810ee55",
+  "benchmark": "locomo",
+  "overrides": {
+    "extraction_batch_target_tokens": 0
+  },
+  "model": "deepseek-v4.1-flash:cloud",
+  "server_versions": [
+    "0.40.4"
+  ],
+  "commit": "d810ee5552e388f85aac62f4cf8c6c6038f0b1c8",
+  "packs": 10,
+  "turns": 5882,
+  "calls": 5882,
+  "prompt_tokens": 30267814,
+  "completion_tokens": 3411484,
+  "seconds": 30829.184800736606,
+  "wall_seconds": 3604.990759,
+  "cache_hits": 0,
+  "dollars": 0,
+  "claims": 6943,
+  "claims_per_turn": 1.180380822849371,
+  "turns_with_claims": 4464,
+  "turns_with_claims_share": 0.7589255355321319,
+  "annotated_evidence_turns": 1423,
+  "annotated_evidence_turns_with_claims": 1169,
+  "evidence_claim_coverage": 0.8215038650737878
+}

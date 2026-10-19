@@ -450,6 +450,70 @@
           0.023915660609914006
         ]
       }
+    },
+    {
+      "after": "locomo-full-defaults-gate.json",
+      "before": "locomo-full-per-turn-gate.json",
+      "inputs": {
+        "after_sha256": "c7367c7f6aa353cacd973a692341fcf61b9c0a94f28edf7672bb15e220cbf3ea",
+        "before_sha256": "0fd499f16256678848a6be76be12281010ce10f095a4b014f127b314d0ceb2db"
+      },
+      "all_evidence_packed": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8229166666666666,
+        "after": 0.8372395833333334,
+        "delta": 0.014322916666666666,
+        "wins": 65,
+        "losses": 43,
+        "ties": 1428,
+        "interval_95": [
+          0.004703115814226925,
+          0.02702702702702703
+        ]
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.8819290789170035,
+        "after": 0.89269444620992,
+        "delta": 0.010765367292916635,
+        "wins": 87,
+        "losses": 66,
+        "ties": 1383,
+        "interval_95": [
+          0.0032306923859472944,
+          0.020002762627463994
+        ]
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "groups": 10,
+        "before": 0.9641927083333334,
+        "after": 0.9830729166666666,
+        "delta": 0.018880208333333332,
+        "wins": 30,
+        "losses": 1,
+        "ties": 1505,
+        "interval_95": [
+          0.011543134872417983,
+          0.027882441597588545
+        ]
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "groups": 10,
+        "before": 0.7638694716457212,
+        "after": 0.7748683238981086,
+        "delta": 0.010998852252387403,
+        "wins": 65,
+        "losses": 43,
+        "ties": 1432,
+        "interval_95": [
+          0.004329066795607637,
+          0.020030963942079136
+        ]
+      }
     }
   ]
 }

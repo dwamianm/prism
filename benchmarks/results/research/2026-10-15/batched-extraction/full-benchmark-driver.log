@@ -1,0 +1,29 @@
+2026-10-16T19:12:15Z driver started, pid 35901, commit d810ee55, Ollama {"version":"0.40.4"}
+2026-10-16T19:12:15Z build full-defaults-locomo-deepseek-d810ee55: attempt 1, 0 of 10 packs complete so far
+2026-10-16T19:25:26Z build full-defaults-locomo-deepseek-d810ee55: attempt 1 exited 0, 10 of 10 packs complete
+2026-10-16T19:25:26Z build full-per-turn-locomo-deepseek-d810ee55: attempt 1, 0 of 10 packs complete so far
+2026-10-16T20:25:32Z build full-per-turn-locomo-deepseek-d810ee55: attempt 1 exited 0, 10 of 10 packs complete
+2026-10-16T20:25:32Z gate full-defaults-locomo-deepseek-d810ee55: start
+2026-10-16T20:34:33Z gate full-defaults-locomo-deepseek-d810ee55: exit 0
+2026-10-16T20:34:33Z gate full-per-turn-locomo-deepseek-d810ee55: start
+2026-10-16T20:44:55Z gate full-per-turn-locomo-deepseek-d810ee55: exit 0
+2026-10-16T20:44:56Z summary full-defaults-locomo-deepseek-d810ee55: exit 0
+2026-10-16T20:44:56Z summary full-per-turn-locomo-deepseek-d810ee55: exit 0
+2026-10-16T20:44:59Z compare locomo-defaults-vs-per-turn: exit 0
+2026-10-16T20:44:59Z build full-defaults-lme-deepseek-d810ee55: attempt 1, 0 of 500 packs complete so far
+2026-10-17T11:19:07Z build full-defaults-lme-deepseek-d810ee55: attempt 1 exited 0, 499 of 500 packs complete
+2026-10-17T11:34:07Z build full-defaults-lme-deepseek-d810ee55: attempt 2, 499 of 500 packs complete so far
+2026-10-17T11:40:39Z build full-defaults-lme-deepseek-d810ee55: attempt 2 exited 0, 500 of 500 packs complete
+2026-10-17T11:40:39Z build full-per-turn-lme-deepseek-d810ee55: attempt 1, 0 of 500 packs complete so far
+2026-10-18T03:57:47Z build full-per-turn-lme-deepseek-d810ee55: attempt 1 exited 0, 498 of 500 packs complete
+2026-10-18T04:12:47Z build full-per-turn-lme-deepseek-d810ee55: attempt 2, 498 of 500 packs complete so far
+2026-10-18T04:19:16Z build full-per-turn-lme-deepseek-d810ee55: attempt 2 exited 0, 500 of 500 packs complete
+2026-10-18T04:19:16Z gate full-defaults-lme-deepseek-d810ee55: start
+2026-10-18T04:24:43Z gate full-defaults-lme-deepseek-d810ee55: exit 0
+2026-10-18T04:24:43Z gate full-per-turn-lme-deepseek-d810ee55: start
+2026-10-18T04:30:16Z gate full-per-turn-lme-deepseek-d810ee55: exit 0
+2026-10-18T04:30:17Z summary full-defaults-lme-deepseek-d810ee55: exit 0
+2026-10-18T04:30:18Z summary full-per-turn-lme-deepseek-d810ee55: exit 0
+2026-10-18T04:30:19Z compare lme-defaults-vs-per-turn: exit 0
+2026-10-18T04:30:19Z Ollama at the end: {"version":"0.40.4"}
+2026-10-18T04:30:19Z ALL DONE

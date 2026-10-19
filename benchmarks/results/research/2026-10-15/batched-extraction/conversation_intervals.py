@@ -31,6 +31,8 @@ PAIRS = (
     ("locomo-batch-8192-gate.json", "locomo-batch-2048-gate.json"),
     ("locomo-batch-1-ablation-gate.json", "locomo-ingest-baseline-gate.json"),
     ("locomo-batch-2048-gate.json", "locomo-batch-1-ablation-gate.json"),
+    # The full builds of 2026-10-16, both at d810ee55: batched at 2,048 (the defaults) against one call per turn.
+    ("locomo-full-defaults-gate.json", "locomo-full-per-turn-gate.json"),
 )
 METRICS = {
     "all_evidence_packed": (True, _all_packed),
