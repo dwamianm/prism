@@ -5,7 +5,7 @@ Combines event sourcing, graph-based relational modeling, hybrid retrieval,
 and explicit or opportunistic memory reorganization.
 """
 
-__version__ = "0.16.0a3"
+__version__ = "0.16.0a4"
 
 from typing import TYPE_CHECKING
 

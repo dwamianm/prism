@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a4] - 2026-10-19
+
+This is an alpha. It passed CI, the fast gate, the fast cycle and the mid tier,
+and it has not been through the full benchmark. The stable release stays at
+0.15.0 until the full benchmark audit, so `pip install prme` still installs
+0.15.0. Install the alpha with `pip install --pre prme` or
+`pip install prme==0.16.0a4`.
+
 ### Added
 
 - Add three options, all off by default, that make the graph count in ranking
@@ -80,6 +88,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (+0.1, 7 wins and 6 losses; single-hop -0.4, interval -0.8 to +0.0). The full
   benchmark audit and the default-change rule's answer runs are pending.
   `BENCHMARKS.md` ("Graph fusion") has the tables.
+
+### Tooling and tests
+
+These do not ship in the wheel and change no behavior.
+
+- The scheduled full benchmark on the Mac mini (prism-monorepo issue 272), under
+  `scripts/full-benchmark/`, runs the full build twice a week (see Added).
+- The release rule in `CLAUDE.md`, `AGENTS.md` and `CONTRIBUTING.md` now names
+  the alpha, beta and stable channels: what each needs, the fast tiers with their
+  commands, and how to cut a prerelease (#312).
+- A test pins the owner name carry on the batched extraction path with the
+  recorded dev run (#314). The carry already worked there, so no source changed.
+
+### Upgrade notes
+
+- One default changed since 0.16.0a3: `packing.session_context_skip_entities`
+  is on (see Changed). It affects `retrieve()` over memories that `ingest()`
+  extracted, not stores made with `store()` alone, and it rewrites nothing. Set
+  `PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES=false` to get the expansion of
+  0.16.0a3 back. A receipt written with the default names the field, which
+  releases before 0.16.0a4 ignore when they read it. A `PackingConfig` built in
+  code keeps it off.
+- The three options of the graph fusion work are new, and two of them stay off:
+  `enable_owner_group_links` (neutral on every tier) and `scoring.rrf_graph_weight`
+  (it moves two `chat-v1` answers out of the top 3 and lowers LoCoMo evidence in
+  the top 25 by 5.4 points on the mid tier). Leave them off.
+- The five options turned on in 0.16.0a3 and `lexical_term_weights` (PostgreSQL
+  only, 0.16.0a2) are still on, each with the environment variable that turns
+  it off (see the 0.16.0a3 notes).
+- Known weaknesses are as in 0.16.0a3: the Austin-to-Denver case of the
+  corrections probe on one live extraction sample, and single answer ranks one
+  or two places lower on the fast cycle. On the mid tier the entity skip does not
+  raise all evidence packed (+0.1, not clear of zero) and single-hop all evidence
+  packed is 0.4 points lower (-0.8 to +0.0).
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a3] - 2026-10-19
 
@@ -2554,7 +2600,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a3...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a4...HEAD
+[0.16.0a4]: https://github.com/dwamianm/prism/compare/v0.16.0a3...v0.16.0a4
 [0.16.0a3]: https://github.com/dwamianm/prism/compare/v0.16.0a2...v0.16.0a3
 [0.16.0a2]: https://github.com/dwamianm/prism/compare/v0.16.0a1...v0.16.0a2
 [0.16.0a1]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0a1
