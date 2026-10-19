@@ -1,0 +1,78 @@
+{
+  "kind": "prme-chat-probe",
+  "schema_version": 1,
+  "name": "defects-v1",
+  "description": "A scripted first-person chat between Alex Rivera and an assistant over three short sessions (a trip to Japan, learning to code, a work decision), written to reproduce the ingest defects of dwamianm/prism-monorepo#258 and #259 in a few minutes: the speaker stays \"I\" instead of Alex, the turn that names the four cities yields no claim that names them, the entities are not linked to each other, and the answer ranks low. It is the first step of the fast gate for ingest changes (BENCHMARKS.md). The probes also check the rank of the answer in the retrieve results, because a context that holds the whole chat passes a context-only check by default.",
+  "owner": "defects-v1-alex",
+  "user_name": "Alex Rivera",
+  "reference_time": "2026-10-19T12:00:00+00:00",
+  "sessions": [
+    {
+      "id": "s1-trip",
+      "start": "2026-10-05T19:00:00+00:00",
+      "turns": [
+        {"role": "user", "text": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year."},
+        {"role": "assistant", "text": "That is cherry blossom season. Which places are you thinking about?"},
+        {"role": "user", "text": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time."},
+        {"role": "assistant", "text": "A shorter list makes for a calmer trip. Is there anything about getting around that you want to sort out?"},
+        {"role": "user", "text": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants."},
+        {"role": "assistant", "text": "Both are easy to arrange ahead of time. Let me know when you want to start on the details."}
+      ]
+    },
+    {
+      "id": "s2-learning",
+      "start": "2026-10-12T20:00:00+00:00",
+      "turns": [
+        {"role": "user", "text": "On weekends I am learning Rust. I am reading Rust for Rustaceans."},
+        {"role": "assistant", "text": "Good book. Do you write Go at work?"},
+        {"role": "user", "text": "Yes, I write Go for services and TypeScript for tooling."},
+        {"role": "assistant", "text": "That sounds like a practical mix. How are the weekend sessions going so far?"}
+      ]
+    },
+    {
+      "id": "s3-work",
+      "start": "2026-10-16T16:30:00+00:00",
+      "turns": [
+        {"role": "user", "text": "We chose Postgres partitioning over TimescaleDB for the shipment table. We dropped the idea of self-hosting."},
+        {"role": "assistant", "text": "Good to have that settled. Is there anything else on your plate this week?"},
+        {"role": "user", "text": "My manager Dana wants the runbook reviewed by Sam before Friday."},
+        {"role": "assistant", "text": "Do you want help putting together a review checklist?"}
+      ]
+    }
+  ],
+  "key": {
+    "entities": [
+      {"id": "alex", "names": ["Alex", "Alex Rivera"], "owner": true},
+      {"id": "jordan", "names": ["Jordan"]},
+      {"id": "japan", "names": ["Japan"]},
+      {"id": "tokyo", "names": ["Tokyo"]},
+      {"id": "kyoto", "names": ["Kyoto"]},
+      {"id": "kanazawa", "names": ["Kanazawa"]},
+      {"id": "osaka", "names": ["Osaka"]},
+      {"id": "dana", "names": ["Dana"]},
+      {"id": "sam", "names": ["Sam"]}
+    ],
+    "links": [
+      {"id": "partner", "between": ["alex", "jordan"], "label": "Jordan is Alex's partner"},
+      {"id": "trip", "between": ["alex", "japan"], "label": "Alex is planning a trip to Japan"},
+      {"id": "trip-partner", "between": ["jordan", "japan"], "label": "Jordan is going on the trip to Japan"},
+      {"id": "city-tokyo", "between": ["japan", "tokyo"], "label": "Tokyo is a city of the trip to Japan"},
+      {"id": "city-kyoto", "between": ["japan", "kyoto"], "label": "Kyoto is a city of the trip to Japan"},
+      {"id": "city-kanazawa", "between": ["japan", "kanazawa"], "label": "Kanazawa is a city of the trip to Japan"},
+      {"id": "city-osaka", "between": ["japan", "osaka"], "label": "Osaka is a city of the trip to Japan"},
+      {"id": "manager", "between": ["alex", "dana"], "label": "Dana is Alex's manager"},
+      {"id": "reviewer", "between": ["dana", "sam"], "label": "Dana wants Sam to review the runbook"}
+    ],
+    "repeats": [],
+    "probes": [
+      {"id": "cities", "question": "Which cities will Alex and Jordan visit in Japan?", "all_of": ["Tokyo", "Kyoto", "Kanazawa", "Osaka"],
+       "note": "Fails when no single stored text names the four cities, which is what #258 and #259 report."},
+      {"id": "learning", "question": "What coding language is Alex learning?", "all_of": ["Rust"]},
+      {"id": "work-languages", "question": "Which languages does Alex write at work?", "all_of": ["Go", "TypeScript"]},
+      {"id": "travel", "question": "How does Alex prefer to travel in Japan?", "any_of": ["JR Pass", "trains"]},
+      {"id": "allergy", "question": "Who is allergic to shellfish?", "all_of": ["Jordan", "shellfish"]},
+      {"id": "shipments", "question": "What did the team choose for the shipment table?", "all_of": ["Postgres", "partitioning"]},
+      {"id": "reviewer", "question": "Who should review the runbook?", "all_of": ["Sam"]}
+    ]
+  }
+}

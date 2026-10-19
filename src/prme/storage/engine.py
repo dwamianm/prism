@@ -696,6 +696,7 @@ class MemoryEngine:
                 extraction_timeout=config.extraction.batch_timeout,
                 extraction_corrections=config.enable_extraction_corrections,
                 link_mentions=config.enable_mention_links,
+                claim_fixes=config.enable_ingest_claim_fixes,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -849,6 +850,7 @@ class MemoryEngine:
                 extraction_timeout=config.extraction.batch_timeout,
                 extraction_corrections=config.enable_extraction_corrections,
                 link_mentions=config.enable_mention_links,
+                claim_fixes=config.enable_ingest_claim_fixes,
             )
 
             startup.push_async_callback(pipeline.shutdown)

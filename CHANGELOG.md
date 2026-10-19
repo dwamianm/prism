@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `enable_ingest_claim_fixes` (`PRME_ENABLE_INGEST_CLAIM_FIXES`), off by
+  default (prism-monorepo issue 258). With it on, `ingest()` makes three
+  changes to what a turn's claims say, and with it off nothing changes:
+  records, plans, receipts and configuration dumps keep their bytes. It has not
+  been through the default-change rule, so turning it on by default needs that
+  rule on the `ingest()` answer track.
+  1. A claim of a plural first-person statement is kept. Given "We chose Tokyo,
+     Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.", Claude
+     Haiku 4.5 returned two facts whose subject was `I`, a word the sentences
+     do not contain, so grounding discarded both and the turn's extraction had
+     empty `facts`. When a built-in provider writes `I`, `me`, `my`, `mine` or
+     `myself` for a claim's subject, object or relationship endpoint and the
+     cited sentences use no singular first-person form but do use the plural
+     counterpart (`we`, `us`, `our`, `ours`, `ourselves`), the claim keeps the
+     turn's own word. Singular and plural forms still do not match each other
+     in grounding, and a plural reference still stays local to its message.
+     A custom provider is passed `plural_first_person=True` only while the
+     option is on.
+  2. A speaker who introduces themselves is linked to their own entity. A user
+     turn with no `speaker` that says who it is ("Hi, I am Alex Rivera", "I'm
+     Alex Rivera", "My name is Alex Rivera", "Call me Alex") binds its `I`,
+     `me` and `my` to the person entity of that name, the way a caller-named
+     `speaker` does under `enable_speaker_references`, when the extraction
+     lists the name as a person. The claim's `speaker_reference` metadata has
+     `"basis": "self_introduction"`, and the turn no longer creates a
+     message-local `I` entity. A possessive ("I am Jordan's partner"), a name
+     the extraction did not list as a person, a turn that introduces two
+     different people, an assistant turn, a `speaker` the caller gave, and
+     `first_person_owner=True` bind nothing new. The binding covers that turn
+     only: a later turn that names nobody keeps its own `I`.
+  3. With `enable_claim_sentence_text`, no two claims of one message share a
+     text. A claim whose sentences are already the text of an earlier claim of
+     the same message, such as the partner claim and the trip claim of "My
+     partner Jordan and I are planning a trip to Japan.", has a one-sentence
+     statement of its own, "Alex Rivera partner Jordan.", built from its
+     subject, predicate and object (the speaker's name, "the speaker" or "the
+     speaker's group" for a first-person reference, "It is not true that ..."
+     for a denial, the condition in parentheses). It records
+     `claim_statement_v1` as its grounding method. The first claim keeps the
+     source sentences and the paragraph stays every claim's `evidence_quote`.
+     The statement is not source text, so the packed context shows it as its
+     own line instead of folding it into the message.
+- Add a fast gate for ingest changes (part of prism-monorepo issues 258 and
+  259; `BENCHMARKS.md`, "Fast gate for ingest changes"). The chat probe takes a
+  second conversation, `benchmarks/conversations/defects-v1.json`: 14 turns
+  over three sessions that reproduce both issues in 22 seconds and 14 model
+  calls, with 7 probe questions. Every probe now also reports the rank of its
+  answer, the 1-based place of the first `retrieve()` result whose text holds
+  it, because a short chat fits the context whole and passes a context-only
+  check. The summary and `compare` count the probes ranked in the top 3 and in
+  the top 5. The existing measures are unchanged, and a report from before the
+  rank reads "not measured". Nothing in the engine changes.
 - Add `enable_extraction_corrections` (#277), off by default. With batched
   extraction, each request also shows the model a few stored claims of the
   same owner and scope that resemble its turns, labeled m1, m2 and on, and an
