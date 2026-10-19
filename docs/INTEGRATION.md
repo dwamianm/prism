@@ -1265,6 +1265,7 @@ EmbeddingConfig(
     model_name="BAAI/bge-small-en-v1.5", # PRME_EMBEDDING_MODEL_NAME
     dimension=384,                       # PRME_EMBEDDING_DIMENSION; optional for registered models
     api_key=None,                        # PRME_EMBEDDING_API_KEY
+    threads=None,                        # PRME_EMBEDDING_THREADS; fastembed only, None keeps ONNX Runtime's default
 )
 ```
 

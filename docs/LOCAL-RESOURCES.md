@@ -32,6 +32,17 @@ without changing the already-open engine. Close all connections before changing
 the setting for that file. Worker settings are runtime configuration, not durable
 memory content; reopening a copied pack uses the caller's configuration.
 
+Embedding inference has its own setting. `embedding.threads`
+(`PRME_EMBEDDING__THREADS`) sets the ONNX Runtime threads of a `fastembed`
+model when it loads, and a caller-owned `FastEmbedProvider(threads=1)` takes the
+same value. The default is `None`, which keeps ONNX Runtime's choice of one
+thread per core the machine shows; that choice does not follow a container's CPU
+limit. The setting is not recorded with a vector, and it changes how many threads
+compute each vector, not the model or the version recorded with it. On the
+machine measured when the setting was added, one thread gave the same vectors,
+bit for bit, as the default for 300 texts; check this on your own platform
+before changing it for a store whose vectors already exist.
+
 Closing idle engines can reduce active resource use; applications should keep
 the engine context alive until all operations finish. A shared provider avoids
 loading another embedding model per pack. It does not share graph or search

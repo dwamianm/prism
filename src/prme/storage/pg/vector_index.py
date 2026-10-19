@@ -190,11 +190,15 @@ class PgVectorIndex:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
 
+        # Read the provider's identity once per search, not once per row.
+        expected = (
+            (self._provider.model_name, self._provider.model_version, self._provider.dimension)
+            if rows
+            else None
+        )
         results = []
         for row in rows:
-            if (row["embedding_model"], row["embedding_version"], row["embedding_dim"]) != (
-                self._provider.model_name, self._provider.model_version, self._provider.dimension,
-            ):
+            if (row["embedding_model"], row["embedding_version"], row["embedding_dim"]) != expected:
                 raise EmbeddingVersionMismatchError(
                     "Stored embeddings have unknown or incompatible model metadata; run prme rebuild"
                 )

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from prme.config import EmbeddingConfig, PRMEConfig
-from prme.storage.embedding import FastEmbedProvider
+from prme.storage.embedding import FastEmbedProvider, create_embedding_provider
 
 
 def test_fastembed_dimension_is_inferred_from_model_name():
@@ -61,3 +61,52 @@ def test_direct_fastembed_provider_infers_dimension_without_loading_model():
 def test_direct_fastembed_provider_rejects_invalid_dimension(dimension):
     with pytest.raises(ValueError, match="positive integer"):
         FastEmbedProvider(dimension=dimension)
+
+
+def test_fastembed_threads_default_to_the_runtime_choice():
+    config = EmbeddingConfig()
+
+    assert config.threads is None
+    assert create_embedding_provider(config)._provider._threads is None
+
+
+def test_fastembed_threads_reach_the_provider(monkeypatch):
+    monkeypatch.setenv("PRME_EMBEDDING__THREADS", "2")
+    config = PRMEConfig(_env_file=None).embedding
+
+    assert config.threads == 2
+    assert create_embedding_provider(config)._provider._threads == 2
+    assert create_embedding_provider(EmbeddingConfig(threads=1))._provider._threads == 1
+
+
+@pytest.mark.parametrize("threads", [True, 0, -3])
+def test_fastembed_threads_must_be_a_positive_integer(threads):
+    with pytest.raises(ValueError):
+        EmbeddingConfig(threads=threads)
+
+
+def test_fastembed_threads_read_the_standalone_environment_form(monkeypatch):
+    monkeypatch.setenv("PRME_EMBEDDING_THREADS", "3")
+
+    assert EmbeddingConfig(_env_file=None).threads == 3
+
+
+def test_unset_fastembed_threads_leave_configuration_dumps_unchanged():
+    from pathlib import Path
+
+    from benchmarks.diagnostics.product_packing import gate_config
+    from benchmarks.integrations.gpt54_baselines import _check_defaults_build
+    from benchmarks.retrieval_eval import provenance
+
+    assert "threads" not in EmbeddingConfig().model_dump()
+    assert "threads" not in PRMEConfig(_env_file=None).model_dump(mode="json")["embedding"]
+    assert EmbeddingConfig(threads=2).model_dump()["threads"] == 2
+    # An ingest() build recorded before the setting existed still holds the defaults.
+    defaults = provenance(gate_config(Path("{pack}")))["engine_config"]
+    assert "threads" not in defaults["embedding"]
+    _check_defaults_build(Path("recorded"), {"provenance": {"engine_config": defaults}})
+    # A build made with a thread count set records it and is refused, deliberately:
+    # identical vectors across thread counts were measured on one machine only.
+    threaded = {**defaults, "embedding": {**defaults["embedding"], "threads": 1}}
+    with pytest.raises(ValueError, match="embedding"):
+        _check_defaults_build(Path("threaded"), {"provenance": {"engine_config": threaded}})
