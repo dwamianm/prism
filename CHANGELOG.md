@@ -46,6 +46,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cases, including scenarios from the packing tests, against digests that
   the earlier implementation wrote.
 
+### Fixed
+
+- PostgreSQL lexical search no longer requires every term of the query
+  (prism-monorepo issue 254). A question written as a sentence, such as "what
+  coding language is alex learning?", shares only some words with the memory
+  that answers it, so it found no lexical candidates and the vector ranking
+  alone decided the order. When no document contains every term, a document
+  that contains any of them now matches, and hits rank by the number of
+  distinct terms they match and then by `ts_rank_cd`. When some document
+  contains every term, only those documents match, as before. In a query with
+  more than one term, a term that matches at least half of the searched
+  documents, such as the owner's name, does not select candidates while
+  another term matches (it still counts when ranking them), so it does not
+  make every memory a lexical candidate. Only the
+  first 32 distinct terms are used. Queries with a single term (one lexeme)
+  return the same hits and scores as before. In the three memory example from
+  the issue, the memory that answers the question went from a lead of 0.008
+  to a score of 1.0 against 0.492.
+
 ## [0.15.0] - 2026-10-16
 
 ### Added
