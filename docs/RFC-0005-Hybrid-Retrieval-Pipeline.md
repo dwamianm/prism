@@ -180,7 +180,7 @@ memories ingested before the option was on keep the links they have. A walk
 expands each node once per depth, not once per path, so hub entities do not
 multiply the work. Under rank fusion a candidate found only through the graph
 still scores 0 (Section 7.2), so these options add candidates and
-weighted-score evidence, not a fused channel.
+weighted-score evidence, not a fused channel, unless `rrf_graph_weight` is set.
 
 ### 4.2 Vector Similarity Search
 
@@ -579,10 +579,16 @@ score(obj) =
   every ranked candidate shares is therefore 1.0. Temporal affinity applies
   only to TEMPORAL intent, as in formula version 1. Negative epistemic weights
   or node-type boosts are rejected.
-- Graph proximity, salience and confidence are not used, and recency only
-  through the recency boost below. In the 2026-09-23 benchmark archive they
-  were constant or carried no relevance information. Graph proximity can become a fused channel once ingestion
-  populates the graph. The query-specific weight shifts for current-state,
+- Salience and confidence are not used, graph proximity only through the
+  opt-in `rrf_graph_weight` below, and recency only through the recency boost
+  below. In the 2026-09-23 benchmark archive they were constant or carried no
+  relevance information. With `rrf_graph_weight` set (unset by default,
+  issues 259 and 260), the graph path is a third ranked list: a candidate
+  the graph search returned ranks by hop count (first for one hop, second for
+  two, third for three) and gains `rrf_graph_weight / (rrf_k + rank)` before the
+  scale, through the same epistemic and node-type factors, and a candidate
+  only the graph returned scores above 0. Saved provenance records the rank
+  (`graph_rank`) and the weight, and receipts that set it are version 19. The query-specific weight shifts for current-state,
   episodic and relational questions do not apply. Non-neutral ranking
   multipliers are rejected before retrieval runs (HTTP 422), weighted ranking
   profiles are reported as inapplicable (`rank_fusion_scoring`), learning skips

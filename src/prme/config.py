@@ -954,6 +954,26 @@ class PRMEConfig(_ProjectSettings):
             "rule's DeepSeek answer runs are pending."
         ),
     )
+    enable_owner_group_links: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() links a claim that a user turn "
+            "states about we, us or our to the owner's entity (prism-monorepo "
+            "issues 259 and 260). The claim stays attached to the group the "
+            "turn names, because a we claim is not always true of one person "
+            "alone, so a graph walk from the owner's entity never reached it. "
+            "The extra link is a MENTIONS edge marked metadata.basis="
+            "group_member from the claim to the entity that carries the name a "
+            "user turn gave the owner (enable_owner_name_carry), under the "
+            "turn's own speaker when the caller named one. It is made after "
+            "the derivation commits, outside the derivation plan, only for a "
+            "user turn that is not first_person_owner, and never when no "
+            "user turn named the owner. Claim merging ignores it. It needs "
+            "enable_owner_name_carry, adds no model call, and memories "
+            "ingested earlier are not linked. Off by default: not yet gated "
+            "for the alpha channel."
+        ),
+    )
     enable_superseded_source_suppression: bool = Field(
         default=False,
         description=(

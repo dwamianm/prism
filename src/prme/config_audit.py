@@ -65,6 +65,12 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "scoring.rrf_recency_boost is set (current-state questions only)",
         lambda value: value is not None,
     ),
+    # ScoringWeights drops it unless fusion is 'rrf', so set means applied.
+    "scoring.rrf_graph_weight": (
+        "scoring.rrf_graph_weight",
+        "scoring.rrf_graph_weight is set",
+        lambda value: value is not None,
+    ),
     # Applied only to triggers scored by rank fusion, which a request's own
     # weights can select on a weighted engine.
     "packing.session_context_rank_fusion_score_decay": (
@@ -86,6 +92,12 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "packing",
         "packing.fold_repeated_text is true and packing.context_format is 'reader'",
         lambda packing: packing.fold_repeated_text and packing.context_format == "reader",
+    ),
+    # It keeps entities out of session expansion, so it needs expansion.
+    "packing.session_context_skip_entities": (
+        "packing",
+        "packing.session_context_skip_entities is true and packing.session_context_window > 0",
+        lambda packing: packing.session_context_skip_entities and packing.session_context_window > 0,
     ),
     "packing.graph_seed_words": (
         "packing.graph_seed_words",
@@ -216,6 +228,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
     "enable_owner_name_carry": (
         "enable_owner_name_carry",
         "enable_owner_name_carry is true",
+        bool,
+    ),
+    "enable_owner_group_links": (
+        "enable_owner_group_links",
+        "enable_owner_group_links is true",
         bool,
     ),
     "enable_superseded_source_suppression": (

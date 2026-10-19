@@ -1651,6 +1651,122 @@ uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/con
 - Not covered: receipts. A retrieval receipt written with these defaults names `graph_seed_words` and
   `folded_records_keep_rank`; releases before 0.16.0a3 ignore the two fields when they read it.
 
+### Graph fusion (prism-monorepo issues 259 and 260)
+
+Three options, all off by default, make the graph count in ranking. Measured on 2026-10-19 on `origin/main` at
+`c6477e36`, with `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6) replayed from the extraction caches, so no
+model call was made. The finding to fix came from the dev service (prme 0.16.0a3, the five structure options on,
+Haiku extraction, batched at 2,048 tokens): for "which cities will Alex and jordan visit in Japan?" the four-turn Japan
+chat gave 21 results and 13 graph candidates, and the cities note ranked 11th and the cities claim ("We chose Tokyo,
+Kyoto, Kanazawa, and Osaka.") 12th. Four causes: rank fusion ignores graph proximity, so the graph finds candidates
+and gives no score; the three notes tie at 0.6 times the introduction note's score through session context; entities
+take the places that inheritance gives them (five entities scored 0.5903, above both records); and the model wrote
+"We", so the claim hangs on the speaker's group and the owner's graph seeds never reach it.
+
+| Option | What it does |
+|---|---|
+| `enable_owner_group_links` | `ingest()` links a claim a user turn states about we, us or our to the owner's entity (`MENTIONS`, `metadata.basis` `group_member`), after the derivation commits. The subject stays the group. |
+| `packing.session_context_skip_entities` | An entity neither starts a session context expansion nor receives an inherited score. |
+| `scoring.rrf_graph_weight` | The graph path is a third rank fusion list, ranked by hop count (first, second, third), adding `weight / (rrf_k + rank)` before the scale. A saved `graph_rank` makes the score replayable. |
+
+**Dev replay.** `tests/test_graph_fusion.py` replays the saved extraction
+(`tests/fixtures/extraction/trip_dev_a3.json`, no model call) and embeds every text at the cosine the default
+fastembed model gave it (`trip_dev_a3_cosines.json`). With real embeddings on PostgreSQL it reproduces the dev table
+(note 10th or 11th, claim 12th; three notes tie, so the note moves with node IDs). Place of the cities claim, both
+spellings alike, with the graph weight at 0.25:
+
+| Options on | PostgreSQL | DuckDB |
+|---|---:|---:|
+| none | 12 | 2 |
+| graph weight | 14 | 3 |
+| group links | 12 | 2 |
+| skip entities | 6 | 2 |
+| graph weight, group links | 9 | 2 |
+| graph weight, skip entities | 10 | 3 |
+| group links, skip entities | 6 | 2 |
+| all three | 3 | 2 |
+
+Every option is needed for the top 3, and none is enough alone, because the claim needs a graph path (links), a score
+for it (weight) and no entities in the way (skip). All three put it 3rd at weights 0.1, 0.25, 0.5 and 1.0, and 6th at 0.05.
+DuckDB already ranks the claim 2nd without any option: Tantivy keeps "and", which the claim holds, and PostgreSQL's
+English text search drops it. That is an accident of the stop word and not a signal. The cities note is 5th to 8th
+with all three on, tied with two other notes.
+
+**Fast gate**, chat probe on the local caches, off against all three on (graph weight 0.25):
+
+| Measure | defects-v1 off | on | chat-v1 off | on |
+|---|---:|---:|---:|---:|
+| Answers ranked in the top 3 | 7/7 | 7/7 | 14/18 | 14/18 |
+| Answers ranked in the top 5 | 7/7 | 7/7 | 15/18 | 15/18 |
+| Answers in the context | 7/7 | 7/7 | 17/18 | 17/18 |
+| Every other measure of the report | | equal | | equal |
+
+Only one rank moved: "What news did Melanie share after the race?" 2 to 3. A first version of the graph list that
+used competition ranks (every neighbor of the owner shares rank 1 and the next hop count ranks after all of them)
+cost the answers: top 3 14 to 13 at weight 0.25 and to 12 at 0.5, top 5 15 to 14 at 0.5. A neighborhood of 40 claims
+set the gap to the next hop count, not the distance, so the list ranks by hop count (dense ranks). The corrections
+probe is identical with the options on (no measure differs; only record IDs and the label).
+
+**Fast cycle** (committed cache, DuckDB, judged exactly against `baseline-main.json`):
+
+| Run | Result |
+|---|---|
+| none on | pass, 133 unchanged |
+| group links | pass; edges per turn move (+0.056 `chat-v1`, +0.063 `corrections-v1`, +0.286 `defects-v1`), the extra links |
+| skip entities | pass, 133 unchanged |
+| graph weight 0.25 | **fail**: `chat-v1` answers in the top 3 14 to 12; "mel-news" and "overnight" 3 to 4, "cities" of `defects-v1` 2 to 3 |
+| all three, weight 0.25 | **fail**: the same two answers fall out of the top 3, and the edge counts move |
+| all three, weight 0.15 | **fail**: `chat-v1` top 3 14 to 13; "mel-news" 3 to 4 |
+| all three, weight 0.1 | **fail**: `chat-v1` top 3 14 to 13; "mel-news" 3 to 4 |
+| PostgreSQL store stage, off against all three | pass, 30 unchanged |
+
+The cause is in the scores. "mel-news": the answer is a claim with epistemic factor 0.90 at 0.8716, and the claim
+that passes it ("Big news: my sister Rachel had her baby last Thursday!", cosine rank 15) has factor 1.00 at 0.8688.
+Both are three hops from the owner, so both gain the same graph rank term, but the term goes through the epistemic and
+node-type factors like the rest of the score, so the factor 1.00 claim gains 0.012 more at weight 0.25 and ends 0.009
+ahead. "overnight": the answer is a note (node-type factor 0.87, three hops) 0.015 ahead of a claim (factor 1.00, one
+hop), and the term closes the gap. Both gaps are knife-edge ties, which is what a ranking change moves. The epistemic
+factor alone shifts "mel-news" by 0.048 times the weight against a gap of 0.003, so it flips above a weight of about
+0.06 (measured at 0.1, 0.15 and 0.25), while the replay needs more than 0.05 (6th at 0.05, 3rd at 0.1). A sliver of
+weights, resting on the ties of two fixtures, is not a setting to turn on, and I did not look for it.
+
+**Offline evidence gate**, off against all three on (`gate-compare`, 10 minutes per side): no row differs on either
+benchmark (LoCoMo all evidence packed 84.0% on both sides, 1,536 ties; LongMemEval-S 94.7%, 470 ties), and no
+question lost its candidates. As expected, the saved packs hold no extracted records, so it shows only that plain
+retrieval is untouched.
+
+**Mid tier** (all of LoCoMo and 12 LongMemEval-S questions through `ingest()`, warm replay of the cache, 0 live calls,
+the baseline is this tree with every option off; paired changes in points, 95% intervals by questions, wins and losses
+of questions on LoCoMo; LongMemEval-S, 12 questions, is unchanged in every run):
+
+| Options on | All evidence packed | Evidence recall | Evidence in top 25 | Projected accuracy |
+|---|---|---|---|---|
+| all three | -0.1 (-0.8 to +0.7) | +0.2 | **-2.4 (-3.3 to -1.5), 12 wins, 70 losses** | 0.0 |
+| graph weight | 0.0 (-0.7 to +0.7) | +0.2 | **-5.4 (-6.5 to -4.4), 0 wins, 120 losses** | +0.1 |
+| skip entities | +0.1 (-0.4 to +0.5) | 0.0 | **+2.1 (+1.5 to +2.8), 48 wins, 0 losses** | 0.0 |
+| group links | -0.1 (-0.3 to +0.1) | 0.0 | -0.3 (-0.6 to +0.0), 2 wins, 8 losses | 0.0 |
+
+The graph weight and the entity skip are retrieval options, so their runs replayed the baseline's packs (about 4
+minutes each); the group links changed what ingestion stores, so that run built its own packs (11 minutes), as did the
+run with all three (11 minutes 16 seconds against 11 minutes 19 seconds for the baseline). Evidence in top 25 is the
+share of annotated evidence among the first 25 results. The graph weight lowers it for 120 questions and raises it for
+none: records near the question's names move above records that match it. Skipping entities raises it for 48 questions
+and lowers it for none, which fits entities no longer taking places that the session decay gave them.
+
+**Result.** The target is not reached: the three options together put the cities claim 3rd on the replay, but the
+graph weight, which the replay needs, fails the fast cycle at every weight that fixes the replay (and the mid tier), and
+I stopped after two repair cycles (the competition-rank list, then the hop-count list with three weights). The graph
+weight stays off. The group links change no gated measure. The entity skip passes the alpha fast tiers on its own
+(defect probes 7/7, chat probe 14/18 and 15/18 as without it, fast cycle 133 measures unchanged, mid tier +2.1 points of
+evidence in the top 25 with 48 wins and no loss on LoCoMo) and is the one worth turning on; I left it off, as the
+task asked for options, and it needs its own pull request to flip.
+
+**Bounded alternative, not run.** With group links and entity skip on, the cities claim is 6th (note 4th or 5th), 0.015
+below the three tied notes that session context gives 0.6 times the introduction note's score. The existing
+`packing.session_context_rank_fusion_score_decay` at 0.5 puts the claim 3rd on the replay (0.455 against 0.391 for the
+notes) with no graph weight at all, and 0.45 does the same. That setting changes every question's neighbors, and the
+offline gate chose 0.6, so it needs all the tiers before anything flips; the replay is the only thing measured here.
+
 ### Fast cycle: store, ingest and retrieve in under a minute (prototype)
 
 The multi-day benchmarks cannot check every change. The fast cycle is a

@@ -1,0 +1,29 @@
+{
+ "description": "Cosine similarity of each text the replay of trip_dev_a3.json embeds with the question below, from the default fastembed model (BAAI/bge-small-en-v1.5) the dev service used. The lower-case spelling of the question gives the same values to three decimals. Texts: the four notes, the seven claims and the twelve entities of the run.",
+ "question": "which cities will Alex and Jordan visit in Japan?",
+ "cosines": {
+  "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.": 0.73,
+  "My partner Jordan and I are planning a trip to Japan in late March next year.": 0.671,
+  "Jordan": 0.668,
+  "Alex Rivera partner Jordan.": 0.668,
+  "Tokyo": 0.662,
+  "Japan": 0.623,
+  "We chose Tokyo, Kyoto, Kanazawa, and Osaka.": 0.584,
+  "Osaka": 0.581,
+  "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants.": 0.574,
+  "Alex Rivera": 0.568,
+  "Kyoto": 0.556,
+  "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.": 0.534,
+  "That is cherry blossom season. Which places are you thinking about?": 0.529,
+  "Jordan is allergic to shellfish, so I need an allergy card for restaurants.": 0.519,
+  "JR Pass": 0.489,
+  "I prefer trains to flights, so I want a JR Pass.": 0.489,
+  "The speaker wants JR Pass.": 0.47,
+  "Hiroshima": 0.456,
+  "Kanazawa": 0.449,
+  "shellfish": 0.401,
+  "We": 0.399,
+  "We dropped Hiroshima to save time.": 0.353,
+  "allergy card": 0.309
+ }
+}

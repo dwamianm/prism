@@ -28,7 +28,7 @@ from prme.types import RepresentationLevel
 DEFAULT_RRF_K = 60
 # Rank fusion terms that ScoringWeights() leaves unset and PRMEConfig sets by
 # default, recorded only in version 19 receipts (issue #168).
-RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break")
+RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break", "rrf_graph_weight")
 # Settings that only rank fusion reads; weighted scoring drops them.
 RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
 # Settings that only the weighted formula reads; rank fusion drops them.
@@ -271,6 +271,30 @@ class ScoringWeights(BaseModel):
             "ignores a supplied value with a warning."
         ),
     )
+    rrf_graph_weight: float | None = Field(
+        default=None,
+        gt=0,
+        le=4,
+        exclude_if=lambda value: value is None,
+        description=(
+            "[HYPOTHESIS] fusion='rrf' only; unset by default, PRMEConfig too. "
+            "Adds the graph path as a third ranked list (prism-monorepo issues "
+            "259 and 260). A candidate the graph search returned, a neighbor "
+            "of an entity the question names within graph_max_hops, ranks by "
+            "hop count: first for a neighbor one hop away, second for two, "
+            "third for three. Its fused score gains rrf_graph_weight / "
+            "(rrf_k + that rank) before the scale that gives first place on "
+            "the semantic and lexical lists 1.0, so a candidate first on all "
+            "three lists scores 1 + rrf_graph_weight / 2. With rrf_k=60 the "
+            "three ranks differ by about 1.6% each, so the list mostly "
+            "favors a candidate the graph found over one it did not, by the "
+            "same amount whatever the size of a seed's neighborhood. A "
+            "candidate the graph did not return gains nothing, and one only "
+            "the graph returned now scores above 0. Unset, rank fusion "
+            "ignores graph proximity. Weighted fusion ignores a supplied "
+            "value with a warning."
+        ),
+    )
     # Omitted when unset, so configurations, receipts and version ids that do
     # not use it keep the bytes they had before it existed (issue #83).
     recency_time: Literal["event_time"] | None = Field(
@@ -395,6 +419,8 @@ class ScoringWeights(BaseModel):
                 payload += f":recency={self.rrf_recency_boost}"
             if self.rrf_tie_break is not None:
                 payload += f":tie_break={self.rrf_tie_break}"
+            if self.rrf_graph_weight is not None:
+                payload += f":graph={self.rrf_graph_weight}"
         elif self.recency_time is not None:
             # Weighted configurations without it keep their version.
             payload += f":recency_time={self.recency_time}"
@@ -595,6 +621,27 @@ class PackingConfig(BaseModel):
             "candidate ranked on both channels, though still above any "
             "candidate found by one channel alone, which scores at most 0.5. "
             "[HYPOTHESIS]"
+        ),
+    )
+    # Omitted when off, so configurations and receipts that do not use it keep
+    # their bytes.
+    session_context_skip_entities: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "Keep entity records out of session context expansion "
+            "(prism-monorepo issues 259 and 260). An entity is a name, not a "
+            "turn: ingest() creates it with the turn that names it and gives "
+            "it that turn's session_id, so a window of adjacent records "
+            "holds the entities created beside a claim and each of them "
+            "takes the full session decay of the claim's score. A chat that "
+            "names five places then puts five entities, which never answer a "
+            "question, above its notes and claims. When True, an entity "
+            "neither triggers an expansion (session_context_top_k counts the "
+            "other records) nor receives an inherited score; the window "
+            "still counts its position in the session. Off, expansion treats "
+            "every record alike, as before. Needs session expansion "
+            "(session_context_window > 0). [HYPOTHESIS]"
         ),
     )
     # Omitted when unset, like the rank fusion session decay above, so

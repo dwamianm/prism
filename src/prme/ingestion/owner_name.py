@@ -44,13 +44,17 @@ def owner_name_marker(event_id: str, basis: Literal["speaker", "self_introductio
     return {"event_id": event_id, "basis": basis}
 
 
-async def carried_owner_name(graph_store: GraphStore, *, user_id: str, scope: Scope) -> str | None:
-    """The name of the owner's newest named entity, or None when no user turn gave one.
+async def carried_owner_entity(
+    graph_store: GraphStore, *, user_id: str, scope: Scope, name: str | None = None,
+) -> MemoryNode | None:
+    """The owner's newest named entity, or None when no user turn gave one.
 
     Reads the owner's entities in this scope page by page, as entity matching
-    does, and returns the content of the one marked most recently. Best effort:
-    a failure is logged and returns None, which leaves the turn's I as it was.
+    does, and returns the one marked most recently. With ``name``, only an
+    entity marked under that name counts, ignoring case. Best effort: a
+    failure is logged and returns None, which leaves the turn as it was.
     """
+    wanted = name.strip().casefold() if name else None
     newest: MemoryNode | None = None
     after_id: str | None = None
     try:
@@ -61,8 +65,8 @@ async def carried_owner_name(graph_store: GraphStore, *, user_id: str, scope: Sc
             for node in page:
                 marker = (node.metadata or {}).get(OWNER_NAME_KEY)
                 if marker and node.content.strip() and (
-                    newest is None or (node.created_at, str(node.id)) > (newest.created_at, str(newest.id))
-                ):
+                    wanted is None or node.content.strip().casefold() == wanted
+                ) and (newest is None or (node.created_at, str(node.id)) > (newest.created_at, str(newest.id))):
                     newest = node
             if len(page) < _PAGE:
                 break
@@ -70,4 +74,10 @@ async def carried_owner_name(graph_store: GraphStore, *, user_id: str, scope: Sc
     except Exception as exc:
         logger.warning("owner_name.lookup_failed", error_type=type(exc).__name__)
         return None
+    return newest
+
+
+async def carried_owner_name(graph_store: GraphStore, *, user_id: str, scope: Scope) -> str | None:
+    """The name of the owner's newest named entity, or None when no user turn gave one."""
+    newest = await carried_owner_entity(graph_store, user_id=user_id, scope=scope)
     return newest.content.strip() if newest is not None else None

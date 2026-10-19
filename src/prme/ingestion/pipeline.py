@@ -33,6 +33,7 @@ from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import claim_sentences, validate_grounding
+from prme.ingestion.group_links import FIRST_PERSON_PLURAL
 from prme.ingestion.owner_name import carried_owner_name, owner_name_marker
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
@@ -150,9 +151,6 @@ def _introduced_speaker(event: Event, result: ExtractionResult) -> str | None:
     )
 
 
-_FIRST_PERSON_PLURAL = frozenset({"we", "us", "our", "ours", "ourselves"})
-
-
 def _claim_statement(fact: ExtractedFact, speaker: str | None) -> str:
     """One sentence for a claim whose source sentences are another claim's text.
 
@@ -164,7 +162,7 @@ def _claim_statement(fact: ExtractedFact, speaker: str | None) -> str:
     def named(value: str, entity_type: str | None) -> str:
         if _speaker_reference(value, entity_type):
             return speaker or "the speaker"
-        if value.strip().casefold() in _FIRST_PERSON_PLURAL and unresolved_personal_reference(value, entity_type):
+        if value.strip().casefold() in FIRST_PERSON_PLURAL and unresolved_personal_reference(value, entity_type):
             return "the speaker's group"
         return value
 
@@ -269,6 +267,7 @@ class IngestionPipeline:
         link_mentions: bool = False,
         claim_fixes: bool = False,
         owner_name_carry: bool = False,
+        link_owner_groups: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -319,6 +318,9 @@ class IngestionPipeline:
         # A user turn that names nobody keeps the name an earlier user turn gave its I
         # (enable_owner_name_carry).
         self._owner_name_carry = owner_name_carry
+        # A claim a user turn states about we is also linked to the owner's entity
+        # (enable_owner_group_links).
+        self._link_owner_groups = link_owner_groups
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -1681,6 +1683,17 @@ class IngestionPipeline:
             await link_event_mentions(
                 str(plan.event_id), plan.nodes, user_id=plan.user_id, graph_store=self._graph_store,
                 event_store=self._event_store, with_note=True,
+                create_edge=(
+                    self._graph_writer or WriteQueueGraphWriter(self._graph_store, self._write_queue)
+                ).create_edge,
+            )
+        # A claim a user turn states about we gets one more link, to the owner's entity.
+        if self._link_owner_groups:
+            from prme.ingestion.group_links import link_group_claims
+
+            await link_group_claims(
+                str(plan.event_id), plan.nodes, user_id=plan.user_id, graph_store=self._graph_store,
+                event_store=self._event_store,
                 create_edge=(
                     self._graph_writer or WriteQueueGraphWriter(self._graph_store, self._write_queue)
                 ).create_edge,
