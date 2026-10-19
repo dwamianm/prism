@@ -1433,6 +1433,73 @@ Not met by this change:
 - Models and prompts differ between runs. Every number here is one replay of
   one recorded extraction, not an accuracy estimate.
 
+### Owner name carry (#258)
+
+`enable_owner_name_carry` keeps the owner's name on their later user turns: the
+`I` of a turn that names nobody binds to the person entity that an earlier user
+turn created under the owner's name (the introduction, or the caller's
+`speaker`), where `enable_ingest_claim_fixes` bound it for the introducing turn
+only. Measured on 2026-10-19 with the chat probe on `defects-v1` and `chat-v1`
+(`deepseek-v4.1-flash:cloud`, the cached extraction replayed, so all three sets
+read identical model output and no model call was made), on `main` at
+`e0251cc2` with `structure-ranking` (engine PR #306) merged in a throwaway tree.
+"Set" is `enable_ingest_claim_fixes`, `enable_mention_links`,
+`packing.graph_seed_words` and `packing.folded_records_keep_rank`; "carry" adds
+`enable_owner_name_carry`.
+
+| Measure | defects-v1 off | set | carry | chat-v1 off | set | carry |
+|---|---:|---:|---:|---:|---:|---:|
+| User claims attached to the named owner | 0 | 2 | 12 | 0 | 4 | 35 |
+| User claims attached to "I" or "We" | 17 | 15 | 5 | 39 | 35 | 3 |
+| Pronoun entities | 6 | 5 | 2 | 34 | 33 | 14 |
+| Entities with no link | 7 | 0 | 0 | 12 | 1 | 0 |
+| Key links linked / via pronoun / not linked / missing | 1/2/6/0 | 4/0/5/0 | 4/0/5/0 | 4/10/0/0 | 7/7/0/0 | 14/0/0/0 |
+| Answers in the context | 7/7 | 7/7 | 7/7 | 17/18 | 17/18 | 17/18 |
+| Answers ranked in the top 3 | 5/7 | 7/7 | 7/7 | 14/18 | 14/18 | 14/18 |
+| Answers ranked in the top 5 | 7/7 | 7/7 | 7/7 | 15/18 | 15/18 | 15/18 |
+| Active claims | 24 | 24 | 24 | 102 | 102 | 101 |
+
+The `chat-v1` claim that carry drops is a repeat the named subject now merges
+(#209). The corrections probe, which names the owner as the speaker of every
+turn, is unchanged with the option on (no measure and no context line differs
+from the set). Per-probe ranks of `chat-v1` against the set: "Who was Dana's
+manager at Northwind?" 1 to 3, "Where does Dana work now?" 8 to 7, the other 16
+unchanged; `defects-v1` unchanged.
+
+A first version wrote the carried name into the statements that give a duplicate
+sentence its own text ("Dana quit coffee."). That made every such statement
+match a question that names the owner, and `packing.folded_records_keep_rank`
+gives each claim the better score of its statements, so 35 claims outranked the
+answer and the top 3 fell from 14 to 10 of 18 and the top 5 from 15 to 13. The
+statements keep "the speaker" for a carried name, which restores the counts. Without
+`packing.folded_records_keep_rank` the option does not move the ranks: the top 3 and
+top 5 read 4 and 6 of 7 in `defects-v1` and go from 8 to 9 and stay 13 of 18 in
+`chat-v1`, and the other measures move as in the table.
+
+Fast cycle (`--stages store,ingest,store-session,store-extract,store-extract-session`,
+cache replay, DuckDB), the same three sets. Off against the committed baseline:
+pass, 168 measures unchanged. The set and carry against the committed baseline:
+pass, no gated measure failed. Carry against the set: 20 measures moved. 14 are
+better (`chat-v1` user claims on the named owner 4 to 36 and on "I" or "We" 36 to
+3, key links linked 7 to 14, pronoun entities 35 to 15, entities with no link 1 to
+0, repeated records in the contexts 36 to 18; `defects-v1` 2 to 11 and 13 to 4;
+nodes per turn), 3 are neutral moves (claims and edges per turn, key links linked
+only through a pronoun 7 to 0), 2 are watched ranks that got worse (`chat-v1`
+"old-manager" 1 to 3, and "dog" 19 to 20 in the `store-session` stage), and one
+is a gated failure that is not the option's: the mean reciprocal rank of the
+`store-session` stage, 0.559 to 0.559 (-0.000155). That stage stores with `store()` and never reaches ingestion, and two
+runs of it with identical settings differ the same way (-0.000594 on the
+`dog` question, 18 to 22) while a third matches the first, so it is not
+deterministic. It is not in the committed baseline. Follow-up: make the stage
+deterministic or ungate it.
+
+Limits. The name is remembered on an entity the user turn creates, so a person
+an earlier message already named is not marked and that owner keeps their own `I`
+(an assistant turn that said "Dana" before the owner introduced themselves, or a
+memory built before the option was on). An owner who returns to an earlier name
+(A, then B, then A) keeps B. A name is carried within one scope. The offline
+evidence gate was not run: the option changes neither retrieval nor `store()`.
+
 ### Fast cycle: store, ingest and retrieve in under a minute (prototype)
 
 The multi-day benchmarks cannot check every change. The fast cycle is a

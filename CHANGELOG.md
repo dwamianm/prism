@@ -32,6 +32,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   configuration dumps keep their bytes. It has not been through the
   default-change rule on the `ingest()` answer track. `BENCHMARKS.md` has the
   evidence ("Why the claim fixes lost rank").
+- Add `enable_owner_name_carry` (`PRME_ENABLE_OWNER_NAME_CARRY`), off by default
+  (part of prism-monorepo issue 258). A `user` turn is the memory's owner by
+  definition. `enable_ingest_claim_fixes` binds the `I` of the turn that
+  introduces them ("Hi, I am Alex Rivera") and `enable_speaker_references` binds
+  the `I` of a turn with a caller's `speaker`, for that turn only, so a later
+  turn that names nobody ("I prefer trains to flights") kept an `I` entity of
+  its own, one per message. With the option on, the person entity a user turn
+  creates under the owner's name carries `owner_name` metadata, written once
+  with the node (no node is changed, so no plan that cites it goes stale), and
+  a later user turn of the same owner and scope that names nobody binds its `I`
+  to the newest such entity, through the same binding; its claims record
+  `"basis": "owner_name"`. It never applies to `participant`, `assistant`,
+  `tool` or `system` turns, a caller's `speaker` or `first_person_owner` on the
+  turn wins, a later name replaces an earlier one for the turns after it
+  without rewriting earlier claims, and a name no user turn gave is never
+  invented. It needs `enable_speaker_references`, sends the model the same
+  request, makes no extra call, and a failed lookup leaves the old behavior.
+  It marks only an entity the turn creates, so a person an earlier message
+  already named is not marked. A statement written for a duplicate sentence
+  keeps "the speaker" instead of the carried name: with the name in every
+  statement, `packing.folded_records_keep_rank` lifts all of them for any
+  question that names the owner, and the chat probe's top-3 answers fell from
+  14 to 10 of 18. Chat probe, replaying the cached extraction of
+  `deepseek-v4.1-flash:cloud` with `enable_ingest_claim_fixes`,
+  `enable_mention_links`, `packing.graph_seed_words` and
+  `packing.folded_records_keep_rank` on, and the option off then on:
+  `defects-v1` user claims on the named owner against `I` or `We` go from 2
+  against 15 to 12 against 5, `chat-v1` from 4 against 35 to 35 against 3,
+  `chat-v1` key links linked from 7 to 14 of 14 and entities with no link from
+  1 to 0; answers in the top 3 and top 5 do not change (7 and 7 of 7, 14 and 15
+  of 18). `BENCHMARKS.md`, "Owner name carry", has the table and the fast cycle
+  result.
 - Add the `store-contextual` stage to the fast cycle (`BENCHMARKS.md`, "Fast
   cycle: situating sentences at store time"; part of prism-monorepo issue
   260). It stores the 75 memories with a one-sentence situating context

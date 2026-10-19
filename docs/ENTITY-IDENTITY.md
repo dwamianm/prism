@@ -37,11 +37,33 @@ speaker but says who it is ("Hi, I am Alex Rivera", "I'm Alex", "My name is Alex
 Rivera", "Call me Alex") binds the same way when the extraction lists that name
 as a person; the claim's `speaker_reference` metadata then has
 `"basis": "self_introduction"`. That binding is local to the turn that names
-itself: later turns of the session still keep their own `I`, a caller's `speaker`
+itself, unless `enable_owner_name_carry` (below) is on: later turns of the
+session still keep their own `I`, a caller's `speaker`
 or `first_person_owner` wins, and a possessive ("I am Jordan's partner"), a name
 the extraction did not list as a person, and a turn that introduces two
 different people bind nothing. The option has not been through the default-change
 rule, so turning it on by default needs that rule on the `ingest()` track.
+
+With `enable_owner_name_carry` (default `false`; it needs
+`enable_speaker_references`), the name outlives the turn that gave it. A `user`
+turn is the memory's owner by definition, so the person entity that a user turn
+creates under the owner's name (the caller's `speaker`, or the introduction above)
+carries `owner_name` metadata, written once with the node. A later user turn of
+the same owner and scope that names nobody ("I prefer trains to flights") binds its
+`I`, `me` and `my` to the newest such entity, so the person is linked to all of
+their claims and no `I` entity is made for the message; the claim's
+`speaker_reference` metadata then has `"basis": "owner_name"`. It never applies to
+`participant`, `assistant`, `tool` or `system` turns; a caller's `speaker` or
+`first_person_owner` on the turn wins; a later name replaces an earlier one for the
+turns after it and earlier claims keep theirs; and a name no user turn gave is never
+invented. The extraction request, the number of model calls and the claim wording
+are unchanged: a statement written for a duplicate sentence still says "the
+speaker", because a name in every such statement makes a question that names the
+owner match all of them. Only an entity that the turn creates is marked, so a person
+an earlier message already named is not, and an owner who goes back to an
+earlier name (A, then B, then A again) keeps B, because A's entity is not marked again. A failed lookup leaves the old
+behavior. The owner's entity lives in one scope, so a name given in one scope is
+not carried to another.
 
 `ingest(first_person_owner=True)` provides a separate per-message declaration
 for user/human sources with no named speaker. Under fresh v14 plans, singular
