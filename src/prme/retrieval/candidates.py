@@ -11,15 +11,17 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from prme.retrieval.config import DEFAULT_PACKING_CONFIG, PackingConfig
 from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 if TYPE_CHECKING:
+    from prme.models.edges import MemoryEdge
     from prme.models.nodes import MemoryNode
     from prme.storage.graph_store import GraphStore
     from prme.storage.lexical_index import LexicalIndex
@@ -152,6 +154,69 @@ async def _find_seed_entities(
     return list(seeds.values())
 
 
+def _is_owner_entity(node: MemoryNode) -> bool:
+    """An entity a user turn named as the memory's owner, or the owner reference."""
+    from prme.ingestion.owner_name import OWNER_NAME_KEY
+
+    metadata = node.metadata or {}
+    return node.node_type == NodeType.ENTITY and (
+        bool(metadata.get(OWNER_NAME_KEY)) or metadata.get("identity_status") == "owner_reference"
+    )
+
+
+def _unverified_alias(edge: MemoryEdge) -> bool:
+    """An alias proposal no one accepted, which the neighborhood search does not traverse either."""
+    metadata = edge.metadata or {}
+    verified = metadata.get("identity_verified")
+    return (edge.edge_type == EdgeType.RELATES_TO and metadata.get("relation") == "alias"
+            and (verified is False or verified == "false"))
+
+
+async def _seed_reach(
+    graph_store: GraphStore,
+    seeds: list[MemoryNode],
+    nodes: dict[str, MemoryNode],
+    max_hops: int,
+) -> dict[str, tuple[int, int, int]]:
+    """How many seeds reach each node, their total hop count and the fewest hops (``rrf_graph_seed_count``).
+
+    A seed reaches a node within ``max_hops`` along links that never pass
+    through an owner entity: the owner's entity can be reached, and can be a
+    seed, but a walk does not continue through it, because nearly every claim
+    of the owner is one hop from it and would otherwise be near every other
+    seed too. ``nodes`` are the records the graph search returned, which hold
+    every node within ``max_hops`` of a seed that the search's filters admit,
+    so the walk stays among them and the seeds. One query reads their links.
+    """
+    known = {**nodes, **{str(seed.id): seed for seed in seeds}}
+    adjacency: dict[str, set[str]] = defaultdict(set)
+    for edge in await graph_store.get_edges(node_ids=list(known)):
+        source, target = str(edge.source_id), str(edge.target_id)
+        if source != target and source in known and target in known and not _unverified_alias(edge):
+            adjacency[source].add(target)
+            adjacency[target].add(source)
+    owners = {node_id for node_id, node in known.items() if _is_owner_entity(node)}
+    hops: dict[str, dict[str, int]] = defaultdict(dict)
+    for seed in seeds:
+        seed_id = str(seed.id)
+        seen, frontier = {seed_id}, [seed_id]
+        for depth in range(1, max_hops + 1):
+            reached = []
+            for node_id in frontier:
+                if node_id in owners and node_id != seed_id:
+                    continue
+                for other in adjacency[node_id]:
+                    if other not in seen:
+                        seen.add(other)
+                        reached.append(other)
+                        hops[other][seed_id] = depth
+            frontier = reached
+    return {
+        node_id: (len(by_seed), sum(by_seed.values()), min(by_seed.values()))
+        for node_id, by_seed in hops.items()
+    }
+
+
 async def _generate_graph_candidates(
     analysis: QueryAnalysis,
     graph_store: GraphStore,
@@ -161,6 +226,7 @@ async def _generate_graph_candidates(
     scope: list[Scope] | None = None,
     time_from: datetime | None = None,
     time_to: datetime | None = None,
+    seed_reach: bool = False,
 ) -> list[dict]:
     """Generate candidates from graph neighborhood traversal.
 
@@ -173,7 +239,10 @@ async def _generate_graph_candidates(
     Scope and temporal filters are forwarded to query_nodes() for seed
     discovery and used for post-filter on neighborhood results.
 
-    Returns list of dicts: {node: MemoryNode, graph_proximity: float}.
+    Returns list of dicts: {node: MemoryNode, graph_proximity: float}. With
+    ``seed_reach`` (``ScoringWeights.rrf_graph_seed_count``) each dict also
+    holds ``graph_seed_reach``, from ``_seed_reach``, or None for a node no
+    seed reaches without passing through the owner's entity.
     """
     seed_nodes = await _find_seed_entities(
         analysis, graph_store, user_id, scope, config.graph_seed_words,
@@ -237,7 +306,12 @@ async def _generate_graph_candidates(
     candidates.sort(
         key=lambda c: (-c["node"].confidence, -c["node"].created_at.timestamp()),
     )
-    return candidates[: config.graph_max_candidates]
+    candidates = candidates[: config.graph_max_candidates]
+    if seed_reach:
+        reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops)
+        for candidate in candidates:
+            candidate["graph_seed_reach"] = reach.get(str(candidate["node"].id))
+    return candidates
 
 
 async def _generate_vector_candidates(
@@ -389,6 +463,7 @@ def merge_candidates(
                 "semantic_score": 0.0,
                 "lexical_score": 0.0,
                 "graph_proximity": 0.0,
+                "graph_seed_reach": None,
             }
         elif node is not None and candidates[node_id]["node"] is None:
             candidates[node_id]["node"] = node
@@ -403,6 +478,8 @@ def merge_candidates(
         entry["graph_proximity"] = max(
             entry["graph_proximity"], cand["graph_proximity"]
         )
+        if cand.get("graph_seed_reach") is not None:
+            entry["graph_seed_reach"] = cand["graph_seed_reach"]
 
     # Vector candidates (need resolution from resolved_nodes).
     for cand in vector_cands:
@@ -458,6 +535,7 @@ def merge_candidates(
                 semantic_score=data["semantic_score"],
                 lexical_score=data["lexical_score"],
                 graph_proximity=data["graph_proximity"],
+                graph_seed_reach=data["graph_seed_reach"],
             )
         )
 
@@ -488,6 +566,7 @@ async def generate_candidates(
     include_graph: bool = True,
     include_pinned: bool = True,
     diagnostics: CandidateDiagnostics | None = None,
+    graph_seed_reach: bool = False,
 ) -> tuple[list[RetrievalCandidate], dict[str, int]]:
     """Generate and merge candidates from all four backends in parallel.
 
@@ -513,6 +592,8 @@ async def generate_candidates(
         include_pinned: Run the pinned/active-task backend. Disabled for
             cheap secondary passes (e.g. cross-scope hints).
         diagnostics: Optional per-call status output; never stores exception messages.
+        graph_seed_reach: Measure how many seeds reach each graph candidate
+            (``ScoringWeights.rrf_graph_seed_count``). One more graph query.
 
     Returns:
         Tuple of (merged_candidates, candidate_counts_per_backend).
@@ -524,7 +605,7 @@ async def generate_candidates(
     results = await asyncio.gather(
         _generate_graph_candidates(
             analysis, graph_store, user_id, config,
-            scope=scope, time_from=time_from, time_to=time_to,
+            scope=scope, time_from=time_from, time_to=time_to, seed_reach=graph_seed_reach,
         ) if include_graph else _empty_graph_candidates(),
         _generate_vector_candidates(
             analysis, vector_index, user_id, config,

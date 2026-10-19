@@ -174,6 +174,22 @@ and it has not been through the full benchmark. The stable release stays at
   wins, no loss), so it is turned on below. With the options off,
   results, contexts, receipts and configuration dumps keep their bytes.
   `BENCHMARKS.md` ("Graph fusion") has the measurements.
+- Add `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), off
+  by default (prism-monorepo issue 276): a graph list for rank fusion that tells
+  records apart. A record joins only when two or more of the question's seeds
+  reach it within `graph_max_hops`, one of them by a direct link, along links
+  that never pass through the owner's entity, so the owner's own claims no
+  longer rise together; the list ranks more seeds first, then fewer total hops,
+  and its weight is `rrf_graph_weight`, 0.5 when unset. A session context
+  neighbor inherits its trigger's score without that graph term. On the
+  `defects-v1` chat probe pack with the prism-monorepo#275 links added by hand,
+  it puts "We chose Tokyo, Kyoto, Kanazawa, and Osaka." 4th for "which cities
+  will alex visit in japan?" (10th without it), but every weight that does so
+  (0.31 and up) moves one defect probe answer out of the top 3 and fails the
+  fast cycle, so it stays off. At 0.25 it passes the fast tiers and leaves the
+  claim 7th. With the option off, results, contexts, receipts and configuration
+  dumps keep their bytes. `BENCHMARKS.md` ("Graph seed count") has the
+  measurements.
 - Add a scheduled full benchmark on the Mac mini (prism-monorepo issue 272). A
   LaunchAgent runs `scripts/full-benchmark/weekly-run.sh` on Monday and Thursday at
   00:30 local time: it builds LoCoMo and LongMemEval-S with the defaults, runs the

@@ -180,7 +180,8 @@ memories ingested before the option was on keep the links they have. A walk
 expands each node once per depth, not once per path, so hub entities do not
 multiply the work. Under rank fusion a candidate found only through the graph
 still scores 0 (Section 7.2), so these options add candidates and
-weighted-score evidence, not a fused channel, unless `rrf_graph_weight` is set.
+weighted-score evidence, not a fused channel, unless `rrf_graph_weight` or
+`rrf_graph_seed_count` is set.
 
 ### 4.2 Vector Similarity Search
 
@@ -595,7 +596,16 @@ score(obj) =
   two, third for three) and gains `rrf_graph_weight / (rrf_k + rank)` before the
   scale, through the same epistemic and node-type factors, and a candidate
   only the graph returned scores above 0. Saved provenance records the rank
-  (`graph_rank`) and the weight, and receipts that set it are version 19. The query-specific weight shifts for current-state,
+  (`graph_rank`) and the weight, and receipts that set it are version 19.
+  With `rrf_graph_seed_count` (off by default, prism-monorepo issue 276) the
+  list instead holds a record that two or more of the question's seeds reach
+  within `graph_max_hops`, one of them by a direct link, along links that never
+  pass through the owner's entity (an entity a user turn named as the owner, or
+  the owner reference); an entity record never joins. It ranks more seeds
+  first, then the smaller total hop count (dense ranks), and its weight is
+  `rrf_graph_weight`, 0.5 when unset. A session context neighbor inherits its
+  trigger's score without that graph term, and its saved provenance drops the
+  trigger's `graph_rank` so it replays. The query-specific weight shifts for current-state,
   episodic and relational questions do not apply. Non-neutral ranking
   multipliers are rejected before retrieval runs (HTTP 422), weighted ranking
   profiles are reported as inapplicable (`rank_fusion_scoring`), learning skips

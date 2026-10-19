@@ -26,6 +26,7 @@ EXPECTED_HYPOTHESES = {
     "scoring.rrf_k",
     "scoring.rrf_recency_boost",
     "scoring.rrf_graph_weight",
+    "scoring.rrf_graph_seed_count",
     "packing.session_context_rank_fusion_score_decay",
     "packing.session_context_packing",
     "packing.session_context_skip_entities",

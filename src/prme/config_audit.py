@@ -71,6 +71,12 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "scoring.rrf_graph_weight is set",
         lambda value: value is not None,
     ),
+    # Dropped unless fusion is 'rrf', and on it always has a graph weight.
+    "scoring.rrf_graph_seed_count": (
+        "scoring.rrf_graph_seed_count",
+        "scoring.rrf_graph_seed_count is on",
+        lambda value: value is True,
+    ),
     # Applied only to triggers scored by rank fusion, which a request's own
     # weights can select on a weighted engine.
     "packing.session_context_rank_fusion_score_decay": (

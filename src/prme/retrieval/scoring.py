@@ -44,7 +44,7 @@ from prme.retrieval.models import (
     ScoreProvenance,
     ScoreTrace,
 )
-from prme.types import DECAY_LAMBDAS, EPISTEMIC_WEIGHTS, DecayProfile, EpistemicType, LifecycleState, QueryIntent
+from prme.types import DECAY_LAMBDAS, EPISTEMIC_WEIGHTS, DecayProfile, EpistemicType, LifecycleState, NodeType, QueryIntent
 
 
 # --- Temporal affinity patterns (compiled once, reused) ---
@@ -584,6 +584,27 @@ def _dense_ranks(scores: list[float | None]) -> list[int | None]:
     return [None if score is None else place[score] for score in scores]
 
 
+def _seed_count_ranks(candidates: list[RetrievalCandidate]) -> list[int | None]:
+    """The graph list of ``rrf_graph_seed_count``: dense ranks, more seeds first, then fewer total hops.
+
+    A candidate joins only when two or more of the question's seeds reach it
+    without passing through the owner's entity, and one of them links to it
+    directly (``graph_seed_reach``). A record near one name, or near the owner
+    alone, gains nothing, and neither does one that only sits between names it
+    is not about. An entity, whose text is only its name, never joins.
+    """
+    keys = [
+        (reach[0], -reach[1])
+        if (reach := candidate.graph_seed_reach) is not None and reach[0] >= 2 and reach[2] == 1
+        and candidate.node.node_type != NodeType.ENTITY else None
+        for candidate in candidates
+    ]
+    place = {key: rank for rank, key in enumerate(
+        sorted({key for key in keys if key is not None}, reverse=True), start=1,
+    )}
+    return [None if key is None else place[key] for key in keys]
+
+
 def _pool_relative(values: list[float], ranked: list[bool]) -> list[float]:
     """Divide by the largest value among ranked candidates, capped at 1.0.
 
@@ -633,6 +654,8 @@ def _rank_fused_scores(
     value. Salience and confidence are not used, and graph proximity is used
     only through ``rrf_graph_weight``: with it, the graph path is a third
     ranked list, ordered by proximity, that adds its weighted reciprocal rank.
+    With ``rrf_graph_seed_count`` that list holds only records two or more of
+    the question's seeds reach, ordered by how many (``_seed_count_ranks``).
 
     On a current-state question, ``rrf_recency_boost`` adds the weighted
     formula's current-state recency, measured from the newest stated time in
@@ -654,7 +677,9 @@ def _rank_fused_scores(
     semantic_ranks = _competition_ranks(semantic)
     lexical_ranks = _competition_ranks(lexical)
     graph_ranks: list[int | None] = [None] * len(candidates)
-    if weights.rrf_graph_weight is not None:
+    if weights.rrf_graph_weight is not None and weights.rrf_graph_seed_count:
+        graph_ranks = _seed_count_ranks(candidates)
+    elif weights.rrf_graph_weight is not None:
         graph = [
             candidate.graph_proximity if "GRAPH" in candidate.paths or candidate.graph_proximity > 0 else None
             for candidate in candidates

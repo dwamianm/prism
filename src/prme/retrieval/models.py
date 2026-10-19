@@ -184,7 +184,10 @@ class RankFusion(BaseModel):
     ``ScoringWeights.rrf_tie_break`` is set. ``graph_rank`` is the candidate's
     place among the graph search's results by hop count (1 for one hop, 2 for
     two, 3 for three); it is present only for such a candidate, and only when
-    ``ScoringWeights.rrf_graph_weight`` is set.
+    ``ScoringWeights.rrf_graph_weight`` is set. With
+    ``ScoringWeights.rrf_graph_seed_count`` it is the candidate's place by how
+    many of the question's seeds reach it, then by their total hop count. The
+    score replays from the saved rank either way.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -376,6 +379,11 @@ class RetrievalCandidate(BaseModel):
     # relevance among the memories that added this candidate as session,
     # episode or evidence context, whether or not their score replaced its own.
     context_relevance: float = Field(default=0.0, ge=0, allow_inf_nan=False, exclude=True)
+    # Working state for ScoringWeights.rrf_graph_seed_count, never serialized:
+    # how many of the question's graph seeds reach this candidate without
+    # passing through the owner's entity, the total of their hop counts and
+    # the fewest. None when the graph search did not measure it.
+    graph_seed_reach: tuple[int, int, int] | None = Field(default=None, exclude=True)
     # Set only with PackingConfig.session_context_packing and omitted
     # otherwise, so results and bundles keep their bytes. Serialized so that a
     # saved candidate list packs the same way again.

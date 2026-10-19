@@ -553,6 +553,7 @@ class RetrievalPipeline:
             time_to=effective_time_to,
             config=candidate_config,
             diagnostics=candidate_diagnostics,
+            graph_seed_reach=effective_weights.fusion == "rrf" and effective_weights.rrf_graph_seed_count,
         )
 
         aggregation_candidate_limit_paths: list[str] = []
