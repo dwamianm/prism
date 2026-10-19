@@ -277,7 +277,8 @@ async def _retrieve(base, user, *, fold: bool) -> tuple[str, RetrievalReceipt]:
 
 async def test_ingest_and_retrieve_show_the_sentence_once(config, user):
     context, receipt = await _retrieve(config, user, fold=False)
-    assert context.count(SENTENCE) == 4
+    # The note and the first claim; the other claims of the sentence have text of their own.
+    assert context.count(SENTENCE) == 2
     assert receipt.schema_version == 19 and FIELD not in json.loads(receipt.model_dump_json())["packing"]
     context, receipt = await _retrieve(config, user + "-folded", fold=True)
     assert context.count(SENTENCE) == 1

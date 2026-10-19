@@ -159,7 +159,8 @@ async def test_on_the_speakers_claims_attach_to_their_entity(config, user):
     assert record.grounding_policy == "speech_act_v14"
     assert found == [
         ("Dana", "lives_in", "Denver", HOME_QUOTE),
-        ("Dana", "partner_of", "Sam", HOME_QUOTE),
+        # A second claim of the same sentences gets a text of its own.
+        ("Dana", "partner_of", "Sam", "Dana partner of Sam."),
         # The speaker's own sentence is the claim's text, not the whole message.
         ("Dana", "works_at", "Brightpath", "Now I work at Brightpath."),
     ]

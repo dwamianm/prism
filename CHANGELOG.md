@@ -71,6 +71,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   people, an assistant turn, a `speaker` the caller gave, and
   `first_person_owner=True` bind nothing new. The binding covers that turn
   only: a later turn that names nobody keeps its own `I`.
+- With `enable_claim_sentence_text`, no two claims of one message share a text
+  (prism-monorepo issue 258). A claim whose sentences are already the text of an
+  earlier claim of the same message, such as the partner claim and the trip
+  claim of "My partner Jordan and I are planning a trip to Japan.", now has a
+  one-sentence statement of its own, "Alex Rivera partner Jordan.", built from
+  its subject, predicate and object (the speaker's name, "the speaker" or "the
+  speaker's group" for a first-person reference, "It is not true that ..." for a
+  denial, the condition in parentheses) and records `claim_statement_v1` as its
+  grounding method. The first claim keeps the source sentences, the paragraph
+  stays every claim's `evidence_quote`, and with the setting off nothing
+  changes. The statement is not source text, so the packed context shows it as
+  its own line instead of folding it into the message. Repeated text across
+  messages is unchanged.
 - PostgreSQL lexical search no longer requires every term of the query
   (prism-monorepo issue 254). A question written as a sentence, such as "what
   coding language is alex learning?", shares only some words with the memory

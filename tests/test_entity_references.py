@@ -76,7 +76,8 @@ async def test_custom_provider_unresolved_facts_are_preserved_without_guessing(c
     async with MemoryEngine.open(config) as engine:
         engine._pipeline._extraction_provider.extract = AsyncMock(return_value=ExtractionResult.model_validate(payload))
         event_id = await engine.ingest("Jordan lives in Jordan.", user_id=user, wait_for_extraction=True)
-        fact = next(n for n in await engine.get_event_nodes(event_id, user_id=user) if n.node_type == NodeType.FACT)
+        fact = next(n for n in await engine.get_event_nodes(event_id, user_id=user)
+                    if n.node_type == NodeType.FACT and n.metadata["predicate"] == "lives_in")
         assert fact.content == "Jordan lives in Jordan."
         assert fact.metadata["subject_link_status"] == ("missing" if missing else "ambiguous")
         assert await engine._graph_store.get_edges(target_id=str(fact.id)) == []

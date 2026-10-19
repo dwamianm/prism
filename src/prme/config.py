@@ -763,11 +763,15 @@ class PRMEConfig(_ProjectSettings):
             "paragraph so a qualifier cannot be lost, which gives every claim "
             "of a one-paragraph chat message that message as its text. The "
             "paragraph stays the claim's evidence_quote, and a text that fact "
-            "text resolution accepts takes precedence. Default True since it "
-            "passed the default-change rule with enable_speaker_references "
-            "and packing.fold_repeated_text. A qualifier elsewhere in the "
-            "paragraph is no longer in the text, though it stays in the "
-            "evidence."
+            "text resolution accepts takes precedence. A claim whose sentences "
+            "are already an earlier claim's text from the same message gets a "
+            "one-sentence statement of its own built from its subject, "
+            "predicate and object, so no two claims of a message share a text. "
+            "Default True since it passed the default-change rule with "
+            "enable_speaker_references and packing.fold_repeated_text; the "
+            "statements came later and have not been through it. A qualifier "
+            "elsewhere in the paragraph is no longer in the text, though it "
+            "stays in the evidence."
         ),
     )
     enable_speaker_grounding: bool = Field(

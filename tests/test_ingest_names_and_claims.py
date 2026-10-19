@@ -1,4 +1,4 @@
-"""The repro of prism-monorepo issue 258: a speaker who introduces themselves.
+"""The repro of prism-monorepo issue 258: a speaker who introduces themselves, and each claim's own text.
 
 The batched response in ``fixtures/extraction/trip_batch_haiku45.json`` is what
 Claude Haiku 4.5 returned for the four turns of the issue's repro, recorded once.
@@ -13,7 +13,8 @@ from uuid import UUID
 import pytest
 
 from prme import MemoryEngine
-from prme.ingestion.schema import ExtractionResult
+from prme.ingestion.pipeline import _claim_statement
+from prme.ingestion.schema import ExtractedFact, ExtractionResult
 from prme.models.speaker import introduced_speaker
 from prme.types import EdgeType, NodeType
 from tests import test_durable_ingestion
@@ -26,6 +27,7 @@ T0 = datetime(2026, 10, 17, 10, 0, tzinfo=timezone.utc)
 CITIES = "We chose Tokyo, Kyoto, Kanazawa, and Osaka."
 DROPPED = "We dropped Hiroshima to save time."
 INTRODUCTION = "Hi, I am Alex Rivera."
+SENTENCE = "My partner Jordan and I are planning a trip to Japan in late March next year."
 
 
 def batched(base, **updates):
@@ -123,6 +125,31 @@ class TestWhoseIsI:
         assert subject.content == "I" and "speaker_reference" not in node.metadata
 
 
+class TestClaimStatement:
+    def fact(self, subject, predicate, obj, **fields):
+        return ExtractedFact(subject=subject, predicate=predicate, object=obj, **fields)
+
+    def test_a_named_speaker_stands_for_i(self):
+        assert _claim_statement(self.fact("I", "wants_to_use", "JR Pass"), "Alex Rivera") == (
+            "Alex Rivera wants to use JR Pass.")
+        assert _claim_statement(self.fact("Sam", "called", "me"), "Alex Rivera") == "Sam called Alex Rivera."
+
+    def test_without_a_name_the_speaker_or_their_group_does(self):
+        assert _claim_statement(self.fact("I", "wants_to_use", "JR Pass"), None) == "The speaker wants to use JR Pass."
+        assert _claim_statement(self.fact("We", "dropped", "Hiroshima"), None) == (
+            "The speaker's group dropped Hiroshima.")
+
+    def test_a_denial_and_a_condition_stay_in_the_text(self):
+        fact = self.fact("Dana", "would_take_offer_from", "Brightpath", polarity="negative",
+                         condition="If Brightpath makes an offer")
+        assert _claim_statement(fact, None) == (
+            "It is not true that Dana would take offer from Brightpath (If Brightpath makes an offer).")
+
+    def test_a_word_that_is_not_a_person_reference_is_kept(self):
+        assert _claim_statement(self.fact("IT", "supports", "us", subject_entity_type="technology"), None) == (
+            "IT supports the speaker's group.")
+
+
 class TestTheRepro:
     """The issue's four turns, with the model's recorded answer."""
 
@@ -165,3 +192,27 @@ class TestTheRepro:
         for node, subject in found:
             assert subject.content == "We" and subject.metadata["identity_status"] == "unresolved_reference"
             assert "speaker_reference" not in node.metadata
+
+    async def test_no_two_nodes_of_one_event_have_the_same_content(self, config, user):
+        async with MemoryEngine.open(batched(config)) as engine:
+            event_ids = await ingest_trip(engine, user)
+            nodes = await engine.query_nodes(user_id=user)
+        for event_id in event_ids:
+            contents = [node.content for node in nodes
+                        if UUID(event_id) in node.evidence_refs or str(node.id) == event_id]
+            assert len(contents) == len(set(contents)), contents
+        trip = {node.metadata["object"]: node for node in nodes
+                if UUID(event_ids[0]) in node.evidence_refs and node.node_type != NodeType.ENTITY}
+        # The first claim keeps its source sentence; the second has a statement of its own.
+        assert trip["Japan in late March next year"].content == SENTENCE
+        assert trip["Jordan"].content == "Alex Rivera partner Jordan."
+        assert trip["Jordan"].metadata["grounding_method"] == "claim_statement_v1"
+        assert trip["Jordan"].metadata["evidence_quote"] == trip["Japan in late March next year"].metadata[
+            "evidence_quote"]
+
+    async def test_with_claim_sentences_off_claims_keep_the_source_passage(self, config, user):
+        async with MemoryEngine.open(batched(config, enable_claim_sentence_text=False)) as engine:
+            event_ids = await ingest_trip(engine, user)
+            found = await claims(engine, user, event_ids[0])
+        assert {node.content for node, _ in found} == {f"{INTRODUCTION} {SENTENCE}"}
+        assert {node.metadata["grounding_method"] for node, _ in found} == {"source_passage_v1"}

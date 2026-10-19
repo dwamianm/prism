@@ -32,7 +32,7 @@ from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import claim_sentences, validate_grounding
-from prme.ingestion.schema import ExtractedEntity, ExtractionResult
+from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
 from prme.ingestion.supersedence import SupersedenceDetector, correctable_claim
 from prme.models.edges import MemoryEdge
@@ -146,6 +146,36 @@ def _introduced_speaker(event: Event, result: ExtractionResult) -> str | None:
     return introduced_speaker(
         event.content, [entity.name for entity in result.entities if entity.entity_type.strip().casefold() == "person"],
     )
+
+
+_FIRST_PERSON_PLURAL = frozenset({"we", "us", "our", "ours", "ourselves"})
+
+
+def _claim_statement(fact: ExtractedFact, speaker: str | None) -> str:
+    """One sentence for a claim whose source sentences are another claim's text.
+
+    The subject, predicate and object, where the speaker's name stands for a
+    first-person singular reference that binds to the speaker, and the speaker
+    (or the speaker's group, for we) for one that names nobody, because a
+    predicate such as wants_to_use reads after a name and not after I.
+    """
+    def named(value: str, entity_type: str | None) -> str:
+        if _speaker_reference(value, entity_type):
+            return speaker or "the speaker"
+        if value.strip().casefold() in _FIRST_PERSON_PLURAL and unresolved_personal_reference(value, entity_type):
+            return "the speaker's group"
+        return value
+
+    statement = " ".join((
+        named(fact.subject, fact.subject_entity_type),
+        fact.predicate.replace("_", " "),
+        named(fact.object, fact.object_entity_type),
+    ))
+    if fact.polarity == "negative":
+        statement = f"it is not true that {statement}"
+    if fact.condition:
+        statement = f"{statement} ({fact.condition})"
+    return f"{statement[:1].upper()}{statement[1:]}."
 
 
 def _entities_with_unresolved_references(result: ExtractionResult) -> list[ExtractedEntity]:
@@ -1163,9 +1193,10 @@ class IngestionPipeline:
         entity (enable_speaker_references); ``speaker_introduced`` says the turn
         itself gave the name ("I am Alex Rivera") rather than the caller.
         ``sentence_text`` stores a claim's own sentences as its text
-        (enable_claim_sentence_text), and with
-        ``grounding_speaker`` (enable_speaker_grounding) the speaker's own I, me
-        or my mentions them there as in grounding. Only current-policy
+        (enable_claim_sentence_text), and a claim whose sentences are already
+        another claim's text from this message gets a statement of its own.
+        With ``grounding_speaker`` (enable_speaker_grounding) the speaker's own
+        I, me or my mentions them there as in grounding. Only current-policy
         plans use these, so a saved extraction replanned under an older
         materialization policy keeps that policy's behavior.
         """
@@ -1285,6 +1316,7 @@ class IngestionPipeline:
         # --- Source-cited claims ---
         planned_claims: set[tuple] = set()
         planned_fact_ids: set[str] = set()
+        claim_texts: set[str] = set()
         for fact, from_relationship in claims:
             fact_scope = scope
 
@@ -1368,6 +1400,13 @@ class IngestionPipeline:
                 fact_content = fact.resolved_text
             elif sentences is not None:
                 fact_content = sentences
+            if sentence_text and resolution is None:
+                if fact_content in claim_texts:
+                    # Another claim of this message already has this text.
+                    fact_content = _claim_statement(fact, speaker)
+                    fact_metadata["grounding_method"] = "claim_statement_v1"
+                else:
+                    claim_texts.add(fact_content)
             if fact.scope:
                 fact_metadata["suggested_scope"] = fact.scope
             if fact.temporal_ref:
