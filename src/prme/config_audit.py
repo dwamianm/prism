@@ -87,6 +87,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "packing.fold_repeated_text is true and packing.context_format is 'reader'",
         lambda packing: packing.fold_repeated_text and packing.context_format == "reader",
     ),
+    "packing.folded_records_keep_rank": (
+        "packing.folded_records_keep_rank",
+        "packing.folded_records_keep_rank is true",
+        bool,
+    ),
     "packing.cross_scope_top_n": (
         "packing.cross_scope_top_n",
         "packing.cross_scope_top_n > 0",
@@ -145,6 +150,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
     "enable_qa_pairing": (
         "enable_qa_pairing",
         "enable_qa_pairing is true",
+        bool,
+    ),
+    "lexical_term_weights": (
+        "lexical_term_weights",
+        "lexical_term_weights is true",
         bool,
     ),
     "enable_windowed_extraction": (

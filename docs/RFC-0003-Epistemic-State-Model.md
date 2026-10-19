@@ -119,7 +119,9 @@ statement of its own instead, built from its subject, predicate and object
 first-person singular reference and "the speaker's group" for we, `It is not
 true that ...` for a denial and the condition in parentheses. It records
 `claim_statement_v1` as the grounding method, and the first claim keeps the
-source sentences. The same option lets a built-in provider's claim that writes
+source sentences. A statement outranks the claim that holds its sentence, so
+`packing.folded_records_keep_rank` folds it into that claim at retrieval
+(RFC-0005, 4.8). The same option lets a built-in provider's claim that writes
 `I` for a plural first-person statement ("We chose Tokyo") keep the claim: the
 subject, object or relationship endpoint becomes the turn's own `we`, `us`,
 `our`, `ours` or `ourselves` when the cited sentences use no singular form.

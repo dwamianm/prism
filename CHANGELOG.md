@@ -9,6 +9,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `packing.folded_records_keep_rank` (`PRME_PACKING__FOLDED_RECORDS_KEEP_RANK`),
+  off by default (prism-monorepo issues 258 and 259). With
+  `enable_ingest_claim_fixes` on, the answer to a question ranked worse than
+  with it off (the chat probe's answer in the top 3 fell from 14 of 18 to 8 of
+  18, the defect probes' from 5 of 7 to 4 of 7). The cause is the statement
+  that option builds for a claim whose sentences another claim already holds
+  ("Dana has pet Biscuit."): it is short and repeats the names and verbs of a
+  question, so it outranks the claim that holds the sentence, and 39 of the 56
+  records above the chat probe's answers were such statements. With the new
+  option on, `retrieve()` folds each statement into the claim of the same
+  evidence that holds its object: the claim takes the better of the two scores
+  through a replayable `claim_statement_fold` score adjustment that names the
+  statement, and the statement leaves the results with the exclusion reason
+  `claim_statement_folded`. In the reader context, the record that folds
+  earlier packed records (`fold_repeated_text`) also takes the place of the
+  earliest one, so folding no longer moves a claim's text down to its source
+  note's place. With all four options on, the defect probes rank the answer in
+  the top 3 for 7 of 7 questions and the chat probe for 14 of 18, as with them
+  all off, and the fast cycle passes its rules. With the option off, or for
+  memories without statements, nothing changes: results, contexts, receipts and
+  configuration dumps keep their bytes. It has not been through the
+  default-change rule on the `ingest()` answer track. `BENCHMARKS.md` has the
+  evidence ("Why the claim fixes lost rank").
+- Add the `store-contextual` stage to the fast cycle (`BENCHMARKS.md`, "Fast
+  cycle: situating sentences at store time"; part of prism-monorepo issue
+  260). It stores the 75 memories with a one-sentence situating context
+  written by a local model from the memory's session and passed as
+  `retrieval_content`, beside the plain store stage, on that fixture and on a
+  second fixture of 30 memories and 10 questions. The sentences are cached, so a
+  rerun calls no model. It is opt in (`--stages store,store-contextual`) and
+  changes nothing in the engine or the default run. It found no lift that meets
+  the conditions set for building the option, so the engine does not have one.
+
+## [0.16.0a2] - 2026-10-19
+
+This is an alpha. It passed CI and the fast gate and fast cycle, and it has not
+been through the full benchmark. The stable release stays at 0.15.0 until the
+full benchmark audit, so `pip install prme` still installs 0.15.0. Install the
+alpha with `pip install --pre prme` or `pip install prme==0.16.0a2`.
+
+### Added
+
+- Add the store-extract stages to the fast cycle (part of prism-monorepo issue
+  260; `BENCHMARKS.md`, "Store with extraction"), opt-in with `--stages`.
+  `store-extract` stores the store stage's 75 memories with `extract=True`
+  (extraction by `deepseek-v4.1-flash:cloud`, drained by hand so the requests do
+  not depend on the 30 second timer) and asks the same 17 questions;
+  `store-extract-session` does so with each memory's session as `session_id`;
+  `store-session` is the control with no extraction. They report the extraction
+  requests and tokens, the entities made, the graph candidates per question and
+  the repeated records in the contexts next to the store measures. The
+  extraction cache leaves a turn's wall-clock time out of its key so a stored
+  memory replays, rules gain per-stage live tolerances (`live_by_stage`), and the
+  committed baseline gains the `store-extract` stage (the committed cache
+  now holds 166 responses). Three live runs on `main`: extraction ranks the
+  answer first for 12 questions instead of 6 and lifts the reciprocal rank from
+  0.56 to 0.73, but ranks 12 answers in the top 3 instead of 14, pushes five
+  questions down, doubles the context tokens and costs 75 requests and 462,000
+  tokens (7 requests and 71,000 tokens with sessions). Nothing in the engine
+  changes.
 - Add `enable_superseded_source_suppression` (part of prism-monorepo issue
   270), off by default. `ingest()` keeps a message as a note beside the claims
   extracted from it, so retiring a claim (a correction, `supersede()`) left
@@ -23,15 +83,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   records the option only while it is on. The corrections probe gains two
   measures, "old-only lines in the context" and "old value shown before the
   new value".
-- Add the `store-contextual` stage to the fast cycle (`BENCHMARKS.md`, "Fast
-  cycle: situating sentences at store time"; part of prism-monorepo issue
-  260). It stores the 75 memories with a one-sentence situating context
-  written by a local model from the memory's session and passed as
-  `retrieval_content`, beside the plain store stage, on that fixture and on a
-  second fixture of 30 memories and 10 questions. The sentences are cached, so a
-  rerun calls no model. It is opt in (`--stages store,store-contextual`) and
-  changes nothing in the engine or the default run. It found no lift that meets
-  the conditions set for building the option, so the engine does not have one.
+- Add a mid-tier benchmark, `python -m benchmarks.mid_tier` (`run`, `compare`,
+  `select`, `check`). It builds packs for all of LoCoMo and a fixed,
+  stratified sample of 12 LongMemEval-S questions through `ingest()` with
+  `deepseek-v4.1-flash:cloud` on the local Ollama server, replays them
+  through the offline evidence gate and writes one report: all evidence
+  packed, evidence recall, evidence in the first 25 candidates and projected
+  accuracy, overall and by category, with 95% intervals (LoCoMo also by
+  conversation), and the calls, tokens, wall time and load average of each
+  stage. A cold run took 25 and 34 minutes, a warm one 11, and
+  `--reuse-build` gates an earlier run's packs for retrieval and packing
+  changes in about 3. `compare` pairs two reports question by question. It
+  makes no reader or judge call, so it measures evidence coverage, not
+  answers (BENCHMARKS.md, "Mid tier"). `extracted_packs build` gains
+  `--cache-dir` and `--in-flight` so builds under different labels share one
+  extraction cache and several build processes cap their live model calls.
+
+### Changed
+
+- Turn on `lexical_term_weights` by default (part of prism-monorepo issue 254),
+  on PostgreSQL only; DuckDB ignores it. It is on in the alpha channel on the
+  fast cycle and the offline evidence gate, by the owner's directive of
+  2026-10-19 (defaults flip on the fast gate and the full benchmark audits
+  later). The full benchmark audit and the default-change rule's DeepSeek
+  answer runs are pending. `PRME_LEXICAL_TERM_WEIGHTS=false` restores the
+  any-term word search of 0.16.0a1. Since that search (see Fixed under
+  0.16.0a1), a question that holds the owner's name and a few common words
+  lifts unrelated memories as much as the memory with the rare word: on the
+  fast cycle's 75 memory fixture the Rust question ranked 4th and the dog
+  question fell from 1st to 5th. A query word now weighs ln(N / df), where N is
+  the number of the owner's searched memories and df the number that hold the
+  word, and a memory is a candidate (with more than one query word) only when
+  the words it holds would be held together by chance by at most 0.2% of the
+  memories, and at least 2 memories. The owner's name or a common verb cannot
+  select candidates, and candidates rank by the weight of the words they hold.
+  A memory that holds every query word is still returned alone, and a one-word
+  query is unchanged. On PostgreSQL, the 75 memory fixture goes from 8 answers
+  ranked first and 13 in the top 3 to 11 and 15, the Rust question from 4th to
+  1st and the dog question from 5th to 1st, with no question ranked lower. The
+  28 questions of a second set, written before the first run, go from 22 and
+  25 to 24 and 25. With 2,000 or more memories the effect is within noise. The
+  search takes the same time within 0.2 ms at 5,000 memories, and the offline
+  evidence gate shows no change. The fast cycle also takes `--store-fixture`
+  and ships the second question set as
+  `benchmarks/fixtures/fast-cycle/store-heldout-v1.json`. `BENCHMARKS.md`,
+  "Lexical term weights", has the table.
+
+### Upgrade notes
+
+- One default changed since 0.16.0a1: `lexical_term_weights` is on, and it
+  affects PostgreSQL only (DuckDB ignores it). Word search weighs each query
+  word by how rare it is and keeps weak matches out of the candidates. On the
+  fast cycle's 75 memory fixture it moved the Rust question from 4th to 1st and
+  the dog question from 5th to 1st, with no question ranked lower, and the
+  offline evidence gate did not change. The effect is within noise from about
+  2,000 memories. The default-change rule's DeepSeek answer runs have not been
+  done. Set `PRME_LEXICAL_TERM_WEIGHTS=false` to get the word search of
+  0.16.0a1 back.
+- `enable_superseded_source_suppression` is new and off. `enable_ingest_claim_fixes`,
+  `enable_mention_links`, `packing.graph_seed_words`, `enable_store_extraction`
+  and `enable_extraction_corrections` stay off.
+- The new store-extract stages measured `store(extract=True)` on the fast
+  cycle's 75 memories: answers ranked first went from 6 to 12 and stale values
+  above the answer from 4 to 2, but answers in the top 3 went from 14 to 12,
+  five questions ranked lower, and the context used about twice the tokens. The
+  mid-tier benchmark (all of LoCoMo and 12 LongMemEval-S questions through
+  `ingest()`, evidence coverage only) runs in 25 to 35 minutes cold.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a1] - 2026-10-19
 
@@ -2235,7 +2356,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a1...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a2...HEAD
+[0.16.0a2]: https://github.com/dwamianm/prism/compare/v0.16.0a1...v0.16.0a2
 [0.16.0a1]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0a1
 [0.15.0]: https://github.com/dwamianm/prism/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/dwamianm/prism/compare/v0.14.1...v0.14.2

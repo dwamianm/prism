@@ -338,6 +338,26 @@ the three augmentation settings; version 12 also records the anchor policy.
 Versions 1–10 mean augmentation was disabled, while versions 1–11 mean the
 anchor policy was `all`.
 
+### 4.8 Claim statement folding
+
+**Implementation status (2026-10-19):** with `packing.folded_records_keep_rank`
+(off by default), Stage 5.5e folds each claim statement into the claim it
+restates. A statement (`grounding_method` `claim_statement_v1`, RFC-0003) is
+what `enable_ingest_claim_fixes` builds for a claim whose sentences another
+claim of the message already holds. It is short and repeats the names and verbs
+of a question, so it outranks that claim. The stage runs after session,
+episode and evidence expansion and before consumer filters and selection. For
+each statement it finds the claims of the same exact `evidence_refs` set that
+hold its stored `object` as whole words, ignoring case and spacing, preferring
+those that hold its `subject` too and then the best score. That claim takes the
+better score, with the statement's provenance and a `claim_statement_fold`
+adjustment of coefficient 1 that names the statement, and the statement leaves
+the results with the exclusion reason `claim_statement_folded`. A statement
+with no such claim stays, and notes and entities are never the claim. The
+option also makes the reader context's fold of repeated text (RFC-0006) keep
+the place of the earliest record it folds. No model is called. When the
+ranking changed, the receipt's ranking policy is `score_id`.
+
 ---
 
 ## 5. Stage 3: Candidate Merging
@@ -1139,6 +1159,25 @@ parser splits into several lexemes, such as a hyphenated word or a URL, counts
 as several terms. Tantivy on DuckDB also matches any term, but ranks by BM25
 alone: the common-term rule, the full-match rule and the matched-term tiers
 apply to PostgreSQL only.
+
+With `lexical_term_weights` (PostgreSQL only; on by default since 2026-10-19 in
+the alpha channel, and `false` restores the rules above) the common-term rule
+and the matched-term tiers are replaced by term weights from the owner's own
+memories. With N searched documents, a query term that df of them hold weighs
+ln(N / df), and a document's evidence is the total weight of the query terms it
+holds, which is ln(N / c) for c, the number of documents expected to hold those
+terms together by chance (the document frequencies multiplied, as if the terms
+were independent). When the query has more than one term, a document is a
+candidate only when c is at most 0.2% of N or 2 documents, whichever is more. A
+few words that many memories share therefore cannot make a hit, and a word that
+two memories hold always can. Hits rank by evidence and then by `ts_rank_cd`;
+the full-match rule and the single-term behavior are unchanged. Rank fusion
+reads only the membership and order of the lexical candidates, and a document
+that both searches return usually outscores one that only the vector search
+found, even at a low vector rank (in the dog question of the fast cycle, a
+memory at vector rank 36 and word rank 4 outscored the vector search's first
+result). Weak word matches are therefore kept out of the candidates instead of
+ranked low.
 
 ## Visual memory retrieval (2026-10-15)
 

@@ -4,10 +4,12 @@
 direction that is good, whether it gates, and how much a live run may differ
 (``live``, absolute and relative to the baseline value). The tolerance is exact
 (zero) when the run is deterministic: the store stage uses no model, and an
-ingest stage whose extraction came wholly from the cache repeats the model
-output of the baseline's, so any difference is the code's. An ingest stage
-that asked the model (a changed prompt or model, or an empty cache) differs
-from run to run, so it gets the rule's ``live`` tolerance.
+ingest or store-extract stage whose extraction came wholly from the cache
+repeats the model output of the baseline's, so any difference is the code's. A
+stage that asked the model (a changed prompt or model, or an empty cache)
+differs from run to run, so it gets the rule's ``live`` tolerance, or its
+``live_by_stage`` entry for the store-extract stages, whose spread is not the
+chats' spread.
 
 A measure passes when it is the same, better, or worse by no more than its
 tolerance. A gated measure worse than that fails the comparison. A watched
@@ -32,6 +34,11 @@ RULES_KIND = "prme-fast-cycle-rules"
 REPORT_KIND = "prme-fast-cycle-report"
 SCHEMA_VERSION = 1
 GROUPS = ("storage", "meaning", "results")
+# Stages that store the fixture's memories; their measures are scoped by the stage's name. The "-session"
+# stages store each memory under its session as session_id; store-session is the control for store-extract-session.
+# store-contextual stores each memory with a situating sentence as retrieval_content.
+STORE_STAGES = ("store", "store-session", "store-extract", "store-extract-session", "store-contextual")
+EXTRACT_STAGES = ("store-extract", "store-extract-session")
 VERDICT_ORDER = ("FAIL", "worse, accepted", "worse (watched)", "worse, within tolerance", "moved", "better")
 
 
@@ -66,11 +73,16 @@ def label_for(rules: dict, measure_id: str) -> str:
     return f"{rule_for(rules, measure_id)['label']}{': ' + qualifier if qualifier else ''} [{scope}]"
 
 
+def stage_of(scope: str) -> str:
+    """The stage a measure's scope belongs to: a store stage is its own scope, a chat is the ingest stage's."""
+    return scope if scope in STORE_STAGES else "ingest"
+
+
 def grouped(rules: dict, stages: dict) -> dict:
     """The stages' measures by group, keyed by measure ID."""
     groups: dict[str, dict] = {group: {} for group in GROUPS}
-    found = {f"{stage}/{name}": value for stage in ("store", "store-contextual")
-             for name, value in stages.get(stage, {}).get("measures", {}).items()}
+    found = {f"{stage}/{name}": value for stage in STORE_STAGES if stage in stages
+             for name, value in stages[stage].get("measures", {}).items()}
     for chat, measures in stages.get("ingest", {}).get("measures", {}).items():
         found.update({f"{chat}/{name}": value for name, value in measures.items()})
     for measure_id, value in found.items():
@@ -78,10 +90,10 @@ def grouped(rules: dict, stages: dict) -> dict:
     return groups
 
 
-def tolerance(rule: dict, baseline: float | None, *, live: bool) -> float:
+def tolerance(rule: dict, baseline: float | None, *, live: bool, stage: str = "ingest") -> float:
     if not live:
         return 0.0
-    allowed = rule.get("live", {})
+    allowed = rule.get("live_by_stage", {}).get(stage, rule.get("live", {}))
     return max(allowed.get("abs", 0), allowed.get("rel", 0) * abs(baseline or 0))
 
 
@@ -123,9 +135,9 @@ def _cannot_compare(baseline: dict, report: dict) -> list[str]:
     if reasons:
         return reasons
     base, new = baseline["stages"], report["stages"]
-    for stage in ("store", "store-contextual"):
+    for stage in STORE_STAGES:
         if stage in base and stage in new:
-            for key, what in (("fixture_sha256", f"{stage} fixture"), ("backend", f"{stage} backend")):
+            for key, what in (("fixture_sha256", "store fixture"), ("backend", "store backend")):
                 if base[stage][key] != new[stage][key]:
                     reasons.append(f"the {what} differs ({base[stage][key][:12]} against {new[stage][key][:12]})"
                                    if key.endswith("sha256") else
@@ -144,7 +156,10 @@ def compare(baseline: dict, report: dict, rules: dict, accept: frozenset[str] = 
     if reasons:
         return {"status": "not comparable", "reasons": reasons, "rows": [], "skipped": [], "unchanged": 0}
     base, new = baseline["measures"], report["measures"]
-    live = any(entry.get("ingest", {}).get("mode") == "live" for entry in (baseline["stages"], report["stages"]))
+    # A stage that asked the model differs from run to run; the store stage never does.
+    live_stages = {stage for entry in (baseline["stages"], report["stages"]) for stage, result in entry.items()
+                   if result.get("mode") == "live"}
+    live = bool(live_stages)
     rows, skipped, unchanged = [], [], 0
     for group in GROUPS:
         for measure_id in sorted(set(base[group]) | set(new[group])):
@@ -153,7 +168,8 @@ def compare(baseline: dict, report: dict, rules: dict, accept: frozenset[str] = 
                 continue
             rule = rule_for(rules, measure_id)
             scope, name, _ = split_id(measure_id)
-            allowed = tolerance(rule, base[group][measure_id], live=live and scope != "store")
+            allowed = tolerance(rule, base[group][measure_id], live=stage_of(scope) in live_stages,
+                                stage=stage_of(scope))
             verdict = judge(rule, base[group][measure_id], new[group][measure_id], allowed,
                             accepted=bool({measure_id, name} & accept))
             if verdict == "same":
@@ -179,7 +195,7 @@ def render(result: dict, baseline: dict, report: dict) -> str:
     if result["status"] == "not comparable":
         return "\n".join([*lines, "NOT COMPARABLE", *(f"- {reason}" for reason in result["reasons"])]) + "\n"
     missing = sorted(baseline["stages"].keys() ^ report["stages"].keys())
-    kind = "live (noise tolerances)" if result["live"] else "exact (no model call in the ingest stage, or none run)"
+    kind = "live (noise tolerances)" if result["live"] else "exact (no model call in the ingest or store-extract stages, or none run)"
     failed = result["failed"]
     lines += [f"{result['status']}: {len(failed)} measure(s) failed, {len(result['rows'])} moved, "
               f"{result['unchanged']} unchanged. Tolerance: {kind}."]
