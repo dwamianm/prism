@@ -1,0 +1,333 @@
+{
+ "note": "The four turns of the issue 258 repro as the hosted dev service ingested them on 2026-10-19 with prme 0.16.0a3 (all five structure options on, extraction by Claude Haiku 4.5 on Amazon Bedrock, one batched request for the four turns), read back with GET /v1/events/{id} and GET /v1/events/{id}/extraction. `records` are the per-turn results the service saved, after the engine's checks; `observed` is what the service then stored for the claims (GET /v1/nodes). Replayed without a model call by tests/test_owner_carry_batch.py.",
+ "model": "bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0",
+ "turns": [
+  {
+   "role": "user",
+   "content": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+   "timestamp": "2026-10-19T17:01:46.247416Z"
+  },
+  {
+   "role": "assistant",
+   "content": "That is cherry blossom season. Which places are you thinking about?",
+   "timestamp": "2026-10-19T17:01:46.555194Z"
+  },
+  {
+   "role": "user",
+   "content": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.",
+   "timestamp": "2026-10-19T17:01:46.806781Z"
+  },
+  {
+   "role": "user",
+   "content": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+   "timestamp": "2026-10-19T17:01:47.226796Z"
+  }
+ ],
+ "records": [
+  {
+   "facts": [
+    {
+     "scope": "project",
+     "object": "Japan in late March next year",
+     "subject": "I",
+     "polarity": "positive",
+     "quantity": null,
+     "condition": null,
+     "fact_type": "fact",
+     "predicate": "planning_trip_to",
+     "confidence": 0.95,
+     "temporal_ref": "late March next year",
+     "epistemic_type": "observed",
+     "evidence_quote": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+     "replaces_object": null,
+     "temporal_intent": "assertion",
+     "object_entity_type": null,
+     "subject_entity_type": null
+    }
+   ],
+   "summary": null,
+   "entities": [
+    {
+     "name": "Alex Rivera",
+     "scope": "personal",
+     "description": null,
+     "entity_type": "person"
+    },
+    {
+     "name": "Jordan",
+     "scope": "personal",
+     "description": null,
+     "entity_type": "person"
+    },
+    {
+     "name": "Japan",
+     "scope": "project",
+     "description": null,
+     "entity_type": "location"
+    }
+   ],
+   "relationships": [
+    {
+     "polarity": "positive",
+     "condition": null,
+     "confidence": 0.95,
+     "source_entity": "I",
+     "target_entity": "Jordan",
+     "epistemic_type": "observed",
+     "evidence_quote": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+     "relationship_type": "partner",
+     "source_entity_type": null,
+     "target_entity_type": null
+    }
+   ]
+  },
+  {
+   "facts": [],
+   "summary": null,
+   "entities": [],
+   "relationships": []
+  },
+  {
+   "facts": [
+    {
+     "scope": "project",
+     "object": "Tokyo, Kyoto, Kanazawa, and Osaka",
+     "subject": "We",
+     "polarity": "positive",
+     "quantity": null,
+     "condition": null,
+     "fact_type": "fact",
+     "predicate": "chose_destinations",
+     "confidence": 0.95,
+     "temporal_ref": null,
+     "epistemic_type": "observed",
+     "evidence_quote": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.",
+     "replaces_object": null,
+     "temporal_intent": "assertion",
+     "object_entity_type": null,
+     "subject_entity_type": null
+    },
+    {
+     "scope": "project",
+     "object": "Hiroshima",
+     "subject": "We",
+     "polarity": "positive",
+     "quantity": null,
+     "condition": null,
+     "fact_type": "fact",
+     "predicate": "dropped_destination",
+     "confidence": 0.95,
+     "temporal_ref": null,
+     "epistemic_type": "observed",
+     "evidence_quote": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.",
+     "replaces_object": null,
+     "temporal_intent": "assertion",
+     "object_entity_type": null,
+     "subject_entity_type": null
+    }
+   ],
+   "summary": null,
+   "entities": [
+    {
+     "name": "Tokyo",
+     "scope": "project",
+     "description": null,
+     "entity_type": "location"
+    },
+    {
+     "name": "Kyoto",
+     "scope": "project",
+     "description": null,
+     "entity_type": "location"
+    },
+    {
+     "name": "Kanazawa",
+     "scope": "project",
+     "description": null,
+     "entity_type": "location"
+    },
+    {
+     "name": "Osaka",
+     "scope": "project",
+     "description": null,
+     "entity_type": "location"
+    },
+    {
+     "name": "Hiroshima",
+     "scope": "project",
+     "description": null,
+     "entity_type": "location"
+    }
+   ],
+   "relationships": []
+  },
+  {
+   "facts": [
+    {
+     "scope": "personal",
+     "object": "trains to flights",
+     "subject": "I",
+     "polarity": "positive",
+     "quantity": null,
+     "condition": null,
+     "fact_type": "preference",
+     "predicate": "prefers",
+     "confidence": 0.95,
+     "temporal_ref": null,
+     "epistemic_type": "observed",
+     "evidence_quote": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+     "replaces_object": null,
+     "temporal_intent": "assertion",
+     "object_entity_type": null,
+     "subject_entity_type": null
+    },
+    {
+     "scope": "project",
+     "object": "JR Pass",
+     "subject": "I",
+     "polarity": "positive",
+     "quantity": null,
+     "condition": null,
+     "fact_type": "preference",
+     "predicate": "wants",
+     "confidence": 0.95,
+     "temporal_ref": null,
+     "epistemic_type": "observed",
+     "evidence_quote": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+     "replaces_object": null,
+     "temporal_intent": "assertion",
+     "object_entity_type": null,
+     "subject_entity_type": null
+    },
+    {
+     "scope": "project",
+     "object": "allergy card for restaurants",
+     "subject": "I",
+     "polarity": "positive",
+     "quantity": null,
+     "condition": null,
+     "fact_type": "decision",
+     "predicate": "needs",
+     "confidence": 0.95,
+     "temporal_ref": null,
+     "epistemic_type": "observed",
+     "evidence_quote": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+     "replaces_object": null,
+     "temporal_intent": "assertion",
+     "object_entity_type": null,
+     "subject_entity_type": null
+    }
+   ],
+   "summary": null,
+   "entities": [
+    {
+     "name": "JR Pass",
+     "scope": "project",
+     "description": null,
+     "entity_type": "product"
+    },
+    {
+     "name": "shellfish",
+     "scope": "personal",
+     "description": null,
+     "entity_type": "concept"
+    },
+    {
+     "name": "allergy card",
+     "scope": "project",
+     "description": null,
+     "entity_type": "product"
+    }
+   ],
+   "relationships": []
+  }
+ ],
+ "observed": [
+  {
+   "event": 1,
+   "node_type": "fact",
+   "content": "My partner Jordan and I are planning a trip to Japan in late March next year.",
+   "subject": "I",
+   "speaker_reference": {
+    "basis": "self_introduction",
+    "fields": [
+     "subject"
+    ],
+    "speaker": "Alex Rivera"
+   },
+   "grounding_method": "claim_sentences_v1"
+  },
+  {
+   "event": 1,
+   "node_type": "fact",
+   "content": "Alex Rivera partner Jordan.",
+   "subject": "I",
+   "speaker_reference": {
+    "basis": "self_introduction",
+    "fields": [
+     "subject"
+    ],
+    "speaker": "Alex Rivera"
+   },
+   "grounding_method": "claim_statement_v1"
+  },
+  {
+   "event": 3,
+   "node_type": "fact",
+   "content": "We chose Tokyo, Kyoto, Kanazawa, and Osaka.",
+   "subject": "We",
+   "speaker_reference": null,
+   "grounding_method": "claim_sentences_v1"
+  },
+  {
+   "event": 3,
+   "node_type": "fact",
+   "content": "We dropped Hiroshima to save time.",
+   "subject": "We",
+   "speaker_reference": null,
+   "grounding_method": "claim_sentences_v1"
+  },
+  {
+   "event": 4,
+   "node_type": "preference",
+   "content": "I prefer trains to flights, so I want a JR Pass.",
+   "subject": "I",
+   "speaker_reference": {
+    "basis": "owner_name",
+    "fields": [
+     "subject"
+    ],
+    "speaker": "Alex Rivera"
+   },
+   "grounding_method": "claim_sentences_v1"
+  },
+  {
+   "event": 4,
+   "node_type": "preference",
+   "content": "The speaker wants JR Pass.",
+   "subject": "I",
+   "speaker_reference": {
+    "basis": "owner_name",
+    "fields": [
+     "subject"
+    ],
+    "speaker": "Alex Rivera"
+   },
+   "grounding_method": "claim_statement_v1"
+  },
+  {
+   "event": 4,
+   "node_type": "decision",
+   "content": "Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+   "subject": "I",
+   "speaker_reference": {
+    "basis": "owner_name",
+    "fields": [
+     "subject"
+    ],
+    "speaker": "Alex Rivera"
+   },
+   "grounding_method": "claim_sentences_v1"
+  }
+ ]
+}
