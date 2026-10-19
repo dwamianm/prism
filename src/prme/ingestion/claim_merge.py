@@ -23,6 +23,7 @@ from __future__ import annotations
 import unicodedata
 from typing import TYPE_CHECKING
 
+from prme.ingestion.mention_links import is_text_link
 from prme.types import EdgeType, EpistemicType, LifecycleState
 
 if TYPE_CHECKING:
@@ -90,7 +91,7 @@ async def find_repeated_claims(
         # The object link is read last: only exact candidates pay for it.
         links = {
             str(edge.target_id) for edge in await graph.get_edges(source_id=str(node.id))
-            if edge.edge_type == EdgeType.MENTIONS
+            if edge.edge_type == EdgeType.MENTIONS and not is_text_link(edge)
         }
         if links == ({object_entity_id} if object_entity_id else set()):
             copies.append(node)

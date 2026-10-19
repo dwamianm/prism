@@ -216,6 +216,7 @@ class IngestionPipeline:
         extraction_batch_target_tokens: int = 0,
         extraction_timeout: float = 30.0,
         extraction_corrections: bool = False,
+        link_mentions: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -258,6 +259,8 @@ class IngestionPipeline:
         self._batch_close_seconds = BATCH_CLOSE_SECONDS
         # Show each batched request earlier claims it may correct (#277).
         self._extraction_corrections = extraction_corrections
+        # Link claims and the raw note to the entities their text names (#259).
+        self._link_mentions = link_mentions
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -1536,6 +1539,18 @@ class IngestionPipeline:
         for edge in plan.replacements:
             await evict_from_indexes(
                 self._write_queue, self._lexical_index, self._vector_index, str(edge.target_id),
+            )
+        # Link the entities to the claims and the note whose text names them
+        # (#259). The note may not exist yet; its own materialization links it.
+        if self._link_mentions:
+            from prme.ingestion.mention_links import link_event_mentions
+
+            await link_event_mentions(
+                str(plan.event_id), plan.nodes, user_id=plan.user_id, graph_store=self._graph_store,
+                event_store=self._event_store, with_note=True,
+                create_edge=(
+                    self._graph_writer or WriteQueueGraphWriter(self._graph_store, self._write_queue)
+                ).create_edge,
             )
 
     async def _materialize(
