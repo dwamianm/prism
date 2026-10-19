@@ -28,8 +28,9 @@ Choices, and why:
   that the committed file still follows from it.
 - The builds are one set of packs for each benchmark, under ``<label>-locomo``
   and ``<label>-longmemeval``. Ingestion is CPU-bound Python (a warm pack
-  takes minutes), so each set is built by three processes at the same time
-  (``extracted_packs build --shard``) that share the cap on live calls. Each
+  takes minutes), so each set is built by several processes at the same time,
+  four packs each (``extracted_packs build --shard``), that divide the cap on
+  live calls. Each
   benchmark's gate starts when its build ends, as separate processes (LoCoMo's
   split by conversation), so a stage reports its own time.
 - ``compare`` pairs two reports question by question with the gate's paired
@@ -68,7 +69,8 @@ LME_QUESTIONS = 12
 MODEL = "deepseek-v4.1-flash:cloud"
 # Ollama's cloud refused requests beyond about 25 at once (a 429) on 2026-10-19.
 IN_FLIGHT = 24
-BUILD_SHARDS = 3
+# Packs one build process holds at most: ingestion is CPU-bound Python, so more packs than this slow each other.
+PACKS_PER_PROCESS = 4
 GATE_SHARDS = 3
 # Seconds to wait before building again after packs paused (a rate limit), and how many builds to try.
 RETRY_WAIT = 300.0
@@ -76,7 +78,10 @@ ATTEMPTS = 4
 SAMPLES = 2000
 # Fewer groups than this give no honest bootstrap interval.
 MIN_GROUPS = 5
-FIELDS = ["question_id", "category", "group", "annotated", "packed", "all_packed", "all_returned", "projected"]
+FIELDS = ["question_id", "category", "group", "annotated", "packed", "top_25", "all_packed", "all_returned",
+          "projected"]
+# An evidence turn this near the top of the candidates counts for the rank measure.
+TOP = 25
 LIMITS = [
     "The LongMemEval-S sample is small (a few questions per type), so its intervals are wide. It flags a type "
     "that collapses, not a small change. LoCoMo carries most of the signal, and its conversation-level "
@@ -271,6 +276,8 @@ def compact_row(row: dict) -> dict:
         "question_id": question_id, "category": row["category"], "group": group,
         "annotated": None if evidence is None else evidence["annotated"],
         "packed": None if evidence is None else evidence["packed"],
+        "top_25": None if evidence is None else sum(rank is not None and rank <= TOP
+                                                     for rank in evidence["ranks"].values()),
         "all_packed": None if evidence is None else evidence["all_packed"],
         "all_returned": None if evidence is None else _all_within(evidence, math.inf),
         "projected": row["projected_correct"],
@@ -309,6 +316,7 @@ def measure(rows: list[dict], *, clustered: bool) -> dict:
         "all_evidence_packed": _share(annotated, "all_packed", clustered),
         "all_evidence_returned": _share(annotated, "all_returned", clustered),
         "evidence_recall": _mean(annotated, lambda row: row["packed"] / row["annotated"], clustered),
+        "evidence_in_top_25": _mean(annotated, lambda row: row["top_25"] / row["annotated"], clustered),
         "projected_accuracy": _mean(rows, lambda row: row["projected"], clustered),
     }
 
@@ -456,16 +464,29 @@ def report_markdown(report: dict) -> str:
                      ", and with this few questions they are wide."), "",
                   "| Category | Questions | All evidence packed | 95% questions | "
                   + ("95% conversations | " if clustered else "")
-                  + "Evidence recall | Projected accuracy | All evidence among candidates |",
-                  "|---|---:|---:|---:|" + ("---:|" if clustered else "") + "---:|---:|---:|"]
+                  + "Evidence recall | Evidence in top 25 | Projected accuracy | All evidence among candidates |",
+                  "|---|---:|---:|---:|" + ("---:|" if clustered else "") + "---:|---:|---:|---:|"]
         for category, item in [("**All**", measures["overall"]), *sorted(measures["categories"].items())]:
             packed = item["all_evidence_packed"]
             lines.append(
                 f"| {category} | {item['questions']:,} | {packed['count']}/{packed['of']} ({_percent(packed['share'])}) | "
                 f"{_interval(packed['interval_95_questions'])} | "
                 + (f"{_interval(packed['interval_95_conversations'])} | " if clustered else "")
-                + f"{_percent(item['evidence_recall']['mean'])} | {_percent(item['projected_accuracy']['mean'])} | "
+                + f"{_percent(item['evidence_recall']['mean'])} | {_percent(item['evidence_in_top_25']['mean'])} | "
+                f"{_percent(item['projected_accuracy']['mean'])} | "
                 f"{item['all_evidence_returned']['count']}/{item['all_evidence_returned']['of']} |")
+        overall = measures["overall"]
+        lines += ["", f"All {title} questions, each measure with its intervals:", "",
+                  "| Measure | Value | 95% questions |" + (" 95% conversations |" if clustered else ""),
+                  "|---|---:|---:|" + ("---:|" if clustered else "")]
+        for measure_name, key in (("All evidence packed", "all_evidence_packed"),
+                                  ("All evidence among the candidates", "all_evidence_returned"),
+                                  ("Evidence recall", "evidence_recall"), ("Evidence in top 25", "evidence_in_top_25"),
+                                  ("Projected accuracy", "projected_accuracy")):
+            item = overall[key]
+            value = item["share"] if "share" in item else item["mean"]
+            lines.append(f"| {measure_name} | {_percent(value)} | {_interval(item['interval_95_questions'])} |"
+                         + (f" {_interval(item['interval_95_conversations'])} |" if clustered else ""))
         lines.append("")
     lines += ["## Limits", "", *[f"- {limit}" for limit in report["limits"]], ""]
     return "\n".join(lines)
@@ -477,6 +498,7 @@ def report_markdown(report: dict) -> str:
 METRICS = {
     "all_evidence_packed": ("annotated", lambda row: float(bool(row["all_packed"]))),
     "evidence_recall": ("annotated", lambda row: row["packed"] / row["annotated"]),
+    "evidence_in_top_25": ("annotated", lambda row: row["top_25"] / row["annotated"]),
     "all_evidence_returned": ("annotated", lambda row: float(bool(row["all_returned"]))),
     "projected_accuracy": ("all", lambda row: row["projected"]),
 }
@@ -691,11 +713,21 @@ def _git(*args: str) -> str:
 
 
 def in_flight_shares(cap: int, packs: list[int]) -> list[int]:
-    """Each process's share of the live-call cap: every pack its own call when they all fit, else a proportion."""
+    """Each process's share of the live-call cap: a call for every pack when they all fit, else a proportion.
+
+    The shares are fixed, so a process whose packs finish early leaves its share idle. Keep the packs of a
+    run within the cap (the default sample does: 22 packs against 24 calls) and this never matters.
+    """
     total = sum(packs)
     if total <= cap:
         return list(packs)
-    return [max(1, cap * count // total) for count in packs]
+    shares = [max(1, cap * count // total) for count in packs]
+    # Hand out what rounding down left, to the processes with the most packs behind each call.
+    for index in sorted(range(len(packs)), key=lambda i: -packs[i] / shares[i]):
+        if sum(shares) >= cap:
+            break
+        shares[index] += 1
+    return shares
 
 
 async def build_shard(benchmark: str, label: str, root: Path, units: list[str], shard: tuple[int, int], *,
@@ -736,7 +768,7 @@ async def build_stage(benchmark: str, label: str, units: list[str], *, build_fn,
     from benchmarks.diagnostics import extracted_packs
 
     clock = Clock(f"build-{benchmark}")
-    shards = max(1, min(shards, len(units)))
+    shards = max(1, min(shards or math.ceil(len(units) / PACKS_PER_PROCESS), len(units)))
     tries = 0
     while True:
         tries += 1
@@ -782,7 +814,7 @@ async def gate_stage(benchmark: str, packs: Path, slices: list[Path], out: Path,
 
 
 async def run_mid_tier(*, label: str, out: Path, overrides: dict, set_args: list[str], root: Path, cache_dir: Path,
-                       lme_questions: int, conversations: list[str] | None, build_shards: int, gate_shards: int,
+                       lme_questions: int, conversations: list[str] | None, build_shards: int | None, gate_shards: int,
                        model: str, in_flight: int, attempts: int, retry_wait: float, command: list[str],
                        build_fn=build_shard, gate_fn=gate_shard, sample_path: Path = SAMPLE_PATH,
                        locomo_questions: dict[str, list[str]] | None = None) -> dict:
@@ -897,8 +929,8 @@ def main(argv: list[str] | None = None) -> None:
                      help="The extraction cache, shared by every label (default: data/mid-tier-v1/extraction-cache)")
     run.add_argument("--model", default=MODEL, help="An Ollama cloud model tag (default %(default)s)")
     run.add_argument("--in-flight", type=int, default=IN_FLIGHT, help="Live model calls at once (default %(default)s)")
-    run.add_argument("--build-shards", type=int, default=BUILD_SHARDS,
-                     help="Build processes for each benchmark, each holding some of its packs (default %(default)s)")
+    run.add_argument("--build-shards", type=int,
+                     help=f"Build processes for each benchmark (default: one for every {PACKS_PER_PROCESS} packs)")
     run.add_argument("--gate-shards", type=int, default=GATE_SHARDS,
                      help="LoCoMo gate processes, split by conversation (default %(default)s)")
     run.add_argument("--attempts", type=int, default=ATTEMPTS,

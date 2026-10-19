@@ -30,41 +30,46 @@ def locomo_questions(sample):
     return {name: [f"{name}-q{index:04d}" for index in range(6)] for name in sample["locomo"]["conversations"]}
 
 
-def gate_row(benchmark, question_id, category, *, annotated=2, packed=2, returned=True, projected=0.8):
-    """A row as the gate writes it, with the fields the mid tier reads."""
+def gate_row(benchmark, question_id, category, *, annotated=2, packed=2, returned=True, projected=0.8, first=1):
+    """A row as the gate writes it, with the fields the mid tier reads; the turns rank from ``first``."""
     evidence = None
     if annotated:
-        ranks = {f"{question_id}-t{index}": (index + 1 if returned or index else None) for index in range(annotated)}
+        ranks = {f"{question_id}-t{index}": (first + index if returned or index else None)
+                 for index in range(annotated)}
         evidence = {"annotated": annotated, "unresolved": [], "packed": packed, "all_packed": packed == annotated,
                     "ranks": ranks}
     return {"benchmark": benchmark, "question_id": question_id, "category": category, "evidence": evidence,
             "projected_correct": projected}
 
 
-def gate_rows(plan, locomo_questions, *, lost=(), gained=()):
-    """Every planned question as a gate row; ``lost`` questions miss evidence, the others pack all of it."""
+def gate_rows(plan, locomo_questions, *, lost=(), deep=()):
+    """Every planned question as a gate row; ``lost`` questions miss evidence, the others pack all of it.
+
+    The evidence of a ``deep`` question is still packed but ranks far down the candidates.
+    """
     rows = {"locomo": [], "longmemeval": []}
     for name in plan["benchmarks"]["locomo"]["units"]:
         for index, question in enumerate(locomo_questions[name]):
             miss = question in lost
             rows["locomo"].append(gate_row("locomo", question, CATEGORIES[index % 4], annotated=2,
-                                           packed=1 if miss else 2, projected=0.5 if miss else 0.8))
+                                           packed=1 if miss else 2, projected=0.5 if miss else 0.8,
+                                           first=60 if question in deep else 1))
     for question in plan["benchmarks"]["longmemeval"]["questions"]:
         kind = plan["longmemeval_types"][question]
         miss = question in lost
         rows["longmemeval"].append(gate_row("longmemeval", question, kind, annotated=1, packed=0 if miss else 1,
-                                            projected=0.7 if miss else 0.9))
+                                            projected=0.7 if miss else 0.9, first=60 if question in deep else 1))
     return rows
 
 
-def make_report(sample, locomo_questions, label="base", *, lost=(), calls=0, hits=40, overrides=None, src="tree-a",
-                tokenizer="cl100k_base", lme_questions=6, seconds=600.0):
+def make_report(sample, locomo_questions, label="base", *, lost=(), deep=(), calls=0, hits=40, overrides=None,
+                src="tree-a", tokenizer="cl100k_base", lme_questions=6, seconds=600.0):
     plan = plan_sample(sample, locomo_questions, lme_questions=lme_questions)
     stage = {"started_at": "2026-10-19T00:00:00+00:00", "seconds": 100.0, "load_average_1m": {"start": 3.0, "end": 4.0}}
     build = {**stage, "packs": 10, "processes": 3, "turns": 100, "calls": calls, "prompt_tokens": calls * 1000,
              "completion_tokens": calls * 300, "cache_hits": hits}
     return assemble_report(
-        label=label, plan=plan, gate_rows=gate_rows(plan, locomo_questions, lost=lost),
+        label=label, plan=plan, gate_rows=gate_rows(plan, locomo_questions, lost=lost, deep=deep),
         stages={"build-locomo": build, "build-longmemeval": build, "gate-locomo": stage, "gate-longmemeval": stage},
         total={"started_at": stage["started_at"], "finished_at": stage["started_at"], "seconds": seconds,
                "load_average_1m": stage["load_average_1m"], "cache_entries": {"start": 0, "end": 0}},
@@ -171,8 +176,9 @@ def test_conversations_are_split_into_gate_shards_of_similar_size():
 
 def test_live_calls_share_the_cap_in_proportion_only_when_the_packs_do_not_fit():
     assert in_flight_shares(24, [4, 3, 3, 4, 4, 4]) == [4, 3, 3, 4, 4, 4]
-    shares = in_flight_shares(24, [10, 10, 10, 10])
-    assert shares == [6, 6, 6, 6] and sum(shares) <= 24
+    shares = in_flight_shares(24, [4, 3, 3, 4, 4, 4, 4, 4, 4])
+    assert sum(shares) == 24 and min(shares) >= 2 and shares[0] >= shares[1]
+    assert in_flight_shares(24, [10, 10, 10, 10]) == [6, 6, 6, 6]
     assert in_flight_shares(2, [1, 1, 1, 9]) == [1, 1, 1, 1]
 
 
@@ -208,12 +214,22 @@ def test_a_cluster_interval_resamples_whole_groups_and_needs_enough_of_them():
 def test_a_row_keeps_what_the_measures_need_and_a_question_without_evidence_keeps_none():
     row = compact_row(gate_row("locomo", "conv-26-q0007", "temporal", annotated=3, packed=2))
     assert row == {"question_id": "conv-26-q0007", "category": "temporal", "group": "conv-26", "annotated": 3,
-                   "packed": 2, "all_packed": False, "all_returned": True, "projected": 0.8}
+                   "packed": 2, "top_25": 3, "all_packed": False, "all_returned": True, "projected": 0.8}
     assert compact_row(gate_row("longmemeval", "abc123", "multi-session"))["group"] == "abc123"
     bare = compact_row(gate_row("locomo", "conv-30-q0001", "single-hop", annotated=0))
-    assert (bare["annotated"], bare["packed"], bare["all_packed"], bare["all_returned"]) == (None, None, None, None)
+    assert (bare["annotated"], bare["packed"], bare["top_25"], bare["all_packed"], bare["all_returned"]) == (
+        None, None, None, None, None)
     unreturned = compact_row(gate_row("locomo", "conv-30-q0002", "single-hop", annotated=2, packed=2, returned=False))
     assert unreturned["all_returned"] is False
+
+
+def test_the_rank_measure_counts_the_evidence_turns_ranked_in_the_first_25_candidates():
+    row = gate_row("longmemeval", "q1", "multi-session", annotated=4, packed=4)
+    row["evidence"]["ranks"] = {"a": 3, "b": 25, "c": 26, "d": None}
+    compact = compact_row(row)
+    assert (compact["top_25"], compact["packed"]) == (2, 4)
+    result = measure([compact], clustered=False)
+    assert result["evidence_in_top_25"]["mean"] == 0.5 and result["evidence_recall"]["mean"] == 1.0
 
 
 def test_measures_count_annotated_questions_only_for_evidence_and_all_questions_for_projection():
@@ -226,6 +242,7 @@ def test_measures_count_annotated_questions_only_for_evidence_and_all_questions_
     assert (packed["count"], packed["of"]) == (2, 6) and packed["share"] == pytest.approx(1 / 3)
     assert packed["interval_95"] == packed["interval_95_questions"] and "interval_95_conversations" not in packed
     assert result["evidence_recall"]["mean"] == pytest.approx(1 / 2)
+    assert result["evidence_in_top_25"]["mean"] == 1.0
     assert result["projected_accuracy"]["mean"] == pytest.approx((6 * 0.5 + 0.9) / 7)
 
 
@@ -327,6 +344,18 @@ def test_a_comparison_lists_the_questions_that_gained_and_lost_evidence_and_the_
     assert "`base`" in markdown and "`try`" in markdown and '{"packing": {"token_budget": 8192}}' in markdown
     assert "Lost all evidence (18)" in markdown and "| all evidence packed | 90.0% | 60.0% | -30.0 |" in markdown
     assert "The engine source differs." in markdown and "—" not in markdown and "–" not in markdown
+
+
+def test_a_change_that_only_moves_evidence_down_the_candidates_shows_in_the_rank_measure(sample, locomo_questions):
+    deep = [f"conv-{number}-q{index:04d}" for number in (26, 30, 41, 42, 43, 44, 47, 48, 49, 50)
+            for index in (0, 1, 2)]
+    baseline = make_report(sample, locomo_questions, "base")
+    candidate = make_report(sample, locomo_questions, "try", deep=deep)
+    metrics = compare_reports(baseline, candidate, samples=300)["benchmarks"]["locomo"]["metrics"]
+    top = metrics["evidence_in_top_25"]
+    assert top["before"] == 1.0 and top["after"] == pytest.approx(0.5) and top["excludes_zero"] is True
+    # Everything is still packed, so the packing measures do not move.
+    assert metrics["all_evidence_packed"]["delta"] == 0 and metrics["evidence_recall"]["delta"] == 0
 
 
 def test_a_locomo_change_is_clear_of_zero_only_when_the_conversation_interval_excludes_it_too(
@@ -438,7 +467,7 @@ class Fakes:
 
 def run_it(tmp_path, sample_questions, fakes, **change):
     options = dict(label="main", out=tmp_path / "out", overrides={}, set_args=[], root=tmp_path / "builds",
-                   cache_dir=tmp_path / "cache", lme_questions=6, conversations=None, build_shards=3,
+                   cache_dir=tmp_path / "cache", lme_questions=6, conversations=None, build_shards=None,
                    gate_shards=3, model="deepseek-v4.1-flash:cloud", in_flight=24, attempts=3, retry_wait=0.0,
                    command=["python"], build_fn=fakes.build, gate_fn=fakes.gate, locomo_questions=sample_questions)
     options.update(change)
@@ -454,9 +483,13 @@ def test_a_run_builds_both_benchmarks_gates_each_and_writes_one_report(tmp_path,
     assert "# Mid tier: main" in (out / "report.md").read_text()
     assert list(report["stages"]) == ["build-locomo", "build-longmemeval", "gate-locomo", "gate-longmemeval"]
     builds = {(benchmark, shard): (packs, share, jobs) for benchmark, shard, packs, share, jobs, *_ in fakes.builds}
-    # Ten LoCoMo packs and six LongMemEval-S packs in three processes each; all fit the cap, so each pack calls freely.
+    # Four packs to a process: ten LoCoMo packs in three, six LongMemEval-S packs in two. All fit the cap.
     assert sorted(len(packs) for (benchmark, _), (packs, _, _) in builds.items() if benchmark == "locomo") == [3, 3, 4]
+    assert sorted(len(packs) for (benchmark, _), (packs, _, _) in builds.items() if benchmark == "longmemeval") == [
+        3, 3]
     assert all(share == jobs == len(packs) for packs, share, jobs in builds.values())
+    assert (report["stages"]["build-locomo"]["processes"], report["stages"]["build-longmemeval"]["processes"]) == (
+        3, 2)
     assert {item[5][0] for item in fakes.builds} == {"packing.token_budget=8192"}
     # The LoCoMo gate ran as three shards that together cover every conversation; LongMemEval-S as one.
     assert sorted(gate[2] for gate in fakes.gates if gate[0] == "locomo") == [
@@ -483,7 +516,8 @@ def test_a_run_builds_again_after_a_pack_pauses_and_gives_up_after_its_attempts(
     fakes = Fakes(locomo_questions, pause_first=[paused])
     report = run_it(tmp_path, locomo_questions, fakes)
     assert report["stages"]["build-longmemeval"]["builds"] == 2 and report["stages"]["build-locomo"]["builds"] == 1
-    assert sum(1 for build in fakes.builds if build[0] == "longmemeval") == 6
+    # Two processes built the packs twice; the second time the paused pack's process built it again.
+    assert sum(1 for build in fakes.builds if build[0] == "longmemeval") == 4
     stuck = Fakes(locomo_questions)
 
     async def never(*args, **kwargs):
