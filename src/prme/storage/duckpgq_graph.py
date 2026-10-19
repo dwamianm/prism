@@ -1584,11 +1584,12 @@ class DuckPGQGraphStore:
     ) -> list[tuple[MemoryNode, int]]:
         """Get neighborhood with min hop depth via recursive CTE (sync).
 
-        Traverses edges in both directions. The recursive CTE tracks the
-        path of visited nodes per branch and refuses to revisit a node
-        already on the path (cycle guard), preventing A->B->A oscillation
-        from enumerating exponentially many paths. Each reachable node is
-        returned once with its minimum depth (GROUP BY id, MIN(depth)).
+        Traverses edges in both directions. The recursive CTE keeps one row
+        per (node, depth) -- UNION drops a row it has already produced -- so
+        a node reached by many paths is expanded once per depth instead of
+        once per path, which would multiply with every hub entity on the
+        way. Each reachable node is returned once with its minimum depth
+        (GROUP BY id, MIN(depth)).
         """
         logger.debug(
             "get_neighborhood using recursive CTE (SQL fallback)",
@@ -1638,10 +1639,10 @@ class DuckPGQGraphStore:
 
         # Recursive CTE: base case finds direct neighbors (both directions),
         # recursive case expands from there. Uses CASE to handle bidirectional
-        # traversal in a single UNION ALL. Each branch carries the list of
-        # nodes on its path; the recursive step skips nodes already visited
-        # on that path (cycle guard). The outer query collapses paths to one
-        # row per node with the minimum depth.
+        # traversal in a single UNION. A row is a node and the depth it was
+        # reached at; UNION drops repeats, so every node is expanded once per
+        # depth however many paths lead to it. The outer query keeps the
+        # minimum depth of each node.
         query = f"""
             WITH RECURSIVE neighborhood AS (
                 -- Base case: direct neighbors in both directions
@@ -1650,44 +1651,24 @@ class DuckPGQGraphStore:
                          THEN e.target_id
                          ELSE e.source_id
                     END AS id,
-                    1 AS depth,
-                    [CAST(? AS UUID),
-                     CASE WHEN e.source_id = CAST(? AS UUID)
-                          THEN e.target_id
-                          ELSE e.source_id
-                     END] AS path
+                    1 AS depth
                 FROM edges e
                 WHERE (e.source_id = CAST(? AS UUID) OR e.target_id = CAST(? AS UUID))
                     {edge_where}
 
-                UNION ALL
+                UNION
 
-                -- Recursive case: expand from discovered neighbors,
-                -- skipping nodes already on this branch's path.
+                -- Recursive case: expand from discovered neighbors.
                 SELECT
                     CASE WHEN e.source_id = nb.id
                          THEN e.target_id
                          ELSE e.source_id
                     END AS id,
-                    nb.depth + 1 AS depth,
-                    list_append(
-                        nb.path,
-                        CASE WHEN e.source_id = nb.id
-                             THEN e.target_id
-                             ELSE e.source_id
-                        END
-                    ) AS path
+                    nb.depth + 1 AS depth
                 FROM neighborhood nb
                 JOIN edges e ON (e.source_id = nb.id OR e.target_id = nb.id)
                     {edge_where}
                 WHERE nb.depth < ?
-                    AND NOT list_contains(
-                        nb.path,
-                        CASE WHEN e.source_id = nb.id
-                             THEN e.target_id
-                             ELSE e.source_id
-                        END
-                    )
             )
             SELECT n.*, nb.min_depth
             FROM (
@@ -1700,9 +1681,7 @@ class DuckPGQGraphStore:
         """
 
         params: list = []
-        # Base case: 5 refs to node_id + edge_params
-        params.append(node_id)
-        params.append(node_id)
+        # Base case: 3 refs to node_id + edge_params
         params.append(node_id)
         params.append(node_id)
         params.append(node_id)

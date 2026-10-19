@@ -31,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The neighborhood walk (`get_neighborhood`, `get_neighborhood_with_depth`
+  and graph candidates) on DuckDB and PostgreSQL returns the same nodes at the
+  same depths but expands each node once per depth instead of once per path.
+  It followed every simple path, so its work multiplied with each hub entity
+  on the way, which a more densely linked graph makes expensive. On 3,000
+  events over 40 entities in PostgreSQL with links from every claim and note
+  to the entities its text names, graph candidates took a median 1,346 ms with
+  the old walk and 156 ms with this walk, against 148 ms for the old walk
+  without those links. A test checks the walk against a reference
+  breadth-first search on random graphs with cycles, parallel edges and hubs.
 - Retrieval does less work and returns the same results, contexts and
   receipts. `FastEmbedProvider.model_version` reads fastembed's package
   metadata once per process instead of on every access, and the PostgreSQL
