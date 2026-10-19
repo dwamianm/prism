@@ -1260,10 +1260,10 @@ each answer) are listed and never fail.
   worth repeating once.
 
 Baseline on 2026-10-19 (`benchmarks/fixtures/fast-cycle/baseline-main.json`,
-the engine tree of `origin/main` at `2b0df5c2`, DuckDB, from a replay of the
+the engine tree of `origin/main` at `0622c9f9`, DuckDB, from a replay of the
 committed cache; its 132 store and ingest measures equal the baseline taken at
-`7f9ce556`, so #297 moved none of them, and it adds the store-extract stage
-below):
+`7f9ce556`, so #296, #297 and #299 moved none of them with their options off,
+and it adds the store-extract stage below):
 
 | Measure | store | defects-v1 | corrections-v1 | chat-v1 |
 |---|---:|---:|---:|---:|
@@ -1394,10 +1394,12 @@ not usage, so `usage.json` keeps the tokens of each request the model answered
 live, and a replay reports them. The stages are on DuckDB; the stage prints what
 retrieval returns, not what a reader answers.
 
-Result on 2026-10-19 (laptop, `main` at `2b0df5c2`, DuckDB, Ollama 0.40.6),
-three live runs of each stage, every one with a cold cache (75 and 7 model
-requests). Values are the three runs in order, one value when all three are
-equal:
+Result on 2026-10-19 (laptop, DuckDB, Ollama 0.40.6), three live runs of each
+stage, every one with a cold cache (75 and 7 model requests), on `main` at
+`2b0df5c2`. Replaying each run's recorded responses on `main` at `0622c9f9`
+(which adds #296, #299 and #300) gives the same measures for `store` and
+`store-extract`, so the numbers hold for `main` as it is. Values are the three
+runs in order, one value when all three are equal:
 
 | Measure | store | store-extract | store-session | store-extract-session |
 |---|---:|---:|---:|---:|
@@ -1460,11 +1462,15 @@ also changes the plain store: the control ranks the dog 17th to 21st and every
 other answer as the store stage does, because memories that share a session
 break retrieval ties differently from run to run.
 
-**With the unmerged options** (`enable_mention_links` and
-`packing.graph_seed_words` of #299, `enable_ingest_claim_fixes` of #296; neither
-is on `main` yet, so I measured them on a throwaway merge of the
-`issue-259-entity-links-and-graph-seeds` branch, which contains the
-`issue-258-ingest-names-and-claims` branch, over this branch; three runs each):
+**With the options of #299 and #296** (`enable_mention_links`,
+`packing.graph_seed_words` and `enable_ingest_claim_fixes`, all off by default;
+`--set enable_mention_links=true --set packing.graph_seed_words=true --set
+enable_ingest_claim_fixes=true`). I took three live runs of each stage before
+they were on `main`, on a throwaway merge of the
+`issue-259-entity-links-and-graph-seeds` branch (which contains the
+`issue-258-ingest-names-and-claims` branch) over `2b0df5c2`. Replaying their
+recorded responses on `main` at `0622c9f9` gives the same measures, with every
+request a cache hit:
 
 | Measure | store-extract | store-extract-session |
 |---|---:|---:|
@@ -1505,8 +1511,8 @@ down although the context holds them all (17 of 17); no reader answers, so
 whether a reader would answer better from the larger context is not measured;
 DuckDB only (the hosted service uses PostgreSQL, whose word search differs);
 the timer is set aside, so the number of requests in the hosted service
-depends on how far apart a user's stores are; the options were measured on a
-throwaway merge, not on `main`.
+depends on how far apart a user's stores are; the options' live runs were taken
+before they were merged, and only replayed on `main`.
 
 ### Corrections probe: what a correction stores and returns
 

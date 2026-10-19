@@ -2,18 +2,18 @@
  "kind": "prme-fast-cycle-report",
  "schema_version": 1,
  "label": "main",
- "created_at": "2026-10-19T09:43:13.888951+00:00",
+ "created_at": "2026-10-19T10:06:07.012799+00:00",
  "provenance": {
-  "commit": "b0f50593698f07c200a96bd9b6c2a59e3fc1921c",
-  "src_tree": "7053947939d6e816e1c5718c81cafecf9d56876f",
+  "commit": "eae43959ed13035b4d6cdea0473540bf3fad5e4b",
+  "src_tree": "c0d99f864c9bc36887d5730492fb270e2fcc5d7a",
   "src_modified": false,
   "settings": {}
  },
  "seconds": {
-  "store": 7.684916041995166,
-  "ingest": 19.396323792003386,
-  "store-extract": 24.50171662500361,
-  "total": 51.58295645900216
+  "store": 36.986675958003616,
+  "ingest": 49.999437541999214,
+  "store-extract": 27.665177208997193,
+  "total": 114.65129070900002
  },
  "stages": {
   "store": {
@@ -25,8 +25,8 @@
    "calls": 75,
    "nodes": 75,
    "edges": 0,
-   "store_seconds": 7.091234334002365,
-   "retrieve_seconds": 0.5476925410039257,
+   "store_seconds": 30.526245458997437,
+   "retrieve_seconds": 6.300432957999874,
    "measures": {
     "nodes_per_store_call": 1.0,
     "edges_per_store_call": 0.0,
@@ -394,7 +394,7 @@
      ]
     }
    ],
-   "seconds": 7.684916041995166
+   "seconds": 36.986675958003616
   },
   "ingest": {
    "mode": "replay",
@@ -406,7 +406,7 @@
     "defects-v1": {
      "turns": 14,
      "speaker": false,
-     "seconds": 4.3546512910033925,
+     "seconds": 26.57659337500081,
      "conversation_sha256": "613a1441aab022dc5261de6b9d3d82d43f8fbdf1d5f160d47e5af2bbbba4c4fc",
      "live_calls": 0,
      "cache_hits": 14,
@@ -458,11 +458,11 @@
       "shipments": [
        "fact: We chose Postgres partitioning over TimescaleDB for the shipment table.",
        "decision: We chose Postgres partitioning over TimescaleDB for the shipment table.",
-       "fact: My manager Dana wants the runbook reviewed by Sam before Friday."
+       "preference: My manager Dana wants the runbook reviewed by Sam before Friday."
       ],
       "reviewer": [
-       "fact: My manager Dana wants the runbook reviewed by Sam before Friday.",
        "preference: My manager Dana wants the runbook reviewed by Sam before Friday.",
+       "fact: My manager Dana wants the runbook reviewed by Sam before Friday.",
        "fact: My manager Dana wants the runbook reviewed by Sam before Friday."
       ]
      }
@@ -470,7 +470,7 @@
     "corrections-v1": {
      "turns": 16,
      "speaker": true,
-     "seconds": 3.388031750000664,
+     "seconds": 5.778932584005815,
      "conversation_sha256": "7ef185ed2e365fffc713f37aa8f4d312aa24ca69d159df3023c5b7ad13a8e1a9",
      "live_calls": 0,
      "cache_hits": 16,
@@ -520,7 +520,7 @@
        "probe": "move-city",
        "records": [
         {
-         "id": "1f231da7-fa6f-41d6-9186-a43d0df26adf",
+         "id": "60163a8a-236f-40d3-8298-2ce9d6c73a71",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -532,7 +532,7 @@
          "replacement": null
         },
         {
-         "id": "082a6f7c-5901-4750-924f-a926e9109205",
+         "id": "821c7d40-d370-462f-be48-f3be319f20b9",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -544,7 +544,7 @@
          "replacement": null
         },
         {
-         "id": "3be9ae72-f90b-4a4d-8426-619edaa84421",
+         "id": "3c80a3a0-865d-4416-a4b0-3ce1fbd50943",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -556,7 +556,7 @@
          "replacement": null
         },
         {
-         "id": "8c94a100-8409-40d4-acb8-48cfdfc05737",
+         "id": "ee787cae-a719-41ba-8ec1-74a376dea320",
          "type": "decision",
          "state": "tentative",
          "mentions": [
@@ -568,7 +568,7 @@
          "replacement": null
         },
         {
-         "id": "7c5827c8-bb32-4f94-a60f-34ce98500b11",
+         "id": "30ad6cea-26f1-43de-b9f5-43f8c5c06f89",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -581,7 +581,7 @@
          "replacement": null
         },
         {
-         "id": "6e4625c5-6f7d-4d10-986e-b7f224b94cf8",
+         "id": "4ecaebf4-9e12-4111-9656-14d0f6b87d90",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -593,7 +593,7 @@
          "replacement": null
         },
         {
-         "id": "9a111570-f77d-4b8a-9a02-f12c37d8cb70",
+         "id": "88b4cd41-4dcd-4225-a45d-309bdbddb1f3",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -651,7 +651,7 @@
        "probe": "jo-birthday",
        "records": [
         {
-         "id": "3b3c990f-1f6b-459f-a7f4-0dabc827b86b",
+         "id": "13b4a2d1-8137-4fe9-bafc-f4f92f9b124f",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -663,7 +663,7 @@
          "replacement": null
         },
         {
-         "id": "31cd28b8-0b59-40d4-9866-477b1d19102c",
+         "id": "c5677cd1-a9ab-4e72-a749-a11d4cf127ee",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -675,7 +675,7 @@
          "replacement": null
         },
         {
-         "id": "d2ecaa07-16cc-4f94-b875-b17f01215d65",
+         "id": "7ad12a6a-b163-4481-af7c-b9ff2f3a047d",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -687,7 +687,7 @@
          "replacement": null
         },
         {
-         "id": "2e33580b-6547-4647-a927-24d6229e5e47",
+         "id": "cf0a6016-16ad-401f-bb26-f4cdd949598b",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -699,7 +699,7 @@
          "replacement": null
         },
         {
-         "id": "a7522c79-cb05-48e0-9773-5d03d7114a9e",
+         "id": "a23b2cf9-a59f-4a74-8837-0a3b65bd614a",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -711,7 +711,7 @@
          "replacement": null
         },
         {
-         "id": "8c0b48f0-f8d0-417d-8aeb-6299c0effc4d",
+         "id": "3d5afafe-f4c5-44f5-9b29-e0de70a42141",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -761,7 +761,7 @@
        "probe": "coffee",
        "records": [
         {
-         "id": "7ea7fcbd-1618-4707-8de4-855935937dc6",
+         "id": "3f999f6f-6f53-4d9e-b34c-683304aefbd6",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -773,7 +773,7 @@
          "replacement": null
         },
         {
-         "id": "dc3c584a-a147-4288-9052-056464af1b7d",
+         "id": "0a50180c-298a-45e6-bda4-816abcf0e3a5",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -785,7 +785,7 @@
          "replacement": null
         },
         {
-         "id": "34702f3d-79e6-4ede-b823-277b22150a00",
+         "id": "a4de39b7-42a4-4702-96ee-39387d1dc52a",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -797,7 +797,7 @@
          "replacement": null
         },
         {
-         "id": "7be00609-bf45-4237-8280-bbc02cd9123b",
+         "id": "8b3c0cbe-5ebf-41a2-a6bc-ccee1d71244f",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -849,7 +849,7 @@
        "probe": "job",
        "records": [
         {
-         "id": "0bc9fc2d-aabc-4340-a0ac-a25425f4502a",
+         "id": "af75ec9a-e73d-4f4f-944b-beb9e431d6aa",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -861,7 +861,7 @@
          "replacement": null
         },
         {
-         "id": "ca1102d2-5fc6-4ff5-a17c-af3cdcffaf89",
+         "id": "24fbe4f8-c7a2-48fa-bd90-2cacab67b85c",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -873,7 +873,7 @@
          "replacement": null
         },
         {
-         "id": "3d214535-8c76-4ac7-aec1-cd29bcdab36f",
+         "id": "4e06327b-1a33-4150-ac7b-c4a3d57a7ba2",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -885,7 +885,7 @@
          "replacement": null
         },
         {
-         "id": "2479bcbe-7526-480f-af61-59b308ad9765",
+         "id": "afc9bd83-f488-4c6c-9db9-1f0e0fdd38bb",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -926,7 +926,7 @@
     "chat-v1": {
      "turns": 54,
      "speaker": false,
-     "seconds": 11.532839667001099,
+     "seconds": 16.515952000001562,
      "conversation_sha256": "535a76267ea20486e0d5afdace7c7ff277f649ccc8c4687c448ee169c374af8d",
      "live_calls": 0,
      "cache_hits": 54,
@@ -988,8 +988,8 @@
       ],
       "allergy": [
        "fact: Nothing with peanuts though, Sam is allergic to peanuts.",
-       "decision: I'll leave peanuts out of suggestions since Sam is allergic.",
-       "fact: I'll leave peanuts out of suggestions since Sam is allergic."
+       "fact: I'll leave peanuts out of suggestions since Sam is allergic.",
+       "decision: I'll leave peanuts out of suggestions since Sam is allergic."
       ],
       "dog": [
        "fact: Biscuit is a great road trip dog, he's our 3 year old golden.",
@@ -1165,7 +1165,7 @@
      "answer_rank:language": 1
     }
    },
-   "seconds": 19.396323792003386
+   "seconds": 49.999437541999214
   },
   "store-extract": {
    "backend": "duckdb",
@@ -1184,9 +1184,9 @@
    "live_calls": 0,
    "cache_hits": 75,
    "unreproduced": 0,
-   "store_seconds": 7.84158683300484,
-   "extract_seconds": 14.738416791995405,
-   "retrieve_seconds": 1.6277376250000088,
+   "store_seconds": 8.422088416999031,
+   "extract_seconds": 17.38794666600006,
+   "retrieve_seconds": 1.5652051249999204,
    "measures": {
     "nodes_per_store_call": 5.026666666666666,
     "edges_per_store_call": 3.52,
@@ -1321,8 +1321,8 @@
      "top_results": [
       "fact: Correction: pair programming drains Alex.",
       "preference: Alex likes pair programming and does it most Thursdays.",
-      "fact: Alex likes pair programming and does it most Thursdays.",
       "preference: Alex likes pair programming and does it most Thursdays.",
+      "fact: Alex likes pair programming and does it most Thursdays.",
       "preference: Correction: pair programming drains Alex. Alex prefers short 30 minute bursts and not full sessions."
      ]
     },
@@ -1341,9 +1341,9 @@
      "graph_candidates": 150,
      "top_results": [
       "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
-      "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
-      "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
       "fact: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
+      "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
+      "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
       "fact: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend."
      ]
     },
@@ -1495,8 +1495,8 @@
      "graph_candidates": 150,
      "top_results": [
       "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
-      "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
       "fact: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
+      "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
       "fact: TimescaleDB gives compression but needs extra operations work.",
       "fact: TimescaleDB gives compression but needs extra operations work."
      ]
@@ -1533,9 +1533,9 @@
      "graph_candidates": 150,
      "top_results": [
       "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
       "fact: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
-      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
-      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
       "fact: The Japan trip budget is 8,500 USD, not including flights."
      ]
     },
@@ -1553,13 +1553,13 @@
      "top_results": [
       "preference: Alex formats SQL with lowercase keywords and one clause per line.",
       "preference: Alex formats SQL with lowercase keywords and one clause per line.",
-      "fact: Alex formats SQL with lowercase keywords and one clause per line.",
       "preference: Alex formats SQL with lowercase keywords and one clause per line.",
+      "fact: Alex formats SQL with lowercase keywords and one clause per line.",
       "fact: Correction: pair programming drains Alex."
      ]
     }
    ],
-   "seconds": 24.50171662500361
+   "seconds": 27.665177208997193
   }
  },
  "measures": {
