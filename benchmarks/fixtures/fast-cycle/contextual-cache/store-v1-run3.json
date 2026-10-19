@@ -1,0 +1,710 @@
+{
+ "kind": "prme-fast-cycle-contextual-cache",
+ "model": "deepseek-v4.1-flash:cloud",
+ "prompt_sha256": {
+  "situate": "6a846e0c05f8dfae6202a1887136b16b4acbd3e35348c108169237cf1f994d8a",
+  "label": "f87387be0bd7fd3df8b758d1545c58ba669e24803da4fd52b2b053cc2583b1e9"
+ },
+ "entries": {
+  "026d811e55f81740a198a8d57b0e404ae9b33dc818cd7c99591b1064a5a06198": {
+   "raw": "Alex chose OpenTelemetry for the observability rewrite.",
+   "prompt_tokens": 289,
+   "completion_tokens": 12
+  },
+  "041c1ebc2b23c8bbbcce85b32bf6c4ff3519689a728deb40bf207b73f1399d2e": {
+   "raw": "Alex rejected TimescaleDB for shipment_events partitioning, so the assistant suggested pg_partman for weekly partitions.",
+   "prompt_tokens": 307,
+   "completion_tokens": 23
+  },
+  "09235b28160852daba28d3649eabec5bf20ee7dbfddcd2625e04165501114921": {
+   "raw": "Alex and Jordan\u2019s Japan trip for cherry blossom season.",
+   "prompt_tokens": 218,
+   "completion_tokens": 13
+  },
+  "0937e47029bc0d853fcff6a07a56cb878484d54aa9025721b688e8a721950239": {
+   "raw": "Alex and pair programming.",
+   "prompt_tokens": 280,
+   "completion_tokens": 6
+  },
+  "099b135c4f969f8f5aa3bd44fec418763504276e1b3e5f7f522cef091c2d4b7c": {
+   "raw": "Alex and Jordan's Japan trip itinerary for cherry blossom season.",
+   "prompt_tokens": 239,
+   "completion_tokens": 13
+  },
+  "09f1184d716119b5a79245b0d7482fa76c3e2ce431a476117da0750aa52ce51d": {
+   "raw": "Alex prefers concise explanations and time estimates in hours rather than story points.",
+   "prompt_tokens": 274,
+   "completion_tokens": 15
+  },
+  "0bef8b27732d81eceec5348b47229fc7b18fa1fa873f307a276d6fea61a53ecc": {
+   "raw": "Alex, who joined Northwind as a backend engineer, has a border collie named Juniper.",
+   "prompt_tokens": 305,
+   "completion_tokens": 21
+  },
+  "0c738e6563a5c7310803b95f792bc1376a3e184290c42c6bd52433a693db48c8": {
+   "raw": "NONE",
+   "prompt_tokens": 286,
+   "completion_tokens": 3
+  },
+  "0c9bd8d8431939d04c09384657b6fbf3bfc051b6170203a194c143d7aae6a08a": {
+   "raw": "Alex Rivera prefers Go and TypeScript code examples.",
+   "prompt_tokens": 312,
+   "completion_tokens": 11
+  },
+  "0cb22386c6b508d53dee590b128387e9b8a87ce7a7bbcca5f6253562e0d653ad": {
+   "raw": "Alex and Go code review priorities.",
+   "prompt_tokens": 262,
+   "completion_tokens": 8
+  },
+  "0d9daca8bf22552931f9b154b016802733b59e42c89346111c4d18329616592a": {
+   "raw": "Alex\u2019s Japan trip includes booked United flights from Denver to Tokyo Haneda.",
+   "prompt_tokens": 273,
+   "completion_tokens": 17
+  },
+  "10759dabfe0c384d362eb3a81bbd075d550f138cebad1b79035ce1cd809cd25e": {
+   "raw": "Sam Lindqvist and the migration runbook.",
+   "prompt_tokens": 249,
+   "completion_tokens": 10
+  },
+  "141188185439fb83384f850a411397bb119f4f2fc4efcde640df7233ea7314a0": {
+   "raw": "NONE",
+   "prompt_tokens": 294,
+   "completion_tokens": 3
+  },
+  "14e47eb25b8667052af39abe2b684d655a4c4d4a6c632c87ae5680acb736e802": {
+   "raw": "Alex and Juniper; personal life.",
+   "prompt_tokens": 321,
+   "completion_tokens": 9
+  },
+  "15b2e3c8030c6e43db0824f24c94d94f0f0218f441f5a5cf84aa24a44f2530cf": {
+   "raw": "Alex and Jordan; personal details.",
+   "prompt_tokens": 313,
+   "completion_tokens": 8
+  },
+  "15b4060d0574520322934214add529b65fa79ded562ce26359878d9e8b6a832e": {
+   "raw": "Alex's Go coding preferences include avoiding unnecessary dependencies.",
+   "prompt_tokens": 262,
+   "completion_tokens": 11
+  },
+  "1b43e2a16441830a7ecae0b139fba24582cbaced632164b27d41ed36a009ef50": {
+   "raw": "The assistant compared native partitioning and TimescaleDB for Northwind's shipment_events migration.",
+   "prompt_tokens": 329,
+   "completion_tokens": 19
+  },
+  "1e93e73f07847124138b42da1b8c69abf98f06c90d0146438dff95fe613c3f50": {
+   "raw": "NONE",
+   "prompt_tokens": 302,
+   "completion_tokens": 3
+  },
+  "2016489090178b61879b7ff742b9117bbc8d1e6f917eb274d9a5eab18795b276": {
+   "raw": "Alex's editor preference: uses Neovim, switched from VS Code in August 2026.",
+   "prompt_tokens": 273,
+   "completion_tokens": 21
+  },
+  "2086cd30989bd91db401490cd061e441982629474bf81e3359c554c67cf220a1": {
+   "raw": "Alex's Datadog metric tags.",
+   "prompt_tokens": 307,
+   "completion_tokens": 9
+  },
+  "20c12efbeb6ec02a883ada2fdfd56f496bf205616942a6fb52a917dde938c670": {
+   "raw": "Alex career goals.",
+   "prompt_tokens": 273,
+   "completion_tokens": 5
+  },
+  "23e254ca79802e84afdacf87d23bdaee610a3aa9cf7a21d5207f337f03f99cd6": {
+   "raw": "Alex wants the production cutover moved one week due to replication lag risk.",
+   "prompt_tokens": 296,
+   "completion_tokens": 16
+  },
+  "2455ea5506306976b6b8d1567f5c3d66bfc0cb53e112d69e0d1940c774e2303d": {
+   "raw": "NONE",
+   "prompt_tokens": 283,
+   "completion_tokens": 3
+  },
+  "260520c98a498dbe1064a3e8c42c049b2816e725b85a76f46d753d4b85b07942": {
+   "raw": "NONE",
+   "prompt_tokens": 328,
+   "completion_tokens": 3
+  },
+  "32fdc057824b8e73ba2b431894ab3f1164e87189f93352dfd0509eb7dabcbc62": {
+   "raw": "Northwind's data storage: the shipment_events table in RDS Postgres.",
+   "prompt_tokens": 223,
+   "completion_tokens": 18
+  },
+  "3552c7e323c9d46a579b5ba6e715cb4f0d1e45cfc07207d50ab11c8a3a2801cc": {
+   "raw": "Alex and the observability rewrite.",
+   "prompt_tokens": 296,
+   "completion_tokens": 8
+  },
+  "3642cfa4db29ae48e11ce71f62e762733297c6d49bad03720f769b4656dccd71": {
+   "raw": "NONE",
+   "prompt_tokens": 305,
+   "completion_tokens": 3
+  },
+  "3858a1c4e332564a4864fed682a7824735a23684da712ac11e86336c391420c5": {
+   "raw": "Alex\u2019s communication style: short messages, conclusion first, dislikes long preambles.",
+   "prompt_tokens": 284,
+   "completion_tokens": 20
+  },
+  "3a67ccf4f4b2812637897eaf2ca4567c5bc5d55f053f03bad12c9eca0734b4c6": {
+   "raw": "Alex\u2019s preference for Go services and TypeScript tooling relates to the topic of choosing sqlc over an ORM.",
+   "prompt_tokens": 193,
+   "completion_tokens": 26
+  },
+  "3ae9ba03e62cd92dec1085b57072477fd3332c0863b17ee0eee3e9d0b5400222": {
+   "raw": "Alex and Jordan's Japan trip.",
+   "prompt_tokens": 234,
+   "completion_tokens": 8
+  },
+  "3c047edaf5259495560907ee6cc434d769887087666e11a1871144213c89e49a": {
+   "raw": "Alex and Jordan's Japan trip itinerary.",
+   "prompt_tokens": 255,
+   "completion_tokens": 9
+  },
+  "3ebcfabf71e34a59c83e28f200ca614f5a2e21ce6104027b6b276a1014acd2ff": {
+   "raw": "Alex rejected TimescaleDB; topic is Postgres partitioning.",
+   "prompt_tokens": 323,
+   "completion_tokens": 13
+  },
+  "4048c20936cab7aaa1149bfb281a6e0039092ec39597b4077acaa5615f8fd33a": {
+   "raw": "Alex's observability rewrite uses OpenTelemetry with Datadog as backend.",
+   "prompt_tokens": 273,
+   "completion_tokens": 17
+  },
+  "40c7ef48b84b21ac896986f4dd66e8b602383ef46a5f7ab0a41cefe05f684d42": {
+   "raw": "Alex's OpenTelemetry observability rewrite and its Datadog cost concerns.",
+   "prompt_tokens": 287,
+   "completion_tokens": 17
+  },
+  "4975f2a80848e8b7b74d3ff71a2720a4072dc477ef4b3eda8c86818067d48915": {
+   "raw": "Alex's gravel riding is affected by a strained calf.",
+   "prompt_tokens": 281,
+   "completion_tokens": 12
+  },
+  "4aa9b5a35ce84410f2376e3b8e70a0483575cf88bfaa2eb4556a5f8c559c2888": {
+   "raw": "NONE",
+   "prompt_tokens": 295,
+   "completion_tokens": 3
+  },
+  "4bccdf9ac83257b50e74e2616dbf97c082e514930eca8a3352eb4a6dc9ea14a3": {
+   "raw": "Alex is learning Rust on weekends and is reading Rust for Rustaceans.",
+   "prompt_tokens": 263,
+   "completion_tokens": 15
+  },
+  "4fb97b3e702382e58fe57b9c4736acf2bd7356dc8628479681e1abcb3d518552": {
+   "raw": "Northwind's shipment_events Postgres migration.",
+   "prompt_tokens": 292,
+   "completion_tokens": 11
+  },
+  "50555201d5b5b92f7b320ed734aa658fc0ff2038a076bf08beaede2183d2701b": {
+   "raw": "Alex rejected TimescaleDB for the Postgres 16 migration of shipment_events, keeping native partitioning.",
+   "prompt_tokens": 317,
+   "completion_tokens": 22
+  },
+  "52be49c8b85423cb03ec1dde2e24722897abee9e4a7d0646cf69ba1c871d29de": {
+   "raw": "Alex\u2019s gravel biking topic includes a 100 km race in Fruita.",
+   "prompt_tokens": 275,
+   "completion_tokens": 18
+  },
+  "533b5e589adb674c2043276487e77621312579d833bfab9611be7aa410e7c3e4": {
+   "raw": "Alex\u2019s preference for pair programming and async written updates.",
+   "prompt_tokens": 264,
+   "completion_tokens": 13
+  },
+  "55eecb49bec12a4468ba2943cb75cd43fda4b4a49d211097cf3af85e9a9803bc": {
+   "raw": "Alex\u2019s communication style.",
+   "prompt_tokens": 300,
+   "completion_tokens": 7
+  },
+  "57294cf71d225a860079a578cfc26344bd6ae9486b6086103f4ffd15d387e33d": {
+   "raw": "Alex agreed to use pg_partman for partition management.",
+   "prompt_tokens": 312,
+   "completion_tokens": 12
+  },
+  "5e6b57cc8c5810768da78cea546a5000e909e478d0a11b5846dffab480315fa7": {
+   "raw": "Alex and the observability rewrite.",
+   "prompt_tokens": 277,
+   "completion_tokens": 8
+  },
+  "5e6c5ec067cb82605a2582d24ef5f6e29e83a2b0084470f72f5c21522bc01e7c": {
+   "raw": "Alex's partner Jordan is a nurse practitioner with a shellfish allergy.",
+   "prompt_tokens": 297,
+   "completion_tokens": 14
+  },
+  "619b68a2c9994f197f7cfd42ec6918a54788d6f77c75a4607996f82989783409": {
+   "raw": "Alex and Datadog observability costs.",
+   "prompt_tokens": 303,
+   "completion_tokens": 10
+  },
+  "625701d6fb6d610e2403c8db61853d834885e843362d5d32c461cdc5537d4175": {
+   "raw": "Alex's Go code review priorities.",
+   "prompt_tokens": 246,
+   "completion_tokens": 8
+  },
+  "67eb2ed80389fcd45e5d24cb0b471bf91da9ca3f7ce92f8450f2e164814e25c8": {
+   "raw": "Alex and Jordan's Japan trip budget.",
+   "prompt_tokens": 303,
+   "completion_tokens": 9
+  },
+  "69c1ab4c80edb38df86e0058de3de8250d243835edf5a48227dc22453ddc4b11": {
+   "raw": "Alex is on call for the production cutover.",
+   "prompt_tokens": 346,
+   "completion_tokens": 11
+  },
+  "6deb9459fb856a056c849763abccaeac5a5b71649f7c8306d22386d541dfceb8": {
+   "raw": "Alex and Go testing.",
+   "prompt_tokens": 245,
+   "completion_tokens": 6
+  },
+  "7150b087e9200feb3c591286bac1b4b6fcda401334d479b18afb3c32023b0b80": {
+   "raw": "Alex Rivera: career at Northwind Logistics.",
+   "prompt_tokens": 228,
+   "completion_tokens": 10
+  },
+  "719b9a0d6e13378186ebd9ba283772cdad280570adc60de67a9ea8498a8d37a8": {
+   "raw": "Alex and Priya discussed the on-call schedule.",
+   "prompt_tokens": 348,
+   "completion_tokens": 12
+  },
+  "7345e7bd3fc4f3238ac876de2755564ec108b38c029239e989cccacb395fa04c": {
+   "raw": "Sam's replication lag risk moved the production cutover to 2026-10-31.",
+   "prompt_tokens": 324,
+   "completion_tokens": 20
+  },
+  "751ba6341ffc227596b00668a49db81941e7941e1e37a6f844e11eb0dfdc1060": {
+   "raw": "Alex\u2019s Japan trip food preferences include ramen shops and izakaya while avoiding touristy restaurants.",
+   "prompt_tokens": 273,
+   "completion_tokens": 22
+  },
+  "759961ac067c56f978e90abe7cd8fae90c034db476a11446b2288687c1543fa0": {
+   "raw": "Alex is learning Rust.",
+   "prompt_tokens": 279,
+   "completion_tokens": 6
+  },
+  "79c9fb5362e2650945fc7cc2acfae033b62e9365ae20c24becd78e177727a033": {
+   "raw": "Alex's migration plan presentation relates to Dana Okafor's engineering all-hands.",
+   "prompt_tokens": 256,
+   "completion_tokens": 18
+  },
+  "7a7d661e94d6d724b3ee7b209431a766a2655a28d2e9725d360a473ee309e690": {
+   "raw": "Alex is on call for the production cutover week.",
+   "prompt_tokens": 330,
+   "completion_tokens": 12
+  },
+  "7e64b5fdb356963230834778bb8b2d6bf779663104ea69fc4ea2ba38ca0214d4": {
+   "raw": "Alex's Go testing preferences.",
+   "prompt_tokens": 229,
+   "completion_tokens": 7
+  },
+  "7e88b97acde38b746a94cb4911d0411aa4c7126d02d895d505d1bc8868cb245e": {
+   "raw": "Alex and the topic of Go services.",
+   "prompt_tokens": 209,
+   "completion_tokens": 9
+  },
+  "8132c4bf6586e33f2145b682a4dc0c4176053dcb1543ea329589800698cf797f": {
+   "raw": "Alex, learning Rust and comparing it to Go, using the shipment parser example.",
+   "prompt_tokens": 270,
+   "completion_tokens": 17
+  },
+  "81fffcb182c5cd1efbcbd3f7a729b2ca2ae8725b6283876f1cee1bc42ba4e126": {
+   "raw": "Alex and Jordan, Japan trip.",
+   "prompt_tokens": 307,
+   "completion_tokens": 8
+  },
+  "821ccdba5971873648f2820c137440545c16a3942b24307992d6473fe5f28537": {
+   "raw": "Alex and Jordan are planning the Japan trip.",
+   "prompt_tokens": 289,
+   "completion_tokens": 10
+  },
+  "8349a83c2d3f2145373a63e6371ba10bf88d8de687bdeb4bd32b1550a9db590e": {
+   "raw": "Alex and Jordan: Japan trip.",
+   "prompt_tokens": 291,
+   "completion_tokens": 8
+  },
+  "8554c49905d7ff876ba428c0166826dd02b2e511ededc7dbc7a1f53708cfa85c": {
+   "raw": "Northwind's shipment_events migration: native partitioning versus TimescaleDB.",
+   "prompt_tokens": 345,
+   "completion_tokens": 16
+  },
+  "89ba77108faf5197d03f492107e478e23265a249263e284b0a6093af98e9ef5a": {
+   "raw": "Alex and Jordan plan a Japan trip.",
+   "prompt_tokens": 272,
+   "completion_tokens": 9
+  },
+  "8b2cc2b2173a4a295cb81cedf1a0ab76014b744ae487de10d79a030885a9b424": {
+   "raw": "NONE",
+   "prompt_tokens": 239,
+   "completion_tokens": 3
+  },
+  "8d456d734657fae51c9233b9c992f1b1e44643e924dfda701a2b047f40f40e3e": {
+   "raw": "Alex prefers Postgres for database questions and wants basics skipped.",
+   "prompt_tokens": 274,
+   "completion_tokens": 13
+  },
+  "8daf652bc9d0c61c993a69324af70885e90f843e0d844bd60d0532a947a8df6b": {
+   "raw": "Alex prefers concise explanations.",
+   "prompt_tokens": 290,
+   "completion_tokens": 6
+  },
+  "8e0027b3e79524e3609517adef8281f1ac82bb2919c3101a75f3d97f6a690238": {
+   "raw": "Alex\u2019s work preferences include pair programming.",
+   "prompt_tokens": 265,
+   "completion_tokens": 10
+  },
+  "8e494f3d098f47ae27fd73d838b509c89129d0688ee809d1198d5fa5ee886fc7": {
+   "raw": "Alex\u2019s coffee habits.",
+   "prompt_tokens": 302,
+   "completion_tokens": 7
+  },
+  "90990c0ffac8e96d20574765d0ad560fa7d7e08cc839fef8755f1fbbd8769464": {
+   "raw": "Alex's Japan trip budget topic.",
+   "prompt_tokens": 287,
+   "completion_tokens": 8
+  },
+  "910a0d3d1f6105554a772a46153d84ff11d4ed1c85f416e4f46da3fd6fa02aae": {
+   "raw": "Alex and Priya Shah: mentoring.",
+   "prompt_tokens": 303,
+   "completion_tokens": 9
+  },
+  "91a3d2b1b9395580a9fa7c04288626fbfa7706f8d56f5184a2814e04bb7bfcd4": {
+   "raw": "Alex and Rust.",
+   "prompt_tokens": 286,
+   "completion_tokens": 5
+  },
+  "9671edfb4f41a578ab87f6c96604801908eb1366d448d6d2b7a3df33bc958de5": {
+   "raw": "Priya Shah is on call for the production cutover checklist.",
+   "prompt_tokens": 352,
+   "completion_tokens": 14
+  },
+  "97bb109016b4f3c878c4728b41ab932499b66dbcbbba0ae25320c828554097d4": {
+   "raw": "Alex Rivera: career history at Northwind Logistics.",
+   "prompt_tokens": 253,
+   "completion_tokens": 11
+  },
+  "98e23ca8df3756f9aacbb7500d69dbb6a49a71b7a2c1218399e2a97999295cfd": {
+   "raw": "Alex Rivera\u2019s career timeline at Northwind Logistics, including his backend engineer role and senior promotion.",
+   "prompt_tokens": 212,
+   "completion_tokens": 21
+  },
+  "9b28af8f626f08c484e2c0bbbd7bc1a2a5ec442139493f81030f8c26b1d30c19": {
+   "raw": "Alex and Jordan's Japan trip: Jordan's shellfish allergy and a Japanese allergy card for restaurants.",
+   "prompt_tokens": 291,
+   "completion_tokens": 20
+  },
+  "9cd46071e00211097e6f79e6fb9a4a9b3afd49e1294adf520bb3fad03de5814b": {
+   "raw": "Priya Shah and Alex swapped on-call weeks so the production cutover is not during Alex's shift.",
+   "prompt_tokens": 342,
+   "completion_tokens": 23
+  },
+  "9cf81e8711d584e856783873b511a3112908480d358ddc5803c7951a4daffb79": {
+   "raw": "Priya Shah and Alex are on call for the production cutover.",
+   "prompt_tokens": 358,
+   "completion_tokens": 15
+  },
+  "9d944f57014bcb4ea7f684080bec6c5b6e50ab30a1b115405ff8d126df741640": {
+   "raw": "NONE",
+   "prompt_tokens": 292,
+   "completion_tokens": 3
+  },
+  "a434b4cc8f847f7dfcb1dd90128adfd44a1d5c2db32db0696f1a21ceaad5f7b2": {
+   "raw": "Sam Lindqvist should review the migration runbook, a topic for the platform team.",
+   "prompt_tokens": 233,
+   "completion_tokens": 18
+  },
+  "a5113810151ee8cc294173f4cef02f5c578d86f9abc2503687d1a913b3c4bd01": {
+   "raw": "Alex uses Neovim and VS Code as editors.",
+   "prompt_tokens": 295,
+   "completion_tokens": 12
+  },
+  "a5e88ee45e0c1e125d664365e67e11eb01cec132f49e17997523912a8307831c": {
+   "raw": "Alex Rivera\u2019s prior work history before joining Northwind Logistics.",
+   "prompt_tokens": 237,
+   "completion_tokens": 14
+  },
+  "a8708f04a2018a4afe4ab96b18229a810c65e9d8cdf7c20e100d28764cecda0f": {
+   "raw": "NONE",
+   "prompt_tokens": 342,
+   "completion_tokens": 3
+  },
+  "a94e8433cc5235fffa0bfe5bfb85699e47487ee3c162d8bf84e8a9b90b5b6d63": {
+   "raw": "Alex and Dana Okafor: 1:1 meetings.",
+   "prompt_tokens": 236,
+   "completion_tokens": 14
+  },
+  "aa04bc9a74c001c6ce9085fd606405457cae1ba2766c2d2d9f9ed4031c767b72": {
+   "raw": "Alex Rivera prefers concise, answer-first explanations.",
+   "prompt_tokens": 279,
+   "completion_tokens": 10
+  },
+  "aa2e7b85c80c33b1383a6da5da8364555985a12556bc92524d2017b0c940437b": {
+   "raw": "Alex\u2019s preference for Go services and sqlc over ORMs, based on GORM migration pain at Meridian Freight.",
+   "prompt_tokens": 211,
+   "completion_tokens": 27
+  },
+  "aa906f5d90103e0d73aa4be29ec30495b86afaf34601209205bf360afed72dd5": {
+   "raw": "Alex's manager Dana Okafor and the engineering all-hands migration plan topic.",
+   "prompt_tokens": 266,
+   "completion_tokens": 18
+  },
+  "adc04fc5e2189116ba56b7563f914d6d22594a6bb32952abbe4078baa0c840d8": {
+   "raw": "Northwind's shipment lookup endpoint latency is a performance concern.",
+   "prompt_tokens": 247,
+   "completion_tokens": 13
+  },
+  "aff9fdb9eb802eaa17fdc9bc85f2e1ee66abcaed24a9957535cdd933e7e49ac2": {
+   "raw": "Alex's staff engineer promotion packet covers migration impact, observability leadership, and mentoring Priya.",
+   "prompt_tokens": 289,
+   "completion_tokens": 20
+  },
+  "b2e06c7cacdd94a5410fc171840f3574dff794dee74718ce513aa73f78b2e188": {
+   "raw": "NONE",
+   "prompt_tokens": 350,
+   "completion_tokens": 3
+  },
+  "b50bf02b96b4c22cfdb31dbd32336411f597f45cbf574efdf5bf99a691afe4f9": {
+   "raw": "Alex's on-call swap with Priya regarding the production cutover.",
+   "prompt_tokens": 332,
+   "completion_tokens": 16
+  },
+  "b52e68042d9942744f47bc18cebcb7b035625ac0bf5d0e8c02eaaf0789bfe628": {
+   "raw": "NONE",
+   "prompt_tokens": 304,
+   "completion_tokens": 3
+  },
+  "b6038e7fea034a8127b563ff88521a1fa7ee20f84ec971f5e421a687a0879d2b": {
+   "raw": "Alex and the Fruita race.",
+   "prompt_tokens": 312,
+   "completion_tokens": 9
+  },
+  "b66bb31edc2f9700169bf2633e9657905b3975d5c5205264ec70b8747c303f75": {
+   "raw": "Alex's SQL formatting preference belongs to the cutover work context.",
+   "prompt_tokens": 326,
+   "completion_tokens": 14
+  },
+  "b6a19fbf7065ca51479320b35fd6f6f8995efef95c182fe07b040ae2d355548e": {
+   "raw": "Priya Shah and Sam Lindqvist are on Alex's platform team under Dana Okafor, VP of Engineering.",
+   "prompt_tokens": 199,
+   "completion_tokens": 24
+  },
+  "b7bf48acb2b6736955ffb10194481c87dac8b2f2865f06899818cad9de503841": {
+   "raw": "Alex's database topic.",
+   "prompt_tokens": 290,
+   "completion_tokens": 6
+  },
+  "b84d1dbcaac7748e31fe5373d048f6ff052a032f3c5fe2d94891981a61db25e0": {
+   "raw": "Alex and Jordan plan a Japan trip.",
+   "prompt_tokens": 289,
+   "completion_tokens": 9
+  },
+  "ba57e5358fbcf4b8fc4e0fc5b65b1e6dd4cc3c92b402a0ef7443f795689ff66f": {
+   "raw": "Alex wants the production cutover moved one week.",
+   "prompt_tokens": 312,
+   "completion_tokens": 11
+  },
+  "bdbe0a66f54a9b8493c97068bf0d514a24ab2c664b991cd12411476ff1a42968": {
+   "raw": "Alex Rivera prefers Go and TypeScript code examples over Java.",
+   "prompt_tokens": 296,
+   "completion_tokens": 13
+  },
+  "be610ee7dab0b9571e73d872eb1d80de5199c1c763c73c7decb5cc80c890e915": {
+   "raw": "NONE",
+   "prompt_tokens": 263,
+   "completion_tokens": 3
+  },
+  "be8121ad5d68afa5e537a26d9758e7a13d5b342c62e9acd8cbb047fb73d81156": {
+   "raw": "Northwind's shipment_events migration: TimescaleDB versus native partitioning.",
+   "prompt_tokens": 316,
+   "completion_tokens": 16
+  },
+  "bf0e96438bb308c8c240a29d28936b653c0ab52ab8fd27428bf4af4feac6e9aa": {
+   "raw": "NONE",
+   "prompt_tokens": 368,
+   "completion_tokens": 3
+  },
+  "bf2ab0594e920b5aa453dbdf07e0d9d1f2f60d7e76fefa4d09f8a7088100927e": {
+   "raw": "Alex's career goal is a staff engineer role.",
+   "prompt_tokens": 257,
+   "completion_tokens": 11
+  },
+  "c0f800a32a949f5f66ed86402a29e53fbb70ae56188ee8d7f8797e24de431bab": {
+   "raw": "Alex and Priya: staff promotion packet.",
+   "prompt_tokens": 305,
+   "completion_tokens": 10
+  },
+  "c1b025508311ec865a54262a3662504dbf3e93e0bb47497b68661e057b605e6d": {
+   "raw": "Alex Rivera\u2019s personal location and move related to remote work at Northwind Logistics.",
+   "prompt_tokens": 263,
+   "completion_tokens": 18
+  },
+  "c22a19eba4b8c475f097322ad9f47739ae0aac877415d5161594533fef8de18e": {
+   "raw": "Alex accepted leading the observability rewrite, which serves as staff-level evidence toward the staff engineer role.",
+   "prompt_tokens": 280,
+   "completion_tokens": 21
+  },
+  "c2562e2b85b66ce062a4965b3efcda3770ae975b946426ccd685a323a1dac2ad": {
+   "raw": "Alex Rivera\u2019s location and move.",
+   "prompt_tokens": 279,
+   "completion_tokens": 9
+  },
+  "c293e57de55a46bcf36260028f513483690ecd43e65541d16c8bd79156dde36c": {
+   "raw": "Alex's 1:1 with manager Dana Okafor, VP of Engineering.",
+   "prompt_tokens": 220,
+   "completion_tokens": 18
+  },
+  "c7449408cc4ce4aea53faeb755cf252f78c907b99711530036088d4134fa2199": {
+   "raw": "NONE",
+   "prompt_tokens": 282,
+   "completion_tokens": 3
+  },
+  "c8c3f2e693ccf84fc07f10b60b79492437cad12d9c483c4e12a46bd0ae3857bc": {
+   "raw": "Priya Shah and Sam Lindqvist are on the platform team.",
+   "prompt_tokens": 215,
+   "completion_tokens": 14
+  },
+  "c985f5d8145f78e395bd5c85f11b9a0edcc4679cb43a17ef1ebb55a1d668d4db": {
+   "raw": "NONE",
+   "prompt_tokens": 308,
+   "completion_tokens": 3
+  },
+  "c9ee8caad1feca730825f82fb709fae3231e4f57a698e7f3330e4b841cfdbe2b": {
+   "raw": "Alex's staff engineer goal involves leading the observability rewrite.",
+   "prompt_tokens": 267,
+   "completion_tokens": 13
+  },
+  "d1c999827d7c1724b2e968698ec9a0c175c0a1e6127dabd0e9355a273f688303": {
+   "raw": "Alex reads science fiction.",
+   "prompt_tokens": 310,
+   "completion_tokens": 6
+  },
+  "d7d14a8a9b55ae2f478a881655f366c49a8059fbe2151f368e5597b24a20d91c": {
+   "raw": "Alex's editor setup: Neovim as main editor, with VS Code for the Go debugger.",
+   "prompt_tokens": 279,
+   "completion_tokens": 22
+  },
+  "d8767c19836eae34d4c00a52182a0e70f5b55b651beecfcb6facfcd4e260fa2f": {
+   "raw": "Alex\u2019s coffee and caffeine habits.",
+   "prompt_tokens": 286,
+   "completion_tokens": 9
+  },
+  "d89229d2a2114b201458efe73f33548545a26343cbf7d1eee951d63ed8a13d6f": {
+   "raw": "NONE",
+   "prompt_tokens": 334,
+   "completion_tokens": 3
+  },
+  "de03654e5bc7e8e9e622fc8f05541ce74810fd5e30121c9b89288b527dd3c9f1": {
+   "raw": "Priya Shah's on-call cutover work involves the Shipment Lookup SLO Datadog dashboard.",
+   "prompt_tokens": 312,
+   "completion_tokens": 24
+  },
+  "e047433269bbaf0b445502e0c32ea72015eedf95ed4f8cb30a14fd69b6e3f5f4": {
+   "raw": "Alex's shipment_events autovacuum incident relates to the Postgres partitioning and indexing work.",
+   "prompt_tokens": 290,
+   "completion_tokens": 21
+  },
+  "e06d40f8699bced0439a1bf07cf30f080488857b4df47a6b0b63a5dc393e764c": {
+   "raw": "NONE",
+   "prompt_tokens": 289,
+   "completion_tokens": 3
+  },
+  "e10c094b3d52d7bf7d93d774b656a1ebc47c70d32d35d9bac437d5062159e46f": {
+   "raw": "Alex declined leading the observability rewrite, which is staff-level evidence toward the staff engineer role.",
+   "prompt_tokens": 261,
+   "completion_tokens": 20
+  },
+  "e143c36f20d11544fad00a3d10cd8d7ad04e262193e4c1ebc0a3ef9fb808e50d": {
+   "raw": "NONE",
+   "prompt_tokens": 281,
+   "completion_tokens": 3
+  },
+  "e22b58001b02d586c92bf9e0e647029c4baed6367333e2fad51b8a74653e898b": {
+   "raw": "Alex's migration plan for Dana Okafor.",
+   "prompt_tokens": 272,
+   "completion_tokens": 11
+  },
+  "e6ac1a2653d9883fae8190e592e55ece042ef5d4b5ddcbf6d77e4bad4df6ad34": {
+   "raw": "NONE",
+   "prompt_tokens": 278,
+   "completion_tokens": 3
+  },
+  "e70f5eede30cf7b143f90510c120245ae1c64abb684d31c8f70afbe717c3b634": {
+   "raw": "Alex's Datadog cost concern: limiting metric tags and using traces.",
+   "prompt_tokens": 291,
+   "completion_tokens": 16
+  },
+  "e71b0ee17e8a03bf6efabd68595b34475e3d6d0bf26c8c986a36c22cb055111c": {
+   "raw": "Alex's migration topic: production cutover schedule.",
+   "prompt_tokens": 288,
+   "completion_tokens": 11
+  },
+  "ecb86deb52e547ceb7b9caadd279e7bfe646dfa2f88084d520670733c183c80e": {
+   "raw": "Alex and ORMs.",
+   "prompt_tokens": 227,
+   "completion_tokens": 6
+  },
+  "eda4a0787b55d5286ba92383514d98adf2c8b09b45b10eb44299a0c27ce16ad8": {
+   "raw": "Alex and the observability rewrite.",
+   "prompt_tokens": 283,
+   "completion_tokens": 8
+  },
+  "edd4dddd38f89bb6aa4444d13aea5dc1b778bf063a3a3533c553a710f2952cba": {
+   "raw": "NONE",
+   "prompt_tokens": 306,
+   "completion_tokens": 3
+  },
+  "efd41915a8f473360d4b4e31c55963af5d26d175d0af52a9b2f15a5e882d24cb": {
+   "raw": "Northwind's shipment_events Postgres migration: considering TimescaleDB instead of native partitioning.",
+   "prompt_tokens": 300,
+   "completion_tokens": 20
+  },
+  "f0374ca5cb5ad29c95ec5782c61d46b2705a229919a3c1921c3f075cf8b6d129": {
+   "raw": "Alex uses Neovim as the main editor.",
+   "prompt_tokens": 289,
+   "completion_tokens": 11
+  },
+  "f2e3315e2f9900e4efda43edf9fde566c5044e710c2abba504ada67d4a2e0627": {
+   "raw": "Alex\u2019s Japan trip preference for trains and a JR Pass.",
+   "prompt_tokens": 256,
+   "completion_tokens": 14
+  },
+  "f50e44122f27b47ac504f5481ad4efb60997188c660aff779aaa5ddace7a7730": {
+   "raw": "Alex is injured and cannot do gravel biking.",
+   "prompt_tokens": 297,
+   "completion_tokens": 10
+  },
+  "f58fced2433ecc63d17e83e870d7860e63f58d0f06530d0725ad4d808a87ffa8": {
+   "raw": "Alex rejected TimescaleDB for the Postgres migration.",
+   "prompt_tokens": 333,
+   "completion_tokens": 12
+  },
+  "f6204d0257b912973debbaca7a6157ccb3c2b97503f031671b620920cc96fc08": {
+   "raw": "Sam, production cutover.",
+   "prompt_tokens": 340,
+   "completion_tokens": 7
+  },
+  "f7a496b190a587a2c94ba7fd992a2e742fe4d0d2b03ff537636ba8c76106e1b3": {
+   "raw": "NONE",
+   "prompt_tokens": 267,
+   "completion_tokens": 3
+  },
+  "f9c415ec151e9494558aa91b8cbb04cdea20047648dd899093aca1dfac1b7c04": {
+   "raw": "Alex\u2019s Fruita gravel race taper plan.",
+   "prompt_tokens": 296,
+   "completion_tokens": 12
+  },
+  "fcea3e0fa70e71f9e41e667298ecd3efed29aacbb57e7dec83885320b201c925": {
+   "raw": "Northwind's shipment_events Postgres migration and partitioning topic.",
+   "prompt_tokens": 276,
+   "completion_tokens": 14
+  },
+  "fd7a085260ea08c30a3182a8449cb139ff98ed378bc991a27d13a1129bfec661": {
+   "raw": "Alex\u2019s staff promotion packet includes mentoring Priya.",
+   "prompt_tokens": 287,
+   "completion_tokens": 12
+  },
+  "ff427fa55792e42b1de5a81a9f6a7a01ae12b11b467885bcac5e26ee74f4a1a1": {
+   "raw": "Alex agreed to use pg_partman for partition management, following the decision on Postgres 16 native range partitioning for shipment_events.",
+   "prompt_tokens": 296,
+   "completion_tokens": 28
+  }
+ }
+}
