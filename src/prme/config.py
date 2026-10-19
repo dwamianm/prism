@@ -921,6 +921,36 @@ class PRMEConfig(_ProjectSettings):
             "that rule."
         ),
     )
+    enable_owner_name_carry: bool = Field(
+        default=False,
+        # Unset, it is left out of dumps, so a configuration recorded before
+        # the option existed still compares equal.
+        exclude_if=lambda value: value is False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() keeps the memory owner's name on "
+            "their later turns too (prism-monorepo issue 258). A user turn is "
+            "the owner by definition. The turn that gives their name, as the "
+            "caller's speaker or by saying who it is (\"Hi, I am Alex "
+            "Rivera\", with enable_ingest_claim_fixes), already binds its I, "
+            "me and my to that person's entity. With this option, the person "
+            "entity that turn creates is marked as the name a user turn gave "
+            "its owner, and a later user turn of the same owner and scope that "
+            "names nobody (\"I prefer trains to flights\") binds its I, me and "
+            "my to the newest such entity instead of creating an I entity of "
+            "its own, so the graph connects the person to all of their "
+            "claims. It never applies to participant, assistant, tool or "
+            "system turns, a caller's speaker or first_person_owner on the "
+            "turn wins, a later name replaces an earlier one for the turns "
+            "after it without rewriting earlier claims, and a name no user "
+            "turn gave is never invented. It needs "
+            "enable_speaker_references, adds no model call and no extraction "
+            "request change, and a failed lookup leaves the turn's I as it "
+            "was. It marks only an entity the turn creates, so a person an "
+            "earlier message already named is not marked. Default False: "
+            "it has not been through the default-change rule on the ingest() "
+            "answer track."
+        ),
+    )
     enable_superseded_source_suppression: bool = Field(
         default=False,
         description=(

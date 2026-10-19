@@ -32,6 +32,7 @@ from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import claim_sentences, validate_grounding
+from prme.ingestion.owner_name import carried_owner_name, owner_name_marker
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
 from prme.ingestion.supersedence import SupersedenceDetector, correctable_claim
@@ -257,6 +258,7 @@ class IngestionPipeline:
         extraction_corrections: bool = False,
         link_mentions: bool = False,
         claim_fixes: bool = False,
+        owner_name_carry: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -304,6 +306,9 @@ class IngestionPipeline:
         # A plural claim keeps its we, a turn that says who it is names its I,
         # and no two claims of a message share a text (enable_ingest_claim_fixes).
         self._claim_fixes = claim_fixes
+        # A user turn that names nobody keeps the name an earlier user turn gave its I
+        # (enable_owner_name_carry).
+        self._owner_name_carry = owner_name_carry
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -1188,6 +1193,18 @@ class IngestionPipeline:
         introduced = (_introduced_speaker(event, result)
                       if self._claim_fixes and self._bind_speaker_references and current_policy
                       and speaker is None and not owner_reference else None)
+        # A user turn that names nobody keeps the name an earlier user turn gave its I; the
+        # turns that do name their speaker mark the entity a later turn will find.
+        carried = None
+        owner_name_basis = None
+        if (self._owner_name_carry and self._bind_speaker_references and current_policy
+                and not owner_reference and event.role.casefold() in OWNER_ROLES):
+            owner_name_basis = "speaker" if speaker is not None else "self_introduction" if introduced else None
+            if owner_name_basis is None and any(
+                _speaker_reference(entity.name, entity.entity_type)
+                for entity in _entities_with_unresolved_references(result)
+            ):
+                carried = await carried_owner_name(graph, user_id=event.user_id, scope=event.scope)
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
@@ -1195,7 +1212,8 @@ class IngestionPipeline:
             first_person_forms=materialization_policy in {"speech_act_v13", "speech_act_v14"},
             explicit_corrections=materialization_policy == "speech_act_v14",
             owner_reference=owner_reference,
-            speaker=speaker or introduced, speaker_introduced=introduced is not None,
+            speaker=speaker or introduced or carried, speaker_introduced=introduced is not None,
+            speaker_carried=carried is not None, owner_name_basis=owner_name_basis,
             sentence_text=self._claim_sentence_text and current_policy,
             distinct_text=self._claim_fixes,
             grounding_speaker=(metadata_speaker(event.metadata)
@@ -1213,13 +1231,18 @@ class IngestionPipeline:
         grounding_speaker: str | None = None, first_person_forms: bool = False,
         explicit_corrections: bool = False, owner_reference: bool = False,
         speaker_introduced: bool = False, distinct_text: bool = False,
+        speaker_carried: bool = False, owner_name_basis: str | None = None,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
         ``merge_claims`` folds a repeated claim into one current record (#209).
         ``speaker`` binds first-person singular references to that speaker's
         entity (enable_speaker_references); ``speaker_introduced`` says the turn
-        itself gave the name ("I am Alex Rivera") rather than the caller.
+        itself gave the name ("I am Alex Rivera") rather than the caller, and
+        ``speaker_carried`` that an earlier user turn gave it and this one
+        names nobody (enable_owner_name_carry). With ``owner_name_basis``, a
+        person entity this turn creates under the speaker's name is marked as
+        the name a user turn gave its owner, for a later turn to find.
         ``sentence_text`` stores a claim's own sentences as its text
         (enable_claim_sentence_text), and with ``distinct_text`` a claim whose
         sentences are already another claim's text from this message gets a
@@ -1257,7 +1280,16 @@ class IngestionPipeline:
                 )
 
         # --- Entities ---
-        for entity in _entities_with_unresolved_references(result):
+        entities = _entities_with_unresolved_references(result)
+        owner_marker = owner_name_marker(event_id, owner_name_basis) if owner_name_basis and speaker else None
+        marked_name = (speaker or "").strip().casefold()
+        if owner_name_basis == "speaker" and not any(
+            entity.entity_type.strip().casefold() == "person" and entity.name.strip().casefold() == marked_name
+            for entity in entities
+        ):
+            # The caller names the owner, so the owner has their entity even when the turn lists none.
+            entities.append(ExtractedEntity(name=speaker, entity_type="person"))
+        for entity in entities:
             entity_scope = scope
             # The turn's named speaker is who says I, me and my in it.
             bound = speaker is not None and _speaker_reference(entity.name, entity.entity_type)
@@ -1272,6 +1304,8 @@ class IngestionPipeline:
                 )
                 name, description = "I", None
             else:
+                names_owner = (owner_marker is not None and entity_type == "person"
+                               and name.strip().casefold() == marked_name)
                 entity_id, is_new = await entity_merger.find_or_create_entity(
                     name=name,
                     entity_type=entity_type,
@@ -1280,6 +1314,7 @@ class IngestionPipeline:
                     session_id=event.session_id,
                     evidence_event_id=event_id,
                     scope=entity_scope,
+                    owner_name=owner_marker if names_owner else None,
                 )
             entity_refs.add(entity.name, entity.entity_type, entity_id)
 
@@ -1407,6 +1442,8 @@ class IngestionPipeline:
                     fact_metadata["speaker_reference"] = {"speaker": speaker, "fields": bound_fields}
                     if speaker_introduced:
                         fact_metadata["speaker_reference"]["basis"] = "self_introduction"
+                    elif speaker_carried:
+                        fact_metadata["speaker_reference"]["basis"] = "owner_name"
             if owner_reference:
                 owner_fields = [field for field, value, kind in (
                     ("subject", fact.subject, fact.subject_entity_type),
@@ -1432,7 +1469,9 @@ class IngestionPipeline:
             if sentence_text and distinct_text and resolution is None:
                 if fact_content in claim_texts:
                     # Another claim of this message already has this text.
-                    fact_content = _claim_statement(fact, speaker)
+                    # A carried name stays out of the text: every later claim would then name the
+                    # owner, and a question that names them would match all of them.
+                    fact_content = _claim_statement(fact, None if speaker_carried else speaker)
                     fact_metadata["grounding_method"] = "claim_statement_v1"
                 else:
                     claim_texts.add(fact_content)
