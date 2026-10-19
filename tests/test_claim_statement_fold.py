@@ -10,8 +10,6 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
-import pytest
-
 from prme import MemoryEngine, PRMEConfig
 from prme.ingestion.schema import ExtractionResult
 from prme.models.nodes import MemoryNode
