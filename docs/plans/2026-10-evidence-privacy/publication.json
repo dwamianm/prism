@@ -1,0 +1,107 @@
+{
+  "status": "published_and_verified",
+  "published_at": "2026-10-19",
+  "repository": "dwamianm/prism",
+  "epic": {
+    "repo": "dwamianm/prism",
+    "number": 318,
+    "url": "https://github.com/dwamianm/prism/issues/318",
+    "title": "Epic: Sanitized memory, private evidence, and reliable erasure",
+    "id": 5933272113,
+    "body_verified": true
+  },
+  "companion_epic": "https://github.com/dwamianm/prism-monorepo/issues/279",
+  "issues": {
+    "PV-01": {
+      "repo": "dwamianm/prism",
+      "number": 319,
+      "url": "https://github.com/dwamianm/prism/issues/319",
+      "title": "[PV-01] Specify privacy boundaries and inventory every content copy",
+      "id": 5933274144,
+      "body_verified": true
+    },
+    "PV-02": {
+      "repo": "dwamianm/prism",
+      "number": 320,
+      "url": "https://github.com/dwamianm/prism/issues/320",
+      "title": "[PV-02] Add evidence capture, retention and admission policies",
+      "id": 5933274569,
+      "body_verified": true
+    },
+    "PV-03": {
+      "repo": "dwamianm/prism",
+      "number": 321,
+      "url": "https://github.com/dwamianm/prism/issues/321",
+      "title": "[PV-03] Encrypt evidence with separate keys and fail-closed storage",
+      "id": 5933274906,
+      "body_verified": true
+    },
+    "PV-04": {
+      "repo": "dwamianm/prism",
+      "number": 323,
+      "url": "https://github.com/dwamianm/prism/issues/323",
+      "title": "[PV-04] Separate usable memory from sealed source evidence",
+      "id": 5933275717,
+      "body_verified": true
+    },
+    "PV-05": {
+      "repo": "dwamianm/prism",
+      "number": 324,
+      "url": "https://github.com/dwamianm/prism/issues/324",
+      "title": "[PV-05] Protect journals, receipts and asynchronous extraction work",
+      "id": 5933276149,
+      "body_verified": true
+    },
+    "PV-06": {
+      "repo": "dwamianm/prism",
+      "number": 325,
+      "url": "https://github.com/dwamianm/prism/issues/325",
+      "title": "[PV-06] Implement evidence expiry and dependency-aware memory erasure",
+      "id": 5933276515,
+      "body_verified": true
+    },
+    "PV-07": {
+      "repo": "dwamianm/prism",
+      "number": 326,
+      "url": "https://github.com/dwamianm/prism/issues/326",
+      "title": "[PV-07] Migrate and export protected packs with explicit recovery limits",
+      "id": 5933276903,
+      "body_verified": true
+    },
+    "PV-11": {
+      "repo": "dwamianm/prism",
+      "number": 327,
+      "url": "https://github.com/dwamianm/prism/issues/327",
+      "title": "[PV-11] Verify privacy contracts and measure sealed retrieval behavior",
+      "id": 5933277247,
+      "body_verified": true
+    },
+    "PV-13": {
+      "repo": "dwamianm/prism",
+      "number": 322,
+      "url": "https://github.com/dwamianm/prism/issues/322",
+      "title": "[PV-13] Sanitize source passages before every admission path",
+      "id": 5933275270,
+      "body_verified": true
+    }
+  },
+  "dependencies": {
+    "PV-01": [],
+    "PV-02": ["PV-01"],
+    "PV-03": ["PV-01", "PV-02"],
+    "PV-04": ["PV-02", "PV-03", "PV-13"],
+    "PV-05": ["PV-03", "PV-04", "PV-13"],
+    "PV-06": ["PV-02", "PV-03", "PV-04", "PV-05"],
+    "PV-07": ["PV-03", "PV-04", "PV-05", "PV-06"],
+    "PV-11": ["PV-02", "PV-03", "PV-04", "PV-05", "PV-06", "PV-07", "PV-13"],
+    "PV-13": ["PV-01", "PV-02"]
+  },
+  "validation": {
+    "repository": "dwamianm/prism",
+    "epic": "https://github.com/dwamianm/prism/issues/318",
+    "children": 9,
+    "dependency_edges": 26,
+    "status": "verified"
+  },
+  "definition_of_done": "Two epics and fourteen issues published once in the owning repositories; native parents/blockers and exact published bodies verified; local plans linked. Implementation and deployment are separate."
+}
