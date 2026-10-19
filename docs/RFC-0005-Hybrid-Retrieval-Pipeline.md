@@ -338,6 +338,26 @@ the three augmentation settings; version 12 also records the anchor policy.
 Versions 1–10 mean augmentation was disabled, while versions 1–11 mean the
 anchor policy was `all`.
 
+### 4.8 Claim statement folding
+
+**Implementation status (2026-10-19):** with `packing.folded_records_keep_rank`
+(off by default), Stage 5.5e folds each claim statement into the claim it
+restates. A statement (`grounding_method` `claim_statement_v1`, RFC-0003) is
+what `enable_ingest_claim_fixes` builds for a claim whose sentences another
+claim of the message already holds. It is short and repeats the names and verbs
+of a question, so it outranks that claim. The stage runs after session,
+episode and evidence expansion and before consumer filters and selection. For
+each statement it finds the claims of the same exact `evidence_refs` set that
+hold its stored `object` as whole words, ignoring case and spacing, preferring
+those that hold its `subject` too and then the best score. That claim takes the
+better score, with the statement's provenance and a `claim_statement_fold`
+adjustment of coefficient 1 that names the statement, and the statement leaves
+the results with the exclusion reason `claim_statement_folded`. A statement
+with no such claim stays, and notes and entities are never the claim. The
+option also makes the reader context's fold of repeated text (RFC-0006) keep
+the place of the earliest record it folds. No model is called. When the
+ranking changed, the receipt's ranking policy is `score_id`.
+
 ---
 
 ## 5. Stage 3: Candidate Merging

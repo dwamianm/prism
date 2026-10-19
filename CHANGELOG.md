@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `packing.folded_records_keep_rank` (`PRME_PACKING__FOLDED_RECORDS_KEEP_RANK`),
+  off by default (prism-monorepo issues 258 and 259). With
+  `enable_ingest_claim_fixes` on, the answer to a question ranked worse than
+  with it off (the chat probe's answer in the top 3 fell from 14 of 18 to 8 of
+  18, the defect probes' from 5 of 7 to 4 of 7). The cause is the statement
+  that option builds for a claim whose sentences another claim already holds
+  ("Dana has pet Biscuit."): it is short and repeats the names and verbs of a
+  question, so it outranks the claim that holds the sentence, and 39 of the 56
+  records above the chat probe's answers were such statements. With the new
+  option on, `retrieve()` folds each statement into the claim of the same
+  evidence that holds its object: the claim takes the better of the two scores
+  through a replayable `claim_statement_fold` score adjustment that names the
+  statement, and the statement leaves the results with the exclusion reason
+  `claim_statement_folded`. In the reader context, the record that folds
+  earlier packed records (`fold_repeated_text`) also takes the place of the
+  earliest one, so folding no longer moves a claim's text down to its source
+  note's place. With all four options on, the defect probes rank the answer in
+  the top 3 for 7 of 7 questions and the chat probe for 14 of 18, as with them
+  all off, and the fast cycle passes its rules. With the option off, or for
+  memories without statements, nothing changes: results, contexts, receipts and
+  configuration dumps keep their bytes. It has not been through the
+  default-change rule on the `ingest()` answer track. `BENCHMARKS.md` has the
+  evidence ("Why the claim fixes lost rank").
 - Add the fast cycle (part of prism-monorepo issues 258 and 259;
   `BENCHMARKS.md`, "Fast cycle"): `uv run python -m benchmarks.fast_cycle run
   --label <name> --out <dir>` stores 75 memories with `store()` and asks 17
