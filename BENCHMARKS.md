@@ -1147,6 +1147,210 @@ at temperature 0 is close to repeatable but not guaranteed to be, so a single
 baseline build is not a measure of run-to-run noise. Compare builds only when
 both used the same model and Ollama server version (`build.json` records both).
 
+### Fast cycle: store, ingest and retrieve in under a minute (prototype)
+
+The multi-day benchmarks cannot check every change. The fast cycle is a
+regression screen over the paths a developer meets first: memories stored one
+node per call as `POST /v1/store` stores them, chats read by an extraction
+model through `ingest()`, and the questions asked afterwards. One command runs
+both, writes a report with the measures in three groups (storage, meaning,
+results) and the time of each stage, and says pass or fail against a committed
+baseline. It replaces none of the benchmarks: the full ones stay for the
+twice-weekly run on a remote machine. It is not an accuracy estimate.
+
+```sh
+uv run python -m benchmarks.fast_cycle run --label my-change --out /tmp/cycle
+uv run python -m benchmarks.fast_cycle run --label my-change --out /tmp/cycle --set <key>=<value>
+uv run python -m benchmarks.fast_cycle compare benchmarks/fixtures/fast-cycle/baseline-main.json /tmp/cycle/report.json
+```
+
+`run` judges its own report against the committed baseline when it finishes
+(`--baseline none` skips that, `--stages store` runs one stage) and exits 0 on
+a pass, 1 when a gated measure got worse by more than its tolerance, and 2
+when the two reports are not comparable (another fixture, chat or backend).
+`--accept <measure>` names a measure whose worsening the change means to cause
+(more nodes per call for an enrichment, say); it is listed and does not fail.
+The run needs the local Ollama server with `deepseek-v4.1-flash:cloud` (the
+chat probe's build reads the model identity even when every request is
+replayed) and the cached local embedding model (`BAAI/bge-small-en-v1.5`,
+loaded offline). The store stage can run on PostgreSQL, the hosted backend, with
+`--database-url` or `PRME_FAST_CYCLE_DATABASE_URL` (and `uv run --extra
+postgres`); it uses a new owner in that database for each run.
+
+**Store stage** (`benchmarks/fixtures/fast-cycle/store-v1.json`). A fresh
+engine on the gate's configuration stores 75 memories of one made-up user (the
+Alex entries of the dev project's seed) with `store_with_receipt()`, as the
+route does, and answers 17 questions with answer terms (`all_of` or `any_of`)
+and, for five corrected facts, the stale value. Three questions are real
+repros: "what coding language is alex learning?" (Rust; #254), "which cities
+will Alex and jordan visit in Japan?" (#260) and "When is the production
+cutover?" (2026-10-31, stale 2026-10-24). Storage is the nodes and edges made
+per call and the context tokens used. Meaning is how many of eight key
+entities exist as nodes and how many questions the word and graph channels
+found a candidate for. Results are the rank of each answer among the results
+`retrieve()` returned (the chat probe's `answer_rank`), the answers ranked
+first and in the top 3, the mean reciprocal rank, the answers in the context,
+and the questions where a record with only the stale value ranks above the
+answer or is in the context.
+
+**Ingest stage.** The three scripted chats (`defects-v1`, `corrections-v1`,
+`chat-v1`: 14, 16 and 54 turns) are built by the chat probe's build, the one the
+fast gate uses, with extraction by `deepseek-v4.1-flash:cloud` through Ollama;
+`corrections-v1` names its owner as the speaker, as the corrections probe does.
+Storage is the extraction requests and tokens, claims per turn, claims that
+repeat another's text, and nodes and edges per turn. Meaning is the user claims
+attached to the named owner against "I" or "We", pronoun entities, entities
+with no link, and the key entities and key links found. Results are the answers
+in the context and in the top 3 and top 5, the stale values and repeated
+records in the contexts, and for the corrections chat the old value shown
+first, the context lines and active records that hold only the old value, the
+extracted claims not retired, and the new values that are active.
+
+Every request goes through the extraction cache. The committed cache
+(`benchmarks/fixtures/fast-cycle/extraction-cache`, 84 responses, 113 KB with
+`usage.json`) holds one live run, so a change to what ingestion does with the
+model's output (claims, entities, links, retrieval) is measured on identical
+model output with no model call. A run works on a copy of the cache, so it
+never writes into the repository. A change to the extraction prompt or the
+model misses the cache and makes live calls, which differ from run to run.
+`usage.json` keeps each turn's tokens from the live call that filled the cache,
+because a replay reports none.
+
+Times on 2026-10-19 (laptop, `main` at `7f9ce556`, Ollama 0.40.6):
+
+| Run | Store | Ingest | Total |
+|---|---:|---:|---:|
+| Cold: empty cache, 84 live requests, three runs | 7.0-7.8 s | 151-203 s | 158-211 s |
+| Warm: replay of the cache, no model call, three runs | 6.9-8.6 s | 18.0-19.6 s | 25.3-28.3 s |
+
+In the first cold run the ingest stage took 29.0 s for `defects-v1`, 29.5 s for
+`corrections-v1` and 128.7 s for `chat-v1`; the model's latency is nearly all of
+it. The store stage on PostgreSQL takes about 2 s. Both are far under the 10
+minutes the cycle aims at, so no stage overruns. The warm runs reproduced the
+cold run's 132 measures exactly.
+
+**Pass rule.** `benchmarks/fixtures/fast-cycle/rules.json` lists each measure
+with its group, the better direction, whether it gates and a live tolerance.
+Compare judges every measure the two reports share. It passes when no gated
+measure is worse than the baseline by more than its tolerance. Better
+measures and the moves of ungated ones (claims and edges per turn, the rank of
+each answer) are listed and never fail.
+
+- A deterministic run is judged exactly, with tolerance 0. The store stage
+  calls no model, and an ingest stage whose requests all came from the cache
+  repeats the baseline's model output, so any difference is the code's.
+- An ingest stage that asked the model (live calls above zero in either
+  report) differs from run to run, so it gets the rule's `live` tolerance, the
+  larger of `abs` and `rel` times the baseline value. I chose them from three
+  full live runs of the unchanged code (252 model calls): for each chat and
+  measure, the spread between the lowest and highest of the three. `rel` is
+  twice the largest spread over mean for the chats whose mean is at least 10,
+  and `abs` is twice the largest spread over the others (at least 1 for a
+  count). Twice, because three runs show less than the range a fourth can
+  reach. With these, none of the six baseline and candidate pairs among the
+  three runs fails. The largest spreads: repeated records in the `chat-v1`
+  contexts 72, 36 and 36; claims that repeat another's text 44, 39 and 41 in
+  `chat-v1` and 10, 11 and 12 in `defects-v1`; user claims attached to "I" or
+  "We" 40, 42 and 39 in `chat-v1` and 15, 16 and 17 in `defects-v1`; answers in
+  the top 3 in `chat-v1` 14, 14 and 13; extraction tokens within 0.6%. Most of
+  the other measures did not move. Three runs are a small sample: a live pass
+  with a measure at its limit deserves a second run, and a live fail by one is
+  worth repeating once.
+
+Baseline on 2026-10-19 (`benchmarks/fixtures/fast-cycle/baseline-main.json`,
+the engine tree of `origin/main` at `7f9ce556`, DuckDB, from a replay of the
+committed cache):
+
+| Measure | store | defects-v1 | corrections-v1 | chat-v1 |
+|---|---:|---:|---:|---:|
+| Nodes per store call or turn | 1.00 | 4.79 | 3.38 | 4.54 |
+| Edges per store call or turn | 0.00 | 2.64 | 2.00 | 3.15 |
+| Extraction requests / tokens | | 14 / 84,400 | 16 / 96,475 | 54 / 335,364 |
+| Claims per turn | | 1.57 | 1.25 | 2.07 |
+| Claims whose text repeats another's | | 10 | 7 | 44 |
+| Context tokens per question | 1,786 | | | |
+| Key entities found (split, missing) | 0 of 8 | 9 (0, 0) | 2 (0, 0) | 15 (2, 0) |
+| User claims attached to the named owner | | 0 | 12 | 0 |
+| User claims attached to "I" or "We" | | 15 | 1 | 40 |
+| Pronoun entities / entities with no link | | 6 / 9 | 2 / 5 | 36 / 11 |
+| Key links linked / not linked | | 1 / 6 | 1 / 0 | 4 / 0 |
+| Questions with a word / graph candidate | 17 / 0 | | | |
+| Answers ranked in the top 3 | 14 of 17 | 5 of 7 | 1 of 4 | 14 of 18 |
+| Answers in the context | 17 of 17 | 7 of 7 | 4 of 4 | 17 of 18 |
+| Stale value in the context | 5 | 0 | 2 | 3 |
+| Stale value ranked above the answer | 4 | | | |
+| Repeated records in the contexts | | 0 | 0 | 72 |
+| Old value shown first / new value active | | | 1 / 2 | |
+
+The `defects-v1` column matches the fast gate's baseline above in the measures
+they share (6 pronoun entities, 1 key link linked and 6 not linked, 5 of 7
+answers in the top 3), from a separate live run. The store column shows the
+defects of #254 and #260 as they are: no entity, no edge and no graph
+candidate, and the question that names Japan and four cities ranks 26th of 75.
+
+**Check against a known change.** The lexical any-term fix (`57b1c364`, in
+`7f9ce556`) changed only the PostgreSQL word search. The store stage on
+PostgreSQL at `d92901ec`, the commit before the merge, against `7f9ce556`:
+
+| Measure | `d92901ec` | `7f9ce556` |
+|---|---:|---:|
+| "what coding language is alex learning?": rank of Rust / word-search hits | 6 / 0 | 4 / 5 |
+| Questions with a word-search candidate | 10 of 17 | 17 of 17 |
+| Answers ranked first / in the top 3 | 9 / 15 | 8 / 13 |
+| Mean reciprocal rank | 0.710 | 0.653 |
+| Stale value ranked above the answer | 3 | 4 |
+
+The cycle flags the difference. The Rust question moves from 6th, with no word
+candidate, as on dev, to 4th. Compare reports the gated measures that moved
+the wrong way (answers ranked first and in the top 3, the reciprocal rank and
+the stale value above the answer) as FAIL with `d92901ec` as the baseline, and
+the word-candidate count as FAIL the other way round. The same two commits on
+DuckDB give 29 measures unchanged, because Tantivy already matched any term.
+The fix lifts the question it targets but not to first place, and the "dog"
+question (answer in a memory that shares no word with it) falls from 1st to
+5th, so on this fixture and backend the fix is a net loss. Whether that holds
+at scale is for the full benchmarks.
+
+**Refresh.** Run these when the extraction prompt, the model, a conversation or
+the store fixture changes; the tests fail while the committed baseline names an
+older conversation or fixture.
+
+```sh
+rm -r benchmarks/fixtures/fast-cycle/extraction-cache
+uv run python -m benchmarks.fast_cycle run --label refresh --out /tmp/refresh --no-cache --update-cache --baseline none
+uv run python -m benchmarks.fast_cycle run --label main --out /tmp/main --baseline none
+cp /tmp/main/report.json benchmarks/fixtures/fast-cycle/baseline-main.json
+```
+
+The first run makes 84 live requests and fills the cache (`--update-cache`
+copies the responses it added; it never removes one, so delete the folder
+first for a clean cache). The second replays it, so the baseline is a
+deterministic report. Take the baseline from a checkout of the code it is
+named for, and rerun the three live runs for the tolerances after a model,
+server or prompt change.
+
+**What it cannot show.**
+
+- The ingest measures describe one recorded sample of one model's output. A
+  replay shows what the code does with that output, not how it behaves on
+  other outputs, and a single live run is one sample.
+- The fixtures are small: 75 memories, 84 turns and 46 questions. Every
+  context fits the 4,096-token budget, so packing under pressure and ranking
+  among thousands of nodes are not exercised, and the rank is the only measure
+  that tells a good order from a bad one. The questions were chosen from known
+  defects, so a new kind of defect may not be in them.
+- It is not an accuracy estimate. No reader answers and no judge scores:
+  an answer is a term found in a record.
+- Retrieval latency, concurrency, quotas, multi-tenant isolation, long-range
+  and multi-hop questions, temporal reasoning and abstention are not measured.
+- The default backend is DuckDB. The hosted service runs PostgreSQL, whose
+  word search differs, so a change to the hosted path needs `--database-url`.
+  The hosted API sets options in its own configuration that the cycle does not
+  copy; pass them with `--set`.
+- Ranks can differ between machines, CPU architectures or `fastembed`
+  versions when two scores nearly tie, so compare reports made on the same
+  machine, or refresh the baseline there.
+
 ### Corrections probe: what a correction stores and returns
 
 `benchmarks.diagnostics.corrections_probe` shows what PRME stores and what

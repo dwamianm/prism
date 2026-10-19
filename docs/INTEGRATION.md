@@ -193,10 +193,12 @@ async def store(
     valid_from: datetime | None = None,
     valid_to: datetime | None = None,
     ttl_days: int | None = ...,
+    extract: bool | None = None,
 ) -> str
 ```
 
-Store content across all four backends in one call. No LLM needed. By default,
+Store content across all four backends in one call. No LLM needed unless you
+ask for extraction with `extract=True` (see below). By default,
 the exact source text is also the searchable and model-facing memory. For large
 agent traces, logs, or structured documents, pass compact
 `retrieval_content`; `get_event()` still returns the exact source while the graph,
@@ -248,8 +250,27 @@ truth judgment or calibrated confidence model.
 | `valid_from` | `datetime \| None` | `None` | Timezone-aware inclusive validity start; omission uses admission time |
 | `valid_to` | `datetime \| None` | `None` | Exclusive validity end; requires an explicit earlier `valid_from` |
 | `ttl_days` | `int \| None` | `...` | Omit for configured default, pass `None` to disable, or set a nonnegative override |
+| `extract` | `bool \| None` | `None` | `True` also queues the background LLM extraction `ingest()` runs; `False` never does; `None` follows `enable_store_extraction` (off by default) |
 
 **Returns:** `str` — UUID of the created event (source of truth ID).
+
+**Extraction after a store.** A plain `store()` adds no meaning to the text: no
+entities, no claims, and so no graph neighbors. With `extract=True` (or
+`enable_store_extraction=True` and no `extract` argument), the call also saves
+an extraction job for the event in the same transaction as the event and its
+node, and starts the extraction in the background once the node is stored. It
+is the extraction `ingest()` runs, with the same provider, grounding policy and
+batching (the queued job is extracted in the owner's next flush, 30 seconds
+after the first queued turn, together with the other queued turns of its
+session), so entities, claims and their links appear afterwards, and
+`extraction_status()` reports the job. The call does not wait for any of it.
+The stored node keeps its id, content and typed values and stays the only node
+for the source text; extraction reads the exact source `content`, not
+`retrieval_content`, and adds nodes beside it. A job that fails is retried like
+an ingested turn's, and `retry_extraction()` and `process_extractions()` reach
+it by event id. `extract=True` on an engine with no ingestion pipeline raises
+`ValueError` before anything is saved; `enable_store_extraction` is skipped
+there. A plain `store()` is unchanged.
 
 A conversation between two or more people has more than one first-party
 speaker. Store the memory owner's turns with `role="user"` and every other

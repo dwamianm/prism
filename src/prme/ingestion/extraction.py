@@ -38,6 +38,7 @@ from prme.ingestion.grounding import (
     exact_decimal_string_from_quantity_text,
     mentioned_or_spoken,
     names_speaker,
+    plural_first_person_form,
     recover_exact_quantity_from_object,
     recover_exact_quantity_prefix,
     validate_extracted_quantity,
@@ -61,6 +62,11 @@ _VALIDATION_ROLE: ContextVar[str | None] = ContextVar(
 # The turn's named speaker, when enable_speaker_grounding is on.
 _VALIDATION_SPEAKER: ContextVar[str | None] = ContextVar(
     "prme_extraction_validation_speaker", default=None
+)
+# Whether a claim's I, me or my may become the turn's own we, us or our
+# (enable_ingest_claim_fixes).
+_VALIDATION_PLURAL: ContextVar[bool] = ContextVar(
+    "prme_extraction_validation_plural", default=False
 )
 # A list here receives the provider's output as parsed, before any check, so a
 # benchmark can keep it and validate it again under other grounding rules.
@@ -173,12 +179,15 @@ def _validate_modality(fact_type: str, epistemic_type: str, evidence_quote: str,
 
 
 def _validate_fact_source_support(
-    fact: ExtractedFact, source: str, speaker: str | None = None
+    fact: ExtractedFact, source: str, speaker: str | None = None, plural_first_person: bool = False
 ) -> None:
     claim_passage = _supporting_claim_passage(fact.evidence_quote or "", source)
     evidence_passage = _supporting_passage(fact.evidence_quote or "", source)
     if claim_passage is None or evidence_passage is None:
         raise ValueError("evidence_quote must be copied verbatim from the source")
+    if plural_first_person:
+        fact.subject = plural_first_person_form(fact.subject, claim_passage) or fact.subject
+        fact.object = plural_first_person_form(fact.object, claim_passage) or fact.object
     if (
         not mentioned_or_spoken(fact.subject, claim_passage, speaker)
         or not mentioned_or_spoken(fact.object, claim_passage, speaker)
@@ -204,7 +213,8 @@ def _validate_fact_source_support(
 
 
 def _validate_relationship_source_support(
-    relationship: ExtractedRelationship, source: str, speaker: str | None = None
+    relationship: ExtractedRelationship, source: str, speaker: str | None = None,
+    plural_first_person: bool = False,
 ) -> None:
     claim_passage = _supporting_claim_passage(
         relationship.evidence_quote or "", source
@@ -214,6 +224,13 @@ def _validate_relationship_source_support(
     )
     if claim_passage is None or evidence_passage is None:
         raise ValueError("relationship evidence_quote must be copied verbatim from the source")
+    if plural_first_person:
+        relationship.source_entity = (
+            plural_first_person_form(relationship.source_entity, claim_passage) or relationship.source_entity
+        )
+        relationship.target_entity = (
+            plural_first_person_form(relationship.target_entity, claim_passage) or relationship.target_entity
+        )
     if (
         not mentioned_or_spoken(relationship.source_entity, claim_passage, speaker)
         or not mentioned_or_spoken(relationship.target_entity, claim_passage, speaker)
@@ -700,6 +717,9 @@ class _CitedExtractionResult(ExtractionResult):
         source = (info.context or {}).get("source_text")
         role = (info.context or {}).get("source_role")
         speaker = (info.context or {}).get("speaker")
+        plural_first_person = (info.context or {}).get("plural_first_person")
+        if plural_first_person is None:
+            plural_first_person = _VALIDATION_PLURAL.get()
         if source is None:
             source = _VALIDATION_SOURCE.get()
         if role is None:
@@ -710,7 +730,7 @@ class _CitedExtractionResult(ExtractionResult):
             supported_facts = []
             for index, fact in enumerate(self.facts):
                 try:
-                    _validate_fact_source_support(fact, source, speaker)
+                    _validate_fact_source_support(fact, source, speaker, plural_first_person)
                 except ValueError as exc:
                     logger.warning(
                         "extraction_claim_discarded",
@@ -722,7 +742,7 @@ class _CitedExtractionResult(ExtractionResult):
             supported_relationships = []
             for index, relationship in enumerate(self.relationships):
                 try:
-                    _validate_relationship_source_support(relationship, source, speaker)
+                    _validate_relationship_source_support(relationship, source, speaker, plural_first_person)
                 except ValueError as exc:
                     logger.warning(
                         "extraction_claim_discarded",
@@ -1087,19 +1107,20 @@ def _source_details_message(resolution: FactTextResolution) -> str | None:
 
 def validate_raw_output(
     raw: dict[str, Any], content: str, *, role: str = "user", resolving: bool = False,
-    speaker: str | None = None,
+    speaker: str | None = None, plural_first_person: bool = False,
 ) -> ExtractionResult:
     """Check a provider's parsed output as :meth:`InstructorExtractionProvider.extract` does.
 
     ``raw`` is what the provider returned before any check, as kept through
     ``_RAW_OUTPUT``. The checks are deterministic, so the same output, source,
-    role and speaker give the same result as the live call, and the same
-    output can be checked again under other grounding rules without a model
-    call.
+    role, speaker and ``plural_first_person`` give the same result as the live
+    call, and the same output can be checked again under other grounding rules
+    without a model call.
     """
     model = _ResolvingCitedExtractionResult if resolving else _CitedExtractionResult
     return model.model_validate_json(json.dumps(raw), context={
         "source_text": content, "source_role": role.strip().casefold(), "speaker": speaker,
+        "plural_first_person": plural_first_person,
     })
 
 
@@ -1375,6 +1396,7 @@ def batch_turns_without_entry(raw: Any, turns: Sequence[BatchTurn]) -> list[int]
 
 def validate_batch_output(
     raw: Any, turns: Sequence[BatchTurn], *, speakers: dict[int, str | None] | None = None,
+    plural_first_person: bool = False,
 ) -> dict[int, ExtractionResult]:
     """Split a batched response by cited turn and check each part as a single turn's output (#254).
 
@@ -1385,8 +1407,10 @@ def validate_batch_output(
     turn supports is rejected. An entry that cites a turn outside the batch
     is dropped, entries citing the same turn are joined, and a turn without
     an entry gets an empty result. ``speakers`` names, by index, the turns'
-    speakers for grounding (enable_speaker_grounding). The checks are
-    deterministic, so the same response gives the same results on replay.
+    speakers for grounding (enable_speaker_grounding). With
+    ``plural_first_person`` (enable_ingest_claim_fixes) a claim's I, me or my
+    that its sentences write as we, us or our becomes that word. The checks
+    are deterministic, so the same response gives the same results on replay.
 
     Raises ExtractionError with reason ValidationError when the response as
     a whole does not have the batch shape.
@@ -1414,7 +1438,8 @@ def validate_batch_output(
     for index, part in parts.items():
         turn = by_index[index]
         try:
-            results[index] = validate_raw_output(part, turn.content, role=turn.role, speaker=speakers.get(index))
+            results[index] = validate_raw_output(part, turn.content, role=turn.role, speaker=speakers.get(index),
+                                                 plural_first_person=plural_first_person)
         except ValidationError as exc:
             raise ExtractionError("Batched extraction output failed a turn's checks",
                                   reason_code="ValidationError") from exc
@@ -1457,6 +1482,7 @@ class ExtractionProvider(Protocol):
     async def extract(
         self, content: str, *, role: str = "user", context: Sequence[str] = (),
         resolve: FactTextResolution | None = None, speaker: str | None = None,
+        plural_first_person: bool = False,
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
@@ -1473,6 +1499,10 @@ class ExtractionProvider(Protocol):
                 enable_speaker_grounding. Grounding then also accepts the
                 speaker's own I, me or my as a mention of the speaker. The
                 model is asked the same question either way.
+            plural_first_person: Given only with enable_ingest_claim_fixes. A
+                claim's I, me or my that the cited sentences write as we, us
+                or our (and use no singular form) becomes the sentences' own
+                word instead of being discarded.
 
         Returns:
             ExtractionResult with entities, facts, relationships, and summary.
@@ -1601,6 +1631,7 @@ class InstructorExtractionProvider:
     async def extract(
         self, content: str, *, role: str = "user", context: Sequence[str] = (),
         resolve: FactTextResolution | None = None, speaker: str | None = None,
+        plural_first_person: bool = False,
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
@@ -1615,6 +1646,9 @@ class InstructorExtractionProvider:
             speaker: The turn's named speaker (enable_speaker_grounding).
                 Grounding also accepts their own I, me or my as a mention of
                 them. It is not shown to the model.
+            plural_first_person: Given only with enable_ingest_claim_fixes. A
+                claim's I, me or my that the cited sentences write as we, us
+                or our becomes that word instead of being discarded.
 
         Returns:
             ExtractionResult with extracted entities, facts, relationships,
@@ -1660,11 +1694,13 @@ class InstructorExtractionProvider:
             source_token = _VALIDATION_SOURCE.set(content)
             role_token = _VALIDATION_ROLE.set(role.strip().casefold())
             speaker_token = _VALIDATION_SPEAKER.set(speaker)
+            plural_token = _VALIDATION_PLURAL.set(plural_first_person)
             try:
                 result = await asyncio.wait_for(
                     client.create(**create_kwargs), timeout=self._timeout
                 )
             finally:
+                _VALIDATION_PLURAL.reset(plural_token)
                 _VALIDATION_SPEAKER.reset(speaker_token)
                 _VALIDATION_ROLE.reset(role_token)
                 _VALIDATION_SOURCE.reset(source_token)

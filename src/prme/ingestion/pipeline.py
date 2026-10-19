@@ -27,12 +27,12 @@ import dateparser
 from prme._temporal import DATEPARSER_LOCK as _DATEPARSER_LOCK
 import structlog
 
-from prme.epistemic.inference import infer_source_type
+from prme.epistemic.inference import OWNER_ROLES, infer_source_type
 from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import claim_sentences, validate_grounding
-from prme.ingestion.schema import ExtractedEntity, ExtractionResult
+from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
 from prme.ingestion.supersedence import SupersedenceDetector, correctable_claim
 from prme.models.edges import MemoryEdge
@@ -45,7 +45,7 @@ from prme.storage._threading import run_async_to_completion
 from prme.storage.index_eviction import evict_from_indexes
 from prme.storage.lexical_index import has_lexical_document
 from prme.models.nodes import MemoryNode
-from prme.models.speaker import metadata_speaker, speaker_labeled
+from prme.models.speaker import introduced_speaker, metadata_speaker, speaker_labeled
 from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope, SourceType
 
 if TYPE_CHECKING:
@@ -139,6 +139,45 @@ def _speaker_reference(name: str, entity_type: str | None) -> bool:
     return name.strip().casefold() in _FIRST_PERSON_SINGULAR and unresolved_personal_reference(name, entity_type)
 
 
+def _introduced_speaker(event: Event, result: ExtractionResult) -> str | None:
+    """Who a user turn says it is ("I am Alex Rivera"), when the extraction lists that person."""
+    if event.role.casefold() not in OWNER_ROLES:
+        return None
+    return introduced_speaker(
+        event.content, [entity.name for entity in result.entities if entity.entity_type.strip().casefold() == "person"],
+    )
+
+
+_FIRST_PERSON_PLURAL = frozenset({"we", "us", "our", "ours", "ourselves"})
+
+
+def _claim_statement(fact: ExtractedFact, speaker: str | None) -> str:
+    """One sentence for a claim whose source sentences are another claim's text.
+
+    The subject, predicate and object, where the speaker's name stands for a
+    first-person singular reference that binds to the speaker, and the speaker
+    (or the speaker's group, for we) for one that names nobody, because a
+    predicate such as wants_to_use reads after a name and not after I.
+    """
+    def named(value: str, entity_type: str | None) -> str:
+        if _speaker_reference(value, entity_type):
+            return speaker or "the speaker"
+        if value.strip().casefold() in _FIRST_PERSON_PLURAL and unresolved_personal_reference(value, entity_type):
+            return "the speaker's group"
+        return value
+
+    statement = " ".join((
+        named(fact.subject, fact.subject_entity_type),
+        fact.predicate.replace("_", " "),
+        named(fact.object, fact.object_entity_type),
+    ))
+    if fact.polarity == "negative":
+        statement = f"it is not true that {statement}"
+    if fact.condition:
+        statement = f"{statement} ({fact.condition})"
+    return f"{statement[:1].upper()}{statement[1:]}."
+
+
 def _entities_with_unresolved_references(result: ExtractionResult) -> list[ExtractedEntity]:
     """Add one noncanonical identity for each unlisted personal reference.
 
@@ -216,6 +255,8 @@ class IngestionPipeline:
         extraction_batch_target_tokens: int = 0,
         extraction_timeout: float = 30.0,
         extraction_corrections: bool = False,
+        link_mentions: bool = False,
+        claim_fixes: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -258,6 +299,11 @@ class IngestionPipeline:
         self._batch_close_seconds = BATCH_CLOSE_SECONDS
         # Show each batched request earlier claims it may correct (#277).
         self._extraction_corrections = extraction_corrections
+        # Link claims and the raw note to the entities their text names (#259).
+        self._link_mentions = link_mentions
+        # A plural claim keeps its we, a turn that says who it is names its I,
+        # and no two claims of a message share a text (enable_ingest_claim_fixes).
+        self._claim_fixes = claim_fixes
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -348,6 +394,23 @@ class IngestionPipeline:
             await task
 
         return str(event.id)
+
+    def queue_extraction(self, event: Event, scope: Scope = Scope.PERSONAL) -> None:
+        """Start the background extraction of a saved event that has a durable job (#260).
+
+        The part of Phase 2 of :meth:`ingest` that does not wait, for a source
+        that was saved another way: a ``store()`` that asked for extraction
+        saves its event, its node and its job in one transaction and calls
+        this once its node is in place. Batched, the event joins the flush
+        :meth:`_arm_flush` schedules, 30 seconds after the owner's first queued
+        turn; unbatched, it extracts at once in a background task.
+        """
+        if self._batch_target_tokens > 0:
+            self._arm_flush(event.user_id, scope)
+            return
+        task = asyncio.create_task(self._extract_and_materialize(event, str(event.id), scope))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
 
     async def _append_event(
         self, content: str, *, user_id: str, role: str, session_id: str | None, metadata: dict | None,
@@ -802,6 +865,8 @@ class IngestionPipeline:
             speaker = metadata_speaker(event.metadata) if self._speaker_grounding else None
             if speaker is not None:
                 extra["speaker"] = speaker
+            if self._claim_fixes:
+                extra["plural_first_person"] = True
             async with self._extraction_semaphore:
                 result = await self._extraction_provider.extract(
                     event.content, role=event.role, **extra
@@ -940,7 +1005,7 @@ class IngestionPipeline:
             # The speaker is shown to the model either way; grounding accepts
             # the speaker's own I, me and my only with speaker grounding on.
             speakers = {turn.index: turn.speaker for turn in turns} if self._speaker_grounding else {}
-            results = validate_batch_output(raw, turns, speakers=speakers)
+            results = validate_batch_output(raw, turns, speakers=speakers, plural_first_person=self._claim_fixes)
             without_entry = batch_turns_without_entry(raw, turns)
         except ExtractionError as exc:
             if len(events) == 1 and exc.reason_code in _HALVABLE_FAILURES - _VALIDATION_FAILURES:
@@ -1118,6 +1183,11 @@ class IngestionPipeline:
         owner_reference = (materialization_policy == "speech_act_v14"
                            and event.role.casefold() in {"user", "human"}
                            and (event.metadata or {}).get(OWNER_REFERENCE_KEY) is True)
+        speaker = metadata_speaker(event.metadata) if self._bind_speaker_references and current_policy else None
+        # A turn that says who it is, with no caller-named speaker, names its own I.
+        introduced = (_introduced_speaker(event, result)
+                      if self._claim_fixes and self._bind_speaker_references and current_policy
+                      and speaker is None and not owner_reference else None)
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
@@ -1125,9 +1195,9 @@ class IngestionPipeline:
             first_person_forms=materialization_policy in {"speech_act_v13", "speech_act_v14"},
             explicit_corrections=materialization_policy == "speech_act_v14",
             owner_reference=owner_reference,
-            speaker=(metadata_speaker(event.metadata)
-                     if self._bind_speaker_references and current_policy else None),
+            speaker=speaker or introduced, speaker_introduced=introduced is not None,
             sentence_text=self._claim_sentence_text and current_policy,
+            distinct_text=self._claim_fixes,
             grounding_speaker=(metadata_speaker(event.metadata)
                                if self._speaker_grounding and current_policy else None),
         )
@@ -1142,15 +1212,20 @@ class IngestionPipeline:
         merge_claims: bool = False, speaker: str | None = None, sentence_text: bool = False,
         grounding_speaker: str | None = None, first_person_forms: bool = False,
         explicit_corrections: bool = False, owner_reference: bool = False,
+        speaker_introduced: bool = False, distinct_text: bool = False,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
         ``merge_claims`` folds a repeated claim into one current record (#209).
         ``speaker`` binds first-person singular references to that speaker's
-        entity (enable_speaker_references). ``sentence_text`` stores a claim's
-        own sentences as its text (enable_claim_sentence_text), and with
-        ``grounding_speaker`` (enable_speaker_grounding) the speaker's own I, me
-        or my mentions them there as in grounding. Only current-policy
+        entity (enable_speaker_references); ``speaker_introduced`` says the turn
+        itself gave the name ("I am Alex Rivera") rather than the caller.
+        ``sentence_text`` stores a claim's own sentences as its text
+        (enable_claim_sentence_text), and with ``distinct_text`` a claim whose
+        sentences are already another claim's text from this message gets a
+        statement of its own (enable_ingest_claim_fixes).
+        With ``grounding_speaker`` (enable_speaker_grounding) the speaker's own
+        I, me or my mentions them there as in grounding. Only current-policy
         plans use these, so a saved extraction replanned under an older
         materialization policy keeps that policy's behavior.
         """
@@ -1270,6 +1345,7 @@ class IngestionPipeline:
         # --- Source-cited claims ---
         planned_claims: set[tuple] = set()
         planned_fact_ids: set[str] = set()
+        claim_texts: set[str] = set()
         for fact, from_relationship in claims:
             fact_scope = scope
 
@@ -1329,6 +1405,8 @@ class IngestionPipeline:
                 if bound_fields:
                     # The literal pronoun stays in subject/object; this names who it is.
                     fact_metadata["speaker_reference"] = {"speaker": speaker, "fields": bound_fields}
+                    if speaker_introduced:
+                        fact_metadata["speaker_reference"]["basis"] = "self_introduction"
             if owner_reference:
                 owner_fields = [field for field, value, kind in (
                     ("subject", fact.subject, fact.subject_entity_type),
@@ -1351,6 +1429,13 @@ class IngestionPipeline:
                 fact_content = fact.resolved_text
             elif sentences is not None:
                 fact_content = sentences
+            if sentence_text and distinct_text and resolution is None:
+                if fact_content in claim_texts:
+                    # Another claim of this message already has this text.
+                    fact_content = _claim_statement(fact, speaker)
+                    fact_metadata["grounding_method"] = "claim_statement_v1"
+                else:
+                    claim_texts.add(fact_content)
             if fact.scope:
                 fact_metadata["suggested_scope"] = fact.scope
             if fact.temporal_ref:
@@ -1537,6 +1622,18 @@ class IngestionPipeline:
             await evict_from_indexes(
                 self._write_queue, self._lexical_index, self._vector_index, str(edge.target_id),
             )
+        # Link the entities to the claims and the note whose text names them
+        # (#259). The note may not exist yet; its own materialization links it.
+        if self._link_mentions:
+            from prme.ingestion.mention_links import link_event_mentions
+
+            await link_event_mentions(
+                str(plan.event_id), plan.nodes, user_id=plan.user_id, graph_store=self._graph_store,
+                event_store=self._event_store, with_note=True,
+                create_edge=(
+                    self._graph_writer or WriteQueueGraphWriter(self._graph_store, self._write_queue)
+                ).create_edge,
+            )
 
     async def _materialize(
         self, result: ExtractionResult, event: Event, event_id: str,
@@ -1556,7 +1653,11 @@ class IngestionPipeline:
             plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
             if plan is None:
                 existing = await self._graph_store.get_event_nodes(event_id, user_id=event.user_id)
-                if any(node.id != event.id for node in existing):
+                # The source's own node: the raw NOTE, whose id is the event's,
+                # or the node a store() saved with the event (#260).
+                direct = await self._event_store.get_direct_store(event_id, user_id=event.user_id)
+                source_id = direct.node.id if direct is not None else event.id
+                if any(node.id != source_id for node in existing):
                     # Another attempt may have published between the first
                     # plan read and this graph read. Its journal distinguishes
                     # a valid concurrent completion from unjournaled legacy data.

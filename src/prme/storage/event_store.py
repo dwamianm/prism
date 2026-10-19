@@ -296,8 +296,6 @@ class EventStore:
             store_node = store_node.model_copy(update={"metadata": snapshot_metadata(store_node.metadata)})
         record = None
         if store_node is not None:
-            if defer_extraction:
-                raise ValueError("Direct store work cannot also request LLM extraction")
             record = DirectStoreRecord.model_validate_json(DirectStoreRecord(
                 schema_version=1 if store_node.content == event.content else 2,
                 event_id=event.id, content_hash=event.content_hash, node=store_node,
