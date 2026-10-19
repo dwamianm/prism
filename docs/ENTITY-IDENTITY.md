@@ -67,6 +67,30 @@ earlier name (A, then B, then A again) keeps B, because A's entity is not marked
 behavior. The owner's entity lives in one scope, so a name given in one scope is
 not carried to another.
 
+With `enable_owner_group_links` (default `true` since 2026-10-19 in the alpha channel; `false` restores
+0.16.0a3; it needs `enable_owner_name_carry`), a claim that a `user` turn states about `we`, `us` or `our`
+is linked to the people it speaks for, while its subject stays the `we` entity local to its message and its
+text keeps the literal word (prism-monorepo issue 275). We always includes the speaker, so the claim gains a
+`MENTIONS` link marked `metadata.basis` `group_member` to the owner's named entity (the newest entity a user
+turn marked with the owner's name, or the one under the turn's own `speaker`). It is linked to the other
+members only on evidence: when the session's user turns with the same speaker, up to and including the claim's
+turn in the order they were ingested, name exactly one group with the owner ("My partner Jordan and I", "Jordan,
+Sam and I", "me and Jordan"), the claim is also linked to each named person, and that link records the turn
+that named the group in `named_in`. A member must be a person entity a turn already stored, matched by its full
+name or the last words of it, and only one person may carry that name. When the session names two or more
+different groups, a member without a name ("my wife and I"), or a name no single person entity has, the claim is
+linked to the owner only; no member is invented, and names count as written with a capital letter. The reading
+is a conservative English rule, not coreference resolution: "and I" counts only after members that start a
+clause, so "I got the offer from Brightpath and I accepted it" names no group. Participant, assistant, tool and
+system turns keep their own `we`, as do `first_person_owner` turns. With `enable_claim_merge`, the same `we`
+claim repeated in two user turns of one session merges into one current record, as a named speaker's repeated
+`I` claim does: the earlier copy is found through its link to the owner. A claim repeated in another session
+stays separate, because a session may speak for another group. The statements built for a duplicate sentence
+keep "the speaker's group" and never name the members. The links are made after the derivation commits,
+outside the plan, so saved plans keep their bytes; memories ingested before the option was on are not linked
+or merged. The default rests on the fast tiers by the owner's directive of 2026-10-19; the full benchmark
+audit and the default-change rule on the `ingest()` track are pending.
+
 `ingest(first_person_owner=True)` provides a separate per-message declaration
 for user/human sources with no named speaker. Under fresh v14 plans, singular
 first-person references bind to one deterministic `owner_reference` entity per

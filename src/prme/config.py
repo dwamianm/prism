@@ -967,23 +967,38 @@ class PRMEConfig(_ProjectSettings):
         ),
     )
     enable_owner_group_links: bool = Field(
-        default=False,
+        default=True,
         description=(
             "[HYPOTHESIS] When True, ingest() links a claim that a user turn "
-            "states about we, us or our to the owner's entity (prism-monorepo "
-            "issues 259 and 260). The claim stays attached to the group the "
-            "turn names, because a we claim is not always true of one person "
-            "alone, so a graph walk from the owner's entity never reached it. "
-            "The extra link is a MENTIONS edge marked metadata.basis="
-            "group_member from the claim to the entity that carries the name a "
-            "user turn gave the owner (enable_owner_name_carry), under the "
-            "turn's own speaker when the caller named one. It is made after "
+            "states about we, us or our to the people it speaks for "
+            "(prism-monorepo issues 259, 260 and 275). The claim stays "
+            "attached to the group the turn names, because a we claim is not "
+            "always true of one person alone, so a graph walk from the "
+            "owner's entity never reached it. Each extra link is a MENTIONS "
+            "edge marked metadata.basis=group_member from the claim: to the "
+            "entity that carries the name a user turn gave the owner "
+            "(enable_owner_name_carry), under the turn's own speaker when the "
+            "caller named one, since we always includes the speaker; and to "
+            "each person the session names with the owner, when the owner's "
+            "turns of the session up to the claim's turn name exactly one "
+            "group (\"My partner Jordan and I\", \"me and Jordan\") and each "
+            "member is a person entity already stored (that link also records "
+            "the turn that named the group, named_in). Two different groups, "
+            "a member without a name (\"my wife and I\") or a name no single "
+            "person entity has link the owner only. The links are made after "
             "the derivation commits, outside the derivation plan, only for a "
             "user turn that is not first_person_owner, and never when no "
-            "user turn named the owner. Claim merging ignores it. It needs "
-            "enable_owner_name_carry, adds no model call, and memories "
-            "ingested earlier are not linked. Off by default: not yet gated "
-            "for the alpha channel."
+            "user turn named the owner. With enable_claim_merge, the same we "
+            "claim repeated in two user turns of one session merges into one "
+            "current record, as a named speaker's repeated I claim does; "
+            "otherwise claim merging ignores the links. It needs "
+            "enable_owner_name_carry, adds no model call and no extraction "
+            "request change, and memories ingested before it was on are not "
+            "linked or merged. False restores the claims and links of "
+            "0.16.0a3. Default True since 2026-10-19, in the alpha channel, on "
+            "the fast tiers (owner directive of 2026-10-19); the full "
+            "benchmark audit and the default-change rule's DeepSeek answer "
+            "runs are pending."
         ),
     )
     enable_superseded_source_suppression: bool = Field(

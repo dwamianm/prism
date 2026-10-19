@@ -152,6 +152,8 @@ and it has not been through the full benchmark. The stable release stays at
   release needs the latest scheduled run to show no loss. `run-builds.sh` gains
   `BUILDS=defaults` and `EXTRACTION_CACHE`. See `BENCHMARKS.md` and
   `memory_bank/HANDOFF-2026-10-19-WEEKLY-BENCHMARK.md`.
+- `MemoryEngine.get_events()` and both event stores accept `until`, an
+  ingestion time: only events recorded at or before it are returned.
 
 ### Changed
 
@@ -178,6 +180,31 @@ and it has not been through the full benchmark. The stable release stays at
   (+0.1, 7 wins and 6 losses; single-hop -0.4, interval -0.8 to +0.0). The full
   benchmark audit and the default-change rule's answer runs are pending.
   `BENCHMARKS.md` ("Graph fusion") has the tables.
+- `enable_owner_group_links` (`PRME_ENABLE_OWNER_GROUP_LINKS`) is on by default
+  in the alpha channel, and a "We" claim is now linked to the people it speaks
+  for (prism-monorepo issue 275). A claim stated with "We" was attached only to
+  an entity named `We` that exists for one message, so the graph did not know
+  who made the decision, and "We" claims from different messages never shared a
+  subject. Each such claim of a `user` turn keeps its literal "We" and its group
+  subject, and gains a `group_member` link to the owner, because "we" always
+  includes the speaker, and to each person the session names with the owner,
+  when the owner's turns of the session up to the claim's turn name exactly one
+  group ("My partner Jordan and I", "me and Jordan") and that person is a stored
+  person entity (the link records the naming turn in `named_in`). Two different
+  groups, a member without a name ("my wife and I") or a name no single person
+  entity has link the owner only; no member is invented. With
+  `enable_claim_merge`, the same "We" claim repeated in two user turns of one
+  session merges into one current record, as a named speaker's repeated "I"
+  claim does. Participant, assistant, tool and system turns keep their own
+  "we". It adds no model call and no extraction request change. Memories
+  ingested before the upgrade are not linked or merged, and are not rewritten.
+  On the fast tiers the defect probes keep 7 of 7 answers in the top 3, their
+  key links linked go from 4 to 9 of 14 with the five links the probe key gains
+  for the "We" claims, the chat probe and the corrections probe are unchanged,
+  and the fast cycle moves only the edge counts. `false` restores the claims
+  and links of 0.16.0a3. The default rests on the fast tiers by the owner's
+  directive of 2026-10-19; the full benchmark audit is pending.
+  `BENCHMARKS.md` ("We claims linked to their members") has the measurements.
 
 ### Tooling and tests
 

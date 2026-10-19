@@ -50,7 +50,9 @@
       {"id": "kanazawa", "names": ["Kanazawa"]},
       {"id": "osaka", "names": ["Osaka"]},
       {"id": "dana", "names": ["Dana"]},
-      {"id": "sam", "names": ["Sam"]}
+      {"id": "sam", "names": ["Sam"]},
+      {"id": "hiroshima", "names": ["Hiroshima"]},
+      {"id": "timescaledb", "names": ["TimescaleDB"]}
     ],
     "links": [
       {"id": "partner", "between": ["alex", "jordan"], "label": "Jordan is Alex's partner"},
@@ -61,7 +63,12 @@
       {"id": "city-kanazawa", "between": ["japan", "kanazawa"], "label": "Kanazawa is a city of the trip to Japan"},
       {"id": "city-osaka", "between": ["japan", "osaka"], "label": "Osaka is a city of the trip to Japan"},
       {"id": "manager", "between": ["alex", "dana"], "label": "Dana is Alex's manager"},
-      {"id": "reviewer", "between": ["dana", "sam"], "label": "Dana wants Sam to review the runbook"}
+      {"id": "reviewer", "between": ["dana", "sam"], "label": "Dana wants Sam to review the runbook"},
+      {"id": "we-cities-alex", "between": ["alex", "tokyo"], "label": "Alex chose Tokyo for the trip (\"We chose Tokyo, ...\")"},
+      {"id": "we-cities-jordan", "between": ["jordan", "tokyo"], "label": "Jordan chose Tokyo for the trip (\"We chose Tokyo, ...\")"},
+      {"id": "we-dropped-alex", "between": ["alex", "hiroshima"], "label": "Alex dropped Hiroshima from the trip (\"We dropped Hiroshima\")"},
+      {"id": "we-dropped-jordan", "between": ["jordan", "hiroshima"], "label": "Jordan dropped Hiroshima from the trip (\"We dropped Hiroshima\")"},
+      {"id": "we-shipments-alex", "between": ["alex", "timescaledb"], "label": "Alex's team chose Postgres partitioning over TimescaleDB (\"We chose ...\")"}
     ],
     "repeats": [],
     "probes": [
