@@ -17,6 +17,7 @@ from uuid import UUID
 import structlog
 
 from prme.ingestion.graph_writer import GraphWriter
+from prme.ingestion.owner_name import OWNER_NAME_KEY
 from prme.models.nodes import MemoryNode
 from prme.models.entity_identity import unresolved_personal_reference
 from prme.storage.graph_store import GraphStore
@@ -65,6 +66,7 @@ class EntityMerger:
         session_id: str | None = None,
         evidence_event_id: str | None = None,
         scope: Scope = Scope.PERSONAL,
+        owner_name: dict | None = None,
     ) -> tuple[str, bool]:
         """Find an existing entity or create a new one.
 
@@ -79,6 +81,8 @@ class EntityMerger:
             description: Optional description for new entities.
             session_id: Optional session ID for new entities.
             evidence_event_id: Optional event ID providing evidence.
+            owner_name: Marks a new entity as the name a user turn gave its
+                owner (enable_owner_name_carry). A reused entity is not changed.
 
         Returns:
             Tuple of (node_id, is_new). is_new is True if a new node
@@ -128,6 +132,8 @@ class EntityMerger:
             metadata.update(identity_status="unresolved_reference", reference_event_id=evidence_event_id)
         if description is not None:
             metadata["description"] = description
+        if owner_name is not None:
+            metadata[OWNER_NAME_KEY] = owner_name
 
         from prme.types import DecayProfile
 

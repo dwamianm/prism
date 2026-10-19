@@ -53,6 +53,7 @@ EXPECTED_HYPOTHESES = {
     "extraction_batch_target_tokens",
     "enable_extraction_corrections",
     "enable_ingest_claim_fixes",
+    "enable_owner_name_carry",
     "enable_superseded_source_suppression",
     "novelty_high_threshold",
     "novelty_low_threshold",

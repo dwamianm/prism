@@ -198,6 +198,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_ingest_claim_fixes is true",
         bool,
     ),
+    "enable_owner_name_carry": (
+        "enable_owner_name_carry",
+        "enable_owner_name_carry is true",
+        bool,
+    ),
     "enable_superseded_source_suppression": (
         "enable_superseded_source_suppression",
         "enable_superseded_source_suppression is true",

@@ -697,6 +697,7 @@ class MemoryEngine:
                 extraction_corrections=config.enable_extraction_corrections,
                 link_mentions=config.enable_mention_links,
                 claim_fixes=config.enable_ingest_claim_fixes,
+                owner_name_carry=config.enable_owner_name_carry,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -852,6 +853,7 @@ class MemoryEngine:
                 extraction_corrections=config.enable_extraction_corrections,
                 link_mentions=config.enable_mention_links,
                 claim_fixes=config.enable_ingest_claim_fixes,
+                owner_name_carry=config.enable_owner_name_carry,
             )
 
             startup.push_async_callback(pipeline.shutdown)
