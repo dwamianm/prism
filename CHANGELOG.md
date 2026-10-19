@@ -100,6 +100,12 @@ These do not ship in the wheel and change no behavior.
   commands, and how to cut a prerelease (#312).
 - A test pins the owner name carry on the batched extraction path with the
   recorded dev run (#314). The carry already worked there, so no source changed.
+- `tests/test_summary_publication.py::test_operator_scan_is_explicit_and_can_cross_tenants`
+  now reads the operator scan page by page. It read one page of 10,000 nodes in
+  UUID order, and the database of a whole suite run holds more than that, so it
+  failed on engine CI for the release branch of this alpha (5 of 16 runs on a
+  database of 13,000 nodes, none after the change). It tests the scan, not a
+  size, and no source changed.
 
 ### Upgrade notes
 
