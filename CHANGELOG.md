@@ -123,6 +123,15 @@ alpha with `pip install --pre prme` or `pip install prme==0.16.0a3`.
   The full benchmark audit and the default-change rule's DeepSeek answer runs
   are pending. `BENCHMARKS.md` has the tables.
 
+### Fixed
+
+- Aggregation coverage no longer reports `candidate_limited` when the individual
+  keyword searches recovered every candidate and only a keyword pair's any-term
+  search reached its limit of 50 (#295, from an outside contributor; part of
+  issue #293). Only an individual keyword search that reaches 50 sets the
+  `LEXICAL_AGG` limit marker now. Results, their order and their scores do not
+  change, only the coverage report and its limitations.
+
 ### Upgrade notes
 
 - Five defaults changed since 0.16.0a2: `enable_ingest_claim_fixes`,
