@@ -1052,6 +1052,62 @@ warm replay of the cache it built, which is the baseline to commit: copy its
 request. `compare` warns when either side made live calls, reused packs, ran on
 a changed working tree or used another server version or model.
 
+### Scheduled full benchmark: twice a week on the Mac mini (#272)
+
+The fast tiers above gate daily work. The full benchmark runs on a schedule, on
+the Mac mini, and gates stable releases. A LaunchAgent starts a run on Monday and
+Thursday at 00:30 local time (the first is Thursday 2026-10-22) when `origin/main`
+has changed since the last completed run and no other run is going. A run builds
+LoCoMo and LongMemEval-S through `ingest()` with the defaults and
+`deepseek-v4.1-flash:cloud` (`scripts/full-benchmark/run-builds.sh` with
+`BUILDS=defaults`, one extraction cache shared by every run), runs the offline
+evidence gate over each build, compares the gate reports with the last stable
+release's (v0.15.0, through the batched defaults builds of the full batching run)
+and with the previous scheduled run's, and writes `report.md` and `report.json`.
+The answer track is not part of it: it has no time estimate and costs far more,
+so it stays on demand. No paid API is called.
+
+| Step | Cold cache | Warm cache (estimate) |
+|---|---|---|
+| LoCoMo build and gate | 13 min and 9 min | about 15 min and 9 min |
+| LongMemEval-S build and gate | 14.9 h and 5.5 min | about 9 h (6 to 12) and 5.5 min |
+| One run | about 15.3 h | about 9.5 h |
+
+The cold times are recorded (`d810ee55` and `793118e3`, 17 packs at a time). The
+warm times are estimates from the older all-hit builds, because replay still
+ingests, embeds and writes every turn; the first scheduled run with an unchanged
+extraction request records the real figure in its report. A run is warm only when
+the extraction prompt, the batching and the options that add earlier memories to
+a request are unchanged. The longest gap between triggers is 96 hours, so even a
+cold run with a long usage-limit pause finishes first.
+
+**Reading a verdict.** `report.md` opens with the verdict against the last stable
+release: `no loss`, `loss` followed by the measures that lost, or `not compared`
+when gate-compare refused the pair or a gate is missing. A measure lost when its
+paired 95% interval lies wholly below zero (the default-change rule's test); a
+drop whose interval reaches zero is noise. Five measures per benchmark count: all
+evidence packed, all evidence packed with memory text, evidence recall, all
+evidence among the candidates and projected accuracy. Per-category rows and
+retrieval time are listed and not judged.
+
+**Release rule.** An alpha or beta needs the fast tiers (the fast gate, the fast
+cycle and, where it applies, the mid tier). A stable release needs the latest
+scheduled run to show no loss against the last stable release, where "latest"
+means a completed run of the release commit or of an earlier commit with no
+change under `src/`, `benchmarks/`, `pyproject.toml` or `uv.lock` since.
+
+**Disk.** A run's packs take about 33 GB. The newest 3 runs keep their packs and
+worktrees, older ones are deleted, reports stay, and a run refuses to start with
+less than 120 GB free and says so in its log.
+
+Results travel by pull request: `scripts/full-benchmark/publish-results.sh`, run
+on the MacBook, copies the small result files over ssh and opens the pull request
+(the Mac mini holds no GitHub credentials). Nothing runs it automatically yet.
+`install-schedule.sh` and `uninstall-schedule.sh` add and remove the job,
+`status-weekly.sh` shows the next run, the last verdict and the disk, and
+`weekly-run.sh --dry-run` rehearses everything but the builds. The runbook is
+`memory_bank/HANDOFF-2026-10-19-WEEKLY-BENCHMARK.md`.
+
 ### Windowed extraction with fact text resolution on LoCoMo (#91)
 
 `fact-text-w4-locomo-deepseek` rebuilt all ten LoCoMo conversations through

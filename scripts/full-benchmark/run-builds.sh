@@ -8,6 +8,9 @@
 # its output is already complete, so running this again resumes where it
 # stopped. A build that pauses (for example at an Ollama usage limit) is started
 # again after RETRY_SLEEP seconds and resumes from the turns it holds.
+#
+# The scheduled run (weekly-run.sh) uses it with BUILDS=defaults, which leaves
+# out the per-turn builds, and EXTRACTION_CACHE set (settings.sh).
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$HERE/settings.sh"
@@ -53,7 +56,8 @@ build() {  # label benchmark expected jobs [--set ...]
     fi
     log "build $label: attempt $attempt, $(count "$label" "$benchmark") of $expected packs complete so far"
     in_worktree uv run --no-sync python -m benchmarks.diagnostics.extracted_packs build \
-      --benchmark "$benchmark" --label "$label" --model "$MODEL" --cloud --jobs "$jobs" "$@" \
+      --benchmark "$benchmark" --label "$label" --root "$PACKS" --model "$MODEL" --cloud --jobs "$jobs" \
+      ${EXTRACTION_CACHE:+--cache-dir "$EXTRACTION_CACHE"} "$@" \
       >> "$PACKS/$label.log" 2>&1
     log "build $label: attempt $attempt exited $?, $(count "$label" "$benchmark") of $expected packs complete"
     [ "$(count "$label" "$benchmark")" = "$expected" ] && return 0
@@ -80,7 +84,7 @@ gate() {  # label benchmark
 
 summary() {  # label benchmark
   in_worktree uv run --no-sync python -m benchmarks.diagnostics.extracted_packs summary --label "$1" \
-    --benchmark "$2" > "$RESULTS_DIR/summary-$1.json" 2>> "$RESULTS_DIR/summary-errors.log"
+    --root "$PACKS" --benchmark "$2" > "$RESULTS_DIR/summary-$1.json" 2>> "$RESULTS_DIR/summary-errors.log"
   log "summary $1: exit $?"
 }
 
@@ -95,16 +99,21 @@ compare() {  # name before-label after-label
 benchmark_round() {  # benchmark expected jobs defaults-label per-turn-label short-name
   local benchmark=$1 expected=$2 jobs=$3 defaults=$4 per_turn=$5 name=$6 ok=0
   build "$defaults" "$benchmark" "$expected" "$jobs" || ok=1
-  build "$per_turn" "$benchmark" "$expected" "$jobs" --set extraction_batch_target_tokens=0 || ok=1
+  if [ "$BUILDS" = all ]; then
+    build "$per_turn" "$benchmark" "$expected" "$jobs" --set extraction_batch_target_tokens=0 || ok=1
+  fi
   if [ "$ok" -ne 0 ]; then
     log "$name: a build is incomplete, so its gates and comparison are skipped"
     return 1
   fi
-  gate "$defaults" "$benchmark" && gate "$per_turn" "$benchmark" || return 1
+  gate "$defaults" "$benchmark" || return 1
   summary "$defaults" "$benchmark"
-  summary "$per_turn" "$benchmark"
-  # Before is one call per turn, after is the batched default, as in the #254 reports.
-  compare "$name-defaults-vs-per-turn" "$per_turn" "$defaults"
+  if [ "$BUILDS" = all ]; then
+    gate "$per_turn" "$benchmark" || return 1
+    summary "$per_turn" "$benchmark"
+    # Before is one call per turn, after is the batched default, as in the #254 reports.
+    compare "$name-defaults-vs-per-turn" "$per_turn" "$defaults"
+  fi
 }
 
 log "driver started, pid $$, commit ${COMMIT:0:8}, Ollama $(curl -s "$OLLAMA_URL/api/version")"
@@ -113,4 +122,6 @@ locomo=$?
 benchmark_round longmemeval 500 "$LME_JOBS" "$LME_DEFAULTS" "$LME_PER_TURN" lme
 lme=$?
 log "Ollama at the end: $(curl -s "$OLLAMA_URL/api/version")"
-if [ "$locomo" -eq 0 ] && [ "$lme" -eq 0 ]; then log "ALL DONE"; else log "FINISHED WITH PROBLEMS (locomo $locomo, lme $lme)"; fi
+if [ "$locomo" -eq 0 ] && [ "$lme" -eq 0 ]; then log "ALL DONE"; exit 0; fi
+log "FINISHED WITH PROBLEMS (locomo $locomo, lme $lme)"
+exit 1
