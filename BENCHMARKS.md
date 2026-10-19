@@ -865,6 +865,193 @@ outside it are not used while iterating. A slice is never edited: select a new
 one under a new name, for example when a new defaults baseline replaces
 `prme@d811e3ed`.
 
+### Mid tier: all of LoCoMo and a LongMemEval-S sample in under an hour
+
+The full benchmarks take about two days (a LongMemEval-S build alone is 15 to
+20 hours), and the development slice's LongMemEval-S packs take about 100
+minutes cold. `benchmarks.mid_tier` is the check between the
+[fast cycle](#fast-cycle-store-ingest-and-retrieve-in-under-a-minute-prototype)
+and the twice-weekly full run: it builds packs through `ingest()` with
+`deepseek-v4.1-flash:cloud` on the local Ollama server, replays them through
+the offline evidence gate and writes one report. It makes no reader or judge
+call, so it measures evidence coverage and not answers.
+
+```sh
+# The baseline: the code you branched from. Cold the first time, warm after.
+uv run python -m benchmarks.mid_tier run --label main-7f9ce556 --out /tmp/mid-main
+# A change to retrieval or packing: replay the baseline's packs (about 3 minutes).
+uv run python -m benchmarks.mid_tier run --label try --reuse-build main-7f9ce556 \
+  --set packing.token_budget=8192 --out /tmp/mid-try
+# A change to ingestion, grounding or extraction: build new packs from your checkout.
+uv run python -m benchmarks.mid_tier run --label try2 --out /tmp/mid-try2
+# Pair the two reports question by question.
+uv run python -m benchmarks.mid_tier compare /tmp/mid-main /tmp/mid-try
+```
+
+Each run writes `report.json` and `report.md` into `--out`, with the gate's own
+reports and the build and gate logs beside them. `compare` takes either a
+report or the folder that holds it, refuses reports over different questions,
+datasets, tokenizers or extraction models, and writes its result with
+`--output`. The Ollama server must run and be signed in for the cloud model,
+and the datasets and the embedding and tokenizer files must be in place, as for
+every other build and gate command.
+
+**The sample** is `benchmarks/slices/mid-v1.json`:
+
+| Benchmark | In the mid tier | Chosen by |
+|---|---|---|
+| LoCoMo | All 10 conversations: 1,540 questions, 1,536 with annotated evidence (single-hop 841, temporal 321, multi-hop 282, open-domain 96) | Nothing: it fits |
+| LongMemEval-S | 12 of 500 questions, two of each of the six types | The first 12 of a fixed draw order that takes the types in turn |
+
+The draw order holds 36 annotated, non-abstention questions, six of each type,
+ordered within a type by the SHA-256 of `20261019:<question ID>`. Abstention
+questions cite no evidence, so the gate cannot score them. Any prefix of the
+order has the types in turn, so `--lme-questions N` keeps the sample stratified.
+A report names its questions, and `compare` refuses reports over different
+ones. `python -m benchmarks.mid_tier check` confirms that the committed file
+still follows from the dataset and the seed; the order is never edited, and a
+new sample gets a new name.
+
+**What runs.** Ollama's cloud answered about 25 requests at once on
+2026-10-19 and refused the rest with a 429, and the builds' model calls are
+sequential within a pack, so the 10 LoCoMo packs and the 12 LongMemEval-S packs
+(22 in all) are built at the same time, each with a call of its own. Ingestion is
+CPU-bound Python, so one build process holds four packs
+(`extracted_packs build --shard`); the processes share the cap on live calls
+(`--in-flight`, 24 by default) and the extraction cache. A benchmark's gate
+starts when its build ends, with LoCoMo's questions split by conversation over
+three gate processes, so the LoCoMo gate overlaps the LongMemEval-S build.
+Asking for more than 14 LongMemEval-S questions puts more packs than calls in
+flight and queues them; the cold time then grows with the question count, but
+that has not been measured.
+
+**The extraction cache** is one folder for every label,
+`data/mid-tier-v1/extraction-cache` in the main checkout (13 MB for the
+baseline), keyed by the model and the full request as in the builds above. A
+run whose requests are in it makes no model call and gets exactly the packs the
+earlier run did: the cold baseline and its warm replay agree on every measure
+of all 1,552 questions. A request that failed or timed out in a cold run is not
+saved, so the first warm run asks for it again (it made one call). A changed
+extraction prompt, batch size or model changes the keys; the old entries stay
+unread.
+Delete the folder to start clean, or point `--cache-dir` at another build's
+`extraction-cache` (for example the full run's) to replay it. Builds go to
+`data/mid-tier-v1/builds/<label>-locomo` and `-longmemeval` (about 1.2 GB a
+run); delete them when you no longer need `--reuse-build`.
+
+**Timings** (this Mac, 18 cores, Ollama 0.40.6, other jobs running; the load
+average is the one-minute value at the start and end of the run, and the
+reports give it for every stage). The four runs below used `main` at `7f9ce556`
+plus the benchmark code; a later warm run on `975dba21` took 11 min 57 s:
+
+| Run | Whole run | Build LoCoMo | Build LongMemEval-S | Gate LoCoMo | Gate LongMemEval-S | Live calls | Load |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Cold, empty cache | 24 min 31 s | 15 min 23 s | 24 min 21 s | 3 min 10 s | 10 s | 1,187 | 5.1 to 6.8 |
+| Cold again, empty cache | 34 min 17 s | 21 min 45 s | 34 min 05 s | 3 min 47 s | 11 s | 1,181 | 5.7 to 23.6, peak 133 |
+| Warm, same prompt | 11 min 00 s | 6 min 19 s | 10 min 49 s | 4 min 21 s | 12 s | 0 | 3.1 to 20.9 |
+| Reused packs, `--reuse-build` | 2 min 57 s | none | none | 2 min 57 s | 11 s | 0 | 2.5 to 7.2 |
+
+The first cold run's 1,187 calls carried 8.76 million prompt tokens and 3.69
+million completion tokens (about 2,500 completion tokens a second across both
+benchmarks), and the build processes held at most about 14 GB resident in all.
+The stages overlap, so the whole run is shorter than their sum. A warm run is
+ingestion, which is CPU-bound, on a busy machine: its own processes raised the
+load average from 3 to about 20, so its time moves with the other jobs.
+
+The sample was sized by these numbers. Each pack makes about 76 sequential model
+calls (19 seconds each at the first run's pace), so a cold run is as long as the
+cloud makes it, not as the number of packs. With 12 LongMemEval-S questions a
+cold run took 25 minutes on a quiet machine and 34 under a load spike, so a
+cloud twice as slow would still finish within the hour.
+
+**Baseline.** `main` moved while this was measured, so there are two reports
+in `benchmarks/results/research/2026-10-19/mid-tier/`. `baseline-7f9ce556` is
+`main` when the work began, the warm replay of the first cold build above, and
+the comparisons and timings here are over it. `baseline-975dba21` is `main`
+after the fast cycle, the ingest claim fixes, the mention links and the
+0.16.0a1 release merged, again a warm replay of the same cache: it made no
+model call because the extraction request did not change. It differs from the
+first by 0.1 points or less on every LoCoMo measure and not at all on the
+LongMemEval-S questions (`main-moved-7f9ce556-to-975dba21.md`). The table gives
+the second, which is the one to compare with. Each was run from a commit that
+adds only the benchmark code to `main`, so its engine source tree is `main`'s.
+
+| Measure | LoCoMo, 1,536 questions with evidence | LongMemEval-S, 12 questions |
+|---|---|---|
+| All evidence packed | 1,277 (83.1%); 95% conversations 80.8 to 85.4, questions 81.2 to 84.9 | 12 (100.0%); 95% 75.8 to 100.0 |
+| Evidence recall | 88.9%; conversations 87.3 to 90.7 | 100.0% |
+| Evidence in the first 25 candidates | 69.9%; conversations 67.8 to 71.9 | 100.0% |
+| All evidence among the candidates | 1,510 (98.3%) | 12 |
+| Projected accuracy (1,540 and 12 questions) | 77.0%; conversations 75.5 to 78.5 | 95.5% |
+
+By category, LoCoMo packs all evidence for 94.3% of single-hop, 90.7% of
+temporal, 56.5% of open-domain and 50.0% of multi-hop questions. The full
+LoCoMo build with the same defaults and model on 2026-10-16 packed 83.7%. The
+0.6 points between them sit inside the build-to-build spread measured on
+2026-10-15 for the same code (-0.1 points, -0.9 to +0.8), and the commits
+between them are not controlled.
+
+**What a change looks like.** `packing.token_budget=8192` on the baseline's
+packs (the gate's own example) packs all evidence for 91 more LoCoMo questions
+and 2 fewer: all evidence packed +5.8 points (95% conversations +4.7 to +6.8,
+questions +4.6 to +7.0), evidence recall +4.6, projected accuracy +3.7; every
+LoCoMo category gains, multi-hop most (+16.7). The 12 LongMemEval-S questions
+do not move (`budget-8192-vs-baseline.md`, over `baseline-7f9ce556`).
+
+**Model noise.** The second cold build of the same code (`cold-run-2.md`) is
+not the baseline: all evidence packed differs by +0.4 points (95%
+conversations -0.1 to +1.0, questions -0.1 to +1.0; 12 questions gained all
+their evidence and 6 lost it), evidence recall by +0.2 and projected accuracy
+by +0.3, and no LoCoMo category moves by more than 1.4 points
+(`cold-2-vs-baseline.md`). That is the floor for a change that makes the
+extraction request new, which cannot be replayed from the cache: a LoCoMo
+difference of about a point or less is not distinguishable from rebuilding.
+The same cache replayed gave exactly zero difference on every measure of all
+1,552 questions (`cold-run-1-vs-warm-replay.md`), so a change that leaves the
+extraction request alone is measured without this noise. The second cold run
+was slower than the first because the machine's load average rose to 133 for
+about ten minutes while other jobs ran; it still finished in 34 minutes.
+
+**Limits.**
+
+- The LongMemEval-S sample is small and near the ceiling. The full benchmark
+  packs all evidence for 96.8% of its questions, so 12 questions show 12 of 12
+  about two times in three. The interval is wide (Wilson 75.8 to 100.0, against
+  94.8 to 98.1 for the 470 annotated questions of the full set), and a sample at
+  the ceiling cannot show a gain. A paired change is clear of zero only when at
+  least four of the 12 questions gain or lose all their evidence, so read this
+  part as a check that no question type collapses. The recall and top-25
+  measures show a smaller loss.
+- LoCoMo carries the signal. Its questions come from 10 conversations, so
+  the conversation interval (a paired change of a point or two) is the one to
+  trust, and a LoCoMo change is clear of zero only when the question-level and
+  the conversation-level intervals both exclude it.
+- It measures evidence coverage, not answers: the projected accuracy is the
+  gate's planning estimate from the 2026-09-23 GPT-5.4 run. A change that
+  passes here still needs the full benchmarks, and a default change still needs
+  the answer track under the epic #77 rules.
+- Every one of these questions has been examined before, so the tier is a
+  development gate and not publication evidence, like the gate it uses.
+- A `--reuse-build` run shows retrieval and packing only. Cold runs differ from
+  each other by model noise (above), so compare a change with a baseline built
+  over the same cache.
+
+**Refreshing the cache.** It needs no refresh. A run whose extraction request
+is new (a changed prompt, batch size or model, or the first run) calls the
+model for the requests the folder lacks and saves them, and the next run
+replays them. The entries of an old request stay unread; delete the folder
+(`data/mid-tier-v1/extraction-cache`) to drop them, which makes the next run
+cold.
+
+**Refreshing the baseline.** When `main` moves in a way that changes these
+numbers, check it out and run the first command above under a new label. If
+the extraction request changed, that run is cold, so run it again to get the
+warm replay of the cache it built, which is the baseline to commit: copy its
+`report.json` and `report.md` to
+`benchmarks/results/research/<date>/mid-tier/` and name the commit in the pull
+request. `compare` warns when either side made live calls, reused packs, ran on
+a changed working tree or used another server version or model.
+
 ### Windowed extraction with fact text resolution on LoCoMo (#91)
 
 `fact-text-w4-locomo-deepseek` rebuilt all ten LoCoMo conversations through
@@ -1264,7 +1451,8 @@ uv run python -m benchmarks.fast_cycle compare benchmarks/fixtures/fast-cycle/ba
 ```
 
 `run` judges its own report against the committed baseline when it finishes
-(`--baseline none` skips that, `--stages store` runs one stage) and exits 0 on
+(`--baseline none` skips that, `--stages store` runs one stage; the
+store-extract stages below are opt-in) and exits 0 on
 a pass, 1 when a gated measure got worse by more than its tolerance, and 2
 when the two reports are not comparable (another fixture, chat or backend).
 `--accept <measure>` names a measure whose worsening the change means to cause
@@ -1306,8 +1494,9 @@ first, the context lines and active records that hold only the old value, the
 extracted claims not retired, and the new values that are active.
 
 Every request goes through the extraction cache. The committed cache
-(`benchmarks/fixtures/fast-cycle/extraction-cache`, 84 responses, 113 KB with
-`usage.json`) holds one live run, so a change to what ingestion does with the
+(`benchmarks/fixtures/fast-cycle/extraction-cache`, 166 responses, 314 KB with
+`usage.json`: 84 of the ingest stage and 82 of the store-extract stages) holds
+one live run, so a change to what ingestion does with the
 model's output (claims, entities, links, retrieval) is measured on identical
 model output with no model call. A run works on a copy of the cache, so it
 never writes into the repository. A change to the extraction prompt or the
@@ -1357,8 +1546,10 @@ each answer) are listed and never fail.
   worth repeating once.
 
 Baseline on 2026-10-19 (`benchmarks/fixtures/fast-cycle/baseline-main.json`,
-the engine tree of `origin/main` at `7f9ce556`, DuckDB, from a replay of the
-committed cache):
+the engine tree of `origin/main` at `0622c9f9`, DuckDB, from a replay of the
+committed cache; its 132 store and ingest measures equal the baseline taken at
+`7f9ce556`, so #296, #297 and #299 moved none of them with their options off,
+and it adds the store-extract stage below):
 
 | Measure | store | defects-v1 | corrections-v1 | chat-v1 |
 |---|---:|---:|---:|---:|
@@ -1378,7 +1569,7 @@ committed cache):
 | Answers in the context | 17 of 17 | 7 of 7 | 4 of 4 | 17 of 18 |
 | Stale value in the context | 5 | 0 | 2 | 3 |
 | Stale value ranked above the answer | 4 | | | |
-| Repeated records in the contexts | | 0 | 0 | 72 |
+| Repeated records in the contexts | 0 | 0 | 0 | 72 |
 | Old value shown first / new value active | | | 1 / 2 | |
 
 The `defects-v1` column matches the fast gate's baseline above in the measures
@@ -1580,12 +1771,12 @@ older conversation or fixture.
 
 ```sh
 rm -r benchmarks/fixtures/fast-cycle/extraction-cache
-uv run python -m benchmarks.fast_cycle run --label refresh --out /tmp/refresh --no-cache --update-cache --baseline none
-uv run python -m benchmarks.fast_cycle run --label main --out /tmp/main --baseline none
+uv run python -m benchmarks.fast_cycle run --label refresh --out /tmp/refresh --stages ingest,store-extract,store-extract-session --no-cache --update-cache --baseline none
+uv run python -m benchmarks.fast_cycle run --label main --out /tmp/main --stages store,ingest,store-extract --baseline none
 cp /tmp/main/report.json benchmarks/fixtures/fast-cycle/baseline-main.json
 ```
 
-The first run makes 84 live requests and fills the cache (`--update-cache`
+The first run makes 84 + 75 + 7 live requests and fills the cache (`--update-cache`
 copies the responses it added; it never removes one, so delete the folder
 first for a clean cache). The second replays it, so the baseline is a
 deterministic report. Take the baseline from a checkout of the code it is
@@ -1613,6 +1804,170 @@ server or prompt change.
 - Ranks can differ between machines, CPU architectures or `fastembed`
   versions when two scores nearly tie, so compare reports made on the same
   machine, or refresh the baseline there.
+
+### Store with extraction: does `store(..., extract=True)` help retrieval? (#260)
+
+`store(..., extract=True)` (behind `enable_store_extraction`, off by default)
+saves the memory at once and queues the batched extraction `ingest()` runs, so
+a stored memory also gets entities, claims and links. The hosted service will
+turn it on. Nobody had measured whether it improves what `retrieve()` returns,
+so the fast cycle has three opt-in stages on the store stage's fixture (the same
+75 memories, roles, node types, scopes and metadata, and the same 17 questions):
+
+- `store-extract`: a fresh engine with `enable_store_extraction` on and the
+  ingest stage's extraction (`deepseek-v4.1-flash:cloud` through Ollama,
+  batched at the default 2,048-token target) stores each memory with
+  `extract=True` and no `session_id`, as the store stage does, so every memory
+  is its own extraction request. It then drains the background extraction with
+  `process_extractions()` and asks the questions.
+- `store-extract-session`: the same, with each memory's session (five
+  sessions) as its `session_id`, so the engine can share a request between the
+  memories of a session within the token target. The hosted estimate
+  (prism-monorepo #269) assumes this. It is the best case of the 30 second
+  window; a store a minute apart from the next is a request of its own.
+- `store-session`: the store stage with each memory's session as `session_id`
+  and no extraction, the control for `store-extract-session`.
+
+```sh
+uv run python -m benchmarks.fast_cycle run --label my-change --out /tmp/cycle --stages store,store-extract
+uv run python -m benchmarks.fast_cycle run --label sessions --out /tmp/cycle --stages store,store-session,store-extract-session --baseline none
+```
+
+Choices, and why. The engine's 30 second timer is set aside and the extraction
+is drained by hand, so a run composes the same requests whatever the machine's
+speed (the hosted service lets the timer decide; a store with no `session_id`
+goes alone either way). A stored memory carries the wall-clock time of its
+store and a batched request shows each turn's time to the minute, so the
+extraction cache's key leaves the time out; a replay returns the model's
+recorded answer to the request as it was first sent. The cache keeps responses,
+not usage, so `usage.json` keeps the tokens of each request the model answered
+live, and a replay reports them. The stages are on DuckDB; the stage prints what
+retrieval returns, not what a reader answers.
+
+Result on 2026-10-19 (laptop, DuckDB, Ollama 0.40.6), three live runs of each
+stage, every one with a cold cache (75 and 7 model requests), on `main` at
+`2b0df5c2`. Replaying each run's recorded responses on `main` at `0622c9f9`
+(which adds #296, #299 and #300) and at `975dba21` (which adds #301) gives the
+same measures for `store` and `store-extract`, so the numbers hold for `main`
+as it is. Values are the three
+runs in order, one value when all three are equal:
+
+| Measure | store | store-extract | store-session | store-extract-session |
+|---|---:|---:|---:|---:|
+| Nodes / edges per store call | 1.00 / 0.00 | 5.03, 5.05, 5.03 / 3.52, 3.59, 3.60 | 1.00 / 0.00 | 4.45, 4.59, 4.56 / 2.65, 2.79, 2.71 |
+| Entities made (key entities found of 8) | 0 (0) | 132, 134, 130 (8) | 0 (0) | 128, 133, 136 (8) |
+| Graph candidates per question (questions with any) | 0 (0) | 96.5, 96.5, 97.4 (13) | 0 (0) | 84.4, 82.8, 84.6 (13) |
+| Context tokens per question | 1,786 | 3,695, 3,656, 3,766 | 1,786 | 3,376, 3,347, 3,407 |
+| Answers ranked first | 6 | 12 | 6 | 10 |
+| Answers ranked in the top 3 | 14 | 12 | 14 | 12 |
+| Mean reciprocal rank | 0.559 | 0.728, 0.727, 0.725 | 0.559 | 0.657, 0.664, 0.660 |
+| Stale value ranked above the answer | 4 | 2 | 4 | 3 |
+| Answers in the context / stale value in it | 17 / 5 | 17 / 5 | 17 / 5 | 17 / 5 |
+| Repeated records in the 17 contexts | 0 | 340, 323, 374 | 0 | 204, 187, 187 |
+| Extraction requests | | 75 | | 7 |
+| Extraction tokens | | 462,676; 462,084; 462,093 | | 70,911; 71,108; 71,249 |
+| Stage time: stores, extraction, questions (a busy laptop, two runs at a time) | 7 to 25 s, 0, 1 s | 7 to 22 s, 143 to 204 s, 1 to 3 s | 7 to 28 s, 0, 1 s | 6 to 47 s, 97 to 142 s, 2 to 3 s |
+
+The rank of each answer (the place of the first result that holds it; a star
+marks a stale value ranked above it):
+
+| Question | store | store-extract | store-extract-session |
+|---|---:|---:|---:|
+| what coding language is alex learning? | 3 | 1, 1, 1 | 7, 1, 7 |
+| which cities will Alex and jordan visit in Japan? | 26 | 51, 54, 60 | 39, 41, 38 |
+| When is the production cutover? | 3* | 1, 1, 1 | 3*, 3*, 3* |
+| When is the Japan trip? | 4* | 10*, 13*, 12* | 1, 3, 1 |
+| Does Alex like pair programming? | 2* | 1, 1, 1 | 3*, 4*, 3* |
+| Is Alex leading the observability rewrite? | 3* | 12*, 12*, 11* | 11*, 9*, 10* |
+| What is Alex's dog called? | 19 | 30, 32, 33 | 29, 27, 32 |
+| Which airline did Alex book for the Japan trip? | 3 | 7, 7, 10 | 5, 5, 4 |
+| The dashboard, table size and gravel race questions | 2, 2, 3 | 1, 1, 1 | 1, 1, 1 |
+| The other six questions | 1 | 1 | 1 |
+
+**Verdict: it does not improve the results; it trades them.** Against the
+plain store, `store-extract` ranks the answer first for 12 questions instead of
+6, lifts the mean reciprocal rank from 0.56 to 0.73 and puts a stale value above
+the answer for 2 questions instead of 4. It ranks fewer answers in the top 3
+(12 against 14), and the same five questions fall in all three runs: the Japan
+cities (26th to 51st-60th), the Japan dates (4th to 10th-13th), the
+observability rewrite (3rd to 11th-12th), the dog (19th to 30th-33rd) and the
+flights (3rd to 7th-10th). Six questions improve, six stay equal and five
+get worse. The answer is in the context for all 17 questions either way.
+
+The cost is the reason for the fall. Extraction adds about four records to each
+memory (5.0 nodes per call: 1.8 entities and 2.3 claims on average, 3.6 edges).
+A claim's text is the stored sentence or the sentence that holds it, so the top
+results of a question hold several copies of one sentence: the top five results
+for the Japan cities are the trip sentence five times, and the 17 contexts hold
+340 repeated records against none. They use 3,700 of the 4,096-token budget
+instead of 1,800. The graph channel now finds candidates for 13 questions (none
+before) and all 8 key entities exist, but the answer's rank does not gain from
+it (#299 notes that under the default rank fusion a candidate found only
+through the graph scores 0). Extraction costs 75 model requests and 462,000
+tokens for the 75 memories, about 6,200 tokens each, and 2.4 to 3.4 minutes.
+
+`store-extract-session` is the cheaper way to the same trade: 7 requests and
+71,000 tokens (6.5 times fewer), top 1 for 10 questions, top 3 for 12, a
+reciprocal rank of 0.66 and a stale value above the answer for 3. The session
+also changes the plain store: the control ranks the dog 17th to 21st and every
+other answer as the store stage does, because memories that share a session
+break retrieval ties differently from run to run.
+
+**With the options of #299 and #296** (`enable_mention_links`,
+`packing.graph_seed_words` and `enable_ingest_claim_fixes`, all off by default;
+`--set enable_mention_links=true --set packing.graph_seed_words=true --set
+enable_ingest_claim_fixes=true`). I took three live runs of each stage before
+they were on `main`, on a throwaway merge of the
+`issue-259-entity-links-and-graph-seeds` branch (which contains the
+`issue-258-ingest-names-and-claims` branch) over `2b0df5c2`. Replaying their
+recorded responses on `main` at `0622c9f9` gives the same measures, with every
+request a cache hit:
+
+| Measure | store-extract | store-extract-session |
+|---|---:|---:|
+| Edges per store call | 4.73, 4.97, 4.77 | 3.99, 3.87, 4.08 |
+| Questions with a graph candidate (candidates per question) | 17 (122, 124, 123) | 17 (111, 110, 116) |
+| Answers ranked first / in the top 3 | 8, 9, 9 / 12, 13, 13 | 8, 9, 9 / 13, 12, 14 |
+| Mean reciprocal rank | 0.606, 0.656, 0.646 | 0.603, 0.633, 0.647 |
+| Stale value ranked above the answer | 1 | 3 |
+| Repeated records in the 17 contexts | 73, 72, 78 | 29, 49, 44 |
+| Context tokens per question | about 4,000 | about 3,990 |
+
+The graph channel now finds candidates for all 17 questions, the repeated
+records fall by four fifths, the Japan dates and the cutover rank well (2nd to
+3rd and 1st), and the stale value is above the answer for 1 question. The
+answers ranked first (8 to 9 against 12) and the reciprocal rank (0.61 to 0.66
+against 0.73) fall below the stage without the options, and the Japan cities
+are still 43rd to 45th (25th to 29th with sessions): the memory that holds the
+four cities names neither Japan nor Alex. The compare rules fail this run on
+the context tokens, the answers ranked first and the reciprocal rank. Adding
+#301's `enable_superseded_source_suppression` (on `main` after these runs;
+replayed on `975dba21`) changes nothing for `store-extract`, because nothing is
+retired in these stores, and takes the stale value out of two of the three
+`store-extract-session` contexts.
+
+The runs agree closely (the extraction output of a temperature-0 model moves
+few claims, so most ranks repeat), and a replay of each run's recorded
+responses gives the run's measures again for `store-extract`; for the session
+stage a replay can move one rank (the dog) because of the tie-breaking above.
+
+**Rules.** `store-extract` is in the committed baseline
+(`baseline-main.json`, a replay of the committed cache, so exact). A live
+run uses the `live_by_stage` entry of each measure in `rules.json`, taken from
+these three runs by the rule of the ingest stage (twice the spread, rounded up;
+one for a count that did not move). With them none of the six baseline and
+candidate pairs among the three runs fails. A default run (store and ingest)
+leaves the stage out, and compare says it was not compared. The two session
+stages have no baseline and no tolerance: they are for reading.
+
+**What it cannot show.** One fixture of 75 memories of one user, 17 questions
+and one model; the rank counts every result, so repeated records push answers
+down although the context holds them all (17 of 17); no reader answers, so
+whether a reader would answer better from the larger context is not measured;
+DuckDB only (the hosted service uses PostgreSQL, whose word search differs);
+the timer is set aside, so the number of requests in the hosted service
+depends on how far apart a user's stores are; the options' live runs were taken
+before they were merged, and only replayed on `main`.
 
 ### Corrections probe: what a correction stores and returns
 

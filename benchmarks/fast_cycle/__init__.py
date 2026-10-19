@@ -12,6 +12,12 @@ and results moved the wrong way:
   a model through Ollama, which an extraction cache replays without a model
   call while the prompt is unchanged (``ingest.py``).
 
+Three more stages are opt-in (``--stages``). ``store-extract`` and
+``store-extract-session`` store the store stage's memories with
+``extract=True``, so a stored memory also gets entities and claims, and ask the
+same questions (``store_extract.py``); ``store-session`` is the control with no
+extraction for the second.
+
     uv run python -m benchmarks.fast_cycle run --label candidate --out /tmp/cycle
     uv run python -m benchmarks.fast_cycle compare \\
       benchmarks/fixtures/fast-cycle/baseline-main.json /tmp/cycle/report.json

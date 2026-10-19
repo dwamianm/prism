@@ -349,6 +349,63 @@ async def test_an_entry_saved_after_its_checks_does_not_serve_a_call_with_a_spea
     assert (cache.misses, cache.hits) == (2, 1)
 
 
+async def test_live_calls_wait_for_the_shared_cap_and_a_hit_does_not(tmp_path):
+    import asyncio
+
+    class Slow(_Provider):
+        running = busiest = 0
+
+        async def extract(self, content, *, role="user", **extra):
+            Slow.running += 1
+            Slow.busiest = max(Slow.busiest, Slow.running)
+            await asyncio.sleep(0.01)
+            Slow.running -= 1
+            return await super().extract(content, role=role, **extra)
+
+    cap = asyncio.Semaphore(2)
+    # Three packs share one cache and one cap, as the packs of a build process do.
+    providers = [Slow() for _ in range(3)]
+    for provider in providers:
+        ExtractionCache(tmp_path, cap).wrap(provider)
+    texts = [f"Turn number {number}." for number in range(8)]
+    await asyncio.gather(*(providers[number % 3].extract(text, role="user") for number, text in enumerate(texts)))
+    assert Slow.busiest == 2
+    # Every answer is saved now, so replaying all of them never touches the cap.
+    async with cap, cap:
+        await asyncio.wait_for(asyncio.gather(*(provider.extract(text, role="user")
+                                                for provider in providers for text in texts)), timeout=5)
+    assert sum(len(provider.calls) for provider in providers) == 8
+
+
+async def test_a_build_keeps_its_cache_in_the_folder_it_is_given_so_another_label_replays_it(
+        tmp_path, locomo, mock_embeddings, monkeypatch):
+    from unittest.mock import patch
+
+    shared = tmp_path / "cache"
+    scripted = ScriptedExtraction()
+    monkeypatch.setattr(extracted_packs, "model_identity", lambda model, cloud=False: {
+        "provider": "ollama_cloud", "model": model, "server_version": "0.40.6"})
+    monkeypatch.setattr(extracted_packs, "benchmark_units", lambda benchmark: [locomo])
+    monkeypatch.setattr(extracted_packs, "check_endpoint", lambda endpoint: None)
+    config_for = extracted_packs.build_config
+    monkeypatch.setattr(extracted_packs, "build_config",
+                        lambda pack, overrides=None, **kw: config_for(pack, {"extraction_batch_target_tokens": 0,
+                                                                              **(overrides or {})}, **kw))
+    original = extracted_packs.build_unit
+
+    async def scripted_unit(folder, unit, config_for, **kw):
+        return await original(folder, unit, config_for, prepare=_scripted(scripted.extract), **kw)
+
+    with patch.object(extracted_packs, "build_unit", scripted_unit):
+        first = await extracted_packs.build("one", root=tmp_path / "builds", model="m", cloud=True,
+                                            cache_dir=shared, in_flight=1)
+        second = await extracted_packs.build("two", root=tmp_path / "builds", model="m", cloud=True,
+                                             cache_dir=shared, in_flight=1)
+    assert first["conv-1"]["cache_hits"] == 0 and second["conv-1"]["cache_hits"] == 3
+    assert not (tmp_path / "builds" / "one" / "extraction-cache").exists()
+    assert any(shared.rglob("*.json")) and len(scripted.calls) == 3
+
+
 def test_a_turn_without_a_window_keeps_its_cache_key(tmp_path):
     import hashlib
 

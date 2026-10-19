@@ -32,6 +32,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   configuration dumps keep their bytes. It has not been through the
   default-change rule on the `ingest()` answer track. `BENCHMARKS.md` has the
   evidence ("Why the claim fixes lost rank").
+
+## [0.16.0a2] - 2026-10-19
+
+This is an alpha. It passed CI and the fast gate and fast cycle, and it has not
+been through the full benchmark. The stable release stays at 0.15.0 until the
+full benchmark audit, so `pip install prme` still installs 0.15.0. Install the
+alpha with `pip install --pre prme` or `pip install prme==0.16.0a2`.
+
+### Added
+
+- Add the store-extract stages to the fast cycle (part of prism-monorepo issue
+  260; `BENCHMARKS.md`, "Store with extraction"), opt-in with `--stages`.
+  `store-extract` stores the store stage's 75 memories with `extract=True`
+  (extraction by `deepseek-v4.1-flash:cloud`, drained by hand so the requests do
+  not depend on the 30 second timer) and asks the same 17 questions;
+  `store-extract-session` does so with each memory's session as `session_id`;
+  `store-session` is the control with no extraction. They report the extraction
+  requests and tokens, the entities made, the graph candidates per question and
+  the repeated records in the contexts next to the store measures. The
+  extraction cache leaves a turn's wall-clock time out of its key so a stored
+  memory replays, rules gain per-stage live tolerances (`live_by_stage`), and the
+  committed baseline gains the `store-extract` stage (the committed cache
+  now holds 166 responses). Three live runs on `main`: extraction ranks the
+  answer first for 12 questions instead of 6 and lifts the reciprocal rank from
+  0.56 to 0.73, but ranks 12 answers in the top 3 instead of 14, pushes five
+  questions down, doubles the context tokens and costs 75 requests and 462,000
+  tokens (7 requests and 71,000 tokens with sessions). Nothing in the engine
+  changes.
 - Add `enable_superseded_source_suppression` (part of prism-monorepo issue
   270), off by default. `ingest()` keeps a message as a note beside the claims
   extracted from it, so retiring a claim (a correction, `supersede()`) left
@@ -46,6 +74,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   records the option only while it is on. The corrections probe gains two
   measures, "old-only lines in the context" and "old value shown before the
   new value".
+- Add a mid-tier benchmark, `python -m benchmarks.mid_tier` (`run`, `compare`,
+  `select`, `check`). It builds packs for all of LoCoMo and a fixed,
+  stratified sample of 12 LongMemEval-S questions through `ingest()` with
+  `deepseek-v4.1-flash:cloud` on the local Ollama server, replays them
+  through the offline evidence gate and writes one report: all evidence
+  packed, evidence recall, evidence in the first 25 candidates and projected
+  accuracy, overall and by category, with 95% intervals (LoCoMo also by
+  conversation), and the calls, tokens, wall time and load average of each
+  stage. A cold run took 25 and 34 minutes, a warm one 11, and
+  `--reuse-build` gates an earlier run's packs for retrieval and packing
+  changes in about 3. `compare` pairs two reports question by question. It
+  makes no reader or judge call, so it measures evidence coverage, not
+  answers (BENCHMARKS.md, "Mid tier"). `extracted_packs build` gains
+  `--cache-dir` and `--in-flight` so builds under different labels share one
+  extraction cache and several build processes cap their live model calls.
 
 ### Changed
 
@@ -76,6 +119,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and ships the second question set as
   `benchmarks/fixtures/fast-cycle/store-heldout-v1.json`. `BENCHMARKS.md`,
   "Lexical term weights", has the table.
+
+### Upgrade notes
+
+- One default changed since 0.16.0a1: `lexical_term_weights` is on, and it
+  affects PostgreSQL only (DuckDB ignores it). Word search weighs each query
+  word by how rare it is and keeps weak matches out of the candidates. On the
+  fast cycle's 75 memory fixture it moved the Rust question from 4th to 1st and
+  the dog question from 5th to 1st, with no question ranked lower, and the
+  offline evidence gate did not change. The effect is within noise from about
+  2,000 memories. The default-change rule's DeepSeek answer runs have not been
+  done. Set `PRME_LEXICAL_TERM_WEIGHTS=false` to get the word search of
+  0.16.0a1 back.
+- `enable_superseded_source_suppression` is new and off. `enable_ingest_claim_fixes`,
+  `enable_mention_links`, `packing.graph_seed_words`, `enable_store_extraction`
+  and `enable_extraction_corrections` stay off.
+- The new store-extract stages measured `store(extract=True)` on the fast
+  cycle's 75 memories: answers ranked first went from 6 to 12 and stale values
+  above the answer from 4 to 2, but answers in the top 3 went from 14 to 12,
+  five questions ranked lower, and the context used about twice the tokens. The
+  mid-tier benchmark (all of LoCoMo and 12 LongMemEval-S questions through
+  `ingest()`, evidence coverage only) runs in 25 to 35 minutes cold.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a1] - 2026-10-19
 
@@ -2279,7 +2347,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a1...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a2...HEAD
+[0.16.0a2]: https://github.com/dwamianm/prism/compare/v0.16.0a1...v0.16.0a2
 [0.16.0a1]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0a1
 [0.15.0]: https://github.com/dwamianm/prism/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/dwamianm/prism/compare/v0.14.1...v0.14.2

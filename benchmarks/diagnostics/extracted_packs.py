@@ -52,7 +52,8 @@ Choices, and why:
 
 Layout under ``<root>/<label>/``: ``build.json`` (benchmark, commit,
 configuration, model identity, and every Ollama server version seen),
-``extraction-cache/``, and per conversation or question
+``extraction-cache/`` (or the folder ``--cache-dir`` names, which labels can
+share), and per conversation or question
 ``<benchmark>/<id>/pack/`` (the memory pack), ``turns.jsonl`` (one line per
 turn ingested: event, extraction status, seconds, model calls and tokens; in a
 batched build, one more line per session holds them) and, once complete,
@@ -66,6 +67,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 from collections import Counter
+import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import fcntl
@@ -296,10 +298,16 @@ class ExtractionCache:
     rebuild asks for them the same way and replays that request too. A
     cache filled before #260 does not hold that request, so a rebuild from
     it calls the model for each response that left out a turn.
+
+    ``in_flight`` caps the live model calls that packs sharing the cache make
+    at the same time. Ollama's cloud answered about 25 requests at once on
+    2026-10-19 and refused the rest with a 429, so a build that runs more
+    packs than that waits here instead. A hit never waits.
     """
 
-    def __init__(self, folder: Path) -> None:
+    def __init__(self, folder: Path, in_flight: asyncio.Semaphore | None = None) -> None:
         self.folder = folder
+        self.in_flight = in_flight
         self.hits = self.misses = 0
         # Live results the kept raw output did not reproduce; those are not kept.
         self.unreproduced = 0
@@ -317,6 +325,10 @@ class ExtractionCache:
                       list(context), _source_details_message(resolve) if resolve is not None else None,
                       resolve is not None]
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
+
+    def _live(self):
+        """The cap on live model calls, or a context that waits for nothing."""
+        return self.in_flight if self.in_flight is not None else contextlib.nullcontext()
 
     @staticmethod
     def _write(path: Path, text: str) -> None:
@@ -360,7 +372,8 @@ class ExtractionCache:
             raw: list[dict] = []
             token = _RAW_OUTPUT.set(raw)
             try:
-                result = await extract(content, role=role, **extra)
+                async with self._live():
+                    result = await extract(content, role=role, **extra)
             finally:
                 _RAW_OUTPUT.reset(token)
             if raw:
@@ -410,7 +423,8 @@ class ExtractionCache:
                                       reason_code=json.loads(failed.read_bytes())["reason_code"])
             self.misses += 1
             try:
-                raw = await extract_batch(turns, **extra)
+                async with self._live():
+                    raw = await extract_batch(turns, **extra)
             except ExtractionError as exc:
                 # Only a response that failed validation and split its request
                 # is kept. A single turn's failure is retried, and a timeout or
@@ -669,7 +683,7 @@ async def build_unit(folder: Path, unit: Unit, config_for, *, progress=None, pre
         usage = _Usage(engine)
         hits = ExtractionCache(Path())  # counts this pack's hits when no cache is shared
         if cache is not None:
-            hits = ExtractionCache(cache.folder)
+            hits = ExtractionCache(cache.folder, cache.in_flight)
             hits.wrap(engine._pipeline._extraction_provider)
         stored = await _stored_events(engine, unit.benchmark, unit.user_id)
         if set(stored) - set(keys):
@@ -789,13 +803,17 @@ def _shard(value: str) -> tuple[int, int]:
 async def build(label: str, *, benchmark: str = "locomo", root: Path | None = None, units: list[str] | None = None,
                 overrides: dict | None = None, model: str = DEFAULT_MODEL, jobs: int = 1,
                 max_turns: int | None = None, cloud: bool = False, cache: bool = True,
-                shard: tuple[int, int] | None = None) -> dict:
+                shard: tuple[int, int] | None = None, cache_dir: Path | None = None,
+                in_flight: asyncio.Semaphore | int | None = None) -> dict:
     """Build or resume every selected pack; returns the complete manifests by unit.
 
     ``units`` names conversations or questions (all by default). ``shard``
     (K, N) takes every Nth of them from the Kth, for parallel processes.
     ``max_turns`` stops each pack after that many new turns, for a trial run
-    that a later build resumes.
+    that a later build resumes. ``cache_dir`` keeps the extraction cache
+    outside the build's folder, so builds under other labels replay it
+    (``benchmarks.mid_tier``). ``in_flight`` caps live model calls, a count or
+    a semaphore to share with other builds in the same process.
     """
     if not label or Path(label).name != label:
         raise ValueError("The label must be a plain folder name")
@@ -827,7 +845,9 @@ async def build(label: str, *, benchmark: str = "locomo", root: Path | None = No
             print(f"{unit_id}: {number}/{total} turns", file=sys.stderr, flush=True)
 
     semaphore = asyncio.Semaphore(max(1, jobs))
-    shared = ExtractionCache(folder / "extraction-cache") if cache else None
+    if isinstance(in_flight, int):
+        in_flight = asyncio.Semaphore(max(1, in_flight))
+    shared = ExtractionCache(cache_dir or folder / "extraction-cache", in_flight) if cache else None
 
     async def one(unit_id: str) -> tuple[str, dict | None]:
         async with semaphore:
@@ -947,6 +967,11 @@ def main(argv: list[str] | None = None) -> None:
     command.add_argument("--cloud", action="store_true",
                          help="Accept an Ollama cloud model: Ollama's hosted service receives the turns")
     command.add_argument("--no-cache", action="store_true", help="Extract every turn afresh")
+    command.add_argument("--cache-dir", type=Path,
+                         help="Keep the extraction cache here, to share it between labels (default: "
+                              "<root>/<label>/extraction-cache)")
+    command.add_argument("--in-flight", type=int,
+                         help="Most live model calls at once in this process (default: no cap)")
     command.add_argument("--jobs", type=int, default=1, help="Packs built at the same time")
     command.add_argument("--shard", type=_shard, metavar="K/N", help="Build every Nth pack from the Kth")
     command.add_argument("--max-turns", type=int,
@@ -983,7 +1008,8 @@ def main(argv: list[str] | None = None) -> None:
             parser.error(str(exc))
     manifests = asyncio.run(build(args.label, benchmark=args.benchmark, root=args.root, units=units,
                                   overrides=overrides, model=args.model, jobs=args.jobs, max_turns=args.max_turns,
-                                  cloud=args.cloud, cache=not args.no_cache, shard=args.shard))
+                                  cloud=args.cloud, cache=not args.no_cache, shard=args.shard,
+                                  cache_dir=args.cache_dir, in_flight=args.in_flight))
     print(json.dumps({unit_id: {key: manifest[key] for key in (
         "turns", "extraction_status", "claims", "evidence_claim_coverage", "seconds")}
         for unit_id, manifest in manifests.items()}, indent=2))
