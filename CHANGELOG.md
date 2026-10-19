@@ -24,6 +24,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   takes about 3 minutes and a warm one under 30 seconds. The store stage can run
   on PostgreSQL (`--database-url`). It is a regression screen, not an accuracy
   estimate. Nothing in the engine changes.
+- Add the store-extract stages to the fast cycle (part of prism-monorepo issue
+  260; `BENCHMARKS.md`, "Store with extraction"), opt-in with `--stages`.
+  `store-extract` stores the store stage's 75 memories with `extract=True`
+  (extraction by `deepseek-v4.1-flash:cloud`, drained by hand so the requests do
+  not depend on the 30 second timer) and asks the same 17 questions;
+  `store-extract-session` does so with each memory's session as `session_id`;
+  `store-session` is the control with no extraction. They report the extraction
+  requests and tokens, the entities made, the graph candidates per question and
+  the repeated records in the contexts next to the store measures. The
+  extraction cache leaves a turn's wall-clock time out of its key so a stored
+  memory replays, rules gain per-stage live tolerances (`live_by_stage`), and the
+  committed baseline gains the `store-extract` stage (the committed cache
+  now holds 166 responses). Three live runs on `main`: extraction ranks the
+  answer first for 12 questions instead of 6 and lifts the reciprocal rank from
+  0.56 to 0.73, but ranks 12 answers in the top 3 instead of 14, pushes five
+  questions down, doubles the context tokens and costs 75 requests and 462,000
+  tokens (7 requests and 71,000 tokens with sessions). Nothing in the engine
+  changes.
 - Add `extract` to `store()`, `store_with_receipt()`, `POST /v1/store`, the
   `memory_store` MCP tool and the sync client (#260), and
   `enable_store_extraction` to set its default (off). `extract=True` saves an

@@ -1165,7 +1165,8 @@ uv run python -m benchmarks.fast_cycle compare benchmarks/fixtures/fast-cycle/ba
 ```
 
 `run` judges its own report against the committed baseline when it finishes
-(`--baseline none` skips that, `--stages store` runs one stage) and exits 0 on
+(`--baseline none` skips that, `--stages store` runs one stage; the
+store-extract stages below are opt-in) and exits 0 on
 a pass, 1 when a gated measure got worse by more than its tolerance, and 2
 when the two reports are not comparable (another fixture, chat or backend).
 `--accept <measure>` names a measure whose worsening the change means to cause
@@ -1207,8 +1208,9 @@ first, the context lines and active records that hold only the old value, the
 extracted claims not retired, and the new values that are active.
 
 Every request goes through the extraction cache. The committed cache
-(`benchmarks/fixtures/fast-cycle/extraction-cache`, 84 responses, 113 KB with
-`usage.json`) holds one live run, so a change to what ingestion does with the
+(`benchmarks/fixtures/fast-cycle/extraction-cache`, 166 responses, 314 KB with
+`usage.json`: 84 of the ingest stage and 82 of the store-extract stages) holds
+one live run, so a change to what ingestion does with the
 model's output (claims, entities, links, retrieval) is measured on identical
 model output with no model call. A run works on a copy of the cache, so it
 never writes into the repository. A change to the extraction prompt or the
@@ -1258,8 +1260,10 @@ each answer) are listed and never fail.
   worth repeating once.
 
 Baseline on 2026-10-19 (`benchmarks/fixtures/fast-cycle/baseline-main.json`,
-the engine tree of `origin/main` at `7f9ce556`, DuckDB, from a replay of the
-committed cache):
+the engine tree of `origin/main` at `2b0df5c2`, DuckDB, from a replay of the
+committed cache; its 132 store and ingest measures equal the baseline taken at
+`7f9ce556`, so #297 moved none of them, and it adds the store-extract stage
+below):
 
 | Measure | store | defects-v1 | corrections-v1 | chat-v1 |
 |---|---:|---:|---:|---:|
@@ -1279,7 +1283,7 @@ committed cache):
 | Answers in the context | 17 of 17 | 7 of 7 | 4 of 4 | 17 of 18 |
 | Stale value in the context | 5 | 0 | 2 | 3 |
 | Stale value ranked above the answer | 4 | | | |
-| Repeated records in the contexts | | 0 | 0 | 72 |
+| Repeated records in the contexts | 0 | 0 | 0 | 72 |
 | Old value shown first / new value active | | | 1 / 2 | |
 
 The `defects-v1` column matches the fast gate's baseline above in the measures
@@ -1317,12 +1321,12 @@ older conversation or fixture.
 
 ```sh
 rm -r benchmarks/fixtures/fast-cycle/extraction-cache
-uv run python -m benchmarks.fast_cycle run --label refresh --out /tmp/refresh --no-cache --update-cache --baseline none
-uv run python -m benchmarks.fast_cycle run --label main --out /tmp/main --baseline none
+uv run python -m benchmarks.fast_cycle run --label refresh --out /tmp/refresh --stages ingest,store-extract,store-extract-session --no-cache --update-cache --baseline none
+uv run python -m benchmarks.fast_cycle run --label main --out /tmp/main --stages store,ingest,store-extract --baseline none
 cp /tmp/main/report.json benchmarks/fixtures/fast-cycle/baseline-main.json
 ```
 
-The first run makes 84 live requests and fills the cache (`--update-cache`
+The first run makes 84 + 75 + 7 live requests and fills the cache (`--update-cache`
 copies the responses it added; it never removes one, so delete the folder
 first for a clean cache). The second replays it, so the baseline is a
 deterministic report. Take the baseline from a checkout of the code it is
@@ -1350,6 +1354,159 @@ server or prompt change.
 - Ranks can differ between machines, CPU architectures or `fastembed`
   versions when two scores nearly tie, so compare reports made on the same
   machine, or refresh the baseline there.
+
+### Store with extraction: does `store(..., extract=True)` help retrieval? (#260)
+
+`store(..., extract=True)` (behind `enable_store_extraction`, off by default)
+saves the memory at once and queues the batched extraction `ingest()` runs, so
+a stored memory also gets entities, claims and links. The hosted service will
+turn it on. Nobody had measured whether it improves what `retrieve()` returns,
+so the fast cycle has three opt-in stages on the store stage's fixture (the same
+75 memories, roles, node types, scopes and metadata, and the same 17 questions):
+
+- `store-extract`: a fresh engine with `enable_store_extraction` on and the
+  ingest stage's extraction (`deepseek-v4.1-flash:cloud` through Ollama,
+  batched at the default 2,048-token target) stores each memory with
+  `extract=True` and no `session_id`, as the store stage does, so every memory
+  is its own extraction request. It then drains the background extraction with
+  `process_extractions()` and asks the questions.
+- `store-extract-session`: the same, with each memory's session (five
+  sessions) as its `session_id`, so the engine can share a request between the
+  memories of a session within the token target. The hosted estimate
+  (prism-monorepo #269) assumes this. It is the best case of the 30 second
+  window; a store a minute apart from the next is a request of its own.
+- `store-session`: the store stage with each memory's session as `session_id`
+  and no extraction, the control for `store-extract-session`.
+
+```sh
+uv run python -m benchmarks.fast_cycle run --label my-change --out /tmp/cycle --stages store,store-extract
+uv run python -m benchmarks.fast_cycle run --label sessions --out /tmp/cycle --stages store,store-session,store-extract-session --baseline none
+```
+
+Choices, and why. The engine's 30 second timer is set aside and the extraction
+is drained by hand, so a run composes the same requests whatever the machine's
+speed (the hosted service lets the timer decide; a store with no `session_id`
+goes alone either way). A stored memory carries the wall-clock time of its
+store and a batched request shows each turn's time to the minute, so the
+extraction cache's key leaves the time out; a replay returns the model's
+recorded answer to the request as it was first sent. The cache keeps responses,
+not usage, so `usage.json` keeps the tokens of each request the model answered
+live, and a replay reports them. The stages are on DuckDB; the stage prints what
+retrieval returns, not what a reader answers.
+
+Result on 2026-10-19 (laptop, `main` at `2b0df5c2`, DuckDB, Ollama 0.40.6),
+three live runs of each stage, every one with a cold cache (75 and 7 model
+requests). Values are the three runs in order, one value when all three are
+equal:
+
+| Measure | store | store-extract | store-session | store-extract-session |
+|---|---:|---:|---:|---:|
+| Nodes / edges per store call | 1.00 / 0.00 | 5.03, 5.05, 5.03 / 3.52, 3.59, 3.60 | 1.00 / 0.00 | 4.45, 4.59, 4.56 / 2.65, 2.79, 2.71 |
+| Entities made (key entities found of 8) | 0 (0) | 132, 134, 130 (8) | 0 (0) | 128, 133, 136 (8) |
+| Graph candidates per question (questions with any) | 0 (0) | 96.5, 96.5, 97.4 (13) | 0 (0) | 84.4, 82.8, 84.6 (13) |
+| Context tokens per question | 1,786 | 3,695, 3,656, 3,766 | 1,786 | 3,376, 3,347, 3,407 |
+| Answers ranked first | 6 | 12 | 6 | 10 |
+| Answers ranked in the top 3 | 14 | 12 | 14 | 12 |
+| Mean reciprocal rank | 0.559 | 0.728, 0.727, 0.725 | 0.559 | 0.657, 0.664, 0.660 |
+| Stale value ranked above the answer | 4 | 2 | 4 | 3 |
+| Answers in the context / stale value in it | 17 / 5 | 17 / 5 | 17 / 5 | 17 / 5 |
+| Repeated records in the 17 contexts | 0 | 340, 323, 374 | 0 | 204, 187, 187 |
+| Extraction requests | | 75 | | 7 |
+| Extraction tokens | | 462,676; 462,084; 462,093 | | 70,911; 71,108; 71,249 |
+| Stage time: stores, extraction, questions (a busy laptop, two runs at a time) | 7 to 25 s, 0, 1 s | 7 to 22 s, 143 to 204 s, 1 to 3 s | 7 to 28 s, 0, 1 s | 6 to 47 s, 97 to 142 s, 2 to 3 s |
+
+The rank of each answer (the place of the first result that holds it; a star
+marks a stale value ranked above it):
+
+| Question | store | store-extract | store-extract-session |
+|---|---:|---:|---:|
+| what coding language is alex learning? | 3 | 1, 1, 1 | 7, 1, 7 |
+| which cities will Alex and jordan visit in Japan? | 26 | 51, 54, 60 | 39, 41, 38 |
+| When is the production cutover? | 3* | 1, 1, 1 | 3*, 3*, 3* |
+| When is the Japan trip? | 4* | 10*, 13*, 12* | 1, 3, 1 |
+| Does Alex like pair programming? | 2* | 1, 1, 1 | 3*, 4*, 3* |
+| Is Alex leading the observability rewrite? | 3* | 12*, 12*, 11* | 11*, 9*, 10* |
+| What is Alex's dog called? | 19 | 30, 32, 33 | 29, 27, 32 |
+| Which airline did Alex book for the Japan trip? | 3 | 7, 7, 10 | 5, 5, 4 |
+| The dashboard, table size and gravel race questions | 2, 2, 3 | 1, 1, 1 | 1, 1, 1 |
+| The other six questions | 1 | 1 | 1 |
+
+**Verdict: it does not improve the results; it trades them.** Against the
+plain store, `store-extract` ranks the answer first for 12 questions instead of
+6, lifts the mean reciprocal rank from 0.56 to 0.73 and puts a stale value above
+the answer for 2 questions instead of 4. It ranks fewer answers in the top 3
+(12 against 14), and the same five questions fall in all three runs: the Japan
+cities (26th to 51st-60th), the Japan dates (4th to 10th-13th), the
+observability rewrite (3rd to 11th-12th), the dog (19th to 30th-33rd) and the
+flights (3rd to 7th-10th). Six questions improve, six stay equal and five
+get worse. The answer is in the context for all 17 questions either way.
+
+The cost is the reason for the fall. Extraction adds about four records to each
+memory (5.0 nodes per call: 1.8 entities and 2.3 claims on average, 3.6 edges).
+A claim's text is the stored sentence or the sentence that holds it, so the top
+results of a question hold several copies of one sentence: the top five results
+for the Japan cities are the trip sentence five times, and the 17 contexts hold
+340 repeated records against none. They use 3,700 of the 4,096-token budget
+instead of 1,800. The graph channel now finds candidates for 13 questions (none
+before) and all 8 key entities exist, but the answer's rank does not gain from
+it (#299 notes that under the default rank fusion a candidate found only
+through the graph scores 0). Extraction costs 75 model requests and 462,000
+tokens for the 75 memories, about 6,200 tokens each, and 2.4 to 3.4 minutes.
+
+`store-extract-session` is the cheaper way to the same trade: 7 requests and
+71,000 tokens (6.5 times fewer), top 1 for 10 questions, top 3 for 12, a
+reciprocal rank of 0.66 and a stale value above the answer for 3. The session
+also changes the plain store: the control ranks the dog 17th to 21st and every
+other answer as the store stage does, because memories that share a session
+break retrieval ties differently from run to run.
+
+**With the unmerged options** (`enable_mention_links` and
+`packing.graph_seed_words` of #299, `enable_ingest_claim_fixes` of #296; neither
+is on `main` yet, so I measured them on a throwaway merge of the
+`issue-259-entity-links-and-graph-seeds` branch, which contains the
+`issue-258-ingest-names-and-claims` branch, over this branch; three runs each):
+
+| Measure | store-extract | store-extract-session |
+|---|---:|---:|
+| Edges per store call | 4.73, 4.97, 4.77 | 3.99, 3.87, 4.08 |
+| Questions with a graph candidate (candidates per question) | 17 (122, 124, 123) | 17 (111, 110, 116) |
+| Answers ranked first / in the top 3 | 8, 9, 9 / 12, 13, 13 | 8, 9, 9 / 13, 12, 14 |
+| Mean reciprocal rank | 0.606, 0.656, 0.646 | 0.603, 0.633, 0.647 |
+| Stale value ranked above the answer | 1 | 3 |
+| Repeated records in the 17 contexts | 73, 72, 78 | 29, 49, 44 |
+| Context tokens per question | about 4,000 | about 3,990 |
+
+The graph channel now finds candidates for all 17 questions, the repeated
+records fall by four fifths, the Japan dates and the cutover rank well (2nd to
+3rd and 1st), and the stale value is above the answer for 1 question. The
+answers ranked first (8 to 9 against 12) and the reciprocal rank (0.61 to 0.66
+against 0.73) fall below the stage without the options, and the Japan cities
+are still 43rd to 45th (25th to 29th with sessions): the memory that holds the
+four cities names neither Japan nor Alex. The compare rules fail this run on
+the context tokens, the answers ranked first and the reciprocal rank.
+
+The runs agree closely (the extraction output of a temperature-0 model moves
+few claims, so most ranks repeat), and a replay of each run's recorded
+responses gives the run's measures again for `store-extract`; for the session
+stage a replay can move one rank (the dog) because of the tie-breaking above.
+
+**Rules.** `store-extract` is in the committed baseline
+(`baseline-main.json`, a replay of the committed cache, so exact). A live
+run uses the `live_by_stage` entry of each measure in `rules.json`, taken from
+these three runs by the rule of the ingest stage (twice the spread, rounded up;
+one for a count that did not move). With them none of the six baseline and
+candidate pairs among the three runs fails. A default run (store and ingest)
+leaves the stage out, and compare says it was not compared. The two session
+stages have no baseline and no tolerance: they are for reading.
+
+**What it cannot show.** One fixture of 75 memories of one user, 17 questions
+and one model; the rank counts every result, so repeated records push answers
+down although the context holds them all (17 of 17); no reader answers, so
+whether a reader would answer better from the larger context is not measured;
+DuckDB only (the hosted service uses PostgreSQL, whose word search differs);
+the timer is set aside, so the number of requests in the hosted service
+depends on how far apart a user's stores are; the options were measured on a
+throwaway merge, not on `main`.
 
 ### Corrections probe: what a correction stores and returns
 
