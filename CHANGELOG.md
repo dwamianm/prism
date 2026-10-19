@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a3] - 2026-10-19
+
+This is an alpha. It passed CI, the fast gate and the fast cycle, and it has not
+been through the full benchmark. The stable release stays at 0.15.0 until the
+full benchmark audit, so `pip install prme` still installs 0.15.0. Install the
+alpha with `pip install --pre prme` or `pip install prme==0.16.0a3`.
+
 ### Added
 
 - Add `packing.folded_records_keep_rank` (`PRME_PACKING__FOLDED_RECORDS_KEEP_RANK`),
@@ -115,6 +122,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   two packing fields, which releases before 0.16.0a3 ignore when they read it.
   The full benchmark audit and the default-change rule's DeepSeek answer runs
   are pending. `BENCHMARKS.md` has the tables.
+
+### Upgrade notes
+
+- Five defaults changed since 0.16.0a2: `enable_ingest_claim_fixes`,
+  `packing.folded_records_keep_rank`, `enable_mention_links`,
+  `packing.graph_seed_words` and `enable_owner_name_carry` are on (see Changed).
+  They shape what `ingest()` stores and what `retrieve()` returns over it; they
+  do not touch `store()`, and memories already stored are not rewritten. Set
+  `PRME_ENABLE_INGEST_CLAIM_FIXES=false`, `PRME_PACKING__FOLDED_RECORDS_KEEP_RANK=false`,
+  `PRME_ENABLE_MENTION_LINKS=false`, `PRME_PACKING__GRAPH_SEED_WORDS=false` and
+  `PRME_ENABLE_OWNER_NAME_CARRY=false` to get the behavior of 0.16.0a2 back. The
+  fast gate passed with the five on together; the full benchmark audit has not
+  been run.
+- A retrieval receipt written with the defaults names `graph_seed_words` and
+  `folded_records_keep_rank`. Releases before 0.16.0a3 ignore the two fields
+  when they read it. A `PackingConfig` built in code keeps both off.
+- A dump of the configuration now always names `enable_ingest_claim_fixes` and
+  `enable_owner_name_carry`.
+- A custom extraction provider whose `extract` does not take
+  `plural_first_person` is not given it, so the new default breaks none.
+- Known weakness: on one live extraction sample of the corrections probe, the
+  Austin-to-Denver case shows the old value before the new one with the five on
+  (the committed sample of the fast cycle does not move). The fast cycle also
+  shows nine single answer ranks one or two places lower. Neither is gated.
+- `enable_owner_name_carry` marks only an entity that a turn creates, so a
+  memory built before it was on has no marked entity, and an owner who returns
+  to an earlier name keeps the later one.
+- Still off: `enable_store_extraction`, `enable_extraction_corrections` and
+  `enable_superseded_source_suppression`. `lexical_term_weights` (PostgreSQL
+  only) stays on from 0.16.0a2.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a2] - 2026-10-19
 
@@ -2430,7 +2471,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a2...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a3...HEAD
+[0.16.0a3]: https://github.com/dwamianm/prism/compare/v0.16.0a2...v0.16.0a3
 [0.16.0a2]: https://github.com/dwamianm/prism/compare/v0.16.0a1...v0.16.0a2
 [0.16.0a1]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0a1
 [0.15.0]: https://github.com/dwamianm/prism/compare/v0.14.2...v0.15.0
