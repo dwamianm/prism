@@ -991,6 +991,12 @@ memory bundle starts with the same coverage warning; if that warning cannot fit,
 the packer emits no unqualified evidence. The alternate `format_for_llm()` path
 also emits the boundary, including when zero candidates were found.
 
+For the supplementary aggregation lexical scan, `LEXICAL_AGG` reports a
+candidate limit when an individual keyword search reaches its cap. A capped
+adjacent-keyword pair search alone does not imply missing candidates: its hits
+are already covered by the individual keyword searches. This does not make the
+semantic retrieval exhaustive.
+
 Coverage metadata and the exact structure are recorded in the retrieval
 operation and versioned execution descriptor. HTTP and MCP return it under
 `metrics.aggregation_coverage`. These diagnostics explain the retrieved set;

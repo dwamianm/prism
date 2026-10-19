@@ -476,8 +476,9 @@ class RetrievalPipeline:
                     "that", "this", "those", "these", "it", "its"}
             words = re.findall(r'\b[a-z]{3,}\b', query.lower())
             keywords = [w for w in words if w not in stop]
-            # Search for each keyword pair for better precision
+            # Search individual keywords and adjacent pairs.
             search_terms = keywords[:5]
+            keyword_term_count = len(search_terms)
             if len(search_terms) >= 2:
                 # Also try bigrams
                 for i in range(len(search_terms) - 1):
@@ -498,11 +499,13 @@ class RetrievalPipeline:
                 return_exceptions=True,
             )
             successful_term_results: list[list[dict]] = []
-            for hits in term_results:
+            for term_index, hits in enumerate(term_results):
                 if isinstance(hits, BaseException):
                     aggregation_scan_failed = True
                     continue
-                if len(hits) >= 50:
+                # Pair hits are already covered by the individual keywords;
+                # only a capped keyword search can hide additional candidates.
+                if term_index < keyword_term_count and len(hits) >= 50:
                     aggregation_term_limit_reached = True
                 successful_term_results.append(hits)
             agg_hits = merge_normalized_bm25_hits(successful_term_results)
