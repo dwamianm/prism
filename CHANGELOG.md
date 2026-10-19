@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `0.15` and `0.1`) and lowers LoCoMo evidence in the top 25 by 5.4 points on the
   mid tier. The group links change no gated measure. Skipping entities passes
   the fast tiers and raises LoCoMo evidence in the top 25 by 2.1 points (48
-  wins, no loss), so it is the one to turn on next. With the options off,
+  wins, no loss), so it is turned on below. With the options off,
   results, contexts, receipts and configuration dumps keep their bytes.
   `BENCHMARKS.md` ("Graph fusion") has the measurements.
 - Add a scheduled full benchmark on the Mac mini (prism-monorepo issue 272). A
@@ -54,6 +54,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   release needs the latest scheduled run to show no loss. `run-builds.sh` gains
   `BUILDS=defaults` and `EXTRACTION_CACHE`. See `BENCHMARKS.md` and
   `memory_bank/HANDOFF-2026-10-19-WEEKLY-BENCHMARK.md`.
+
+### Changed
+
+- Turn on `packing.session_context_skip_entities` by default, in the alpha
+  channel (prism-monorepo issues 259 and 260), by the owner's directive of
+  2026-10-19: ship what passes the fast tiers and audit on the full benchmark
+  at the stable release. An entity record now neither starts a session context
+  expansion nor receives an inherited score, so the entities that `ingest()`
+  creates beside a claim stop taking places above the notes and claims that
+  answer. It acts on `retrieve()` over memories that have entities, so it
+  changes nothing for a store made with `store()` alone, and it rewrites no
+  memory. `PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES=false` restores the
+  expansion of 0.16.0a3. A `PackingConfig` built in code keeps it off, and an
+  off setting stays out of receipts, so a receipt of a retrieval that does not
+  use it keeps its bytes; a receipt written with the default names the field,
+  which releases before 0.16.0a4 ignore when they read it. On the fast tiers
+  (`deepseek-v4.1-flash:cloud`, extraction replayed from the committed cache),
+  with it on against the defaults: the defect probes rank 7 of 7 answers in the
+  top 3 and the chat probe 14 of 18 (top 5: 15 of 18), with every probe rank
+  equal; the fast cycle passes with 168 measures unchanged, on DuckDB and on the
+  PostgreSQL store stage; the offline evidence gate shows no change; and on the
+  mid tier LoCoMo evidence in the top 25 rises by 2.1 points (95% interval +1.5
+  to +2.7, 48 wins, 0 losses). All evidence packed does not move clear of zero
+  (+0.1, 7 wins and 6 losses; single-hop -0.4, interval -0.8 to +0.0). The full
+  benchmark audit and the default-change rule's answer runs are pending.
+  `BENCHMARKS.md` ("Graph fusion") has the tables.
 
 ## [0.16.0a3] - 2026-10-19
 

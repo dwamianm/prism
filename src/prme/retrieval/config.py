@@ -90,6 +90,9 @@ DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
     # PackingConfig built in code keeps their field defaults (off).
     "graph_seed_words": True,
     "folded_records_keep_rank": True,
+    # Alpha channel, 0.16.0a4: entities neither start a session expansion nor
+    # inherit a score (the fast tiers and the mid tier passed it alone).
+    "session_context_skip_entities": True,
 }
 
 
@@ -640,8 +643,12 @@ class PackingConfig(BaseModel):
             "neither triggers an expansion (session_context_top_k counts the "
             "other records) nor receives an inherited score; the window "
             "still counts its position in the session. Off, expansion treats "
-            "every record alike, as before. Needs session expansion "
-            "(session_context_window > 0). [HYPOTHESIS]"
+            "every record alike, as 0.16.0a3 did. PRMEConfig sets it by "
+            "default (DEFAULT_PACKING_SETTINGS) since 2026-10-19, in the "
+            "alpha channel (0.16.0a4), on the fast tiers and the mid tier by "
+            "the owner's directive; a PackingConfig built in code keeps "
+            "False. Needs session expansion (session_context_window > 0). "
+            "[HYPOTHESIS]"
         ),
     )
     # Omitted when unset, like the rank fusion session decay above, so
