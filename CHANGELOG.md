@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add the fast cycle (part of prism-monorepo issues 258 and 259;
+  `BENCHMARKS.md`, "Fast cycle"): `uv run python -m benchmarks.fast_cycle run
+  --label <name> --out <dir>` stores 75 memories with `store()` and asks 17
+  questions (rank of each answer, stale values, nodes per call, context
+  tokens), then runs the three scripted chats through `ingest()` with
+  extraction by `deepseek-v4.1-flash:cloud`, replaying a committed extraction
+  cache (84 responses, 113 KB) while the prompt is unchanged. It writes a JSON
+  and a Markdown report with the measures in three groups (storage, meaning,
+  results) and the time of each stage, and judges them against the committed
+  baseline by `benchmarks/fixtures/fast-cycle/rules.json`: exact on a replay,
+  with noise tolerances measured from three live runs when the model is
+  asked. `compare <baseline> <report>` exits 1 on a failed rule. A cold run
+  takes about 3 minutes and a warm one under 30 seconds. The store stage can run
+  on PostgreSQL (`--database-url`). It is a regression screen, not an accuracy
+  estimate. Nothing in the engine changes.
 - Add a fast gate for ingest changes (part of prism-monorepo issues 258 and
   259; `BENCHMARKS.md`, "Fast gate for ingest changes"). The chat probe takes a
   second conversation, `benchmarks/conversations/defects-v1.json`: 14 turns
