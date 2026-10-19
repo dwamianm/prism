@@ -41,6 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   records the option only while it is on. The corrections probe gains two
   measures, "old-only lines in the context" and "old value shown before the
   new value".
+- Add a mid-tier benchmark, `python -m benchmarks.mid_tier` (`run`, `compare`,
+  `select`, `check`). It builds packs for all of LoCoMo and a fixed,
+  stratified sample of 12 LongMemEval-S questions through `ingest()` with
+  `deepseek-v4.1-flash:cloud` on the local Ollama server, replays them
+  through the offline evidence gate and writes one report: all evidence
+  packed, evidence recall, evidence in the first 25 candidates and projected
+  accuracy, overall and by category, with 95% intervals (LoCoMo also by
+  conversation), and the calls, tokens, wall time and load average of each
+  stage. A cold run took 25 and 34 minutes, a warm one 11, and
+  `--reuse-build` gates an earlier run's packs for retrieval and packing
+  changes in about 3. `compare` pairs two reports question by question. It
+  makes no reader or judge call, so it measures evidence coverage, not
+  answers (BENCHMARKS.md, "Mid tier"). `extracted_packs build` gains
+  `--cache-dir` and `--in-flight` so builds under different labels share one
+  extraction cache and several build processes cap their live model calls.
 
 ### Changed
 
