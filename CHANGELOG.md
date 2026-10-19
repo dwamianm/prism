@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   records the option only while it is on. The corrections probe gains two
   measures, "old-only lines in the context" and "old value shown before the
   new value".
+- Add the `store-contextual` stage to the fast cycle (`BENCHMARKS.md`, "Fast
+  cycle: situating sentences at store time"; part of prism-monorepo issue
+  260). It stores the 75 memories with a one-sentence situating context
+  written by a local model from the memory's session and passed as
+  `retrieval_content`, beside the plain store stage, on that fixture and on a
+  second fixture of 30 memories and 10 questions. The sentences are cached, so a
+  rerun calls no model. It is opt in (`--stages store,store-contextual`) and
+  changes nothing in the engine or the default run. It found no lift that meets
+  the conditions set for building the option, so the engine does not have one.
 
 ## [0.16.0a1] - 2026-10-19
 

@@ -81,13 +81,22 @@ def stale_above_answer(question: dict, ranked: list[dict]) -> bool:
                                for result in above)
 
 
-def question_report(question: dict, response) -> dict:
-    """What one question's ``retrieve()`` response holds."""
-    ranked = [{"content": candidate.node.content, "type": candidate.node.node_type.value}
-              for candidate in response.results]
-    included = [{"content": candidate.node.content, "type": candidate.node.node_type.value}
-                for section in response.bundle.sections.values() for candidate in section]
-    report = context_report(question, included, response.bundle.render(), response.bundle.tokens_used,
+def question_report(question: dict, response, originals: dict[str, str] | None = None) -> dict:
+    """What one question's ``retrieve()`` response holds.
+
+    ``originals`` maps the retrieval content a memory was stored with to the text it was sent as. Answers and
+    stale values are read from the text as sent, so a sentence added to a memory cannot answer for it.
+    """
+    originals = originals or {}
+    ranked = [{"content": originals.get(candidate.node.content, candidate.node.content),
+               "type": candidate.node.node_type.value} for candidate in response.results]
+    included = [{"content": originals.get(candidate.node.content, candidate.node.content),
+                 "type": candidate.node.node_type.value} for section in response.bundle.sections.values()
+                for candidate in section]
+    context = response.bundle.render()
+    for stored, sent in originals.items():
+        context = context.replace(stored, sent)
+    report = context_report(question, included, context, response.bundle.tokens_used,
                             response.bundle.token_budget, ranked)
     channels = response.metadata.candidates_generated
     return {**report, "stale_above_answer": stale_above_answer(question, ranked),
@@ -123,18 +132,27 @@ def store_config(pack: Path, overrides: dict | None = None, database_url: str | 
 
 
 async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: dict | None = None,
-              database_url: str | None = None) -> dict:
-    """Store the fixture's memories, ask its questions and return the stage's measures and details."""
+              database_url: str | None = None, retrieval_contents: list[str | None] | None = None) -> dict:
+    """Store the fixture's memories, ask its questions and return the stage's measures and details.
+
+    ``retrieval_contents`` gives each memory's ``retrieval_content`` (None keeps the memory as written); the
+    contextual stage uses it. Answers are always read from the memory as sent.
+    """
     fixture = load_fixture(fixture_path)
+    if retrieval_contents is not None and len(retrieval_contents) != len(fixture["memories"]):
+        raise ValueError("retrieval_contents needs one entry for each memory")
+    originals = {} if retrieval_contents is None else {
+        stored: memory["content"] for stored, memory in zip(retrieval_contents, fixture["memories"]) if stored}
     pack = work / "pack"
     (pack / "lexical_index").mkdir(parents=True, exist_ok=True)
     # A shared PostgreSQL database keeps earlier runs, so each run is a new owner.
     owner = f"{fixture['owner']}-{uuid.uuid4().hex[:8]}" if database_url else fixture["owner"]
     started = time.perf_counter()
     async with MemoryEngine.open(store_config(pack, overrides, database_url)) as engine:
-        for memory in fixture["memories"]:
+        for number, memory in enumerate(fixture["memories"]):
             await engine.store_with_receipt(
                 memory["content"], user_id=owner, role=memory["role"], speaker=memory.get("speaker"),
+                retrieval_content=None if retrieval_contents is None else retrieval_contents[number],
                 node_type=NodeType(memory["node_type"]), scope=Scope(memory["scope"]),
                 metadata={"source": "synthetic-demo", "session": memory["session"]})
         stored = time.perf_counter() - started
@@ -144,7 +162,8 @@ async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: di
         questions = []
         asked = time.perf_counter()
         for question in fixture["key"]["questions"]:
-            questions.append(question_report(question, await engine.retrieve(question["question"], user_id=owner)))
+            questions.append(question_report(question, await engine.retrieve(question["question"], user_id=owner),
+                                             originals))
         asked = time.perf_counter() - asked
     measures = store_measures(questions, nodes, edges, len(fixture["memories"]), fixture["key"]["entities"])
     return {"backend": "postgres" if database_url else "duckdb", "fixture": fixture["name"],

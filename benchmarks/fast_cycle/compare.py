@@ -69,7 +69,8 @@ def label_for(rules: dict, measure_id: str) -> str:
 def grouped(rules: dict, stages: dict) -> dict:
     """The stages' measures by group, keyed by measure ID."""
     groups: dict[str, dict] = {group: {} for group in GROUPS}
-    found = {f"store/{name}": value for name, value in stages.get("store", {}).get("measures", {}).items()}
+    found = {f"{stage}/{name}": value for stage in ("store", "store-contextual")
+             for name, value in stages.get(stage, {}).get("measures", {}).items()}
     for chat, measures in stages.get("ingest", {}).get("measures", {}).items():
         found.update({f"{chat}/{name}": value for name, value in measures.items()})
     for measure_id, value in found.items():
@@ -122,12 +123,13 @@ def _cannot_compare(baseline: dict, report: dict) -> list[str]:
     if reasons:
         return reasons
     base, new = baseline["stages"], report["stages"]
-    if "store" in base and "store" in new:
-        for key, what in (("fixture_sha256", "store fixture"), ("backend", "store backend")):
-            if base["store"][key] != new["store"][key]:
-                reasons.append(f"the {what} differs ({base['store'][key][:12]} against {new['store'][key][:12]})"
-                               if key.endswith("sha256") else
-                               f"the {what} differs ({base['store'][key]} against {new['store'][key]})")
+    for stage in ("store", "store-contextual"):
+        if stage in base and stage in new:
+            for key, what in (("fixture_sha256", f"{stage} fixture"), ("backend", f"{stage} backend")):
+                if base[stage][key] != new[stage][key]:
+                    reasons.append(f"the {what} differs ({base[stage][key][:12]} against {new[stage][key][:12]})"
+                                   if key.endswith("sha256") else
+                                   f"the {what} differs ({base[stage][key]} against {new[stage][key]})")
     if "ingest" in base and "ingest" in new:
         for chat, entry in base["ingest"]["conversations"].items():
             other = new["ingest"]["conversations"].get(chat)

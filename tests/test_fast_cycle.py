@@ -1,11 +1,14 @@
 """The fast cycle's fixtures, measures, rules and comparator, with no model and no network."""
 import copy
 import json
+import re
+from types import SimpleNamespace
 
 import pytest
 
 from benchmarks.diagnostics import chat_probe
-from benchmarks.fast_cycle import compare, cycle, ingest, store
+from benchmarks.fast_cycle import compare, contextual, cycle, ingest, store
+from prme.types import NodeType
 from tests.test_chat_probe import CLAIMS, HOME, NURSE, ScriptedExtraction, _conversation, mock_embeddings  # noqa: F401
 
 RULES = compare.load_rules()
@@ -353,3 +356,149 @@ def test_run_writes_both_reports_and_exits_with_the_verdict(tmp_path, monkeypatc
     assert cycle.main(command[:-2] + ["--baseline", "none"]) == 0
     with pytest.raises(SystemExit):
         cycle.main([*command[:-2], "--baseline", str(tmp_path / "missing.json")])
+
+
+# --- The store-contextual stage ------------------------------------------------------------------------
+
+CONTEXTUAL_FIXTURE = store.FIXTURES / "store-contextual-v1.json"
+
+
+def test_the_second_store_fixture_has_its_own_story_and_every_answer_and_stale_term_is_in_a_memory():
+    fixture = store.load_fixture(CONTEXTUAL_FIXTURE)
+    memories = fixture["memories"]
+    assert len(memories) == 30 and len(fixture["key"]["questions"]) == 10
+    assert len({memory["session"] for memory in memories}) == 3
+    # A different story from the first fixture, so a lift on one is not the other's wording.
+    first = " ".join(memory["content"] for memory in store.load_fixture()["memories"]).casefold()
+    assert not any(name.casefold() in first for entity in fixture["key"]["entities"] for name in entity["names"])
+    texts = [memory["content"].casefold() for memory in memories]
+    for question in fixture["key"]["questions"]:
+        terms = [term.casefold() for term in question.get("all_of") or question["any_of"]]
+        holds = all if question.get("all_of") else any
+        assert any(holds(term in text for term in terms) for text in texts), question["id"]
+        for stale in question.get("stale", []):
+            assert any(stale.casefold() in text and not holds(term in text for term in terms)
+                       for text in texts), (question["id"], stale)
+
+
+def test_a_prompt_gets_only_the_five_memories_before_it_in_its_session_and_names_nothing_of_a_fixture():
+    memories = [{"session": "a", "content": f"a{number}"} for number in range(7)]
+    memories.insert(3, {"session": "b", "content": "b0"})
+    assert contextual.context_window(memories, 0) == [] and contextual.context_window(memories, 3) == []
+    assert contextual.context_window(memories, 4) == ["a0", "a1", "a2"]
+    assert contextual.context_window(memories, 7) == ["a1", "a2", "a3", "a4", "a5"]
+    text = contextual.build_prompt(["first", "second"], "the memory")
+    assert "1. first\n2. second" in text and text.endswith("the memory\n\nSentence:")
+    # The overfitting guard: no prompt names a person, place or answer of either fixture.
+    words = set()
+    for path in (store.DEFAULT_FIXTURE, CONTEXTUAL_FIXTURE):
+        fixture = store.load_fixture(path)
+        words |= {name.casefold() for entity in fixture["key"]["entities"] for name in entity["names"]}
+        words |= {term.casefold() for question in fixture["key"]["questions"]
+                  for term in question.get("all_of", []) + question.get("any_of", []) + question.get("stale", [])}
+    for name, prompt in contextual.PROMPTS.items():
+        assert not [word for word in words if re.search(rf"\b{re.escape(word)}\b", prompt.casefold())], name
+
+
+def test_a_reply_is_one_short_sentence_or_nothing():
+    clean = contextual.clean_sentence
+    assert clean("  Maya and Luis's kitchen\nrenovation.  ") == "Maya and Luis's kitchen renovation."
+    assert clean('"Sentence: The choir."') == "The choir."
+    assert clean("NONE") is None and clean("none.") is None and clean("  ") is None
+    assert clean("x" * (contextual.MAX_SENTENCE_CHARS + 1)) is None
+    assert contextual.retrieval_content("About the trip.", "They chose three cities.") == "About the trip. They chose three cities."
+    assert contextual.retrieval_content(None, "They chose three cities.") is None
+
+
+def test_the_committed_replies_cover_both_fixtures_and_both_prompts_so_a_rerun_asks_no_model():
+    import asyncio
+
+    for path in (store.DEFAULT_FIXTURE, CONTEXTUAL_FIXTURE):
+        fixture = store.load_fixture(path)
+        for prompt in contextual.PROMPTS:
+            for number in (1, 2, 3):
+                cache = contextual.Cache(contextual.cache_path(fixture, number))
+                assert all(contextual._cached(fixture, number, cache, prompt, contextual.MODEL))
+                records = asyncio.run(contextual.generate(fixture, run=number, cache=cache, live=False, prompt=prompt))
+                assert len(records) == len(fixture["memories"]) and not any(record["asked"] for record in records)
+                # The first memory of each session has nothing to situate it by, so it is stored as written.
+                assert all(record["sentence"] is None for record in records if record["skipped"])
+    empty = contextual.Cache(contextual.CACHE_DIR / "none.json")
+    with pytest.raises(RuntimeError, match="No cached reply"):
+        asyncio.run(contextual.generate(store.load_fixture(), run=9, cache=empty, live=False))
+
+
+def test_replies_added_by_a_run_are_copied_to_the_committed_cache_once(tmp_path):
+    committed, working = tmp_path / "committed", tmp_path / "working"
+    for folder, entries in ((committed, {"a": {"raw": "one"}}), (working, {"a": {"raw": "other"}, "b": {"raw": "two"}})):
+        cache = contextual.Cache(folder / "store-v1-run1.json")
+        cache.entries = entries
+        cache.save()
+    assert contextual.update_cache(working, committed) == 1
+    assert contextual.update_cache(working, committed) == 0
+    assert contextual.Cache(committed / "store-v1-run1.json").entries == {"a": {"raw": "one"}, "b": {"raw": "two"}}
+
+
+def test_answers_are_read_from_the_text_as_sent_not_from_the_sentence_added_to_it():
+    node = NodeType.FACT
+    sentence = "Tokyo, Kyoto, Kanazawa and Osaka were chosen. They dropped Hiroshima."
+    other = SimpleNamespace(node=SimpleNamespace(content=f"{sentence} Alex booked flights.", node_type=node))
+    answer = SimpleNamespace(node=SimpleNamespace(content="Tokyo, Kyoto, Kanazawa, and Osaka.", node_type=node))
+    response = SimpleNamespace(
+        results=[other, answer],
+        bundle=SimpleNamespace(sections={"facts": [other]}, tokens_used=30, token_budget=100,
+                               render=lambda: f"- [fact] {sentence} Alex booked flights."),
+        metadata=SimpleNamespace(candidates_generated={"LEXICAL": 2}))
+    question = {"id": "cities", "question": "which cities?", "all_of": ["Tokyo", "Kyoto", "Kanazawa", "Osaka"]}
+    assert store.question_report(question, response)["answer_rank"] == 1
+    sent = store.question_report(question, response, {f"{sentence} Alex booked flights.": "Alex booked flights."})
+    assert sent["answer_rank"] == 2 and not sent["answer_in_context"]
+    assert sent["tokens_used"] == 30 and sent["top_results"][0] == "fact: Alex booked flights."
+
+
+async def test_the_contextual_stage_stores_with_the_sentences_and_asks_no_model_from_the_cache(
+        tmp_path, mock_embeddings):  # noqa: F811
+    from prme import MemoryEngine
+
+    seen = []
+    original = MemoryEngine.store_with_receipt
+
+    async def spy(self, content, **options):
+        seen.append((content, options.get("retrieval_content")))
+        return await original(self, content, **options)
+
+    MemoryEngine.store_with_receipt = spy
+    try:
+        result = await contextual.run(tmp_path / "ctx", cache_dir=contextual.CACHE_DIR)
+    finally:
+        MemoryEngine.store_with_receipt = original
+    info = result["contextual"]
+    assert info["model_calls"] == 0 and info["replayed"] == 70 and info["no_context"] == 5
+    assert result["calls"] == 75 and len(seen) == 75
+    fixture = store.load_fixture()
+    for (content, retrieval), memory in zip(seen, fixture["memories"]):
+        # The source text is sent as written; the sentence rides in front of it as retrieval content.
+        assert content == memory["content"] and (retrieval is None or retrieval.endswith(f" {content}"))
+    assert sum(retrieval is not None for _, retrieval in seen) == info["sentences"]
+    assert result["measures"]["nodes_per_store_call"] == 1.0
+
+
+def test_the_contextual_stage_is_opt_in_and_its_measures_are_reported_beside_the_stores():
+    assert "store-contextual" not in cycle.STAGES and cycle.OPT_IN_STAGES == ("store-contextual",)
+    with pytest.raises(SystemExit):
+        cycle.main(["run", "--label", "x", "--out", "/nonexistent", "--stages", "nothing"])
+    results = _results()
+    results["store-contextual"] = {**results["store"], "seconds": 5.0, "working_cache": "/not/in/the/report",
+                                   "measures": {**results["store"]["measures"], "answers_in_top3": 15,
+                                                "answer_rank:rust": 2},
+                                   "contextual": {"model": "m", "prompt": "situate", "run": 1, "sentences": 61,
+                                                  "model_calls": 0, "replayed": 70, "memories": 75}}
+    report = cycle.build_report("candidate", results, {}, RULES)
+    assert report["measures"]["results"]["store-contextual/answers_in_top3"] == 15
+    text = cycle.report_markdown(report, RULES)
+    assert "| what coding language is alex learning? | store-contextual | 2 |" in text
+    assert "before 61 of 75 memories: 0 model calls and 70 replayed" in text
+    # Against a baseline without the stage, its measures are listed as not compared and nothing fails.
+    result = compare.compare(_report("main"), report, RULES)
+    assert result["status"] == "PASS" and {where for _, where in result["skipped"]} == {"report"}
+    assert all(measure.startswith("store-contextual/") for measure, _ in result["skipped"])
