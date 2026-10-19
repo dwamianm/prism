@@ -90,9 +90,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   limit; nothing changes unless it is set. On an 18-core machine one thread
   embedded a short text with 4.9 ms of CPU against 42.5 ms by default, in
   about the same wall time, and gave bit-identical vectors for 300 texts.
+- Add `enable_mention_links` and `packing.graph_seed_words` (prism-monorepo
+  issue 259), both off by default, so graph search can find the claims and
+  notes that name an entity. After `ingest()`, the neighborhood of an entity
+  such as Japan or Tokyo was empty, because extraction linked an entity only
+  to the claims it is the subject of (HAS_FACT) and to a claim's resolved
+  object (MENTIONS), and graph search seeded only from the capitalized words
+  of a question. With both off, ingestion, graph candidates and receipts keep
+  the bytes they had.
+  - `enable_mention_links` (`PRME_ENABLE_MENTION_LINKS`) makes `ingest()` add
+    a MENTIONS link from each claim and from the raw source note to every
+    entity its extraction lists whose name occurs in its text as a whole word,
+    ignoring case. That covers a claim whose object text holds a name ("Japan
+    in late March next year") and a note that no claim covers ("We chose
+    Tokyo, Kyoto, Kanazawa, and Osaka."). The edge metadata marks these links
+    `basis: text_mention`, and claim merging ignores them. A name that two
+    listed entities share and a literal I or we are not linked. The links are
+    made after the derivation commits and after the note exists, in either
+    order, and are not part of the derivation plan, so a failure to link never
+    fails an extraction and saved plans keep their bytes. Memories ingested
+    before the option was on keep the links they have.
+  - `packing.graph_seed_words` (`PRME_PACKING__GRAPH_SEED_WORDS`) makes graph
+    candidate generation independent of capital letters. The capitalized names
+    and quoted strings it matched before still match as substrings. Every
+    other word of the question seeds the graph when it has three or more
+    letters, is not a common function word and is a whole word of an entity's
+    name, so `which cities will Alex and jordan visit in Japan?` and the same
+    question with `Jordan` find the same seeds. Receipts record it when it is
+    on.
+  - On the conversation of that issue (stub extraction), with both on, the
+    neighbors within two hops of Tokyo, Japan and Alex Rivera went from 0, 0
+    and 0 to 5, 6 and 3, and `candidates_generated.GRAPH` for the two
+    spellings of the question from 0 and 4 to 11 and 11, on DuckDB and
+    PostgreSQL. Under the default rank fusion a candidate found only through
+    the graph still scores 0 (RFC-0005), so this adds candidates and
+    weighted-score evidence, not a graph channel. Neither option has been
+    through the default-change rule.
 
 ### Changed
 
+- The neighborhood walk (`get_neighborhood`, `get_neighborhood_with_depth`
+  and graph candidates) on DuckDB and PostgreSQL returns the same nodes at the
+  same depths but expands each node once per depth instead of once per path.
+  It followed every simple path, so its work multiplied with each hub entity
+  on the way, which a more densely linked graph makes expensive. On 3,000
+  events over 40 entities in PostgreSQL with links from every claim and note
+  to the entities its text names, graph candidates took a median 1,346 ms with
+  the old walk and 156 ms with this walk, against 148 ms for the old walk
+  without those links. A test checks the walk against a reference
+  breadth-first search on random graphs with cycles, parallel edges and hubs.
 - Retrieval does less work and returns the same results, contexts and
   receipts. `FastEmbedProvider.model_version` reads fastembed's package
   metadata once per process instead of on every access, and the PostgreSQL
