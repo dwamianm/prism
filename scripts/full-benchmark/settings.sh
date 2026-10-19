@@ -44,6 +44,19 @@ LOCOMO_PER_TURN="${LOCOMO_PER_TURN:-full-per-turn-locomo-deepseek-${COMMIT:0:8}}
 LME_DEFAULTS="${LME_DEFAULTS:-full-defaults-lme-deepseek-${COMMIT:0:8}}"
 LME_PER_TURN="${LME_PER_TURN:-full-per-turn-lme-deepseek-${COMMIT:0:8}}"
 
+# Which builds run-builds.sh makes. "all" is the four builds of the full
+# batching run (the batched defaults and one call per turn, on both benchmarks,
+# with their comparison). "defaults" is only the batched defaults, which is what
+# the scheduled run makes (weekly-run.sh).
+BUILDS="${BUILDS:-all}"
+
+# Where builds keep their extraction cache. Empty: each label keeps its own, in
+# <packs>/<label>/extraction-cache. The scheduled run points every label at one
+# folder, so a turn or batch whose request is unchanged replays from an earlier
+# run without a model call (the cache key holds the model and the full request,
+# not the commit).
+EXTRACTION_CACHE="${EXTRACTION_CACHE:-}"
+
 # Parallel packs. 17 is the measured Ollama cloud ceiling for LongMemEval-S;
 # LoCoMo has only 10 conversations.
 LOCOMO_JOBS=10

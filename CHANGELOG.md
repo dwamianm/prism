@@ -41,6 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wins, no loss), so it is the one to turn on next. With the options off,
   results, contexts, receipts and configuration dumps keep their bytes.
   `BENCHMARKS.md` ("Graph fusion") has the measurements.
+- Add a scheduled full benchmark on the Mac mini (prism-monorepo issue 272). A
+  LaunchAgent runs `scripts/full-benchmark/weekly-run.sh` on Monday and Thursday at
+  00:30 local time: it builds LoCoMo and LongMemEval-S with the defaults, runs the
+  offline evidence gate, compares the result with v0.15.0 and with the previous run,
+  and writes a report whose first line reads "no loss" or names the measures that
+  lost. It skips when `origin/main` has not changed or a run is going, refuses to
+  start with less than 120 GB free, and keeps the packs of the newest 3 runs. The
+  scripts: `install-schedule.sh`, `uninstall-schedule.sh`, `status-weekly.sh`,
+  `deploy-schedule.sh` and `publish-results.sh` (opens the results pull request from
+  the MacBook). The release rule: an alpha or beta needs the fast tiers, a stable
+  release needs the latest scheduled run to show no loss. `run-builds.sh` gains
+  `BUILDS=defaults` and `EXTRACTION_CACHE`. See `BENCHMARKS.md` and
+  `memory_bank/HANDOFF-2026-10-19-WEEKLY-BENCHMARK.md`.
 
 ## [0.16.0a3] - 2026-10-19
 
