@@ -1,0 +1,523 @@
+{
+  "kind": "prme-mid-tier-comparison",
+  "schema_version": 1,
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "baseline": {
+    "label": "main-7f9ce556",
+    "commit": "6d741a9a3c7c4721a30d65d1cd52141c58c20119",
+    "src_tree": "c8dc31e4a753a48b9b778620144ab1dcbb41ae32",
+    "dirty": false,
+    "overrides": {},
+    "created_at": "2026-10-19T09:38:15.194756+00:00",
+    "cache": "warm",
+    "seconds": 660.4905956250004,
+    "calls": 0
+  },
+  "candidate": {
+    "label": "cold-2",
+    "commit": "eda1bc069dfcfb8caa24bcee45c4984ca6ae4799",
+    "src_tree": "c8dc31e4a753a48b9b778620144ab1dcbb41ae32",
+    "dirty": false,
+    "overrides": {},
+    "created_at": "2026-10-19T10:23:48.439627+00:00",
+    "cache": "cold",
+    "seconds": 2056.5302048329977,
+    "calls": 1181
+  },
+  "same_engine_source": true,
+  "warnings": [
+    "The candidate extracted live (1,181 calls, cold). Model output is close to repeatable but not exact, so part of any difference can be that noise, not the change. Compare against a baseline that replayed the same cache."
+  ],
+  "benchmarks": {
+    "locomo": {
+      "questions": 1540,
+      "annotated_questions": 1536,
+      "metrics": {
+        "all_evidence_packed": {
+          "queries": 1536,
+          "before": 0.8313802083333334,
+          "after": 0.8352864583333334,
+          "delta": 0.00390625,
+          "wins": 12,
+          "losses": 6,
+          "ties": 1518,
+          "interval_95_questions": [
+            -0.0013020833333333333,
+            0.009765625
+          ],
+          "interval_95_conversations": [
+            -0.0012353304508956147,
+            0.009953550099535502
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "evidence_recall": {
+          "queries": 1536,
+          "before": 0.8889861601954046,
+          "after": 0.8908591895378067,
+          "delta": 0.0018730293424021654,
+          "wins": 22,
+          "losses": 17,
+          "ties": 1497,
+          "interval_95_questions": [
+            -0.0028487024149937753,
+            0.006653793644650843
+          ],
+          "interval_95_conversations": [
+            -0.002530375059130159,
+            0.007739760418908256
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "evidence_in_top_25": {
+          "queries": 1536,
+          "before": 0.6997468410522603,
+          "after": 0.69970538887779,
+          "delta": -4.1452174470266666e-05,
+          "wins": 21,
+          "losses": 25,
+          "ties": 1490,
+          "interval_95_questions": [
+            -0.00652469389619883,
+            0.006373822517942583
+          ],
+          "interval_95_conversations": [
+            -0.009288330716902146,
+            0.00999978549195102
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "all_evidence_returned": {
+          "queries": 1536,
+          "before": 0.9830729166666666,
+          "after": 0.9830729166666666,
+          "delta": 0.0,
+          "wins": 2,
+          "losses": 2,
+          "ties": 1532,
+          "interval_95_questions": [
+            -0.0026041666666666665,
+            0.0026041666666666665
+          ],
+          "interval_95_conversations": [
+            -0.00266844563042028,
+            0.002577319587628866
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "projected_accuracy": {
+          "queries": 1540,
+          "before": 0.77038484637516,
+          "after": 0.773224994148985,
+          "delta": 0.0028401477738251063,
+          "wins": 12,
+          "losses": 6,
+          "ties": 1522,
+          "interval_95_questions": [
+            -0.0008432496605855331,
+            0.006689885502391115
+          ],
+          "interval_95_conversations": [
+            -0.0006357029405779035,
+            0.0069916017881082
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        }
+      },
+      "categories": {
+        "multi-hop": {
+          "queries": 282,
+          "before": 0.5,
+          "after": 0.5141843971631206,
+          "delta": 0.014184397163120567,
+          "wins": 5,
+          "losses": 1,
+          "ties": 276,
+          "interval_95_questions": [
+            0.0,
+            0.031914893617021274
+          ],
+          "interval_95_conversations": [
+            0.0,
+            0.027450980392156862
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "open-domain": {
+          "queries": 92,
+          "before": 0.5652173913043478,
+          "after": 0.5543478260869565,
+          "delta": -0.010869565217391304,
+          "wins": 0,
+          "losses": 1,
+          "ties": 91,
+          "interval_95_questions": [
+            -0.03260869565217391,
+            0.0
+          ],
+          "interval_95_conversations": [
+            -0.033707865168539325,
+            0.0
+          ],
+          "conversations": 9,
+          "excludes_zero": false
+        },
+        "single-hop": {
+          "queries": 841,
+          "before": 0.9429250891795482,
+          "after": 0.9464922711058263,
+          "delta": 0.0035671819262782403,
+          "wins": 6,
+          "losses": 3,
+          "ties": 832,
+          "interval_95_questions": [
+            -0.0035671819262782403,
+            0.01070154577883472
+          ],
+          "interval_95_conversations": [
+            -0.0024390243902439024,
+            0.011049723756906077
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "temporal": {
+          "queries": 321,
+          "before": 0.9065420560747663,
+          "after": 0.9065420560747663,
+          "delta": 0.0,
+          "wins": 1,
+          "losses": 1,
+          "ties": 319,
+          "interval_95_questions": [
+            -0.009345794392523364,
+            0.009345794392523364
+          ],
+          "interval_95_conversations": [
+            -0.00911854103343465,
+            0.008902077151335312
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        }
+      },
+      "gained_all_evidence": [
+        "conv-26-q0011",
+        "conv-26-q0090",
+        "conv-26-q0121",
+        "conv-30-q0081",
+        "conv-41-q0025",
+        "conv-43-q0061",
+        "conv-44-q0015",
+        "conv-44-q0105",
+        "conv-47-q0001",
+        "conv-48-q0015",
+        "conv-48-q0080",
+        "conv-50-q0152"
+      ],
+      "lost_all_evidence": [
+        "conv-42-q0084",
+        "conv-43-q0129",
+        "conv-47-q0003",
+        "conv-49-q0110",
+        "conv-50-q0027",
+        "conv-50-q0130"
+      ]
+    },
+    "longmemeval": {
+      "questions": 12,
+      "annotated_questions": 12,
+      "metrics": {
+        "all_evidence_packed": {
+          "queries": 12,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        },
+        "evidence_recall": {
+          "queries": 12,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        },
+        "evidence_in_top_25": {
+          "queries": 12,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        },
+        "all_evidence_returned": {
+          "queries": 12,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        },
+        "projected_accuracy": {
+          "queries": 12,
+          "before": 0.9553349875930521,
+          "after": 0.9553349875930521,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        }
+      },
+      "categories": {
+        "knowledge-update": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "multi-session": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "single-session-assistant": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "single-session-preference": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "single-session-user": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "temporal-reasoning": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        }
+      },
+      "gained_all_evidence": [],
+      "lost_all_evidence": []
+    }
+  },
+  "stages": {
+    "baseline": {
+      "build-locomo": {
+        "started_at": "2026-10-19T09:27:14.674516+00:00",
+        "seconds": 379.38921762500104,
+        "load_average_1m": {
+          "start": 3.12890625,
+          "end": 16.0537109375
+        },
+        "packs": 10,
+        "processes": 3,
+        "turns": 5882,
+        "calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_hits": 275,
+        "model_seconds_summed": 2799.6152435819968,
+        "builds": 1,
+        "claims": 4782
+      },
+      "build-longmemeval": {
+        "started_at": "2026-10-19T09:27:14.674583+00:00",
+        "seconds": 648.8896265840012,
+        "load_average_1m": {
+          "start": 3.12890625,
+          "end": 24.1064453125
+        },
+        "packs": 12,
+        "processes": 3,
+        "turns": 5895,
+        "calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_hits": 911,
+        "model_seconds_summed": 6502.019120816964,
+        "builds": 1,
+        "claims": 7633
+      },
+      "gate-locomo": {
+        "started_at": "2026-10-19T09:33:34.065290+00:00",
+        "seconds": 261.3016946249991,
+        "load_average_1m": {
+          "start": 16.0537109375,
+          "end": 27.33984375
+        },
+        "shards": 3,
+        "questions": 1540
+      },
+      "gate-longmemeval": {
+        "started_at": "2026-10-19T09:38:03.565896+00:00",
+        "seconds": 11.594155792001402,
+        "load_average_1m": {
+          "start": 24.1064453125,
+          "end": 20.94091796875
+        },
+        "shards": 1,
+        "questions": 12
+      }
+    },
+    "candidate": {
+      "build-locomo": {
+        "started_at": "2026-10-19T09:49:31.841001+00:00",
+        "seconds": 1305.3435224579953,
+        "load_average_1m": {
+          "start": 5.72021484375,
+          "end": 18.298828125
+        },
+        "packs": 10,
+        "processes": 3,
+        "turns": 5882,
+        "calls": 275,
+        "prompt_tokens": 2074186,
+        "completion_tokens": 1393884,
+        "cache_hits": 0,
+        "model_seconds_summed": 11003.028593791962,
+        "builds": 1,
+        "claims": 4931
+      },
+      "build-longmemeval": {
+        "started_at": "2026-10-19T09:49:31.841430+00:00",
+        "seconds": 2045.0890324170032,
+        "load_average_1m": {
+          "start": 5.72021484375,
+          "end": 27.029296875
+        },
+        "packs": 12,
+        "processes": 3,
+        "turns": 5895,
+        "calls": 906,
+        "prompt_tokens": 6649058,
+        "completion_tokens": 2310567,
+        "cache_hits": 0,
+        "model_seconds_summed": 21048.357696700965,
+        "builds": 1,
+        "claims": 7509
+      },
+      "gate-locomo": {
+        "started_at": "2026-10-19T10:11:17.220676+00:00",
+        "seconds": 226.62654954200116,
+        "load_average_1m": {
+          "start": 18.298828125,
+          "end": 14.69775390625
+        },
+        "shards": 3,
+        "questions": 1540
+      },
+      "gate-longmemeval": {
+        "started_at": "2026-10-19T10:23:36.971706+00:00",
+        "seconds": 11.435851999995066,
+        "load_average_1m": {
+          "start": 27.029296875,
+          "end": 23.64208984375
+        },
+        "shards": 1,
+        "questions": 12
+      }
+    }
+  }
+}

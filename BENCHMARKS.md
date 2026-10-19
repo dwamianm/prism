@@ -865,6 +865,185 @@ outside it are not used while iterating. A slice is never edited: select a new
 one under a new name, for example when a new defaults baseline replaces
 `prme@d811e3ed`.
 
+### Mid tier: all of LoCoMo and a LongMemEval-S sample in under an hour
+
+The full benchmarks take about two days (a LongMemEval-S build alone is 15 to
+20 hours), and the development slice's LongMemEval-S packs take about 100
+minutes cold. `benchmarks.mid_tier` is the check between the fast-cycle checks
+and the twice-weekly full run: it builds packs through `ingest()` with
+`deepseek-v4.1-flash:cloud` on the local Ollama server, replays them through
+the offline evidence gate and writes one report. It makes no reader or judge
+call, so it measures evidence coverage and not answers.
+
+```sh
+# The baseline: the code you branched from. Cold the first time, warm after.
+uv run python -m benchmarks.mid_tier run --label main-7f9ce556 --out /tmp/mid-main
+# A change to retrieval or packing: replay the baseline's packs (about 3 minutes).
+uv run python -m benchmarks.mid_tier run --label try --reuse-build main-7f9ce556 \
+  --set packing.token_budget=8192 --out /tmp/mid-try
+# A change to ingestion, grounding or extraction: build new packs from your checkout.
+uv run python -m benchmarks.mid_tier run --label try2 --out /tmp/mid-try2
+# Pair the two reports question by question.
+uv run python -m benchmarks.mid_tier compare /tmp/mid-main /tmp/mid-try
+```
+
+Each run writes `report.json` and `report.md` into `--out`, with the gate's own
+reports and the build and gate logs beside them. `compare` takes either a
+report or the folder that holds it, refuses reports over different questions,
+datasets, tokenizers or extraction models, and writes its result with
+`--output`. The Ollama server must run and be signed in for the cloud model,
+and the datasets and the embedding and tokenizer files must be in place, as for
+every other build and gate command.
+
+**The sample** is `benchmarks/slices/mid-v1.json`:
+
+| Benchmark | In the mid tier | Chosen by |
+|---|---|---|
+| LoCoMo | All 10 conversations: 1,540 questions, 1,536 with annotated evidence (single-hop 841, temporal 321, multi-hop 282, open-domain 96) | Nothing: it fits |
+| LongMemEval-S | 12 of 500 questions, two of each of the six types | The first 12 of a fixed draw order that takes the types in turn |
+
+The draw order holds 36 annotated, non-abstention questions, six of each type,
+ordered within a type by the SHA-256 of `20261019:<question ID>`. Abstention
+questions cite no evidence, so the gate cannot score them. Any prefix of the
+order has the types in turn, so `--lme-questions N` keeps the sample stratified.
+A report names its questions, and `compare` refuses reports over different
+ones. `python -m benchmarks.mid_tier check` confirms that the committed file
+still follows from the dataset and the seed; the order is never edited, and a
+new sample gets a new name.
+
+**What runs.** Ollama's cloud answered about 25 requests at once on
+2026-10-19 and refused the rest with a 429, and the builds' model calls are
+sequential within a pack, so the 10 LoCoMo packs and the 12 LongMemEval-S packs
+(22 in all) are built at the same time, each with a call of its own. Ingestion is
+CPU-bound Python, so one build process holds four packs
+(`extracted_packs build --shard`); the processes share the cap on live calls
+(`--in-flight`, 24 by default) and the extraction cache. A benchmark's gate
+starts when its build ends, with LoCoMo's questions split by conversation over
+three gate processes, so the LoCoMo gate overlaps the LongMemEval-S build.
+Asking for more than 14 LongMemEval-S questions puts more packs than calls in
+flight and queues them; the cold time then grows with the question count, but
+that has not been measured.
+
+**The extraction cache** is one folder for every label,
+`data/mid-tier-v1/extraction-cache` in the main checkout (13 MB for the
+baseline), keyed by the model and the full request as in the builds above. A
+run whose requests are in it makes no model call and gets exactly the packs the
+earlier run did: the cold baseline and its warm replay agree on every measure
+of all 1,552 questions. A request that failed or timed out in a cold run is not
+saved, so the first warm run asks for it again (it made one call). A changed
+extraction prompt, batch size or model changes the keys; the old entries stay
+unread.
+Delete the folder to start clean, or point `--cache-dir` at another build's
+`extraction-cache` (for example the full run's) to replay it. Builds go to
+`data/mid-tier-v1/builds/<label>-locomo` and `-longmemeval` (about 1.2 GB a
+run); delete them when you no longer need `--reuse-build`.
+
+**Timings** (this Mac, 18 cores, Ollama 0.40.6, other jobs running; the load
+average is the one-minute value at the start and end of the run, and the
+reports give it for every stage):
+
+| Run | Whole run | Build LoCoMo | Build LongMemEval-S | Gate LoCoMo | Gate LongMemEval-S | Live calls | Load |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Cold, empty cache (`ec2a7022`) | 24 min 31 s | 15 min 23 s | 24 min 21 s | 3 min 10 s | 10 s | 1,187 | 5.1 to 6.8 |
+| Cold again, empty cache (`eda1bc06`) | 34 min 17 s | 21 min 45 s | 34 min 05 s | 3 min 47 s | 11 s | 1,181 | 5.7 to 23.6, peak 133 |
+| Warm, same prompt (`6d741a9a`) | 11 min 00 s | 6 min 19 s | 10 min 49 s | 4 min 21 s | 12 s | 0 | 3.1 to 20.9 |
+| Reused packs, `--reuse-build` (`eda1bc06`) | 2 min 57 s | none | none | 2 min 57 s | 11 s | 0 | 2.5 to 7.2 |
+
+The first cold run's 1,187 calls carried 8.76 million prompt tokens and 3.69
+million completion tokens (about 2,500 completion tokens a second across both
+benchmarks), and the build processes held at most about 14 GB resident in all.
+The stages overlap, so the whole run is shorter than their sum. A warm run is
+ingestion, which is CPU-bound, on a busy machine: its own processes raised the
+load average from 3 to about 20, so its time moves with the other jobs.
+
+The sample was sized by these numbers. Each pack makes about 76 sequential model
+calls (19 seconds each at the first run's pace), so a cold run is as long as the
+cloud makes it, not as the number of packs. With 12 LongMemEval-S questions a
+cold run took 25 minutes on a quiet machine and 34 under a load spike, so a
+cloud twice as slow would still finish within the hour.
+
+**Baseline, `main` at `7f9ce556`.** It was run from `6d741a9a`, which adds only
+the benchmark code to `main` (the engine source tree is identical), and it is
+the warm replay of the first cold build above, so it carries no model noise.
+The reports and comparisons named below are in
+`benchmarks/results/research/2026-10-19/mid-tier/`.
+
+| Measure | LoCoMo, 1,536 questions with evidence | LongMemEval-S, 12 questions |
+|---|---|---|
+| All evidence packed | 1,277 (83.1%); 95% conversations 80.8 to 85.4, questions 81.2 to 84.9 | 12 (100.0%); 95% 75.8 to 100.0 |
+| Evidence recall | 88.9%; conversations 87.3 to 90.7 | 100.0% |
+| Evidence in the first 25 candidates | 70.0%; conversations 67.8 to 72.1 | 100.0% |
+| All evidence among the candidates | 1,510 (98.3%) | 12 |
+| Projected accuracy (1,540 and 12 questions) | 77.0%; conversations 75.5 to 78.5 | 95.5% |
+
+By category, LoCoMo packs all evidence for 94.3% of single-hop, 90.7% of
+temporal, 56.5% of open-domain and 50.0% of multi-hop questions. The full
+LoCoMo build with the same defaults and model on 2026-10-16 packed 83.7%. The
+0.6 points between them sit inside the build-to-build spread measured on
+2026-10-15 for the same code (-0.1 points, -0.9 to +0.8), and the commits
+between them are not controlled.
+
+**What a change looks like.** `packing.token_budget=8192` on the baseline's
+packs (the gate's own example) packs all evidence for 91 more LoCoMo questions
+and 2 fewer: all evidence packed +5.8 points (95% conversations +4.7 to +6.8,
+questions +4.6 to +7.0), evidence recall +4.6, projected accuracy +3.7; every
+LoCoMo category gains, multi-hop most (+16.7). The 12 LongMemEval-S questions
+do not move (`2026-10-19/mid-tier/budget-8192-vs-baseline.md`).
+
+**Model noise.** The second cold build of the same code (`cold-run-2.md`) is
+not the baseline: all evidence packed differs by +0.4 points (95%
+conversations -0.1 to +1.0, questions -0.1 to +1.0; 12 questions gained all
+their evidence and 6 lost it), evidence recall by +0.2 and projected accuracy
+by +0.3, and no LoCoMo category moves by more than 1.4 points
+(`cold-2-vs-baseline.md`). That is the floor for a change that makes the
+extraction request new, which cannot be replayed from the cache: a LoCoMo
+difference of about a point or less is not distinguishable from rebuilding.
+The same cache replayed gave exactly zero difference on every measure of all
+1,552 questions (`cold-run-1-vs-warm-replay.md`), so a change that leaves the
+extraction request alone is measured without this noise. The second cold run
+was slower than the first because the machine's load average rose to 133 for
+about ten minutes while other jobs ran; it still finished in 34 minutes.
+
+**Limits.**
+
+- The LongMemEval-S sample is small and near the ceiling. The full benchmark
+  packs all evidence for 96.8% of its questions, so 12 questions show 12 of 12
+  about two times in three. The interval is wide (Wilson 75.8 to 100.0, against
+  94.8 to 98.1 for the 470 annotated questions of the full set), and a sample at
+  the ceiling cannot show a gain. A paired change is clear of zero only when at
+  least four of the 12 questions gain or lose all their evidence, so read this
+  part as a check that no question type collapses. The recall and top-25
+  measures show a smaller loss.
+- LoCoMo carries the signal. Its questions come from 10 conversations, so
+  the conversation interval (a paired change of a point or two) is the one to
+  trust, and a LoCoMo change is clear of zero only when the question-level and
+  the conversation-level intervals both exclude it.
+- It measures evidence coverage, not answers: the projected accuracy is the
+  gate's planning estimate from the 2026-09-23 GPT-5.4 run. A change that
+  passes here still needs the full benchmarks, and a default change still needs
+  the answer track under the epic #77 rules.
+- Every one of these questions has been examined before, so the tier is a
+  development gate and not publication evidence, like the gate it uses.
+- A `--reuse-build` run shows retrieval and packing only. Cold runs differ from
+  each other by model noise (above), so compare a change with a baseline built
+  over the same cache.
+
+**Refreshing the cache.** It needs no refresh. A run whose extraction request
+is new (a changed prompt, batch size or model, or the first run) calls the
+model for the requests the folder lacks and saves them, and the next run
+replays them. The entries of an old request stay unread; delete the folder
+(`data/mid-tier-v1/extraction-cache`) to drop them, which makes the next run
+cold.
+
+**Refreshing the baseline.** When `main` moves in a way that changes these
+numbers, check it out and run the first command above under a new label. If
+the extraction request changed, that run is cold, so run it again to get the
+warm replay of the cache it built, which is the baseline to commit: copy its
+`report.json` and `report.md` to
+`benchmarks/results/research/<date>/mid-tier/` and name the commit in the pull
+request. `compare` warns when either side made live calls, reused packs, ran on
+a changed working tree or used another server version or model.
+
 ### Windowed extraction with fact text resolution on LoCoMo (#91)
 
 `fact-text-w4-locomo-deepseek` rebuilt all ten LoCoMo conversations through
