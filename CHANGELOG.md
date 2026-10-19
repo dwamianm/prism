@@ -35,7 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   On the fast tiers the defect probes keep 7 of 7 answers in the top 3, their
   key links linked go from 4 to 9 of 14 with the five links the probe key gains
   for the "We" claims, the chat probe and the corrections probe are unchanged,
-  and the fast cycle moves only the edge counts. `false` restores the claims
+  the fast cycle moves only the edge counts, the offline evidence gate shows no
+  change, and on the mid tier no LoCoMo measure moves clear of zero (all
+  evidence packed -0.1 points, 95% interval -0.3 to +0.1). `false` restores the claims
   and links of 0.16.0a3. The default rests on the fast tiers by the owner's
   directive of 2026-10-19; the full benchmark audit is pending.
   `BENCHMARKS.md` ("We claims linked to their members") has the measurements.

@@ -1806,6 +1806,69 @@ evidence packed is not clearly better, and single-hop all evidence packed is 0.4
 evidence. It does nothing for a store with no entities or with `session_context_window=0`. The full benchmark
 audit and the default-change rule's answer runs are pending.
 
+### We claims linked to their members (prism-monorepo #275)
+
+A claim stated with "We" hung on a `We` entity that exists for one message, so the graph did not know who made the
+decision, and two "We" claims never shared a subject. `enable_owner_group_links` (#315) linked such a claim to the
+owner only. It now also links it to each person the session names with the owner, and the same "We" claim
+repeated in one session merges, and the alpha channel turns it on (`docs/ENTITY-IDENTITY.md` has the rule).
+
+- **The rule.** A `user` turn's we, us or our claim keeps its literal "We" and its group subject, and gains a
+  `group_member` link to the owner and, when the owner's turns of the session up to the claim's turn name exactly
+  one group ("My partner Jordan and I", "Jordan and I", "me and Jordan"), to each named person entity; that link
+  records the naming turn in `named_in`. Two different groups, a member without a name ("my wife and I") or a name
+  no single person entity has link the owner only. "and I" counts only after members that start a clause, so "I
+  got the offer from Brightpath and I accepted it" names no group.
+- **Why only the turns up to the claim's turn.** A batched request extracts turns that later turns of the session
+  were ingested with, so reading the whole session would give a batched build and a per-turn build different links.
+  The event stores gained `until` for that read.
+- **Why the merge looks through the owner.** A "We" entity is local to its message, so the plan never found an
+  earlier copy on the subject the way it does for a named speaker's "I". The earlier copy is linked to the owner, so
+  the plan finds it there (same session, same claim, we in the same field).
+
+The tiers ran on this branch rebased on `origin/main` at `19210c2b` (the entity skip default, #316) and again on
+`13b25058` (0.16.0a4, which changed only the version), with `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6),
+every extraction replayed from the caches (0 model calls). "Off" sets `enable_owner_group_links=false`, "on" is
+this branch's defaults:
+
+```sh
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label off --model deepseek-v4.1-flash:cloud --cloud --set enable_owner_group_links=false
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label on --model deepseek-v4.1-flash:cloud --cloud
+uv run python -m benchmarks.fast_cycle run --label on --out /tmp/on --stages store,ingest,store-extract
+uv run python -m benchmarks.mid_tier run --label off --out /tmp/mid-off --set enable_owner_group_links=false
+uv run python -m benchmarks.mid_tier run --label on --out /tmp/mid-on
+uv run python -m benchmarks.mid_tier compare /tmp/mid-off /tmp/mid-on
+```
+
+The mid tier built both sides warm (0 live calls, 1,186 cache hits each), 14 min 38 s and 15 min 01 s.
+Its two LoCoMo losses (`conv-44-q0036`, `conv-47-q0008`) and one gain (`conv-50-q0152`) are the only
+questions whose packed evidence changed.
+
+| Tier | Result with the option on against off |
+|---|---|
+| Defect probes | 7/7 in the top 3 and top 5 on both sides, every probe rank equal; user claims on the named owner 12 against 5 on "I" or "We" on both sides; key links linked 4 to 9 of 14 (via pronoun 3 to 0, not linked 7 to 5): the five links the key gains for the "We" claims |
+| Chat probe (`chat-v1`) | every measure and every probe rank equal (14/18 in the top 3, 15/18 in the top 5, 17/18 in context); its three "We" claims come from sessions that name no group and get the owner link only |
+| Corrections probe | every measure equal |
+| Fast cycle, DuckDB, against the committed baseline before this change | pass: 0 failed, 3 moved, 165 unchanged; only the edges per turn move, by the links (`chat-v1` +0.056, `corrections-v1` +0.063, `defects-v1` +0.429). Off: 168 unchanged |
+| Offline evidence gate | no row differs on either benchmark, 0 wins and 0 losses (LoCoMo all evidence packed 84.0%, projected 77.6%; LongMemEval-S 94.7% and 91.4%), no question lost its candidates; the saved `store()` packs hold no extracted records, so this shows only that plain retrieval is left alone |
+| Mid tier, LoCoMo | no measure clear of zero: all evidence packed -0.1 (95% questions -0.3 to +0.1, conversations -0.3 to +0.1), 1 win and 2 losses; evidence recall +0.0, 2 wins and 3 losses; evidence in the top 25 +0.1 (+0.0 to +0.3), 2 wins and 0 losses; projected accuracy -0.0 (-0.2 to +0.1); multi-hop all evidence packed -0.7 (-1.8 to +0.0), 0 wins and 2 losses |
+| Mid tier, LongMemEval-S (12 questions) | unchanged in every measure |
+
+The links on the `defects-v1` pack: "We chose Tokyo, Kyoto, Kanazawa, and Osaka.", "We dropped Hiroshima to save
+time." and the statement "The speaker's group dropped to save time Hiroshima." each link to Alex Rivera and to
+Jordan, whom the first turn names ("My partner Jordan and I"); "We chose Postgres partitioning over TimescaleDB for
+the shipment table." and "We dropped the idea of self-hosting." link to Alex Rivera only, because the work session
+names no group. The probe key gains the entities Hiroshima and TimescaleDB and five links (Alex and Jordan to Tokyo
+and to Hiroshima, Alex to TimescaleDB), so the fast cycle baseline (`baseline-main.json`) was taken again: against
+the one before, it moves the three edge counts above and, from the key alone, `defects-v1` key entities found 9 to
+11 and key links linked 4 to 9. `chat-v1` keeps its key: its "We" claims link Dana only, and every Dana link they
+could add is already linked by another claim.
+
+What it does not do: it does not move the cities claim up the ranked list, because the default rank fusion does not
+read graph links (#276). Lower-case names ("jordan and i") are not read as names, and a group named with a word the
+rule does not list ("my bandmates and I") is not seen, so another group named in the same session can then be linked
+on its own. The full benchmark audit and the default-change rule's answer runs are pending.
+
 ### Fast cycle: store, ingest and retrieve in under a minute (prototype)
 
 The multi-day benchmarks cannot check every change. The fast cycle is a
