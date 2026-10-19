@@ -1397,8 +1397,9 @@ retrieval returns, not what a reader answers.
 Result on 2026-10-19 (laptop, DuckDB, Ollama 0.40.6), three live runs of each
 stage, every one with a cold cache (75 and 7 model requests), on `main` at
 `2b0df5c2`. Replaying each run's recorded responses on `main` at `0622c9f9`
-(which adds #296, #299 and #300) gives the same measures for `store` and
-`store-extract`, so the numbers hold for `main` as it is. Values are the three
+(which adds #296, #299 and #300) and at `975dba21` (which adds #301) gives the
+same measures for `store` and `store-extract`, so the numbers hold for `main`
+as it is. Values are the three
 runs in order, one value when all three are equal:
 
 | Measure | store | store-extract | store-session | store-extract-session |
@@ -1489,7 +1490,11 @@ answers ranked first (8 to 9 against 12) and the reciprocal rank (0.61 to 0.66
 against 0.73) fall below the stage without the options, and the Japan cities
 are still 43rd to 45th (25th to 29th with sessions): the memory that holds the
 four cities names neither Japan nor Alex. The compare rules fail this run on
-the context tokens, the answers ranked first and the reciprocal rank.
+the context tokens, the answers ranked first and the reciprocal rank. Adding
+#301's `enable_superseded_source_suppression` (on `main` after these runs;
+replayed on `975dba21`) changes nothing for `store-extract`, because nothing is
+retired in these stores, and takes the stale value out of two of the three
+`store-extract-session` contexts.
 
 The runs agree closely (the extraction output of a temperature-0 model moves
 few claims, so most ranks repeat), and a replay of each run's recorded
