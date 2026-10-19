@@ -336,9 +336,10 @@ def stage_totals(stages: dict[str, dict]) -> dict:
     builds = [stage for name, stage in stages.items() if name.startswith("build-")]
     calls = sum(stage["calls"] for stage in builds)
     hits = sum(stage["cache_hits"] for stage in builds)
+    cache = "warm" if calls == 0 else ("cold" if hits == 0 else "partly warm")
     return {"calls": calls, "prompt_tokens": sum(stage["prompt_tokens"] for stage in builds),
             "completion_tokens": sum(stage["completion_tokens"] for stage in builds), "cache_hits": hits,
-            "cache": "warm" if calls == 0 else ("cold" if hits == 0 else "partly warm")}
+            "cache": "reused" if any("reused" in stage for stage in builds) else cache}
 
 
 def assemble_report(*, label: str, plan: dict, gate_rows: dict[str, list[dict]], stages: dict[str, dict],
@@ -420,6 +421,16 @@ def _load(stage: dict) -> str:
     return f"{load['start']:.2f} / {load['end']:.2f}" if load else "n/a"
 
 
+def _extraction_sentence(report: dict) -> str:
+    total = report["total"]
+    if total["cache"] == "reused":
+        return (f"No pack was built: the gate replayed the packs of the build `{report['settings']['reused_build']}`, "
+                "so a change that acts when memories are stored is not measured.")
+    return (f"Extraction was **{total['cache']}** ({total['calls']:,} live calls, {total['cache_hits']:,} cache hits; "
+            f"the cache held {total['cache_entries']['start']:,} responses before and "
+            f"{total['cache_entries']['end']:,} after).")
+
+
 def stage_table(report: dict) -> list[str]:
     lines = ["| Stage | Wall time | Live calls | Prompt tokens | Completion tokens | Cache hits | Load, 1 min (start / end) |",
              "|---|---:|---:|---:|---:|---:|---:|"]
@@ -428,6 +439,7 @@ def stage_table(report: dict) -> list[str]:
         prompt = _tokens(stage["prompt_tokens"]) if "calls" in stage else ""
         completion = _tokens(stage["completion_tokens"]) if "calls" in stage else ""
         hits = f"{stage['cache_hits']:,}" if "calls" in stage else ""
+        name = f"{name} (packs of {stage['reused']})" if "reused" in stage else name
         lines.append(f"| {name} | {_clock(stage['seconds'])} | {calls} | {prompt} | {completion} | {hits} | "
                      f"{_load(stage)} |")
     total = report["total"]
@@ -448,10 +460,8 @@ def report_markdown(report: dict) -> str:
         f"Extraction: `{model['model']}` on Ollama {', '.join(model['server_versions'])}.", "",
         f"Sample `{sample['name']}`{' (trial: not the mid tier)' if sample['trial'] else ''}: "
         f"{len(sample['locomo_conversations'])} LoCoMo conversations ({sample['locomo_questions']:,} questions) and "
-        f"{len(sample['longmemeval_questions'])} LongMemEval-S questions. Extraction was **{total['cache']}** "
-        f"({total['calls']:,} live calls, {total['cache_hits']:,} cache hits; the cache held "
-        f"{total['cache_entries']['start']:,} responses before and {total['cache_entries']['end']:,} after). "
-        f"The run took **{_clock(total['seconds'])}** on a machine with {report['settings']['machine']['cpus']} "
+        f"{len(sample['longmemeval_questions'])} LongMemEval-S questions. " + _extraction_sentence(report)
+        + f" The run took **{_clock(total['seconds'])}** on a machine with {report['settings']['machine']['cpus']} "
         "cores.", "",
         *stage_table(report), "",
         "Stages overlap: each benchmark's gate starts when its build ends, and the builds run together.", ""]
@@ -532,6 +542,10 @@ def comparison_warnings(baseline: dict, candidate: dict) -> list[str]:
                 "not the change. Compare against a baseline that replayed the same cache.")
         if report["code"]["dirty"]:
             warnings.append(f"The {side} ran on a working tree with uncommitted changes.")
+    for side, report in (("baseline", baseline), ("candidate", candidate)):
+        if report["settings"].get("reused_build"):
+            warnings.append(f"The {side} reused the packs of the build {report['settings']['reused_build']}. A "
+                            "change that acts when memories are stored is not measured.")
     if baseline["model"]["server_versions"] != candidate["model"]["server_versions"]:
         warnings.append("The Ollama server versions differ: "
                         f"{baseline['model']['server_versions']} against {candidate['model']['server_versions']}.")
@@ -797,6 +811,33 @@ async def build_stage(benchmark: str, label: str, units: list[str], *, build_fn,
         claims=summary["claims"])
 
 
+# Settings that act when memories are retrieved and packed, so packs built without them still measure them.
+REUSABLE_SETTINGS = frozenset({"packing", "scoring", "enable_reranker", "reranker_policy", "reranker_prior_weight",
+                               "reranker_top_k"})
+
+
+def check_reusable(overrides: dict) -> None:
+    """A run on earlier packs may change only retrieval and packing; the rest may act when memories are stored."""
+    stored = sorted(set(overrides) - REUSABLE_SETTINGS)
+    if stored:
+        raise ValueError(f"{', '.join(stored)} may act when memories are stored, which reused packs do not "
+                         "show. Leave out --reuse-build to build new packs.")
+
+
+def reuse_stage(benchmark: str, packs: str, units: list[str], root: Path) -> dict:
+    """The build stage of a run that gates the packs of an earlier run: nothing is built."""
+    from benchmarks.diagnostics import extracted_packs
+
+    clock = Clock(f"build-{benchmark}")
+    built = extracted_packs.built_units(root / packs / benchmark)
+    missing = [unit for unit in units if unit not in built]
+    if missing:
+        raise ValueError(f"The build {packs} lacks {len(missing)} of the {benchmark} packs this run needs "
+                         f"({', '.join(missing[:5])})")
+    return clock.finish(reused=packs, packs=len(units), processes=0, calls=0, prompt_tokens=0, completion_tokens=0,
+                        cache_hits=0)
+
+
 async def gate_stage(benchmark: str, packs: Path, slices: list[Path], out: Path, set_args: list[str], *,
                      gate_fn) -> tuple[dict, list[dict], dict]:
     """The gate over a build, one process for each slice file at the same time.
@@ -817,10 +858,15 @@ async def run_mid_tier(*, label: str, out: Path, overrides: dict, set_args: list
                        lme_questions: int, conversations: list[str] | None, build_shards: int | None, gate_shards: int,
                        model: str, in_flight: int, attempts: int, retry_wait: float, command: list[str],
                        build_fn=build_shard, gate_fn=gate_shard, sample_path: Path = SAMPLE_PATH,
-                       locomo_questions: dict[str, list[str]] | None = None) -> dict:
-    """Build both benchmarks' packs, gate each as its build ends, and write the report into ``out``."""
+                       locomo_questions: dict[str, list[str]] | None = None, reuse: str | None = None) -> dict:
+    """Build both benchmarks' packs, gate each as its build ends, and write the report into ``out``.
+
+    With ``reuse``, the label of an earlier run, nothing is built: the gate replays that run's packs.
+    """
     from benchmarks.diagnostics.product_packing import gate_config
 
+    if reuse:
+        check_reusable(overrides)
     if (out / "report.json").exists():
         raise ValueError(f"{out / 'report.json'} exists: use another --out for a new run")
     sample = load_sample(sample_path)
@@ -851,13 +897,18 @@ async def run_mid_tier(*, label: str, out: Path, overrides: dict, set_args: list
     whole = Clock("whole run")
     stages: dict[str, dict] = {}
 
+    packs_label = f"{reuse or label}-" + "{}"
+
     async def one(benchmark: str, units: list[str], slices: list[Path]):
-        stages[f"build-{benchmark}"] = await build_stage(
-            benchmark, f"{label}-{benchmark}", units, build_fn=build_fn, root=root, set_args=set_args,
-            model=model, cache_dir=cache_dir, in_flight=in_flight, shards=build_shards, attempts=attempts,
-            retry_wait=retry_wait, out=out)
-        stage, rows, first = await gate_stage(benchmark, root / f"{label}-{benchmark}", slices, out, set_args,
-                                              gate_fn=gate_fn)
+        if reuse:
+            stages[f"build-{benchmark}"] = reuse_stage(benchmark, packs_label.format(benchmark), units, root)
+        else:
+            stages[f"build-{benchmark}"] = await build_stage(
+                benchmark, f"{label}-{benchmark}", units, build_fn=build_fn, root=root, set_args=set_args,
+                model=model, cache_dir=cache_dir, in_flight=in_flight, shards=build_shards, attempts=attempts,
+                retry_wait=retry_wait, out=out)
+        stage, rows, first = await gate_stage(benchmark, root / packs_label.format(benchmark), slices, out,
+                                              set_args, gate_fn=gate_fn)
         stages[f"gate-{benchmark}"] = stage
         return rows, first
 
@@ -866,7 +917,7 @@ async def run_mid_tier(*, label: str, out: Path, overrides: dict, set_args: list
         one("longmemeval", benchmarks["longmemeval"]["units"], [lme_slice]))
     finished = whole.finish()
     ordered = {name: stages[name] for name in ("build-locomo", "build-longmemeval", "gate-locomo", "gate-longmemeval")}
-    records = [json.loads((root / f"{label}-{name}" / "build.json").read_text()) for name in BENCHMARKS]
+    records = [json.loads((root / packs_label.format(name) / "build.json").read_text()) for name in BENCHMARKS]
     versions = sorted({version for record in records for version in record.get("server_versions", [])})
     identity = records[0]["model"]
     model_record = {"model": identity.get("model"), "provider": identity.get("provider"),
@@ -878,7 +929,7 @@ async def run_mid_tier(*, label: str, out: Path, overrides: dict, set_args: list
                "load_average_1m": finished["load_average_1m"],
                "cache_entries": {"start": entries_at_start, "end": cache_entries(cache_dir)}},
         code=code, model=model_record,
-        settings={"overrides": overrides, "in_flight": in_flight, "build_shards": build_shards,
+        settings={"overrides": overrides, "reused_build": reuse, "in_flight": in_flight, "build_shards": build_shards,
                   "gate_shards": len(locomo_slices),
                   "datasets": {**locomo_first["provenance"]["datasets"], **lme_first["provenance"]["datasets"]},
                   "machine": {"cpus": os.cpu_count(), "platform": platform.platform()}},
@@ -922,6 +973,9 @@ def main(argv: list[str] | None = None) -> None:
                      help="Build and gate setting: a dotted key and a JSON value, as for the gate")
     run.add_argument("--lme-questions", type=int, default=LME_QUESTIONS,
                      help="The first N questions of the sample's LongMemEval-S draw order (default %(default)s)")
+    run.add_argument("--reuse-build", metavar="LABEL",
+                     help="Build nothing: gate the packs an earlier run with this label built. Only for settings "
+                          "that act at retrieval and packing; any other setting may act when memories are stored")
     run.add_argument("--conversations", help="A trial: only these LoCoMo conversations, comma separated. "
                                              "The report is then not the mid tier and compares with nothing else")
     run.add_argument("--root", type=Path, help="Where builds live (default: the main checkout's data/mid-tier-v1/builds)")
@@ -980,11 +1034,17 @@ def main(argv: list[str] | None = None) -> None:
         root=args.root or data / "builds", cache_dir=args.cache_dir or data / "extraction-cache",
         lme_questions=args.lme_questions, conversations=args.conversations.split(",") if args.conversations else None,
         build_shards=args.build_shards, gate_shards=args.gate_shards, model=args.model, in_flight=args.in_flight,
-        attempts=args.attempts, retry_wait=args.retry_wait,
+        attempts=args.attempts, retry_wait=args.retry_wait, reuse=args.reuse_build,
         command=public_command(argv if argv is not None else sys.argv[1:])))
     print((args.out / "report.md").read_text())
     print(f"Wrote {args.out / 'report.json'} ({(args.out / 'report.json').stat().st_size:,} bytes)",
           file=sys.stderr)
+    if not args.reuse_build:
+        packs = [path for path in (args.root or data / "builds").glob(f"{args.label}-*") if path.is_dir()]
+        size = sum(file.stat().st_size for path in packs for file in path.rglob("*") if file.is_file())
+        print(f"The packs ({size / 1e9:.1f} GB) stay in {packs[0].parent if packs else args.root} as "
+              f"{args.label}-*: pass --reuse-build {args.label} to gate them again, or delete them.",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":

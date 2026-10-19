@@ -530,6 +530,29 @@ def test_a_run_builds_again_after_a_pack_pauses_and_gives_up_after_its_attempts(
                attempts=2, out=tmp_path / "out2")
 
 
+def test_a_run_can_gate_the_packs_of_an_earlier_run_for_a_retrieval_setting_only(tmp_path, locomo_questions):
+    first = Fakes(locomo_questions)
+    base = run_it(tmp_path, locomo_questions, first, out=tmp_path / "base")
+    again = Fakes(locomo_questions)
+    overrides = parse_overrides(["packing.token_budget=8192"])
+    report = run_it(tmp_path, locomo_questions, again, label="try", out=tmp_path / "try", overrides=overrides,
+                    set_args=["packing.token_budget=8192"], reuse="main")
+    assert again.builds == [] and sorted({gate[1] for gate in again.gates}) == ["main-locomo", "main-longmemeval"]
+    assert report["total"]["cache"] == "reused" and report["settings"]["reused_build"] == "main"
+    assert report["stages"]["build-locomo"]["reused"] == "main-locomo" and report["total"]["calls"] == 0
+    assert report["model"] == base["model"] and not (tmp_path / "builds" / "try-locomo").exists()
+    markdown = report_markdown(report)
+    assert "| build-locomo (packs of main-locomo) |" in markdown and "No pack was built" in markdown
+    warnings = compare_reports(base, report, samples=100)["warnings"]
+    assert any("reused the packs of the build main" in warning for warning in warnings)
+    # What acts when memories are stored needs new packs, and so do packs that were never built.
+    with pytest.raises(ValueError, match="extraction_batch_target_tokens may act when memories are stored"):
+        run_it(tmp_path, locomo_questions, again, label="bad", out=tmp_path / "bad", reuse="main",
+               overrides={"extraction_batch_target_tokens": 0})
+    with pytest.raises(ValueError, match="The build nothing-locomo lacks 10 of the locomo packs"):
+        run_it(tmp_path, locomo_questions, again, label="none", out=tmp_path / "none", reuse="nothing")
+
+
 def test_a_trial_run_covers_only_the_named_conversations(tmp_path, locomo_questions):
     fakes = Fakes(locomo_questions)
     report = run_it(tmp_path, locomo_questions, fakes, conversations=["conv-26", "conv-30"], lme_questions=1)
