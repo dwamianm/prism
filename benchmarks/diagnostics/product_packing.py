@@ -5,7 +5,8 @@ runs retrieval concurrently with its temporary comparator substitution. Source
 labels are used solely after packing, and pointer-only records earn no evidence
 credit. No production defaults are changed.
 
-The ``gate`` and ``gate-compare`` subcommands are the offline evidence gate. The
+The ``gate`` and ``gate-compare`` subcommands are the offline evidence gate
+(``gate-conversations`` adds LoCoMo's conversation-level intervals to a comparison). The
 gate replays the public ``retrieve()`` over copies of the saved 2026-09-23
 LoCoMo and LongMemEval-S memory packs and measures the context the product
 renderer actually produced: records, memory text, annotated evidence and its
@@ -1778,6 +1779,56 @@ def compare_gates(before: dict, after: dict, *, samples: int = 2000) -> dict:
     }
 
 
+# compare_gates' five headline measures: whether only annotated questions count, and the question's value.
+_HEADLINE_MEASURES = {
+    "all_evidence_packed": (True, _all_packed),
+    "all_evidence_packed_with_text": (True, _all_packed_with_text),
+    "evidence_recall": (True, _evidence_recall),
+    "all_evidence_returned": (True, _all_returned),
+    "projected_accuracy": (False, _projected),
+}
+
+
+def conversation_intervals(before: dict, after: dict, *, samples: int = 2000) -> dict:
+    """LoCoMo's conversation-level 95% intervals for compare_gates' five headline measures (issue #272).
+
+    ``gate-compare`` resamples questions. LoCoMo's 1,540 questions come from 10 conversations, and the stable gate
+    in CLAUDE.md counts the conversation-level interval too. This pairs the same two reports over the same questions
+    as ``compare_gates`` and resamples whole conversations with ``cluster_statistics``, the bootstrap the answer
+    track and the mid tier use (2,000 samples, seed 42). A question's conversation is its id before ``-q``.
+    The research script of the #254 comparisons (``conversation_intervals.py``) gives the same numbers.
+    """
+    from benchmarks.diagnostics.compare_public_captures import cluster_statistics
+
+    old, new = _gate_rows(before, "before"), _gate_rows(after, "after")
+    if old.keys() != new.keys():
+        raise ValueError("Question sets differ between the reports")
+    for key, row in old.items():
+        if _labels(row) != _labels(new[key]):
+            raise ValueError(f"{key[1]}: category or evidence annotation differs between reports")
+    locomo = [key for key in old if key[0] == "locomo"]
+    if not locomo:
+        raise ValueError("The reports hold no LoCoMo questions, which are the only ones grouped by conversation")
+    measures = {}
+    for name, (annotated_only, value) in _HEADLINE_MEASURES.items():
+        keys = [key for key in locomo if old[key]["evidence"] is not None or not annotated_only]
+        measures[name] = cluster_statistics([(float(value(old[key])), float(value(new[key]))) for key in keys],
+                                            [key[1].rsplit("-q", 1)[0] for key in keys], samples=samples)
+    return {"kind": "gate-conversation-intervals", "bootstrap_samples": samples, "bootstrap_seed": 42,
+            "interval_note": "Intervals resample whole conversations (10 in LoCoMo), not single questions.",
+            "benchmarks": {"locomo": measures}}
+
+
+def conversation_markdown(result: dict) -> str:
+    lines = ["# Conversation-level intervals", "", result["interval_note"], "",
+             "| Measure | Before | After | Change | 95% interval | Conversations |", "|---|---:|---:|---:|---|---:|"]
+    for name, stat in result["benchmarks"]["locomo"].items():
+        interval = "n/a" if stat["interval_95"] is None else f"{_pct(stat['interval_95'][0], True)} to {_pct(stat['interval_95'][1], True)}"
+        lines.append(f"| {name} | {_pct(stat['before'])} | {_pct(stat['after'])} | {_pct(stat['delta'], True)} | "
+                     f"{interval} | {stat['groups']} |")
+    return "\n".join(lines) + "\n"
+
+
 def _pct(value: float | None, signed: bool = False) -> str:
     if value is None:
         return "n/a"
@@ -2175,6 +2226,27 @@ def gate_main(argv: list[str]) -> None:
     print(markdown)
 
 
+def gate_conversations_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        prog="python -m benchmarks.diagnostics.product_packing gate-conversations",
+        description="LoCoMo's conversation-level 95% intervals for the change between two evidence gate reports.")
+    parser.add_argument("before", type=Path)
+    parser.add_argument("after", type=Path)
+    parser.add_argument("--output", type=_json_output, required=True,
+                        help="JSON result; a Markdown summary is written beside it")
+    parser.add_argument("--samples", type=int, default=2000, help="Bootstrap samples")
+    args = parser.parse_args(argv)
+    if args.output.resolve() in {args.before.resolve(), args.after.resolve()}:
+        parser.error("the output would overwrite an input report")
+    before, after = args.before.read_bytes(), args.after.read_bytes()
+    result = conversation_intervals(json.loads(before), json.loads(after), samples=args.samples)
+    result["inputs"] = {"before_sha256": hashlib.sha256(before).hexdigest(),
+                        "after_sha256": hashlib.sha256(after).hexdigest()}
+    markdown = conversation_markdown(result)
+    _write_report(args.output, result, markdown)
+    print(markdown)
+
+
 def gate_compare_main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="python -m benchmarks.diagnostics.product_packing gate-compare",
                                      description="Compare two evidence gate reports question by question.")
@@ -2201,6 +2273,8 @@ def main(argv: list[str] | None = None):
         return gate_main(argv[1:])
     if argv[:1] == ["gate-compare"]:
         return gate_compare_main(argv[1:])
+    if argv[:1] == ["gate-conversations"]:
+        return gate_conversations_main(argv[1:])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--snapshots", type=Path, required=True)

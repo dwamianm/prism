@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `python -m benchmarks.diagnostics.product_packing gate-conversations`
+  (prism-monorepo issue 272), which gives LoCoMo's conversation-level 95% intervals
+  for the five measures `gate-compare` headlines, by resampling whole conversations
+  with the bootstrap the answer track and the mid tier use. The scheduled full
+  benchmark runs it after each LoCoMo `gate-compare`, and its report shows the
+  question-level and conversation-level intervals side by side. The verdict reads
+  "loss" when either interval of a measure lies wholly below zero and names the
+  level, and it cannot read "no loss" without both, as the stable gate in
+  `CLAUDE.md` asks.
+
 ## [0.16.0a4] - 2026-10-19
 
 This is an alpha. It passed CI, the fast gate, the fast cycle and the mid tier,

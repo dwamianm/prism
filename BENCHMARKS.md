@@ -1111,23 +1111,27 @@ a request are unchanged. The longest gap between triggers is 96 hours, so even a
 cold run with a long usage-limit pause finishes first.
 
 **Reading a verdict.** `report.md` opens with the verdict against the last stable
-release: `no loss`, `loss` followed by the measures that lost, or `not compared`
-when gate-compare refused the pair or a gate is missing. A measure lost when its
-paired 95% interval lies wholly below zero (the default-change rule's test); a
-drop whose interval reaches zero is noise. Five measures per benchmark count: all
-evidence packed, all evidence packed with memory text, evidence recall, all
-evidence among the candidates and projected accuracy. Per-category rows and
-retrieval time are listed and not judged.
+release: `no loss`, `loss` followed by the measures that lost and the level, or
+`not compared` when gate-compare refused the pair, a gate is missing or a LoCoMo
+conversation-level interval could not be computed. A measure lost when its paired
+95% interval lies wholly below zero at either level (the stable gate's test): the
+question-level interval from `gate-compare`, and for LoCoMo also the
+conversation-level interval from `product_packing gate-conversations`, which
+resamples the 10 conversations with the bootstrap the answer track and the mid
+tier use and reproduces the numbers `conversation_intervals.py` published for
+#254. LongMemEval-S has the question-level interval only. A drop whose intervals
+reach zero is noise, and a gain needs both levels above zero. Five measures per
+benchmark count: all evidence packed, all evidence packed with memory text,
+evidence recall, all evidence among the candidates and projected accuracy.
+Per-category rows and retrieval time are listed and not judged.
 
 **Release rule** (`CLAUDE.md`, "Stable gate"). An alpha or beta needs the fast
 tiers (the fast gate, the fast cycle and, where it applies, the mid tier). A
 stable release needs the latest scheduled run to show no loss against the last
 stable release, and the run must be of the release commit or of a `main` commit
-with the same `src/` tree. For LoCoMo that rule counts the conversation-level
-interval as well. The scheduled report shows only `gate-compare`'s question-level
-intervals, so before a stable release resample LoCoMo's conversations over the
-run's two gate reports, as `conversation_intervals.py` did for #254 (not
-automated yet).
+with the same `src/` tree. For LoCoMo the rule counts the conversation-level
+interval as well, and the report shows both levels beside each other, so a stable
+release can be judged from one report.
 
 **Disk.** A run's packs take about 33 GB. The newest 3 runs keep their packs and
 worktrees, older ones are deleted, reports stay, and a run refuses to start with

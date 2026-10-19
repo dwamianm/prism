@@ -19,11 +19,10 @@ with the previous run, twice a week. The owner approved the machine's use on
   under `benchmarks/`, `pyproject.toml` and `uv.lock`). When the newest run does
   not cover the release commit, start one by hand with `weekly-run.sh --force`
   (about 15 hours) or wait for the next trigger.
-- For LoCoMo the rule counts the conversation-level interval too. The report shows
-  only gate-compare's question-level intervals, so before a stable release
-  resample LoCoMo's conversations over the run's two gate reports, as
-  `benchmarks/results/research/2026-10-15/batched-extraction/conversation_intervals.py`
-  did for #254. That is not automated yet.
+- For LoCoMo the rule counts the conversation-level interval too. The report
+  shows both levels beside each other (`product_packing gate-conversations` runs
+  after each `gate-compare` and resamples the 10 conversations), so a stable
+  release can be judged from one report.
 - The answer track is not scheduled. It runs on demand, as before, and it still
   decides a default change (`CLAUDE.md`).
 
@@ -50,7 +49,8 @@ A run:
    key variables, and a run refuses to start if the clone's `.env` holds one.
 3. Runs the offline evidence gate over each build.
 4. Compares each gate report with the last stable release's (`gate-compare`) and
-   with the previous scheduled run's, and writes `report.md` and `report.json`.
+   with the previous scheduled run's, resamples LoCoMo's conversations for the
+   same two pairs (`gate-conversations`), and writes `report.md` and `report.json`.
 5. Deletes the packs and worktrees of runs beyond the newest 3. Reports stay.
 
 Which reference is "the last stable release": **v0.15.0**, through the batched
@@ -143,13 +143,20 @@ Monday) after the last.
 `runs/<id>/report.md` starts with two lines:
 
 - **Against the last stable release (v0.15.0): no loss.** or **loss.** followed
-  by the measures that lost, or **not compared** with the reason (gate-compare
-  refused the pair, or a gate is missing). This line is the release rule's.
+  by the measures that lost and the level (question level or conversation level),
+  or **not compared** with the reason (gate-compare refused the pair, a gate is
+  missing, or LoCoMo's conversation-level intervals could not be computed). This
+  line is the release rule's.
 - Against the previous scheduled run: the same, for trend.
 
-A measure lost when its paired 95% interval (gate-compare's, question level)
-lies wholly below zero, the rule in `CLAUDE.md`. A drop whose interval reaches
-zero is noise. The verdict covers five measures per benchmark: all evidence
+A measure lost when its paired 95% interval lies wholly below zero at either
+level, the stable gate in `CLAUDE.md`: the question-level interval from
+gate-compare, and for LoCoMo the conversation-level interval too (whole
+conversations resampled, as the answer track does). LongMemEval-S has the
+question level only. A loss at one level is a loss even when the other interval
+reaches zero, so the table has a column for each and the Result column names the
+level. A drop whose intervals reach zero is noise, and a gain needs both levels
+above zero. The verdict covers five measures per benchmark: all evidence
 packed, all evidence packed with memory text, evidence recall, all evidence
 among the candidates and projected accuracy. The per-category rows are listed
 but are not part of the verdict (30 to 130 questions each). Retrieval time is

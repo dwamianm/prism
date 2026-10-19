@@ -11,12 +11,16 @@ request text that publish-results.sh uses.
     weekly_report.py verdict RUN_DIR
     weekly_report.py pr-body RUN_DIR [--files-verified N]
 
-The verdict follows the default-change rule in CLAUDE.md: a measure lost when
-its paired 95% interval lies wholly below zero. A point estimate below zero
-whose interval reaches zero is noise and is not a loss. The measures are the
-five that gate-compare headlines for each benchmark. The per-category rows are
-listed in the report but are not part of the verdict: their intervals rest on
-30 to 130 questions each.
+The verdict follows the stable gate in CLAUDE.md: a measure lost when its paired
+95% interval lies wholly below zero, at either level. LoCoMo's two levels are the
+question-level interval (gate-compare) and the conversation-level interval
+(``product_packing gate-conversations``); both count, so a loss at one level is a
+loss even when the other interval reaches zero. LongMemEval-S has the
+question-level interval only. A point estimate below zero whose intervals reach
+zero is noise and is not a loss. The measures are the five that gate-compare
+headlines for each benchmark. A LoCoMo comparison with no conversation-level
+intervals cannot read "no loss". The per-category rows are listed in the report
+but are not part of the verdict: their intervals rest on 30 to 130 questions each.
 
 Standard library only, and Python 3.9 compatible: the Mac mini runs it with the
 system python3, outside any worktree's environment.
@@ -44,6 +48,9 @@ MEASURES = (
 # float that should be zero never does.
 EPSILON = 1e-12
 CATEGORIES = "all_evidence_packed_by_category"
+# LoCoMo's questions come from 10 conversations, so the stable gate counts a conversation-level interval too.
+# LongMemEval-S resamples questions only: each question has its own history.
+CONVERSATION_LEVEL = ("locomo",)
 
 
 def read_env(path):
@@ -122,27 +129,81 @@ def row_status(delta, low, high):
 
 
 def make_row(key, label, entry):
+    """One measure at the question level (gate-compare's interval). ``conversation`` is added for LoCoMo."""
     low, high = entry["interval_95"]
     return {
         "measure": key, "label": label, "queries": entry["queries"], "before": entry["before"],
         "after": entry["after"], "delta": entry["delta"], "low": low, "high": high,
         "wins": entry["wins"], "losses": entry["losses"], "ties": entry["ties"],
-        "status": row_status(entry["delta"], low, high),
+        "status": row_status(entry["delta"], low, high), "conversation": None,
     }
 
 
-def compared_benchmark(compare, benchmark):
-    """The rows of one benchmark from a gate-compare result, or None when it holds none."""
+def attach_conversation(row, stat):
+    """Add LoCoMo's conversation-level interval to a row; False when the stat holds none for this measure."""
+    if not stat or not stat.get("interval_95"):
+        return False
+    low, high = stat["interval_95"]
+    row["conversation"] = {"low": low, "high": high, "groups": stat.get("groups"),
+                           "status": row_status(row["delta"], low, high)}
+    return True
+
+
+def loss_levels(row):
+    """The levels at which a row's interval lies wholly below zero."""
+    levels = []
+    if row["status"] == "loss":
+        levels.append("question level")
+    if row["conversation"] is not None and row["conversation"]["status"] == "loss":
+        levels.append("conversation level")
+    return levels
+
+
+def row_result(row):
+    """The row's result over its levels: a loss at either level is a loss; a gain needs every level above zero."""
+    statuses = [row["status"]] + ([row["conversation"]["status"]] if row["conversation"] is not None else [])
+    levels = loss_levels(row)
+    if levels:
+        return "loss ({})".format("both levels" if len(levels) == 2 else levels[0])
+    if all(status == "gain" for status in statuses):
+        return "gain"
+    if all(status == "unchanged" for status in statuses):
+        return "unchanged"
+    return "within noise"
+
+
+def compared_benchmark(compare, benchmark, conversations=None, conversations_reason=None):
+    """The rows of one benchmark from a gate-compare result, or None when it holds none.
+
+    LoCoMo also needs its conversation-level intervals (``conversations``: gate-conversations' measures). When they
+    are absent, ``conversations_reason`` says why and the benchmark cannot be judged as free of loss.
+    """
     data = (compare.get("benchmarks") or {}).get(benchmark)
     if not data:
         return None
     rows = [make_row(key, label, data[key]) for key, label in MEASURES if key in data]
+    missing = None
+    if benchmark in CONVERSATION_LEVEL:
+        if conversations is None:
+            missing = conversations_reason or "the conversation-level intervals were not computed"
+        elif not all(attach_conversation(row, conversations.get(row["measure"])) for row in rows):
+            missing = "the conversation-level intervals are missing a measure or have fewer than two conversations"
     categories = [dict(make_row(category, category, entry)) for category, entry in sorted((data.get(CATEGORIES) or {}).items())]
     return {
-        "state": "compared", "rows": rows, "categories": categories,
+        "state": "compared", "rows": rows, "categories": categories, "conversation_missing": missing,
         "lost_all_evidence": list(data.get("lost_all_evidence") or []),
         "gained_all_evidence": list(data.get("gained_all_evidence") or []),
     }
+
+
+def load_conversations(run_dir, name, benchmark):
+    """gate-conversations' measures for a benchmark, or (None, why they are missing)."""
+    base = os.path.join(run_dir, "compare-{}-{}-conversations".format(name, benchmark))
+    data = read_json(base + ".json")
+    measures = ((data or {}).get("benchmarks") or {}).get(benchmark)
+    if measures:
+        return measures, None
+    return None, read_text(base + ".refused") or "the conversation-level intervals were not computed"
 
 
 def load_comparison(run_dir, name):
@@ -153,8 +214,11 @@ def load_comparison(run_dir, name):
         base = os.path.join(run_dir, "compare-{}-{}".format(name, benchmark))
         compare = read_json(base + ".json")
         refused = read_text(base + ".refused")
+        conversations, reason = None, None
+        if benchmark in CONVERSATION_LEVEL:
+            conversations, reason = load_conversations(run_dir, name, benchmark)
         if compare is not None:
-            found = compared_benchmark(compare, benchmark)
+            found = compared_benchmark(compare, benchmark, conversations, reason)
             if found is not None:
                 result[benchmark] = found
                 provenance = (compare.get("before") or {}).get("provenance") or {}
@@ -167,9 +231,13 @@ def load_comparison(run_dir, name):
     return result, commits
 
 
-def describe_loss(benchmark_name, row):
-    return "{} {} {} (95% interval {})".format(
-        benchmark_name, row["label"][0].lower() + row["label"][1:], pp(row["delta"]), interval(row["low"], row["high"]))
+def describe_loss(benchmark, benchmark_name, row, level):
+    """One loss: the measure, its change and the interval that lies below zero. LoCoMo names the level too."""
+    low, high = (row["low"], row["high"]) if level == "question level" else (
+        row["conversation"]["low"], row["conversation"]["high"])
+    return "{} {}{} {} (95% interval {})".format(
+        benchmark_name, row["label"][0].lower() + row["label"][1:],
+        ", " + level if benchmark in CONVERSATION_LEVEL else "", pp(row["delta"]), interval(low, high))
 
 
 def judge(comparison):
@@ -180,9 +248,12 @@ def judge(comparison):
         if found["state"] != "compared":
             missing.append("{} ({})".format(name, found["reason"].splitlines()[-1] if found["reason"] else found["state"]))
             continue
+        if found["conversation_missing"]:
+            missing.append("{} conversation-level intervals ({})".format(name, found["conversation_missing"]))
         for row in found["rows"]:
-            if row["status"] == "loss":
-                losses.append({"benchmark": benchmark, "measure": row["measure"], "text": describe_loss(name, row)})
+            for level in loss_levels(row):
+                losses.append({"benchmark": benchmark, "measure": row["measure"], "level": level,
+                               "text": describe_loss(benchmark, name, row, level)})
     if losses:
         result = "loss"
         detail = "; ".join(item["text"] for item in losses)
@@ -278,15 +349,17 @@ def build_report(run_dir, reference_dir=None, previous_run_dir=None):
         "builds": builds,
         "comparisons": {"stable": stable, "previous": previous if have_previous else None},
         "verdict": {"stable": judge(stable), "previous": judge(previous) if have_previous else None},
-        "rule": ("A measure lost when its paired 95% interval lies wholly below zero. The verdict covers the five "
-                 "headline measures of each benchmark."),
+        "rule": ("A measure lost when its paired 95% interval lies wholly below zero at either level: the question "
+                 "level, and for LoCoMo the conversation level too. The verdict covers the five headline measures of "
+                 "each benchmark."),
     }
     return report
 
 
 def md_table(rows):
-    lines = ["| Benchmark | Measure | Before | After | Change | 95% interval | Wins | Losses | Ties | Result |",
-             "|---|---|---:|---:|---:|---|---:|---:|---:|---|"]
+    lines = ["| Benchmark | Measure | Before | After | Change | Question-level 95% interval | "
+             "Conversation-level 95% interval | Wins | Losses | Ties | Result |",
+             "|---|---|---:|---:|---:|---|---|---:|---:|---:|---|"]
     lines += rows
     return lines
 
@@ -296,13 +369,18 @@ def comparison_rows(comparison):
     for benchmark, name, _ in BENCHMARKS:
         found = comparison[benchmark]
         if found["state"] != "compared":
-            rows.append("| {} | not compared | | | | | | | | {} |".format(
+            rows.append("| {} | not compared | | | | | | | | | {} |".format(
                 name, (found["reason"].splitlines() or [found["state"]])[-1]))
             continue
         for row in found["rows"]:
-            rows.append("| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+            if row["conversation"] is not None:
+                conversation = interval(row["conversation"]["low"], row["conversation"]["high"])
+            else:
+                conversation = "not computed" if benchmark in CONVERSATION_LEVEL else "n/a"
+            rows.append("| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                 name, row["label"], pct(row["before"]), pct(row["after"]), pp(row["delta"]),
-                interval(row["low"], row["high"]), row["wins"], row["losses"], row["ties"], row["status"]))
+                interval(row["low"], row["high"]), conversation, row["wins"], row["losses"], row["ties"],
+                row_result(row)))
     return rows
 
 
@@ -349,7 +427,9 @@ def report_markdown(report, title=True):
     else:
         lines += ["", "Against the previous scheduled run: none yet, this is the first."]
     lines += ["", "The release rule reads the first line: a stable release needs the latest scheduled run to show no "
-              "loss against the last stable release. A measure lost when its paired 95% interval lies wholly below zero."]
+              "loss against the last stable release. A measure lost when its paired 95% interval lies wholly below zero at "
+              "either level: the question level, and for LoCoMo the conversation level too (LongMemEval-S has the "
+              "question level only)."]
 
     lines += ["", "## Run", "", "| | |", "|---|---|"]
     lines.append("| Commit | `{}` |".format(commit))
@@ -402,7 +482,8 @@ def report_markdown(report, title=True):
                   "|---|---|---:|---:|---:|---|---|"] + categories
         lines += ["", "Each category rests on 30 to 130 questions, so a category marked loss is a reason to look, "
                   "not a failed gate."]
-    lines += ["", "Intervals resample questions (paired bootstrap, 2,000 samples, seed 42). Projected accuracy is a planning "
+    lines += ["", "Question-level intervals resample questions and conversation-level intervals resample LoCoMo's 10 whole "
+              "conversations (paired bootstrap, 2,000 samples, seed 42 for both). Projected accuracy is a planning "
               "estimate from the saved GPT-5.4 run, not an answer score. The answer track is not part of the scheduled run."]
     return "\n".join(lines) + "\n"
 

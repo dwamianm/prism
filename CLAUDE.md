@@ -224,8 +224,9 @@ owner's instruction says so.
    and Thursday at 00:30 local time (prism-monorepo issue #272, `scripts/full-benchmark/`): LoCoMo and LongMemEval-S
    through `ingest()` with the defaults, then the offline evidence gate, compared with the previous stable's full run
    (for 0.15.0, the run at `d810ee55` in `BENCHMARKS.md`). No loss means no 95% interval entirely below zero in that
-   comparison (for LoCoMo, both the conversation-level and the question-level interval count). The run must be of the
-   release commit, or of a `main` commit with the same `src/` tree; otherwise wait for the next run.
+   comparison (for LoCoMo, both the conversation-level and the question-level interval count, and the run's report
+   shows both). The run must be of the release commit, or of a `main` commit with the same `src/` tree; otherwise wait
+   for the next run.
 2. **The answer track, on demand, for an `ingest()` default.** It is not scheduled. For each `ingest()` default that is
    on (flipped in an alpha or beta, or in the stable release itself), run the DeepSeek answer track over `ingest()`
    packs of the release commit under the default-change rule below, with its A/A checks, interleaved pairs and confirmation (`BENCHMARKS.md`,
