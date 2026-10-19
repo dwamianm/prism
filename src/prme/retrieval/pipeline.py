@@ -61,6 +61,7 @@ from prme.retrieval.filtering import filter_candidate_types, filter_epistemic, n
 from prme.retrieval.models import (
     AggregationCoverage,
     AggregationLimitation,
+    ExcludedCandidate,
     FilterMetadata,
     HistoricalCoverage,
     RetrievalCandidate,
@@ -74,6 +75,7 @@ from prme.retrieval.query_analysis import (
     QueryIntentOrder,
     analyze_query,
 )
+from prme.retrieval.replaced_sources import suppress_replaced_sources
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.scope import ScopeInput, normalize_scope
 from prme.retrieval.selection import (
@@ -207,6 +209,7 @@ class RetrievalPipeline:
         query_reformulation_timeout: float | None = None,
         query_intent_order: QueryIntentOrder = "entity_first",
         reranker_prior_weight: float = DEFAULT_RERANKER_PRIOR_WEIGHT,
+        superseded_source_suppression: bool = False,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -240,6 +243,7 @@ class RetrievalPipeline:
         if query_intent_order not in QUERY_INTENT_ORDERS:
             raise ValueError(f"Unknown query intent order: {query_intent_order!r}")
         self._query_intent_order = query_intent_order
+        self._superseded_source_suppression = superseded_source_suppression
         self._temporal_languages = temporal_languages
         self._temporal_relation_config = (
             temporal_relation_config or TemporalRelationConfig()
@@ -299,6 +303,9 @@ class RetrievalPipeline:
         if self._query_intent_order != "entity_first":
             # It decides which questions get temporal scoring (issue #85).
             features["query_intent_classification"] = {"order": self._query_intent_order, "version": 1}
+        if self._superseded_source_suppression:
+            # It decides which retired claims' source text is left out (issue #270).
+            features["superseded_source_suppression"] = {"version": 1}
         return features
 
     async def retrieve(
@@ -873,6 +880,14 @@ class RetrievalPipeline:
         scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types)
         excluded.extend(type_excluded)
 
+        # --- Stage 5.6: Replaced Source Suppression (opt-in, issue #270) ---
+        # A correction retires the claim it replaces, not the message that
+        # stated it or a sibling claim from the same sentence. Leave those
+        # out of default retrieval; EXPLICIT mode keeps retired material.
+        if self._superseded_source_suppression and analysis.retrieval_mode != RetrievalMode.EXPLICIT:
+            scored, replaced = await self._suppress_replaced_sources(scored, user_id)
+            excluded.extend(replaced)
+
         # --- Cross-Scope Hint Generation ---
         # When scope is active and include_cross_scope=True, run a secondary
         # vector+lexical pass without scope filter (cheapest backends only,
@@ -929,6 +944,8 @@ class RetrievalPipeline:
                     analysis.retrieval_mode,
                     unverified_threshold=self._unverified_confidence_threshold,
                 )
+                if self._superseded_source_suppression and analysis.retrieval_mode != RetrievalMode.EXPLICIT:
+                    hint_candidates, _ = await self._suppress_replaced_sources(hint_candidates, user_id)
                 # Score the hints using the same weights and timestamp.
                 if hint_candidates:
                     scored_hints, _ = score_and_rank(
@@ -1100,6 +1117,7 @@ class RetrievalPipeline:
                 "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
                 **({"query_intent_order": self._query_intent_order}
                    if self._query_intent_order != "entity_first" else {}),
+                **({"superseded_source_suppression": True} if self._superseded_source_suppression else {}),
                 "reranker_top_k": self._reranker_top_k,
                 **({"reranker_prior_weight": prior_weight}
                    if prior_weight != DEFAULT_RERANKER_PRIOR_WEIGHT else {}),
@@ -1233,6 +1251,21 @@ class RetrievalPipeline:
             filter_metadata=filter_meta,
             cross_scope_hints=cross_scope_hints,
         )
+
+    async def _suppress_replaced_sources(
+        self, candidates: list[RetrievalCandidate], user_id: str
+    ) -> tuple[list[RetrievalCandidate], list[ExcludedCandidate]]:
+        """Leave out source text a correction replaced; on a failed lookup, keep every candidate."""
+        try:
+            return await suppress_replaced_sources(
+                candidates, graph_store=self._graph_store, user_id=user_id
+            )
+        except Exception:
+            logger.warning(
+                "Replaced source suppression failed; continuing without it",
+                exc_info=True,
+            )
+            return candidates, []
 
     async def _expand_reformulated_queries(
         self,

@@ -1,0 +1,681 @@
+{
+  "kind": "prme-corrections-probe-report",
+  "schema_version": 1,
+  "conversation": "corrections-v1",
+  "conversation_sha256": "7ef185ed2e365fffc713f37aa8f4d312aa24ca69d159df3023c5b7ad13a8e1a9",
+  "reference_time": "2026-05-10T12:00:00+00:00",
+  "paths": {
+    "ingest": {
+      "records": 50,
+      "cases": [
+        {
+          "id": "move",
+          "kind": "changed mind",
+          "label": "Riley plans to move to Austin, then chooses Denver",
+          "probe": "move-city",
+          "records": [
+            {
+              "id": "832d26da-b727-49e3-96f7-2fff7952c2b9",
+              "type": "fact",
+              "state": "tentative",
+              "mentions": [
+                "Denver"
+              ],
+              "claim": "I \u2192 moving_to \u2192 Denver",
+              "content": "We're moving to Denver instead, and I start at a hospital there in July.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "9865cab8-52b2-4d78-a149-fe08e272ca9d",
+              "type": "fact",
+              "state": "tentative",
+              "mentions": [
+                "Denver"
+              ],
+              "claim": "I \u2192 starts_at \u2192 a hospital there in July",
+              "content": "We're moving to Denver instead, and I start at a hospital there in July.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "aeafcea5-40e6-4aa5-ac87-a1c3e42813e6",
+              "type": "decision",
+              "state": "tentative",
+              "mentions": [
+                "Denver"
+              ],
+              "claim": "we \u2192 moving_to \u2192 Denver",
+              "content": "We're moving to Denver instead, and I start at a hospital there in July.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "205fb97f-e52c-44dc-8ef0-ab6020f17449",
+              "type": "decision",
+              "state": "tentative",
+              "mentions": [
+                "Austin"
+              ],
+              "claim": "I \u2192 NOT turned_down \u2192 the Austin job",
+              "content": "Change of plans: I turned down the Austin job.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "70d8d365-c868-4688-8a50-45759b4efe24",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "Austin",
+                "Denver"
+              ],
+              "claim": null,
+              "content": "Change of plans: I turned down the Austin job. We're moving to Denver instead, and I start at a hospital there in July.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "38ec61de-947d-42ff-a83d-8ad281781462",
+              "type": "fact",
+              "state": "superseded",
+              "mentions": [
+                "Austin"
+              ],
+              "claim": "I \u2192 planning_to_move_to \u2192 Austin",
+              "content": "Big news: I'm planning to move to Austin this summer.",
+              "superseded_by": "aeafcea5-40e6-4aa5-ac87-a1c3e42813e6",
+              "replacement": "We're moving to Denver instead, and I start at a hospital there in July."
+            },
+            {
+              "id": "69b13366-2327-4c19-ae60-12f0018c8f6e",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "Austin"
+              ],
+              "claim": null,
+              "content": "Big news: I'm planning to move to Austin this summer. A hospital there offered me a day-shift position.",
+              "superseded_by": null,
+              "replacement": null
+            }
+          ],
+          "edges": [
+            {
+              "type": "supersedes",
+              "from": "We're moving to Denver instead, and I start at a hospital there in July.",
+              "to": "Big news: I'm planning to move to Austin this summer."
+            },
+            {
+              "type": "supersedes",
+              "from": "Change of plans: I turned down the Austin job.",
+              "to": "A hospital there offered me a day-shift position."
+            }
+          ],
+          "context_lines": [
+            {
+              "position": 0,
+              "line": "- [2025-07-14] \"We're moving to Denver instead, and I start at a hospital there in July.\"",
+              "mentions": [
+                "Denver"
+              ]
+            },
+            {
+              "position": 3,
+              "line": "- [2026-04-14 19:30] \"Riley\": \"Change of plans: I turned down the Austin job. We're moving to Denver instead, and I start at a hospital there in July.\"",
+              "mentions": [
+                "Austin",
+                "Denver"
+              ]
+            }
+          ],
+          "context_records": 16,
+          "facts": {
+            "new_value_active": true,
+            "active_records_with_only_the_old_value": 2,
+            "extracted_claims_with_only_the_old_value": 2,
+            "of_them_superseded": 1,
+            "context_lines_with_only_the_old_value": 0,
+            "context_lines_with_the_new_value": 2,
+            "first_context_line_shows": "new",
+            "old_only_lines_in_the_context": 0,
+            "old_value_shown_before_the_new_value": false
+          },
+          "question": "Where is Riley moving?",
+          "tokens_used": 588,
+          "token_budget": 4096
+        },
+        {
+          "id": "birthday",
+          "kind": "wrong fact fixed later",
+          "label": "Jo's birthday is given as March 3, then corrected to March 13 in a later session",
+          "probe": "jo-birthday",
+          "records": [
+            {
+              "id": "24d5e064-f278-48d9-a5aa-35d67a4e0146",
+              "type": "fact",
+              "state": "tentative",
+              "mentions": [
+                "March 13"
+              ],
+              "claim": "Jo \u2192 birthday \u2192 March 13",
+              "content": "And sorry, I gave you Jo's birthday wrong last time. It's actually March 13.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "c5ab7f6f-6082-4bd9-a462-e1c95b3f7faa",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "March 13"
+              ],
+              "claim": null,
+              "content": "Yes, soon. And sorry, I gave you Jo's birthday wrong last time. It's actually March 13.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "4a753bff-9ff3-4f2b-932a-34fa5ecbe30d",
+              "type": "fact",
+              "state": "superseded",
+              "mentions": [
+                "March 3"
+              ],
+              "claim": "Jo \u2192 birthday \u2192 March 3",
+              "content": "Also, my sister Jo's birthday is March 3.",
+              "superseded_by": "24d5e064-f278-48d9-a5aa-35d67a4e0146",
+              "replacement": "And sorry, I gave you Jo's birthday wrong last time. It's actually March 13."
+            },
+            {
+              "id": "aad26fee-27e1-4ff3-a0f6-28e0fbe157aa",
+              "type": "fact",
+              "state": "tentative",
+              "mentions": [
+                "March 3"
+              ],
+              "claim": "Jo \u2192 is_sister_of \u2192 my",
+              "content": "Also, my sister Jo's birthday is March 3.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "85e80086-3c8b-4956-a6b1-d5c2ca5d3c1a",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "March 3"
+              ],
+              "claim": null,
+              "content": "Also, my sister Jo's birthday is March 3. Can you remind me to send her something before then?",
+              "superseded_by": null,
+              "replacement": null
+            }
+          ],
+          "edges": [
+            {
+              "type": "supersedes",
+              "from": "And sorry, I gave you Jo's birthday wrong last time. It's actually March 13.",
+              "to": "Also, my sister Jo's birthday is March 3."
+            }
+          ],
+          "context_lines": [
+            {
+              "position": 0,
+              "line": "- [2026-04-14 19:34] \"Riley\": \"Yes, soon. And sorry, I gave you Jo's birthday wrong last time. It's actually March 13.\"",
+              "mentions": [
+                "March 13"
+              ]
+            }
+          ],
+          "context_records": 16,
+          "facts": {
+            "new_value_active": true,
+            "active_records_with_only_the_old_value": 2,
+            "extracted_claims_with_only_the_old_value": 2,
+            "of_them_superseded": 1,
+            "context_lines_with_only_the_old_value": 0,
+            "context_lines_with_the_new_value": 1,
+            "first_context_line_shows": "new",
+            "old_only_lines_in_the_context": 0,
+            "old_value_shown_before_the_new_value": false
+          },
+          "question": "When is Jo's birthday?",
+          "tokens_used": 647,
+          "token_budget": 4096
+        },
+        {
+          "id": "coffee",
+          "kind": "conflict in one session",
+          "label": "Riley says black coffee and oat milk in the same session",
+          "probe": "coffee",
+          "records": [
+            {
+              "id": "647f3315-afc0-4f68-b580-b5a2726ad596",
+              "type": "fact",
+              "state": "tentative",
+              "mentions": [
+                "oat milk"
+              ],
+              "claim": "I \u2192 takes_in_coffee \u2192 oat milk",
+              "content": "Though honestly, I take oat milk in my coffee every morning.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "7bb8d7ee-7d05-41dc-8aa5-ccfb51f56301",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "oat milk"
+              ],
+              "claim": null,
+              "content": "Not really. Though honestly, I take oat milk in my coffee every morning.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "10b04bc2-6378-487c-bd08-148c82294c79",
+              "type": "preference",
+              "state": "tentative",
+              "mentions": [
+                "black"
+              ],
+              "claim": "I \u2192 drinks \u2192 coffee black",
+              "content": "I drink my coffee black, always have.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "2fa82260-a0eb-4c94-b130-331f427759ca",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "black"
+              ],
+              "claim": null,
+              "content": "I'm trying to cut back on sugar. I drink my coffee black, always have.",
+              "superseded_by": null,
+              "replacement": null
+            }
+          ],
+          "edges": [],
+          "context_lines": [
+            {
+              "position": 0,
+              "line": "- [2026-03-20 08:04] \"Riley\": \"Not really. Though honestly, I take oat milk in my coffee every morning.\"",
+              "mentions": [
+                "oat milk"
+              ]
+            },
+            {
+              "position": 2,
+              "line": "- [2026-03-20 08:00] \"Riley\": \"I'm trying to cut back on sugar. I drink my coffee black, always have.\"",
+              "mentions": [
+                "black"
+              ]
+            }
+          ],
+          "context_records": 16,
+          "facts": {
+            "active_records_per_value": {
+              "black": 2,
+              "oat milk": 2
+            },
+            "context_lines_per_value": {
+              "black": 1,
+              "oat milk": 1
+            },
+            "contradicts_edges": 0
+          },
+          "question": "How does Riley take coffee?",
+          "tokens_used": 588,
+          "token_budget": 4096
+        },
+        {
+          "id": "job",
+          "kind": "control",
+          "label": "Riley is a nurse; no correction touches it",
+          "probe": "job",
+          "records": [
+            {
+              "id": "bded0e47-6e07-48f2-8ff0-4a944c59eec2",
+              "type": "fact",
+              "state": "tentative",
+              "mentions": [
+                "nurse"
+              ],
+              "claim": "I \u2192 works \u2192 mostly night shifts",
+              "content": "I work as an ER nurse in Seattle, mostly night shifts.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "3be00ab9-a5ae-4e6b-87c4-d8f46629a0b1",
+              "type": "fact",
+              "state": "tentative",
+              "mentions": [
+                "nurse"
+              ],
+              "claim": "I \u2192 works_in \u2192 Seattle",
+              "content": "I work as an ER nurse in Seattle, mostly night shifts.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "e7b0bc7c-fd1d-4084-af12-2d1db07bd216",
+              "type": "fact",
+              "state": "tentative",
+              "mentions": [
+                "nurse"
+              ],
+              "claim": "I \u2192 works_as \u2192 ER nurse",
+              "content": "I work as an ER nurse in Seattle, mostly night shifts.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "a5cf364f-908e-4be3-a73b-fdee8f24aa8c",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "nurse"
+              ],
+              "claim": null,
+              "content": "Hi, I'm Riley. I work as an ER nurse in Seattle, mostly night shifts.",
+              "superseded_by": null,
+              "replacement": null
+            }
+          ],
+          "edges": [],
+          "context_lines": [
+            {
+              "position": 0,
+              "line": "- [2026-03-02 18:00] \"Riley\": \"Hi, I'm Riley. I work as an ER nurse in Seattle, mostly night shifts.\"",
+              "mentions": [
+                "nurse"
+              ]
+            }
+          ],
+          "context_records": 16,
+          "facts": {
+            "active_records_per_value": {
+              "nurse": 4
+            },
+            "context_lines_per_value": {
+              "nurse": 1
+            },
+            "contradicts_edges": 0
+          },
+          "question": "What does Riley do for work?",
+          "tokens_used": 588,
+          "token_budget": 4096
+        }
+      ],
+      "build": {
+        "turns": 16,
+        "seconds": 3.9045106249977835,
+        "calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_hits": 16,
+        "cache_unreproduced": 0,
+        "settings": {
+          "overrides": {
+            "enable_extraction_corrections": true,
+            "enable_superseded_source_suppression": true
+          },
+          "speaker": true,
+          "organize": false
+        },
+        "label": "sup-corr"
+      },
+      "model": {
+        "provider": "ollama_cloud",
+        "model": "deepseek-v4.1-flash:cloud",
+        "resolved_model": "deepseek-v4.1-flash:cloud",
+        "manifest_digest_sha256": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+        "remote_host": "https://ollama.com",
+        "remote_model": "deepseek-v4.1-flash"
+      }
+    },
+    "explicit": {
+      "records": 7,
+      "cases": [
+        {
+          "id": "move",
+          "kind": "changed mind",
+          "label": "Riley plans to move to Austin, then chooses Denver",
+          "probe": "move-city",
+          "records": [
+            {
+              "id": "cdc9ea2e-acbe-4330-b326-5613d4588037",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "Denver"
+              ],
+              "claim": null,
+              "content": "Riley is moving to Denver and starts at a hospital there in July.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "7c08ec5f-21af-4ee1-98a6-d5b5c3f2d5e5",
+              "type": "note",
+              "state": "superseded",
+              "mentions": [
+                "Austin"
+              ],
+              "claim": null,
+              "content": "Riley plans to move to Austin this summer.",
+              "superseded_by": "cdc9ea2e-acbe-4330-b326-5613d4588037",
+              "replacement": "Riley is moving to Denver and starts at a hospital there in July."
+            }
+          ],
+          "edges": [
+            {
+              "type": "supersedes",
+              "from": "Riley is moving to Denver and starts at a hospital there in July.",
+              "to": "Riley plans to move to Austin this summer."
+            }
+          ],
+          "context_lines": [
+            {
+              "position": 0,
+              "line": "- [2026-04-14 19:30] \"Riley is moving to Denver and starts at a hospital there in July.\"",
+              "mentions": [
+                "Denver"
+              ]
+            }
+          ],
+          "context_records": 5,
+          "facts": {
+            "new_value_active": true,
+            "active_records_with_only_the_old_value": 0,
+            "extracted_claims_with_only_the_old_value": 0,
+            "of_them_superseded": 0,
+            "context_lines_with_only_the_old_value": 0,
+            "context_lines_with_the_new_value": 1,
+            "first_context_line_shows": "new",
+            "old_only_lines_in_the_context": 0,
+            "old_value_shown_before_the_new_value": false
+          },
+          "question": "Where is Riley moving?",
+          "tokens_used": 172,
+          "token_budget": 4096
+        },
+        {
+          "id": "birthday",
+          "kind": "wrong fact fixed later",
+          "label": "Jo's birthday is given as March 3, then corrected to March 13 in a later session",
+          "probe": "jo-birthday",
+          "records": [
+            {
+              "id": "311da463-d2d8-489f-8f56-6909e5035536",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "March 13"
+              ],
+              "claim": null,
+              "content": "Riley's sister Jo's birthday is March 13.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "b3cd0d60-fa14-4882-93f7-163df2f5fb7b",
+              "type": "note",
+              "state": "superseded",
+              "mentions": [
+                "March 3"
+              ],
+              "claim": null,
+              "content": "Riley's sister Jo's birthday is March 3.",
+              "superseded_by": "311da463-d2d8-489f-8f56-6909e5035536",
+              "replacement": "Riley's sister Jo's birthday is March 13."
+            }
+          ],
+          "edges": [
+            {
+              "type": "supersedes",
+              "from": "Riley's sister Jo's birthday is March 13.",
+              "to": "Riley's sister Jo's birthday is March 3."
+            }
+          ],
+          "context_lines": [
+            {
+              "position": 0,
+              "line": "- [2026-04-14 19:34] \"Riley's sister Jo's birthday is March 13.\"",
+              "mentions": [
+                "March 13"
+              ]
+            }
+          ],
+          "context_records": 5,
+          "facts": {
+            "new_value_active": true,
+            "active_records_with_only_the_old_value": 0,
+            "extracted_claims_with_only_the_old_value": 0,
+            "of_them_superseded": 0,
+            "context_lines_with_only_the_old_value": 0,
+            "context_lines_with_the_new_value": 1,
+            "first_context_line_shows": "new",
+            "old_only_lines_in_the_context": 0,
+            "old_value_shown_before_the_new_value": false
+          },
+          "question": "When is Jo's birthday?",
+          "tokens_used": 231,
+          "token_budget": 4096
+        },
+        {
+          "id": "coffee",
+          "kind": "conflict in one session",
+          "label": "Riley says black coffee and oat milk in the same session",
+          "probe": "coffee",
+          "records": [
+            {
+              "id": "eef0ba4c-7788-434c-a9eb-1ba9bc38715f",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "oat milk"
+              ],
+              "claim": null,
+              "content": "Riley takes oat milk in coffee every morning.",
+              "superseded_by": null,
+              "replacement": null
+            },
+            {
+              "id": "1e49fd97-3d38-4291-8e68-97e2cf6637d6",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "black"
+              ],
+              "claim": null,
+              "content": "Riley drinks coffee black.",
+              "superseded_by": null,
+              "replacement": null
+            }
+          ],
+          "edges": [],
+          "context_lines": [
+            {
+              "position": 0,
+              "line": "- [2026-03-20 08:04] \"Riley takes oat milk in coffee every morning.\"",
+              "mentions": [
+                "oat milk"
+              ]
+            },
+            {
+              "position": 1,
+              "line": "- [2026-03-20 08:00] \"Riley drinks coffee black.\"",
+              "mentions": [
+                "black"
+              ]
+            }
+          ],
+          "context_records": 5,
+          "facts": {
+            "active_records_per_value": {
+              "black": 1,
+              "oat milk": 1
+            },
+            "context_lines_per_value": {
+              "black": 1,
+              "oat milk": 1
+            },
+            "contradicts_edges": 0
+          },
+          "question": "How does Riley take coffee?",
+          "tokens_used": 172,
+          "token_budget": 4096
+        },
+        {
+          "id": "job",
+          "kind": "control",
+          "label": "Riley is a nurse; no correction touches it",
+          "probe": "job",
+          "records": [
+            {
+              "id": "65299b64-43e1-4e91-b1da-57e636186b9f",
+              "type": "note",
+              "state": "tentative",
+              "mentions": [
+                "nurse"
+              ],
+              "claim": null,
+              "content": "Riley works as an ER nurse in Seattle.",
+              "superseded_by": null,
+              "replacement": null
+            }
+          ],
+          "edges": [],
+          "context_lines": [
+            {
+              "position": 0,
+              "line": "- [2026-03-02 18:00] \"Riley works as an ER nurse in Seattle.\"",
+              "mentions": [
+                "nurse"
+              ]
+            }
+          ],
+          "context_records": 5,
+          "facts": {
+            "active_records_per_value": {
+              "nurse": 1
+            },
+            "context_lines_per_value": {
+              "nurse": 1
+            },
+            "contradicts_edges": 0
+          },
+          "question": "What does Riley do for work?",
+          "tokens_used": 172,
+          "token_budget": 4096
+        }
+      ]
+    }
+  }
+}

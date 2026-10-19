@@ -27,6 +27,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   questions down, doubles the context tokens and costs 75 requests and 462,000
   tokens (7 requests and 71,000 tokens with sessions). Nothing in the engine
   changes.
+- Add `enable_superseded_source_suppression` (part of prism-monorepo issue
+  270), off by default. `ingest()` keeps a message as a note beside the claims
+  extracted from it, so retiring a claim (a correction, `supersede()`) left
+  the note that stated the old value, and any claim written from the same
+  sentence, active and able to reach the context ahead of the correction.
+  With the option on, default retrieval leaves out a note or claim when a
+  superseded claim that cites one of its source messages was replaced by a
+  record from another message with a different statement and the record's
+  text holds that claim's text; a bare entity name goes when every message
+  that named it does. Nothing is written or deleted, the records stay
+  readable by id, and `RetrievalMode.EXPLICIT` keeps them. The receipt
+  records the option only while it is on. The corrections probe gains two
+  measures, "old-only lines in the context" and "old value shown before the
+  new value".
 
 ## [0.16.0a1] - 2026-10-19
 

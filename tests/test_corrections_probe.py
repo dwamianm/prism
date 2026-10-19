@@ -57,11 +57,55 @@ def test_case_report_separates_source_messages_from_retired_claims():
         "new_value_active": True, "active_records_with_only_the_old_value": 1,
         "extracted_claims_with_only_the_old_value": 1, "of_them_superseded": 1,
         "context_lines_with_only_the_old_value": 1, "context_lines_with_the_new_value": 1,
-        "first_context_line_shows": "new"}
+        "first_context_line_shows": "new", "old_only_lines_in_the_context": 1,
+        "old_value_shown_before_the_new_value": False}
     assert [record["id"] for record in report["records"]] == ["m1", "c1", "c2"]
     assert report["records"][1]["replacement"] == "Riley moves to Denver."
     assert report["edges"] == [{"type": "supersedes", "from": "Riley moves to Denver.", "to": "Riley moves to Austin."}]
     assert report["context_records"] == 3
+
+
+def _lines_case(*lines):
+    """The facts for a case whose context holds exactly these record lines."""
+    case = {"id": "move", "kind": "changed mind", "label": "move", "probe": "move-city",
+            "old": ["Austin"], "new": ["Denver"]}
+    return case_report(case, [], [], "header\n" + "\n".join(f'- {line}' for line in lines))["facts"]
+
+
+def test_an_old_only_line_shown_before_the_new_value_is_counted():
+    facts = _lines_case('"Unrelated."', '[2026-03-02 18:04] "I moved to Austin."', '[2026-04-14 19:30] "Now Denver."')
+    assert facts["old_only_lines_in_the_context"] == 1
+    assert facts["old_value_shown_before_the_new_value"] is True
+    facts = _lines_case('"Now Denver."', '"I moved to Austin."')
+    assert (facts["old_only_lines_in_the_context"], facts["old_value_shown_before_the_new_value"]) == (1, False)
+
+
+def test_an_old_only_line_with_no_new_value_in_the_context_is_shown_before_it():
+    facts = _lines_case('"I moved to Austin."')
+    assert (facts["old_only_lines_in_the_context"], facts["old_value_shown_before_the_new_value"]) == (1, True)
+    facts = _lines_case('"Unrelated."')
+    assert (facts["old_only_lines_in_the_context"], facts["old_value_shown_before_the_new_value"]) == (0, False)
+
+
+def test_a_line_marked_as_replaced_is_not_an_old_only_line():
+    facts = _lines_case('[2026-03-02 18:04] [superseded] "I moved to Austin."', '[replaced by a correction] "Austin."',
+                        '[2026-04-14 19:30] "Now Denver."')
+    assert facts["context_lines_with_only_the_old_value"] == 2
+    assert facts["old_only_lines_in_the_context"] == 0
+    assert facts["old_value_shown_before_the_new_value"] is False
+    # Another tag does not mark it, and neither does the word inside the text.
+    facts = _lines_case('[inferred] "I moved to Austin."', '"The [superseded] Austin plan."')
+    assert facts["old_only_lines_in_the_context"] == 2
+
+
+def test_the_report_names_the_two_measures_plainly():
+    report = {"conversation": "x", "reference_time": "t", "paths": {"explicit": {"cases": [{
+        "label": "move", "kind": "changed mind", "question": "q", "records": [], "edges": [], "context_lines": [],
+        "context_records": 0, "tokens_used": 1, "token_budget": 2,
+        "facts": {"old_only_lines_in_the_context": 0, "old_value_shown_before_the_new_value": False}}]}}}
+    text = corrections_probe.report_markdown(report)
+    assert "| old-only lines in the context | 0 |" in text
+    assert "| old value shown before the new value | False |" in text
 
 
 async def test_the_explicit_path_retires_both_old_values_and_keeps_the_conflict(tmp_path, mock_embeddings):
@@ -74,6 +118,8 @@ async def test_the_explicit_path_retires_both_old_values_and_keeps_the_conflict(
         assert facts["new_value_active"] is True
         assert facts["active_records_with_only_the_old_value"] == 0
         assert facts["context_lines_with_only_the_old_value"] == 0
+        assert facts["old_only_lines_in_the_context"] == 0
+        assert facts["old_value_shown_before_the_new_value"] is False
         assert [edge["type"] for edge in cases[case_id]["edges"]] == ["supersedes"]
         assert "superseded" in {record["state"] for record in cases[case_id]["records"]}
     assert cases["coffee"]["facts"]["active_records_per_value"] == {"black": 1, "oat milk": 1}
