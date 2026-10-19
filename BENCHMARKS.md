@@ -1327,8 +1327,8 @@ memory, first in the vector search, outscores it. A weak word match is not
 harmless under rank fusion, so the fix keeps such matches out of the
 candidates; ranking them lower would not help.
 
-With `lexical_term_weights` on (PostgreSQL only, off by default; the DuckDB
-backend ignores it) a query word weighs ln(N / df), where N is the number of
+With `lexical_term_weights` on (PostgreSQL only; the DuckDB backend ignores
+it) a query word weighs ln(N / df), where N is the number of
 the owner's searched memories and df the number that hold the word. A
 memory's evidence is the total weight of the query words it holds, which is
 ln(N / c) for c, the number of memories that would hold those words together
@@ -1337,7 +1337,13 @@ memory is a candidate only when c is at most 0.2% of N or 2 memories, whichever
 is more. A memory that holds every query word is still returned alone, and a
 one-word query is unchanged. Candidates rank by evidence, then by
 `ts_rank_cd`. Everything comes from the owner's own memories, the work is one
-indexed count per word (as before) and the result is deterministic.
+indexed count per word (as before) and the result is deterministic. The
+option was added off by default and measured that way (`--set
+lexical_term_weights=true` for the on arm). Since 2026-10-19 it is on by
+default in the alpha channel, on this fast cycle and the offline gate below, by
+the owner's directive that defaults flip on the fast gate and the full
+benchmark audits later; `PRME_LEXICAL_TERM_WEIGHTS=false` (or `--set
+lexical_term_weights=false` for the off arm) restores the any-term search.
 
 Options I tried on the way, as ranks of the answers over the 17 questions,
 store-v1 and the 28 held-out questions (below), 75 memories on PostgreSQL:
@@ -1443,12 +1449,12 @@ off and on, on this laptop:
 `retrieve()` from end to end (including the query embedding), median over the
 45 questions, was 0.120 s with the option off and 0.125 s on at 4,975 memories.
 
-DuckDB. The store stage on DuckDB with `--set lexical_term_weights=true` gives
-the same 29 measures as with it off, and both match `baseline-main.json`
+DuckDB. The store stage on DuckDB with the option on gives the same 29
+measures as with it off, and both match `baseline-main.json`
 exactly. Tantivy already weights words by BM25.
 
-Offline evidence gate. `gate --set lexical_term_weights=true` on the committed
-branch (`bd95f733`) against the gate run on `main` at `7f9ce556` for the fast
+Offline evidence gate. `gate --set lexical_term_weights=true` (set explicitly,
+before the flip) on the committed branch (`bd95f733`) against the gate run on `main` at `7f9ce556` for the fast
 gate (same machine, the regenerated LongMemEval-S controls): no row of the first
 table changes, with 0 wins, 0 losses and all ties. LoCoMo keeps all evidence
 packed for 84.0% of questions (1,290 of 1,536), evidence recall 89.2% and all
@@ -1465,7 +1471,9 @@ questions. The benefit is for small stores, which is where the dev project and
 alpha users are. A question whose answer shares only a word that many
 memories hold now leaves the order to the vector search. The mechanism changes
 which candidates the word search returns for PostgreSQL only; no answer run
-with a reader and a judge has been done, so the default stays off.
+with a reader and a judge has been done. The flip to on rests on the fast
+cycle and the offline gate; the full benchmark audit and the default-change
+rule's DeepSeek answer runs are pending.
 
 **Refresh.** Run these when the extraction prompt, the model, a conversation or
 the store fixture changes; the tests fail while the committed baseline names an

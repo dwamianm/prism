@@ -293,13 +293,14 @@ async def weighted_index(pg_pool, lexical_index):
     return PgLexicalIndex(pg_pool, term_weights=True)
 
 
-async def test_term_weights_are_off_by_default(pg_pool):
+async def test_term_weights_are_the_config_default_and_off_in_a_bare_index(pg_pool):
     from prme import PRMEConfig
     from prme.storage.pg.lexical_index import PgLexicalIndex
 
+    # The config turns them on (alpha channel, 2026-10-19); an index built by hand keeps the any-term search.
+    assert PRMEConfig().lexical_term_weights is True
+    assert PRMEConfig(lexical_term_weights=False).lexical_term_weights is False
     assert PgLexicalIndex(pg_pool)._term_weights is False
-    assert PRMEConfig().lexical_term_weights is False
-    assert PRMEConfig(lexical_term_weights=True).lexical_term_weights is True
 
 
 async def test_the_question_finds_the_memory_with_the_rare_word_alone(lexical_index, weighted_index, graph_store):
@@ -430,8 +431,10 @@ async def test_retrieve_follows_the_option_on_a_store_where_the_name_is_common(m
     memories = [RUST, *CODE_NOTES, *CALL_NOTES, *MANAGER_NOTES, *(f"Alex {text}." for text in STATEMENTS)]
     found = {}
     for option in (False, True):
-        config = PRMEConfig(database_url=os.environ["PRME_TEST_DATABASE_URL"], lexical_term_weights=option,
-                            organizer={"opportunistic_enabled": False})
+        # On is the default, so the engine's wiring of the default is what the second pass tests.
+        config = PRMEConfig(database_url=os.environ["PRME_TEST_DATABASE_URL"],
+                            organizer={"opportunistic_enabled": False},
+                            **({} if option else {"lexical_term_weights": False}))
         async with MemoryEngine.open(config) as engine:
             assert engine._lexical_index._term_weights is option
             if not option:

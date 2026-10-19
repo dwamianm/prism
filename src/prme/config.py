@@ -851,7 +851,7 @@ class PRMEConfig(_ProjectSettings):
         ),
     )
     lexical_term_weights: bool = Field(
-        default=False,
+        default=True,
         description=(
             "[HYPOTHESIS] PostgreSQL word search only; the DuckDB backend "
             "ignores it, because Tantivy already weights words by BM25. When "
@@ -865,15 +865,18 @@ class PRMEConfig(_ProjectSettings):
             "such words leaves the order to the vector search. Candidates "
             "rank by the weight of the words they hold. A memory that holds "
             "every query word is still returned alone, and a one-word query "
-            "returns every memory that holds the word. Off, a memory is a "
-            "candidate when it holds any word that fewer than half of the "
-            "memories hold, and the number of matched words ranks them "
-            "(#254). On the fast cycle's 75 memory store fixture it ranks the "
-            "Rust and dog questions first and raises the answers in the top "
-            "3 from 13 to 15 of 17; with 2,000 or more memories the effect "
-            "fades to noise (BENCHMARKS.md, \"Lexical term weights\"). The "
-            "default-change rule's DeepSeek answer runs have not been done. "
-            "Default False."
+            "returns every memory that holds the word. False restores the "
+            "any-term search of 0.16.0a1: a memory is a candidate when it "
+            "holds any word that fewer than half of the memories hold, and "
+            "the number of matched words ranks them (#254). On the fast "
+            "cycle's 75 memory store fixture it ranks the Rust and dog "
+            "questions first and raises the answers in the top 3 from 13 to "
+            "15 of 17; with 2,000 or more memories the effect fades to noise "
+            "(BENCHMARKS.md, \"Lexical term weights\"). Default True since "
+            "2026-10-19, in the alpha channel, on the fast cycle and the "
+            "offline evidence gate (owner directive of 2026-10-19); the full "
+            "benchmark audit and the default-change rule's DeepSeek answer "
+            "runs are pending."
         ),
     )
     enable_mention_links: bool = Field(

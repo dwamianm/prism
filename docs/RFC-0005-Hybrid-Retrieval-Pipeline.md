@@ -1140,7 +1140,8 @@ as several terms. Tantivy on DuckDB also matches any term, but ranks by BM25
 alone: the common-term rule, the full-match rule and the matched-term tiers
 apply to PostgreSQL only.
 
-With `lexical_term_weights` (default off, PostgreSQL only) the common-term rule
+With `lexical_term_weights` (PostgreSQL only; on by default since 2026-10-19 in
+the alpha channel, and `false` restores the rules above) the common-term rule
 and the matched-term tiers are replaced by term weights from the owner's own
 memories. With N searched documents, a query term that df of them hold weighs
 ln(N / df), and a document's evidence is the total weight of the query terms it
