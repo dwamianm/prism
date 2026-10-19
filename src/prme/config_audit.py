@@ -188,6 +188,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_extraction_corrections is true",
         bool,
     ),
+    "enable_ingest_claim_fixes": (
+        "enable_ingest_claim_fixes",
+        "enable_ingest_claim_fixes is true",
+        bool,
+    ),
     "novelty_high_threshold": (
         "enable_surprise_gating",
         "enable_surprise_gating is true",

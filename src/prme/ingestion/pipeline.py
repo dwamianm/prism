@@ -255,6 +255,7 @@ class IngestionPipeline:
         extraction_batch_target_tokens: int = 0,
         extraction_timeout: float = 30.0,
         extraction_corrections: bool = False,
+        claim_fixes: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -297,6 +298,9 @@ class IngestionPipeline:
         self._batch_close_seconds = BATCH_CLOSE_SECONDS
         # Show each batched request earlier claims it may correct (#277).
         self._extraction_corrections = extraction_corrections
+        # A plural claim keeps its we, a turn that says who it is names its I,
+        # and no two claims of a message share a text (enable_ingest_claim_fixes).
+        self._claim_fixes = claim_fixes
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -841,6 +845,8 @@ class IngestionPipeline:
             speaker = metadata_speaker(event.metadata) if self._speaker_grounding else None
             if speaker is not None:
                 extra["speaker"] = speaker
+            if self._claim_fixes:
+                extra["plural_first_person"] = True
             async with self._extraction_semaphore:
                 result = await self._extraction_provider.extract(
                     event.content, role=event.role, **extra
@@ -979,7 +985,7 @@ class IngestionPipeline:
             # The speaker is shown to the model either way; grounding accepts
             # the speaker's own I, me and my only with speaker grounding on.
             speakers = {turn.index: turn.speaker for turn in turns} if self._speaker_grounding else {}
-            results = validate_batch_output(raw, turns, speakers=speakers)
+            results = validate_batch_output(raw, turns, speakers=speakers, plural_first_person=self._claim_fixes)
             without_entry = batch_turns_without_entry(raw, turns)
         except ExtractionError as exc:
             if len(events) == 1 and exc.reason_code in _HALVABLE_FAILURES - _VALIDATION_FAILURES:
@@ -1159,7 +1165,8 @@ class IngestionPipeline:
                            and (event.metadata or {}).get(OWNER_REFERENCE_KEY) is True)
         speaker = metadata_speaker(event.metadata) if self._bind_speaker_references and current_policy else None
         # A turn that says who it is, with no caller-named speaker, names its own I.
-        introduced = (_introduced_speaker(event, result) if self._bind_speaker_references and current_policy
+        introduced = (_introduced_speaker(event, result)
+                      if self._claim_fixes and self._bind_speaker_references and current_policy
                       and speaker is None and not owner_reference else None)
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
@@ -1170,6 +1177,7 @@ class IngestionPipeline:
             owner_reference=owner_reference,
             speaker=speaker or introduced, speaker_introduced=introduced is not None,
             sentence_text=self._claim_sentence_text and current_policy,
+            distinct_text=self._claim_fixes,
             grounding_speaker=(metadata_speaker(event.metadata)
                                if self._speaker_grounding and current_policy else None),
         )
@@ -1184,7 +1192,7 @@ class IngestionPipeline:
         merge_claims: bool = False, speaker: str | None = None, sentence_text: bool = False,
         grounding_speaker: str | None = None, first_person_forms: bool = False,
         explicit_corrections: bool = False, owner_reference: bool = False,
-        speaker_introduced: bool = False,
+        speaker_introduced: bool = False, distinct_text: bool = False,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
@@ -1193,8 +1201,9 @@ class IngestionPipeline:
         entity (enable_speaker_references); ``speaker_introduced`` says the turn
         itself gave the name ("I am Alex Rivera") rather than the caller.
         ``sentence_text`` stores a claim's own sentences as its text
-        (enable_claim_sentence_text), and a claim whose sentences are already
-        another claim's text from this message gets a statement of its own.
+        (enable_claim_sentence_text), and with ``distinct_text`` a claim whose
+        sentences are already another claim's text from this message gets a
+        statement of its own (enable_ingest_claim_fixes).
         With ``grounding_speaker`` (enable_speaker_grounding) the speaker's own
         I, me or my mentions them there as in grounding. Only current-policy
         plans use these, so a saved extraction replanned under an older
@@ -1400,7 +1409,7 @@ class IngestionPipeline:
                 fact_content = fact.resolved_text
             elif sentences is not None:
                 fact_content = sentences
-            if sentence_text and resolution is None:
+            if sentence_text and distinct_text and resolution is None:
                 if fact_content in claim_texts:
                     # Another claim of this message already has this text.
                     fact_content = _claim_statement(fact, speaker)

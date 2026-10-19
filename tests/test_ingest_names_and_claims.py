@@ -1,4 +1,4 @@
-"""The repro of prism-monorepo issue 258: a speaker who introduces themselves, and each claim's own text.
+"""The repro of prism-monorepo issue 258, with enable_ingest_claim_fixes on and off.
 
 The batched response in ``fixtures/extraction/trip_batch_haiku45.json`` is what
 Claude Haiku 4.5 returned for the four turns of the issue's repro, recorded once.
@@ -28,6 +28,11 @@ CITIES = "We chose Tokyo, Kyoto, Kanazawa, and Osaka."
 DROPPED = "We dropped Hiroshima to save time."
 INTRODUCTION = "Hi, I am Alex Rivera."
 SENTENCE = "My partner Jordan and I are planning a trip to Japan in late March next year."
+
+
+def on(base, **updates):
+    """The configuration with the issue 258 behavior turned on."""
+    return base.model_copy(update={"enable_ingest_claim_fixes": True, **updates})
 
 
 def batched(base, **updates):
@@ -105,23 +110,28 @@ class TestWhoseIsI:
         return node, subject
 
     async def test_the_name_in_the_turn_binds_its_i(self, config, user):
-        node, subject = await self.subject_of_claim(config, user)
+        node, subject = await self.subject_of_claim(on(config), user)
         assert subject.content == "Alex Rivera" and node.metadata["speaker_reference"]["basis"] == "self_introduction"
 
     async def test_a_name_the_caller_gives_wins(self, config, user):
-        node, subject = await self.subject_of_claim(config, user, speaker="Dana")
+        node, subject = await self.subject_of_claim(on(config), user, speaker="Dana")
         assert subject.content == "Dana" and "basis" not in node.metadata["speaker_reference"]
 
     async def test_a_declared_owner_wins(self, config, user):
-        node, subject = await self.subject_of_claim(config, user, first_person_owner=True)
+        node, subject = await self.subject_of_claim(on(config), user, first_person_owner=True)
         assert subject.content == "I" and "speaker_reference" not in node.metadata and "owner_reference" in node.metadata
 
     async def test_an_assistant_turn_names_no_user(self, config, user):
-        node, subject = await self.subject_of_claim(config, user, role="assistant")
+        node, subject = await self.subject_of_claim(on(config), user, role="assistant")
         assert subject.content == "I" and "speaker_reference" not in node.metadata
 
     async def test_it_is_off_with_speaker_references(self, config, user):
-        node, subject = await self.subject_of_claim(config.model_copy(update={"enable_speaker_references": False}), user)
+        node, subject = await self.subject_of_claim(on(config, enable_speaker_references=False), user)
+        assert subject.content == "I" and "speaker_reference" not in node.metadata
+
+    async def test_it_is_off_by_default(self, config, user):
+        assert config.enable_ingest_claim_fixes is False
+        node, subject = await self.subject_of_claim(config, user)
         assert subject.content == "I" and "speaker_reference" not in node.metadata
 
 
@@ -154,7 +164,7 @@ class TestTheRepro:
     """The issue's four turns, with the model's recorded answer."""
 
     async def test_the_claims_name_the_speaker_who_introduces_themselves(self, config, user):
-        async with MemoryEngine.open(batched(config)) as engine:
+        async with MemoryEngine.open(batched(on(config))) as engine:
             event_ids = await ingest_trip(engine, user)
             found = await claims(engine, user, event_ids[0])
             entities = {node.content for node in await engine.query_nodes(user_id=user, node_type=NodeType.ENTITY)}
@@ -172,7 +182,7 @@ class TestTheRepro:
         assert len([name for name in entities if name == "I"]) == 1
 
     async def test_a_turn_that_names_no_one_keeps_its_own_i(self, config, user):
-        async with MemoryEngine.open(batched(config)) as engine:
+        async with MemoryEngine.open(batched(on(config))) as engine:
             event_ids = await ingest_trip(engine, user)
             found = await claims(engine, user, event_ids[3])
         assert found
@@ -181,7 +191,7 @@ class TestTheRepro:
             assert "speaker_reference" not in node.metadata
 
     async def test_the_turn_with_we_has_claims_for_the_cities_and_the_dropped_city(self, config, user):
-        async with MemoryEngine.open(batched(config)) as engine:
+        async with MemoryEngine.open(batched(on(config))) as engine:
             event_ids = await ingest_trip(engine, user)
             record = await engine.get_extraction(event_ids[2], user_id=user)
             found = await claims(engine, user, event_ids[2])
@@ -194,7 +204,7 @@ class TestTheRepro:
             assert "speaker_reference" not in node.metadata
 
     async def test_no_two_nodes_of_one_event_have_the_same_content(self, config, user):
-        async with MemoryEngine.open(batched(config)) as engine:
+        async with MemoryEngine.open(batched(on(config))) as engine:
             event_ids = await ingest_trip(engine, user)
             nodes = await engine.query_nodes(user_id=user)
         for event_id in event_ids:
@@ -211,8 +221,52 @@ class TestTheRepro:
             "evidence_quote"]
 
     async def test_with_claim_sentences_off_claims_keep_the_source_passage(self, config, user):
-        async with MemoryEngine.open(batched(config, enable_claim_sentence_text=False)) as engine:
+        async with MemoryEngine.open(batched(on(config), enable_claim_sentence_text=False)) as engine:
             event_ids = await ingest_trip(engine, user)
             found = await claims(engine, user, event_ids[0])
         assert {node.content for node, _ in found} == {f"{INTRODUCTION} {SENTENCE}"}
         assert {node.metadata["grounding_method"] for node, _ in found} == {"source_passage_v1"}
+
+
+class TestOffByDefault:
+    """With the option off, the repro gives what the engine gave before the option existed."""
+
+    def test_the_option_is_off_and_left_out_of_dumps(self):
+        from prme import PRMEConfig
+
+        default = PRMEConfig(_env_file=None)
+        assert default.enable_ingest_claim_fixes is False
+        assert "enable_ingest_claim_fixes" not in default.model_dump(mode="json")
+        turned_on = PRMEConfig(_env_file=None, enable_ingest_claim_fixes=True)
+        assert turned_on.model_dump(mode="json")["enable_ingest_claim_fixes"] is True
+        assert PRMEConfig(_env_file=None, **turned_on.model_dump()).enable_ingest_claim_fixes is True
+
+    async def test_the_we_turn_has_no_claims_and_the_i_stays_local(self, config, user):
+        async with MemoryEngine.open(batched(config)) as engine:
+            event_ids = await ingest_trip(engine, user)
+            record = await engine.get_extraction(event_ids[2], user_id=user)
+            first = await claims(engine, user, event_ids[0])
+        assert record.result["facts"] == []
+        for node, subject in first:
+            assert subject.content == "I" and subject.metadata["identity_status"] == "unresolved_reference"
+            assert "speaker_reference" not in node.metadata
+
+    async def test_two_claims_of_one_sentence_share_its_text(self, config, user):
+        async with MemoryEngine.open(batched(config)) as engine:
+            event_ids = await ingest_trip(engine, user)
+            first = await claims(engine, user, event_ids[0])
+        assert [node.content for node, _ in first] == [SENTENCE, SENTENCE]
+        assert {node.metadata["grounding_method"] for node, _ in first} == {"claim_sentences_v1"}
+
+    @pytest.mark.parametrize("enabled", [False, True])
+    async def test_a_provider_is_told_about_plural_references_only_with_the_option(self, config, user, enabled):
+        calls = []
+
+        async def extract(content, *, role="user", **options):
+            calls.append(options)
+            return ExtractionResult()
+
+        async with MemoryEngine.open(on(config) if enabled else config) as engine:
+            engine._pipeline._extraction_provider.extract = extract
+            await engine.ingest("We chose Tokyo.", user_id=user, session_id="s1", wait_for_extraction=True)
+        assert calls == [{"plural_first_person": True} if enabled else {}]

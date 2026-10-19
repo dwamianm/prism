@@ -739,17 +739,13 @@ class PRMEConfig(_ProjectSettings):
             "mentions of the name share, instead of an identity local to the "
             "message. A speaker's claims then connect across messages, and a "
             "repeated or replaced claim can merge with or supersede the "
-            "earlier one. A user turn that gives no speaker but says who it "
-            "is (\"I am Alex Rivera\") names its speaker when the extraction "
-            "lists that person, for that turn only. Other turns "
-            "without a speaker, and plural, second- and third-person "
-            "references, keep message-local identities. Default True since it "
-            "passed the default-change rule with enable_claim_sentence_text "
-            "and packing.fold_repeated_text; the introduced speaker came "
-            "later and has not been through it. Only the caller knows that "
-            "the named speaker, and not someone the turn quotes, is who says "
-            "I, so set it False when a speaker's turns quote others in the "
-            "first person."
+            "earlier one. Turns without a speaker, and plural, second- and "
+            "third-person references, keep message-local identities. Default "
+            "True since it passed the default-change rule with "
+            "enable_claim_sentence_text and packing.fold_repeated_text. Only "
+            "the caller knows that the named speaker, and not someone the "
+            "turn quotes, is who says I, so set it False when a speaker's "
+            "turns quote others in the first person."
         ),
     )
     enable_claim_sentence_text: bool = Field(
@@ -763,15 +759,11 @@ class PRMEConfig(_ProjectSettings):
             "paragraph so a qualifier cannot be lost, which gives every claim "
             "of a one-paragraph chat message that message as its text. The "
             "paragraph stays the claim's evidence_quote, and a text that fact "
-            "text resolution accepts takes precedence. A claim whose sentences "
-            "are already an earlier claim's text from the same message gets a "
-            "one-sentence statement of its own built from its subject, "
-            "predicate and object, so no two claims of a message share a text. "
-            "Default True since it passed the default-change rule with "
-            "enable_speaker_references and packing.fold_repeated_text; the "
-            "statements came later and have not been through it. A qualifier "
-            "elsewhere in the paragraph is no longer in the text, though it "
-            "stays in the evidence."
+            "text resolution accepts takes precedence. Default True since it "
+            "passed the default-change rule with enable_speaker_references "
+            "and packing.fold_repeated_text. A qualifier elsewhere in the "
+            "paragraph is no longer in the text, though it stays in the "
+            "evidence."
         ),
     )
     enable_speaker_grounding: bool = Field(
@@ -845,6 +837,31 @@ class PRMEConfig(_ProjectSettings):
             "with the extraction. Needs extraction_batch_target_tokens above "
             "zero. A correction in the same request as the claim it corrects "
             "is not covered. Default False."
+        ),
+    )
+    enable_ingest_claim_fixes: bool = Field(
+        default=False,
+        # Unset, it is left out of dumps, so a configuration recorded before
+        # the option existed still compares equal.
+        exclude_if=lambda value: value is False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() makes three changes to what a "
+            "turn's claims say (prism-monorepo issue 258). (1) A claim that "
+            "the model writes with I, me or my, where the cited sentences use "
+            "we, us or our and no singular form, keeps the sentences' own "
+            "word instead of being discarded, so \"We chose Tokyo\" is a "
+            "claim about We. (2) A user turn that gives no speaker but says "
+            "who it is (\"I am Alex Rivera\", \"My name is Alex Rivera\") "
+            "binds its I, me and my to that person's entity when the "
+            "extraction lists the person, for that turn only, as "
+            "enable_speaker_references does for a caller's speaker. (3) With "
+            "enable_claim_sentence_text, a claim whose sentences are already "
+            "an earlier claim's text from the same message gets a one-"
+            "sentence statement of its own built from its subject, predicate "
+            "and object, so no two claims of a message share a text. Default "
+            "False: none of it has been through the default-change rule on "
+            "the ingest() answer track, and turning it on by default needs "
+            "that rule."
         ),
     )
     enable_qa_pairing: bool = Field(

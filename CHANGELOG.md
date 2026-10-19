@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `enable_ingest_claim_fixes` (`PRME_ENABLE_INGEST_CLAIM_FIXES`), off by
+  default (prism-monorepo issue 258). With it on, `ingest()` makes three
+  changes to what a turn's claims say, and with it off nothing changes:
+  records, plans, receipts and configuration dumps keep their bytes. It has not
+  been through the default-change rule, so turning it on by default needs that
+  rule on the `ingest()` answer track.
+  1. A claim of a plural first-person statement is kept. Given "We chose Tokyo,
+     Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.", Claude
+     Haiku 4.5 returned two facts whose subject was `I`, a word the sentences
+     do not contain, so grounding discarded both and the turn's extraction had
+     empty `facts`. When a built-in provider writes `I`, `me`, `my`, `mine` or
+     `myself` for a claim's subject, object or relationship endpoint and the
+     cited sentences use no singular first-person form but do use the plural
+     counterpart (`we`, `us`, `our`, `ours`, `ourselves`), the claim keeps the
+     turn's own word. Singular and plural forms still do not match each other
+     in grounding, and a plural reference still stays local to its message.
+     A custom provider is passed `plural_first_person=True` only while the
+     option is on.
+  2. A speaker who introduces themselves is linked to their own entity. A user
+     turn with no `speaker` that says who it is ("Hi, I am Alex Rivera", "I'm
+     Alex Rivera", "My name is Alex Rivera", "Call me Alex") binds its `I`,
+     `me` and `my` to the person entity of that name, the way a caller-named
+     `speaker` does under `enable_speaker_references`, when the extraction
+     lists the name as a person. The claim's `speaker_reference` metadata has
+     `"basis": "self_introduction"`, and the turn no longer creates a
+     message-local `I` entity. A possessive ("I am Jordan's partner"), a name
+     the extraction did not list as a person, a turn that introduces two
+     different people, an assistant turn, a `speaker` the caller gave, and
+     `first_person_owner=True` bind nothing new. The binding covers that turn
+     only: a later turn that names nobody keeps its own `I`.
+  3. With `enable_claim_sentence_text`, no two claims of one message share a
+     text. A claim whose sentences are already the text of an earlier claim of
+     the same message, such as the partner claim and the trip claim of "My
+     partner Jordan and I are planning a trip to Japan.", has a one-sentence
+     statement of its own, "Alex Rivera partner Jordan.", built from its
+     subject, predicate and object (the speaker's name, "the speaker" or "the
+     speaker's group" for a first-person reference, "It is not true that ..."
+     for a denial, the condition in parentheses). It records
+     `claim_statement_v1` as its grounding method. The first claim keeps the
+     source sentences and the paragraph stays every claim's `evidence_quote`.
+     The statement is not source text, so the packed context shows it as its
+     own line instead of folding it into the message.
 - Add `enable_extraction_corrections` (#277), off by default. With batched
   extraction, each request also shows the model a few stored claims of the
   same owner and scope that resemble its turns, labeled m1, m2 and on, and an
@@ -48,42 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `ingest()` keeps the claim of a plural first-person statement (prism-monorepo
-  issue 258). Given "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped
-  Hiroshima to save time.", Claude Haiku 4.5 returned two facts whose subject
-  was `I`, a word the sentences do not contain, so grounding discarded both and
-  the turn's extraction had empty `facts`. When a built-in provider writes `I`,
-  `me`, `my`, `mine` or `myself` for a claim's subject, object or relationship
-  endpoint and the cited sentences use no singular first-person form but do use
-  the plural counterpart (`we`, `us`, `our`, `ours`, `ourselves`), the claim
-  now keeps the turn's own word. Singular and plural references still do not
-  match each other in grounding, a plural reference still stays local to its
-  message, and saved extraction records are unchanged.
-- `ingest()` links a speaker who introduces themselves to their own entity
-  (prism-monorepo issue 258). A user turn with no `speaker` that says who it is
-  ("Hi, I am Alex Rivera", "I'm Alex Rivera", "My name is Alex Rivera", "Call me
-  Alex") now binds its `I`, `me` and `my` to the person entity of that name, the
-  way a caller-named `speaker` does under `enable_speaker_references`, when the
-  extraction lists the name as a person. The claim's `speaker_reference`
-  metadata has `"basis": "self_introduction"`, and the turn no longer creates a
-  message-local `I` entity. A possessive ("I am Jordan's partner"), a name the
-  extraction did not list as a person, a turn that introduces two different
-  people, an assistant turn, a `speaker` the caller gave, and
-  `first_person_owner=True` bind nothing new. The binding covers that turn
-  only: a later turn that names nobody keeps its own `I`.
-- With `enable_claim_sentence_text`, no two claims of one message share a text
-  (prism-monorepo issue 258). A claim whose sentences are already the text of an
-  earlier claim of the same message, such as the partner claim and the trip
-  claim of "My partner Jordan and I are planning a trip to Japan.", now has a
-  one-sentence statement of its own, "Alex Rivera partner Jordan.", built from
-  its subject, predicate and object (the speaker's name, "the speaker" or "the
-  speaker's group" for a first-person reference, "It is not true that ..." for a
-  denial, the condition in parentheses) and records `claim_statement_v1` as its
-  grounding method. The first claim keeps the source sentences, the paragraph
-  stays every claim's `evidence_quote`, and with the setting off nothing
-  changes. The statement is not source text, so the packed context shows it as
-  its own line instead of folding it into the message. Repeated text across
-  messages is unchanged.
 - PostgreSQL lexical search no longer requires every term of the query
   (prism-monorepo issue 254). A question written as a sentence, such as "what
   coding language is alex learning?", shares only some words with the memory
