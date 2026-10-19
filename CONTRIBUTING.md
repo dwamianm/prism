@@ -103,6 +103,14 @@ Explain *what* changed and *why*, not *how*.
 
 ## Releases
 
+There are two release channels. They differ in the evidence a release needs, not
+in how it is published. An alpha or beta (`0.16.0a3`, `0.16.0b1`) is a GitHub
+prerelease that is gated by the fast tiers. A stable release (`0.16.0`) also
+needs the latest scheduled full benchmark run to show no loss against the
+previous stable. `CLAUDE.md` ("Release channels and default changes") is the
+rule: the gates, the commands and their times, and who may turn a default on
+with which evidence. This section is the mechanics.
+
 A release is a GitHub release whose tag is the version (for example `v0.15.0`)
 and whose assets include the wheel, the source archive and `SHA256SUMS`.
 Publishing the release runs `.github/workflows/publish.yml`, which checks both
@@ -112,6 +120,112 @@ token is stored anywhere. To publish an existing release again, run the
 workflow by hand with its tag (Actions, Publish to PyPI, Run workflow). Files
 PyPI already has are skipped. PyPI never accepts changed files for a version it
 already has, so fix a bad upload with a new version.
+
+### Cutting an alpha or beta
+
+These are the steps the release steward took on 2026-10-19 for 0.16.0a1 to
+0.16.0a3 (pull requests #302, #308 and #311). Use `aN` while the line still
+takes default flips and `bN` once it is a candidate for the stable release.
+
+1. **Merge what ships first.** Everything in the prerelease is already on `main`
+   with green CI. A default turned on since the last prerelease went through its
+   own pull request with the gate numbers (`CLAUDE.md`), not through the version
+   bump.
+2. **Open the version bump pull request** from `main` (for example branch
+   `release-0-16-0a4`). Change the version in `pyproject.toml`,
+   `src/prme/__init__.py` and `uv.lock` (run `uv lock`, then
+   `uv lock --check --offline` must pass). In `CHANGELOG.md`, move the
+   `[Unreleased]` entries under `## [0.16.0a4] - <date>`, add upgrade notes, and
+   update the compare links at the bottom. Open the section with the alpha note:
+
+   > This is an alpha. It passed CI, the fast gate and the fast cycle, and it has
+   > not been through the full benchmark. The stable release stays at 0.15.0
+   > until the full benchmark audit, so `pip install prme` still installs 0.15.0.
+   > Install the alpha with `pip install --pre prme` or
+   > `pip install prme==0.16.0a4`.
+
+   Change no code, and leave `README.md`, `AGENTS.md` and `CLAUDE.md` alone: they
+   name a release only when it is stable. The pull request body says what is new
+   since the last prerelease and which checks the tree passed. Wait for the
+   required CI checks (10 for 0.16.0a3: DuckDB and PostgreSQL on Python 3.11 to
+   3.13, framework integrations, simulations and lint), then merge.
+3. **Build from the merged commit**, in a clean checkout of it.
+   `uv build --out-dir <dir>` writes `prme-<version>-py3-none-any.whl` and
+   `prme-<version>.tar.gz`. The build backend is `uv_build`, and two builds of
+   one commit gave identical bytes (checked for 0.16.0a1). Check that both files
+   hold every file that `git ls-files src/prme` lists, byte for byte (188 files
+   for 0.16.0a3). Write `VALIDATION.json` with the keys of the previous
+   release's (download it from that release): the version, the release commit,
+   the tested pull request head and whether its tree matches the release commit,
+   the CI run and its jobs, `local_checks`, `provider_boundary` (with the alpha
+   note: validated on CI, the fast gate and the fast cycle, not on the full
+   benchmark), `compatibility` (the defaults changed since the last prerelease
+   and the environment variable that restores each) and `packaging` (the size
+   and SHA-256 of each artifact and of each committed file). Record what you ran
+   and what you did not run, and never claim a check you skipped. Write
+   `SHA256SUMS` with one line for the wheel, the source archive and
+   `VALIDATION.json`, in the form of `sha256sum` (the hash, two spaces, the file
+   name), which the publish workflow reads.
+4. **Check the wheel.** In a fresh virtual environment, install the wheel and run
+   the repository's tests against it with `src/` off the path (0.16.0a3: 20 test
+   files, 594 passed and 3 skipped, with the PostgreSQL variants on a live
+   database). Run a store, `ingest()` (with a stubbed extractor) and `retrieve()`
+   smoke test too (Python 3.13 for 0.16.0a3). List the known flaky tests in the
+   release notes. For 0.16.0a3 they were
+   `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+   (a DuckDB segmentation fault while the engine closes) and
+   `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+   (it fails inside a git worktree).
+5. **Create the prerelease** from the merge commit:
+
+   ```bash
+   gh release create v0.16.0a4 --repo dwamianm/prism --prerelease \
+     --target <merge commit sha> --title "v0.16.0a4: <short headline> (alpha)" \
+     --notes-file <notes.md> \
+     prme-0.16.0a4-py3-none-any.whl prme-0.16.0a4.tar.gz SHA256SUMS VALIDATION.json
+   ```
+
+   The notes, in plain US English, follow the 0.16.0a3 release: what the release
+   is (an alpha that passed CI, the fast gate and the fast cycle, not the full
+   benchmark, with the stable version `pip install prme` still installs);
+   Install (`pip install --pre prme` and `pip install prme==0.16.0a4`); What
+   changed since the last prerelease (each option, what it does and the
+   environment variable that restores the old behavior); Why these are on (the
+   gate table, off against on); Known weaknesses; Known flaky tests; Validation
+   (the CI run, the installed-wheel result, that the fast gate and the fast cycle
+   are regression screens and not accuracy estimates, and that no full benchmark
+   ran); and the compare link from the last prerelease.
+6. **Watch the `Publish to PyPI` run**, which publishing the release starts
+   (`gh run list --repo dwamianm/prism --workflow publish.yml`). It took 30 to 40
+   seconds for 0.16.0a1 to 0.16.0a3. If it fails, run the workflow once by hand
+   with the tag. A bad upload needs a new version, never a changed file.
+7. **Check PyPI from a clean directory** outside the repository, with Python 3.11
+   or newer:
+
+   ```bash
+   python -m pip index versions prme --pre   # lists 0.16.0a4 first, then the earlier versions
+   python -m venv check && check/bin/pip install prme==0.16.0a4
+   check/bin/python -c "import prme; print(prme.__version__)"   # 0.16.0a4
+   python -m pip install --dry-run prme      # still the last stable: "Would install prme-0.15.0"
+   ```
+
+   Then run the store, `ingest()` (stubbed extractor) and `retrieve()` smoke test
+   with `check/bin/python`. If any of these fails, the release is not done:
+   report it.
+
+### Cutting a stable release
+
+A stable release is cut the same way, with these differences. The gates in
+`CLAUDE.md` have passed (the latest scheduled full benchmark run shows no loss,
+and the answer track audit is done for each `ingest()` default that is on), and
+the notes link their evidence. Whether to cut one is the owner's decision. The
+version has no suffix (`0.16.0`), and the `CHANGELOG.md` section covers
+everything since the previous stable release and drops the alpha note.
+`README.md`, `CLAUDE.md`, `AGENTS.md` and `memory_bank/GOALS.md` name the new
+release, as they did for v0.15.0 (pull request #272), and the defaults that the audit passed
+move from the alpha-channel list into the plain list of notable defaults. The
+release is created without `--prerelease`, so GitHub shows it as the latest
+release and `pip install prme` installs it.
 
 ## Reporting Bugs
 
