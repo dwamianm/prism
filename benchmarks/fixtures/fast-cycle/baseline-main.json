@@ -2,18 +2,18 @@
  "kind": "prme-fast-cycle-report",
  "schema_version": 1,
  "label": "main",
- "created_at": "2026-10-19T10:06:07.012799+00:00",
+ "created_at": "2026-10-19T14:28:38.868200+00:00",
  "provenance": {
-  "commit": "eae43959ed13035b4d6cdea0473540bf3fad5e4b",
-  "src_tree": "c0d99f864c9bc36887d5730492fb270e2fcc5d7a",
+  "commit": "a88eaf601f02013c248a5e68833f9c434c4fe693",
+  "src_tree": "8c94ef7eb1797fe31c852115d10f3688038d1bd4",
   "src_modified": false,
   "settings": {}
  },
  "seconds": {
-  "store": 36.986675958003616,
-  "ingest": 49.999437541999214,
-  "store-extract": 27.665177208997193,
-  "total": 114.65129070900002
+  "store": 6.924407250000513,
+  "ingest": 18.20165483299934,
+  "store-extract": 20.379337917001976,
+  "total": 45.50540000000183
  },
  "stages": {
   "store": {
@@ -25,8 +25,8 @@
    "calls": 75,
    "nodes": 75,
    "edges": 0,
-   "store_seconds": 30.526245458997437,
-   "retrieve_seconds": 6.300432957999874,
+   "store_seconds": 6.381811207997089,
+   "retrieve_seconds": 0.510813542001415,
    "measures": {
     "nodes_per_store_call": 1.0,
     "edges_per_store_call": 0.0,
@@ -394,7 +394,7 @@
      ]
     }
    ],
-   "seconds": 36.986675958003616
+   "seconds": 6.924407250000513
   },
   "ingest": {
    "mode": "replay",
@@ -406,7 +406,7 @@
     "defects-v1": {
      "turns": 14,
      "speaker": false,
-     "seconds": 26.57659337500081,
+     "seconds": 3.8662138340005185,
      "conversation_sha256": "613a1441aab022dc5261de6b9d3d82d43f8fbdf1d5f160d47e5af2bbbba4c4fc",
      "live_calls": 0,
      "cache_hits": 14,
@@ -432,45 +432,45 @@
      "top_results": {
       "cities": [
        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
-       "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
-       "fact: My partner Jordan and I are planning a trip to Japan in late March next year."
+       "decision: We chose Tokyo, Kyoto, Kanazawa, and Osaka.",
+       "fact: Hi, I am Alex Rivera."
       ],
       "learning": [
+       "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
        "fact: Hi, I am Alex Rivera.",
-       "fact: On weekends I am learning Rust.",
-       "fact: Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+       "fact: On weekends I am learning Rust."
       ],
       "work-languages": [
-       "fact: Hi, I am Alex Rivera.",
        "fact: Yes, I write Go for services and TypeScript for tooling.",
-       "fact: Yes, I write Go for services and TypeScript for tooling."
+       "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
+       "fact: Hi, I am Alex Rivera."
       ],
       "travel": [
        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
-       "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
-       "fact: My partner Jordan and I are planning a trip to Japan in late March next year."
+       "preference: I prefer trains to flights, so I want a JR Pass.",
+       "fact: Hi, I am Alex Rivera."
       ],
       "allergy": [
        "fact: Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
-       "fact: Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+       "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
        "decision: We dropped Hiroshima to save time."
       ],
       "shipments": [
-       "fact: We chose Postgres partitioning over TimescaleDB for the shipment table.",
        "decision: We chose Postgres partitioning over TimescaleDB for the shipment table.",
-       "preference: My manager Dana wants the runbook reviewed by Sam before Friday."
+       "preference: I prefer trains to flights, so I want a JR Pass.",
+       "fact: My manager Dana wants the runbook reviewed by Sam before Friday."
       ],
       "reviewer": [
-       "preference: My manager Dana wants the runbook reviewed by Sam before Friday.",
        "fact: My manager Dana wants the runbook reviewed by Sam before Friday.",
-       "fact: My manager Dana wants the runbook reviewed by Sam before Friday."
+       "fact: Yes, I write Go for services and TypeScript for tooling.",
+       "preference: I prefer trains to flights, so I want a JR Pass."
       ]
      }
     },
     "corrections-v1": {
      "turns": 16,
      "speaker": true,
-     "seconds": 5.778932584005815,
+     "seconds": 3.323169958006474,
      "conversation_sha256": "7ef185ed2e365fffc713f37aa8f4d312aa24ca69d159df3023c5b7ad13a8e1a9",
      "live_calls": 0,
      "cache_hits": 16,
@@ -492,24 +492,24 @@
      },
      "top_results": {
       "move-city": [
+       "fact: I work as an ER nurse in Seattle, mostly night shifts.",
        "fact: Hi, I'm Riley.",
-       "fact: I'm still on night shifts at the ER until the move.",
-       "fact: I'm still on night shifts at the ER until the move."
+       "fact: We're moving to Denver instead, and I start at a hospital there in July."
       ],
       "jo-birthday": [
        "fact: Also, my sister Jo's birthday is March 3.",
-       "fact: Also, my sister Jo's birthday is March 3.",
-       "fact: Also, my sister Jo's birthday is March 3."
+       "fact: And sorry, I gave you Jo's birthday wrong last time. It's actually March 13.",
+       "fact: I'll keep your sister's birthday in mind so you can plan a gift."
       ],
       "coffee": [
-       "fact: Hi, I'm Riley.",
-       "preference: Though honestly, I take oat milk in my coffee every morning.",
-       "preference: I drink my coffee black, always have."
+       "fact: We're moving to Denver instead, and I start at a hospital there in July.",
+       "fact: I work as an ER nurse in Seattle, mostly night shifts.",
+       "fact: I'm still on night shifts at the ER until the move."
       ],
       "job": [
-       "fact: Hi, I'm Riley.",
        "fact: I work as an ER nurse in Seattle, mostly night shifts.",
-       "fact: I work as an ER nurse in Seattle, mostly night shifts."
+       "fact: I'm still on night shifts at the ER until the move.",
+       "fact: Hi, I'm Riley."
       ]
      },
      "corrections": [
@@ -520,31 +520,19 @@
        "probe": "move-city",
        "records": [
         {
-         "id": "60163a8a-236f-40d3-8298-2ce9d6c73a71",
+         "id": "c5a295dd-20bf-49ca-a257-02c75feb1975",
          "type": "fact",
          "state": "tentative",
          "mentions": [
           "Denver"
          ],
          "claim": "hospital \u2192 located_in \u2192 Denver",
-         "content": "We're moving to Denver instead, and I start at a hospital there in July.",
+         "content": "Hospital located in Denver.",
          "superseded_by": null,
          "replacement": null
         },
         {
-         "id": "821c7d40-d370-462f-be48-f3be319f20b9",
-         "type": "fact",
-         "state": "tentative",
-         "mentions": [
-          "Denver"
-         ],
-         "claim": "I \u2192 starts_at \u2192 hospital",
-         "content": "We're moving to Denver instead, and I start at a hospital there in July.",
-         "superseded_by": null,
-         "replacement": null
-        },
-        {
-         "id": "3c80a3a0-865d-4416-a4b0-3ce1fbd50943",
+         "id": "3e0ae89b-37c2-4314-a90a-9a1469abc1a2",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -556,7 +544,7 @@
          "replacement": null
         },
         {
-         "id": "ee787cae-a719-41ba-8ec1-74a376dea320",
+         "id": "04309c53-5fc0-484e-8637-b95d3421b326",
          "type": "decision",
          "state": "tentative",
          "mentions": [
@@ -568,7 +556,7 @@
          "replacement": null
         },
         {
-         "id": "30ad6cea-26f1-43de-b9f5-43f8c5c06f89",
+         "id": "fbfb5924-2809-48af-8565-f8cf8dcca7ec",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -581,7 +569,7 @@
          "replacement": null
         },
         {
-         "id": "4ecaebf4-9e12-4111-9656-14d0f6b87d90",
+         "id": "c47e067d-8ef9-445a-a665-2a982d9ecb94",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -593,7 +581,7 @@
          "replacement": null
         },
         {
-         "id": "88b4cd41-4dcd-4225-a45d-309bdbddb1f3",
+         "id": "1b438d64-4617-4407-81cf-ffab06db2747",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -608,25 +596,18 @@
        "edges": [],
        "context_lines": [
         {
-         "position": 0,
-         "line": "- [2025-07-14] \"We're moving to Denver instead, and I start at a hospital there in July.\"",
-         "mentions": [
-          "Denver"
-         ]
-        },
-        {
-         "position": 3,
-         "line": "- [2026-03-02 18:04] \"Riley\": \"Big news: I'm planning to move to Austin this summer. A hospital there offered me a day-shift position.\"",
-         "mentions": [
-          "Austin"
-         ]
-        },
-        {
-         "position": 5,
+         "position": 2,
          "line": "- [2026-04-14 19:30] \"Riley\": \"Change of plans: I turned down the Austin job. We're moving to Denver instead, and I start at a hospital there in July.\"",
          "mentions": [
           "Austin",
           "Denver"
+         ]
+        },
+        {
+         "position": 5,
+         "line": "- [2026-03-02 18:04] \"Riley\": \"Big news: I'm planning to move to Austin this summer. A hospital there offered me a day-shift position.\"",
+         "mentions": [
+          "Austin"
          ]
         }
        ],
@@ -637,11 +618,13 @@
         "extracted_claims_with_only_the_old_value": 2,
         "of_them_superseded": 0,
         "context_lines_with_only_the_old_value": 1,
-        "context_lines_with_the_new_value": 2,
-        "first_context_line_shows": "new"
+        "context_lines_with_the_new_value": 1,
+        "first_context_line_shows": "new",
+        "old_only_lines_in_the_context": 1,
+        "old_value_shown_before_the_new_value": false
        },
        "question": "Where is Riley moving?",
-       "tokens_used": 700,
+       "tokens_used": 692,
        "token_budget": 4096
       },
       {
@@ -651,7 +634,7 @@
        "probe": "jo-birthday",
        "records": [
         {
-         "id": "13b4a2d1-8137-4fe9-bafc-f4f92f9b124f",
+         "id": "df8aeb76-18b9-4da5-a0c1-060b0656bd58",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -663,7 +646,7 @@
          "replacement": null
         },
         {
-         "id": "c5677cd1-a9ab-4e72-a749-a11d4cf127ee",
+         "id": "64f982c1-52d8-4682-b12a-b80b3fc0434b",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -675,31 +658,19 @@
          "replacement": null
         },
         {
-         "id": "7ad12a6a-b163-4481-af7c-b9ff2f3a047d",
-         "type": "fact",
-         "state": "tentative",
-         "mentions": [
-          "March 3"
-         ],
-         "claim": "Jo \u2192 sister_of \u2192 I",
-         "content": "Also, my sister Jo's birthday is March 3.",
-         "superseded_by": null,
-         "replacement": null
-        },
-        {
-         "id": "cf0a6016-16ad-401f-bb26-f4cdd949598b",
+         "id": "fa0ab962-090f-405d-863e-002a0502aeeb",
          "type": "fact",
          "state": "tentative",
          "mentions": [
           "March 3"
          ],
          "claim": "Jo \u2192 birthday \u2192 March 3",
-         "content": "Also, my sister Jo's birthday is March 3.",
+         "content": "Jo birthday March 3.",
          "superseded_by": null,
          "replacement": null
         },
         {
-         "id": "a23b2cf9-a59f-4a74-8837-0a3b65bd614a",
+         "id": "1588fc7d-1778-4ba0-a23c-3edf80161188",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -711,7 +682,7 @@
          "replacement": null
         },
         {
-         "id": "3d5afafe-f4c5-44f5-9b29-e0de70a42141",
+         "id": "6443429e-da61-4917-8c51-b6410ff965da",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -726,14 +697,14 @@
        "edges": [],
        "context_lines": [
         {
-         "position": 1,
+         "position": 0,
          "line": "- [2026-03-02 18:08] \"Riley\": \"Also, my sister Jo's birthday is March 3. Can you remind me to send her something before then?\"",
          "mentions": [
           "March 3"
          ]
         },
         {
-         "position": 2,
+         "position": 1,
          "line": "- [2026-04-14 19:34] \"Riley\": \"Yes, soon. And sorry, I gave you Jo's birthday wrong last time. It's actually March 13.\"",
          "mentions": [
           "March 13"
@@ -743,15 +714,17 @@
        "context_records": 19,
        "facts": {
         "new_value_active": true,
-        "active_records_with_only_the_old_value": 4,
-        "extracted_claims_with_only_the_old_value": 3,
+        "active_records_with_only_the_old_value": 3,
+        "extracted_claims_with_only_the_old_value": 2,
         "of_them_superseded": 0,
         "context_lines_with_only_the_old_value": 1,
         "context_lines_with_the_new_value": 1,
-        "first_context_line_shows": "old"
+        "first_context_line_shows": "old",
+        "old_only_lines_in_the_context": 1,
+        "old_value_shown_before_the_new_value": true
        },
        "question": "When is Jo's birthday?",
-       "tokens_used": 759,
+       "tokens_used": 751,
        "token_budget": 4096
       },
       {
@@ -761,7 +734,7 @@
        "probe": "coffee",
        "records": [
         {
-         "id": "3f999f6f-6f53-4d9e-b34c-683304aefbd6",
+         "id": "47138120-3650-42e5-ab55-208bbebef01a",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -773,7 +746,7 @@
          "replacement": null
         },
         {
-         "id": "0a50180c-298a-45e6-bda4-816abcf0e3a5",
+         "id": "432d8de4-869f-49d1-888a-4cfc462b898e",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -785,7 +758,7 @@
          "replacement": null
         },
         {
-         "id": "a4de39b7-42a4-4702-96ee-39387d1dc52a",
+         "id": "c42e363a-6169-4cdb-a6be-93f724e38410",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -797,7 +770,7 @@
          "replacement": null
         },
         {
-         "id": "8b3c0cbe-5ebf-41a2-a6bc-ccee1d71244f",
+         "id": "46a4d7b4-2298-48a6-9c7f-34f0816077c1",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -812,14 +785,14 @@
        "edges": [],
        "context_lines": [
         {
-         "position": 0,
+         "position": 4,
          "line": "- [2026-03-20 08:04] \"Riley\": \"Not really. Though honestly, I take oat milk in my coffee every morning.\"",
          "mentions": [
           "oat milk"
          ]
         },
         {
-         "position": 2,
+         "position": 5,
          "line": "- [2026-03-20 08:00] \"Riley\": \"I'm trying to cut back on sugar. I drink my coffee black, always have.\"",
          "mentions": [
           "black"
@@ -839,7 +812,7 @@
         "contradicts_edges": 0
        },
        "question": "How does Riley take coffee?",
-       "tokens_used": 700,
+       "tokens_used": 692,
        "token_budget": 4096
       },
       {
@@ -849,31 +822,7 @@
        "probe": "job",
        "records": [
         {
-         "id": "af75ec9a-e73d-4f4f-944b-beb9e431d6aa",
-         "type": "fact",
-         "state": "tentative",
-         "mentions": [
-          "nurse"
-         ],
-         "claim": "I \u2192 work_schedule \u2192 mostly night shifts",
-         "content": "I work as an ER nurse in Seattle, mostly night shifts.",
-         "superseded_by": null,
-         "replacement": null
-        },
-        {
-         "id": "24fbe4f8-c7a2-48fa-bd90-2cacab67b85c",
-         "type": "fact",
-         "state": "tentative",
-         "mentions": [
-          "nurse"
-         ],
-         "claim": "I \u2192 works_in \u2192 Seattle",
-         "content": "I work as an ER nurse in Seattle, mostly night shifts.",
-         "superseded_by": null,
-         "replacement": null
-        },
-        {
-         "id": "4e06327b-1a33-4150-ac7b-c4a3d57a7ba2",
+         "id": "38d10ce7-3000-4764-89a2-b462c1fe819d",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -885,7 +834,7 @@
          "replacement": null
         },
         {
-         "id": "afc9bd83-f488-4c6c-9db9-1f0e0fdd38bb",
+         "id": "c286dec1-095b-4286-82f9-4c6cdf7ffe8b",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -910,7 +859,7 @@
        "context_records": 19,
        "facts": {
         "active_records_per_value": {
-         "nurse": 4
+         "nurse": 2
         },
         "context_lines_per_value": {
          "nurse": 1
@@ -918,7 +867,7 @@
         "contradicts_edges": 0
        },
        "question": "What does Riley do for work?",
-       "tokens_used": 700,
+       "tokens_used": 692,
        "token_budget": 4096
       }
      ]
@@ -926,7 +875,7 @@
     "chat-v1": {
      "turns": 54,
      "speaker": false,
-     "seconds": 16.515952000001562,
+     "seconds": 10.97917916699953,
      "conversation_sha256": "535a76267ea20486e0d5afdace7c7ff277f649ccc8c4687c448ee169c374af8d",
      "live_calls": 0,
      "cache_hits": 54,
@@ -962,92 +911,92 @@
      },
      "top_results": {
       "job-now": [
-       "fact: Amazing, Dana! 1:58:30 for your first half marathon, and under two hours.",
-       "note: Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and ou",
-       "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite."
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
+       "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite.",
+       "fact: With Sam on nights at Denver Health, would it help to plan shared time around Sam's days off?"
       ],
       "title-now": [
+       "fact: Mel has run like ten half marathons, so she's making me a training plan.",
        "note: Will do. The new job is going well so far. Two weeks in at Brightpath and I already like my team more than the one at No",
-       "note: Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to.",
-       "fact: It sounds like Sam has been a big support through the job change and the training."
+       "note: Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to."
       ],
       "start-date": [
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
        "fact: I start as analytics manager on May 4.",
-       "fact: I start as analytics manager on May 4.",
-       "fact: Amazing, Dana! 1:58:30 for your first half marathon, and under two hours."
+       "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards."
       ],
       "old-manager": [
-       "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards.",
-       "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards.",
+       "fact: I gave notice at Northwind yesterday.",
+       "fact: We use Tableau at Northwind.",
        "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards."
       ],
       "partner-job": [
-       "fact: What a stretch for Melanie: a 1:41 half and an engagement to Tom!",
-       "fact: What a stretch for Melanie: a 1:41 half and an engagement to Tom!",
-       "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite."
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
+       "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite.",
+       "fact: With Sam on nights at Denver Health, would it help to plan shared time around Sam's days off?"
       ],
       "allergy": [
        "fact: Nothing with peanuts though, Sam is allergic to peanuts.",
        "fact: I'll leave peanuts out of suggestions since Sam is allergic.",
-       "decision: I'll leave peanuts out of suggestions since Sam is allergic."
+       "preference: Got it: fish is fine, and peanuts are still out because of Sam's allergy."
       ],
       "dog": [
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
        "fact: Biscuit is a great road trip dog, he's our 3 year old golden.",
-       "fact: Biscuit is a great road trip dog, he's our 3 year old golden.",
-       "fact: Biscuit is a great road trip dog, he's our 3 year old golden."
+       "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite."
       ],
       "niece-name": [
        "fact: A girl named Ivy.",
        "fact: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy.",
-       "fact: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+       "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards."
       ],
       "niece-born": [
        "fact: A girl named Ivy.",
-       "fact: Rachel lives in Portland, so I haven't met Ivy yet.",
-       "fact: Rachel lives in Portland, so I haven't met Ivy yet."
+       "fact: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy.",
+       "fact: I'm planning the Portland trip for July to finally meet Ivy."
       ],
       "sister-city": [
        "fact: Big news: my sister Rachel had her baby last Thursday!",
        "fact: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy.",
-       "fact: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+       "fact: Rachel lives in Portland, so I haven't met Ivy yet."
       ],
       "running-partner": [
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
        "fact: Training update: Mel and I did a 10 mile long run on Saturday.",
-       "fact: Training update: Mel and I did a 10 mile long run on Saturday.",
-       "note: I signed up for the Cherry Creek Half Marathon on May 17! My friend Melanie talked me into it. She's going to be my runn"
+       "fact: Three runs a week on a plan from an experienced runner is a solid base."
       ],
       "race-time": [
-       "fact: I finished the Cherry Creek Half on Sunday in 1:58:30!",
-       "fact: I finished the Cherry Creek Half on Sunday in 1:58:30!",
-       "fact: I signed up for the Cherry Creek Half Marathon on May 17!"
+       "fact: I signed up for the Cherry Creek Half Marathon on May 17!",
+       "fact: In February you signed up for the Cherry Creek Half Marathon on May 17, and you finished it in 1:58:30.",
+       "fact: I finished the Cherry Creek Half on Sunday in 1:58:30!"
       ],
       "coffee": [
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
        "fact: Also I quit coffee last month, so mornings are rough.",
-       "fact: Amazing, Dana! 1:58:30 for your first half marathon, and under two hours.",
-       "note: About 5 miles. Also I quit coffee last month, so mornings are rough. Green tea now."
+       "fact: Amazing, Dana! 1:58:30 for your first half marathon, and under two hours."
       ],
       "diet": [
        "fact: Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian.",
-       "fact: Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian.",
-       "fact: Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian."
+       "fact: Noted: you're pescatarian now rather than vegetarian.",
+       "note: About 5 miles. Also I quit coffee last month, so mornings are rough. Green tea now."
       ],
       "mel-news": [
-       "fact: And she told me after the race that she got engaged to her boyfriend Tom last weekend!",
        "fact: Training update: Mel and I did a 10 mile long run on Saturday.",
-       "fact: Training update: Mel and I did a 10 mile long run on Saturday."
+       "fact: Melanie finished in 1:41, she's so fast.",
+       "fact: And she told me after the race that she got engaged to her boyfriend Tom last weekend!"
       ],
       "trip": [
        "fact: I'm planning the Portland trip for July to finally meet Ivy.",
-       "fact: I'm planning the Portland trip for July to finally meet Ivy.",
-       "fact: Amazing, Dana! 1:58:30 for your first half marathon, and under two hours."
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
+       "fact: Mel has run like ten half marathons, so she's making me a training plan."
       ],
       "overnight": [
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
        "decision: Drive. It's about 18 hours from Denver, so I'll split it over two days.",
-       "fact: Amazing, Dana! 1:58:30 for your first half marathon, and under two hours.",
        "note: Yes, somewhere around Boise for the overnight stop. And remind me, what was I training for back in February? I want to t"
       ],
       "language": [
-       "preference: Understood: Tableau is the standard at Northwind, even though you prefer Python.",
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
        "fact: Understood: Tableau is the standard at Northwind, even though you prefer Python.",
        "preference: Their team uses Python for everything, which I love."
       ]
@@ -1059,30 +1008,30 @@
      "extraction_requests": 14,
      "extraction_tokens": 84400,
      "claims_per_turn": 1.5714285714285714,
-     "claims_repeating_text": 10,
+     "claims_repeating_text": 0,
      "claims_repeating_triple": 0,
-     "claims_whole_message": 7,
-     "nodes_per_turn": 4.785714285714286,
-     "edges_per_turn": 2.642857142857143,
-     "user_claims_named_owner": 0,
-     "user_claims_first_person": 15,
-     "pronoun_entities": 6,
-     "entities_without_link": 9,
+     "claims_whole_message": 2,
+     "nodes_per_turn": 4.5,
+     "edges_per_turn": 6.0,
+     "user_claims_named_owner": 11,
+     "user_claims_first_person": 4,
+     "pronoun_entities": 2,
+     "entities_without_link": 0,
      "key_entities_found": 9,
      "key_entities_split": 0,
      "key_entities_missing": 0,
-     "key_links_linked": 1,
-     "key_links_via_pronoun": 2,
-     "key_links_not_linked": 6,
+     "key_links_linked": 4,
+     "key_links_via_pronoun": 0,
+     "key_links_not_linked": 5,
      "answers_in_context": 7,
-     "answers_in_top3": 5,
+     "answers_in_top3": 7,
      "answers_in_top5": 7,
      "stale_in_context": 0,
      "repeated_records_in_contexts": 0,
-     "answer_rank:cities": 4,
-     "answer_rank:learning": 2,
-     "answer_rank:work-languages": 2,
-     "answer_rank:travel": 5,
+     "answer_rank:cities": 2,
+     "answer_rank:learning": 3,
+     "answer_rank:work-languages": 1,
+     "answer_rank:travel": 2,
      "answer_rank:allergy": 1,
      "answer_rank:shipments": 1,
      "answer_rank:reviewer": 1
@@ -1091,15 +1040,15 @@
      "extraction_requests": 16,
      "extraction_tokens": 96475,
      "claims_per_turn": 1.25,
-     "claims_repeating_text": 7,
+     "claims_repeating_text": 0,
      "claims_repeating_triple": 0,
      "claims_whole_message": 0,
      "nodes_per_turn": 3.375,
-     "edges_per_turn": 2.0,
+     "edges_per_turn": 3.75,
      "user_claims_named_owner": 12,
      "user_claims_first_person": 1,
      "pronoun_entities": 2,
-     "entities_without_link": 5,
+     "entities_without_link": 0,
      "key_entities_found": 2,
      "key_entities_split": 0,
      "key_entities_missing": 0,
@@ -1107,65 +1056,65 @@
      "key_links_via_pronoun": 0,
      "key_links_not_linked": 0,
      "answers_in_context": 4,
-     "answers_in_top3": 1,
-     "answers_in_top5": 2,
+     "answers_in_top3": 3,
+     "answers_in_top5": 3,
      "stale_in_context": 2,
      "repeated_records_in_contexts": 0,
-     "answer_rank:move-city": 8,
-     "answer_rank:jo-birthday": 4,
+     "answer_rank:move-city": 3,
+     "answer_rank:jo-birthday": 2,
      "answer_rank:coffee": null,
-     "answer_rank:job": 2,
+     "answer_rank:job": 1,
      "old_value_shown_first": 1,
      "old_only_context_lines": 2,
-     "old_records_still_active": 7,
-     "old_claims_not_retired": 5,
+     "old_records_still_active": 6,
+     "old_claims_not_retired": 4,
      "new_value_active": 2
     },
     "chat-v1": {
      "extraction_requests": 54,
      "extraction_tokens": 335364,
-     "claims_per_turn": 2.074074074074074,
-     "claims_repeating_text": 44,
+     "claims_per_turn": 2.0555555555555554,
+     "claims_repeating_text": 0,
      "claims_repeating_triple": 5,
-     "claims_whole_message": 12,
-     "nodes_per_turn": 4.537037037037037,
-     "edges_per_turn": 3.1481481481481484,
-     "user_claims_named_owner": 0,
-     "user_claims_first_person": 40,
-     "pronoun_entities": 36,
-     "entities_without_link": 11,
+     "claims_whole_message": 5,
+     "nodes_per_turn": 4.148148148148148,
+     "edges_per_turn": 6.055555555555555,
+     "user_claims_named_owner": 36,
+     "user_claims_first_person": 3,
+     "pronoun_entities": 15,
+     "entities_without_link": 0,
      "key_entities_found": 15,
      "key_entities_split": 2,
      "key_entities_missing": 0,
-     "key_links_linked": 4,
-     "key_links_via_pronoun": 10,
+     "key_links_linked": 14,
+     "key_links_via_pronoun": 0,
      "key_links_not_linked": 0,
      "answers_in_context": 17,
      "answers_in_top3": 14,
      "answers_in_top5": 15,
      "stale_in_context": 3,
-     "repeated_records_in_contexts": 72,
-     "answer_rank:job-now": 10,
-     "answer_rank:title-now": 9,
-     "answer_rank:start-date": 1,
-     "answer_rank:old-manager": 1,
-     "answer_rank:partner-job": 3,
+     "repeated_records_in_contexts": 18,
+     "answer_rank:job-now": 7,
+     "answer_rank:title-now": 10,
+     "answer_rank:start-date": 2,
+     "answer_rank:old-manager": 3,
+     "answer_rank:partner-job": 2,
      "answer_rank:allergy": 1,
      "answer_rank:dog": 1,
      "answer_rank:niece-name": 1,
      "answer_rank:niece-born": null,
-     "answer_rank:sister-city": 4,
-     "answer_rank:running-partner": 1,
-     "answer_rank:race-time": 1,
-     "answer_rank:coffee": 3,
+     "answer_rank:sister-city": 3,
+     "answer_rank:running-partner": 2,
+     "answer_rank:race-time": 2,
+     "answer_rank:coffee": 4,
      "answer_rank:diet": 1,
-     "answer_rank:mel-news": 1,
+     "answer_rank:mel-news": 3,
      "answer_rank:trip": 1,
      "answer_rank:overnight": 3,
-     "answer_rank:language": 1
+     "answer_rank:language": 2
     }
    },
-   "seconds": 49.999437541999214
+   "seconds": 18.20165483299934
   },
   "store-extract": {
    "backend": "duckdb",
@@ -1177,52 +1126,52 @@
    "session_ids": false,
    "calls": 75,
    "nodes": 377,
-   "edges": 264,
+   "edges": 368,
    "mode": "replay",
    "model": "deepseek-v4.1-flash:cloud",
    "server_version": "0.40.6",
    "live_calls": 0,
    "cache_hits": 75,
    "unreproduced": 0,
-   "store_seconds": 8.422088416999031,
-   "extract_seconds": 17.38794666600006,
-   "retrieve_seconds": 1.5652051249999204,
+   "store_seconds": 6.207754708004359,
+   "extract_seconds": 12.440460124998935,
+   "retrieve_seconds": 1.5153062919998774,
    "measures": {
     "nodes_per_store_call": 5.026666666666666,
-    "edges_per_store_call": 3.52,
-    "context_tokens_mean": 3694.705882352941,
+    "edges_per_store_call": 4.906666666666666,
+    "context_tokens_mean": 3200.705882352941,
     "key_entities_found": 8,
-    "questions_with_a_graph_candidate": 13,
+    "questions_with_a_graph_candidate": 17,
     "questions_with_a_word_candidate": 17,
     "answers_in_top1": 12,
-    "answers_in_top3": 12,
+    "answers_in_top3": 13,
     "answers_in_context": 17,
-    "mean_reciprocal_rank": 0.7281842148624156,
-    "stale_above_answer": 2,
+    "mean_reciprocal_rank": 0.7609477124183006,
+    "stale_above_answer": 1,
     "stale_in_context": 5,
-    "repeated_records_in_contexts": 340,
+    "repeated_records_in_contexts": 102,
     "answer_rank:rust": 1,
-    "answer_rank:japan-cities": 51,
+    "answer_rank:japan-cities": 30,
     "answer_rank:cutover": 1,
-    "answer_rank:japan-dates": 10,
+    "answer_rank:japan-dates": 2,
     "answer_rank:pair-programming": 1,
-    "answer_rank:observability": 12,
+    "answer_rank:observability": 9,
     "answer_rank:on-call": 1,
     "answer_rank:manager": 1,
     "answer_rank:allergy": 1,
-    "answer_rank:dog": 30,
+    "answer_rank:dog": 24,
     "answer_rank:japan-budget": 1,
     "answer_rank:dashboard": 1,
     "answer_rank:table-size": 1,
     "answer_rank:timescale": 1,
     "answer_rank:gravel-race": 1,
-    "answer_rank:flights": 7,
+    "answer_rank:flights": 4,
     "answer_rank:sql-style": 1,
     "extraction_requests": 75,
     "extraction_tokens": 462676,
     "extractions_incomplete": 0,
     "entities_made": 132,
-    "graph_candidates_per_question": 96.52941176470588
+    "graph_candidates_per_question": 118.58823529411765
    },
    "questions": [
     {
@@ -1232,35 +1181,35 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 180,
-     "graph_candidates": 0,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 162,
+     "graph_candidates": 150,
      "top_results": [
       "fact: Alex is learning Rust on weekends and is reading Rust for Rustaceans.",
-      "fact: Alex is learning Rust on weekends and is reading Rust for Rustaceans.",
+      "preference: Alex uses Neovim as the main editor. Alex switched from VS Code in August 2026.",
       "preference: Alex likes code examples in Go and TypeScript and dislikes Java examples.",
       "preference: Alex likes code examples in Go and TypeScript and dislikes Java examples.",
-      "preference: Alex likes code examples in Go and TypeScript and dislikes Java examples."
+      "instruction: When reviewing Alex's code, point out race conditions and unchecked errors first."
      ]
     },
     {
      "id": "japan-cities",
      "question": "which cities will Alex and jordan visit in Japan?",
-     "answer_rank": 51,
+     "answer_rank": 30,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 193,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 177,
      "graph_candidates": 150,
      "top_results": [
+      "fact: The Japan trip budget is 8,500 USD, not including flights.",
       "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season."
+      "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
      ]
     },
     {
@@ -1272,37 +1221,37 @@
       "2026-10-24"
      ],
      "stale_above_answer": false,
-     "tokens_used": 3746,
-     "repeated_records": 20,
-     "lexical_candidates": 135,
-     "graph_candidates": 0,
+     "tokens_used": 3252,
+     "repeated_records": 6,
+     "lexical_candidates": 101,
+     "graph_candidates": 49,
      "top_results": [
       "decision: Correction: the production cutover moved from 2026-10-24 to Saturday 2026-10-31 at 02:00 UTC after Sam found the replica",
       "fact: Production cutover is scheduled for Saturday 2026-10-24 at 02:00 UTC.",
       "event: Production cutover is scheduled for Saturday 2026-10-24 at 02:00 UTC.",
-      "fact: Correction: the production cutover moved from 2026-10-24 to Saturday 2026-10-31 at 02:00 UTC after Sam found the replica",
-      "fact: Correction: the production cutover moved from 2026-10-24 to Saturday 2026-10-31 at 02:00 UTC after Sam found the replica"
+      "event: Correction: the production cutover moved from 2026-10-24 to Saturday 2026-10-31 at 02:00 UTC after Sam found the replica",
+      "preference: I want the cutover moved one week."
      ]
     },
     {
      "id": "japan-dates",
      "question": "When is the Japan trip?",
-     "answer_rank": 10,
+     "answer_rank": 2,
      "answer_in_context": true,
      "stale_in_context": [
       "April 2027 for the cherry blossom"
      ],
-     "stale_above_answer": true,
-     "tokens_used": 3746,
-     "repeated_records": 20,
-     "lexical_candidates": 135,
-     "graph_candidates": 83,
+     "stale_above_answer": false,
+     "tokens_used": 3252,
+     "repeated_records": 6,
+     "lexical_candidates": 102,
+     "graph_candidates": 90,
      "top_results": [
       "fact: The Japan trip budget is 8,500 USD, not including flights.",
-      "fact: The Japan trip budget is 8,500 USD, not including flights.",
+      "fact: Correction: the Japan trip moved earlier, to 2027-03-28 through 2027-04-11, because the blossoms peak in late March.",
       "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season."
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season."
      ]
     },
     {
@@ -1314,37 +1263,37 @@
       "likes pair programming"
      ],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 166,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 149,
      "graph_candidates": 150,
      "top_results": [
       "fact: Correction: pair programming drains Alex.",
       "preference: Alex likes pair programming and does it most Thursdays.",
       "preference: Alex likes pair programming and does it most Thursdays.",
-      "fact: Alex likes pair programming and does it most Thursdays.",
-      "preference: Correction: pair programming drains Alex. Alex prefers short 30 minute bursts and not full sessions."
+      "preference: Correction: pair programming drains Alex. Alex prefers short 30 minute bursts and not full sessions.",
+      "preference: Alex writes table-driven tests in Go and wants subtests named after the scenario."
      ]
     },
     {
      "id": "observability",
      "question": "Is Alex leading the observability rewrite?",
-     "answer_rank": 12,
+     "answer_rank": 9,
      "answer_in_context": true,
      "stale_in_context": [
       "first declined"
      ],
      "stale_above_answer": true,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 219,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 190,
      "graph_candidates": 150,
      "top_results": [
       "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
-      "fact: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
       "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
-      "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
-      "fact: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend."
+      "preference: I would like you to lead the observability rewrite next quarter.",
+      "decision: Alex first declined to lead the observability rewrite, citing the migration workload.",
+      "decision: Alex first declined to lead the observability rewrite, citing the migration workload."
      ]
     },
     {
@@ -1356,16 +1305,16 @@
       "Alex is on call the week of 2026-10-26"
      ],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 172,
-     "graph_candidates": 0,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 127,
+     "graph_candidates": 42,
      "top_results": [
       "fact: Priya Shah is now on call the week of 2026-10-26.",
+      "fact: Priya Shah is now on call the week of 2026-10-26. Alex covers the week of 2026-11-02.",
       "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
       "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
-      "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
-      "fact: Priya Shah is now on call the week of 2026-10-26. Alex covers the week of 2026-11-02."
+      "fact: Alex covers the week of 2026-11-02."
      ]
     },
     {
@@ -1375,14 +1324,14 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 57,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 46,
      "graph_candidates": 150,
      "top_results": [
       "fact: Alex's manager is Dana Okafor, VP of Engineering.",
       "fact: Alex's manager is Dana Okafor, VP of Engineering.",
-      "fact: Alex's manager is Dana Okafor, VP of Engineering.",
+      "decision: Alex asked to swap the on-call week with Priya so the cutover is not during Alex's shift. Priya agreed.",
       "decision: Alex agreed to use pg_partman for partition management.",
       "decision: Alex agreed to use pg_partman for partition management."
      ]
@@ -1394,34 +1343,34 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 113,
-     "graph_candidates": 82,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 88,
+     "graph_candidates": 86,
      "top_results": [
       "fact: Jordan is allergic to shellfish.",
       "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
-      "fact: Alex's partner is Jordan, a nurse practitioner.",
-      "fact: Alex's partner is Jordan, a nurse practitioner.",
-      "fact: Because of Jordan's shellfish allergy, Alex needs a Japanese allergy card for restaurants."
+      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+      "fact: Because of Jordan's shellfish allergy, Alex needs a Japanese allergy card for restaurants.",
+      "fact: Alex's partner is Jordan, a nurse practitioner."
      ]
     },
     {
      "id": "dog",
      "question": "What is Alex's dog called?",
-     "answer_rank": 30,
+     "answer_rank": 24,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 55,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 44,
      "graph_candidates": 150,
      "top_results": [
       "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
+      "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
       "fact: Alex's partner is Jordan, a nurse practitioner.",
-      "fact: Alex's partner is Jordan, a nurse practitioner.",
-      "fact: Alex is learning Rust on weekends and is reading Rust for Rustaceans.",
+      "preference: Alex reads science fiction. The current book is Children of Time.",
       "fact: Alex is learning Rust on weekends and is reading Rust for Rustaceans."
      ]
     },
@@ -1432,16 +1381,16 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3713,
-     "repeated_records": 20,
-     "lexical_candidates": 134,
-     "graph_candidates": 83,
+     "tokens_used": 3219,
+     "repeated_records": 6,
+     "lexical_candidates": 101,
+     "graph_candidates": 90,
      "top_results": [
       "fact: The Japan trip budget is 8,500 USD, not including flights.",
       "fact: The Japan trip budget is 8,500 USD, not including flights.",
-      "fact: The Japan trip budget is 8,500 USD, not including flights.",
+      "fact: Correction: the Japan trip moved earlier, to 2027-03-28 through 2027-04-11, because the blossoms peak in late March.",
       "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season."
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
      ]
     },
     {
@@ -1451,16 +1400,16 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 169,
-     "graph_candidates": 43,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 137,
+     "graph_candidates": 64,
      "top_results": [
       "fact: The Datadog dashboard for this work is called Shipment Lookup SLO.",
       "fact: The Datadog dashboard for this work is called Shipment Lookup SLO.",
-      "fact: The Datadog dashboard for this work is called Shipment Lookup SLO.",
+      "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
       "instruction: Please have Sam review the migration runbook before Friday.",
-      "decision: Please have Sam review the migration runbook before Friday."
+      "fact: Northwind runs on AWS: ECS Fargate for services, RDS Postgres for data, SQS for event delivery, and Datadog for observab"
      ]
     },
     {
@@ -1470,16 +1419,16 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3713,
-     "repeated_records": 20,
-     "lexical_candidates": 123,
-     "graph_candidates": 0,
+     "tokens_used": 3219,
+     "repeated_records": 6,
+     "lexical_candidates": 87,
+     "graph_candidates": 95,
      "top_results": [
       "fact: The shipment_events table has 2.3 billion rows and grows by about 40 million rows per day.",
-      "fact: The shipment_events table has 2.3 billion rows and grows by about 40 million rows per day.",
-      "fact: The shipment_events table has 2.3 billion rows and grows by about 40 million rows per day.",
       "decision: Northwind decided to migrate shipment_events from one Postgres 14 instance to Postgres 16 with native range partitioning",
-      "decision: Northwind decided to migrate shipment_events from one Postgres 14 instance to Postgres 16 with native range partitioning"
+      "fact: The shipment_events table has 2.3 billion rows and grows by about 40 million rows per day.",
+      "fact: A runaway autovacuum on shipment_events caused a 22 minute degradation on 2026-10-02.",
+      "fact: Assistant drafted the cutover checklist: freeze writes, run final sync, verify row counts, flip the view, watch Datadog "
      ]
     },
     {
@@ -1489,16 +1438,16 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 169,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 154,
      "graph_candidates": 150,
      "top_results": [
       "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
-      "fact: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
       "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
       "fact: TimescaleDB gives compression but needs extra operations work.",
-      "fact: TimescaleDB gives compression but needs extra operations work."
+      "decision: I think we should look at TimescaleDB instead of native partitioning.",
+      "fact: Correction: pair programming drains Alex."
      ]
     },
     {
@@ -1508,35 +1457,35 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 185,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 168,
      "graph_candidates": 150,
      "top_results": [
       "fact: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07.",
-      "fact: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07.",
       "event: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07.",
       "fact: Alex rides gravel bikes on weekends, about 60 miles a week.",
-      "fact: Alex rides gravel bikes on weekends, about 60 miles a week."
+      "fact: Alex rides gravel bikes on weekends, about 60 miles a week.",
+      "fact: Alex is learning Rust on weekends and is reading Rust for Rustaceans."
      ]
     },
     {
      "id": "flights",
      "question": "Which airline did Alex book for the Japan trip?",
-     "answer_rank": 7,
+     "answer_rank": 4,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 220,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 197,
      "graph_candidates": 150,
      "top_results": [
       "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "fact: The Japan trip budget is 8,500 USD, not including flights.",
       "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
-      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
-      "fact: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
-      "fact: The Japan trip budget is 8,500 USD, not including flights."
+      "fact: Alex booked United flights from Denver to Tokyo Haneda departing 2027-03-28.",
+      "event: Alex booked United flights from Denver to Tokyo Haneda departing 2027-03-28."
      ]
     },
     {
@@ -1546,20 +1495,20 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3684,
-     "repeated_records": 20,
-     "lexical_candidates": 163,
+     "tokens_used": 3190,
+     "repeated_records": 6,
+     "lexical_candidates": 147,
      "graph_candidates": 150,
      "top_results": [
       "preference: Alex formats SQL with lowercase keywords and one clause per line.",
       "preference: Alex formats SQL with lowercase keywords and one clause per line.",
-      "preference: Alex formats SQL with lowercase keywords and one clause per line.",
-      "fact: Alex formats SQL with lowercase keywords and one clause per line.",
-      "fact: Correction: pair programming drains Alex."
+      "preference: Alex likes pair programming and does it most Thursdays.",
+      "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
+      "preference: Alex went back to VS Code for the Go debugger but keeps Neovim for quick edits and writing."
      ]
     }
    ],
-   "seconds": 27.665177208997193
+   "seconds": 20.379337917001976
   }
  },
  "measures": {
@@ -1568,74 +1517,74 @@
    "store/edges_per_store_call": 0.0,
    "store/context_tokens_mean": 1785.7058823529412,
    "store-extract/nodes_per_store_call": 5.026666666666666,
-   "store-extract/edges_per_store_call": 3.52,
-   "store-extract/context_tokens_mean": 3694.705882352941,
+   "store-extract/edges_per_store_call": 4.906666666666666,
+   "store-extract/context_tokens_mean": 3200.705882352941,
    "store-extract/extraction_requests": 75,
    "store-extract/extraction_tokens": 462676,
    "store-extract/extractions_incomplete": 0,
    "defects-v1/extraction_requests": 14,
    "defects-v1/extraction_tokens": 84400,
    "defects-v1/claims_per_turn": 1.5714285714285714,
-   "defects-v1/claims_repeating_text": 10,
+   "defects-v1/claims_repeating_text": 0,
    "defects-v1/claims_repeating_triple": 0,
-   "defects-v1/claims_whole_message": 7,
-   "defects-v1/nodes_per_turn": 4.785714285714286,
-   "defects-v1/edges_per_turn": 2.642857142857143,
+   "defects-v1/claims_whole_message": 2,
+   "defects-v1/nodes_per_turn": 4.5,
+   "defects-v1/edges_per_turn": 6.0,
    "corrections-v1/extraction_requests": 16,
    "corrections-v1/extraction_tokens": 96475,
    "corrections-v1/claims_per_turn": 1.25,
-   "corrections-v1/claims_repeating_text": 7,
+   "corrections-v1/claims_repeating_text": 0,
    "corrections-v1/claims_repeating_triple": 0,
    "corrections-v1/claims_whole_message": 0,
    "corrections-v1/nodes_per_turn": 3.375,
-   "corrections-v1/edges_per_turn": 2.0,
+   "corrections-v1/edges_per_turn": 3.75,
    "chat-v1/extraction_requests": 54,
    "chat-v1/extraction_tokens": 335364,
-   "chat-v1/claims_per_turn": 2.074074074074074,
-   "chat-v1/claims_repeating_text": 44,
+   "chat-v1/claims_per_turn": 2.0555555555555554,
+   "chat-v1/claims_repeating_text": 0,
    "chat-v1/claims_repeating_triple": 5,
-   "chat-v1/claims_whole_message": 12,
-   "chat-v1/nodes_per_turn": 4.537037037037037,
-   "chat-v1/edges_per_turn": 3.1481481481481484
+   "chat-v1/claims_whole_message": 5,
+   "chat-v1/nodes_per_turn": 4.148148148148148,
+   "chat-v1/edges_per_turn": 6.055555555555555
   },
   "meaning": {
    "store/key_entities_found": 0,
    "store/questions_with_a_graph_candidate": 0,
    "store/questions_with_a_word_candidate": 17,
    "store-extract/key_entities_found": 8,
-   "store-extract/questions_with_a_graph_candidate": 13,
+   "store-extract/questions_with_a_graph_candidate": 17,
    "store-extract/questions_with_a_word_candidate": 17,
    "store-extract/entities_made": 132,
-   "store-extract/graph_candidates_per_question": 96.52941176470588,
-   "defects-v1/user_claims_named_owner": 0,
-   "defects-v1/user_claims_first_person": 15,
-   "defects-v1/pronoun_entities": 6,
-   "defects-v1/entities_without_link": 9,
+   "store-extract/graph_candidates_per_question": 118.58823529411765,
+   "defects-v1/user_claims_named_owner": 11,
+   "defects-v1/user_claims_first_person": 4,
+   "defects-v1/pronoun_entities": 2,
+   "defects-v1/entities_without_link": 0,
    "defects-v1/key_entities_found": 9,
    "defects-v1/key_entities_split": 0,
    "defects-v1/key_entities_missing": 0,
-   "defects-v1/key_links_linked": 1,
-   "defects-v1/key_links_via_pronoun": 2,
-   "defects-v1/key_links_not_linked": 6,
+   "defects-v1/key_links_linked": 4,
+   "defects-v1/key_links_via_pronoun": 0,
+   "defects-v1/key_links_not_linked": 5,
    "corrections-v1/user_claims_named_owner": 12,
    "corrections-v1/user_claims_first_person": 1,
    "corrections-v1/pronoun_entities": 2,
-   "corrections-v1/entities_without_link": 5,
+   "corrections-v1/entities_without_link": 0,
    "corrections-v1/key_entities_found": 2,
    "corrections-v1/key_entities_split": 0,
    "corrections-v1/key_entities_missing": 0,
    "corrections-v1/key_links_linked": 1,
    "corrections-v1/key_links_via_pronoun": 0,
    "corrections-v1/key_links_not_linked": 0,
-   "chat-v1/user_claims_named_owner": 0,
-   "chat-v1/user_claims_first_person": 40,
-   "chat-v1/pronoun_entities": 36,
-   "chat-v1/entities_without_link": 11,
+   "chat-v1/user_claims_named_owner": 36,
+   "chat-v1/user_claims_first_person": 3,
+   "chat-v1/pronoun_entities": 15,
+   "chat-v1/entities_without_link": 0,
    "chat-v1/key_entities_found": 15,
    "chat-v1/key_entities_split": 2,
    "chat-v1/key_entities_missing": 0,
-   "chat-v1/key_links_linked": 4,
-   "chat-v1/key_links_via_pronoun": 10,
+   "chat-v1/key_links_linked": 14,
+   "chat-v1/key_links_via_pronoun": 0,
    "chat-v1/key_links_not_linked": 0
   },
   "results": {
@@ -1664,78 +1613,78 @@
    "store/answer_rank:flights": 3,
    "store/answer_rank:sql-style": 1,
    "store-extract/answers_in_top1": 12,
-   "store-extract/answers_in_top3": 12,
+   "store-extract/answers_in_top3": 13,
    "store-extract/answers_in_context": 17,
-   "store-extract/mean_reciprocal_rank": 0.7281842148624156,
-   "store-extract/stale_above_answer": 2,
+   "store-extract/mean_reciprocal_rank": 0.7609477124183006,
+   "store-extract/stale_above_answer": 1,
    "store-extract/stale_in_context": 5,
-   "store-extract/repeated_records_in_contexts": 340,
+   "store-extract/repeated_records_in_contexts": 102,
    "store-extract/answer_rank:rust": 1,
-   "store-extract/answer_rank:japan-cities": 51,
+   "store-extract/answer_rank:japan-cities": 30,
    "store-extract/answer_rank:cutover": 1,
-   "store-extract/answer_rank:japan-dates": 10,
+   "store-extract/answer_rank:japan-dates": 2,
    "store-extract/answer_rank:pair-programming": 1,
-   "store-extract/answer_rank:observability": 12,
+   "store-extract/answer_rank:observability": 9,
    "store-extract/answer_rank:on-call": 1,
    "store-extract/answer_rank:manager": 1,
    "store-extract/answer_rank:allergy": 1,
-   "store-extract/answer_rank:dog": 30,
+   "store-extract/answer_rank:dog": 24,
    "store-extract/answer_rank:japan-budget": 1,
    "store-extract/answer_rank:dashboard": 1,
    "store-extract/answer_rank:table-size": 1,
    "store-extract/answer_rank:timescale": 1,
    "store-extract/answer_rank:gravel-race": 1,
-   "store-extract/answer_rank:flights": 7,
+   "store-extract/answer_rank:flights": 4,
    "store-extract/answer_rank:sql-style": 1,
    "defects-v1/answers_in_context": 7,
-   "defects-v1/answers_in_top3": 5,
+   "defects-v1/answers_in_top3": 7,
    "defects-v1/answers_in_top5": 7,
    "defects-v1/stale_in_context": 0,
    "defects-v1/repeated_records_in_contexts": 0,
-   "defects-v1/answer_rank:cities": 4,
-   "defects-v1/answer_rank:learning": 2,
-   "defects-v1/answer_rank:work-languages": 2,
-   "defects-v1/answer_rank:travel": 5,
+   "defects-v1/answer_rank:cities": 2,
+   "defects-v1/answer_rank:learning": 3,
+   "defects-v1/answer_rank:work-languages": 1,
+   "defects-v1/answer_rank:travel": 2,
    "defects-v1/answer_rank:allergy": 1,
    "defects-v1/answer_rank:shipments": 1,
    "defects-v1/answer_rank:reviewer": 1,
    "corrections-v1/answers_in_context": 4,
-   "corrections-v1/answers_in_top3": 1,
-   "corrections-v1/answers_in_top5": 2,
+   "corrections-v1/answers_in_top3": 3,
+   "corrections-v1/answers_in_top5": 3,
    "corrections-v1/stale_in_context": 2,
    "corrections-v1/repeated_records_in_contexts": 0,
-   "corrections-v1/answer_rank:move-city": 8,
-   "corrections-v1/answer_rank:jo-birthday": 4,
+   "corrections-v1/answer_rank:move-city": 3,
+   "corrections-v1/answer_rank:jo-birthday": 2,
    "corrections-v1/answer_rank:coffee": null,
-   "corrections-v1/answer_rank:job": 2,
+   "corrections-v1/answer_rank:job": 1,
    "corrections-v1/old_value_shown_first": 1,
    "corrections-v1/old_only_context_lines": 2,
-   "corrections-v1/old_records_still_active": 7,
-   "corrections-v1/old_claims_not_retired": 5,
+   "corrections-v1/old_records_still_active": 6,
+   "corrections-v1/old_claims_not_retired": 4,
    "corrections-v1/new_value_active": 2,
    "chat-v1/answers_in_context": 17,
    "chat-v1/answers_in_top3": 14,
    "chat-v1/answers_in_top5": 15,
    "chat-v1/stale_in_context": 3,
-   "chat-v1/repeated_records_in_contexts": 72,
-   "chat-v1/answer_rank:job-now": 10,
-   "chat-v1/answer_rank:title-now": 9,
-   "chat-v1/answer_rank:start-date": 1,
-   "chat-v1/answer_rank:old-manager": 1,
-   "chat-v1/answer_rank:partner-job": 3,
+   "chat-v1/repeated_records_in_contexts": 18,
+   "chat-v1/answer_rank:job-now": 7,
+   "chat-v1/answer_rank:title-now": 10,
+   "chat-v1/answer_rank:start-date": 2,
+   "chat-v1/answer_rank:old-manager": 3,
+   "chat-v1/answer_rank:partner-job": 2,
    "chat-v1/answer_rank:allergy": 1,
    "chat-v1/answer_rank:dog": 1,
    "chat-v1/answer_rank:niece-name": 1,
    "chat-v1/answer_rank:niece-born": null,
-   "chat-v1/answer_rank:sister-city": 4,
-   "chat-v1/answer_rank:running-partner": 1,
-   "chat-v1/answer_rank:race-time": 1,
-   "chat-v1/answer_rank:coffee": 3,
+   "chat-v1/answer_rank:sister-city": 3,
+   "chat-v1/answer_rank:running-partner": 2,
+   "chat-v1/answer_rank:race-time": 2,
+   "chat-v1/answer_rank:coffee": 4,
    "chat-v1/answer_rank:diet": 1,
-   "chat-v1/answer_rank:mel-news": 1,
+   "chat-v1/answer_rank:mel-news": 3,
    "chat-v1/answer_rank:trip": 1,
    "chat-v1/answer_rank:overnight": 3,
-   "chat-v1/answer_rank:language": 1
+   "chat-v1/answer_rank:language": 2
   }
  }
 }

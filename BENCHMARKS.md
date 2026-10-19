@@ -1671,7 +1671,12 @@ each answer) are listed and never fail.
   with a measure at its limit deserves a second run, and a live fail by one is
   worth repeating once.
 
-Baseline on 2026-10-19 (`benchmarks/fixtures/fast-cycle/baseline-main.json`,
+The table below is the baseline before 0.16.0a3 (the engine tree of
+`origin/main` at `0622c9f9`, with the structure options off). Since the alpha
+channel turned them on, `benchmarks/fixtures/fast-cycle/baseline-main.json` is a
+replay on the tree of the default flip (see "Structure options on by default"
+above), and 49 of its measures differ from this table on purpose. The earlier
+baseline on 2026-10-19 (`baseline-main.json`,
 the engine tree of `origin/main` at `0622c9f9`, DuckDB, from a replay of the
 committed cache; its 132 store and ingest measures equal the baseline taken at
 `7f9ce556`, so #296, #297 and #299 moved none of them with their options off,
