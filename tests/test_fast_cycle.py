@@ -25,8 +25,12 @@ def test_the_store_fixture_has_the_memories_and_the_three_questions_of_the_issue
     assert questions["cutover"]["any_of"] == ["2026-10-31"] and questions["cutover"]["stale"] == ["2026-10-24"]
 
 
-def test_every_answer_and_stale_term_of_the_store_fixture_is_in_a_memory():
-    fixture = store.load_fixture()
+HELDOUT = store.FIXTURES / "store-heldout-v1.json"
+
+
+@pytest.mark.parametrize("path", [store.DEFAULT_FIXTURE, HELDOUT], ids=["store-v1", "store-heldout-v1"])
+def test_every_answer_and_stale_term_of_the_store_fixture_is_in_a_memory(path):
+    fixture = store.load_fixture(path)
     texts = [memory["content"].casefold() for memory in fixture["memories"]]
     for question in fixture["key"]["questions"]:
         terms = [term.casefold() for term in question.get("all_of") or question["any_of"]]
@@ -36,6 +40,15 @@ def test_every_answer_and_stale_term_of_the_store_fixture_is_in_a_memory():
             # The stale value is held by a memory that does not hold the answer, or the question cannot test it.
             assert any(stale.casefold() in text and not holds(term in text for term in terms)
                        for text in texts), (question["id"], stale)
+
+
+def test_the_heldout_fixture_asks_other_questions_of_the_same_memories():
+    fixture, heldout = store.load_fixture(), store.load_fixture(HELDOUT)
+    assert heldout["memories"] == fixture["memories"] and len(heldout["key"]["questions"]) == 28
+    asked = {question["question"].casefold() for question in fixture["key"]["questions"]}
+    assert not asked & {question["question"].casefold() for question in heldout["key"]["questions"]}
+    assert not {question["id"] for question in fixture["key"]["questions"]} & {
+        question["id"] for question in heldout["key"]["questions"]}
 
 
 def test_a_store_fixture_question_needs_all_of_or_any_of(tmp_path):
@@ -323,7 +336,10 @@ def test_the_markdown_report_groups_the_measures_and_times_each_stage():
 def test_run_writes_both_reports_and_exits_with_the_verdict(tmp_path, monkeypatch, capsys):
     stages = {}
 
+    store_options = []
+
     async def fake_store(work, **options):
+        store_options.append(options)
         return stages["store"]
 
     async def fake_ingest(work, **options):
@@ -351,5 +367,8 @@ def test_run_writes_both_reports_and_exits_with_the_verdict(tmp_path, monkeypatc
     assert "FAIL: Answers ranked in the top 3 [store]: 14 to 12 (-2)" in capsys.readouterr().out
     assert cycle.main([*command, "--accept", "answers_in_top3"]) == 0
     assert cycle.main(command[:-2] + ["--baseline", "none"]) == 0
+    assert store_options[-1]["fixture_path"] == store.DEFAULT_FIXTURE
+    assert cycle.main([*command[:-2], "--baseline", "none", "--store-fixture", str(HELDOUT)]) == 0
+    assert store_options[-1]["fixture_path"] == HELDOUT
     with pytest.raises(SystemExit):
         cycle.main([*command[:-2], "--baseline", str(tmp_path / "missing.json")])

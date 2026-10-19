@@ -10,6 +10,7 @@ explicit indexing step is needed for graph nodes. Non-node content
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 import asyncpg
 
@@ -19,6 +20,21 @@ logger = logging.getLogger(__name__)
 # indexed count and one check per hit, so a pasted paragraph must not multiply
 # the work without bound; 32 terms covers any question.
 MAX_QUERY_TERMS = 32
+
+# Term weights (``term_weights=True``). Let N be the number of searched
+# documents and df the number that hold a query term. The term weighs ln(N / df).
+# A document's evidence is the total weight of the query terms it holds, which
+# is ln(N / c) for c, the number of documents expected to hold those terms by
+# chance (the document frequencies multiplied, as if the terms were
+# independent). With more than one query term, a document is a candidate only
+# when c is at most MAX_CHANCE_SHARE of N, or MIN_CHANCE_DOCUMENTS if that is
+# more. The owner's name or a common verb cannot select candidates, and a word
+# that two documents hold always can, in a store of any size.
+MAX_CHANCE_SHARE = 0.002
+MIN_CHANCE_DOCUMENTS = 2
+# ts_rank_cd breaks ties between equal evidence. It adds less than this to a
+# score, so it never reorders evidence that differs by more than this.
+RANK_TIE_BREAK = 0.001
 
 
 class PgLexicalIndex:
@@ -30,8 +46,9 @@ class PgLexicalIndex:
     - Searching across both ``nodes`` and ``lexical_documents``
     """
 
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    def __init__(self, pool: asyncpg.Pool, *, term_weights: bool = False) -> None:
         self._pool = pool
+        self._term_weights = term_weights
 
     async def index(
         self,
@@ -107,6 +124,17 @@ class PgLexicalIndex:
         ``ts_rank_cd``; a query with a single term keeps the ``ts_rank_cd``
         score. Only the first ``MAX_QUERY_TERMS`` distinct terms are used.
 
+        With ``term_weights`` the number of matched terms is replaced by their
+        weights, which come from the owner's own memories: a term is worth
+        ln(N / df), so a rare word counts more than a verb that many memories
+        hold. With more than one query term, a document is a candidate only
+        when the terms it holds are held together by few memories (see
+        ``MAX_CHANCE_SHARE``), so a few common words that happen to match
+        select nothing and the vector search decides. Results rank by the
+        weight of the terms they hold, then by ``ts_rank_cd``. A document
+        that holds every query term is still returned alone, and a query with
+        one term returns every document that holds it.
+
         Args:
             query_text: Natural language search query.
             user_id: Only return results belonging to this user.
@@ -141,20 +169,23 @@ class PgLexicalIndex:
                     f"UNION ALL SELECT d.node_id FROM lexical_documents d "
                     f"WHERE {docs_where}{docs}")
 
-        # plainto_tsquery joins its terms with " & "; a lexeme never contains
-        # a space, so splitting its text on that operator yields the terms.
-        # With more than one term, a term counts as common when it matches at
-        # least half of the searched documents, where the classic BM25
-        # (Robertson-Sparck Jones) inverse document frequency is no longer
-        # positive. Without another matching term, every term is searched.
-        # Common terms still count when ranking the hits: scores add 1 + the
-        # best ts_rank_cd per extra matched query term, so a hit that matches
-        # more terms always ranks higher and a single-term query keeps its
-        # scores. When a hit matches every query term, hits that match fewer
-        # are dropped, which keeps the old all-terms result: under rank fusion
-        # they would otherwise take the next lexical rank, nearly as strong as
-        # the first.
-        query = f"""
+        if self._term_weights:
+            query = self._term_weight_query(nodes_where, docs_where, searched_ids, limit_idx)
+        else:
+            # plainto_tsquery joins its terms with " & "; a lexeme never contains
+            # a space, so splitting its text on that operator yields the terms.
+            # With more than one term, a term counts as common when it matches at
+            # least half of the searched documents, where the classic BM25
+            # (Robertson-Sparck Jones) inverse document frequency is no longer
+            # positive. Without another matching term, every term is searched.
+            # Common terms still count when ranking the hits: scores add 1 + the
+            # best ts_rank_cd per extra matched query term, so a hit that matches
+            # more terms always ranks higher and a single-term query keeps its
+            # scores. When a hit matches every query term, hits that match fewer
+            # are dropped, which keeps the old all-terms result: under rank fusion
+            # they would otherwise take the next lexical rank, nearly as strong as
+            # the first.
+            query = f"""
             WITH query_terms AS (
                 SELECT term FROM (
                     SELECT operand AS term, min(position) AS position
@@ -241,7 +272,7 @@ class PgLexicalIndex:
                OR matched_terms = (SELECT terms FROM search)
             ORDER BY score DESC, node_id COLLATE "C"
             LIMIT ${limit_idx}
-        """
+            """
 
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
@@ -249,6 +280,123 @@ class PgLexicalIndex:
         return [{"node_id": row["node_id"], "content": row["content"],
                  "score": float(row["score"]), "node_type": row["node_type"]}
                 for row in rows]
+
+    @staticmethod
+    def _term_weight_query(
+        nodes_where: str, docs_where: str, searched_ids: Callable[..., str], limit_idx: int,
+    ) -> str:
+        """SQL for ``search`` with term weights; see ``MAX_CHANCE_SHARE``.
+
+        ``term_weights`` holds ln(N / df) for each query term that some
+        searched document holds. ``gate`` turns the chance limit into a
+        threshold on evidence (less 1e-9 for rounding), which a query with one
+        term does not need. A candidate that reaches the threshold holds a term
+        that weighs at least the threshold over the number of weighted terms,
+        so ``search`` looks for those terms only, and a common term does not
+        make the index read every document that holds it. A score is the
+        evidence plus a fraction of ``ts_rank_cd``. As without term weights,
+        when a hit holds every query term, hits that hold fewer are dropped.
+        """
+        return f"""
+            WITH query_terms AS (
+                SELECT term FROM (
+                    SELECT operand AS term, min(position) AS position
+                    FROM unnest(string_to_array(
+                        plainto_tsquery('english', $2)::text, ' & '))
+                        WITH ORDINALITY AS operands (operand, position)
+                    GROUP BY operand
+                ) AS distinct_terms
+                ORDER BY position
+                LIMIT {MAX_QUERY_TERMS}
+            ), searched AS (
+                SELECT count(DISTINCT node_id) AS documents
+                FROM ({searched_ids()}) AS searched_documents
+            ), term_weights AS (
+                SELECT t.term, ln(s.documents::float8 / f.matches) AS weight
+                FROM query_terms t
+                CROSS JOIN searched s
+                CROSS JOIN LATERAL (
+                    SELECT count(DISTINCT node_id) AS matches
+                    FROM ({searched_ids("t.term::tsquery")}) AS matching
+                ) AS f
+                WHERE f.matches > 0
+            ), gate AS (
+                SELECT
+                    (SELECT count(*) FROM query_terms) AS terms,
+                    (SELECT count(*) FROM term_weights) AS weighted,
+                    CASE WHEN (SELECT count(*) FROM query_terms) > 1
+                         THEN ln(GREATEST(documents, 1)::float8 / GREATEST(
+                             {MAX_CHANCE_SHARE}::float8 * documents,
+                             {MIN_CHANCE_DOCUMENTS}::float8)) - 1e-9
+                         ELSE 0.0 END AS threshold
+                FROM searched
+            ), search AS (
+                SELECT
+                    (SELECT string_agg(w.term::text, ' | ')::tsquery
+                     FROM term_weights w
+                     WHERE w.weight >= g.threshold / GREATEST(g.weighted, 1)) AS query,
+                    (SELECT string_agg(w.term::text, ' | ')::tsquery
+                     FROM term_weights w) AS ranking,
+                    g.terms,
+                    g.threshold
+                FROM gate g
+            ), combined AS (
+                SELECT
+                    n.id::text AS node_id,
+                    n.content,
+                    n.content_tsv AS tsv,
+                    n.node_type,
+                    0 AS source_priority
+                FROM nodes n
+                WHERE {nodes_where}
+                  AND n.content_tsv @@ (SELECT query FROM search)
+
+                UNION ALL
+
+                SELECT
+                    d.node_id,
+                    d.content,
+                    d.content_tsv,
+                    d.node_type,
+                    1 AS source_priority
+                FROM lexical_documents d
+                WHERE {docs_where}
+                  AND d.content_tsv @@ (SELECT query FROM search)
+            ), hits AS (
+                SELECT
+                    c.node_id,
+                    c.content,
+                    c.node_type,
+                    c.source_priority,
+                    ts_rank_cd(c.tsv, (SELECT ranking FROM search))::float8 AS rank,
+                    (SELECT coalesce(sum(w.weight), 0) FROM term_weights w
+                     WHERE c.tsv @@ w.term::tsquery) AS evidence,
+                    (SELECT count(*) FROM term_weights w
+                     WHERE c.tsv @@ w.term::tsquery) AS matched_terms
+                FROM combined c
+            ), unique_hits AS (
+                SELECT DISTINCT ON (node_id)
+                    node_id, content, node_type, rank, evidence, matched_terms
+                FROM hits
+                ORDER BY node_id, evidence DESC, rank DESC, source_priority
+            ), scored AS (
+                SELECT
+                    node_id,
+                    content,
+                    node_type,
+                    evidence,
+                    matched_terms,
+                    max(matched_terms) OVER () AS best_matched,
+                    evidence + {RANK_TIE_BREAK} * rank / (1 + max(rank) OVER ()) AS score
+                FROM unique_hits
+            )
+            SELECT node_id, content, score, node_type FROM scored
+            WHERE evidence >= (SELECT threshold FROM search)
+              AND (best_matched < (SELECT terms FROM search)
+                   OR matched_terms = (SELECT terms FROM search))
+            ORDER BY score DESC, node_id COLLATE "C"
+            LIMIT ${limit_idx}
+        """
 
     async def delete_by_node_id(self, node_id: str) -> None:
         """Delete a document from lexical_documents by node_id."""

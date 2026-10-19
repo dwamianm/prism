@@ -152,6 +152,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_qa_pairing is true",
         bool,
     ),
+    "lexical_term_weights": (
+        "lexical_term_weights",
+        "lexical_term_weights is true",
+        bool,
+    ),
     "enable_windowed_extraction": (
         "enable_windowed_extraction",
         "enable_windowed_extraction is true",

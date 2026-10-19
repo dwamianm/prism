@@ -43,6 +43,7 @@ EXPECTED_HYPOTHESES = {
     "vision.extract",
     "vision.change_threshold",
     "vision.repeat_similarity",
+    "lexical_term_weights",
     "enable_qa_pairing",
     "enable_windowed_extraction",
     "extraction_window_turns",
@@ -77,7 +78,7 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert report.hypothesis_count == len(EXPECTED_HYPOTHESES)
     # Speaker references, claim sentence text and folding became defaults together, so they apply,
     # and batched extraction became a default later (#254).
-    assert report.effective_count == 19
+    assert report.effective_count == 20
     assert report.customized_count == 0
     for name in ("enable_speaker_references", "enable_claim_sentence_text", "packing.fold_repeated_text"):
         setting = settings[name]
@@ -101,6 +102,11 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert (session_packing.effective, session_packing.value, session_packing.customized) == (False, None, False)
     assert session_packing.environment_variable == "PRME_PACKING__SESSION_CONTEXT_PACKING"
     assert settings["enable_qa_pairing"].effective is False
+    # The PostgreSQL word search weighs query words by rarity by default (alpha channel, fast gate, 2026-10-19).
+    term_weights = settings["lexical_term_weights"]
+    assert (term_weights.effective, term_weights.value, term_weights.default, term_weights.customized) == (
+        True, True, True, False)
+    assert term_weights.environment_variable == "PRME_LEXICAL_TERM_WEIGHTS"
     assert settings["novelty_high_threshold"].effective is False
     assert settings["query_reformulation_count"].effective is False
     # Visual memory is off by default, so its provisional thresholds are dormant.
@@ -154,7 +160,7 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values(monkeypatch):
     report, settings = _by_path(config)
 
     # A PackingConfig built in code has no rank fusion session decay and does not fold, which the audit reports.
-    assert report.effective_count == 29
+    assert report.effective_count == 30
     assert report.customized_count == 6
     assert settings["packing.fold_repeated_text"].customized is True
     assert settings["packing.session_context_rank_fusion_score_decay"].value is None

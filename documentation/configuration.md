@@ -182,6 +182,7 @@ decay and no folding), which stored receipts and configurations rely on.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `PRME_LEXICAL_TERM_WEIGHTS` | `true` | PostgreSQL word search only; the DuckDB backend ignores it. Weights each query word by how rare it is among the owner's searched memories (ln(N / df)), and with more than one query word keeps a memory as a word-search candidate only when the words it holds would be held together by chance by at most 0.2% of those memories, or 2 memories if that is more. The owner's name or a common verb no longer lifts every memory, and candidates rank by the weight of the words they hold. `false` restores the any-term search of 0.16.0a1. Default since 2026-10-19, in the alpha channel, chosen on the fast cycle and the offline evidence gate; the full benchmark audit is pending. Provisional |
 | `PRME_ENABLE_STORE_SUPERSEDENCE` | `false` | Auto-detect supersedence on store |
 | `PRME_REINFORCE_SIMILARITY_THRESHOLD` | `None` | Auto-reinforce similar existing nodes |
 | `PRME_ENABLE_SURPRISE_GATING` | `false` | Novelty-based salience adjustment |
