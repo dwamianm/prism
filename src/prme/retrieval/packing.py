@@ -402,7 +402,9 @@ def pack_context(
     record whose text a packed record from the same source event already
     shows is left out, and packing a record removes the earlier packed records
     of its sources whose text it shows (:func:`_folds_into`). Removed records
-    join ``excluded_ids``; their budget goes to later candidates.
+    join ``excluded_ids``; their budget goes to later candidates. With
+    ``config.folded_records_keep_rank`` the record that removes them takes the
+    place of the earliest one in its section.
 
     Args:
         scored_candidates: Candidates from scoring stage, sorted by score.
@@ -703,6 +705,15 @@ def pack_context(
         if total > available:
             # Removing lines cannot normally add tokens; keep the packed context if it would.
             return
+        if config.folded_records_keep_rank and container.node.id not in required and window_of(container) is None:
+            # The record that remains takes the place of the earliest one it
+            # folded in its section, so folding does not move text down the context.
+            name = classify_into_sections(container)
+            earliest = next((i for i, item in enumerate(sections.get(name, ())) if id(item) in contained), None)
+            kept = proposed.get(name, [])
+            at = next((i for i, item in enumerate(kept) if item is container), None)
+            if earliest is not None and at is not None and at > earliest:
+                kept.insert(earliest, kept.pop(at))
         sections.clear()
         sections.update(proposed)
         tokens_used = total

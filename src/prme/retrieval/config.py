@@ -632,6 +632,35 @@ class PackingConfig(BaseModel):
             "(DEFAULT_PACKING_SETTINGS). [HYPOTHESIS]"
         ),
     )
+    # Omitted when off, so configurations and receipts that do not use it keep
+    # their bytes.
+    folded_records_keep_rank: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "A record that stands in for another keeps the better rank of "
+            "the two (prism-monorepo issues 258 and 259). (1) With "
+            "enable_ingest_claim_fixes and enable_claim_sentence_text, "
+            "ingest() gives a claim whose sentences are already another "
+            "claim's text a short statement built from its subject, predicate "
+            "and object (\"Dana has pet Biscuit.\"). Such a statement shares "
+            "the question's names and verbs and is short, so it outranks the "
+            "claim that holds the sentence and takes the places a reader "
+            "needs for answers. When True, retrieve() folds each statement "
+            "into the claim of the same evidence that holds its object: the "
+            "claim takes the better of the two scores, with the statement's "
+            "score lineage, and the statement leaves the results and the "
+            "context. A statement with no such claim among the results "
+            "stays. (2) With fold_repeated_text in the reader format, packing "
+            "leaves out a record whose text a packed record of the same "
+            "source already shows, and the record that remains is packed at "
+            "its own, usually lower, place. When True, it takes the place of "
+            "the earliest record it folded, so no text moves down the "
+            "context. Memories ingested without the option have no "
+            "statements, so (1) changes nothing for them. Default False. "
+            "[HYPOTHESIS]"
+        ),
+    )
     episode_context_top_k: int = Field(
         default=0,
         ge=0,

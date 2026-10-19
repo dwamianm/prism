@@ -1334,6 +1334,105 @@ at temperature 0 is close to repeatable but not guaranteed to be, so a single
 baseline build is not a measure of run-to-run noise. Compare builds only when
 both used the same model and Ollama server version (`build.json` records both).
 
+### Why the claim fixes lost rank
+
+With `enable_ingest_claim_fixes`, `enable_mention_links` and
+`packing.graph_seed_words` on, the fast gate on 2026-10-19 ranked the answer
+worse than with them off (top 3: 5 to 4 of 7 on `defects-v1`, 14 to 8 of 18 on
+`chat-v1`), while the names and links improved. The release steward's
+explanation was that each claim now keeps its own text, so the packer no longer
+folds claims that shared one sentence. The ranked results say otherwise. For each
+probe I listed what `retrieve()` returns, with the score, the ranks that make the
+score and the path of each result, from the builds with the options off and on
+(a replay of a recorded extraction, no model call), and counted what ranks above
+the first record that holds the answer:
+
+| Records above the answers | defects off | on | on + fold | chat off | on | on + fold |
+|---|---:|---:|---:|---:|---:|---:|
+| Statements built from a claim's subject, predicate and object (`claim_statement_v1`) | 0 | 9 | 0 | 0 | 39 | 0 |
+| Claims that hold their source sentences | 9 | 5 | 4 | 23 | 14 | 24 |
+| Notes | 0 | 0 | 0 | 3 | 3 | 3 |
+| Entities | 0 | 0 | 0 | 0 | 0 | 0 |
+| Results returned | 67 | 66 | 54 | 232 | 231 | 192 |
+
+(`uv run python -m benchmarks.diagnostics.ranked_results --label on` prints the
+lists and these counts for a build. The "on + fold" columns are the fix below.)
+
+- The cause is the statement, not the number of records. The pack returns
+  about as many results on as off, and the copies of one sentence that the
+  packer used to fold are gone (claims whose text repeats another's: 12 to 0 and
+  39 to 0). What took their places is that a claim whose sentences another claim
+  holds now gets a short statement ("Dana has pet Biscuit.", "Dana started using
+  this assistant."), and a short text that repeats the question's name and verb
+  scores high on both channels. For "When did Dana start the new job?" the
+  statement "Dana started using this assistant." has cosine 0.82 and the top
+  fused score; the answer ("I start as analytics manager on May 4.") has 0.57
+  and 4th place, behind three statements about the owner. On every probe that
+  lost its place, statements rank above the answer.
+- Entity nodes are not a cause here. They take places in the order (ranks 9 to
+  14 on several probes), but none ranks above an answer in any of the 50 lists.
+- The graph path is not a cause either. These packs are small enough that
+  vector search returns every node, so the graph adds no candidate, and under
+  rank fusion its proximity does not enter the score (a graph-only candidate
+  scores 0). Giving it a third rank fusion channel, emulated on the returned
+  lists, makes the lists worse: top 3 falls from 4 to 3 of 7 and from 8 to 5 of
+  18 with the options on, because the owner's name seeds the graph and every
+  claim attached to the owner gets proximity 1.0.
+- The existing `packing.evidence_projection_top_k=10` reaches 7 of 7 and 15 of
+  18, but replaces the claims with the raw messages, and `docs/PACKING.md`
+  records a pass-level loss for wholesale projection. It is not used.
+
+`packing.folded_records_keep_rank` (off by default) folds each statement into
+the claim that holds its sentence (`docs/PACKING.md`, "Folded records keep their
+rank"), and the reader context's fold of repeated text keeps the earlier
+record's place. The first version, the statement fold alone, ranked the answers
+as below but failed one rule of the fast cycle: on `corrections-v1`, "corrections
+whose context shows the old value first" went from 1 to 2, because the fold put
+the Denver claim 3rd in the results and the reader context then replaced it with
+its source note at the note's 12th place. The second version, the one committed,
+puts the note in the claim's place. Nothing else was tried.
+
+| Measure (replay of the committed cache) | defects-v1 off | on | on + fold | chat-v1 off | on | on + fold |
+|---|---:|---:|---:|---:|---:|---:|
+| Probes with the answer in the top 3 | 5/7 | 4/7 | 7/7 | 14/18 | 8/18 | 14/18 |
+| Probes with the answer in the top 5 | 7/7 | 6/7 | 7/7 | 15/18 | 13/18 | 15/18 |
+| Probes with the answer in context | 7/7 | 7/7 | 7/7 | 17/18 | 17/18 | 17/18 |
+| Probes with a stale value in context | 0 | 0 | 0 | 3 | 3 | 3 |
+| Repeated records in contexts | 0/105 | 0/189 | 0/105 | 18/1638 | 18/2322 | 18/1620 |
+| User claims attached to the named owner / to I or We | 0/17 | 2/15 | 2/15 | 0/39 | 4/35 | 4/35 |
+
+The fast cycle against the committed baseline: with the three options on it
+fails 5 gated measures; with the fold also on it passes (47 measures moved, 85
+unchanged, none worse). Better: answers in the top 3 on `defects-v1` 5 to 7 and
+on `corrections-v1` 1 to 3, repeated records in the `chat-v1` contexts 72 to 36,
+and the rank of 9 answers. Eight single ranks are 1 to 2 places lower (not gated;
+`coffee`, `language`, `mel-news`, `race-time`, `running-partner`, `start-date`,
+`title-now` in `chat-v1` and `learning` in `defects-v1`), because a statement
+that names the owner now lifts the claim it restates.
+
+The offline evidence gate, the four options on against the defaults, run on one
+machine one side after the other: no change anywhere. LoCoMo packed all evidence
+for 84.0% of questions before and after (projected accuracy 77.6%) and
+LongMemEval-S for 94.7% (91.4%); every row has 0 wins and 0 losses, and no
+question lost its candidates. That is expected, because the saved `store()`
+packs hold no extracted records and so no statements.
+
+Not met by this change:
+
+- The named owner's claims do not exceed the claims on "I" or "We" (2 against 15
+  and 4 against 35), with or without the fold. That is ingestion (issue 258):
+  only the turn that says who it is binds its "I", and later turns keep
+  their own. Bounded alternative: carry the introduced speaker's entity over to
+  the later user turns of the same session, behind its own option.
+- On the other extraction sample (the 2026-10-19 live run in the main checkout's
+  cache), the corrections probe's `move-city` context shows the old value first
+  with the three options on and also with the fold, where it shows the new value
+  first with them off. There the Denver claim is a decision, which the context
+  holds in another section than its source note, so the note cannot take its
+  place. The fold does not change this case.
+- Models and prompts differ between runs. Every number here is one replay of
+  one recorded extraction, not an accuracy estimate.
+
 ### Owner name carry (#258)
 
 `enable_owner_name_carry` keeps the owner's name on their later user turns: the

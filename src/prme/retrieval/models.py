@@ -138,6 +138,7 @@ class ScoreAdjustment(BaseModel):
         "episode_decay",
         "evidence_projection",
         "evidence_augmentation",
+        "claim_statement_fold",
         "current_update",
         "neural_rank_assignment",
     ]
@@ -159,6 +160,8 @@ class ScoreAdjustment(BaseModel):
             0 < self.coefficient <= 1
         ):
             raise ValueError("Evidence-context coefficient must be in (0, 1]")
+        if self.kind == "claim_statement_fold" and self.coefficient != 1:
+            raise ValueError("A claim statement fold records lineage and leaves the score as it is")
         return self
 
 

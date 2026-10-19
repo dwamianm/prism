@@ -406,6 +406,40 @@ the DeepSeek answer track over `ingest()` packs (`BENCHMARKS.md`, "Default
 change: claim sentences, speaker references and folding").
 `BENCHMARKS.md` ("Folding repeated text") has the gate results.
 
+## Folded records keep their rank
+
+Two things can move a record down the context while a record that says the
+same thing stays near the top. `packing.folded_records_keep_rank` (default
+`false`, `PRME_PACKING__FOLDED_RECORDS_KEEP_RANK`, a hypothesis) fixes both, and
+a memory ingested without the claim options is not affected by the first.
+
+- **Claim statements.** With `enable_ingest_claim_fixes` and
+  `enable_claim_sentence_text`, a claim whose sentences are already another
+  claim's text gets a short statement built from its subject, predicate and
+  object, such as "Dana has pet Biscuit." Such a statement repeats the names
+  and verbs of a question and is short, so it outranks the claim that holds the
+  sentence. On the chat probe (`BENCHMARKS.md`, "Why the claim fixes lost
+  rank") 39 of the 56 records that ranked above an answer were statements.
+  With the option on, `retrieve()` folds each statement into the claim of the
+  same evidence (`evidence_refs`) whose text holds the statement's object as
+  whole words, preferring one that holds its subject too. The claim takes the
+  better of the two scores through a replayable `claim_statement_fold`
+  adjustment, which records the statement as its lineage and leaves the score
+  as it is, and the statement leaves the results, the context and the
+  receipt's candidates; `excluded` lists it with the reason
+  `claim_statement_folded`. A statement with no such claim among the results
+  stays, and notes and entities are never the claim. The stage reads stored
+  metadata only and makes no model call.
+- **Folding in the reader context.** `fold_repeated_text` packs a claim's text
+  once, inside the note that says it, and the note is packed at its own place,
+  usually far below the claim. With the option on, the record that folds
+  earlier packed records takes the place of the earliest one in its section.
+  The same records are packed with the same tokens; only their order changes.
+
+Receipts record the option in the packing settings and nothing else changes in
+their schema: a folded claim's score replays from the statement's provenance.
+The fold does not change `store()` memories, which have no statements.
+
 ## Default retrieval settings
 
 `PRMEConfig()` retrieves with these settings, which changed after v0.12.0
