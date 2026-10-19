@@ -1,11 +1,15 @@
 """The fast cycle's fixtures, measures, rules and comparator, with no model and no network."""
 import copy
+import dataclasses
+from datetime import datetime, timezone
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from benchmarks.diagnostics import chat_probe
-from benchmarks.fast_cycle import compare, cycle, ingest, store
+from benchmarks.fast_cycle import compare, cycle, ingest, store, store_extract
+from prme.ingestion.extraction import BatchTurn
 from tests.test_chat_probe import CLAIMS, HOME, NURSE, ScriptedExtraction, _conversation, mock_embeddings  # noqa: F401
 
 RULES = compare.load_rules()
@@ -177,6 +181,156 @@ def chat_probe_echo():
     return "Nice, Sam sounds great."
 
 
+# --- The store-extract stage ---------------------------------------------------------------------------
+
+
+class ScriptedBatches:
+    """A batched model that finds the first memory's employer, names Alex where a turn does, and bills tokens."""
+
+    def __init__(self, engine):
+        self.calls = []
+        self.client = engine._pipeline._extraction_provider._ensure_client()
+
+    async def extract_batch(self, turns, **extra):
+        self.calls.append([turn.content for turn in turns])
+        # The usage the provider's client would report for this request.
+        self.client.hooks.emit_completion_response(SimpleNamespace(usage=SimpleNamespace(
+            prompt_tokens=100, completion_tokens=10 * len(turns))))
+        entries = []
+        for turn in turns:
+            entry = {"turn": turn.index, "entities": [], "facts": [], "relationships": []}
+            if "Alex" in turn.content:
+                entry["entities"] = [{"name": "Alex", "entity_type": "person"}]
+            if turn.content.startswith("Alex Rivera is a senior backend engineer"):
+                quote = "Alex Rivera is a senior backend engineer at Northwind Logistics"
+                entry["entities"] = [{"name": "Alex Rivera", "entity_type": "person"},
+                                     {"name": "Northwind Logistics", "entity_type": "organization"}]
+                entry["facts"] = [{"subject": "Alex Rivera", "subject_entity_type": "person", "predicate": "works_at",
+                                   "object": "Northwind Logistics", "polarity": "positive",
+                                   "epistemic_type": "observed", "evidence_quote": quote}]
+            entries.append(entry)
+        return {"turns": entries}
+
+
+def _scripted_stage(tmp_path, monkeypatch, scripted):
+    monkeypatch.setattr(store_extract, "model_identity", lambda model, cloud=False: {
+        "provider": "ollama", "model": model, "server_version": "0.0.0"})
+
+    def prepare(engine):
+        scripted.append(ScriptedBatches(engine))
+        engine._pipeline._extraction_provider.extract_batch = scripted[-1].extract_batch
+
+    return {"model": "local-model", "prepare": prepare, "cache_dir": tmp_path / "committed-cache"}
+
+
+async def test_the_store_extract_stage_extracts_each_memory_alone_and_a_rerun_replays_the_cache_exactly(
+        tmp_path, mock_embeddings, monkeypatch):  # noqa: F811
+    scripted = []
+    options = _scripted_stage(tmp_path, monkeypatch, scripted)
+    first = await store_extract.run(tmp_path / "first", use_cache=False, **options)
+    measures = first["measures"]
+    # A memory without a session goes alone: one request each, and every one of them answered.
+    assert len(scripted[0].calls) == 75 and all(len(call) == 1 for call in scripted[0].calls)
+    assert (measures["extraction_requests"], measures["extractions_incomplete"]) == (75, 0)
+    assert measures["extraction_tokens"] == 75 * 110
+    # The stored note is kept as it is and extraction adds the entity and the claim.
+    assert measures["nodes_per_store_call"] > 1 and measures["edges_per_store_call"] > 0
+    assert measures["entities_made"] >= 2 and measures["key_entities_found"] >= 1
+    assert first["mode"] == "live" and first["live_calls"] == 75 and first["settings"]["enable_store_extraction"]
+    assert all(f"answer_rank:{question['id']}" in measures for question in store.load_fixture()["key"]["questions"])
+
+    committed = options["cache_dir"]
+    assert ingest.update_cache(tmp_path / "first" / "extraction-cache", committed) == 75
+    usage = json.loads((committed / ingest.USAGE_FILE).read_text())
+    assert len(usage[store_extract.STAGE]) == 75
+
+    second = await store_extract.run(tmp_path / "second", **options)
+    assert len(scripted[1].calls) == 0 and second["mode"] == "replay" and second["cache_hits"] == 75
+    # The stored memories carry another wall-clock time, and the replay does not mind.
+    assert second["measures"] == measures
+    assert ingest.update_cache(tmp_path / "second" / "extraction-cache", committed) == 0
+
+
+async def test_memories_of_one_session_share_requests_and_the_session_is_on_the_stored_notes(
+        tmp_path, mock_embeddings, monkeypatch):  # noqa: F811
+    scripted = []
+    options = _scripted_stage(tmp_path, monkeypatch, scripted)
+    result = await store_extract.run(tmp_path / "session", use_cache=False, session_ids=True, **options)
+    requests = result["measures"]["extraction_requests"]
+    # Five sessions in two scopes: far fewer requests than memories, each a few turns, none of them empty.
+    assert 5 <= requests < 75 and requests == len(scripted[0].calls) and result["measures"]["extractions_incomplete"] == 0
+    assert sum(len(call) for call in scripted[0].calls) == 75
+    assert result["session_ids"] and result["measures"]["extraction_tokens"] == 100 * requests + 10 * 75
+    # The control stores the same memories under their sessions and extracts nothing.
+    control = await store.run(tmp_path / "control", session_ids=True)
+    assert (control["nodes"], control["edges"]) == (75, 0) and "extraction_requests" not in control["measures"]
+
+
+def test_the_store_extract_cache_key_leaves_out_the_wall_clock_time_of_a_turn():
+    provider = SimpleNamespace(model_name="m", _model="m", _temperature=0.0, _reasoning_effort=None)
+
+    def turn(**changes):
+        base = BatchTurn(index=1, role="user", content="Alex is learning Rust.", speaker=None,
+                         time=datetime(2026, 10, 19, 9, 30, tzinfo=timezone.utc))
+        return dataclasses.replace(base, **changes)
+
+    key = store_extract.StoredTurnCache._batch_key
+    assert key(provider, [turn()]) == key(provider, [turn(time=datetime(2026, 10, 20, 1, 5, tzinfo=timezone.utc))])
+    assert key(provider, [turn()]) == key(provider, [turn(time=None)])
+    # The time is only left out of the key: the text, the role and the speaker still tell requests apart.
+    assert len({key(provider, [turn()]), key(provider, [turn(content="Alex is learning Go.")]),
+                key(provider, [turn(role="assistant")]), key(provider, [turn(speaker="Alex")])}) == 4
+    assert key(provider, [turn()]) != store_extract.ExtractionCache._batch_key(provider, [turn()])
+
+
+async def test_the_request_meter_counts_live_tokens_and_the_tokens_recorded_for_a_replayed_request():
+    class Cache:
+        misses = 0
+
+        @staticmethod
+        def _batch_key(provider, turns, memories=()):
+            return turns[0]
+
+    class Usage:
+        total = 0
+
+        def snapshot(self):
+            return 1, self.total, 0
+
+    async def extract_batch(turns, **extra):
+        return {"turns": turns}
+
+    provider = SimpleNamespace(extract_batch=extract_batch)
+    cache, usage = Cache(), Usage()
+    meter = store_extract.RequestMeter(provider, cache, usage, {"replayed": {"prompt_tokens": 40, "completion_tokens": 2}})
+
+    async def live(turns):
+        cache.misses += 1
+        usage.total += 7
+        return {"turns": turns}
+
+    meter._cached = live
+    await provider.extract_batch(["fresh"])
+    assert meter.live == {"fresh": {"calls": 0, "prompt_tokens": 7, "completion_tokens": 0}} and meter.total_tokens == 7
+    meter._cached = extract_batch
+    await provider.extract_batch(["replayed"])
+    assert (meter.requests, meter.total_tokens) == (2, 49)
+    # A replayed request with no record leaves the total unknown instead of understating it.
+    await provider.extract_batch(["unrecorded"])
+    assert meter.requests == 3 and meter.total_tokens is None
+
+
+def test_the_extraction_measures_count_cost_entities_and_graph_candidates():
+    meter = SimpleNamespace(requests=12, total_tokens=60_000)
+    nodes = [{"type": "entity", "state": "stable"}, {"type": "entity", "state": "superseded"},
+             {"type": "entity", "state": "tentative"}, {"type": "note", "state": "stable"}]
+    questions = [{"graph_candidates": 0}, {"graph_candidates": 3}]
+    statuses = {"a": "complete", "b": "failed", "c": "pending"}
+    assert store_extract.extraction_measures(questions, nodes, meter, statuses) == {
+        "extraction_requests": 12, "extraction_tokens": 60_000, "extractions_incomplete": 2, "entities_made": 2,
+        "graph_candidates_per_question": 1.5}
+
+
 # --- The rules and the baseline -----------------------------------------------------------------------
 
 
@@ -204,12 +358,30 @@ def test_the_committed_baseline_covers_every_measure_and_matches_the_committed_f
 # --- The comparator ------------------------------------------------------------------------------------
 
 
-def _results(*, store_values=None, ingest_values=None, mode="replay", backend="duckdb"):
-    """Stage results as the stages return them, with a few measures each."""
+def _extract_stage(name, *, values=None, mode="replay", ranks=None):
+    """A store-extract stage result as the stage returns it, with a few measures."""
     replay = mode == "replay"
-    return {
+    questions = [{"id": "rust", "question": "what coding language is alex learning?", "answer_rank": 1,
+                  "stale_above_answer": False}, {"id": "cutover", "question": "When is the production cutover?",
+                                                 "answer_rank": 3, "stale_above_answer": True}]
+    return {"fixture": "store-v1", "fixture_sha256": "f" * 64, "backend": "duckdb", "calls": 75, "seconds": 90.0,
+            "session_ids": name.endswith("session"), "mode": mode, "model": "m", "live_calls": 0 if replay else 75,
+            "cache_hits": 75 if replay else 0, "working_cache": "/not/in/the/report",
+            "questions": [{**question, "answer_rank": rank} for question, rank in zip(questions, ranks or (1, 3))],
+            "measures": {"nodes_per_store_call": 5.0, "answers_in_top3": 12, "answer_rank:rust": (ranks or (1, 3))[0],
+                         "extraction_requests": 75, "extraction_tokens": 460_000, "graph_candidates_per_question": 90.0,
+                         **(values or {})}}
+
+
+def _results(*, store_values=None, ingest_values=None, mode="replay", backend="duckdb", extract=None):
+    """Stage results as the stages return them, with a few measures each; ``extract`` adds store-extract stages."""
+    replay = mode == "replay"
+    results = {
         "store": {"fixture": "store-v1", "fixture_sha256": "f" * 64, "backend": backend, "calls": 75, "seconds": 9.0,
-                  "questions": [{"id": "rust", "question": "what coding language is alex learning?"}],
+                  "questions": [{"id": "rust", "question": "what coding language is alex learning?",
+                                 "answer_rank": 3, "stale_above_answer": False},
+                                {"id": "cutover", "question": "When is the production cutover?",
+                                 "answer_rank": 3, "stale_above_answer": True}],
                   "measures": {"nodes_per_store_call": 1.0, "answers_in_top3": 14, "answer_rank:rust": 3,
                                "edges_per_store_call": 0.0, **(store_values or {})}},
         "ingest": {"mode": mode, "model": "m", "live_calls": 0 if replay else 14, "cache_hits": 14 if replay else 0,
@@ -218,6 +390,7 @@ def _results(*, store_values=None, ingest_values=None, mode="replay", backend="d
                                               "questions": {}}},
                    "measures": {"chat": {"claims_repeating_text": 10, "user_claims_named_owner": 0,
                                          "extraction_requests": 14, **(ingest_values or {})}}}}
+    return {**results, **(extract or {})}
 
 
 def _report(label="candidate", **options):
@@ -353,3 +526,98 @@ def test_run_writes_both_reports_and_exits_with_the_verdict(tmp_path, monkeypatc
     assert cycle.main(command[:-2] + ["--baseline", "none"]) == 0
     with pytest.raises(SystemExit):
         cycle.main([*command[:-2], "--baseline", str(tmp_path / "missing.json")])
+
+
+# --- The store-extract stages in the comparison ----------------------------------------------------------
+
+
+def _extracting(label="candidate", *, mode="replay", **values):
+    """A report whose only change from the default is a store-extract stage with these measures."""
+    return _report(label, extract={"store-extract": _extract_stage("store-extract", mode=mode, values=values)})
+
+
+def test_a_replayed_store_extract_stage_is_judged_exactly_and_a_live_one_by_its_own_tolerance():
+    rules = copy.deepcopy(RULES)
+    rules["measures"]["answers_in_top3"]["live_by_stage"] = {"store-extract": {"abs": 2}}
+    baseline = _extracting("main")
+    result = compare.compare(baseline, _extracting(answers_in_top3=11), rules)
+    assert result["failed"] == ["store-extract/answers_in_top3"] and not result["live"]
+    live = compare.compare(baseline, _extracting(mode="live", answers_in_top3=10), rules)
+    assert live["status"] == "PASS" and live["live"] and live["rows"][0]["verdict"] == "worse, within tolerance"
+    assert live["rows"][0]["tolerance"] == 2
+    assert compare.compare(baseline, _extracting(mode="live", answers_in_top3=9), rules)["failed"] == [
+        "store-extract/answers_in_top3"]
+    # A measure with no tolerance of its own for the stage takes the rule's live one (the chats').
+    assert compare.compare(baseline, _extracting(mode="live", extraction_requests=76), rules)["rows"][0]["tolerance"] == 1
+    # A live store-extract stage does not loosen the store stage or the replayed ingest stage next to it.
+    report = _report(extract={"store-extract": _extract_stage("store-extract", mode="live")},
+                     store_values={"nodes_per_store_call": 1.01}, ingest_values={"claims_repeating_text": 11})
+    assert compare.compare(baseline, report, rules)["failed"] == [
+        "chat/claims_repeating_text", "store/nodes_per_store_call"]
+
+
+def test_the_two_store_extract_stages_are_grouped_by_their_own_names_and_never_mixed():
+    session = _extract_stage("store-extract-session", values={"extraction_requests": 11})
+    stages = _results(extract={"store-extract": _extract_stage("store-extract"), "store-extract-session": session})
+    measures = compare.grouped(RULES, stages)
+    assert measures["storage"]["store-extract/extraction_requests"] == 75
+    assert measures["storage"]["store-extract-session/extraction_requests"] == 11
+    assert measures["storage"]["store/nodes_per_store_call"] == 1.0 and "chat/extraction_requests" in measures["storage"]
+    assert [compare.stage_of(scope) for scope in ("store", "store-session", "store-extract", "store-extract-session",
+                                                    "chat")] == ["store", "store-session", "store-extract",
+                                                                 "store-extract-session", "ingest"]
+    base = cycle.build_report("main", stages, {}, RULES)
+    other = cycle.build_report("candidate", stages, {}, RULES)
+    other["stages"]["store-extract-session"]["fixture_sha256"] = "e" * 64
+    assert compare.compare(base, other, RULES)["reasons"] == ["the store fixture differs (ffffffffffff against eeeeeeeeeeee)"]
+
+
+def test_a_report_without_the_store_extract_stage_is_compared_on_the_stages_it_has():
+    result = compare.compare(_extracting("main"), _report(), RULES)
+    assert result["status"] == "PASS" and all(measure.startswith("store-extract/") for measure, _ in result["skipped"])
+    assert "Partial: store-extract is in only one of the reports" in compare.render(result, _extracting("main"), _report())
+
+
+def test_the_markdown_report_sets_each_answer_rank_with_extraction_beside_the_plain_store_rank():
+    control = {**_results()["store"], "session_ids": True}
+    report = _report(extract={"store-session": control, "store-extract": _extract_stage("store-extract", ranks=(1, 8)),
+                              "store-extract-session": _extract_stage("store-extract-session", ranks=(2, 4))})
+    text = cycle.report_markdown(report, RULES)
+    assert "Store-session: the same 75 memories, each stored with its session as `session_id`" in text
+    assert "Store-extract: the same 75 memories with `extract=True`, extraction by `m`: 0 model requests and 75 replayed" in text
+    assert "Store-extract-session: the same 75 memories with `extract=True` and each session as session_id" in text
+    assert "## Store with extraction against plain store" in text
+    assert "| Question | store | store-session | store-extract | store-extract-session |" in text
+    # A star marks the stale cutover date ranked above the answer.
+    assert "| When is the production cutover? | 3* | 3* | 8* | 4* |" in text
+    assert "| what coding language is alex learning? | 3 | 3 | 1 | 2 |" in text
+    assert "| Extraction requests | store-extract | 75 | lower |" in text
+    assert "| what coding language is alex learning? | store-extract | 1 |" in text
+    assert "## Store with extraction" not in cycle.report_markdown(_report(), RULES)
+
+
+def test_the_store_extract_stages_run_only_when_asked_for(tmp_path, monkeypatch, capsys):
+    calls = []
+
+    async def fake_store(work, **options):
+        return _results()["store"]
+
+    async def fake_extract(work, **options):
+        calls.append(options["session_ids"])
+        name = "store-extract-session" if options["session_ids"] else "store-extract"
+        return _extract_stage(name)
+
+    monkeypatch.setattr(store, "run", fake_store)
+    monkeypatch.setattr(store_extract, "run", fake_extract)
+    monkeypatch.setattr(cycle, "_quiet_logs", lambda: None)
+    assert cycle.DEFAULT_STAGES == ("store", "ingest") and set(cycle.STAGES) - set(cycle.DEFAULT_STAGES) == {
+        "store-session", "store-extract", "store-extract-session"}
+    command = ["run", "--label", "x", "--out", str(tmp_path), "--baseline", "none"]
+    assert cycle.main([*command, "--stages", "store,store-extract,store-extract-session"]) == 0
+    assert calls == [False, True]
+    saved = json.loads((tmp_path / "report.json").read_text())
+    assert set(saved["stages"]) == {"store", "store-extract", "store-extract-session"}
+    assert "working_cache" not in json.dumps(saved) and set(saved["seconds"]) == set(saved["stages"]) | {"total"}
+    assert "## Store with extraction against plain store" in (tmp_path / "report.md").read_text()
+    with pytest.raises(SystemExit):
+        cycle.main([*command, "--stages", "store,extract"])

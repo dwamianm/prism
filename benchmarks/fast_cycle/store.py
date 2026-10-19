@@ -123,8 +123,12 @@ def store_config(pack: Path, overrides: dict | None = None, database_url: str | 
 
 
 async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: dict | None = None,
-              database_url: str | None = None) -> dict:
-    """Store the fixture's memories, ask its questions and return the stage's measures and details."""
+              database_url: str | None = None, session_ids: bool = False) -> dict:
+    """Store the fixture's memories, ask its questions and return the stage's measures and details.
+
+    ``session_ids`` stores each memory under its session as ``session_id`` (the
+    store-session stage), the control for the store-extract variant that does.
+    """
     fixture = load_fixture(fixture_path)
     pack = work / "pack"
     (pack / "lexical_index").mkdir(parents=True, exist_ok=True)
@@ -136,6 +140,7 @@ async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: di
             await engine.store_with_receipt(
                 memory["content"], user_id=owner, role=memory["role"], speaker=memory.get("speaker"),
                 node_type=NodeType(memory["node_type"]), scope=Scope(memory["scope"]),
+                session_id=memory["session"] if session_ids else None,
                 metadata={"source": "synthetic-demo", "session": memory["session"]})
         stored = time.perf_counter() - started
         # Search indexes are written after the node; wait for them as a reader later would.
@@ -148,7 +153,7 @@ async def run(work: Path, *, fixture_path: Path = DEFAULT_FIXTURE, overrides: di
         asked = time.perf_counter() - asked
     measures = store_measures(questions, nodes, edges, len(fixture["memories"]), fixture["key"]["entities"])
     return {"backend": "postgres" if database_url else "duckdb", "fixture": fixture["name"],
-            "fixture_sha256": fixture_digest(fixture_path), "settings": overrides or {},
+            "fixture_sha256": fixture_digest(fixture_path), "settings": overrides or {}, "session_ids": session_ids,
             "calls": len(fixture["memories"]), "nodes": len(nodes), "edges": len(edges),
             "store_seconds": stored, "retrieve_seconds": asked, "measures": measures,
             "questions": [{"id": question["id"], "question": question["question"], **{
