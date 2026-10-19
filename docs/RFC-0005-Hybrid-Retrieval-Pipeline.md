@@ -1140,6 +1140,25 @@ as several terms. Tantivy on DuckDB also matches any term, but ranks by BM25
 alone: the common-term rule, the full-match rule and the matched-term tiers
 apply to PostgreSQL only.
 
+With `lexical_term_weights` (PostgreSQL only; on by default since 2026-10-19 in
+the alpha channel, and `false` restores the rules above) the common-term rule
+and the matched-term tiers are replaced by term weights from the owner's own
+memories. With N searched documents, a query term that df of them hold weighs
+ln(N / df), and a document's evidence is the total weight of the query terms it
+holds, which is ln(N / c) for c, the number of documents expected to hold those
+terms together by chance (the document frequencies multiplied, as if the terms
+were independent). When the query has more than one term, a document is a
+candidate only when c is at most 0.2% of N or 2 documents, whichever is more. A
+few words that many memories share therefore cannot make a hit, and a word that
+two memories hold always can. Hits rank by evidence and then by `ts_rank_cd`;
+the full-match rule and the single-term behavior are unchanged. Rank fusion
+reads only the membership and order of the lexical candidates, and a document
+that both searches return usually outscores one that only the vector search
+found, even at a low vector rank (in the dog question of the fast cycle, a
+memory at vector rank 36 and word rank 4 outscored the vector search's first
+result). Weak word matches are therefore kept out of the candidates instead of
+ranked low.
+
 ## Visual memory retrieval (2026-10-15)
 
 [RFC-0018](RFC-0018-Visual-Memory.md) is a Draft design, with a feasibility spike

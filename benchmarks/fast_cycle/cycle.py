@@ -47,14 +47,15 @@ def provenance(overrides: dict) -> dict:
 
 
 async def run_stages(out: Path, *, stages: tuple[str, ...], overrides: dict, model: str, use_cache: bool,
-                     cache_dir: Path, database_url: str | None) -> dict:
+                     cache_dir: Path, database_url: str | None, store_fixture: Path = store.DEFAULT_FIXTURE) -> dict:
     results: dict = {}
     for name in stages:
         work = out / "work" / name
         shutil.rmtree(work, ignore_errors=True)
         started = time.perf_counter()
         if name == "store":
-            results[name] = await store.run(work, overrides=overrides, database_url=database_url)
+            results[name] = await store.run(work, fixture_path=store_fixture, overrides=overrides,
+                                            database_url=database_url)
         else:
             results[name] = await ingest.run(work, cache_dir=cache_dir, use_cache=use_cache, overrides=overrides,
                                              model=model)
@@ -157,6 +158,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--update-cache", action="store_true",
                      help="Copy the extraction responses this run added to the committed cache")
     run.add_argument("--cache-dir", type=Path, default=ingest.CACHE_DIR, help="The committed extraction cache")
+    run.add_argument("--store-fixture", type=Path, default=store.DEFAULT_FIXTURE,
+                     help="The store stage's fixture (default: store-v1); a report of another fixture is not "
+                          "comparable with the committed baseline, so pass --baseline none")
     run.add_argument("--database-url", default=None,
                      help=f"Run the store stage on PostgreSQL (or set {DATABASE_URL_ENV}); a DuckDB pack otherwise")
     comparison = commands.add_parser("compare", help="Judge a report against a baseline; exit 1 on a failed rule")
@@ -182,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     results = asyncio.run(run_stages(args.out, stages=stages, overrides=overrides, model=args.model,
                                      use_cache=not args.no_cache, cache_dir=args.cache_dir,
-                                     database_url=database_url))
+                                     database_url=database_url, store_fixture=args.store_fixture))
     report = build_report(args.label, results, overrides, rules)
     (args.out / "report.json").write_text(json.dumps(report, indent=1) + "\n")
     (args.out / "report.md").write_text(report_markdown(report, rules))
