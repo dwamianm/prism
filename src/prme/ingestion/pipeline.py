@@ -15,6 +15,7 @@ committed) and extraction is retried with exponential backoff (5s, 30s, 180s).
 from __future__ import annotations
 
 import asyncio
+import inspect
 import math
 import time
 import weakref
@@ -213,6 +214,15 @@ def _entities_with_unresolved_references(result: ExtractionResult) -> list[Extra
         entities.append(ExtractedEntity(name=occurrences[0][0], entity_type=entity_type))
         listed_names.add(normalized)
     return entities
+
+
+def _accepts_keyword(function, name: str) -> bool:
+    """Whether ``function`` takes the keyword argument ``name`` (a ``**kwargs`` takes any)."""
+    try:
+        parameters = inspect.signature(function).parameters
+    except (TypeError, ValueError):
+        return True
+    return name in parameters or any(item.kind is inspect.Parameter.VAR_KEYWORD for item in parameters.values())
 
 
 class IngestionPipeline:
@@ -870,7 +880,9 @@ class IngestionPipeline:
             speaker = metadata_speaker(event.metadata) if self._speaker_grounding else None
             if speaker is not None:
                 extra["speaker"] = speaker
-            if self._claim_fixes:
+            if self._claim_fixes and _accepts_keyword(self._extraction_provider.extract, "plural_first_person"):
+                # A provider written against the earlier signature is not asked, so the default that turned
+                # the option on does not break it; its "I" for a "we" is discarded as before.
                 extra["plural_first_person"] = True
             async with self._extraction_semaphore:
                 result = await self._extraction_provider.extract(

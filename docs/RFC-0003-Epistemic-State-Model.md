@@ -112,7 +112,7 @@ sentence of the paragraph is then absent from the content, though it stays in
 the evidence. With the setting off, the content is the whole passage, and
 because a chat message is usually one paragraph, every claim from it shares
 the message as its content.
-With `enable_ingest_claim_fixes` (default `false`), a claim whose sentences are
+With `enable_ingest_claim_fixes` (default `true` since 2026-10-19 in the alpha channel), a claim whose sentences are
 already the content of an earlier claim of the same message gets a one-sentence
 statement of its own instead, built from its subject, predicate and object
 (`Alex Rivera partner Jordan.`), with the speaker's name or "the speaker" for a
@@ -182,7 +182,7 @@ instead of dropping their qualifications.
 Relationships are materialized as source-cited FACT nodes with epistemic types,
 not direct semantic edges between entities. The subject links through HAS_FACT;
 a resolved object receives a MENTIONS link from the claim. With
-`enable_mention_links` (off by default), a claim and the raw source note also
+`enable_mention_links` (on by default since 2026-10-19 in the alpha channel), a claim and the raw source note also
 receive a MENTIONS link to each entity their extraction lists whose name occurs
 in their text (`metadata.basis` is `text_mention`), made once the derivation has
 committed and the note exists. A name that two listed entities share and a

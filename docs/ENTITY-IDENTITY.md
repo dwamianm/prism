@@ -32,19 +32,21 @@ knows that the named speaker, and not someone the turn quotes, is who says
 `I`, so set `PRME_ENABLE_SPEAKER_REFERENCES=false` when a speaker's turns
 quote others in the first person.
 
-With `enable_ingest_claim_fixes` (default `false`), a user turn that gives no
+With `enable_ingest_claim_fixes` (default `true` since 2026-10-19 in the alpha channel; `false` restores
+0.16.0a2), a user turn that gives no
 speaker but says who it is ("Hi, I am Alex Rivera", "I'm Alex", "My name is Alex
 Rivera", "Call me Alex") binds the same way when the extraction lists that name
 as a person; the claim's `speaker_reference` metadata then has
 `"basis": "self_introduction"`. That binding is local to the turn that names
-itself, unless `enable_owner_name_carry` (below) is on: later turns of the
+itself, unless `enable_owner_name_carry` (below) is on, as it is by default: later turns of the
 session still keep their own `I`, a caller's `speaker`
 or `first_person_owner` wins, and a possessive ("I am Jordan's partner"), a name
 the extraction did not list as a person, and a turn that introduces two
-different people bind nothing. The option has not been through the default-change
-rule, so turning it on by default needs that rule on the `ingest()` track.
+different people bind nothing. The default rests on the fast gate by the owner's directive of 2026-10-19; the
+full benchmark audit and the default-change rule on the `ingest()` track are pending.
 
-With `enable_owner_name_carry` (default `false`; it needs
+With `enable_owner_name_carry` (default `true` since 2026-10-19 in the alpha channel; `false` restores
+0.16.0a2; it needs
 `enable_speaker_references`), the name outlives the turn that gave it. A `user`
 turn is the memory's owner by definition, so the person entity that a user turn
 creates under the owner's name (the caller's `speaker`, or the introduction above)

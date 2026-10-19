@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add `packing.folded_records_keep_rank` (`PRME_PACKING__FOLDED_RECORDS_KEEP_RANK`),
-  off by default (prism-monorepo issues 258 and 259). With
+  added off and turned on below (prism-monorepo issues 258 and 259). With
   `enable_ingest_claim_fixes` on, the answer to a question ranked worse than
   with it off (the chat probe's answer in the top 3 fell from 14 of 18 to 8 of
   18, the defect probes' from 5 of 7 to 4 of 7). The cause is the statement
@@ -32,8 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   configuration dumps keep their bytes. It has not been through the
   default-change rule on the `ingest()` answer track. `BENCHMARKS.md` has the
   evidence ("Why the claim fixes lost rank").
-- Add `enable_owner_name_carry` (`PRME_ENABLE_OWNER_NAME_CARRY`), off by default
-  (part of prism-monorepo issue 258). A `user` turn is the memory's owner by
+- Add `enable_owner_name_carry` (`PRME_ENABLE_OWNER_NAME_CARRY`), added off and
+  turned on below (part of prism-monorepo issue 258). A `user` turn is the memory's owner by
   definition. `enable_ingest_claim_fixes` binds the `I` of the turn that
   introduces them ("Hi, I am Alex Rivera") and `enable_speaker_references` binds
   the `I` of a turn with a caller's `speaker`, for that turn only, so a later
@@ -73,6 +73,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rerun calls no model. It is opt in (`--stages store,store-contextual`) and
   changes nothing in the engine or the default run. It found no lift that meets
   the conditions set for building the option, so the engine does not have one.
+
+### Changed
+
+- Turn on five options by default, in the alpha channel (prism-monorepo issues
+  258 and 259), by the owner's directive of 2026-10-19: ship what passes the fast
+  gate and leave the full benchmark audit for later. They apply to `ingest()`
+  and to `retrieve()` over what it stores, not to `store()`, and memories
+  ingested before the upgrade are not rewritten. Each has an environment
+  variable that turns it off and restores the behavior of 0.16.0a2:
+  - `enable_ingest_claim_fixes` (`PRME_ENABLE_INGEST_CLAIM_FIXES=false`): a
+    plural first-person claim is kept, a user turn that says who it is binds its
+    `I`, and a claim whose sentences another claim already holds gets a
+    statement of its own. A custom extraction provider whose `extract` does not
+    take `plural_first_person` is not given it, so the default breaks none; its
+    `I` for a `we` is discarded as before.
+  - `packing.folded_records_keep_rank` (`PRME_PACKING__FOLDED_RECORDS_KEEP_RANK=false`):
+    `retrieve()` folds each such statement into the claim it restates, which
+    takes the better score, and the packer keeps a folded record's place. It is
+    what stops the statements from lowering the rank of an answer.
+  - `enable_mention_links` (`PRME_ENABLE_MENTION_LINKS=false`): a claim and the
+    raw source note are linked to every entity whose name they hold.
+  - `packing.graph_seed_words` (`PRME_PACKING__GRAPH_SEED_WORDS=false`): graph
+    search seeds from any word of the question that is a whole word of an
+    entity's name, whatever its case.
+  - `enable_owner_name_carry` (`PRME_ENABLE_OWNER_NAME_CARRY=false`): the owner's
+    name, once a user turn gave it, binds the `I` of their later user turns.
+  On the fast gate (`deepseek-v4.1-flash:cloud`, extraction replayed from the
+  committed cache), with the five on against off: the defect probes rank the
+  answer in the top 3 for 7 of 7 questions (5 of 7 off) and the chat probe for
+  14 of 18 and in the top 5 for 15 of 18, as with them off; user claims on the
+  named owner against "I" or "We" go from 0 against 17 to 12 against 5 on the
+  defect probes and from 0 against 39 to 35 against 3 on the chat probe;
+  claims whose text repeats another's go from 12 and 39 to 0; entities with no
+  link from 7 and 12 to 0; key links linked from 1 and 4 to 4 and 14. The fast
+  cycle passes with no gated measure worse (49 measures moved, 9 single answer
+  ranks one to two places lower, none gated), and the offline evidence gate is
+  unchanged. A `PackingConfig` built in code keeps its fields off, and an off
+  packing setting is left out of receipts, so receipts of retrievals that do
+  not use them keep their bytes; a receipt written with the defaults names the
+  two packing fields, which releases before 0.16.0a3 ignore when they read it.
+  The full benchmark audit and the default-change rule's DeepSeek answer runs
+  are pending. `BENCHMARKS.md` has the tables.
 
 ## [0.16.0a2] - 2026-10-19
 

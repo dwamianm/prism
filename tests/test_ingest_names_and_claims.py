@@ -129,7 +129,7 @@ class TestWhoseIsI:
         node, subject = await self.subject_of_claim(on(config, enable_speaker_references=False), user)
         assert subject.content == "I" and "speaker_reference" not in node.metadata
 
-    async def test_it_is_off_by_default(self, config, user):
+    async def test_it_does_nothing_while_off(self, config, user):
         assert config.enable_ingest_claim_fixes is False
         node, subject = await self.subject_of_claim(config, user)
         assert subject.content == "I" and "speaker_reference" not in node.metadata
@@ -228,18 +228,24 @@ class TestTheRepro:
         assert {node.metadata["grounding_method"] for node, _ in found} == {"source_passage_v1"}
 
 
-class TestOffByDefault:
+class TestOff:
     """With the option off, the repro gives what the engine gave before the option existed."""
 
-    def test_the_option_is_off_and_left_out_of_dumps(self):
+    def test_the_option_is_on_by_default_and_left_out_of_dumps_while_off(self, monkeypatch):
         from prme import PRMEConfig
+        from tests.conftest import STRUCTURE_OPTIONS
 
+        for name in STRUCTURE_OPTIONS:
+            monkeypatch.delenv(name)
+        # On since 2026-10-19 in the alpha channel (0.16.0a3); the fast gate decided it.
         default = PRMEConfig(_env_file=None)
-        assert default.enable_ingest_claim_fixes is False
-        assert "enable_ingest_claim_fixes" not in default.model_dump(mode="json")
-        turned_on = PRMEConfig(_env_file=None, enable_ingest_claim_fixes=True)
-        assert turned_on.model_dump(mode="json")["enable_ingest_claim_fixes"] is True
-        assert PRMEConfig(_env_file=None, **turned_on.model_dump()).enable_ingest_claim_fixes is True
+        assert default.enable_ingest_claim_fixes is True
+        assert default.model_dump(mode="json")["enable_ingest_claim_fixes"] is True
+        assert PRMEConfig(_env_file=None, **default.model_dump()).enable_ingest_claim_fixes is True
+        # A dump always names it, so a configuration with the option off survives a round trip.
+        turned_off = PRMEConfig(_env_file=None, enable_ingest_claim_fixes=False)
+        assert turned_off.model_dump(mode="json")["enable_ingest_claim_fixes"] is False
+        assert PRMEConfig(_env_file=None, **turned_off.model_dump()).enable_ingest_claim_fixes is False
 
     async def test_the_we_turn_has_no_claims_and_the_i_stays_local(self, config, user):
         async with MemoryEngine.open(batched(config)) as engine:

@@ -247,12 +247,17 @@ class TestScope:
 
 
 class TestOff:
-    def test_the_option_is_off_and_left_out_of_dumps(self):
+    def test_the_option_is_on_by_default_and_a_dump_names_it(self, monkeypatch):
+        from tests.conftest import STRUCTURE_OPTIONS
+
+        for name in STRUCTURE_OPTIONS:
+            monkeypatch.delenv(name)
+        # On since 2026-10-19 in the alpha channel (0.16.0a3); the fast gate decided it.
         default = PRMEConfig(_env_file=None)
-        assert default.enable_owner_name_carry is False
-        assert "enable_owner_name_carry" not in default.model_dump(mode="json")
-        turned_on = PRMEConfig(_env_file=None, enable_owner_name_carry=True)
-        assert turned_on.model_dump(mode="json")["enable_owner_name_carry"] is True
+        assert default.enable_owner_name_carry is True
+        assert default.model_dump(mode="json")["enable_owner_name_carry"] is True
+        turned_off = PRMEConfig(_env_file=None, enable_owner_name_carry=False)
+        assert turned_off.model_dump(mode="json")["enable_owner_name_carry"] is False
 
     async def test_without_it_a_later_turn_keeps_its_own_i_and_no_entity_is_marked(self, config, user):
         async with MemoryEngine.open(on(config, enable_owner_name_carry=False)) as engine:
