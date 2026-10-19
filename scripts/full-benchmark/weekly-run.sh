@@ -310,6 +310,8 @@ if [ -n "$RESUME" ]; then
   set_env "$RUN_ENV" RESUMED "$(date -u +%FT%TZ)"
 else
   RUN_ID="$(date -u +%Y%m%d-%H%M%S)-${SHA:0:8}"
+  # Two runs of one commit in the same second (a forced rerun) must not share a folder.
+  while [ -e "$RUNS/$RUN_ID" ] || [ -e "$DRY_RUNS/$RUN_ID" ]; do sleep 1; RUN_ID="$(date -u +%Y%m%d-%H%M%S)-${SHA:0:8}"; done
   if [ "$DRY_RUN" = 1 ]; then RUN_DIR="$DRY_RUNS/$RUN_ID"; else RUN_DIR="$RUNS/$RUN_ID"; fi
   RUN_ENV="$RUN_DIR/run.env"
   mkdir -p "$RUN_DIR"
