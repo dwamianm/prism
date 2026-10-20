@@ -163,6 +163,8 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, claim: Extrac
                     "last_error = NULL, updated_at = ? WHERE event_id = ?",
                     [receipt.created_at, str(plan.event_id)],
                 )
+        from prme.storage.privacy import consume_duck
+        consume_duck(conn, str(plan.event_id))
         conn.execute("COMMIT")
         return receipt
     except BaseException:
@@ -250,4 +252,6 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, *, claim: E
                 "UPDATE event_extractions SET status = 'complete', lease_expires_at = NULL, "
                 "last_error = NULL, updated_at = clock_timestamp() WHERE event_id = $1", str(plan.event_id),
             )
+        from prme.storage.privacy import consume_pg
+        await consume_pg(conn, str(plan.event_id))
         return receipt

@@ -191,20 +191,38 @@ class PlanningIndexes:
         self,
         provider: EmbeddingProvider,
         *,
+        privacy=None,
         materialization_policy: Literal[
             "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
         ] = (
             "speech_act_v12"
         ),
     ) -> DerivationPlan:
+        if privacy is not None:
+            from prme.privacy.records import PRIVACY_KEY
+            coordinator, prepared = privacy
+            for key, node in tuple(self.graph.nodes.items()):
+                metadata = dict(node.metadata or {})
+                # New plans do not become a hidden evidence archive. Grounded
+                # structured fields/qualifiers remain for PV-05 projection.
+                metadata.pop("evidence_quote", None)
+                metadata.pop("resolution", None)
+                metadata[PRIVACY_KEY] = prepared.record.reference()
+                self.graph.nodes[key] = node.model_copy(update={"metadata": metadata})
         # Snapshot before provider I/O, including referenced existing nodes.
         nodes = tuple(node.model_copy(deep=True) for node in self.graph.nodes.values())
         references = await self.graph.references()
+        if privacy is not None:
+            await coordinator.validate_references(prepared.record, references)
         inputs = tuple(self.vectors.items())
         if {key for key, _ in inputs} != {node.id for node in nodes}:
             raise ValueError("Every planned node requires an embedding input")
+        if privacy is not None:
+            provider = coordinator.require_runtime().embedder
         identity = (provider.model_name, provider.model_version, provider.dimension)
-        vectors = await encode_texts(provider, [content for _, content in inputs]) if inputs else []
+        vectors = (await coordinator.encode(tuple(content for _, content in inputs), prepared.record.snapshot,
+                   processing=prepared.record.processing_state == "pending")
+                   if privacy is not None else await encode_texts(provider, [content for _, content in inputs])) if inputs else []
         if len(vectors) != len(inputs):
             raise ValueError("Embedding provider must return one vector per planned input")
         if identity != (provider.model_name, provider.model_version, provider.dimension):

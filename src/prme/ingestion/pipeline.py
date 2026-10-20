@@ -299,6 +299,7 @@ class IngestionPipeline:
                                  "or fact text resolution")
             if not isinstance(extraction_provider, BatchExtractionProvider):
                 raise ValueError("Batched extraction needs a provider with extract_batch()")
+        self._privacy = None
         self._event_store = event_store
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -737,6 +738,13 @@ class IngestionPipeline:
 
         heartbeat = asyncio.create_task(renew_lease()) if claim is not None else None
         try:
+            from prme.privacy.records import PRIVACY_KEY
+            if PRIVACY_KEY in (event.metadata or {}):
+                if self._privacy is None:
+                    from prme.privacy.policy import PrivacyDenied
+                    raise PrivacyDenied("privacy_capability_unavailable")
+                await self._privacy.resume(event, claim=claim)
+                return
             plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
             if plan is None:
                 result = await self._extract_or_load(event, claim=claim, through=through)
@@ -1223,6 +1231,7 @@ class IngestionPipeline:
         result: ExtractionResult,
         event: Event,
         *,
+        privacy=None,
         materialization_policy: Literal[
             "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
         ] = "speech_act_v14",
@@ -1254,7 +1263,7 @@ class IngestionPipeline:
         # turns that do name their speaker mark the entity a later turn will find.
         carried = None
         owner_name_basis = None
-        if (self._owner_name_carry and self._bind_speaker_references and current_policy
+        if (privacy is None and self._owner_name_carry and self._bind_speaker_references and current_policy
                 and not owner_reference and event.role.casefold() in OWNER_ROLES):
             owner_name_basis = "speaker" if speaker is not None else "self_introduction" if introduced else None
             if owner_name_basis is None and any(
@@ -1280,7 +1289,7 @@ class IngestionPipeline:
             await before_prepare(graph)
         return await indexes.prepare(
             self._vector_index._provider,
-            materialization_policy=materialization_policy,
+            materialization_policy=materialization_policy, privacy=privacy,
         )
 
     async def _populate(

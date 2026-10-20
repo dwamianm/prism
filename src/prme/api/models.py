@@ -6,6 +6,9 @@ These are thin DTOs — no business logic belongs here.
 
 from __future__ import annotations
 
+from prme.privacy.policy import PrivacyPolicy
+
+
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
 from prme.models.learning import (
     FullRetrievalEvaluation,
@@ -109,6 +112,8 @@ class StoreRequest(BaseModel):
     """Request body for POST /v1/store."""
 
     model_config = ConfigDict(extra="forbid")
+    policy: PrivacyPolicy | None = None
+
 
     content: str = Field(description="Exact source text retained in the event log")
     retrieval_content: str | None = Field(
@@ -201,6 +206,8 @@ class IngestRequest(BaseModel):
     """Request body for POST /v1/ingest."""
 
     model_config = ConfigDict(extra="forbid")
+    policy: PrivacyPolicy | None = None
+
 
     content: str = Field(description="Message text to ingest")
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
@@ -238,6 +245,8 @@ class FastIngestBatchRequest(BaseModel):
     """Atomic raw-source admission for POST /v1/ingest/fast."""
 
     model_config = ConfigDict(extra="forbid")
+    policy: PrivacyPolicy | None = None
+
 
     items: Annotated[list[FastIngestItem], Field(min_length=1)]
     user_id: str | None = Field(
@@ -601,3 +610,10 @@ class RankingProfileRollbackRequest(RankingProfileScopeChangeRequest):
 
 class AnswerCitationRequest(AnswerCitationSubmission):
     user_id: str | None = Field(default=None, description="Owner; defaults to authenticated user")
+
+
+class PrivacyInspectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: str | None = None
+    scope: Scope = Scope.PERSONAL
+    policy: PrivacyPolicy | None = None

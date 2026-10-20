@@ -473,7 +473,7 @@ def claim_sentences(
 
 
 def validate_grounding(
-    result: ExtractionResult, source_text: str, *, speaker: str | None = None
+    result: ExtractionResult, source_text: str, *, speaker: str | None = None, content_free_logs: bool = False
 ) -> ExtractionResult:
     """Filter out extracted items not grounded in source text.
 
@@ -500,13 +500,19 @@ def validate_grounding(
         A new ExtractionResult with ungrounded items removed.
     """
 
+    def warning(code: str, **details) -> None:
+        if content_free_logs:
+            logger.warning(code)
+        else:
+            logger.warning(code, **details)
+
     # Filter entities: name must appear in source
     grounded_entities = []
     for entity in result.entities:
         if mentioned_or_spoken(entity.name, source_text, speaker):
             grounded_entities.append(entity)
         else:
-            logger.warning(
+            warning(
                 "grounding_entity_discarded",
                 entity_name=entity.name,
                 entity_type=entity.entity_type,
@@ -531,7 +537,7 @@ def validate_grounding(
                 replacement = None
             condition = fact.condition
             if condition is not None and condition not in passage:
-                logger.warning(
+                warning(
                     "grounding_condition_discarded",
                     subject=fact.subject,
                     reason="Condition is not a verbatim span of the supporting passage",
@@ -549,7 +555,7 @@ def validate_grounding(
                 claim_passage=passage,
             )
             if fact.quantity is not None and quantity is None:
-                logger.warning(
+                warning(
                     "grounding_quantity_discarded",
                     subject=fact.subject,
                     reason="Quantity is not an exact supported value and unit in the claim object",
@@ -562,7 +568,7 @@ def validate_grounding(
                 "quantity": quantity,
             }))
         else:
-            logger.warning(
+            warning(
                 "grounding_fact_discarded",
                 subject=fact.subject,
                 predicate=fact.predicate,
@@ -579,7 +585,7 @@ def validate_grounding(
         if passage is not None and source_grounded and target_grounded:
             condition = rel.condition
             if condition is not None and condition not in passage:
-                logger.warning(
+                warning(
                     "grounding_relationship_condition_discarded",
                     source_entity=rel.source_entity,
                     target_entity=rel.target_entity,
@@ -600,7 +606,7 @@ def validate_grounding(
                 if not source_grounded
                 else "target_entity"
             )
-            logger.warning(
+            warning(
                 "grounding_relationship_discarded",
                 source_entity=rel.source_entity,
                 target_entity=rel.target_entity,
