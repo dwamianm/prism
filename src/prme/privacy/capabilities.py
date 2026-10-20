@@ -36,6 +36,27 @@ class OperationBudget:
 
 
 @dataclass(frozen=True, repr=False)
+class BudgetContinuation:
+    """Non-content accounting carried only inside authenticated processing input.
+
+    A live-claim owner must prevent replay/concurrent reuse. This value is not a
+    public budget grant and is never reconstructed from caller metadata.
+    """
+    operation_id: UUID
+    input_bytes: int
+    detector_nanoseconds: int
+    leaves: int
+
+
+@dataclass(frozen=True, repr=False)
+class SourceOnlyRegion:
+    """Trusted engine classification of a sanitized source passage."""
+    path: tuple[str | int, ...]
+    start: int
+    end: int
+
+
+@dataclass(frozen=True, repr=False)
 class AdmissionContent:
     # Canonical finite JSON contains all named representations and metadata.
     # An immutable string prevents nested caller mutation while awaiting a lock.
@@ -45,6 +66,9 @@ class AdmissionContent:
     budget: OperationBudget
     issued_tokens: tuple[str, ...] = ()
     pseudonym_epoch: UUID | None = None
+    source: SanitizedContent | None = None
+    source_role: str = "user"
+    source_time: str | None = None
 
 
 @dataclass(frozen=True, repr=False)
@@ -62,6 +86,11 @@ class SanitizedContent:
     complete: bool = True
     unambiguous: bool = True
     representation_role: Literal["sanitized_source", "admitted_memory"] = "sanitized_source"
+    source_snapshot: PolicySnapshot | None = None
+    continuation: BudgetContinuation | None = None
+    source_only: tuple[SourceOnlyRegion, ...] = ()
+    source_role: str = "user"
+    source_time: str | None = None
 
 
 class Sanitizer(Protocol):

@@ -13,6 +13,8 @@ from prme import PrivacyPolicy, PrivacyRuntime, PRMEConfig
 from prme.privacy import CryptoProtector, NativeKeyCustody, PolicySnapshot, SecretKeyHandle, public_registry
 from prme.privacy.capabilities import EvidenceAccess, Guard, PayloadContext, ProtectedPayload, PayloadProtector
 from prme.privacy.keys import PseudonymKeyProvider
+from prme.privacy import ClosedSchema, CustomRule, LocalSanitizer, ValueValidator
+from prme.privacy.capabilities import AdmissionContent, SanitizedContent
 
 
 async def privacy_key_consumer(protector: CryptoProtector, custody: NativeKeyCustody,
@@ -35,6 +37,14 @@ async def privacy_key_consumer(protector: CryptoProtector, custody: NativeKeyCus
     assert_type(handle.use(len), int)
     handle.close()
     assert_type(CryptoProtector(public_registry("/operator/public.json")), CryptoProtector)
+
+
+async def sanitizer_consumer(content: AdmissionContent, schema_id: UUID) -> None:
+    sanitizer = LocalSanitizer()
+    assert_type(await sanitizer.admit(content), SanitizedContent)
+    assert_type(sanitizer.close(), None)
+    assert_type(CustomRule("literal_topic", "restricted topic"), CustomRule)
+    assert_type(ClosedSchema(schema_id, (("active", ValueValidator("boolean")),)), ClosedSchema)
 
 
 def protected_consumer(client: MemoryClient, policy: PrivacyPolicy, runtime: PrivacyRuntime) -> None:

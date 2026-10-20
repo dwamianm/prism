@@ -36,7 +36,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --python ${{ matrix.python-version }} --dev --extra api --extra mcp
+        run: uv sync --python ${{ matrix.python-version }} --dev --extra api --extra mcp --extra privacy --extra langchain --extra llamaindex
 
       - name: Install ffmpeg (video tests of RFC-0018 observe())
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
@@ -66,7 +66,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --python ${{ matrix.python-version }} --dev --extra postgres --extra api --extra mcp
+        run: uv sync --python ${{ matrix.python-version }} --dev --extra postgres --extra api --extra mcp --extra privacy --extra langchain --extra llamaindex
 
       - name: Start PostgreSQL
         run: docker compose up -d --wait
