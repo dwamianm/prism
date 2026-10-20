@@ -968,6 +968,155 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T231034156765-portability-cli-recovery-path-fix1-source.json",
       "source_manifest_sha256": "81aecbcad6368c526e97e4f41abd6412fa2c685d7cbb17e09883019891bb1c94",
       "tracked_diff_sha256": "ec8b065875550251af5763ee530f9eaaed22501ea1e3966c56085365b13d1017"
+    },
+    {
+      "name": "portability-checkpoint-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/privacy/admission.py",
+        "src/prme/privacy/portability.py",
+        "src/prme/privacy/cli.py",
+        "src/prme/storage/privacy_export.py",
+        "src/prme/storage/privacy_migration.py",
+        "src/prme/storage/engine.py",
+        "src/prme/client.py",
+        "src/prme/cli.py",
+        "tests/privacy_portability_support.py",
+        "tests/test_privacy_format_compatibility.py",
+        "tests/test_privacy_export.py",
+        "tests/test_privacy_restore.py",
+        "tests/test_privacy_migration.py",
+        "tests/test_privacy_portability_cli.py"
+      ],
+      "started_at": "2026-10-20T23:13:12.348716+00:00",
+      "elapsed_seconds": 0.066,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T231312348716-portability-checkpoint-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T231312348716-portability-checkpoint-static-source.json",
+      "source_manifest_sha256": "81aecbcad6368c526e97e4f41abd6412fa2c685d7cbb17e09883019891bb1c94",
+      "tracked_diff_sha256": "ec8b065875550251af5763ee530f9eaaed22501ea1e3966c56085365b13d1017"
+    },
+    {
+      "name": "mixed-family-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[directory]"
+      ],
+      "started_at": "2026-10-20T23:22:43.395865+00:00",
+      "elapsed_seconds": 1.988,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T232243395865-mixed-family-initial.log",
+      "log_sha256": "caba348e7fe2478681f58e29e4dd22a58b15c6d084c0a12d0b7125eabc397f63",
+      "head": "1d640faea75b9bf7b0ba454157475348a0f1e713",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232243395865-mixed-family-initial-source.json",
+      "source_manifest_sha256": "e420a2b35993185a28ac2555815b4d7de34fa03f68b79b165a71b066d3b20ded",
+      "tracked_diff_sha256": "7d0af35abf9e037e7aa97c51da5baccab89f04dfb58d01b7a367fa1ab30ee813"
+    },
+    {
+      "name": "mixed-family-fixture-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[directory]"
+      ],
+      "started_at": "2026-10-20T23:23:16.875876+00:00",
+      "elapsed_seconds": 10.055,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T232316875876-mixed-family-fixture-fix1.log",
+      "log_sha256": "f80372b425076c2924383c3a43d43f8aafbcd8e1da0beb4063cef920576105ca",
+      "head": "1d640faea75b9bf7b0ba454157475348a0f1e713",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232316875876-mixed-family-fixture-fix1-source.json",
+      "source_manifest_sha256": "d1bc5c092bd278e39d6c36f0b0d60c5e869042e2c0a472f0b28ce15321b7f3d2",
+      "tracked_diff_sha256": "6aef380c9619a2742a5fc51fe2da6bc59b17ff1a7b9b043dc10abdbeebbe9e69"
+    },
+    {
+      "name": "mixed-family-fixture-fix2",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[directory]"
+      ],
+      "started_at": "2026-10-20T23:24:09.337245+00:00",
+      "elapsed_seconds": 6.211,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T232409337245-mixed-family-fixture-fix2.log",
+      "log_sha256": "fe86a2d21faf2fe26efa3f06f47b7a6bf9f4d1ba1bce77a388b539140ec06e79",
+      "head": "1d640faea75b9bf7b0ba454157475348a0f1e713",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232409337245-mixed-family-fixture-fix2-source.json",
+      "source_manifest_sha256": "527c14698fff902984be4c2cb54194961111fcf54325afe4141d13d0c89fb9d1",
+      "tracked_diff_sha256": "ff1ec6839840563cd9ad2cb8a9f9d0c098b366a23e1f3283cd6cb11617b8d76d"
+    },
+    {
+      "name": "mixed-family-dependency-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[directory]"
+      ],
+      "started_at": "2026-10-20T23:24:44.026823+00:00",
+      "elapsed_seconds": 5.281,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T232444026823-mixed-family-dependency-fix1.log",
+      "log_sha256": "9e473887857eb0b504d1212f37313f47f0c4393eca92d0e5c566ece1f2781e83",
+      "head": "1d640faea75b9bf7b0ba454157475348a0f1e713",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232444026823-mixed-family-dependency-fix1-source.json",
+      "source_manifest_sha256": "f16820b7dc290795ce7b9d21a83b467b626926d335ffb492c4d252f603da0a71",
+      "tracked_diff_sha256": "72df9e85cfcb41d97c988a79063a6919ef7a7708b32c515c7fd3710281efa57e"
+    },
+    {
+      "name": "mixed-family-remaining-affected",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[pack]",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[postgres]",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[closed_fernet]",
+        "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure",
+        "tests/test_privacy_export.py",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-20T23:25:09.357763+00:00",
+      "elapsed_seconds": 39.981,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T232509357763-mixed-family-remaining-affected.log",
+      "log_sha256": "715e3adf72e329bd7a4040364287175bfe66ea1ee767c05e1bba8a10881d51ef",
+      "head": "1d640faea75b9bf7b0ba454157475348a0f1e713",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232509357763-mixed-family-remaining-affected-source.json",
+      "source_manifest_sha256": "f16820b7dc290795ce7b9d21a83b467b626926d335ffb492c4d252f603da0a71",
+      "tracked_diff_sha256": "72df9e85cfcb41d97c988a79063a6919ef7a7708b32c515c7fd3710281efa57e"
+    },
+    {
+      "name": "mixed-checkpoint-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/privacy_migration.py",
+        "src/prme/storage/privacy_export.py",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-20T23:26:44.398867+00:00",
+      "elapsed_seconds": 0.075,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T232644398867-mixed-checkpoint-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "1d640faea75b9bf7b0ba454157475348a0f1e713",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232644398867-mixed-checkpoint-static-source.json",
+      "source_manifest_sha256": "f16820b7dc290795ce7b9d21a83b467b626926d335ffb492c4d252f603da0a71",
+      "tracked_diff_sha256": "72df9e85cfcb41d97c988a79063a6919ef7a7708b32c515c7fd3710281efa57e"
     }
   ],
   "repair_cycles": {
@@ -992,6 +1141,17 @@
     "cli": {
       "initial": "Composite 11 passed/1 failed; nonexistent PG local db_path incorrectly used as recovery exclusion domain",
       "fix1": "Use actual protected export artifact in separate directory; failed PG case passed"
+    },
+    "mixed_fixture": {
+      "initial": "Directory setup failed before migration: required Event.role omitted.",
+      "fix1": "Required event role and explicit historical receipt settings corrected; native fixture setup reached migration. Run still failed because saved fact lacked extraction_kind.",
+      "fix2": "Saved fact now carries its actual fact extraction_kind. Fixture/setup and migration projection reached publication; run failed on a newly exposed missing summary UUID.",
+      "runtime_followup": "No fixture or assertion weakening: first dependency-loss runtime correction passed the exact case. Three failed runs remain failures."
+    },
+    "mixed_dependency_loss": {
+      "initial": "mixed-family-fixture-fix2: a freshly committed generated node was removed from pending before the same-loop known map was updated, so a dependent summary was wrongly omitted.",
+      "fix1": "Update known only after committed insertion; omit only proven removed/erased dependencies and refuse unexplained missing IDs. Directory passed, then remaining original three layouts passed.",
+      "unsuccessful_runtime_corrections": 0
     }
   },
   "held_dependencies": [
@@ -1066,16 +1226,48 @@
       "provenance": "root 326-historical-reader-provenance.json verifies 184/189 source files against exact git blobs, .pth/direct_url and locks; local historical-readers/source-pins.json and *-isolated-install.log"
     },
     "portability": {
-      "export": "3 affected checks passed in portability-cli-initial",
-      "restore": "3 affected checks passed in portability-cli-initial; direct rows + source availability only, no held ordinary retrieval parity",
-      "migration": "4 direct-intent layout checks passed migration-marker-fix1; closed Fernet intact-native vectors retained; mixed families pending",
+      "export": "3 affected checks passed in mixed-family-remaining-affected after complete generated dependency closure validation.",
+      "restore": "3 affected direct restore checks passed in mixed-family-remaining-affected; mixed migration also published/restored and resumed after lost acknowledgment under current ledger. No public retrieval parity claim.",
+      "migration": "Direct4 + mixed4 across directory, single-file, PostgreSQL and closed-Fernet passed affected controls. Same frozen EM07 family; public retrieval parity remains held.",
       "cli": "Initial composite failed with 11 passes and 1 PG recovery exclusion-path fixture failure; corrected PG case passed. Includes actual parser/handler, policy, scoped diagnostics/audit, separate key recovery/loss, erasure/status, export, dry-run/migration/status/restore",
       "whole_frozen_cases_passed": 0
+    },
+    "mixed_migration": {
+      "fixture": "tests/fixtures/privacy/migration-v1.json; unchanged original EM07 family",
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres",
+        "closed_fernet"
+      ],
+      "passed": 4,
+      "source_protocols": [
+        "EventStore.append / record_extraction / record_derivation_plan",
+        "native vector+lexical stage and commit_derivation",
+        "ProfileWorkRepository.prepare / _publish_prepared_profile",
+        "prepare_consolidation / native stage / publish_consolidation",
+        "existing checksum-bearing lifecycle snapshot and retrieval receipt readers"
+      ],
+      "assertions": [
+        "opaque event/node UUIDs, truth qualifiers and clocks retained",
+        "source/previous generated dependency closure retained in existing typed reference; missing previous dependency refuses export",
+        "explicit visual removal in supported local blob layouts and explicit changed-statement reembedding",
+        "interruption after generated insertion and after target publication; persisted admission envelopes/deadlines unchanged",
+        "current ledger applied after publication-before-ack; erased profile source closure absent and unrelated admitted node survives",
+        "target retains typed unavailable original history IDs; no rewritten original executable checksum",
+        "source logical fingerprint unchanged on every layout; directory and closed-Fernet source file hashes unchanged"
+      ],
+      "limitations": [
+        "PostgreSQL has no native visual blob layout; no invented visual adapter",
+        "No public standard-mode retrieval parity or replay continuity claim",
+        "Summary-selected erasure source closure is an upstream source-backed gap: memory UUID evidence refs currently treated as event admissions in storage/erasure.py:_resolve_intent_sources",
+        "Whole frozen EM07 and other shared cases remain unpassed"
+      ]
     }
   },
   "remaining_original_work": [
-    "Mixed legacy saved derivation/profile/summary conversion and visual/history dispositions",
-    "Lost-ack migration resume and current-authority target validation",
+    "Complete protected journal/export family coverage and original mixed standard-mode public retrieval parity; broader whole-case verdict remains pending",
+    "Upstream #325 typed summary evidence closure: distinguish source memory UUIDs from event UUIDs when resolving erasure intent sources",
     "Wrong/stale/foreign ledger restore negatives; copied pack and native PostgreSQL quarantine restore paths",
     "Bound same-lineage hosted PostgreSQL workspace restore into current live control authority",
     "EM04 rotation/erasure and remaining EM01-EM08 shared integration",

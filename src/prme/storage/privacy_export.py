@@ -185,14 +185,40 @@ def validate_export(bundle: ProtectedExport) -> ProtectedExport:
                             record.event_id, record.source_id, record.representation_id, purpose):
                         raise ValueError()
                     decode_envelope(payload, record.snapshot)
+        from prme.privacy.journals import JOURNAL_KEY, GeneratedNodeReference
+        by_node = {node.id: node for node in bundle.nodes}
+        dependencies = {}
         for node in bundle.nodes:
             _node(node, manifest)
-            if not set(node.evidence_refs) <= records.keys():
+            reference = (node.metadata or {}).get(JOURNAL_KEY)
+            sources = set(GeneratedNodeReference.model_validate(reference).source_node_ids) if reference else set()
+            if not sources <= by_node.keys() or node.id in sources:
                 raise ValueError()
+            if not set(node.evidence_refs) <= records.keys() | sources:
+                raise ValueError()
+            for identifier in sources | set(node.evidence_refs):
+                boundary = ((str(records[identifier].snapshot.policy.owner_id), records[identifier].snapshot.policy.scope)
+                    if identifier in records else (by_node[identifier].user_id, by_node[identifier].scope))
+                if boundary != (node.user_id, node.scope):
+                    raise ValueError()
+            dependencies[node.id] = sources
+        # A complete generated-memory graph must terminate in admitted sources,
+        # including previous publications, without a circular identity claim.
+        pending = dict(dependencies)
+        while pending:
+            ready = {identifier for identifier, sources in pending.items() if not sources.intersection(pending)}
+            if not ready:
+                raise ValueError()
+            for identifier in ready:
+                del pending[identifier]
         node_ids = {node.id for node in bundle.nodes}
         from prme.ingestion.admitted_statements import project_admitted_edge
         for edge in bundle.edges:
-            if edge.source_id not in node_ids or edge.target_id not in node_ids or edge.provenance_event_id not in records:
+            if edge.source_id not in node_ids or edge.target_id not in node_ids:
+                raise ValueError()
+            if edge.provenance_event_id not in records and not (
+                    edge.provenance_event_id is None and edge.target_id in dependencies[edge.source_id]
+                    and edge.edge_type.value == "derived_from"):
                 raise ValueError()
             if edge.model_dump(mode="json") != project_admitted_edge(edge).model_dump(mode="json"):
                 raise ValueError()

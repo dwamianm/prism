@@ -220,8 +220,26 @@ def _target(config):
 
 
 def _legacy_objects(source, *, remove_event_ids, remove_node_ids, unavailable_history):
+    try:
+        return _decode_legacy_objects(source, remove_event_ids=remove_event_ids,
+            remove_node_ids=remove_node_ids, unavailable_history=unavailable_history)
+    except (PrivacyDenied, PrivacyPortabilityError):
+        raise
+    except (ValueError, TypeError, KeyError, AttributeError):
+        raise PrivacyPortabilityError("privacy_legacy_unclassified") from None
+
+
+def _meaning(node):
+    """Saved content, qualifiers and truth clocks; mutable usage/state is separate."""
+    return node.model_dump(include={"id", "content", "metadata", "evidence_refs", "user_id", "scope",
+        "session_id", "node_type", "epistemic_type", "source_type", "valid_from", "valid_to", "event_time"})
+
+
+def _decode_legacy_objects(source, *, remove_event_ids, remove_node_ids, unavailable_history):
     from prme.models import Event
     from prme.models.direct_store import DirectStoreRecord
+    from prme.models.extraction import ExtractionRecord
+    from prme.storage.derivation_registry import decode_plan
     from prme.storage.pg.graph_store import PgGraphStore
     if source.tables.get("privacy_admissions"):
         raise PrivacyPortabilityError("privacy_legacy_unclassified")
@@ -239,29 +257,74 @@ def _legacy_objects(source, *, remove_event_ids, remove_node_ids, unavailable_hi
         events[event.id] = event
     if not set(remove_event_ids) <= events.keys():
         raise PrivacyPortabilityError("privacy_legacy_unclassified")
-    direct = {}
+    candidates, extractions, generated = {}, {}, {}
     for operation in source.tables["operations"]:
-        if operation["op_type"] != "DIRECT_STORE_REQUESTED":
-            continue
+        if operation["op_type"] == "EXTRACTION_VALIDATED":
+            body = json.loads(operation["payload"]) if isinstance(operation["payload"], str) else operation["payload"]
+            record = ExtractionRecord.model_validate(body)
+            event = events[record.event_id]
+            record.verify_source(event.user_id, event.scope.value, event.content_hash)
+            if record.operation_id != str(operation["id"]) or str(event.id) != str(operation["target_id"]):
+                raise PrivacyPortabilityError("privacy_legacy_unclassified")
+            extractions[event.id] = record
+    for operation in source.tables["operations"]:
         body = json.loads(operation["payload"]) if isinstance(operation["payload"], str) else operation["payload"]
-        record = DirectStoreRecord.from_operation_payload(body)
-        if record.event_id not in events or record.content_hash != events[record.event_id].content_hash:
-            raise PrivacyPortabilityError("privacy_legacy_unclassified")
-        direct[record.node.id] = record.event_id
+        if operation["op_type"] == "DIRECT_STORE_REQUESTED":
+            record = DirectStoreRecord.from_operation_payload(body)
+            record.verify_source(events[record.event_id])
+            if record.operation_id != str(operation["id"]):
+                raise PrivacyPortabilityError("privacy_legacy_unclassified")
+            candidates.setdefault(record.node.id, []).append((record.event_id, "direct", record.node))
+        elif operation["op_type"] == "DERIVATION_PREPARED":
+            plan = decode_plan(body)
+            event = events[plan.event_id]
+            plan.verify_source(event.user_id, event.scope.value, event.content_hash)
+            if plan.prepared_operation_id != str(operation["id"]) or plan.event_id not in extractions:
+                raise PrivacyPortabilityError("privacy_legacy_unclassified")
+            for node in plan.nodes:
+                candidates.setdefault(node.id, []).append((event.id, "extraction", node))
+        elif operation["op_type"] in {"PROFILE_PUBLISHED", "CONSOLIDATION_PUBLISHED"}:
+            if operation["op_type"] == "PROFILE_PUBLISHED":
+                from prme.storage.profile_registry import decode
+                plan = decode(tuple(operation[name] for name in ("id", "op_type", "target_id", "payload", "actor_id", "namespace_id")))
+                kind = "profile"
+            else:
+                from prme.storage.consolidation_publication import _unpack, _validate_operation
+                plan = _unpack(body)
+                _validate_operation(plan, tuple(operation[name] for name in ("op_type", "target_id", "payload", "actor_id", "namespace_id")), "CONSOLIDATION_PUBLISHED")
+                kind = "summary"
+            if plan.schema_version != 1 or plan.privacy_manifest is not None:
+                raise PrivacyPortabilityError("privacy_legacy_unclassified")
+            generated[plan.node.id] = (kind, plan)
     nodes = {node.id: node for node in map(PgGraphStore._record_to_node, source.tables["nodes"])}
     if not set(remove_node_ids) <= nodes.keys():
         raise PrivacyPortabilityError("privacy_legacy_unclassified")
     by_event = {identifier: [] for identifier in events}
+    kinds = {identifier: "extraction" if identifier in extractions else "direct" for identifier in events}
+    retained_generated = {}
     for node in nodes.values():
         if node.id in remove_node_ids or any(value in remove_event_ids for value in node.evidence_refs):
             continue
-        # This adapter never guesses that a historical source paragraph is an
-        # admitted statement. Saved direct intent is the supported direct form;
-        # other legacy graph kinds need their deliberate removal disposition.
-        if direct.get(node.id) not in events or node.evidence_refs != [direct[node.id]]:
+        if node.id in generated:
+            kind, plan = generated[node.id]
+            if (_meaning(node) != _meaning(plan.node) or any(
+                    dep.id not in nodes or _meaning(dep) != _meaning(nodes[dep.id])
+                    for dep in (*plan.sources, *plan.previous))):
+                raise PrivacyPortabilityError("privacy_legacy_unclassified")
+            retained_generated[node.id] = (node, kind, plan)
+            continue
+        matching = [(event_id, kind) for event_id, kind, saved in candidates.get(node.id, ())
+                    if _meaning(node) == _meaning(saved)]
+        if len(set(matching)) != 1:
             raise PrivacyPortabilityError("privacy_legacy_unclassified")
-        by_event[direct[node.id]].append(node)
-    if any(len(values) > 1 for values in by_event.values()):
+        event_id, kind = matching[0]
+        if any(ref not in events or (events[ref].user_id, events[ref].scope) != (node.user_id, node.scope) for ref in node.evidence_refs):
+            raise PrivacyPortabilityError("privacy_legacy_unclassified")
+        if by_event[event_id] and kinds[event_id] != kind:
+            raise PrivacyPortabilityError("privacy_legacy_unclassified")
+        kinds[event_id] = kind
+        by_event[event_id].append(node)
+    if any(len(values) > 1 and kinds[identifier] == "direct" for identifier, values in by_event.items()):
         raise PrivacyPortabilityError("privacy_legacy_unclassified")
     if source.tables.get("blobs"):
         # A visual source and all dependent nodes must be explicitly selected
@@ -270,7 +333,7 @@ def _legacy_objects(source, *, remove_event_ids, remove_node_ids, unavailable_hi
             if any(key in (event.metadata or {}) for key in ("frame_sha256", "thumbnail", "observation_id", "frame_id"))}
         if not visual or not visual <= set(remove_event_ids):
             raise PrivacyPortabilityError("privacy_legacy_unclassified")
-    return events, by_event
+    return events, by_event, kinds, retained_generated
 
 
 def _legacy_vectors(source, config):
@@ -330,6 +393,222 @@ def _migration_coordinator(conn, config, runtime):
     return engine
 
 
+async def _event_nodes(coordinator, prepared, nodes, vectors, *, allow_reembedding):
+    """Use the existing closed projections; never admit a supporting paragraph."""
+    from prme.privacy.records import PRIVACY_KEY
+    from prme.models.derivation import PreparedEmbedding
+    if not nodes:
+        return (), ()
+    if prepared.record.kind == "direct":
+        admitted = []
+        for original in nodes:
+            projected = coordinator.direct_node(prepared, node_type=original.node_type,
+                epistemic_type=original.epistemic_type, source_type=original.source_type,
+                confidence=original.confidence, ttl_days=original.ttl_days,
+                valid_from=original.valid_from, valid_to=original.valid_to)
+            admitted.append(original.model_copy(update={"content": projected.content, "metadata": projected.metadata}))
+    else:
+        from prme.ingestion.admitted_statements import project_admitted_node
+        admitted = [project_admitted_node(node, prepared.source) for node in nodes]
+        fields = {"nodes": [{"content": node.content, "metadata": node.metadata} for node in admitted],
+                  "vectors": [node.content for node in admitted], "lexical": [node.content for node in admitted]}
+        values, report = await coordinator.final_generated_bundle(prepared, fields)
+        if set(values) != set(fields) or any(len(values[key]) != len(fields[key]) for key in fields):
+            raise PrivacyDenied("privacy_invalid_result")
+        for index, node in enumerate(admitted):
+            value = values["nodes"][index]
+            if value["content"] != values["vectors"][index] or value["content"] != values["lexical"][index]:
+                raise PrivacyDenied("privacy_invalid_result")
+            metadata = dict(value["metadata"])
+            metadata[PRIVACY_KEY] = prepared.record.reference()
+            if report is not None:
+                metadata[PRIVACY_KEY]["sanitization"] = report.model_dump(mode="json")
+            admitted[index] = node.model_copy(update={"content": value["content"], "metadata": metadata})
+    embeddings = []
+    runtime = coordinator.require_runtime()
+    for node in admitted:
+        existing = vectors.get(node.id)
+        if existing is None:
+            raise PrivacyPortabilityError("privacy_legacy_unclassified")
+        if existing.content == node.content:
+            embeddings.append(existing)
+        elif allow_reembedding:
+            encoded = await coordinator.encode((node.content,), prepared.record.snapshot, records=(prepared.record,))
+            embeddings.append(PreparedEmbedding(node_id=node.id, content=node.content, values=encoded[0],
+                model=runtime.embedder.model_name, version=runtime.embedder.model_version, dimension=runtime.embedder.dimension))
+        else:
+            raise PrivacyPortabilityError("privacy_legacy_unclassified")
+    return tuple(node.model_dump() for node in admitted), tuple(embeddings)
+
+
+class _GeneratedMigration:
+    """Only already-admitted, exact migration dependencies enter this adapter.
+
+    This implements the existing #324 generated-output capability shape. It
+    does not use or replace the ordinary-read contributor classifier.
+    """
+    def __init__(self, coordinator, records):
+        from prme.privacy.capabilities import OperationBudget
+        self.coordinator = coordinator
+        self.records = {record.event_id: record for record in records}
+        self.budget = OperationBudget(uuid4())
+
+    async def generated_sources(self, values):
+        from prme.privacy.admission import _fields
+        from prme.privacy.sanitizer import canonical
+        snapshots = {record.snapshot for record in self.records.values()}
+        return tuple([await self.coordinator.sanitize(_fields(canonical(values), None), saved,
+            self.budget, mode="query") for saved in snapshots])
+
+    async def generated(self, fields, *, sources):
+        from prme.privacy.sanitizer import canonical
+        values = [await self.coordinator.sanitize(canonical(fields), source.source_snapshot,
+            self.budget, mode="generated_output", source=source) for source in sources]
+        if not values or len({value.fields_json for value in values}) != 1:
+            raise PrivacyDenied("privacy_policy_conflict")
+        return json.loads(values[0].fields_json)
+
+
+def _dependency_records(nodes, known_nodes, records):
+    from prme.privacy.journals import JOURNAL_KEY, GeneratedNodeReference
+    from prme.privacy.records import PRIVACY_KEY
+    pending, seen, event_ids = list(nodes), set(), set()
+    while pending:
+        node = pending.pop()
+        if node.id in seen:
+            continue
+        seen.add(node.id)
+        metadata = node.metadata or {}
+        event_ids.add(UUID(metadata[PRIVACY_KEY]["event_id"]))
+        if JOURNAL_KEY in metadata:
+            pending.extend(known_nodes[identifier] for identifier in GeneratedNodeReference.model_validate(metadata[JOURNAL_KEY]).source_node_ids)
+        for identifier in node.evidence_refs:
+            if identifier in records:
+                event_ids.add(identifier)
+            elif identifier in known_nodes:
+                pending.append(known_nodes[identifier])
+            else:
+                raise PrivacyPortabilityError("privacy_legacy_unclassified")
+    return tuple(records[identifier] for identifier in sorted(event_ids, key=str))
+
+
+async def _generated_nodes(engine, generated, vectors, *, removed_nodes, allow_reembedding, fault):
+    """Admitted memory survives; old executable publication identity does not.
+
+    The existing typed generated reference records *all* source and previous
+    publication nodes. Current ledger traversal therefore retains the full
+    declared dependency closure without inventing a new executable journal.
+    """
+    from prme.models.derivation import PreparedEmbedding
+    from prme.privacy.journals import admit_generated_node
+    from prme.privacy.portability import ProtectedExport, ProtectedExportManifest, ProtectedStoreFormat
+    from prme.storage.pg.graph_store import PgGraphStore, _NODE_COLUMNS
+    from prme.storage.privacy_export import _load_export, _node
+    coordinator = engine._privacy
+    runtime = coordinator.require_runtime()
+    pending, omitted = dict(generated), set(removed_nodes)
+    while pending:
+        progressed = False
+        # Read the actual committed batches on every resume; never regenerate
+        # an already persisted generated node or its stored numerical vector.
+        async with coordinator.erasure.repository.session() as session:
+            known = {node.id: node for node in map(PgGraphStore._record_to_node,
+                await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))}
+        records = {record.event_id: record for record in await coordinator.erasure.current_records(
+            await coordinator.repository._read("1=1", ()))}
+        for identifier, (original, kind, plan) in tuple(pending.items()):
+            if identifier in known:
+                pending.pop(identifier)
+                progressed = True
+                continue
+            dependencies = tuple(dict.fromkeys(node.id for node in (*plan.sources, *plan.previous)))
+            if any(identity in pending for identity in dependencies):
+                continue
+            if any(identity in omitted for identity in dependencies):
+                # A deliberate removal or current erasure invalidates the whole
+                # generated result; no surviving fragment justifies its text.
+                omitted.add(identifier)
+                pending.pop(identifier)
+                progressed = True
+                continue
+            if any(identity not in known for identity in dependencies):
+                raise PrivacyPortabilityError("privacy_legacy_unclassified")
+            sources = tuple(known[identity] for identity in dependencies)
+            selected = _dependency_records(sources, known, records)
+            try:
+                async with coordinator.erasure.guard(selected, node_ids=(identifier, *dependencies)):
+                    metadata = dict(original.metadata or {})
+                    if kind == "profile":
+                        metadata["profile_format_version"] = 2
+                    else:
+                        # The new opaque lineage is an existing opaque node ID,
+                        # never the old content-derived request hash or name.
+                        metadata["consolidation_key"] = str(identifier)
+                        if metadata.get("summary_publication_kind") == "hierarchical_source_excerpts_v2":
+                            metadata["summary_publication_key"] = str(identifier)
+                        else:
+                            metadata["consolidation_format_version"] = 2
+                    admitted, manifest = await admit_generated_node(_GeneratedMigration(coordinator, selected),
+                        original.model_copy(update={"metadata": metadata}), sources, kind=kind, lineage_id=identifier)
+                    _node(admitted, manifest)
+                    existing = vectors.get(identifier)
+                    if existing is None:
+                        raise PrivacyPortabilityError("privacy_legacy_unclassified")
+                    if existing.content == admitted.content:
+                        embedding = existing
+                    elif allow_reembedding:
+                        encoded = await coordinator.encode((admitted.content,), selected[0].snapshot, records=selected)
+                        embedding = PreparedEmbedding(node_id=identifier, content=admitted.content, values=encoded[0],
+                            model=runtime.embedder.model_name, version=runtime.embedder.model_version, dimension=runtime.embedder.dimension)
+                    else:
+                        raise PrivacyPortabilityError("privacy_legacy_unclassified")
+                    # Internal append, not a standalone export. The complete
+                    # typed graph is validated before any external publication.
+                    descriptor = ProtectedStoreFormat.model_validate_json((await coordinator.repository._query("SELECT body FROM privacy_format", ()))[0][0])
+                    head = (await coordinator.erasure.repository.state())[1]
+                    batch = ProtectedExport(manifest=ProtectedExportManifest(mode="protected", format=descriptor,
+                        created_at=runtime.clock(), ledger_checkpoint=head, omitted=("legacy_executable_publication",)),
+                        admissions=(), events=(), nodes=(admitted.model_dump(),), edges=(), embeddings=(embedding,), operations=(), work=())
+                    async with coordinator.publication_guards(selected, node_ids=(identifier, *dependencies)):
+                        await _load_export(coordinator.erasure.repository, batch)
+                    known[identifier] = admitted
+                if fault:
+                    await fault("after_generated", len(generated) - len(pending), engine)
+            except PrivacyDenied as exc:
+                if exc.code != "privacy_erased":
+                    raise
+                omitted.add(identifier)
+            pending.pop(identifier)
+            progressed = True
+        if not progressed:
+            raise PrivacyPortabilityError("privacy_legacy_unclassified")
+
+
+async def _published_target(config, runtime, provider, expected):
+    """A lost acknowledgment can only resume this exact published lineage/job."""
+    from prme import MemoryEngine
+    from prme.privacy.portability import ProtectedStoreFormat
+    if config.backend != "postgres" and not Path(config.pack_path or config.db_path).exists():
+        return False
+    async with _source(config) as query:
+        tables = await query("SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema() AND table_type='BASE TABLE'")
+        if not tables:
+            return False
+        if "privacy_format" not in {row["table_name"] for row in tables}:
+            raise PrivacyPortabilityError("privacy_destination_occupied")
+        actual = ProtectedStoreFormat.model_validate_json((await query("SELECT body FROM privacy_format"))[0]["body"])
+        if actual != expected.model_copy(update={"state": "complete"}):
+            raise PrivacyPortabilityError("privacy_destination_occupied")
+    # Normal current-ledger/expiry-before-recovery startup is still mandatory;
+    # the job's completion bit is not permission to serve stale target data.
+    async with MemoryEngine.open(config, privacy_runtime=runtime, embedding_provider=provider) as engine:
+        coordinator = engine._privacy
+        records = await coordinator.erasure.current_records(await coordinator.repository._read("1=1", ()))
+        nodes = await coordinator.repository._query("SELECT id FROM nodes", ())
+        async with coordinator.publication_guards(records, node_ids=tuple(row[0] for row in nodes)):
+            return True
+
+
 def migration_status(job_path) -> MigrationStatus:
     """Read-only job status is progress, never independent serving permission."""
     import duckdb
@@ -370,7 +649,7 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
     source = await _read_snapshot(source_config)
     remove_events = tuple(sorted(map(UUID, map(str, remove_event_ids)), key=str))
     remove_nodes = tuple(sorted(map(UUID, map(str, remove_node_ids)), key=str))
-    events, by_event = _legacy_objects(source, remove_event_ids=remove_events,
+    events, by_event, kinds, generated = _legacy_objects(source, remove_event_ids=remove_events,
         remove_node_ids=remove_nodes, unavailable_history=unavailable_legacy_history)
     vectors = _legacy_vectors(source, source_config)
     path = Path(job_path).absolute()
@@ -415,8 +694,6 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
             async with coordinator.guard(job.snapshot, "admission"):
                 if not await runtime.retry_committer.verify(job.model_dump_json().encode(), commitment):
                     raise PrivacyDenied("privacy_retry_conflict")
-            if state == "complete":
-                return MigrationStatus(job_id=job.job_id, state=state, completed=completed, total=len(job.event_ids))
             await prepare_store(conn=conn, runtime=runtime, namespace_id=working.namespace_id)
         else:
             job = _MigrationJob(job_id=uuid4(), snapshot=current, source_generation=source.fingerprint,
@@ -439,6 +716,15 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
         descriptor = ProtectedStoreFormat.model_validate_json(conn.execute("SELECT body FROM privacy_format").fetchone()[0])
         if descriptor.migration_id != job.job_id or descriptor.state != "staging":
             raise PrivacyPortabilityError("privacy_migration_incomplete")
+        if resume and completed == len(job.event_ids):
+            if await _published_target(target_config, runtime, embedding_provider, descriptor):
+                conn.execute("UPDATE privacy_migration_job SET state='complete' WHERE singleton=1")
+                return MigrationStatus(job_id=job.job_id, state="complete", completed=completed, total=len(job.event_ids))
+            if state == "complete":
+                raise PrivacyPortabilityError("privacy_migration_incomplete")
+        from prme.privacy.records import PrivacyRecord
+        subjects = {identifier: PrivacyRecord(event_id=identifier, source_id=uuid4(), representation_id=uuid4(),
+            snapshot=job.snapshot, kind=kinds[identifier]) for identifier in events}
         for index, event_id in enumerate(job.event_ids):
             if index < completed:
                 continue
@@ -446,51 +732,51 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
                 conn.execute("UPDATE privacy_migration_job SET completed=? WHERE singleton=1", [index + 1])
                 continue
             event = events[event_id]
-            from prme.privacy.records import PrivacyRecord
-            subject = PrivacyRecord(event_id=event_id, source_id=uuid4(), representation_id=uuid4(), snapshot=job.snapshot, kind="direct")
+            subject = subjects[event_id]
             if not await coordinator.erasure.current_records((subject,)):
                 conn.execute("UPDATE privacy_migration_job SET completed=? WHERE singleton=1", [index + 1])
                 continue
-            nodes = by_event[event_id]
-            original_node = nodes[0] if nodes else None
-            prepared = await coordinator.prepare(event.content, user_id=event.user_id, scope=event.scope, policy=None,
-                kind="direct", asynchronous=False, session_id=event.session_id, role=event.role,
-                metadata=original_node.metadata if original_node else event.metadata, event_time=event.event_time,
-                retrieval_content=original_node.content if original_node else None,
-                _migration_identity=(event_id, job.snapshot))
-            from dataclasses import replace
-            prepared = replace(prepared, record=prepared.record.model_copy(update={"retry": commitment, "request_index": index}))
-            admitted_nodes, embeddings = (), ()
-            if original_node is not None:
-                projected = coordinator.direct_node(prepared, node_type=original_node.node_type,
-                    epistemic_type=original_node.epistemic_type, source_type=original_node.source_type,
-                    confidence=original_node.confidence, ttl_days=original_node.ttl_days,
-                    valid_from=original_node.valid_from, valid_to=original_node.valid_to)
-                admitted = original_node.model_copy(update={"content": projected.content, "metadata": projected.metadata,
-                    "evidence_refs": [event_id]})
-                admitted_nodes = (admitted.model_dump(),)
-                existing = vectors.get(original_node.id)
-                if existing is not None and existing.content == admitted.content:
-                    embeddings = (existing,)
-                elif existing is not None:
-                    if not allow_reembedding:
-                        raise PrivacyPortabilityError("privacy_legacy_unclassified")
-                    from prme.models.derivation import PreparedEmbedding
-                    values = await coordinator.encode((admitted.content,), prepared.record.snapshot, records=(prepared.record,))
-                    embeddings = (PreparedEmbedding(node_id=admitted.id, content=admitted.content, values=values[0],
-                        model=runtime.embedder.model_name, version=runtime.embedder.model_version, dimension=runtime.embedder.dimension),)
-            head = (await coordinator.erasure.repository.state())[1]
-            batch = ProtectedExport(manifest=ProtectedExportManifest(mode="protected", format=descriptor.model_copy(update={"state": "complete"}),
-                created_at=runtime.clock(), ledger_checkpoint=head, omitted=("legacy_history_checksum_and_replay",)),
-                admissions=(prepared.record,), events=(ExportEvent(id=event.id, timestamp=event.timestamp, role=event.role,
-                    user_id=event.user_id, session_id=event.session_id, scope=event.scope, created_at=event.created_at, event_time=event.event_time),),
-                nodes=admitted_nodes, edges=(), embeddings=embeddings, operations=(), work=())
-            from prme.storage.privacy_export import validate_export
-            validate_export(batch)
-            if _fault:
-                await _fault("before_batch", index, engine)
-            async with coordinator.publication_guards((prepared.record,), node_ids=tuple(node["id"] for node in admitted_nodes)), coordinator.writer_guard((prepared.record,)):
-                await _load_export(coordinator.erasure.repository, batch, _cursor=index + 1)
+            nodes = []
+            for node in by_event[event_id]:
+                # Keep the exact full evidence set or omit the whole node when
+                # a current event/node fence invalidates it; never trim refs.
+                try:
+                    async with coordinator.erasure.guard(tuple(subjects[ref] for ref in node.evidence_refs), node_ids=(node.id,)):
+                        nodes.append(node)
+                except PrivacyDenied as exc:
+                    if exc.code != "privacy_erased":
+                        raise
+            dependencies = tuple(subjects[identifier] for identifier in sorted(
+                {event_id, *(ref for node in nodes for ref in node.evidence_refs)}, key=str))
+            async with coordinator.erasure.guard(dependencies, node_ids=tuple(node.id for node in nodes)):
+                original_node = nodes[0] if nodes else None
+                prepared = await coordinator.prepare(event.content, user_id=event.user_id, scope=event.scope, policy=None,
+                    kind=kinds[event_id], asynchronous=False, session_id=event.session_id, role=event.role,
+                    metadata=original_node.metadata if original_node and kinds[event_id] == "direct" else event.metadata, event_time=event.event_time,
+                    retrieval_content=original_node.content if original_node and kinds[event_id] == "direct" else None,
+                    _migration_identity=(event_id, job.snapshot))
+                from dataclasses import replace
+                prepared = replace(prepared, record=prepared.record.model_copy(update={"retry": commitment, "request_index": index}))
+                admitted_nodes, embeddings = await _event_nodes(coordinator, prepared, nodes, vectors,
+                    allow_reembedding=allow_reembedding)
+                head = (await coordinator.erasure.repository.state())[1]
+                batch = ProtectedExport(manifest=ProtectedExportManifest(mode="protected", format=descriptor.model_copy(update={"state": "complete"}),
+                    created_at=runtime.clock(), ledger_checkpoint=head, omitted=("legacy_history_checksum_and_replay",)),
+                    admissions=(prepared.record,), events=(ExportEvent(id=event.id, timestamp=event.timestamp, role=event.role,
+                        user_id=event.user_id, session_id=event.session_id, scope=event.scope, created_at=event.created_at, event_time=event.event_time),),
+                    nodes=admitted_nodes, edges=(), embeddings=embeddings, operations=(), work=())
+                # The job may contain an admitted node referring to a later event
+                # batch. It remains non-serving until complete dependency closure
+                # validates below. Each persisted node still passes the existing
+                # typed projection under its exact primary record before this write.
+                from prme.storage.privacy_export import _node, _manifest
+                manifest = _manifest((prepared.record,), runtime.clock())
+                for node in batch.nodes:
+                    _node(node, manifest)
+                if _fault:
+                    await _fault("before_batch", index, engine)
+                async with coordinator.publication_guards((prepared.record, *dependencies), node_ids=tuple(node["id"] for node in admitted_nodes)), coordinator.writer_guard((prepared.record,)):
+                    await _load_export(coordinator.erasure.repository, batch, _cursor=index + 1)
             if _fault:
                 await _fault("after_batch", index, engine)
         # Metadata-only historical references use the existing unavailable view;
@@ -505,6 +791,11 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
                 view = ProtectedOperationView(id=operation["id"], target_id=target_id, created_at=operation["created_at"])
                 conn.execute("INSERT INTO privacy_migration_history VALUES(?,?) ON CONFLICT DO NOTHING", [str(view.id), view.model_dump_json()])
         await prepare_store(conn=conn, runtime=runtime, namespace_id=working.namespace_id)
+        all_source_nodes = {UUID(str(row["id"])) for row in source.tables["nodes"]}
+        existing_nodes = {UUID(str(row[0])) for row in conn.execute("SELECT id FROM nodes").fetchall()}
+        await _generated_nodes(engine, generated, vectors,
+            removed_nodes=all_source_nodes - existing_nodes - generated.keys(),
+            allow_reembedding=allow_reembedding, fault=_fault)
         from prme.storage.pg.graph_store import PgGraphStore, _EDGE_COLUMNS
         from prme.ingestion.admitted_statements import project_admitted_edge
         remaining_nodes = {UUID(str(row[0])) for row in conn.execute("SELECT id FROM nodes").fetchall()}
@@ -512,7 +803,7 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
         edges = []
         for row in source.tables["edges"]:
             edge = PgGraphStore._record_to_edge(row)
-            if edge.source_id not in remaining_nodes or edge.target_id not in remaining_nodes or edge.provenance_event_id not in remaining_events:
+            if edge.source_id not in remaining_nodes or edge.target_id not in remaining_nodes or (edge.provenance_event_id is not None and edge.provenance_event_id not in remaining_events):
                 continue  # Explicit removal or the real current erasure fence.
             edges.append(project_admitted_edge(edge))
         records = await coordinator.erasure.current_records(await coordinator.repository._read("1=1", ()))
@@ -536,6 +827,8 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
         async with coordinator.publication_guards(records, node_ids=tuple(node.id for node in bundle.nodes)):
             _publish_bytes(artifact, bundle.model_dump_json().encode())
         await restore_protected_export(artifact, target_config, privacy_runtime=runtime, embedding_provider=embedding_provider)
+        if _fault:
+            await _fault("after_publication", len(job.event_ids), engine)
         conn.execute("UPDATE privacy_migration_job SET state='complete' WHERE singleton=1")
         return MigrationStatus(job_id=job.job_id, state="complete", completed=len(job.event_ids), total=len(job.event_ids))
     except BaseException:

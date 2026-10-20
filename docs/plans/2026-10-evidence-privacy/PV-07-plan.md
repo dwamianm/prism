@@ -615,3 +615,32 @@ Root authorized initialize=False after the actual HS01/HS11 restricted-login fai
 ## Implementation checkpoint (2026-10-20)
 
 Source reader and explicit protected format/runtime-only PostgreSQL opening are committed. The next checkpoint adds closed export/restore, authenticated resumable direct-intent migration, exact pinned-reader evidence and explicit CLI controls. All original six ACs and the frozen scenarios remain open pending complete integration; no direct-only or component-only pass closes EM07. The source private identity seam adds only admission.py prepare validation, explicitly approved by root for AC2. Mixed saved derivation/profile/summary conversion, lost acknowledgments, restore negative/native routes and final shared gates remain in the original finite scope. A third unsuccessful repair cycle requires USER approval (superseding the preparation text that incorrectly said root approval). The held #323 classifier/ordinary-read strategy is untouched. See PV-07-results.json for exact failures, corrections, commands, times, source/log hashes and remaining work.
+
+## Mixed saved-family checkpoint (2026-10-20)
+
+Original AC2/EM07 mapping extends only `storage/privacy_migration.py` and
+`storage/privacy_export.py`, with the existing migration test and unchanged
+`migration-v1.json` fixture. Saved source/checksum readers validate direct,
+extraction/derivation, profile and consolidation identities. Existing admitted
+projections retain opaque node IDs, truth qualifiers/clocks and full source plus
+previous-publication closure. Old executable publication bytes stay in the
+original, with typed unavailable history in the destination; no validator is
+weakened and no original checksum/replay continuity is fabricated. Complete
+export validation checks typed memory/event closure, matching owner/scope and
+acyclic generated references. Resume after publication validates the exact
+migration/lineage target under current ledger guards.
+
+The finite directory mixed case passed after two resolved fixture omissions and
+one newly observed runtime dependency-loss correction; the three failed runs are
+preserved separately. The same fixture then passed pack, PostgreSQL and closed
+Fernet, together with affected direct4/export3/restore3 (13 checks). The original
+historical-reader, source-reader and runtime-open passing controls were not
+repeated. Source hashes and terminal evidence are in PV-07-results.json. Public
+fixed-clock retrieval parity and every whole frozen case remain pending.
+
+Source-backed upstream integration gap: `storage/erasure.py` currently resolves
+all `evidence_refs` as event IDs, while valid consolidation nodes include source
+memory UUIDs as well. The mixed check erases an old profile and verifies the full
+source closure plus an unrelated survivor; it does not prove summary-selected
+erasure. This was reported to root for #325 coordination without changing its
+consumer or the held #323 paths.

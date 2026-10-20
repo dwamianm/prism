@@ -5,10 +5,10 @@ store does not rewrite its plaintext, change its original records/checksums, or
 label it protected. Use the current independent erasure ledger and the exact
 saved key/model capabilities. A copied checkpoint is not current authority.
 
-This implementation is still undergoing PV-07 integration. The direct-intent
-migration, closed exports and restore controls have component evidence. Mixed
-legacy derivations/profiles, the complete shared scenarios, and the fixed-clock
-public retrieval comparison remain pending; see
+This implementation is still undergoing PV-07 integration. Direct-intent and mixed saved
+derivation/profile/summary migration, closed exports and restore controls have
+component evidence. The complete shared scenarios and fixed-clock public
+retrieval comparison remain pending; see
 [PV-07 results](plans/2026-10-evidence-privacy/PV-07-results.json).
 
 ## Explicit local commands
@@ -62,6 +62,13 @@ and its event cursor commit together. Interrupted output refuses normal serving.
 A changed source or tampered job refuses resume. Original history kept solely in
 the retained source is represented by typed unavailable references in the new
 store; those references do not claim the original checksum or replay payload.
+Saved derivations use their validated original source and plan identity before
+admitted projection. Saved profiles and summaries retain their opaque node UUIDs,
+truth clocks and complete source/previous dependency references. Their original
+executable publication records remain at source; migration does not claim replay
+continuity or rewrite the old source checksum. After a lost publication
+acknowledgment, resume validates the exact destination lineage and migration ID
+and opens it under the current ledger before completing the job.
 The private v2 Event adapter's empty checksum is never an original source hash.
 
 ## Export and restore boundaries

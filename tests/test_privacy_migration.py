@@ -113,3 +113,219 @@ async def test_EM07_direct_migration_resume_exact_identity_current_erasure(tmp_p
         with pytest.raises((PrivacyDenied, PrivacyPortabilityError)):
             await migrate_privacy_pack(original, target, privacy_runtime=runtime, embedding_provider=runtime.embedder,
                 job_path=job_path, unavailable_legacy_history=True, resume=True)
+
+
+async def mixed_legacy_family(engine, runtime, owner):
+    """One frozen EM07 family through real saved-plan/publication protocols.
+
+    Only numerical model output is synthetic. Native event, plan, graph, vector,
+    profile and consolidation writers persist the historical source controls.
+    No protected ordinary-read classifier or general importer is used.
+    """
+    from datetime import datetime
+    from uuid import uuid5
+    from prme.models import Event, MemoryNode, MemoryEdge
+    from prme.models.derivation import DerivationPlan, PreparedEmbedding, PreparedLexicalDocument
+    from prme.models.extraction import ExtractionRecord
+    from prme.models.profile import ProfilePublication
+    from prme.models.consolidation import ConsolidationPublication, consolidation_key, consolidation_request_hash
+    from prme.storage.derivation_staging import DuckDBStageFence
+    from prme.organizer.consolidation import _stage_consolidation
+    from prme.storage.pg.graph_store import PgGraphStore, _NODE_COLUMNS
+    from prme.types import NodeType, EpistemicType, SourceType, EdgeType, Scope
+    stamp = datetime.fromisoformat(FIXTURE["clock"])
+    scope = Scope.PERSONAL
+    event_id = await engine.store(FIXTURE["admitted"][0] + " " + FIXTURE["source_only"] + " " + FIXTURE["prohibited"],
+        retrieval_content=FIXTURE["admitted"][0], user_id=owner, event_time=stamp)
+    async with engine._privacy.erasure.repository.session() as session:
+        direct = PgGraphStore._record_to_node((await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))[0])
+    event = Event(role="user", content=FIXTURE["admitted"][1] + " " + FIXTURE["source_only"] + " " + FIXTURE["prohibited"],
+        user_id=owner, scope=scope, timestamp=stamp, created_at=stamp, event_time=stamp)
+    await engine._event_store.append(event)
+    fact = MemoryNode(node_type=NodeType.FACT, content=event.content, user_id=owner, scope=scope,
+        evidence_refs=[event.id, UUID(event_id)], metadata={"subject": "Mara", "predicate": "likes", "object": "oranges", "polarity": "positive",
+            "supporting_passage": event.content, "extraction_kind": "fact"}, event_time=stamp, valid_from=stamp, created_at=stamp, updated_at=stamp)
+    entity = MemoryNode(node_type=NodeType.ENTITY, content="Mara", user_id=owner, scope=scope,
+        evidence_refs=[event.id], metadata={"entity_type": "person"}, event_time=stamp, valid_from=stamp, created_at=stamp, updated_at=stamp)
+    async def embedding(node):
+        values = (await runtime.embedder.embed([node.content]))[0]
+        return PreparedEmbedding(node_id=node.id, content=node.content, model=runtime.embedder.model_name,
+            version=runtime.embedder.model_version, dimension=runtime.embedder.dimension, values=values)
+    extraction = ExtractionRecord(event_id=event.id, user_id=owner, scope=scope, content_hash=event.content_hash,
+        provider="fixture", model="saved-external-result", created_at=stamp,
+        result={"entities": [{"name": "Mara", "entity_type": "person"}], "facts": [{"subject": "Mara", "predicate": "likes", "object": "oranges", "evidence_quote": event.content}], "relationships": [], "summary": None})
+    await engine._event_store.record_extraction(extraction)
+    plan = DerivationPlan(event_id=event.id, user_id=owner, scope=scope, content_hash=event.content_hash,
+        created_at=stamp, nodes=(fact, entity), embeddings=tuple([await embedding(node) for node in (fact, entity)]),
+        lexical_documents=tuple(PreparedLexicalDocument(node_id=node.id, content=node.content) for node in (fact, entity)))
+    await engine._event_store.record_derivation_plan(plan)
+    if engine._pool is None:
+        fence = DuckDBStageFence(engine._conn, engine._event_store._conn_lock, plan, None)
+        for value in plan.embeddings:
+            await engine._vector_index.stage(value, user_id=owner, fence=fence)
+        await engine._lexical_index.stage(plan, fence=fence)
+    await engine._graph_store.commit_derivation(plan)
+    generated = []
+    previous = ()
+    for generation in range(2):
+        node = MemoryNode(node_type=NodeType.SUMMARY, content="Mara: " + " ".join(FIXTURE["admitted"][:2]),
+            user_id=owner, scope=scope, evidence_refs=[UUID(event_id), event.id],
+            epistemic_type=EpistemicType.INFERRED, source_type=SourceType.SYSTEM_INFERRED,
+            metadata={"entity_profile": True, "entity_name": "Mara", "source_node_ids": [str(direct.id), str(fact.id)],
+                "source_count_available": 2, "source_count_included": 2, "tokens_used": 16, "profile_format_version": 2},
+            event_time=stamp, valid_from=stamp, created_at=stamp, updated_at=stamp)
+        profile = ProfilePublication(node=node, sources=(direct, fact), previous=previous,
+            embedding=await embedding(node), generation=generation)
+        await engine._profile_work.prepare(profile)
+        await engine._publish_prepared_profile(profile)
+        generated.append((node, "profile", (*profile.sources, *profile.previous)))
+        previous = (node,)
+    sources = tuple(sorted((direct, fact), key=lambda node: str(node.id)))
+    key = consolidation_key(owner, scope, [node.id for node in sources])
+    previous = ()
+    for generation in range(2):
+        content = " ".join(FIXTURE["admitted"][:2])
+        selected = [str(node.id) for node in sources]
+        digest = consolidation_request_hash(sources, content=content, confidence=0.5, salience=0.5,
+            selected_ids=selected, embedding_identity=(runtime.embedder.model_name, runtime.embedder.model_version, runtime.embedder.dimension))
+        node = MemoryNode(id=uuid5(UUID(key), f"{digest}:{generation}"), node_type=NodeType.SUMMARY, content=content,
+            user_id=owner, scope=scope, evidence_refs=sorted({ref for dep in sources for ref in (dep.id, *dep.evidence_refs)}, key=str),
+            epistemic_type=EpistemicType.INFERRED, source_type=SourceType.SYSTEM_INFERRED,
+            metadata={"consolidation_summary": True, "consolidation_key": key, "consolidation_request_hash": digest,
+                "consolidation_generation": generation, "source_node_ids": selected, "selected_source_node_ids": selected,
+                "cluster_size": 2, "consolidation_format_version": 2}, event_time=stamp, valid_from=stamp, created_at=stamp, updated_at=stamp)
+        edges = tuple(MemoryEdge(source_id=node.id, target_id=dep.id, edge_type=EdgeType.DERIVED_FROM, user_id=owner) for dep in sources)
+        summary = ConsolidationPublication(node=node, sources=sources, previous=previous, edges=edges,
+            embedding=await embedding(node), generation=generation, request_hash=digest)
+        await engine._graph_store.prepare_consolidation(summary)
+        if engine._pool is None:
+            await _stage_consolidation(engine, summary)
+        await engine._graph_store.publish_consolidation(summary)
+        generated.append((node, "summary", (*summary.sources, *summary.previous)))
+        previous = (node,)
+    # Historical snapshot-only content and a checksum-bearing receipt remain
+    # intact at source; the target receives only their typed unavailable IDs.
+    from prme.storage.lifecycle import LifecycleRecord, _payload, read_record
+    from prme.types import LifecycleState
+    old = fact.model_copy(update={"id": uuid4()})
+    lifecycle = LifecycleRecord(operation_id=uuid4(), action="promote", before=old,
+        after=old.model_copy(update={"lifecycle_state": LifecycleState.STABLE}))
+    lifecycle_payload = _payload(lifecycle)
+    assert read_record(lifecycle_payload) == lifecycle
+    from prme.models.relevance import RetrievalReceipt
+    from prme.retrieval.config import ScoringWeights, PackingConfig
+    receipt = RetrievalReceipt(request_id=uuid4(), user_id=owner, query=FIXTURE["source_only"], reference_time=stamp,
+        scopes=(scope,), scoring=ScoringWeights(fusion="weighted", current_update_multiplier=1.0, recency_time=None),
+        packing=PackingConfig(context_format="auditable", multipath_ordering="density", context_guidance_mode="off",
+            context_citations=False, episode_context_top_k=0, evidence_projection_top_k=0, evidence_augmentation_top_k=0,
+            evidence_augmentation_anchor_policy="all", session_context_packing=None, fold_repeated_text=False),
+        context_sha256=hashlib.sha256(event.content.encode()).hexdigest(), candidates=())
+    receipt_payload = json.dumps({"receipt": receipt.model_dump_json(), "receipt_checksum": receipt.checksum})
+    from prme.storage.relevance import RelevanceRepository
+    assert RelevanceRepository._read_receipt(receipt_payload, request_id=str(receipt.request_id), user_id=owner) == receipt
+    for identifier, kind, target, payload in ((lifecycle.operation_id, "PROMOTE", old.id, lifecycle_payload),
+            (uuid4(), "RETRIEVAL_REQUEST", receipt.request_id, receipt_payload)):
+        await engine._privacy.repository._query("INSERT INTO operations(id,op_type,target_id,payload,actor_id,namespace_id,created_at) VALUES(?,?,?,?,?,?,?) RETURNING id",
+            (str(identifier), kind, str(target), payload, owner, scope.value, stamp))
+    visual = None
+    if engine._pool is None:
+        from prme.storage.blobs import put_blob, thumbnail_key
+        raw = (FIXTURE["source_only"] + FIXTURE["prohibited"]).encode()
+        digest = hashlib.sha256(raw).hexdigest()
+        visual = Event(role="user", content=FIXTURE["admitted"][2], user_id=owner, scope=scope, timestamp=stamp,
+            created_at=stamp, event_time=stamp, metadata={"frame_sha256": digest, "thumbnail": thumbnail_key(digest)})
+        await engine._event_store.append(visual)
+        put_blob(engine._conn, thumbnail_key(digest), "image/jpeg", raw)
+    survivor_event = await engine.store(FIXTURE["admitted"][2] + " " + FIXTURE["source_only"],
+        retrieval_content=FIXTURE["admitted"][2], user_id=owner, event_time=stamp)
+    async with engine._privacy.erasure.repository.session() as session:
+        survivor = next(node for node in map(PgGraphStore._record_to_node, await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))
+            if UUID(survivor_event) in node.evidence_refs)
+    return direct, fact, entity, generated, visual, survivor
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres", "closed_fernet"])
+async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, layout, analyzer, native):
+    from prme.storage.privacy_export import validate_export
+    from prme.privacy.portability import ProtectedExport
+    from prme.privacy.journals import JOURNAL_KEY, GeneratedNodeReference
+    from prme.storage.pg.graph_store import PgGraphStore, _NODE_COLUMNS
+    template, runtime, policy, custody, *_ = await journal_engine(tmp_path / "template", "directory", analyzer)
+    base = template._config
+    await template.close()
+    runtime = replace(runtime, retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    owner = str(policy.owner_id)
+    local_layout = "directory" if layout == "closed_fernet" else layout
+    async with fresh_config(base, tmp_path / "legacy", local_layout) as original, fresh_config(base, tmp_path / "migrated", local_layout, restore=True) as target:
+        original = original.model_copy(update={"privacy_policy": None})
+        if layout == "closed_fernet":
+            original = type(original).model_validate({**original.model_dump(), "encryption_enabled": True, "encryption_key": "passphrase:task-owned-migration-source"})
+        async with MemoryEngine.open(original, embedding_provider=runtime.embedder) as source:
+            direct, fact, entity, generated, visual, survivor = await mixed_legacy_family(source, runtime, owner)
+            if layout == "closed_fernet":
+                source._conn.execute("DELETE FROM vector_payloads")
+        before = await _read_snapshot(original)
+        source_files = hashes(tmp_path / "legacy") if local_layout == "directory" else None
+        remove_events = () if visual is None else (visual.id,)
+        if visual is not None:
+            with pytest.raises(PrivacyPortabilityError, match="^privacy_legacy_unclassified$"):
+                await migrate_privacy_pack(original, target, privacy_runtime=runtime, embedding_provider=runtime.embedder,
+                    job_path=tmp_path / "visual-refused", unavailable_legacy_history=True, allow_reembedding=True)
+        with pytest.raises(PrivacyPortabilityError, match="^privacy_legacy_unclassified$"):
+            await migrate_privacy_pack(original, target, privacy_runtime=runtime, embedding_provider=runtime.embedder,
+                job_path=tmp_path / "embedding-refused", unavailable_legacy_history=True, remove_event_ids=remove_events)
+        job = tmp_path / "migration-job"
+        saved = {}
+        async def interrupted(stage, index, engine):
+            if stage == "after_generated":
+                saved["records"] = await engine._privacy.repository._read("1=1", ())
+                saved["nodes"] = await engine._privacy.repository._query("SELECT id,content,metadata FROM nodes", ())
+                raise RuntimeError("synthetic mixed interruption")
+        arguments = dict(privacy_runtime=runtime, embedding_provider=runtime.embedder, job_path=job,
+            unavailable_legacy_history=True, remove_event_ids=remove_events, allow_reembedding=True)
+        with pytest.raises(RuntimeError, match="synthetic mixed interruption"):
+            await migrate_privacy_pack(original, target, **arguments, _fault=interrupted)
+        async def lost_ack(stage, index, engine):
+            if stage == "after_publication":
+                raise RuntimeError("synthetic lost publication acknowledgment")
+        with pytest.raises(RuntimeError, match="synthetic lost publication acknowledgment"):
+            await migrate_privacy_pack(original, target, **arguments, resume=True, _fault=lost_ack)
+        bundle = validate_export(ProtectedExport.model_validate_json((job / "protected-export.json").read_bytes()))
+        assert bundle.operations == ()
+        assert {item.id for item in bundle.unavailable_history} == {UUID(str(row["id"])) for row in before.tables["operations"]}
+        assert {record.event_id: record for record in bundle.admissions} == {record.event_id: record for record in saved["records"]}
+        nodes = {node.id: node for node in bundle.nodes}
+        assert set(nodes) == {direct.id, fact.id, entity.id, survivor.id, *(row[0].id for row in generated)}
+        assert nodes[fact.id].content == FIXTURE["admitted"][1]
+        assert nodes[fact.id].evidence_refs == fact.evidence_refs
+        assert nodes[fact.id].event_time == fact.event_time and nodes[fact.id].valid_from == fact.valid_from
+        for original_node, kind, dependencies in generated:
+            migrated = nodes[original_node.id]
+            reference = GeneratedNodeReference.model_validate(migrated.metadata[JOURNAL_KEY])
+            assert reference.kind == kind and reference.lineage_id == original_node.id
+            assert reference.source_node_ids == tuple(node.id for node in dependencies)
+            for field in ("content", "evidence_refs", "epistemic_type", "source_type", "event_time", "valid_from", "valid_to", "created_at"):
+                assert getattr(migrated, field) == getattr(original_node, field)
+        payload = bundle.model_dump_json()
+        assert FIXTURE["source_only"] not in payload and FIXTURE["prohibited"] not in payload
+        assert "consolidation_request_hash" not in payload and "BEGIN PRIVATE KEY" not in payload
+        # The complete exported dependency graph cannot lose a previous profile
+        # or a cited source node and still pass as a valid protected artifact.
+        current_profile = generated[1][0].id
+        broken = bundle.model_copy(update={"nodes": tuple(node for node in bundle.nodes if node.id != generated[0][0].id)})
+        with pytest.raises(PrivacyPortabilityError):
+            validate_export(broken)
+        async with MemoryEngine.open(target, privacy_runtime=runtime, embedding_provider=runtime.embedder) as restored:
+            # Managed memory erasure after target publication, before job ack.
+            await restored._privacy.erasure.request(ErasureRequest(request_id=uuid4(), node_ids=(generated[0][0].id,)), user_id=owner)
+        result = await migrate_privacy_pack(original, target, **arguments, resume=True)
+        assert result.state == "complete"
+        async with MemoryEngine.open(target, privacy_runtime=runtime, embedding_provider=runtime.embedder) as restored:
+            async with restored._privacy.erasure.repository.session() as session:
+                surviving = {node.id: node for node in map(PgGraphStore._record_to_node, await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))}
+            assert generated[0][0].id not in surviving and current_profile not in surviving
+            assert not {fact.id, entity.id, direct.id, generated[-1][0].id}.intersection(surviving)
+            assert set(surviving) == {survivor.id} and surviving[survivor.id].content == FIXTURE["admitted"][2]
+        assert (await _read_snapshot(original)).fingerprint == before.fingerprint
+        if source_files is not None:
+            assert hashes(tmp_path / "legacy") == source_files
