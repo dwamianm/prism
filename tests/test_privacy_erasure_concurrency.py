@@ -51,6 +51,8 @@ async def test_ER03_stale_extraction_profile_and_diagnostic_cannot_finish_after_
         source = await engine.ingest(SOURCE, user_id=owner)
         with processing_keys(runtime, custody, processing):
             assert (await engine.process_extractions(user_id=owner)).processed == 1
+        extracted = next(node for node in await engine.get_event_nodes(source, user_id=owner)
+                         if "sanitization" in node.metadata["_prme_privacy_v1"])
         entered, release = asyncio.Event(), asyncio.Event()
         original = engine._publish_prepared_profile
         async def paused_profile(plan):
@@ -63,13 +65,14 @@ async def test_ER03_stale_extraction_profile_and_diagnostic_cannot_finish_after_
             task = asyncio.create_task(engine.consolidate_knowledge(user_id=owner, scope=Scope.PERSONAL, entity_names=["Mara"]))
             await asyncio.wait_for(entered.wait(), 15)
             assert plans[-1].privacy_manifest and plans[-1].sources
-            await engine.request_erasure(ErasureRequest(request_id=uuid4(), event_ids=(UUID(source),)), user_id=owner)
+            await engine.request_erasure(ErasureRequest(request_id=uuid4(), node_ids=(extracted.id,)), user_id=owner)
             release.set()
             with pytest.raises(PrivacyDenied):
                 await asyncio.wait_for(task, 15)
         assert await engine._graph_store.get_node(str(plans[-1].node.id)) is None
 
         diagnostic = await engine.store("Mara likes pears. Source lilac.", retrieval_content="Mara likes pears.", user_id=owner)
+        diagnostic_node = (await engine.get_event_nodes(diagnostic, user_id=owner))[0]
         grant = await selection(engine, runtime, owner, (diagnostic,), kind="diagnostic")
         entered, release = asyncio.Event(), asyncio.Event()
         guard = engine._privacy.guard
@@ -86,19 +89,18 @@ async def test_ER03_stale_extraction_profile_and_diagnostic_cannot_finish_after_
                 patch.setattr(engine._privacy, "guard", paused_guard)
                 task = asyncio.create_task(engine.read_source(diagnostic, user_id=owner, access=grant))
                 await asyncio.wait_for(entered.wait(), 15)
-                await engine.request_erasure(ErasureRequest(request_id=uuid4(), event_ids=(UUID(diagnostic),)), user_id=owner)
+                await engine.request_erasure(ErasureRequest(request_id=uuid4(), node_ids=(diagnostic_node.id,)), user_id=owner)
                 release.set()
                 with pytest.raises(PrivacyDenied):
                     await asyncio.wait_for(task, 15)
 
-        # A node-only fence leaves its source available, but cannot be bypassed
-        # by a lifecycle or chain operation whose admitted event is still live.
+        # Node selection fences its covered source and every dependent effect.
         node_event = await engine.store("Mara collects shells.", user_id=owner)
         untouched_event = await engine.store("Mara grows herbs.", user_id=owner)
         target = (await engine.get_event_nodes(node_event, user_id=owner))[0]
         untouched = (await engine.get_event_nodes(untouched_event, user_id=owner))[0]
         await engine.request_erasure(ErasureRequest(request_id=uuid4(), node_ids=(target.id,)), user_id=owner)
-        assert (await engine.inspect_source(node_event, user_id=owner)).state == "sealed"
+        assert (await engine.inspect_source(node_event, user_id=owner)).state == "erased"
         with pytest.raises(PrivacyDenied, match="privacy_erased"):
             await engine._graph_store.promote(str(target.id))
         with pytest.raises(PrivacyDenied, match="privacy_erased"):

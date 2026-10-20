@@ -46,8 +46,21 @@ class ErasureRepository(ExtractionWorkRepository):
         if session is None:
             async with self.session() as current:
                 return await self.intents(current)
-        return tuple(ErasureIntent.model_validate_json(row["intent"]) for row in
-                     await session.fetch("SELECT intent FROM privacy_erasure_jobs ORDER BY request_id"))
+        intents = tuple(ErasureIntent.model_validate_json(row["intent"]) for row in
+                        await session.fetch("SELECT intent FROM privacy_erasure_jobs ORDER BY request_id"))
+        if any(intent.request.node_ids and intent.source_event_ids is None for intent in intents):
+            raise PrivacyDenied("privacy_migration_required")
+        return intents
+
+    async def repair_source_closures(self):
+        """Old intents are usable only while their original provenance survives."""
+        async with self.session(transaction=True) as session:
+            for row in await session.fetch("SELECT intent FROM privacy_erasure_jobs"):
+                intent = ErasureIntent.model_validate_json(row["intent"])
+                if intent.request.node_ids and intent.source_event_ids is None:
+                    intent = await _resolve_intent_sources(session, intent)
+                    await session.execute("UPDATE privacy_erasure_jobs SET intent=$1 WHERE request_id=$2",
+                                          intent.model_dump_json(), str(intent.request.request_id))
 
     async def apply(self, entry):
         async with self.session(transaction=True) as session:
@@ -58,7 +71,7 @@ class ErasureRepository(ExtractionWorkRepository):
                     or entry.head.ledger_id != before.ledger_id or entry.head.store_id != before.store_id
                     or entry.intent.project_id != project):
                 raise PrivacyDenied("privacy_ledger_stale")
-            intent = entry.intent
+            intent = await _resolve_intent_sources(session, entry.intent)
             status = ErasureStatus(request_id=intent.request.request_id, mode=intent.request.mode,
                                    state="blocked_from_access", facts_may_remain=intent.request.mode != "memory",
                                    stage="discover")
@@ -97,8 +110,56 @@ def affected(intent, record, purpose="memory"):
         return False
     if request.mode != "memory" and request.mode != purpose and not (request.mode == "evidence" and purpose == "processing"):
         return False
-    return (record.event_id in request.event_ids
+    return (record.event_id in (*request.event_ids, *(intent.source_event_ids or ()))
             or (request.owner_all and record.snapshot.admitted_at <= intent.created_at))
+
+
+async def _resolve_intent_sources(session, intent):
+    """Resolve real owned provenance before an intent can acknowledge a fence.
+
+    Sources are indivisible retained representations. No text matching or
+    evidence decryption is used to guess which part can survive.
+    """
+    if not intent.request.node_ids or intent.source_event_ids is not None:
+        return intent
+    import json
+    from prme.privacy.journals import GeneratedNodeReference, JOURNAL_KEY
+    from prme.privacy.records import PRIVACY_KEY, SanitizationReport
+    pending, visited, sources = set(intent.request.node_ids), set(), set()
+    while pending:
+        identifier = pending.pop()
+        if identifier in visited:
+            continue
+        visited.add(identifier)
+        rows = await session.fetch("SELECT metadata,evidence_refs FROM nodes WHERE id=$1 AND user_id=$2 AND scope=$3",
+                                   str(identifier), str(intent.owner_id), intent.request.scope.value)
+        if len(rows) != 1:
+            raise PrivacyDenied("privacy_migration_required")
+        try:
+            metadata = json.loads(rows[0]["metadata"]) if isinstance(rows[0]["metadata"], str) else rows[0]["metadata"]
+            refs = json.loads(rows[0]["evidence_refs"]) if isinstance(rows[0]["evidence_refs"], str) else rows[0]["evidence_refs"]
+            origin = UUID(metadata[PRIVACY_KEY]["event_id"])
+            reference = {key: value for key, value in metadata[PRIVACY_KEY].items() if key != "sanitization"}
+            if "sanitization" in metadata[PRIVACY_KEY]:
+                SanitizationReport.model_validate(metadata[PRIVACY_KEY]["sanitization"])
+            dependencies = {origin, *(UUID(str(value)) for value in refs or ())}
+            if JOURNAL_KEY in metadata:
+                pending.update(GeneratedNodeReference.model_validate(metadata[JOURNAL_KEY]).source_node_ids)
+        except (KeyError, ValueError, TypeError):
+            raise PrivacyDenied("privacy_migration_required") from None
+        for event_id in dependencies:
+            rows = await session.fetch("SELECT body FROM privacy_admissions WHERE event_id=$1 AND user_id=$2 AND scope=$3",
+                                       str(event_id), str(intent.owner_id), intent.request.scope.value)
+            if len(rows) != 1:
+                raise PrivacyDenied("privacy_migration_required")
+            record = PrivacyRecord.model_validate_json(rows[0]["body"])
+            policy = record.snapshot.policy
+            if (policy.project_id, policy.owner_id, policy.scope) != (intent.project_id, intent.owner_id, intent.request.scope):
+                raise PrivacyDenied("privacy_boundary_mismatch")
+            if event_id == origin and reference != record.reference():
+                raise PrivacyDenied("privacy_migration_required")
+            sources.add(event_id)
+    return intent.model_copy(update={"source_event_ids": tuple(sorted(sources, key=str))})
 
 
 async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None, conn_lock=None):
@@ -140,6 +201,7 @@ async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None
         entries = await ledger.entries_since(checkpoint)
         for entry in entries:
             await repository.apply(entry)
+        await repository.repair_source_closures()
         # Exact read deadlines already deny without maintenance. Persist due
         # roots now so recovered publications cannot outlive offline expiry.
         async with repository.session() as session:
@@ -217,9 +279,11 @@ class ErasureCoordinator:
             lease = [self, True, asyncio.current_task()]
             token = _HELD.set(lease)
             try:
-                await self.assert_records_current(records, purpose=purpose, snapshots=snapshots, node_ids=node_ids)
-                yield
-                await self.assert_records_current(records, purpose=purpose, snapshots=snapshots, node_ids=node_ids)
+                from prme.privacy.keys import managed_key_usage
+                with managed_key_usage(checkpoint.store_id):
+                    await self.assert_records_current(records, purpose=purpose, snapshots=snapshots, node_ids=node_ids)
+                    yield
+                    await self.assert_records_current(records, purpose=purpose, snapshots=snapshots, node_ids=node_ids)
             finally:
                 lease[1] = False
                 _HELD.reset(token)
@@ -292,6 +356,8 @@ class ErasureCoordinator:
             _, head = await self.repository.state()
             intent = ErasureIntent(request=request, store_id=head.store_id, project_id=runtime.project_id,
                                    owner_id=UUID(user_id), created_at=runtime.clock())
+            async with self.repository.session() as session:
+                intent = await _resolve_intent_sources(session, intent)
             async def commit():
                 # Independent fsync commit precedes the local transactional
                 # fence. An interrupted apply is replayed before the next effect.
@@ -452,7 +518,7 @@ async def _discover_step(repository, intent):
         progress = await _progress(session, request.request_id, "discover", {"phase": "events", "after": "", "changed": False})
         if progress["phase"] == "done":
             return True
-        for event in request.event_ids:
+        for event in (*request.event_ids, *(intent.source_event_ids or ())):
             await _target(session, request.request_id, "event", event)
         for node in request.node_ids:
             await _target(session, request.request_id, "node", node)
@@ -645,7 +711,10 @@ async def _retire_keys(coordinator, intent):
         # Custody records denial before removing native private parts. A prior
         # failed removal is still pending even when its public state is retired.
         # The existing exact-version operation retries removal idempotently.
-        await custody.retire(version)
+        retire = getattr(custody, "retire_managed", None)
+        if retire is None:
+            raise PrivacyDenied("privacy_provider_unavailable")
+        await retire(version, store_id=intent.store_id)
 
 
 async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):
@@ -706,6 +775,10 @@ async def _verify_purge(coordinator, intent):
     repository = coordinator.repository
     async with repository.session() as session:
         targets = await _targets(session, intent.request.request_id)
+        required = {("event", value) for value in (*intent.request.event_ids, *(intent.source_event_ids or ()))}
+        required.update(("node", value) for value in intent.request.node_ids)
+        if not required <= targets or (intent.request.node_ids and not intent.source_event_ids):
+            raise PrivacyDenied("privacy_invalid_result")
         if not targets:
             # An owner-wide request for an empty protected store still has an
             # access cutoff; it provides no positive purge evidence.
@@ -721,6 +794,14 @@ async def _verify_purge(coordinator, intent):
                 record = PrivacyRecord.model_validate_json(rows[0]["body"])
                 if record.processing is not None or (intent.request.mode != "processing" and record.evidence is not None):
                     raise PrivacyDenied("privacy_invalid_result")
+                if record.retry is not None:
+                    raise PrivacyDenied("privacy_invalid_result")
+                if intent.request.mode == "memory":
+                    if record.pseudonym_epoch is not None:
+                        raise PrivacyDenied("privacy_invalid_result")
+                    rows = await session.fetch("SELECT content,content_hash FROM events WHERE id=$1", str(identifier))
+                    if len(rows) != 1 or rows[0]["content"] or rows[0]["content_hash"]:
+                        raise PrivacyDenied("privacy_invalid_result")
             if intent.request.mode != "memory":
                 continue
             if kind == "node":

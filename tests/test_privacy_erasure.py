@@ -75,7 +75,7 @@ async def test_ER02_evidence_and_memory_purge_preserve_unrelated_owned_memory(tm
         assert any(value.id == node.id and value.content == "Mara likes tea." for value in retained_views)
         assert (await engine.inspect_source(erased, user_id=owner)).state == "erased"
         assert await engine.get_node(str(mixed.id), user_id=owner) is not None
-        memory_request = ErasureRequest(request_id=uuid4(), event_ids=(UUID(erased),))
+        memory_request = ErasureRequest(request_id=uuid4(), node_ids=(node.id,))
         await engine.request_erasure(memory_request, user_id=owner)
         statuses = await engine.process_erasures(user_id=owner, budget_ms=60000)
         final = next(status for status in statuses if status.request_id == memory_request.request_id)

@@ -46,6 +46,9 @@ class ErasureIntent(FrozenModel):
     owner_id: UUID
     created_at: datetime
     reason: Literal["requested", "expired"] = "requested"
+    # Internal provenance closure, separate from the caller's retry identity.
+    # None identifies older node requests whose coverage is not established.
+    source_event_ids: tuple[UUID, ...] | None = None
 
     @model_validator(mode="after")
     def clock(self):

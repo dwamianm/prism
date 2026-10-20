@@ -27,6 +27,7 @@ from prme.privacy.keys import (
     WrappingKeyDescriptor,
     WrappingKeyRef,
     aware,
+    current_key_lineage,
     utc_now,
 )
 from prme.privacy.policy import FrozenModel, PrivacyDenied
@@ -142,11 +143,16 @@ class KeyEntry(FrozenModel):
     auxiliary: AuxiliaryKeyRef | None = None
     state: Literal["pending", "ready", "retired"] = "pending"
     active: bool = False
+    # Missing old history or unbound use is unknown, never exclusive ownership.
+    # The monotonic set is exclusive-use evidence, not live reference counting.
+    managed_lineages: tuple[UUID, ...] | None = None
 
     @model_validator(mode="after")
     def shape(self) -> KeyEntry:
         if ((self.wrapping is None) == (self.auxiliary is None)
                 or (self.active and (self.state != "ready" or self.wrapping is None))):
+            raise ValueError("privacy_configuration_invalid")
+        if self.managed_lineages is not None and len(set(self.managed_lineages)) != len(self.managed_lineages):
             raise ValueError("privacy_configuration_invalid")
         return self
 
@@ -207,9 +213,18 @@ def public_registry(path: str | Path, *, private_wrapper: RSAKeyWrapper | None =
         return (tuple(item.wrapping for item in current.entries if item.wrapping and item.state == "ready"),
                 tuple(item.wrapping.ref for item in current.entries if item.wrapping and item.active))
     descriptors, active = refresh()
+    def record_usage(refs, lineage):
+        current = read_public_store(path)
+        if current.provider_id != state.provider_id:
+            raise PrivacyDenied("privacy_capability_unavailable")
+        known = {item.wrapping.ref for item in current.entries if item.wrapping and item.state == "ready"}
+        if not set(refs) <= known:
+            raise PrivacyDenied("privacy_capability_unavailable")
+        _record_usage(path, current, {ref.key_version for ref in refs}, lineage)
     registry = KeyRegistry(descriptors, active=active, refresh=refresh,
                        publication_guard=lambda: _publication_guard(path),
-                       wrappers={state.provider_id: private_wrapper or RSAKeyWrapper()})
+                       wrappers={state.provider_id: private_wrapper or RSAKeyWrapper()},
+                       record_usage=record_usage)
     registry.publication_domain = str(path)
     return registry
 
@@ -240,6 +255,23 @@ def _write_public(path: Path, state: PublicKeyStore) -> None:
         raise
     except Exception:
         raise PrivacyDenied("privacy_capability_unavailable") from None
+
+
+def _record_usage(path: Path, state: PublicKeyStore, versions: set[UUID], lineage: UUID | None) -> None:
+    """Caller holds the same native registry lock used by retirement."""
+    entries = []
+    for entry in state.entries:
+        if entry.version in versions:
+            if entry.state != "ready":
+                raise PrivacyDenied("privacy_capability_unavailable")
+            known = entry.managed_lineages
+            after = None if known is None or lineage is None else tuple(sorted({*known, lineage}, key=str))
+            entry = entry.model_copy(update={"managed_lineages": after})
+        entries.append(entry)
+    if versions - {entry.version for entry in entries}:
+        raise PrivacyDenied("privacy_capability_unavailable")
+    if tuple(entries) != state.entries:
+        _write_public(path, state.model_copy(update={"entries": tuple(entries)}))
 
 
 class NativeKeyCustody:
@@ -283,6 +315,7 @@ class NativeKeyCustody:
         state = read_public_store(self.path)
         if any(item.version == entry.version for item in state.entries):
             raise PrivacyDenied("privacy_configuration_invalid")
+        entry = entry.model_copy(update={"managed_lineages": ()})
         self._replace(state, entry)
         self._native.write(entry.version, entry.binding(), secret)
         self._verify(entry, self._native.read(entry.version, entry.binding()))
@@ -356,12 +389,23 @@ class NativeKeyCustody:
             await run_to_completion(activate)
 
     async def retire(self, version: UUID) -> None:
+        """Explicit operator retirement; never an automatic erasure fallback."""
+        await self._retire(version)
+
+    async def retire_managed(self, version: UUID, *, store_id: UUID) -> None:
+        if not isinstance(store_id, UUID):
+            raise PrivacyDenied("privacy_provider_unavailable")
+        await self._retire(version, store_id=store_id)
+
+    async def _retire(self, version: UUID, *, store_id: UUID | None = None) -> None:
         def retire():
             with self._lock:
                 state = read_public_store(self.path)
                 items = [item for item in state.entries if item.version == version]
                 if len(items) != 1:
                     raise PrivacyDenied("privacy_capability_unavailable")
+                if store_id is not None and items[0].managed_lineages != (store_id,):
+                    raise PrivacyDenied("privacy_provider_unavailable")
                 self._replace(state, items[0].model_copy(update={"state": "retired", "active": False}))
                 self._native.remove(version)
         await run_to_completion(retire)
@@ -404,9 +448,10 @@ class NativeKeyCustody:
                 return ref
         return await run_to_completion(provision)
 
-    def _auxiliary(self, entry: KeyEntry) -> SecretKeyHandle:
+    def _auxiliary(self, entry: KeyEntry, lineage: UUID | None) -> SecretKeyHandle:
         if entry.state != "ready" or entry.auxiliary is None:
             raise PrivacyDenied("privacy_capability_unavailable")
+        _record_usage(self.path, read_public_store(self.path), {entry.version}, lineage)
         key = self._native.read(entry.version, entry.binding())
         self._verify(entry, key)
         def validate():
@@ -417,18 +462,20 @@ class NativeKeyCustody:
 
     async def key_for(self, project_id: UUID, owner_id: UUID, scope: str, epoch: UUID) -> SecretKeyHandle:
         boundary = KeyBoundary(project_id=project_id, owner_id=owner_id, scope=scope)
+        lineage = current_key_lineage()
         def lookup():
             with self._lock:
                 items = [e for e in self.inventory() if e.auxiliary and e.auxiliary.purpose == "pseudonym"
                          and e.auxiliary.boundary == boundary and e.auxiliary.epoch == epoch]
                 if len(items) != 1:
                     raise PrivacyDenied("privacy_capability_unavailable")
-                return self._auxiliary(items[0])
+                return self._auxiliary(items[0], lineage)
         return await run_to_completion(lookup)
 
     async def provision_retry_key(self, context: RetryContext, *, retention_ref: UUID,
                                   expires_at: datetime) -> SecretKeyHandle:
         boundary, binding = KeyBoundary.from_snapshot(context.snapshot), policy_binding(context.snapshot)
+        lineage = current_key_lineage()
         expiry = aware(expires_at)
         if expiry <= aware(self.clock()):
             raise PrivacyDenied("privacy_retry_unavailable")
@@ -440,11 +487,11 @@ class NativeKeyCustody:
                     if len(items) != 1 or (items[0].auxiliary.policy_binding, items[0].auxiliary.retention_ref,
                                           items[0].auxiliary.expires_at) != (binding, retention_ref, expiry):
                         raise PrivacyDenied("privacy_retry_unavailable")
-                    return self._auxiliary(items[0])
+                    return self._auxiliary(items[0], lineage)
                 ref = AuxiliaryKeyRef(boundary=boundary, purpose="retry_commitment", key_version=uuid4(),
                     request_id=context.request_id, retention_ref=retention_ref, expires_at=expiry, policy_binding=binding)
                 entry = self._provision(KeyEntry(auxiliary=ref), os.urandom(32), activate=False)
-                return self._auxiliary(entry)
+                return self._auxiliary(entry, lineage)
         try:
             return await run_to_completion(provision)
         except Exception:
@@ -452,6 +499,7 @@ class NativeKeyCustody:
 
     async def get_retry_key(self, context: RetryContext, *, key_version: UUID,
                             retention_ref: UUID) -> SecretKeyHandle:
+        lineage = current_key_lineage()
         def lookup():
             with self._lock:
                 entry = self._entry(key_version)
@@ -461,7 +509,7 @@ class NativeKeyCustody:
                         or ref.policy_binding != policy_binding(context.snapshot)
                         or aware(self.clock()) >= ref.expires_at):
                     raise PrivacyDenied("privacy_retry_unavailable")
-                return self._auxiliary(entry)
+                return self._auxiliary(entry, lineage)
         try:
             return await run_to_completion(lookup)
         except Exception:

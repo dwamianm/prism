@@ -2,7 +2,7 @@
   "schema_version": 1,
   "issue": 325,
   "acceptanceComplete": false,
-  "implementationStatus": "independent_implementation_checkpoint_pending_root_review",
+  "implementationStatus": "corrected_checkpoint_pending_affected_review",
   "sourcePlan": "PV-06-plan.md",
   "originalAcceptanceCount": 6,
   "frozenRows": [
@@ -72,6 +72,24 @@
       "resolved": true,
       "passingLog": "/tmp/privacy325-node-retry-2.log",
       "correction": "Under current ledger and policy approval, compare the exact persisted owned request before resolving live targets; return saved status for an identical request and reject changed requests."
+    },
+    "node_selected_source_closure": {
+      "initialFailure": ".github-ticket-loop/privacy-325/evidence/privacy325-review-initial-witnesses.log",
+      "fixValidationCycles": 3,
+      "unsuccessful": 1,
+      "resolved": true,
+      "failedRepair": ".github-ticket-loop/privacy-325/evidence/privacy325-review-correction-1.log",
+      "remaining": null,
+      "passingLog": ".github-ticket-loop/privacy-325/evidence/privacy325-review-source-correction-2.log",
+      "compatibilityLog": ".github-ticket-loop/privacy-325/evidence/privacy325-review-extracted-source-1.log",
+      "correction": "Persist exact owned source closure before acknowledgement; inspection observes the fence; normalize the existing optional typed sanitization report when resolving an extracted node. First correction failed; second passed; the final extracted-node compatibility adjustment passed its first check."
+    },
+    "cross_store_native_key_survival": {
+      "initialFailure": ".github-ticket-loop/privacy-325/evidence/privacy325-review-initial-witnesses.log",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true,
+      "passingLog": ".github-ticket-loop/privacy-325/evidence/privacy325-review-correction-1.log"
     }
   },
   "checks": [
@@ -259,6 +277,104 @@
       "result": "passed",
       "log": "/tmp/privacy325-node-retry-lint.log",
       "command": ".venv/bin/ruff check src/prme/storage/erasure.py tests/test_privacy_erasure_recovery.py"
+    },
+    {
+      "name": "Frozen review initial source-closure and shared-custody failure witnesses",
+      "result": "failed",
+      "failed": 6,
+      "deselected": 9,
+      "exitCode": 1,
+      "seconds": 11.33,
+      "sourceHead": "ee620296f2af8a81fa1df2b6f428a7344fea5b2f",
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-initial-witnesses.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_recovery.py tests/test_privacy_erasure_retirement.py -k 'ER04 or shared_custody_store' -q",
+      "observations": [
+        "All three ER04 layouts: source still sealed after node-only acknowledgement and current-ledger reopen.",
+        "All three ER02 layouts: actual survivor custody unlock failed after A retired the shared native key."
+      ],
+      "repairCycle": false
+    },
+    {
+      "name": "First source-closure and exclusive-use retirement correction",
+      "result": "failed",
+      "passed": 9,
+      "failed": 6,
+      "deselected": 6,
+      "exitCode": 1,
+      "seconds": 42.05,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-correction-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure.py tests/test_privacy_erasure_concurrency.py tests/test_privacy_erasure_recovery.py tests/test_privacy_erasure_retirement.py -k 'ER02 or ER03 or ER04' -q",
+      "observations": [
+        "ER02 independent admissions and all six native retirement cases passed.",
+        "ER03 paused node-source reveal denied, but immediate inspection still reported sealed on all three layouts.",
+        "ER04 durable source closure/reopen erased the source; post-purge read denied with privacy_denied rather than the newly asserted privacy_erased. The native context masked the assertion mismatch; this is a fixture expectation stricter than the original denial requirement, and the failure remains preserved."
+      ]
+    },
+    {
+      "name": "Second source closure correction: immediate status and durable node retry",
+      "result": "passed",
+      "passed": 6,
+      "deselected": 6,
+      "exitCode": 0,
+      "seconds": 19.25,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-source-correction-2.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_concurrency.py tests/test_privacy_erasure_recovery.py -k 'ER03 or ER04' -q",
+      "coverage": [
+        "Positive actual source reveal before erasure, paused reveal denial after node acknowledgement, immediate erased availability.",
+        "Independent ledger retains source closure before lost apply; reopen purges source copies; post-purge reveal denies without a required specific error code.",
+        "Same-owner survivor and completed node request idempotency/change rejection remain."
+      ],
+      "scopeAddition": "Only privacy/reads.py:inspect_source final availability observation, approved by root; no #323 ReadContext.create/project_public_result/classifier changes.",
+      "reusedPassingEvidence": "First correction log: 3 ER02 independent-admission cases and 6 native exclusive/shared custody cases; no provider or purge source changes since their pass."
+    },
+    {
+      "name": "Existing native key, cryptography, rotation and retry compatibility",
+      "result": "passed",
+      "passed": 93,
+      "exitCode": 0,
+      "seconds": 32.73,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-provider-regressions-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_keys.py tests/test_privacy_crypto.py tests/test_privacy_rotation.py tests/test_privacy_retry_commitments.py -q",
+      "limitations": [
+        "Provider source is unchanged after this run; later edits only normalize extracted-node source references and strengthen the existing ER03 selector."
+      ]
+    },
+    {
+      "name": "ER03 actual extracted-node source closure with existing sanitization provenance",
+      "result": "passed",
+      "passed": 3,
+      "exitCode": 0,
+      "seconds": 9.09,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-extracted-source-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_concurrency.py -k ER03 -q",
+      "coverage": [
+        "The existing paused extraction/profile case selects a real extracted node with optional typed sanitization provenance, then verifies immediate source fence and denial on directory, pack and PostgreSQL."
+      ],
+      "reason": "Final source inspection found the new strict equality would reject existing extracted-node references carrying an optional sanitization report. Normalize and validate that existing field using the established reader pattern; no new scenario family."
+    },
+    {
+      "name": "Review correction scoped Ruff",
+      "result": "passed",
+      "exitCode": 0,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-lint-final.log",
+      "command": ".venv/bin/ruff check src/prme/privacy/erasure.py src/prme/privacy/keys.py src/prme/privacy/local_keys.py src/prme/privacy/crypto.py src/prme/privacy/admission.py src/prme/privacy/reads.py src/prme/storage/erasure.py tests/test_privacy_erasure.py tests/test_privacy_erasure_concurrency.py tests/test_privacy_erasure_recovery.py tests/test_privacy_erasure_retirement.py"
+    },
+    {
+      "name": "Final extracted-node correction scoped Ruff",
+      "result": "passed",
+      "exitCode": 0,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-lint-extracted-final.log",
+      "command": ".venv/bin/ruff check src/prme/storage/erasure.py tests/test_privacy_erasure_concurrency.py"
+    },
+    {
+      "name": "Review correction strict public consumer types",
+      "result": "passed",
+      "exitCode": 0,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-types-1.log",
+      "command": ".venv/bin/mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py",
+      "limitations": [
+        "The later private source-reference normalization does not change public types."
+      ]
     }
   ],
   "pending": [
@@ -267,7 +383,7 @@
     "#327 full frozen protected product gate",
     "Final #323 dependency composition after its separately owned known-failing classifier repair",
     "Root-owned required reviews, final full checks/CI, PR and merge; no claim of acceptance completion",
-    "Cross-store shared key-version custody is an unresolved #321/#326/hosted-provider integration constraint and possible original AC4 survivor blocker. Local zero-reference inventory is not a global proof. Managed multi-store wiring must prove exclusive lineage or complete authorized reference ownership, or refuse destructive cross-store retirement; documentation alone cannot waive survivor loss."
+    "Affected review of source closure and exclusive-lineage native retirement. Shared, legacy and unbound key usage now visibly defers automatic destruction while survivors remain usable; complete cross-store reference authority and any resulting eventual retirement remain outside this bounded implementation."
   ],
   "setupFailures": [
     {
@@ -327,7 +443,8 @@
     "reviewBase": "418c7ed8e1c99b3bbbb7b90725bf88c8591e42aa",
     "artifactOnlyMerge": "4aaf58b6bc58feedb45e507b9b1e311d67ed56c9",
     "nodeRetryDiffBase": "4aaf58b6bc58feedb45e507b9b1e311d67ed56c9",
-    "nodeRetryRuntimeDiffSha256": "18cb8979fdd134008c0acb9e9933efce38c3c851d8cf2a74689cfe8a0f6c97bc"
+    "nodeRetryRuntimeDiffSha256": "18cb8979fdd134008c0acb9e9933efce38c3c851d8cf2a74689cfe8a0f6c97bc",
+    "reviewCorrectionBase": "ee620296f2af8a81fa1df2b6f428a7344fea5b2f"
   },
   "validationFailures": [
     {

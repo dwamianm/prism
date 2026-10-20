@@ -171,6 +171,22 @@ terminal cleanup and publication. Neither purpose creates a reverse-value map.
 The public inventory exposes only references/states for PV-07 erasure.
 The ordinary store key is separate from all four purposes.
 
+For automatic managed erasure, fresh native key entries retain a monotonic set
+of opaque store lineages that used the version. Wrapping, rewrap, final envelope
+publication and native pseudonym/retry use record that identity under the
+existing registry lock. An absent legacy history or use without a current
+managed lease makes exclusive ownership unproven. Copying or rolling back the
+registry is not a way to establish ownership.
+
+`retire_managed(version, store_id=...)` requires usage by exactly that lineage
+and serializes the proof with native retirement. The erasure coordinator also
+requires zero local surviving references. Shared or uncertain keys remain
+usable and leave a visible pending provider stage. This is exclusive-use
+evidence, not complete reference counting across stores, and closing a store
+does not remove its history. Explicit operator `retire` remains separate;
+automatic erasure never falls back to it. Retrying managed retirement preserves
+the existing exact-version private-part deletion recovery.
+
 ## CLI and recovery
 
 ```sh

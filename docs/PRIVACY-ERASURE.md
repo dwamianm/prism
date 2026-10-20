@@ -66,6 +66,15 @@ the acknowledged cutoff. Later admissions are independent. Node selection is
 available for memory erasure. Reuse the exact request UUID and selectors when
 retrying; conflicting reuse refuses.
 
+A node request resolves its actual owned source dependencies before the
+independent intent is committed. That saved closure drives immediate source
+denial, restart recovery, cleanup and verification. Inseparable retained source
+representations are removed with their affected derivatives; independent
+surviving admissions remain. The caller's selectors do not change on retry.
+Older node intents without a saved closure require surviving provenance to
+reconstruct it; missing provenance refuses protected continuation rather than
+trusting an old completion status.
+
 - `mode="evidence"` removes selected evidence, processing copies and retry
   commitments. Separately admitted facts remain; `facts_may_remain` is true.
 - `mode="processing"` removes processing copies and their retry state. Evidence
@@ -97,12 +106,21 @@ reference. Private-part deletion failures remain pending even after custody has
 recorded the key as retired. Recovery artifacts and external copies of keys are
 outside this store's managed cleanup.
 
-Reference checks cover this managed store. They are not proof that an independent
-live store no longer needs the same key version. Sharing a version/custody
-boundary across independently managed stores is an unresolved integration
-constraint for key, migration and hosted-provider wiring; this implementation
-does not certify that configuration as safe. Use distinct key boundaries for
-independently managed stores. Same-store surviving references prevent retirement.
+Local reference checks alone never authorize destruction. Newly provisioned
+native keys also record the opaque managed store lineages that used each version,
+under the same registry lock as retirement. Automatic retirement requires both
+no local surviving reference and usage exclusively by the requesting lineage.
+The recorded set is monotonic exclusive-use evidence, not complete cross-store
+reference counting. It does not shrink when a store closes or purges.
+
+A shared version, old key without usage history, use outside a managed lease,
+or provider without this proof remains available. The job stays at `keys` with
+`failure="provider_unavailable"` and `logical_live_copies="pending"`; its access
+fence remains effective. Fresh exclusively used native keys can finish
+retirement, including a retry after private-part removal fails. No global
+reference service or automatic conversion of ambiguous custody is provided.
+Keep the current native registry independent of pack snapshots; tampering with
+or rolling back this local authority is outside same-user isolation guarantees.
 
 The same four methods are available on synchronous `MemoryClient`. Protected
 DuckDB `rebuild_indexes(user_id=...)` reconstructs current native indexes from

@@ -1,6 +1,7 @@
 """ER04–06 fault/recovery checks using real ledger, SQL and native indexes."""
 import asyncio
 from dataclasses import replace
+from datetime import timedelta
 from pathlib import Path
 import shutil
 from uuid import UUID, uuid4
@@ -11,10 +12,12 @@ from prme import MemoryEngine
 from prme.privacy import PrivacyDenied
 from prme.privacy.erasure import ErasureRequest
 from prme.privacy.ledger import LocalErasureLedger
+from prme.privacy.local_keys import public_registry
 from tests.privacy_journal_support import (
     LAYOUTS, journal_engine, isolated_privacy_postgres, local_analyzer_fixture,  # noqa: F401
 )
 from tests.privacy_journal_support import native as native_fixture  # noqa: F401
+from tests.test_privacy_source_routing import selection
 
 
 async def reopen(engine, runtime):
@@ -26,14 +29,20 @@ async def reopen(engine, runtime):
 
 @pytest.mark.parametrize("layout", LAYOUTS)
 async def test_ER04_intent_and_each_stage_survive_interruption_and_failure(tmp_path, layout, analyzer, native, monkeypatch):
-    engine, runtime, policy, custody, *_ = await journal_engine(tmp_path, layout, analyzer)
+    engine, runtime, policy, custody, evidence, _ = await journal_engine(tmp_path, layout, analyzer)
     runtime = replace(runtime, key_custody=custody)
     engine._privacy.runtime = runtime
     owner = str(policy.owner_id)
     try:
         event = await engine.store("Mara likes tea. Source maroon.", retrieval_content="Mara likes tea.", user_id=owner)
         positive = await engine.store("Mara likes apples.", user_id=owner)
-        request = ErasureRequest(request_id=uuid4(), event_ids=(UUID(event),))
+        selected = (await engine.get_event_nodes(event, user_id=owner))[0]
+        grant = await selection(engine, runtime, owner, (event,), kind="diagnostic")
+        with custody.unlocked((evidence.ref,), expires_at=runtime.clock() + timedelta(minutes=2)) as private:
+            runtime.protector.registry = public_registry(custody.path, private_wrapper=private)
+            assert (await engine.read_source(event, user_id=owner, access=grant)).content == "Mara likes tea. Source maroon."
+        runtime.protector.registry = public_registry(custody.path)
+        request = ErasureRequest(request_id=uuid4(), node_ids=(selected.id,))
         repository = engine._privacy.erasure.repository
         apply = repository.apply
         async def lost_fence(entry):
@@ -46,9 +55,16 @@ async def test_ER04_intent_and_each_stage_survive_interruption_and_failure(tmp_p
                 _, checkpoint = await repository.state()
                 pending = await runtime.erasure_ledger.entries_since(checkpoint)
                 assert len(pending) == 1 and pending[0].intent.request == request
+                assert pending[0].intent.source_event_ids == (UUID(event),)
         assert apply is not lost_fence
         engine, runtime = await reopen(engine, runtime)
         assert (await engine.request_erasure(request, user_id=owner)).state == "blocked_from_access"
+        assert (await engine.inspect_source(event, user_id=owner)).state == "erased"
+        with custody.unlocked((evidence.ref,), expires_at=runtime.clock() + timedelta(minutes=2)) as private:
+            runtime.protector.registry = public_registry(custody.path, private_wrapper=private)
+            with pytest.raises(PrivacyDenied):
+                await engine.read_source(event, user_id=owner, access=grant)
+        runtime.protector.registry = public_registry(custody.path)
         with pytest.raises(PrivacyDenied):
             await engine.get_event_nodes(event, user_id=owner)
         assert await engine.get_event_nodes(positive, user_id=owner)
@@ -78,6 +94,9 @@ async def test_ER04_intent_and_each_stage_survive_interruption_and_failure(tmp_p
         [complete] = await engine.process_erasures(user_id=owner, budget_ms=60000)
         assert complete.state == "live_purged" and complete.failure is None
         assert await engine.request_erasure(request, user_id=owner) == complete
+        erased = await engine._privacy.repository.get(event, user_id=owner)
+        assert erased.evidence is None and erased.processing is None and erased.retry is None
+        assert await engine._privacy.repository._query("SELECT content,content_hash FROM events WHERE id=?", (event,)) == [("", "")]
         # A completed node-only selection no longer has a node row to resolve.
         # Its exact persisted request must still be safely retryable.
         selected = (await engine.get_event_nodes(positive, user_id=owner))[0]

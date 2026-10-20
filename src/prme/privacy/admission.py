@@ -900,8 +900,9 @@ class AdmissionCoordinator:
             old = await self.repository.request(request_id, user_id=user_id)
             if old:
                 await self.check_disclosure(old)
-                if old[0].retry is None or not await capability_call(runtime.retry_committer.verify(request, old[0].retry), "privacy_retry_unavailable"):
-                    raise PrivacyDenied("privacy_retry_conflict")
+                async with self.guard(old[0].snapshot, "admission", records=old):
+                    if old[0].retry is None or not await capability_call(runtime.retry_committer.verify(request, old[0].retry), "privacy_retry_unavailable"):
+                        raise PrivacyDenied("privacy_retry_conflict")
                 return FastIngestAdmission(event_ids=tuple(row.event_id for row in old), replayed=True)
             if await self.repository.has_legacy_request(request_id, user_id=user_id):
                 raise PrivacyDenied("privacy_retry_conflict")
@@ -911,7 +912,8 @@ class AdmissionCoordinator:
         if not prepared:
             return FastIngestAdmission(event_ids=())
         if request_id is not None:
-            commitment = await capability_call(runtime.retry_committer.commit(request, RetryContext(request_id=request_id, snapshot=prepared[0].record.snapshot)), "privacy_retry_unavailable")
+            async with self.guard(prepared[0].record.snapshot, "admission", records=tuple(p.record for p in prepared)):
+                commitment = await capability_call(runtime.retry_committer.commit(request, RetryContext(request_id=request_id, snapshot=prepared[0].record.snapshot)), "privacy_retry_unavailable")
             prepared = [PreparedAdmission(p.record.model_copy(update={"retry": commitment, "request_index": i}),
                                            p.event, p.source, p.budget) for i, p in enumerate(prepared)]
         nodes = [self.direct_node(p) for p in prepared]
@@ -928,8 +930,9 @@ class AdmissionCoordinator:
             if not old or old[0].retry is None:
                 raise PrivacyDenied("privacy_retry_unavailable") from None
             await self.check_disclosure(old)
-            if not await capability_call(runtime.retry_committer.verify(request, old[0].retry), "privacy_retry_unavailable"):
-                raise PrivacyDenied("privacy_retry_conflict") from None
+            async with self.guard(old[0].snapshot, "admission", records=old):
+                if not await capability_call(runtime.retry_committer.verify(request, old[0].retry), "privacy_retry_unavailable"):
+                    raise PrivacyDenied("privacy_retry_conflict") from None
             return FastIngestAdmission(event_ids=tuple(row.event_id for row in old), replayed=True)
         self.engine._materialization_queue.note_added()
         return FastIngestAdmission(event_ids=tuple(p.event.id for p in prepared))

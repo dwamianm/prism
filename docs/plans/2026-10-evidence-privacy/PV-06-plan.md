@@ -356,3 +356,51 @@ final CI, merge and issue closure remain root-owned and pending. Cross-store key
 custody remains a possible original AC4 blocker: actual managed multi-store
 wiring must prove exclusive lineage/complete references or refuse destructive
 cross-store retirement. Documentation cannot waive a known surviving-store loss.
+
+## Required review corrections (2026-10-20)
+
+The four required reviews of `ee620296` identified two original-AC blockers:
+node-selected memory erasure omitted retained source representations (AC2/3/6),
+and store-local retirement could destroy a second managed store's live keys
+(AC4). Root approved the bounded plan in
+`.github-ticket-loop/privacy-325/proposed-repair-plan.md` and released the freeze.
+No new scenario family, live model, benchmark, global service or quality round
+was added. Original integration/full-suite/CI obligations remain pending.
+
+Owned correction paths are `privacy/{erasure,keys,local_keys,crypto,admission}.py`,
+`storage/erasure.py`, four existing ER fixture modules, and these plan/results
+and erasure/key docs. The first correction validation required one additional
+narrow path, `privacy/reads.py:inspect_source`: truthful immediate availability
+must observe the committed fence. Root approved that AC2/6 adjustment. The
+separately held #323 classification/read-context strategy is unchanged.
+
+The internal intent saves resolved owned sources separately from the caller's
+request identity before acknowledgement. Fence, recovery, target seeding,
+cleanup and verification share that closure. New native keys record monotonic
+ever-used store lineages in the existing atomic public registry. Native managed
+retirement requires exclusive use by this lineage plus the current local
+reference check. Shared, legacy or unbound usage remains usable and pending;
+this does not claim complete cross-store reference counting. Fresh exclusive
+keys retain a successful retirement and private-removal retry path.
+
+The initial six witnesses failed against unchanged runtime source. The first
+correction command had 9 passes and 6 failures: all three ER02 independent
+admission cases and all six native retirement cases passed; immediate source
+inspection still said sealed, and a new post-purge assertion required an error
+code stricter than the original denial criterion. Those failures remain in
+results. The second source correction retains the positive reveal witness and
+effective no-payload denial, corrects that expectation, and fixes only immediate
+inspection. Exact commands, outcomes and independent behavioral cycle counts
+are recorded in `PV-06-results.json`; no full check or CI runs on #323 here.
+
+The second source correction passed all six selected ER03/ER04 cases. Final
+source inspection then found that real extracted nodes can carry an existing
+optional typed sanitization report in their source reference. The new resolver
+now validates that report separately before comparing the source identity. The
+existing ER03 case now selects an actual extracted node and passed on all three
+layouts. Source closure has one unsuccessful correction in three bounded
+correction checks; custody has zero unsuccessful corrections in one. The 93
+existing native-key, crypto, rotation and retry tests passed on the final provider
+revision. Scoped Ruff and strict public consumer typing also passed. Earlier
+failures and all original 31 logs remain preserved; this checkpoint still awaits
+affected review and the separately owned integration/full-check obligations.

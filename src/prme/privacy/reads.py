@@ -500,7 +500,14 @@ async def inspect_source(coordinator, event_id: str, *, user_id: str, scope: Sco
         return SourceUnavailable()
     context = await ReadContext.create(coordinator, user_id=user_id, scopes=[scope] if scope else None)
     async with context.guard():
-        return context.availability(row)
+        available = context.availability(row)
+        try:
+            await coordinator.erasure.assert_records_current((row,), purpose="evidence")
+        except PrivacyDenied as exc:
+            if exc.code != "privacy_erased":
+                raise
+            return available.model_copy(update={"state": "expired" if available.state == "expired" else "erased"})
+        return available
 
 
 async def read_source(coordinator, event_id: str, *, user_id: str, access: EvidenceAccess,
