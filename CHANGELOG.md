@@ -115,6 +115,22 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
   stays open until it is verified with the real key custody, read, durable-work
   and authority components. Nothing changes while no policy is set.
 
+- Add authenticated evidence encryption to that opt-in path (dwamianm/prism#356,
+  part of issue #321). Public-write and private-read are separate capabilities.
+  Each object gets a fresh data key and nonce, and its policy, identity, owner,
+  scope and purpose are authenticated with it. Key versions are exact, grants name
+  finite selected sources, audits hold no content, recovery is deliberate and
+  encrypted, and rewrapping resumes after a stop. `prme privacy-keys` provisions
+  and diagnoses local keys, and the optional extra `local-privacy` (`keyring`)
+  adds native local key custody. Opening a store creates one more empty table,
+  `privacy_rotation_jobs`. The pull request lists what this does not do: a
+  local same-process capability does not isolate secrets from malicious code in
+  that process or from a local administrator, rotation does not erase older backup
+  or recovery copies, a missing key never falls back to plaintext, native custody
+  was checked on macOS only, and the issue stays open until its integration
+  criteria are verified with the real authority, read, durable-work and migration
+  components (issues #323 to #326). Nothing changes while no policy is set.
+
 ### Changed
 
 - The window's guidance to the model now says to keep every subject, object and
@@ -153,6 +169,12 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
   directive of 2026-10-19; the full benchmark audit is pending.
   `BENCHMARKS.md` ("We claims linked to their members") has the measurements.
 
+- The runtime dependency `cryptography` is now pinned to exactly 50.0.2 for every
+  install (dwamianm/prism#356). It was `>=43.0`. The pin comes with the evidence
+  encryption above, but it applies whether or not a privacy policy is used: an
+  environment that needs another `cryptography` release cannot install this
+  release next to it. The optional extra `local-privacy` pins `keyring` to 25.7.0.
+
 ### Fixed
 
 - A close no longer cancels an extraction batch whose output is saved but not yet
@@ -173,15 +195,18 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
   hop-count list of 0.16.0a4 now drives the seed count list; see its entry.
 - Everything else new is off by default: `enable_owner_window_extraction`, the
   windowed extraction options it extends, and the privacy admission policies
-  (`privacy_policy`). `scoring.rrf_graph_weight` and the other options that were
+  (`privacy_policy`), with their sanitization and evidence encryption. `scoring.rrf_graph_weight` and the other options that were
   off in 0.16.0a5 stay off. The defaults turned on in earlier alphas are still
   on (`lexical_term_weights` for PostgreSQL, `enable_ingest_claim_fixes`,
   `packing.folded_records_keep_rank`, `enable_mention_links`,
   `packing.graph_seed_words`, `enable_owner_name_carry` and
   `packing.session_context_skip_entities`).
-- A store gains an empty table `privacy_admissions` the first time this release
-  opens it, and `reingest()` and a few other entry points read it (see the
+- A store gains two empty tables, `privacy_admissions` and `privacy_rotation_jobs`, the
+  first time this release opens it, and `reingest()` and a few other entry points read it (see the
   privacy entry). Code from earlier releases does not use the table.
+- Install: `cryptography` is pinned to exactly 50.0.2 (see Changed). If another
+  package in your environment needs a different release, the resolver will refuse
+  this alpha; a later alpha may relax the pin.
 - Known weaknesses are as in 0.16.0a5. On the fast cycle three answers rank one
   place lower with `scoring.rrf_graph_seed_count` on (travel 2 to 3, coffee 4 to
   5, job-now 7 to 8), and the `reingest()` limits of 0.16.0a5 stand.

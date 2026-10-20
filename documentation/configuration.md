@@ -241,6 +241,13 @@ file unchanged.
 
 See [Deployment](deployment.md#encryption-at-rest) for details.
 
+Opt-in evidence encryption has separate purpose keys and explicit capabilities;
+it does not reuse `PRME_ENCRYPTION_KEY` or change this default. Install the
+`local-privacy` extra, provision the required public descriptors, and inject
+`CryptoProtector` into `PrivacyRuntime`. Ordinary sealed writers never open a
+native private key. See [privacy key provisioning, diagnostics and rotation](../docs/PRIVACY-KEYS.md).
+Protected product readiness still depends on the remaining privacy release gates.
+
 ## Write Queue
 
 | Variable | Default | Description |
