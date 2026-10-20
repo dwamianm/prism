@@ -1,0 +1,271 @@
+"""The graph oracle's gold graphs, strategies, store round trip and reports, with no model and no network."""
+import copy
+from contextlib import asynccontextmanager
+import json
+
+import pytest
+
+from benchmarks.diagnostics.chat_probe import load_conversation
+from benchmarks.diagnostics.extracted_packs import _drain_sources
+from benchmarks.diagnostics.product_packing import gate_config
+from benchmarks.fast_cycle import store as fast_store
+from benchmarks.graph_oracle import gold as gold_module
+from benchmarks.graph_oracle import run as oracle_run
+from benchmarks.graph_oracle.fidelity import fidelity
+from benchmarks.graph_oracle.gold import GOLD_NAMES, RELATIONS, load_gold, mentions, relation_cues, target_cues
+from benchmarks.graph_oracle.graph import CLAIM, DIRECT, MemorySource, load_graph, write_graph
+from benchmarks.graph_oracle.strategies import Params, fuse, generic_scores, graph_first, graph_order, run_oracle
+from prme import MemoryEngine
+from tests.test_chat_probe import mock_embeddings  # noqa: F401
+
+
+def _source_questions(gold):
+    """The questions of the corpus a gold file annotates: id to (text, terms)."""
+    raw = json.loads(gold.path.read_text())["corpus"]
+    path = gold_module.ROOT / raw["path"]
+    if raw["kind"] == "conversation":
+        probes = load_conversation(path)["key"]["probes"]
+    else:
+        probes = fast_store.load_fixture(path)["key"]["questions"]
+    return {probe["id"]: (probe["question"], {key: probe[key] for key in ("all_of", "any_of") if probe.get(key)})
+            for probe in probes}
+
+
+# --- The gold files ------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("name", GOLD_NAMES)
+def test_a_gold_file_annotates_every_question_of_its_corpus_and_only_adds_marked_ones(name):
+    gold = load_gold(name)
+    source = _source_questions(gold)
+    kept = {question.id: question for question in gold.questions if question.origin == "source"}
+    assert set(kept) == set(source)
+    for question_id, (text, terms) in source.items():
+        assert kept[question_id].text == text and kept[question_id].terms == terms
+    added = [question for question in gold.questions if question.origin == "added"]
+    assert added and all(question.kind in ("two_hop", "three_hop") for question in added)
+
+
+def test_the_corpora_are_the_three_the_issue_names():
+    counts = {name: (len(load_gold(name).memories), len(load_gold(name).questions)) for name in GOLD_NAMES}
+    assert counts == {"defects-v1": (14, 8), "store-v1": (75, 20), "chat-v1": (54, 21)}
+    assert len(load_gold("defects-v1").questions) - 1 == 7
+
+
+@pytest.mark.parametrize("name", GOLD_NAMES)
+def test_every_answer_is_a_memory_and_most_hold_the_answer_terms(name):
+    gold = load_gold(name)
+    for question in gold.questions:
+        holding = {memory.id for memory in gold.memories if gold_module.term_hits(question.terms, memory.text)}
+        if question.id == "niece-born":
+            # The date comes from the session's date, which no turn's text holds.
+            assert not holding
+        else:
+            assert holding & set(question.answers), question.id
+
+
+@pytest.mark.parametrize("name", GOLD_NAMES)
+def test_the_gold_graph_stays_inside_the_closed_vocabulary_and_marks_what_it_infers(name):
+    gold = load_gold(name)
+    assert {claim.r for claim in gold.claims} <= set(RELATIONS) and len(RELATIONS) == 17
+    inferred = [claim for claim in gold.claims if claim.inferred]
+    assert inferred and all(claim.r == "located_in" and not claim.ev for claim in inferred)
+    assert all(claim.ev for claim in gold.claims if not claim.inferred)
+
+
+def _break(gold, claim_index=0, **changes):
+    broken = copy.copy(gold)
+    broken.claims = list(gold.claims)
+    broken.claims[claim_index] = gold_module.Claim(**{**gold.claims[claim_index].__dict__, **changes})
+    return broken
+
+
+@pytest.mark.parametrize("changes, message", [
+    ({"r": "likes"}, "not in the vocabulary"),
+    ({"o": "nobody"}, "unknown entity"),
+    ({"ev": ()}, "needs evidence"),
+    ({"ev": ("s9-nowhere#0",)}, "unknown memory"),
+    ({"inferred": True, "ev": ()}, "only located_in may be inferred"),
+    ({"polarity": "maybe"}, "bad status or polarity"),
+    ({"supersedes": "missing"}, "supersedes an unknown claim"),
+])
+def test_a_gold_file_that_breaks_a_rule_is_rejected(changes, message):
+    with pytest.raises(ValueError, match=message):
+        gold_module.validate(_break(load_gold("defects-v1"), **changes))
+
+
+def test_a_literal_claim_needs_an_attribute_and_only_has_takes_one():
+    gold = load_gold("store-v1")
+    literal = next(index for index, claim in enumerate(gold.claims) if claim.r == "has")
+    with pytest.raises(ValueError, match="only has takes a literal"):
+        gold_module.validate(_break(gold, literal, attr=""))
+    with pytest.raises(ValueError, match="only has takes a literal"):
+        gold_module.validate(_break(gold, 0, o=None))
+
+
+# --- Reading text -----------------------------------------------------------------------------------
+
+
+def test_a_longer_name_wins_over_the_shorter_name_inside_it_and_exact_case_names_stay_exact():
+    chat = load_gold("chat-v1")
+    assert mentions(chat, "Sam is a nurse at Denver Health.") == ["sam", "denver_health"]
+    assert mentions(chat, "I live in Denver.") == ["denver"]
+    store = load_gold("store-v1")
+    assert "go" in mentions(store, "Alex likes code examples in Go and TypeScript") and "go" not in mentions(store, "let's go home")
+    assert mentions(store, "WHICH CITIES WILL ALEX VISIT IN JAPAN") == ["alex", "japan"]
+
+
+def test_a_question_word_that_names_a_subtype_asks_for_it_and_cue_words_point_at_relations():
+    store = load_gold("store-v1")
+    assert target_cues(store, "which cities will Alex visit?")["subtype"] == {"city"}
+    assert target_cues(store, "What is Alex's dog called?")["subtype"] == {"dog"}
+    assert target_cues(store, "Who is on call?")["type"] == {"person"}
+    assert {"allergic_to"} <= relation_cues("What is Jordan allergic to?")
+    assert {"manager_of"} <= relation_cues("Who is Alex's manager?")
+    assert relation_cues("How many rows does the table have?") == set()
+
+
+# --- Combining lists -------------------------------------------------------------------------------
+
+
+def test_the_graph_list_keeps_text_order_for_equal_scores_and_leaves_out_memories_it_does_not_reach():
+    base = ["a", "b", "c", "d"]
+    assert graph_order({"c": 2.0, "d": 2.0, "a": 1.0, "b": 0.0}, base) == ["c", "d", "a"]
+    assert graph_first({"c": 2.0}, base) == ["c", "a", "b", "d"]
+
+
+def test_fusion_with_no_weight_is_the_text_order_and_a_high_weight_lifts_a_graph_memory():
+    base = ["a", "b", "c", "d"]
+    assert fuse({"d": 1.0}, base, 0.0) == base
+    assert fuse({"d": 1.0}, base, 0.01)[0] == "a"
+    assert fuse({"d": 1.0}, base, 100.0)[0] == "d"
+    assert fuse({}, base, 5.0) == base
+
+
+def test_the_settings_flag_parses_json_values_and_refuses_an_unknown_name():
+    params = oracle_run.parse_params(["hops=3", "cue_filter=false", 'relations=["visits"]', 'weights={"part_of": 0.5}'])
+    assert params.hops == 3 and params.cue_filter is False
+    assert params.relations == frozenset({"visits"}) and params.weights == (("part_of", 0.5),)
+    with pytest.raises(ValueError, match="not a setting"):
+        oracle_run.parse_params(["speed=2"])
+
+
+# --- The graph in a store ----------------------------------------------------------------------------
+
+
+@asynccontextmanager
+async def _stored(tmp_path, name):
+    """A pack with the corpus stored (mock embeddings), its gold graph written and read back."""
+    gold = load_gold(name)
+    pack = tmp_path / "pack"
+    (pack / "lexical_index").mkdir(parents=True)
+    async with MemoryEngine.open(gate_config(pack)) as engine:
+        node_ids = {}
+        for memory in gold.memories:
+            receipt = await engine.store_with_receipt(memory.text, user_id=gold.owner, role=memory.role,
+                                                      node_type=memory.node_type, scope=memory.scope, extract=False)
+            node_ids[memory.id] = str(receipt.node.id)
+        await _drain_sources(engine, gold.owner)
+        handles = await write_graph(engine, gold, gold.owner, node_ids)
+        yield engine, gold, handles, await load_graph(engine, gold.owner, handles)
+
+
+async def test_both_shapes_read_back_as_the_claims_that_were_written(mock_embeddings, tmp_path):  # noqa: F811
+    async with _stored(tmp_path, "defects-v1") as (engine, gold, handles, data):
+        written = {claim.id: claim for claim in gold.claims}
+        for shape in (DIRECT, CLAIM):
+            read = {edge.id: edge for edge in data.edges if edge.shape in (shape, "both")}
+            assert set(read) == set(written)
+            for claim_id, edge in read.items():
+                claim = written[claim_id]
+                assert (edge.s, edge.r, edge.o, edge.polarity, edge.status, set(edge.evidence)) == (
+                    claim.s, claim.r, claim.o, claim.polarity, claim.status, set(claim.ev)), (shape, claim_id)
+        # A memory has a mentions edge to every entity it names, and nothing else names an entity.
+        assert all(data.mentions[memory.id] == set(mentions(gold, memory.text)) for memory in gold.memories
+                   if mentions(gold, memory.text))
+
+
+async def test_generic_finds_the_cities_memory_first_from_the_three_spellings_in_both_shapes(mock_embeddings, tmp_path):  # noqa: F811
+    async with _stored(tmp_path, "defects-v1") as (engine, gold, handles, data):
+        for text in (gold.questions[0].text, *gold.questions[0].variants):
+            for params in (Params(), Params(shape=CLAIM, hops=4)):
+                result = await generic_scores(text, gold, MemorySource(data, params.shape), params)
+                assert graph_order(result.scores, [])[0] == "s1-trip#2", (text, params.shape)
+        # Without a name in the question there is no seed, so the graph adds nothing.
+        empty = await generic_scores("what happened yesterday?", gold, MemorySource(data), Params())
+        assert empty.seeds == [] and empty.scores == {}
+
+
+async def test_a_negative_or_superseded_claim_does_not_carry_the_walk(mock_embeddings, tmp_path):  # noqa: F811
+    async with _stored(tmp_path, "defects-v1") as (engine, gold, handles, data):
+        text = "which cities will alex visit?"
+        result = await generic_scores(text, gold, MemorySource(data), Params())
+        # A dropped city is still reached through the country's containment, but less than a chosen one.
+        assert result.entities["tokyo"] > result.entities["hiroshima"] > 0
+        allowed = await generic_scores(text, gold, MemorySource(data), Params(negative=1.0))
+        assert allowed.entities["hiroshima"] == allowed.entities["tokyo"]
+
+
+async def test_the_oracle_follows_a_spec_and_a_changed_spec_changes_the_memories(mock_embeddings, tmp_path):  # noqa: F811
+    async with _stored(tmp_path, "defects-v1") as (engine, gold, handles, data):
+        base = [memory.id for memory in gold.memories]
+        cities = gold.questions[0].spec
+        result = run_oracle(gold, data, cities, base)
+        assert result.answered == ["s1-trip#2"] and result.targets == ["kanazawa", "kyoto", "osaka", "tokyo"]
+        dropped = run_oracle(gold, data, {**cities, "target": {"subtype": "city"},
+                                           "path": [{**cities["path"][0], "polarity": "negative"}]}, base)
+        assert dropped.targets == ["hiroshima"]
+
+
+# --- The whole run -------------------------------------------------------------------------------------
+
+
+async def test_the_oracle_ranks_every_gold_question_first_and_a_run_writes_its_report(mock_embeddings, tmp_path):  # noqa: F811
+    report = await oracle_run.run(tmp_path / "out", heldout=False, ablations=True, work=tmp_path / "work")
+    gold_items = [item for item in report["items"] if item["group"] == "gold"]
+    assert len(gold_items) == 53 and all(item["ranks"]["oracle"] == 1 for item in gold_items)
+    assert report["summary"]["oracle"]["top1"] == 53 and report["summary"]["baseline"]["n"] == 53
+    assert report["store_and_memory_traversals_differ"] == 0
+    # Two hops cost three reads of the store: one for each hop and one for the last frontier.
+    assert report["milliseconds"]["store_reads_per_question"]["max"] == 3
+    assert {row["group"] for row in report["ablations"]} >= {"hop limit", "hub damping of the owner", "drop one relation",
+                                                              "claim nodes or direct edges", "question cues"}
+    written = json.loads((tmp_path / "out" / "report.json").read_text())
+    assert written["kind"] == oracle_run.KIND and "## Strategies over all gold questions" in (tmp_path / "out" / "report.md").read_text()
+    cities = [item for item in gold_items if item["id"].split("#")[0] in oracle_run.CITIES]
+    assert len(cities) == 6 and all(item["ranks"]["generic"] == 1 for item in cities)
+    comparison = oracle_run.compare_markdown(report, report)
+    assert "Questions whose rank changed" in comparison and "| baseline | top3 |" in comparison
+
+
+# --- Extraction fidelity -----------------------------------------------------------------------------
+
+
+def _as_candidate(gold, drop=(), rename=None):
+    rename = rename or {}
+    entities = [{"id": f"x-{entity.id}", "names": list(entity.names)} for entity in gold.entities.values()]
+    relations = [{"s": f"x-{claim.s}", "r": claim.r, **({"o": f"x-{claim.o}"} if claim.o else {"attr": claim.attr}),
+                  "polarity": claim.polarity, "status": claim.status}
+                 for claim in gold.claims if claim.id not in drop and not claim.inferred]
+    return {"entities": entities, "relations": relations}
+
+
+def test_a_candidate_equal_to_the_gold_graph_scores_one_and_missing_or_wrong_claims_lower_it():
+    gold = load_gold("defects-v1")
+    perfect = fidelity(gold, _as_candidate(gold))
+    assert (perfect["entity_recall"], perfect["entity_precision"], perfect["relation_recall"],
+            perfect["relation_precision"], perfect["polarity_accuracy"], perfect["status_accuracy"]) == (1.0,) * 6
+    assert perfect["inferred_containment_found"] == 0.0
+    missing = _as_candidate(gold, drop={gold.claims[0].id})
+    assert fidelity(gold, missing)["relation_recall"] < 1.0 and fidelity(gold, missing)["relation_precision"] == 1.0
+    wrong = _as_candidate(gold)
+    wrong["relations"].append({"s": "x-alex", "r": "owns", "o": "x-japan"})
+    wrong["entities"].append({"id": "x-ghost", "names": ["Nobody Atall"]})
+    scored = fidelity(gold, wrong)
+    assert scored["relation_precision"] < 1.0 and scored["entity_precision"] < 1.0 and scored["entity_recall"] == 1.0
+    flipped = _as_candidate(gold)
+    flipped["relations"][-1]["polarity"] = "negative"
+    assert fidelity(gold, flipped)["polarity_accuracy"] < 1.0
+    contained = _as_candidate(gold)
+    contained["relations"].append({"s": "x-tokyo", "r": "located_in", "o": "x-japan"})
+    assert fidelity(gold, contained)["inferred_containment_found"] > 0
