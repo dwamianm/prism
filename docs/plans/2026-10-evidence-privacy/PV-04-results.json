@@ -379,5 +379,66 @@
       "owner": "root"
     },
     "final_full_validation": "Pending root-owned final revision and affected review; no full suite run by this worker."
+  },
+  "upstream_window_composition": {
+    "approved_checkpoint": "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
+    "main": "b5fa5be5294dbf28e63536fce4836dad8644561e",
+    "merge_strategy": "Normal two-parent merge; both reviewed dependency and upstream ancestry retained.",
+    "conflicts": [],
+    "runtime_repairs": 0,
+    "source_disposition": "16 of 19 upstream files are byte-identical to main. Configuration documentation, pipeline and engine compose existing privacy changes with upstream hunks. The actual private grounding route, temporal resolver and protected reads/crypto/sanitizer are preserved.",
+    "source_anchors": "23 line-number-only changes, mapped from unchanged lines in the approved source.",
+    "upstream_ci_reused": {
+      "head": "1f462591c1aa94f249c4b42f32128565f9804720",
+      "required_checks_succeeded": 10,
+      "scope": "Byte-identical upstream config-audit, fast-cycle and PostgreSQL event-store paths; root verified PR352 evidence."
+    },
+    "verified": [
+      {
+        "kind": "affected_window_reingest_privacy_fences",
+        "result": "103 passed, 69 deselected in 40.87s",
+        "log": "323-upstream352-window-reingest-final.log"
+      },
+      {
+        "kind": "protected_q04_staging_and_provider",
+        "result": "8 passed in 19.78s",
+        "log": "323-upstream352-protected-ingest.log",
+        "scope": "Real crypto/storage/sanitizer for the existing Q04 and staging cases across three layouts; existing native provider MockTransport checks. Component authority only; full CL07 remains pending."
+      },
+      {
+        "kind": "public_types",
+        "result": "passed",
+        "log": "323-upstream352-public-types.log"
+      },
+      {
+        "kind": "composed_runtime_lint",
+        "result": "passed",
+        "log": "323-upstream352-ruff.log"
+      },
+      {
+        "kind": "structural_contract",
+        "result": "passed",
+        "log": "323-upstream352-contract.log"
+      }
+    ],
+    "preserved_initial_command_issue": {
+      "log": "323-upstream352-window-reingest.log",
+      "exit_code": 4,
+      "cause": "Unavailable --no-cov argument; no tests collected. Corrected command omitted only that argument."
+    },
+    "preserved_anchor_failure": {
+      "log": "323-upstream352-contract-before-anchors.log",
+      "cause": "Upstream source line shifts; only mapped line numbers updated."
+    },
+    "prior_full_suite": {
+      "head": "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
+      "status": "interrupted_not_passed",
+      "passed": 1074,
+      "skipped": 12,
+      "reason": "Root stopped after main advanced to PR352; not a repair failure.",
+      "log": "validation-323-review-repair/final-interruption-upstream352.json"
+    },
+    "review_status": "All four required reviews approved eb457646; affected composition review remains root-owned.",
+    "pending": "Root final combined suite and affected review; #324 durable publication/recovery and #325 actual authority/scoped revocation/erasure remain original gates."
   }
 }

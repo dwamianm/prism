@@ -67,6 +67,23 @@ async def test_get_by_user(pg_event_store):
     assert "second" in contents
 
 
+async def test_get_by_user_before_an_event(pg_event_store):
+    from datetime import datetime, timedelta, timezone
+
+    from prme.models import Event
+
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    start = datetime(2026, 3, 2, 9, tzinfo=timezone.utc)
+    events = [Event(content=f"turn {n}", user_id=uid, role="user", timestamp=start + timedelta(minutes=n))
+              for n in range(4)]
+    for event in events:
+        await pg_event_store.append(event)
+
+    before = await pg_event_store.get_by_user(uid, limit=2, before=events[2])
+    assert [e.content for e in before] == ["turn 1", "turn 0"]
+    assert await pg_event_store.get_by_user(uid, before=events[0]) == []
+
+
 async def test_get_by_hash(pg_event_store):
     from prme.models import Event
 
