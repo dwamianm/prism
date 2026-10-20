@@ -2,18 +2,18 @@
  "kind": "prme-fast-cycle-report",
  "schema_version": 1,
  "label": "main",
- "created_at": "2026-10-20T00:05:41.833518+00:00",
+ "created_at": "2026-10-20T15:21:48.118630+00:00",
  "provenance": {
-  "commit": "326f32635c318d0a7c46203a12c213179df58bd0",
-  "src_tree": "5510af9854e22ed6eaa5fbe11ee2b68bd9ba620d",
+  "commit": "49fad815d80518225074c8aec21a61207495f765",
+  "src_tree": "ba7c754ad8433cdc49978498948480f2f75e5390",
   "src_modified": false,
   "settings": {}
  },
  "seconds": {
-  "store": 10.651952457992593,
-  "ingest": 23.73643983299553,
-  "store-extract": 25.642994082998484,
-  "total": 60.03138637398661
+  "store": 7.236197208010708,
+  "ingest": 20.347346209004172,
+  "store-extract": 23.95483662499464,
+  "total": 51.53838004200952
  },
  "stages": {
   "store": {
@@ -25,8 +25,8 @@
    "calls": 75,
    "nodes": 75,
    "edges": 0,
-   "store_seconds": 10.003907292004442,
-   "retrieve_seconds": 0.6135732920083683,
+   "store_seconds": 6.56917566699849,
+   "retrieve_seconds": 0.6281891249964247,
    "measures": {
     "nodes_per_store_call": 1.0,
     "edges_per_store_call": 0.0,
@@ -394,7 +394,7 @@
      ]
     }
    ],
-   "seconds": 10.651952457992593
+   "seconds": 7.236197208010708
   },
   "ingest": {
    "mode": "replay",
@@ -406,7 +406,7 @@
     "defects-v1": {
      "turns": 14,
      "speaker": false,
-     "seconds": 4.962074790993938,
+     "seconds": 4.528946958002052,
      "conversation_sha256": "a198c2be1f27c0b5522f52316855f2b6a788cac0afc2703fc46edbbd4f3d703d",
      "live_calls": 0,
      "cache_hits": 14,
@@ -470,7 +470,7 @@
     "corrections-v1": {
      "turns": 16,
      "speaker": true,
-     "seconds": 4.388256707999972,
+     "seconds": 3.6929720000043744,
      "conversation_sha256": "7ef185ed2e365fffc713f37aa8f4d312aa24ca69d159df3023c5b7ad13a8e1a9",
      "live_calls": 0,
      "cache_hits": 16,
@@ -520,7 +520,7 @@
        "probe": "move-city",
        "records": [
         {
-         "id": "3b0e30eb-5d72-431b-833f-ebc256e7623e",
+         "id": "19de2f97-7cef-46ef-98b8-219e308ab69f",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -532,7 +532,7 @@
          "replacement": null
         },
         {
-         "id": "1e8149ea-5a6a-4cfa-88e2-9960c42ba8b4",
+         "id": "ef17a22a-aea8-460e-8b1b-f162f73eed25",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -544,7 +544,7 @@
          "replacement": null
         },
         {
-         "id": "1b35ba13-987c-41ae-837b-24b359590d5d",
+         "id": "7b711bd9-6a25-4673-885f-718acd47b731",
          "type": "decision",
          "state": "tentative",
          "mentions": [
@@ -556,7 +556,7 @@
          "replacement": null
         },
         {
-         "id": "b12f68e9-9d3e-43ef-9672-2224287f4ab7",
+         "id": "e9520e4b-028a-4572-ae0b-c94408639ff6",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -569,7 +569,7 @@
          "replacement": null
         },
         {
-         "id": "ec2780f8-7818-4432-b49c-0e68780dcfa3",
+         "id": "65438657-2aff-4ee0-9cb2-fabcc0968413",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -581,7 +581,7 @@
          "replacement": null
         },
         {
-         "id": "afce94ad-98e9-49d4-816c-c7078ba33dbb",
+         "id": "4a65d42d-02ef-40b7-9c68-5cb5b69e1388",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -634,7 +634,7 @@
        "probe": "jo-birthday",
        "records": [
         {
-         "id": "100c836f-9aba-40fe-99c5-58cf32dd9aac",
+         "id": "db4432e2-d010-441b-843e-ae1d50d66d71",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -646,7 +646,7 @@
          "replacement": null
         },
         {
-         "id": "81e35528-6506-436a-bc1c-f1938538cbc5",
+         "id": "6ca2a372-0e72-4164-878e-adede30f9bfd",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -658,7 +658,7 @@
          "replacement": null
         },
         {
-         "id": "d257894a-9e0d-47c8-ad29-ab5959c25f73",
+         "id": "c6486afc-8449-4d98-8789-c1db99ac91b2",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -670,7 +670,7 @@
          "replacement": null
         },
         {
-         "id": "b63d0149-9899-47a4-8954-532ffe2b8c86",
+         "id": "4532a151-e170-4a0b-898d-1d7747c03812",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -682,7 +682,7 @@
          "replacement": null
         },
         {
-         "id": "08187915-39be-49cc-9d4b-fd98c9f216a3",
+         "id": "cfc673c5-b907-44af-804b-674843c100c3",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -734,7 +734,7 @@
        "probe": "coffee",
        "records": [
         {
-         "id": "5054fff0-f393-49fc-99d9-0544180942bf",
+         "id": "d2dd17e9-308a-4611-8041-7f991a37606d",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -746,7 +746,7 @@
          "replacement": null
         },
         {
-         "id": "aea10e4d-9626-40d2-8602-523cf54ad219",
+         "id": "af7b4bfb-5cd8-40b5-80d1-3aa3b321db94",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -758,7 +758,7 @@
          "replacement": null
         },
         {
-         "id": "b07e3ff3-0a75-4f2c-b61a-ea7f4a9f075e",
+         "id": "7fb5c88c-9686-40e8-9929-ac8a67b54d6d",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -770,7 +770,7 @@
          "replacement": null
         },
         {
-         "id": "f7d89672-30d2-495e-8043-a9262af441ef",
+         "id": "a10789f0-0871-47b5-bf5b-9a0abd49073b",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -822,7 +822,7 @@
        "probe": "job",
        "records": [
         {
-         "id": "57570d24-e08e-4c0e-8752-135a5a828236",
+         "id": "2736f15c-6923-4a4b-9f87-07b658404246",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -834,7 +834,7 @@
          "replacement": null
         },
         {
-         "id": "6419e7e5-cc89-48bf-b62c-e2d22c568f06",
+         "id": "acbb574a-7a01-481a-9eb9-33bb5c0e16bb",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -875,7 +875,7 @@
     "chat-v1": {
      "turns": 54,
      "speaker": false,
-     "seconds": 14.324397834003321,
+     "seconds": 12.076110832989798,
      "conversation_sha256": "535a76267ea20486e0d5afdace7c7ff277f649ccc8c4687c448ee169c374af8d",
      "live_calls": 0,
      "cache_hits": 54,
@@ -1114,7 +1114,7 @@
      "answer_rank:language": 2
     }
    },
-   "seconds": 23.73643983299553
+   "seconds": 20.347346209004172
   },
   "store-extract": {
    "backend": "duckdb",
@@ -1133,9 +1133,9 @@
    "live_calls": 0,
    "cache_hits": 75,
    "unreproduced": 0,
-   "store_seconds": 9.28351933399972,
-   "extract_seconds": 14.330733832990518,
-   "retrieve_seconds": 1.6264843750104774,
+   "store_seconds": 6.474617833009688,
+   "extract_seconds": 15.36420279199956,
+   "retrieve_seconds": 1.8869038749980973,
    "measures": {
     "nodes_per_store_call": 5.026666666666666,
     "edges_per_store_call": 4.906666666666666,
@@ -1508,7 +1508,7 @@
      ]
     }
    ],
-   "seconds": 25.642994082998484
+   "seconds": 23.95483662499464
   }
  },
  "measures": {

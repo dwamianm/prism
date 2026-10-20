@@ -1826,8 +1826,9 @@ repeated in one session merges, and the alpha channel turns it on (`docs/ENTITY-
   earlier copy on the subject the way it does for a named speaker's "I". The earlier copy is linked to the owner, so
   the plan finds it there (same session, same claim, we in the same field).
 
-The tiers ran on this branch rebased on `origin/main` at `19210c2b` (the entity skip default, #316) and again on
-`13b25058` (0.16.0a4, which changed only the version), with `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6),
+The tiers ran on this branch rebased on `origin/main` at `19210c2b` (the entity skip default, #316), again on
+`13b25058` (0.16.0a4, which changed only the version) and again after rebasing onto `46422fd5` (0.16.0a5, with
+`reingest()`), with `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6),
 every extraction replayed from the caches (0 model calls). "Off" sets `enable_owner_group_links=false`, "on" is
 this branch's defaults:
 
@@ -1866,8 +1867,14 @@ could add is already linked by another claim.
 
 After review, the merge reads only the owner's own group links (another speaker's identical claim never
 retires the owner's), a member is matched by the full name, and the phrase reader works in linear time with a
-cap of 16 members and 4,096 words a turn. At that head (`326f3263`) the defect probes and the chat probe give
-the same reports as above, and the fast cycle baseline taken there equals the one before on all 168 measures.
+cap of 16 members and 4,096 words a turn. After the rebase onto 0.16.0a5, at `49fad815`, the defect probes and
+the chat probe give the same reports as above (0 model calls), the fast cycle against main's committed baseline
+passes with only the three edge counts moved (option off: 168 unchanged), and the baseline taken there equals the
+branch's earlier one on all 168 measures. The opt-in `reingest` stage gives 36 equal measures off and on: its
+plain stores name no session and no owner, so they get no group link. `reingest()` plans each source through the
+pipeline's own planning and links after its commit, so a re-derived chat gets the links a fresh `ingest()`
+gives, and a repeated "We" claim of a session merges into one current record
+(`tests/test_group_members.py::TestReingest`).
 
 What it does not do: it does not move the cities claim up the ranked list, because the default rank fusion does not
 read graph links (#276). Lower-case names ("jordan and i") are not read as names, and a group named with a word the
