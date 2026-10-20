@@ -35,7 +35,7 @@ from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import claim_sentences, validate_grounding
-from prme.ingestion.group_links import FIRST_PERSON_PLURAL
+from prme.ingestion.group_links import SESSION_TURNS, is_group_reference
 from prme.ingestion.owner_name import carried_owner_entity, carried_owner_name, owner_name_marker
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
@@ -169,8 +169,7 @@ def _speaks_for_a_group(result: ExtractionResult) -> bool:
     for relationship in result.relationships:
         pairs += [(relationship.source_entity, relationship.source_entity_type),
                   (relationship.target_entity, relationship.target_entity_type)]
-    return any(value.strip().casefold() in FIRST_PERSON_PLURAL and unresolved_personal_reference(value, kind)
-               for value, kind in pairs)
+    return any(is_group_reference(value, kind) for value, kind in pairs)
 
 
 def _introduced_speaker(event: Event, result: ExtractionResult) -> str | None:
@@ -193,7 +192,7 @@ def _claim_statement(fact: ExtractedFact, speaker: str | None) -> str:
     def named(value: str, entity_type: str | None) -> str:
         if _speaker_reference(value, entity_type):
             return speaker or "the speaker"
-        if value.strip().casefold() in FIRST_PERSON_PLURAL and unresolved_personal_reference(value, entity_type):
+        if is_group_reference(value, entity_type):
             return "the speaker's group"
         return value
 
@@ -1276,6 +1275,7 @@ class IngestionPipeline:
         # A we claim of the owner's turn can repeat one of an earlier turn of the session; the owner's
         # group links find it (enable_owner_group_links). Only a turn whose claims speak for a group looks.
         group_owner = None
+        group_session: set[str] = set()
         if (self._link_owner_groups and self._merge_repeated_claims and current_policy and event.session_id
                 and not owner_reference and event.role.casefold() in OWNER_ROLES
                 and (event.metadata or {}).get(OWNER_REFERENCE_KEY) is not True
@@ -1283,7 +1283,13 @@ class IngestionPipeline:
             owner = await carried_owner_entity(
                 graph, user_id=event.user_id, scope=event.scope, name=metadata_speaker(event.metadata),
             )
-            group_owner = str(owner.id) if owner is not None else None
+            if owner is not None:
+                group_owner = str(owner.id)
+                # The session's turns up to this one bound which earlier copies are read.
+                group_session = {str(turn.id) for turn in await self._event_store.get_by_user(
+                    event.user_id, session_id=event.session_id, scopes=[event.scope], until=event.timestamp,
+                    limit=SESSION_TURNS,
+                )}
         await self._populate(
             result, event, str(event.id), event.scope, graph_store=graph,
             writer=graph, vector_index=indexes, lexical_index=indexes, write_queue=PlanningQueue(),
@@ -1297,7 +1303,7 @@ class IngestionPipeline:
             distinct_text=self._claim_fixes,
             grounding_speaker=(metadata_speaker(event.metadata)
                                if self._speaker_grounding and current_policy else None),
-            group_owner=group_owner,
+            group_owner=group_owner, group_session=group_session,
         )
         if before_prepare is not None:
             await before_prepare(graph)
@@ -1314,13 +1320,14 @@ class IngestionPipeline:
         explicit_corrections: bool = False, owner_reference: bool = False,
         speaker_introduced: bool = False, distinct_text: bool = False,
         speaker_carried: bool = False, owner_name_basis: str | None = None,
-        group_owner: str | None = None,
+        group_owner: str | None = None, group_session: set[str] | None = None,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
         ``merge_claims`` folds a repeated claim into one current record (#209);
         with ``group_owner``, the owner's entity, a claim about we also folds a
-        copy that an earlier turn of the session stated (enable_owner_group_links).
+        copy that an earlier turn of the session, one of ``group_session``,
+        stated (enable_owner_group_links).
         ``speaker`` binds first-person singular references to that speaker's
         entity (enable_speaker_references); ``speaker_introduced`` says the turn
         itself gave the name ("I am Alex Rivera") rather than the caller, and
@@ -1638,7 +1645,7 @@ class IngestionPipeline:
                     # same claim in an earlier turn of the session.
                     copies = await find_repeated_group_claims(
                         graph_store, group_owner, fact_node, key, object_entity_id,
-                        exclude=planned_fact_ids,
+                        session_events=group_session or set(), exclude=planned_fact_ids,
                     )
                 if copies:
                     fact_node = merged_claim(fact_node, copies)

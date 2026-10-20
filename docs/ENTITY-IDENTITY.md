@@ -77,15 +77,22 @@ members only on evidence: when the session's user turns with the same speaker, u
 turn in the order they were ingested, name exactly one group with the owner ("My partner Jordan and I", "Jordan,
 Sam and I", "me and Jordan"), the claim is also linked to each named person, and that link records the turn
 that named the group in `named_in`. A member must be a person entity a turn already stored, matched by its full
-name or the last words of it, and only one person may carry that name. When the session names two or more
+name (or, after a weekday, a month or a title such as "Sunday Jordan" or "Coach Taylor", by the rest of it),
+and only one person may carry that name, so "Jordan Lee and I" never links a stored "Lee". A group named
+anywhere earlier in the session counts as evidence, however far back and whatever it was about: in a long
+session, a later "we" about something else (a work decision after "Jordan and I went hiking") is linked to
+Jordan too. Only the newest 500 events of the session up to the claim's turn are read, only the first 4,096
+words and marks of a turn, and a list of more than 16 members names no group. When the session names two or more
 different groups, a member without a name ("my wife and I"), or a name no single person entity has, the claim is
 linked to the owner only; no member is invented, and names count as written with a capital letter. The reading
 is a conservative English rule, not coreference resolution: "and I" counts only after members that start a
 clause, so "I got the offer from Brightpath and I accepted it" names no group. Participant, assistant, tool and
 system turns keep their own `we`, as do `first_person_owner` turns. With `enable_claim_merge`, the same `we`
 claim repeated in two user turns of one session merges into one current record, as a named speaker's repeated
-`I` claim does: the earlier copy is found through its link to the owner. A claim repeated in another session
-stays separate, because a session may speak for another group. The statements built for a duplicate sentence
+`I` claim does: the earlier copy is found through its link to the owner who said it, so another speaker's
+identical claim, linked to the owner only as a member of that speaker's group, never retires it. A claim
+repeated in another session stays separate, because a session may speak for another group. A claim whose
+sentence names the owner still gets its group link beside the text link, so it can merge too. The statements built for a duplicate sentence
 keep "the speaker's group" and never name the members. The links are made after the derivation commits,
 outside the plan, so saved plans keep their bytes; memories ingested before the option was on are not linked
 or merged. The default rests on the fast tiers by the owner's directive of 2026-10-19; the full benchmark

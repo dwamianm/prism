@@ -23,7 +23,7 @@ from __future__ import annotations
 import unicodedata
 from typing import TYPE_CHECKING
 
-from prme.ingestion.group_links import group_fields, is_group_link
+from prme.ingestion.group_links import group_fields, is_group_link, is_owner_group_link
 from prme.ingestion.mention_links import is_text_link
 from prme.types import EdgeType, EpistemicType, LifecycleState
 
@@ -82,22 +82,28 @@ async def find_repeated_claims(
 
 async def find_repeated_group_claims(
     graph, owner_entity_id: str, new: MemoryNode, key: tuple,
-    object_entity_id: str | None, *, exclude: set[str],
+    object_entity_id: str | None, *, session_events: set[str], exclude: set[str],
 ) -> list[MemoryNode]:
     """Return active copies of ``key`` the owner stated about the same we earlier in the session, oldest first.
 
     A claim about we hangs on a we entity local to its message, so
     :func:`find_repeated_claims` never finds another message's copy. With
     enable_owner_group_links each such claim of the owner's turns is linked to
-    the owner's entity, so the owner's group links lead to the copies: claims
-    from the same session whose subject or object is we in the same field, as
-    ``new``'s, and that are otherwise the same claim.
+    the owner's entity, so the owner's own group links lead to the copies:
+    claims from the same session whose subject or object is we in the same
+    field, as ``new``'s, and that are otherwise the same claim. A link that
+    names someone as a member of another speaker's we (``named_in``) never
+    counts, so another speaker's claim never retires the owner's. Only links
+    made by ``session_events``, the session's turns, are read further.
     """
-    edges = await graph.get_edges(target_id=owner_entity_id, edge_type=EdgeType.MENTIONS)
-    sources = sorted({str(edge.source_id) for edge in edges if is_group_link(edge)} - exclude)
     fields = group_fields(new)
-    if not sources or not fields or new.session_id is None:
+    if not fields or new.session_id is None or not session_events:
         return []
+    edges = await graph.get_edges(target_id=owner_entity_id, edge_type=EdgeType.MENTIONS)
+    sources = sorted({
+        str(edge.source_id) for edge in edges
+        if is_owner_group_link(edge) and str(edge.provenance_event_id) in session_events
+    } - exclude)
     return await _copies(
         graph, sources, new, key, object_entity_id,
         same=lambda node: node.session_id == new.session_id and group_fields(node) == fields,

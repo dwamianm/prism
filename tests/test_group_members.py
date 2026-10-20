@@ -8,14 +8,25 @@ with a scripted extraction in place of the model. Every test runs on DuckDB and,
 on PostgreSQL.
 """
 
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from prme import MemoryEngine
-from prme.ingestion.group_links import is_group_link, named_groups, session_group_members
+from prme.ingestion.claim_merge import claim_key, find_repeated_group_claims
+from prme.ingestion.group_links import (
+    GROUP_LINK_METADATA,
+    _candidate_names,
+    is_group_link,
+    link_group_claims,
+    named_groups,
+    session_group_members,
+)
+from prme.models.edges import MemoryEdge
+from prme.models.nodes import MemoryNode
 from prme.ingestion.schema import ExtractionResult
-from prme.types import EdgeType, LifecycleState, NodeType
+from prme.types import EdgeType, LifecycleState, NodeType, Scope
 from tests import test_durable_ingestion
 from tests.test_mention_links import claim, person, place
 from tests.test_owner_name_carry import on
@@ -42,6 +53,11 @@ HIKE_RILEY = "Riley and I went hiking on Saturday."
 PASTA = "We chose the pasta place."
 TOKYO = "We chose Tokyo."
 FLIGHTS = "Jordan and I booked the flights."
+DANA_INTRODUCTION = "Hi, I am Dana."
+HIKE_DANA = "Dana and I went hiking on Saturday."
+COLLEAGUE = "My colleague Lee reviewed the runbook."
+HIKE_JORDAN_LEE = "Jordan Lee and I went hiking on Saturday."
+KYOTO_NAMED = "Alex Rivera and the team: we chose Kyoto."
 
 TRIP_SENTENCE = "My partner Jordan and I are planning a trip to Japan in late March next year."
 RESULTS = {
@@ -65,6 +81,12 @@ RESULTS = {
     TOKYO: {"entities": [place("Tokyo")],
             "facts": [claim("We", "chose", "Tokyo", TOKYO, object_entity_type="location")]},
     FLIGHTS: {"entities": [person("Jordan")], "facts": [claim("Jordan", "booked", "the flights", FLIGHTS)]},
+    DANA_INTRODUCTION: {"entities": [person("Dana")], "facts": [claim("I", "name", "Dana", DANA_INTRODUCTION)]},
+    HIKE_DANA: {"entities": [person("Dana")], "facts": [claim("Dana", "went", "hiking", HIKE_DANA)]},
+    COLLEAGUE: {"entities": [person("Lee")], "facts": [claim("Lee", "reviewed", "the runbook", COLLEAGUE)]},
+    HIKE_JORDAN_LEE: {"entities": [], "facts": [claim("I", "went", "hiking", HIKE_JORDAN_LEE)]},
+    KYOTO_NAMED: {"entities": [person(OWNER), place("Kyoto")],
+                  "facts": [claim("We", "chose", "Kyoto", KYOTO_NAMED, object_entity_type="location")]},
 }
 
 # The defect probe's chat, without the turns that state nothing about a group.
@@ -304,3 +326,137 @@ class TestRepeatedWeClaims:
             active = [node for node in await engine.query_nodes(user_id=user)
                       if node.content == TOKYO and node.node_type != NodeType.NOTE]
         assert len(active) == 2
+
+
+class TestGuards:
+    """The review's cases: another speaker's claim, a partial name, a failed link, a long roster, the lookup cost."""
+
+    async def test_another_speakers_identical_we_claim_does_not_retire_the_owners(self, config, user):
+        async def extract(content, **_):
+            return ExtractionResult.model_validate(RESULTS[content])
+
+        turns = [(DANA_INTRODUCTION, "Dana"), (INTRODUCTION, OWNER), (HIKE_DANA, OWNER), (TOKYO, OWNER), (TOKYO, "Dana")]
+        async with MemoryEngine.open(linked(config)) as engine:
+            engine._pipeline._extraction_provider.extract = extract
+            for minute, (content, speaker) in enumerate(turns):
+                await engine.ingest(content, user_id=user, role="user", speaker=speaker, session_id="s1",
+                                    event_time=T0 + timedelta(minutes=minute), wait_for_extraction=True)
+            nodes = await engine.query_nodes(user_id=user, lifecycle_states=list(LifecycleState), limit=1000)
+            copies = [node for node in nodes if node.content == TOKYO and node.node_type != NodeType.NOTE]
+            found = await group_links(engine, user)
+        assert len(copies) == 2 and all(node.lifecycle_state != LifecycleState.SUPERSEDED for node in copies)
+        assert not any(node.metadata.get("merged_claim_ids") for node in copies)
+        # Alex's claim links Alex and Dana, whom Alex named; Dana's links Dana only.
+        assert found == sorted([(TOKYO, OWNER), (TOKYO, "Dana"), (TOKYO, "Dana")])
+
+    async def test_a_partial_name_does_not_link_another_person(self, config, user):
+        async with MemoryEngine.open(linked(config)) as engine:
+            await chat(engine, user, {"s0": [INTRODUCTION, COLLEAGUE], "s1": [HIKE_JORDAN_LEE, TOKYO]})
+            found = per_claim(await group_links(engine, user))
+        assert found == {TOKYO: {OWNER}}
+
+    def test_only_a_weekday_month_or_title_is_dropped_from_the_front_of_a_name(self):
+        assert _candidate_names("Jordan Lee") == ["Jordan Lee"]
+        assert _candidate_names("Sunday Jordan") == ["Sunday Jordan", "Jordan"]
+        assert _candidate_names("Coach Taylor") == ["Coach Taylor", "Taylor"]
+        assert _candidate_names("June Lee") == ["June Lee"]
+
+    async def test_a_failed_member_link_costs_no_claim_its_owner_link(self, config, user):
+        async with MemoryEngine.open(linked(config, enable_owner_group_links=False)) as engine:
+            await chat(engine, user, DEFECTS)
+            claims = [node for node in await engine.query_nodes(user_id=user) if node.content in (CITIES, DROPPED)]
+            [event_id] = {str(ref) for node in claims for ref in node.evidence_refs}
+            [jordan] = [node for node in await engine.query_nodes(user_id=user, node_type=NodeType.ENTITY)
+                        if node.content == "Jordan"]
+
+            async def create_edge(edge):
+                if edge.target_id == jordan.id:
+                    raise RuntimeError("write failed")
+                return await engine._graph_store.create_edge(edge)
+
+            made = await link_group_claims(event_id, claims, user_id=user, graph_store=engine._graph_store,
+                                           event_store=engine._event_store, create_edge=create_edge)
+            found = per_claim(await group_links(engine, user))
+        assert made == 2 and found == {CITIES: {OWNER}, DROPPED: {OWNER}}
+
+    async def test_an_event_of_another_user_gets_no_link(self, config, user):
+        async with MemoryEngine.open(linked(config, enable_owner_group_links=False)) as engine:
+            await chat(engine, user, DEFECTS)
+            claims = [node for node in await engine.query_nodes(user_id=user) if node.content in (CITIES, DROPPED)]
+            [event_id] = {str(ref) for node in claims for ref in node.evidence_refs}
+            made = await link_group_claims(event_id, claims, user_id=f"{user}-other", graph_store=engine._graph_store,
+                                           event_store=engine._event_store,
+                                           create_edge=engine._graph_store.create_edge)
+            assert made == 0 and await group_links(engine, user) == []
+
+    async def test_a_claim_whose_sentence_names_the_owner_still_merges(self, config, user):
+        async with MemoryEngine.open(linked(config, enable_mention_links=True)) as engine:
+            await chat(engine, user, {"s1": [INTRODUCTION, KYOTO_NAMED, REPLY, KYOTO_NAMED]})
+            active = [node for node in await engine.query_nodes(user_id=user)
+                      if node.content == KYOTO_NAMED and node.node_type != NodeType.NOTE]
+        assert len(active) == 1 and len(active[0].metadata["merged_claim_ids"]) == 1
+
+    async def test_a_time_without_a_zone_is_read_as_utc(self, config, user):
+        async with MemoryEngine.open(linked(config)) as engine:
+            await chat(engine, user, {"s1": [INTRODUCTION, PASTA]})
+            first = min(await engine.get_events(user), key=lambda event: event.timestamp)
+            naive = first.timestamp.astimezone(timezone.utc).replace(tzinfo=None)
+            listed = await engine.get_events(user, until=naive)
+        assert [event.id for event in listed] == [first.id]
+
+    def test_a_long_roster_is_read_in_bounded_time_and_names_no_group(self):
+        started = time.perf_counter()
+        assert named_groups("Jordan, " * 1000 + "and I went home.") == []
+        assert named_groups("Jordan, " * 40_000 + "and I went home.") == []
+        assert named_groups(", ".join(["Jordan"] * 15) + " and I went home.") == [tuple(["Jordan"] * 15)]
+        assert time.perf_counter() - started < 2.0
+
+
+class _Graph:
+    """The two reads the merge lookup makes, counted."""
+
+    def __init__(self, edges, nodes):
+        self.edges, self.nodes = edges, {str(node.id): node for node in nodes}
+        self.edge_reads, self.node_reads = 0, []
+
+    async def get_edges(self, *, source_id=None, target_id=None, edge_type=None):
+        self.edge_reads += 1
+        return [edge for edge in self.edges
+                if str(edge.source_id if source_id else edge.target_id) == (source_id or target_id)]
+
+    async def get_nodes(self, node_ids):
+        self.node_reads.extend(node_ids)
+        return [self.nodes[node_id] for node_id in node_ids if node_id in self.nodes]
+
+
+def _claim(subject="We", session="s1"):
+    return MemoryNode(user_id="owner", scope=Scope.PERSONAL, node_type=NodeType.DECISION, content=TOKYO,
+                      session_id=session, metadata={"subject": subject, "subject_entity_type": "person",
+                                                    "predicate": "chose", "object": "Tokyo"},
+                      event_time=T0, valid_from=T0)
+
+
+def _link(claim, owner, event_id, **extra):
+    return MemoryEdge(source_id=claim.id, target_id=owner.id, edge_type=EdgeType.MENTIONS, user_id="owner",
+                      provenance_event_id=event_id, metadata={**GROUP_LINK_METADATA, **extra})
+
+
+class TestMergeLookup:
+    async def test_a_claim_not_about_we_reads_nothing(self):
+        graph, new = _Graph([], []), _claim(subject="Alex")
+        found = await find_repeated_group_claims(graph, "owner-id", new, claim_key(new, None), None,
+                                                 session_events={"e1"}, exclude=set())
+        assert found == [] and graph.edge_reads == 0 and graph.node_reads == []
+
+    async def test_it_loads_only_owner_links_made_in_the_session(self):
+        owner, here, elsewhere, named = _claim(subject="Owner"), _claim(), _claim(session="s2"), _claim()
+        session_event, other_event = here.id, elsewhere.id  # any distinct IDs stand for the two turns
+        graph = _Graph([
+            _link(here, owner, session_event),
+            _link(elsewhere, owner, other_event),
+            _link(named, owner, session_event, named_in="intro"),
+        ], [here, elsewhere, named])
+        new = _claim()
+        found = await find_repeated_group_claims(graph, str(owner.id), new, claim_key(new, None), None,
+                                                 session_events={str(session_event)}, exclude=set())
+        assert graph.node_reads == [str(here.id)] and [node.id for node in found] == [here.id]

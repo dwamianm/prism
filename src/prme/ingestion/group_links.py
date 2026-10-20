@@ -34,15 +34,18 @@ from __future__ import annotations
 
 import re
 from collections.abc import Awaitable, Callable, Sequence
+from functools import lru_cache
+from itertools import islice
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
 import structlog
 
 from prme.epistemic.inference import OWNER_ROLES
+from prme.ingestion.mention_links import is_text_link
 from prme.ingestion.owner_name import carried_owner_entity
 from prme.models.edges import MemoryEdge
-from prme.models.entity_identity import unresolved_personal_reference
+from prme.models.entity_identity import PERSONAL_REFERENCES, unresolved_personal_reference
 from prme.models.owner_reference import OWNER_REFERENCE_KEY
 from prme.models.speaker import metadata_speaker
 from prme.types import ACTIVE_LIFECYCLE_STATES, EdgeType, NodeType
@@ -56,16 +59,22 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 # Marks a MENTIONS edge that records only that a claim's we includes its target.
-# Claim merging ignores it, as it ignores a text link.
+# Claim merging ignores it, as it ignores a text link. A link to a named member
+# also carries ``named_in``; the owner's link does not.
 GROUP_LINK_METADATA = {"basis": "group_member"}
+NAMED_IN_KEY = "named_in"
 
 FIRST_PERSON_PLURAL = frozenset({"we", "us", "our", "ours", "ourselves"})
 _CLAIM_TYPES = frozenset({NodeType.FACT, NodeType.DECISION, NodeType.PREFERENCE, NodeType.TASK})
 
-# The owner's turns of a session read for the groups they name: the newest ones
-# at or before the claim's turn. Far more than a chat session holds.
+# The owner's turns of a session read for the groups they name, and for the
+# copies a repeated we claim may merge with: the newest ones at or before the
+# claim's turn. Far more than a chat session holds.
 SESSION_TURNS = 500
-# Entities read while looking up the names a group gives.
+# Entities read while looking up the names a group gives. A name is matched as
+# a substring before the exact check, so a short name ("Al") can match many
+# entities; this reads twice mention_links' 500, which looks up the names one
+# extraction listed.
 _LOOKUP_LIMIT = 1000
 
 
@@ -74,14 +83,23 @@ def is_group_link(edge: MemoryEdge) -> bool:
     return (edge.metadata or {}).get("basis") == GROUP_LINK_METADATA["basis"]
 
 
+def is_owner_group_link(edge: MemoryEdge) -> bool:
+    """Whether the edge is a claim's group link to the owner who said it, not to a named member."""
+    return is_group_link(edge) and NAMED_IN_KEY not in (edge.metadata or {})
+
+
+def is_group_reference(value: object, entity_type: str | None) -> bool:
+    """Whether a claim's subject or object is a literal we, us or our."""
+    return (isinstance(value, str) and value.strip().casefold() in FIRST_PERSON_PLURAL
+            and unresolved_personal_reference(value, entity_type))
+
+
 def group_fields(node: MemoryNode) -> frozenset[str]:
     """The claim's fields, subject or object, that are a literal we, us or our."""
     metadata = node.metadata or {}
     return frozenset(
         field for field in ("subject", "object")
-        if isinstance(metadata.get(field), str)
-        and metadata[field].strip().casefold() in FIRST_PERSON_PLURAL
-        and unresolved_personal_reference(metadata[field], metadata.get(f"{field}_entity_type"))
+        if is_group_reference(metadata.get(field), metadata.get(f"{field}_entity_type"))
     )
 
 
@@ -100,10 +118,8 @@ def group_fields(node: MemoryNode) -> frozenset[str]:
 
 _TOKEN_RE = re.compile(r"[^\W\d_][\w'’-]*|\d[\w'’.,-]*|[.,!?;:()\[\]{}\"“”—–]")
 _DETERMINERS = frozenset({"my", "our", "the", "a", "an"})
-_PRONOUNS = frozenset({
-    "i", "me", "my", "mine", "myself", "we", "us", "our", "ours", "ourselves", "you", "your", "yours",
-    "he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs", "it", "its",
-})
+# The pronouns entity identity keeps local to a message, and "its".
+_PRONOUNS = PERSONAL_REFERENCES | {"its"}
 # Words that can open the clause a group starts, so they end the members before "and I". Greetings and
 # interjections ("Hi, Jordan and I") are never a name either.
 _CLAUSE_WORDS = frozenset({
@@ -132,8 +148,23 @@ _RELATIONS = frozenset({
     "neighbor", "neighbors", "neighbour", "neighbours", "classmate", "classmates", "coach", "mentor",
     "client", "clients", "cofounder", "co-founder", "dog", "cat", "crew", "band",
 })
+# A capitalized word that can stand before a name without being part of it ("Sunday Jordan", "Coach Taylor"):
+# the only words dropped from the front of a name when the whole name is no stored person. Months that are
+# also first names (April, May, June, August) are left out, so "June Lee" is never read as "Lee".
+_LEADING_NON_NAMES = frozenset({
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january", "february",
+    "march", "july", "september", "october", "november", "december", "mr", "mrs", "ms", "miss", "mx", "dr",
+    "doctor", "prof", "professor", "coach", "captain", "sir", "madam", "aunt", "auntie", "uncle", "cousin",
+    "grandma", "grandpa", "nana",
+})
 _MAX_NAME_WORDS = 4
 _MAX_RELATION_WORDS = 3
+# Bounds on one turn's reading, so a pasted roster costs a fixed amount: the members of one group, and the
+# tokens read from one turn.
+_MAX_MEMBERS = 16
+_MAX_TURN_TOKENS = 4096
+# The longest turn whose groups are kept between link passes.
+_CACHED_TEXT = 20_000
 
 
 def _fold(token: str) -> str:
@@ -206,24 +237,26 @@ def _members_before(tokens: list[str], conjunction: int, *, clause_start: bool) 
     end = conjunction - 1
     if end >= 0 and tokens[end] == ",":
         end -= 1  # "Jordan, Sam, and I"
-    members: list[str | None] = []
-    found = None
+    members: list[str | None] = []  # read right to left
+    found = 0  # how many of them form the longest list that starts a clause
     while end >= 0:
+        if len(members) == _MAX_MEMBERS:
+            return None  # a list this long is a roster, not a group the speaker belongs to
         item = _item_before(tokens, end, joined=not members)
         if item is None:
             break
         name, start = item
-        members.insert(0, name)
+        members.append(name)
         before = start - 1
         if _is_boundary(tokens, before) or (not clause_start and len(members) == 1):
-            found = tuple(members)
+            found = len(members)
         if before >= 0 and (tokens[before] == "," or _fold(tokens[before]) == "and"):
             end = before - 1
             if end >= 0 and tokens[end] == "," and _fold(tokens[before]) == "and":
                 end -= 1
             continue
         break
-    return found
+    return tuple(reversed(members[:found])) or None
 
 
 def _item_after(tokens: list[str], start: int, *, joined: bool = False) -> tuple[str | None, int] | None:
@@ -256,17 +289,19 @@ def _members_after(tokens: list[str], conjunction: int) -> tuple[str | None, ...
     comma alone starts another clause ("me and Biscuit, Sam can't come") and does not count.
     """
     members: list[str | None] = []
-    found = None
+    found = 0  # how many of them end a list
     start = conjunction + 1
     joined = True  # the first member follows "me and"
     while start < len(tokens):
+        if len(members) == _MAX_MEMBERS:
+            return None  # a list this long is a roster, not a group the speaker belongs to
         item = _item_after(tokens, start, joined=not members)
         if item is None:
             break
         name, end = item
         members.append(name)
         if joined:
-            found = tuple(members)
+            found = len(members)
         following = end + 1
         if following + 1 < len(tokens) and (tokens[following] == "," or _fold(tokens[following]) == "and"):
             start = following + 1
@@ -276,7 +311,7 @@ def _members_after(tokens: list[str], conjunction: int) -> tuple[str | None, ...
                 joined = True
             continue
         break
-    return found
+    return tuple(members[:found]) or None
 
 
 def named_groups(text: str) -> list[tuple[str | None, ...]]:
@@ -285,9 +320,10 @@ def named_groups(text: str) -> list[tuple[str | None, ...]]:
     A member is the name the text gives it as written, or None for a relation
     without a name ("my wife and I" gives ``(None,)``). "and I" counts only
     after members that start a clause; "and me", "me and" and "I and" count
-    anywhere.
+    anywhere. Only the first ``_MAX_TURN_TOKENS`` words and marks are read,
+    and a list of more than ``_MAX_MEMBERS`` members names no group.
     """
-    tokens = _TOKEN_RE.findall(text)
+    tokens = [match.group() for match in islice(_TOKEN_RE.finditer(text), _MAX_TURN_TOKENS)]
     groups: list[tuple[str | None, ...]] = []
     for index in range(len(tokens) - 1):
         word, following = tokens[index], tokens[index + 1]
@@ -303,6 +339,17 @@ def named_groups(text: str) -> list[tuple[str | None, ...]]:
     return groups
 
 
+@lru_cache(maxsize=1024)
+def _cached_groups(text: str) -> tuple[tuple[str | None, ...], ...]:
+    return tuple(named_groups(text))
+
+
+def _turn_groups(text: str) -> tuple[tuple[str | None, ...], ...]:
+    """``named_groups`` of a turn. Every later "we" turn of a session reads its earlier turns again, so a
+    turn of chat length is read once and kept; a longer one is read each time rather than held in memory."""
+    return _cached_groups(text) if len(text) <= _CACHED_TEXT else tuple(named_groups(text))
+
+
 # --- Who the owner's group is in a session ------------------------------------------------------
 
 
@@ -311,10 +358,18 @@ def _speaker_key(event: Event) -> str | None:
     return speaker.casefold() if speaker else None
 
 
-def _suffixes(name: str) -> list[str]:
-    """The name and each shorter run of its last words, longest first ("Today Jordan" gives "Jordan" too)."""
+def _candidate_names(name: str) -> list[str]:
+    """The name, then the name without the words before it that never name anyone, longest first.
+
+    "Sunday Jordan" and "Coach Taylor" also give "Jordan" and "Taylor". "Jordan Lee" gives only "Jordan Lee":
+    its first word is part of the name, so a stored "Lee" is someone else.
+    """
     words = name.split()
-    return [" ".join(words[start:]) for start in range(len(words))]
+    candidates = [name]
+    while len(words) > 1 and words[0].casefold().rstrip(".") in _LEADING_NON_NAMES:
+        words = words[1:]
+        candidates.append(" ".join(words))
+    return candidates
 
 
 async def _people(graph_store: GraphStore, event: Event, names: set[str]) -> dict[str, list[MemoryNode]]:
@@ -337,9 +392,9 @@ async def _people(graph_store: GraphStore, event: Event, names: set[str]) -> dic
 
 
 def _person(name: str, people: dict[str, list[MemoryNode]]) -> MemoryNode | None:
-    """The one person entity a name gives, by its longest run of last words that is a name, or None."""
-    for suffix in _suffixes(name):
-        found = people.get(suffix.casefold(), [])
+    """The one person entity a name gives, by its longest candidate (``_candidate_names``), or None."""
+    for candidate in _candidate_names(name):
+        found = people.get(candidate.casefold(), [])
         if len(found) == 1:
             return found[0]
         if found:
@@ -370,12 +425,12 @@ async def session_group_members(
         (str(turn.id), group)
         for turn in reversed(recent)
         if turn.role.casefold() in OWNER_ROLES and _speaker_key(turn) == speaker
-        for group in named_groups(turn.content)
+        for group in _turn_groups(turn.content)
     ]
     if not named:
         return [], None
     people = await _people(graph_store, event, {
-        suffix for _, group in named for name in group if name for suffix in _suffixes(name)
+        candidate for _, group in named for name in group if name for candidate in _candidate_names(name)
     })
     nodes: dict[str, MemoryNode] = {}
     groups: list[tuple[str, frozenset[str]]] = []
@@ -420,7 +475,7 @@ async def link_group_claims(
         if not claims:
             return 0
         event = await event_store.get(event_id)
-        if (event is None or event.role.casefold() not in OWNER_ROLES
+        if (event is None or event.user_id != user_id or event.role.casefold() not in OWNER_ROLES
                 or (event.metadata or {}).get(OWNER_REFERENCE_KEY) is True):
             return 0
         owner = await carried_owner_entity(
@@ -433,32 +488,41 @@ async def link_group_claims(
                 event, owner, graph_store=graph_store, event_store=event_store,
             )
         except Exception as exc:
-            # The owner is still linked; only the members wait for a later repair.
+            # The owner is still linked. Nothing links this turn's members later: only publishing the
+            # same plan again runs this step.
             logger.warning("group_links.members_failed", event_id=event_id, error_type=type(exc).__name__)
             members, named_in = [], None
-        targets = [(owner, dict(GROUP_LINK_METADATA))]
-        targets += [(member, {**GROUP_LINK_METADATA, "named_in": named_in}) for member in members]
+        # A text link (the claim's sentence names the person) does not stand in for a group link, which
+        # the merge of a repeated we claim looks for; any other link between the two does.
         linked = {
             (edge.source_id, edge.target_id)
             for edge in await graph_store.get_edges(node_ids=[str(node.id) for node in claims])
+            if not is_text_link(edge)
         }
-        for claim in claims:
-            for target, metadata in targets:
-                if (claim.id, target.id) in linked or (target.id, claim.id) in linked:
-                    continue
-                edge = MemoryEdge(
-                    id=uuid5(UUID(event_id), f"prme:group-link:{claim.id}:{target.id}"),
-                    source_id=claim.id, target_id=target.id, edge_type=EdgeType.MENTIONS,
-                    user_id=user_id, provenance_event_id=UUID(event_id), metadata=metadata,
-                )
+        # Every claim's owner link first, so a failed member link costs no claim its owner link.
+        links = [(claim, owner, dict(GROUP_LINK_METADATA)) for claim in claims]
+        links += [(claim, member, {**GROUP_LINK_METADATA, NAMED_IN_KEY: named_in})
+                  for member in members for claim in claims]
+        for claim, target, metadata in links:
+            if (claim.id, target.id) in linked or (target.id, claim.id) in linked:
+                continue
+            edge = MemoryEdge(
+                id=uuid5(UUID(event_id), f"prme:group-link:{claim.id}:{target.id}"),
+                source_id=claim.id, target_id=target.id, edge_type=EdgeType.MENTIONS,
+                user_id=user_id, provenance_event_id=UUID(event_id), metadata=metadata,
+            )
+            try:
+                await create_edge(edge)
+            except Exception as exc:
+                # A retry of the same publication finds the link made; the edge ID is fixed.
                 try:
-                    await create_edge(edge)
+                    made = any(e.id == edge.id for e in await graph_store.get_edges(source_id=str(claim.id)))
                 except Exception:
-                    # A retry of the same publication finds the link made; the edge ID is fixed.
-                    if not any(e.id == edge.id for e in await graph_store.get_edges(source_id=str(claim.id))):
-                        raise
-                    continue
-                created += 1
+                    made = False
+                if not made:
+                    logger.warning("group_links.link_failed", event_id=event_id, error_type=type(exc).__name__)
+                continue
+            created += 1
     except Exception as exc:
         logger.warning("group_links.failed", event_id=event_id, error_type=type(exc).__name__)
     return created

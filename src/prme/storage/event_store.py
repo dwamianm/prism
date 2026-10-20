@@ -542,7 +542,7 @@ class EventStore:
             limit: Maximum number of events to return.
             offset: Number of events to skip.
             until: Optional ingestion time; only events recorded at or
-                before it are returned.
+                before it are returned. A time without a zone is read as UTC.
 
         Returns:
             List of Events ordered by timestamp descending.
@@ -646,7 +646,8 @@ class EventStore:
 
         if until is not None:
             conditions.append("timestamp <= ?")
-            params.append(until)
+            # A time without a zone is read as UTC, as event timestamps are stored.
+            params.append(until if until.tzinfo is not None else until.replace(tzinfo=timezone.utc))
 
         where_clause = " AND ".join(conditions)
         query = (
