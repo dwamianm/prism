@@ -13,7 +13,7 @@ from prme.privacy.recognizers import CustomRule, MAX_INPUT_BYTES, Span
 from prme.privacy.sanitizer import canonical, restore_budget
 from prme.privacy.strict_schema import ClosedSchema, ValueValidator
 from tests.privacy_sanitizer_support import Rules, Schemas, ScopedTestKeys, admit, setup
-from tests.privacy_sanitizer_support import analyzer as analyzer
+from tests.privacy_sanitizer_support import local_analyzer_fixture as local_analyzer_fixture
 
 
 async def test_nested_admission_and_sanitized_checksum(analyzer):

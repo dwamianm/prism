@@ -59,6 +59,9 @@ async def test_frozen_detector_rows(tmp_path):
 
 @pytest.mark.parametrize("during_iteration", [False, True])
 def test_early_pattern_timeout_is_not_swallowed(during_iteration):
+    import re
+    from presidio_analyzer import Pattern, PatternRecognizer
+
     class EarlyTimeout:
         def finditer(self, text, *, timeout):
             if not during_iteration:
@@ -66,11 +69,15 @@ def test_early_pattern_timeout_is_not_swallowed(during_iteration):
             return self.iterate()
 
         def iterate(self):
-            yield object()
+            yield re.match("synthetic", "synthetic input")
             raise TimeoutError("synthetic private pattern detail")
 
+    pattern = Pattern("injected timeout", "synthetic", 1)
+    recognizer = PatternRecognizer(supported_entity="EMAIL_ADDRESS", patterns=[pattern])
+    pattern.compiled_regex = CompletePattern(EarlyTimeout())
+    pattern.compiled_with_flags = recognizer.global_regex_flags
     with pytest.raises(RecognizerIncomplete, match="privacy_capability_unavailable") as error:
-        list(CompletePattern(EarlyTimeout()).finditer("synthetic input", timeout=60))
+        recognizer.analyze("synthetic input", entities=["EMAIL_ADDRESS"])
     assert not isinstance(error.value, TimeoutError)
     assert error.value.__cause__ is None
 

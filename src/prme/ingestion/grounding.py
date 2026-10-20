@@ -19,6 +19,42 @@ from prme.ingestion.schema import ExtractedQuantity, ExtractionResult
 
 logger = structlog.get_logger(__name__)
 
+
+def validate_private_grounding(result: ExtractionResult, source: str, *, speaker: str | None = None) -> None:
+    """Reject ambiguous protected claims before the legacy repair/logging path.
+
+    The complete source paragraph must remain in the citation. This conservative
+    gate preserves explicit qualifiers; it makes no semantic entailment claim.
+    """
+    from prme.privacy.policy import PrivacyDenied
+
+    for claim in (*result.facts, *result.relationships):
+        quote = claim.evidence_quote
+        if not quote or quote not in source:
+            raise PrivacyDenied("privacy_evidence_ambiguous")
+        passage = _supporting_passage(quote, source)
+        if passage is None or passage.strip() != quote.strip():
+            raise PrivacyDenied("privacy_evidence_ambiguous")
+        subject = getattr(claim, "subject", getattr(claim, "source_entity", ""))
+        object_value = getattr(claim, "object", getattr(claim, "target_entity", ""))
+        if (not mentioned_or_spoken(subject, quote, speaker)
+                or not mentioned_or_spoken(object_value, quote, speaker)
+                or claim.polarity not in {"positive", "negative"}):
+            raise PrivacyDenied("privacy_evidence_ambiguous")
+        conditional = re.search(r"\b(?:if|unless|provided\s+that|as\s+long\s+as)\b", quote, re.IGNORECASE)
+        if conditional and (claim.epistemic_type != "conditional" or not claim.condition
+                            or claim.condition not in quote):
+            raise PrivacyDenied("privacy_evidence_ambiguous")
+        if claim.condition and (claim.epistemic_type != "conditional" or claim.condition not in quote):
+            raise PrivacyDenied("privacy_evidence_ambiguous")
+        negative = re.search(r"\b(?:not|never|neither|without)\b|n['’]t\b", quote, re.IGNORECASE)
+        if negative and claim.polarity != "negative":
+            raise PrivacyDenied("privacy_evidence_ambiguous")
+        quantity = getattr(claim, "quantity", None)
+        if quantity is not None and validate_extracted_quantity(
+                quantity, object_value=object_value, claim_passage=quote) is None:
+            raise PrivacyDenied("privacy_evidence_ambiguous")
+
 _SOURCE_QUOTE_TRANSLATION = str.maketrans({
     "'": '"', "‘": '"', "’": '"', "“": '"', "”": '"',
 })

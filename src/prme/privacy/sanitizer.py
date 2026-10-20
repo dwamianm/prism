@@ -35,9 +35,11 @@ def canonical(value: Any) -> str:
         raise PrivacyDenied("privacy_unsupported_input") from None
 
 
-def sanitized_checksum(fields_json: str) -> str:
+def sanitized_checksum(fields_json: str, role: str = "user", event_time: str | None = None) -> str:
     """This checksum is private and covers only the admitted representation."""
-    return hashlib.sha256(fields_json.encode("utf-8")).hexdigest()
+    unit = canonical({"domain": "prme-sanitized-source-v1", "fields_json": fields_json,
+                      "role": role, "event_time": event_time})
+    return hashlib.sha256(unit.encode("utf-8")).hexdigest()
 
 
 class SourceClassifier(Protocol):
@@ -102,7 +104,7 @@ def validate_source(source: SanitizedContent, snapshot: PolicySnapshot) -> Any:
         raise PrivacyDenied("privacy_boundary_mismatch")
     value = parse_json(source.fields_json)
     if canonical(value) != source.fields_json or not hmac.compare_digest(
-            sanitized_checksum(source.fields_json), source.private_checksum):
+            sanitized_checksum(source.fields_json, source.source_role, source.source_time), source.private_checksum):
         raise PrivacyDenied("privacy_invalid_result")
     for region in source.source_only:
         if type(region) is not SourceOnlyRegion:
@@ -156,6 +158,13 @@ class LocalSanitizer:
                 or policy.registry_version != REGISTRY_VERSION
                 or content.mode not in {"ingress", "query", "generated_output"}):
             raise PrivacyDenied("privacy_configuration_invalid")
+        if content.source_role not in {"user", "human", "participant", "assistant", "tool", "system"}:
+            raise PrivacyDenied("privacy_unsupported_input")
+        if content.source_time is not None:
+            from datetime import datetime
+            parsed = datetime.fromisoformat(content.source_time)
+            if parsed.tzinfo is None or parsed.utcoffset() is None:
+                raise PrivacyDenied("privacy_unsupported_input")
         actions = {item.category: item.action for item in policy.actions()}
         if actions.get("credential") != "block":
             raise PrivacyDenied("privacy_configuration_invalid")
@@ -168,6 +177,8 @@ class LocalSanitizer:
             source_value = validate_source(content.source, content.snapshot)
             if (content.issued_tokens, content.pseudonym_epoch) != (
                     content.source.issued_tokens, content.source.pseudonym_epoch):
+                raise PrivacyDenied("privacy_boundary_mismatch")
+            if (content.source_role, content.source_time) != (content.source.source_role, content.source.source_time):
                 raise PrivacyDenied("privacy_boundary_mismatch")
             epoch = content.pseudonym_epoch
             issued = validate_issued(content.issued_tokens, epoch)
@@ -240,6 +251,10 @@ class LocalSanitizer:
         state.leaves += leaf_count
         if state.input_bytes > MAX_INPUT_BYTES or state.leaves > MAX_LEAVES:
             raise PrivacyDenied("privacy_unsupported_input")
+        if source_value is None:
+            # Freeze the inert source spelling before any recognizer sees it.
+            # No source-provided reserved prefix is an engine-issued identity.
+            texts = [text.replace(RESERVED_PREFIX, INERT_PREFIX) for text in texts]
         if source_value is not None:
             for region in content.source.source_only:
                 prohibited = _at(source_value, region.path)[region.start:region.end]
@@ -311,23 +326,24 @@ class LocalSanitizer:
                         if handle is None:
                             handle = await self._pseudonyms.handle(content.snapshot, epoch)
                         replacement = self._pseudonyms.issue(handle, category, text[start:end])
+                        if source_value is not None and replacement not in issued:
+                            raise PrivacyDenied("privacy_boundary_mismatch")
                         tokens.add(replacement)
                     replacements.append((start, end, replacement))
                 if len(removed_people) > 1:
                     raise PrivacyDenied("privacy_evidence_ambiguous")
                 for span in set(spans):
                     counts[f"{span.category}:{actions[span.category]}"] += 1
-                # Escape raw source token text before inserting engine-issued
-                # placeholders. Offset edits apply to the original string.
+                # Offset edits apply to the exact inert spelling scanned above.
                 pieces = []
                 position = 0
                 for start, end, replacement in replacements:
                     piece = text[position:start]
-                    pieces.append(piece.replace(RESERVED_PREFIX, INERT_PREFIX) if source_value is None else piece)
+                    pieces.append(piece)
                     pieces.append(replacement)
                     position = end
                 piece = text[position:]
-                pieces.append(piece.replace(RESERVED_PREFIX, INERT_PREFIX) if source_value is None else piece)
+                pieces.append(piece)
                 transformed.append("".join(pieces))
         finally:
             if handle is not None:
@@ -361,12 +377,13 @@ class LocalSanitizer:
                 raise PrivacyDenied("privacy_invalid_result")
         result = SanitizedContent(
             fields_json=fields_json, source_id=content.source.source_id if content.source else uuid4(),
-            representation_id=uuid4(), private_checksum=sanitized_checksum(fields_json),
+            representation_id=uuid4(), private_checksum=sanitized_checksum(fields_json, content.source_role, content.source_time),
             sanitizer_version=SANITIZER_VERSION, registry_version=REGISTRY_VERSION,
             detector_versions=VERSIONS, action_counts=tuple(sorted(counts.items())),
             issued_tokens=tuple(sorted(tokens)), pseudonym_epoch=epoch if tokens else None,
             representation_role="admitted_memory" if content.mode == "generated_output" else "sanitized_source",
             source_snapshot=content.snapshot, continuation=state.continuation(), source_only=regions,
+            source_role=content.source_role, source_time=content.source_time,
         )
         validate_source(result, content.snapshot)
         return result
