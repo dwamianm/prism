@@ -1,14 +1,16 @@
 # Issue 320 evidence policy admission review
 
-Status: all planned local checks pass and all four affected reviews are
-COMPLETE and APPROVED. The final full suite passed with 7040 tests and 104
-existing skips. Both final simulation sets passed all 74 checkpoints.
-Final base: `976821c6b07e99775845f5ebfeeeb0fb6454be39`.
-Final helper snapshot: `852c9f72468207a25e204f94a034fcda31d7460437579c700ce8a24e74cde36a`.
-Reviewed provisional snapshot: `b0b1d49b0854258cdd38c76c9f84305f6b48625f271b73c761f59e481130f757`.
-The actual and provisional base trees are identical, as are the feature trees
-before and after rebase and all 35 reviewed source hashes. This document is the
-sole review-hash exclusion. Earlier failed evidence remains recorded below.
+Status: the first PR CI run exposed an optional-dependency test-placement
+regression. Its bounded test-only repair passes the core-without-frameworks and
+required framework integration selections. Affected review and complete CI on
+the repaired head remain pending. Runtime source is unchanged.
+Base: `976821c6b07e99775845f5ebfeeeb0fb6454be39`.
+Current helper snapshot: `85c15e907f6054b92498945296e30f1f16d5d9c161782597f3049cd1461e8b9c`.
+Previous reviewed runtime/test-layout snapshot: `852c9f72468207a25e204f94a034fcda31d7460437579c700ce8a24e74cde36a`.
+The previous local full suite passed 7040 tests with 104 skips, and both simulation
+sets passed 74 checkpoints. Those results retain their original test layout;
+they are not relabeled as a complete suite run after the test relocation.
+This document is the sole review-hash exclusion. Earlier failures remain below.
 
 The original six acceptance criteria and unchanged AP01 through AP08 definitions
 are in [the approved plan](../plans/2026-10-evidence-privacy/PV-02-plan.md).
@@ -17,7 +19,7 @@ separately owned sanitizer, cryptography, sealed projections, journal cleanup,
 erasure, migration or protected-product release gate.
 
 The approved maximum is 44 paths after integrating the newly added reingest
-entry points. The implementation changes 35 paths plus this review document. Existing event-store modules, `fast_ingest`, durable
+entry points. The implementation changes 37 paths plus this review document. Existing event-store modules, `fast_ingest`, durable
 queue and framework adapters need no edits because the coordinator uses their
 existing primitives or intercepts their public engine/client boundary. The
 legacy retrieval pipeline remains explicitly unavailable for protected
@@ -346,3 +348,39 @@ afterward. All 35 source hashes in the running clone and implementation checkout
 matched the reviewed manifest again after pytest completed. This establishes
 final-source coverage without a duplicate suite or an assertion that a changed
 base was reviewed.
+
+
+## Optional framework dependency CI repair
+
+PR head `de520084` failed DuckDB Python 3.13 CI run `39461268703` with one
+failure, 5898 passed and 1176 skipped in 1143.83 seconds. The combined AP01
+framework test in `test_privacy_interfaces.py` imported LangChain unconditionally.
+Core jobs intentionally install dev/API/MCP dependencies without framework
+extras. The required integration jobs installed both frameworks but selected
+the existing integration modules, so they did not run that new combined test.
+This is an introduced test-placement regression, separate from the resolved S2
+and object-enrollment behaviors.
+
+The repair moves the LangChain and LlamaIndex halves into their existing
+integration test modules. Each keeps the real client and adapter call,
+`PrivacyDenied` assertion and no-event assertion. Existing positive adapter
+tests remain unchanged. No skip statement, optional dependency, runtime code or
+CI workflow was added or changed. Both relocated tests execute in the already
+required integration selection.
+
+The original failure was reproduced before edits in an isolated locked core
+environment with both framework packages absent: exit 1, one failure in 0.11
+seconds (`privacy320-ci-framework-prefixed.log`). After the move, the core
+selection passes 15 tests with the two existing optional module skips in 3.83
+seconds, exit 0 (`privacy320-ci-framework-core-repair-1.log`). The exact required
+integration selection passes 48 tests, including both relocated AP01 tests and
+all existing positive cases, with no skips in 9.72 seconds, exit 0
+(`privacy320-ci-framework-integrations-repair-1.log`). Affected Ruff and
+`git diff --check` pass. The dependency/import provenance and complete failed CI
+log are retained with hashes in the ignored repair evidence.
+
+This distinct behavior is resolved by its first local repair validation, subject
+to affected review and complete required CI on the final pushed head. No unchanged
+local full runtime suite, simulations or artifact checks were repeated for this
+test-only relocation. The prior 7040-test result remains explicitly prior-layout
+evidence, and the original S2/object-enrollment cycle-2 limits are unchanged.

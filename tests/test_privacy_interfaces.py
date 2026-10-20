@@ -274,26 +274,6 @@ async def test_AP01_batch_supported_import_is_public_fast_batch(tmp_path):
         await engine.close()
 
 
-def test_AP01_framework_lossless_history_explicitly_refuses_protected_profile(tmp_path, monkeypatch):
-    from prme.integrations import langchain as lc
-    from prme.integrations import llamaindex as li
-    from langchain_core.messages import HumanMessage
-    from llama_index.core.base.llms.types import ChatMessage
-    r = make_runtime()
-    p = policy_for(r)
-    with MemoryClient(config=config_for(tmp_path, policy=p), embedding_provider=r.embedder, privacy_runtime=r) as client:
-        # Inject an existing real client, not fake policy/storage/adapter behavior.
-        monkeypatch.setattr(lc, "MemoryClient", lambda *a, **k: client)
-        monkeypatch.setattr(li, "MemoryClient", lambda *a, **k: client)
-        history = lc.PRMEChatMessageHistory(user_id=str(p.owner_id), session_id=str(uuid4()))
-        store = li.PRMEChatStore()
-        with pytest.raises(PrivacyDenied, match="unsupported"):
-            history.add_message(HumanMessage(content=SOURCE))
-        with pytest.raises(PrivacyDenied, match="unsupported"):
-            store.add_message(str(p.owner_id) + ":" + str(uuid4()), ChatMessage(role="user", content=SOURCE))
-        assert client.get_events(str(p.owner_id)) == []
-
-
 async def test_AP03_namespace_factory_binds_actual_project_id(tmp_path):
     from prme import MemoryWorkspace
     from dataclasses import replace

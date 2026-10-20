@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
@@ -16,16 +17,33 @@ try:
 except ImportError:
     from llama_index.core.base.llms.types import ChatMessage
 
+from prme import MemoryClient
 from prme.client import config_from_directory
+from prme.integrations import llamaindex as li
 from prme.integrations.llamaindex import PRMEChatStore, PRMERetriever
+from prme.privacy import PrivacyDenied
 from prme.retrieval.config import ScoringWeights
 from prme.types import SourceType
+from tests.privacy_fakes import config_for, make_runtime, policy_for
 
 
 @pytest.fixture
 def tmpdir():
     with tempfile.TemporaryDirectory() as d:
         yield d
+
+
+def test_AP01_lossless_history_explicitly_refuses_protected_profile(tmp_path, monkeypatch):
+    r = make_runtime()
+    p = policy_for(r)
+    with MemoryClient(config=config_for(tmp_path, policy=p), embedding_provider=r.embedder, privacy_runtime=r) as client:
+        # Inject an existing real client, not fake policy/storage/adapter behavior.
+        monkeypatch.setattr(li, "MemoryClient", lambda *a, **k: client)
+        store = PRMEChatStore()
+        with pytest.raises(PrivacyDenied, match="unsupported"):
+            store.add_message(str(p.owner_id) + ":" + str(uuid4()),
+                              ChatMessage(role="user", content="Alex does not like tea unless it is cold."))
+        assert client.get_events(str(p.owner_id)) == []
 
 
 class TestPRMERetriever:
