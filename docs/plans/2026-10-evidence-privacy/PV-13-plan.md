@@ -169,10 +169,17 @@ No detector label or expected detection was changed.
 
 ## Explicit remaining integration gates
 
-Real #321 custody and #323/#324 query/generated/profile/source/copy integration
+Real #321 custody, #325 local current-ledger/policy authority (#280 hosted),
+and #323/#324 query/generated/profile/source/copy integration
 are dependencies, not successful fake-provider evidence. Positive query,
 profile and summary controls remain required and pending until the corresponding
 actual route exists. Unavailable routes cannot manufacture an SN pass. The
 fixed 69-row report and actual local recognition are separate from the combined
 protected-product gate in #327. No anonymity, leak-proof, universal detection or
 semantic entailment claim is made.
+
+The preserved 20 passed / 4 pending pytest count is component/subcheck evidence
+with real recognition/backends and test `FakeAuthority`/`FakeProtector`
+capabilities. It does not establish an entire frozen SN product-case pass.
+All product-case statuses remain pending the concrete authority, custody and
+route integration; no replacement authority is part of this ticket.
