@@ -98,8 +98,10 @@ Sanitization is bounded by the pinned detector contract. The frozen
 grammar and remains in an explicitly revealed sanitized source; the supported
 `sample.person@example.com` fixture is removed. A sanitized label does not
 claim universal detection. Ordinary sealed responses exclude both source-only
-values. Source-time phrases that cannot be retained reliably are refused
-during grounding; supported event-time and statement qualifiers remain visible.
+values. A unique source-present date directly attached to “starting” or
+“beginning” can retain its future effective time through the existing validity
+fields. Missing, conflicting or ambiguous references are refused during
+grounding; supported event-time and statement qualifiers remain visible.
 
 The concrete local policy ledger and erasure fences belong to PV-06, historical
 classification and migration to PV-07, and the final release gate to PV-08.

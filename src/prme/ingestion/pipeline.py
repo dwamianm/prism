@@ -1943,7 +1943,9 @@ class IngestionPipeline:
             ) from exc
 
     @staticmethod
-    def _resolve_temporal(temporal_ref: str | None, *, reference_time: datetime | None = None) -> str | None:
+    def _resolve_temporal(temporal_ref: str | None, *, reference_time: datetime | None = None,
+                          prefer_dates_from: Literal["past", "future"] = "past",
+                          source_text: str | None = None) -> str | None:
         """Resolve a natural language temporal reference to an ISO date string.
 
         Uses dateparser to parse references like 'yesterday', 'last week',
@@ -1957,17 +1959,29 @@ class IngestionPipeline:
         """
         if temporal_ref is None:
             return None
+        settings = {
+            "PREFER_DATES_FROM": prefer_dates_from,
+            "RELATIVE_BASE": reference_time or datetime.now(timezone.utc),
+            "RETURN_AS_TIMEZONE_AWARE": True,
+            "TIMEZONE": "UTC",
+            "TO_TIMEZONE": "UTC",
+        }
+        if prefer_dates_from == "future":
+            # Protected forward-start admission must not invent a calendar day
+            # from a month/year-only reference or choose an ambiguous date order.
+            settings.update(REQUIRE_PARTS=["day", "month"], PREFER_LOCALE_DATE_ORDER=False,
+                            DATE_ORDER="MDY")
         with _DATEPARSER_LOCK:
-            parsed = dateparser.parse(
-                temporal_ref,
-                settings={
-                    "PREFER_DATES_FROM": "past",
-                    "RELATIVE_BASE": reference_time or datetime.now(timezone.utc),
-                    "RETURN_AS_TIMEZONE_AWARE": True,
-                    "TIMEZONE": "UTC",
-                    "TO_TIMEZONE": "UTC",
-                },
-            )
+            parsed = dateparser.parse(temporal_ref, settings=settings)
+            if prefer_dates_from == "future" and parsed != dateparser.parse(
+                    temporal_ref, settings={**settings, "DATE_ORDER": "DMY"}):
+                return None
+            if prefer_dates_from == "future" and source_text is not None:
+                from dateparser.search import search_dates
+                spans = search_dates(source_text, languages=["en"], settings=settings)
+                if (parsed is None or not spans or len(spans) != 1
+                        or temporal_ref not in spans[0][0] or spans[0][1] != parsed):
+                    return None
         if parsed is not None:
             return parsed.isoformat()
         return None

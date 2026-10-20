@@ -23,7 +23,7 @@ MEMORY = FIXTURE["admitted_marker"]
 PROHIBITED = FIXTURE["prohibited_marker"]
 
 
-@pytest.fixture(params=["directory", "postgres"], ids=["duckdb", "postgres"], name="layout")
+@pytest.fixture(params=["directory", "pack", "postgres"], ids=["duckdb", "duckdb_single_file", "postgres"], name="layout")
 def backend_layout(request):
     if request.param == "postgres" and not os.getenv("PRME_TEST_DATABASE_URL"):
         pytest.skip("dedicated PostgreSQL required; this is not acceptance success")

@@ -775,3 +775,72 @@ and AC06 historical recovery; CL07 covered erasure; final mandatory checks and
 independent review, actual merged-dependency reconciliation, push and PR.
 Protected owner-group and reingestion routes remain explicit refusals. No live
 model calls, long benchmarks, new cohort, publish, deploy or issue closure.
+
+
+## Approved Q04 and single-file repair checkpoint, 2026-10-20
+
+Root reviewed the concrete Q04 proposal after checkpoint `b0e64283` and released
+only the original AC2 repair in `ingestion/grounding.py`, `privacy/admission.py`
+and the existing resolver in `ingestion/pipeline.py`, followed by the already
+planned single-file layout subchecks. No new cohort or temporal classifier was
+added. The preceding pending Q04 and single-file statuses are historical.
+
+The private qualifier gate now returns a checked copy of the extraction. It
+requires a unique exact source-present temporal_ref directly preceded by the
+existing starting/beginning cue, with no other recognized temporal cue outside
+that reference. The coordinator supplies the trusted source event_time or event
+timestamp. Only this supported forward-start path requests future resolution.
+The existing resolver retains its past default and shared parser lock; forward
+resolution uses the same dateparser to require complete day/month parts, reject
+conflicting numeric date orders, and verify that the cited passage has exactly
+one matching parsed temporal span. Missing refs, borrowed cues, incomplete or
+ambiguous dates and competing source dates fail closed. The validated UTC ref
+then follows the existing resolved_date/event_time/valid_from materialization
+path. Source bytes and the caller's extraction remain unchanged. No projection,
+legacy schema, old plan bytes, detector or product defaults were changed.
+
+Frozen Q04 is now an actual positive through sanitizer, crypto, ingestion,
+storage and ordinary reads. With its frozen Oct 19, 2026 source clock, the source
+"Starting October 21, Alex uses TeaDB." resolves to 2026-10-21T00:00:00+00:00.
+The stored claim retains that event_time, valid_from, resolved_date and opaque
+source reference. Exact state is unknown one microsecond before the boundary
+and single at it. Ordinary retrieval with an explicit time_to boundary excludes
+the claim before and includes it at the boundary; the source limitation remains.
+This does not claim that reference_time alone is an effective-time filter.
+The prior missing-ref refusal is retained as a negative control. The old blanket
+refusal is no longer used as proof of positive effective-time retention.
+
+Exact preserved evidence in the runroot:
+
+- `323-q04-positive-before-repair.log`: 2 failed, 6 deselected in 3.10s; the
+  original protected date gate prevented actual positive Q04 ingestion.
+- `323-q04-repair-cycle1.log`: 55 passed, 6 deselected in 13.49s. This covers both
+  backend qualifier cases, existing temporal validity/half-open boundaries,
+  historical ingestion and saved recovery behavior, shared parser locking and
+  existing projection tests. The first source repair resolved the positive gap.
+- `323-q04-competing-span-before-repair.log`: 1 failed, 13 deselected in 1.02s.
+  The required ambiguity control found that the original cue regex alone did
+  not catch an additional numeric source date. This failure is preserved; the
+  bounded fix reuses the existing parser's span search under the same lock.
+- `323-q04-single-file-final-targeted.log`: 18 passed, 35 deselected in 26.94s.
+  It covers the Q04 controls and actual Q04 backend paths, shared-parser checks,
+  plus all 12 existing source-read/routing/adapter test functions in the
+  single-file DuckDB layout. The existing CL07 interruption also covers its
+  actual vector_snapshot row, copy inspection and reopen. The suite now contains
+  36 layout executions of the same 12 functions: directory DuckDB, single-file
+  DuckDB and PostgreSQL. This does not add scenario IDs or certify erasure.
+
+The exact targeted command was
+`pytest tests/test_privacy_source_reads.py tests/test_privacy_source_routing.py tests/test_privacy_source_interfaces.py tests/test_privacy_source_separation.py tests/test_shared_temporal_parser.py -q -k 'single_file or Q04 or AP04 or mixed_parser or mixed_parsing'`,
+using the assigned worktree environment and PostgreSQL database. Scoped Ruff,
+strict public mypy, diff whitespace and refreshed contract anchors are checked
+on this repair. Unrelated passing checks were reused; final full-suite, build,
+wheel and simulations were not started before root receives this handoff.
+
+Repair accounting remains one successful source-repair validation for positive
+Q04 and one successful bounded ambiguity repair; no unresolved behavior received
+two unsuccessful repair cycles. Previous .test detector/oracle failures and all
+other evidence remain unchanged. Actual PV-06 policy/fence/erasure acceptance,
+PV-05 protected publication/receipts/recovery, full CL07 erasure, final mandatory
+checks, independent review and publication remain pending. The new checkpoint
+is suitable for deliberate adoption by the #324 branch stacked on `b0e64283`.

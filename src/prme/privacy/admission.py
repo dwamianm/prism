@@ -578,7 +578,9 @@ class AdmissionCoordinator:
         source = json.loads(prepared.source.fields_json)
         if prepared.source.source_snapshot is not None:
             from prme.ingestion.grounding import validate_private_grounding
-            validate_private_grounding(result, source["content"], speaker=source["speaker"])
+            result = validate_private_grounding(result, source["content"], speaker=source["speaker"],
+                reference_time=prepared.event.event_time or prepared.event.timestamp,
+                resolve_date=self.engine._pipeline._resolve_temporal)
         result = validate_grounding(result, source["content"], speaker=source["speaker"], content_free_logs=True)
         # This transient event's identity/hash refers to the durable empty envelope.
         # Its actual sanitized checksum remains in the private source representation.
