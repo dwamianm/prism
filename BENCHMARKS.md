@@ -3701,6 +3701,141 @@ containment found. A first extraction target is entity recall and relation
 recall of 0.8 with relation precision of 0.9 and polarity accuracy of 0.95.
 Those thresholds are a proposal; this probe did not validate them.
 
+#### Blind validation of the typed walk
+
+Part of #351; protocol and decision rule in
+[`BLIND.md`](benchmarks/graph_oracle/BLIND.md), written and committed before any
+strategy ran on these questions. The oracle table above is an upper bound: one
+person wrote the gold graphs and the cue words with the questions in view. This
+run asks whether the walk helps on questions nobody wrote the graph for, and on
+the same questions reworded.
+
+```sh
+uv run python -m benchmarks.graph_oracle blind --out /tmp/blind
+uv run python -m benchmarks.graph_oracle latency --out /tmp/latency --backend duckdb --turns 2000 10000
+uv run --extra postgres python -m benchmarks.graph_oracle latency --out /tmp/latency --backend postgres \
+  --database-url <url> --turns 2000 10000
+```
+
+**The questions.** `blind-v1.json` (sha256 `b84b6dc8381320a0059aadd0e969c282043e94f9efd84d99100332a078ff4b71`):
+86 questions over the three memory sets, in seven types, written by the fast
+tiers' extraction model through a local Ollama server from the memories alone
+(29 requests in two rounds; the model never saw a gold graph, a query spec or the
+cue words). A reviewer who read only the memories and the candidates dropped 61 of
+147 candidates (25 not answerable or ambiguous, 26 repeating an existing or earlier
+question, 10 asking the same fact and type as one already kept), corrected 4 answer
+id lists and relabeled 12 questions that one memory answers as lookups. Three
+paraphrases of each question came from 3 more requests (258; 28 were unchanged from
+the original apart from punctuation and are left out, 230 scored). The reviewer
+spot checked 22 questions' paraphrases and found the meaning kept in all but one
+borderline case. Two limits to read the table with: 79 of the 86 blind answers sit in
+memories that an original or held-out question already asks about, because a model
+asked about a small memory set picks the same salient facts the gold author did, so
+the blind set tests wording and question shapes more than unseen facts (7 questions
+are about memories no earlier question touches); and the first round's lookups mostly
+repeated existing questions, which is why a second round was drawn.
+
+**Gold coverage.** Checking each blind question against the gold graph, from the
+memory text, found 2 facts missing (the book Alex is reading while learning Rust, and
+Alex's request to swap the on-call week), added in a separate commit before the run,
+and 1 modeling gap that is not an edit: a plan that came true leaves its date in a
+superseded claim ("when is the half marathon I signed up for?"). Two blind questions
+(of 7 in the first person) name no entity, so the walk has no seed; seeding the owner
+from I, me and my is the exploratory `[derived+I]` column and changes the top 3 by one
+question. The two added claims moved the original items' `generic` row from 33 to 31
+first places (top 3 unchanged at 51, MRR 0.757 to 0.74).
+
+**Cue words.** `generic[hand]` is the hand written lexicon of the oracle report.
+`generic[derived]` takes each relation's cue words from the words of its name and
+definition in `DESIGN.md`, less stop words, the schema's own words, capitalized example
+names and digits, with verb forms (`derive_cues`; nothing about a question informs it).
+
+Measured once, with the first report's settings, at `6480a248` on 2026-10-20.
+Each cell is questions in the top 3 / top 5 / ranked first, then MRR.
+
+Blind set, by type (the rule's strategy is `generic[derived]`):
+
+| Type (n) | baseline | generic[hand] | generic[derived] | fused@1[derived] | fused@2[derived] |
+|---|---|---|---|---|---|
+| all (86) | 70/76/43, 0.66 | 72/76/46, 0.69 | 64/71/42, 0.64 | 72/76/49, 0.71 | 69/77/49, 0.71 |
+| lookup (28) | 24/26/17, 0.74 | 22/24/13, 0.62 | 20/23/12, 0.59 | 22/24/17, 0.71 | 22/24/13, 0.64 |
+| list (11) | 7/8/3, 0.47 | 10/11/7, 0.78 | 9/10/7, 0.74 | 8/8/5, 0.61 | 8/10/6, 0.67 |
+| multi-hop (12) | 9/10/6, 0.64 | 12/12/8, 0.79 | 10/10/8, 0.76 | 11/11/7, 0.74 | 9/11/8, 0.76 |
+| temporal (11) | 11/11/8, 0.85 | 10/10/6, 0.73 | 9/10/4, 0.61 | 11/11/9, 0.91 | 11/11/8, 0.86 |
+| correction (7) | 5/5/3, 0.59 | 4/5/2, 0.50 | 3/5/2, 0.44 | 6/6/3, 0.61 | 6/6/4, 0.71 |
+| negation (12) | 10/12/5, 0.64 | 10/10/7, 0.72 | 10/10/6, 0.67 | 11/12/7, 0.77 | 11/12/8, 0.81 |
+| aggregation (5) | 4/4/1, 0.41 | 4/4/3, 0.73 | 3/3/3, 0.65 | 3/4/1, 0.43 | 2/3/2, 0.51 |
+
+The 53 original items, all questions and paraphrases (`report.md` has every column and type):
+
+| Set (n) | baseline | generic[hand] | generic[derived] | fused@1[derived] | fused@2[derived] |
+|---|---|---|---|---|---|
+| original (53) | 39/41/21, 0.56 | 51/51/31, 0.74 | 46/47/28, 0.67 | 43/46/27, 0.68 | 44/47/28, 0.69 |
+| blind (86) | 70/76/43, 0.66 | 72/76/46, 0.69 | 64/71/42, 0.64 | 72/76/49, 0.71 | 69/77/49, 0.71 |
+| paraphrases (230) | 189/204/115, 0.66 | 192/204/124, 0.69 | 173/193/118, 0.65 | 193/203/141, 0.74 | 190/202/136, 0.72 |
+
+**Verdict: STOP, by the rule as written.** For `generic[derived]` on the blind set:
+(1) top 3 is 7.0 points below the baseline, not 8 above; (2) it loses 4 questions in
+lookup and 2 each in temporal and correction, where 1 is allowed; (3) it loses 4 lookups
+where it must tie; (4) its paraphrase top 3 rate is 0.8 points above its own blind rate,
+which holds. The same four conditions for `fused@1[derived]`: +2.3 points, loses 2
+questions in lookup, loses 2 lookups, paraphrases +0.2 (holds); for `fused@2[derived]`:
+-1.2 points, loses 2, loses 2 lookups, paraphrases +2.4 (holds); for `generic[hand]`: +2.3
+points, loses 2, loses 2 lookups, paraphrases -0.2 (holds). No row passes.
+
+What the evidence says:
+
+- **The lift is mostly in the oracle's questions, not in new ones.** With the hand cues
+  the walk puts 51 of 53 original items in the top 3 against 39 for the baseline (+23
+  points); on the blind set it puts 72 of 86 against 70 (+2.3 points). The oracle
+  table's number was optimistic by about 20 points, as the report's limits said.
+- **The graph helps the shapes it is built for and hurts the ones text already
+  answers.** On the blind set the graph ahead of the text list gains on list (7 to 10
+  with the hand cues), multi-hop (9 to 12) and aggregation (rank 1: 1 to 3), and loses
+  on lookup (24 to 22), temporal (11 to 10) and correction (5 to 4). Fusing with the text
+  list recovers the losses but also the gains: `fused@1[hand]` is 73 in the top 3 and
+  ties or beats the baseline on every type but lookup (23 against 24).
+- **Mechanically derived cue words cost 8 top 3 places on the blind set and 5 on the
+  original items, against the hand written ones.** The definitions hold few of the
+  words people ask with (dog, trip, race, book); the hand lexicon holds them because
+  its author had them in view. This is the part of the walk that has to be learned, not
+  written, for the lift to generalize.
+- **Wording is not the weak point.** Paraphrases score the same as the original wording
+  for every strategy (within 2.4 points), so the gap above is about question shapes and
+  cue coverage, not about names or rewording.
+
+Latency of the typed walk, on synthetic packs built straight in the graph store (memory
+nodes, entities with a zipf popularity, `mentions` and typed claim edges, an owner
+named by 30% of the memories), 100 questions that name one to three entities, half of
+them the owner. The budget proposed in `BLIND.md`: at most 50 ms at the 95th percentile
+at 10,000 memories on either backend. Milliseconds, median / 95th percentile:
+
+| Backend, memories | Every edge on the frontier | Without the owner's mentions | Claim edges only |
+|---|---|---|---|
+| DuckDB, 2,000 | 43 / 71 (3,808 edges, 3 reads) | 37 / 66 (2,936, 6 reads) | 33 / 55 (818, 9 reads) |
+| DuckDB, 10,000 | 267 / 327 (21,306 edges) | 224 / 285 (17,026) | 155 / 235 (4,382) |
+| PostgreSQL, 2,000 | 25 / 48 | 21 / 46 | 13 / 31 |
+| PostgreSQL, 10,000 | 175 / 198 | 148 / 176 | 55 / 76 |
+
+**No mode meets the budget at 10,000 memories** (best: PostgreSQL, claim edges only,
+76 ms at the 95th percentile; DuckDB 235 ms). The cost follows the edges read, about
+8 to 12 microseconds each with their decoding, and the popular entities of a zipf pack
+put thousands of `mentions` edges on a frontier; a real pack may be lighter, but the
+owner and a partner are as popular as the top entity here. A product walk would need to
+run as one SQL statement that returns scored entities and memory ids, and to cap the
+edges read for each entity.
+
+**One bounded alternative.** The graph list earns its place only on the shapes where it
+won (list, multi-hop, aggregation, and negation with fusion), and loses where the text
+ranking already answers. Apply the fused list (weight 1, hand written cues for now) only
+to a question that names a subtype or asks for several things ("which cities", "how
+many", "who are"), and leave single fact lookups, temporal questions and corrections to
+the text ranking. This blind set is now spent: choosing the gate from its table would
+tune on it, so the gate has to be fixed in writing and tested on a new blind draw (a
+new seed and new questions) before any retrieval port. Learning the relation cues from
+the memories' own claims, instead of writing or deriving them, is the other open
+problem; the extraction step (Phase 3B) is where those claims would come from.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
