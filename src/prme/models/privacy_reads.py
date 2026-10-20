@@ -26,6 +26,10 @@ SOURCE_LIMITATION = (
     "ordinary read. Source quotations and source-only details cannot be recovered "
     "from this context."
 )
+SELECTED_SOURCE_LIMITATION = (
+    "Only admitted memory and explicitly selected sanitized evidence are available "
+    "under this finite runtime grant. Other source-only details remain unavailable."
+)
 
 
 class SourceAvailability(FrozenModel):

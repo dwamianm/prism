@@ -640,3 +640,138 @@ standard runtime source lease, protected profile/summary publication, backend
 reopen/staging checks and final mandatory suite remain unfinished. AC06 recovery
 and CL07 erasure remain pending #324/#325. No acceptance case or issue closure
 is inferred from the passing component and compatibility checks.
+
+
+## Reconciled read integration checkpoint, 2026-10-20
+
+This appendix supersedes the intermediate implementation status above without
+changing the original six criteria, frozen scenario IDs or Q01-Q08 bytes. The
+source is frozen for required review and final checks, not issue closure.
+
+### Deliberate source reconciliation
+
+PV-03 prerequisites were adopted in dependency order: `4e0b3c9c` as local
+`d0bacbb1`, `3c96baf8` as `a0898ffb`, `d179fd35` as `548b413f`, then the reviewed
+expiry/grant-lease repair `a63e78a7b64810a4b127a00e9102732e393272aa` as
+`7cc34172`. The first incomplete cherry-pick was aborted before that deliberate
+chain. Both sanitizer and crypto exports remain lazy, both optional dependency
+sets and pinned versions remain, and the public read delegate is retained.
+PV-13 runtime/tests are the previously adopted `9ce3af6c`; `002fbbe` adds evidence
+clarifications rather than runtime changes. Imported prerequisites are not
+independent PV-04 delivery.
+
+The final selected-source route decrypts only exact selected sources, then holds
+PV-03's grant-only metadata lease through downstream work and return. Every
+actual effect retains its effect-specific policy guard and post-wait deadline
+checks. The rejected outer-policy-lock approach and PV-03's reproduced lock and
+expiry failures remain preserved in that owner's repair evidence. The bounded
+second approach passes the two-source, transmission denial, expiry and policy
+activation component controls here. No authority clone or bypass was added.
+
+The explorer factory and framework constructors forward explicit runtime and
+embedding capabilities. Query encoding preserves the configured index identity
+and asymmetric query-encoder requirement. No defaults or ranking algorithm
+changed. The existing session fallback path was confirmed to swallow a privacy
+denial and log its traceback. Root approved the existing planned path's narrow
+PrivacyDenied propagation and protected content-free logging fix. It belongs to
+the same generic-catch root-cause group as the temporal provider catch; each
+confirmed site passed its first source-repair validation. No unresolved behavior
+received a third fix-and-validation cycle.
+
+### Actual component evidence and limits
+
+The three source-read test modules contain 12 test functions with DuckDB
+(directory) and PostgreSQL executions, 24 component executions. They use actual
+storage, sanitizer, AES/RSA ciphertext, routing, grounding and packing. Only
+external model responses, the OS key adapter and the explicitly named fixture
+PolicyAuthority are replaced. These are not whole product acceptance passes.
+
+- AP04/CL02: Q01-Q03 and Q05-Q08 exercise actual extraction, grounding, projected
+  metadata, supported quantity aggregation, exact state reads and a successful
+  entity snapshot. Named speaker, source event_time, conditions and negation are
+  preserved. Q04 is conservatively refused before embedding. That refusal is
+  not the planned positive future-effective before/at-boundary result; this
+  specific original obligation remains pending. No future-date retention pass
+  is claimed from event_time retention.
+- AC01/AC04/AC06: ordinary event, graph, provenance, state, aggregate and retrieval
+  responses are admitted-only; the evidence-open trap is never invoked. Actual
+  two-seed graph traversal retains its numeric rank and excludes foreign or
+  unclassified neighbors. Session and episode expansion, ordinary evidence
+  projection/augmentation, standalone answerability over the admitted bundle,
+  guarded native query reformulation and actual temporal HTTP dispatch pass.
+  Query provider failure/retry, generated credential denial, effect-specific
+  policy denial and asymmetric query encoding refusal are checked. Zero-result
+  and zero-token responses still carry source limitation metadata.
+- AC02/AC03/AC05 adapters and AC06: two selected standard sources use the finite
+  grant with successful projection and augmentation; the unselected third source
+  stays excluded. Diagnostic reads are labeled sanitized, cannot drive retrieval,
+  and missing/unselected capabilities deny. Actual crypto/audit failure cases
+  remain PV-03 evidence; these adapter positives do not replace it.
+- AC07/AC08: intentionally allowed sensitive admitted memory remains usable.
+  Public LangChain and LlamaIndex constructors execute actual MemoryClient
+  retrieval; lossless raw history and destructive history controls explicitly
+  refuse without changing the protected profile. Actual HTTP and MCP dispatch
+  returns admitted memory and closed availability, with equal foreign/missing
+  denial responses.
+- CL07: interrupted pre-publication derivation, actual retry, an abandoned staged
+  preparation, directory native snapshot interruption, file/logical SQL copy
+  inspection and actual reopen retrieval pass on the tested layouts. This is
+  not erasure or historical crash-recovery certification. Single-file DuckDB
+  read/staging subchecks have not been run by PV-04 and remain pending.
+- Explorer AC01: the task-owned actual app factory opened synthetic protected
+  state. Desktop selection, mobile retired-neighbor navigation and both source
+  buttons show sealed availability. Browser API responses exclude the source
+  marker; the mobile viewport has no horizontal overflow. The local browser and
+  server were closed. The policy/OS fixtures make this a component UI check.
+
+Required affected adapter/framework/temporal/explorer compatibility: 60 passed
+in 23.58s. The expansion run contained 30 passing checks (two protected plus 28
+legacy) and two initially failing augmentation configuration assertions; those
+specific assertions passed on the corrected existing top-three configuration
+(2 passed, 10 deselected in 5.47s). All failures are retained. Earlier unchanged
+14 projection, 95 compatibility/13 skips and 48 provider/snapshot results remain
+historical evidence, not new backend passes. Full Ruff, strict public mypy and
+the contract structural validator pass after dependency-import and moved-anchor
+reconciliation. Final full pytest/build/wheel/simulations are still pending on
+the genuine exact-head validation clone; no worktree checkout assertion was
+weakened. Root schedules required reviews.
+
+### Frozen email oracle adjudication
+
+The original fixture from `717f1cf2`, SHA-256
+`8e5094399c848c66d9830ce3128f91ef25ba7889f4fd093792546fc50d7d0a09`, retains
+`privacy-fixture@example.test` unchanged. The original selected-source removal
+assertion failed on both backends in `323-selected-positive-unmasked.log`.
+The read-only `323-source-sanitizer-probe.py`/`.log` confirms the admitted source
+retains it. PV-13 checked installed Presidio 2.2.364 and its pinned offline suffix
+snapshot: `.test` is outside the email-v1 recognizer grammar. The original
+removal assertion remains failed evidence, not a sanitizer success.
+
+Root approved returning to the accepted plan's oracle: compare selected evidence
+byte-for-byte with the actual admitted sanitized representation and assert
+absence of values actually removed. The same case reuses frozen sanitizer-v1
+`email-01` (`sample.person@example.com`) for a supported removal positive, while
+asserting that the `.test` miss remains visible. The corrected selected-source
+case passes on both backends (`323-selected-supported-oracle.log`, then the
+extended augmentation case `323-selected-augmentation-cycle1.log`). No fixture
+bytes, detector labels, thresholds, pinned recognizers or sanitizer runtime were
+changed. This correction does not claim universal detection.
+
+### Preserved failures and pending delivery
+
+All complete logs are in the assigned runroot. The results artifact indexes
+failed assertions, source repairs, setup issues and stronger oracle assumptions
+separately. In particular: the snapshot fixture initially chose the first entity
+instead of Alex; the framework fixture initially used an invalid UUID session;
+the graph query initially supplied one recognized seed; the mobile text probe
+initially compared unnormalized casing/line breaks. These are retained fixture
+failures, not hidden product passes. The actual temporal/session denial failures
+and original `.test` removal failures remain distinct.
+
+Pending original gates: actual PV-06 local current-ledger/fence/erasure authority;
+Q04 positive future-effective before/at-boundary behavior; single-file PV-04
+layout subchecks; PV-05 protected profile/summary publication, durable receipts
+and AC06 historical recovery; CL07 covered erasure; final mandatory checks and
+independent review, actual merged-dependency reconciliation, push and PR.
+Protected owner-group and reingestion routes remain explicit refusals. No live
+model calls, long benchmarks, new cohort, publish, deploy or issue closure.

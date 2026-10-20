@@ -13,6 +13,9 @@ from prme.organizer.models import OrganizeResult
 from prme import PrivacyPolicy, PrivacyRuntime, PRMEConfig
 from prme.privacy import ClosedSchema, CustomRule, LocalSanitizer, ValueValidator
 from prme.privacy.capabilities import AdmissionContent, SanitizedContent
+from prme.privacy import CryptoProtector, NativeKeyCustody, PolicySnapshot, SecretKeyHandle, public_registry
+from prme.privacy.capabilities import Guard, PayloadContext, ProtectedPayload, PayloadProtector
+from prme.privacy.keys import PseudonymKeyProvider
 
 
 async def sanitizer_consumer(content: AdmissionContent, schema_id: UUID) -> None:
@@ -21,11 +24,6 @@ async def sanitizer_consumer(content: AdmissionContent, schema_id: UUID) -> None
     assert_type(sanitizer.close(), None)
     assert_type(CustomRule("literal_topic", "restricted topic"), CustomRule)
     assert_type(ClosedSchema(schema_id, (("active", ValueValidator("boolean")),)), ClosedSchema)
-
-from prme.privacy import CryptoProtector, NativeKeyCustody, PolicySnapshot, SecretKeyHandle, public_registry
-from prme.privacy.capabilities import Guard, PayloadContext, ProtectedPayload, PayloadProtector
-from prme.privacy.keys import PseudonymKeyProvider
-
 
 async def privacy_key_consumer(protector: CryptoProtector, custody: NativeKeyCustody,
                                context: PayloadContext, snapshot: PolicySnapshot,

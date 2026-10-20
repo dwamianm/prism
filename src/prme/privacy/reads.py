@@ -6,6 +6,7 @@ opaque admission records for one request, never a plaintext source cache.
 
 from __future__ import annotations
 
+import hmac
 import json
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
@@ -20,6 +21,7 @@ from prme.models.privacy_reads import (
     ProtectedEventView, ProtectedExtractionView, ProtectedOperationView,
     ProtectedProvenanceView, ProtectedReceiptView, SanitizedEvidenceView,
     SourceAvailability, SourceUnavailable, LegacySourceAvailability,
+    SOURCE_LIMITATION, SELECTED_SOURCE_LIMITATION,
 )
 from prme.privacy.capabilities import EvidenceAccess, OperationBudget, SanitizedContent
 from prme.privacy.policy import PrivacyDenied
@@ -42,6 +44,9 @@ class ReadContext:
     query_source: SanitizedContent | None = None
     query_sources: tuple[SanitizedContent, ...] = ()
     fallback_snapshot: object | None = None
+    selected_records: tuple[PrivacyRecord, ...] = ()
+    source_nodes: dict[str, MemoryNode] = field(default_factory=dict)
+    evidence_lease_active: bool = False
 
     @classmethod
     async def create(cls, coordinator, *, user_id: str, scopes=None, source_access=None):
@@ -67,12 +72,30 @@ class ReadContext:
         return item.user_id == self.user_id and (self.scopes is None or item.scope in self.scopes)
 
     async def check(self) -> None:
+        self.check_selected()
         await self.coordinator.check_disclosure(tuple(self.records.values()))
+        self.check_selected()
+
+    def check_selected(self) -> None:
+        if self.source_access is None:
+            return
+        access = self.source_access
+        now = self.coordinator.require_runtime().clock()
+        if (access.kind != "runtime" or not 1 <= len(access.selected_ids) <= 128
+                or len(set(access.selected_ids)) != len(access.selected_ids)):
+            raise PrivacyDenied("privacy_denied")
+        if now >= access.expires_at:
+            raise PrivacyDenied("privacy_expired")
+        for row in self.selected_records:
+            self.coordinator.check_deadlines(row.snapshot)
+            if row.snapshot.evidence_deadline is not None and now >= row.snapshot.evidence_deadline:
+                raise PrivacyDenied("privacy_expired")
 
     @asynccontextmanager
     async def guard(self, effect="disclosure"):
         """Keep current authority through an actual effect, then check deadlines."""
         rows = tuple(self.records.values())
+        self.check_selected()
         await self.coordinator.check_disclosure(rows)
         groups = {}
         for row in rows:
@@ -85,11 +108,70 @@ class ReadContext:
         async with AsyncExitStack() as stack:
             for saved in groups.values():
                 await stack.enter_async_context(self.coordinator.guard(saved, effect))
+            self.check_selected()
+            for row in rows:
+                self.coordinator.check_deadlines(row.snapshot)
             yield
+            self.check_selected()
             for row in rows:
                 self.coordinator.check_deadlines(row.snapshot)
             if self.fallback_snapshot is not None:
                 self.coordinator.check_deadlines(self.fallback_snapshot)
+
+    @property
+    def source_limitation(self):
+        return SELECTED_SOURCE_LIMITATION if self.source_nodes else SOURCE_LIMITATION
+
+    async def prepare_selected_sources(self, scopes=None) -> None:
+        """Open only the explicit finite selection, never a search or cache."""
+        if self.source_access is None:
+            return
+        from prme.epistemic.inference import infer_source_type
+        self.check_selected()
+        rows = []
+        for event_id in self.source_access.selected_ids:
+            row = await self.record_for_event(str(event_id))
+            if (row is None or row.evidence is None or row.snapshot.policy.evidence_use != "runtime"
+                    or (scopes is not None and row.snapshot.policy.scope not in scopes)):
+                raise PrivacyDenied("privacy_denied")
+            rows.append(row)
+        self.selected_records = tuple(rows)
+        self.check_selected()
+        for row in rows:
+            view = await read_source(self.coordinator, str(row.event_id), user_id=self.user_id,
+                                     access=self.source_access, scope=row.snapshot.policy.scope)
+            availability = self.availability(row).model_copy(update={"state": "available"})
+            self.source_nodes[str(row.event_id)] = MemoryNode(
+                id=row.event_id, user_id=self.user_id, scope=row.snapshot.policy.scope,
+                node_type=NodeType.NOTE, content=view.content,
+                created_at=row.snapshot.admitted_at, updated_at=row.snapshot.admitted_at,
+                event_time=view.event_time, valid_from=view.event_time or row.snapshot.admitted_at,
+                source_type=infer_source_type(NodeType.NOTE, role=view.role),
+                evidence_refs=[row.event_id],
+                metadata={"source_representation": "sanitized", "speaker": view.speaker,
+                          "source_availability": [availability.model_dump(mode="json")]},
+            )
+        self.check_selected()
+
+    @asynccontextmanager
+    async def evidence_lease(self):
+        if self.source_access is None:
+            yield
+            return
+        self.check_selected()
+        protector = self.coordinator.require_runtime().protector
+        try:
+            async with protector.hold_evidence_access(
+                tuple((row.evidence, row.snapshot) for row in self.selected_records),
+                self.source_access, guard=lambda: self.guard("disclosure"),
+            ):
+                self.check_selected()
+                self.evidence_lease_active = True
+                yield
+                self.check_selected()
+        finally:
+            self.evidence_lease_active = False
+            self.source_nodes.clear()
 
     async def record_for_event(self, event_id: str) -> PrivacyRecord | None:
         row = await self.coordinator.repository.get(event_id, user_id=self.user_id)
@@ -153,6 +235,8 @@ class ReadContext:
             state = "not_captured"
         elif record.evidence is None:
             state = "missing"
+        elif self.evidence_lease_active and str(record.event_id) in self.source_nodes:
+            state = "available"
         else:
             # Ordinary inspection never probes private-key readiness. Even
             # standard runtime evidence requires a separately selected grant.
@@ -292,15 +376,34 @@ class ProtectedVectorSearch:
 
     async def search(self, query, user_id, **options):
         from prme.privacy.admission import capability_call
+        from prme.storage.embedding import _validated_vectors, has_query_encoder
         if user_id != self.context.user_id:
             raise PrivacyDenied("privacy_boundary_mismatch")
         runtime = self.context.coordinator.require_runtime()
+        provider = self.index._provider
+        def identity(value):
+            return (value.model_name, value.model_version, value.dimension)
+        expected = identity(provider)
+        if identity(runtime.embedder) != expected:
+            raise PrivacyDenied("privacy_provider_unavailable")
         await self.context.check()
-        values = await capability_call(runtime.embedder.encode(
-            (query,), self.context.snapshot, guard=lambda: self.context.guard("transmission"),
-        ), "privacy_provider_unavailable")
-        if len(values) != 1:
+        if has_query_encoder(provider):
+            encoder = getattr(runtime.embedder, "encode_query", None)
+            if not callable(encoder):
+                raise PrivacyDenied("privacy_provider_unavailable")
+            values = [await capability_call(encoder(
+                query, self.context.snapshot, guard=self.context.transmission_guard,
+            ), "privacy_provider_unavailable")]
+        else:
+            values = await capability_call(runtime.embedder.encode(
+                (query,), self.context.snapshot, guard=self.context.transmission_guard,
+            ), "privacy_provider_unavailable")
+        if identity(provider) != expected or identity(runtime.embedder) != expected:
             raise PrivacyDenied("privacy_invalid_result")
+        try:
+            values = _validated_vectors(values, count=1, dimension=expected[2])
+        except ValueError:
+            raise PrivacyDenied("privacy_invalid_result") from None
         async with self.context.guard():
             return await self.index.search_by_vector(values[0], user_id, **options)
 
@@ -337,12 +440,7 @@ async def prepare_retrieval(engine, query, *, user_id, scopes, source_access=Non
     # that integration is present, return receipt_persisted=False truthfully.
     pipeline._conn = None
     pipeline._pool = None
-    if source_access is not None:
-        if source_access.kind != "runtime":
-            raise PrivacyDenied("privacy_denied")
-        # The final selected-evidence lease is deliberately not bypassed while
-        # the real custody checkpoint is being integrated.
-        raise PrivacyDenied("privacy_capability_unavailable")
+    await context.prepare_selected_sources(scopes)
     if pipeline._reranker is not None:
         adapter = getattr(pipeline._reranker, "privacy_adapter", None)
         if adapter is None:
@@ -389,7 +487,18 @@ async def read_source(coordinator, event_id: str, *, user_id: str, access: Evide
     try:
         async with opened(row.evidence, access, original_snapshot=row.snapshot,
                           guard=lambda: coordinator.guard(row.snapshot, "disclosure")) as raw:
+            from prme.privacy.sanitizer import canonical, sanitized_checksum
             data = json.loads(raw)
+            fields = {name: data[name] for name in (
+                "content", "retrieval_content", "metadata", "speaker", "value_bindings",
+            )}
+            if (data["representation"] != "sanitized" or data["checksum_scope"] != "sanitized_source_unit_v1"
+                    or data["sanitizer_version"] != row.snapshot.policy.sanitizer_version
+                    or data["registry_version"] != row.snapshot.policy.registry_version
+                    or not hmac.compare_digest(data["private_checksum"], sanitized_checksum(
+                        canonical(fields), data["role"], data["event_time"],
+                    ))):
+                raise PrivacyDenied("privacy_invalid_result")
             view = SanitizedEvidenceView(
                 event_id=row.event_id, source_id=row.source_id, representation_id=row.representation_id,
                 content=data["content"], speaker=data["speaker"], role=data["role"],

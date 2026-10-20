@@ -60,6 +60,12 @@ The local reranker holds its request guard until its inference worker finishes,
 including cancellation. A provider without the required capability is refused.
 These protected routes do not change the ordinary feature defaults.
 
+The query embedding capability must match the index's model, version and
+dimension. An asymmetric index also requires a guarded query encoder; a
+document encoder cannot silently stand in for it. LangChain, LlamaIndex and the
+explorer's Python app factory accept explicit `privacy_runtime` and
+`embedding_provider` arguments, as does `MemoryClient`.
+
 Lossless framework chat history, replacement, clearing and deletion are
 unsupported for protected sources and fail before deserialization or control
 writes. Deprecated raw search, protected raw export, unscoped blob access and
@@ -74,11 +80,26 @@ does not mint grants or promote diagnostic evidence into ordinary memory.
 Standard-mode source use requires runtime eligibility and a runtime grant;
 diagnostic grants are never accepted by retrieval.
 
-At this checkpoint, retrieval with `source_access` is explicitly unavailable
-until the real PV-03 selected-evidence lease is integrated. Protected persisted
-retrieval receipts are also pending PV-05; a transient response reports
+For standard-mode retrieval, `source_access` selects at most 128 exact source
+identities under a finite runtime grant. Individual sources are opened before
+the final grant lease; that lease covers downstream provider work, packing and
+return. Every effect also holds its own current-policy guard and rechecks the
+grant and source deadlines after waits. Revocation, expiry or policy denial
+prevents the response. Selected sanitized source nodes exist only for that
+request's evidence projection or augmentation; they are not added to the graph,
+indexes or a shared cache. Diagnostic grants cannot activate this path.
+
+Protected persisted retrieval receipts are pending PV-05; a transient response reports
 `receipt_persisted=False`. Protected profile publication, reingestion and
 owner-group links retain their existing refusal.
+
+Sanitization is bounded by the pinned detector contract. The frozen
+`privacy-fixture@example.test` example is outside the email recognizer's suffix
+grammar and remains in an explicitly revealed sanitized source; the supported
+`sample.person@example.com` fixture is removed. A sanitized label does not
+claim universal detection. Ordinary sealed responses exclude both source-only
+values. Source-time phrases that cannot be retained reliably are refused
+during grounding; supported event-time and statement qualifiers remain visible.
 
 The concrete local policy ledger and erasure fences belong to PV-06, historical
 classification and migration to PV-07, and the final release gate to PV-08.

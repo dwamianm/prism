@@ -33,7 +33,7 @@ from prme.privacy.admission import privacy_disclosure
 
 import asyncio
 import atexit
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, nullcontext
 import hashlib
 import json
 import logging
@@ -2401,7 +2401,6 @@ class MemoryEngine:
 
     # --- Retrieval Operations ---
 
-    @privacy_disclosure
     async def retrieve(
         self,
         query: str,
@@ -2556,38 +2555,41 @@ class MemoryEngine:
                     exc_info=True,
                 )
 
-        result = await retrieval_pipeline.retrieve(
-            query,
-            user_id=user_id,
-            scope=scope,
-            time_from=time_from,
-            time_to=time_to,
-            reference_time=reference_time,
-            knowledge_at=knowledge_at,
-            event_time_from=event_time_from,
-            event_time_to=event_time_to,
-            token_budget=token_budget,
-            min_score=min_score, limit=limit,
-            max_per_source=max_per_source,
-            max_per_evidence=max_per_evidence,
-            exclude_node_types=exclude_node_types, source_types=source_types,
-            weights=weights,
-            ranking_multipliers=ranking_multipliers,
-            ranking_profile=profile_application,
-            min_fidelity=min_fidelity,
-            include_cross_scope=include_cross_scope,
-            retrieval_mode=retrieval_mode,
-        )
+        # Selected evidence stays under its finite grant through every downstream
+        # effect and final return. Each effect still acquires its own policy guard.
+        async with private_read.evidence_lease() if private_read is not None else nullcontext():
+            result = await retrieval_pipeline.retrieve(
+                query,
+                user_id=user_id,
+                scope=scope,
+                time_from=time_from,
+                time_to=time_to,
+                reference_time=reference_time,
+                knowledge_at=knowledge_at,
+                event_time_from=event_time_from,
+                event_time_to=event_time_to,
+                token_budget=token_budget,
+                min_score=min_score, limit=limit,
+                max_per_source=max_per_source,
+                max_per_evidence=max_per_evidence,
+                exclude_node_types=exclude_node_types, source_types=source_types,
+                weights=weights,
+                ranking_multipliers=ranking_multipliers,
+                ranking_profile=profile_application,
+                min_fidelity=min_fidelity,
+                include_cross_scope=include_cross_scope,
+                retrieval_mode=retrieval_mode,
+            )
 
-        # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather
-        # than awaited: nothing in the response depends on it, so its time
-        # budget must not land on the caller's latency (issue #62).
-        if private_read is None and self._maintenance_runner:
-            self._maintenance_runner.schedule(user_id=user_id)
-        if private_read is not None:
-            async with private_read.guard():
-                return result
-        return result
+            # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather
+            # than awaited: nothing in the response depends on it, so its time
+            # budget must not land on the caller's latency (issue #62).
+            if private_read is None and self._maintenance_runner:
+                self._maintenance_runner.schedule(user_id=user_id)
+            if private_read is not None:
+                async with private_read.guard():
+                    return result
+            return result
 
     async def search(
         self,

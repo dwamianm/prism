@@ -17,6 +17,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
+from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.temporal_relations import (
     CONFIRMED_GATE_MODEL,
     EvidenceRecord,
@@ -150,7 +151,7 @@ async def _post_json(
             if attempt >= max_attempts:
                 break
             await asyncio.sleep(_retry_delay(response, attempt))
-        except TemporalRelationProviderError:
+        except (PrivacyDenied, TemporalRelationProviderError):
             raise
         except (httpx.HTTPStatusError, json.JSONDecodeError, ValueError) as exc:
             raise TemporalRelationProviderError("provider request failed") from exc
@@ -185,7 +186,7 @@ async def _get_json(
             if attempt >= max_attempts:
                 break
             await asyncio.sleep(_retry_delay(response, attempt))
-        except TemporalRelationProviderError:
+        except (PrivacyDenied, TemporalRelationProviderError):
             raise
         except (httpx.HTTPStatusError, json.JSONDecodeError, ValueError) as exc:
             raise TemporalRelationProviderError(

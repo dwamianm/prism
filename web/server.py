@@ -133,8 +133,8 @@ def explorer_config() -> PRMEConfig:
     return PRMEConfig(**paths) if paths else config
 
 
-def create_explorer_app(config: PRMEConfig | None = None):
-    app = create_app(config)
+def create_explorer_app(config: PRMEConfig | None = None, *, privacy_runtime=None, embedding_provider=None):
+    app = create_app(config, privacy_runtime=privacy_runtime, embedding_provider=embedding_provider)
     app.include_router(router)
 
     @app.middleware("http")

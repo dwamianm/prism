@@ -34,7 +34,6 @@ import duckdb
 
 from prme.models.learning import RankingMultipliers
 from prme.privacy.policy import PrivacyDenied
-from prme.models.privacy_reads import SOURCE_LIMITATION
 from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
 from prme.retrieval.candidates import (
     CandidateDiagnostics,
@@ -1040,7 +1039,7 @@ class RetrievalPipeline:
         coverage_notices = []
         private_read = getattr(self, "_privacy_context", None)
         if private_read is not None:
-            coverage_notices.append(SOURCE_LIMITATION)
+            coverage_notices.append(private_read.source_limitation)
         if analysis.is_aggregation:
             coverage_notices.append(_AGGREGATION_COVERAGE_NOTICE)
         if knowledge_at is not None:
@@ -1244,7 +1243,7 @@ class RetrievalPipeline:
         # --- Assemble RetrievalResponse ---
         completed_at = time.monotonic()
         metadata = RetrievalMetadata(
-            source_limitation=SOURCE_LIMITATION if private_read is not None else None,
+            source_limitation=private_read.source_limitation if private_read is not None else None,
             source_availability=tuple(private_read.availability(row) for row in private_read.records.values())
                 if private_read is not None else None,
             receipt_persisted=receipt_persisted,

@@ -40,6 +40,16 @@ class AdmittedGraphView:
         await self.context.check()
         return result
 
+    async def get_evidence_nodes(self, event_ids):
+        """Selected runtime evidence is reachable only from evidence packing."""
+        if self.context.source_access is None:
+            return []
+        if not self.context.evidence_lease_active:
+            raise PrivacyDenied("privacy_denied")
+        await self.context.check()
+        return [self.context.source_nodes[key].model_copy(deep=True)
+                for key in dict.fromkeys(event_ids) if key in self.context.source_nodes]
+
     async def scan_nodes(self, *, user_id=None, scope=None, node_type=None, lifecycle_states=None,
                          after_id=None, limit=100, operator_unscoped=False):
         owner = self._owner(user_id)
