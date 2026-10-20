@@ -145,7 +145,8 @@ class KeyEntry(FrozenModel):
 
     @model_validator(mode="after")
     def shape(self) -> KeyEntry:
-        if (self.wrapping is None) == (self.auxiliary is None) or (self.active and self.state != "ready"):
+        if ((self.wrapping is None) == (self.auxiliary is None)
+                or (self.active and (self.state != "ready" or self.wrapping is None))):
             raise ValueError("privacy_configuration_invalid")
         return self
 
@@ -408,7 +409,11 @@ class NativeKeyCustody:
             raise PrivacyDenied("privacy_capability_unavailable")
         key = self._native.read(entry.version, entry.binding())
         self._verify(entry, key)
-        return SecretKeyHandle(entry.auxiliary, key, clock=self.clock)
+        def validate():
+            current = self._entry(entry.version)
+            if current.state != "ready" or current.auxiliary != entry.auxiliary:
+                raise PrivacyDenied("privacy_capability_unavailable")
+        return SecretKeyHandle(entry.auxiliary, key, clock=self.clock, validate=validate)
 
     async def key_for(self, project_id: UUID, owner_id: UUID, scope: str, epoch: UUID) -> SecretKeyHandle:
         boundary = KeyBoundary(project_id=project_id, owner_id=owner_id, scope=scope)

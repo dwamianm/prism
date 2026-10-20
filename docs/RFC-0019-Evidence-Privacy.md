@@ -201,15 +201,15 @@ bytes. New response envelopes link old IDs to a versioned availability observati
 ## 7. Encryption and local key-provider choice
 
 Use maintained PyCA **cryptography**, already present in this repository
-(`uv.lock` currently records 46.0.5). The selected primitive contract is
+(`uv.lock` for PV-03 pins the tested 50.0.2 release). The selected primitive contract is
 `AESGCM` with a freshly generated 256-bit data key per object, a fresh 12-byte
 nonce, and its full 16-byte tag. Encrypt once per object generation; retries
 reuse the exact saved envelope, while changed plaintext gets a new generation,
 key and nonce. Reject authentication failure without releasing any plaintext.
 The [current AESGCM documentation](https://cryptography.io/en/50.0.2/hazmat/primitives/aead/)
 defines these interfaces and the nonce-reuse prohibition. PV-03 must use a
-supported patched library release and pin its tested version; this RFC installs
-nothing and does not claim the existing lock is the latest release.
+supported patched library release and pin its tested version; this is not a
+claim that the pin will always be the latest release.
 
 `evidence-envelope-v1` stores algorithm/schema, opaque object and representation
 IDs, project/owner/scope, purpose, generation, policy revision, key-provider/key
@@ -220,9 +220,18 @@ all authorization identities. Mutable availability/purge progress is outside
 that context; a policy rebind requires a new authenticated envelope. Neither
 context nor provider audit fields contain user-entered names or content hashes.
 
+PV-03 clarifies two distinct versioned domains so rotation is possible without
+reencrypting a payload. Immutable `prme-payload-aad-v1` binds every original
+authorization/content identity, purpose and a canonical versioned digest of the
+complete original `PolicySnapshot` (composed references, effective rules and saved
+independent lifetimes). This digest covers policy metadata, never source content.
+Separate `prme-wrapper-v1` binds those exact payload-context bytes plus the wrapper
+kind, provider/key/version/locator, revision and domain. Current policy/erasure
+authority is checked independently and never rewrites original acceptance AAD.
+
 The local write-only adapter uses **RSA-OAEP**, SHA-256 with MGF1-SHA-256,
 4096-bit RSA keys and exponent 65537, through the same library to wrap only the
-random 32-byte data key. OAEP's label is the exact authenticated context bytes.
+random 32-byte data key. OAEP's label is the exact wrapping-context bytes.
 The [RSA documentation](https://cryptography.io/en/stable/hazmat/primitives/asymmetric/rsa/)
 documents public encryption/private decryption and OAEP. No bespoke cipher,
 text-derived key or unauthenticated encryption is permitted.
@@ -241,7 +250,7 @@ uses an explicitly configured external provider or refuses protected creation.
 describes these platform stores and their same-application access limitations.
 PV-03 owns provisioning/unlock and provider conformance, not hosted KMS services.
 
-`processing`, `evidence` and `pseudonym` have separate key purposes and grants;
+`processing`, `evidence`, `pseudonym` and `retry_commitment` have separate key purposes and grants;
 the ordinary store key is separate again. Standard's runtime evidence reader is
 an explicit capability. A permanently loaded private key in the retrieval
 process must report `same_process`, and cannot advertise service isolation.
@@ -261,6 +270,18 @@ of an unrecoverable evidence key permanently loses evidence; separately protecte
 admitted memory may remain usable. Rotation rewraps with explicit version and
 restart-safe progress. Deleting the live wrapped key does not prove deletion of
 backup copies still decryptable with an old wrapping key.
+
+Wrapper-only rewrap preserves the payload key, nonce, AAD and ciphertext/tag.
+Local rotation uses enforced quiesced activation via the shared native public
+registry lock and existing admission authority, exact-version reads and per-row
+CAS/checkpoints. It does not promise uninterrupted online cutover. The closed
+`aws-kms-symmetric-v1` hosted adapter uses the same payload codec and canonical
+wrapping context; AWS RSA OAEP cannot authenticate the required custom label.
+Its SDK, IAM and transport guards remain hosted-owned. A processing-only broker
+may return a transient DEK to an authorized worker while holding the actual
+response guard; human/runtime evidence reads return plaintext through `open_held`.
+There is no generic evidence unwrap route. See [privacy keys](PRIVACY-KEYS.md)
+for the concrete capability and native-provider limitations.
 
 ## 8. Erasure, history and rebuild amendment
 

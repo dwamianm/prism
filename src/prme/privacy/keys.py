@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, Protocol, TypeVar
+from typing import Any, AsyncContextManager, Literal, Protocol, TypeVar
 from uuid import UUID, uuid4
 
 from pydantic import Field, model_validator
@@ -120,25 +120,48 @@ class SecretKeyHandle:
     promise Python heap/swap zeroization.
     """
 
-    __slots__ = ("_reference", "_key", "_clock")
+    __slots__ = ("_reference", "_key", "_clock", "_validate")
 
     def __init__(self, reference: AuxiliaryKeyRef, key: bytes, *,
-                 clock: Callable[[], datetime] = utc_now) -> None:
+                 clock: Callable[[], datetime] = utc_now, validate: Callable[[], None] | None = None) -> None:
         if not isinstance(key, bytes) or len(key) != 32:
             raise PrivacyDenied("privacy_capability_unavailable")
         self._reference = reference
         self._key = bytearray(key)
         self._clock = clock
+        self._validate = validate
 
-    reference = property(lambda self: self._reference)
-    purpose = property(lambda self: self._reference.purpose)
-    project_id = property(lambda self: self._reference.boundary.project_id)
-    owner_id = property(lambda self: self._reference.boundary.owner_id)
-    scope = property(lambda self: self._reference.boundary.scope)
-    epoch = property(lambda self: self._reference.epoch)
-    key_version = property(lambda self: self._reference.key_version)
+    @property
+    def reference(self) -> AuxiliaryKeyRef:
+        return self._reference
+
+    @property
+    def purpose(self) -> Literal["pseudonym", "retry_commitment"]:
+        return self._reference.purpose
+
+    @property
+    def project_id(self) -> UUID:
+        return self._reference.boundary.project_id
+
+    @property
+    def owner_id(self) -> UUID:
+        return self._reference.boundary.owner_id
+
+    @property
+    def scope(self) -> str:
+        return self._reference.boundary.scope
+
+    @property
+    def epoch(self) -> UUID | None:
+        return self._reference.epoch
+
+    @property
+    def key_version(self) -> UUID:
+        return self._reference.key_version
 
     def use(self, callback: Callable[[bytes], T]) -> T:
+        if self._validate is not None:
+            self._validate()
         if len(self._key) != 32 or (self._reference.expires_at is not None
                                   and aware(self._clock()) >= self._reference.expires_at):
             raise PrivacyDenied("privacy_retry_unavailable" if self.purpose == "retry_commitment"
@@ -178,6 +201,14 @@ class AuditEvent(FrozenModel):
     slot_id: UUID
     object_generation: int
     purpose: Literal["evidence", "processing"]
+    policy_id: UUID
+    policy_revision: int
+    provider_id: UUID
+    key_id: UUID
+    key_version: UUID
+    access_kind: Literal["runtime", "diagnostic", "processing"]
+    authority_id: UUID
+    work_generation: int | None = None
     at: datetime
 
 
@@ -195,9 +226,11 @@ class FileAuditSink:
         line = (event.model_dump_json() + "\n").encode()
 
         def append() -> None:
-            fd = os.open(self.path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+            if self.path.is_symlink():
+                raise PrivacyDenied("privacy_configuration_invalid")
+            fd = os.open(self.path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
             try:
-                if os.fstat(fd).st_mode & 0o077:
+                if os.name != "nt" and os.fstat(fd).st_mode & 0o077:
                     raise PrivacyDenied("privacy_configuration_invalid")
                 offset = 0
                 while offset < len(line):
@@ -221,16 +254,51 @@ class ProcessingAuthorizer(Protocol):
                        original_snapshot: PolicySnapshot) -> None: ...
 
 
-class UnwrapPermit:
-    __slots__ = ("context", "access", "action", "_active")
+class StoredProcessingAuthorizer:
+    """Current single-event local claims; larger cohorts require PV-06 authority.
 
-    def __init__(self, context: PayloadContext, access: ProcessingAccess | EvidenceAccess,
-                 action: ReadAction) -> None:
-        self.context, self.access, self.action, self._active = context, access, action, True
+    The supplied current-policy guard must also fence claim publication/erasure.
+    This validator loads the exact slot and work state, never caller plaintext.
+    """
+
+    def __init__(self, repository, work) -> None:
+        self.repository, self.work = repository, work
+
+    async def validate(self, payload: ProtectedPayload, access: ProcessingAccess,
+                       original_snapshot: PolicySnapshot) -> None:
+        context = payload.context
+        if access.work_id != context.event_id or access.claimed_event_ids != (context.event_id,):
+            raise PrivacyDenied("privacy_processing_unavailable")
+        owner, event_id = str(context.owner_id), str(context.event_id)
+        record = await self.repository.get(event_id, user_id=owner)
+        status = await self.work.status(event_id, user_id=owner)
+        if (record is None or record.snapshot != original_snapshot or record.processing != payload
+                or record.processing_state != "pending" or status is None or status.status != "running"
+                or status.generation != access.work_generation or status.lease_expires_at != access.lease_deadline):
+            raise PrivacyDenied("privacy_processing_unavailable")
+
+
+class UnwrapPermit:
+    __slots__ = ("context", "access", "action", "_active", "_source_ref", "_wrapping_context", "_wrapped")
+
+    def __init__(self, payload: ProtectedPayload, snapshot: PolicySnapshot,
+                 access: ProcessingAccess | EvidenceAccess, action: ReadAction) -> None:
+        from prme.privacy.crypto import decode64, decode_envelope
+        envelope = decode_envelope(payload, snapshot)
+        self.context, self.access, self.action, self._active = payload.context, access, action, True
+        self._source_ref = envelope.wrapper.ref
+        self._wrapping_context = envelope.wrapper.bytes()
+        self._wrapped = decode64(envelope.wrapped_key, minimum=1, maximum=6144)
 
     def require(self, descriptor: WrappingKeyDescriptor) -> None:
         if (not self._active or descriptor.boundary != KeyBoundary.from_context(self.context)
                 or descriptor.purpose != self.context.purpose):
+            raise PrivacyDenied("privacy_capability_unavailable")
+
+    def require_unwrap(self, descriptor: WrappingKeyDescriptor, wrapped: bytes, wrapping_context: bytes) -> None:
+        self.require(descriptor)
+        if (descriptor.ref != self._source_ref or wrapped != self._wrapped
+                or wrapping_context != self._wrapping_context):
             raise PrivacyDenied("privacy_capability_unavailable")
 
     def close(self) -> None:
@@ -249,6 +317,16 @@ class KeyWrapper(Protocol):
                        wrapping_context: bytes) -> bytes: ...
     async def unwrap_key(self, wrapped: bytes, descriptor: WrappingKeyDescriptor,
                          wrapping_context: bytes, permit: UnwrapPermit) -> bytes: ...
+
+
+class PrivateAccessAuthority(Protocol):
+    """Hosted/local implementations own the real held authorization boundary."""
+
+    def authorize(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess,
+                  snapshot: PolicySnapshot, *, guard: Guard,
+                  action: ReadAction) -> AsyncContextManager[UnwrapPermit]: ...
+    def hold_evidence_access(self, selections: tuple[tuple[ProtectedPayload, PolicySnapshot], ...],
+                             access: EvidenceAccess, *, guard: Guard) -> AsyncContextManager[None]: ...
 
 
 class KeyRegistry:
@@ -390,17 +468,54 @@ class LocalAccessAuthority:
                     or (access.kind == "runtime" and snapshot.policy.evidence_use != "runtime")):
                 raise PrivacyDenied("privacy_capability_unavailable")
 
+    @staticmethod
+    def _audit_base(payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess, action: ReadAction) -> dict:
+        context = payload.context
+        return dict(operation_id=uuid4(), action=action, boundary=KeyBoundary.from_context(context),
+                    event_id=context.event_id, slot_id=context.slot_id,
+                    object_generation=context.object_generation, purpose=context.purpose,
+                    policy_id=context.policy_id, policy_revision=context.policy_revision,
+                    provider_id=payload.provider_id, key_id=payload.key_id, key_version=payload.key_version,
+                    access_kind="processing" if isinstance(access, ProcessingAccess) else access.kind,
+                    authority_id=access.work_id if isinstance(access, ProcessingAccess) else access.grant_id,
+                    work_generation=access.work_generation if isinstance(access, ProcessingAccess) else None)
+
+    @asynccontextmanager
+    async def hold_evidence_access(self, selections: tuple[tuple[ProtectedPayload, PolicySnapshot], ...],
+                                   access: EvidenceAccess, *, guard: Guard) -> AsyncIterator[None]:
+        """Metadata-only final response lease; never nest opens inside this.
+
+        Decrypt separately under open_held, then acquire this lease before any
+        downstream effect. Revocation/expiry in that gap denies. The supplied
+        guard must cover every selected snapshot's current authority.
+        """
+        if (not isinstance(access, EvidenceAccess) or not 1 <= len(selections) <= 128
+                or len({p.context.slot_id for p, _ in selections}) != len(selections)):
+            raise PrivacyDenied("privacy_capability_unavailable")
+        async with self._lock, guard():
+            for payload, saved in selections:
+                await self._validate(payload, access, saved, "read")
+            events = [self._audit_base(payload, access, "read") for payload, _ in selections]
+            for event in events:
+                await self.audit.write(AuditEvent(**event, outcome="authorized", at=aware(self.clock())))
+            outcome = "failed"
+            try:
+                yield
+                for payload, saved in selections:
+                    await self._validate(payload, access, saved, "read")
+                outcome = "finished"
+            finally:
+                for event in events:
+                    await self.audit.write(AuditEvent(**event, outcome=outcome, at=aware(self.clock())))
+
     @asynccontextmanager
     async def authorize(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess,
                         snapshot: PolicySnapshot, *, guard: Guard, action: ReadAction) -> AsyncIterator[UnwrapPermit]:
         async with self._lock, guard():
             await self._validate(payload, access, snapshot, action)
-            context = payload.context
-            base = dict(operation_id=uuid4(), action=action, boundary=KeyBoundary.from_context(context),
-                        event_id=context.event_id, slot_id=context.slot_id,
-                        object_generation=context.object_generation, purpose=context.purpose)
+            base = self._audit_base(payload, access, action)
             await self.audit.write(AuditEvent(**base, outcome="authorized", at=aware(self.clock())))
-            permit = UnwrapPermit(context, access, action)
+            permit = UnwrapPermit(payload, snapshot, access, action)
             outcome = "failed"
             try:
                 yield permit

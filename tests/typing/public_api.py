@@ -22,6 +22,33 @@ async def sanitizer_consumer(content: AdmissionContent, schema_id: UUID) -> None
     assert_type(CustomRule("literal_topic", "restricted topic"), CustomRule)
     assert_type(ClosedSchema(schema_id, (("active", ValueValidator("boolean")),)), ClosedSchema)
 
+from prme.privacy import CryptoProtector, NativeKeyCustody, PolicySnapshot, SecretKeyHandle, public_registry
+from prme.privacy.capabilities import Guard, PayloadContext, ProtectedPayload, PayloadProtector
+from prme.privacy.keys import PseudonymKeyProvider
+
+
+async def privacy_key_consumer(protector: CryptoProtector, custody: NativeKeyCustody,
+                               context: PayloadContext, snapshot: PolicySnapshot,
+                               access: EvidenceAccess, guard: Guard) -> None:
+    capability: PayloadProtector = protector
+    assert_type(await capability.seal(b"sanitized", context, original_snapshot=snapshot), ProtectedPayload)
+    payload = await protector.seal(b"sanitized", context, original_snapshot=snapshot)
+    async with capability.writer_guard((payload,)):
+        pass
+    async with capability.open_held(payload, access, original_snapshot=snapshot, guard=guard) as source:
+        assert_type(source, bytes)
+    async with capability.hold_evidence_access(((payload, snapshot),), access, guard=guard):
+        pass
+    provider: PseudonymKeyProvider = custody
+    handle = await provider.key_for(context.project_id, context.owner_id, context.scope, UUID(int=1))
+    assert_type(handle, SecretKeyHandle)
+    assert_type(handle.project_id, UUID)
+    assert_type(handle.epoch, UUID | None)
+    assert_type(handle.use(len), int)
+    handle.close()
+    assert_type(CryptoProtector(public_registry("/operator/public.json")), CryptoProtector)
+
+
 
 def protected_consumer(client: MemoryClient, policy: PrivacyPolicy, runtime: PrivacyRuntime) -> None:
     config = PRMEConfig(privacy_policy=policy)

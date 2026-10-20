@@ -41,7 +41,7 @@ class NativeDouble:
         del self.values[service, username]
 
 
-@pytest.fixture
+@pytest.fixture(name="native")
 def native(monkeypatch):
     backend = NativeDouble()
     monkeypatch.setattr("prme.privacy.local_keys._open_native", lambda name: backend)
@@ -137,6 +137,26 @@ async def test_complete_pending_native_readback_can_resume(custody, native, monk
     await CryptoProtector(public_registry(custody.path)).ready(saved, ("evidence",))
 
 
+async def test_interrupted_retirement_resumes_exact_native_cleanup(custody, native, monkeypatch):
+    _, _, context, *_ = setup_crypto()
+    descriptor = await custody.provision_wrapping(KeyBoundary.from_context(context), "evidence")
+    delete = native.delete_password
+    calls = 0
+    def interrupted(service, username):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("synthetic cleanup interruption")
+        delete(service, username)
+    monkeypatch.setattr(native, "delete_password", interrupted)
+    with pytest.raises(PrivacyDenied):
+        await custody.retire(descriptor.ref.key_version)
+    assert custody.inventory()[0].state == "retired" and native.values
+    monkeypatch.setattr(native, "delete_password", delete)
+    await custody.retire(descriptor.ref.key_version)
+    assert not native.values
+
+
 @pytest.mark.parametrize("failure", ["missing", "swapped", "corrupt", "marker"])
 async def test_native_parts_authenticate_exact_key_and_boundary(custody, native, failure):
     _, _, context, *_ = setup_crypto()
@@ -179,7 +199,10 @@ async def test_pseudonym_retry_keys_separate_exact_lifetimes(custody, native):
                  (boundary.project_id, boundary.owner_id, boundary.scope, uuid4())):
         with pytest.raises(PrivacyDenied):
             await custody.key_for(*args)
+    still_open = await custody.key_for(boundary.project_id, boundary.owner_id, boundary.scope, epoch)
     await custody.retire(pseudonym.key_version)
+    with pytest.raises(PrivacyDenied):
+        still_open.use(len)
     with pytest.raises(PrivacyDenied):
         await custody.key_for(boundary.project_id, boundary.owner_id, boundary.scope, epoch)
     with pytest.raises(PrivacyDenied):

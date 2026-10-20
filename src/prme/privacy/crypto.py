@@ -20,7 +20,7 @@ from prme.privacy.capabilities import EvidenceAccess, Guard, PayloadContext, Pro
 from prme.privacy.keys import (
     KeyBoundary,
     KeyRegistry,
-    LocalAccessAuthority,
+    PrivateAccessAuthority,
     ReadAction,
     UnwrapPermit,
     WrappingKeyDescriptor,
@@ -199,7 +199,7 @@ class RSAKeyWrapper:
 
     async def unwrap_key(self, wrapped: bytes, descriptor: WrappingKeyDescriptor,
                          wrapping_context: bytes, permit: UnwrapPermit) -> bytes:
-        permit.require(descriptor)
+        permit.require_unwrap(descriptor, wrapped, wrapping_context)
         try:
             if self._expires_at is not None and aware(self._clock()) >= aware(self._expires_at):
                 raise ValueError()
@@ -257,7 +257,7 @@ class ProcessingKeyLease:
 class CryptoProtector:
     """Concrete encryption over the existing admission slots and capability hooks."""
 
-    def __init__(self, registry: KeyRegistry, *, authority: LocalAccessAuthority | None = None) -> None:
+    def __init__(self, registry: KeyRegistry, *, authority: PrivateAccessAuthority | None = None) -> None:
         self.registry, self.authority = registry, authority
 
     async def validate_writers(self, payloads: tuple[ProtectedPayload, ...]) -> None:
@@ -329,10 +329,10 @@ class CryptoProtector:
                 raise PrivacyDenied("privacy_capability_unavailable")
             descriptor = self.registry.exact(envelope.wrapper.ref)
             async with self.authority.authorize(payload, access, original_snapshot, guard=guard, action=action) as permit:
-                permit.require(descriptor)
+                wrapped = decode64(envelope.wrapped_key, minimum=1, maximum=6144)
+                permit.require_unwrap(descriptor, wrapped, envelope.wrapper.bytes())
                 key = await self.registry.wrapper(descriptor).unwrap_key(
-                    decode64(envelope.wrapped_key, minimum=1, maximum=6144),
-                    descriptor, envelope.wrapper.bytes(), permit)
+                    wrapped, descriptor, envelope.wrapper.bytes(), permit)
                 if not isinstance(key, bytes) or len(key) != 32:
                     raise PrivacyDenied("privacy_capability_unavailable")
                 yield envelope, key, permit
@@ -359,6 +359,19 @@ class CryptoProtector:
                    original_snapshot: PolicySnapshot, guard: Guard) -> bytes:
         async with self.open_held(payload, access, original_snapshot=original_snapshot, guard=guard) as plaintext:
             return plaintext
+
+    @asynccontextmanager
+    async def hold_evidence_access(self, selections: tuple[tuple[ProtectedPayload, PolicySnapshot], ...],
+                                   access: EvidenceAccess, *, guard: Guard) -> AsyncIterator[None]:
+        if self.authority is None:
+            raise PrivacyDenied("privacy_capability_unavailable")
+        try:
+            async with self.authority.hold_evidence_access(selections, access, guard=guard):
+                yield
+        except PrivacyDenied:
+            raise
+        except Exception:
+            raise PrivacyDenied("privacy_capability_unavailable") from None
 
     @asynccontextmanager
     async def unwrap_processing_key_held(self, payload: ProtectedPayload, access: ProcessingAccess, *,
