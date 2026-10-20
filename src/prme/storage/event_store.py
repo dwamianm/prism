@@ -530,6 +530,7 @@ class EventStore:
         scopes: list[Scope] | None = None,
         limit: int = 100,
         offset: int = 0,
+        until: datetime | None = None,
         before: Event | None = None,
     ) -> list[Event]:
         """Retrieve events for a user, optionally filtered by session and scope.
@@ -541,6 +542,8 @@ class EventStore:
                 returns events from all scopes (backward compatible).
             limit: Maximum number of events to return.
             offset: Number of events to skip.
+            until: Optional ingestion time; only events recorded at or
+                before it are returned. A time without a zone is read as UTC.
             before: Only events that come before this one in the order
                 below, so the first result is the event just before it.
 
@@ -549,7 +552,7 @@ class EventStore:
         """
         async with self._conn_lock:
             return await run_to_completion(
-                self._get_by_user_sync, user_id, session_id, scopes, limit, offset, before
+                self._get_by_user_sync, user_id, session_id, scopes, limit, offset, until, before
             )
 
     async def get_by_hash(
@@ -626,6 +629,7 @@ class EventStore:
         scopes: list[Scope] | None,
         limit: int,
         offset: int,
+        until: datetime | None = None,
         before: Event | None = None,
     ) -> list[Event]:
         """Retrieve events for a user (sync).
@@ -647,6 +651,11 @@ class EventStore:
             placeholders = ", ".join(["?" for _ in scopes])
             conditions.append(f"scope IN ({placeholders})")
             params.extend([s.value for s in scopes])
+
+        if until is not None:
+            conditions.append("timestamp <= ?")
+            # A time without a zone is read as UTC, as event timestamps are stored.
+            params.append(until if until.tzinfo is not None else until.replace(tzinfo=timezone.utc))
 
         where_clause = " AND ".join(conditions)
         query = (

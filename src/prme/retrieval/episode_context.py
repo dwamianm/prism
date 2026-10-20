@@ -17,6 +17,7 @@ from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import (
     RetrievalCandidate,
     ScoreAdjustment,
+    inherited_score,
     rank_fusion_relevance,
 )
 
@@ -145,11 +146,12 @@ def expand_episode_context(
                 str(candidate.node.id),
             ),
         )
-        inherited_score = anchor.composite_score * config.episode_context_score_decay
+        # Less a seed count graph term, which only the anchor's own links earned.
+        anchor_score, inherited_provenance = inherited_score(anchor)
+        member_score = anchor_score * config.episode_context_score_decay
         # Every promoted member keeps the anchor's relevance, even one whose own
         # score stays higher; min_score gates it under rank fusion.
         inherited_relevance = rank_fusion_relevance(anchor)
-        inherited_provenance = anchor.score_provenance
         if inherited_provenance is not None:
             inherited_provenance = inherited_provenance.model_copy(
                 update={
@@ -174,9 +176,9 @@ def expand_episode_context(
                 updates["path_count"] = current.path_count + 1
             if inherited_relevance > current.context_relevance:
                 updates["context_relevance"] = inherited_relevance
-            if inherited_score > current.composite_score:
+            if member_score > current.composite_score:
                 updates.update(
-                    composite_score=inherited_score,
+                    composite_score=member_score,
                     reranker_score=None,
                     score_trace=None,
                     score_provenance=inherited_provenance,

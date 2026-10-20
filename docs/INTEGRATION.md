@@ -648,7 +648,9 @@ async def get_events(self, user_id: str, **kwargs) -> list[Event]
 async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None
 ```
 
-Retrieve events by ID or by user. `get_events()` accepts `session_id`, `limit`, `offset`.
+Retrieve events by ID or by user. `get_events()` returns the newest first and accepts
+`session_id`, `scopes`, `limit`, `offset` and `until`, an ingestion time: only events
+recorded at or before it are returned, and a `datetime` without a zone is read as UTC.
 `get_extraction()` reads saved grounded model output without inference or pending
 processing. `None` means no owned record exists. A record includes the source
 hash, provider/model, schema and grounding versions, and structured output; it

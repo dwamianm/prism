@@ -25,6 +25,7 @@ from prme.retrieval.models import (
     RetrievalCandidate,
     ScoreAdjustment,
     SessionContextLink,
+    inherited_score,
     rank_fusion_relevance,
 )
 
@@ -177,11 +178,12 @@ async def expand_session_context(
             rank_fusion_decay
             if rank_fused and rank_fusion_decay is not None else weighted_decay
         )
-        context_score = trigger.composite_score * decay
+        # Less a seed count graph term, which only the trigger's own links earned.
+        inherited, provenance = inherited_score(trigger)
+        context_score = inherited * decay
         # A neighbor keeps its trigger's relevance even when its own score
         # stays higher; min_score gates it under rank fusion.
         context_relevance = rank_fusion_relevance(trigger)
-        provenance = trigger.score_provenance
         if provenance is not None:
             provenance = provenance.model_copy(update={
                 "adjustments": provenance.adjustments + (ScoreAdjustment(

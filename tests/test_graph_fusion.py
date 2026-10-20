@@ -38,7 +38,7 @@ from prme.retrieval.models import MemoryBundle, RankFusion, RetrievalCandidate, 
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, NodeType, Scope
-from tests import test_durable_ingestion
+from tests import conftest, test_durable_ingestion
 from tests.test_mention_links import claim, person, place
 from tests.test_owner_carry_batch import RECORDED, T0, hosted, replay_dev_run
 from tests.test_owner_name_carry import on
@@ -275,15 +275,22 @@ class TestGraphList:
         with pytest.warns(UserWarning, match="rrf_graph_weight applies only"):
             assert ScoringWeights(rrf_graph_weight=WEIGHT) == ScoringWeights()
 
-    def test_the_product_defaults_leave_the_three_options_off(self):
+    def test_the_product_defaults_rank_the_graph_list_by_seed_count_not_by_hop_count(self, monkeypatch):
         from prme import PRMEConfig
+        from prme.retrieval.config import RRF_GRAPH_SEED_COUNT_WEIGHT
 
+        # tests/conftest.py turns the group links, the entity skip and the seed count list off for every other test.
+        conftest.product_defaults(monkeypatch)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             config = PRMEConfig(_env_file=None)
-        assert config.scoring.rrf_graph_weight is None
-        assert config.enable_owner_group_links is False
-        assert config.packing.session_context_skip_entities is False
+        # The graph weight is the seed count list's; the hop count list is never the default.
+        assert config.scoring.rrf_graph_seed_count is True
+        assert config.scoring.rrf_graph_weight == RRF_GRAPH_SEED_COUNT_WEIGHT
+        # On in the alpha channel: the entity skip since 0.16.0a4, the group links since prism-monorepo issue 275,
+        # the seed count list since prism-monorepo issue 276.
+        assert config.enable_owner_group_links is True
+        assert config.packing.session_context_skip_entities is True
 
 
 # --- Option 2: a "we" claim links to the owner ---------------------------------------------------------------
@@ -313,6 +320,8 @@ def linked(base, **updates):
 
 OWNER = "Alex Rivera"
 BOTH_WE_CLAIMS = [("We chose Tokyo, Kyoto, Kanazawa, and Osaka.", OWNER), ("We dropped Hiroshima to save time.", OWNER)]
+# The introduction says "My partner Jordan and I", so the session's we is Alex and Jordan (prism-monorepo issue 275).
+MEMBER_LINKS = [(text, "Jordan") for text, _ in BOTH_WE_CLAIMS]
 
 
 class TestOwnerGroupLinks:
@@ -326,14 +335,19 @@ class TestOwnerGroupLinks:
             [cities] = [node for node in await engine.query_nodes(user_id=user, node_type=NodeType.FACT)
                         if node.content == CITIES]
             edges = await engine._graph_store.get_edges(node_ids=[str(cities.id)])
-        assert found == sorted(BOTH_WE_CLAIMS)
-        # The subject link to the group stays, and the extra link names its basis and its source turn.
+            [introduction] = [event for event in await engine.get_events(user) if event.content == INTRODUCTION]
+        assert found == sorted(BOTH_WE_CLAIMS + MEMBER_LINKS)
+        # The subject link to the group stays, and the extra links name their basis and their source turn.
         subjects = {edge.source_id for edge in edges if edge.edge_type == EdgeType.HAS_FACT}
         assert len(subjects) == 1 and cities.metadata["subject"] == "We"
-        [link] = [edge for edge in edges if is_group_link(edge)]
+        links = [edge for edge in edges if is_group_link(edge)]
+        [link] = [edge for edge in links if "named_in" not in edge.metadata]
         assert (link.edge_type, link.metadata, link.source_id, link.provenance_event_id) == (
             EdgeType.MENTIONS, GROUP_LINK_METADATA, cities.id, cities.evidence_refs[0])
-        assert link.target_id not in subjects
+        # The member link also names the turn that named the group.
+        [member] = [edge for edge in links if edge is not link]
+        assert member.metadata == {**GROUP_LINK_METADATA, "named_in": str(introduction.id)}
+        assert not {edge.target_id for edge in links} & subjects
 
     async def test_the_owners_own_claims_get_no_group_link(self, config, user):
         async with MemoryEngine.open(linked(config)) as engine:
@@ -380,7 +394,7 @@ class TestOwnerGroupLinks:
                 side_effect=lambda content, **_: ExtractionResult.model_validate(RECORDS[content]))
             for content in (INTRODUCTION, CITIES_TURN):
                 await engine.ingest(content, user_id=user, role="user", session_id="s1", wait_for_extraction=True)
-            assert await group_links(engine, user) == sorted(BOTH_WE_CLAIMS)
+            assert await group_links(engine, user) == sorted(BOTH_WE_CLAIMS + MEMBER_LINKS)
 
     async def test_a_second_pass_makes_no_more_links(self, config, user):
         async with MemoryEngine.open(linked(config)) as engine:
@@ -391,7 +405,7 @@ class TestOwnerGroupLinks:
             again = await link_group_claims(
                 event_id, claims, user_id=user, graph_store=engine._graph_store,
                 event_store=engine._event_store, create_edge=engine._graph_store.create_edge)
-            assert again == 0 and len(await group_links(engine, user)) == 2
+            assert again == 0 and len(await group_links(engine, user)) == 4
 
     async def test_a_group_link_does_not_stop_a_repeated_claim_from_merging(self, config, user):
         def extract(content, **_):

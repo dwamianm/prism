@@ -2995,11 +2995,13 @@ class MemoryEngine:
     async def get_events(
         self, user_id: str, **kwargs
     ) -> list[Event]:
-        """Retrieve events for a user.
+        """Retrieve events for a user, newest first.
 
         Args:
             user_id: The user to query events for.
-            **kwargs: Additional filters (session_id, limit, offset).
+            **kwargs: Additional filters: session_id, scopes, limit, offset,
+                and until, an ingestion time (only events recorded at or
+                before it; a time without a zone is read as UTC).
 
         Returns:
             List of Events.
