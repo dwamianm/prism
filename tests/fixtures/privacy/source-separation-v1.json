@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "clock": "2026-10-19T12:00:00+00:00",
+  "owner": "10000000-0000-0000-0000-000000000001",
+  "project": "20000000-0000-0000-0000-000000000001",
+  "source_only_marker": "SOURCE_ONLY_COPPER_VAULT_731",
+  "admitted_marker": "ADMITTED_TEAL_GARDEN_462",
+  "prohibited_marker": "privacy-fixture@example.test",
+  "qualifiers": [
+    {
+      "id": "Q01",
+      "source": "Alex does not prefer tea unless it is cold. SOURCE_ONLY_COPPER_VAULT_731 is written on the private envelope.",
+      "subject": "Alex",
+      "predicate": "prefers",
+      "object": "tea",
+      "polarity": "negative",
+      "condition": "unless it is cold",
+      "speaker": "Alex",
+      "expected": "It is not true that Alex prefers tea (unless it is cold)."
+    },
+    {
+      "id": "Q02",
+      "source": "Alex uses tea. Only when it is cold.",
+      "subject": "Alex",
+      "predicate": "uses",
+      "object": "tea",
+      "polarity": "positive",
+      "condition": "Only when it is cold",
+      "expected": "Alex uses tea (Only when it is cold)."
+    },
+    {
+      "id": "Q03",
+      "source": "I no longer use TeaDB.",
+      "subject": "I",
+      "predicate": "uses",
+      "object": "TeaDB",
+      "polarity": "negative",
+      "expected": "It is not true that I uses TeaDB."
+    },
+    {
+      "id": "Q04",
+      "source": "Starting October 21, Alex uses TeaDB.",
+      "subject": "Alex",
+      "predicate": "uses",
+      "object": "TeaDB",
+      "polarity": "positive",
+      "effective_time": "2026-10-21T00:00:00+00:00",
+      "expected": "Alex uses TeaDB."
+    },
+    {
+      "id": "Q05",
+      "source": "Alex tried to install TeaDB.",
+      "subject": "Alex",
+      "predicate": "tried_to_install",
+      "object": "TeaDB",
+      "polarity": "positive",
+      "expected": "Alex tried to install TeaDB."
+    },
+    {
+      "id": "Q06",
+      "source": "If approved, Alex would work with Jordan.",
+      "subject": "Alex",
+      "predicate": "would_work_with",
+      "object": "Jordan",
+      "polarity": "positive",
+      "condition": "If approved",
+      "relationship": true,
+      "expected": "Alex would work with Jordan (If approved)."
+    },
+    {
+      "id": "Q07",
+      "source": "Alex raised 12.50 USD. SOURCE_ONLY_COPPER_VAULT_731 is written on the private envelope.",
+      "subject": "Alex",
+      "predicate": "raised",
+      "object": "12.50 USD",
+      "polarity": "positive",
+      "quantity": {
+        "value": "12.50",
+        "unit": "USD",
+        "source_text": "12.50 USD",
+        "grounding": "object_decimal_v1"
+      },
+      "expected": "Alex raised 12.50 USD."
+    },
+    {
+      "id": "Q08",
+      "source": "I use TeaDB.",
+      "subject": "I",
+      "predicate": "uses",
+      "object": "TeaDB",
+      "polarity": "positive",
+      "speaker": "Alex",
+      "speaker_reference": {
+        "speaker": "Alex",
+        "fields": [
+          "subject"
+        ]
+      },
+      "expected": "Alex uses TeaDB."
+    }
+  ]
+}

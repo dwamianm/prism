@@ -1197,6 +1197,159 @@ claim coverage from 0.86 to 0.74; with resolution it is 0.85, so resolution
 recovers most of what the window cost there. The LongMemEval-S side has not
 been built with these options.
 
+### Windowed extraction on memories that name no one (dwamianm/prism#345, #347)
+
+A stored memory such as "They chose Tokyo, Kyoto, Kanazawa, and Osaka. They
+dropped Hiroshima to save time." names neither the person nor the trip. Its
+claim hangs off a pronoun entity "They", so a question that names Alex or Japan
+reaches it only through its words. This section tests whether the existing
+options `enable_windowed_extraction` and `enable_fact_text_resolution` (#91)
+fix it, on the fast cycle's `store-v1` fixture (75 plain stores of one owner, no
+`session_id`), and the chat probes. The window needs a `session_id` and both
+options turn batched extraction off, so they could not reach this memory in any
+of the paths that store or re-derive one. Two changes made them testable, both
+off by default:
+
+- `enable_owner_window_extraction`: a turn with no `session_id` gets the
+  owner's preceding memories in the same scope (up to `extraction_window_turns`,
+  in the order stored) as its window. The window now holds only turns stored
+  before the turn.
+- `reingest()` sends each source as its own request when batching is off, shows
+  it its window, and counts the window settings, fact text resolution and their
+  prompts in the settings fingerprint, so turning an option on makes sources
+  re-derived without it stale (`tests/test_reingest.py`). Before, it raised.
+
+| Path | Window before | Window now |
+|---|---|---|
+| `ingest()` with a `session_id` | the turns before it in the session, batching off | the same |
+| `ingest()` with none | none | the owner's preceding memories, with the new option |
+| `store(extract=True)` | none (`store()` has no session) | the owner's preceding memories, with the new option |
+| `reingest()` | refused (`ValueError`) | the same two windows, one request per source |
+
+Measured at `7618c905` (the head after the graph seed and group link changes),
+`deepseek-v4.1-flash:cloud` (`e04da138`), Ollama 0.40.6. Off is the committed
+baseline (a replay, `PASS` with 168 measures unchanged). Each on run is one live
+sample, so a measure moves by chance; the second column of a pair is a second
+live sample. `both` is the window, owner-wide window and fact text resolution
+together, `win` the first two, `res` fact text resolution alone.
+
+| Measure | Off | both | win | res |
+|---|---:|---:|---:|---:|
+| Defect probes, answers in the top 3 (of 7) | 7 | 7, 5 | 6, 7 | 6 |
+| `chat-v1`, answers in the top 3 (of 18) | 14 | 10, 10 | 14, 13 | 10 |
+| `chat-v1`, answers in the top 5 | 15 | 14, 13 | 15, 14 | 13 |
+| `chat-v1`, claims whose text is the whole message | 5 | 15, 13 | 4, 4 | 10 |
+| `chat-v1`, claims repeating another claim's text | 0 | 31, 29 | 0, 0 | 29 |
+| `chat-v1`, user claims on the named owner | 36 | 30, 30 | 29, 33 | 29 |
+| `chat-v1`, user claims on "I" or "We" | 3 | 1, 0 | 2, 2 | 3 |
+| `chat-v1`, key links linked | 14 | 13, 12 | 11, 12 | 14 |
+| Defect probes, claims whose text is the whole message | 2 | 7, 5 | 2, 2 | 8 |
+| Defect probes, key links linked | 9 | 8, 2 | 9, 9 | 8 |
+| `corrections-v1`, answers in the top 3 (of 4) | 3 | 2, 2 | 2, 3 | 1 |
+| Fast cycle ingest verdict, measures worse than the baseline | none | 22, 13 | 12, 3 | 22 |
+
+The second `win` sample had one extraction request time out, so it understates.
+The corrections probe (`corrections_probe`, ingest path) with all three on stores
+one extracted claim with only the old value instead of two in both changed-fact
+scenarios, but shows Jo's old birthday after the new one, with one more context line for
+the old birthday and one more for oat milk.
+
+The Japan cities memory, in the `store-extract` and `reingest` stages. The
+fixture's question names Alex and Jordan; the second question, "which cities
+will alex visit in japan?", names only Alex. Ranks are the place of the claim
+that holds the four cities and of the raw note among all results (the question's
+own case does not matter). The stage's `answer_rank:japan-cities` is the better
+of the claim's and the note's rank for the fixture question.
+
+| Case | Cities claim, with Jordan | Raw note | Cities claim, Alex only | Raw note |
+|---|---:|---:|---:|---:|
+| Plain `store()` (no extraction) | none | 26 | none | 51 |
+| Off, `store(extract=True)` and `reingest()` | 30 | 63 | 87 | 119 |
+| both, `store(extract=True)` | 6 | 101 | 12 | 191 |
+| both, `reingest()` | 9 | 102 | 14 | 192 |
+| win, `store(extract=True)` | none | 56 | none | 120 |
+| win, `reingest()` | 32 | 58 | 92 | 127 |
+| res, `store(extract=True)` | 46 | 100 | 100 | 189 |
+| res, `reingest()` | 48 | 102 | 105 | 194 |
+
+| Stage, measure | Off | both | win | res |
+|---|---:|---:|---:|---:|
+| `store-extract`, answers ranked first (of 17) | 12 | 9 | 9 | 9 |
+| `store-extract`, answers in the top 3 | 14 | 12 | 14 | 12 |
+| `store-extract`, mean reciprocal rank | 0.776 | 0.635 | 0.665 | 0.623 |
+| `reingest`, answers ranked first | 12 | 9 | 8 | 9 |
+| `reingest`, answers in the top 3 | 14 | 11 | 13 | 12 |
+| `reingest`, mean reciprocal rank | 0.766 | 0.624 | 0.616 | 0.624 |
+| `reingest`, Japan dates question rank | 2 | 16 | 3 | 11 |
+| `reingest`, dog question rank | 24 | 30 | 28 | 30 |
+
+What happens to the memory:
+
+- Without the window the model extracts "They, chose, Tokyo, Kyoto, Kanazawa, and
+  Osaka" as a decision of the pronoun entity. With it, the first version of the
+  guidance made the model write the trip as the subject; the grounding check
+  needs subjects and objects to occur in the quoted sentence, so every claim of
+  the memory was dropped and only five city entities stayed (cities claim rank
+  102). The guidance now tells the model to keep subjects and objects as the
+  message words them, and to write "They" for two named people as both names in
+  the resolved text. The memory then keeps the claim with the resolved text
+  "Alex and Jordan chose Tokyo, Kyoto, Kanazawa, and Osaka." (the checker accepts
+  the replacement from the window). The claim ranks 6th and 9th for the question
+  with Jordan and 12th and 14th without, against 30th and 87th.
+- Resolved text alone cannot do it (no name to use), and the window alone leaves
+  the claim without resolved text, so the rank gets worse. Only both together
+  help the memory, and then 22 of the fast cycle's ingest measures get worse.
+- The raw note falls from 63rd to about 100th: the new claims and entities
+  outrank it.
+- Resolved text covers the whole supporting passage, so with
+  `enable_claim_sentence_text` on (the default) several claims of one message
+  share one text again: claims repeating another's text go from 0 to about 30 on
+  `chat-v1`, and records repeated in the 17 contexts from 102 to 289.
+- Questions that were answered by a memory that names its subject move too:
+  the Japan dates question goes from 2nd to 16th and the dog question from 24th
+  to 30th in the `reingest` stage, and answers ranked first fall from 12 to 9.
+
+Cost, per memory, from the `reingest` stage (one request at a time, so the
+request meter is exact; the `store-extract` stage's meter overlaps while
+per-turn requests run together and was not used). Off is one batched request per
+memory.
+
+| | Off | both | win | res |
+|---|---:|---:|---:|---:|
+| Input tokens per memory | 5,821 | 5,510 (0.95x) | 5,171 (0.89x) | 5,310 (0.91x) |
+| Output tokens per memory | 349 | 660 (1.89x) | 608 (1.74x) | 686 (1.97x) |
+| Input and output tokens | 6,170 | 6,170 (1.00x) | 5,779 (0.94x) | 5,996 (0.97x) |
+
+On the `ingest` stage (84 turns, one request per turn on both sides) `both` uses
+4,802 input tokens per turn against 5,824 (0.82x) and 493 output tokens against
+322 (1.53x). The window adds a few tens of tokens for each turn shown (the fixture's
+memories are one or two sentences), and the one-turn prompt is shorter than the
+batch prompt. The ratio is under 3x here, but a
+session whose turns share a batched request becomes one request per turn with
+these options on, so on a long session the input cost grows with the number of
+turns in a batch.
+
+**Rule.** No option passes the alpha gate, so no default flips:
+
+- `both`: the defect probes are 7 of 7 on one sample and 5 of 7 on the other;
+  `chat-v1` is 10 of 18 in the top 3 against 14 and 14 and 13 of 15 in the top 5
+  against 15; the whole-message claims, repeating-text claims and named-owner
+  claims are worse (above).
+- `win`: the defect probes are 6 and 7 of 7, `chat-v1` 14 and 13 in the top 3
+  and 15 and 14 in the top 5, key links linked 11 and 12 against 14, user claims
+  on the named owner 29 and 33 against 36.
+- `res`: 6 of 7 and 10 of 18.
+- The fast cycle's `ingest` verdict fails for all three, and the offline
+  evidence gate and the mid tier were not run, because the cheaper tiers had
+  failed and they could only add failures.
+
+**One bounded alternative.** Ask a second time, with the owner window and
+resolved text, only for the sources whose first extraction left a claim on a
+pronoun subject ("They", "He", "She", "It"), and take the checked replacement
+for that claim's own sentence instead of the whole passage. The other memories
+keep the extraction they have, so the measures above should not move for them,
+and the cost is one more request for each memory that names no one.
+
 ### Chat probe: a short chat through `ingest()`
 
 The benchmark packs take most of an hour per conversation to build, and their
