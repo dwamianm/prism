@@ -451,8 +451,8 @@ The fold does not change `store()` memories, which have no statements.
 | `scoring.fusion` (`PRME_SCORING__FUSION`) | `rrf`, with `rrf_k=60` | `weighted` |
 | `scoring.rrf_recency_boost` (`PRME_SCORING__RRF_RECENCY_BOOST`) | `0.25` | unset (rank fusion did not exist as a default) |
 | `scoring.rrf_tie_break` (`PRME_SCORING__RRF_TIE_BREAK`) | `event_time` | unset |
-| `scoring.rrf_graph_weight` (`PRME_SCORING__RRF_GRAPH_WEIGHT`), opt-in | unset | unset |
-| `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), opt-in | `false` | `false` |
+| `scoring.rrf_graph_weight` (`PRME_SCORING__RRF_GRAPH_WEIGHT`) | `0.5`, set by the seed count list | unset |
+| `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), since 2026-10-19 in the alpha channel | `true` | `false` |
 | `packing.context_format` (`PRME_PACKING__CONTEXT_FORMAT`) | `reader` | `auditable` |
 | `packing.multipath_ordering` (`PRME_PACKING__MULTIPATH_ORDERING`) | `balanced` | `balanced` (`score` between the two steps described below) |
 | `packing.session_context_rank_fusion_score_decay` (`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`) | `0.6` | None (0.85, the weighted decay) |
@@ -631,7 +631,8 @@ which records `min_score_skipped: true`, requires every candidate's
 `semantic_relevance` to be 0, and also records the rank fusion session decay
 when it is set. Versions 1 to 17 cannot record a skipped floor. A rank fusion
 retrieval with `scoring.rrf_recency_boost`, `scoring.rrf_tie_break`,
-`scoring.rrf_graph_weight` or `scoring.rrf_graph_seed_count` set (the defaults set the first two) emits version 19, which records them in its scoring
+`scoring.rrf_graph_weight` or `scoring.rrf_graph_seed_count` set (the defaults set all four, the last two since the
+seed count list became an alpha default) emits version 19, which records them in its scoring
 settings and saved factors, requires every score provenance to use the same
 values, and also admits the version 17 and 18 features, so default retrievals
 wrote version 19 until folding became a default on 2026-10-06; they now write

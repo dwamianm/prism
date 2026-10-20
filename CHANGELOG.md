@@ -11,23 +11,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `MemoryEngine.get_events()` and both event stores accept `until`, an
   ingestion time: only events recorded at or before it are returned.
-- Add `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), off
-  by default (prism-monorepo issue 276): a graph list for rank fusion that tells
-  records apart. A record joins only when two or more of the question's seeds
-  reach it within `graph_max_hops`, one of them by a direct link, along links
-  that never pass through the owner's entity, so the owner's own claims no
-  longer rise together; the list ranks more seeds first, then fewer total hops,
-  and its weight is `rrf_graph_weight`, 0.5 when unset. A session context
-  neighbor inherits its trigger's score without that graph term. On the
-  `defects-v1` chat probe pack with the prism-monorepo#275 links added by hand,
-  it puts "We chose Tokyo, Kyoto, Kanazawa, and Osaka." 4th for "which cities
-  will alex visit in japan?" (6th without it), but every weight that does so
-  (0.31 and up) moves one defect probe answer out of the top 3 and fails the
-  fast cycle, and at 0.5 it lowers LoCoMo evidence in the top 25 by 5.2 points
-  on the mid tier (1 win, 114 losses), so it stays off. At 0.25 it passes the
-  fast tiers and leaves the claim 6th. With the option off, results, contexts,
-  receipts and configuration dumps keep their bytes. `BENCHMARKS.md` ("Graph
-  seed count") has the measurements.
+- Add `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), on
+  by default in the alpha channel (prism-monorepo issue 276): rank fusion's graph
+  list now tells records apart, so a "We" claim linked to the people a question
+  names can rise. A record joins the list only when two or more of the
+  question's seeds reach it within `graph_max_hops`, one of them by a direct
+  link, along links that never pass through the owner's entity, and when the
+  semantic search ranks it in its top 10; the list ranks more seeds first, then
+  fewer total hops, and its weight is `rrf_graph_weight`, 0.5 when unset. A
+  session context neighbor inherits its trigger's score without that graph
+  term. With the group links of prism-monorepo issue 275 it puts "We chose
+  Tokyo, Kyoto, Kanazawa, and Osaka." 4th for "which cities will alex visit in
+  japan?" on the `defects-v1` chat probe (6th without it). On the fast tiers the
+  defect probes keep 7 of 7 answers in the top 3 and the chat probe 14 of 18 (15
+  of 18 in the top 5), the fast cycle passes with three answers one place lower
+  (travel 2 to 3, coffee 4 to 5, job-now 7 to 8), and the offline evidence gate
+  and the mid tier show no
+  change (LoCoMo evidence in the top 25 70.3% on both sides). Two earlier
+  versions of the rule failed: without the semantic gate the defect probes lost
+  an answer from the top 3 and the mid tier lost 5.2 points of LoCoMo evidence in
+  the top 25. A question that names two or more entities reads the links around
+  them once more, about 80 ms per retrieval (median) on a 400-turn LoCoMo
+  conversation. `false` restores the scoring of 0.16.0a4, with its scores,
+  ranks and receipts. The default rests on the fast tiers by the owner's
+  directive of 2026-10-19; the full benchmark audit is pending. `BENCHMARKS.md`
+  ("Graph seed count") has the measurements of all three versions.
 
 ### Changed
 

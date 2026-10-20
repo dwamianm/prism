@@ -597,15 +597,18 @@ score(obj) =
   scale, through the same epistemic and node-type factors, and a candidate
   only the graph returned scores above 0. Saved provenance records the rank
   (`graph_rank`) and the weight, and receipts that set it are version 19.
-  With `rrf_graph_seed_count` (off by default, prism-monorepo issue 276) the
-  list instead holds a record that two or more of the question's seeds reach
-  within `graph_max_hops`, one of them by a direct link, along links that never
-  pass through the owner's entity (an entity a user turn named as the owner, or
-  the owner reference); an entity record never joins. It ranks more seeds
-  first, then the smaller total hop count (dense ranks), and its weight is
-  `rrf_graph_weight`, 0.5 when unset. A session context neighbor inherits its
-  trigger's score without that graph term, and its saved provenance drops the
-  trigger's `graph_rank` so it replays. The query-specific weight shifts for current-state,
+  With `rrf_graph_seed_count` (prism-monorepo issue 276; on in `PRMEConfig`
+  since 2026-10-19 in the alpha channel, on the fast tiers) the list instead
+  holds a record that two or more of the question's seeds reach within
+  `graph_max_hops`, one of them by a direct link, along links that never pass
+  through the owner's entity (an entity a user turn named as the owner, or the
+  owner reference), and that the semantic search ranks in its top 10; an entity
+  record never joins. It ranks more seeds first, then the smaller total hop
+  count (dense ranks), and its weight is `rrf_graph_weight`, 0.5 when unset, so
+  it reorders records that already match the question instead of lifting the
+  ones near its names. A session context neighbor inherits its trigger's score
+  without that graph term, and its saved provenance drops the trigger's
+  `graph_rank` so it replays. The hop count list stays opt-in. The query-specific weight shifts for current-state,
   episodic and relational questions do not apply. Non-neutral ranking
   multipliers are rejected before retrieval runs (HTTP 422), weighted ranking
   profiles are reported as inapplicable (`rank_fusion_scoring`), learning skips

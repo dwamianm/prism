@@ -99,6 +99,10 @@ DEFAULT_SCORING_SETTINGS: dict[str, Any] = {
     "fusion": "rrf",
     "rrf_recency_boost": 0.25,
     "rrf_tie_break": "event_time",
+    # Alpha channel, 2026-10-19: on the fast tiers, by the owner's directive
+    # (prism-monorepo issue 276). It brings rrf_graph_weight's seed count
+    # default with it; a ScoringWeights built in code keeps both unset.
+    "rrf_graph_seed_count": True,
 }
 DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
     "context_format": "reader",
@@ -325,8 +329,10 @@ class ScoringWeights(BaseModel):
         default=False,
         exclude_if=lambda value: not value,
         description=(
-            "[HYPOTHESIS] fusion='rrf' only; off in this class (prism-monorepo "
-            "issue 276). Ranks the graph list by how many of the entities the "
+            "[HYPOTHESIS] fusion='rrf' only; off in this class, and on in "
+            "PRMEConfig since 2026-10-19 in the alpha channel, on the fast "
+            "tiers (prism-monorepo issue 276), where it also sets "
+            "rrf_graph_weight. Ranks the graph list by how many of the entities the "
             "question names reach a record, instead of by hop count. A seed "
             "reaches a record within graph_max_hops along links that never "
             "pass through the memory owner's own entity (an entity a user "

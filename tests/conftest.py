@@ -50,6 +50,7 @@ STRUCTURE_OPTIONS = (
     "PRME_PACKING__GRAPH_SEED_WORDS",
     "PRME_PACKING__FOLDED_RECORDS_KEEP_RANK",
     "PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES",
+    "PRME_SCORING__RRF_GRAPH_SEED_COUNT",
 )
 
 
@@ -61,9 +62,10 @@ def structure_options_off(monkeypatch):
     ``enable_owner_name_carry``, ``packing.graph_seed_words``,
     ``packing.folded_records_keep_rank`` (0.16.0a3) and
     ``packing.session_context_skip_entities`` (0.16.0a4) on (2026-10-19), and
-    ``enable_owner_group_links`` after them (prism-monorepo issue 275). Most tests count
+    ``enable_owner_group_links`` (prism-monorepo issue 275) and ``scoring.rrf_graph_seed_count``
+    (prism-monorepo issue 276) after them. Most tests count
     claims, edges and ranks that those options change, and the off path stays supported, so a test starts with all
-    seven off, as the batching variable above starts every test at one call per turn, and turns
+    eight off, as the batching variable above starts every test at one call per turn, and turns
     on what it tests. The tests of the options themselves compare each on against off, and a test
     that checks the defaults removes these variables first (``tests/test_default_structure_options.py``
     runs the issue's repro with the defaults).

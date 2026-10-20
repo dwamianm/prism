@@ -245,11 +245,19 @@ class TestTheSetting:
         scoring = PRMEConfig(_env_file=None).scoring
         assert (scoring.rrf_graph_seed_count, scoring.rrf_graph_weight) == (False, None)
 
-    def test_the_product_defaults_leave_it_off(self):
+    def test_the_product_defaults_turn_it_on_and_false_restores_the_scoring_before(self, monkeypatch):
+        monkeypatch.delenv("PRME_SCORING__RRF_GRAPH_SEED_COUNT")
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             scoring = PRMEConfig(_env_file=None).scoring
-        assert scoring.rrf_graph_seed_count is False and "rrf_graph_seed_count" not in scoring.model_dump(mode="json")
+        assert (scoring.rrf_graph_seed_count, scoring.rrf_graph_weight) == (True, WEIGHT)
+        dumped = scoring.model_dump(mode="json")
+        assert (dumped["rrf_graph_seed_count"], dumped["rrf_graph_weight"]) == (True, WEIGHT)
+        # A ScoringWeights built in code keeps it off, and the environment variable restores the scoring before.
+        assert ScoringWeights(fusion="rrf").rrf_graph_seed_count is False
+        monkeypatch.setenv("PRME_SCORING__RRF_GRAPH_SEED_COUNT", "false")
+        before = PRMEConfig(_env_file=None).scoring
+        assert before == ScoringWeights(fusion="rrf", rrf_recency_boost=.25, rrf_tie_break="event_time")
 
 
 # --- A retrieval ---------------------------------------------------------------------------------------------------

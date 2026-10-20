@@ -33,6 +33,7 @@ async def test_the_structure_options_are_on(product_defaults, config):
     assert config.packing.graph_seed_words and config.packing.folded_records_keep_rank
     assert config.packing.session_context_skip_entities
     assert config.enable_owner_group_links
+    assert config.scoring.rrf_graph_seed_count
 
 
 def test_a_packing_config_built_in_code_keeps_the_packing_options_off(product_defaults):
