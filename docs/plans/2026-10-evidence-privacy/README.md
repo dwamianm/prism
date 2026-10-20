@@ -8,6 +8,11 @@ the published GitHub issues are linked below. Policies and numerical defaults re
 
 - [Engine issue specifications](issues.md)
 - [Engine architecture](architecture.md)
+- [Frozen PV-01 contract](../../RFC-0019-Evidence-Privacy.md),
+  [content-copy inventory](content-copy-inventory.json),
+  [sanitizer registry](sanitizer-contract.json) and
+  [40 plus 12 scenario manifest](privacy-scenarios.json). These specify future
+  behavior; no runtime privacy test has passed merely because the contract exists.
 - [Hosted epic](https://github.com/dwamianm/prism-monorepo/blob/main/memory-bank/plans/2026-10-evidence-privacy/README.md): five separate hosted issues and project settings
 
 ## Published GitHub tracking
@@ -178,9 +183,20 @@ strategy and report the evidence and a bounded alternative. Findings outside the
 criteria become follow-ups. Engine documentation is authored here and synced by
 the hosted docs site only after the engine change is committed/released.
 
-## Remaining implementation choices
+## Contract and implementation handoff
 
-PV-01 freezes the key provider and local recognizer/library/language matrix.
-PV-02 freezes immutable policy snapshots and public enforcement hooks so the
-hosted service does not fork engine behavior. Numerical retention and detector
-threshold defaults are proposals for release review, not implemented guarantees.
+PV-01 freezes the library/provider boundary and the English-only versioned
+recognizer/action registry in RFC-0019 and its linked JSON artifacts. It assigns
+stable case IDs to the original 40 category slots and the 12 sanitation additions;
+the earlier plan did not contain a named executable manifest or passing baseline.
+PV-02 implements immutable policy snapshots and public enforcement hooks, and
+PV-13 implements and validates the selected sanitizer. Neither is implemented by
+the contract ticket. Numerical retention recommendations remain proposals;
+registry thresholds and bounds are explicit v1 contract choices, not measured
+accuracy, latency or security guarantees.
+
+Run the bounded contract check with
+`python3 docs/plans/2026-10-evidence-privacy/validate-contract.py` from the repository
+root. It checks source anchors, inventory structure, registry closure, original
+counts, E1-E9 coverage, dependency consistency and local document links. It does
+not execute the future 104 backend-case gate or certify privacy behavior.

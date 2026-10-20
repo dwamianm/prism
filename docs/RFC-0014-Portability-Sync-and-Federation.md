@@ -14,6 +14,22 @@ This RFC specifies how RMS memory can be moved between devices, synchronised acr
 
 This RFC supersedes and significantly extends the original RFC-0002 (Git Sync Profile) from the previous suite, which correctly identified Git as a viable transport substrate but did not adequately specify merge conflict resolution or partial sync handling.
 
+### Protected-store portability amendment (RFC-0019, implementation pending)
+
+[RFC-0019](RFC-0019-Evidence-Privacy.md#8-erasure-history-and-rebuild-amendment)
+limits append-only transport and rebuild to surviving authorized payloads. A
+protected export contains encrypted evidence and no recovery secrets, or is an
+explicit admitted-memory-only export. It never silently includes plaintext
+diagnostic evidence. Supported restore/import applies an independently current
+erasure ledger before serving or recovering work; the snapshot's own older ledger
+cannot establish deletion continuity. Historical identities and intact checksums
+remain unchanged; unavailable payloads use a new versioned envelope and cannot be
+replayed. Backups, WAL archives, old wrapped keys, migration source packs and
+operator-held exports remain separate copies until their owner disposes of them.
+Deleting a live key or compacting SQL rows is not proof of backup deletion or
+physical-media sanitization. Offline copies have no central revocation. These
+requirements do not relabel existing pack/export formats as protected.
+
 ---
 
 ## 2. Design Goals

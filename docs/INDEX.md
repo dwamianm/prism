@@ -135,6 +135,7 @@ approximate mode's recall tradeoff.
 | RFC-0003 | Epistemic State Model | Draft | [RFC-0003-Epistemic-State-Model.md](RFC-0003-Epistemic-State-Model.md) |
 | RFC-0004 | Namespace and Scope Isolation | Draft | [RFC-0004-Namespace-and-Scope-Isolation.md](RFC-0004-Namespace-and-Scope-Isolation.md) |
 | RFC-0016 | Durable Derivation Commits | Partially implemented; fenced recovery and explicit revisions | [RFC-0016-Durable-Derivation-Commits.md](RFC-0016-Durable-Derivation-Commits.md) |
+| RFC-0019 | Sanitized Memory, Protected Evidence and Erasure | Frozen v1 contract; implementation pending | [RFC-0019-Evidence-Privacy.md](RFC-0019-Evidence-Privacy.md) |
 
 ### Tier 2 — Retrieval
 

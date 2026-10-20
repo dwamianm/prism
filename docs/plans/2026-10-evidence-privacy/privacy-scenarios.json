@@ -1,0 +1,922 @@
+{
+  "schema_version": 1,
+  "manifest_id": "prme-privacy-scenarios-v1",
+  "status": "frozen_contract_not_run",
+  "origin": "The approved epic allocated the original 40 slots as eight in each of five groups, without named executable cases or a passing baseline. PV-01 freezes those slots here; the twelve named PV-13 sanitation slots are additive.",
+  "source_revision": "72360483",
+  "requirements": {
+    "E1": "Encrypted evidence and sanitized work before durable write",
+    "E2": "Ordinary readers cannot disclose sealed source-only content",
+    "E3": "Explicit scoped unexpired diagnostic capability and content-free audit",
+    "E4": "Inspectable separate retention; immediate access denial at expiry",
+    "E5": "Complete scoped fenced live erasure and non-resurrection; honest boundaries",
+    "E6": "Honest verified migration, fixed-input encryption parity and separate sealed quality",
+    "E7": "Usable local policy/status/unlock and key-loss/backup limits",
+    "E8": "Sanitizer before all content side effects; report coverage and benign damage",
+    "E9": "Immutable scoped policy snapshots and authoritative fences; hosted owns controls"
+  },
+  "issues": {
+    "PV-01": {
+      "issue": 319,
+      "depends_on": [],
+      "requirements": [
+        "E1",
+        "E2",
+        "E3",
+        "E4",
+        "E5",
+        "E6",
+        "E7",
+        "E8",
+        "E9"
+      ]
+    },
+    "PV-02": {
+      "issue": 320,
+      "depends_on": [
+        "PV-01"
+      ],
+      "requirements": [
+        "E1",
+        "E4",
+        "E7",
+        "E8",
+        "E9"
+      ]
+    },
+    "PV-03": {
+      "issue": 321,
+      "depends_on": [
+        "PV-01",
+        "PV-02"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E3"
+      ]
+    },
+    "PV-13": {
+      "issue": 322,
+      "depends_on": [
+        "PV-01",
+        "PV-02"
+      ],
+      "requirements": [
+        "E2",
+        "E6",
+        "E8",
+        "E9"
+      ]
+    },
+    "PV-04": {
+      "issue": 323,
+      "depends_on": [
+        "PV-02",
+        "PV-03",
+        "PV-13"
+      ],
+      "requirements": [
+        "E2",
+        "E3",
+        "E6",
+        "E8"
+      ]
+    },
+    "PV-05": {
+      "issue": 324,
+      "depends_on": [
+        "PV-03",
+        "PV-04",
+        "PV-13"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E4",
+        "E8"
+      ]
+    },
+    "PV-06": {
+      "issue": 325,
+      "depends_on": [
+        "PV-02",
+        "PV-03",
+        "PV-04",
+        "PV-05"
+      ],
+      "requirements": [
+        "E4",
+        "E5",
+        "E9"
+      ]
+    },
+    "PV-07": {
+      "issue": 326,
+      "depends_on": [
+        "PV-03",
+        "PV-04",
+        "PV-05",
+        "PV-06"
+      ],
+      "requirements": [
+        "E1",
+        "E3",
+        "E5",
+        "E6",
+        "E7",
+        "E8"
+      ]
+    },
+    "PV-11": {
+      "issue": 327,
+      "depends_on": [
+        "PV-02",
+        "PV-03",
+        "PV-04",
+        "PV-05",
+        "PV-06",
+        "PV-07",
+        "PV-13"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E3",
+        "E4",
+        "E5",
+        "E6",
+        "E7",
+        "E8",
+        "E9"
+      ]
+    }
+  },
+  "execution_contract": {
+    "backends": [
+      "duckdb",
+      "postgresql"
+    ],
+    "original_per_backend": 40,
+    "sanitization_per_backend": 12,
+    "total_per_backend": 52,
+    "backend_case_executions": 104,
+    "layouts": {
+      "duckdb": [
+        "directory",
+        "single_file"
+      ],
+      "postgresql": [
+        "schema"
+      ]
+    },
+    "layout_counting": "Both DuckDB layouts are required subchecks where storage artifacts differ, recorded inside each case; never replace a failed layout with another or count it as a new passing scenario.",
+    "providers": "Deterministic local fakes or fixed existing extraction artifacts; zero new live/paid model calls. Real pinned local recognizers run supported detector fixtures in PV-13.",
+    "clock": "Fixed fake clock; advance to exact deadlines without sleeps.",
+    "repair_limit": 2,
+    "results": "No runtime results in this contract ticket. Each execution later records case/backend/layout, fixture checksum, code/library versions, command/log, status, observed outcome and any failure.",
+    "marker_contract": "Each relevant fixture has distinct source-only and deliberately admitted markers. Sealed prohibited sinks must contain neither raw source-only markers nor removed prohibited values; intentionally admitted allowed facts are tested separately. Scan all inventory logical copies plus applicable log/temp/export artifacts after success, failure and restart. Ciphertext at rest is allowed; plaintext absence alone does not prove physical erasure.",
+    "adapters": [
+      "sync_python",
+      "async_python",
+      "http",
+      "mcp",
+      "fast_batch",
+      "langchain",
+      "llamaindex",
+      "supported_import",
+      "explorer",
+      "cli"
+    ]
+  },
+  "separate_quality_sets": {
+    "storage_parity": {
+      "cases": 24,
+      "owner": "PV-11",
+      "selection": "Freeze 24 existing retrieval queries and their fixture hashes before baseline capture. Same sanitized admitted input/policy, fixed clock before expiry, same keys/versions except storage transformation.",
+      "expected": "Identical selected record IDs/order and packed text before/after byte-preserving encryption/migration. Keep unsanitized baseline and report sanitation-induced differences separately."
+    },
+    "sealed_behavior": {
+      "cases": 24,
+      "owner": "PV-11",
+      "groups": {
+        "simple_facts": 6,
+        "conditions_or_corrections": 6,
+        "multi_source": 6,
+        "source_only_or_quotation": 6
+      },
+      "expected": "Required admitted facts/qualifiers survive; source-only questions report unavailable. Report standard/sealed differences without a benchmark equivalence claim."
+    },
+    "budget": "PV-11 owns one baseline capture and one final run, plus at most two targeted repairs per behavior. No new universal retrieval-default evaluation is authorized here."
+  },
+  "groups": {
+    "admission_policy": 8,
+    "access": 8,
+    "copied_content_leakage": 8,
+    "erasure_recovery": 8,
+    "encryption_migration": 8,
+    "sanitization": 12
+  },
+  "cases": [
+    {
+      "id": "AP01",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Profile and explicit lifetime inspection",
+      "requirements": ["E1", "E4", "E7", "E9"],
+      "implementation_owners": ["PV-02"],
+      "copy_ids": ["C01", "C02", "C10", "C41"],
+      "setup": "Admit a fixed fact under each valid standard, sealed and no-evidence policy; inspect effective snapshot and explicit unlimited option.",
+      "expected": "Exactly the selected capture/use and independent evidence/memory/work deadlines are reported, including provider boundary. No-evidence has no completed evidence payload.",
+      "adapter_subchecks": ["sync_python", "async_python", "http", "mcp", "fast_batch", "langchain", "llamaindex", "supported_import"],
+      "status": "not_run"
+    },
+    {
+      "id": "AP02",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Invalid policy before side effects",
+      "requirements": ["E1", "E4", "E8", "E9"],
+      "implementation_owners": ["PV-02"],
+      "copy_ids": ["C01", "C10", "C24", "C31", "C32"],
+      "setup": "Try capture/use conflicts, malformed deadline, unsupported registry and a fake admission hook that denies.",
+      "expected": "Admission rejects before event, graph, queue, embedding, external provider or content log write; no partial batch acceptance.",
+      "adapter_subchecks": ["sync_python", "async_python", "http", "mcp", "fast_batch", "langchain", "llamaindex", "supported_import"],
+      "status": "not_run"
+    },
+    {
+      "id": "AP03",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Restrictive composition and concurrent projects",
+      "requirements": ["E4", "E8", "E9"],
+      "implementation_owners": ["PV-02"],
+      "copy_ids": ["C01", "C02", "C39", "C41"],
+      "setup": "Interleave two projects with different immutable policies; caller narrows capture/deadline/category permission.",
+      "expected": "No global policy mutation or cross-project bleed. Caller restrictions remain; incompatible transformation/schema composition rejects, mandatory block cannot relax.",
+      "adapter_subchecks": ["sync_python", "async_python", "http", "mcp", "fast_batch", "langchain", "llamaindex", "supported_import"],
+      "status": "not_run"
+    },
+    {
+      "id": "AP04",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Minimal evidence preserves qualifiers",
+      "requirements": ["E2", "E4"],
+      "implementation_owners": ["PV-02", "PV-04"],
+      "copy_ids": ["C01", "C04", "C05"],
+      "setup": "Use a source containing a conditional negated preference, named speaker and effective time with enough excerpt space.",
+      "expected": "Minimal sanitized evidence and admitted statement preserve condition, negation, attribution and time; the quote is labeled sanitized and linked to its own source ID.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "AP05",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Unsafe minimal excerpt refuses truncation",
+      "requirements": ["E2", "E4"],
+      "implementation_owners": ["PV-02"],
+      "copy_ids": ["C01", "C05", "C09"],
+      "setup": "Set excerpt limit below the complete qualifier-bearing span; include two ambiguous speakers.",
+      "expected": "No truncated or guessed assertion is admitted; explicit rejection or caller-selected full policy is required, never an automatic capture upgrade.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "AP06",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "No evidence differs from no durable processing",
+      "requirements": ["E1", "E4", "E7"],
+      "implementation_owners": ["PV-02", "PV-05"],
+      "copy_ids": ["C01", "C08", "C10", "C41"],
+      "setup": "Run no-evidence sync and async with fake failure; separately request no durable processing input.",
+      "expected": "No-evidence may use encrypted finite pending work, removed on completion; strict no-durable input rejects async before enqueue and explains resubmission after sync failure.",
+      "adapter_subchecks": ["sync_python", "async_python", "http", "mcp", "fast_batch", "langchain", "llamaindex", "supported_import"],
+      "status": "not_run"
+    },
+    {
+      "id": "AP07",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Protected visual admission is unsupported",
+      "requirements": ["E1", "E7", "E8"],
+      "implementation_owners": ["PV-02", "PV-13"],
+      "copy_ids": ["C02", "C24", "C38"],
+      "setup": "Try image/video body and binary message attachment under each protected profile.",
+      "expected": "Reject before blob, thumbnail, frame hash, provider or content storage; unsupported input is not silently downgraded to standard.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "AP08",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Old policy retry and activation fence",
+      "requirements": ["E4", "E5", "E9"],
+      "implementation_owners": ["PV-02", "PV-06"],
+      "copy_ids": ["C09", "C10", "C37", "C42"],
+      "setup": "Pause work before publication/transmission, activate a stricter revision, then retry old work concurrently and after restart.",
+      "expected": "Authoritative fence denies stale publication, external transmission and disclosure; current revision applies without reinterpreting legacy identity.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "AC01",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Every ordinary sealed read path",
+      "requirements": ["E2"],
+      "implementation_owners": ["PV-04"],
+      "copy_ids": ["C01", "C05", "C15", "C25", "C26", "C27", "C30"],
+      "setup": "Store admitted fact plus source-only marker in sealed evidence; enumerate ordinary read adapters and retired graph inspection.",
+      "expected": "Python/HTTP/MCP event/extraction/history/receipt/node/provenance/state/aggregate/retrieval and explorer return allowed memory plus availability or denial, never marker or raw diagnostic metadata.",
+      "adapter_subchecks": ["sync_python", "async_python", "http", "mcp", "explorer", "cli"],
+      "status": "not_run"
+    },
+    {
+      "id": "AC02",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Selected authorized diagnostic read",
+      "requirements": ["E3", "E7"],
+      "implementation_owners": ["PV-03", "PV-07"],
+      "copy_ids": ["C01", "C25", "C41"],
+      "setup": "Use an explicit scoped unexpired capability for two selected records with working key and audit sink.",
+      "expected": "Only selected currently available evidence is returned, labeled sanitized; successful authorization/outcome audit contains no source or key.",
+      "adapter_subchecks": ["async_python", "cli"],
+      "status": "not_run"
+    },
+    {
+      "id": "AC03",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Missing expired or overbroad capability",
+      "requirements": ["E3"],
+      "implementation_owners": ["PV-03"],
+      "copy_ids": ["C01", "C25", "C41"],
+      "setup": "Attempt no capability, expired capability, unselected record and wrong purpose.",
+      "expected": "All deny before decrypt/disclosure and produce content-free attempts; no ordinary tool mints a diagnostic capability.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "AC04",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Cross-owner project and scope substitution",
+      "requirements": ["E2", "E3", "E9"],
+      "implementation_owners": ["PV-03", "PV-04"],
+      "copy_ids": ["C01", "C25", "C26", "C27", "C39"],
+      "setup": "Substitute owner/scope/project and compare missing versus foreign record requests.",
+      "expected": "No disclosure or existence oracle; authenticated ownership and envelope context both bind the selected record.",
+      "adapter_subchecks": ["async_python", "http", "mcp"],
+      "status": "not_run"
+    },
+    {
+      "id": "AC05",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Audit or key unavailable",
+      "requirements": ["E1", "E3", "E7"],
+      "implementation_owners": ["PV-03"],
+      "copy_ids": ["C01", "C31", "C41"],
+      "setup": "Fail audit append, remove key version or corrupt envelope on a permitted diagnostic request.",
+      "expected": "Fail closed with fixed reason/status and no plaintext fallback or exception-body source. Key loss is visible to authorized inspection.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "AC06",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "No source fallback through retrieval components",
+      "requirements": ["E2", "E3"],
+      "implementation_owners": ["PV-04", "PV-05"],
+      "copy_ids": ["C15", "C24", "C25", "C37"],
+      "setup": "Ask a quotation/source-only query with session expansion, augmentation, temporal reasoning and answerability enabled; decrypt provider raises if called.",
+      "expected": "Sealed ordinary processing makes zero evidence decrypt calls and never transmits source-only marker; reports source unavailability. Standard source access is separately authorized while available.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "AC07",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Permitted admitted facts remain sensitive",
+      "requirements": ["E2", "E6"],
+      "implementation_owners": ["PV-04"],
+      "copy_ids": ["C04", "C11", "C25"],
+      "setup": "Deliberately admit an allowed sensitive synthetic fact and keep an unrelated source-only marker in sealed evidence.",
+      "expected": "Normal authorized retrieval returns admitted fact, not marker; report does not call admitted data anonymous or count it as a source-only leak.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "AC08",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Framework raw history cannot change profile",
+      "requirements": ["E2", "E7"],
+      "implementation_owners": ["PV-04"],
+      "copy_ids": ["C28", "C29"],
+      "setup": "Request lossless chat history/clear/delete through LangChain and LlamaIndex for a sealed source.",
+      "expected": "Unsupported raw-history operation rejects or returns explicit availability; never returns sealed removed messages or changes the store profile.",
+      "adapter_subchecks": ["langchain", "llamaindex"],
+      "status": "not_run"
+    },
+    {
+      "id": "CL01",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Event and metadata copy scan",
+      "requirements": ["E1", "E2", "E8"],
+      "implementation_owners": ["PV-03", "PV-13"],
+      "copy_ids": ["C01", "C02", "C03", "C39"],
+      "setup": "Put synthetic prohibited values in body, nested metadata values, metadata keys and speaker/display fields; inspect accepted or rejected artifacts.",
+      "expected": "No original prohibited value or public raw-value hash is durable. Protected protocol IDs are opaque; transformations do not merely sanitize body text.",
+      "adapter_subchecks": ["sync_python", "async_python", "http", "mcp", "fast_batch", "langchain", "llamaindex", "supported_import"],
+      "status": "not_run"
+    },
+    {
+      "id": "CL02",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Claim metadata and value binding copies",
+      "requirements": ["E2", "E8"],
+      "implementation_owners": ["PV-04", "PV-13"],
+      "copy_ids": ["C04", "C05", "C06", "C25"],
+      "setup": "Extract claims with longer evidence_quote, references, structured objects and presentation/lookup metadata.",
+      "expected": "Only admitted sanitized claim fields enter ordinary graph/index/output; evidence-only passages and lookups cannot smuggle source-only text.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "CL03",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Extraction and prepared plan copies",
+      "requirements": ["E1", "E2", "E8"],
+      "implementation_owners": ["PV-05"],
+      "copy_ids": ["C07", "C08", "C09", "C12"],
+      "setup": "Pause after extraction and preparation; inspect model responses, references, prepared embeddings and lexical content, then recover.",
+      "expected": "Executable plan is admitted-only; sanitized diagnostics are protected references; no hidden raw-input archive in extraction/batch/direct-store operations.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "CL04",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Lifecycle snapshot copies",
+      "requirements": ["E1", "E2", "E5"],
+      "implementation_owners": ["PV-05", "PV-06"],
+      "copy_ids": ["C16", "C17"],
+      "setup": "Promote/archive/reinforce/supersede/expire/penalize nodes with source-only metadata, then erase.",
+      "expected": "All before/after and chain snapshots obey profile and erasure; fixed metadata-only erasure records do not preserve erased snapshot text or public predictable hashes.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "CL05",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Organizer profiles summaries and alias copies",
+      "requirements": ["E1", "E2", "E8"],
+      "implementation_owners": ["PV-05", "PV-06", "PV-13"],
+      "copy_ids": ["C18", "C19", "C20", "C21", "C40"],
+      "setup": "Prepare and publish profiles, daily summaries, merges and accepted/rejected alias proposals from mixed sources; inject an abandoned generation.",
+      "expected": "Published, prepared, retired and abandoned copies respect admitted-only policy and output validation; no forgotten source-only excerpts or external assessment copies.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "CL06",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Queries receipts and historical commitments",
+      "requirements": ["E1", "E2", "E8"],
+      "implementation_owners": ["PV-05", "PV-13"],
+      "copy_ids": ["C03", "C15", "C22", "C23"],
+      "setup": "Use a query containing a prohibited synthetic value; inspect receipt execution maps, candidate/context hashes, retry binding and citations.",
+      "expected": "Only sanitized/minimized query reaches providers/receipts; sensitive unkeyed commitments are protected/erased, not described as anonymous. Legacy intact checksum bytes remain unchanged.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "CL07",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Indexes snapshots and abandoned stages",
+      "requirements": ["E1", "E2", "E5"],
+      "implementation_owners": ["PV-04", "PV-05", "PV-06"],
+      "copy_ids": ["C11", "C12", "C13", "C14", "C34"],
+      "setup": "Interrupt vector/lexical staging and native snapshot save; retry and abandon one work item.",
+      "expected": "No sealed source indexed or left in prepared/abandoned content. Inspect all live SQL/native/Tantivy/pgvector copies, then verify covered erasure; physical residue limitations remain explicit.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "CL08",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Errors logs preview export and browser sinks",
+      "requirements": ["E1", "E2", "E8"],
+      "implementation_owners": ["PV-05", "PV-07", "PV-13"],
+      "copy_ids": ["C26", "C27", "C29", "C30", "C31", "C32", "C35", "C36"],
+      "setup": "Inject provider/validation exceptions with marker text and inspect logging, tracing, response bodies, preview, export and explorer state.",
+      "expected": "No original/prohibited or sealed source-only text appears in prohibited sinks after success/failure. Default protected export has no keys or plaintext evidence; already delivered external copies are disclosed.",
+      "adapter_subchecks": ["http", "mcp", "explorer", "cli", "langchain", "llamaindex"],
+      "status": "not_run"
+    },
+    {
+      "id": "ER01",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Exact expiry before maintenance",
+      "requirements": ["E4", "E7"],
+      "implementation_owners": ["PV-06"],
+      "copy_ids": ["C01", "C10", "C25", "C41"],
+      "setup": "Advance fake clock exactly to evidence expiry without running purge, then reopen after offline time.",
+      "expected": "Evidence denies at deadline/startup; availability is expired even while bytes await purge. Admitted memory remains until its own policy expires.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "ER02",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Source-only versus dependency-aware memory erasure",
+      "requirements": ["E4", "E5"],
+      "implementation_owners": ["PV-06"],
+      "copy_ids": ["C04", "C05", "C06", "C18", "C19", "C20"],
+      "setup": "Compare source-only purge and memory erase on one single-source fact, one separable multi-source fact, one uncertain summary and an unrelated owner.",
+      "expected": "Source-only says facts remain. Memory erase removes covered fact/derivatives; retain only proven surviving content, invalidate uncertain mixed content, preserve unrelated owner.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "ER03",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Transactional fence and in-flight disclosure",
+      "requirements": ["E3", "E5", "E9"],
+      "implementation_owners": ["PV-06"],
+      "copy_ids": ["C09", "C10", "C25", "C41", "C42"],
+      "setup": "Pause extraction publication, organizer publication and diagnostic response just before completion; commit erasure fence.",
+      "expected": "Acknowledgment follows committed fence; paused stale work cannot publish or disclose afterward. Already returned responses are explicitly outside revocation.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "ER04",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Idempotent interrupted purge",
+      "requirements": ["E5", "E7"],
+      "implementation_owners": ["PV-06"],
+      "copy_ids": ["C01", "C09", "C12", "C16", "C42"],
+      "setup": "Repeat request identity, crash after each purge stage and inject a persistent one-stage failure.",
+      "expected": "Same request resumes without re-adding data; failures stay visible and access remains blocked; no complete status while any managed stage fails.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "ER05",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Restart journals cannot resurrect source",
+      "requirements": ["E4", "E5"],
+      "implementation_owners": ["PV-05", "PV-06"],
+      "copy_ids": ["C07", "C08", "C09", "C10", "C19", "C37"],
+      "setup": "Erase or expire pending source after prepare/stage and before publish; remove mutable work row, then restart journal recovery.",
+      "expected": "Reconstructed jobs honor authoritative fence/deadline and cannot reload source from historical direct-store, extraction, derivation or profile payloads.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "ER06",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Rebuild cannot resurrect index content",
+      "requirements": ["E2", "E5"],
+      "implementation_owners": ["PV-06"],
+      "copy_ids": ["C11", "C12", "C13", "C14", "C37"],
+      "setup": "After purge restore a stale native index snapshot while keeping current graph/ledger, then rebuild and reopen.",
+      "expected": "Reconciliation/rebuild exclude erased vectors, lexical documents and stages, serving surviving admitted memory only; no re-extraction of erased source.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "ER07",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Pre-erasure restore requires current ledger",
+      "requirements": ["E5", "E6"],
+      "implementation_owners": ["PV-06", "PV-07"],
+      "copy_ids": ["C36", "C37", "C42"],
+      "setup": "Restore/import snapshot taken before erasure, once with current independent ledger and once with only the snapshot ledger.",
+      "expected": "Current ledger is applied before serving and recovered jobs are fenced. Snapshot alone refuses any deletion-continuity/protected-restore success claim; no erased content exposed.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "ER08",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Truthful purge backup and external status",
+      "requirements": ["E4", "E5", "E7"],
+      "implementation_owners": ["PV-06", "PV-07"],
+      "copy_ids": ["C28", "C34", "C35", "C36", "C42"],
+      "setup": "Archive and clear chat, then erase with live purge complete but retained backup and operator-held export.",
+      "expected": "Archive/clear is not erase; report live_purged then backup_expiry_pending, remaining copies and failures; complete only within verified managed boundary, never media wiping or offline revocation.",
+      "adapter_subchecks": ["async_python", "cli", "langchain", "llamaindex"],
+      "status": "not_run"
+    },
+    {
+      "id": "EM01",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Authenticated-encryption known vectors and context",
+      "requirements": ["E1", "E3"],
+      "implementation_owners": ["PV-03"],
+      "copy_ids": ["C01", "C41"],
+      "setup": "Use fixed library-compatible AES-GCM test vectors; alter ciphertext/tag/nonce/AAD and independently inspect generated object key/nonce handling.",
+      "expected": "Valid fixture decrypts exactly; every tamper fails without plaintext. Changed payload uses new object generation/key/nonce; retry reuses exact persisted envelope.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "EM02",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Swapped record purpose scope or wrapping key",
+      "requirements": ["E1", "E3"],
+      "implementation_owners": ["PV-03"],
+      "copy_ids": ["C01", "C41"],
+      "setup": "Swap envelope between two records/owners/scopes and between processing/evidence purposes; use wrong OAEP label/private key.",
+      "expected": "Context and unwrap/decrypt fail closed for all substitutions; no wrong-record content and no context containing names or predictable source hashes.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "EM03",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Provisioning and failed write have no plaintext fallback",
+      "requirements": ["E1", "E7"],
+      "implementation_owners": ["PV-03"],
+      "copy_ids": ["C01", "C31", "C33", "C34", "C41"],
+      "setup": "Create protected store with no usable public/provider key; fail encryption/wrap and storage mid-write.",
+      "expected": "Fail before content durability. Scan database/WAL/temp/log/manifest/export artifacts for plaintext/key material; protected status is never assigned to partial/plaintext store.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "EM04",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Versioned resumable rotation",
+      "requirements": ["E1", "E3", "E5"],
+      "implementation_owners": ["PV-03", "PV-07"],
+      "copy_ids": ["C01", "C36", "C41"],
+      "setup": "Rotate wrapping key with interruption after some envelopes; retry while an erasure fence covers another object.",
+      "expected": "Reads select exact saved key version, rotation resumes idempotently without changing protected plaintext; erased objects stay denied; old backup keys remain explicitly a backup concern.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "EM05",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Permanent key loss and explicit recovery export",
+      "requirements": ["E3", "E7"],
+      "implementation_owners": ["PV-03", "PV-07"],
+      "copy_ids": ["C33", "C35", "C36", "C41"],
+      "setup": "Lose evidence key; separately use deliberate recovery-key export outside pack and test supported local unlock.",
+      "expected": "Unavailable key gives clear permanent-loss guidance without downgrade. Admitted memory remains usable under separate protection; default pack/export never embeds recovery secrets.",
+      "adapter_subchecks": ["async_python", "cli"],
+      "status": "not_run"
+    },
+    {
+      "id": "EM06",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Local public writer and same-process disclosure",
+      "requirements": ["E2", "E3", "E7"],
+      "implementation_owners": ["PV-03"],
+      "copy_ids": ["C24", "C25", "C33", "C41"],
+      "setup": "Provision public writer, separate diagnostic private provider and ordinary retrieval; try null/plaintext keyring backend and permanently loaded private-key configuration.",
+      "expected": "Ordinary writer can wrap but cannot unwrap evidence. Disallowed backend rejects. Same-process key configuration is labeled same_process and refuses service-isolation claims; explicit local capability/audit still required.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "EM07",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Legacy migration retains identity and explicit incompleteness",
+      "requirements": ["E5", "E6", "E8"],
+      "implementation_owners": ["PV-07"],
+      "copy_ids": ["C01", "C03", "C08", "C15", "C22", "C36", "C38"],
+      "setup": "Dry-run/migrate legacy plaintext store containing hashes, receipts, source-only snapshots and visual records; interrupt and resume under erasure fence.",
+      "expected": "Dry-run lists affected copies/features/keys; no protected label until all transformations verify. Intact records keep bytes; erased payload gets new unavailable envelope, never rewritten original checksum. Unsupported visual legacy is refused or removed explicitly.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run"
+    },
+    {
+      "id": "EM08",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Protected export and remaining source copies",
+      "requirements": ["E1", "E5", "E6", "E7"],
+      "implementation_owners": ["PV-07"],
+      "copy_ids": ["C33", "C34", "C35", "C36", "C42"],
+      "setup": "Export protected and explicit admitted-memory-only variants, migrate directory to single-file and inspect original pack/backups.",
+      "expected": "Default evidence stays encrypted with no recovery keys; admitted-only export states facts remain sensitive. Original packs/backups are listed, not silently deleted or declared erased. Storage parity stays a separately executed 24-query gate.",
+      "adapter_subchecks": ["async_python", "cli", "supported_import"],
+      "status": "not_run"
+    },
+    {
+      "id": "SN01",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "recognized credential",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Put each supported credential grammar in body/metadata, including a benign use of the word password without assignment.",
+      "expected": "Supported positive values block the entire input before side effects; benign controls remain admissible. Unknown credential formats are recorded as unsupported, not proof of universal detection.",
+      "adapter_subchecks": ["sync_python", "async_python", "http", "mcp", "fast_batch", "langchain", "llamaindex", "supported_import"],
+      "status": "not_run",
+      "category_ids": ["credential"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN02",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "contact identifier",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Use labeled email/US and GB phone fixtures with benign numeric text and opt-in allow/redact/block actions.",
+      "expected": "Supported policy removes/blocks detected contact values from every copy, or visibly allows them when allowed. Measure true/false positives/negatives and benign damage.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["email", "phone"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN03",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "placeholder continuity",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Repeat one identifier in related facts in the same project/owner/scope; include a spoofed reserved token in input and simulate key loss.",
+      "expected": "Same boundary/epoch preserves issued identity; spoof is inert and cannot impersonate token. Key loss refuses continuity and explicit new epoch cannot silently merge people.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["person", "email", "custom_identifier"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN04",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "cross-owner/project isolation",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Admit same identifier across two owners, projects and scopes, and try to reuse an issued token across boundaries.",
+      "expected": "Tokens differ across every boundary and foreign issued token lookup rejects; no global digest or plaintext reverse map exists.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["person", "email", "custom_identifier"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN05",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "configured sensitive topic",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Configure an exact topic literal and bounded identifier exclusion; try unlisted topic paraphrase and malicious/custom executable regex.",
+      "expected": "Configured block rejects before side effects; unlisted semantic paraphrase is documented unsupported. Overlong/unbounded/executable rule rejects; policy inspection never echoes sensitive custom literals.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["sensitive_topic", "custom_identifier"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN06",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "condition/negation preservation",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Transform a negated conditional preference with attribution/time; strict schema rejects an unknown notes field and unsupported qualifier.",
+      "expected": "Keep exact necessary qualifier relationships in sanitized source and admitted record or reject; never produce unconditional/positive/misattributed fact or free-text escape.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["person", "email"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN07",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "unsupported language",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Declare es, unknown or missing language; separately misdeclare a non-English input as en as a known limitation.",
+      "expected": "Unsupported declaration rejects before side effects. Misdeclared/mixed language limitation is measured/reported, never claimed reliably auto-detected.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["credential", "person"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN08",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "supported obfuscation",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Use [at]/(at) and [dot]/(dot) supported email forms and allowed assignment whitespace; include encoded/homoglyph unsupported controls.",
+      "expected": "Supported spans are detected/transformed with correct original offsets; unsupported forms are reported as misses/limitations rather than inflated recall or silently added grammar.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["email", "credential"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN09",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "detector failure",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Inject local analyzer exception, missing model, missing recognizer and invalid offset map.",
+      "expected": "Each rejects before all provider/log/queue/storage side effects with fixed reason code; no fallback to unsanitized input.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["credential", "email", "person"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN10",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "timeout",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Use fake deadline/worker stall plus max input/rule/depth bounds, without wall-clock sleep.",
+      "expected": "Deadline/size violations deny whole operation and cancel/discard partial results; no partial sanitized acceptance or late publication.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["credential", "email", "person"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN11",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "pre-write side effects",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Exercise all supported adapters, query metadata/display names, imports and a fast batch whose later item fails; install sink spies.",
+      "expected": "Zero original/prohibited values at content logs, previews, queues, storage, embedding or external extraction; query persistence/transmission sanitized; batch rejects atomically.",
+      "adapter_subchecks": ["sync_python", "async_python", "http", "mcp", "fast_batch", "langchain", "llamaindex", "supported_import"],
+      "status": "not_run",
+      "category_ids": ["credential", "email", "sensitive_topic"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    },
+    {
+      "id": "SN12",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "generated output reintroduction",
+      "requirements": ["E2", "E6", "E8", "E9"],
+      "implementation_owners": ["PV-13"],
+      "copy_ids": ["C01", "C02", "C04", "C05", "C08", "C09", "C10", "C11", "C12", "C15", "C19", "C20", "C24", "C26", "C27", "C28", "C31", "C35", "C41"],
+      "setup": "Fake extractor/organizer emits a prohibited value, source-only passage, foreign token or strict-schema extra field after input was sanitized.",
+      "expected": "Output validation rejects/withholds before plan/index/profile/summary publication. Verbatim evidence uses sanitized source ID/checksum, reports contain counts not removed spans/hashes.",
+      "adapter_subchecks": ["async_python"],
+      "status": "not_run",
+      "category_ids": ["credential", "email", "person"],
+      "fixture_contract": "Include labeled positives, benign controls and at least one documented unsupported example where applicable. Record detector misses/false positives separately; fixed case name and required outcome do not change after failure."
+    }
+  ]
+}

@@ -3,6 +3,11 @@
 Tracking epic: [dwamianm/prism#318](https://github.com/dwamianm/prism/issues/318).
 
 Proposed 2026-10-19. This is a target design, not current functionality.
+[RFC-0019](../../RFC-0019-Evidence-Privacy.md) now freezes the v1 contract,
+including the [copy inventory](content-copy-inventory.json),
+[sanitizer registry](sanitizer-contract.json) and [scenario manifest](privacy-scenarios.json).
+The RFC takes precedence over the early sketches below where it selects a
+library, state name or versioned contract. Runtime implementation remains pending.
 [Engine requirements and issues](README.md) belong to `dwamianm/prism`.
 The engine provides reusable local policy, sanitization, storage and erasure
 capabilities without depending on hosted organizations, project tables or AWS.
@@ -78,7 +83,7 @@ memory from source passages. The no-evidence choice keeps no diagnostic source
 payload after processing. Changing policy to a stricter profile is a migration,
 not a flag that makes existing copies disappear.
 
-`store()` explicitly admits caller-provided memory text, and now passes through
+In the target contract, `store()` explicitly admits caller-provided memory text and passes through
 the same sanitizer as `ingest()`; direct storage is not a bypass. `ingest()` can
 extract a compact fact, but the extractor is fallible; schema/qualifier checks,
 caller exclusions and source-only leakage tests are required. A memory
@@ -99,11 +104,12 @@ baseline. Then apply project-selected category rules, bounded custom exclusions,
 and a maintained local entity-recognition component. Do not send unsanitized
 input to an external model to decide what should have been removed.
 
-Presidio is a candidate component, not a complete security boundary or a pinned
-dependency selected by this document. It provides rule-based and entity-based
-recognizers and explicitly documents that automated detection can miss sensitive
-information. Freeze the selected version, languages and recognizer registry in
-PV-01/PV-13. [Presidio documentation](https://presidio.dataprivacystack.org/)
+RFC-0019 selects the local Presidio adapter, exact package/model versions and
+English-only allowlisted registry for PV-13. It remains a fallible component,
+not a complete security boundary. Its rule-based and entity-based recognizers
+can miss sensitive information. The frozen matrix is in
+[sanitizer-contract.json](sanitizer-contract.json).
+[Presidio documentation](https://presidio.dataprivacystack.org/)
 
 V1 category actions are `allow`, `redact`, `pseudonymize`, or `block`, within an
 explicit supported category/action matrix. `allow` is unavailable for the platform's

@@ -14,6 +14,21 @@ This RFC specifies the Event Store: the append-only, tamper-evident log that is 
 
 All derived state in RMS — memory objects, graph edges, entity snapshots, scores — is computed from this log. If derived state is lost or corrupted, it is rebuilt by replaying the log. The log itself is never rebuilt; it is always the ground truth.
 
+### Protected-store erasure amendment (RFC-0019, implementation pending)
+
+The [RFC-0019 privacy contract](RFC-0019-Evidence-Privacy.md#8-erasure-history-and-rebuild-amendment)
+qualifies the payload-immutability and rebuild promises above for protected stores.
+Authorized erasure may remove source content and content-bearing historical
+snapshots while preserving opaque event/operation identities and minimal erasure
+records. Intact historical versions/checksums keep their exact bytes. An erased
+payload is represented by a new unavailable/redacted envelope, never by recomputing
+its old checksum over replacement text. Sensitive old hashes must themselves be
+protected or removed; identity preservation does not require a public digest of
+predictable erased content. Rebuild uses surviving admitted memory, and cannot
+re-extract or replay erased sources. Raw-source recovery below must obey current
+expiry and erasure fences once protected mode is implemented. This amendment does
+not claim current stores implement content erasure or complete historical replay.
+
 ---
 
 ## 2. Storage Backend Requirements
