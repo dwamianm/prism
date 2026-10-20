@@ -503,6 +503,8 @@ class MemoryEngine:
         else:
             engine = await cls._create_duckdb(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
         engine._privacy.runtime = privacy_runtime
+        from prme.storage.erasure_indexes import attach
+        await attach(engine)
         await engine._privacy.processing.expire()
         return engine
 
@@ -667,6 +669,9 @@ class MemoryEngine:
 
             startup.push_async_callback(vector_index.close)
 
+            if not single_file and privacy_runtime is not None:
+                from prme.storage.erasure_indexes import recover_lexical_swaps
+                recover_lexical_swaps(conn, config.lexical_path)
             # Create lexical index. A single-file pack holds it in memory,
             # shared by every engine in this process that opens the pack and
             # built from the graph by the first of them, before any read.
@@ -1675,6 +1680,17 @@ class MemoryEngine:
     async def request_erasure(self, request, *, user_id: str):
         """Durably fence selected evidence or memory; purge is explicit maintenance."""
         return await self._privacy.erasure.request(request, user_id=user_id)
+
+    async def expire_privacy(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000):
+        from prme.storage.erasure import prepare_store
+        repository = self._privacy.repository
+        await prepare_store(conn=repository.conn, pool=repository.pool, conn_lock=repository.lock,
+                            runtime=self._privacy.require_runtime(), namespace_id=self._config.namespace_id)
+        return await self.process_erasures(user_id=user_id, limit=limit, budget_ms=budget_ms)
+
+    async def process_erasures(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000):
+        from prme.storage.erasure import process_erasures
+        return await process_erasures(self._privacy.erasure, user_id=user_id, limit=limit, budget_ms=budget_ms)
 
     async def get_erasure_status(self, request_id, *, user_id: str):
         async with self._privacy.erasure.guard():

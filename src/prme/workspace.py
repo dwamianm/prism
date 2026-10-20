@@ -471,6 +471,8 @@ class _PostgresWorkspace(MemoryWorkspace):
         config = self._config.model_copy(update={"namespace_id": namespace.id}, deep=True)
         engine = await MemoryEngine._create_postgres(config, embedding_provider=self._provider, namespace_pool=pool, privacy_runtime=runtime)
         engine._privacy.runtime = runtime
+        from prme.storage.erasure_indexes import attach
+        await attach(engine)
         self._entries[namespace.id] = _Entry(engine)
         self._condition.notify_all()
 

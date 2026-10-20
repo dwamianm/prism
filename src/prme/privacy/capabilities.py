@@ -200,5 +200,6 @@ class PrivacyRuntime:
     extractor: PrivacyExtractor | None = None
     retry_committer: RetryCommitter | None = None
     erasure_ledger: ErasureLedger | None = None
+    key_custody: object | None = None
     allow_unlimited_evidence: bool = False
     clock: Callable[[], datetime] = field(default=lambda: datetime.now(timezone.utc), repr=False)

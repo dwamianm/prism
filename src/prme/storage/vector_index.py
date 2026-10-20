@@ -312,6 +312,15 @@ class VectorIndex:
             )
 
     def _save_snapshot(self) -> None:
+        from prme.storage.erasure_indexes import enabled, native_fence, reconcile_vector
+        if enabled(self._conn):
+            with native_fence(self._conn) as fence:
+                reconcile_vector(self, fence)
+                self._persist_snapshot()
+        else:
+            self._persist_snapshot()
+
+    def _persist_snapshot(self) -> None:
         """Replace the last complete snapshot only after the new file is written.
 
         In a single-file pack the snapshot is the ``vector_snapshot`` row,
@@ -817,11 +826,13 @@ class VectorIndex:
                 # A snapshot row that already matches the index is not
                 # written again, so an open that only reads leaves the pack
                 # file unchanged.
-                if self._snapshot_dirty:
+                from prme.storage.erasure_indexes import enabled
+                if self._snapshot_dirty or enabled(self._conn):
                     async with self._conn_lock:
                         await run_to_completion(self._save_snapshot)
             else:
-                await run_to_completion(self._save_snapshot)
+                async with self._conn_lock:
+                    await run_to_completion(self._save_snapshot)
             self._unsaved_inserts = 0
 
     async def clear(self) -> None:

@@ -58,6 +58,19 @@ async def preflight_runtime(config, runtime: PrivacyRuntime | None) -> None:
         raise PrivacyDenied("privacy_boundary_mismatch")
     if policy.unlimited_evidence and not runtime.allow_unlimited_evidence:
         raise PrivacyDenied("privacy_configuration_invalid")
+    ledger_path = getattr(runtime.erasure_ledger, "path", None)
+    if ledger_path is not None and config.backend != "postgres":
+        from pathlib import Path
+        ledger_path = Path(ledger_path).resolve()
+        if config.single_file_pack:
+            invalid = ledger_path == Path(config.pack_path).resolve()
+        else:
+            invalid = any(ledger_path.is_relative_to(root) for root in (
+                Path(config.db_path).resolve().parent, Path(config.vector_path).resolve().parent,
+                Path(config.lexical_path).resolve(),
+            ))
+        if invalid:
+            raise PrivacyDenied("privacy_configuration_invalid")
     saved = snapshot(policy, None, runtime.clock())
     async with runtime.erasure_ledger.guard(), runtime.authority.guard(saved, "admission"):
         purposes = tuple(p for p, required in (("evidence", policy.capture != "none"),
@@ -368,7 +381,7 @@ class AdmissionCoordinator:
         event_id = uuid4()
         record = PrivacyRecord(event_id=event_id, snapshot=saved, source_id=source.source_id,
                                representation_id=source.representation_id, kind=kind,
-                               sanitization=self.sanitization_report(source))
+                               sanitization=self.sanitization_report(source), pseudonym_epoch=source.pseudonym_epoch)
         purposes = tuple(p for p, needed in (("evidence", saved.policy.capture != "none"),
                                             ("processing", kind == "extraction" and asynchronous)) if needed)
         runtime = self.require_runtime()

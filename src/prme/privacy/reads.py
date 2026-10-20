@@ -47,6 +47,7 @@ class ReadContext:
     selected_records: tuple[PrivacyRecord, ...] = ()
     source_nodes: dict[str, MemoryNode] = field(default_factory=dict)
     evidence_lease_active: bool = False
+    used_node_ids: set[UUID] = field(default_factory=set)
 
     @classmethod
     async def create(cls, coordinator, *, user_id: str, scopes=None, source_access=None):
@@ -123,12 +124,14 @@ class ReadContext:
             groups[None] = self.fallback_snapshot
         async with AsyncExitStack() as stack:
             for saved in groups.values():
-                await stack.enter_async_context(self.coordinator.guard(saved, effect, records=rows))
+                await stack.enter_async_context(self.coordinator.guard(saved, effect, records=rows, node_ids=self.used_node_ids))
             self.check_selected()
+            await self.coordinator.erasure.assert_records_current(self.selected_records, purpose="evidence")
             for row in rows:
                 self.coordinator.check_deadlines(row.snapshot)
             yield
             self.check_selected()
+            await self.coordinator.erasure.assert_records_current(self.selected_records, purpose="evidence")
             for row in rows:
                 self.coordinator.check_deadlines(row.snapshot)
             if self.fallback_snapshot is not None:
@@ -216,6 +219,14 @@ class ReadContext:
             return None if self.protected else node.model_copy(deep=True)
         if len(await self.coordinator.erasure.current_records(rows)) != len(rows):
             return None
+        try:
+            async with self.coordinator.erasure.guard(rows, node_ids=(node.id,)):
+                pass
+        except PrivacyDenied as exc:
+            if exc.code == "privacy_erased":
+                return None
+            raise
+        self.used_node_ids.add(node.id)
         self.protected = True
         self.records.update((row.event_id, row) for row in rows)
         await self.coordinator.check_disclosure(rows)
@@ -253,7 +264,9 @@ class ReadContext:
     def availability(self, record: PrivacyRecord) -> SourceAvailability:
         saved = record.snapshot
         now = self.coordinator.require_runtime().clock()
-        if saved.evidence_deadline is not None and now >= saved.evidence_deadline:
+        if record.evidence_disposition is not None:
+            state = record.evidence_disposition
+        elif saved.evidence_deadline is not None and now >= saved.evidence_deadline:
             state = "expired"
         elif saved.policy.capture == "none":
             state = "not_captured"
@@ -271,6 +284,9 @@ class ReadContext:
 
     async def event_view(self, event: Event):
         if not self.owns(event):
+            return None
+        enrolled = await self.coordinator.repository.get(str(event.id), user_id=self.user_id)
+        if enrolled is not None and not await self.coordinator.erasure.current_records((enrolled,)):
             return None
         record = await self.record_for_event(str(event.id))
         if record is None:

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "issue": 325,
   "acceptanceComplete": false,
-  "implementationStatus": "in_progress",
+  "implementationStatus": "purge_checkpoint_in_progress",
   "sourcePlan": "PV-06-plan.md",
   "originalAcceptanceCount": 6,
   "frozenRows": [
@@ -40,10 +40,39 @@
       "limitations": [
         "deterministic policy/model/sanitizer component inputs; no full ER row claimed"
       ]
+    },
+    {
+      "name": "startup SQL fence after native-save integration",
+      "result": "passed",
+      "count": 3,
+      "log": "/tmp/privacy325-purge-startup-1.log"
+    },
+    {
+      "name": "ER01 expiry and ER02 purge/support plus fence subchecks",
+      "result": "passed",
+      "count": 9,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-purge-expiry-checkpoint-1.log",
+      "limitations": [
+        "ER02 mixed-summary and foreign-owner controls remain pending",
+        "ER03 concurrent child/native effects remain pending",
+        "key OS adapter and policy/model inputs remain named fixtures"
+      ]
     }
   ],
   "pending": [
-    "final324 profile/summary/copy-manifest integration",
+    "ER02 actual mixed summary and foreign-owner controls",
+    "ER03 concurrency/cancellation and inherited child scope",
+    "ER04 crash ordering, durable swap interruption and persistent failures",
+    "ER05 pending extraction/profile recovery and removed work rows",
+    "ER06 independently loaded native save/close/rebuild and stale native snapshots",
+    "CL04/05/07 full real journal/native purge workflows",
+    "pseudonym/retry retirement subchecks and reference-aware proofs",
+    "final324 alias/task-ownership checkpoint",
     "ER07 actual326 restore",
     "ER08 actual326 export/backup",
     "327 full frozen product gate"
@@ -53,6 +82,12 @@
       "log": "/tmp/privacy325-ledger-fence-1.log",
       "reason": "fixture function imported as fixture name; collection only",
       "resolved": true
+    },
+    {
+      "log": "/tmp/privacy325-er02-support-1.log",
+      "reason": "new shared evidence fixture made event-node ordering non-unique; assertion now selects original node ID and still asserts exact admitted content",
+      "resolved": true,
+      "repairCycle": false
     }
   ]
 }

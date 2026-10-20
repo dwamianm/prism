@@ -94,3 +94,17 @@ class ErasureStatus(FrozenModel):
     backup_copies: Literal["not_managed", "pending", "expired"] = "not_managed"
     external_copies: Literal["not_managed"] = "not_managed"
     physical_wipe: Literal[False] = False
+
+
+class ErasedOperation(FrozenModel):
+    """Replacement record, never a redaction masquerading as an old checksum."""
+    schema_version: Literal[1] = 1
+    kind: Literal["erased_operation"] = "erased_operation"
+    operation_id: UUID
+    request_id: UUID
+    original_type: str = Field(min_length=1, max_length=128, pattern=r"^[A-Z][A-Z0-9_]*$")
+    owner_id: UUID
+    scope: Scope
+    state: Literal["erased"] = "erased"
+    replay: Literal["unavailable"] = "unavailable"
+    checksum: Literal["unavailable"] = "unavailable"
