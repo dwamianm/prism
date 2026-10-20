@@ -20,13 +20,13 @@ import sys
 import time
 
 from benchmarks.diagnostics.product_packing import _quiet_offline_cli, parse_overrides
-from benchmarks.fast_cycle import compare, contextual, ingest, store, store_extract
+from benchmarks.fast_cycle import compare, contextual, ingest, reingest, store, store_extract
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_BASELINE = store.FIXTURES / "baseline-main.json"
 STAGES = ("store", "ingest", *compare.STORE_STAGES[1:])
-# The other stages are opt-in: the store-extract ones make a model request per memory on a cold cache, and
-# store-contextual asks a model for a sentence per memory unless the committed cache holds it.
+# The other stages are opt-in: the store-extract ones and reingest make a model request per memory on a cold cache,
+# and store-contextual asks a model for a sentence per memory unless the committed cache holds it.
 DEFAULT_STAGES = ("store", "ingest")
 DATABASE_URL_ENV = "PRME_FAST_CYCLE_DATABASE_URL"
 
@@ -63,6 +63,9 @@ async def run_stages(out: Path, *, stages: tuple[str, ...], overrides: dict, mod
         elif name == "store-contextual":
             results[name] = await contextual.run(work, overrides=overrides, database_url=database_url,
                                                  use_cache=use_cache, **(contextual_options or {}))
+        elif name == reingest.STAGE:
+            results[name] = await reingest.run(work, cache_dir=cache_dir, use_cache=use_cache, overrides=overrides,
+                                               model=model)
         elif name in compare.EXTRACT_STAGES:
             results[name] = await store_extract.run(work, cache_dir=cache_dir, use_cache=use_cache, overrides=overrides,
                                                     model=model, session_ids=name == store_extract.SESSION_STAGE)
@@ -117,6 +120,15 @@ def report_markdown(report: dict, rules: dict) -> str:
                       f"{' and each session as session_id' if entry['session_ids'] else ''}, extraction by "
                       f"`{entry['model']}`: {entry['live_calls']} model requests and {entry['cache_hits']} replayed from "
                       f"the extraction cache ({entry['mode']})."]
+    if reingest.STAGE in stages:
+        entry, info = stages[reingest.STAGE], stages[reingest.STAGE]["reingest"]
+        first = info["first"]
+        lines += [f"Reingest: the same {entry['calls']} memories stored plainly, then `reingest()`: "
+                  f"{first['processed']} of {first['total']} memories re-derived with {first['model_calls']} model "
+                  f"requests by `{entry['model']}` ({entry['live_calls']} asked the model and {entry['cache_hits']} were "
+                  f"replayed from the extraction cache, {entry['mode']}); a second run re-derived "
+                  f"{info['second']['processed']}; the sources and raw notes "
+                  f"{'are unchanged' if info['sources_unchanged'] else 'CHANGED'}."]
     if "ingest" in stages:
         entry = stages["ingest"]
         lines += [f"Ingest: {sum(chat['turns'] for chat in entry['conversations'].values())} turns of "
@@ -149,7 +161,22 @@ def report_markdown(report: dict, rules: dict) -> str:
                                                     for key, rank in ranks.items()])
     if "store" in stages and any(name in stages for name in compare.EXTRACT_STAGES):
         lines += _extraction_effect(stages)
+    if reingest.STAGE in stages:
+        lines += _reingest_effect(stages[reingest.STAGE])
     return "\n".join(lines) + "\n"
+
+
+def _reingest_effect(entry: dict) -> list[str]:
+    """Each answer's rank before and after the re-derivation of the plainly stored memories."""
+    lines = ["", "## Re-ingest against plain store", "",
+             "The same memories and questions, asked of the plainly stored pack and again after `reingest()`. "
+             "Rank is the place of the first result that holds the answer (none when no result does); a star "
+             "marks a stale value ranked above it.", ""]
+    rows = []
+    for before, after in zip(entry["before"], entry["questions"]):
+        rows.append([after["question"], *(f"{compare.number(row['answer_rank'])}{'*' if row['stale_above_answer'] else ''}"
+                                         for row in (before, after))])
+    return lines + _table(["Question", "Before", "After"], rows)
 
 
 def _extraction_effect(stages: dict) -> list[str]:
