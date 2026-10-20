@@ -154,22 +154,23 @@ class ReingestRepository:
         batch (a turn asked on its own) only the turn's output is saved.
         """
         async with self._work.session(transaction=True) as session:
-            await require_legacy_session(session, batch.user_id, batch.scope.value)
-            # The saved batch includes omitted/retried turns and prior context,
-            # not only the records this particular response happened to yield.
-            for turn in batch.turns:
-                rows = await session.fetch(
-                    "SELECT user_id,scope,content_hash FROM events WHERE id=$1", str(turn.event_id))
-                if not rows:
-                    raise ValueError("Extraction requires a matching persisted source event")
-                row = rows[0]
-                batch.verify_turn(turn.event_id, row["user_id"], row["scope"], row["content_hash"])
-                await require_legacy_session(session, row["user_id"], row["scope"])
-            for memory in batch.memories:
-                rows = await session.fetch("SELECT user_id,scope FROM nodes WHERE id=$1", str(memory.node_id))
-                if not rows or (rows[0]["user_id"], rows[0]["scope"]) != (batch.user_id, batch.scope.value):
-                    from prme.privacy.policy import PrivacyDenied
-                    raise PrivacyDenied("privacy_provider_unavailable")
+            if batch is not None:
+                await require_legacy_session(session, batch.user_id, batch.scope.value)
+                # The saved batch includes omitted/retried turns and prior context,
+                # not only the records this particular response happened to yield.
+                for turn in batch.turns:
+                    rows = await session.fetch(
+                        "SELECT user_id,scope,content_hash FROM events WHERE id=$1", str(turn.event_id))
+                    if not rows:
+                        raise ValueError("Extraction requires a matching persisted source event")
+                    row = rows[0]
+                    batch.verify_turn(turn.event_id, row["user_id"], row["scope"], row["content_hash"])
+                    await require_legacy_session(session, row["user_id"], row["scope"])
+                for memory in batch.memories:
+                    rows = await session.fetch("SELECT user_id,scope FROM nodes WHERE id=$1", str(memory.node_id))
+                    if not rows or (rows[0]["user_id"], rows[0]["scope"]) != (batch.user_id, batch.scope.value):
+                        from prme.privacy.policy import PrivacyDenied
+                        raise PrivacyDenied("privacy_provider_unavailable")
             for record in records:
                 rows = await session.fetch(
                     "SELECT user_id, scope, content_hash FROM events WHERE id = $1", str(record.event_id),
@@ -178,7 +179,9 @@ class ReingestRepository:
                     raise ValueError("Extraction requires a matching persisted source event")
                 row = rows[0]
                 record.verify_source(row["user_id"], row["scope"], row["content_hash"])
-                if batch is not None:
+                if batch is None:
+                    await require_legacy_session(session, row["user_id"], row["scope"])
+                else:
                     batch.verify_turn(record.event_id, row["user_id"], row["scope"], row["content_hash"])
             if batch is not None:
                 await session.execute(

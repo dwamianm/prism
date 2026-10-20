@@ -3,6 +3,8 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
+import pytest
+
 from prme import MemoryEngine
 from prme.ingestion.extraction import _extraction_prompt_for_role, _window_message
 from prme.ingestion.schema import ExtractionResult
@@ -130,6 +132,37 @@ class TestOwnerWideWindow:
             await say_plain(engine, user, "First.", minutes=0)
             await say_plain(engine, user, "Second.", minutes=1)
         assert [call["context"] for call in calls] == [[], []]
+
+
+class TestPrivacy:
+    async def test_a_protected_turn_gets_no_window(self, config, user):
+        from prme.privacy.records import PRIVACY_KEY
+
+        async with MemoryEngine.open(windowed(config, owner_wide=True)) as engine:
+            engine._pipeline._extraction_provider.extract = recorder([])
+            await say_plain(engine, user, "An earlier memory.", minutes=0)
+            await say_plain(engine, user, "A protected one.", minutes=1)
+            event = (await engine.get_events(user_id=user, limit=10))[0]
+            assert event.content == "A protected one."
+            protected = event.model_copy(update={"metadata": {**(event.metadata or {}), PRIVACY_KEY: {}}})
+            assert await engine._pipeline._extraction_window(protected) == []
+            assert [item.content for item in await engine._pipeline._extraction_window(event)] == ["An earlier memory."]
+
+    async def test_a_window_memory_the_privacy_policy_protects_is_refused(self, config, user):
+        from prme.privacy.policy import PrivacyDenied
+
+        class Coordinator:
+            async def require_legacy_inputs(self, events=(), nodes=()):
+                raise PrivacyDenied("privacy_provider_unavailable")
+
+        async with MemoryEngine.open(windowed(config, owner_wide=True)) as engine:
+            engine._pipeline._extraction_provider.extract = recorder([])
+            await say_plain(engine, user, "An earlier memory.", minutes=0)
+            await say_plain(engine, user, "The next one.", minutes=1)
+            event = (await engine.get_events(user_id=user, limit=10))[0]
+            engine._pipeline._privacy = Coordinator()
+            with pytest.raises(PrivacyDenied):
+                await engine._pipeline._extraction_window(event)
 
 
 class TestWhenThereIsNoWindow:

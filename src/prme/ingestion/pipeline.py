@@ -900,6 +900,11 @@ class IngestionPipeline:
             return []
         if not event.session_id and not self._extraction_window_owner_wide:
             return []
+        from prme.privacy.records import PRIVACY_KEY
+
+        if PRIVACY_KEY in (event.metadata or {}):
+            # Protected work shows the provider only what its snapshot admits, never other memories.
+            return []
         earlier = await self._event_store.get_by_user(
             event.user_id,
             session_id=event.session_id,
@@ -907,7 +912,11 @@ class IngestionPipeline:
             limit=self._extraction_window_turns,
             before=event,
         )
-        return [item for item in reversed(earlier) if item.content]
+        window = [item for item in reversed(earlier) if item.content]
+        if window and self._privacy is not None:
+            # The window goes to the provider, so it holds no memory the privacy policy protects.
+            await self._privacy.require_legacy_inputs(window)
+        return window
 
     async def _extract_turn(self, event: Event) -> ExtractionRecord:
         """Ask for one turn's own extraction, with its window and resolved text when on, and check the output."""
@@ -956,8 +965,16 @@ class IngestionPipeline:
         on (#91). There is no batch record then: the checked output is saved as
         the turn's alone, through the run.
         """
+        async def check():
+            if self._privacy is not None:
+                await self._privacy.require_legacy_inputs([event])
+            if run.check is not None:
+                await run.check()
+
+        await check()
         run.requests += 1
         record = await self._extract_turn(event)
+        await check()
         await self._write_queue.submit(lambda: run.save(None, [record]), label=f"extraction.record:{event.id}")
 
     async def _extract_or_load(self, event: Event, *, claim: ExtractionClaim | None = None,
