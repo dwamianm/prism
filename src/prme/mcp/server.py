@@ -18,7 +18,7 @@ from pydantic import AwareDatetime, StrictBool, TypeAdapter
 
 from prme import __version__
 from prme.config import PRMEConfig
-from prme.ingestion.errors import MaterializationError, extraction_failure_code
+from prme.ingestion.errors import MaterializationError, ReingestBusyError, ReingestDisabledError, extraction_failure_code
 from prme.models.aggregation import AssertionQuery, QuantityAggregationQuery
 from prme.models.temporal import AssertionStateQuery
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
@@ -1455,6 +1455,38 @@ async def memory_process_extractions(limit: int = 100, budget_ms: float = 5000, 
         return _internal_error("memory_process_extractions", exc)
 
 
+async def memory_reingest(
+    limit: int | None = None,
+    cursor: str | None = None,
+    dry_run: bool = False,
+    scope: Scope | None = None,
+    ctx: Context = None,
+) -> str:
+    """Re-derive this caller's stored memories after an engine change; calls a model unless dry_run.
+
+    Runs the batched extraction over the caller's memories again, in event
+    order, and replaces the claims derived from each source. Source events and
+    raw notes are never changed. Sources already re-derived under the same
+    settings are skipped. limit caps the memories one call takes; the result's
+    cursor continues after them. dry_run counts the memories and model requests
+    and does no work. The server must run with enable_reingest on.
+    """
+    engine = _get_engine(ctx)
+    try:
+        result = await engine.reingest(
+            _get_user_id(engine, required=True), scope=scope, limit=limit, cursor=cursor, dry_run=dry_run,
+        )
+        return result.model_dump_json()
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    except (ReingestDisabledError, ReingestBusyError) as exc:
+        return json.dumps({"error": str(exc)})
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_reingest", exc)
+
+
 async def memory_promote_node(
     node_id: str,
     request_id: str | None = None,
@@ -1740,6 +1772,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_record_answer_citations, memory_get_answer_citations,
                  memory_list_answer_citations,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,
+                 memory_reingest,
                  memory_promote_node, memory_archive_node, memory_evaluate_condition,
                  memory_get_provenance, memory_supersede, memory_mark_contradiction,
                  memory_resolve_contradiction):

@@ -261,6 +261,16 @@ class ExtractionProcessRequest(BaseModel):
     budget_ms: float = Field(default=5000, ge=0, allow_inf_nan=False)
 
 
+class ReingestRequest(BaseModel):
+    """Re-derive one owner's stored memories after an engine change; calls the extraction model unless ``dry_run``."""
+
+    user_id: str | None = None
+    scope: Scope | None = Field(default=None, description="Only the owner's memories in this scope; omitted visits every scope")
+    limit: int | None = Field(default=None, ge=0, le=1_000_000, description="The most memories to re-derive in this call; omitted takes all that are not current")
+    cursor: str | None = Field(default=None, max_length=1024, description="The cursor of an earlier result, to continue after it")
+    dry_run: bool = Field(default=False, description="Count the memories and model requests a run would take, and do no work")
+
+
 class MaterializationProcessRequest(BaseModel):
     """Process saved source/index work without invoking extraction."""
 

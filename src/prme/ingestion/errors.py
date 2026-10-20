@@ -21,6 +21,14 @@ class ExtractionError(IngestionError):
         super().__init__(message)
 
 
+class ReingestDisabledError(IngestionError):
+    """Re-deriving stored sources is off for this engine (``enable_reingest``)."""
+
+
+class ReingestBusyError(IngestionError):
+    """A re-derivation of this owner's sources is already running in this engine."""
+
+
 class WriteQueueError(IngestionError):
     """Error during write queue operation.
 

@@ -28,6 +28,7 @@ from prme.storage.fast_ingest import (
     validate_fast_ingest_record,
 )
 from prme.models.extraction_work import ExtractionClaim, StaleExtractionClaimError
+from prme.storage.reingest import ReingestRepository
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ class PgEventStore:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
         self.extraction_work = ExtractionWorkRepository(pool=pool)
+        self.reingest = ReingestRepository(self.extraction_work)
 
     async def get_derivation_receipt(self, event_id: str, *, user_id: str) -> DerivationReceipt | None:
         """Read verified completion through the immutable source owner's scope."""

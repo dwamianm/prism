@@ -37,7 +37,7 @@ from uuid import UUID, uuid4
 import duckdb
 
 from prme.config import PRMEConfig
-from prme.ingestion.errors import MaterializationError, extraction_failure_code
+from prme.ingestion.errors import MaterializationError, ReingestDisabledError, extraction_failure_code
 from prme.models import (
     Event,
     FastIngestItem,
@@ -50,6 +50,7 @@ from prme.models import (
 from prme.models.provenance import NodeProvenance
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.models.reingest import ReingestResult
 from prme.storage.index_eviction import delete_from_indexes
 from prme.quality.feedback import FeedbackSignal, FeedbackTracker
 from prme.models.relevance import (
@@ -2095,6 +2096,65 @@ class MemoryEngine:
         configured timeouts. Failed counts are terminal jobs needing retry.
         """
         return await self._pipeline.process_extractions(user_id=user_id, limit=limit, budget_ms=budget_ms)
+
+    async def reingest(
+        self,
+        user_id: str,
+        *,
+        scope: Scope | str | None = None,
+        limit: int | None = None,
+        cursor: str | None = None,
+        dry_run: bool = False,
+    ) -> ReingestResult:
+        """Re-derive one owner's stored memories, after an engine change improved how they are derived.
+
+        A memory stored before the change keeps the entities, claims and links
+        the engine derived then, or none when ``store()`` saved it plainly. This
+        runs the batched extraction ``ingest()`` runs over the owner's sources
+        again, in event order, and publishes what the present engine derives:
+        new entities, claims and links, with the owner's earlier claims from the
+        same source superseded by the claims that restate them, or archived with
+        a pointer to the claims that replaced them. The source events and their
+        raw notes are never changed or deleted. Only this owner's sources are
+        touched.
+
+        A second run over the same data does nothing for the sources already
+        re-derived under the same settings, so a stopped run continues where it
+        stopped. The settings are the engine version, the extraction model and
+        prompt, and the options that decide what is derived. Memories whose own
+        extraction has not finished are left for ``process_extractions()``.
+        A call can stop early: three requests in a row that fail end it, and the
+        sources it did not reach stay not current.
+
+        Args:
+            user_id: The owner whose sources are re-derived.
+            scope: Only the owner's sources in this scope; ``None`` for every scope.
+            limit: The most sources this call re-derives, in event order;
+                ``None`` for all that are not current. The result says how many
+                remain.
+            cursor: The ``cursor`` of an earlier result, to continue after the
+                last source it took. Without one the call starts at the first
+                source that is not current.
+            dry_run: Count what a run would do and send no model request: the
+                result has the sources it would take and the requests it would
+                send (``model_calls``), and ``processed`` is 0.
+
+        Raises:
+            ReingestDisabledError: When ``enable_reingest`` is off.
+            ReingestBusyError: When this engine is already running a
+                re-derivation for the owner.
+            ValueError: Without an ingestion pipeline or batched extraction
+                (``extraction_batch_target_tokens`` above 0), or for a bad
+                ``limit`` or ``cursor``.
+        """
+        if not self._config.enable_reingest:
+            raise ReingestDisabledError(
+                "Re-deriving stored sources is off for this engine; set enable_reingest (PRME_ENABLE_REINGEST) to turn it on"
+            )
+        if self._pipeline is None:
+            raise ValueError("reingest() needs an ingestion pipeline, and this engine has none")
+        return await self._pipeline.reingest(user_id=user_id, scope=scope, limit=limit, cursor=cursor,
+                                             dry_run=dry_run)
 
     # ------------------------------------------------------------------
     # Visual memory (RFC-0018, phase 1)

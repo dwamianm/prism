@@ -61,6 +61,7 @@ from prme.models.processing import (
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.models.reingest import ReingestResult
 from prme.models.value_bindings import MemoryValueBinding
 from prme.types import ConditionEvaluationMethod, ConditionState, EpistemicType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope, SourceType
 from prme.models import Event, MemoryNode
@@ -884,6 +885,11 @@ class MemoryClient:
     def retry_extraction(self, event_id: str, *, user_id: str, replan: bool = False) -> ExtractionStatus | None:
         """Queue an owned extraction retry; execute it with process_extractions()."""
         return self._run(self._engine.retry_extraction(event_id, user_id=user_id, replan=replan))
+
+    def reingest(self, user_id: str, *, scope: Scope | str | None = None, limit: int | None = None,
+                 cursor: str | None = None, dry_run: bool = False) -> ReingestResult:
+        """Re-derive one owner's stored memories under the present engine; see ``MemoryEngine.reingest``."""
+        return self._run(self._engine.reingest(user_id, scope=scope, limit=limit, cursor=cursor, dry_run=dry_run))
 
     def process_extractions(self, *, user_id: str, limit: int = 100,
                             budget_ms: float = 5000) -> ExtractionProcessingResult:
