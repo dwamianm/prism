@@ -33,7 +33,7 @@ dependencies = [
     "anthropic>=0.80",
     "ollama>=0.6",
     "dateparser>=1.2",
-    "cryptography>=43.0",
+    "cryptography==50.0.2",
     "filelock>=3.16",
     "httpx>=0.27",
     "tiktoken>=0.12",
@@ -53,6 +53,9 @@ prme = "prme.cli:main"
 prme-mcp = "prme.mcp:main"
 
 [project.optional-dependencies]
+local-privacy = [
+    "keyring==25.7.0",
+]
 postgres = [
     "asyncpg>=0.29.0",
     "pgvector>=0.3.0",

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "source": "https://raw.githubusercontent.com/pyca/cryptography/50.0.2/vectors/cryptography_vectors/ciphers/AES/GCM/gcmEncryptExtIV256.rsp",
+  "description": "Fixed AES-256-GCM CAVP subset; public synthetic test material only.",
+  "aes_gcm": [
+    {
+      "Key": "b52c505a37d78eda5dd34f20c22540ea1b58963cf8e5bf8ffa85f9f2492505b4",
+      "IV": "516c33929df5a3284ff463d7",
+      "PT": "",
+      "AAD": "",
+      "CT": "",
+      "Tag": "bdc1ac884d332457a1d2664f168c76f0"
+    },
+    {
+      "Key": "92e11dcdaa866f5ce790fd24501f92509aacf4cb8b1339d50c9c1240935dd08b",
+      "IV": "ac93a1a6145299bde902f21a",
+      "PT": "2d71bcfa914e4ac045b2aa60955fad24",
+      "AAD": "1e0889016f67601c8ebea4943bc23ad6",
+      "CT": "8995ae2e6df3dbf96fac7b7137bae67f",
+      "Tag": "eca5aa77d51d4a0a14d9c51e1da474ab"
+    },
+    {
+      "Key": "dad89d9be9bba138cdcf8752c45b579d7e27c3dbb40f53e771dd8cfd500aa2d5",
+      "IV": "cfb2aec82cfa6c7d89ee72ff",
+      "PT": "b526ba1050177d05b0f72f8d67",
+      "AAD": "6e43784a91851a77667a02198e28dc32",
+      "CT": "8b29e66e924ecae84f6d8f7d68",
+      "Tag": "1e365805c8f28b2ed8a5cadfd9079158"
+    }
+  ]
+}
