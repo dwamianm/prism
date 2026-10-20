@@ -46,10 +46,25 @@ STRUCTURE_OPTIONS = (
     "PRME_ENABLE_INGEST_CLAIM_FIXES",
     "PRME_ENABLE_MENTION_LINKS",
     "PRME_ENABLE_OWNER_NAME_CARRY",
+    "PRME_ENABLE_OWNER_GROUP_LINKS",
     "PRME_PACKING__GRAPH_SEED_WORDS",
     "PRME_PACKING__FOLDED_RECORDS_KEEP_RANK",
     "PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES",
 )
+# Scoring defaults the alpha channel turned on. They are kept off by taking them out of the product's default
+# settings, not by an environment variable: a PRME_SCORING__ variable would make PRMEConfig fill rank fusion's
+# defaults into weighted scoring that a test passes in code as a dict, which leaves out the weighted fusion.
+ALPHA_SCORING = {"rrf_graph_seed_count": True}
+
+
+def product_defaults(monkeypatch):
+    """Undo ``structure_options_off`` for a test that checks the defaults."""
+    from prme.retrieval.config import DEFAULT_SCORING_SETTINGS
+
+    for name in STRUCTURE_OPTIONS:
+        monkeypatch.delenv(name)
+    for name, value in ALPHA_SCORING.items():
+        monkeypatch.setitem(DEFAULT_SCORING_SETTINGS, name, value)
 
 
 @pytest.fixture(autouse=True)
@@ -59,15 +74,21 @@ def structure_options_off(monkeypatch):
     The alpha channel turned ``enable_ingest_claim_fixes``, ``enable_mention_links``,
     ``enable_owner_name_carry``, ``packing.graph_seed_words``,
     ``packing.folded_records_keep_rank`` (0.16.0a3) and
-    ``packing.session_context_skip_entities`` (0.16.0a4) on (2026-10-19). Most tests count
+    ``packing.session_context_skip_entities`` (0.16.0a4) on (2026-10-19), and
+    ``enable_owner_group_links`` (prism-monorepo issue 275) and ``scoring.rrf_graph_seed_count``
+    (prism-monorepo issue 276) after them. Most tests count
     claims, edges and ranks that those options change, and the off path stays supported, so a test starts with all
-    six off, as the batching variable above starts every test at one call per turn, and turns
+    eight off, as the batching variable above starts every test at one call per turn, and turns
     on what it tests. The tests of the options themselves compare each on against off, and a test
-    that checks the defaults removes these variables first (``tests/test_default_structure_options.py``
+    that checks the defaults calls ``product_defaults`` first (``tests/test_default_structure_options.py``
     runs the issue's repro with the defaults).
     """
+    from prme.retrieval.config import DEFAULT_SCORING_SETTINGS
+
     for name in STRUCTURE_OPTIONS:
         monkeypatch.setenv(name, "false")
+    for name in ALPHA_SCORING:
+        monkeypatch.delitem(DEFAULT_SCORING_SETTINGS, name)
 
 
 @pytest.fixture

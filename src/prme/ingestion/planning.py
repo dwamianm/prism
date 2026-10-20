@@ -124,12 +124,22 @@ class PlanningGraph:
         self._scan_page = {node.id: node for node in page if node.id not in self.nodes}
         return [node.model_copy(deep=True) for node in page]
 
-    async def get_edges(self, *, source_id: str) -> list[MemoryEdge]:
-        if await self.get_node(source_id) is None:
+    async def get_edges(
+        self, *, source_id: str | None = None, target_id: str | None = None, edge_type: EdgeType | None = None,
+    ) -> list[MemoryEdge]:
+        """The durable and planned edges from ``source_id``, or into ``target_id``; give exactly one."""
+        if (source_id is None) == (target_id is None):
+            raise ValueError("Give exactly one of source_id and target_id")
+        node_id = source_id if source_id is not None else target_id
+        if await self.get_node(node_id) is None:
             return []
-        durable = await self.graph.get_edges(source_id=source_id)
+        if source_id is not None:
+            durable = await self.graph.get_edges(source_id=source_id, edge_type=edge_type)
+        else:
+            durable = await self.graph.get_edges(target_id=target_id, edge_type=edge_type)
         return [edge.model_copy(deep=True) for edge in durable + self.edges
-                if str(edge.source_id) == source_id and edge.user_id == self.event.user_id]
+                if str(edge.source_id if source_id is not None else edge.target_id) == node_id
+                and edge.user_id == self.event.user_id and edge_type in (None, edge.edge_type)]
 
     def is_retired(self, node_id: str) -> bool:
         """Whether this plan replaces the node."""

@@ -496,8 +496,13 @@ class PgEventStore:
         scopes: list[Scope] | None = None,
         limit: int = 100,
         offset: int = 0,
+        until: datetime | None = None,
     ) -> list[Event]:
-        """Retrieve events for a user, optionally filtered by session and scope."""
+        """Retrieve events for a user, optionally filtered by session and scope.
+
+        With ``until``, only events recorded at or before that ingestion time;
+        a time without a zone is read as UTC.
+        """
         conditions: list[str] = ["user_id = $1"]
         params: list = [user_id]
         idx = 2
@@ -512,6 +517,12 @@ class PgEventStore:
             conditions.append(f"scope IN ({placeholders})")
             params.extend(s.value for s in scopes)
             idx += len(scopes)
+
+        if until is not None:
+            conditions.append(f"timestamp <= ${idx}")
+            # A time without a zone is read as UTC, as event timestamps are stored.
+            params.append(until if until.tzinfo is not None else until.replace(tzinfo=timezone.utc))
+            idx += 1
 
         where = " AND ".join(conditions)
         query = (

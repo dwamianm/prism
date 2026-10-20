@@ -1806,6 +1806,207 @@ evidence packed is not clearly better, and single-hop all evidence packed is 0.4
 evidence. It does nothing for a store with no entities or with `session_context_window=0`. The full benchmark
 audit and the default-change rule's answer runs are pending.
 
+### We claims linked to their members (prism-monorepo #275)
+
+A claim stated with "We" hung on a `We` entity that exists for one message, so the graph did not know who made the
+decision, and two "We" claims never shared a subject. `enable_owner_group_links` (#315) linked such a claim to the
+owner only. It now also links it to each person the session names with the owner, and the same "We" claim
+repeated in one session merges, and the alpha channel turns it on (`docs/ENTITY-IDENTITY.md` has the rule).
+
+- **The rule.** A `user` turn's we, us or our claim keeps its literal "We" and its group subject, and gains a
+  `group_member` link to the owner and, when the owner's turns of the session up to the claim's turn name exactly
+  one group ("My partner Jordan and I", "Jordan and I", "me and Jordan"), to each named person entity; that link
+  records the naming turn in `named_in`. Two different groups, a member without a name ("my wife and I") or a name
+  no single person entity has link the owner only. "and I" counts only after members that start a clause, so "I
+  got the offer from Brightpath and I accepted it" names no group.
+- **Why only the turns up to the claim's turn.** A batched request extracts turns that later turns of the session
+  were ingested with, so reading the whole session would give a batched build and a per-turn build different links.
+  The event stores gained `until` for that read.
+- **Why the merge looks through the owner.** A "We" entity is local to its message, so the plan never found an
+  earlier copy on the subject the way it does for a named speaker's "I". The earlier copy is linked to the owner, so
+  the plan finds it there (same session, same claim, we in the same field).
+
+The tiers ran on this branch rebased on `origin/main` at `19210c2b` (the entity skip default, #316), again on
+`13b25058` (0.16.0a4, which changed only the version) and again after rebasing onto `46422fd5` (0.16.0a5, with
+`reingest()`), with `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6),
+every extraction replayed from the caches (0 model calls). "Off" sets `enable_owner_group_links=false`, "on" is
+this branch's defaults:
+
+```sh
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label off --model deepseek-v4.1-flash:cloud --cloud --set enable_owner_group_links=false
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label on --model deepseek-v4.1-flash:cloud --cloud
+uv run python -m benchmarks.fast_cycle run --label on --out /tmp/on --stages store,ingest,store-extract
+uv run python -m benchmarks.mid_tier run --label off --out /tmp/mid-off --set enable_owner_group_links=false
+uv run python -m benchmarks.mid_tier run --label on --out /tmp/mid-on
+uv run python -m benchmarks.mid_tier compare /tmp/mid-off /tmp/mid-on
+```
+
+The mid tier built both sides warm (0 live calls, 1,186 cache hits each), 14 min 38 s and 15 min 01 s.
+Its two LoCoMo losses (`conv-44-q0036`, `conv-47-q0008`) and one gain (`conv-50-q0152`) are the only
+questions whose packed evidence changed.
+
+| Tier | Result with the option on against off |
+|---|---|
+| Defect probes | 7/7 in the top 3 and top 5 on both sides, every probe rank equal; user claims on the named owner 12 against 5 on "I" or "We" on both sides; key links linked 4 to 9 of 14 (via pronoun 3 to 0, not linked 7 to 5): the five links the key gains for the "We" claims |
+| Chat probe (`chat-v1`) | every measure and every probe rank equal (14/18 in the top 3, 15/18 in the top 5, 17/18 in context); its three "We" claims come from sessions that name no group and get the owner link only |
+| Corrections probe | every measure equal |
+| Fast cycle, DuckDB, against the committed baseline before this change | pass: 0 failed, 3 moved, 165 unchanged; only the edges per turn move, by the links (`chat-v1` +0.056, `corrections-v1` +0.063, `defects-v1` +0.429). Off: 168 unchanged |
+| Offline evidence gate | no row differs on either benchmark, 0 wins and 0 losses (LoCoMo all evidence packed 84.0%, projected 77.6%; LongMemEval-S 94.7% and 91.4%), no question lost its candidates; the saved `store()` packs hold no extracted records, so this shows only that plain retrieval is left alone |
+| Mid tier, LoCoMo | no measure clear of zero: all evidence packed -0.1 (95% questions -0.3 to +0.1, conversations -0.3 to +0.1), 1 win and 2 losses; evidence recall +0.0, 2 wins and 3 losses; evidence in the top 25 +0.1 (+0.0 to +0.3), 2 wins and 0 losses; projected accuracy -0.0 (-0.2 to +0.1); multi-hop all evidence packed -0.7 (-1.8 to +0.0), 0 wins and 2 losses |
+| Mid tier, LongMemEval-S (12 questions) | unchanged in every measure |
+
+The links on the `defects-v1` pack: "We chose Tokyo, Kyoto, Kanazawa, and Osaka.", "We dropped Hiroshima to save
+time." and the statement "The speaker's group dropped to save time Hiroshima." each link to Alex Rivera and to
+Jordan, whom the first turn names ("My partner Jordan and I"); "We chose Postgres partitioning over TimescaleDB for
+the shipment table." and "We dropped the idea of self-hosting." link to Alex Rivera only, because the work session
+names no group. The probe key gains the entities Hiroshima and TimescaleDB and five links (Alex and Jordan to Tokyo
+and to Hiroshima, Alex to TimescaleDB), so the fast cycle baseline (`baseline-main.json`) was taken again: against
+the one before, it moves the three edge counts above and, from the key alone, `defects-v1` key entities found 9 to
+11 and key links linked 4 to 9. `chat-v1` keeps its key: its "We" claims link Dana only, and every Dana link they
+could add is already linked by another claim.
+
+After review, the merge reads only the owner's own group links (another speaker's identical claim never
+retires the owner's), a member is matched by the full name, and the phrase reader works in linear time with a
+cap of 16 members and 4,096 words a turn. After the rebase onto 0.16.0a5, at `49fad815`, the defect probes and
+the chat probe give the same reports as above (0 model calls), the fast cycle against main's committed baseline
+passes with only the three edge counts moved (option off: 168 unchanged), and the baseline taken there equals the
+branch's earlier one on all 168 measures. The opt-in `reingest` stage gives 36 equal measures off and on: its
+plain stores name no session and no owner, so they get no group link. `reingest()` plans each source through the
+pipeline's own planning and links after its commit, so a re-derived chat gets the links a fresh `ingest()`
+gives, and a repeated "We" claim of a session merges into one current record
+(`tests/test_group_members.py::TestReingest`).
+
+What it does not do: it does not move the cities claim up the ranked list, because the default rank fusion does not
+read graph links (#276). Lower-case names ("jordan and i") are not read as names, and a group named with a word the
+rule does not list ("my bandmates and I") is not seen, so another group named in the same session can then be linked
+on its own. The full benchmark audit and the default-change rule's answer runs are pending.
+
+### Graph seed count (prism-monorepo issue 276)
+
+`scoring.rrf_graph_seed_count` makes the graph count in rank fusion with a list that tells records apart. It took three
+versions of the rule; the third passed the alpha fast tiers and is on by default in the alpha channel
+(`PRME_SCORING__RRF_GRAPH_SEED_COUNT=false` restores the scoring of 0.16.0a5). Every run used
+`deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6) replayed from the extraction caches, so no model call was made.
+The branch is stacked on prism-monorepo#275 (`ecb127d6`, on the 0.16.0a5 release `46422fd5`).
+
+**The rule** (third version). The hop count list of "Graph fusion" gives every graph candidate a rank by its distance
+from a seed, so the owner's own claims, all one hop from the owner, rise together. The seed count list holds only a
+record that
+
+- two or more of the question's seeds reach within `graph_max_hops`, along links that never pass through the owner's
+  entity (an entity a user turn named as the owner, or the owner reference);
+- one of those seeds links to directly;
+- the semantic search ranks in its top 10 (`RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP`), so the list reorders records that
+  already match the question instead of lifting the ones near its names;
+- is not an entity, whose text is only its name.
+
+It ranks more seeds first, then the smaller total hop count, and adds `weight / (rrf_k + rank)` before the scale, as
+the hop count list does; the weight is `rrf_graph_weight`, 0.5 when unset, and the settings record it, and the
+version id names the rule and its constant (`graph_rule=seed_count:top=10`). A record that session, episode or
+evidence augmentation context pulls in inherits its trigger's score without the graph term, which only the trigger's
+own links earned, and its saved provenance drops the trigger's `graph_rank` so it replays; evidence projection, which
+replaces a claim with its source, keeps the claim's whole score. The walk reads the links of the nodes the graph
+search found nearer than `graph_max_hops` once more, never those of an owner entity the question does not name, and
+nothing for a question with fewer than two seeds. Past 5,000 nodes to read it is skipped, and a failed read keeps
+every graph candidate; the response metadata's `graph_seed_reach` then says `neighborhood_limit` or `backend_error`.
+Only a record among the graph search's kept candidates (`graph_max_candidates`, newest first at equal confidence) can
+join, and a first-person question ("which cities will we visit in Japan?") has one seed at most, so the list does
+nothing for it.
+
+**The three versions.** The first ran on `origin/main` at `22b7239c` and the second at `19210c2b` (the entity skip a
+default; for the first, criterion 2 set it too), with the links of prism-monorepo#275 added by hand to a copy of the
+`defects-v1` build for criterion 2. The third ran on this branch
+stacked on #275's branch (group links on, member links to the people the session names with the owner), so criterion
+2 reads a real build: the offline gate and the mid tier on #275's head `e6b4db7e`, and criterion 2, both probes and
+the fast cycle again on its reviewed head `cdf8b354`, with the same results. Off is the same tree with the option off;
+weight 0.5.
+
+| Version | Criterion 2: cities claim, off / on | Defect probes top 3 | `chat-v1` top 3 / top 5 | Fast cycle | Mid tier: LoCoMo evidence in top 25 |
+|---|---|---:|---|---|---|
+| 1: two seeds within three hops | 6 / 4 (hand links) | 5/7 (off 7/7) | 15/18, 15/18 (off 14/18, 15/18) | not run | not run |
+| 2: and a direct link | 6 / 4 (hand links) | 6/7 (off 7/7) | 15/18, 15/18 (off 14/18, 15/18) | **fail**: defects-v1 top 3 7 to 6 | **-5.2** (-6.3 to -4.2), 1 win, 114 losses |
+| 3: and the semantic top 10 | 6 / 4 (real build) | 7/7 (off 7/7) | 14/18, 15/18 (off 14/18, 15/18) | pass | +0.0, 0 wins, 0 losses |
+
+Version 1 lifted Jordan's allergy claim, which Alex and Japan reach only through Jordan, over the cities and travel
+answers. Version 2 put the cities claim 4th at 0.5 only at a cost: from a weight of 0.31, which the claim needs, "We
+dropped Hiroshima to save time." (38th by meaning, linked to Alex and reached from Japan through Jordan) passed the
+travel answer, and without #275's links the allergy claim (15th by meaning) passed the cities answer. Its mid tier
+loss came from LoCoMo's second speaker: in `conv-26` the owner, Caroline, has 468 links and is never passed through,
+but the participant, Melanie, has 319, so a question naming Melanie and one more entity reached most records through
+her. Version 3 keeps both kinds of record off the list. At 0.25 version 2 passed the fast tiers but left the claim 6th;
+at 0.35 it failed like 0.5.
+
+**Criterion 2 on the real stacked build**, "which cities will alex visit in japan?":
+
+| Settings | Cities claim | Top 3 |
+|---|---:|---|
+| off | 6 | the trip sentence ("My partner Jordan and I are planning a trip to Japan in late March next year."), "Hi, I am Alex Rivera.", the introduction note |
+| on (0.5) | 4 | the trip sentence, the introduction note, "Hi, I am Alex Rivera." |
+| on at 0.35 | 4 | |
+| on at 0.25 | 6 | |
+
+Two notes of the trip session, the cities turn's own note and the assistant's reply, sit at 0.6 by session context (the
+decay times the trip sentence's score of 1.0); the claim scores 0.4485 by itself (8th by meaning, no word match), so
+it needs a graph term above 0.15, which its place on the list (second) gives from a weight of 0.31. Without the session
+inheritance rule the notes would rise with their trigger, and the claim would need a weight of about 0.8.
+
+**Version 3 on the fast tiers** (the stacked tree, off against on):
+
+- Defect probes: 7/7 in the top 3 and the top 5 on both sides; travel 2 to 3, every other probe rank equal; every
+  other measure equal (key links linked 9 of 14 on both, from #275).
+- Chat probe: 14/18 in the top 3 and 15/18 in the top 5 on both sides; job-now 7 to 8 and coffee 4 to 5, every other
+  measure equal.
+- Fast cycle: pass, 3 measures moved, all watched (travel 2 to 3, coffee 4 to 5, job-now 7 to 8). The baseline
+  (`baseline-main.json`) was taken again at the final head `631e6301` (clean tree, no other test or benchmark running,
+  48 s in all), with the store, ingest and store-extract stages: against #275's 0.16.0a5 baseline, those three, and
+  in the store-extract stage "flights" 4 to 2, answers in the top 3 13 to 14 and the mean reciprocal rank 0.761 to
+  0.776, moved; 162 measures are unchanged.
+- Offline evidence gate (`gate-compare`): no row differs (LoCoMo all evidence packed 84.0% on both sides, 1,536 ties;
+  LongMemEval-S 94.7%, 470 ties), and no question lost its candidates. Its packs hold no extracted entities, so this
+  shows only that plain retrieval is untouched; retrieval p50 0.153 s against 0.160 s on LoCoMo and 0.162 s against
+  0.169 s on LongMemEval-S, at a load of 4 to 8.
+- Mid tier (all of LoCoMo and 12 LongMemEval-S questions, warm, both sides gating the `i275r-on` packs that #275's
+  branch built at `0ea827d9`; its later review fixes change no probe or fast cycle result): every LoCoMo measure ties
+  (all evidence packed 83.6%, evidence in the top 25 70.3%, projected accuracy 77.4% on both sides; evidence recall
+  one question better), and LongMemEval-S is unchanged. The LoCoMo stage took 5 min 19 s against 4 min 04 s, before
+  the narrower link read below.
+- Corrections probe: no measure differs; in the birthday context an assistant line moves down one place.
+
+**Cost.** A question that names two or more entities reads the links around them once more, so the cost grows with
+their neighborhood. On `conv-26` of the LoCoMo packs, retrieval takes 353 ms against 283 ms with the list off (median
+of 16 questions, the walk itself 58 ms; about 100 ms before the walk read only the nodes nearer than `graph_max_hops`,
+and 71 ms before it left out the owner's links). Both narrower reads give the same reach as reading every link, on all
+the questions with two or more seeds checked (13 and 10). On the review's synthetic DuckDB packs
+(`_generate_graph_candidates` alone, off against on):
+
+| Pack | Question | Before the review fixes | After |
+|---|---|---:|---:|
+| 2,000 turns (5,262 nodes) | names the owner | +0.6 s | +0 (skipped: `neighborhood_limit`) |
+| 2,000 turns | names two other entities | +0.12 s | +0.1 s |
+| 10,000 turns (25,246 nodes) | names the owner | +3 s | +0 (skipped) |
+| 10,000 turns | names two other entities | +0.7 s | +0.47 s |
+
+The walk is skipped where the owner is a seed on those packs, so the list does nothing there; on the probes, the
+fast cycle and LoCoMo it never reaches the limit.
+
+**An unmarked owner** (review scenario 2). A pack ingested before `enable_owner_name_carry` became a default has no
+owner marker, so the walk passes through the owner's entity. Both probes built with `enable_owner_name_carry=false`
+(cache replays, 0 model calls), off against on: defect probes 7/7 in the top 3 and the top 5 on both sides (cities 2
+to 3, travel 2 to 3), chat probe 14/18 and 15/18 on both sides with no rank moved, and every other measure equal. The
+group links need the carry too, so the cities claim is not on the list there.
+
+**On the final tree** (after the review fixes, rebased on `ecb127d6`), off against on: defect probes 7/7 and 7/7 on
+both sides (travel 2 to 3); chat probe 14/18 and 15/18 on both sides (job-now 7 to 8, coffee 4 to 5); criterion 2 the
+cities claim 6th off and 4th on; fast cycle pass on both sides against #275's baseline (on: the three watched answers
+one place lower); corrections probe with no measure different. The offline gate and the mid tier were not run again:
+the walk never reaches the node limit on their LoCoMo packs and their store packs hold no entities, and the other
+fixes change nothing under the default settings, so their results stand.
+
+**Decision.** Version 3 passes the alpha rule (defect probes 7/7, chat probe counts not below off, fast cycle pass,
+offline gate without loss, mid tier without loss) and meets criterion 2 on a real build, so it is on by default in the
+alpha channel, by the owner's directive of 2026-10-19. The full benchmark audit and the default-change rule's answer
+runs are pending.
+
 ### Fast cycle: store, ingest and retrieve in under a minute (prototype)
 
 The multi-day benchmarks cannot check every change. The fast cycle is a
