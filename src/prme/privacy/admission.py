@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from types import SimpleNamespace
 from typing import Any, Awaitable, Callable, Concatenate, ParamSpec, TypeVar
@@ -114,8 +114,8 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
 _UNAVAILABLE_EFFECTS = frozenset({
     "organize", "consolidate_knowledge", "resume_profile", "process_profiles", "end_session",
     "rebuild_indexes", "embed_texts", "propose_product_alignment", "find_product_alignment_candidates",
-    "evaluate_full_retrieval", "create_ranking_profile", "record_relevance", "record_answer_citations",
-    "promote", "evaluate_condition", "supersede", "contradict", "resolve_contradiction", "archive", "reinforce",
+    "evaluate_full_retrieval", "create_ranking_profile",
+    "contradict", "resolve_contradiction",
     "review_alias_proposal", "feedback",
 })
 
@@ -152,6 +152,9 @@ class AdmissionCoordinator:
         policy = engine._config.privacy_policy
         self.default = PrivacyPolicy.model_validate_json(policy.model_dump_json()) if policy else None
         self.repository = PrivacyRepository(engine._event_store)
+        from prme.storage.privacy_journals import ProcessingJournal
+        self.processing = ProcessingJournal(engine._event_store.extraction_work,
+            clock=lambda: self.runtime.clock() if self.runtime else datetime.now(timezone.utc))
 
     def selected(self, policy: PrivacyPolicy | None = None) -> bool:
         return policy is not None or self.default is not None
@@ -554,34 +557,39 @@ class AdmissionCoordinator:
             if payload is not None)):
             yield
 
-    async def extraction_plan(self, prepared: PreparedAdmission) -> DerivationPlan:
+    async def extraction_plan(self, prepared: PreparedAdmission, *, checkpoint=None, checkpoint_writer=None) -> DerivationPlan:
         from prme.ingestion.grounding import validate_grounding
         from prme.ingestion.schema import ExtractionResult
         runtime = self.require_runtime()
         if runtime.extractor is None:
             raise PrivacyDenied("privacy_provider_unavailable")
         saved = prepared.record.snapshot
-        async with self.guard(saved, "transmission", processing=True):
-            pass
-        result = await capability_call(runtime.extractor.extract(prepared.source, saved,
-            guard=lambda: self.guard(saved, "transmission", processing=True)), "privacy_resubmit_required")
-        result_fields = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
-        admitted = await self.sanitize(finite_json({"extraction": result_fields}), saved, prepared.budget,
-                                       mode="generated_output", source=prepared.source)
-        report = self.sanitization_report(admitted)
-        if report is not None:
-            prepared.generated_reports.append(report)
-        try:
-            result = ExtractionResult.model_validate(json.loads(admitted.fields_json)["extraction"])
-        except (TypeError, ValueError, KeyError):
-            raise PrivacyDenied("privacy_invalid_result") from None
         source = json.loads(prepared.source.fields_json)
-        if prepared.source.source_snapshot is not None:
-            from prme.ingestion.grounding import validate_private_grounding
-            result = validate_private_grounding(result, source["content"], speaker=source["speaker"],
-                reference_time=prepared.event.event_time or prepared.event.timestamp,
-                resolve_date=self.engine._pipeline._resolve_temporal)
-        result = validate_grounding(result, source["content"], speaker=source["speaker"], content_free_logs=True)
+        if checkpoint is None:
+            async with self.guard(saved, "transmission", processing=True):
+                pass
+            result = await capability_call(runtime.extractor.extract(prepared.source, saved,
+                guard=lambda: self.guard(saved, "transmission", processing=True)), "privacy_resubmit_required")
+            result_fields = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
+            admitted = await self.sanitize(finite_json({"extraction": result_fields}), saved, prepared.budget,
+                                           mode="generated_output", source=prepared.source)
+            report = self.sanitization_report(admitted)
+            if report is not None:
+                prepared.generated_reports.append(report)
+            try:
+                result = ExtractionResult.model_validate(json.loads(admitted.fields_json)["extraction"])
+            except (TypeError, ValueError, KeyError):
+                raise PrivacyDenied("privacy_invalid_result") from None
+            if prepared.source.source_snapshot is not None:
+                from prme.ingestion.grounding import validate_private_grounding
+                result = validate_private_grounding(result, source["content"], speaker=source["speaker"],
+                    reference_time=prepared.event.event_time or prepared.event.timestamp,
+                    resolve_date=self.engine._pipeline._resolve_temporal)
+            result = validate_grounding(result, source["content"], speaker=source["speaker"], content_free_logs=True)
+        else:
+            result = ExtractionResult.model_validate(checkpoint)
+        if checkpoint_writer is not None:
+            await checkpoint_writer(result)
         # This transient event's identity/hash refers to the durable empty envelope.
         # Its actual sanitized checksum remains in the private source representation.
         from prme.models.speaker import attach_speaker
@@ -633,9 +641,17 @@ class AdmissionCoordinator:
             prepared.append(await self.prepare(policy=policy, kind="extraction", asynchronous=not wait_for_extraction,
                 user_id=user_id, scope=scope, session_id=session_id, budget=budget, **dict(msg)))
         if not wait_for_extraction and len(prepared) > 1 and any(item.source.continuation for item in prepared):
-            # Disjoint durable grants and replay accounting belong to the live
-            # claim integration. Never let every item reuse the batch remainder.
-            raise PrivacyDenied("privacy_processing_unavailable")
+            from dataclasses import replace
+            from prme.privacy.journals import partition_continuations
+            grants = partition_continuations(budget.state.continuation(), len(prepared))
+            for index, (item, grant) in enumerate(zip(prepared, grants)):
+                source = replace(item.source, continuation=grant)
+                payload = item.record.processing
+                context = payload.context.model_copy(update={"object_generation": payload.context.object_generation + 1})
+                async with self.guard(item.record.snapshot, "admission", processing=True):
+                    payload = await capability_call(self.require_runtime().protector.seal(
+                        self.source_bytes(source), context, original_snapshot=item.record.snapshot))
+                prepared[index] = replace(item, source=source, record=item.record.model_copy(update={"processing": payload}))
         plans = []
         if wait_for_extraction:
             try:
@@ -651,8 +667,8 @@ class AdmissionCoordinator:
         for index, item in enumerate(prepared):
             if wait_for_extraction:
                 await self.publish(item.record, plans[index])
-            else:
-                self.engine._pipeline.queue_extraction(item.event, scope)
+            # Protected durable work is enqueue-only. A separately authorized
+            # worker invokes process_extractions; close/flush cannot unwrap it.
         return [str(p.event.id) for p in prepared]
 
     async def resume(self, event: Event, *, claim) -> None:
@@ -666,31 +682,74 @@ class AdmissionCoordinator:
             if self.require_runtime().clock() >= claim.lease_expires_at:
                 raise PrivacyDenied("privacy_processing_unavailable")
         plan = await self.engine._event_store.get_derivation_plan(str(event.id), user_id=event.user_id)
-        if plan is None:
+        if plan is not None:
+            # Recovery of admitted executable copies never opens evidence/input.
+            await self.publish(record, plan, claim=claim)
+            return
+        record = await self.processing.begin(claim)
+        from dataclasses import replace
+        from prme.privacy.journals import load_checkpoint, save_checkpoint
+        source = None
+        budget = None
+        checkpoint = None
+
+        async def persist(*, release):
+            nonlocal record, source
+            if source is None or budget is None or record.processing is None:
+                raise PrivacyDenied("privacy_processing_unavailable")
+            if source.continuation is not None:
+                if budget.state is None or budget.state.failed:
+                    raise PrivacyDenied("privacy_processing_unavailable")
+                source = replace(source, continuation=budget.state.continuation())
+            context = record.processing.context.model_copy(update={
+                "object_generation": record.processing.context.object_generation + 1})
+            async with self.guard(record.snapshot, "admission", processing=True):
+                payload = await capability_call(self.require_runtime().protector.seal(
+                    save_checkpoint(self.source_bytes(source), checkpoint), context,
+                    original_snapshot=record.snapshot), "privacy_processing_unavailable")
+                async with self.require_runtime().protector.writer_guard((payload,)):
+                    record = await self.processing.checkpoint(claim, record, payload, release=release)
+
+        async def extracted(result):
+            nonlocal checkpoint, record
+            checkpoint = result.model_dump(mode="json")
+            await persist(release=True)
+            # The saved output is a completed checkpoint. A new reservation
+            # covers planning, whose sanitizer work must not replay on a crash.
+            record = await self.processing.begin(claim)
+
+        try:
             if record.processing is None:
                 raise PrivacyDenied("privacy_processing_unavailable")
-            access = ProcessingAccess(work_id=event.id, work_generation=claim.generation, lease_deadline=claim.lease_expires_at,
-                                      processing_deadline=record.snapshot.processing_deadline, claimed_event_ids=(event.id,))
+            access = ProcessingAccess(work_id=event.id, work_generation=claim.generation,
+                lease_deadline=claim.lease_expires_at, processing_deadline=record.snapshot.processing_deadline,
+                claimed_event_ids=(event.id,))
             raw = await capability_call(self.require_runtime().protector.open(record.processing, access,
                 original_snapshot=record.snapshot,
-                guard=lambda: self.guard(record.snapshot, "disclosure", processing=True)), "privacy_processing_unavailable")
-            source = self.load_source(raw)
+                guard=lambda: self.guard(record.snapshot, "disclosure", processing=True)),
+                "privacy_processing_unavailable")
+            source_bytes, checkpoint = load_checkpoint(raw)
+            source = self.load_source(source_bytes)
+            del raw, source_bytes
             if (source.source_id, source.representation_id) != (record.source_id, record.representation_id):
                 raise PrivacyDenied("privacy_processing_unavailable")
             if source.continuation is not None:
                 from prme.privacy.sanitizer import restore_budget, validate_source
                 validate_source(source, record.snapshot)
-                if status.attempts != 1 or claim.attempts != 1:
-                    # A retry cannot replenish detector time/bytes. PV-06 must
-                    # durably consume continuation before allowing another try.
-                    raise PrivacyDenied("privacy_processing_unavailable")
                 budget = restore_budget(source.continuation)
             else:
-                # Explicit component capabilities can omit production accounting.
-                # LocalSanitizer refuses generated input without its provenance.
                 budget = OperationBudget(uuid4())
-            plan = await self.extraction_plan(PreparedAdmission(record, event, source, budget))
-        await self.publish(record, plan, claim=claim)
+            plan = await self.extraction_plan(PreparedAdmission(record, event, source, budget),
+                                               checkpoint=checkpoint, checkpoint_writer=extracted)
+            await self.publish(record, plan, claim=claim)
+        except Exception:
+            # An orderly failure records actual cumulative usage; an abrupt
+            # crash leaves the reservation consumed. Neither replenishes it.
+            try:
+                await persist(release=True)
+            except Exception:
+                await self.processing.terminate(claim)
+            raise
 
     async def materialize_direct(self, event: Event) -> bool:
         record = await self.repository.get(str(event.id), user_id=event.user_id)
@@ -756,6 +815,22 @@ class AdmissionCoordinator:
         for record in records:
             async with self.guard(record.snapshot, "disclosure"):
                 pass
+
+    async def receipt_write_guard(self, user_id, request_id):
+        from prme.privacy.reads import ReadContext
+        from prme.models.privacy_receipts import ProtectedRetrievalReceipt
+        context = await ReadContext.create(self, user_id=user_id)
+        if not context.protected:
+            return None
+        receipt = await self.engine._relevance.get_receipt(str(request_id), user_id=user_id)
+        if not isinstance(receipt, ProtectedRetrievalReceipt):
+            raise PrivacyDenied("privacy_unsupported_input")
+        for dependency in receipt.manifest.dependencies:
+            record = context.records.get(dependency.event_id)
+            if (record is None or record.snapshot != dependency.snapshot
+                    or record.source_id != dependency.source_id or record.representation_id != dependency.representation_id):
+                raise PrivacyDenied("privacy_unavailable")
+        return lambda: context.guard("publication")
 
     @asynccontextmanager
     async def publication_guards(self, records):

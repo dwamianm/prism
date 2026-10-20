@@ -17,6 +17,7 @@ Usage::
 
 from __future__ import annotations
 
+from prme.models.privacy_receipts import ProtectedCitationRecord, ProtectedRetrievalReceipt
 from prme.models.privacy_reads import (
     ProtectedEventView, ProtectedExtractionView, ProtectedProvenanceView,
     ProtectedReceiptView, SanitizedEvidenceView, SourceAvailability, SourceUnavailable,
@@ -618,7 +619,7 @@ class MemoryClient:
             reason=reason, actor_id=actor_id, evaluated_at=evaluated_at,
         ))
 
-    def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | ProtectedReceiptView | None:
+    def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | ProtectedReceiptView | ProtectedRetrievalReceipt | None:
         return self._run(self._engine.get_retrieval_receipt(request_id, user_id=user_id))
 
     def record_relevance(self, submission: RelevanceSubmission, *, user_id: str) -> RelevanceRecord:
@@ -634,18 +635,18 @@ class MemoryClient:
 
     def record_answer_citations(
         self, submission: AnswerCitationSubmission, *, user_id: str,
-    ) -> AnswerCitationRecord:
+    ) -> AnswerCitationRecord | ProtectedCitationRecord:
         """Save an answer's memory citations; reuse citation_id when retrying."""
         return self._run(self._engine.record_answer_citations(submission, user_id=user_id))
 
     def get_answer_citations(
         self, citation_id: str, *, user_id: str,
-    ) -> AnswerCitationRecord | None:
+    ) -> AnswerCitationRecord | ProtectedCitationRecord | None:
         return self._run(self._engine.get_answer_citations(citation_id, user_id=user_id))
 
     def list_answer_citations(
         self, *, user_id: str, limit: int = 100, after_id: str | None = None,
-    ) -> list[AnswerCitationRecord]:
+    ) -> list[AnswerCitationRecord | ProtectedCitationRecord]:
         return self._run(self._engine.list_answer_citations(
             user_id=user_id, limit=limit, after_id=after_id,
         ))

@@ -20,6 +20,7 @@ error handling, and lifecycle transitions are managed here.
 
 from __future__ import annotations
 
+from prme.models.privacy_receipts import ProtectedCitationRecord, ProtectedRetrievalReceipt
 from prme.models.privacy_reads import (
     ProtectedEventView, ProtectedExtractionView, ProtectedProvenanceView,
     ProtectedReceiptView, SanitizedEvidenceView, SourceAvailability, SourceUnavailable,
@@ -402,6 +403,7 @@ class MemoryEngine:
 
         from prme.privacy.admission import AdmissionCoordinator
         self._privacy = AdmissionCoordinator(self)
+        self._graph_store._privacy = self._privacy
         if self._pipeline is not None:
             self._pipeline._privacy = self._privacy
 
@@ -500,6 +502,7 @@ class MemoryEngine:
         else:
             engine = await cls._create_duckdb(config, embedding_provider=embedding_provider)
         engine._privacy.runtime = privacy_runtime
+        await engine._privacy.processing.expire()
         return engine
 
     @classmethod
@@ -3645,7 +3648,7 @@ class MemoryEngine:
         )
 
     @privacy_disclosure
-    async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | ProtectedReceiptView | None:
+    async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | ProtectedReceiptView | ProtectedRetrievalReceipt | None:
         """Read the immutable returned-candidate snapshot through its owner."""
         return await self._relevance.get_receipt(request_id, user_id=user_id)
 
@@ -3657,7 +3660,8 @@ class MemoryEngine:
         Recording does not change weights or facts. Legacy feedback_apply does
         not consume these records; evaluated scoped learning is separate.
         """
-        return await self._relevance.record(submission, user_id=user_id)
+        guard = await self._privacy.receipt_write_guard(user_id, submission.request_id)
+        return await self._relevance.record(submission, user_id=user_id, **({"guard": guard} if guard is not None else {}))
 
     @privacy_disclosure
     async def get_relevance(self, feedback_id: str, *, user_id: str) -> RelevanceRecord | None:
@@ -3672,25 +3676,26 @@ class MemoryEngine:
     @privacy_disclosure
     async def record_answer_citations(
         self, submission: AnswerCitationSubmission, *, user_id: str,
-    ) -> AnswerCitationRecord:
+    ) -> AnswerCitationRecord | ProtectedCitationRecord:
         """Record which packed memories supported one answer.
 
         The record binds to a saved retrieval context. It does not change
         memory state or ranking, and model-reported citations are not treated
         as independently verified causal credit.
         """
-        return await self._citations.record(submission, user_id=user_id)
+        guard = await self._privacy.receipt_write_guard(user_id, submission.request_id)
+        return await self._citations.record(submission, user_id=user_id, **({"guard": guard} if guard is not None else {}))
 
     @privacy_disclosure
     async def get_answer_citations(
         self, citation_id: str, *, user_id: str,
-    ) -> AnswerCitationRecord | None:
+    ) -> AnswerCitationRecord | ProtectedCitationRecord | None:
         return await self._citations.get(citation_id, user_id=user_id)
 
     @privacy_disclosure
     async def list_answer_citations(
         self, *, user_id: str, limit: int = 100, after_id: str | None = None,
-    ) -> list[AnswerCitationRecord]:
+    ) -> list[AnswerCitationRecord | ProtectedCitationRecord]:
         """Page answer citation sets by citation UUID."""
         return await self._citations.list(
             user_id=user_id, limit=limit, after_id=after_id,

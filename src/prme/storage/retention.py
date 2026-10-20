@@ -11,9 +11,10 @@ from uuid import UUID, uuid5
 from pydantic import BaseModel, ConfigDict
 
 from prme.models.nodes import MemoryNode
+from prme.privacy.journals import JournalManifest, SnapshotEnvelope, snapshot_payload, protected_mutation, journal_deadline
 from prme.storage import _snapshot_json
 from prme.storage._threading import run_to_completion
-from prme.types import LifecycleState, validate_transition
+from prme.types import LifecycleState, Scope, validate_transition
 
 if TYPE_CHECKING:
     from prme.storage.duckpgq_graph import DuckPGQGraphStore
@@ -42,6 +43,27 @@ class RetentionRecord(BaseModel):
     content_hash_of_deleted: str
     before: MemoryNode
     after: MemoryNode
+
+
+class RetentionIdentity(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    id: UUID
+    user_id: UUID
+    scope: Scope
+
+
+class ProtectedRetentionRecord(BaseModel):
+    """TTL metadata does not preserve the retired node or a text commitment."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    kind: Literal["protected_retention"] = "protected_retention"
+    version: Literal[2] = 2
+    operation_id: UUID
+    before: RetentionIdentity
+    manifest: JournalManifest
+    evaluated_at: datetime
+    expires_at: datetime
+    reason: Literal["retention_policy_expiry"] = "retention_policy_expiry"
+    original_replay: Literal["unavailable"] = "unavailable"
 
 
 def _utc(value: datetime, name: str) -> datetime:
@@ -92,6 +114,12 @@ def _prepare(
 
 
 def _payload(record: RetentionRecord) -> str:
+    protected = snapshot_payload(record, "retention")
+    if protected is not None:
+        envelope = SnapshotEnvelope.model_validate_json(protected)
+        return ProtectedRetentionRecord(operation_id=record.operation_id,
+            before=RetentionIdentity(id=record.before.id, user_id=record.before.user_id, scope=record.before.scope),
+            manifest=envelope.manifest, evaluated_at=record.evaluated_at, expires_at=record.expires_at).model_dump_json()
     raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     # Keep the RFC-0007 tombstone fields available to older operation readers,
     # while the checksummed record carries the authoritative full transition.
@@ -116,6 +144,11 @@ def _payload(record: RetentionRecord) -> str:
 def read_record(payload: str | dict[str, Any]) -> RetentionRecord:
     """Validate and decode a checksummed TTL tombstone payload."""
     value = json.loads(payload) if isinstance(payload, str) else payload
+    if value.get("kind") == "protected_retention":
+        record = ProtectedRetentionRecord.model_validate(value)
+        if record.manifest.journal_id != record.operation_id or record.before.id not in record.manifest.admitted_node_ids:
+            raise ValueError("Protected retention identity mismatch")
+        return record
     try:
         raw = value["record"]
         if hashlib.sha256(raw.encode()).hexdigest() != value["sha256"]:
@@ -194,8 +227,10 @@ def _replayed(
 
 def _checkpoint(stage: str) -> None:
     """Native transaction fault-injection boundary; no external work."""
+    journal_deadline()
 
 
+@protected_mutation
 async def expire_duckdb(
     store: "DuckPGQGraphStore",
     node_id: str,
@@ -290,6 +325,7 @@ def _expire_duckdb(
         raise
 
 
+@protected_mutation
 async def expire_postgres(
     store: "PgGraphStore",
     node_id: str,

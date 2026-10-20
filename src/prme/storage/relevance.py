@@ -9,6 +9,8 @@ import duckdb
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from prme.models.relevance import RelevanceRecord, RelevanceSubmission, RetrievalReceipt
+from prme.models.privacy_receipts import ProtectedRetrievalReceipt, read_receipt
+from prme.privacy.policy import PrivacyDenied
 from prme.storage._threading import run_to_completion
 
 
@@ -20,7 +22,10 @@ class RelevanceRepository:
     def __init__(self, *, conn=None, conn_lock=None, pool=None):
         self.conn, self.lock, self.pool = conn, conn_lock or asyncio.Lock(), pool
 
-    async def _query(self, sql, *args):
+    async def _query(self, sql, *args, guard=None):
+        if guard is not None:
+            from prme.storage.privacy_journals import guarded_query
+            return await guarded_query(self, sql, args, guard)
         if self.pool is not None:
             async with self.pool.acquire() as conn:
                 return [dict(row) for row in await conn.fetch(sql, *args)]
@@ -87,8 +92,8 @@ class RelevanceRepository:
         payload = json.loads(payload) if isinstance(payload, str) else payload
         if "receipt" not in payload:
             return None
-        receipt = RetrievalReceipt.model_validate_json(payload["receipt"])
-        if (receipt.user_id != user_id or str(receipt.request_id) != request_id
+        receipt = read_receipt(payload["receipt"])
+        if (str(receipt.user_id) != user_id or str(receipt.request_id) != request_id
                 or receipt.checksum != payload.get("receipt_checksum")):
             raise ValueError("Retrieval receipt identity or checksum mismatch")
         return receipt
@@ -149,13 +154,15 @@ class RelevanceRepository:
         )
         return self._read_record(rows[0]["payload"], user_id=user_id, feedback_id=identity) if rows else None
 
-    async def record(self, submission: RelevanceSubmission, *, user_id: str) -> RelevanceRecord:
+    async def record(self, submission: RelevanceSubmission, *, user_id: str, guard=None) -> RelevanceRecord:
         self._owner(user_id)
         # Isolate mutable caller dictionaries before any provider/database await.
         submission = RelevanceSubmission.model_validate_json(submission.model_dump_json())
         receipt = await self.get_receipt(str(submission.request_id), user_id=user_id)
         if receipt is None:
             raise ValueError("A saved retrieval receipt owned by this user is required")
+        if isinstance(receipt, ProtectedRetrievalReceipt) and guard is None:
+            raise PrivacyDenied("privacy_capability_unavailable")
         candidates = {candidate.node_id: candidate for candidate in receipt.candidates}
         for node_id, label in submission.labels.items():
             candidate = candidates.get(node_id)
@@ -173,7 +180,7 @@ class RelevanceRepository:
                     "INSERT INTO operations (id, op_type, target_id, payload, actor_id, created_at) "
                     "VALUES ($1, 'RELEVANCE_RECORDED', $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING",
                     relevance_operation_id(user_id, record.feedback_id), str(record.feedback_id), payload,
-                    user_id, record.recorded_at,
+                    user_id, record.recorded_at, **({"guard": guard} if guard is not None else {}),
                 )
                 break
             except (duckdb.TransactionException, duckdb.ConstraintException):

@@ -726,6 +726,8 @@ class IngestionPipeline:
             event_id: String UUID of the event.
             scope: Ingestion-level scope for fallback when LLM does not classify.
         """
+        from prme.privacy.records import PRIVACY_KEY
+        protected = PRIVACY_KEY in (event.metadata or {})
         work = self._event_store.extraction_work
         status = await work.status(event_id, user_id=event.user_id)
         if status is not None and status.status == "complete":
@@ -736,7 +738,8 @@ class IngestionPipeline:
             claim = await work.claim(user_id=event.user_id, event_id=event_id,
                                      lease_seconds=self._extraction_lease_seconds, ignore_schedule=raise_errors)
             if claim is None:
-                self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
+                if not protected:
+                    self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
                 if raise_errors:
                     raise ExtractionError("Extraction is pending behind earlier work or an active lease", event_id=event_id)
                 return
@@ -765,7 +768,10 @@ class IngestionPipeline:
             logger.info("ingestion.phase2_complete", event_id=event_id)
         except asyncio.CancelledError:
             if claim is not None:
-                await run_async_to_completion(work.fail(claim, error="Cancelled", retry_after=0))
+                if self._privacy is not None and PRIVACY_KEY in (event.metadata or {}):
+                    await run_async_to_completion(self._privacy.processing.terminate(claim))
+                else:
+                    await run_async_to_completion(work.fail(claim, error="Cancelled", retry_after=0))
             raise
         except Exception as exc:
             if claim is not None:
@@ -773,19 +779,22 @@ class IngestionPipeline:
                 current = await work.status(event_id, user_id=event.user_id)
                 if current is not None and current.status == "complete":
                     return
+            protected = self._privacy is not None and PRIVACY_KEY in (event.metadata or {})
+            if protected:
+                await self._privacy.processing.expire(user_id=event.user_id)
             logger.error(
                 "ingestion.extraction_failed",
                 event_id=event_id,
-                error_type=type(exc).__name__,
+                error_type="privacy_processing_failed" if protected else type(exc).__name__,
             )
-            reason = extraction_failure_code(exc)
+            reason = "privacy_processing_failed" if protected else extraction_failure_code(exc)
             if claim is not None:
                 attempt = claim.attempts
                 delay = self._retry_delays[attempt - 1] if attempt <= len(self._retry_delays) else None
                 retained = await work.fail(claim, error=reason, retry_after=delay)
-                if retained and delay is not None:
+                if retained and delay is not None and not protected:
                     self._schedule_retry(event, event_id, attempt=attempt, scope=scope)
-                elif not retained:
+                elif not retained and not protected:
                     if retry_attempt == 0:
                         # The event loop can be starved after a provider returns but
                         # before its heartbeat or fenced publication runs. The old
@@ -822,9 +831,12 @@ class IngestionPipeline:
                         attempt=retry_attempt + 1,
                         scope=scope,
                     )
-            else:
+            elif not protected:
                 self._schedule_retry(event, event_id, attempt=retry_attempt + 1, scope=scope)
             if raise_errors:
+                if protected:
+                    raise ExtractionError("Protected processing did not complete", event_id=event_id,
+                                          reason_code=reason) from None
                 raise ExtractionError(
                     f"Extraction did not complete ({reason}); the source event is persisted",
                     event_id=event_id, reason_code=reason,

@@ -12,6 +12,7 @@ from uuid import UUID, uuid5
 
 from pydantic import BaseModel, ConfigDict
 
+from prme.privacy.journals import protected_mutation, snapshot_payload, validate_snapshot, journal_deadline
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.organizer.oscillation import OscillationResult, analyze_oscillation_chain
@@ -71,6 +72,9 @@ def _request(
 
 
 def _payload(record: OscillationPenaltyRecord) -> str:
+    protected = snapshot_payload(record, "oscillation_penalty")
+    if protected is not None:
+        return protected
     raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps(
         {"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()}
@@ -121,6 +125,7 @@ def read_record(
         record = OscillationPenaltyRecord.model_validate(
             _snapshot_json.loads(raw)
         )
+        validate_snapshot(value, record, "oscillation_penalty")
     except (AttributeError, KeyError, TypeError) as exc:
         raise ValueError("Malformed oscillation penalty journal") from exc
 
@@ -232,6 +237,7 @@ def _replayed(
 
 def _checkpoint(stage: str) -> None:
     """Native transaction fault-injection boundary; no external work."""
+    journal_deadline()
 
 
 def _duckdb_inputs(
@@ -253,6 +259,7 @@ def _duckdb_inputs(
     return [node for node in nodes if node is not None], edges
 
 
+@protected_mutation
 async def apply_duckdb(
     store: "DuckPGQGraphStore",
     node_id: str,
@@ -354,6 +361,7 @@ async def _postgres_inputs(
     return [by_id[node_id] for node_id in ids], edges
 
 
+@protected_mutation
 async def apply_postgres(
     store: "PgGraphStore",
     node_id: str,

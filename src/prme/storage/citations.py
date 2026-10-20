@@ -9,6 +9,8 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 import duckdb
 
 from prme.models.relevance import AnswerCitationRecord, AnswerCitationSubmission
+from prme.models.privacy_receipts import ProtectedCitationRecord, ProtectedRetrievalReceipt
+from prme.privacy.policy import PrivacyDenied
 from prme.storage.relevance import RelevanceRepository
 
 
@@ -32,8 +34,9 @@ class CitationRepository(RelevanceRepository):
         raw = payload["record"]
         if hashlib.sha256(raw.encode()).hexdigest() != payload.get("checksum"):
             raise ValueError("Answer citation record checksum mismatch")
-        record = AnswerCitationRecord.model_validate_json(raw)
-        if record.user_id != user_id or (
+        codec = ProtectedCitationRecord if json.loads(raw).get("kind") == "protected_answer_citations" else AnswerCitationRecord
+        record = codec.model_validate_json(raw)
+        if str(record.user_id) != user_id or (
             citation_id is not None and record.citation_id != citation_id
         ):
             raise ValueError("Answer citation record identity mismatch")
@@ -52,7 +55,7 @@ class CitationRepository(RelevanceRepository):
         ) if rows else None
 
     async def record(self, submission: AnswerCitationSubmission, *,
-                     user_id: str) -> AnswerCitationRecord:
+                     user_id: str, guard=None) -> AnswerCitationRecord | ProtectedCitationRecord:
         self._owner(user_id)
         # Freeze mutable caller containers before a database await.
         submission = AnswerCitationSubmission.model_validate_json(submission.model_dump_json())
@@ -68,11 +71,22 @@ class CitationRepository(RelevanceRepository):
             if not candidate.in_context or not candidate.has_content:
                 raise ValueError("Citations require content-bearing entries included in context")
 
-        record = AnswerCitationRecord(
-            **submission.model_dump(), user_id=user_id,
-            recorded_at=datetime.now(timezone.utc), receipt_checksum=receipt.checksum,
-            context_sha256=receipt.context_sha256,
-        )
+        if isinstance(receipt, ProtectedRetrievalReceipt):
+            if guard is None:
+                raise PrivacyDenied("privacy_capability_unavailable")
+            try:
+                if submission.answer_sha256 is not None or str(UUID(submission.answer_id)) != submission.answer_id:
+                    raise ValueError()
+            except ValueError:
+                raise PrivacyDenied("privacy_unsupported_input") from None
+            record = ProtectedCitationRecord(**submission.model_dump(exclude={"answer_sha256"}),
+                user_id=user_id, recorded_at=datetime.now(timezone.utc), receipt_checksum=receipt.checksum)
+        else:
+            record = AnswerCitationRecord(
+                **submission.model_dump(), user_id=user_id,
+                recorded_at=datetime.now(timezone.utc), receipt_checksum=receipt.checksum,
+                context_sha256=receipt.context_sha256,
+            )
         raw = record.model_dump_json()
         payload = json.dumps({
             "record": raw,
@@ -86,6 +100,7 @@ class CitationRepository(RelevanceRepository):
                     "ON CONFLICT (id) DO NOTHING",
                     citation_operation_id(user_id, record.citation_id),
                     str(record.citation_id), payload, user_id, record.recorded_at,
+                    **({"guard": guard} if guard is not None else {}),
                 )
                 break
             except (duckdb.TransactionException, duckdb.ConstraintException):
@@ -96,7 +111,7 @@ class CitationRepository(RelevanceRepository):
         saved = await self.get(str(record.citation_id), user_id=user_id)
         if saved is None or not saved.matches(submission) or (
             saved.receipt_checksum != receipt.checksum
-            or saved.context_sha256 != receipt.context_sha256
+            or getattr(saved, "context_sha256", None) != getattr(receipt, "context_sha256", None)
         ):
             raise CitationConflict(
                 "citation_id already identifies a different answer citation record"

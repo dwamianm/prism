@@ -1124,95 +1124,112 @@ class RetrievalPipeline:
         logging_started = time.monotonic()
         receipt_persisted = False
         try:
-            from prme.models.relevance import make_receipt
+            if private_read is not None:
+                from prme.models.privacy_receipts import make_protected_receipt
+                receipt = make_protected_receipt(request_id=analysis.request_id, user_id=user_id,
+                    reference_time=scoring_now, scopes=normalized_scope, candidates=scored, bundle=bundle,
+                    ranking_policy=ranking_policy, context=private_read)
+                op_id = str(uuid.uuid4())
+                payload = json.dumps({"kind": "protected_retrieval_operation", "schema_version": 1,
+                    "request_id": str(analysis.request_id), "receipt": receipt.model_dump_json(),
+                    "receipt_checksum": receipt.checksum})
+            else:
+                from prme.models.relevance import make_receipt
 
-            # Recorded only when it differs from the original blend (issue #88).
-            prior_weight = getattr(self._reranker, "_prior_weight", DEFAULT_RERANKER_PRIOR_WEIGHT)
-            execution = RetrievalExecution(features=execution_features, parameters={
-                "ranking_multipliers": ranking_multipliers.model_dump(mode="json") if ranking_multipliers else None,
-                "ranking_profile": ranking_profile,
-                "max_per_source": max_per_source,
-                "max_per_evidence": max_per_evidence,
-                "time_from": time_from.isoformat() if time_from else None,
-                "time_to": time_to.isoformat() if time_to else None,
-                "knowledge_at": knowledge_at.isoformat() if knowledge_at else None,
-                "event_time_from": event_time_from.isoformat() if event_time_from else None,
-                "event_time_to": event_time_to.isoformat() if event_time_to else None,
-                "include_cross_scope": include_cross_scope,
-                **({"exclude_node_types": sorted(value.value for value in exclude_node_types)}
-                   if exclude_node_types is not None else {}),
-                **({"source_types": sorted(value.value for value in source_types)}
-                   if source_types is not None else {}),
-                "epistemic_weights": {key: value for key, value in self._epistemic_weights.items()}
-                    if self._epistemic_weights is not None else None,
-                "unverified_confidence_threshold": self._unverified_confidence_threshold,
-                "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
-                    if aggregation_coverage is not None else None,
-                "historical_coverage": historical_coverage.model_dump(mode="json")
-                    if historical_coverage is not None else None,
-                "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
-                    if temporal_relation_metadata is not None else None,
-                "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
-                **({"query_intent_order": self._query_intent_order}
-                   if self._query_intent_order != "entity_first" else {}),
-                **({"superseded_source_suppression": True} if self._superseded_source_suppression else {}),
-                "reranker_top_k": self._reranker_top_k,
-                **({"reranker_prior_weight": prior_weight}
-                   if prior_weight != DEFAULT_RERANKER_PRIOR_WEIGHT else {}),
-                "query_reformulation": {"enabled": self._enable_query_reformulation,
-                    "count": self._query_reformulation_count, "provider": self._query_reformulation_provider,
-                    "model": self._query_reformulation_model,
-                    **({"merge_policy": self._query_reformulation_merge_policy}
-                       if self._query_reformulation_merge_policy != "new_only" else {})},
-            })
-            receipt = make_receipt(request_id=analysis.request_id, user_id=user_id, query=query,
-                                   reference_time=scoring_now, scopes=normalized_scope,
-                                   scoring=effective_weights, packing=effective_packing_config,
-                                   candidates=scored, bundle=bundle, min_score=min_score, result_limit=limit,
-                                   retrieval_mode=retrieval_mode, time_from=effective_time_from,
-                                   time_to=effective_time_to, ranking_policy=ranking_policy, execution=execution,
-                                   min_score_skipped=min_score_skipped)
-            op_id = str(uuid.uuid4())
-            payload = json.dumps({
-                "request_id": str(analysis.request_id),
-                "receipt": receipt.model_dump_json(), "receipt_checksum": receipt.checksum,
-                "query": query,
-                "reference_time": scoring_now.isoformat(),
-                "query_time_from": analysis.time_from.isoformat() if analysis.time_from else None,
-                "query_time_to": analysis.time_to.isoformat() if analysis.time_to else None,
-                "user_id": user_id,
-                "candidates_generated": candidate_counts,
-                "candidates_filtered": len(excluded),
-                "candidates_included": bundle.included_count,
-                "tokens_used": bundle.tokens_used,
-                "token_budget": bundle.token_budget,
-                "tokenizer": bundle.tokenizer,
-                "scoring_config_version": effective_weights.version_id,
-                "min_score": min_score, "result_limit": limit,
-                "max_per_source": max_per_source,
-                "max_per_evidence": max_per_evidence,
-                "selection_excluded": [item.model_dump(mode="json") for item in selection_excluded],
-                "backends_used": list(candidate_counts.keys()),
-                "embedding_mismatch": embedding_mismatch,
-                "backend_failures": candidate_diagnostics.backend_failures,
-                # Only when the seed count walk did not run, so other entries keep their bytes.
-                **({"graph_seed_reach": candidate_diagnostics.graph_seed_reach}
-                   if candidate_diagnostics.graph_seed_reach is not None else {}),
-                # Always present, like the two keys above; true only under
-                # rank fusion (issue #150).
-                "min_score_skipped": min_score_skipped,
-                "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
-                    if aggregation_coverage is not None else None,
-                "historical_coverage": historical_coverage.model_dump(mode="json")
-                    if historical_coverage is not None else None,
-                "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
-                    if temporal_relation_metadata is not None else None,
-                "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
-                "time_from": effective_time_from.isoformat() if effective_time_from else None,
-                "time_to": effective_time_to.isoformat() if effective_time_to else None,
-                "cross_scope_hint_count": len(cross_scope_hints),
-            })
-            if self._pool is not None:
+                # Recorded only when it differs from the original blend (issue #88).
+                prior_weight = getattr(self._reranker, "_prior_weight", DEFAULT_RERANKER_PRIOR_WEIGHT)
+                execution = RetrievalExecution(features=execution_features, parameters={
+                    "ranking_multipliers": ranking_multipliers.model_dump(mode="json") if ranking_multipliers else None,
+                    "ranking_profile": ranking_profile,
+                    "max_per_source": max_per_source,
+                    "max_per_evidence": max_per_evidence,
+                    "time_from": time_from.isoformat() if time_from else None,
+                    "time_to": time_to.isoformat() if time_to else None,
+                    "knowledge_at": knowledge_at.isoformat() if knowledge_at else None,
+                    "event_time_from": event_time_from.isoformat() if event_time_from else None,
+                    "event_time_to": event_time_to.isoformat() if event_time_to else None,
+                    "include_cross_scope": include_cross_scope,
+                    **({"exclude_node_types": sorted(value.value for value in exclude_node_types)}
+                       if exclude_node_types is not None else {}),
+                    **({"source_types": sorted(value.value for value in source_types)}
+                       if source_types is not None else {}),
+                    "epistemic_weights": {key: value for key, value in self._epistemic_weights.items()}
+                        if self._epistemic_weights is not None else None,
+                    "unverified_confidence_threshold": self._unverified_confidence_threshold,
+                    "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
+                        if aggregation_coverage is not None else None,
+                    "historical_coverage": historical_coverage.model_dump(mode="json")
+                        if historical_coverage is not None else None,
+                    "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
+                        if temporal_relation_metadata is not None else None,
+                    "temporal_languages": list(self._temporal_languages) if self._temporal_languages is not None else None,
+                    **({"query_intent_order": self._query_intent_order}
+                       if self._query_intent_order != "entity_first" else {}),
+                    **({"superseded_source_suppression": True} if self._superseded_source_suppression else {}),
+                    "reranker_top_k": self._reranker_top_k,
+                    **({"reranker_prior_weight": prior_weight}
+                       if prior_weight != DEFAULT_RERANKER_PRIOR_WEIGHT else {}),
+                    "query_reformulation": {"enabled": self._enable_query_reformulation,
+                        "count": self._query_reformulation_count, "provider": self._query_reformulation_provider,
+                        "model": self._query_reformulation_model,
+                        **({"merge_policy": self._query_reformulation_merge_policy}
+                           if self._query_reformulation_merge_policy != "new_only" else {})},
+                })
+                receipt = make_receipt(request_id=analysis.request_id, user_id=user_id, query=query,
+                                       reference_time=scoring_now, scopes=normalized_scope,
+                                       scoring=effective_weights, packing=effective_packing_config,
+                                       candidates=scored, bundle=bundle, min_score=min_score, result_limit=limit,
+                                       retrieval_mode=retrieval_mode, time_from=effective_time_from,
+                                       time_to=effective_time_to, ranking_policy=ranking_policy, execution=execution,
+                                       min_score_skipped=min_score_skipped)
+                op_id = str(uuid.uuid4())
+                payload = json.dumps({
+                    "request_id": str(analysis.request_id),
+                    "receipt": receipt.model_dump_json(), "receipt_checksum": receipt.checksum,
+                    "query": query,
+                    "reference_time": scoring_now.isoformat(),
+                    "query_time_from": analysis.time_from.isoformat() if analysis.time_from else None,
+                    "query_time_to": analysis.time_to.isoformat() if analysis.time_to else None,
+                    "user_id": user_id,
+                    "candidates_generated": candidate_counts,
+                    "candidates_filtered": len(excluded),
+                    "candidates_included": bundle.included_count,
+                    "tokens_used": bundle.tokens_used,
+                    "token_budget": bundle.token_budget,
+                    "tokenizer": bundle.tokenizer,
+                    "scoring_config_version": effective_weights.version_id,
+                    "min_score": min_score, "result_limit": limit,
+                    "max_per_source": max_per_source,
+                    "max_per_evidence": max_per_evidence,
+                    "selection_excluded": [item.model_dump(mode="json") for item in selection_excluded],
+                    "backends_used": list(candidate_counts.keys()),
+                    "embedding_mismatch": embedding_mismatch,
+                    "backend_failures": candidate_diagnostics.backend_failures,
+                    # Only when the seed count walk did not run, so other entries keep their bytes.
+                    **({"graph_seed_reach": candidate_diagnostics.graph_seed_reach}
+                       if candidate_diagnostics.graph_seed_reach is not None else {}),
+                    # Always present, like the two keys above; true only under
+                    # rank fusion (issue #150).
+                    "min_score_skipped": min_score_skipped,
+                    "aggregation_coverage": aggregation_coverage.model_dump(mode="json")
+                        if aggregation_coverage is not None else None,
+                    "historical_coverage": historical_coverage.model_dump(mode="json")
+                        if historical_coverage is not None else None,
+                    "temporal_relation": temporal_relation_metadata.model_dump(mode="json")
+                        if temporal_relation_metadata is not None else None,
+                    "scope_filter": [s.value for s in normalized_scope] if normalized_scope else None,
+                    "time_from": effective_time_from.isoformat() if effective_time_from else None,
+                    "time_to": effective_time_to.isoformat() if effective_time_to else None,
+                    "cross_scope_hint_count": len(cross_scope_hints),
+                })
+            if private_read is not None:
+                from prme.storage.relevance import RelevanceRepository
+                repository = RelevanceRepository(conn=self._conn, conn_lock=self._conn_lock, pool=self._pool)
+                await repository._query(
+                    "INSERT INTO operations (id,op_type,target_id,payload,actor_id,created_at) "
+                    "VALUES ($1,'RETRIEVAL_REQUEST',$2,$3,$4,$5)", op_id, str(analysis.request_id),
+                    payload, user_id, scoring_now, guard=lambda: private_read.guard("publication"))
+            elif self._pool is not None:
                 # PostgreSQL backend
                 async with self._pool.acquire() as pg_conn:
                     await pg_conn.execute(

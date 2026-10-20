@@ -46,7 +46,7 @@ async def test_AC01_ordinary_reads_return_admitted_memory_without_evidence_open(
         assert response.results and MEMORY in response.bundle.render()
         assert_no_source(response.model_dump_json())
         assert response.metadata.source_limitation
-        assert response.metadata.receipt_persisted is False
+        assert response.metadata.receipt_persisted is True  # PV-05 now writes a minimized protected receipt.
         assert all(SOURCE not in str(texts) for texts in runtime.embedder.sends)
         # Existing AC06 mutually exclusive expansion controls use the real view.
         pipeline = engine._retrieval_pipeline

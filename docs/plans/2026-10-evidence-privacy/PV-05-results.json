@@ -1,0 +1,161 @@
+{
+  "stage": "implementation-checkpoint",
+  "issue": "#324",
+  "acceptanceComplete": false,
+  "ownedCases": [
+    {
+      "id": "AP06",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "AC06",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL03",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL04",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL05",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL06",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL07",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL08",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "ER05",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    }
+  ],
+  "verified": [
+    {
+      "log": "processing-baseline.log",
+      "exit": 0,
+      "result": "8 passed",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_ciphertext_storage.py::test_EM03_real_processing_consumed_only_by_actual_claim tests/test_privacy_ephemeral.py -q --tb=short",
+      "seconds": 13.75
+    },
+    {
+      "log": "processing-components-1.log",
+      "exit": 1,
+      "result": "6 passed, 6 failed; new extractor fixture quote/polarity invalid",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py -q --tb=short",
+      "seconds": 21.72
+    },
+    {
+      "log": "processing-diagnosis.log",
+      "exit": 1,
+      "result": "1 failed; confirms privacy_evidence_ambiguous; no production change",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py::test_CL03_component_saved_plan_recovers_without_private_keys[directory] -q --tb=short",
+      "seconds": 2.26
+    },
+    {
+      "log": "processing-components-2.log",
+      "exit": 0,
+      "result": "12 passed; corrected complete source quote and explicit positive polarity",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py -q --tb=short",
+      "seconds": 17.12
+    },
+    {
+      "log": "processing-batch-retry.log",
+      "exit": 1,
+      "result": "16 passed, 3 failed; new test called nonexistent ingest_many API",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py tests/test_privacy_retry_commitments.py -q --tb=short",
+      "seconds": 20.63
+    },
+    {
+      "log": "processing-batch-2.log",
+      "exit": 0,
+      "result": "3 passed, 12 deselected; use actual ingest_batch",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py -k multiple_input -q --tb=short",
+      "seconds": 6.76
+    },
+    {
+      "log": "receipts-1.log",
+      "exit": 1,
+      "result": "49 passed, 1 failed, 1 skipped; legacy crash hook rejected guard=None keyword",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_receipts.py tests/test_answer_citations.py tests/test_relevance_records.py -q --tb=short",
+      "seconds": 13.87
+    },
+    {
+      "log": "receipt-legacy-crash-repair.log",
+      "exit": 0,
+      "result": "1 passed, 1 skipped; preserve legacy call signature",
+      "command": "uv run --no-sync python -m pytest tests/test_relevance_records.py::test_process_exit_after_feedback_commit_preserves_original_receipt -q --tb=short",
+      "seconds": 2.1
+    },
+    {
+      "log": "lifecycle-1.log",
+      "exit": 0,
+      "result": "69 passed, 2 skipped",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py tests/test_atomic_lifecycle.py tests/test_atomic_ttl_expiration.py tests/test_reinforcement_atomic.py -q --tb=short",
+      "seconds": 18.31
+    },
+    {
+      "log": "checkpoint-components.log",
+      "exit": 0,
+      "result": "107 passed, 1 skipped",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_supersedence_journal.py tests/test_condition_evaluation.py tests/test_atomic_oscillation_penalty.py tests/test_atomic_organizer_merges.py -q --tb=short",
+      "seconds": 47.95
+    }
+  ],
+  "repairCycles": {
+    "new_extractor_fixture": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "new_batch_API_name": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "legacy_feedback_crash_hook": {
+      "unsuccessful": 0,
+      "successful": 1
+    }
+  },
+  "evidenceBoundary": {
+    "actual": [
+      "LocalAnalyzer",
+      "LocalSanitizer",
+      "CryptoProtector",
+      "NativeKeyCustody encoding/HMAC",
+      "backend claims/transactions/persistence/staging/publication/processing cleanup"
+    ],
+    "fixtures": [
+      "external models",
+      "clock/faults",
+      "inherited native OS get/set/delete adapter",
+      "current-policy authority"
+    ]
+  },
+  "pending": [
+    "reconcile eb457646 final 321/323 dependency composition",
+    "remaining 324 profile/summary/alias and recovery/diagnostic component coverage",
+    "325 authoritative erasure/current-policy integration",
+    "326 export/restoration",
+    "327 combined gate",
+    "root final reviews/full validation/delivery"
+  ]
+}

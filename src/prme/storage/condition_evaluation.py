@@ -10,6 +10,7 @@ from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
+from prme.privacy.journals import protected_mutation, snapshot_payload, validate_snapshot, journal_deadline
 from prme.models.nodes import MemoryNode
 from prme.storage import _snapshot_json
 from prme.storage._threading import run_to_completion
@@ -137,6 +138,9 @@ def _current_state(node: MemoryNode) -> ConditionState:
 
 
 def _payload(record: ConditionEvaluationRecord) -> str:
+    protected = snapshot_payload(record, "condition_evaluation")
+    if protected is not None:
+        return protected
     raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps(
         {"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()}
@@ -150,6 +154,7 @@ def read_record(payload) -> ConditionEvaluationRecord:
     if hashlib.sha256(raw.encode()).hexdigest() != value["sha256"]:
         raise ValueError("Condition evaluation journal checksum mismatch")
     record = ConditionEvaluationRecord.model_validate(_snapshot_json.loads(raw))
+    validate_snapshot(value, record, "condition_evaluation")
     if (
         record.before.id != record.after.id
         or record.before.user_id != record.after.user_id
@@ -258,8 +263,10 @@ def _record(
 
 def _checkpoint(stage: str) -> None:
     """Transaction fault-injection point, with no external work."""
+    journal_deadline()
 
 
+@protected_mutation
 async def evaluate_condition_duckdb(
     store, node_id, state, *, user_id, evidence_id=None, request_id=None,
     evaluation_method=ConditionEvaluationMethod.USER, reason=None,
@@ -349,6 +356,7 @@ def _evaluate_duckdb(store, node_id: str, inputs: dict) -> MemoryNode:
         raise
 
 
+@protected_mutation
 async def evaluate_condition_postgres(
     store, node_id, state, *, user_id, evidence_id=None, request_id=None,
     evaluation_method=ConditionEvaluationMethod.USER, reason=None,

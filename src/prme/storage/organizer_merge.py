@@ -10,6 +10,7 @@ from uuid import UUID, uuid5
 
 from pydantic import BaseModel, ConfigDict
 
+from prme.privacy.journals import protected_mutation, snapshot_payload, validate_snapshot, journal_deadline
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage._threading import run_to_completion
@@ -59,6 +60,9 @@ def _result(record, applied):
 
 
 def _payload(record):
+    protected = snapshot_payload(record, "organizer_merge")
+    if protected is not None:
+        return protected
     text = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps({"record": text, "sha256": hashlib.sha256(text.encode()).hexdigest()})
 
@@ -71,6 +75,7 @@ def _replayed(value, operation, ids, user_id, kind):
     if hashlib.sha256(raw.encode()).hexdigest() != payload["sha256"]:
         raise ValueError("Organizer merge journal checksum mismatch")
     record = MergeRecord.model_validate(_snapshot_json.loads(raw))
+    validate_snapshot(payload, record, "organizer_merge")
     if (record.operation_id, record.user_id, record.kind) != (operation, user_id, kind) or sorted(
         [str(record.canonical_before.id), str(record.retired_before.id)]
     ) != ids:
@@ -133,8 +138,10 @@ def _prepare(nodes, edges, ids, operation, user_id, kind, score):
 
 def _checkpoint(stage):
     """Transaction fault-injection boundary; never performs external work."""
+    journal_deadline()
 
 
+@protected_mutation
 async def merge_duckdb(store: "DuckPGQGraphStore", a: str, b: str, *, user_id: str, kind: str, score: float) -> MergeResult | None:
     ids, operation = _request(a, b, user_id, kind, score)
     async with store._conn_lock:
@@ -182,6 +189,7 @@ def _merge_duckdb(store, ids, operation, user_id, kind, score):
         raise
 
 
+@protected_mutation
 async def merge_postgres(store: "PgGraphStore", a: str, b: str, *, user_id: str, kind: str, score: float) -> MergeResult | None:
     from prme.storage.pg.graph_store import _NODE_COLUMNS
     ids, operation = _request(a, b, user_id, kind, score)

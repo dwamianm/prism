@@ -20,6 +20,7 @@ from uuid import UUID
 
 import duckdb
 
+from prme.privacy.journals import protected_mutation
 from prme.models.edges import MemoryEdge
 from prme.storage._threading import run_to_completion
 from prme.models.nodes import MemoryNode
@@ -531,6 +532,7 @@ class DuckPGQGraphStore:
         from prme.storage.consolidation_retirement import retire_duckdb
         return await retire_duckdb(self, source_id, summary_id, **policy)
 
+    @protected_mutation
     async def supersede_many(
         self,
         replacements: list[tuple[str, str, str | None]],
