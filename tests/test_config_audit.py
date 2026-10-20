@@ -91,8 +91,8 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert set(settings) == EXPECTED_HYPOTHESES
     assert report.hypothesis_count == len(EXPECTED_HYPOTHESES)
     # Speaker references, claim sentence text and folding became defaults together, so they apply,
-    # and batched extraction became a default later (#254).
-    assert report.effective_count == 26
+    # and batched extraction became a default later (#254), then the group links (prism-monorepo #275).
+    assert report.effective_count == 27
     assert report.customized_count == 0
     for name in ("enable_speaker_references", "enable_claim_sentence_text", "packing.fold_repeated_text"):
         setting = settings[name]
@@ -121,10 +121,11 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert (term_weights.effective, term_weights.value, term_weights.default, term_weights.customized) == (
         True, True, True, False)
     assert term_weights.environment_variable == "PRME_LEXICAL_TERM_WEIGHTS"
-    # The structure options became defaults in the alpha channel on the fast gate (0.16.0a3 and 0.16.0a4, 2026-10-19).
+    # The structure options became defaults in the alpha channel on the fast gate (0.16.0a3 and 0.16.0a4, 2026-10-19),
+    # and the group links after them (prism-monorepo #275).
     for name in ("enable_ingest_claim_fixes", "enable_mention_links", "enable_owner_name_carry",
                  "packing.graph_seed_words", "packing.folded_records_keep_rank",
-                 "packing.session_context_skip_entities"):
+                 "packing.session_context_skip_entities", "enable_owner_group_links"):
         setting = settings[name]
         assert (setting.effective, setting.value, setting.default, setting.customized) == (True, True, True, False), name
     assert settings["novelty_high_threshold"].effective is False
@@ -182,7 +183,7 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values(monkeypatch):
     # A PackingConfig built in code has no rank fusion session decay, does not fold, and keeps the three structure
     # options off (graph seed words, folded records keep rank, session context skips entities), which the audit
     # reports as customized.
-    assert report.effective_count == 33
+    assert report.effective_count == 34
     assert report.customized_count == 9
     assert settings["packing.session_context_skip_entities"].customized is True
     assert settings["packing.graph_seed_words"].customized is True

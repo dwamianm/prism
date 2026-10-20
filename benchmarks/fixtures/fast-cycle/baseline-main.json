@@ -2,18 +2,18 @@
  "kind": "prme-fast-cycle-report",
  "schema_version": 1,
  "label": "main",
- "created_at": "2026-10-19T14:28:38.868200+00:00",
+ "created_at": "2026-10-20T16:35:35.996145+00:00",
  "provenance": {
-  "commit": "a88eaf601f02013c248a5e68833f9c434c4fe693",
-  "src_tree": "8c94ef7eb1797fe31c852115d10f3688038d1bd4",
+  "commit": "b459381c4158b7038adea3b80d4c113173930f7f",
+  "src_tree": "a8324d3091ebcd342c7f66966ab9b64f1c972128",
   "src_modified": false,
   "settings": {}
  },
  "seconds": {
-  "store": 6.924407250000513,
-  "ingest": 18.20165483299934,
-  "store-extract": 20.379337917001976,
-  "total": 45.50540000000183
+  "store": 9.175088332995074,
+  "ingest": 24.728349750002963,
+  "store-extract": 30.87633591600752,
+  "total": 64.77977399900556
  },
  "stages": {
   "store": {
@@ -25,8 +25,8 @@
    "calls": 75,
    "nodes": 75,
    "edges": 0,
-   "store_seconds": 6.381811207997089,
-   "retrieve_seconds": 0.510813542001415,
+   "store_seconds": 8.394861249995301,
+   "retrieve_seconds": 0.6869052909896709,
    "measures": {
     "nodes_per_store_call": 1.0,
     "edges_per_store_call": 0.0,
@@ -394,7 +394,7 @@
      ]
     }
    ],
-   "seconds": 6.924407250000513
+   "seconds": 9.175088332995074
   },
   "ingest": {
    "mode": "replay",
@@ -406,8 +406,8 @@
     "defects-v1": {
      "turns": 14,
      "speaker": false,
-     "seconds": 3.8662138340005185,
-     "conversation_sha256": "613a1441aab022dc5261de6b9d3d82d43f8fbdf1d5f160d47e5af2bbbba4c4fc",
+     "seconds": 5.3548351250065025,
+     "conversation_sha256": "a198c2be1f27c0b5522f52316855f2b6a788cac0afc2703fc46edbbd4f3d703d",
      "live_calls": 0,
      "cache_hits": 14,
      "unreproduced": 0,
@@ -470,7 +470,7 @@
     "corrections-v1": {
      "turns": 16,
      "speaker": true,
-     "seconds": 3.323169958006474,
+     "seconds": 4.331305583007634,
      "conversation_sha256": "7ef185ed2e365fffc713f37aa8f4d312aa24ca69d159df3023c5b7ad13a8e1a9",
      "live_calls": 0,
      "cache_hits": 16,
@@ -520,7 +520,7 @@
        "probe": "move-city",
        "records": [
         {
-         "id": "c5a295dd-20bf-49ca-a257-02c75feb1975",
+         "id": "b738a3a7-22d6-432b-a9bf-e7396c9696e6",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -532,7 +532,7 @@
          "replacement": null
         },
         {
-         "id": "3e0ae89b-37c2-4314-a90a-9a1469abc1a2",
+         "id": "8384a6f4-9fea-480c-bbf9-f74aef991aa8",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -544,7 +544,7 @@
          "replacement": null
         },
         {
-         "id": "04309c53-5fc0-484e-8637-b95d3421b326",
+         "id": "75861f93-1e05-4b27-a0b6-193628c24d35",
          "type": "decision",
          "state": "tentative",
          "mentions": [
@@ -556,7 +556,7 @@
          "replacement": null
         },
         {
-         "id": "fbfb5924-2809-48af-8565-f8cf8dcca7ec",
+         "id": "08c17d74-ec38-4292-b16a-0885d70a415c",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -569,7 +569,7 @@
          "replacement": null
         },
         {
-         "id": "c47e067d-8ef9-445a-a665-2a982d9ecb94",
+         "id": "9eb8b388-cb84-4e76-8f94-741f997d99e2",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -581,7 +581,7 @@
          "replacement": null
         },
         {
-         "id": "1b438d64-4617-4407-81cf-ffab06db2747",
+         "id": "2664fe35-421b-4066-b197-e5b8d0062a95",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -634,7 +634,7 @@
        "probe": "jo-birthday",
        "records": [
         {
-         "id": "df8aeb76-18b9-4da5-a0c1-060b0656bd58",
+         "id": "d342bc0a-dd50-48fc-a092-39d1613c1536",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -646,7 +646,7 @@
          "replacement": null
         },
         {
-         "id": "64f982c1-52d8-4682-b12a-b80b3fc0434b",
+         "id": "c3d9fafc-fbb1-411a-8f27-d7206ba7d5bd",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -658,7 +658,7 @@
          "replacement": null
         },
         {
-         "id": "fa0ab962-090f-405d-863e-002a0502aeeb",
+         "id": "e4772bd1-a13a-4366-ae66-55e101b2e757",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -670,7 +670,7 @@
          "replacement": null
         },
         {
-         "id": "1588fc7d-1778-4ba0-a23c-3edf80161188",
+         "id": "ce48b0af-ad58-4ad1-adee-d72880e6b0d2",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -682,7 +682,7 @@
          "replacement": null
         },
         {
-         "id": "6443429e-da61-4917-8c51-b6410ff965da",
+         "id": "3cf55d88-c442-496c-9923-c15a66e8e819",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -734,7 +734,7 @@
        "probe": "coffee",
        "records": [
         {
-         "id": "47138120-3650-42e5-ab55-208bbebef01a",
+         "id": "7f79c5a5-d90d-4968-aaaf-4e8161bd7b35",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -746,7 +746,7 @@
          "replacement": null
         },
         {
-         "id": "432d8de4-869f-49d1-888a-4cfc462b898e",
+         "id": "2c497550-a06c-4f3d-b3a9-6e0e8e614fce",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -758,7 +758,7 @@
          "replacement": null
         },
         {
-         "id": "c42e363a-6169-4cdb-a6be-93f724e38410",
+         "id": "8adcc2d0-3689-42ad-864d-cb7640488a92",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -770,7 +770,7 @@
          "replacement": null
         },
         {
-         "id": "46a4d7b4-2298-48a6-9c7f-34f0816077c1",
+         "id": "17902b38-b03e-4b87-bc37-9c8b0b96b4fd",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -822,7 +822,7 @@
        "probe": "job",
        "records": [
         {
-         "id": "38d10ce7-3000-4764-89a2-b462c1fe819d",
+         "id": "8c52aa4e-c858-4e72-b8e9-2a7ed7451bd2",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -834,7 +834,7 @@
          "replacement": null
         },
         {
-         "id": "c286dec1-095b-4286-82f9-4c6cdf7ffe8b",
+         "id": "a99a601b-c10e-44d8-9565-7529c5adcba0",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -875,7 +875,7 @@
     "chat-v1": {
      "turns": 54,
      "speaker": false,
-     "seconds": 10.97917916699953,
+     "seconds": 14.729064792001736,
      "conversation_sha256": "535a76267ea20486e0d5afdace7c7ff277f649ccc8c4687c448ee169c374af8d",
      "live_calls": 0,
      "cache_hits": 54,
@@ -1012,15 +1012,15 @@
      "claims_repeating_triple": 0,
      "claims_whole_message": 2,
      "nodes_per_turn": 4.5,
-     "edges_per_turn": 6.0,
+     "edges_per_turn": 6.428571428571429,
      "user_claims_named_owner": 11,
      "user_claims_first_person": 4,
      "pronoun_entities": 2,
      "entities_without_link": 0,
-     "key_entities_found": 9,
+     "key_entities_found": 11,
      "key_entities_split": 0,
      "key_entities_missing": 0,
-     "key_links_linked": 4,
+     "key_links_linked": 9,
      "key_links_via_pronoun": 0,
      "key_links_not_linked": 5,
      "answers_in_context": 7,
@@ -1044,7 +1044,7 @@
      "claims_repeating_triple": 0,
      "claims_whole_message": 0,
      "nodes_per_turn": 3.375,
-     "edges_per_turn": 3.75,
+     "edges_per_turn": 3.8125,
      "user_claims_named_owner": 12,
      "user_claims_first_person": 1,
      "pronoun_entities": 2,
@@ -1078,7 +1078,7 @@
      "claims_repeating_triple": 5,
      "claims_whole_message": 5,
      "nodes_per_turn": 4.148148148148148,
-     "edges_per_turn": 6.055555555555555,
+     "edges_per_turn": 6.111111111111111,
      "user_claims_named_owner": 36,
      "user_claims_first_person": 3,
      "pronoun_entities": 15,
@@ -1114,7 +1114,7 @@
      "answer_rank:language": 2
     }
    },
-   "seconds": 18.20165483299934
+   "seconds": 24.728349750002963
   },
   "store-extract": {
    "backend": "duckdb",
@@ -1133,9 +1133,9 @@
    "live_calls": 0,
    "cache_hits": 75,
    "unreproduced": 0,
-   "store_seconds": 6.207754708004359,
-   "extract_seconds": 12.440460124998935,
-   "retrieve_seconds": 1.5153062919998774,
+   "store_seconds": 9.54133516701404,
+   "extract_seconds": 19.308688375007478,
+   "retrieve_seconds": 1.6569664999988163,
    "measures": {
     "nodes_per_store_call": 5.026666666666666,
     "edges_per_store_call": 4.906666666666666,
@@ -1508,7 +1508,7 @@
      ]
     }
    ],
-   "seconds": 20.379337917001976
+   "seconds": 30.87633591600752
   }
  },
  "measures": {
@@ -1529,7 +1529,7 @@
    "defects-v1/claims_repeating_triple": 0,
    "defects-v1/claims_whole_message": 2,
    "defects-v1/nodes_per_turn": 4.5,
-   "defects-v1/edges_per_turn": 6.0,
+   "defects-v1/edges_per_turn": 6.428571428571429,
    "corrections-v1/extraction_requests": 16,
    "corrections-v1/extraction_tokens": 96475,
    "corrections-v1/claims_per_turn": 1.25,
@@ -1537,7 +1537,7 @@
    "corrections-v1/claims_repeating_triple": 0,
    "corrections-v1/claims_whole_message": 0,
    "corrections-v1/nodes_per_turn": 3.375,
-   "corrections-v1/edges_per_turn": 3.75,
+   "corrections-v1/edges_per_turn": 3.8125,
    "chat-v1/extraction_requests": 54,
    "chat-v1/extraction_tokens": 335364,
    "chat-v1/claims_per_turn": 2.0555555555555554,
@@ -1545,7 +1545,7 @@
    "chat-v1/claims_repeating_triple": 5,
    "chat-v1/claims_whole_message": 5,
    "chat-v1/nodes_per_turn": 4.148148148148148,
-   "chat-v1/edges_per_turn": 6.055555555555555
+   "chat-v1/edges_per_turn": 6.111111111111111
   },
   "meaning": {
    "store/key_entities_found": 0,
@@ -1560,10 +1560,10 @@
    "defects-v1/user_claims_first_person": 4,
    "defects-v1/pronoun_entities": 2,
    "defects-v1/entities_without_link": 0,
-   "defects-v1/key_entities_found": 9,
+   "defects-v1/key_entities_found": 11,
    "defects-v1/key_entities_split": 0,
    "defects-v1/key_entities_missing": 0,
-   "defects-v1/key_links_linked": 4,
+   "defects-v1/key_links_linked": 9,
    "defects-v1/key_links_via_pronoun": 0,
    "defects-v1/key_links_not_linked": 5,
    "corrections-v1/user_claims_named_owner": 12,

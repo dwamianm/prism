@@ -1,6 +1,7 @@
 """Conservative recognition of unresolved English personal references."""
 
-_PERSONAL_REFERENCES = frozenset({
+# Read by group_links too, so a word read as a pronoun is never read as a name there.
+PERSONAL_REFERENCES = frozenset({
     "i", "me", "myself", "my", "mine", "we", "us", "ourselves", "our", "ours",
     "you", "yourself", "yourselves", "your", "yours", "he", "him", "himself", "his",
     "she", "her", "herself", "hers", "they", "them", "themselves", "their", "theirs", "it", "itself",
@@ -16,4 +17,4 @@ def unresolved_personal_reference(name: str, entity_type: str | None = None) -> 
     typed non-person meanings such as US/country and IT/technology are distinct.
     """
     kind = entity_type.strip().casefold() if isinstance(entity_type, str) else ""
-    return name.strip().casefold() in _PERSONAL_REFERENCES and kind not in _NON_PERSONAL_TYPES
+    return name.strip().casefold() in PERSONAL_REFERENCES and kind not in _NON_PERSONAL_TYPES

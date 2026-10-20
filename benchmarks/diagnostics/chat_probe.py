@@ -561,10 +561,12 @@ def compare_markdown(reports: list[dict]) -> str:
                               for by_id in ({row["id"]: row for row in report["probes"]} for report in reports))]
         for probe in reports[0]["probes"]])
     lines += [""]
+    # Every report's links, so a report measured before the key gained a link sits beside one with it.
+    links = {link["id"]: link["label"] for report in reports for link in report["graph"]["links"]}
     lines += _table(["Link", *labels], [
-        [link["label"], *(next(row["status"] for row in report["graph"]["links"] if row["id"] == link["id"])
-                          for report in reports)]
-        for link in reports[0]["graph"]["links"]])
+        [label, *(next((row["status"] for row in report["graph"]["links"] if row["id"] == link_id), "not in key")
+                  for report in reports)]
+        for link_id, label in links.items()])
     return "\n".join(lines) + "\n"
 
 
