@@ -68,6 +68,9 @@ class RequestMeter:
         self._cache, self._usage, self._recorded, self._provider = cache, usage, recorded, provider
         self._cached = provider.extract_batch
         provider.extract_batch = self._extract_batch
+        # With the window or fact text resolution on, the pipeline asks for one turn per request.
+        self._cached_turn = provider.extract
+        provider.extract = self._extract
 
     async def _extract_batch(self, turns, **extra):
         key = self._cache._batch_key(self._provider, turns, extra.get("memories", ()))
@@ -76,14 +79,27 @@ class RequestMeter:
         try:
             return await self._cached(turns, **extra)
         finally:
-            if self._cache.misses > misses:
-                calls, prompt, completion = (now - then for now, then in zip(self._usage.snapshot(), before))
-                self.live[key] = {"calls": calls, "prompt_tokens": prompt, "completion_tokens": completion}
-                self.tokens += prompt + completion
-            else:
-                entry = self._recorded.get(key)
-                self.known = self.known and entry is not None
-                self.tokens += entry["prompt_tokens"] + entry["completion_tokens"] if entry else 0
+            self._count(key, misses, before)
+
+    def _count(self, key: str, misses: int, before: tuple[int, int, int]) -> None:
+        if self._cache.misses > misses:
+            calls, prompt, completion = (now - then for now, then in zip(self._usage.snapshot(), before))
+            self.live[key] = {"calls": calls, "prompt_tokens": prompt, "completion_tokens": completion}
+            self.tokens += prompt + completion
+        else:
+            entry = self._recorded.get(key)
+            self.known = self.known and entry is not None
+            self.tokens += entry["prompt_tokens"] + entry["completion_tokens"] if entry else 0
+
+    async def _extract(self, content, *, role="user", context=(), resolve=None, speaker=None):
+        window = tuple(line for line in context if line and line.strip())
+        key = self._cache._key(self._provider, content, role, window, resolve)
+        misses, before = self._cache.misses, self._usage.snapshot()
+        self.requests += 1
+        try:
+            return await self._cached_turn(content, role=role, context=context, resolve=resolve, speaker=speaker)
+        finally:
+            self._count(key, misses, before)
 
     @property
     def total_tokens(self) -> int | None:

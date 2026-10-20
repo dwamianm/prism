@@ -185,6 +185,12 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_windowed_extraction is true",
         bool,
     ),
+    # Without the window there is nothing for a turn with no session to be given.
+    "enable_owner_window_extraction": (
+        "enable_windowed_extraction",
+        "enable_windowed_extraction is true",
+        bool,
+    ),
     "enable_fact_text_resolution": (
         "enable_fact_text_resolution",
         "enable_fact_text_resolution is true",

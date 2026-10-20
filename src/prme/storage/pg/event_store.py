@@ -496,11 +496,20 @@ class PgEventStore:
         scopes: list[Scope] | None = None,
         limit: int = 100,
         offset: int = 0,
+        before: Event | None = None,
     ) -> list[Event]:
-        """Retrieve events for a user, optionally filtered by session and scope."""
+        """Retrieve events for a user, optionally filtered by session and scope.
+
+        With ``before``, only events that come before it in the result order.
+        """
         conditions: list[str] = ["user_id = $1"]
         params: list = [user_id]
         idx = 2
+
+        if before is not None:
+            conditions.append(f"(timestamp < ${idx} OR (timestamp = ${idx} AND id < ${idx + 1}))")
+            params.extend([before.timestamp, before.id])
+            idx += 2
 
         if session_id is not None:
             conditions.append(f"session_id = ${idx}")

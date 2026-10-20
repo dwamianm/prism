@@ -530,6 +530,7 @@ class EventStore:
         scopes: list[Scope] | None = None,
         limit: int = 100,
         offset: int = 0,
+        before: Event | None = None,
     ) -> list[Event]:
         """Retrieve events for a user, optionally filtered by session and scope.
 
@@ -540,13 +541,15 @@ class EventStore:
                 returns events from all scopes (backward compatible).
             limit: Maximum number of events to return.
             offset: Number of events to skip.
+            before: Only events that come before this one in the order
+                below, so the first result is the event just before it.
 
         Returns:
             List of Events ordered by timestamp descending.
         """
         async with self._conn_lock:
             return await run_to_completion(
-                self._get_by_user_sync, user_id, session_id, scopes, limit, offset
+                self._get_by_user_sync, user_id, session_id, scopes, limit, offset, before
             )
 
     async def get_by_hash(
@@ -623,6 +626,7 @@ class EventStore:
         scopes: list[Scope] | None,
         limit: int,
         offset: int,
+        before: Event | None = None,
     ) -> list[Event]:
         """Retrieve events for a user (sync).
 
@@ -630,6 +634,10 @@ class EventStore:
         """
         conditions: list[str] = ["user_id = ?"]
         params: list = [user_id]
+
+        if before is not None:
+            conditions.append("(timestamp < ? OR (timestamp = ? AND id < ?))")
+            params.extend([before.timestamp, before.timestamp, str(before.id)])
 
         if session_id is not None:
             conditions.append("session_id = ?")

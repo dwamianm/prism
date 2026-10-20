@@ -23,6 +23,10 @@ engine derives:
   goes alone. Every request goes through the pipeline's own batched request, so
   its checks, its halving of a request that fails as a whole and its repeat of
   turns the model left out apply here too.
+- With ``enable_windowed_extraction`` or ``enable_fact_text_resolution`` on,
+  extraction is not batched (#91): each source is its own request, shown the
+  turns before it, and the settings that name those options give the run its own
+  fingerprint, so sources derived without them are derived again.
 """
 
 from __future__ import annotations
@@ -79,13 +83,13 @@ def extraction_settings(pipeline: IngestionPipeline) -> dict:
     sample turn, so a change to its text or its layout changes the settings.
     """
     from prme import __version__
-    from prme.ingestion.extraction import BatchTurn, batch_request_sha256
+    from prme.ingestion.extraction import BatchTurn, _extraction_prompt_for_role, batch_request_sha256
     from prme.ingestion.pipeline import _GROUNDING_POLICY
 
     provider = pipeline._extraction_provider
     sample = BatchTurn(index=1, role="user", content="Sample turn.", speaker="Sample",
                        time=datetime(2000, 1, 1, tzinfo=timezone.utc))
-    return {
+    settings = {
         "engine": __version__,
         "provider": provider.provider_name,
         "model": provider.model_name,
@@ -96,6 +100,16 @@ def extraction_settings(pipeline: IngestionPipeline) -> dict:
         "claim_fixes": pipeline._claim_fixes,
         "speaker_grounding": pipeline._speaker_grounding,
     }
+    if pipeline._extraction_window_turns > 0 or pipeline._resolve_fact_text:
+        # Each source is asked on its own, with these prompts, so they and the window decide the output. The
+        # settings of an engine with both options off are those it had before them.
+        prompt = _extraction_prompt_for_role("user", windowed=pipeline._extraction_window_turns > 0,
+                                             resolving=pipeline._resolve_fact_text)
+        settings["request"] = hashlib.sha256(prompt.encode()).hexdigest()
+        settings["window_turns"] = pipeline._extraction_window_turns
+        settings["window_owner_wide"] = pipeline._extraction_window_owner_wide
+        settings["resolve_fact_text"] = pipeline._resolve_fact_text
+    return settings
 
 
 def derivation_settings(pipeline: IngestionPipeline) -> dict:
@@ -184,8 +198,6 @@ class Reingester:
             raise ValueError("Reingest requires user_id")
         if limit is not None and limit < 0:
             raise ValueError("Reingest limit cannot be negative")
-        if self._pipeline._batch_target_tokens <= 0:
-            raise ValueError("Reingest uses batched extraction: set extraction_batch_target_tokens above 0")
         after = decode_cursor(cursor) if cursor else None
         scope = Scope(scope) if scope is not None else None
         if user_id in self._running:
@@ -311,7 +323,11 @@ class Reingester:
                        ) -> dict[str, ExtractionRecord]:
         """Send one request for the group and return the output saved for its sources."""
         try:
-            await self._pipeline._request_batch(group[0], group, claim=None, run=run)
+            if self._pipeline._batch_target_tokens > 0:
+                await self._pipeline._request_batch(group[0], group, claim=None, run=run)
+            else:
+                # Each source is its own request while the window or fact text resolution is on.
+                await self._pipeline._request_single(group[0], run=run)
         except ExtractionError as exc:
             logger.warning("reingest.request_failed", event_id=str(group[0].id), reason=exc.reason_code)
         return await self._pipeline._event_store.reingest.saved_extractions(

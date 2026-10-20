@@ -1036,7 +1036,9 @@ _WINDOW_GUIDANCE = (
     "EARLIER TURNS: the next message holds turns that came before this one, for "
     "reference only. Use them to resolve who or what the source message refers "
     "to. Extract only what the source message itself states. Do not extract a "
-    "claim that only an earlier turn supports."
+    "claim that only an earlier turn supports. Keep every subject, object and "
+    "evidence_quote as the source message words it, a pronoun included: an "
+    "earlier turn tells you what a word means, not what to write."
 )
 
 
@@ -1046,7 +1048,8 @@ _RESOLUTION_GUIDANCE = (
     "RESOLVED TEXT: for every fact, also write resolved_text: the supporting "
     "sentences of the source message, whole and verbatim, except that a pronoun "
     "referring to a named person becomes that person's name (Melanie's for my, "
-    "your, his, her or their when they mean Melanie) and a relative date "
+    "your, his, her or their when they mean Melanie; They for two named people "
+    "becomes both names, Alex and Jordan) and a relative date "
     "(yesterday, last week, two days ago) becomes the absolute date it means, "
     "computed from the source time and written like 7 May 2023. Use a name only "
     "when the speaker, the source message or an earlier turn gives it, and leave "

@@ -412,13 +412,72 @@ async def test_bad_calls_are_refused_before_any_work(config, user):
             await engine.reingest("")
         assert (await engine.reingest(user, limit=0)).selected == 0
         assert model.calls == []
-    async with MemoryEngine.open(settings(config, extraction_batch_target_tokens=0)) as engine:
-        with pytest.raises(ValueError, match="batched extraction"):
-            await engine.reingest(user)
     async with MemoryEngine.open(settings(config)) as engine:
         engine._pipeline = None
         with pytest.raises(ValueError, match="pipeline"):
             await engine.reingest(user)
+
+
+WINDOW_OPTIONS = {"extraction_batch_target_tokens": 0, "enable_windowed_extraction": True,
+                  "enable_owner_window_extraction": True, "enable_fact_text_resolution": True}
+
+
+def install_per_turn(engine, asked):
+    """A model that answers one turn at a time and records what it was shown."""
+    model = Scripted(FOUND)
+
+    async def extract(text, *, role="user", context=(), resolve=None, **_):
+        asked.append({"text": text, "context": list(context), "resolve": resolve is not None})
+        return await _single(model, text)
+
+    engine._pipeline._extraction_provider.extract = extract
+    engine._pipeline._extraction_provider.extract_batch = AsyncMock(side_effect=AssertionError("one call per turn"))
+
+
+async def test_with_the_window_options_each_source_is_asked_on_its_own_with_its_window(config, user):
+    asked = []
+    async with MemoryEngine.open(settings(config, **WINDOW_OPTIONS)) as engine:
+        install_per_turn(engine, asked)
+        await store_all(engine, user)
+        before = await events_snapshot(engine, user)
+        dry = await engine.reingest(user, dry_run=True)
+        assert (dry.selected, dry.model_calls) == (4, 4) and asked == []
+
+        result = await engine.reingest(user)
+        assert (result.processed, result.failed, result.remaining, result.model_calls) == (4, 0, 0, 4)
+        assert [call["text"] for call in asked] == TEXTS and all(call["resolve"] for call in asked)
+        # The first two share a session, so each sees the turns before it there; the others have no session
+        # and see the owner's memories stored before them.
+        shown = [[line.split(": ", 1)[-1] for line in call["context"]] for call in asked]
+        assert shown == [[], [LAKE], [LAKE, PUPPY], [LAKE, PUPPY, DENVER]]
+        assert sorted(node.content for node in await claims(engine, user)) == sorted(TEXTS)
+        assert await events_snapshot(engine, user) == before
+        # A second run has nothing left to do and asks nothing.
+        again = await engine.reingest(user)
+        assert (again.processed, again.model_calls, len(asked)) == (0, 0, 4)
+
+
+async def test_turning_the_window_options_on_makes_reingested_sources_stale(config, user):
+    async with MemoryEngine.open(settings(config)) as engine:
+        install(engine, Scripted(FOUND))
+        await store_all(engine, user)
+        first = await engine.reingest(user)
+        assert (first.processed, first.remaining) == (4, 0)
+        assert (await engine.reingest(user, dry_run=True)).current == 4
+    fingerprints = {first.fingerprint}
+    for options in ({"enable_windowed_extraction": True},
+                    {"enable_fact_text_resolution": True},
+                    {"enable_windowed_extraction": True, "enable_fact_text_resolution": True},
+                    {"enable_windowed_extraction": True, "enable_owner_window_extraction": True}):
+        async with MemoryEngine.open(settings(config, extraction_batch_target_tokens=0, **options)) as engine:
+            stale = await engine.reingest(user, dry_run=True)
+            # The sources the options-off run made current are selected again, and each needs its own request.
+            assert (stale.current, stale.selected, stale.model_calls) == (0, 4, 4)
+            fingerprints.add(stale.fingerprint)
+    assert len(fingerprints) == 5
+    # The owner-wide option alone changes nothing the extraction does, so it does not make sources stale.
+    async with MemoryEngine.open(settings(config, enable_owner_window_extraction=True)) as engine:
+        assert (await engine.reingest(user, dry_run=True)).current == 4
 
 
 async def test_a_change_of_settings_makes_every_source_stale_again_without_duplicates(config, user, monkeypatch):

@@ -138,13 +138,14 @@ class ReingestRepository:
                     saved[by_operation[row["id"]]] = record
         return saved
 
-    async def save_extractions(self, batch: ExtractionBatchRecord, records: list[ExtractionRecord], *,
+    async def save_extractions(self, batch: ExtractionBatchRecord | None, records: list[ExtractionRecord], *,
                                extraction_key: str) -> None:
         """Save a batched request, its response and each turn's checked output, without touching the sources' own.
 
         The batch record keeps the first response to the same request, as the
         extraction journal does. Each turn's output is saved once per
-        ``extraction_key``; a second save of it keeps the first.
+        ``extraction_key``; a second save of it keeps the first. Without a
+        batch (a turn asked on its own) only the turn's output is saved.
         """
         async with self._work.session(transaction=True) as session:
             for record in records:
@@ -155,13 +156,15 @@ class ReingestRepository:
                     raise ValueError("Extraction requires a matching persisted source event")
                 row = rows[0]
                 record.verify_source(row["user_id"], row["scope"], row["content_hash"])
-                batch.verify_turn(record.event_id, row["user_id"], row["scope"], row["content_hash"])
-            await session.execute(
-                "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
-                "VALUES ($1, 'EXTRACTION_BATCH_RECORDED', $2, $3, 'extraction', $4, $5) ON CONFLICT (id) DO NOTHING",
-                str(batch.id), str(batch.head_event_id), json.dumps({"batch": batch.model_dump_json()}),
-                batch.scope.value, batch.created_at,
-            )
+                if batch is not None:
+                    batch.verify_turn(record.event_id, row["user_id"], row["scope"], row["content_hash"])
+            if batch is not None:
+                await session.execute(
+                    "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
+                    "VALUES ($1, 'EXTRACTION_BATCH_RECORDED', $2, $3, 'extraction', $4, $5) ON CONFLICT (id) DO NOTHING",
+                    str(batch.id), str(batch.head_event_id), json.dumps({"batch": batch.model_dump_json()}),
+                    batch.scope.value, batch.created_at,
+                )
             for record in records:
                 await session.execute(
                     "INSERT INTO operations (id, op_type, target_id, payload, actor_id, namespace_id, created_at) "
