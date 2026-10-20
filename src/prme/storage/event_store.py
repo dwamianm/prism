@@ -531,6 +531,7 @@ class EventStore:
         limit: int = 100,
         offset: int = 0,
         until: datetime | None = None,
+        before: Event | None = None,
     ) -> list[Event]:
         """Retrieve events for a user, optionally filtered by session and scope.
 
@@ -543,13 +544,15 @@ class EventStore:
             offset: Number of events to skip.
             until: Optional ingestion time; only events recorded at or
                 before it are returned. A time without a zone is read as UTC.
+            before: Only events that come before this one in the order
+                below, so the first result is the event just before it.
 
         Returns:
             List of Events ordered by timestamp descending.
         """
         async with self._conn_lock:
             return await run_to_completion(
-                self._get_by_user_sync, user_id, session_id, scopes, limit, offset, until
+                self._get_by_user_sync, user_id, session_id, scopes, limit, offset, until, before
             )
 
     async def get_by_hash(
@@ -627,6 +630,7 @@ class EventStore:
         limit: int,
         offset: int,
         until: datetime | None = None,
+        before: Event | None = None,
     ) -> list[Event]:
         """Retrieve events for a user (sync).
 
@@ -634,6 +638,10 @@ class EventStore:
         """
         conditions: list[str] = ["user_id = ?"]
         params: list = [user_id]
+
+        if before is not None:
+            conditions.append("(timestamp < ? OR (timestamp = ? AND id < ?))")
+            params.extend([before.timestamp, before.timestamp, str(before.id)])
 
         if session_id is not None:
             conditions.append("session_id = ?")

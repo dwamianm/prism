@@ -991,3 +991,64 @@ The two new regression functions are subchecks of existing AC01/AC03, not new
 source cohorts or acceptance IDs. Full suite and affected/adversarial reviews
 remain root-owned; #324 durable publication/recovery and #325 actual authority/
 erasure remain original pending integration obligations.
+
+## Upstream windowed-extraction composition
+
+Root authorized a normal merge of exact main
+`b5fa5be5294dbf28e63536fce4836dad8644561e` (PR352) into the approved
+`eb4576463e5f00f1e8849c539ec627c9ed4bf484` checkpoint. All four required
+#323 reviews approved that checkpoint; their evidence remains unchanged. This
+composition preserves upstream session/owner windows, reingest fences and
+settings, plus the existing protected routing, sanitizer and Q04 grounding.
+No acceptance criterion, source fixture, default or feature is added.
+
+The finite composition checks are the affected extraction-window and reingest
+tests plus the existing real protected Q04 ingest/read and applicable protected
+ingestion/provider checks. The actual private grounding call is in
+PrivacyCoordinator.extraction_plan; protected queued work routes through resume
+before the legacy _extract_or_load method. Upstream's moved _extract_turn must
+not bypass or replace that protected route. Concrete merge conflicts, if any,
+will be recorded and resolved only at these seams. Contract anchors and public
+types are checked if the moved source affects them.
+
+Root verified all ten required PR352 CI checks passed on head1f462591, merged at
+20:13:38Z. Byte-identical upstream-only config-audit, fast-cycle and PostgreSQL
+event-store paths reuse that evidence rather than repeat passing checks. The
+root-owned full suite on eb457646 was intentionally interrupted after 1,074
+passes and 12 skips because main advanced; it is not a passing full suite or a
+repair failure. Its evidence remains in
+`validation-323-review-repair/final-interruption-upstream352.json`. Root will run
+the final combined suite once after this frozen composition and affected review.
+The original #324 and #325 integration gates remain pending.
+
+The normal merge completed without conflicts. Sixteen of nineteen upstream
+files are byte-identical to main. The composed files are configuration
+documentation (the existing privacy-key section), pipeline.py (the unchanged
+Q04 resolver alongside the upstream extraction refactor) and engine.py (upstream
+constructor options and docstrings alongside existing protected public routes).
+No runtime correction was required. The actual protected coordinator, grounding,
+read, projection, snapshot, crypto and sanitizer files retain their approved
+hashes. Twenty-three source anchors moved; only their line numbers changed,
+using unchanged-line mappings from eb457646.
+
+Completed composition evidence in the runroot:
+
+- `323-upstream352-window-reingest-final.log`: 103 passed, 69 deselected in
+  40.87s. The existing extraction-window/reingest tests and applicable privacy
+  reingest fences ran against DuckDB and PostgreSQL.
+- `323-upstream352-protected-ingest.log`: 8 passed in 19.78s. The existing
+  AP04/CL02 Q04 and qualifier/snapshot case plus CL07 staging/retry/reopen ran
+  across all three layouts; the two existing native provider guard/plan-boundary
+  checks used an external MockTransport. This remains component authority
+  evidence; it does not certify #325 or the whole CL07 erasure/recovery case.
+- `323-upstream352-public-types.log`, `323-upstream352-ruff.log` and
+  `323-upstream352-contract.log`: strict public types, lint on the composed
+  runtime files and structural contract pass. Diff whitespace passes.
+
+The first test invocation included unavailable `--no-cov` and exited before
+collection; its command/log remain `323-upstream352-window-reingest.json` and
+`.log`. The corrected invocation changed only that command argument. The initial
+stale-anchor report is preserved as `323-upstream352-contract-before-anchors.log`.
+Neither is a runtime failure or an unsuccessful source-repair cycle. All earlier
+failed evidence, approved reviews and pending full-suite/dependency gates remain
+separate and unchanged. No new cohort, live call or broad full run was added.

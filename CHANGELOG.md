@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `enable_owner_window_extraction` (`PRME_ENABLE_OWNER_WINDOW_EXTRACTION`,
+  off by default; dwamianm/prism#345 and #347): with `enable_windowed_extraction`,
+  a turn with no `session_id` gets the owner's preceding memories in the same
+  scope as its window, so a plainly stored memory such as "They chose Tokyo,
+  Kyoto, Kanazawa, and Osaka." is read with the memories before it. The window
+  options and this one stay off: on the fast tiers no combination passed the alpha
+  rule (defect probes, `chat-v1` and the fast cycle's `ingest` verdict), so
+  nothing flips. With both window options on, the memory's claim moved from 30th
+  to 6th and 9th for the fast cycle's Japan question, and `chat-v1` fell from 14 to
+  10 answers in the top 3. `BENCHMARKS.md` ("Windowed extraction on memories that
+  name no one") has the numbers and one bounded alternative.
+- `reingest()` no longer needs batched extraction. While
+  `enable_windowed_extraction` or `enable_fact_text_resolution` has turned batching
+  off, each source is its own request, shown the turns before it. The window
+  settings, fact text resolution and their prompts are part of the settings
+  fingerprint, so sources re-derived without an option are re-derived again when
+  it is turned on; with both off the fingerprint is what it was.
+- `get_by_user()` on both event stores accepts `before`, an event: only events
+  that come before it in the result order are returned, so the first is the event
+  just before it.
+
 - `MemoryEngine.get_events()` and both event stores accept `until`, an
   ingestion time: only events recorded at or before it are returned.
 - Add `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), on
@@ -58,6 +79,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The window's guidance to the model now says to keep every subject, object and
+  quote as the source message words it, a pronoun included, and the resolved text
+  guidance covers "They" for two named people. Before, a model that read an
+  earlier turn wrote the person or trip as the subject and the grounding check
+  dropped the claim. The two texts are sent only while
+  `enable_windowed_extraction` or `enable_fact_text_resolution` is on, so nothing
+  changes with them off. A window now holds only turns stored before the turn, so
+  an extraction that runs later no longer shows it turns stored after it.
 - `enable_owner_group_links` (`PRME_ENABLE_OWNER_GROUP_LINKS`) is on by default
   in the alpha channel, and a "We" claim is now linked to the people it speaks
   for (prism-monorepo issue 275). A claim stated with "We" was attached only to
