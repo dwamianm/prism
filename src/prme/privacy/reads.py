@@ -73,12 +73,12 @@ class ReadContext:
     async def guard(self, effect="disclosure"):
         """Keep current authority through an actual effect, then check deadlines."""
         rows = tuple(self.records.values())
+        await self.coordinator.check_disclosure(rows)
         groups = {}
         for row in rows:
             saved = row.snapshot
             self.coordinator.check_deadlines(saved)
-            key = (saved.policy.project_id, saved.policy.owner_id, saved.policy.scope,
-                   saved.policy.policy_id, saved.policy.revision, saved.references)
+            key = (saved.policy.project_id, saved.policy.owner_id, saved.policy.scope)
             groups.setdefault(key, saved)
         if not groups and self.fallback_snapshot is not None:
             groups[None] = self.fallback_snapshot
@@ -337,8 +337,12 @@ async def prepare_retrieval(engine, query, *, user_id, scopes, source_access=Non
     # that integration is present, return receipt_persisted=False truthfully.
     pipeline._conn = None
     pipeline._pool = None
-    if source_access is not None and source_access.kind != "runtime":
-        raise PrivacyDenied("privacy_denied")
+    if source_access is not None:
+        if source_access.kind != "runtime":
+            raise PrivacyDenied("privacy_denied")
+        # The final selected-evidence lease is deliberately not bypassed while
+        # the real custody checkpoint is being integrated.
+        raise PrivacyDenied("privacy_capability_unavailable")
     if pipeline._reranker is not None:
         adapter = getattr(pipeline._reranker, "privacy_adapter", None)
         if adapter is None:

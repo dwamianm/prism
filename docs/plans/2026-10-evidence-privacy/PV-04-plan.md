@@ -619,3 +619,24 @@ They are prerequisite source, not independent #323 completion. The scoped
 compatibility run (graph seeds, provenance, API provenance, both frameworks,
 temporal pipeline and projection components) passed 95 tests with 13 skips.
 The skipped checks are not backend acceptance evidence.
+
+The next deliberate #322 source adoption is `9ce3af6c3b1c5d3081bc9bb4561a10678956dc1a`
+as local `b419be6b`, after the PV-04 checkpoint `999ff393`. This brings the actual
+pre-index projection hook, direct-node projection, conservative source-time
+refusal, and shared guarded generator/logging window. Scoped legacy snapshot,
+temporal provider and reformulation checks passed 48 tests. Public consumer
+type checking passed after the protected response unions were declared.
+
+Root confirmed the concrete local current-ledger authority is already owned by
+#325 (accepted preparation-325 lines 92-100); hosted authority belongs to #280.
+#320 supplied the contract. Any test using `FakeAuthority` remains component
+integration evidence even when storage, sanitizer and cryptography are real.
+The corresponding original authority/fence gates remain pending actual #325
+integration. No alternative authority implementation is added to #323.
+
+This is an intermediate implementation handoff to free the ticket slot for
+required review. The actual two-backend PV-04 acceptance matrix, explicit
+standard runtime source lease, protected profile/summary publication, backend
+reopen/staging checks and final mandatory suite remain unfinished. AC06 recovery
+and CL07 erasure remain pending #324/#325. No acceptance case or issue closure
+is inferred from the passing component and compatibility checks.

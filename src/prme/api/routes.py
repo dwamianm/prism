@@ -724,7 +724,7 @@ async def get_node_provenance(
     node_id: UUID,
     operation_cursor: str | None = None,
     operation_limit: int = Query(default=100, ge=1, le=1000),
-) -> NodeProvenance:
+) -> NodeProvenance | ProtectedProvenanceView:
     """Read a tenant-scoped chronological page of node provenance."""
     try:
         result = await _get_engine(request).get_provenance(

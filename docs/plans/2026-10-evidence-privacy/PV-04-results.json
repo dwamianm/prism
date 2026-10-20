@@ -1,0 +1,87 @@
+{
+  "stage": "implementation-checkpoint",
+  "issue": "#323",
+  "acceptanceComplete": false,
+  "fixture": {
+    "path": "tests/fixtures/privacy/source-separation-v1.json",
+    "sha256": "8e5094399c848c66d9830ce3128f91ef25ba7889f4fd093792546fc50d7d0a09"
+  },
+  "ownedCases": [
+    {
+      "id": "AP04",
+      "duckdb": "not_run",
+      "postgres": "not_run"
+    },
+    {
+      "id": "AC01",
+      "duckdb": "not_run",
+      "postgres": "not_run"
+    },
+    {
+      "id": "AC04",
+      "duckdb": "not_run",
+      "postgres": "not_run"
+    },
+    {
+      "id": "AC06",
+      "duckdb": "not_run",
+      "postgres": "not_run"
+    },
+    {
+      "id": "AC07",
+      "duckdb": "not_run",
+      "postgres": "not_run"
+    },
+    {
+      "id": "AC08",
+      "duckdb": "not_run",
+      "postgres": "not_run"
+    },
+    {
+      "id": "CL02",
+      "duckdb": "not_run",
+      "postgres": "not_run"
+    },
+    {
+      "id": "CL07",
+      "duckdb": "not_run",
+      "postgres": "not_run"
+    }
+  ],
+  "verified": [
+    {
+      "kind": "projection_component",
+      "result": "14 passed",
+      "initialResult": "13 passed, 1 failed: fixture Event omitted required role",
+      "repairCycles": 1,
+      "log": "323-projection-component-cycle1.log"
+    },
+    {
+      "kind": "legacy_compatibility_and_components",
+      "result": "95 passed, 13 skipped in 23.29s",
+      "command": ".venv/bin/python -m pytest tests/test_graph_seed_count.py tests/test_node_provenance.py tests/test_event_provenance_api.py tests/test_integrations_langchain.py tests/test_integrations_llamaindex.py tests/test_temporal_relation_pipeline.py tests/test_privacy_source_separation.py -q"
+    },
+    {
+      "kind": "legacy_provider_and_snapshot_compatibility",
+      "result": "48 passed in 3.23s",
+      "command": ".venv/bin/python -m pytest tests/test_entity_snapshots.py tests/test_temporal_relation_providers.py tests/test_reformulation.py -q"
+    },
+    {
+      "kind": "public_types",
+      "result": "Success: no issues found in 1 source file",
+      "command": ".venv/bin/mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py"
+    }
+  ],
+  "pending": [
+    "Actual two-backend owned acceptance matrix, including positive model-boundary routing",
+    "PV-03 real encryption source reconciliation and selected standard runtime evidence lease",
+    "PV-06 local current-ledger policy authority and original authority/fence checks; FakeAuthority is component evidence only",
+    "Protected profile and summary publication integration with PV-13 sanitizer owner",
+    "PV-05 AC06 recovery and durable receipt/work codecs",
+    "CL07 staging/reopen coverage and PV-06 erasure subchecks",
+    "Final full mandatory checks, independent review, push and PR"
+  ],
+  "liveModelCalls": 0,
+  "longBenchmarks": 0,
+  "published": false
+}

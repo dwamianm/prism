@@ -381,6 +381,10 @@ class OllamaTemporalResolver:
             model_digest, provider_version = await _ollama_identity(
                 client, self.config, context,
             )
+            if context is not None:
+                provider_version = (await context.generated(
+                    {"version": provider_version}, sources=sources,
+                ))["version"]
             while True:
                 bodies.append(body)
                 response, attempts = await _post_json(

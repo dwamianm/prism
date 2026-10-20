@@ -5,7 +5,8 @@ from typing import Any, assert_type
 from uuid import UUID
 
 from prme import AliasProposalInboxItem, AliasProposalReviewResult, AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, MemoryValueBinding, ProductAlignmentCandidate, ProductCandidateEntity, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievedValueBinding, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, ReingestResult, RetrievalResponse, Scope, StoreReceipt, ToolArgumentBindingUse, ToolArgumentResolution, ablate_context, assess_context_presence, evaluate_full_retrieval
-from prme import NodeType, SourceType
+from prme import (NodeType, SourceType, ProtectedEventView, ProtectedExtractionView,
+                  ProtectedReceiptView, SourceAvailability, SourceUnavailable, SanitizedEvidenceView, EvidenceAccess)
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
@@ -64,7 +65,7 @@ def consume(client: MemoryClient) -> None:
                                captured_at=datetime(2026, 10, 14, 10, tzinfo=timezone.utc)), list[str])
     assert_type(client.observe(b"\xff\xd8\xff", user_id="alice", source_name="frame.jpg"), list[str])
     assert_type(client.get_blob("frames/abc.jpg"), bytes | None)
-    assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | None)
+    assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | ProtectedReceiptView | None)
     assert_type(client.get_relevance("feedback-id", user_id="alice"), RelevanceRecord | None)
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])
     assert_type(client.retrieve("preferences", user_id="alice",
@@ -123,9 +124,9 @@ def consume(client: MemoryClient) -> None:
         AliasProposalReviewResult,
     )
     assert_type(client.query_nodes(user_id="alice"), list[MemoryNode])
-    assert_type(client.get_events("alice"), list[Event])
-    assert_type(client.get_event("event-id", user_id="alice"), Event | None)
-    assert_type(client.get_extraction("event-id", user_id="alice"), ExtractionRecord | None)
+    assert_type(client.get_events("alice"), list[Event | ProtectedEventView])
+    assert_type(client.get_event("event-id", user_id="alice"), Event | ProtectedEventView | None)
+    assert_type(client.get_extraction("event-id", user_id="alice"), ExtractionRecord | ProtectedExtractionView | None)
     assert_type(client.get_event_nodes("event-id", user_id="alice"), list[MemoryNode])
     assert_type(client.process_pending(user_id="alice"), ProcessingResult)
     assert_type(client.extraction_status("event-id", user_id="alice"), ExtractionStatus | None)
@@ -236,3 +237,9 @@ async def postgres_workspace_consumer() -> None:
         async with workspace.namespace("project") as memory:
             assert_type(memory, NamespaceMemory)
             assert_type(await memory.retrieve("query", user_id="alice"), RetrievalResponse)
+
+
+def selected_source_consumer(client: MemoryClient, grant: EvidenceAccess) -> None:
+    assert_type(client.inspect_source("event-id", user_id="owner"), SourceAvailability | SourceUnavailable)
+    assert_type(client.read_source("event-id", user_id="owner", access=grant), SanitizedEvidenceView)
+    assert_type(client.retrieve("question", user_id="owner", source_access=grant), RetrievalResponse)

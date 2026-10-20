@@ -20,6 +20,12 @@ error handling, and lifecycle transitions are managed here.
 
 from __future__ import annotations
 
+from prme.models.privacy_reads import (
+    ProtectedEventView, ProtectedExtractionView, ProtectedProvenanceView,
+    ProtectedReceiptView, SanitizedEvidenceView, SourceAvailability, SourceUnavailable,
+)
+from prme.privacy.capabilities import EvidenceAccess
+
 from prme.privacy.policy import PrivacyPolicy, PrivacyDenied
 from prme.privacy.capabilities import PrivacyRuntime
 from prme.privacy.admission import privacy_disclosure
@@ -2420,7 +2426,7 @@ class MemoryEngine:
         min_fidelity: RepresentationLevel | None = None,
         include_cross_scope: bool = True,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
-        source_access=None,
+        source_access: EvidenceAccess | None = None,
     ) -> RetrievalResponse:
         """Retrieve memories via the hybrid retrieval pipeline.
 
@@ -2841,11 +2847,11 @@ class MemoryEngine:
         context = await ReadContext.create(self._privacy, user_id=user_id, scopes=scopes)
         return AdmittedGraphView(self._graph_store, context) if context.protected else self._graph_store
 
-    async def inspect_source(self, event_id: str, *, user_id: str, scope: Scope | None = None):
+    async def inspect_source(self, event_id: str, *, user_id: str, scope: Scope | None = None) -> SourceAvailability | SourceUnavailable:
         from prme.privacy.reads import inspect_source
         return await inspect_source(self._privacy, event_id, user_id=user_id, scope=scope)
 
-    async def read_source(self, event_id: str, *, user_id: str, access, scope: Scope | None = None):
+    async def read_source(self, event_id: str, *, user_id: str, access: EvidenceAccess, scope: Scope | None = None) -> SanitizedEvidenceView:
         from prme.privacy.reads import read_source
         return await read_source(self._privacy, event_id, user_id=user_id, access=access, scope=scope)
 
@@ -3020,7 +3026,7 @@ class MemoryEngine:
     # --- Event Operations (delegated to EventStore) ---
 
     @privacy_disclosure
-    async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
+    async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | ProtectedExtractionView | None:
         """Read saved grounded model output for an owned source event.
 
         This does not call a model or complete pending processing. A record
@@ -3032,7 +3038,7 @@ class MemoryEngine:
         return await self._event_store.get_extraction(event_id, user_id=user_id)
 
     @privacy_disclosure
-    async def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
+    async def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | ProtectedEventView | None:
         """Retrieve an event by ID.
 
         Args:
@@ -3069,7 +3075,7 @@ class MemoryEngine:
         user_id: str | None = None,
         operation_cursor: str | None = None,
         operation_limit: int = 100,
-    ) -> NodeProvenance | None:
+    ) -> NodeProvenance | ProtectedProvenanceView | None:
         """Return owned source evidence, transitions, and contradiction links.
 
         Operation pages are chronological. Pass ``next_operation_cursor`` from
@@ -3133,7 +3139,7 @@ class MemoryEngine:
     @privacy_disclosure
     async def get_events(
         self, user_id: str, **kwargs
-    ) -> list[Event]:
+    ) -> list[Event | ProtectedEventView]:
         """Retrieve events for a user, newest first.
 
         Args:
@@ -3637,7 +3643,7 @@ class MemoryEngine:
         )
 
     @privacy_disclosure
-    async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:
+    async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | ProtectedReceiptView | None:
         """Read the immutable returned-candidate snapshot through its owner."""
         return await self._relevance.get_receipt(request_id, user_id=user_id)
 
@@ -3699,6 +3705,7 @@ class MemoryEngine:
         """
         from prme.retrieval.learning import evaluate_learning
 
+        await self.require_legacy_history(user_id=user_id)
         scope_copy = list(scopes) if scopes is not None else None
         group_copy = dict(query_groups) if query_groups is not None else None
         receipts, records = await self._relevance.learning_snapshot(user_id=user_id, max_records=max_records)
