@@ -531,6 +531,58 @@ class TestClosing:
         async with MemoryEngine.open(batched(config)) as engine:
             assert await statuses(engine, user, event_ids) == ["complete"] * 2
 
+    async def test_saved_output_keeps_its_close_allowance_until_publication(self, config, user, monkeypatch):
+        model, happened, budgets, waits = ScriptedBatches(), [], [], []
+        saved, publish = asyncio.Event(), asyncio.Event()
+        saved_records, saved_states = [], []
+        async with MemoryEngine.open(batched(config)) as engine:
+            pipeline = scaled_close(install(engine, model), monkeypatch, timeout=5.0)
+            count, materialize, wait = pipeline._drain_seconds, pipeline._materialize, asyncio.wait
+
+            async def hold_publication(result, event, event_id, scope, **kwargs):
+                if event_id == event_ids[0]:
+                    saved_records.extend([
+                        await engine._event_store.get_extraction(item, user_id=user) is not None
+                        for item in event_ids
+                    ])
+                    saved_states.extend(await statuses(engine, user, event_ids))
+                    happened.append("output saved")
+                    saved.set()
+                    await publish.wait()
+                return await materialize(result, event, event_id, scope, **kwargs)
+
+            async def count_after_saved_output(*args):
+                happened.append("count started")
+                await asyncio.wait_for(saved.wait(), timeout=5.0)
+                # Let the ordinary drain elapse. Events, not this delay, make
+                # the real count see saved output before publication can run.
+                await asyncio.sleep(0.1)
+                budget = await count(*args)
+                budgets.append(budget)
+                happened.append("count done")
+                return budget
+
+            async def release_at_wait(tasks, *, timeout=None, return_when=asyncio.ALL_COMPLETED):
+                if set(tasks).intersection(pipeline._flushing):
+                    waits.append(timeout)
+                    happened.append("publication released")
+                    publish.set()
+                return await wait(tasks, timeout=timeout, return_when=return_when)
+
+            monkeypatch.setattr(pipeline, "_materialize", hold_publication)
+            monkeypatch.setattr(pipeline, "_drain_seconds", count_after_saved_output)
+            monkeypatch.setattr(asyncio, "wait", release_at_wait)
+            event_ids = await self.ingest_queued(engine, user)
+
+        assert happened == ["count started", "output saved", "count done", "publication released"]
+        assert saved_records == [True, True] and saved_states == ["running", "pending"]
+        assert budgets == [5.05]
+        assert len(waits) == 1 and 0.0 < waits[0] < budgets[0]
+        assert model.contents() == [self.TEXTS]
+        async with MemoryEngine.open(batched(config)) as engine:
+            assert await statuses(engine, user, event_ids) == ["complete"] * 2
+            assert await claims_by_event(engine, user) == {event_ids[0]: self.TEXTS[0]}
+
     async def test_counting_is_part_of_the_wait_and_never_passes_the_cap(self, config, user, monkeypatch):
         model = SlowBatches(delay=60.0)
         with capture_logs() as logs:

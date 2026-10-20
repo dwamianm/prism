@@ -76,9 +76,9 @@ _GROUNDING_POLICY: Literal["speech_act_v14"] = "speech_act_v14"
 # process_extractions() or the engine's close extracts them sooner.
 BATCH_FLUSH_SECONDS = 30.0
 # The longest the engine's close waits for the batches of queued turns (#258).
-# It allows the usual drain time plus the extraction timeout for each request
-# their flushes send, up to this, so a close cannot hang on a provider that
-# does not answer.
+# It allows the usual drain time plus the extraction timeout for each batch
+# of unfinished work, including saved output awaiting publication, up to this,
+# so a close cannot hang on a provider that does not answer.
 BATCH_CLOSE_SECONDS = 300.0
 # Pending turns a batch looks at after its first; the token target ends a
 # batch long before this.
@@ -976,8 +976,9 @@ class IngestionPipeline:
         target. The first that does not fit ends the batch, so a turn larger
         than the target goes alone. A turn without a session goes alone, and
         a turn whose output is already saved needs no request. The engine's
-        close counts requests by the same rule (:meth:`_queued_requests`), so
-        a change here belongs there too.
+        close uses the same session and token rules (:meth:`_queued_requests`),
+        but also reserves time for saved output still awaiting publication.
+        A change to the batching rules here belongs there too.
         """
         from prme.retrieval.tokenization import count_tokens
 
@@ -1929,11 +1930,12 @@ class IngestionPipeline:
         """How long the engine's close waits for background extraction (#258).
 
         Without batching, or with no flush to wait for, it is
-        ``drain_timeout``. A flush sends its batched requests one after
-        another, each allowed the provider's timeout, so the close also
-        allows that timeout for each request the flushes of these owners and
-        scopes send before any split, counted by :meth:`_queued_requests`,
-        up to BATCH_CLOSE_SECONDS in all.
+        ``drain_timeout``. Otherwise the close conservatively allows the
+        provider's timeout for each batch of unfinished work in these owners
+        and scopes, counted by :meth:`_queued_requests`, plus the usual drain.
+        Saved output still needs publication, so it retains its allowance
+        while the flush and count run concurrently. The total is bounded by
+        BATCH_CLOSE_SECONDS.
         """
         if self._batch_target_tokens <= 0 or not keys:
             return drain_timeout
@@ -1957,13 +1959,15 @@ class IngestionPipeline:
         return seconds
 
     async def _queued_requests(self, user_id: str, scope: Scope, *, limit: int) -> int:
-        """The batched requests a flush of this owner and scope sends, before any split (#258).
+        """Conservative unfinished-batch count for the close's request allowance (#258).
 
-        Counted as :meth:`_batch_events` composes them: in work order, a
+        Uses :meth:`_batch_events`' session and token rules: in work order, a
         turn joins the request its session has open while their text stays
         within the target; one that does not fit, or has no session, starts
-        a request, and one whose output is already saved needs none.
-        Counting stops at ``limit``.
+        another batch. Unlike an actual request, the count includes saved
+        output whose work is still unfinished: saving extraction must not
+        remove the time reserved for its publication. Completed work is
+        excluded by ``unfinished``. Counting stops at ``limit``.
         """
         from prme.retrieval.tokenization import count_tokens
 
@@ -1974,8 +1978,6 @@ class IngestionPipeline:
         for event_id in await work.unfinished(user_id=user_id, scope=Scope(scope).value, limit=_BATCH_SCAN_LIMIT):
             if requests >= limit:
                 break
-            if await self._event_store.get_extraction(event_id, user_id=user_id) is not None:
-                continue
             event = await self._event_store.get(event_id)
             if event is None:
                 continue
@@ -1999,10 +2001,11 @@ class IngestionPipeline:
         their long sleep delays make draining impractical.
 
         With batched extraction (#258), the flushes of queued turns get
-        longer: *drain_timeout* plus the extraction timeout for each request
-        they send first (:meth:`_drain_seconds`). The flushes start before
-        their requests are counted, and the count is part of the wait, which
-        never passes BATCH_CLOSE_SECONDS in all.
+        longer: *drain_timeout* plus the extraction timeout for each batch
+        of unfinished work, including saved output awaiting publication
+        (:meth:`_drain_seconds`). The flushes start before their work is
+        counted, and the count is part of the wait, which never passes
+        BATCH_CLOSE_SECONDS in all.
 
         Args:
             drain_timeout: Maximum seconds to wait for background tasks.
