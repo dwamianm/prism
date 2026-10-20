@@ -1864,6 +1864,11 @@ the one before, it moves the three edge counts above and, from the key alone, `d
 11 and key links linked 4 to 9. `chat-v1` keeps its key: its "We" claims link Dana only, and every Dana link they
 could add is already linked by another claim.
 
+After review, the merge reads only the owner's own group links (another speaker's identical claim never
+retires the owner's), a member is matched by the full name, and the phrase reader works in linear time with a
+cap of 16 members and 4,096 words a turn. At that head (`326f3263`) the defect probes and the chat probe give
+the same reports as above, and the fast cycle baseline taken there equals the one before on all 168 measures.
+
 What it does not do: it does not move the cities claim up the ranked list, because the default rank fusion does not
 read graph links (#276). Lower-case names ("jordan and i") are not read as names, and a group named with a word the
 rule does not list ("my bandmates and I") is not seen, so another group named in the same session can then be linked
