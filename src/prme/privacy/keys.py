@@ -278,20 +278,43 @@ class StoredProcessingAuthorizer:
             raise PrivacyDenied("privacy_processing_unavailable")
 
 
+def _require_access_deadlines(snapshot: PolicySnapshot, access: ProcessingAccess | EvidenceAccess,
+                              now: datetime) -> None:
+    """Synchronous deadline check after waits while mutable authority stays held."""
+    if snapshot.memory_deadline is not None and now >= aware(snapshot.memory_deadline):
+        raise PrivacyDenied("privacy_expired")
+    if isinstance(access, ProcessingAccess):
+        if now >= min(aware(access.lease_deadline), aware(access.processing_deadline),
+                      aware(snapshot.processing_deadline)):
+            raise PrivacyDenied("privacy_processing_unavailable")
+    elif (now >= aware(access.expires_at)
+          or (snapshot.evidence_deadline is not None and now >= aware(snapshot.evidence_deadline))):
+        raise PrivacyDenied("privacy_capability_unavailable")
+
+
 class UnwrapPermit:
-    __slots__ = ("context", "access", "action", "_active", "_source_ref", "_wrapping_context", "_wrapped")
+    __slots__ = ("context", "access", "action", "_active", "_source_ref", "_wrapping_context", "_wrapped",
+                 "_snapshot", "_clock")
 
     def __init__(self, payload: ProtectedPayload, snapshot: PolicySnapshot,
-                 access: ProcessingAccess | EvidenceAccess, action: ReadAction) -> None:
+                 access: ProcessingAccess | EvidenceAccess, action: ReadAction, *,
+                 clock: Callable[[], datetime]) -> None:
         from prme.privacy.crypto import decode64, decode_envelope
         envelope = decode_envelope(payload, snapshot)
         self.context, self.access, self.action, self._active = payload.context, access, action, True
+        self._snapshot, self._clock = snapshot, clock
         self._source_ref = envelope.wrapper.ref
         self._wrapping_context = envelope.wrapper.bytes()
         self._wrapped = decode64(envelope.wrapped_key, minimum=1, maximum=6144)
 
+    def require_current(self) -> None:
+        if not self._active:
+            raise PrivacyDenied("privacy_capability_unavailable")
+        _require_access_deadlines(self._snapshot, self.access, aware(self._clock()))
+
     def require(self, descriptor: WrappingKeyDescriptor) -> None:
-        if (not self._active or descriptor.boundary != KeyBoundary.from_context(self.context)
+        self.require_current()
+        if (descriptor.boundary != KeyBoundary.from_context(self.context)
                 or descriptor.purpose != self.context.purpose):
             raise PrivacyDenied("privacy_capability_unavailable")
 
@@ -312,6 +335,8 @@ class UnwrapPermit:
 
 
 class KeyWrapper(Protocol):
+    """Private adapters check the bound permit before access and after provider waits."""
+
     async def ready(self, descriptor: WrappingKeyDescriptor) -> None: ...
     async def wrap_key(self, key: bytes, descriptor: WrappingKeyDescriptor,
                        wrapping_context: bytes) -> bytes: ...
@@ -320,7 +345,11 @@ class KeyWrapper(Protocol):
 
 
 class PrivateAccessAuthority(Protocol):
-    """Hosted/local implementations own the real held authorization boundary."""
+    """Hosted/local implementations own the real held authorization boundary.
+
+    Every permit derives mandatory deadlines from its snapshot/access and must
+    use the authority's clock. There is no unbounded hosted permit alternative.
+    """
 
     def authorize(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess,
                   snapshot: PolicySnapshot, *, guard: Guard,
@@ -443,28 +472,25 @@ class LocalAccessAuthority:
 
     async def _validate(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess,
                         snapshot: PolicySnapshot, action: ReadAction) -> None:
-        context, now = payload.context, aware(self.clock())
+        context = payload.context
         if KeyBoundary.from_context(context) != KeyBoundary.from_snapshot(snapshot):
             raise PrivacyDenied("privacy_boundary_mismatch")
-        if snapshot.memory_deadline is not None and now >= snapshot.memory_deadline:
-            raise PrivacyDenied("privacy_expired")
+        _require_access_deadlines(snapshot, access, aware(self.clock()))
         if isinstance(access, ProcessingAccess):
             if (context.purpose != "processing" or action not in {"read", "processing_key", "rewrap"}
                     or not snapshot.policy.durable_processing_input or self.processing is None
                     or context.event_id not in access.claimed_event_ids
                     or not 1 <= len(access.claimed_event_ids) <= 128
                     or len(set(access.claimed_event_ids)) != len(access.claimed_event_ids)
-                    or access.processing_deadline != snapshot.processing_deadline
-                    or now >= min(aware(access.lease_deadline), aware(access.processing_deadline))):
+                    or access.processing_deadline != snapshot.processing_deadline):
                 raise PrivacyDenied("privacy_processing_unavailable")
             await self.processing.validate(payload, access, snapshot)
+            _require_access_deadlines(snapshot, access, aware(self.clock()))
         else:
             grant = self._grants.get(access.grant_id)
             if (context.purpose != "evidence" or snapshot.policy.capture == "none"
                     or action == "processing_key" or grant is None or grant.access != access
                     or (context, snapshot) not in grant.selections or action not in grant.actions
-                    or now >= aware(access.expires_at)
-                    or (snapshot.evidence_deadline is not None and now >= snapshot.evidence_deadline)
                     or (access.kind == "runtime" and snapshot.policy.evidence_use != "runtime")):
                 raise PrivacyDenied("privacy_capability_unavailable")
 
@@ -485,28 +511,39 @@ class LocalAccessAuthority:
                                    access: EvidenceAccess, *, guard: Guard) -> AsyncIterator[None]:
         """Metadata-only final response lease; never nest opens inside this.
 
-        Decrypt separately under open_held, then acquire this lease before any
-        downstream effect. Revocation/expiry in that gap denies. The supplied
-        guard must cover every selected snapshot's current authority.
+        The grant lock holds across the request; the policy guard holds only at
+        entry/exit. Trusted callers guard each actual effect with current policy
+        and check the grant/selected deadlines after waits, before effects/return.
+        The supplied entry/exit guard covers every selected snapshot.
         """
         if (not isinstance(access, EvidenceAccess) or not 1 <= len(selections) <= 128
                 or len({p.context.slot_id for p, _ in selections}) != len(selections)):
             raise PrivacyDenied("privacy_capability_unavailable")
-        async with self._lock, guard():
-            for payload, saved in selections:
-                await self._validate(payload, access, saved, "read")
-            events = [self._audit_base(payload, access, "read") for payload, _ in selections]
-            for event in events:
-                await self.audit.write(AuditEvent(**event, outcome="authorized", at=aware(self.clock())))
-            outcome = "failed"
+        async with self._lock:
+            events, completed = [], False
             try:
+                async with guard():
+                    for payload, saved in selections:
+                        await self._validate(payload, access, saved, "read")
+                    events = [self._audit_base(payload, access, "read") for payload, _ in selections]
+                    for event in events:
+                        await self.audit.write(AuditEvent(**event, outcome="authorized", at=aware(self.clock())))
+                    # Audit append/fsync may consume a selected source's lifetime.
+                    for payload, saved in selections:
+                        await self._validate(payload, access, saved, "read")
                 yield
-                for payload, saved in selections:
-                    await self._validate(payload, access, saved, "read")
-                outcome = "finished"
+                async with guard():
+                    for payload, saved in selections:
+                        await self._validate(payload, access, saved, "read")
+                    for event in events:
+                        await self.audit.write(AuditEvent(**event, outcome="finished", at=aware(self.clock())))
+                    for payload, saved in selections:
+                        await self._validate(payload, access, saved, "read")
+                completed = True
             finally:
-                for event in events:
-                    await self.audit.write(AuditEvent(**event, outcome=outcome, at=aware(self.clock())))
+                if not completed:
+                    for event in events:
+                        await self.audit.write(AuditEvent(**event, outcome="failed", at=aware(self.clock())))
 
     @asynccontextmanager
     async def authorize(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess,
@@ -515,12 +552,19 @@ class LocalAccessAuthority:
             await self._validate(payload, access, snapshot, action)
             base = self._audit_base(payload, access, action)
             await self.audit.write(AuditEvent(**base, outcome="authorized", at=aware(self.clock())))
-            permit = UnwrapPermit(payload, snapshot, access, action)
+            permit = UnwrapPermit(payload, snapshot, access, action, clock=self.clock)
             outcome = "failed"
             try:
+                permit.require_current()
                 yield permit
                 await self._validate(payload, access, snapshot, action)
                 outcome = "finished"
             finally:
                 permit.close()
                 await self.audit.write(AuditEvent(**base, outcome=outcome, at=aware(self.clock())))
+                if outcome == "finished":
+                    try:
+                        _require_access_deadlines(snapshot, access, aware(self.clock()))
+                    except PrivacyDenied:
+                        await self.audit.write(AuditEvent(**base, outcome="failed", at=aware(self.clock())))
+                        raise

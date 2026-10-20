@@ -1,6 +1,6 @@
 # #321 / PV-03 implementation evidence for scheduled review
 
-Status: bounded implementation prepared for root review; unpublished. This is
+Status: grouped AC5/EM06 review repair prepared for affected review; unpublished. This is
 implementation evidence, not an independent approval or a protected-product gate
 claim. Original six acceptance criteria and finite EM01–EM08 definitions remain
 in `docs/plans/2026-10-evidence-privacy/PV-03-plan.md` unchanged.
@@ -101,9 +101,61 @@ live model calls.
 - `ruff-development-7.log`: all changed runtime/test scopes passed lint.
 - `public-import-2.log`: lazy public crypto/custody import passed.
 
-The final required full `pytest tests/`, full-tree ruff, final consumer typing,
-wheel build/import/py.typed smoke and independent reviews remain pending on the
-final reconciled revision. Targeted results do not stand in for those checks.
+Root subsequently ran full-tree Ruff, build and both required simulation
+configurations (74/74 each), all passed. Its preserved contract-1 failure was
+limited to stale anchors/missing mappings; d179fd35 corrected traceability only,
+and contract-2 passed with 45 copies/160 anchors and unchanged scenarios.
+The obsolete full-pytest-1 run was intentionally interrupted after the confirmed
+expiry defect: exit 2, 1 failed/1801 passed/45 skipped. Its only failure was the
+unchanged plain-clone checkout assumption when run in a worktree; root confirmed
+that same test passes in a genuine temporary plain clone. No checkout test was
+changed. Root will coordinate the final full suite in a genuine plain clone at
+the reviewed final revision, using the assigned venv/database. Final wheel smoke
+and delivery remain root-owned; targeted results do not substitute for them.
+
+## Grouped AC5/EM06 review repair
+
+All four frozen d179fd35 source reviews completed. Core, security and adversarial
+requested changes for the same audit/provider-await expiry defect; data approved
+its scope while retaining that overall blocker. This is one grouped repair, not
+new acceptance criteria. The original complete reports remain in the runroot as
+`review-321-{core,security,data,adversarial}.md`.
+
+`expiry-reproduction-1.log/json` preserves **27 failed** deterministic EM06
+subchecks before the runtime correction. Every failure records an expired
+permit/plaintext/key/rewrap/final-lease caller sentinel. Clock changes happen in
+awaited audit, real crypto wrapper completion and processing validation; no real
+sleep, live provider or new cohort was used. `expiry-repair-1.log/json` then
+passed **108 tests, 1 skipped** on the first correction, including the affected
+crypto/custody/rotation/storage/CLI tests. Scoped lint and strict consumer typing
+passed. No unsuccessful fix-validation cycle was hidden or reset.
+
+Every `UnwrapPermit` now requires the authority clock and derives its finite
+bound from the original immutable snapshot/access. `require_current()` is
+checked after processing validation, after audit/provider waits, before the
+permit/key/plaintext/rewrap handoff and before a processing-key callback. Exact
+source binding, existing held authority and non-reentrant locks remain.
+
+Root then approved the #323 integration correction within the same EM06 contract:
+the metadata final lease holds the finite grant lock through the yielded request,
+but takes current-policy guards only at entry and exit. Its trusted caller must
+guard each actual effect and check selected deadlines after waits and before
+effects/final output. The existing two multi-source/gap subchecks first preserved
+the actual old-policy-lock failures in `lease-policy-reproduction-1.log/json`.
+This is the authorized second strategy for that existing non-reentrant interaction;
+no permissive/reentrant guard or separate authority was introduced.
+
+`expiry-completion-reproduction-1.log/json` preserves two more failures for the
+same audit-await invariant at convenience-open/final-lease return. Completion
+audit waits now receive another deadline check before return, with a failed audit
+outcome appended on late refusal. This keeps completion audit from extending
+authority while retaining the original exit checks. Final affected validation
+passed **111 tests, 1 skipped** in 54.94 seconds, recorded in
+`expiry-lease-integration-1.log/json`. `expiry-ruff-2.log/json` and
+`expiry-typing-2.log/json` passed. The skipped physical scan was already executed;
+no native platform or artifact-scan claim is renewed by these component tests.
+Unchanged full-suite and simulation work was not duplicated. Affected independent
+review remains pending.
 
 ## Preserved failures and bounded repairs
 

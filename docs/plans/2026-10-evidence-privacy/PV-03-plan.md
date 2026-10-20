@@ -502,3 +502,43 @@ contract, and #280 supplies hosted authority. AC5/AC6 and EM04/EM06's full outer
 policy/fence integration, including #323's response lease, remain pending. This
 does not add an acceptance criterion, replace the frozen cases or authorize a
 parallel authority implementation here.
+
+## Confirmed AC5/EM06 expiry repair (first grouped repair cycle)
+
+The four frozen reviews of d179fd35 confirmed one shared deadline gap across
+awaited audit, processing validation, unwrap and rewrap. Preserve the failing
+reproduction before changing runtime code. The finite additions to existing EM06
+are 27 deterministic subchecks: nine audit-to-permit/plaintext/final-lease checks
+cover grant/evidence/memory expiry; twelve unwrap/wrap handoff checks cover those
+deadlines and processing lease/work/memory expiry; three processing-validator
+checks and three processing-key callback checks cover lease/work/memory expiry.
+They advance the existing injected clock, use real AES/RSA and no sleeps, live
+providers or new cohort. Every case requires an untouched caller-effect sentinel.
+
+Keep exact-source permits, the held/non-reentrant authority, mandatory audit
+before access and exit validation. Derive a mandatory deadline bound from each
+permit's original snapshot/access and check it immediately before private/key/
+plaintext/rewrap handoff. Refresh processing deadlines after its awaited claim
+validation and all selected final-lease deadlines after audit. Hosted adapters
+must consume the same bound; no optional unbounded permit or new authority stack.
+Run the affected crypto/keys/rotation/storage/CLI checks, consumer typing and
+scoped lint once after the correction, preserve actual failed evidence, then
+freeze for affected review. Unchanged full-suite/simulation work is root-owned.
+
+During #323 integration, root approved the bounded second strategy for the
+existing non-reentrant final-lease interaction: retain only the finite grant lock
+across the yielded pipeline, and take the supplied current-policy guard at entry
+(including authorized audit and post-audit validation) and exit. #323 must keep
+each actual effect under its own current-policy guard and check grant and selected
+snapshot deadlines after waits and immediately before each effect/final output.
+There is no decrypt/open inside the grant lease. Extend the existing multiple-
+selection test with a real effect-specific guard and the existing gap test with
+policy denial after entry. Preserve the two bounded pre-fix deadlock failures;
+validate the changed EM06 scope once and stop if this strategy fails. This keeps
+the original cases/cohort fixed and adds no permissive or reentrant authority.
+
+The same audit-await invariant also covers the completion audit before a
+convenience `open()` or final-lease return. Preserve two deterministic failing
+return sentinels, then recheck deadlines after that audit while finishing the
+existing authority scope. These are two subchecks of the same EM06 repair, not
+another authority/transport mechanism or a new criterion.
