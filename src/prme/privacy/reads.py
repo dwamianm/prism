@@ -129,7 +129,7 @@ class ReadContext:
             await self.coordinator.erasure.assert_records_current(self.selected_records, purpose="evidence")
             for row in rows:
                 self.coordinator.check_deadlines(row.snapshot)
-            yield
+            yield self.check_lifetimes
             self.check_selected()
             await self.coordinator.erasure.assert_records_current(self.selected_records, purpose="evidence")
             for row in rows:

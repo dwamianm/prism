@@ -22,6 +22,10 @@ def authority_factory():
     return FakeAuthority()
 
 
+def engine_factory():
+    raise AssertionError("test supplies an explicit configured engine factory")
+
+
 def parse(values):
     return build_parser().parse_args(["privacy-keys", *values])
 
@@ -52,14 +56,28 @@ async def test_provision_status_public_subprocess_and_fixed_errors(tmp_path, nat
 
 
 async def test_selected_cli_inspection_and_unlock(tmp_path, native, capsys, monkeypatch):
-    engine, runtime, policy, custody, *_ = await real_engine(tmp_path, "pack")
+    import structlog
+    # Match prme.cli.main: diagnostics go to stderr, command JSON to stdout.
+    monkeypatch.setattr(structlog._config._CONFIG, "logger_factory", structlog.PrintLoggerFactory(file=sys.stderr))
+    engine, runtime, policy, custody, evidence, _ = await real_engine(tmp_path, "pack")
     event_id = await engine.store(SOURCE, retrieval_content=MEMORY, user_id=str(policy.owner_id))
     path = engine._config.pack_path
+    config = engine._config
     await engine.close()
+    opened = []
+    async def factory():
+        from prme import MemoryEngine
+        value = await MemoryEngine.create(config, embedding_provider=runtime.embedder, privacy_runtime=runtime)
+        opened.append(value)
+        return value
+    monkeypatch.setattr("tests.test_privacy_key_cli.engine_factory", factory)
     capsys.readouterr()
     base = ["--registry", str(custody.path), "--project", str(policy.project_id), "--owner", str(policy.owner_id),
-            "--store", str(path), "--event", event_id, "--audit", str(tmp_path / "audit.jsonl"),
-            "--authority-factory", "tests.test_privacy_key_cli:authority_factory"]
+            "--engine-factory", "tests.test_privacy_key_cli:engine_factory", "--event", event_id, "--audit", str(tmp_path / "audit.jsonl")]
+    raw = list(base)
+    raw[raw.index("--engine-factory"):raw.index("--engine-factory") + 2] = ["--store", str(path)]
+    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+        await command(parse(["inspect", *raw]))
     before = native.reads
     await command(parse(["inspect", *base]))
     metadata = json.loads(capsys.readouterr().out)
@@ -77,6 +95,17 @@ async def test_selected_cli_inspection_and_unlock(tmp_path, native, capsys, monk
     with pytest.raises(PrivacyDenied):
         await command(parse(["unlock", *base, "--action", "verify"]))
     assert native.reads == before
+    assert all(value._closed for value in opened)
+    target = await custody.provision_wrapping(evidence.boundary, "evidence", key_id=evidence.ref.key_id)
+    rotation = ["--registry", str(custody.path), "--project", str(policy.project_id), "--owner", str(policy.owner_id),
+                "--engine-factory", "tests.test_privacy_key_cli:engine_factory"]
+    await command(parse(["rotate", *rotation, "--audit", str(tmp_path / "audit.jsonl"),
+        "--source-version", str(evidence.ref.key_version), "--target-version", str(target.ref.key_version)]))
+    job = json.loads(capsys.readouterr().out)
+    assert job["state"] == "complete" and job["changed"] == 1
+    await command(parse(["rotation-status", *rotation, "--job", job["job_id"]]))
+    assert json.loads(capsys.readouterr().out) == job
+    assert all(value._closed for value in opened)
 
 
 async def test_recovery_cli_uses_inherited_fd_and_exclusive_artifact(tmp_path, native, capsys):

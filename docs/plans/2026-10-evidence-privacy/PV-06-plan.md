@@ -1,6 +1,6 @@
 # PV-06 implementation plan
 
-Implementation released by root on 2026-10-20, lane 1 iteration 4. This reuses the approved preparation below without expanding its original six acceptance criteria or finite validation. Work branch: `issue-325-erasure-ledger`, base `b50a5276795ae257b83209424bdd88ceb02ece1e`, normally merged exact #323 checkpoint `49b98aeb6de5f6ef77372d37ca11795473ab48f5` before owned edits. Root retains reviews/full suite/simulations/CI/PR/merge/closure. The worker runs targeted checks and may commit coherent checkpoints, but must not push before root's publication release.
+Implementation released by root on 2026-10-20, lane 1 iteration 4. This reuses the approved preparation below without expanding its original six acceptance criteria or finite validation. Work branch: `issue-325-erasure-ledger`, base `b50a5276795ae257b83209424bdd88ceb02ece1e`, normally merged exact #323 checkpoint `49b98aeb6de5f6ef77372d37ca11795473ab48f5` before owned edits. Root retains reviews/full suite/simulations/CI/PR/merge/closure. Root subsequently authorized a normal remote checkpoint push after the finite composition checks and coherent commit; no PR or known-failing dependency CI is authorized.
 
 The earlier preparation-only and wait-for-all-merges language below is historical. Independent ledger/authority/expiry implementation is released now. Final #324 profile/summary manifests and #323 composition must be reconciled before final validation. #326 actual restore/export ER07/08 and #327 full product gate remain pending; no original obligation is weakened. No subagents, live/paid models, long benchmarks, production erasure, deployment or global environment changes. A third failed source-fix/validation cycle for the same behavior requires USER approval; root cannot grant it.
 
@@ -293,3 +293,51 @@ Expected: Archive/clear is not erase; report live_purged then backup_expiry_pend
 PolicyAuthority remains the existing injected policy contract. PV-06 supplies the real independent ledger and composes both approvals in AdmissionCoordinator's one actual-effect guard; no policy-revision service is introduced. Synthetic policy/model fixtures are not evidence of production policy management. Protected engine opens require an explicit ledger; shared synthetic fixtures now explicitly provision an external temporary ledger. Missing binding on existing protected admissions requires authorized versioned migration. PostgreSQL namespace/workspace-catalog runtime threading and the existing consolidation native-stage node-ID argument are approved narrow AC2/6 integration paths. Root owns full-suite/CI/review/delivery; no push is authorized yet.
 
 Checkpoint scope: explicit evidence/source cleanup removes processing work too while preserving admitted memory. Memory erasure additionally discovers exact typed prepared outputs and full dependency closure, saves target IDs, removes covered SQL copies, compacts native indexes, retires zero-reference applicable keys and verifies saved targets. Native physical pages/WAL remain outside logical purge. Pseudonym epoch is now an optional opaque admission reference (omitted when absent, preserving prior bytes); a pseudonymized old record without its epoch cannot claim complete memory/key purge and requires classified migration. No full ER02–ER08/shared case is claimed merely from the initial subchecks.
+
+## Finite composition checkpoint (2026-10-20)
+
+The normal merge `ec2213bb` retains parents `98a5864a` and `b552c56f`.
+Its one `_UNAVAILABLE_EFFECTS` set conflict keeps #324's implemented lifecycle,
+organizer and alias paths and #325's protected rebuild; unsupported effects stay
+denied. #323 fixture compatibility `c42af439` is in the ancestry. The later
+#323 classifier repair remains owned by #323 and is not worked around here.
+
+Remaining implementation reconciles #324's typed manifests with exact backend
+node/chain/alias targets, puts receipt authority before the connection lock with
+an in-transaction deadline check, follows the receipt's logical request identity
+to relevance/citation copies, and repeats idempotent native key removal after a
+failed retirement. Public engine/MemoryClient methods and the explicit CLI
+engine factory use the same current ledger/policy path. The CLI closes its
+owned engine on every outcome; key-only provisioning/recovery remains separate.
+
+The finite tests extend the existing ER02/03/04/05/06 and CL04/05/07 rows, not the
+scenario count. They create actual mixed summaries, same-owner independent
+admissions, foreign-owner positives, receipts/citations, published/retired alias
+and profile copies, pending/abandoned native stages and missing mutable work.
+They exercise real backend/native effects and inspect owned logical stores,
+saved vectors and live Tantivy/PG data. Faults are actual transaction/native
+boundaries, clock changes or the named OS/model adapter inputs. Runtime tests
+use production LocalSanitizer, CryptoProtector, NativeKeyCustody,
+NativeRetryCommitter and LocalErasureLedger; the OS keyring adapter and current
+policy/model inputs remain explicit fixtures. No global policy service or
+physical-wipe proof is claimed.
+
+The receipt closure initially over-selected an independently supported fact;
+its second correction passed with that exact positive retained. Two source-fix
+validation cycles were used, one unsuccessful, now resolved. The native-key
+retirement retry defect was reproduced on every layout and its first correction
+passed. All first failures, the receipt deadlock's terminated incomplete run,
+setup failures and exact commands remain in `PV-06-results.json` and their logs.
+
+Provider reference checks are scoped to this managed store. A local zero-reference
+scan is not global evidence for independently managed live stores sharing a key
+version. Root classified that sharing as an unresolved #321/#326/hosted-provider
+integration constraint, with no global key service added and no safety claim.
+Same-store surviving key references remain mandatory positive controls. A known
+loss inside the declared managed scope would still violate AC4.
+
+ER07 and ER08 still require #326's actual pre-erasure restore/import and retained
+backup/operator-export workflows. #327's full product gate, final #323
+composition, root-owned reviews/full checks/CI and final PR delivery remain
+pending. Passing independently testable erasure rows does not close the six
+original acceptance criteria or make `protected_product_ready` true.

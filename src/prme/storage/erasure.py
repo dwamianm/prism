@@ -479,6 +479,11 @@ async def _discover_step(repository, intent):
                     if output in roots or _identities(row["payload"]).intersection(roots):
                         if await _target(session, request.request_id, "operation", UUID(row["id"])):
                             progress["changed"] = True
+                        # A receipt's public request ID differs from its journal
+                        # row ID. Feedback/citations depend on that exact logical
+                        # copy identity, so include it in the next closure pass.
+                        if row["op_type"] == "RETRIEVAL_REQUEST" and output is not None and await _target(session, request.request_id, "copy", output):
+                            progress["changed"] = True
                         allocated = _allocated_nodes(row["op_type"], row["payload"])
                         for identifier in allocated:
                             if await _target(session, request.request_id, "node", identifier):
@@ -620,8 +625,10 @@ async def _retire_keys(coordinator, intent):
         entry = inventory.get(version)
         if entry is None:
             raise PrivacyDenied("privacy_provider_unavailable")
-        if entry.state != "retired":
-            await custody.retire(version)
+        # Custody records denial before removing native private parts. A prior
+        # failed removal is still pending even when its public state is retired.
+        # The existing exact-version operation retries removal idempotently.
+        await custody.retire(version)
 
 
 async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):

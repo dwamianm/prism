@@ -5,6 +5,8 @@ from prme.privacy.policy import CategoryAction, MemoryRetention, PolicySnapshot,
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from prme.privacy.erasure import ErasureRequest, ErasureStatus
+    from prme.privacy.ledger import LocalErasureLedger
     from prme.privacy.crypto import CryptoProtector
     from prme.privacy.keys import KeyBoundary, LocalAccessAuthority, SecretKeyHandle, StoredProcessingAuthorizer
     from prme.privacy.local_keys import NativeKeyCustody, public_registry

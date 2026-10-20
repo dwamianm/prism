@@ -436,11 +436,39 @@ def protected_mutation(function):
             or (plan.node.user_id if hasattr(plan, "node") else None)
         )
         manifest = getattr(plan, "privacy_manifest", None)
+        if arguments.get("proposal_operation_id") is not None:
+            from prme.storage.alias_proposal import read_record
+            proposal = await coordinator.repository._query(
+                "SELECT payload FROM operations WHERE id=? AND op_type='ALIAS_PROPOSED'",
+                (str(arguments["proposal_operation_id"]),),
+            )
+            if proposal:
+                manifest = getattr(read_record(proposal[0][0]), "manifest", None)
+        # These identities describe the actual backend effect, not an authority
+        # supplied by a caller. Resolve their admissions, then require both the
+        # original policy and the current exact-subject ledger fence.
+        node_ids = {str(value) for name, value in arguments.items() if value is not None and name in {
+            "node_id", "old_node_id", "new_node_id", "node_a_id", "node_b_id",
+            "winner_id", "loser_id", "source_id", "summary_id", "a", "b", "plan_id",
+        }}
+        node_ids.update(map(str, arguments.get("chain_node_ids", ())))
+        replacements = arguments.get("replacements", ())
+        node_ids.update(str(value) for old, new, _ in replacements for value in (old, new))
+        if manifest is not None:
+            node_ids.update(map(str, manifest.admitted_node_ids))
         records = (
             await manifest_records(coordinator, manifest, user_id=owner)
             if manifest is not None
             else await coordinator.records_for_call(owner, arguments)
         )
+        if manifest is None and node_ids:
+            identities = [("nodes", identifier) for identifier in node_ids]
+            identities.extend(("events", str(evidence)) for _, _, evidence in replacements if evidence is not None)
+            resolved = await coordinator.repository.records_for_objects(
+                identities, owner=owner, supplemental_evidence=arguments.get("evidence_id"),
+            )
+            if resolved is not None:
+                records = resolved
         if not records and not coordinator.selected():
             return await function(store, *args, **kwargs)
         if not records:
@@ -467,7 +495,7 @@ def protected_mutation(function):
                 )
                 reason = json.loads(sanitized.fields_json)["retrieval_content"]
             kwargs = {**kwargs, "reason": reason}
-        async with coordinator.publication_guards(records, node_ids=manifest.admitted_node_ids if manifest else ()):
+        async with coordinator.publication_guards(records, node_ids=node_ids):
             with journal_scope(coordinator, records):
                 return await function(store, *args, **kwargs)
 

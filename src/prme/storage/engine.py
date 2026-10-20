@@ -28,6 +28,7 @@ from prme.models.privacy_reads import (
 from prme.privacy.capabilities import EvidenceAccess
 
 from prme.privacy.policy import PrivacyPolicy, PrivacyDenied
+from prme.privacy.erasure import ErasureRequest, ErasureStatus
 from prme.privacy.capabilities import PrivacyRuntime
 from prme.privacy.admission import privacy_disclosure
 
@@ -1680,23 +1681,25 @@ class MemoryEngine:
                     user_id=node.user_id,
                 )
 
-    async def request_erasure(self, request, *, user_id: str):
+    async def request_erasure(self, request: ErasureRequest, *, user_id: str) -> ErasureStatus:
         """Durably fence selected evidence or memory; purge is explicit maintenance."""
         return await self._privacy.erasure.request(request, user_id=user_id)
 
-    async def expire_privacy(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000):
+    async def expire_privacy(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000) -> tuple[ErasureStatus, ...]:
         from prme.storage.erasure import prepare_store
         repository = self._privacy.repository
         await prepare_store(conn=repository.conn, pool=repository.pool, conn_lock=repository.lock,
                             runtime=self._privacy.require_runtime(), namespace_id=self._config.namespace_id)
         return await self.process_erasures(user_id=user_id, limit=limit, budget_ms=budget_ms)
 
-    async def process_erasures(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000):
+    async def process_erasures(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000) -> tuple[ErasureStatus, ...]:
         from prme.storage.erasure import process_erasures
         return await process_erasures(self._privacy.erasure, user_id=user_id, limit=limit, budget_ms=budget_ms)
 
-    async def get_erasure_status(self, request_id, *, user_id: str):
+    async def get_erasure_status(self, request_id: UUID | str, *, user_id: str) -> ErasureStatus | None:
         async with self._privacy.erasure.guard():
+            if self._privacy.default is None:
+                raise PrivacyDenied("privacy_configuration_invalid")
             saved = self._privacy.effective(None, user_id=user_id, scope=self._privacy.default.scope)
             async with self._privacy.require_runtime().authority.guard(saved, "disclosure"):
                 return await self._privacy.erasure.repository.status(request_id, user_id=user_id)

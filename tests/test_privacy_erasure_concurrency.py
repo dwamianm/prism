@@ -91,6 +91,20 @@ async def test_ER03_stale_extraction_profile_and_diagnostic_cannot_finish_after_
                 with pytest.raises(PrivacyDenied):
                     await asyncio.wait_for(task, 15)
 
+        # A node-only fence leaves its source available, but cannot be bypassed
+        # by a lifecycle or chain operation whose admitted event is still live.
+        node_event = await engine.store("Mara collects shells.", user_id=owner)
+        untouched_event = await engine.store("Mara grows herbs.", user_id=owner)
+        target = (await engine.get_event_nodes(node_event, user_id=owner))[0]
+        untouched = (await engine.get_event_nodes(untouched_event, user_id=owner))[0]
+        await engine.request_erasure(ErasureRequest(request_id=uuid4(), node_ids=(target.id,)), user_id=owner)
+        assert (await engine.inspect_source(node_event, user_id=owner)).state == "sealed"
+        with pytest.raises(PrivacyDenied, match="privacy_erased"):
+            await engine._graph_store.promote(str(target.id))
+        with pytest.raises(PrivacyDenied, match="privacy_erased"):
+            await engine._graph_store.apply_oscillation_penalty(str(untouched.id), [str(target.id)], user_id=owner)
+        assert (await engine.get_node(str(untouched.id), user_id=owner)).content == "Mara grows herbs."
+
         # A child inherits ContextVars but cannot borrow the parent's lease.
         positive = await engine.store("Mara likes apples.", user_id=owner)
         record = await engine._privacy.repository.get(positive, user_id=owner)

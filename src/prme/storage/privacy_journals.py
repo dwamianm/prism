@@ -17,34 +17,35 @@ from prme.privacy.records import PrivacyRecord, PRIVACY_KEY
 async def guarded_query(repository, sql, args, guard):
     """Hold the existing policy authority through the actual SQL transaction.
 
-    Acquire the connection/lock first, so deadline checks cannot precede a
-    blocking wait for a writer. A post-effect deadline failure rolls back.
+    Acquire the independent ledger/policy lease before the connection lock.
+    The yielded lifetime check runs again inside the real transaction, after
+    any connection wait and before commit; expiry rolls the effect back.
     """
-    if repository.pool is not None:
-        async with repository.pool.acquire() as conn, conn.transaction():
-            async with guard():
-                return [dict(row) for row in await conn.fetch(sql, *args)]
-    from prme.storage._threading import run_to_completion
-
-    async with repository.lock:
-        await run_to_completion(repository.conn.execute, "BEGIN TRANSACTION")
-        try:
-            async with guard():
-
-                def execute():
+    async with guard() as check:
+        if not callable(check):
+            raise PrivacyDenied("privacy_capability_unavailable")
+        if repository.pool is not None:
+            async with repository.pool.acquire() as conn, conn.transaction():
+                check()
+                result = [dict(row) for row in await conn.fetch(sql, *args)]
+                check()
+                return result
+        from prme.storage._threading import run_to_completion
+        async with repository.lock:
+            def execute():
+                repository.conn.execute("BEGIN TRANSACTION")
+                try:
+                    check()
                     cursor = repository.conn.execute(sql, list(args))
                     names = [item[0] for item in cursor.description]
-                    return [dict(zip(names, row)) for row in cursor.fetchall()]
-
-                result = await run_to_completion(execute)
-            await run_to_completion(repository.conn.execute, "COMMIT")
-            return result
-        except BaseException:
-            try:
-                await run_to_completion(repository.conn.execute, "ROLLBACK")
-            except Exception:
-                pass
-            raise
+                    result = [dict(zip(names, row)) for row in cursor.fetchall()]
+                    check()
+                    repository.conn.execute("COMMIT")
+                    return result
+                except BaseException:
+                    repository.conn.execute("ROLLBACK")
+                    raise
+            return await run_to_completion(execute)
 
 
 def processing_deadline(record):

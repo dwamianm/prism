@@ -1,4 +1,5 @@
 """ER04–06 fault/recovery checks using real ledger, SQL and native indexes."""
+import asyncio
 from dataclasses import replace
 from pathlib import Path
 import shutil
@@ -87,12 +88,17 @@ async def test_ER04_intent_and_each_stage_survive_interruption_and_failure(tmp_p
 
 
 @pytest.mark.parametrize("layout", LAYOUTS)
-async def test_ER06_stale_native_saves_close_restore_and_rebuild_keep_survivor(tmp_path, layout, analyzer, native):
+async def test_ER06_stale_native_saves_close_restore_and_rebuild_keep_survivor(tmp_path, layout, analyzer, native, monkeypatch):
     from prme.storage.erasure_indexes import _documents
     engine, runtime, policy, custody, *_ = await journal_engine(tmp_path, layout, analyzer)
     runtime = replace(runtime, key_custody=custody)
     engine._privacy.runtime = runtime
     owner, stale = str(policy.owner_id), None
+    control, _, control_policy, *_ = await journal_engine(tmp_path / "unaffected-store", "directory", analyzer)
+    control_owner = str(control_policy.owner_id)
+    control_event = await control.store("Ravi grows plums.", user_id=control_owner)
+    await control._vector_index.save()
+    control_snapshot = Path(control._config.vector_path).read_bytes()
     try:
         event = await engine.store("Mara likes tea. Source indigo.", retrieval_content="Mara likes tea.", user_id=owner)
         positive = await engine.store("Mara likes apples. Source amber.", retrieval_content="Mara likes apples.", user_id=owner)
@@ -131,6 +137,7 @@ async def test_ER06_stale_native_saves_close_restore_and_rebuild_keep_survivor(t
         assert (await engine.get_event_nodes(positive, user_id=owner))[0].id == survivor.id
         config = engine._config
         await engine.close()
+
         if layout == "directory":
             Path(config.vector_path).write_bytes(snapshot)
             shutil.rmtree(config.lexical_path)
@@ -148,8 +155,34 @@ async def test_ER06_stale_native_saves_close_restore_and_rebuild_keep_survivor(t
             assert engine._vector_index._index.size == 1
             assert set(_documents(engine._lexical_index, set())) == {str(survivor.id)}
         if layout != "postgres":
-            rebuilt = await engine.rebuild_indexes(user_id=owner)
-            assert rebuilt["nodes_indexed"] == 1
+            later = await engine.store("Mara likes pears.", user_id=owner)
+            later_node = (await engine.get_event_nodes(later, user_id=owner))[0]
+            entered, release = asyncio.Event(), asyncio.Event()
+            get_node = engine._graph_store.get_node
+            async def paused(identifier, *args, **kwargs):
+                value = await get_node(identifier, *args, **kwargs)
+                if identifier == str(later_node.id):
+                    entered.set()
+                    await release.wait()
+                return value
+            with monkeypatch.context() as patch:
+                patch.setattr(engine._graph_store, "get_node", paused)
+                rebuild = asyncio.create_task(engine.rebuild_indexes(user_id=owner))
+                erasure = None
+                try:
+                    await asyncio.wait_for(entered.wait(), 10)
+                    erasure = asyncio.create_task(engine.request_erasure(ErasureRequest(request_id=uuid4(), event_ids=(UUID(later),)), user_id=owner))
+                    await asyncio.sleep(0.02)
+                    assert not erasure.done()
+                    release.set()
+                    assert (await asyncio.wait_for(rebuild, 15))["nodes_indexed"] == 2
+                    assert (await asyncio.wait_for(erasure, 15)).state == "blocked_from_access"
+                finally:
+                    release.set()
+                    await asyncio.gather(*(task for task in (rebuild, erasure) if task is not None), return_exceptions=True)
+            assert all(status.state == "live_purged" for status in await engine.process_erasures(user_id=owner, budget_ms=60000))
+            assert engine._vector_index._index.size == 1
+            assert set(_documents(engine._lexical_index, set())) == {str(survivor.id)}
         else:
             assert not await engine._privacy.repository._query("SELECT id FROM nodes WHERE id=?", (str(node.id),))
             assert await engine._privacy.repository._query("SELECT id FROM nodes WHERE id=? AND embedding IS NOT NULL AND content_tsv IS NOT NULL", (str(survivor.id),))
@@ -160,7 +193,69 @@ async def test_ER06_stale_native_saves_close_restore_and_rebuild_keep_survivor(t
         engine, runtime = await reopen(engine, runtime)
         assert (await engine.get_event_nodes(positive, user_id=owner))[0].id == survivor.id
         assert await engine._graph_store.get_node(str(node.id)) is None
+        assert Path(control._config.vector_path).read_bytes() == control_snapshot
+        assert (await control.get_event_nodes(control_event, user_id=control_owner))[0].content == "Ravi grows plums."
+        assert len(_documents(control._lexical_index, set())) == 1
     finally:
         if stale is not None:
             await stale.close()
+        await engine.close()
+        await control.close()
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_ER05_missing_work_recovery_cannot_restore_erased_preparations(tmp_path, layout, analyzer, native, monkeypatch):
+    from tests.privacy_journal_support import SOURCE, processing_keys
+    engine, runtime, policy, custody, evidence, processing = await journal_engine(tmp_path, layout, analyzer)
+    runtime = replace(runtime, key_custody=custody)
+    engine._privacy.runtime = runtime
+    owner = str(policy.owner_id)
+    try:
+        source = await engine.ingest(SOURCE, user_id=owner)
+        with processing_keys(runtime, custody, processing):
+            assert (await engine.process_extractions(user_id=owner)).processed == 1
+        async def interrupt(*args, **kwargs):
+            raise RuntimeError("synthetic interruption after real native preparation")
+        with monkeypatch.context() as patch:
+            patch.setattr(engine._graph_store, "publish_profile", interrupt)
+            with pytest.raises(PrivacyDenied):
+                await engine.consolidate_knowledge(user_id=owner, entity_names=["Mara"])
+        profile_id = (await engine.profile_jobs(user_id=owner))[0]["plan_id"]
+        profile = await engine._profile_work.get(profile_id, user_id=owner)
+        assert profile.privacy_manifest and profile.node.content
+        extraction = await engine.ingest(SOURCE, user_id=owner)
+        with monkeypatch.context() as patch:
+            patch.setattr(engine._graph_store, "commit_derivation", interrupt)
+            with processing_keys(runtime, custody, processing):
+                assert (await engine.process_extractions(user_id=owner)).processed == 0
+        plan = await engine._event_store.get_derivation_plan(extraction, user_id=owner)
+        assert plan and plan.nodes
+        direct = await engine.ingest_fast("Nora collects shells. Pending source coral.", user_id=owner)
+        assert await engine._event_store.get_direct_store(direct, user_id=owner) is not None
+        positive = await engine.store("Nora bakes bread.", user_id=owner)
+        if layout != "postgres":
+            assert await engine._privacy.repository._query("SELECT node_id FROM vector_staging WHERE node_id=?", (profile_id,))
+        await engine.request_erasure(ErasureRequest(request_id=uuid4(), event_ids=tuple(map(UUID, (source, extraction, direct)))), user_id=owner)
+        # Remove the mutable trackers after acknowledgement. Immutable copies
+        # existed above, and startup must consume the current independent fence
+        # before the existing registry reconstruction sees those preparations.
+        repository = engine._privacy.repository
+        await repository._query("DELETE FROM profile_work WHERE plan_id=?", (profile_id,))
+        await repository._query("DELETE FROM event_extractions WHERE event_id=?", (extraction,))
+        await repository._query("DELETE FROM event_materializations WHERE event_id=?", (direct,))
+        sends = len(runtime.extractor.sends), len(runtime.embedder.sends)
+        engine, runtime = await reopen(engine, runtime)
+        assert not await engine.profile_jobs(user_id=owner)
+        assert (await engine.process_extractions(user_id=owner)).processed == 0
+        assert (await engine.process_pending(user_id=owner)).processed == 0
+        assert (await engine.process_profiles(user_id=owner))["processed"] == 0
+        assert sends == (len(runtime.extractor.sends), len(runtime.embedder.sends))
+        assert await engine._event_store.get_derivation_plan(extraction, user_id=owner) is None
+        assert await engine._event_store.get_direct_store(direct, user_id=owner) is None
+        assert await engine._profile_work.get(profile_id, user_id=owner) is None
+        assert await engine._graph_store.get_node(profile_id) is None
+        assert (await engine.get_event_nodes(positive, user_id=owner))[0].content == "Nora bakes bread."
+        [status] = await engine.process_erasures(user_id=owner, budget_ms=60000)
+        assert status.state == "live_purged" and status.failure is None, status
+    finally:
         await engine.close()
