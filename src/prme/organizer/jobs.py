@@ -20,7 +20,10 @@ from prme.types import ACTIVE_LIFECYCLE_STATES, LifecycleState, NodeType
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 ALL_JOBS: list[str] = [
     "promote",
@@ -450,7 +453,7 @@ async def _job_deduplicate(
         duplicates = await find_duplicates(
             engine, config, budget_ms=budget_ms / 2, user_id=user_id,
         )
-        merged_count = await merge_duplicates(engine, duplicates)
+        merged_count = await merge_duplicates(engine, duplicates, **({"user_id": user_id} if user_id else {}))
     except Exception:
         logger.warning("Deduplication job failed", exc_info=True)
         duration_ms = (time.monotonic() - start) * 1000.0
@@ -496,7 +499,7 @@ async def _job_alias_resolve(
         aliases = await find_aliases(
             engine, config, budget_ms=budget_ms / 2, user_id=user_id,
         )
-        resolved_count = await resolve_aliases(engine, aliases)
+        resolved_count = await resolve_aliases(engine, aliases, **({"user_id": user_id} if user_id else {}))
     except Exception:
         logger.warning("Alias resolution job failed", exc_info=True)
         duration_ms = (time.monotonic() - start) * 1000.0

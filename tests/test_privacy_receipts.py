@@ -18,7 +18,7 @@ from tests.privacy_journal_support import (
     SOURCE_ONLY,
     journal_engine,
     operation_bytes,
-    isolated_privacy_postgres,
+    isolated_privacy_postgres,  # noqa: F401
     local_analyzer_fixture,  # noqa: F401
 )
 from tests.privacy_journal_support import native as native_fixture  # noqa: F401

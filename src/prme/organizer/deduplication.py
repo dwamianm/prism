@@ -16,6 +16,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from prme.privacy.journals import compatible_admitted_pair
 from prme.organizer.merge_policy import compatible_provenance, duplicate_merge_allowed
 from prme.types import LifecycleState, Scope
 
@@ -24,7 +25,10 @@ if TYPE_CHECKING:
     from prme.models.nodes import MemoryNode
     from prme.storage.engine import MemoryEngine
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 
 # ---------------------------------------------------------------------------
@@ -79,6 +83,8 @@ async def find_duplicates(
     Returns:
         List of DuplicateCandidate pairs within one user and scope.
     """
+    from prme.privacy.journals import generation_search
+    index = await generation_search(engine, user_id=user_id)
     start = time.monotonic()
     threshold = config.dedup_similarity_threshold
 
@@ -106,7 +112,7 @@ async def find_duplicates(
         # Normalized text proposes candidates; application checks equivalence.
         for i in range(len(group)):
             for j in range(i + 1, len(group)):
-                if not compatible_provenance(group[i], group[j]):
+                if not compatible_admitted_pair(compatible_provenance, group[i], group[j]):
                     continue
                 # Budget check
                 elapsed_ms = (time.monotonic() - start) * 1000.0
@@ -132,7 +138,7 @@ async def find_duplicates(
 
         # Search for similar vectors
         try:
-            results = await engine._vector_index.search(
+            results = await index.search(
                 node.content,
                 node.user_id,
                 k=10,
@@ -161,7 +167,7 @@ async def find_duplicates(
             # Recheck durable graph ownership/scope before proposing a merge;
             # an index may lag graph updates or be supplied by a custom backend.
             other_node = await engine.get_node(other_id, user_id=node.user_id)
-            if other_node is None or not compatible_provenance(node, other_node):
+            if other_node is None or not compatible_admitted_pair(compatible_provenance, node, other_node):
                 continue
 
             seen_pairs.add(pair_key)
@@ -209,6 +215,7 @@ def _pick_canonical(node_a: MemoryNode, node_b: MemoryNode) -> tuple[MemoryNode,
 async def merge_duplicates(
     engine: MemoryEngine,
     duplicates: list[DuplicateCandidate],
+    *, user_id: str | None = None,
 ) -> int:
     """Merge duplicate node pairs.
 
@@ -234,8 +241,8 @@ async def merge_duplicates(
             continue
 
         # Fetch both nodes
-        node_a = await engine.get_node(dup.node_a_id)
-        node_b = await engine.get_node(dup.node_b_id)
+        node_a = await engine.get_node(dup.node_a_id, **({"user_id": user_id} if user_id else {}))
+        node_b = await engine.get_node(dup.node_b_id, **({"user_id": user_id} if user_id else {}))
 
         if node_a is None or node_b is None:
             # One was already archived/superseded
@@ -252,7 +259,7 @@ async def merge_duplicates(
 
         # Recompute equivalence from durable values, not candidate labels or a
         # similarity threshold. A caller-constructed "exact" pair is not proof.
-        if not duplicate_merge_allowed(node_a, node_b):
+        if not compatible_admitted_pair(duplicate_merge_allowed, node_a, node_b):
             logger.debug("Retaining non-equivalent duplicate candidates (%s, %s)", dup.node_a_id, dup.node_b_id)
             continue
 

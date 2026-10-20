@@ -50,7 +50,10 @@ from prme.privacy.journals import (
     matching_summaries, admit_generated_node, encode_generated,
 )
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +126,8 @@ async def cluster_similar_memories(
     Returns:
         List of MemoryCluster objects, each with a single owner.
     """
+    from prme.privacy.journals import generation_search
+    index = await generation_search(engine, user_id=user_id)
     # Fetch active episodic nodes
     episodic_types = [NodeType.FACT, NodeType.EVENT, NodeType.NOTE]
     active_states = [LifecycleState.TENTATIVE, LifecycleState.STABLE]
@@ -152,7 +157,7 @@ async def cluster_similar_memories(
 
         # Find similar nodes via vector search
         try:
-            results = await engine._vector_index.search(
+            results = await index.search(
                 node.content,
                 node.user_id,
                 k=50, scope=[node.scope.value],
@@ -296,10 +301,12 @@ async def publish_consolidation_plan(
                     await run_async_to_completion(_stage_consolidation(engine, plan))
         else:
             await _stage_consolidation(engine, plan)
-    node_id = await engine._write_queue.submit(
-        lambda: engine._graph_store.publish_consolidation(plan),
-        label=f"consolidation.publish:{plan.node.id}",
-    )
+    from prme.privacy.diagnostics import protected_diagnostics
+    with protected_diagnostics(plan.privacy_manifest is not None):
+        node_id = await engine._write_queue.submit(
+            lambda: engine._graph_store.publish_consolidation(plan),
+            label=f"consolidation.publish:{plan.node.id}",
+        )
     for stale in (*plan.previous, *retired):
         await engine._evict_from_indexes(str(stale.id))
     published = await engine.get_node(node_id, **({"user_id": owner} if plan.privacy_manifest else {}))

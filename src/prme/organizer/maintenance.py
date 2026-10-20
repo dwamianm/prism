@@ -32,7 +32,10 @@ from prme.types import LifecycleState, NodeType
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 
 class MaintenanceRunner:

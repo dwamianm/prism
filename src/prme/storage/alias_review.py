@@ -10,13 +10,21 @@ from uuid import UUID, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from prme.privacy.journals import compatible_admitted_pair
 from prme.models.derivation import node_checksum
 from prme.models.edges import MemoryEdge
 from prme.organizer.merge_policy import alias_pair_allowed
 from prme.storage import _snapshot_json
 from prme.storage._threading import run_to_completion
+from prme.privacy.journals import (
+    JournalManifest,
+    project_manifest_node,
+    protected_mutation,
+    journal_deadline,
+)
 from prme.storage.alias_proposal import (
     AliasProposalJournalRecord,
+    ProtectedAliasProposalRecord,
     read_record as read_proposal_record,
 )
 from prme.types import EdgeType, LifecycleState, Scope
@@ -64,6 +72,28 @@ class AliasProposalReviewRecord(BaseModel):
     verified_edge: MemoryEdge | None = None
 
 
+class ProtectedAliasReviewRecord(BaseModel):
+    """Admitted decision and proposal identity; no copied proposal body."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+    version: Literal[2] = 2
+    policy: Literal["protected_alias_review_v1"] = "protected_alias_review_v1"
+    operation_id: UUID
+    proposal_operation_id: UUID
+    manifest: JournalManifest
+    user_id: str
+    scope: Scope
+    decision: AliasProposalDecision
+    reviewer_id: str
+    reason: str | None = None
+    decided_at: datetime
+    source_id: UUID
+    target_id: UUID
+    score: float = Field(ge=0, le=1)
+    verified_edge: MemoryEdge | None = None
+    diagnostics: Literal["not_retained"] = "not_retained"
+
+
 class AliasProposalInboxItem(BaseModel):
     """One decoded proposal and its current review state."""
 
@@ -71,7 +101,7 @@ class AliasProposalInboxItem(BaseModel):
 
     status: AliasProposalStatus
     proposal: AliasProposalJournalRecord
-    review: AliasProposalReviewRecord | None = None
+    review: AliasProposalReviewRecord | ProtectedAliasReviewRecord | None = None
 
 
 class AliasProposalReviewResult(BaseModel):
@@ -140,6 +170,23 @@ def _review_payload(record: AliasProposalReviewRecord) -> str:
 def _expected_edge(record: AliasProposalReviewRecord) -> MemoryEdge | None:
     if record.decision == "rejected":
         return None
+    if isinstance(record, ProtectedAliasReviewRecord):
+        return MemoryEdge(
+            id=uuid5(record.operation_id, "verified-relates-to"),
+            source_id=record.source_id,
+            target_id=record.target_id,
+            edge_type=EdgeType.RELATES_TO,
+            user_id=record.user_id,
+            confidence=record.score,
+            valid_from=record.decided_at,
+            created_at=record.decided_at,
+            metadata={
+                "relation": "alias",
+                "identity_verified": True,
+                "proposal_operation_id": str(record.proposal_operation_id),
+                "review_operation_id": str(record.operation_id),
+            },
+        )
     proposal = read_proposal_record(record.proposal_payload)
     return MemoryEdge(
         id=uuid5(record.operation_id, "verified-relates-to"),
@@ -170,7 +217,27 @@ def read_review_record(
         raw = value["record"]
         if hashlib.sha256(raw.encode()).hexdigest() != value["sha256"]:
             raise ValueError("Alias proposal review journal checksum mismatch")
-        record = AliasProposalReviewRecord.model_validate(_snapshot_json.loads(raw))
+        decoded = _snapshot_json.loads(raw)
+        if decoded.get("version") == 2:
+            protected = ProtectedAliasReviewRecord.model_validate(decoded)
+            if (
+                protected.operation_id != _operation_id(protected.proposal_operation_id)
+                or protected.manifest.journal_id != protected.operation_id
+                or set(protected.manifest.admitted_node_ids)
+                != {protected.source_id, protected.target_id}
+                or protected.decided_at.tzinfo is None
+                or protected.source_id == protected.target_id
+                or str(UUID(protected.reviewer_id)) != protected.reviewer_id
+                or protected.verified_edge != _expected_edge(protected)
+                or any(
+                    str(dep.snapshot.policy.owner_id) != protected.user_id
+                    or dep.snapshot.policy.scope != protected.scope
+                    for dep in protected.manifest.dependencies
+                )
+            ):
+                raise ValueError("Protected alias review identity mismatch")
+            return protected
+        record = AliasProposalReviewRecord.model_validate(decoded)
         proposal = read_proposal_record(record.proposal_payload)
     except (AttributeError, KeyError, TypeError) as exc:
         raise ValueError("Malformed alias proposal review journal") from exc
@@ -274,7 +341,9 @@ def _prepare(
     ):
         raise ValueError("Alias proposal is unavailable for this owner")
     if proposal.edge not in edges:
-        raise AliasProposalReviewConflict("Alias proposal edge differs from its journal")
+        raise AliasProposalReviewConflict(
+            "Alias proposal edge differs from its journal"
+        )
 
     left_id = str(proposal.left_before.id)
     right_id = str(proposal.right_before.id)
@@ -282,18 +351,38 @@ def _prepare(
         if left_id not in nodes or right_id not in nodes:
             raise StaleAliasProposal("Alias proposal nodes are no longer available")
         left, right = nodes[left_id], nodes[right_id]
+        if isinstance(proposal, ProtectedAliasProposalRecord):
+            left, right = (
+                project_manifest_node(node, proposal.manifest) for node in (left, right)
+            )
         if (
             left.lifecycle_state not in _ACTIVE
             or right.lifecycle_state not in _ACTIVE
             or node_checksum(left) != node_checksum(proposal.left_before)
             or node_checksum(right) != node_checksum(proposal.right_before)
-            or not alias_pair_allowed(left, right)
+            or not compatible_admitted_pair(alias_pair_allowed, left, right)
         ):
             raise StaleAliasProposal(
                 "Alias proposal nodes changed after assessment; assess the pair again"
             )
 
     now = datetime.now(timezone.utc)
+    if isinstance(proposal, ProtectedAliasProposalRecord):
+        record = ProtectedAliasReviewRecord(
+            operation_id=operation_id,
+            proposal_operation_id=proposal_id,
+            manifest=proposal.manifest.model_copy(update={"journal_id": operation_id}),
+            user_id=user_id,
+            scope=proposal.left_before.scope,
+            decision=decision,
+            reviewer_id=reviewer_id,
+            reason=reason,
+            decided_at=now,
+            source_id=proposal.edge.source_id,
+            target_id=proposal.edge.target_id,
+            score=proposal.score,
+        )
+        return record.model_copy(update={"verified_edge": _expected_edge(record)})
     record = AliasProposalReviewRecord(
         operation_id=operation_id,
         proposal_operation_id=proposal_id,
@@ -313,6 +402,7 @@ def _prepare(
 
 def _checkpoint(stage: str) -> None:
     """Native transaction fault-injection boundary; no external work."""
+    journal_deadline()
 
 
 def _inbox_item(
@@ -324,7 +414,9 @@ def _inbox_item(
         return AliasProposalInboxItem(status="pending", proposal=proposal)
     review = read_review_record(review_payload)
     if review.proposal_operation_id != proposal.operation_id:
-        raise AliasProposalReviewConflict("Alias proposal review targets another proposal")
+        raise AliasProposalReviewConflict(
+            "Alias proposal review targets another proposal"
+        )
     return AliasProposalInboxItem(
         status=review.decision,
         proposal=proposal,
@@ -348,6 +440,7 @@ def _list_args(
     return user_id, parsed_scope, cast(AliasProposalStatus | None, status), limit
 
 
+@protected_mutation
 async def review_duckdb(
     store: "DuckPGQGraphStore",
     proposal_operation_id: str,
@@ -474,6 +567,7 @@ def _list_duckdb(store: "DuckPGQGraphStore", args) -> list[AliasProposalInboxIte
     return [_inbox_item(row[1], row[2]) for row in rows]
 
 
+@protected_mutation
 async def review_postgres(
     store: "PgGraphStore",
     proposal_operation_id: str,
@@ -594,10 +688,7 @@ async def list_postgres(
         rows = await conn.fetch(query, *values)
     if len({row["id"] for row in rows}) != len(rows):
         raise AliasProposalReviewConflict("Alias proposal has multiple review records")
-    return [
-        _inbox_item(row["proposal_payload"], row["review_payload"])
-        for row in rows
-    ]
+    return [_inbox_item(row["proposal_payload"], row["review_payload"]) for row in rows]
 
 
 __all__ = [

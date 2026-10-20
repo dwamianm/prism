@@ -56,3 +56,29 @@ def processing_keys(runtime, custody, processing):
 async def operation_bytes(engine):
     rows = await engine._privacy.repository._query("SELECT payload FROM operations", ())
     return repr(rows).encode()
+
+
+async def logical_dump(engine, path):
+    """Dump all managed logical rows in this test-owned schema, not an export API.
+
+    Native PostgreSQL server WAL/base files and external backup archives are not
+    visible to this engine harness. This dump makes no physical erasure claim.
+    """
+    import json
+    import re
+
+    repository = engine._privacy.repository
+    tables = await repository._query(
+        "SELECT table_name FROM information_schema.tables "
+        "WHERE table_schema=current_schema() AND table_type='BASE TABLE' ORDER BY table_name",
+        (),
+    )
+    lines = []
+    for row in tables:
+        name = row["table_name"] if isinstance(row, dict) else row[0]
+        assert re.fullmatch(r"[a-z_][a-z0-9_]*", name)
+        values = await repository._query(f'SELECT * FROM "{name}"', ())
+        lines.append(json.dumps({"table": name, "rows": values}, default=str))
+    assert any('"table": "operations"' in line for line in lines)
+    path.write_text("\n".join(lines))
+    return path.read_bytes()

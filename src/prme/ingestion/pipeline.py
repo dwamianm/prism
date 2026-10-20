@@ -64,7 +64,10 @@ if TYPE_CHECKING:
     from prme.storage.vector_index import VectorIndex
     from prme.storage.write_queue import WriteQueue
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = structlog.get_logger(__name__)
+logger = ScopedLogger(logger)
 
 # The admission validator that fresh extractions record. v14 adds explicit
 # correction and caller-declared owner-reference planning.

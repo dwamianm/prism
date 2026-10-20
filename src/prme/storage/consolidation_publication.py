@@ -20,7 +20,10 @@ if TYPE_CHECKING:
     from prme.storage.duckpgq_graph import DuckPGQGraphStore
     from prme.storage.pg.graph_store import PgGraphStore
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 
 HEADS_DDL = """CREATE TABLE IF NOT EXISTS consolidation_publication_heads (

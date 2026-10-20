@@ -23,7 +23,10 @@ from prme.storage._threading import run_to_completion
 from prme.storage.derivation_staging import DuckDBStageFence
 from prme.types import NodeType
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 # Every Tantivy writer indexes on one thread, so a batch's documents land in
 # one segment in the order they were added. With several threads the split

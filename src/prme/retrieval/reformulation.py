@@ -42,7 +42,10 @@ from pydantic import BaseModel, Field, SecretStr
 
 from prme.model_runtime import create_instructor_client, resolve_provider_connection
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 REFORMULATION_SYSTEM_PROMPT = """\
 You are a search query reformulator. Given a question about a stored \
