@@ -444,6 +444,31 @@ def rank_fusion_relevance(candidate: RetrievalCandidate) -> float:
     return max(0.0, candidate.semantic_score, inherited, candidate.context_relevance)
 
 
+def inherited_score(candidate: RetrievalCandidate) -> tuple[float, ScoreProvenance | None]:
+    """The score and score provenance a context record inherits from ``candidate``.
+
+    Session, episode and evidence augmentation context take the candidate's
+    score less a seed count graph term (``ScoringWeights.rrf_graph_seed_count``):
+    the term rewards the candidate's own links to the question's names, which
+    the records it pulls in do not share, and a record linked to them earns its
+    own. The provenance drops the graph rank so it replays that score. Without
+    such a term both are the candidate's own.
+    """
+    provenance = candidate.score_provenance
+    rank_fusion = provenance.rank_fusion if provenance is not None else None
+    if (provenance is None or rank_fusion is None or rank_fusion.graph_rank is None
+            or not provenance.weights.rrf_graph_seed_count):
+        return candidate.composite_score, provenance
+    assert provenance.weights.rrf_k is not None
+    rank_fusion = rank_fusion.model_copy(update={"graph_rank": None})
+    base = rank_fusion.score(provenance.weights.rrf_k, provenance.weights.rrf_graph_weight)
+    provenance = provenance.model_copy(update={
+        "rank_fusion": rank_fusion,
+        "trace": provenance.trace.model_copy(update={"composite_score": base}),
+    })
+    return provenance.replay_score(), provenance
+
+
 class MemoryBundle(BaseModel):
     """Context-packed output for a retrieval request.
 
@@ -692,6 +717,17 @@ class RetrievalMetadata(BaseModel):
     backend_failures: dict[str, str] = Field(
         default_factory=dict,
         description="Failed primary candidate paths with sanitized reason codes; empty means no detected failure",
+    )
+    # Omitted when the walk ran or was not asked for, so other responses keep their bytes.
+    graph_seed_reach: Literal["neighborhood_limit", "backend_error"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "With ScoringWeights.rrf_graph_seed_count, why its walk did not run: "
+            "neighborhood_limit when the seeds' neighborhood held more nodes to read "
+            "than the walk's limit, backend_error when its read failed. The graph "
+            "candidates are kept either way, and none of them gets a graph rank"
+        ),
     )
     min_score_skipped: bool = Field(
         default=False,

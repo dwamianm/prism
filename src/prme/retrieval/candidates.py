@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from prme.models.owner_reference import OWNER_REFERENCE_STATUS
 from prme.retrieval.config import DEFAULT_PACKING_CONFIG, PackingConfig
 from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
 from prme.types import EdgeType, LifecycleState, NodeType, Scope
@@ -36,6 +37,16 @@ class CandidateDiagnostics:
 
     embedding_mismatch: bool = False
     backend_failures: dict[str, str] = field(default_factory=dict)
+    # Why the walk of ScoringWeights.rrf_graph_seed_count did not run, when it
+    # did not: "neighborhood_limit" or "backend_error". The graph candidates
+    # are kept either way; none of them gets a graph rank.
+    graph_seed_reach: str | None = None
+
+
+# The seed count walk reads the links of every node it can continue from. Past
+# this many it is skipped, because its read grows with the neighborhood and the
+# list is short-listed to the semantic top 10 anyway.
+SEED_REACH_MAX_NODES = 5000
 
 
 def normalize_bm25_scores(results: list[dict]) -> list[dict]:
@@ -154,13 +165,11 @@ async def _find_seed_entities(
     return list(seeds.values())
 
 
-def _is_owner_entity(node: MemoryNode) -> bool:
+def _is_owner_entity(node: MemoryNode, owner_name_key: str) -> bool:
     """An entity a user turn named as the memory's owner, or the owner reference."""
-    from prme.ingestion.owner_name import OWNER_NAME_KEY
-
     metadata = node.metadata or {}
     return node.node_type == NodeType.ENTITY and (
-        bool(metadata.get(OWNER_NAME_KEY)) or metadata.get("identity_status") == "owner_reference"
+        bool(metadata.get(owner_name_key)) or metadata.get("identity_status") == OWNER_REFERENCE_STATUS
     )
 
 
@@ -178,7 +187,7 @@ async def _seed_reach(
     nodes: dict[str, MemoryNode],
     max_hops: int,
     depths: dict[str, int] | None = None,
-) -> dict[str, tuple[int, int, int]]:
+) -> dict[str, tuple[int, int, int]] | None:
     """How many seeds reach each node, their total hop count and the fewest hops (``rrf_graph_seed_count``).
 
     A seed reaches a node within ``max_hops`` along links that never pass
@@ -190,23 +199,31 @@ async def _seed_reach(
     so the walk stays among them and the seeds. One query reads the links of
     the nodes a walk can continue from: with ``depths``, each node's fewest
     hops from any seed in that search, only those nearer than ``max_hops``,
-    because a walk that avoids the owner is never shorter. With fewer than
-    two seeds no node can count two, so nothing is read.
+    because a walk that avoids the owner is never shorter, and never the
+    links of an owner entity that is not a seed, which no walk continues
+    from. With fewer than two seeds no node can count two, so nothing is read.
+    Returns None, having read nothing, when more than
+    ``SEED_REACH_MAX_NODES`` nodes would be read.
     """
     if len(seeds) < 2:
         return {}
+    from prme.ingestion.owner_name import OWNER_NAME_KEY
+
     known = {**nodes, **{str(seed.id): seed for seed in seeds}}
+    owners = {node_id for node_id, node in known.items() if _is_owner_entity(node, OWNER_NAME_KEY)}
+    seed_ids = {str(seed.id) for seed in seeds}
     expandable = (
         set(known) if depths is None
-        else {str(seed.id) for seed in seeds} | {node_id for node_id, depth in depths.items() if depth < max_hops}
-    )
+        else seed_ids | {node_id for node_id, depth in depths.items() if depth < max_hops}
+    ) - (owners - seed_ids)
+    if len(expandable) > SEED_REACH_MAX_NODES:
+        return None
     adjacency: dict[str, set[str]] = defaultdict(set)
     for edge in await graph_store.get_edges(node_ids=list(expandable)):
         source, target = str(edge.source_id), str(edge.target_id)
         if source != target and source in known and target in known and not _unverified_alias(edge):
             adjacency[source].add(target)
             adjacency[target].add(source)
-    owners = {node_id for node_id, node in known.items() if _is_owner_entity(node)}
     hops: dict[str, dict[str, int]] = defaultdict(dict)
     for seed in seeds:
         seed_id = str(seed.id)
@@ -238,6 +255,7 @@ async def _generate_graph_candidates(
     time_from: datetime | None = None,
     time_to: datetime | None = None,
     seed_reach: bool = False,
+    diagnostics: CandidateDiagnostics | None = None,
 ) -> list[dict]:
     """Generate candidates from graph neighborhood traversal.
 
@@ -253,7 +271,9 @@ async def _generate_graph_candidates(
     Returns list of dicts: {node: MemoryNode, graph_proximity: float}. With
     ``seed_reach`` (``ScoringWeights.rrf_graph_seed_count``) each dict also
     holds ``graph_seed_reach``, from ``_seed_reach``, or None for a node no
-    seed reaches without passing through the owner's entity.
+    seed reaches without passing through the owner's entity. When the walk is
+    skipped or its read fails, every dict holds None and ``diagnostics``
+    records why.
     """
     seed_nodes = await _find_seed_entities(
         analysis, graph_store, user_id, scope, config.graph_seed_words,
@@ -322,9 +342,20 @@ async def _generate_graph_candidates(
     )
     candidates = candidates[: config.graph_max_candidates]
     if seed_reach:
-        reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops, node_depth)
+        try:
+            reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops, node_depth)
+        except Exception:
+            # Only the graph list's ordering depends on the walk, so a failed
+            # read costs that term and keeps every graph candidate.
+            logger.warning("Graph seed reach failed; no candidate gets a graph rank", exc_info=True)
+            reach = None
+            if diagnostics is not None:
+                diagnostics.graph_seed_reach = "backend_error"
+        else:
+            if reach is None and diagnostics is not None:
+                diagnostics.graph_seed_reach = "neighborhood_limit"
         for candidate in candidates:
-            candidate["graph_seed_reach"] = reach.get(str(candidate["node"].id))
+            candidate["graph_seed_reach"] = (reach or {}).get(str(candidate["node"].id))
     return candidates
 
 
@@ -615,11 +646,15 @@ async def generate_candidates(
     """
     # Run the enabled backends in parallel, forwarding scope and temporal
     # filters. Disabled backends are replaced with no-op coroutines so
-    # result unpacking stays positional.
+    # result unpacking stays positional. The graph backend sets the walk's
+    # status itself.
+    if diagnostics is not None:
+        diagnostics.graph_seed_reach = None
     results = await asyncio.gather(
         _generate_graph_candidates(
             analysis, graph_store, user_id, config,
             scope=scope, time_from=time_from, time_to=time_to, seed_reach=graph_seed_reach,
+            diagnostics=diagnostics,
         ) if include_graph else _empty_graph_candidates(),
         _generate_vector_candidates(
             analysis, vector_index, user_id, config,

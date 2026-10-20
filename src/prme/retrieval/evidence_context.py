@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.filtering import filter_candidate_types, filter_epistemic
-from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment, rank_fusion_relevance
+from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment, inherited_score, rank_fusion_relevance
 from prme.types import NodeType, RetrievalMode, Scope, SourceType
 
 if TYPE_CHECKING:
@@ -168,6 +168,11 @@ async def project_evidence_context(
     )
     for members, eligible in source_groups:
         anchor = members[0]
+        # The source replaces the claims it stands in for, which leave the
+        # results, so it takes their place with their whole score, a seed count
+        # graph term included (ScoringWeights.rrf_graph_seed_count): unlike
+        # session, episode or augmentation context it is not a second record
+        # riding on the anchor's links.
         projection_score = (
             anchor.composite_score * config.evidence_projection_score_decay
         )
@@ -279,13 +284,14 @@ async def augment_evidence_context(
     ranking_changed = False
     for members, eligible in source_groups:
         anchor = members[0]
-        inherited_score = (
-            anchor.composite_score * config.evidence_augmentation_score_decay
-        )
+        # The claims stay, so a source added beside them inherits the anchor's
+        # score less a seed count graph term, which only the anchor's own links
+        # earned.
+        anchor_score, provenance = inherited_score(anchor)
+        source_score = anchor_score * config.evidence_augmentation_score_decay
         # A source keeps its group's relevance even when its own score stays
         # higher; min_score gates it under rank fusion.
         group_relevance = max(rank_fusion_relevance(member) for member in members)
-        provenance = anchor.score_provenance
         if provenance is not None:
             provenance = provenance.model_copy(
                 update={
@@ -307,7 +313,7 @@ async def augment_evidence_context(
                     node=source,
                     paths=["EVIDENCE_CONTEXT"],
                     path_count=1,
-                    composite_score=inherited_score,
+                    composite_score=source_score,
                     score_provenance=provenance,
                     context_relevance=group_relevance,
                 )
@@ -320,9 +326,9 @@ async def augment_evidence_context(
                 updates["path_count"] = current.path_count + 1
             if group_relevance > current.context_relevance:
                 updates["context_relevance"] = group_relevance
-            if inherited_score > current.composite_score:
+            if source_score > current.composite_score:
                 updates.update(
-                    composite_score=inherited_score,
+                    composite_score=source_score,
                     reranker_score=None,
                     score_trace=None,
                     score_provenance=provenance,

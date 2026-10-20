@@ -345,11 +345,16 @@ class ScoringWeights(BaseModel):
             "its top RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP (10), so the list "
             "reorders records that already match the question. The list "
             "ranks more seeds first, then the smaller total hop count. Entity "
-            "records never join it. A record that inherits a session "
-            "context score inherits its trigger's score without the graph "
-            "term, which only the trigger's own links earned. The list's "
-            "weight is rrf_graph_weight, set to RRF_GRAPH_SEED_COUNT_WEIGHT "
-            "when unset. Weighted fusion ignores a supplied value with a "
+            "records never join it. A record that session, episode or "
+            "evidence augmentation context pulls in inherits its trigger's "
+            "score without the graph term, which only the trigger's own links "
+            "earned; evidence projection, which replaces a claim with its "
+            "source, keeps it. The list's weight is rrf_graph_weight, set to "
+            "RRF_GRAPH_SEED_COUNT_WEIGHT when unset. Turning the switch off in "
+            "a dump of settings it filled (PRMEConfig().scoring.model_dump()) "
+            "leaves that weight behind, which turns on the hop count list, so "
+            "drop rrf_graph_weight too; PRME_SCORING__RRF_GRAPH_SEED_COUNT=false "
+            "never leaves it. Weighted fusion ignores a supplied value with a "
             "warning."
         ),
     )
@@ -487,7 +492,10 @@ class ScoringWeights(BaseModel):
             if self.rrf_graph_weight is not None:
                 payload += f":graph={self.rrf_graph_weight}"
             if self.rrf_graph_seed_count:
-                payload += ":graph_rule=seed_count"
+                # The rule and its tunable constant: any change to the seed
+                # count rule must change this label, so that scores it gives
+                # never share a version with scores the old rule gave.
+                payload += f":graph_rule=seed_count:top={RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP}"
         elif self.recency_time is not None:
             # Weighted configurations without it keep their version.
             payload += f":recency_time={self.recency_time}"

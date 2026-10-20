@@ -8,6 +8,8 @@ from prme.epistemic.inference import OWNER_ROLES
 from prme.models.speaker import SpeakerError
 
 OWNER_REFERENCE_KEY = "prme_first_person_owner_v1"
+# The identity_status of the entity a declared first-person owner binds to.
+OWNER_REFERENCE_STATUS = "owner_reference"
 
 
 def attach_owner_reference(

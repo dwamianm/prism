@@ -30,7 +30,7 @@ import math
 import re
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from prme.models.nodes import MemoryNode
 from prme.models.learning import RankingMultipliers
@@ -569,14 +569,15 @@ def _competition_ranks(scores: list[float | None]) -> list[int | None]:
     return [None if score is None else first_position[score] for score in scores]
 
 
-def _dense_ranks(scores: list[float | None]) -> list[int | None]:
+def _dense_ranks(scores: list[Any]) -> list[int | None]:
     """Rank the present scores in descending order, one rank for each distinct score.
 
-    The graph path scores a candidate by its hop count (1.0, 0.7 or 0.4), so
-    this ranks candidates by hop count. A seed with many neighbors puts all
-    of them at one hop count, and competition ranks would then place the
-    next hop count behind all of them, so the size of a neighborhood, not
-    its distance, would set the gap between the two.
+    A score is anything ordered, such as a tuple of the seed count list's keys;
+    None is not ranked. The graph path scores a candidate by its hop count
+    (1.0, 0.7 or 0.4), so this ranks candidates by hop count. A seed with many
+    neighbors puts all of them at one hop count, and competition ranks would
+    then place the next hop count behind all of them, so the size of a
+    neighborhood, not its distance, would set the gap between the two.
     """
     place = {value: rank for rank, value in enumerate(
         sorted({score for score in scores if score is not None}, reverse=True), start=1,
@@ -606,10 +607,7 @@ def _seed_count_ranks(
         and candidate.node.node_type != NodeType.ENTITY else None
         for candidate, semantic_rank in zip(candidates, semantic_ranks)
     ]
-    place = {key: rank for rank, key in enumerate(
-        sorted({key for key in keys if key is not None}, reverse=True), start=1,
-    )}
-    return [None if key is None else place[key] for key in keys]
+    return _dense_ranks(keys)
 
 
 def _pool_relative(values: list[float], ranked: list[bool]) -> list[float]:

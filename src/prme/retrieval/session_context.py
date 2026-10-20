@@ -24,8 +24,8 @@ from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import (
     RetrievalCandidate,
     ScoreAdjustment,
-    ScoreProvenance,
     SessionContextLink,
+    inherited_score,
     rank_fusion_relevance,
 )
 
@@ -36,23 +36,6 @@ if TYPE_CHECKING:
     from prme.storage.graph_store import GraphStore
 
 logger = logging.getLogger(__name__)
-
-
-def _seed_count_graph_term(provenance: ScoreProvenance) -> bool:
-    """Whether a rank-fused score holds a graph term of the seed count list."""
-    return (provenance.rank_fusion is not None and provenance.rank_fusion.graph_rank is not None
-            and provenance.weights.rrf_graph_seed_count)
-
-
-def _without_graph_term(provenance: ScoreProvenance) -> ScoreProvenance:
-    """The same score provenance without its graph rank, so it replays the score without the graph term."""
-    assert provenance.rank_fusion is not None and provenance.weights.rrf_k is not None
-    rank_fusion = provenance.rank_fusion.model_copy(update={"graph_rank": None})
-    base = rank_fusion.score(provenance.weights.rrf_k, provenance.weights.rrf_graph_weight)
-    return provenance.model_copy(update={
-        "rank_fusion": rank_fusion,
-        "trace": provenance.trace.model_copy(update={"composite_score": base}),
-    })
 
 
 async def expand_session_context(
@@ -195,14 +178,8 @@ async def expand_session_context(
             rank_fusion_decay
             if rank_fused and rank_fusion_decay is not None else weighted_decay
         )
-        provenance = trigger.score_provenance
-        inherited = trigger.composite_score
-        if provenance is not None and _seed_count_graph_term(provenance):
-            # The seed count graph term rewards the trigger's own links to the
-            # question's names, which its neighbors do not share; a neighbor
-            # linked to them earns its own (ScoringWeights.rrf_graph_seed_count).
-            provenance = _without_graph_term(provenance)
-            inherited = provenance.replay_score()
+        # Less a seed count graph term, which only the trigger's own links earned.
+        inherited, provenance = inherited_score(trigger)
         context_score = inherited * decay
         # A neighbor keeps its trigger's relevance even when its own score
         # stays higher; min_score gates it under rank fusion.
