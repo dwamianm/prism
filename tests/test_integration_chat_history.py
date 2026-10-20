@@ -23,6 +23,11 @@ class _PagedEvents:
             events, key=lambda event: (event.timestamp, str(event.id)), reverse=True
         )
         self.calls: list[tuple[int, int]] = []
+        self.legacy_history_calls: list[str] = []
+
+    def require_legacy_history(self, *, user_id: str) -> None:
+        assert user_id == "alice"
+        self.legacy_history_calls.append(user_id)
 
     def get_events(
         self,
@@ -32,6 +37,7 @@ class _PagedEvents:
         limit: int,
         offset: int,
     ) -> list[Event]:
+        assert self.legacy_history_calls == [user_id]
         self.calls.append((limit, offset))
         return self.events[offset : offset + limit]
 
@@ -63,6 +69,7 @@ def test_visible_chat_events_pages_past_one_thousand() -> None:
     assert len(visible) == 1001
     assert visible[0].content == "message-0"
     assert visible[-1].content == "message-1000"
+    assert client.legacy_history_calls == ["alice"]
     assert client.calls == [(1000, 0), (1000, 1000)]
 
 
@@ -89,6 +96,7 @@ def test_visible_chat_events_stops_at_latest_clear_marker() -> None:
     assert [event.content for event in visible] == [
         f"message-{index}" for index in range(996, 1100)
     ]
+    assert client.legacy_history_calls == ["alice"]
     assert client.calls == [(1000, 0)]
 
 
@@ -112,6 +120,8 @@ def test_visible_chat_events_rejects_unknown_control_versions() -> None:
             session_id="session",
             scope=Scope.PERSONAL,
         )
+    assert client.legacy_history_calls == ["alice"]
+    assert client.calls == [(1000, 0)]
 
 
 def test_qa_pairing_does_not_cross_scope(tmp_path) -> None:
