@@ -103,3 +103,29 @@ local delivery evidence directory. These hashes identify the reviewed records:
 | `review-323-adversarial.md` | `da74ff382a2119db2a15c5feb5acbd83c82f18088cbf708ba2e698d5564ce01f` |
 | `review-323-upstream352-core.md` | `a1f87da728e125ae7451f827ee71ed13739becb61d0815f7142162b32fbfeab5` |
 | `review-323-upstream352-security.md` | `d7ecc4291710e3365311a2b0e4aed579550acb4804ad898f24355a77e9fd02dd` |
+
+## CI fixture correction
+
+The initial PR integration run on Python 3.13 failed three legacy pagination tests
+(45 passed): their `_PagedEvents` double lacked the now-required
+`MemoryClient.require_legacy_history` method. The original failure remains
+preserved. The subsequent local full suite was intentionally interrupted at
+1,966 passes and 46 skips because it contained that obsolete fixture; it is not
+a completed pass.
+
+At `54aa261ce37e81d74b7ab326bdc24fde882e27d6` the double explicitly authorizes only
+its fixture owner, records that call, and asserts authorization before every page.
+All original pagination, latest-clear-marker and unsupported-version assertions
+remain. Production guards and all runtime source are unchanged. The three
+existing integration files pass all 48 tests on local Python 3.11.6; touched Ruff
+and diff whitespace pass. The final full suite and required CI remain delivery
+checks, with Python 3.13 not inferred from the local version.
+
+Affected CORE review: COMPLETE, APPROVE. This is one successful bounded fixture
+correction with zero unsuccessful repair cycles. Earlier source reviews remain
+valid for unchanged runtime. Updated source snapshot:
+`7f2fb7a340a320c3dcbc9a0d0c2fb1671b9ae20a14bb868d89abf5f75ffde411`
+against the same dependency base, 41 source files / 4,466 changed lines, with only
+this review transport document excluded. No original acceptance gate changed.
+
+Complete report: `review-323-ci-fixture-core.md`, SHA-256 `9ce8fdb793909961bf621e6a3921b06f1a20778c0fb747345d08f93bf5db0650`.
