@@ -147,7 +147,7 @@ memories up to date. It is off unless `enable_reingest` is set
 `ReingestDisabledError`.
 
 ```python
-config = PRMEConfig(enable_reingest=True)  # also needs extraction_batch_target_tokens above 0 (the default)
+config = PRMEConfig(enable_reingest=True)  # requests are batched at the default token target
 async with MemoryEngine.open(config) as engine:
     preview = await engine.reingest("alice", dry_run=True)   # no model call, no change
     print(preview.selected, preview.model_calls, preview.source_tokens)
