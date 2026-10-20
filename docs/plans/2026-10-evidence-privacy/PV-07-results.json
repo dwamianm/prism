@@ -1,0 +1,683 @@
+{
+  "schema_version": 1,
+  "issue": 326,
+  "base": "4058b00dc693c9903ba302d677accfe8cf988295",
+  "status": "in_progress",
+  "original_ac_status": {
+    "AC1": "not_run",
+    "AC2": "not_run",
+    "AC3": "not_run",
+    "AC4": "not_run",
+    "AC5": "not_run",
+    "AC6": "not_run"
+  },
+  "frozen_cases": [
+    {
+      "id": "AC02",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Selected authorized diagnostic read",
+      "requirements": [
+        "E3",
+        "E7"
+      ],
+      "implementation_owners": [
+        "PV-03",
+        "PV-07"
+      ],
+      "copy_ids": [
+        "C01",
+        "C25",
+        "C41"
+      ],
+      "setup": "Use an explicit scoped unexpired capability for two selected records with working key and audit sink.",
+      "expected": "Only selected currently available evidence is returned, labeled sanitized; successful authorization/outcome audit contains no source or key.",
+      "adapter_subchecks": [
+        "async_python",
+        "cli"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "CL08",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Errors logs preview export and browser sinks",
+      "requirements": [
+        "E1",
+        "E2",
+        "E8"
+      ],
+      "implementation_owners": [
+        "PV-05",
+        "PV-07",
+        "PV-13"
+      ],
+      "copy_ids": [
+        "C26",
+        "C27",
+        "C29",
+        "C30",
+        "C31",
+        "C32",
+        "C35",
+        "C36"
+      ],
+      "setup": "Inject provider/validation exceptions with marker text and inspect logging, tracing, response bodies, preview, export and explorer state.",
+      "expected": "No original/prohibited or sealed source-only text appears in prohibited sinks after success/failure. Default protected export has no keys or plaintext evidence; already delivered external copies are disclosed.",
+      "adapter_subchecks": [
+        "http",
+        "mcp",
+        "explorer",
+        "cli",
+        "langchain",
+        "llamaindex"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "ER07",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Pre-erasure restore requires current ledger",
+      "requirements": [
+        "E5",
+        "E6"
+      ],
+      "implementation_owners": [
+        "PV-06",
+        "PV-07"
+      ],
+      "copy_ids": [
+        "C36",
+        "C37",
+        "C42"
+      ],
+      "setup": "Restore/import snapshot taken before erasure, once with current independent ledger and once with only the snapshot ledger.",
+      "expected": "Current ledger is applied before serving and recovered jobs are fenced. Snapshot alone refuses any deletion-continuity/protected-restore success claim; no erased content exposed.",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "ER08",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Truthful purge backup and external status",
+      "requirements": [
+        "E4",
+        "E5",
+        "E7"
+      ],
+      "implementation_owners": [
+        "PV-06",
+        "PV-07"
+      ],
+      "copy_ids": [
+        "C28",
+        "C34",
+        "C35",
+        "C36",
+        "C42"
+      ],
+      "setup": "Archive and clear chat, then erase with live purge complete but retained backup and operator-held export.",
+      "expected": "Archive/clear is not erase; report live_purged then backup_expiry_pending, remaining copies and failures; complete only within verified managed boundary, never media wiping or offline revocation.",
+      "adapter_subchecks": [
+        "async_python",
+        "cli",
+        "langchain",
+        "llamaindex"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "EM01",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Authenticated-encryption known vectors and context",
+      "requirements": [
+        "E1",
+        "E3"
+      ],
+      "implementation_owners": [
+        "PV-03"
+      ],
+      "copy_ids": [
+        "C01",
+        "C41"
+      ],
+      "setup": "Use fixed library-compatible AES-GCM test vectors; alter ciphertext/tag/nonce/AAD and independently inspect generated object key/nonce handling.",
+      "expected": "Valid fixture decrypts exactly; every tamper fails without plaintext. Changed payload uses new object generation/key/nonce; retry reuses exact persisted envelope.",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "EM02",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Swapped record purpose scope or wrapping key",
+      "requirements": [
+        "E1",
+        "E3"
+      ],
+      "implementation_owners": [
+        "PV-03"
+      ],
+      "copy_ids": [
+        "C01",
+        "C41",
+        "C43"
+      ],
+      "setup": "Swap envelope between two records/owners/scopes and between processing/evidence purposes; use wrong OAEP label/private key.",
+      "expected": "Context and unwrap/decrypt fail closed for all substitutions; no wrong-record content and no context containing names or predictable source hashes.",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "EM03",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Provisioning and failed write have no plaintext fallback",
+      "requirements": [
+        "E1",
+        "E7"
+      ],
+      "implementation_owners": [
+        "PV-03"
+      ],
+      "copy_ids": [
+        "C01",
+        "C31",
+        "C33",
+        "C34",
+        "C41",
+        "C43"
+      ],
+      "setup": "Create protected store with no usable public/provider key; fail encryption/wrap and storage mid-write.",
+      "expected": "Fail before content durability. Scan database/WAL/temp/log/manifest/export artifacts for plaintext/key material; protected status is never assigned to partial/plaintext store.",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "EM04",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Versioned resumable rotation",
+      "requirements": [
+        "E1",
+        "E3",
+        "E5"
+      ],
+      "implementation_owners": [
+        "PV-03",
+        "PV-07"
+      ],
+      "copy_ids": [
+        "C01",
+        "C36",
+        "C41",
+        "C43",
+        "C44"
+      ],
+      "setup": "Rotate wrapping key with interruption after some envelopes; retry while an erasure fence covers another object.",
+      "expected": "Reads select exact saved key version, rotation resumes idempotently without changing protected plaintext; erased objects stay denied; old backup keys remain explicitly a backup concern.",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "EM05",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Permanent key loss and explicit recovery export",
+      "requirements": [
+        "E3",
+        "E7"
+      ],
+      "implementation_owners": [
+        "PV-03",
+        "PV-07"
+      ],
+      "copy_ids": [
+        "C33",
+        "C35",
+        "C36",
+        "C41",
+        "C43",
+        "C45"
+      ],
+      "setup": "Lose evidence key; separately use deliberate recovery-key export outside pack and test supported local unlock.",
+      "expected": "Unavailable key gives clear permanent-loss guidance without downgrade. Admitted memory remains usable under separate protection; default pack/export never embeds recovery secrets.",
+      "adapter_subchecks": [
+        "async_python",
+        "cli"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "EM06",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Local public writer and same-process disclosure",
+      "requirements": [
+        "E2",
+        "E3",
+        "E7"
+      ],
+      "implementation_owners": [
+        "PV-03"
+      ],
+      "copy_ids": [
+        "C24",
+        "C25",
+        "C33",
+        "C41",
+        "C43",
+        "C44"
+      ],
+      "setup": "Provision public writer, separate diagnostic private provider and ordinary retrieval; try null/plaintext keyring backend and permanently loaded private-key configuration.",
+      "expected": "Ordinary writer can wrap but cannot unwrap evidence. Disallowed backend rejects. Same-process key configuration is labeled same_process and refuses service-isolation claims; explicit local capability/audit still required.",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "EM07",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Legacy migration retains identity and explicit incompleteness",
+      "requirements": [
+        "E5",
+        "E6",
+        "E8"
+      ],
+      "implementation_owners": [
+        "PV-07"
+      ],
+      "copy_ids": [
+        "C01",
+        "C03",
+        "C08",
+        "C15",
+        "C22",
+        "C36",
+        "C38"
+      ],
+      "setup": "Dry-run/migrate legacy plaintext store containing hashes, receipts, source-only snapshots and visual records; interrupt and resume under erasure fence.",
+      "expected": "Dry-run lists affected copies/features/keys; no protected label until all transformations verify. Intact records keep bytes; erased payload gets new unavailable envelope, never rewritten original checksum. Unsupported visual legacy is refused or removed explicitly.",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "status": "not_run"
+    },
+    {
+      "id": "EM08",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Protected export and remaining source copies",
+      "requirements": [
+        "E1",
+        "E5",
+        "E6",
+        "E7"
+      ],
+      "implementation_owners": [
+        "PV-07"
+      ],
+      "copy_ids": [
+        "C33",
+        "C34",
+        "C35",
+        "C36",
+        "C42",
+        "C45"
+      ],
+      "setup": "Export protected and explicit admitted-memory-only variants, migrate directory to single-file and inspect original pack/backups.",
+      "expected": "Default evidence stays encrypted with no recovery keys; admitted-only export states facts remain sensitive. Original packs/backups are listed, not silently deleted or declared erased. Storage parity stays a separately executed 24-query gate.",
+      "adapter_subchecks": [
+        "async_python",
+        "cli",
+        "supported_import"
+      ],
+      "status": "not_run"
+    }
+  ],
+  "evidence": [
+    {
+      "name": "environment-sync",
+      "command": [
+        "uv",
+        "sync",
+        "--locked",
+        "--extra",
+        "privacy",
+        "--extra",
+        "local-privacy",
+        "--extra",
+        "postgres",
+        "--extra",
+        "api",
+        "--extra",
+        "mcp",
+        "--extra",
+        "langchain",
+        "--extra",
+        "llamaindex"
+      ],
+      "started_at": "2026-10-20T22:24:03.923889+00:00",
+      "elapsed_seconds": 1.427,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T222403923889-environment-sync.log",
+      "log_sha256": "427fe11331ffd68067e8d4ef2f20b433e66a6739d575eb1626e7a325773637c0",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "legacy-source-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_legacy_source.py",
+        "-q",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T22:25:58.967317+00:00",
+      "elapsed_seconds": 15.217,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T222558967317-legacy-source-initial.log",
+      "log_sha256": "6fe2029fd1e8803bfdf835383b80a38a0f647fbad1940d246ae5fb25a62c4a30",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "legacy-source-diagnosis",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_legacy_source.py::test_closed_fernet_native_read_and_exact_legacy_vectors",
+        "-q",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T22:26:22.993343+00:00",
+      "elapsed_seconds": 2.142,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T222622993343-legacy-source-diagnosis.log",
+      "log_sha256": "8b28474e39b4a4ba577bd6ca4ef1960f98d6c90352dd45c51824d416c7a6d299",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "declare-source-filesystem",
+      "command": [
+        "uv",
+        "lock",
+        "--offline"
+      ],
+      "started_at": "2026-10-20T22:26:29.979886+00:00",
+      "elapsed_seconds": 0.091,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T222629979886-declare-source-filesystem.log",
+      "log_sha256": "ab9a2dd56bdea12949efdb38d8fbd09054a09459eb71a54525a562ecdb9f730c",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "legacy-source-correct-control",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_legacy_source.py",
+        "-q",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T22:26:39.423662+00:00",
+      "elapsed_seconds": 10.133,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T222639423662-legacy-source-correct-control.log",
+      "log_sha256": "881da2890fa587f46969e96b1306da4c867cb3917e67292fc3fc2b01da43e7b9",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "format-static",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "compileall",
+        "-q",
+        "src/prme/storage/privacy_format.py",
+        "src/prme/storage/schema.py",
+        "src/prme/storage/pg/schema.py",
+        "src/prme/storage/event_store.py",
+        "src/prme/storage/pg/event_store.py"
+      ],
+      "started_at": "2026-10-20T22:29:06.954399+00:00",
+      "elapsed_seconds": 0.034,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T222906954399-format-static.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "format-current-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_format_compatibility.py",
+        "-q",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T22:29:54.806858+00:00",
+      "elapsed_seconds": 17.355,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T222954806858-format-current-initial.log",
+      "log_sha256": "cf1cfeb6a7d6dd303c364f3fc6e2883159fdbf4f4bed300f314b4e8b4d2743f5",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "format-current-diagnosis",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_format_compatibility.py::test_v2_real_admission_reopen_and_no_durable_source_hash[directory]",
+        "-q",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T22:31:00.693032+00:00",
+      "elapsed_seconds": 3.452,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T223100693032-format-current-diagnosis.log",
+      "log_sha256": "05e0c82b957dbb7bb9365c74c16abbcb2ffbcc46febd2e5483455c1090b1587d",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "format-current-dispatch-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_format_compatibility.py",
+        "-q",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T22:31:34.974008+00:00",
+      "elapsed_seconds": 7.546,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T223134974008-format-current-dispatch-fix1.log",
+      "log_sha256": "610053d4013dfc9ea73e4324c67210dee8c15fefaba0a92c93d011a67a609e33",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295"
+    },
+    {
+      "name": "runtime-open-format-regression",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_format_compatibility.py"
+      ],
+      "started_at": "2026-10-20T22:38:58.574716+00:00",
+      "elapsed_seconds": 9.043,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T223858574716-runtime-open-format-regression.log",
+      "log_sha256": "291e00ec862f6b5a07aa9421e46f47cc3cbcea50ca98f0a9b11c233d1fc5fb08",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T223858574716-runtime-open-format-regression-source.json",
+      "source_manifest_sha256": "3fcd08ae4b00141cf9c9dabede7c40fcae40ef30efda8eaec11193ef6a61cbd4",
+      "tracked_diff_sha256": "7fc5303ab69db85cf2f79a0a1a7a9bc04805c4cb7074ef600264c7c129c252b1"
+    },
+    {
+      "name": "runtime-open-restricted-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_format_compatibility.py",
+        "-k",
+        "existing_namespace"
+      ],
+      "started_at": "2026-10-20T22:39:53.254747+00:00",
+      "elapsed_seconds": 11.372,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T223953254747-runtime-open-restricted-initial.log",
+      "log_sha256": "c38a624018d4ce3a73bed11a99b8e87aee41ff2cfe369cf7d13d0506f376d60f",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T223953254747-runtime-open-restricted-initial-source.json",
+      "source_manifest_sha256": "e3c1500b2cac4d0017c4dc4f8d18aadab553205090d96b4740840f07e8fe4701",
+      "tracked_diff_sha256": "7fc5303ab69db85cf2f79a0a1a7a9bc04805c4cb7074ef600264c7c129c252b1"
+    },
+    {
+      "name": "runtime-open-restricted-fixture-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_format_compatibility.py",
+        "-k",
+        "existing_namespace"
+      ],
+      "started_at": "2026-10-20T22:40:21.068849+00:00",
+      "elapsed_seconds": 4.518,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224021068849-runtime-open-restricted-fixture-fix1.log",
+      "log_sha256": "6739e1e61055bc88682965875749de603337bc6da1c35eee9009c057c63c9d99",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224021068849-runtime-open-restricted-fixture-fix1-source.json",
+      "source_manifest_sha256": "3723ffd1a791f5625ce7548453dacafedf76274b59af0e6c690f6e31573f60b4",
+      "tracked_diff_sha256": "7fc5303ab69db85cf2f79a0a1a7a9bc04805c4cb7074ef600264c7c129c252b1"
+    },
+    {
+      "name": "runtime-open-protected-code-fix2",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_format_compatibility.py::test_existing_namespace_runtime_login_without_ddl[True-postgres]"
+      ],
+      "started_at": "2026-10-20T22:40:44.261639+00:00",
+      "elapsed_seconds": 3.084,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224044261639-runtime-open-protected-code-fix2.log",
+      "log_sha256": "d26d9086271b3c01fd8c7d73af01431a8319e8474b3741d8881689e73c03c3f8",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224044261639-runtime-open-protected-code-fix2-source.json",
+      "source_manifest_sha256": "ebb545ca818df3a9ab54dc39d4e25b5028c833dc1b4db9e173619e730d10f183",
+      "tracked_diff_sha256": "7fc5303ab69db85cf2f79a0a1a7a9bc04805c4cb7074ef600264c7c129c252b1"
+    },
+    {
+      "name": "runtime-open-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/privacy/portability.py",
+        "src/prme/storage/privacy_format.py",
+        "src/prme/storage/privacy_source.py",
+        "src/prme/storage/pg/schema.py",
+        "src/prme/storage/pg/namespace.py",
+        "src/prme/storage/pg/workspace_catalog.py",
+        "src/prme/workspace.py",
+        "src/prme/storage/engine.py",
+        "src/prme/storage/erasure.py",
+        "tests/test_privacy_format_compatibility.py",
+        "tests/test_privacy_legacy_source.py"
+      ],
+      "started_at": "2026-10-20T22:41:00.037985+00:00",
+      "elapsed_seconds": 0.536,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224100037985-runtime-open-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224100037985-runtime-open-static-source.json",
+      "source_manifest_sha256": "ebb545ca818df3a9ab54dc39d4e25b5028c833dc1b4db9e173619e730d10f183",
+      "tracked_diff_sha256": "7fc5303ab69db85cf2f79a0a1a7a9bc04805c4cb7074ef600264c7c129c252b1"
+    }
+  ],
+  "repair_cycles": {},
+  "held_dependencies": [
+    "323 classifier correction strategy: two failed cycles; USER approval required for third",
+    "323 native SIGABRT unresolved; no generic close rewrite"
+  ],
+  "deferred_checks": [
+    "full suite",
+    "package",
+    "simulation",
+    "CI"
+  ],
+  "whole_case_passes": 0,
+  "component_evidence": {
+    "source_reader": {
+      "passed": 8,
+      "full_migration": false,
+      "exact_source_hash_timing": "not captured before these early runs; HEAD only; logs preserved"
+    },
+    "current_format": {
+      "passed": 6,
+      "historical_reader_refusal": "not_run"
+    },
+    "hosted_281_runtime_open": {
+      "attribution": "#281 original AC1/AC2 engine prerequisite",
+      "positive_controls": [
+        "legacy restricted LOGIN existing-data read",
+        "protected restricted LOGIN metadata source inspection"
+      ],
+      "negative_controls": [
+        "namespace creation denied",
+        "missing namespace denied",
+        "authority-table UPDATE grants absent",
+        "schema drift refused",
+        "corrupt/unregistered derivation recovery refused"
+      ],
+      "full_hosted_scenarios": "not_run; #281 owns ordinary ingestion and worker positives under final grants",
+      "dimension_and_index_permutations": "source-backed only, not separately runtime proven",
+      "failed_runs": [
+        {
+          "name": "runtime-open-restricted-initial",
+          "result": "2 failed",
+          "cause": "No pending legacy derivation fixture; protected namespace/policy UUID mismatch"
+        },
+        {
+          "name": "runtime-open-restricted-fixture-fix1",
+          "result": "legacy passed, protected failed",
+          "cause": "Protected schema drift was correctly refused with privacy_format_unsupported; test expected postgres_schema_bootstrap_required"
+        }
+      ],
+      "corrections": [
+        "Provision actual catalog UUID equal to policy project UUID; insert real corrupt/unregistered pending SQL operation",
+        "Assert the actual protected format refusal code; no runtime behavior changed"
+      ],
+      "cycle_accounting": "One unsuccessful fixture fix-and-validation cycle; second expectation correction passed. No third cycle."
+    }
+  }
+}

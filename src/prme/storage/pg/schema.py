@@ -10,12 +10,116 @@ Called once on startup via ``initialize_pg_database(pool)``.
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 
 import asyncpg
 
 from prme.storage.pg.vector_sql import VectorSQL, resolve_vector_sql
 
 logger = logging.getLogger(__name__)
+
+# Written only by privileged bootstrap. Deployments grant runtime SELECT, never
+# DML, on this descriptor and the catalog/namespace identity authorities.
+_RUNTIME_DDL = "CREATE TABLE IF NOT EXISTS prme_runtime_schema(singleton BOOLEAN PRIMARY KEY CHECK(singleton),body TEXT NOT NULL)"
+_RUNTIME_TABLES = {
+    "events", "nodes", "edges", "operations", "event_materializations", "event_extractions",
+    "profile_publication_heads", "profile_work", "profile_preparation_heads",
+    "lexical_documents", "derivation_artifact_owners", "derivation_registered_plans",
+    "profile_registered_plans", "consolidation_publication_heads",
+    "consolidation_registered_plans", "consolidation_stage_fences",
+    "privacy_admissions", "privacy_rotation_jobs", "prme_runtime_schema",
+}
+_PROTECTED_TABLES = {"privacy_format", "privacy_store_state", "privacy_erasure_jobs",
+    "privacy_erasure_targets", "privacy_erasure_progress", "privacy_erasure_artifacts", "privacy_erasure_epoch"}
+
+
+async def _schema_fingerprint(conn, tables):
+    columns = await conn.fetch(
+        "SELECT c.relname,a.attname,pg_catalog.format_type(a.atttypid,a.atttypmod),a.attnotnull,"
+        "pg_catalog.pg_get_expr(d.adbin,d.adrelid) AS default_value FROM pg_catalog.pg_class c "
+        "JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace "
+        "JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped "
+        "LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid=c.oid AND d.adnum=a.attnum "
+        "WHERE n.nspname=current_schema() AND c.relkind='r' AND c.relname=ANY($1::text[]) "
+        "ORDER BY c.relname,a.attnum", tables)
+    indexes = await conn.fetch(
+        "SELECT t.relname,i.relname,x.indisvalid,x.indisready,pg_catalog.pg_get_indexdef(i.oid) "
+        "FROM pg_catalog.pg_index x JOIN pg_catalog.pg_class i ON i.oid=x.indexrelid "
+        "JOIN pg_catalog.pg_class t ON t.oid=x.indrelid JOIN pg_catalog.pg_namespace n ON n.oid=t.relnamespace "
+        "WHERE n.nspname=current_schema() AND t.relname=ANY($1::text[]) ORDER BY t.relname,i.relname", tables)
+    constraints = await conn.fetch(
+        "SELECT t.relname,c.conname,c.convalidated,pg_catalog.pg_get_constraintdef(c.oid) "
+        "FROM pg_catalog.pg_constraint c JOIN pg_catalog.pg_class t ON t.oid=c.conrelid "
+        "JOIN pg_catalog.pg_namespace n ON n.oid=t.relnamespace "
+        "WHERE n.nspname=current_schema() AND t.relname=ANY($1::text[]) ORDER BY t.relname,c.conname", tables)
+    if {row[0] for row in columns} != set(tables) or any(not row[2] or not row[3] for row in indexes):
+        raise ValueError("postgres_schema_bootstrap_required")
+    body = [[list(row) for row in group] for group in (columns, indexes, constraints)]
+    return hashlib.sha256(json.dumps(body, separators=(",", ":"), sort_keys=True).encode()).hexdigest()
+
+
+async def _record_runtime_schema(conn, *, embedding_dim, protected):
+    await conn.execute(_RUNTIME_DDL)
+    tables = sorted(_RUNTIME_TABLES | (_PROTECTED_TABLES if protected else set()))
+    body = json.dumps({"version": 1, "embedding_dim": embedding_dim, "protected": protected,
+        "tables": tables, "fingerprint": await _schema_fingerprint(conn, tables)}, sort_keys=True)
+    await conn.execute("INSERT INTO prme_runtime_schema VALUES(true,$1) ON CONFLICT(singleton) DO UPDATE SET body=excluded.body", body)
+
+
+async def validate_pg_runtime(pool, *, embedding_dim, protected):
+    """Read-only startup attestation; no implicit bootstrap or registry writes."""
+    from prme.storage.derivation_registry import _PENDING
+    from prme.storage.profile_registry import PENDING as PROFILE_PENDING
+    from prme.storage.consolidation_publication import PENDING as CONSOLIDATION_PENDING
+    async with pool.acquire() as conn:
+        try:
+            rows = await conn.fetch("SELECT body FROM prme_runtime_schema WHERE singleton")
+            if len(rows) != 1:
+                raise ValueError()
+            saved = json.loads(rows[0][0])
+            tables = sorted(_RUNTIME_TABLES | (_PROTECTED_TABLES if protected else set()))
+            if (set(saved) != {"version", "embedding_dim", "protected", "tables", "fingerprint"}
+                    or saved["version"] != 1 or saved["embedding_dim"] != embedding_dim
+                    or saved["protected"] is not protected or saved["tables"] != tables
+                    or saved["fingerprint"] != await _schema_fingerprint(conn, tables)):
+                raise ValueError()
+            # A stored claim about dimension cannot override the native type.
+            dimension = await conn.fetchval("SELECT a.atttypmod FROM pg_catalog.pg_attribute a "
+                "JOIN pg_catalog.pg_class c ON c.oid=a.attrelid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace "
+                "WHERE n.nspname=current_schema() AND c.relname='nodes' AND a.attname='embedding'")
+            if dimension != embedding_dim:
+                raise ValueError()
+        except (ValueError, KeyError, TypeError, asyncpg.UndefinedTableError):
+            raise ValueError("postgres_schema_bootstrap_required") from None
+        for query in (_PENDING, PROFILE_PENDING, CONSOLIDATION_PENDING,
+                "SELECT 1 FROM profile_work WHERE collection_operation_id IS NULL",
+                "SELECT 1 FROM operations o WHERE o.op_type='CONSOLIDATION_PREPARED' AND NOT EXISTS "
+                "(SELECT 1 FROM consolidation_stage_fences s WHERE s.plan_id=o.target_id)"):
+            if await conn.fetchrow(query + " LIMIT 1"):
+                raise ValueError("postgres_recovery_required")
+        # Reconstructing these heads changes publication authority. A runtime
+        # login checks them and asks the bootstrap role to repair missing state.
+        from prme.storage.profile_registry import decode
+        from prme.storage.consolidation_publication import _unpack
+        for kind, table, key in (("PROFILE_PUBLISHED", "profile_publication_heads", "profile_key"),
+                                 ("CONSOLIDATION_PUBLISHED", "consolidation_publication_heads", "consolidation_key")):
+            cursor = ""
+            while True:
+                batch = await conn.fetch("SELECT id,op_type,target_id,payload,actor_id,namespace_id FROM operations "
+                    "WHERE op_type=$1 AND id>$2 ORDER BY id LIMIT 128", kind, cursor)
+                if not batch:
+                    break
+                for row in batch:
+                    cursor = row[0]
+                    try:
+                        plan = decode(row) if kind == "PROFILE_PUBLISHED" else _unpack(row[3])
+                        generation = await conn.fetchval(f"SELECT generation FROM {table} WHERE {key}=$1", plan.key)
+                        if generation is None or generation < plan.generation + 1:
+                            raise ValueError()
+                    except (ValueError, KeyError, TypeError):
+                        raise ValueError("postgres_recovery_required") from None
+        return await resolve_vector_sql(conn)
 
 # DDL split into individual statements for asyncpg (no multi-statement execute).
 _EXTENSIONS = [
@@ -151,6 +255,7 @@ async def initialize_pg_database(
     pool: asyncpg.Pool,
     *,
     embedding_dim: int = 384,
+    protected: bool = False,
 ) -> VectorSQL:
     """Create all PRME tables, indexes and extensions in PostgreSQL.
 
@@ -171,9 +276,10 @@ async def initialize_pg_database(
         vector_sql = await resolve_vector_sql(conn)
 
         # Events
-        await conn.execute(_EVENTS_TABLE)
+        await conn.execute(_EVENTS_TABLE.replace("    content_hash VARCHAR NOT NULL,\n", "") if protected else _EVENTS_TABLE)
         for idx in _EVENTS_INDEXES:
-            await conn.execute(idx)
+            if not (protected and "idx_events_hash" in idx):
+                await conn.execute(idx)
 
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS event_materializations (
@@ -257,6 +363,10 @@ async def initialize_pg_database(
         await initialize_consolidations(conn)
         from prme.storage.privacy import initialize_pg as initialize_privacy
         await initialize_privacy(conn)
+        if protected:
+            from prme.storage.privacy_format import install_pg_format
+            await install_pg_format(conn)
+        await _record_runtime_schema(conn, embedding_dim=embedding_dim, protected=protected)
 
     logger.info("PostgreSQL schema initialized (embedding_dim=%d)", embedding_dim)
 

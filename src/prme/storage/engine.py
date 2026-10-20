@@ -450,6 +450,7 @@ class MemoryEngine:
         cls, config: PRMEConfig | None = None, *,
         embedding_provider: EmbeddingProvider | None = None,
         privacy_runtime: PrivacyRuntime | None = None,
+        initialize: bool = True,
     ):
         """Async context manager for MemoryEngine lifecycle.
 
@@ -458,7 +459,7 @@ class MemoryEngine:
             async with MemoryEngine.open(config) as engine:
                 await engine.store(...)
         """
-        engine = await cls.create(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
+        engine = await cls.create(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime, initialize=initialize)
         try:
             yield engine
         finally:
@@ -469,6 +470,7 @@ class MemoryEngine:
         cls, config: PRMEConfig | None = None, *,
         embedding_provider: EmbeddingProvider | None = None,
         privacy_runtime: PrivacyRuntime | None = None,
+        initialize: bool = True,
     ) -> "MemoryEngine":
         """Create and initialize a MemoryEngine with all backends.
 
@@ -488,6 +490,8 @@ class MemoryEngine:
         """
         if config is None:
             config = PRMEConfig()
+        if type(initialize) is not bool or (not initialize and config.backend != "postgres"):
+            raise ValueError("initialize=False requires an existing PostgreSQL store")
 
         from prme.privacy.admission import preflight_runtime
         await preflight_runtime(config, privacy_runtime)
@@ -503,7 +507,8 @@ class MemoryEngine:
         if config.backend == "postgres":
             if config.namespace_id is not None:
                 raise ValueError("namespace_id currently requires an isolated local pack")
-            engine = await cls._create_postgres(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
+            engine = await cls._create_postgres(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime,
+                                                initialize=initialize)
         else:
             engine = await cls._create_duckdb(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
         engine._privacy.runtime = privacy_runtime
@@ -637,17 +642,19 @@ class MemoryEngine:
             # host timezone by default. A portable pack uses canonical UTC.
             conn.execute("SET TimeZone = 'UTC'")
 
+            from prme.storage.privacy_format import preflight_format
+            protected_format = await preflight_format(conn=conn, runtime=privacy_runtime, namespace_id=config.namespace_id)
             # Current independent erasure state precedes registry/native recovery.
             from prme.storage.erasure import prepare_store
             await prepare_store(conn=conn, runtime=privacy_runtime, namespace_id=config.namespace_id)
             # Initialize schema (tables, indexes, DuckPGQ attempt)
-            initialize_database(conn)
+            initialize_database(conn, protected=protected_format)
 
             # Create shared connection lock for DuckDB thread-safety.
             conn_lock = asyncio.Lock()
 
             # Create backend stores
-            event_store = EventStore(conn, conn_lock)
+            event_store = EventStore(conn, conn_lock, protected=protected_format)
             graph_store = DuckPGQGraphStore(conn, conn_lock)
 
             # Create embedding provider via factory
@@ -818,6 +825,7 @@ class MemoryEngine:
     async def _create_postgres(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
         namespace_pool=None, privacy_runtime: PrivacyRuntime | None = None,
+        initialize: bool = True,
     ) -> "MemoryEngine":
         """Create a MemoryEngine backed by PostgreSQL."""
         from prme.storage.pg import (
@@ -835,17 +843,23 @@ class MemoryEngine:
             # Create asyncpg pool and initialize schema
             pool = namespace_pool if namespace_pool is not None else await create_pool(config.database_url.get_secret_value())
             startup.push_async_callback(pool.close)
+            from prme.storage.privacy_format import preflight_format
+            protected_format = await preflight_format(pool=pool, runtime=privacy_runtime, namespace_id=config.namespace_id)
+            if not initialize:
+                from prme.storage.pg.schema import validate_pg_runtime
+                vector_sql = await validate_pg_runtime(pool, embedding_dim=config.embedding.dimension, protected=protected_format)
             from prme.storage.erasure import prepare_store
-            await prepare_store(pool=pool, runtime=privacy_runtime, namespace_id=config.namespace_id)
+            await prepare_store(pool=pool, runtime=privacy_runtime, namespace_id=config.namespace_id, initialize=initialize)
             if namespace_pool is None:
-                vector_sql = await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
+                if initialize:
+                    vector_sql = await initialize_pg_database(pool, embedding_dim=config.embedding.dimension, protected=protected_format)
             else:
                 if config.namespace_id != namespace_pool.identifier:
                     raise ValueError("Prepared PostgreSQL namespace does not match engine configuration")
                 vector_sql = namespace_pool.vector_sql
 
             # Create Pg backends
-            event_store = PgEventStore(pool)
+            event_store = PgEventStore(pool, protected=protected_format)
             graph_store = PgGraphStore(pool)
             if embedding_provider is None:
                 embedding_provider = create_embedding_provider(config.embedding)

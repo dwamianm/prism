@@ -172,15 +172,19 @@ class MemoryWorkspace:
     async def open_postgres(cls, config: PRMEConfig, *, name: str = "default",
                             embedding_provider: EmbeddingProvider | None = None,
                             max_open: int = 4, min_connections: int = 1,
-                            max_connections: int = 10, privacy_runtime_factory=None) -> AsyncIterator[MemoryWorkspace]:
+                            max_connections: int = 10, privacy_runtime_factory=None,
+                            initialize: bool = True) -> AsyncIterator[MemoryWorkspace]:
         """Open named PostgreSQL projects using one bounded connection pool.
 
         ``name`` identifies a workspace in this database. Project names are
         scoped by that workspace; both names are application keys, not grants.
+        ``initialize=False`` requires privileged bootstrap beforehand and
+        ``namespace(..., create=False)``. It performs no schema/catalog writes.
         """
         async with _PostgresWorkspace(config, name=name, embedding_provider=embedding_provider,
                                       max_open=max_open, min_connections=min_connections,
-                                      max_connections=max_connections, privacy_runtime_factory=privacy_runtime_factory) as workspace:
+                                      max_connections=max_connections, privacy_runtime_factory=privacy_runtime_factory,
+                                      initialize=initialize) as workspace:
             yield workspace
 
     def _path(self, relative: str) -> Path:
@@ -407,7 +411,10 @@ def _validate_name(name: str):
 class _PostgresWorkspace(MemoryWorkspace):
     """PostgreSQL storage hooks using the same lease/cache lifecycle as local packs."""
 
-    def __init__(self, config, *, name, embedding_provider, max_open, min_connections, max_connections, privacy_runtime_factory=None):
+    def __init__(self, config, *, name, embedding_provider, max_open, min_connections, max_connections, privacy_runtime_factory=None, initialize=True):
+        if type(initialize) is not bool:
+            raise ValueError("initialize must be boolean")
+        self._bootstrap = initialize
         self._privacy_runtime_factory = privacy_runtime_factory
         self._config = config.model_copy(deep=True)
         if self._config.backend != "postgres" or self._config.namespace_id is not None:
@@ -450,7 +457,7 @@ class _PostgresWorkspace(MemoryWorkspace):
         assert self._config.database_url is not None
         self._pool = await create_pool(self._config.database_url.get_secret_value(),
                                        min_size=self._min_connections, max_size=self._max_connections)
-        self._catalog = WorkspaceCatalog(self._pool, self._name)
+        self._catalog = WorkspaceCatalog(self._pool, self._name, initialize=self._bootstrap)
         await self._catalog.initialize()
         self._loop = asyncio.get_running_loop()
         self._started = True
@@ -469,7 +476,8 @@ class _PostgresWorkspace(MemoryWorkspace):
         await preflight_runtime(self._config.model_copy(update={"namespace_id": namespace.id}), runtime)
         pool = await self._catalog.prepare(namespace.name, namespace.id, embedding_dim=self._config.embedding.dimension, privacy_runtime=runtime)
         config = self._config.model_copy(update={"namespace_id": namespace.id}, deep=True)
-        engine = await MemoryEngine._create_postgres(config, embedding_provider=self._provider, namespace_pool=pool, privacy_runtime=runtime)
+        engine = await MemoryEngine._create_postgres(config, embedding_provider=self._provider, namespace_pool=pool,
+                                                   privacy_runtime=runtime, initialize=self._bootstrap)
         engine._privacy.runtime = runtime
         from prme.storage.erasure_indexes import attach
         await attach(engine)

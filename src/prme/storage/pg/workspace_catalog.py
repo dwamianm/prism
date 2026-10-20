@@ -9,9 +9,10 @@ from prme.storage.pg.namespace import NamespacePool, _ConnectionPool, prepare_na
 
 
 class WorkspaceCatalog:
-    def __init__(self, pool, name: str):
+    def __init__(self, pool, name: str, *, initialize=True):
         self.pool = pool
         self.name = name
+        self.bootstrap = initialize
 
     async def initialize(self):
         async with self.pool.acquire() as conn:
@@ -21,6 +22,8 @@ class WorkspaceCatalog:
                 await conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('prme_workspace_catalog_v1', 0))")
                 exists = await conn.fetchval("SELECT oid FROM pg_catalog.pg_namespace WHERE nspname='prme_workspace'")
                 if not exists:
+                    if not self.bootstrap:
+                        raise NamespaceIdentityError("Runtime open requires an initialized workspace registry")
                     if await conn.fetchval("SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace "
                                            "WHERE nspname ~ '^prme_ns_[0-9a-f]{32}$')"):
                         raise NamespaceIdentityError("Workspace registry is missing while namespace schemas exist; restore before opening")
@@ -40,10 +43,13 @@ class WorkspaceCatalog:
                     raise NamespaceIdentityError("PostgreSQL workspace registry is incomplete; restore before opening") from exc
                 # Existing extensions retain their installed schema. New shared
                 # extensions are never installed inside a project's namespace.
-                await conn.execute("CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public")
-                await conn.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public")
+                if self.bootstrap:
+                    await conn.execute("CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public")
+                    await conn.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public")
 
     async def resolve(self, name: str, *, create: bool) -> UUID:
+        if create and not self.bootstrap:
+            raise NamespaceIdentityError("Runtime open requires create=False")
         async with self.pool.acquire() as conn, conn.transaction():
             if create:
                 await conn.execute("INSERT INTO prme_workspace.namespaces (workspace, name, id) VALUES ($1, $2, $3) "
@@ -64,12 +70,16 @@ class WorkspaceCatalog:
             await conn.execute("DISCARD TEMP")
             async with conn.transaction():
                 row = await conn.fetchrow("SELECT id, initialized FROM prme_workspace.namespaces "
-                                          "WHERE workspace=$1 AND name=$2 FOR UPDATE", self.name, name)
+                                          "WHERE workspace=$1 AND name=$2" + (" FOR UPDATE" if self.bootstrap else ""), self.name, name)
                 if row is None or row['id'] != identifier:
                     raise NamespaceIdentityError("PostgreSQL workspace registry identity changed")
+                if not self.bootstrap and not row['initialized']:
+                    raise NamespaceIdentityError("Runtime open requires an initialized namespace")
                 # Registry publication and initial schema/identity creation have
                 # one commit, including on cancellation or process failure.
                 prepared = await prepare_namespace(_ConnectionPool(conn), identifier, embedding_dim=embedding_dim,
-                                                    create=not row['initialized'], privacy_runtime=privacy_runtime)
-                await conn.execute("UPDATE prme_workspace.namespaces SET initialized=true WHERE id=$1", identifier)
+                                                    create=not row['initialized'], privacy_runtime=privacy_runtime,
+                                                    initialize=self.bootstrap)
+                if self.bootstrap:
+                    await conn.execute("UPDATE prme_workspace.namespaces SET initialized=true WHERE id=$1", identifier)
         return NamespacePool(self.pool, identifier, prepared.vector_sql)

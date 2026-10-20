@@ -162,7 +162,7 @@ async def _resolve_intent_sources(session, intent):
     return intent.model_copy(update={"source_event_ids": tuple(sorted(sources, key=str))})
 
 
-async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None, conn_lock=None):
+async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None, conn_lock=None, initialize=True):
     """No-content lineage/current-ledger check BEFORE registry/native recovery.
 
     Existing protected admissions without a binding require an explicit versioned
@@ -184,6 +184,8 @@ async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None
             raise PrivacyDenied("privacy_ledger_unavailable")
         if not bound and protected:
             raise PrivacyDenied("privacy_migration_required")
+        if not initialize and not bound:
+            raise PrivacyDenied("privacy_ledger_unavailable")
     async with ledger.guard():
         if not bound:
             head = await ledger.register_store(namespace_id or uuid4(), runtime.project_id)
@@ -192,9 +194,10 @@ async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None
                     await session.execute(statement)
                 await session.execute("INSERT INTO privacy_store_state VALUES(1,$1,$2)", str(runtime.project_id), head.model_dump_json())
                 await session.execute("INSERT INTO privacy_erasure_epoch VALUES(1,0)")
-        async with repository.session(transaction=True) as session:
-            for statement in DDL:
-                await session.execute(statement)
+        if initialize:
+            async with repository.session(transaction=True) as session:
+                for statement in DDL:
+                    await session.execute(statement)
         project, checkpoint = await repository.state()
         if project != runtime.project_id or (namespace_id is not None and checkpoint.store_id != namespace_id):
             raise PrivacyDenied("privacy_boundary_mismatch")
@@ -626,8 +629,13 @@ async def _purge_sql_step(repository, intent):
             if request.mode == "memory":
                 # Keep an opaque enrollment reservation. A predictable digest of
                 # erased content is not a valid integrity/replay record.
-                await session.execute("UPDATE events SET content='',content_hash=$1,metadata=$2 WHERE id=$3 AND user_id=$4",
-                    "", json.dumps({"_prme_privacy_v1": record.reference(), "erasure": "memory"}), str(event_id), str(intent.owner_id))
+                metadata = json.dumps({"_prme_privacy_v1": record.reference(), "erasure": "memory"})
+                if "privacy_format" in tables:
+                    await session.execute("UPDATE events SET content='',metadata=$1 WHERE id=$2 AND user_id=$3",
+                        metadata, str(event_id), str(intent.owner_id))
+                else:
+                    await session.execute("UPDATE events SET content='',content_hash=$1,metadata=$2 WHERE id=$3 AND user_id=$4",
+                        "", metadata, str(event_id), str(intent.owner_id))
                 await session.execute("UPDATE event_materializations SET status='failed',last_error='privacy_erased' WHERE event_id=$1", str(event_id))
         if request.mode != "memory":
             return progress["done"]
@@ -799,7 +807,8 @@ async def _verify_purge(coordinator, intent):
                 if intent.request.mode == "memory":
                     if record.pseudonym_epoch is not None:
                         raise PrivacyDenied("privacy_invalid_result")
-                    rows = await session.fetch("SELECT content,content_hash FROM events WHERE id=$1", str(identifier))
+                    checksum = "NULL AS content_hash" if "privacy_format" in tables else "content_hash"
+                    rows = await session.fetch(f"SELECT content,{checksum} FROM events WHERE id=$1", str(identifier))
                     if len(rows) != 1 or rows[0]["content"] or rows[0]["content_hash"]:
                         raise PrivacyDenied("privacy_invalid_result")
             if intent.request.mode != "memory":
