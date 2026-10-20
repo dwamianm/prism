@@ -228,6 +228,87 @@ model or universally rejected request a successful valid-profile admission.
 
 ## Exact planned file scope
 
+### Current-main group boundary reconciliation
+
+After the approved framework-test relocation, normal merge main
+`4f23c01e53cc534c78f72421c0f62867ca1f8e98` into the published branch. Preserve
+its group-link and graph-ranking defaults and its test fixture controls. The
+five textual overlaps merge without conflicts; existing privacy guards must
+remain. No default change, benchmark gate or protected group feature is added.
+
+Original AC1/AP01 now requires the documented supported configuration to set
+`enable_owner_group_links=False` explicitly. Exercise real product defaults:
+True refuses before effects, and explicit False retains memory and immutable
+policy without completed evidence. Keep the existing explicitly enabled
+revoked-dependency test.
+
+Original AC3/CORE-2 also covers newly selected post-plan group members. The
+legacy helper reads source turns into a text-keyed cache and selects people
+outside the saved plan. Use scoped pre/post-await read adapters in
+`privacy/admission.py`, including validation of the initial event, before
+cache insertion or name/content selection. Wire the pipeline and reingest
+group calls through those adapters. Preserve guarded repeated-claim planning
+and add the new session reads to the same refusal boundary. A native legacy-only
+edge operation in `storage/privacy.py` must verify fixed owner/scope, actual
+source/target and primary/named-in event identities on the held connection,
+then reuse each backend's existing edge insert primitive. Keep queue ownership,
+legacy bytes and best-effort post-commit semantics. No global cross-process
+enrollment lease or rollback of an already committed legacy plan is claimed.
+
+This delta changes only the existing admission/storage privacy modules,
+pipeline/reingest wiring, `tests/privacy_fakes.py`, privacy admission/fence
+tests, the privacy/configuration documents, this plan, inventory and excluded
+review report. Upstream group matching/ranking modules remain unchanged.
+The already approved framework test relocation stays in the two existing
+integration modules and the core interface module.
+
+Finite new nodes, recorded before execution:
+
+- `test_product_defaults_require_explicit_protected_group_override`: 1 case.
+- `test_group_links_refuse_late_protected_member`: `before_publish`,
+  `session_read`, `member_read`, `queued_edge` × `directory`, `pack`,
+  `postgres`: 12 cases. Preserve only `before_publish-directory` as the
+  pre-fix reproduction, then run the repaired parameter set.
+- `test_group_edge_native_boundary`: `valid`, `source_owner`, `target_scope`,
+  `provenance_owner`, `named_in_scope`, `missing_provenance`,
+  `protected_boundary` × the three layouts: 21 cases.
+- `test_group_links_keep_other_owner_and_scope_legacy_controls`:
+  `other_owner`, `other_scope` × the three layouts: 6 cases.
+
+Reuse existing AP01 positive profiles, explicit-True CORE-2 refusal and scoped
+reingest refusal/after-await/native checks. The finite upstream compatibility
+selection is `test_group_members.py::{TestMembers,TestRepeatedWeClaims,TestReingest}`
+and `test_graph_fusion.py::TestOwnerGroupLinks`, with scripted providers.
+Rerun the previously approved core-without-frameworks and exact framework
+integration selections because main changes conftest. Run affected Ruff,
+strict public typing, contract validation and diff checks. Root schedules
+affected reviews on the frozen snapshot; final exact-head CI supplies the
+complete suite/build/simulations. No extra local full run is planned.
+
+CORE-2's first repair and targeted validation passed. Conservatively label
+this closure cycle 2 and stop/report any unsuccessful second repair before
+another attempt. S2 and object-enrollment remain resolved at cycle 2; neither
+implementation nor counter is reset. Preserve all earlier failed evidence.
+
+A focused integration review after the 70 passing boundary cases identified a
+dropped existing reingest callback. Preserve `_scopes` whole-request selection
+and `plan.references` through the existing checked submit, and pass the same
+request effect check into group reads before/after awaits. Keep the fixed-scope
+native identity checks and cancellation ownership without nesting queues or locks.
+This is the first correction for that exact dropped-callback regression, with
+zero previous unsuccessful cycles; the preceding CORE-2, S2 and object-enrollment
+history above remains unchanged.
+
+Freeze exactly two real directory-backend regression nodes before editing:
+`test_reingest_group_preserves_request_boundary[group_read]` and
+`[queued_write]`. An unscoped reingest admits protected data in another scope
+at the respective await boundary; no subsequent group edge may be written.
+Preserve their pre-fix failures. Then run the two cases, existing scoped
+reingest refusal/after-await/native controls and upstream `TestReingest`, plus
+affected static/typing/contract checks. Carry the unaffected 70/60/core/framework
+results at their original revision; do not rerun unrelated selections. No new
+native schema, format or protected feature is added.
+
 The reingestion integration adds only `src/prme/ingestion/reingest.py` and
 `src/prme/storage/reingest.py` to the original 42 paths, for a maximum of 44.
 This follows original AC3's shared side-effect boundary and AC6's inspection

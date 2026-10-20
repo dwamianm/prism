@@ -11,6 +11,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 import json
+from types import SimpleNamespace
 from typing import Any, Awaitable, Callable, Concatenate, ParamSpec, TypeVar
 from uuid import UUID, uuid4
 
@@ -174,6 +175,74 @@ class AdmissionCoordinator:
                 records = await self.repository.records_for_objects([(table, str(item.id))], owner=item.user_id)
                 if records:
                     raise PrivacyDenied("privacy_provider_unavailable")
+
+    async def legacy_group_reads(self, user_id: str, scope: Scope, *, event: Event | None = None,
+                                 effect_check: Callable[[], Awaitable[None]] | None = None):
+        """Refuse protected group inputs before a helper can inspect/cache them."""
+        scope = Scope(scope)
+
+        async def check(*, events=(), nodes=()):
+            events = tuple(events) + ((event,) if event is not None else ())
+            for item in (*events, *nodes):
+                if (item.user_id, item.scope) != (user_id, scope):
+                    raise PrivacyDenied("privacy_boundary_mismatch")
+            await self.require_legacy_inputs(events, nodes)
+            # Group lookup scans this owner/scope beyond the plan's references.
+            await self.repository.require_legacy_range(user_id, scope.value)
+            if effect_check is not None:
+                await effect_check()
+
+        def checked(read, kind=None, *, single=False):
+            async def guarded(*args, **kwargs):
+                await check()
+                result = await read(*args, **kwargs)
+                values = (() if result is None else (result,)) if single else result
+                await check(**{kind: values} if kind is not None else {})
+                return result
+            return guarded
+
+        await check()  # The caller's initial event is checked before any helper.
+        graph, events = self.engine._graph_store, self.engine._event_store
+        return (
+            SimpleNamespace(scan_nodes=checked(graph.scan_nodes, "nodes"),
+                            query_nodes=checked(graph.query_nodes, "nodes"),
+                            get_edges=checked(graph.get_edges)),
+            SimpleNamespace(get=checked(events.get, "events", single=True),
+                            get_by_user=checked(events.get_by_user, "events")),
+            check,
+        )
+
+    async def link_legacy_groups(self, event_id: str, sources, *, user_id: str, scope: Scope,
+                                 event: Event | None = None,
+                                 effect_check: Callable[[], Awaitable[None]] | None = None,
+                                 submit=None) -> int:
+        """Best-effort legacy links; protected group processing is unavailable."""
+        from prme.ingestion.group_links import link_group_claims
+        import structlog
+        try:
+            graph, events, check = await self.legacy_group_reads(
+                user_id, scope, event=event, effect_check=effect_check)
+            await check(nodes=sources)
+            submit = submit or self.engine._write_queue.submit
+
+            async def create_edge(edge):
+                # The native operation repeats the boundary after queue/connection
+                # waits. Keep any caller's checked queue (whole request scope and
+                # saved references), owned until the accepted write settles.
+                return await run_async_to_completion(submit(
+                    lambda: self.repository.create_legacy_group_edge(
+                        self.engine._graph_store, edge, user_id=user_id, scope=scope),
+                    label=f"privacy.group_link:{edge.id}",
+                ))
+
+            return await link_group_claims(event_id, sources, user_id=user_id, graph_store=graph,
+                                           event_store=events, create_edge=create_edge)
+        except Exception as exc:
+            # The legacy plan has committed. Refusal of its optional links is
+            # not a rollback or a successful protected group publication.
+            structlog.get_logger(__name__).warning(
+                "group_links.unavailable", event_id=event_id, error_type=type(exc).__name__)
+            return 0
 
     def require_runtime(self) -> PrivacyRuntime:
         validate_protected_config(self.engine._config)

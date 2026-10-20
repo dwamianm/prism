@@ -17,6 +17,35 @@ from tests.privacy_fakes import isolated_privacy_postgres as isolated_privacy_po
 SOURCE = "Alex does not like tea unless it is cold."
 
 
+async def test_product_defaults_require_explicit_protected_group_override(tmp_path, monkeypatch):
+    from prme import PRMEConfig
+    from tests.conftest import product_defaults
+
+    product_defaults(monkeypatch)
+    r = make_runtime()
+    p = policy_for(r)
+    config = PRMEConfig(db_path=str(tmp_path / "memory.duckdb"),
+                        vector_path=str(tmp_path / "vectors.usearch"),
+                        lexical_path=str(tmp_path / "lexical"), privacy_policy=p)
+    assert config.enable_owner_group_links and config.scoring.rrf_graph_seed_count
+    with pytest.raises(PrivacyDenied, match="privacy_configuration_invalid"):
+        await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)
+    assert not list(tmp_path.iterdir())
+    assert not r.sanitizer.calls and not r.protector.calls and not r.embedder.sends
+
+    engine = await MemoryEngine.create(config.model_copy(update={"enable_owner_group_links": False}),
+                                      embedding_provider=r.embedder, privacy_runtime=r)
+    try:
+        event_id = await engine.store(SOURCE, user_id=str(p.owner_id))
+        [node] = await engine.get_event_nodes(event_id, user_id=str(p.owner_id))
+        saved = await engine._privacy.repository.get(event_id, user_id=str(p.owner_id))
+        assert node.content == SOURCE and saved.snapshot.policy == p
+        assert saved.processing is None and saved.evidence is None
+        assert engine._config.scoring.rrf_graph_seed_count
+    finally:
+        await engine.close()
+
+
 @pytest.mark.parametrize("window", ["naive", "reversed", "equal", "end_only", "ordered"])
 async def test_protected_validity_window_precedes_all_content_effects(tmp_path, window):
     engine, r, p = await open_engine(tmp_path)

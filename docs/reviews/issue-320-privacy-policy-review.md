@@ -1,15 +1,17 @@
 # Issue 320 evidence policy admission review
 
-Status: the first PR CI run exposed an optional-dependency test-placement
-regression. Its bounded test-only repair passes the core-without-frameworks and
-required framework integration selections. Affected review and complete CI on
-the repaired head remain pending. Runtime source is unchanged.
-Base: `976821c6b07e99775845f5ebfeeeb0fb6454be39`.
-Current helper snapshot: `85c15e907f6054b92498945296e30f1f16d5d9c161782597f3049cd1461e8b9c`.
+Status: the bounded main reconciliation and reingest callback correction pass
+the agreed local checks. Core, security, data and adversarial affected reviews
+are complete and approve the identical source snapshot. Required exact-head CI
+on the updated pull request remains pending. The preceding failing selection
+and fixture setup failures remain recorded below.
+Base: `4f23c01e53cc534c78f72421c0f62867ca1f8e98`.
+Current helper snapshot: `95f4b45d492286a61348adcc241d3f0aea74d09c27d4ee442f8ce7d2fe8b070b`.
+Previous framework-layout snapshot: `85c15e907f6054b92498945296e30f1f16d5d9c161782597f3049cd1461e8b9c`.
 Previous reviewed runtime/test-layout snapshot: `852c9f72468207a25e204f94a034fcda31d7460437579c700ce8a24e74cde36a`.
 The previous local full suite passed 7040 tests with 104 skips, and both simulation
-sets passed 74 checkpoints. Those results retain their original test layout;
-they are not relabeled as a complete suite run after the test relocation.
+sets passed 74 checkpoints. Those results retain their original source, base and
+test layout; they are not relabeled as final evidence for this merge.
 This document is the sole review-hash exclusion. Earlier failures remain below.
 
 The original six acceptance criteria and unchanged AP01 through AP08 definitions
@@ -19,7 +21,7 @@ separately owned sanitizer, cryptography, sealed projections, journal cleanup,
 erasure, migration or protected-product release gate.
 
 The approved maximum is 44 paths after integrating the newly added reingest
-entry points. The implementation changes 37 paths plus this review document. Existing event-store modules, `fast_ingest`, durable
+entry points. The implementation changes 37 paths plus this review document (4908 helper-counted changed lines before the report). Existing event-store modules, `fast_ingest`, durable
 queue and framework adapters need no edits because the coordinator uses their
 existing primitives or intercepts their public engine/client boundary. The
 legacy retrieval pipeline remains explicitly unavailable for protected
@@ -384,3 +386,121 @@ to affected review and complete required CI on the final pushed head. No unchang
 local full runtime suite, simulations or artifact checks were repeated for this
 test-only relocation. The prior 7040-test result remains explicitly prior-layout
 evidence, and the original S2/object-enrollment cycle-2 limits are unchanged.
+
+
+## Current-main group boundary reconciliation
+
+The same initial PR CI run also failed PostgreSQL Python 3.13 with the sole
+optional LangChain import failure: 1 failed, 6996 passed, 110 skipped in
+1557.70 seconds. The whole run finished with four successful, two failed and
+four cancelled jobs. Both backend logs and their actual outcomes remain saved.
+Core and adversarial affected reviews approved the relocated mandatory AP01
+assertions at snapshot `85c15e90`; no runtime change was needed for that defect.
+
+The published branch then checkpointed that reviewed relocation and normally
+merged main `4f23c01e` in commit `779d667b`. The merge preserves both parents and
+upstream defaults. Main's new group lookup can select a person after the saved
+plan, parse prior source turns into a text-keyed LRU and publish `named_in`
+provenance. A pre-fix public-admission reproduction created a protected person
+after legacy preparation and observed the forbidden group edge. Its one failed
+case, exit 1, is retained in `privacy320-group-prefixed.log`; it was not a setup
+or missing-dependency failure.
+
+The repair keeps protected group processing unavailable. Real alpha defaults
+with group links enabled return `privacy_configuration_invalid` before store
+creation; explicitly disabling links retains admitted memory, immutable policy
+and no completed evidence payload. Legacy group reads check the initial event,
+fixed owner/scope, authoritative protection and actual returned events/nodes
+before caching or name use, with checks after awaits. Native legacy edge writes
+validate actual endpoints, primary provenance and any naming event on the held
+backend connection, then reuse the existing insert primitive. Accepted queued
+writes retain cancellation ownership. No new schema, fields, edge format or
+historical checksum is introduced. Optional legacy links remain best effort;
+a skipped link does not roll back an already committed legacy derivation. This
+is not protected group support or a global cross-process enrollment lease.
+
+The 40 new cases were fixed before execution: one product-default case, twelve
+late-member boundaries, twenty-one native-edge cases and six other-owner/scope
+legacy controls. Together with thirty existing AP01, CORE-2 and reingest cases,
+they pass: 70 passed, no skips, exit 0 in 19.00 seconds. Core-without-frameworks
+passes 15 tests with the two existing missing-extra module skips, exit 0 in
+5.77 seconds. The exact framework integration selection passes 48 tests,
+including both mandatory AP01 adapter refusals and the unchanged positive
+controls, no skips, exit 0 in 13.51 seconds. Ruff, strict public typing and diff
+checks pass. The frozen contract validator passes with 42 copy classes,
+151 exact source anchors and 17 surfaces; original scenarios remain unchanged.
+The C06/C09/C32 inventory additions classify upstream group provenance,
+repeated-claim references and transient source-cache keys without claiming
+production protected support. Existing maintenance warnings in the pre-fix
+reproduction remain separate from the demonstrated forbidden edge.
+
+CORE-2's first repair passed its original validation. This new-main closure is
+conservatively its second attempt, and the targeted repair passed. S2 and
+object-enrollment remain resolved at cycle 2 with no counter reset or code
+change. The optional dependency placement repair passed cycle 1. No new full
+local suite, artifact build, simulation run or quality benchmark is planned;
+required exact-head CI supplies those final checks after affected review.
+
+
+### Reingest request callback correction
+
+A focused review found that the new group call had bypassed reingest's existing
+checked submit. That lost the original whole-request scope selection and saved
+plan-reference check after a group read or queue wait. The correction passes
+that same request check through scoped reads before and after awaits and uses
+the existing checked submit for the native edge operation. Fixed event-scope
+native identity checks and cancellation ownership remain. No new native format,
+field, schema or cross-process lease is introduced.
+
+Two exact directory-backend regression nodes cover the group read and queued
+write boundaries. Their first two fixture preparations failed before activation:
+the scripted batch used a legacy unknown polarity that unchecked model-response
+validation rejects. Both logs remain setup failures, not runtime defect proof.
+Using the existing upstream positive claim contract then reproduced two actual
+forbidden group edges after another-scope protected admission, exit 1, two failed
+in 2.84 seconds (`privacy320-group-request-prefixed-working-contract-cycle2.log`).
+
+The first corrected selection remains FAILED overall: 2 failed, 23 passed in
+17.19 seconds, exit 1 (`privacy320-group-request-repair-cycle1.log`). Both
+whole-request refusal and zero-edge assertions passed; the extra reference
+assertion failed because the direct-store-only fixture produced no planned
+references. The second validation changes only that fixture: it publicly ingests
+the same We claim with groups off, closes/reopens with groups on and reingests it,
+so the real superseded earlier claim is a nonempty dependency. Both exact nodes
+pass in 1.89 seconds, exit 0, and the same 23 affected controls pass in 15.12
+seconds, exit 0. No assertion was removed and runtime was unchanged between
+these two validations. Changed-test Ruff and diff checks pass; the already
+passing runtime Ruff, public typing and contract checks carry unchanged.
+
+The earlier 70 boundary and 60 legacy cases, 15 core cases/two expected framework
+module skips and 48 real framework integration cases remain evidence at
+`e6bf288b`. They are not relabeled as runs of the callback correction. The two
+new cases and 23 affected controls provide its changed-scope evidence. No
+unrelated passing cohort was repeated. The exact callback behavior had zero
+previous unsuccessful cycles before its first correction; its first complete
+selection failed and its second validation passed. Original CORE-2, S2,
+object-enrollment and test-placement histories remain unchanged. Source remains
+frozen at `95f4b45d`; all four affected reviews approve it. The final required
+full suite, build and simulations remain pending in exact-head CI after push.
+
+
+### Affected review completion
+
+Core, security, data and adversarial reviews are COMPLETE/APPROVE at snapshot
+`95f4b45d492286a61348adcc241d3f0aea74d09c27d4ee442f8ce7d2fe8b070b`,
+base `4f23c01e53cc534c78f72421c0f62867ca1f8e98`, 37 hashed paths and
+4908 changed lines. Each independently matched the source snapshot and covered
+the affected group-read, native identity and reingest request/reference paths.
+The data review carries the unchanged field/schema inventory; all eight
+adversarial scenario dispositions remain Accept. No new blocking finding,
+follow-up or additional test cohort was requested.
+
+The complete reports are retained as `privacy320-review-<role>-group.md` with
+SHA256s in the delivery provenance. Only this review document changed after
+those approvals. The two final regression cases, 23 affected controls and
+same-runtime static checks remain the current bounded evidence. Earlier
+70/60/core/framework cohorts and the 7040-test full run retain their stated
+source stages. Required full backend, integration, build, installed-wheel and
+simulation CI on the updated PR head is pending; review approval does not
+substitute for that result. All failed evidence and repair-cycle history remain
+unchanged.

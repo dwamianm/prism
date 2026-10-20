@@ -30,7 +30,7 @@ policy = PrivacyPolicy(
     memory_retention=MemoryRetention(mode="until_deleted"),
     language="en",
 )
-config = PRMEConfig(privacy_policy=policy)
+config = PRMEConfig(privacy_policy=policy, enable_owner_group_links=False)
 # MemoryEngine.create(config, privacy_runtime=runtime, ...)
 # requires an explicitly installed implementation of every required capability.
 ```
@@ -78,10 +78,19 @@ Synchronous `store()` also prepares its admitted memory before acceptance.
 Python process memory and caller/provider copies are outside durable storage
 guarantees.
 
-Protected admission rejects `enable_owner_group_links=True` before effects.
-That optional legacy helper selects an extra owner entity outside the admitted
-plan, so it cannot yet carry all participating policy dependencies. Protected
-publication retains its authority lease until queued writes finish, including
+The current alpha defaults enable owner-group links. A protected profile must
+explicitly set `enable_owner_group_links=False`; leaving it enabled returns
+`privacy_configuration_invalid` before new store creation or admission effects.
+The group helper selects owner/member entities and prior session sources outside
+the admitted plan, so protected group processing is unavailable. Legacy group
+lookups refuse protected data in the selected owner/scope before source-cache
+insertion and name matching, recheck after reads, and validate actual endpoints,
+provenance and any `named_in` event at native edge publication. Protection in a
+different owner or scope does not disable an otherwise legacy group operation.
+A skipped optional link does not roll back an already committed legacy plan;
+these checks are not a global cross-process enrollment lease.
+
+Protected publication retains its authority lease until queued writes finish, including
 when the caller cancels; cancellation does not promise rollback. Pending work
 also checks its processing deadline at every guarded embedding send.
 

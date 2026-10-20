@@ -486,7 +486,14 @@ class Reingester:
         if pipeline._link_owner_groups:
             from prme.ingestion.group_links import link_group_claims
 
-            await link_group_claims(
-                str(event.id), plan.nodes, user_id=event.user_id, graph_store=pipeline._graph_store,
-                event_store=pipeline._event_store, create_edge=create_edge,
-            )
+            if pipeline._privacy is not None:
+                await pipeline._privacy.link_legacy_groups(
+                    str(event.id), plan.nodes, user_id=event.user_id, scope=event.scope, event=event,
+                    effect_check=lambda: self._check(
+                        plan.user_id, plan.scope, events=(event,), nodes=plan.references),
+                    submit=submit)
+            else:
+                await link_group_claims(
+                    str(event.id), plan.nodes, user_id=event.user_id, graph_store=pipeline._graph_store,
+                    event_store=pipeline._event_store, create_edge=create_edge,
+                )

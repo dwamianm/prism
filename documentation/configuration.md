@@ -37,7 +37,11 @@ Protected admission requires an injected `PrivacyRuntime` with an authoritative
 policy service, sanitizer, payload protector and guarded providers. Missing
 capabilities reject before new store creation. Built-in providers are not yet
 implicitly eligible for protected operation. This component does not turn on a
-production protected profile or change existing defaults. See
+production protected profile or change existing defaults. The current alpha
+enables owner-group links, which protected profiles do not support: use
+`PRMEConfig(privacy_policy=policy, enable_owner_group_links=False)`, or set
+`PRME_ENABLE_OWNER_GROUP_LINKS=false`. Leaving it enabled returns the fixed
+`privacy_configuration_invalid` error before protected admission effects. See
 [evidence policies](../docs/PRIVACY-POLICIES.md) for valid combinations,
 synchronous preparation, provider inspection and remaining integration limits.
 

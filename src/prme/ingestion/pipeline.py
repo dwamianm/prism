@@ -1285,9 +1285,13 @@ class IngestionPipeline:
 
         event = Event.model_validate_json(event.model_dump_json())
         result = ExtractionResult.model_validate_json(result.model_dump_json())
+        group_check = None
+
         async def legacy_check(nodes=()):
             if self._privacy is not None:
                 await self._privacy.require_legacy_inputs((event,), nodes)
+            if group_check is not None:
+                await group_check(nodes=nodes)
             if effect_check is not None:
                 await effect_check()
 
@@ -1325,13 +1329,17 @@ class IngestionPipeline:
                 and not owner_reference and event.role.casefold() in OWNER_ROLES
                 and (event.metadata or {}).get(OWNER_REFERENCE_KEY) is not True
                 and _speaks_for_a_group(result)):
+            group_events = self._event_store
+            if self._privacy is not None:
+                _, group_events, group_check = await self._privacy.legacy_group_reads(
+                    event.user_id, event.scope, event=event)
             owner = await carried_owner_entity(
                 graph, user_id=event.user_id, scope=event.scope, name=metadata_speaker(event.metadata),
             )
             if owner is not None:
                 group_owner = str(owner.id)
                 # The session's turns up to this one bound which earlier copies are read.
-                group_session = {str(turn.id) for turn in await self._event_store.get_by_user(
+                group_session = {str(turn.id) for turn in await group_events.get_by_user(
                     event.user_id, session_id=event.session_id, scopes=[event.scope], until=event.timestamp,
                     limit=SESSION_TURNS,
                 )}
@@ -1828,13 +1836,17 @@ class IngestionPipeline:
         if self._link_owner_groups:
             from prme.ingestion.group_links import link_group_claims
 
-            await link_group_claims(
-                str(plan.event_id), plan.nodes, user_id=plan.user_id, graph_store=self._graph_store,
-                event_store=self._event_store,
-                create_edge=(
-                    self._graph_writer or WriteQueueGraphWriter(self._graph_store, self._write_queue)
-                ).create_edge,
-            )
+            if self._privacy is not None:
+                await self._privacy.link_legacy_groups(
+                    str(plan.event_id), plan.nodes, user_id=plan.user_id, scope=plan.scope)
+            else:
+                await link_group_claims(
+                    str(plan.event_id), plan.nodes, user_id=plan.user_id, graph_store=self._graph_store,
+                    event_store=self._event_store,
+                    create_edge=(
+                        self._graph_writer or WriteQueueGraphWriter(self._graph_store, self._write_queue)
+                    ).create_edge,
+                )
 
     async def _materialize(
         self, result: ExtractionResult, event: Event, event_id: str,

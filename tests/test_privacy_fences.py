@@ -16,6 +16,209 @@ SOURCE = "Alex does not like tea unless it is cold."
 
 
 @pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+@pytest.mark.parametrize("boundary", ["before_publish", "session_read", "member_read", "queued_edge"])
+async def test_group_links_refuse_late_protected_member(tmp_path, monkeypatch, layout, boundary):
+    from prme.ingestion import group_links
+    from prme.ingestion.owner_name import OWNER_NAME_KEY, owner_name_marker
+    from prme.ingestion.schema import ExtractionResult
+    from prme.types import NodeType
+    from structlog.testing import capture_logs
+
+    r = make_runtime()
+    p = policy_for(r)
+    owner, session = str(p.owner_id), str(uuid4())
+    protected_config = config_for(tmp_path, layout=layout).model_copy(update={"enable_owner_group_links": False})
+    protected = await MemoryEngine.create(protected_config, embedding_provider=r.embedder, privacy_runtime=r)
+    config = protected_config.model_copy(update={"enable_owner_group_links": True})
+    engine = await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)
+    activated = False
+    publishing = False
+    member_id = None
+    private_uses = []
+    sends_at_activation = None
+
+    async def activate():
+        nonlocal activated, member_id, sends_at_activation
+        if activated:
+            return
+        event_id = await protected.store("Jordan", user_id=owner, policy=p, session_id=session,
+                                        node_type=NodeType.ENTITY, metadata={"entity_type": "person"})
+        [member] = await protected.get_event_nodes(event_id, user_id=owner)
+        member_id = member.id
+        r.authority.revisions[p.policy_id] = 2
+        sends_at_activation = len(r.embedder.sends)
+        activated = True
+
+    async def extract(*args, **kwargs):
+        return ExtractionResult.model_validate({"entities": [], "relationships": [],
+            "facts": [{"subject": "We", "predicate": "prefer", "object": "tea",
+                       "evidence_quote": "We prefer tea."}]})
+
+    original_publish = engine._pipeline._publish_plan
+
+    async def publish(*args, **kwargs):
+        nonlocal publishing
+        publishing = True
+        if boundary == "before_publish":
+            await activate()
+        return await original_publish(*args, **kwargs)
+
+    original_turns = group_links._turn_groups
+    original_person = group_links._person
+
+    def turns(text):
+        if activated:
+            private_uses.append("cache")
+        return original_turns(text)
+
+    def person(*args):
+        if activated:
+            private_uses.append("person")
+        return original_person(*args)
+
+    monkeypatch.setattr(engine._pipeline._extraction_provider, "extract", extract)
+    monkeypatch.setattr(engine._pipeline, "_publish_plan", publish)
+    monkeypatch.setattr(group_links, "_turn_groups", turns)
+    monkeypatch.setattr(group_links, "_person", person)
+    if boundary == "session_read":
+        original = engine._event_store.get_by_user
+
+        async def read(*args, **kwargs):
+            rows = await original(*args, **kwargs)
+            if publishing:
+                await activate()
+            return rows
+        monkeypatch.setattr(engine._event_store, "get_by_user", read)
+    elif boundary == "member_read":
+        original = engine._graph_store.query_nodes
+
+        async def read(*args, **kwargs):
+            if publishing:
+                await activate()
+            return await original(*args, **kwargs)
+        monkeypatch.setattr(engine._graph_store, "query_nodes", read)
+    elif boundary == "queued_edge":
+        original = engine._write_queue.submit
+
+        async def submit(operation, *, label):
+            async def delayed():
+                if label.startswith("privacy.group_link:"):
+                    await activate()
+                return await operation()
+            return await original(delayed, label=label)
+        monkeypatch.setattr(engine._write_queue, "submit", submit)
+    try:
+        await engine.store("Alex", user_id=owner, session_id=session, node_type=NodeType.ENTITY,
+            metadata={"entity_type": "person", OWNER_NAME_KEY: owner_name_marker(str(uuid4()), "self_introduction")})
+        await engine.store("Jordan and I prefer tea.", user_id=owner, session_id=session)
+        with capture_logs() as logs:
+            event_id = await engine.ingest("We prefer tea.", user_id=owner, session_id=session, wait_for_extraction=True)
+        assert activated
+        edges = await engine._graph_store.get_edges(target_id=str(member_id))
+        assert not any(group_links.is_group_link(edge) for edge in edges)
+        assert not any(group_links.is_group_link(edge) for edge in await engine._graph_store.get_edges()
+                       if edge.user_id == owner)
+        assert private_uses == []
+        assert len(r.embedder.sends) == sends_at_activation
+        assert all("Jordan" not in str(record) for record in logs
+                   if record["event"].startswith("group_links."))
+        # The legacy derivation committed before its optional links were refused.
+        assert await engine._event_store.get_derivation_receipt(event_id, user_id=owner) is not None
+    finally:
+        await engine.close()
+        await protected.close()
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+@pytest.mark.parametrize("case", ["valid", "source_owner", "target_scope", "provenance_owner",
+                                 "named_in_scope", "missing_provenance", "protected_boundary"])
+async def test_group_edge_native_boundary(tmp_path, layout, case):
+    from prme.models import MemoryEdge
+    from prme.types import EdgeType, Scope
+
+    r = make_runtime()
+    p = policy_for(r)
+    owner, other = str(p.owner_id), str(uuid4())
+    engine = await MemoryEngine.create(config_for(tmp_path, layout=layout),
+                                      embedding_provider=r.embedder, privacy_runtime=r)
+    try:
+        source_owner = other if case == "source_owner" else owner
+        source_event = await engine.store("We prefer tea.", user_id=source_owner)
+        [source] = await engine.get_event_nodes(source_event, user_id=source_owner)
+        target_event = await engine.store("Jordan", user_id=owner,
+                                         scope=Scope.PROJECT if case == "target_scope" else Scope.PERSONAL)
+        [target] = await engine.get_event_nodes(target_event, user_id=owner)
+        provenance = await engine.store("We prefer tea.", user_id=other if case == "provenance_owner" else owner)
+        named_in = await engine.store("Jordan and I prefer tea.", user_id=owner,
+                                     scope=Scope.PROJECT if case == "named_in_scope" else Scope.PERSONAL)
+        edge = MemoryEdge(source_id=source.id, target_id=target.id, edge_type=EdgeType.MENTIONS,
+                          user_id=owner, provenance_event_id=uuid4() if case == "missing_provenance" else UUID(provenance),
+                          metadata={"basis": "group_member", "named_in": named_in})
+        if case == "protected_boundary":
+            await engine.store(SOURCE, user_id=owner, policy=p)
+
+        async def publish():
+            return await engine._privacy.repository.create_legacy_group_edge(
+                engine._graph_store, edge, user_id=owner, scope=Scope.PERSONAL)
+
+        # Exercise the native boundary without the outer group read preflight.
+        if case == "valid":
+            assert await engine._write_queue.submit(publish, label="privacy.group_link:test") == str(edge.id)
+            assert await engine._graph_store.get_edges(source_id=str(source.id)) == [edge]
+        else:
+            with pytest.raises(PrivacyDenied):
+                await engine._write_queue.submit(publish, label="privacy.group_link:test")
+            assert await engine._graph_store.get_edges(source_id=str(source.id)) == []
+    finally:
+        await engine.close()
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+@pytest.mark.parametrize("case", ["other_owner", "other_scope"])
+async def test_group_links_keep_other_owner_and_scope_legacy_controls(tmp_path, monkeypatch, layout, case):
+    from prme.ingestion import group_links
+    from prme.ingestion.owner_name import OWNER_NAME_KEY, owner_name_marker
+    from prme.ingestion.schema import ExtractionResult
+    from prme.types import NodeType, Scope
+
+    r = make_runtime()
+    owner, session = str(uuid4()), str(uuid4())
+    p = policy_for(r, owner=UUID(owner) if case == "other_scope" else uuid4(),
+                   scope=Scope.PROJECT if case == "other_scope" else Scope.PERSONAL)
+    config = config_for(tmp_path, layout=layout)
+    protected = await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)
+    engine = await MemoryEngine.create(config.model_copy(update={"enable_owner_group_links": True}),
+                                      embedding_provider=r.embedder, privacy_runtime=r)
+
+    async def extract(*args, **kwargs):
+        return ExtractionResult.model_validate({"entities": [], "relationships": [],
+            "facts": [{"subject": "We", "predicate": "prefer", "object": "tea", "evidence_quote": "We prefer tea."}]})
+
+    monkeypatch.setattr(engine._pipeline._extraction_provider, "extract", extract)
+    try:
+        await protected.store(SOURCE, user_id=str(p.owner_id), scope=p.scope, policy=p)
+        targets = []
+        for name in ("Alex", "Jordan"):
+            metadata = {"entity_type": "person"}
+            if name == "Alex":
+                metadata[OWNER_NAME_KEY] = owner_name_marker(str(uuid4()), "self_introduction")
+            event_id = await engine.store(name, user_id=owner, session_id=session,
+                                          node_type=NodeType.ENTITY, metadata=metadata)
+            [node] = await engine._graph_store.query_nodes(user_id=owner, content_contains_any=[name],
+                                                         scopes=[Scope.PERSONAL])
+            targets.append(node.id)
+        await engine.store("Jordan and I prefer tea.", user_id=owner, session_id=session)
+        event_id = await engine.ingest("We prefer tea.", user_id=owner, session_id=session, wait_for_extraction=True)
+        links = [edge for edge in await engine._graph_store.get_edges()
+                 if edge.user_id == owner and group_links.is_group_link(edge)]
+        assert {edge.target_id for edge in links} == set(targets)
+        assert all(str(edge.provenance_event_id) == event_id for edge in links)
+    finally:
+        await engine.close()
+        await protected.close()
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
 @pytest.mark.parametrize("reopened", [False, True])
 async def test_reingest_protection_precedes_source_filtering(tmp_path, monkeypatch, layout, reopened):
     from unittest.mock import AsyncMock
@@ -49,6 +252,100 @@ async def test_reingest_protection_precedes_source_filtering(tmp_path, monkeypat
         scan.assert_not_awaited()
     finally:
         await engine.close()
+
+
+@pytest.mark.parametrize("boundary", ["group_read", "queued_write"])
+async def test_reingest_group_preserves_request_boundary(tmp_path, monkeypatch, boundary):
+    from prme.ingestion import group_links
+    from prme.ingestion.owner_name import OWNER_NAME_KEY, owner_name_marker
+    from prme.ingestion.reingest import Reingester
+    from prme.ingestion.schema import ExtractionResult
+    from prme.types import NodeType, Scope
+    from tests.test_mention_links import claim
+    from tests.test_reingest import settings
+
+    r = make_runtime()
+    p = policy_for(r, scope=Scope.PROJECT)
+    owner, session = str(p.owner_id), str(uuid4())
+    protected = await MemoryEngine.create(config_for(tmp_path), embedding_provider=r.embedder, privacy_runtime=r)
+    config = settings(config_for(tmp_path), enable_owner_group_links=False, enable_claim_merge=True)
+    engine = await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)
+    activated = False
+    publishing = False
+    expected_references = set()
+    checked_references = []
+
+    async def activate():
+        nonlocal activated
+        if not activated:
+            await protected.store(SOURCE, user_id=owner, scope=Scope.PROJECT, policy=p)
+            activated = True
+
+    async def extract_batch(turns):
+        return {"turns": [{"turn": turn.index, **ExtractionResult.model_validate({
+            "entities": [], "relationships": [],
+            "facts": ([claim("We", "prefer", "tea", "We prefer tea.")]
+                      if turn.content == "We prefer tea." else []),
+        }).model_dump(mode="json")} for turn in turns]}
+
+    original_after, original_check = Reingester._after, Reingester._check
+
+    async def after(self, plan, marker, event, record, note_id):
+        nonlocal publishing, expected_references
+        publishing = event.content == "We prefer tea."
+        if publishing:
+            expected_references = {node.id for node in plan.references}
+        return await original_after(self, plan, marker, event, record, note_id)
+
+    async def check(self, *args, **kwargs):
+        if activated:
+            checked_references.append({node.id for node in kwargs.get("nodes", ())})
+        return await original_check(self, *args, **kwargs)
+
+    monkeypatch.setattr(engine._pipeline._extraction_provider, "extract_batch", extract_batch)
+    monkeypatch.setattr(Reingester, "_after", after)
+    monkeypatch.setattr(Reingester, "_check", check)
+    try:
+        await engine.store("Alex", user_id=owner, session_id=session, node_type=NodeType.ENTITY,
+            metadata={"entity_type": "person", OWNER_NAME_KEY: owner_name_marker(str(uuid4()), "self_introduction")})
+        await engine.store("Jordan and I prefer tea.", user_id=owner, session_id=session)
+        event_id = await engine.ingest("We prefer tea.", user_id=owner, session_id=session, wait_for_extraction=True)
+        prior_claims = {node.id for node in await engine.get_event_nodes(event_id, user_id=owner)
+                        if node.node_type == NodeType.FACT}
+        await engine.close()
+        engine = await MemoryEngine.create(config.model_copy(update={"enable_owner_group_links": True}),
+                                          embedding_provider=r.embedder, privacy_runtime=r)
+        monkeypatch.setattr(engine._pipeline._extraction_provider, "extract_batch", extract_batch)
+        if boundary == "group_read":
+            original = engine._event_store.get_by_user
+
+            async def read(*args, **kwargs):
+                rows = await original(*args, **kwargs)
+                if publishing:
+                    await activate()
+                return rows
+            monkeypatch.setattr(engine._event_store, "get_by_user", read)
+        else:
+            original = engine._write_queue.submit
+
+            async def submit(operation, *, label):
+                async def delayed():
+                    if label.startswith("privacy.group_link:"):
+                        await activate()
+                    return await operation()
+                return await original(delayed, label=label)
+            monkeypatch.setattr(engine._write_queue, "submit", submit)
+        # A whole-owner request must retain that boundary after individual
+        # PERSONAL plans commit, even when the newly protected source is PROJECT.
+        with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+            await engine.reingest(owner)
+        assert activated
+        assert not any(group_links.is_group_link(edge) for edge in await engine._graph_store.get_edges())
+        assert prior_claims and prior_claims <= expected_references
+        assert expected_references and any(expected_references <= refs for refs in checked_references)
+    finally:
+        await engine.close()
+        await protected.close()
 
 
 async def test_shared_batch_refuses_a_protected_participant_before_correction_embedding(tmp_path, monkeypatch):

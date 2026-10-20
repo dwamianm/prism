@@ -192,7 +192,8 @@ def policy_for(runtime, *, owner=None, **changes):
 def config_for(path, *, layout="directory", policy=None):
     kwargs = dict(db_path=str(path / "memory.duckdb"), vector_path=str(path / "vectors.usearch"),
                   lexical_path=str(path / "lexical"), privacy_policy=policy, extraction_batch_target_tokens=0,
-                  enable_mention_links=False, enable_ingest_claim_fixes=False, enable_owner_name_carry=False)
+                  enable_mention_links=False, enable_ingest_claim_fixes=False, enable_owner_name_carry=False,
+                  enable_owner_group_links=False)
     if layout == "pack":
         kwargs["pack_path"] = str(path / "memory.prme")
     if layout == "postgres":

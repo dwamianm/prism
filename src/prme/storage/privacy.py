@@ -6,11 +6,12 @@ from collections.abc import Sequence
 import json
 from uuid import UUID
 
-from prme.models import Event, MemoryNode
+from prme.models import Event, MemoryEdge, MemoryNode
 from prme.models.direct_store import DirectStoreRecord
 from prme.privacy.policy import PrivacyDenied
 from prme.privacy.records import PRIVACY_KEY, PrivacyRecord
 from prme.storage._threading import run_to_completion
+from prme.types import EdgeType, Scope
 
 DDL = """CREATE TABLE IF NOT EXISTS privacy_admissions (
     event_id UUID PRIMARY KEY, user_id VARCHAR NOT NULL, scope VARCHAR NOT NULL,
@@ -96,6 +97,55 @@ class PrivacyRepository:
         else:
             async with self.lock:
                 await run_to_completion(require_legacy_duck, self.conn, user_id, scope)
+
+    async def create_legacy_group_edge(self, graph, edge: MemoryEdge, *, user_id: str, scope: Scope) -> str:
+        """Check the actual group participants on the connection that writes."""
+        edge = MemoryEdge.model_validate_json(edge.model_dump_json())
+        scope = Scope(scope).value
+        if (edge.user_id != user_id or edge.edge_type != EdgeType.MENTIONS
+                or (edge.metadata or {}).get("basis") != "group_member" or edge.provenance_event_id is None):
+            raise PrivacyDenied("privacy_boundary_mismatch")
+        identities = [("nodes", edge.source_id), ("nodes", edge.target_id),
+                      ("events", edge.provenance_event_id)]
+        if "named_in" in (edge.metadata or {}):
+            try:
+                identities.append(("events", UUID(edge.metadata["named_in"])))
+            except (ValueError, TypeError, AttributeError):
+                raise PrivacyDenied("privacy_boundary_mismatch") from None
+        if self.pool is not None:
+            if graph._pool is not self.pool:
+                raise PrivacyDenied("privacy_boundary_mismatch")
+            async with self.pool.acquire() as conn, conn.transaction():
+                await require_legacy_pg(conn, user_id, scope)
+                for table, identifier in identities:
+                    row = await conn.fetchrow(f"SELECT user_id,scope FROM {table} WHERE id=$1 FOR SHARE",
+                                              str(identifier))
+                    if row is None or tuple(row) != (user_id, scope):
+                        raise PrivacyDenied("privacy_boundary_mismatch")
+                await graph._create_edge_on_connection(conn, edge)
+                await require_legacy_pg(conn, user_id, scope)
+        else:
+            if graph._conn is not self.conn:
+                raise PrivacyDenied("privacy_boundary_mismatch")
+
+            def write():
+                self.conn.execute("BEGIN TRANSACTION")
+                try:
+                    require_legacy_duck(self.conn, user_id, scope)
+                    for table, identifier in identities:
+                        row = self.conn.execute(f"SELECT user_id,scope FROM {table} WHERE id=?",
+                                                [str(identifier)]).fetchone()
+                        if row != (user_id, scope):
+                            raise PrivacyDenied("privacy_boundary_mismatch")
+                    graph._create_edge_sync(edge)
+                    self.conn.execute("COMMIT")
+                except BaseException:
+                    self.conn.execute("ROLLBACK")
+                    raise
+
+            async with self.lock:
+                await run_to_completion(write)
+        return str(edge.id)
 
     async def request(self, request_id: UUID, *, user_id: str) -> tuple[PrivacyRecord, ...]:
         return await self._read("user_id=? AND request_id=?", (user_id, str(request_id)))
