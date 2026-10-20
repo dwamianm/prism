@@ -1640,13 +1640,15 @@ class IngestionPipeline:
                     graph_store, subject_entity_id, fact_node, key, object_entity_id,
                     exclude=planned_fact_ids,
                 )
-                if not copies and group_owner is not None:
-                    # A we entity is local to its message; the owner's group links reach the
-                    # same claim in an earlier turn of the session.
-                    copies = await find_repeated_group_claims(
+                if group_owner is not None:
+                    # A we entity is local to its message, so its own subject finds at most this
+                    # event's earlier copy (a reingest); the owner's group links reach the same
+                    # claim in an earlier turn of the session.
+                    known = {copy.id for copy in copies}
+                    copies = sorted([*copies, *(copy for copy in await find_repeated_group_claims(
                         graph_store, group_owner, fact_node, key, object_entity_id,
                         session_events=group_session or set(), exclude=planned_fact_ids,
-                    )
+                    ) if copy.id not in known)], key=lambda node: (node.event_time or node.valid_from, str(node.id)))
                 if copies:
                     fact_node = merged_claim(fact_node, copies)
             fact_node_id = await writer.create_node(fact_node)

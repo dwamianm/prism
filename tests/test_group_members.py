@@ -460,3 +460,51 @@ class TestMergeLookup:
         found = await find_repeated_group_claims(graph, str(owner.id), new, claim_key(new, None), None,
                                                  session_events={str(session_event)}, exclude=set())
         assert graph.node_reads == [str(here.id)] and [node.id for node in found] == [here.id]
+
+
+class TestReingest:
+    """``reingest()`` plans through the same function as ``ingest()``, so a re-derived source gets the same links."""
+
+    @staticmethod
+    def reingesting(base):
+        return linked(base, enable_reingest=True, extraction_batch_target_tokens=2048)
+
+    async def test_a_reingested_chat_gets_the_links_a_fresh_ingest_gives(self, config, user):
+        async with MemoryEngine.open(linked(config, enable_owner_group_links=False)) as engine:
+            await chat(engine, user, DEFECTS)
+            await engine.process_pending(user_id=user)
+            assert await group_links(engine, user) == []
+        async with MemoryEngine.open(self.reingesting(config)) as engine:
+            async def extract_batch(turns):
+                return {"turns": [{**RESULTS[turn.content], "turn": turn.index} for turn in turns]}
+
+            engine._pipeline._extraction_provider.extract_batch = extract_batch
+            result = await engine.reingest(user)
+            reingested = per_claim(await group_links(engine, user))
+        async with MemoryEngine.open(linked(config)) as engine:
+            fresh_owner = f"{user}-fresh"
+            await chat(engine, fresh_owner, DEFECTS)
+            fresh = per_claim(await group_links(engine, fresh_owner))
+        assert result.processed == 4
+        assert reingested == fresh == {CITIES: {OWNER, "Jordan"}, DROPPED: {OWNER, "Jordan"},
+                                       POSTGRES: {OWNER}, SELF_HOSTING: {OWNER}}
+
+    async def test_a_reingested_session_merges_a_repeated_we_claim_as_ingest_does(self, config, user):
+        async with MemoryEngine.open(linked(config, enable_owner_group_links=False)) as engine:
+            await chat(engine, user, {"s1": [INTRODUCTION, TOKYO, REPLY, TOKYO]})
+            await engine.process_pending(user_id=user)
+            before = [node for node in await engine.query_nodes(user_id=user)
+                      if node.content == TOKYO and node.node_type != NodeType.NOTE]
+        async with MemoryEngine.open(self.reingesting(config)) as engine:
+            async def extract_batch(turns):
+                return {"turns": [{**RESULTS[turn.content], "turn": turn.index} for turn in turns]}
+
+            engine._pipeline._extraction_provider.extract_batch = extract_batch
+            await engine.reingest(user)
+            active = [node for node in await engine.query_nodes(user_id=user)
+                      if node.content == TOKYO and node.node_type != NodeType.NOTE]
+        # Without the group links the two copies stayed apart; re-derived with them, one current record holds
+        # both turns, as after ingest() with the links on. It also folds the second turn's own earlier claim.
+        assert len(before) == 2
+        assert len(active) == 1 and {str(ref) for ref in active[0].evidence_refs} == {
+            str(ref) for node in before for ref in node.evidence_refs}
