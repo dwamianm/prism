@@ -20,6 +20,11 @@ error handling, and lifecycle transitions are managed here.
 
 from __future__ import annotations
 
+from prme.privacy.policy import PrivacyPolicy, PrivacyDenied
+from prme.privacy.capabilities import PrivacyRuntime
+from prme.privacy.admission import privacy_disclosure
+
+
 import asyncio
 import atexit
 from contextlib import AsyncExitStack
@@ -388,6 +393,11 @@ class MemoryEngine:
             self._config.scoring, learning_rate=0.01,
         )
 
+        from prme.privacy.admission import AdmissionCoordinator
+        self._privacy = AdmissionCoordinator(self)
+        if self._pipeline is not None:
+            self._pipeline._privacy = self._privacy
+
         self._closed = False
 
         # Visual memory (RFC-0018): the vision provider is built on first
@@ -425,6 +435,7 @@ class MemoryEngine:
     async def open(
         cls, config: PRMEConfig | None = None, *,
         embedding_provider: EmbeddingProvider | None = None,
+        privacy_runtime: PrivacyRuntime | None = None,
     ):
         """Async context manager for MemoryEngine lifecycle.
 
@@ -433,10 +444,7 @@ class MemoryEngine:
             async with MemoryEngine.open(config) as engine:
                 await engine.store(...)
         """
-        if embedding_provider is None:
-            engine = await cls.create(config)
-        else:
-            engine = await cls.create(config, embedding_provider=embedding_provider)
+        engine = await cls.create(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
         try:
             yield engine
         finally:
@@ -446,6 +454,7 @@ class MemoryEngine:
     async def create(
         cls, config: PRMEConfig | None = None, *,
         embedding_provider: EmbeddingProvider | None = None,
+        privacy_runtime: PrivacyRuntime | None = None,
     ) -> "MemoryEngine":
         """Create and initialize a MemoryEngine with all backends.
 
@@ -466,6 +475,9 @@ class MemoryEngine:
         if config is None:
             config = PRMEConfig()
 
+        from prme.privacy.admission import preflight_runtime
+        await preflight_runtime(config, privacy_runtime)
+
         if embedding_provider is not None:
             name, _, dimension = validate_embedding_provider(embedding_provider)
             config = config.model_copy(update={"embedding": config.embedding.model_copy(update={
@@ -477,8 +489,11 @@ class MemoryEngine:
         if config.backend == "postgres":
             if config.namespace_id is not None:
                 raise ValueError("namespace_id currently requires an isolated local pack")
-            return await cls._create_postgres(config, embedding_provider=embedding_provider)
-        return await cls._create_duckdb(config, embedding_provider=embedding_provider)
+            engine = await cls._create_postgres(config, embedding_provider=embedding_provider)
+        else:
+            engine = await cls._create_duckdb(config, embedding_provider=embedding_provider)
+        engine._privacy.runtime = privacy_runtime
+        return engine
 
     @classmethod
     async def _create_duckdb(
@@ -952,6 +967,7 @@ class MemoryEngine:
         valid_to: datetime | None = None,
         ttl_days: int | None = ...,
         extract: bool | None = None,
+        policy: PrivacyPolicy | None = None,
     ) -> str:
         """Store content across all four backends in one call.
 
@@ -1015,6 +1031,9 @@ class MemoryEngine:
         Returns:
             String UUID of the created event (source of truth ID).
         """
+        if self._privacy.selected(policy):
+            arguments = {k: v for k, v in locals().items() if k not in {"self", "content", "policy"}}
+            return await self._privacy.store(content, policy=policy, **arguments)
         from prme.ingestion.temporal import validate_source_time, validate_validity_window
 
         validate_source_time(event_time)
@@ -1328,6 +1347,7 @@ class MemoryEngine:
         valid_to: datetime | None = None,
         ttl_days: int | None = ...,
         extract: bool | None = None,
+        policy: PrivacyPolicy | None = None,
     ) -> StoreReceipt:
         """Store one direct memory and return its source, node, and work status.
 
@@ -1342,7 +1362,7 @@ class MemoryEngine:
         """
         event_id = await self.store(
             content,
-            user_id=user_id,
+            user_id=user_id, policy=policy,
             retrieval_content=retrieval_content,
             value_bindings=value_bindings,
             session_id=session_id,
@@ -1363,6 +1383,11 @@ class MemoryEngine:
         try:
             nodes = await self.get_event_nodes(event_id, user_id=user_id)
             expected_content = content if retrieval_content is None else retrieval_content
+            if self._privacy.selected(policy):
+                intent = await self._event_store.get_direct_store(event_id, user_id=user_id)
+                if intent is None:
+                    raise PrivacyDenied("privacy_processing_unavailable")
+                expected_content = intent.node.content
             node = next((
                 candidate for candidate in nodes
                 if candidate.content == expected_content
@@ -1371,6 +1396,8 @@ class MemoryEngine:
                 and candidate.session_id == session_id
             ), None)
             status = await self.processing_status(event_id, user_id=user_id)
+        except PrivacyDenied:
+            raise
         except Exception as exc:
             raise MaterializationError(
                 "Could not read the accepted store receipt",
@@ -1626,6 +1653,10 @@ class MemoryEngine:
                     user_id=node.user_id,
                 )
 
+    async def inspect_privacy_policy(self, *, user_id: str, scope: Scope = Scope.PERSONAL, policy: PrivacyPolicy | None = None) -> dict:
+        """Inspect effective policy and provider/retention limits without opening evidence."""
+        return await self._privacy.inspect(user_id=user_id, scope=scope, policy=policy)
+
     # --- Ingestion Operations ---
 
     async def ingest(
@@ -1641,6 +1672,7 @@ class MemoryEngine:
         event_time: datetime | None = None,
         wait_for_extraction: bool = False,
         scope: Scope = Scope.PERSONAL,
+        policy: PrivacyPolicy | None = None,
     ) -> str:
         """Ingest a message with LLM-powered extraction and materialization.
 
@@ -1672,6 +1704,9 @@ class MemoryEngine:
         Returns:
             String UUID of the persisted event.
         """
+        if self._privacy.selected(policy):
+            message = {"content": content, "role": role, "speaker": speaker, "first_person_owner": first_person_owner, "metadata": metadata, "event_time": event_time}
+            return (await self._privacy.ingest_many([message], user_id=user_id, scope=scope, session_id=session_id, wait_for_extraction=wait_for_extraction, policy=policy))[0]
         from prme.ingestion.temporal import validate_source_time
         from prme.models.owner_reference import attach_owner_reference
 
@@ -1718,6 +1753,7 @@ class MemoryEngine:
         session_id: str | None = None,
         wait_for_extraction: bool = False,
         scope: Scope = Scope.PERSONAL,
+        policy: PrivacyPolicy | None = None,
     ) -> list[str]:
         """Ingest a batch of messages with LLM extraction.
 
@@ -1738,6 +1774,8 @@ class MemoryEngine:
         Returns:
             List of event ID strings, one per message.
         """
+        if self._privacy.selected(policy):
+            return await self._privacy.ingest_many(messages, user_id=user_id, scope=scope, session_id=session_id, wait_for_extraction=wait_for_extraction, policy=policy)
         from prme.models.owner_reference import attach_owner_reference
 
         # Check every message's attribution before the first one is admitted.
@@ -1793,6 +1831,7 @@ class MemoryEngine:
         metadata: dict | None = None,
         scope: Scope = Scope.PERSONAL,
         event_time: datetime | None = None,
+        policy: PrivacyPolicy | None = None,
     ) -> str:
         """Durably accept a raw event and defer its indexing.
 
@@ -1818,6 +1857,9 @@ class MemoryEngine:
         Returns:
             String UUID of the persisted event.
         """
+        if self._privacy.selected(policy):
+            arguments = {k: v for k, v in locals().items() if k not in {"self", "content", "policy"}}
+            return await self._privacy.store(content, policy=policy, deferred=True, **arguments)
         from prme.ingestion.temporal import validate_source_time
 
         validate_source_time(event_time)
@@ -1850,6 +1892,7 @@ class MemoryEngine:
         *,
         user_id: str,
         request_id: str | UUID | None = None,
+        policy: PrivacyPolicy | None = None,
     ) -> list[str]:
         """Atomically accept an ordered batch of raw events without inference.
 
@@ -1865,15 +1908,20 @@ class MemoryEngine:
         empty input is a no-op. The owner is supplied once to make accidental
         mixed-tenant batches impossible.
         """
+        from prme.storage.fast_ingest import parse_fast_ingest_request_id
+        request_uuid = parse_fast_ingest_request_id(request_id)
+        saved_private_request = (await self._privacy.repository.request(request_uuid, user_id=user_id)
+                                 if request_id is not None else ())
+        if self._privacy.selected(policy) or saved_private_request:
+            result = await self._privacy.fast_many(items, user_id=user_id, request_id=request_id, policy=policy)
+            return [str(event_id) for event_id in result.event_ids]
         if not user_id:
             raise ValueError("user_id must be nonempty")
         from prme.storage.fast_ingest import (
             make_fast_ingest_record,
-            parse_fast_ingest_request_id,
         )
         from prme.storage.metadata import snapshot_metadata
 
-        request_uuid = parse_fast_ingest_request_id(request_id)
         validated = tuple(FastIngestItem.model_validate(item) for item in items)
         events = tuple(
             Event(
@@ -1921,6 +1969,10 @@ class MemoryEngine:
         """
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
 
+        from prme.privacy.records import PRIVACY_KEY
+        if PRIVACY_KEY in (event.metadata or {}):
+            await self._privacy.materialize_direct(event)
+            return
         status = await self._event_store.processing_status(str(event.id), user_id=event.user_id)
         if status is not None and status.status == "complete":
             return
@@ -2070,6 +2122,7 @@ class MemoryEngine:
         """
         return self._materialization_queue.debt_sync()
 
+    @privacy_disclosure
     async def extraction_status(self, event_id: str, *, user_id: str) -> ExtractionStatus | None:
         """Inspect durable LLM extraction separately from raw NOTE indexing."""
         return await self._event_store.extraction_work.status(event_id, user_id=user_id)
@@ -2153,6 +2206,7 @@ class MemoryEngine:
             )
         if self._pipeline is None:
             raise ValueError("reingest() needs an ingestion pipeline, and this engine has none")
+        await self._privacy.require_legacy_reingest(user_id, scope)
         return await self._pipeline.reingest(user_id=user_id, scope=scope, limit=limit, cursor=cursor,
                                              dry_run=dry_run)
 
@@ -2170,6 +2224,7 @@ class MemoryEngine:
         session_id: str | None = None,
         metadata: dict | None = None,
         scope: Scope = Scope.PERSONAL,
+        policy: PrivacyPolicy | None = None,
     ) -> list[str]:
         """Remember what an image or a video showed; return the observation event ids.
 
@@ -2203,6 +2258,8 @@ class MemoryEngine:
         failed; its ``report.event_ids`` lists the events the run did admit.
         Use :func:`prme.vision.observe_source` for the per-frame report.
         """
+        if self._privacy.selected(policy):
+            raise PrivacyDenied("privacy_unsupported_input")
         from prme.vision.errors import ObservationError
         from prme.vision.observe import observe_source
 
@@ -2229,6 +2286,7 @@ class MemoryEngine:
             self._vision_provider_instance = create_vision_provider(self._config.vision)
         return self._vision_provider_instance
 
+    @privacy_disclosure
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         """Embed *texts* with the pack's own embedding provider (the repeat filter uses it)."""
         provider = getattr(self._vector_index, "_provider", None)
@@ -2301,6 +2359,7 @@ class MemoryEngine:
         async with self._event_store._conn_lock:
             return await run_to_completion(query)
 
+    @privacy_disclosure
     async def processing_status(self, event_id: str, *, user_id: str) -> ProcessingStatus | None:
         """Read durable source materialization status within one user's events.
 
@@ -2332,6 +2391,7 @@ class MemoryEngine:
 
     # --- Retrieval Operations ---
 
+    @privacy_disclosure
     async def retrieve(
         self,
         query: str,
@@ -2594,6 +2654,7 @@ class MemoryEngine:
             raise ValueError(f"Node {node_id} not found")
         return node
 
+    @privacy_disclosure
     async def get_node(
         self,
         node_id: str,
@@ -2620,6 +2681,7 @@ class MemoryEngine:
             node_id, include_superseded=include_superseded
         )
 
+    @privacy_disclosure
     async def propose_product_alignment(
         self,
         left_node_id: str,
@@ -2643,6 +2705,7 @@ class MemoryEngine:
             config=config,
         )
 
+    @privacy_disclosure
     async def find_product_alignment_candidates(
         self,
         products: list[ProductCandidateEntity | dict[str, Any]],
@@ -2708,6 +2771,7 @@ class MemoryEngine:
             ),
         )
 
+    @privacy_disclosure
     async def list_alias_proposals(
         self,
         *,
@@ -2721,6 +2785,7 @@ class MemoryEngine:
             user_id=user_id, scope=scope, status=status, limit=limit
         )
 
+    @privacy_disclosure
     async def review_alias_proposal(
         self,
         proposal_operation_id: str,
@@ -2739,6 +2804,7 @@ class MemoryEngine:
             reason=reason,
         )
 
+    @privacy_disclosure
     async def query_nodes(self, **kwargs) -> list[MemoryNode]:
         """Query nodes with flexible filters.
 
@@ -2750,6 +2816,7 @@ class MemoryEngine:
         """
         return await self._graph_store.query_nodes(**kwargs)
 
+    @privacy_disclosure
     async def count_nodes(self, **kwargs) -> int:
         """Count nodes matching the filters without materializing them.
 
@@ -2762,6 +2829,7 @@ class MemoryEngine:
         """
         return await self._graph_store.count_nodes(**kwargs)
 
+    @privacy_disclosure
     async def scan_nodes(
         self, *, user_id: str, scope: Scope | None = None,
         node_type: NodeType | None = None,
@@ -2801,6 +2869,7 @@ class MemoryEngine:
                 break
             cursor = str(page[-1].id)
 
+    @privacy_disclosure
     async def aggregate_assertions(
         self,
         query: "AssertionQuery",
@@ -2824,6 +2893,7 @@ class MemoryEngine:
             batch_size=batch_size,
         )
 
+    @privacy_disclosure
     async def aggregate_quantities(
         self,
         query: "QuantityAggregationQuery",
@@ -2842,6 +2912,7 @@ class MemoryEngine:
             batch_size=batch_size,
         )
 
+    @privacy_disclosure
     async def aggregate_quantities_from_text(
         self,
         question: str,
@@ -2863,6 +2934,7 @@ class MemoryEngine:
         )
         return PlannedQuantityAggregation(plan=plan, aggregation=aggregation)
 
+    @privacy_disclosure
     async def get_assertion_state(
         self,
         query: "AssertionStateQuery",
@@ -2883,6 +2955,7 @@ class MemoryEngine:
 
     # --- Event Operations (delegated to EventStore) ---
 
+    @privacy_disclosure
     async def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
         """Read saved grounded model output for an owned source event.
 
@@ -2894,6 +2967,7 @@ class MemoryEngine:
             raise ValueError("get_extraction requires user_id")
         return await self._event_store.get_extraction(event_id, user_id=user_id)
 
+    @privacy_disclosure
     async def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
         """Retrieve an event by ID.
 
@@ -2908,6 +2982,7 @@ class MemoryEngine:
             return None
         return event
 
+    @privacy_disclosure
     async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
         """Get nodes citing an owned event, including retired derived knowledge.
 
@@ -2921,6 +2996,7 @@ class MemoryEngine:
             return []
         return await self._graph_store.get_event_nodes(event_id, user_id=user_id)
 
+    @privacy_disclosure
     async def get_provenance(
         self,
         node_id: str,
@@ -2989,6 +3065,7 @@ class MemoryEngine:
             next_operation_cursor=next_cursor,
         )
 
+    @privacy_disclosure
     async def get_events(
         self, user_id: str, **kwargs
     ) -> list[Event]:
@@ -3015,6 +3092,8 @@ class MemoryEngine:
         metadata: dict,
     ) -> str:
         """Append an adapter control event without deriving a memory node."""
+        if self._privacy.selected() or await self._privacy.repository.for_owner(user_id):
+            raise PrivacyDenied("privacy_unsupported_input")
         event = Event(
             content=content,
             user_id=user_id,
@@ -3032,6 +3111,7 @@ class MemoryEngine:
 
     # --- Lifecycle Transitions (delegated to GraphStore) ---
 
+    @privacy_disclosure
     async def promote(
         self,
         node_id: str,
@@ -3064,6 +3144,7 @@ class MemoryEngine:
             actor_id=actor or user_id or "system",
         )
 
+    @privacy_disclosure
     async def evaluate_condition(
         self,
         node_id: str,
@@ -3096,6 +3177,7 @@ class MemoryEngine:
             evaluated_at=evaluated_at,
         )
 
+    @privacy_disclosure
     async def supersede(
         self,
         old_node_id: str,
@@ -3139,6 +3221,7 @@ class MemoryEngine:
         # event log remains the source of truth, so this is reconstructable.
         await self._evict_from_indexes(old_node_id)
 
+    @privacy_disclosure
     async def contradict(
         self,
         node_a_id: str,
@@ -3169,6 +3252,7 @@ class MemoryEngine:
         by_id = {str(node.id): node for node in nodes}
         return by_id[str(UUID(node_a_id))], by_id[str(UUID(node_b_id))]
 
+    @privacy_disclosure
     async def resolve_contradiction(
         self,
         winner_id: str,
@@ -3203,6 +3287,7 @@ class MemoryEngine:
         by_id = {str(node.id): node for node in nodes}
         return by_id[str(UUID(winner_id))], by_id[str(UUID(loser_id))]
 
+    @privacy_disclosure
     async def archive(
         self,
         node_id: str,
@@ -3260,6 +3345,7 @@ class MemoryEngine:
 
     # --- Rebuild (issue #45) ---
 
+    @privacy_disclosure
     async def rebuild_indexes(self, *, batch_size: int = 256) -> dict[str, int]:
         """Rebuild the vector and lexical indexes from the durable graph.
 
@@ -3416,6 +3502,7 @@ class MemoryEngine:
 
     # --- Snapshots ---
 
+    @privacy_disclosure
     async def snapshot(
         self,
         entity_id: str,
@@ -3444,6 +3531,7 @@ class MemoryEngine:
 
     # --- Reinforcement ---
 
+    @privacy_disclosure
     async def reinforce(
         self,
         node_id: str,
@@ -3482,10 +3570,12 @@ class MemoryEngine:
             node_id, user_id=user_id, evidence_id=evidence_id, request_id=request_id,
         )
 
+    @privacy_disclosure
     async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:
         """Read the immutable returned-candidate snapshot through its owner."""
         return await self._relevance.get_receipt(request_id, user_id=user_id)
 
+    @privacy_disclosure
     async def record_relevance(self, submission: RelevanceSubmission, *, user_id: str) -> RelevanceRecord:
         """Durably record explicit labels; retry the same feedback_id safely.
 
@@ -3495,14 +3585,17 @@ class MemoryEngine:
         """
         return await self._relevance.record(submission, user_id=user_id)
 
+    @privacy_disclosure
     async def get_relevance(self, feedback_id: str, *, user_id: str) -> RelevanceRecord | None:
         return await self._relevance.get(feedback_id, user_id=user_id)
 
+    @privacy_disclosure
     async def list_relevance(self, *, user_id: str, limit: int = 100,
                              after_id: str | None = None) -> list[RelevanceRecord]:
         """Page by feedback UUID; concurrent inserts may precede the cursor."""
         return await self._relevance.list(user_id=user_id, limit=limit, after_id=after_id)
 
+    @privacy_disclosure
     async def record_answer_citations(
         self, submission: AnswerCitationSubmission, *, user_id: str,
     ) -> AnswerCitationRecord:
@@ -3514,11 +3607,13 @@ class MemoryEngine:
         """
         return await self._citations.record(submission, user_id=user_id)
 
+    @privacy_disclosure
     async def get_answer_citations(
         self, citation_id: str, *, user_id: str,
     ) -> AnswerCitationRecord | None:
         return await self._citations.get(citation_id, user_id=user_id)
 
+    @privacy_disclosure
     async def list_answer_citations(
         self, *, user_id: str, limit: int = 100, after_id: str | None = None,
     ) -> list[AnswerCitationRecord]:
@@ -3544,6 +3639,7 @@ class MemoryEngine:
         return await asyncio.to_thread(evaluate_learning, receipts, records, user_id=user_id,
                                        scopes=scope_copy, surface=surface, config=config, query_groups=group_copy)
 
+    @privacy_disclosure
     async def evaluate_full_retrieval(
         self, trials: Sequence[FullRetrievalTrial], *, user_id: str,
         scopes: list[Scope] | None, proposal_input_checksum: str,
@@ -3601,6 +3697,7 @@ class MemoryEngine:
             return "base_scoring_mismatch"
         return None
 
+    @privacy_disclosure
     async def create_ranking_profile(
         self, proposal: LearningEvaluation, holdout: FullRetrievalEvaluation, *,
         user_id: str, profile_id: str | UUID | None = None,
@@ -3625,11 +3722,13 @@ class MemoryEngine:
         )
         return await self._ranking_profiles.create(profile)
 
+    @privacy_disclosure
     async def get_ranking_profile(
         self, profile_id: str, *, user_id: str,
     ) -> RankingProfile | None:
         return await self._ranking_profiles.get(profile_id, user_id=user_id)
 
+    @privacy_disclosure
     async def list_ranking_profiles(
         self, *, user_id: str, limit: int = 100, after_id: str | None = None,
     ) -> list[RankingProfile]:
@@ -3637,12 +3736,14 @@ class MemoryEngine:
             user_id=user_id, limit=limit, after_id=after_id,
         )
 
+    @privacy_disclosure
     async def get_active_ranking_profile(
         self, *, user_id: str, scopes: list[Scope] | None = None,
     ) -> RankingProfile | None:
         scope_key = self._learning_scope_key(normalize_scope(scopes))
         return await self._ranking_profiles.active(user_id=user_id, scopes=scope_key)
 
+    @privacy_disclosure
     async def get_ranking_profile_status(
         self, profile_id: str, *, user_id: str,
     ) -> RankingProfileStatus | None:
@@ -3658,6 +3759,7 @@ class MemoryEngine:
             latest_change=latest,
         )
 
+    @privacy_disclosure
     async def list_ranking_profile_history(
         self, *, user_id: str, scopes: list[Scope] | None = None, limit: int = 100,
     ) -> list[RankingProfileState]:
@@ -3765,6 +3867,7 @@ class MemoryEngine:
 
     # --- Quality Feedback (Issue #24) ---
 
+    @privacy_disclosure
     async def feedback(self, signal: FeedbackSignal) -> None:
         """Record a feedback signal for quality tracking and auto-tuning.
 
@@ -3812,6 +3915,7 @@ class MemoryEngine:
 
     # --- Organization (RFC-0015) ---
 
+    @privacy_disclosure
     async def organize(
         self,
         *,
@@ -3907,6 +4011,7 @@ class MemoryEngine:
 
         return result
 
+    @privacy_disclosure
     async def consolidate_knowledge(
         self,
         *,
@@ -4124,6 +4229,7 @@ class MemoryEngine:
             lambda: self._graph_store.publish_profile(plan), label=f'consolidate.publish:{plan.node.id}',
         )
 
+    @privacy_disclosure
     async def profile_jobs(self, *, user_id: str, scope: Scope | None = None, status: str = 'pending', limit: int = 100) -> list[ProfileJobStatus]:
         """Inspect owned prepared-profile jobs; no source text or model calls."""
         if status not in {'pending', 'complete', 'abandoned'}:
@@ -4131,6 +4237,7 @@ class MemoryEngine:
         return await self._profile_work.list(user_id=user_id, scope=Scope(scope) if scope is not None else None,
                                              status=status, limit=limit)
 
+    @privacy_disclosure
     async def resume_profile(self, profile_id: str, *, user_id: str) -> str | None:
         """Publish an owned prepared profile without repeating model inference.
 
@@ -4158,6 +4265,7 @@ class MemoryEngine:
         from prme.storage.profile_retirement import discard
         return await discard(self._profile_work, profile_id, user_id=user_id)
 
+    @privacy_disclosure
     async def process_profiles(self, *, user_id: str, scope: Scope | None = None, limit: int = 100, budget_ms: float = 5000) -> ProfileProcessingResult:
         """Resume a bounded owned profile batch, preserving per-job failures.
 
@@ -4192,6 +4300,7 @@ class MemoryEngine:
         return {'processed': processed, 'failed': len(errors), 'pending': await self._profile_work.count(user_id=user_id, scope=scope),
                 'errors': errors}
 
+    @privacy_disclosure
     async def end_session(
         self,
         *,

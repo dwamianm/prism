@@ -20,7 +20,7 @@ class PlanningGraph:
     not make its future updates invalidate the plan.
     """
 
-    def __init__(self, graph: GraphStore, event: Event):
+    def __init__(self, graph: GraphStore, event: Event, *, legacy_check=None):
         self.graph = graph
         self.event = Event.model_validate_json(event.model_dump_json())
         self.nodes: dict[UUID, MemoryNode] = {}
@@ -29,6 +29,7 @@ class PlanningGraph:
         self._read: dict[UUID, MemoryNode] = {}
         self._scan_page: dict[UUID, MemoryNode] = {}
         self._retired: set[UUID] = set()
+        self.legacy_check = legacy_check
 
     def _snapshot(self, node: MemoryNode) -> MemoryNode:
         if (node.user_id, node.scope) != (self.event.user_id, self.event.scope):
@@ -60,6 +61,8 @@ class PlanningGraph:
             if node is None or (node.user_id, node.scope) != (self.event.user_id, self.event.scope):
                 return None
         if key not in self.nodes:
+            if self.legacy_check is not None:
+                await self.legacy_check((node,))
             self._read.setdefault(key, self._snapshot(node))
             node = self._read[key]
         return node.model_copy(deep=True)
@@ -89,6 +92,8 @@ class PlanningGraph:
             if node is None:
                 continue
             if key not in self.nodes:
+                if self.legacy_check is not None:
+                    await self.legacy_check((node,))
                 node = self._read.setdefault(key, self._snapshot(node))
             result.append(node.model_copy(deep=True))
         return result
@@ -107,6 +112,8 @@ class PlanningGraph:
             user_id=user_id, scope=scope, node_type=node_type,
             after_id=after_id, limit=limit + len(self._retired),
         )
+        if self.legacy_check is not None:
+            await self.legacy_check(durable)
         candidates = {node.id: self._read.get(node.id) or self._snapshot(node) for node in durable}
         candidates.update(self.nodes)
         result = [node for node in candidates.values()
@@ -201,20 +208,42 @@ class PlanningIndexes:
         self,
         provider: EmbeddingProvider,
         *,
+        privacy=None,
         materialization_policy: Literal[
             "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
         ] = (
             "speech_act_v12"
         ),
     ) -> DerivationPlan:
+        if privacy is not None:
+            from prme.privacy.records import PRIVACY_KEY
+            coordinator, prepared = privacy
+            for key, node in tuple(self.graph.nodes.items()):
+                metadata = dict(node.metadata or {})
+                # New plans do not become a hidden evidence archive. Grounded
+                # structured fields/qualifiers remain for PV-05 projection.
+                metadata.pop("evidence_quote", None)
+                metadata.pop("resolution", None)
+                metadata[PRIVACY_KEY] = prepared.record.reference()
+                self.graph.nodes[key] = node.model_copy(update={"metadata": metadata})
         # Snapshot before provider I/O, including referenced existing nodes.
         nodes = tuple(node.model_copy(deep=True) for node in self.graph.nodes.values())
         references = await self.graph.references()
+        if privacy is not None:
+            await coordinator.validate_references(prepared.record, references)
+        elif self.graph.legacy_check is not None:
+            await self.graph.legacy_check(references)
         inputs = tuple(self.vectors.items())
         if {key for key, _ in inputs} != {node.id for node in nodes}:
             raise ValueError("Every planned node requires an embedding input")
+        if privacy is not None:
+            provider = coordinator.require_runtime().embedder
         identity = (provider.model_name, provider.model_version, provider.dimension)
-        vectors = await encode_texts(provider, [content for _, content in inputs]) if inputs else []
+        vectors = (await coordinator.encode(tuple(content for _, content in inputs), prepared.record.snapshot,
+                   processing=prepared.record.processing_state == "pending")
+                   if privacy is not None else await encode_texts(provider, [content for _, content in inputs])) if inputs else []
+        if privacy is None and self.graph.legacy_check is not None:
+            await self.graph.legacy_check(references)
         if len(vectors) != len(inputs):
             raise ValueError("Embedding provider must return one vector per planned input")
         if identity != (provider.model_name, provider.model_version, provider.dimension):

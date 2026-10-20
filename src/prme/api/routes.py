@@ -51,6 +51,7 @@ from prme.models.aggregation import (
 from prme.models.temporal import AssertionState
 from prme.models.provenance import NodeProvenance
 from prme.api.models import (
+    PrivacyInspectionRequest,
     AcceptedWorkErrorResponse,
     AnswerCitationRequest,
     AliasProposalReviewRequest,
@@ -241,7 +242,7 @@ async def store(request: Request, body: StoreRequest) -> StoreResponse | JSONRes
         "user_id": _user_id(request, body.user_id, required=True),
         "role": body.role,
     }
-    for name in ("retrieval_content", "value_bindings", "node_type", "scope", "epistemic_type", "metadata", "session_id",
+    for name in ("policy", "retrieval_content", "value_bindings", "node_type", "scope", "epistemic_type", "metadata", "session_id",
                  "source_type", "confidence", "event_time", "valid_from", "valid_to", "speaker", "extract"):
         value = getattr(body, name)
         if value is not None:
@@ -281,7 +282,7 @@ async def ingest(request: Request, body: IngestRequest) -> IngestResponse | JSON
         "role": body.role,
         "wait_for_extraction": body.wait_for_extraction,
     }
-    for name in ("scope", "session_id", "metadata", "event_time", "speaker"):
+    for name in ("policy", "scope", "session_id", "metadata", "event_time", "speaker"):
         value = getattr(body, name)
         if value is not None:
             kwargs[name] = value
@@ -316,6 +317,7 @@ async def ingest_fast_many(
             body.items,
             user_id=owner,
             request_id=idempotency_key,
+            policy=body.policy,
         )
     except FastIngestConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -1409,3 +1411,11 @@ async def get_answer_citations(
     if result is None:
         raise HTTPException(status_code=404, detail="Answer citation record not found")
     return result
+
+
+
+
+@router.post("/privacy/policy", summary="Inspect effective privacy policy and provider limits")
+async def inspect_privacy_policy(request: Request, body: PrivacyInspectionRequest):
+    return await _get_engine(request).inspect_privacy_policy(
+        user_id=_user_id(request, body.user_id, required=True), scope=body.scope, policy=body.policy)

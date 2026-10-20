@@ -1,7 +1,7 @@
 """Static consumer contract; checked by mypy rather than executed."""
 
 from datetime import datetime, timezone
-from typing import assert_type
+from typing import Any, assert_type
 from uuid import UUID
 
 from prme import AliasProposalInboxItem, AliasProposalReviewResult, AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, MemoryValueBinding, ProductAlignmentCandidate, ProductCandidateEntity, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievedValueBinding, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, ReingestResult, RetrievalResponse, Scope, StoreReceipt, ToolArgumentBindingUse, ToolArgumentResolution, ablate_context, assess_context_presence, evaluate_full_retrieval
@@ -9,6 +9,19 @@ from prme import NodeType, SourceType
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
+from prme import PrivacyPolicy, PrivacyRuntime, PRMEConfig
+
+
+def protected_consumer(client: MemoryClient, policy: PrivacyPolicy, runtime: PrivacyRuntime) -> None:
+    config = PRMEConfig(privacy_policy=policy)
+    assert_type(config.privacy_policy, PrivacyPolicy | None)
+    owner = str(policy.owner_id)
+    assert_type(client.store("admitted memory", user_id=owner, policy=policy), str)
+    assert_type(client.store_with_receipt("admitted memory", user_id=owner, policy=policy), StoreReceipt)
+    assert_type(client.ingest("source", user_id=owner, policy=policy), str)
+    assert_type(client.ingest_fast_many([{"content": "source"}], user_id=owner, policy=policy), list[str])
+    assert_type(client.inspect_privacy_policy(user_id=owner, policy=policy), dict[Any, Any])
+    assert_type(MemoryClient(config=config, privacy_runtime=runtime), MemoryClient)
 
 
 def consume(client: MemoryClient) -> None:

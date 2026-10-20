@@ -4,6 +4,8 @@ All tools are thin wrappers around MemoryEngine methods.
 No business logic belongs here — delegate everything to the engine.
 """
 
+from prme.privacy.policy import PrivacyPolicy, PrivacyDenied
+
 import argparse
 import json
 import logging
@@ -118,7 +120,9 @@ def _internal_error(operation: str, exc: Exception) -> str:
     library internals to remote callers (issue #34) — details go to the
     server log only.
     """
-    logger.error("Unexpected error in %s", operation, exc_info=exc)
+    if isinstance(exc, PrivacyDenied):
+        return json.dumps({"error": exc.code})
+    logger.error("Unexpected error in %s (%s)", operation, type(exc).__name__)
     return json.dumps({"error": f"Internal error in {operation}"})
 
 
@@ -134,7 +138,8 @@ async def engine_lifespan(server: FastMCP):
 
     config = server.prme_config or PRMEConfig()
     logger.info("Starting PRME MemoryEngine (backend=%s)...", config.backend)
-    engine = await MemoryEngine.create(config)
+    engine = await MemoryEngine.create(config, privacy_runtime=getattr(server, "prme_privacy_runtime", None),
+                                       embedding_provider=getattr(server, "prme_embedding_provider", None))
     logger.info("PRME MemoryEngine ready")
 
     try:
@@ -173,6 +178,7 @@ async def memory_store(
     speaker: Optional[str] = None,
     extract: Optional[StrictBool] = None,
     ctx: Context = None,
+    policy: Optional[dict[str, Any]] = None,
 ) -> str:
     """Store a memory.
 
@@ -209,6 +215,10 @@ async def memory_store(
     """
     engine = _get_engine(ctx)
     try:
+        selected_policy = PrivacyPolicy.model_validate(policy) if policy is not None else None
+    except ValueError:
+        return json.dumps({"error": "privacy_configuration_invalid"})
+    try:
         user_id = _get_user_id(engine, user_id, required=True)
     except PermissionError as exc:
         return json.dumps({"error": str(exc)})
@@ -216,16 +226,21 @@ async def memory_store(
     try:
         nt = NodeType(node_type)
     except ValueError:
+        if selected_policy is not None or engine._config.privacy_policy is not None:
+            return json.dumps({"error": "privacy_configuration_invalid"})
         return json.dumps({"error": f"Invalid node_type: {node_type!r}. Valid: {[e.value for e in NodeType]}"})
 
     try:
         sc = Scope(scope)
     except ValueError:
+        if selected_policy is not None or engine._config.privacy_policy is not None:
+            return json.dumps({"error": "privacy_configuration_invalid"})
         return json.dumps({"error": f"Invalid scope: {scope!r}. Valid: {[e.value for e in Scope]}"})
 
     try:
         receipt = await engine.store_with_receipt(
             content,
+            policy=selected_policy,
             user_id=user_id,
             retrieval_content=retrieval_content,
             value_bindings=value_bindings,
@@ -267,6 +282,7 @@ async def memory_ingest_fast_many(
     user_id: Optional[str] = None,
     request_id: Optional[str] = None,
     ctx: Context = None,
+    policy: Optional[dict[str, Any]] = None,
 ) -> str:
     """Atomically admit ordered raw sources for deferred graph/index work.
 
@@ -279,11 +295,16 @@ async def memory_ingest_fast_many(
     """
     engine = _get_engine(ctx)
     try:
+        selected_policy = PrivacyPolicy.model_validate(policy) if policy is not None else None
+    except ValueError:
+        return json.dumps({"error": "privacy_configuration_invalid"})
+    try:
         owner = _get_user_id(engine, user_id, required=True)
         if not items:
             raise ValueError("items must contain at least one raw source")
         event_ids = await engine.ingest_fast_many(
             items,
+            policy=selected_policy,
             user_id=owner,
             request_id=request_id,
         )
@@ -495,6 +516,8 @@ async def memory_ingest(
     event_time: Optional[AwareDatetime] = None,
     speaker: Optional[str] = None,
     first_person_owner: StrictBool = False,
+    wait_for_extraction: StrictBool = False,
+    policy: Optional[dict[str, Any]] = None,
 ) -> str:
     """Ingest content with LLM-powered extraction.
 
@@ -518,6 +541,10 @@ async def memory_ingest(
     """
     engine = _get_engine(ctx)
     try:
+        selected_policy = PrivacyPolicy.model_validate(policy) if policy is not None else None
+    except ValueError:
+        return json.dumps({"error": "privacy_configuration_invalid"})
+    try:
         user_id = _get_user_id(engine, user_id, required=True)
     except PermissionError as exc:
         return json.dumps({"error": str(exc)})
@@ -525,13 +552,17 @@ async def memory_ingest(
     try:
         sc = Scope(scope)
     except ValueError:
+        if selected_policy is not None or engine._config.privacy_policy is not None:
+            return json.dumps({"error": "privacy_configuration_invalid"})
         return json.dumps({"error": f"Invalid scope: {scope!r}"})
 
     try:
         event_id = await engine.ingest(
             content,
+            policy=selected_policy,
             user_id=user_id,
             role=role,
+            wait_for_extraction=wait_for_extraction,
             speaker=speaker,
             first_person_owner=first_person_owner,
             scope=sc,
@@ -1747,15 +1778,55 @@ async def resource_node(node_id: str, ctx: Context) -> str:
         return _internal_error("memory://nodes resource", e)
 
 
-def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifespan) -> FastMCP:
+async def memory_inspect_privacy_policy(user_id: Optional[str] = None, scope: str = "personal",
+                                        policy: Optional[dict[str, Any]] = None, ctx: Context = None) -> str:
+    """Inspect effective privacy limits and provider use without decrypting evidence."""
+    engine = _get_engine(ctx)
+    try:
+        selected = PrivacyPolicy.model_validate(policy) if policy is not None else None
+        result = await engine.inspect_privacy_policy(user_id=_get_user_id(engine, user_id, required=True),
+                                                     scope=Scope(scope), policy=selected)
+        return json.dumps(result)
+    except PrivacyDenied as exc:
+        return json.dumps({"error": exc.code})
+    except (ValueError, PermissionError):
+        return json.dumps({"error": "privacy_configuration_invalid"})
+
+
+class _PrivacyFastMCP(FastMCP):
+    async def call_tool(self, name: str, arguments: dict[str, Any]):
+        # The active lifespan owns its resolved configuration. Reusing a server
+        # must not cache the first environment or another lifespan's policy.
+        try:
+            config = _get_engine(self.get_context())._config
+        except ValueError:  # Direct invocation outside an MCP request context.
+            config = self.prme_config
+        if (config is not None and config.privacy_policy is not None) or arguments.get("policy") is not None:
+            # FastMCP validates before the tool body, then formats ValidationError
+            # with raw input values. Validate at dispatch before that formatter;
+            # keep the same schemas and JSON argument conversion for valid calls.
+            tool = self._tool_manager.get_tool(name)
+            if tool is None:
+                raise PrivacyDenied("privacy_unsupported_input")
+            try:
+                metadata = tool.fn_metadata
+                metadata.arg_model.model_validate(metadata.pre_parse_json(arguments))
+            except Exception:
+                raise PrivacyDenied("privacy_unsupported_input") from None
+        return await super().call_tool(name, arguments)
+
+
+def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifespan, privacy_runtime=None, embedding_provider=None) -> FastMCP:
     """Build an isolated MCP server with request-scoped tools and resources."""
-    server = FastMCP(
+    server = _PrivacyFastMCP(
         "prme", instructions="PRME — Portable Relational Memory Engine. "
         "Store, retrieve, and organize long-term memory for AI agents.",
         lifespan=lifespan, stateless_http=True, json_response=True,
     )
     server.prme_config = config
-    for tool in (memory_store, memory_ingest_fast_many, memory_process_materializations,
+    server.prme_privacy_runtime = privacy_runtime
+    server.prme_embedding_provider = embedding_provider
+    for tool in (memory_inspect_privacy_policy, memory_store, memory_ingest_fast_many, memory_process_materializations,
                  memory_retrieve, memory_ingest, memory_organize,
                  memory_list_alias_proposals, memory_review_alias_proposal,
                  memory_get_node, memory_scan_nodes, memory_aggregate_assertions,

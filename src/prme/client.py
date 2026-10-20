@@ -17,6 +17,9 @@ Usage::
 
 from __future__ import annotations
 
+from prme.privacy import PrivacyPolicy, PrivacyRuntime
+
+
 import asyncio
 import atexit
 import logging
@@ -234,6 +237,7 @@ class MemoryClient:
         *,
         config: PRMEConfig | None = None,
         embedding_provider: EmbeddingProvider | None = None,
+        privacy_runtime: PrivacyRuntime | None = None,
     ) -> None:
         # A failed constructor must not leave a usable client or emit a
         # destructor error that hides the original configuration failure.
@@ -255,10 +259,7 @@ class MemoryClient:
         # Create the engine on that loop.
         from prme.storage.engine import MemoryEngine
 
-        creation = (
-            MemoryEngine.create(self._config, embedding_provider=embedding_provider)
-            if embedding_provider is not None else MemoryEngine.create(self._config)
-        )
+        creation = MemoryEngine.create(self._config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
         future = asyncio.run_coroutine_threadsafe(creation, self._loop)
         try:
             self._engine: MemoryEngine = future.result(timeout=60)
@@ -344,6 +345,7 @@ class MemoryClient:
         valid_to: datetime | None = None,
         ttl_days: int | None = ...,
         extract: bool | None = None,
+        policy: PrivacyPolicy | None = None,
     ) -> str:
         """Store a memory. Returns the event UUID.
 
@@ -362,7 +364,7 @@ class MemoryClient:
         return self._run(
             self._engine.store(
                 content,
-                user_id=user_id,
+                user_id=user_id, policy=policy,
                 retrieval_content=retrieval_content,
                 value_bindings=value_bindings,
                 session_id=session_id,
@@ -403,11 +405,12 @@ class MemoryClient:
         valid_to: datetime | None = None,
         ttl_days: int | None = ...,
         extract: bool | None = None,
+        policy: PrivacyPolicy | None = None,
     ) -> StoreReceipt:
         """Store a memory and return its event, node, and processing status."""
         return self._run(self._engine.store_with_receipt(
             content,
-            user_id=user_id,
+            user_id=user_id, policy=policy,
             retrieval_content=retrieval_content,
             value_bindings=value_bindings,
             session_id=session_id,
@@ -478,6 +481,10 @@ class MemoryClient:
             )
         )
 
+    def inspect_privacy_policy(self, *, user_id: str, scope: Scope = Scope.PERSONAL, policy: PrivacyPolicy | None = None) -> dict:
+        """Inspect policy limits without opening retained source payloads."""
+        return self._run(self._engine.inspect_privacy_policy(user_id=user_id, scope=scope, policy=policy))
+
     def ingest(
         self,
         content: str,
@@ -490,12 +497,13 @@ class MemoryClient:
         metadata: dict | None = None,
         event_time: datetime | None = None,
         scope: Scope = Scope.PERSONAL,
+        policy: PrivacyPolicy | None = None,
     ) -> str:
         """Ingest with extraction; event_time is the timezone-aware source clock."""
         return self._run(
             self._engine.ingest(
                 content,
-                user_id=user_id,
+                user_id=user_id, policy=policy,
                 role=role,
                 speaker=speaker,
                 first_person_owner=first_person_owner,
@@ -514,12 +522,13 @@ class MemoryClient:
         user_id: str,
         session_id: str | None = None,
         scope: Scope = Scope.PERSONAL,
+        policy: PrivacyPolicy | None = None,
     ) -> list[str]:
         """Ingest a batch of messages. Returns list of event UUIDs."""
         return self._run(
             self._engine.ingest_batch(
                 messages,
-                user_id=user_id,
+                user_id=user_id, policy=policy,
                 session_id=session_id,
                 wait_for_extraction=True,
                 scope=scope,
@@ -536,6 +545,7 @@ class MemoryClient:
         session_id: str | None = None,
         metadata: dict | None = None,
         scope: Scope = Scope.PERSONAL,
+        policy: PrivacyPolicy | None = None,
     ) -> list[str]:
         """Remember what a photo or a saved video showed; return the observation event ids.
 
@@ -550,7 +560,7 @@ class MemoryClient:
         return self._run(
             self._engine.observe(
                 source,
-                user_id=user_id,
+                user_id=user_id, policy=policy,
                 captured_at=captured_at,
                 source_name=source_name,
                 session_id=session_id,
@@ -855,10 +865,11 @@ class MemoryClient:
         speaker: str | None = None,
         session_id: str | None = None, metadata: dict | None = None,
         scope: Scope = Scope.PERSONAL, event_time: datetime | None = None,
+        policy: PrivacyPolicy | None = None,
     ) -> str:
         """Durably accept a raw event; indexing resumes on processing/retrieval."""
         return self._run(self._engine.ingest_fast(
-            content, user_id=user_id, role=role, speaker=speaker, session_id=session_id,
+            content, user_id=user_id, policy=policy, role=role, speaker=speaker, session_id=session_id,
             metadata=metadata, scope=scope, event_time=event_time,
         ))
 
@@ -868,12 +879,13 @@ class MemoryClient:
         *,
         user_id: str,
         request_id: str | UUID | None = None,
+        policy: PrivacyPolicy | None = None,
     ) -> list[str]:
         """Atomically accept raw events with optional retry identity."""
         return self._run(
             self._engine.ingest_fast_many(
                 items,
-                user_id=user_id,
+                user_id=user_id, policy=policy,
                 request_id=request_id,
             )
         )

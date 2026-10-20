@@ -25,6 +25,26 @@ PRME_EXTRACTION__MODEL=gpt-4o-mini
 
 For store-only usage (no LLM), no configuration is needed.
 
+## Explicit evidence policy
+
+`PRMEConfig(privacy_policy=PrivacyPolicy(...))` selects an opt-in evidence policy;
+the default is `None`. The caller can further restrict it with a text write's
+`policy` argument. A policy requires opaque project/owner IDs, an explicit memory
+retention choice, and finite evidence retention unless unlimited retention is
+explicitly permitted by both policy and deployment.
+
+Protected admission requires an injected `PrivacyRuntime` with an authoritative
+policy service, sanitizer, payload protector and guarded providers. Missing
+capabilities reject before new store creation. Built-in providers are not yet
+implicitly eligible for protected operation. This component does not turn on a
+production protected profile or change existing defaults. The current alpha
+enables owner-group links, which protected profiles do not support: use
+`PRMEConfig(privacy_policy=policy, enable_owner_group_links=False)`, or set
+`PRME_ENABLE_OWNER_GROUP_LINKS=false`. Leaving it enabled returns the fixed
+`privacy_configuration_invalid` error before protected admission effects. See
+[evidence policies](../docs/PRIVACY-POLICIES.md) for valid combinations,
+synchronous preparation, provider inspection and remaining integration limits.
+
 ## Storage Paths
 
 | Variable | Default | Description |

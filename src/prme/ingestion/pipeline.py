@@ -120,6 +120,7 @@ class BatchRun:
 
     save: Callable[..., Awaitable[None]]
     requests: int = 0
+    check: Callable[[], Awaitable[None]] | None = None
 
 # Fact type to NodeType mapping
 _FACT_TYPE_TO_NODE_TYPE: dict[str, NodeType] = {
@@ -309,6 +310,7 @@ class IngestionPipeline:
                                  "or fact text resolution")
             if not isinstance(extraction_provider, BatchExtractionProvider):
                 raise ValueError("Batched extraction needs a provider with extract_batch()")
+        self._privacy = None
         self._event_store = event_store
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -747,6 +749,13 @@ class IngestionPipeline:
 
         heartbeat = asyncio.create_task(renew_lease()) if claim is not None else None
         try:
+            from prme.privacy.records import PRIVACY_KEY
+            if PRIVACY_KEY in (event.metadata or {}):
+                if self._privacy is None:
+                    from prme.privacy.policy import PrivacyDenied
+                    raise PrivacyDenied("privacy_capability_unavailable")
+                await self._privacy.resume(event, claim=claim)
+                return
             plan = await self._event_store.get_derivation_plan(event_id, user_id=event.user_id)
             if plan is None:
                 result = await self._extract_or_load(event, claim=claim, through=through)
@@ -1049,12 +1058,26 @@ class IngestionPipeline:
         )
         from prme.models.extraction import ExtractionBatchMemory, ExtractionBatchRecord, ExtractionBatchTurn
 
+        memories = []
+
+        async def check():
+            if self._privacy is not None:
+                await self._privacy.require_legacy_inputs(events)
+                records = await self._privacy.repository.records_for_objects(
+                    [("nodes", str(memory.node_id)) for memory in memories], owner=head.user_id)
+                if records:
+                    from prme.privacy.policy import PrivacyDenied
+                    raise PrivacyDenied("privacy_provider_unavailable")
+            if run is not None and run.check is not None:
+                await run.check()
+
+        await check()
         turns = [
             BatchTurn(index=index, role=event.role, content=event.content,
                       speaker=metadata_speaker(event.metadata), time=event.event_time or event.timestamp)
             for index, event in enumerate(events, start=1)
         ]
-        memories = await self._correction_memories(events)
+        memories = await self._correction_memories(events, check=check)
         # Named only when there are memories, so a provider written before
         # enable_extraction_corrections keeps working while it is off.
         extra = {"memories": memories} if memories else {}
@@ -1062,7 +1085,9 @@ class IngestionPipeline:
             if run is not None:
                 run.requests += 1
             async with self._extraction_semaphore:
+                await check()
                 raw = await self._extraction_provider.extract_batch(turns, **extra)
+            await check()
             if hasattr(raw, "model_dump"):
                 raw = raw.model_dump(mode="json")
             # The speaker is shown to the model either way; grounding accepts
@@ -1130,8 +1155,12 @@ class IngestionPipeline:
         save = run.save if run is not None else (
             lambda saved, saved_records: self._event_store.record_extraction_batch(saved, saved_records, claim=claim)
         )
+        async def save_checked():
+            await check()
+            await save(batch, records)
+
         await self._write_queue.submit(
-            lambda: save(batch, records),
+            save_checked,
             label=f"extraction.batch:{batch.id}",
         )
         logger.info("ingestion.extraction_batch_saved", event_id=str(head.id), batch_id=str(batch.id),
@@ -1147,7 +1176,7 @@ class IngestionPipeline:
             logger.warning("ingestion.extraction_batch_turns_missing", event_id=str(head.id),
                            batch_id=str(batch.id), turns=without_entry, batch_turns=len(turns))
 
-    async def _correction_memories(self, events: list[Event]):
+    async def _correction_memories(self, events: list[Event], *, check=None):
         """Earlier claims a batched request shows the model (enable_extraction_corrections, #277).
 
         For each turn in order, the claims nearest its text in the vector
@@ -1166,6 +1195,10 @@ class IngestionPipeline:
         chosen: dict[str, MemoryNode] = {}
         for event in events:
             moment = event.event_time or event.timestamp
+            if check is not None:
+                await check()
+            if self._privacy is not None:
+                await self._privacy.require_legacy_inputs(events)
             hits = await self._vector_index.search(
                 event.content, event.user_id, k=_CORRECTION_SEARCH_K, scope=[event.scope.value],
             )
@@ -1178,6 +1211,8 @@ class IngestionPipeline:
                     shown += 1
                     continue
                 node = await self._graph_store.get_node(node_id)
+                if node is not None and self._privacy is not None:
+                    await self._privacy.require_legacy_inputs(events, (node,))
                 if (node is None or (node.user_id, node.scope) != (event.user_id, event.scope)
                         or not correctable_claim(node) or (node.event_time or node.valid_from) > moment):
                     continue
@@ -1233,10 +1268,12 @@ class IngestionPipeline:
         result: ExtractionResult,
         event: Event,
         *,
+        privacy=None,
         materialization_policy: Literal[
             "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
         ] = "speech_act_v14",
         before_prepare: Callable[[PlanningGraph], Awaitable[None]] | None = None,
+        effect_check: Callable[[], Awaitable[None]] | None = None,
     ) -> DerivationPlan:
         """Prepare fixed graph/index inputs without publishing any artifacts.
 
@@ -1248,7 +1285,19 @@ class IngestionPipeline:
 
         event = Event.model_validate_json(event.model_dump_json())
         result = ExtractionResult.model_validate_json(result.model_dump_json())
-        graph = PlanningGraph(self._graph_store, event)
+        group_check = None
+
+        async def legacy_check(nodes=()):
+            if self._privacy is not None:
+                await self._privacy.require_legacy_inputs((event,), nodes)
+            if group_check is not None:
+                await group_check(nodes=nodes)
+            if effect_check is not None:
+                await effect_check()
+
+        if privacy is None:
+            await legacy_check()
+        graph = PlanningGraph(self._graph_store, event, legacy_check=legacy_check if privacy is None else None)
         indexes = PlanningIndexes(graph)
         current_policy = materialization_policy in {"speech_act_v12", "speech_act_v13", "speech_act_v14"}
         from prme.models.owner_reference import OWNER_REFERENCE_KEY
@@ -1264,7 +1313,7 @@ class IngestionPipeline:
         # turns that do name their speaker mark the entity a later turn will find.
         carried = None
         owner_name_basis = None
-        if (self._owner_name_carry and self._bind_speaker_references and current_policy
+        if (privacy is None and self._owner_name_carry and self._bind_speaker_references and current_policy
                 and not owner_reference and event.role.casefold() in OWNER_ROLES):
             owner_name_basis = "speaker" if speaker is not None else "self_introduction" if introduced else None
             if owner_name_basis is None and any(
@@ -1280,13 +1329,17 @@ class IngestionPipeline:
                 and not owner_reference and event.role.casefold() in OWNER_ROLES
                 and (event.metadata or {}).get(OWNER_REFERENCE_KEY) is not True
                 and _speaks_for_a_group(result)):
+            group_events = self._event_store
+            if self._privacy is not None:
+                _, group_events, group_check = await self._privacy.legacy_group_reads(
+                    event.user_id, event.scope, event=event)
             owner = await carried_owner_entity(
                 graph, user_id=event.user_id, scope=event.scope, name=metadata_speaker(event.metadata),
             )
             if owner is not None:
                 group_owner = str(owner.id)
                 # The session's turns up to this one bound which earlier copies are read.
-                group_session = {str(turn.id) for turn in await self._event_store.get_by_user(
+                group_session = {str(turn.id) for turn in await group_events.get_by_user(
                     event.user_id, session_id=event.session_id, scopes=[event.scope], until=event.timestamp,
                     limit=SESSION_TURNS,
                 )}
@@ -1309,7 +1362,7 @@ class IngestionPipeline:
             await before_prepare(graph)
         return await indexes.prepare(
             self._vector_index._provider,
-            materialization_policy=materialization_policy,
+            materialization_policy=materialization_policy, privacy=privacy,
         )
 
     async def _populate(
@@ -1783,13 +1836,17 @@ class IngestionPipeline:
         if self._link_owner_groups:
             from prme.ingestion.group_links import link_group_claims
 
-            await link_group_claims(
-                str(plan.event_id), plan.nodes, user_id=plan.user_id, graph_store=self._graph_store,
-                event_store=self._event_store,
-                create_edge=(
-                    self._graph_writer or WriteQueueGraphWriter(self._graph_store, self._write_queue)
-                ).create_edge,
-            )
+            if self._privacy is not None:
+                await self._privacy.link_legacy_groups(
+                    str(plan.event_id), plan.nodes, user_id=plan.user_id, scope=plan.scope)
+            else:
+                await link_group_claims(
+                    str(plan.event_id), plan.nodes, user_id=plan.user_id, graph_store=self._graph_store,
+                    event_store=self._event_store,
+                    create_edge=(
+                        self._graph_writer or WriteQueueGraphWriter(self._graph_store, self._write_queue)
+                    ).create_edge,
+                )
 
     async def _materialize(
         self, result: ExtractionResult, event: Event, event_id: str,

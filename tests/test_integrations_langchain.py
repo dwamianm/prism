@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
@@ -12,17 +13,33 @@ pytest.importorskip("langchain_core", reason="langchain-core not installed")
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
+from prme import MemoryClient
 from prme.client import config_from_directory
+from prme.integrations import langchain as lc
 from prme.integrations._chat_history import CHAT_CONTROL_METADATA_KEY
 from prme.integrations.langchain import PRMEChatMessageHistory, PRMERetriever
+from prme.privacy import PrivacyDenied
 from prme.retrieval.config import ScoringWeights
 from prme.types import Scope, SourceType
+from tests.privacy_fakes import config_for, make_runtime, policy_for
 
 
 @pytest.fixture
 def tmpdir():
     with tempfile.TemporaryDirectory() as d:
         yield d
+
+
+def test_AP01_lossless_history_explicitly_refuses_protected_profile(tmp_path, monkeypatch):
+    r = make_runtime()
+    p = policy_for(r)
+    with MemoryClient(config=config_for(tmp_path, policy=p), embedding_provider=r.embedder, privacy_runtime=r) as client:
+        # Inject an existing real client, not fake policy/storage/adapter behavior.
+        monkeypatch.setattr(lc, "MemoryClient", lambda *a, **k: client)
+        history = PRMEChatMessageHistory(user_id=str(p.owner_id), session_id=str(uuid4()))
+        with pytest.raises(PrivacyDenied, match="unsupported"):
+            history.add_message(HumanMessage(content="Alex does not like tea unless it is cold."))
+        assert client.get_events(str(p.owner_id)) == []
 
 
 class TestPRMERetriever:
