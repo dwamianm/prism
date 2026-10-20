@@ -1052,3 +1052,38 @@ stale-anchor report is preserved as `323-upstream352-contract-before-anchors.log
 Neither is a runtime failure or an unsuccessful source-repair cycle. All earlier
 failed evidence, approved reviews and pending full-suite/dependency gates remain
 separate and unchanged. No new cohort, live call or broad full run was added.
+
+## Legacy chat-history fixture compatibility
+
+At pushed checkpoint `4f1deb7784d8ebb67688fcd0f3db9b74ee810d3f`, CI run
+39495180277, integration Python 3.13 job 118878294206, failed the three existing
+pagination/clear/version tests because their _PagedEvents double lacks the
+MemoryClient.require_legacy_history method. The production helper deliberately
+calls that method unconditionally under original AC3/AC6. The immutable initial
+log is `323-ci-integration313-initial.log`: 3 failed, 45 passed in 22.19s.
+
+Root authorized one bounded test-only repair: explicitly authorize the fixture's
+legacy owner, record that authorization and assert it precedes every page read.
+Retain all pagination, latest-clear and unknown-version assertions. Production
+guards and interfaces remain unchanged; no optional guard bypass is introduced.
+This is the first source/test repair cycle for this compatibility behavior.
+
+The finite validation plan is the complete existing test_integration_chat_history,
+test_integrations_langchain and test_integrations_llamaindex files, plus Ruff on
+the changed test. No public types change, new cohort or full-suite run is needed
+from this worker. Root released the assigned environment after interrupting the
+known-obsolete full suite at 1,966 passed and 46 skipped, exit 2 at 361.39s; that is
+not a completed pass. The root-owned interruption and full output remain saved
+in `final-interruption-ci-fixture.json` and its validation log. Root owns affected
+review, push/CI and final full validation. Original #324/#325 gates stay pending.
+
+The first bounded repair passed all 48 tests in the three integration files in
+9.61s on this worktree's Python 3.11.6. Exact command/output and the initial CI
+log checksum are saved in `323-ci-fixture-repair-cycle1.log` and `.json`.
+`323-ci-fixture-ruff.log` records the changed test's passing Ruff check. Every
+production file and existing test assertion is preserved. The fake requires
+exactly one authorization for alice before any event page and the three tests
+assert the recorded owner, including the unknown-control-version refusal.
+There are zero unsuccessful repair cycles for this behavior. Python 3.13 CI
+and the final complete suite remain root-owned pending checks, not inferred
+from this local Python 3.11 pass.

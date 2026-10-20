@@ -440,5 +440,52 @@
     },
     "review_status": "All four required reviews approved eb457646; affected composition review remains root-owned.",
     "pending": "Root final combined suite and affected review; #324 durable publication/recovery and #325 actual authority/scoped revocation/erasure remain original gates."
+  },
+  "legacy_chat_history_fixture_repair": {
+    "parent_head": "4f1deb7784d8ebb67688fcd0f3db9b74ee810d3f",
+    "criteria": [
+      3,
+      6
+    ],
+    "scope": "Existing pagination-only legacy double explicitly authorizes alice, records the owner and requires authorization before every page. Existing pagination/clear/version assertions and all production code are unchanged.",
+    "initial_failure": {
+      "ci_run": 39495180277,
+      "job": 118878294206,
+      "python": "3.13",
+      "result": "3 failed, 45 passed in 22.19s",
+      "log": "323-ci-integration313-initial.log",
+      "sha256": "4b975aef55a2326b13452b21418050ec4d419fc019fa6f3163564b2ae0a9115c",
+      "cause": "_PagedEvents lacked the required MemoryClient.require_legacy_history method."
+    },
+    "repair_cycles": 1,
+    "unsuccessful_repair_cycles": 0,
+    "targeted_validation": {
+      "python": "3.11.6",
+      "result": "48 passed in 9.61s",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_integration_chat_history.py",
+        "tests/test_integrations_langchain.py",
+        "tests/test_integrations_llamaindex.py"
+      ],
+      "log": "323-ci-fixture-repair-cycle1.log"
+    },
+    "lint": {
+      "result": "passed",
+      "log": "323-ci-fixture-ruff.log"
+    },
+    "interrupted_full_suite": {
+      "status": "interrupted_not_passed",
+      "passed": 1966,
+      "skipped": 46,
+      "exit_code": 2,
+      "seconds": 361.39,
+      "reason": "Root deliberately stopped the obsolete fixture revision.",
+      "evidence": "validation-323-upstream352/final-interruption-ci-fixture.json"
+    },
+    "pending": "Root affected review, push/CI including Python 3.13 and final complete suite; original #324/#325 integration gates remain pending."
   }
 }
