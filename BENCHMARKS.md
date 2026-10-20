@@ -1883,113 +1883,95 @@ on its own. The full benchmark audit and the default-change rule's answer runs a
 
 ### Graph seed count (prism-monorepo issue 276)
 
-One option, off by default, `scoring.rrf_graph_seed_count`, asks the graph list of "Graph fusion" to tell records
-apart. Measured on 2026-10-19 on `origin/main` at `19210c2b` (the entity skip is a default there) with this change,
-with `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6) replayed from the extraction caches, so no model call
-was made. The 0.16.0a4 release (`13b25058`) merged afterwards and changes only the version; the defect probes, the
-chat probe and the fast cycle, run again on it, gave the same results.
+`scoring.rrf_graph_seed_count` makes the graph count in rank fusion with a list that tells records apart. It took three
+versions of the rule; the third passed the alpha fast tiers and is on by default in the alpha channel
+(`PRME_SCORING__RRF_GRAPH_SEED_COUNT=false` restores the scoring of 0.16.0a4). Every run used
+`deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6) replayed from the extraction caches, so no model call was made.
 
-**The rule.** The hop count list gives every graph candidate a rank by its distance from a seed, so the owner's own
-claims, all one hop from the owner, rise together. The seed count list holds only a record that two or more of the
-question's seeds reach within `graph_max_hops`, one of them by a direct link, along links that never pass through the
-owner's entity (an entity a user turn named as the owner, or the owner reference); an entity record never joins. It
-ranks more seeds first, then the smaller total hop count, and adds `weight / (rrf_k + rank)` before the scale, as the
-hop count list does. Its weight is `rrf_graph_weight`, 0.5 when unset. A session context neighbor inherits its
-trigger's score without the graph term, which only the trigger's own links earned. One more query reads the links
-among the graph search's records.
+**The rule** (third version). The hop count list of "Graph fusion" gives every graph candidate a rank by its distance
+from a seed, so the owner's own claims, all one hop from the owner, rise together. The seed count list holds only a
+record that
 
-**Criterion 2.** The issue measures the claim "We chose Tokyo, Kyoto, Kanazawa, and Osaka." for "which cities will
-alex visit in japan?" on the `defects-v1` pack with the links of prism-monorepo#275. That issue is not merged, so the
-links were added by hand to a copy of the `main` build: a `MENTIONS` edge (`metadata.basis` `group_member`) from each
-of the three "We" claims of the cities turn to Alex Rivera and to Jordan. Places on that copy:
+- two or more of the question's seeds reach within `graph_max_hops`, along links that never pass through the owner's
+  entity (an entity a user turn named as the owner, or the owner reference);
+- one of those seeds links to directly;
+- the semantic search ranks in its top 10 (`RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP`), so the list reorders records that
+  already match the question instead of lifting the ones near its names;
+- is not an entity, whose text is only its name.
 
-| Settings | Cities claim (criterion 2) | Travel probe answer | Cities probe answer |
-|---|---:|---:|---:|
-| defaults | 6 | 2 | 2 |
-| hop count list at 0.25 | 6 | 2 | 2 |
-| seed count at 0.25 | 6 | 2 | 2 |
-| seed count at 0.35 | 4 | 4 | 2 |
-| seed count at 0.5 (its default weight) | 4 | 4 | 2 |
+It ranks more seeds first, then the smaller total hop count, and adds `weight / (rrf_k + rank)` before the scale, as
+the hop count list does; the weight is `rrf_graph_weight`, 0.5 when unset, and the settings record it. A session
+context neighbor inherits its trigger's score without the graph term, which only the trigger's own links earned, and
+its saved provenance drops the trigger's `graph_rank` so it replays. The walk reads the links of the nodes the graph
+search found nearer than `graph_max_hops` once more, and nothing for a question with fewer than two seeds.
 
-The top 3 for the question with the seed count at 0.5: the trip sentence ("My partner Jordan and I are planning a trip
-to Japan in late March next year."), the introduction note, and "Hi, I am Alex Rivera.". Without the entity skip
-(0.16.0a3's defaults) the claim is 10th, and 4th with the seed count at 0.35 or 0.5.
+**The three versions.** The first ran on `origin/main` at `22b7239c` and the second at `19210c2b` (the entity skip a
+default; for the first, criterion 2 set it too), with the links of prism-monorepo#275 added by hand to a copy of the
+`defects-v1` build for criterion 2. The third ran on this branch
+stacked on #275's branch (group links on, member links to the people the session names with the owner), so criterion
+2 reads a real build: the offline gate and the mid tier on #275's head `e6b4db7e`, and criterion 2, both probes and
+the fast cycle again on its reviewed head `cdf8b354`, with the same results. Off is the same tree with the option off;
+weight 0.5.
 
-No weight serves criterion 2 and the travel probe at once. Two notes of the trip session, the cities turn's own note
-and the assistant's reply, sit at 0.6: the session decay times the trip sentence's score of 1.0. The claim scores
-0.4485 by itself (semantic rank 8, no word match), so it needs a graph term above 0.15, which its place on the list
-(second) gives from a weight of 0.31. From 0.28 and 0.29, on "How does Alex prefer to travel in Japan?", the claim
-"We dropped Hiroshima to save time." (now linked to Alex, and reached from Japan through Jordan) and the introduction
-note pass the answer, which is linked to Alex alone.
+| Version | Criterion 2: cities claim, off / on | Defect probes top 3 | `chat-v1` top 3 / top 5 | Fast cycle | Mid tier: LoCoMo evidence in top 25 |
+|---|---|---:|---|---|---|
+| 1: two seeds within three hops | 6 / 4 (hand links) | 5/7 (off 7/7) | 15/18, 15/18 (off 14/18, 15/18) | not run | not run |
+| 2: and a direct link | 6 / 4 (hand links) | 6/7 (off 7/7) | 15/18, 15/18 (off 14/18, 15/18) | **fail**: defects-v1 top 3 7 to 6 | **-5.2** (-6.3 to -4.2), 1 win, 114 losses |
+| 3: and the semantic top 10 | 6 / 4 (real build) | 7/7 (off 7/7) | 14/18, 15/18 (off 14/18, 15/18) | pass | +0.0, 0 wins, 0 losses |
 
-**Defect probes and chat probe** (`main`, so without #275's links), answers ranked in the top 3 and top 5; every other
-measure of the reports is equal:
+Version 1 lifted Jordan's allergy claim, which Alex and Japan reach only through Jordan, over the cities and travel
+answers. Version 2 put the cities claim 4th at 0.5 only at a cost: from a weight of 0.31, which the claim needs, "We
+dropped Hiroshima to save time." (38th by meaning, linked to Alex and reached from Japan through Jordan) passed the
+travel answer, and without #275's links the allergy claim (15th by meaning) passed the cities answer. Its mid tier
+loss came from LoCoMo's second speaker: in `conv-26` the owner, Caroline, has 468 links and is never passed through,
+but the participant, Melanie, has 319, so a question naming Melanie and one more entity reached most records through
+her. Version 3 keeps both kinds of record off the list. At 0.25 version 2 passed the fast tiers but left the claim 6th;
+at 0.35 it failed like 0.5.
 
-| Run | defects-v1 top 3 | top 5 | chat-v1 top 3 | top 5 |
-|---|---:|---:|---:|---:|
-| off | 7/7 | 7/7 | 14/18 | 15/18 |
-| seed count at 0.25 | 7/7 | 7/7 | 15/18 | 15/18 |
-| seed count at 0.35 | 6/7 | 7/7 | | |
-| seed count at 0.5 | 6/7 | 7/7 | 15/18 | 15/18 |
+**Criterion 2 on the real stacked build**, "which cities will alex visit in japan?":
 
-Without #275's links the cities probe's answer is the claim, which links to no one, and "Jordan is allergic to
-shellfish, so I need an allergy card for restaurants." (Jordan's claim, which Alex and Japan reach through Jordan)
-passes it: 2 to 3 at 0.25, 2 to 4 at 0.35 and 0.5. The travel probe goes 2 to 3 at 0.35 and 0.5. On `chat-v1`, "Does
-Dana drink coffee?" goes 4 to 3 at both weights; at 0.5 four answers drop one place inside the top 10.
+| Settings | Cities claim | Top 3 |
+|---|---:|---|
+| off | 6 | the trip sentence ("My partner Jordan and I are planning a trip to Japan in late March next year."), "Hi, I am Alex Rivera.", the introduction note |
+| on (0.5) | 4 | the trip sentence, the introduction note, "Hi, I am Alex Rivera." |
+| on at 0.35 | 4 | |
+| on at 0.25 | 6 | |
 
-**Fast cycle** (committed cache, exact judgement against `baseline-main.json`):
+Two notes of the trip session, the cities turn's own note and the assistant's reply, sit at 0.6 by session context (the
+decay times the trip sentence's score of 1.0); the claim scores 0.4485 by itself (8th by meaning, no word match), so
+it needs a graph term above 0.15, which its place on the list (second) gives from a weight of 0.31. Without the session
+inheritance rule the notes would rise with their trigger, and the claim would need a weight of about 0.8.
 
-| Run | Result |
-|---|---|
-| off (this tree) | pass, 133 unchanged |
-| seed count at 0.25 | pass; `chat-v1` answers in the top 3 14 to 15 (coffee 4 to 3), title-now 10 to 11 |
-| seed count at 0.35 | **fail**: `defects-v1` answers in the top 3 7 to 6 (cities 2 to 4, travel 2 to 3) |
-| seed count at 0.5 | **fail**: the same, and `chat-v1` overnight 3 to 4 |
+**Version 3 on the fast tiers** (the stacked tree, off against on):
 
-Against the hop count list of "Graph fusion", which failed the fast cycle on `chat-v1` (answers in the top 3 14 to 12
-at 0.25, 14 to 13 at 0.15 and 0.1, with "mel-news" and "overnight" out of the top 3), the seed count list leaves
-"mel-news" alone at every weight, adds a `chat-v1` answer to the top 3 at 0.25 and 0.35 (coffee 4 to 3), and at 0.5
-trades coffee in for overnight out. Its failure is the defect probes' cities and travel answers, at the weights
-criterion 2 needs.
+- Defect probes: 7/7 in the top 3 and the top 5 on both sides; travel 2 to 3, every other probe rank equal; every
+  other measure equal (key links linked 9 of 14 on both, from #275).
+- Chat probe: 14/18 in the top 3 and 15/18 in the top 5 on both sides; job-now 7 to 8 and coffee 4 to 5, every other
+  measure equal.
+- Fast cycle: pass, 3 measures moved, all watched (travel 2 to 3, coffee 4 to 5, job-now 7 to 8). The baseline
+  (`baseline-main.json`) was taken again on a clean tree after the flip, with the store, ingest and store-extract
+  stages: against #275's baseline, those three, and in the store-extract stage "flights" 4 to 2, answers in the top 3
+  13 to 14 and the mean reciprocal rank 0.761 to 0.776, moved; 162 measures are unchanged.
+- Offline evidence gate (`gate-compare`): no row differs (LoCoMo all evidence packed 84.0% on both sides, 1,536 ties;
+  LongMemEval-S 94.7%, 470 ties), and no question lost its candidates. Its packs hold no extracted entities, so this
+  shows only that plain retrieval is untouched; retrieval p50 0.153 s against 0.160 s on LoCoMo and 0.162 s against
+  0.169 s on LongMemEval-S, at a load of 4 to 8.
+- Mid tier (all of LoCoMo and 12 LongMemEval-S questions, warm, both sides gating the `i275r-on` packs that #275's
+  branch built at `0ea827d9`; its later review fixes change no probe or fast cycle result): every LoCoMo measure ties
+  (all evidence packed 83.6%, evidence in the top 25 70.3%, projected accuracy 77.4% on both sides; evidence recall
+  one question better), and LongMemEval-S is unchanged. The LoCoMo stage took 5 min 19 s against 4 min 04 s, before
+  the narrower link read below.
+- Corrections probe: no measure differs; in the birthday context an assistant line moves down one place.
 
-**Corrections probe**: no measure differs. In the context for "How does Riley take coffee?" the black coffee line
-moves from the third line to the first, and in the birthday context an assistant line moves down one place.
+**Cost.** A question that names two or more entities reads the links around them once more. On `conv-26` of the
+LoCoMo packs, retrieval took 339 ms against 260 ms (median of 16 questions, the walk itself 71 ms); reading only the
+links of the nodes nearer than `graph_max_hops`, which gives the same reach on all 13 questions checked against reading
+every link, brought the walk down from about 100 ms.
 
-**Offline evidence gate**, off against the seed count at 0.5 (`gate-compare`): no row differs on either benchmark
-(LoCoMo all evidence packed 84.0% on both sides, 1,536 ties; LongMemEval-S 94.7%, 470 ties), and no question lost its
-candidates. The saved packs hold no extracted entities, so no question has a seed: this shows only that plain retrieval
-is untouched. The two sides ran while other work loaded the machine, so their latencies are not compared.
-
-**Mid tier** (all of LoCoMo and 12 LongMemEval-S questions, warm, both sides gating the `main-c6477e36` packs, 0 live
-calls; off against the seed count at 0.5; paired changes in points):
-
-| Measure | Off | On | Change | 95% questions | 95% conversations | Wins / losses |
-|---|---:|---:|---:|---|---|---:|
-| All evidence packed | 83.7% | 83.5% | -0.2 | -0.8 to +0.5 | -1.1 to +0.6 | 11 / 14 |
-| Evidence recall | 89.1% | 89.3% | +0.1 | -0.3 to +0.6 | -0.5 to +0.7 | 24 / 19 |
-| Evidence in top 25 | 70.3% | 65.1% | **-5.2** | -6.3 to -4.2 | -6.6 to -4.0 | 1 / 114 |
-| Projected accuracy | 77.4% | 77.3% | -0.1 | -0.5 to +0.3 | -0.7 to +0.4 | 11 / 14 |
-
-LongMemEval-S is unchanged. The evidence in the top 25 falls clear of zero, as it did for the hop count list (-5.4,
-0 wins and 120 losses), so the mid tier fails the option too. The owner barrier does not hold there: in a LoCoMo pack
-one speaker is the owner (in `conv-26`, Caroline, 468 links) and the other is a participant (Melanie, 319 links), so a
-question that names Melanie and one more entity reaches most records through her.
-
-**Result.** The seed count list does what the issue asks of it on the hand-linked pack (the cities claim 4th), but
-only at weights that cost a defect probe answer its top 3 place and fail the fast cycle, and at 0.5 it lowers LoCoMo
-evidence in the top 25 by 5.2 points on the mid tier. At 0.25, where it passes the fast tiers, the claim stays 6th. I
-stopped after two rule cycles: the first version counted two seeds within three hops with no direct link (5 of 7
-defect probes in the top 3: Jordan's allergy claim and the trip records passed the cities and travel answers); the
-second added the direct link (6 of 7 at every weight that meets criterion 2). The option stays off and no default
-changes.
-
-**Bounded alternative, not run.** Let only a record that the semantic channel ranks in its top 10 join the list, so
-the graph list reorders records that already match the question instead of lifting the ones near its names. The
-records that cost the probes their places rank low there (the Hiroshima claim 38th for the travel question, Jordan's
-allergy claim 15th for the cities question), while the cities claim ranks 8th for the criterion 2 question. From the
-recorded scores at 0.5 that keeps the cities claim 4th and both probe answers in the top 3 (cities 3rd without #275's
-links, travel 3rd with them), and it bounds how far a LoCoMo record near a speaker can rise. It needs the fast cycle,
-`chat-v1` and the mid tier again, as a third cycle.
+**Decision.** Version 3 passes the alpha rule (defect probes 7/7, chat probe counts not below off, fast cycle pass,
+offline gate without loss, mid tier without loss) and meets criterion 2 on a real build, so it is on by default in the
+alpha channel, by the owner's directive of 2026-10-19. The full benchmark audit and the default-change rule's answer
+runs are pending.
 
 ### Fast cycle: store, ingest and retrieve in under a minute (prototype)
 
