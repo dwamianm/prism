@@ -404,6 +404,7 @@ class MemoryEngine:
         from prme.privacy.admission import AdmissionCoordinator
         self._privacy = AdmissionCoordinator(self)
         self._graph_store._privacy = self._privacy
+        self._profile_work._privacy = self._privacy
         if self._pipeline is not None:
             self._pipeline._privacy = self._privacy
 
@@ -4159,6 +4160,10 @@ class MemoryEngine:
                 )
             return total
         scope = Scope(scope)
+        from prme.privacy.reads import ReadContext
+        from prme.privacy.read_graph import AdmittedGraphView
+        context = await ReadContext.create(self._privacy, user_id=user_id, scopes=(scope,))
+        graph = AdmittedGraphView(self._graph_store, context) if context.protected else self._graph_store
 
         # Scan by immutable ID instead of interpreting a newest-N window as
         # complete history. Otherwise older qualifying evidence can disappear
@@ -4167,7 +4172,7 @@ class MemoryEngine:
         existing_profiles: dict[str, list[MemoryNode]] = {}
         after_id: str | None = None
         while True:
-            page = await self._graph_store.scan_nodes(
+            page = await graph.scan_nodes(
                 user_id=user_id, scope=scope,
                 lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
                 after_id=after_id, limit=500,
@@ -4175,6 +4180,9 @@ class MemoryEngine:
             if not page:
                 break
             for node in page:
+                if context.protected:
+                    node = node.model_copy(update={"metadata": {key: value for key, value in (node.metadata or {}).items()
+                                                              if key != "source_availability"}})
                 meta = node.metadata or {}
                 if meta.get("entity_profile"):
                     # Generated profiles cannot qualify as fresh evidence.
@@ -4228,7 +4236,17 @@ class MemoryEngine:
 
         profiles_created = 0
         for entity_name in entity_names:
-            generation = await self._graph_store.profile_generation(profile_key(user_id, scope, entity_name))
+            if context.protected:
+                from uuid import uuid5
+                from prme.privacy.policy import PrivacyDenied
+                entities = [node for node in all_nodes if node.node_type == NodeType.ENTITY and node.content == entity_name]
+                if len(entities) != 1:
+                    raise PrivacyDenied("privacy_unsupported_input")
+                lineage = uuid5(entities[0].id, "prme:protected-profile:v1")
+                key = str(lineage)
+            else:
+                key = profile_key(user_id, scope, entity_name)
+            generation = await self._graph_store.profile_generation(key)
             # Find all nodes mentioning this entity
             related = []
             for node in all_nodes:
@@ -4275,16 +4293,27 @@ class MemoryEngine:
                 decay_profile=DecayProfile.FAST,
             )
             from prme.models.profile import profile_request_hash
-            provider = self._vector_index._provider
             previous = tuple(existing_profiles.get(entity_name, []))
+            manifest = None
+            if context.protected:
+                from prme.privacy.journals import admit_generated_node, encode_generated
+                profile_node, manifest = await admit_generated_node(
+                    context, profile_node, selected_sources, kind="profile", lineage_id=lineage, previous=previous,
+                )
+                profile_text = profile_node.content
+                provider = self._privacy.require_runtime().embedder
+            else:
+                provider = self._vector_index._provider
             request_hash = profile_request_hash(profile_node, selected_sources, previous, generation,
                                                 (provider.model_name, provider.model_version, provider.dimension))
-            plan = await self._profile_work.reusable(profile_key(user_id, scope, entity_name), request_hash, user_id=user_id)
+            plan = await self._profile_work.reusable(key, request_hash, user_id=user_id)
             if plan is None:
-                vectors = await encode_texts(provider, [profile_text])
+                vectors = (await encode_generated(context, [profile_text]) if context.protected
+                           else await encode_texts(provider, [profile_text]))
                 if len(vectors) != 1:
                     raise ValueError("Profile embedding provider must return exactly one vector")
                 plan = ProfilePublication(
+                    schema_version=2 if manifest is not None else 1, privacy_manifest=manifest,
                     node=profile_node, sources=tuple(selected_sources), previous=previous, generation=generation,
                     embedding=PreparedEmbedding(
                         node_id=profile_node.id, content=profile_text,
@@ -4302,6 +4331,7 @@ class MemoryEngine:
 
     async def _publish_prepared_profile(self, plan: ProfilePublication) -> str:
         from prme.storage.profile_work import ProfileStageFence
+        from prme.storage._threading import run_async_to_completion
         state = await self._profile_work.status(str(plan.node.id), user_id=plan.node.user_id)
         if state is None:
             raise ValueError('Profile publication requires durable preparation')
@@ -4310,8 +4340,19 @@ class MemoryEngine:
             raise StaleProfileError('Profile preparation was replaced by a newer request')
         if state['status'] != 'complete' and self._pool is None:
             fence = ProfileStageFence(self._conn, self._event_store._conn_lock, plan)
-            await self._vector_index.stage(plan.embedding, user_id=plan.node.user_id, fence=fence)
-            await self._lexical_index.stage_profile(plan, fence=fence)
+            async def stage():
+                await self._vector_index.stage(plan.embedding, user_id=plan.node.user_id, fence=fence)
+                await self._lexical_index.stage_profile(plan, fence=fence)
+            if plan.privacy_manifest is not None:
+                from prme.privacy.journals import manifest_records, journal_scope
+                records = await manifest_records(self._privacy, plan.privacy_manifest, user_id=plan.node.user_id)
+                async with self._privacy.publication_guards(records):
+                    with journal_scope(self._privacy, records):
+                        await run_async_to_completion(stage())
+            else:
+                await stage()
+        # The queue consumer acquires its own backend publication guard. Holding
+        # the producer's non-reentrant authority across submit would deadlock.
         return await self._write_queue.submit(
             lambda: self._graph_store.publish_profile(plan), label=f'consolidate.publish:{plan.node.id}',
         )
@@ -4366,6 +4407,7 @@ class MemoryEngine:
         if not math.isfinite(budget_ms) or budget_ms < 0:
             raise ValueError('budget_ms must be finite and nonnegative')
         scope = Scope(scope) if scope is not None else None
+        protected = bool(self._privacy.selected() or await self._privacy.owner_records(user_id, (scope,) if scope else None))
         jobs = await self.profile_jobs(user_id=user_id, scope=scope, limit=limit)
         started, processed, errors = time.monotonic(), 0, {}
         for job in jobs:
@@ -4381,7 +4423,7 @@ class MemoryEngine:
                 if state is not None and state['status'] == 'complete':
                     processed += 1
                     continue
-                reason = extraction_failure_code(exc)
+                reason = "privacy_profile_failed" if protected else extraction_failure_code(exc)
                 await self._profile_work.failed(profile_id, user_id=user_id, reason=reason)
                 errors[profile_id] = reason
         return {'processed': processed, 'failed': len(errors), 'pending': await self._profile_work.count(user_id=user_id, scope=scope),

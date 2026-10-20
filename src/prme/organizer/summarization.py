@@ -49,6 +49,11 @@ from prme.types import (
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
 
+from prme.privacy.journals import (
+    generation_context, generation_graph, generation_inputs, without_availability,
+    matching_summaries, admit_generated_node, encode_generated,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -201,8 +206,9 @@ async def _hierarchical_lineage_summaries(
     active: list[MemoryNode] = []
     retired: list[MemoryNode] = []
     after_id: str | None = None
+    graph = await generation_graph(engine, user_id=user_id, scope=scope)
     while True:
-        page = await engine._graph_store.scan_nodes(
+        page = await graph.scan_nodes(
             user_id=user_id,
             scope=scope,
             node_type=NodeType.SUMMARY,
@@ -213,6 +219,7 @@ async def _hierarchical_lineage_summaries(
         if not page:
             break
         for node in page:
+            node = without_availability(node) if graph is not engine._graph_store else node
             metadata = node.metadata or {}
             managed = (
                 metadata.get("consolidation_summary") is True
@@ -240,8 +247,9 @@ async def _scan_summary_inputs(
     """Read every organizer input through stable pages, including operator runs."""
     nodes: list[MemoryNode] = []
     after_id: str | None = None
+    graph = await generation_graph(engine, user_id=user_id)
     while True:
-        page = await engine._graph_store.scan_nodes(
+        page = await graph.scan_nodes(
             user_id=user_id,
             node_type=node_type,
             lifecycle_states=lifecycle_states,
@@ -251,7 +259,7 @@ async def _scan_summary_inputs(
         )
         if not page:
             break
-        nodes.extend(page)
+        nodes.extend([without_availability(node) for node in page] if graph is not engine._graph_store else page)
         after_id = str(page[-1].id)
     return nodes
 
@@ -269,9 +277,14 @@ async def _materialize_summary_node(
     scope = source_nodes[0].scope
     if any(node.user_id != user_id or node.scope != scope for node in source_nodes):
         raise ValueError("Summary sources must share the requested user and scope")
+    context = await generation_context(engine, user_id=user_id, scope=scope)
+    source_nodes = await generation_inputs(context, source_nodes)
     selected_nodes = list(source_nodes)
     source_nodes = sorted(selected_nodes, key=lambda node: str(node.id))
     content = _build_summary_content(level, period_key, selected_nodes)
+    if context:
+        admitted = await context.generated({"content": content}, sources=await context.generated_sources([node.content for node in source_nodes]))
+        content = admitted["content"]
     evidence_refs = []
     for node in selected_nodes:
         evidence_refs.extend(node.evidence_refs)
@@ -287,7 +300,7 @@ async def _materialize_summary_node(
     salience = _compute_summary_salience(selected_nodes)
     confidence = _compute_summary_confidence(selected_nodes)
     key = _summary_publication_key(user_id, scope, level, period_key)
-    provider = engine._vector_index._provider
+    provider = engine._privacy.require_runtime().embedder if context else engine._vector_index._provider
     source_ids = [str(node.id) for node in source_nodes]
     selected_ids = [str(node.id) for node in selected_nodes]
     request_hash = consolidation_request_hash(
@@ -311,11 +324,7 @@ async def _materialize_summary_node(
         period_key=period_key,
         key=key,
     )
-    matching = [
-        node
-        for node in previous
-        if (node.metadata or {}).get("consolidation_request_hash") == request_hash
-    ]
+    matching = await matching_summaries(engine, previous, request_hash, context)
     if len(previous) == 1 and len(matching) == 1:
         for stale in retired:
             await engine._evict_from_indexes(str(stale.id))
@@ -359,6 +368,13 @@ async def _materialize_summary_node(
             event_time=min(n.event_time or n.created_at for n in selected_nodes),
             pinned=False,
         )
+        manifest = None
+        if context:
+            summary_node, manifest = await admit_generated_node(context, summary_node, source_nodes,
+                kind="summary", lineage_id=UUID(key), previous=previous)
+            if summary_node.content != content:
+                from prme.privacy.policy import PrivacyDenied
+                raise PrivacyDenied("privacy_invalid_result")
         edges = tuple(
             MemoryEdge(
                 id=uuid5(summary_id, f"derived-from:{source_node.id}"),
@@ -376,10 +392,14 @@ async def _materialize_summary_node(
             )
             for source_node in selected_nodes
         )
-        vectors = await encode_texts(provider, [content])
+        if context:
+            from prme.ingestion.admitted_statements import project_admitted_edge
+            edges = tuple(project_admitted_edge(edge) for edge in edges)
+        vectors = await encode_generated(context, [content]) if context else await encode_texts(provider, [content])
         if len(vectors) != 1:
             raise ValueError("Summary embedding provider must return exactly one vector")
         plan = ConsolidationPublication(
+            schema_version=2 if manifest else 1, privacy_manifest=manifest,
             node=summary_node,
             sources=tuple(source_nodes),
             previous=tuple(sorted(previous, key=lambda node: str(node.id))),

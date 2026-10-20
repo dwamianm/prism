@@ -14,6 +14,7 @@ from prme.models.consolidation import (
 )
 from prme.models.derivation import node_checksum
 from prme.storage._threading import run_to_completion
+from prme.privacy.journals import protected_mutation, journal_deadline, project_manifest_node
 
 if TYPE_CHECKING:
     from prme.storage.duckpgq_graph import DuckPGQGraphStore
@@ -44,6 +45,7 @@ PENDING = (
 
 def _checkpoint(_stage: str) -> None:
     """Fault-injection hook used by transactional race tests."""
+    journal_deadline()
 
 
 def _payload(plan: ConsolidationPublication) -> str:
@@ -166,6 +168,7 @@ def initialize_duck(conn) -> None:
                 logger.warning(
                     "Consolidation head reconstruction incomplete for %s", operation_id
                 )
+        journal_deadline()
         conn.execute("COMMIT")
     except BaseException:
         conn.execute("ROLLBACK")
@@ -306,6 +309,7 @@ async def get_prepared_postgres(
     return plan
 
 
+@protected_mutation
 async def prepare_duckdb(
     store: DuckPGQGraphStore, plan: ConsolidationPublication
 ) -> ConsolidationPublication:
@@ -324,6 +328,7 @@ async def prepare_duckdb(
             if saved is not None:
                 if saved.key != plan.key or saved.request_hash != plan.request_hash:
                     raise ValueError("Prepared consolidation identity conflicts") from exc
+                journal_deadline()
                 return saved
             if attempt == 4:
                 raise StaleConsolidationError(
@@ -351,7 +356,9 @@ def _prepare_duckdb(store, plan):
                 or saved.request_hash != plan.request_hash
             ):
                 raise ValueError("Prepared consolidation identity conflicts")
+            journal_deadline()
             conn.execute("COMMIT")
+            journal_deadline()
             return saved
         _reserve_duck(conn, plan)
         conn.execute(
@@ -390,7 +397,9 @@ def _prepare_duckdb(store, plan):
             "INSERT INTO consolidation_registered_plans VALUES (?,?) ON CONFLICT DO NOTHING",
             [saved.prepared_operation_id, str(saved.node.id)],
         )
+        journal_deadline()
         conn.execute("COMMIT")
+        journal_deadline()
         return saved
     except BaseException:
         try:
@@ -400,6 +409,7 @@ def _prepare_duckdb(store, plan):
         raise
 
 
+@protected_mutation
 async def prepare_postgres(
     store: PgGraphStore, plan: ConsolidationPublication
 ) -> ConsolidationPublication:
@@ -441,6 +451,7 @@ async def prepare_postgres(
             saved.prepared_operation_id,
             str(saved.node.id),
         )
+        journal_deadline()
         return saved
 
 
@@ -449,6 +460,8 @@ def _validate_dependencies(plan, current, prior_ids) -> None:
         raise StaleConsolidationError("Current consolidation summary changed; rebuild")
     for expected in plan.sources + plan.previous:
         actual = current.get(str(expected.id))
+        if actual is not None and plan.privacy_manifest is not None:
+            actual = project_manifest_node(actual, plan.privacy_manifest)
         if actual is None or node_checksum(actual) != node_checksum(expected):
             raise StaleConsolidationError("Consolidation dependency changed; rebuild")
 
@@ -489,7 +502,9 @@ class ConsolidationStageFence:
                     "UPDATE consolidation_stage_fences SET epoch=epoch+1 WHERE plan_id=?",
                     [str(self.plan.node.id)],
                 )
+                journal_deadline()
                 yield
+                journal_deadline()
                 row = conn.execute(
                     "SELECT op_type,target_id,payload,actor_id,namespace_id FROM operations WHERE id=?",
                     [self.plan.prepared_operation_id],
@@ -498,6 +513,7 @@ class ConsolidationStageFence:
                     self.plan, row, "CONSOLIDATION_PREPARED"
                 ):
                     raise ValueError("Consolidation preparation changed during staging")
+                journal_deadline()
                 conn.execute("COMMIT")
             except BaseException:
                 try:
@@ -511,6 +527,7 @@ class ConsolidationStageFence:
         return transaction()
 
 
+@protected_mutation
 async def commit_duckdb(store: DuckPGQGraphStore, plan: ConsolidationPublication) -> str:
     import asyncio
 
@@ -650,7 +667,9 @@ def _commit_duckdb(store, plan):
                 "INSERT INTO consolidation_registered_plans VALUES (?,?) ON CONFLICT DO NOTHING",
                 [plan.operation_id, str(node.id)],
             )
+        journal_deadline()
         conn.execute("COMMIT")
+        journal_deadline()
         return str(node.id)
     except BaseException:
         try:
@@ -660,6 +679,7 @@ def _commit_duckdb(store, plan):
         raise
 
 
+@protected_mutation
 async def commit_postgres(store: PgGraphStore, plan: ConsolidationPublication) -> str:
     from prme.storage.pg.graph_store import _NODE_COLUMNS
     from prme.storage.pg.vector_sql import resolve_vector_sql
@@ -680,6 +700,7 @@ async def commit_postgres(store: PgGraphStore, plan: ConsolidationPublication) -
             plan.operation_id,
         )
         if _validate_operation(plan, row, "CONSOLIDATION_PUBLISHED"):
+            journal_deadline()
             return str(node.id)
         prepared = await conn.fetchrow(
             "SELECT op_type,target_id,payload,actor_id,namespace_id FROM operations WHERE id=$1",
@@ -759,4 +780,5 @@ async def commit_postgres(store: PgGraphStore, plan: ConsolidationPublication) -
             plan.operation_id,
             str(node.id),
         )
+        journal_deadline()
         return str(node.id)

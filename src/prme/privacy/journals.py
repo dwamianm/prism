@@ -28,6 +28,9 @@ class JournalDependency(BaseModel):
     source_id: UUID
     representation_id: UUID
     snapshot: PolicySnapshot
+    admission_kind: Literal["direct", "extraction"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @classmethod
     def from_record(cls, record):
@@ -36,6 +39,7 @@ class JournalDependency(BaseModel):
             source_id=record.source_id,
             representation_id=record.representation_id,
             snapshot=record.snapshot,
+            admission_kind=record.kind,
         )
 
 
@@ -55,6 +59,284 @@ class JournalManifest(BaseModel):
         ) or len(set(self.admitted_node_ids)) != len(self.admitted_node_ids):
             raise ValueError("Duplicate protected journal identity")
         return self
+
+
+JOURNAL_KEY = "_prme_privacy_journal_v1"
+
+
+class GeneratedNodeReference(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    schema_version: Literal[1] = 1
+    kind: Literal["profile", "summary"]
+    lineage_id: UUID
+    source_node_ids: tuple[UUID, ...]
+
+
+def project_generated_node(node):
+    """Closed admitted generated memory; never a source/evidence fallback."""
+    from prme.privacy.records import PRIVACY_KEY
+    from prme.types import NodeType
+
+    metadata = node.metadata or {}
+    try:
+        reference = GeneratedNodeReference.model_validate(metadata[JOURNAL_KEY])
+        if (
+            node.node_type != NodeType.SUMMARY
+            or not node.content.strip()
+            or not reference.source_node_ids
+        ):
+            raise ValueError()
+        projected = {
+            PRIVACY_KEY: metadata[PRIVACY_KEY],
+            JOURNAL_KEY: reference.model_dump(mode="json"),
+            "source_node_ids": [str(value) for value in reference.source_node_ids],
+        }
+        if reference.kind == "profile":
+            name = metadata["entity_name"]
+            if (
+                not isinstance(name, str)
+                or not name.strip()
+                or name not in node.content
+            ):
+                raise ValueError()
+            if (
+                metadata.get("entity_profile") is not True
+                or metadata.get("profile_format_version") != 2
+            ):
+                raise ValueError()
+            projected.update(
+                entity_profile=True, entity_name=name, profile_format_version=2
+            )
+            for key in (
+                "source_count_available",
+                "source_count_included",
+                "tokens_used",
+            ):
+                value = metadata[key]
+                if type(value) is not int or value < 0:
+                    raise ValueError()
+                projected[key] = value
+        else:
+            import re
+
+            selected = [
+                str(UUID(str(value))) for value in metadata["selected_source_node_ids"]
+            ]
+            if (
+                metadata.get("consolidation_summary") is not True
+                or not selected
+                or len(set(selected)) != len(selected)
+                or not set(selected) <= set(projected["source_node_ids"])
+                or metadata["consolidation_key"] != str(reference.lineage_id)
+            ):
+                raise ValueError()
+            generation = metadata["consolidation_generation"]
+            if type(generation) is not int or generation < 0:
+                raise ValueError()
+            projected.update(
+                consolidation_summary=True,
+                consolidation_key=str(reference.lineage_id),
+                consolidation_generation=generation,
+                selected_source_node_ids=selected,
+            )
+            if (
+                metadata.get("summary_publication_kind")
+                == "hierarchical_source_excerpts_v2"
+            ):
+                level, period = metadata["summarization_level"], metadata["period_key"]
+                patterns = {
+                    "daily": r"\d{4}-\d{2}-\d{2}",
+                    "weekly": r"\d{4}-W\d{2}",
+                    "monthly": r"\d{4}-\d{2}",
+                }
+                if (
+                    level not in patterns
+                    or not isinstance(period, str)
+                    or re.fullmatch(patterns[level], period) is None
+                    or metadata["summary_publication_key"] != str(reference.lineage_id)
+                    or metadata["summary_format"] != "source-excerpts-v1"
+                ):
+                    raise ValueError()
+                projected.update(
+                    summary_publication_kind="hierarchical_source_excerpts_v2",
+                    summary_publication_key=str(reference.lineage_id),
+                    summarization_level=level,
+                    summary_format="source-excerpts-v1",
+                    period_key=period,
+                    source_count=len(reference.source_node_ids),
+                )
+            else:
+                if metadata.get("consolidation_format_version") != 2:
+                    raise ValueError()
+                projected.update(
+                    consolidation_format_version=2,
+                    cluster_size=len(reference.source_node_ids),
+                )
+        return node.model_copy(deep=True, update={"metadata": projected})
+    except (KeyError, TypeError, ValueError):
+        raise PrivacyDenied("privacy_invalid_result") from None
+
+
+def project_manifest_node(node, manifest):
+    from prme.privacy.records import PRIVACY_KEY
+    from prme.ingestion.admitted_statements import (
+        project_direct_node,
+        project_admitted_node,
+    )
+
+    reference = (node.metadata or {}).get(PRIVACY_KEY)
+    try:
+        origin = next(
+            item
+            for item in manifest.dependencies
+            if str(item.event_id) == reference["event_id"]
+        )
+        if (
+            node.user_id != str(origin.snapshot.policy.owner_id)
+            or node.scope != origin.snapshot.policy.scope
+        ):
+            raise ValueError()
+        expected = {
+            "schema_version": 1,
+            "event_id": str(origin.event_id),
+            "source_id": str(origin.source_id),
+            "representation_id": str(origin.representation_id),
+            "policy_id": str(origin.snapshot.policy.policy_id),
+            "policy_revision": origin.snapshot.policy.revision,
+            "representation": "sanitized",
+        }
+        if {
+            key: value for key, value in reference.items() if key != "sanitization"
+        } != expected:
+            raise ValueError()
+    except (TypeError, KeyError, StopIteration, ValueError):
+        raise PrivacyDenied("privacy_boundary_mismatch") from None
+    if JOURNAL_KEY in (node.metadata or {}):
+        return project_generated_node(node)
+    if origin.admission_kind == "direct":
+        return project_direct_node(node)
+    if origin.admission_kind == "extraction":
+        return project_admitted_node(node)
+    raise PrivacyDenied("privacy_processing_unavailable")
+
+
+def validate_generated_publication(plan, *, kind):
+    from prme.models.derivation import node_checksum
+    from prme.privacy.records import PRIVACY_KEY
+
+    manifest = plan.privacy_manifest
+    nodes = (plan.node, *plan.sources, *plan.previous)
+    if manifest is None:
+        if plan.schema_version != 1 or any(
+            PRIVACY_KEY in (node.metadata or {}) for node in nodes
+        ):
+            raise PrivacyDenied("privacy_processing_unavailable")
+        return
+    if plan.schema_version != 2 or manifest.journal_id != plan.node.id:
+        raise PrivacyDenied("privacy_invalid_result")
+    reference = GeneratedNodeReference.model_validate(plan.node.metadata[JOURNAL_KEY])
+    if reference.kind != kind or reference.source_node_ids != tuple(
+        node.id for node in plan.sources
+    ):
+        raise PrivacyDenied("privacy_invalid_result")
+    if set(manifest.admitted_node_ids) != {node.id for node in nodes}:
+        raise PrivacyDenied("privacy_invalid_result")
+    for node in nodes:
+        if node_checksum(project_manifest_node(node, manifest)) != node_checksum(node):
+            raise PrivacyDenied("privacy_invalid_result")
+
+
+async def manifest_records(coordinator, manifest, *, user_id):
+    records = []
+    for dependency in manifest.dependencies:
+        record = await coordinator.repository.get(
+            str(dependency.event_id), user_id=user_id
+        )
+        if (
+            record is None
+            or record.snapshot != dependency.snapshot
+            or record.source_id != dependency.source_id
+            or record.representation_id != dependency.representation_id
+            or (
+                dependency.admission_kind is not None
+                and record.kind != dependency.admission_kind
+            )
+        ):
+            raise PrivacyDenied("privacy_processing_unavailable")
+        records.append(record)
+    if not records:
+        raise PrivacyDenied("privacy_processing_unavailable")
+    return tuple(records)
+
+
+def generation_manifest(context, node, sources):
+    from prme.privacy.records import PRIVACY_KEY
+
+    identifiers = set()
+    for source in sources:
+        reference = (source.metadata or {}).get(PRIVACY_KEY)
+        if not isinstance(reference, dict):
+            raise PrivacyDenied("privacy_processing_unavailable")
+        identifiers.add(UUID(reference["event_id"]))
+        identifiers.update(
+            ref for ref in source.evidence_refs if ref in context.records
+        )
+    try:
+        dependencies = tuple(
+            JournalDependency.from_record(context.records[identifier])
+            for identifier in sorted(identifiers, key=str)
+        )
+    except KeyError:
+        raise PrivacyDenied("privacy_processing_unavailable") from None
+    return JournalManifest(
+        journal_id=node.id,
+        dependencies=dependencies,
+        admitted_node_ids=tuple(
+            dict.fromkeys((node.id, *(source.id for source in sources)))
+        ),
+        created_at=node.created_at,
+    )
+
+
+async def admit_generated_node(
+    context, node, sources, *, kind, lineage_id, previous=()
+):
+    from prme.privacy.records import PRIVACY_KEY
+
+    sanitized_sources = await context.generated_sources(
+        [source.content for source in sources]
+    )
+    fields = {"content": node.content}
+    if kind == "profile":
+        fields["entity_name"] = node.metadata["entity_name"]
+    fields = await context.generated(fields, sources=sanitized_sources)
+    manifest = generation_manifest(context, node, (*sources, *previous))
+    origin = context.records[manifest.dependencies[0].event_id]
+    metadata = {
+        **node.metadata,
+        PRIVACY_KEY: origin.reference(),
+        JOURNAL_KEY: GeneratedNodeReference(
+            kind=kind,
+            lineage_id=lineage_id,
+            source_node_ids=tuple(source.id for source in sources),
+        ).model_dump(mode="json"),
+    }
+    if kind == "profile":
+        metadata["entity_name"] = fields["entity_name"]
+    return project_generated_node(
+        node.model_copy(update={"content": fields["content"], "metadata": metadata})
+    ), manifest
+
+
+async def encode_generated(context, texts):
+    from prme.privacy.admission import capability_call
+
+    runtime = context.coordinator.require_runtime()
+    saved = next(iter(context.records.values())).snapshot
+    return await capability_call(
+        runtime.embedder.encode(tuple(texts), saved, guard=context.transmission_guard),
+        "privacy_provider_unavailable",
+    )
 
 
 class SnapshotEnvelope(BaseModel):
@@ -131,8 +413,18 @@ def protected_mutation(function):
             current.check()
             return await function(store, *args, **kwargs)
         arguments = signature.bind(store, *args, **kwargs).arguments
-        owner = arguments.get("user_id")
-        records = await coordinator.records_for_call(owner, arguments)
+        plan = arguments.get("plan")
+        owner = (
+            arguments.get("user_id")
+            or arguments.get("policy", {}).get("user_id")
+            or (plan.node.user_id if hasattr(plan, "node") else None)
+        )
+        manifest = getattr(plan, "privacy_manifest", None)
+        records = (
+            await manifest_records(coordinator, manifest, user_id=owner)
+            if manifest is not None
+            else await coordinator.records_for_call(owner, arguments)
+        )
         if not records and not coordinator.selected():
             return await function(store, *args, **kwargs)
         if not records:
@@ -228,9 +520,13 @@ def snapshot_payload(record, family):
             if ref in records:
                 dependencies[ref] = records[ref]
         return (
-            project_direct_node(node)
-            if origin.kind == "direct"
-            else project_admitted_node(node)
+            project_generated_node(node)
+            if JOURNAL_KEY in (node.metadata or {})
+            else (
+                project_direct_node(node)
+                if origin.kind == "direct"
+                else project_admitted_node(node)
+            )
         )
 
     projected = _snapshot_projection(record, project)
@@ -332,3 +628,73 @@ def load_checkpoint(value: bytes) -> tuple[bytes, dict | None]:
         return json.dumps(data["source"], allow_nan=False).encode(), data["extraction"]
     except (ValueError, TypeError, KeyError):
         raise PrivacyDenied("privacy_processing_unavailable") from None
+
+
+async def generation_context(engine, *, user_id, scope=None):
+    from prme.privacy.reads import ReadContext
+
+    if user_id is None:
+        if engine._privacy.selected():
+            raise PrivacyDenied("privacy_boundary_mismatch")
+        await engine._privacy.repository.require_legacy_range(
+            None, scope.value if scope else None
+        )
+        return None
+    context = await ReadContext.create(
+        engine._privacy, user_id=user_id, scopes=(scope,) if scope else None
+    )
+    return context if context.protected else None
+
+
+def without_availability(node):
+    return node.model_copy(
+        deep=True,
+        update={
+            "metadata": {
+                key: value
+                for key, value in (node.metadata or {}).items()
+                if key != "source_availability"
+            }
+        },
+    )
+
+
+async def generation_graph(engine, *, user_id, scope=None):
+    from prme.privacy.read_graph import AdmittedGraphView
+
+    context = await generation_context(engine, user_id=user_id, scope=scope)
+    return (
+        AdmittedGraphView(engine._graph_store, context)
+        if context
+        else engine._graph_store
+    )
+
+
+async def generation_inputs(context, nodes):
+    if context is None:
+        return nodes
+    projected = [await context.project_node(node) for node in nodes]
+    if any(node is None for node in projected):
+        raise PrivacyDenied("privacy_processing_unavailable")
+    return [without_availability(node) for node in projected]
+
+
+async def matching_summaries(engine, previous, request_hash, context):
+    if context is None:
+        return [
+            node
+            for node in previous
+            if (node.metadata or {}).get("consolidation_request_hash") == request_hash
+        ]
+    result = []
+    for node in previous:
+        plan = await engine._graph_store.get_prepared_consolidation(
+            str(node.id), user_id=context.user_id
+        )
+        if (
+            plan is not None
+            and plan.privacy_manifest is not None
+            and plan.request_hash == request_hash
+        ):
+            result.append(node)
+    return result

@@ -45,6 +45,11 @@ if TYPE_CHECKING:
     from prme.config import OrganizerConfig
     from prme.storage.engine import MemoryEngine
 
+from prme.privacy.journals import (
+    generation_context, generation_graph, without_availability,
+    matching_summaries, admit_generated_node, encode_generated,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -216,6 +221,7 @@ async def cluster_similar_memories(
 async def consolidate_cluster(
     engine: MemoryEngine,
     cluster: MemoryCluster,
+    *, user_id: str | None = None,
 ) -> MemoryNode:
     """Create a source-labelled SUMMARY excerpt within one namespace.
 
@@ -236,7 +242,7 @@ async def consolidate_cluster(
     Returns:
         The created SUMMARY MemoryNode.
     """
-    summary, _created = await _consolidate_cluster(engine, cluster)
+    summary, _created = await _consolidate_cluster(engine, cluster, user_id=user_id)
     return summary
 
 
@@ -248,8 +254,9 @@ async def _lineage_summaries(
     active: list[MemoryNode] = []
     retired: list[MemoryNode] = []
     after_id: str | None = None
+    graph = await generation_graph(engine, user_id=user_id, scope=scope)
     while True:
-        page = await engine._graph_store.scan_nodes(
+        page = await graph.scan_nodes(
             user_id=user_id,
             scope=scope,
             node_type=NodeType.SUMMARY,
@@ -260,6 +267,7 @@ async def _lineage_summaries(
         if not page:
             break
         for node in page:
+            node = without_availability(node) if graph is not engine._graph_store else node
             metadata = node.metadata or {}
             if (
                 metadata.get("consolidation_summary") is True
@@ -279,55 +287,70 @@ async def publish_consolidation_plan(
     """Stage and atomically publish a prepared extractive summary plan."""
     owner = plan.node.user_id
     if engine._pool is None:
-        import asyncio
-        import duckdb
-
-        from prme.models.consolidation import StaleConsolidationError
-        from prme.storage.consolidation_publication import ConsolidationStageFence
-
-        fence = ConsolidationStageFence(
-            engine._conn, engine._event_store._conn_lock, plan
-        )
-        for attempt in range(10):
-            try:
-                await engine._vector_index.stage(
-                    plan.embedding, user_id=owner, fence=fence
-                )
-                await engine._lexical_index.stage_consolidation(plan, fence=fence)
-                break
-            except (duckdb.ConstraintException, duckdb.TransactionException) as exc:
-                if attempt == 9:
-                    raise StaleConsolidationError(
-                        "Concurrent consolidation staging did not settle; retry"
-                    ) from exc
-                await asyncio.sleep(0.01 * (attempt + 1))
-            except ValueError as exc:
-                if "LockBusy" not in str(exc) or attempt == 9:
-                    raise
-                await asyncio.sleep(0.01 * (attempt + 1))
+        if plan.privacy_manifest is not None:
+            from prme.privacy.journals import manifest_records, journal_scope
+            from prme.storage._threading import run_async_to_completion
+            records = await manifest_records(engine._privacy, plan.privacy_manifest, user_id=owner)
+            async with engine._privacy.publication_guards(records):
+                with journal_scope(engine._privacy, records):
+                    await run_async_to_completion(_stage_consolidation(engine, plan))
+        else:
+            await _stage_consolidation(engine, plan)
     node_id = await engine._write_queue.submit(
         lambda: engine._graph_store.publish_consolidation(plan),
         label=f"consolidation.publish:{plan.node.id}",
     )
     for stale in (*plan.previous, *retired):
         await engine._evict_from_indexes(str(stale.id))
-    published = await engine.get_node(node_id)
+    published = await engine.get_node(node_id, **({"user_id": owner} if plan.privacy_manifest else {}))
     if published is None:
         raise RuntimeError("Consolidation publication did not produce an active summary")
     return published
 
 
+async def _stage_consolidation(engine, plan):
+    owner = plan.node.user_id
+    import asyncio
+    import duckdb
+
+    from prme.models.consolidation import StaleConsolidationError
+    from prme.storage.consolidation_publication import ConsolidationStageFence
+
+    fence = ConsolidationStageFence(
+        engine._conn, engine._event_store._conn_lock, plan
+    )
+    for attempt in range(10):
+        try:
+            await engine._vector_index.stage(
+                plan.embedding, user_id=owner, fence=fence
+            )
+            await engine._lexical_index.stage_consolidation(plan, fence=fence)
+            break
+        except (duckdb.ConstraintException, duckdb.TransactionException) as exc:
+            if attempt == 9:
+                raise StaleConsolidationError(
+                    "Concurrent consolidation staging did not settle; retry"
+                ) from exc
+            await asyncio.sleep(0.01 * (attempt + 1))
+        except ValueError as exc:
+            if "LockBusy" not in str(exc) or attempt == 9:
+                raise
+            await asyncio.sleep(0.01 * (attempt + 1))
+
+
 async def _consolidate_cluster(
     engine: MemoryEngine,
     cluster: MemoryCluster,
+    *, user_id: str | None = None,
 ) -> tuple[MemoryNode, bool]:
     """Prepare, stage, and atomically publish one extractive summary."""
+    context = await generation_context(engine, user_id=user_id)
     # Fetch all member nodes from a de-duplicated input identity list.
     members: list[MemoryNode] = []
     for mid in dict.fromkeys(cluster.member_ids):
-        node = await engine.get_node(mid, include_superseded=False)
+        node = await engine.get_node(mid, include_superseded=False, **({"user_id": user_id} if user_id else {}))
         if node is not None and node.lifecycle_state in {LifecycleState.TENTATIVE, LifecycleState.STABLE}:
-            members.append(node)
+            members.append(without_availability(node) if context else node)
 
     if not members:
         raise ValueError("No valid member nodes found for consolidation")
@@ -349,6 +372,9 @@ async def _consolidate_cluster(
     summary_content = f"[Consolidated excerpt: {len(selected)} of {len(members)} memories]\n" + "\n\n".join(
         _render_source(m) for m in selected
     )
+    if context:
+        admitted = await context.generated({"content": summary_content}, sources=await context.generated_sources([node.content for node in members]))
+        summary_content = admitted["content"]
     coverage = {str(m.id): _source_fingerprint(m) for m in selected}
     avg_confidence = sum(m.confidence for m in selected) / len(selected)
     max_salience = max(m.salience for m in selected)
@@ -356,7 +382,7 @@ async def _consolidate_cluster(
     members = sorted(members, key=lambda node: str(node.id))
     selected_ids = [str(node.id) for node in selected]
     key = consolidation_key(owner, centroid.scope, (node.id for node in members))
-    provider = engine._vector_index._provider
+    provider = engine._privacy.require_runtime().embedder if context else engine._vector_index._provider
     request_hash = consolidation_request_hash(
         members,
         content=summary_content,
@@ -372,11 +398,7 @@ async def _consolidate_cluster(
     previous, retired = await _lineage_summaries(
         engine, user_id=owner, scope=centroid.scope, key=key
     )
-    matching = [
-        node
-        for node in previous
-        if (node.metadata or {}).get("consolidation_request_hash") == request_hash
-    ]
+    matching = await matching_summaries(engine, previous, request_hash, context)
     if len(previous) == 1 and len(matching) == 1:
         for stale in retired:
             await engine._evict_from_indexes(str(stale.id))
@@ -415,6 +437,13 @@ async def _consolidate_cluster(
             source_type=SourceType.SYSTEM_INFERRED,
             decay_profile=DecayProfile.FAST,
         )
+        manifest = None
+        if context:
+            summary_node, manifest = await admit_generated_node(context, summary_node, members,
+                kind="summary", lineage_id=UUID(key), previous=previous)
+            if summary_node.content != summary_content:
+                from prme.privacy.policy import PrivacyDenied
+                raise PrivacyDenied("privacy_invalid_result")
         edges = tuple(
             MemoryEdge(
                 id=uuid5(summary_id, f"derived-from:{member.id}"),
@@ -430,10 +459,11 @@ async def _consolidate_cluster(
         )
         from prme.storage.embedding import encode_texts
 
-        vectors = await encode_texts(provider, [summary_content])
+        vectors = await encode_generated(context, [summary_content]) if context else await encode_texts(provider, [summary_content])
         if len(vectors) != 1:
             raise ValueError("Consolidation embedding provider must return exactly one vector")
         plan = ConsolidationPublication(
+            schema_version=2 if manifest else 1, privacy_manifest=manifest,
             node=summary_node,
             sources=tuple(members),
             previous=tuple(sorted(previous, key=lambda node: str(node.id))),
@@ -559,7 +589,7 @@ async def run_consolidation_pipeline(
 
         try:
             # Consolidate
-            summary_node, created = await _consolidate_cluster(engine, cluster)
+            summary_node, created = await _consolidate_cluster(engine, cluster, user_id=user_id)
             summaries_created += int(created)
             total_consolidated += len((summary_node.metadata or {}).get("consolidation_coverage", {}))
 

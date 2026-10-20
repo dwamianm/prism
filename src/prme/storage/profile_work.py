@@ -11,6 +11,7 @@ from uuid import UUID, uuid5
 
 from prme.models.profile import ProfileJobStatus, ProfilePublication, StaleProfileError
 from prme.storage._threading import run_to_completion
+from prme.privacy.journals import protected_mutation, journal_deadline
 
 PROFILE_WORK_DDL = """CREATE TABLE IF NOT EXISTS profile_work (
     plan_id VARCHAR PRIMARY KEY,
@@ -112,6 +113,7 @@ class ProfileWorkStore:
                 )
         return await self.get(row[0], user_id=user_id) if row else None
 
+    @protected_mutation
     async def prepare(self, plan: ProfilePublication) -> ProfilePublication:
         plan = ProfilePublication.model_validate_json(plan.model_dump_json())
         if self.pool is not None:
@@ -219,6 +221,7 @@ class ProfileWorkStore:
                 "INSERT INTO profile_registered_plans VALUES (?,?)",
                 [plan.prepared_operation_id, str(plan.node.id)],
             )
+            journal_deadline()
             conn.execute("COMMIT")
             return plan
         except BaseException:
@@ -301,6 +304,7 @@ class ProfileWorkStore:
                 plan.prepared_operation_id,
                 str(plan.node.id),
             )
+            journal_deadline()
             return plan
 
     async def list(
@@ -387,7 +391,7 @@ def pg_sql(sql):
 
 def validate_work_row(plan, row, saved, *, expected_status="pending"):
     if row is None:
-        if saved is not None:
+        if plan.privacy_manifest is not None or saved is not None:
             raise ValueError("Journaled profile is missing its work record")
         return False
     if tuple(row[:5]) != (
@@ -487,7 +491,9 @@ class ProfileStageFence:
             try:
                 conn.execute("BEGIN TRANSACTION")
                 validate_duck_work(conn, self.plan, required=True)
+                journal_deadline()
                 yield
+                journal_deadline()
                 validate_duck_work(conn, self.plan, required=True)
                 conn.execute("COMMIT")
             except BaseException:

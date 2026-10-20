@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from prme.models.derivation import PreparedEmbedding, canonical_hash, node_checksum
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
+from prme.privacy.journals import JournalManifest
 from prme.types import (
     EdgeType,
     EpistemicType,
@@ -75,7 +76,7 @@ class ConsolidationPublication(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     node: MemoryNode
     sources: tuple[MemoryNode, ...]
     previous: tuple[MemoryNode, ...] = ()
@@ -83,6 +84,7 @@ class ConsolidationPublication(BaseModel):
     embedding: PreparedEmbedding
     generation: int = Field(ge=0)
     request_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    privacy_manifest: JournalManifest | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @property
     def key(self) -> str:
@@ -122,7 +124,7 @@ class ConsolidationPublication(BaseModel):
             or node.source_type != SourceType.SYSTEM_INFERRED
             or meta.get("consolidation_summary") is not True
             or meta.get("consolidation_key") != self.key
-            or meta.get("consolidation_request_hash") != self.request_hash
+            or (self.schema_version == 1 and meta.get("consolidation_request_hash") != self.request_hash)
             or hierarchical != (meta.get("summary_publication_key") is not None)
         ):
             raise ValueError("Publication requires an active inferred consolidation summary")
@@ -214,4 +216,6 @@ class ConsolidationPublication(BaseModel):
             raise ValueError("Consolidation request hash does not match its prepared inputs")
         if node.id != uuid5(UUID(self.key), f"{self.request_hash}:{self.generation}"):
             raise ValueError("Consolidation identity must be deterministic for its request")
+        from prme.privacy.journals import validate_generated_publication
+        validate_generated_publication(self, kind="summary")
         return self
