@@ -212,6 +212,7 @@ class RSAKeyWrapper:
                                       algorithm=hashes.SHA256(), label=wrapping_context))
             if len(result) != 32:
                 raise ValueError()
+            permit.require_current()
             return result
         except Exception:
             raise PrivacyDenied("privacy_capability_unavailable") from None
@@ -239,8 +240,9 @@ class ProcessingKeyLease:
         self._key, self._permit = bytearray(key), permit
 
     def use(self, callback: Callable[[bytes], T]) -> T:
-        if len(self._key) != 32 or not self._permit._active:
+        if len(self._key) != 32:
             raise PrivacyDenied("privacy_processing_unavailable")
+        self._permit.require_current()
         return callback(bytes(self._key))
 
     def close(self) -> None:
@@ -335,6 +337,7 @@ class CryptoProtector:
                     wrapped, descriptor, envelope.wrapper.bytes(), permit)
                 if not isinstance(key, bytes) or len(key) != 32:
                     raise PrivacyDenied("privacy_capability_unavailable")
+                permit.require_current()
                 yield envelope, key, permit
         except PrivacyDenied:
             raise
@@ -345,7 +348,7 @@ class CryptoProtector:
     async def open_held(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess, *,
                         original_snapshot: PolicySnapshot, guard: Guard) -> AsyncIterator[bytes]:
         async with self._key_held(payload, access, original_snapshot=original_snapshot,
-                                  guard=guard, action="read") as (envelope, key, _):
+                                  guard=guard, action="read") as (envelope, key, permit):
             try:
                 plaintext = AESGCM(key).decrypt(
                     decode64(envelope.nonce, minimum=12, maximum=12),
@@ -353,6 +356,7 @@ class CryptoProtector:
                     envelope.payload.bytes())
             except Exception:
                 raise PrivacyDenied("privacy_capability_unavailable") from None
+            permit.require_current()
             yield plaintext
 
     async def open(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess, *,
@@ -382,6 +386,7 @@ class CryptoProtector:
                                   guard=guard, action="processing_key") as (envelope, key, permit):
             lease = ProcessingKeyLease(envelope, key, permit)
             try:
+                permit.require_current()
                 yield lease
             finally:
                 lease.close()
@@ -399,6 +404,7 @@ class CryptoProtector:
             candidate = envelope.model_copy(update={"wrapper": wrapping, "wrapped_key": encode64(wrapped)})
             result = self._stored(candidate)
             decode_envelope(result, original_snapshot)
+            permit.require_current()
             yield result
 
     async def rewrap(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess,

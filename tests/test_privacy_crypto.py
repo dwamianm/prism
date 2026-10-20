@@ -6,6 +6,7 @@ import pickle
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -336,6 +337,10 @@ async def test_EM06_multiple_selected_final_lease_and_nonreentrant_open_evidence
     wrapper.unwrap_key = forbidden
     before = len(audit.events)
     async with protector.hold_evidence_access(tuple((p, saved) for p in payloads), access, guard=fence.guard):
+        async def guarded_effect():
+            async with fence.guard():
+                return "effect_guard_entered"
+        assert await asyncio.wait_for(guarded_effect(), timeout=0.1) == "effect_guard_entered"
         revocation = asyncio.create_task(protector.authority.revoke(access.grant_id))
         await asyncio.sleep(0.02)
         assert not revocation.done()
@@ -343,7 +348,7 @@ async def test_EM06_multiple_selected_final_lease_and_nonreentrant_open_evidence
     assert calls == 0 and len(audit.events) == before + 4
 
 
-@pytest.mark.parametrize("gap", ["revoke", "expiry", "fence"])
+@pytest.mark.parametrize("gap", ["revoke", "expiry", "fence", "after_entry_fence"])
 async def test_EM06_final_lease_gap_denies_before_downstream_effect(gap):
     clock = [NOW]
     protector, saved, context, _, _, _, fence = setup_crypto(use="runtime", clock=lambda: clock[0])
@@ -354,13 +359,19 @@ async def test_EM06_final_lease_gap_denies_before_downstream_effect(gap):
         await protector.authority.revoke(access.grant_id)
     elif gap == "expiry":
         clock[0] = access.expires_at
-    else:
+    elif gap == "fence":
         await fence.deny()
-    effect = False
+    effect, policy_changed = False, False
     with pytest.raises(PrivacyDenied):
         async with protector.hold_evidence_access(((payload, saved),), access, guard=fence.guard):
-            effect = True
+            if gap == "after_entry_fence":
+                await asyncio.wait_for(fence.deny(), timeout=0.1)
+                policy_changed = True
+            async with fence.guard():
+                effect = True
     assert not effect
+    if gap == "after_entry_fence":
+        assert policy_changed, "final lease prevented the real current-policy transition"
 
 
 async def test_EM06_actual_response_scope_orders_revocation():
@@ -406,3 +417,170 @@ async def test_EM06_processing_only_key_response_and_expired_handle():
     with pytest.raises(PrivacyDenied):
         async with protector.unwrap_processing_key_held(payload, access, original_snapshot=saved, guard=fence.guard):
             pytest.fail("terminal work obtained a processing key")
+
+
+async def expiry_case(purpose, deadline):
+    """Real crypto, with one independently selected finite deadline."""
+    clock = [NOW]
+    protector, saved, context, descriptor, audit, claim, fence = setup_crypto(
+        purpose=purpose, use="runtime", clock=lambda: clock[0])
+    changes = {}
+    if deadline == "memory":
+        changes["memory_retention"] = MemoryRetention(mode="erase_after", seconds=1)
+    elif deadline == "evidence":
+        changes["evidence_lifetime_seconds"] = 1
+    elif deadline == "processing":
+        changes["processing_ceiling_seconds"] = 1
+    saved = snapshot(None, saved.policy.model_copy(update=changes), NOW)
+    payload = await protector.seal(SOURCE, context, original_snapshot=saved)
+    access = (processing_access(saved, context) if purpose == "processing"
+              else await grant(protector, saved, context, actions=("read", "rewrap")))
+    expires = (access.expires_at if deadline == "grant" else access.lease_deadline if deadline == "lease"
+               else getattr(saved, f"{deadline}_deadline"))
+    return SimpleNamespace(protector=protector, saved=saved, payload=payload, access=access,
+                           descriptor=descriptor, audit=audit, claim=claim, fence=fence,
+                           clock=clock, expires=expires)
+
+
+@pytest.mark.parametrize("exposure", ["permit", "plaintext", "final_lease"])
+@pytest.mark.parametrize("deadline", ["grant", "evidence", "memory"])
+async def test_EM06_expiry_during_audit_denies_before_effect(exposure, deadline):
+    case = await expiry_case("evidence", deadline)
+    selections = ((case.payload, case.saved),)
+    if exposure == "final_lease":
+        # Expiry of an earlier selection must not be hidden by the last audit.
+        other_saved = snapshot(None, case.saved.policy.model_copy(update={
+            "evidence_lifetime_seconds": 3600,
+            "memory_retention": MemoryRetention(mode="until_deleted")}), NOW)
+        other_context = case.payload.context.model_copy(update={"event_id": uuid4(), "slot_id": uuid4()})
+        other = await case.protector.seal(SOURCE, other_context, original_snapshot=other_saved)
+        selections += ((other, other_saved),)
+        case.access = await case.protector.authority.grant("runtime",
+            tuple((p.context, saved) for p, saved in selections), expires_at=NOW + timedelta(minutes=5))
+    write = case.audit.write
+    authorized = 0
+    async def expire_during_audit(event):
+        nonlocal authorized
+        await write(event)
+        if event.outcome == "authorized":
+            authorized += 1
+            if authorized == len(selections):
+                case.clock[0] = case.expires
+    case.audit.write = expire_during_audit
+    wrapper = case.protector.registry.wrapper(case.descriptor)
+    unwrap, private_calls, effects = wrapper.unwrap_key, [], []
+    async def counted_unwrap(*args):
+        private_calls.append("unwrap")
+        return await unwrap(*args)
+    wrapper.unwrap_key = counted_unwrap
+    with pytest.raises(PrivacyDenied):
+        if exposure == "permit":
+            async with case.protector.authority.authorize(case.payload, case.access, case.saved,
+                                                          guard=case.fence.guard, action="read"):
+                effects.append("permit")
+        elif exposure == "plaintext":
+            async with case.protector.open_held(case.payload, case.access,
+                    original_snapshot=case.saved, guard=case.fence.guard):
+                effects.append("plaintext")
+        else:
+            async with case.protector.hold_evidence_access(selections, case.access, guard=case.fence.guard):
+                effects.append("final_lease")
+    assert effects == [], f"expired {deadline} reached {exposure} caller"
+    assert private_calls == [], "expired audit reached private provider"
+    assert not any(event.outcome == "finished" for event in case.audit.events)
+
+
+@pytest.mark.parametrize("exposure,purpose,deadline,wait_at", [
+    ("plaintext", "evidence", "grant", "unwrap"),
+    ("plaintext", "evidence", "evidence", "unwrap"),
+    ("plaintext", "evidence", "memory", "unwrap"),
+    ("plaintext", "processing", "lease", "unwrap"),
+    ("processing_key", "processing", "processing", "unwrap"),
+    ("processing_key", "processing", "memory", "unwrap"),
+    ("rewrap", "evidence", "grant", "wrap"),
+    ("rewrap", "evidence", "evidence", "wrap"),
+    ("rewrap", "evidence", "memory", "wrap"),
+    ("rewrap", "processing", "lease", "wrap"),
+    ("rewrap", "processing", "processing", "wrap"),
+    ("rewrap", "processing", "memory", "wrap"),
+])
+async def test_EM06_expiry_during_provider_denies_before_effect(exposure, purpose, deadline, wait_at):
+    case = await expiry_case(purpose, deadline)
+    wrapper = case.protector.registry.wrapper(case.descriptor)
+    method = getattr(wrapper, f"{wait_at}_key")
+    async def expire_during_provider(*args):
+        result = await method(*args)
+        case.clock[0] = case.expires
+        return result
+    setattr(wrapper, f"{wait_at}_key", expire_during_provider)
+    effects = []
+    with pytest.raises(PrivacyDenied):
+        if exposure == "plaintext":
+            async with case.protector.open_held(case.payload, case.access,
+                    original_snapshot=case.saved, guard=case.fence.guard):
+                effects.append("plaintext")
+        elif exposure == "processing_key":
+            async with case.protector.unwrap_processing_key_held(case.payload, case.access,
+                    original_snapshot=case.saved, guard=case.fence.guard) as lease:
+                effects.append("processing_key_lease")
+                lease.use(lambda key: effects.append("processing_key_bytes"))
+        else:
+            async with case.protector.rewrap_held(case.payload, case.access, case.descriptor.ref,
+                    original_snapshot=case.saved, guard=case.fence.guard):
+                effects.append("rewrap_CAS")
+    assert effects == [], f"expired {deadline} reached {exposure} after {wait_at}"
+    assert not any(event.outcome == "finished" for event in case.audit.events)
+
+
+@pytest.mark.parametrize("deadline", ["lease", "processing", "memory"])
+async def test_EM06_expiry_during_processing_validation_denies_before_permit(deadline):
+    case = await expiry_case("processing", deadline)
+    validate = case.claim.validate
+    async def expire_during_validation(*args):
+        await validate(*args)
+        case.clock[0] = case.expires
+    case.claim.validate = expire_during_validation
+    effects = []
+    with pytest.raises(PrivacyDenied):
+        async with case.protector.authority.authorize(case.payload, case.access, case.saved,
+                                                      guard=case.fence.guard, action="processing_key"):
+            effects.append("permit")
+    assert effects == [], f"expired {deadline} reached permit after claim validation"
+    assert case.audit.events == [], "expired validation was recorded as authorized"
+
+
+@pytest.mark.parametrize("deadline", ["lease", "processing", "memory"])
+async def test_EM06_expiry_inside_processing_lease_denies_before_callback(deadline):
+    case = await expiry_case("processing", deadline)
+    effects = []
+    with pytest.raises(PrivacyDenied):
+        async with case.protector.unwrap_processing_key_held(case.payload, case.access,
+                original_snapshot=case.saved, guard=case.fence.guard) as lease:
+            case.clock[0] = case.expires
+            lease.use(lambda key: effects.append("processing_key_bytes"))
+    assert effects == [], f"expired {deadline} reached processing key callback"
+
+
+@pytest.mark.parametrize("exposure", ["plaintext_return", "final_lease_return"])
+async def test_EM06_expiry_during_completion_audit_denies_return(exposure):
+    case = await expiry_case("evidence", "grant")
+    write = case.audit.write
+    async def expire_during_completion(event):
+        await write(event)
+        if event.outcome == "finished":
+            case.clock[0] = case.expires
+    case.audit.write = expire_during_completion
+    effects, denied = [], False
+    try:
+        if exposure == "plaintext_return":
+            await case.protector.open(case.payload, case.access,
+                                     original_snapshot=case.saved, guard=case.fence.guard)
+        else:
+            async with case.protector.hold_evidence_access(
+                    ((case.payload, case.saved),), case.access, guard=case.fence.guard):
+                pass
+        effects.append(exposure)
+    except PrivacyDenied:
+        denied = True
+    assert effects == [], f"expired completion audit reached {exposure}"
+    assert denied

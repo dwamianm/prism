@@ -105,15 +105,30 @@ the caller's actual output/send. `open` is for in-process use; transports must
 use the held form and must not cache the disclosed value. Audit authorization
 must be durably appended before disclosure.
 
+Permits derive mandatory effective deadlines from the original snapshot and
+explicit access; private authorities must supply their clock when constructing
+one. `require_current()` checks the bound deadline and active scope. The codec
+checks it after provider awaits and immediately before plaintext, processing-key
+or rewrap output, and a processing-key lease checks again before its callback.
+Private provider adapters must use the same permit checks before private access
+and after provider waits. Audit and processing-validator waits cannot extend the
+grant, source, memory or work lifetime. Completion audits are followed by another
+deadline check before returning; a late failure appends a failed audit outcome.
+
 For multiple selected standard sources, decrypt each under `open_held`, then
 enter `hold_evidence_access(((payload, original_snapshot), ...), access, guard=...)`
 before any downstream provider/publication/response effect. This metadata-only
-lease reuses the existing grant, selection bounds, audit and lock ordering,
-revalidates all selections before return, and yields no key or plaintext.
-Revocation, expiry or a current fence in the gap denies before downstream work.
-The supplied guard covers every selected snapshot. Never nest `open_held` or
-another decrypt inside this non-reentrant final lease; hold all downstream
-effects inside it and discard transient source values on failure.
+lease retains the finite grant lock through the request, serializing grant
+revocation, and yields no key or plaintext. The supplied current-policy guard
+covers every selected snapshot at entry (including authorized audit and fresh
+validation) and exit. It is released during the yielded pipeline so that each
+actual effect can take its own effect-specific current-policy guard. A trusted
+caller must check grant and selected snapshot deadlines after every wait and
+immediately before each effect and final output. A policy fence activated after
+entry must deny the next guarded effect; the grant lease does not replace those
+guards. Entry/exit recheck all selections after audit waits. Never nest
+`open_held` or another decrypt inside this non-reentrant grant lease; discard
+transient source values on failure. #323 owns that actual pipeline integration.
 
 `inspect_metadata` parses and checks context using only public descriptors. Its
 `public_descriptor_known` result does not prove private-key availability or
