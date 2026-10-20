@@ -93,7 +93,8 @@ class PrivacyRepository:
         if type(limit) is not int or not 1 <= limit <= 128:
             raise PrivacyDenied("privacy_configuration_invalid")
         args = (user_id, scope, str(after or UUID(int=0)), limit)
-        sql = "SELECT body FROM privacy_admissions WHERE user_id=? AND scope=? AND event_id>? ORDER BY event_id LIMIT ?"
+        operator = ">=" if after is None else ">"
+        sql = f"SELECT body FROM privacy_admissions WHERE user_id=? AND scope=? AND event_id{operator}? ORDER BY event_id LIMIT ?"
         rows = await self._query(sql, args)
         return tuple(PrivacyRecord.model_validate_json(row[0]) for row in rows)
 

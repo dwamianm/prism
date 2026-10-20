@@ -246,7 +246,7 @@ async def test_capability_errors_are_content_free_before_durable_effect(tmp_path
     p = policy_for(r, capture="full", evidence_use="diagnostics_only", evidence_lifetime_seconds=300)
     engine, _, _ = await open_engine(tmp_path, runtime=r, policy=p)
 
-    async def fail(*args):
+    async def fail(*args, **kwargs):
         raise ValueError("private capability error sentinel")
 
     monkeypatch.setattr(r.protector, "seal", fail)

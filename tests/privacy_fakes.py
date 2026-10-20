@@ -129,6 +129,11 @@ class FakeProtector:
         raise PrivacyDenied("privacy_capability_unavailable")
         yield  # This storage-effect double never supplies key material.
 
+    @asynccontextmanager
+    async def hold_evidence_access(self, selections, access, *, guard):
+        raise PrivacyDenied("privacy_capability_unavailable")
+        yield  # A storage-effect double cannot authorize source disclosure.
+
 
 class FakeEmbedding:
     model_name = "privacy-component-embedding"

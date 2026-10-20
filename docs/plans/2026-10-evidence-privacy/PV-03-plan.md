@@ -1,9 +1,9 @@
 # PV-03 / #321 implementation plan
 
-Status: implementation in progress; runtime cases remain not_run until recorded.
+Status: implementation in progress; component evidence is recorded separately from pending shared release gates.
 Issue: https://github.com/dwamianm/prism/issues/321
 Provisional prerequisite/base: b84a866cd3b46db8c018ca608bb5079e96f90fd9 (#320 PR342).
-Final target: main. Publication/rebase waits for verified dependency delivery and root release.
+Final target: main. Root verified #320 delivery and authorized reconciliation onto 50d22d4e; the implementation remains unpublished pending review/delivery.
 
 This records the previously accepted preparation and reconciliations before coding.
 Only #321's assigned worktree/environment and isolated privacy_engine_321 database
@@ -114,7 +114,7 @@ No intended change to ordinary `storage/encryption.py`, `pack_manifest.py`, old 
 
 ## Finite validation plan
 
-All runtime evidence is currently **not run**. These are planned checks, not assertions of success. Root allocates a dedicated PostgreSQL test database before implementation. Never use a shared/user database or another worker's database. Use a worktree-specific environment and frozen lock; no shared editable environment.
+At the original plan freeze runtime evidence was **not run**. These frozen checks are not themselves assertions of success; the implementation evidence report records actual results. Root allocated the dedicated `privacy_engine_321` PostgreSQL test database. Never use a shared/user database or another worker's database. Use a worktree-specific environment and frozen lock; no shared editable environment.
 
 ### Frozen cohort and direct cryptographic checks
 
@@ -469,3 +469,36 @@ AC6/EM04 uses bounded quiesced local activation, not uninterrupted online cutove
 `rewrap_held` preserves the immutable payload and retains the current-policy/private permit through the actual full-body database CAS. Cancellation waits for accepted native writes before releasing locks. A saved content-free job records exact old/new versions and bounded progress. Interrupted CAS/checkpoint boundaries resume by inspecting the saved slot; a stale CAS never overwrites consumed/erased work. Denied rows leave blocked status. Existing original EM04 cases include paused acceptance/activation and a previously prepared old-version envelope; this is a subcheck of the existing case, not a new cohort. Old key retirement and backup erasure remain separate explicit decisions.
 
 Initial development evidence is in the ignored `validation-321/` run directory: real AES/RSA crypto checks passed (26); the first native-adapter test run exposed incorrect test helper tuple unpacking, before exercising custody. That failed log is retained, and the bounded helper correction is recorded separately. Mocked native adapters are never counted as native OS conformance.
+
+Root accepted the bounded #323 response-lifetime addition within AC5/EM06:
+`hold_evidence_access(selections: tuple[(ProtectedPayload, PolicySnapshot), ...],
+access: EvidenceAccess, *, guard)` is a metadata-only final-response lease on
+the existing private authority, exposed through `CryptoProtector` and the
+protector protocol. It reuses exact selection/snapshot/grant checks, at most 128
+selections, finite expiry, the same lock ordering and required audit. Decrypt
+selected sources individually under `open_held`; enter this lease before every
+downstream provider/publication/response effect and revalidate before return.
+Revoke/expiry/current-fence activation in the gap denies before any effect.
+Never nest decrypt/open inside the metadata lease; no new grant, cached authority
+or reentrant-lock design is introduced. The bounded EM06 test preserves evidence
+that nesting two existing opens waits on the intentionally non-reentrant lock,
+then verifies the metadata-only multiple-source lease and each denied gap.
+
+The final AC1/AC4 provider-boundary check binds `UnwrapPermit` to the exact decoded
+source reference, canonical wrapping-context bytes and wrapped-key bytes.
+`require_unwrap` is checked by the engine codec and local RSA adapter; hosted
+adapters must reuse it before private provider access. The EM02 low-level
+substitution subcheck rejects using one live permit for a different slot/wrapper,
+even inside the same boundary. Rewrap's public target remains separately
+purpose/boundary checked. This strengthens the existing approved private-permit
+contract without adding a new unwrap flow.
+
+Staged authority evidence remains deliberately bounded: the real engine/storage
+helper uses `FakeAuthority` for the outer `PolicyAuthority`, and crypto component
+tests use `Fence`. The AES/RSA, ciphertext storage/CAS, native custody and shared
+descriptor FileLock are real; the fixture outer guard is not a current policy or
+erasure ledger. #325 supplies the concrete local authority through the existing
+contract, and #280 supplies hosted authority. AC5/AC6 and EM04/EM06's full outer
+policy/fence integration, including #323's response lease, remain pending. This
+does not add an acceptance criterion, replace the frozen cases or authorize a
+parallel authority implementation here.

@@ -1662,6 +1662,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_config_audit.set_defaults(func=cmd_config_audit)
 
+    from prme.privacy.cli import register as register_privacy_keys
+    register_privacy_keys(subparsers)
     return parser
 
 

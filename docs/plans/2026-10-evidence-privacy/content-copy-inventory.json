@@ -608,12 +608,13 @@
       "id": "C41",
       "surface": "encryption",
       "layouts": ["duckdb_directory", "duckdb_single_file", "postgresql"],
-      "current_fields": ["planned evidence-envelope-v1 ciphertext/wrapped DEK/context", "planned processing encrypted work body", "planned provider evidence/processing/pseudonym keys", "planned custom literal policy material", "privacy_admissions.body evidence/processing ProtectedPayload slots with context, provider/key selectors and envelope_revision"],
+      "current_fields": ["PV-03 closed AES-256-GCM evidence ciphertext/wrapped DEK/context", "PV-03 purpose-distinct encrypted pending work", "PV-03 provider evidence/processing/pseudonym/retry_commitment keys", "planned custom literal policy material", "privacy_admissions.body evidence/processing ProtectedPayload slots with context, provider/key selectors and envelope_revision"],
       "source_refs": [{"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 214, "anchor": "`evidence-envelope-v1`"}, {"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 230, "anchor": "provider boundary"}, {"path": "src/prme/storage/privacy.py", "line": 16, "anchor": "DDL ="}],
       "current_access": ["worker", "diagnostic", "hosted"],
-      "current_retention": "Not implemented; no current retention guarantee. Source, work, key and backup deadlines are distinct.",
-      "required_treatment": "Planned, not present in current schema. Ciphertext/context include no plaintext. Purpose keys and sensitive custom rules stay protected outside ordinary pack grants; scope erasure across provider and backup state.",
-      "pv02_implementation": "PV-02 persists versioned opaque payload envelopes through an explicit protector capability and supplies expected-body compare-and-swap for rewrap. It supplies no cryptographic implementation; evidence/processing/key disposal and authenticated envelope checks remain PV-03/PV-06.",
+      "current_retention": "PV-03 crypto/custody is implemented at the component boundary. Source, work, key and backup deadlines remain distinct; full lifecycle/erasure gates are pending.",
+      "required_treatment": "Ciphertext/context include no plaintext. Purpose keys stay outside ordinary pack grants. Full custom-rule custody and erasure across provider/backup state remain separate dependent obligations.",
+      "pv02_implementation": "PV-02 persists versioned opaque payload envelopes through an explicit protector capability and supplies expected-body compare-and-swap for rewrap.",
+      "pv03_implementation": "PV-03 supplies authenticated AES/RSA envelopes with immutable original policy snapshot binding, exact-purpose/version providers and wrapper-only held CAS. Current-policy/lifecycle integration and managed disposal remain separately gated.",
       "retention": "provider_key",
       "erasure_owners": ["engine", "key_provider", "storage_operator", "hosted_service"],
       "requirements": ["E1", "E2", "E5", "E8"]
@@ -630,6 +631,151 @@
       "retention": "metadata",
       "erasure_owners": ["engine", "application", "hosted_service", "storage_operator"],
       "requirements": ["E1", "E2", "E5", "E8"]
+    },
+    {
+      "layouts": [
+        "duckdb_directory",
+        "duckdb_single_file",
+        "postgresql"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E5",
+        "E8"
+      ],
+      "id": "C43",
+      "surface": "encryption",
+      "current_fields": [
+        "public native registry descriptors and purpose/boundary/version/epoch/request/retention references",
+        "bounded native private-key parts and completeness binding/checksum",
+        "transient non-serializable purpose key handles"
+      ],
+      "source_refs": [
+        {
+          "path": "src/prme/privacy/local_keys.py",
+          "line": 68,
+          "anchor": "class _NativeParts:"
+        },
+        {
+          "path": "src/prme/privacy/local_keys.py",
+          "line": 162,
+          "anchor": "class PublicKeyStore"
+        },
+        {
+          "path": "src/prme/privacy/keys.py",
+          "line": 116,
+          "anchor": "class SecretKeyHandle:"
+        }
+      ],
+      "current_access": [
+        "operator",
+        "worker",
+        "diagnostic"
+      ],
+      "current_retention": "Native private keys persist until explicit exact-version retirement; finite unlock/handle expiry is separate. Public retired references prevent implicit reprovision. PV-07 connects erasure inventory.",
+      "required_treatment": "No private material in public registry/pack/logs. Purpose keys remain separate; native and recovery copies are key-provider-owned. Retire/recovery cannot erase previously copied bytes.",
+      "retention": "provider_key",
+      "erasure_owners": [
+        "key_provider",
+        "storage_operator"
+      ]
+    },
+    {
+      "layouts": [
+        "duckdb_directory",
+        "duckdb_single_file",
+        "postgresql"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E5",
+        "E8"
+      ],
+      "id": "C44",
+      "surface": "metadata",
+      "current_fields": [
+        "privacy_rotation_jobs.body exact source/target refs and bounded cursor/progress",
+        "content-free local audit opaque identity/policy/key/action/outcome/timestamp metadata"
+      ],
+      "source_refs": [
+        {
+          "path": "src/prme/privacy/rotation.py",
+          "line": 21,
+          "anchor": "class RotationJob"
+        },
+        {
+          "path": "src/prme/privacy/keys.py",
+          "line": 194,
+          "anchor": "class AuditEvent"
+        },
+        {
+          "path": "src/prme/storage/privacy.py",
+          "line": 21,
+          "anchor": "ROTATION_DDL ="
+        }
+      ],
+      "current_access": [
+        "operator",
+        "diagnostic",
+        "hosted"
+      ],
+      "current_retention": "Durable operator-owned metadata; no source plaintext or DEK. Retention/purge integration remains PV-07/operator-owned.",
+      "required_treatment": "Require durable audit before disclosure and held current authority through effects. Rotation CAS cannot restore consumed/erased slots; blocked rows never imply complete.",
+      "retention": "metadata",
+      "erasure_owners": [
+        "engine",
+        "application",
+        "storage_operator"
+      ]
+    },
+    {
+      "layouts": [
+        "duckdb_directory",
+        "duckdb_single_file",
+        "postgresql"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E5",
+        "E8"
+      ],
+      "id": "C45",
+      "surface": "export_backup",
+      "current_fields": [
+        "explicit separately encrypted PKCS8 recovery artifact outside pack directory",
+        "transient hidden-prompt/inherited-FD recovery passphrase"
+      ],
+      "source_refs": [
+        {
+          "path": "src/prme/privacy/local_keys.py",
+          "line": 470,
+          "anchor": "async def export_recovery("
+        },
+        {
+          "path": "src/prme/privacy/local_keys.py",
+          "line": 500,
+          "anchor": "async def import_recovery("
+        },
+        {
+          "path": "src/prme/privacy/cli.py",
+          "line": 25,
+          "anchor": "def _passphrase("
+        }
+      ],
+      "current_access": [
+        "operator"
+      ],
+      "current_retention": "Only deliberate export; recipient/operator decides recovery retention independently. No default pack export/private-key artifact.",
+      "required_treatment": "Exclusive restrictive creation, maintained password encryption, exact public-key match on restore. Permanently lost unbacked evidence cannot be recovered. Live key retirement does not erase recovery artifacts/backups.",
+      "retention": "provider_key",
+      "erasure_owners": [
+        "key_provider",
+        "storage_operator",
+        "recipient"
+      ]
     }
   ]
 }

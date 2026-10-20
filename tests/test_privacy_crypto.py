@@ -13,12 +13,12 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from prme.privacy.capabilities import PayloadContext, ProcessingAccess
+from prme.privacy.capabilities import PayloadContext, ProcessingAccess, ProtectedPayload
 from prme.privacy.crypto import (
     CryptoProtector, RSAKeyWrapper, canonical, decode64, decode_envelope, encode64, rsa_descriptor,
 )
 from prme.privacy.keys import KeyBoundary, KeyRegistry, LocalAccessAuthority
-from prme.privacy.policy import MemoryRetention, PrivacyDenied, PrivacyPolicy, snapshot
+from prme.privacy.policy import MemoryRetention, PolicySnapshot, PrivacyDenied, PrivacyPolicy, snapshot
 
 FIXTURES = Path(__file__).parent / "fixtures" / "privacy"
 NOW = datetime(2026, 10, 20, 12, tzinfo=timezone.utc)
@@ -112,6 +112,24 @@ def test_EM01_fixed_AES256_GCM_CAVP_vectors():
         assert AESGCM(key).decrypt(nonce, ciphertext + tag, aad) == plaintext
 
 
+async def test_EM01_fixed_whole_envelope_compatible_vector():
+    vector = json.loads((FIXTURES / "crypto-vectors-v1.json").read_text())["envelope_v1"]
+    payload = ProtectedPayload.model_validate(vector["payload"])
+    saved = PolicySnapshot.model_validate(vector["snapshot"])
+    parsed = decode_envelope(payload, saved)
+    assert parsed.payload.bytes().hex() == vector["payload_aad_hex"]
+    assert parsed.wrapper.bytes().hex() == vector["wrapping_context_hex"]
+    key = fixture_private().decrypt(decode64(parsed.wrapped_key, minimum=512, maximum=512),
+        padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(),
+                     label=bytes.fromhex(vector["wrapping_context_hex"])))
+    import hmac
+    assert hmac.compare_digest(key, bytes.fromhex(vector["data_key_hex"]))
+    protector, _, context, *_ = setup_crypto()
+    access = await grant(protector, saved, context)
+    plaintext = await protector.open(payload, access, original_snapshot=saved, guard=Fence().guard)
+    assert plaintext.hex() == vector["plaintext_hex"]
+
+
 async def test_EM01_real_random_keys_nonces_and_independent_library_decrypt():
     protector, saved, context, descriptor, *_ = setup_crypto()
     first = await protector.seal(SOURCE, context, original_snapshot=saved)
@@ -130,6 +148,62 @@ async def test_EM01_real_random_keys_nonces_and_independent_library_decrypt():
     assert SOURCE.decode() not in first.model_dump_json()
     assert encode64(keys[0]) not in first.model_dump_json()
     assert one.wrapper.ref == descriptor.ref
+
+
+async def test_EM02_inner_AAD_label_wrapper_revision_swaps_and_wrong_private_key():
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    protector, saved, context, descriptor, _, _, fence = setup_crypto()
+    payload = await protector.seal(SOURCE, context, original_snapshot=saved)
+    original = decode_envelope(payload, saved)
+    altered_context = context.model_copy(update={"event_id": uuid4()})
+    aad = original.payload.model_copy(update={"context": altered_context})
+    wrapping = original.wrapper.model_copy(update={"payload": aad})
+    forged = original.model_copy(update={"payload": aad, "wrapper": wrapping})
+    access = await grant(protector, saved, altered_context)
+    with pytest.raises(PrivacyDenied):
+        await protector.open(protector._stored(forged), access, original_snapshot=saved, guard=fence.guard)
+    # A valid RSA label alone cannot rebind a saved AES payload's AAD.
+    key = fixture_private().decrypt(decode64(original.wrapped_key, minimum=512, maximum=512),
+        padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=original.wrapper.bytes()))
+    wrapped = fixture_private().public_key().encrypt(key,
+        padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=wrapping.bytes()))
+    forged = forged.model_copy(update={"wrapped_key": encode64(wrapped)})
+    with pytest.raises(PrivacyDenied):
+        await protector.open(protector._stored(forged), access, original_snapshot=saved, guard=fence.guard)
+    access = await grant(protector, saved, context)
+    revised = original.model_copy(update={"wrapper": original.wrapper.model_copy(update={"revision": 2})})
+    second = decode_envelope(await protector.seal(SOURCE, context, original_snapshot=saved), saved)
+    swapped = original.model_copy(update={"wrapped_key": second.wrapped_key})
+    for invalid in (revised, swapped):
+        with pytest.raises(PrivacyDenied):
+            await protector.open(protector._stored(invalid), access, original_snapshot=saved, guard=fence.guard)
+    wrong = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    protector.registry = KeyRegistry((descriptor,), active=(descriptor.ref,),
+        wrappers={descriptor.ref.provider_id: RSAKeyWrapper({descriptor.ref: wrong})})
+    with pytest.raises(PrivacyDenied):
+        await protector.open(payload, access, original_snapshot=saved, guard=fence.guard)
+
+
+async def test_EM02_private_permit_is_bound_to_exact_slot_wrapper_and_bytes():
+    protector, saved, context, descriptor, _, _, fence = setup_crypto()
+    one = await protector.seal(SOURCE, context, original_snapshot=saved)
+    two = await protector.seal(SOURCE, context.model_copy(update={"event_id": uuid4(), "slot_id": uuid4()}),
+                               original_snapshot=saved)
+    first, second = decode_envelope(one, saved), decode_envelope(two, saved)
+    access = await grant(protector, saved, context)
+    wrapper = protector.registry.wrapper(descriptor)
+    async with protector.authority.authorize(one, access, saved, guard=fence.guard, action="read") as permit:
+        assert len(await wrapper.unwrap_key(decode64(first.wrapped_key, minimum=512, maximum=512),
+                                             descriptor, first.wrapper.bytes(), permit)) == 32
+        with pytest.raises(PrivacyDenied):
+            await wrapper.unwrap_key(decode64(second.wrapped_key, minimum=512, maximum=512),
+                                     descriptor, second.wrapper.bytes(), permit)
+        with pytest.raises(PrivacyDenied):
+            await wrapper.unwrap_key(decode64(first.wrapped_key, minimum=512, maximum=512),
+                                     descriptor, second.wrapper.bytes(), permit)
+    with pytest.raises(PrivacyDenied):
+        await wrapper.unwrap_key(decode64(first.wrapped_key, minimum=512, maximum=512),
+                                 descriptor, first.wrapper.bytes(), permit)
 
 
 @pytest.mark.parametrize("field", ["nonce", "ciphertext", "wrapped_key"])
@@ -214,6 +288,79 @@ async def test_EM06_public_writer_grants_audit_and_metadata():
         LocalAccessAuthority(audit, isolation="service_isolated")
     with pytest.raises(TypeError):
         pickle.dumps(reader.registry.wrapper(reader.registry.inventory()[0]))
+
+
+async def test_EM06_standard_explicit_runtime_and_expiry_selected_ids():
+    clock = [NOW]
+    protector, saved, context, descriptor, _, _, fence = setup_crypto(use="runtime", clock=lambda: clock[0])
+    payload = await protector.seal(SOURCE, context, original_snapshot=saved)
+    access = await grant(protector, saved, context, kind="runtime")
+    assert await protector.open(payload, access, original_snapshot=saved, guard=fence.guard) == SOURCE
+    other = await protector.seal(SOURCE, context.model_copy(update={"event_id": uuid4()}), original_snapshot=saved)
+    calls = 0
+    wrapper = protector.registry.wrapper(descriptor)
+    unwrap = wrapper.unwrap_key
+    async def counted(*args):
+        nonlocal calls
+        calls += 1
+        return await unwrap(*args)
+    wrapper.unwrap_key = counted
+    with pytest.raises(PrivacyDenied):
+        await protector.open(other, access, original_snapshot=saved, guard=fence.guard)
+    clock[0] = access.expires_at
+    with pytest.raises(PrivacyDenied):
+        await protector.open(payload, access, original_snapshot=saved, guard=fence.guard)
+    assert calls == 0
+
+
+async def test_EM06_multiple_selected_final_lease_and_nonreentrant_open_evidence():
+    protector, saved, context, descriptor, audit, _, fence = setup_crypto(use="runtime")
+    contexts = (context, context.model_copy(update={"event_id": uuid4(), "slot_id": uuid4()}))
+    payloads = tuple([await protector.seal(SOURCE, c, original_snapshot=saved) for c in contexts])
+    access = await protector.authority.grant("runtime", tuple((c, saved) for c in contexts),
+                                             expires_at=NOW + timedelta(minutes=1))
+    # Preserve bounded evidence of why nested open_held is not a batching API.
+    async with protector.open_held(payloads[0], access, original_snapshot=saved, guard=fence.guard):
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(protector.open(payloads[1], access, original_snapshot=saved,
+                                                   guard=fence.guard), timeout=0.02)
+    for payload in payloads:
+        async with protector.open_held(payload, access, original_snapshot=saved, guard=fence.guard) as source:
+            assert source == SOURCE
+    calls = 0
+    wrapper = protector.registry.wrapper(descriptor)
+    async def forbidden(*args):
+        nonlocal calls
+        calls += 1
+        raise AssertionError("metadata lease unwrapped a key")
+    wrapper.unwrap_key = forbidden
+    before = len(audit.events)
+    async with protector.hold_evidence_access(tuple((p, saved) for p in payloads), access, guard=fence.guard):
+        revocation = asyncio.create_task(protector.authority.revoke(access.grant_id))
+        await asyncio.sleep(0.02)
+        assert not revocation.done()
+    await revocation
+    assert calls == 0 and len(audit.events) == before + 4
+
+
+@pytest.mark.parametrize("gap", ["revoke", "expiry", "fence"])
+async def test_EM06_final_lease_gap_denies_before_downstream_effect(gap):
+    clock = [NOW]
+    protector, saved, context, _, _, _, fence = setup_crypto(use="runtime", clock=lambda: clock[0])
+    payload = await protector.seal(SOURCE, context, original_snapshot=saved)
+    access = await grant(protector, saved, context, kind="runtime")
+    assert await protector.open(payload, access, original_snapshot=saved, guard=fence.guard) == SOURCE
+    if gap == "revoke":
+        await protector.authority.revoke(access.grant_id)
+    elif gap == "expiry":
+        clock[0] = access.expires_at
+    else:
+        await fence.deny()
+    effect = False
+    with pytest.raises(PrivacyDenied):
+        async with protector.hold_evidence_access(((payload, saved),), access, guard=fence.guard):
+            effect = True
+    assert not effect
 
 
 async def test_EM06_actual_response_scope_orders_revocation():
