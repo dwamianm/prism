@@ -41,14 +41,27 @@ def validate_private_grounding(result: ExtractionResult, source: str, *, speaker
                 or not mentioned_or_spoken(object_value, quote, speaker)
                 or claim.polarity not in {"positive", "negative"}):
             raise PrivacyDenied("privacy_evidence_ambiguous")
-        conditional = re.search(r"\b(?:if|unless|provided\s+that|as\s+long\s+as)\b", quote, re.IGNORECASE)
+        conditional = re.search(r"\b(?:if|unless|provided\s+that|as\s+long\s+as|only\s+when)\b", quote, re.IGNORECASE)
         if conditional and (claim.epistemic_type != "conditional" or not claim.condition
                             or claim.condition not in quote):
             raise PrivacyDenied("privacy_evidence_ambiguous")
         if claim.condition and (claim.epistemic_type != "conditional" or claim.condition not in quote):
             raise PrivacyDenied("privacy_evidence_ambiguous")
-        negative = re.search(r"\b(?:not|never|neither|without)\b|n['’]t\b", quote, re.IGNORECASE)
+        negative = re.search(r"\b(?:not|never|neither|without|no\s+longer)\b|n['’]t\b", quote, re.IGNORECASE)
         if negative and claim.polarity != "negative":
+            raise PrivacyDenied("privacy_evidence_ambiguous")
+        # A projected triple must not silently become timeless. The ordinary
+        # temporal resolver is heuristic; until its effective-time result is
+        # source-validated, reject declared refs and these explicit source cues.
+        # This is a conservative gate, not general temporal language coverage.
+        if getattr(claim, "temporal_ref", None) or re.search(
+            r"\b(?:starting|beginning|since|until|yesterday|today|tomorrow|"
+            r"currently|previously|formerly|next|last|"
+            r"January|February|March|April|May|June|July|August|September|October|November|December|"
+            r"Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b"
+            r"|\b\d{4}-\d{2}-\d{2}\b",
+            quote, re.IGNORECASE,
+        ):
             raise PrivacyDenied("privacy_evidence_ambiguous")
         quantity = getattr(claim, "quantity", None)
         if quantity is not None and validate_extracted_quantity(

@@ -1,0 +1,302 @@
+{
+  "schema_version": 1,
+  "issue": 322,
+  "status": "prerequisite_implementation_original_gates_open",
+  "closing_reference": false,
+  "base_revision": "50d22d4e365b52ce78300fe2d2e21d6f753b3a78",
+  "adopted_projection_revision": "717f1cf2",
+  "global_defaults_changed": false,
+  "original_acceptance_criteria_count": 6,
+  "original_scenarios_count": 12,
+  "planned_backend_executions": 24,
+  "detector": {
+    "kind": "local_synthetic_inference",
+    "fixture_rows": 69,
+    "fixture_sha256": "e38a8a11a46d73d0278ca3341f2e89e5098a3f3a618ccceb2f2c78123b03c007",
+    "first_report_sha256": "89cafdd7d0dd67931e685f760808d421f0f89dfafd9739707fd30463d63adac5",
+    "versions": [
+      "presidio-analyzer:2.2.364",
+      "spacy:3.8.11",
+      "en_core_web_sm:3.8.0"
+    ],
+    "python": "3.11.6",
+    "counts": {
+      "credential": {
+        "tp": 13,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3,
+        "unsupported_detected": 0,
+        "unsupported_missed": 4,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "email": {
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 0,
+        "unsupported_missed": 2,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "phone": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 0,
+        "unsupported_missed": 1,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "person": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 1,
+        "unsupported_missed": 0,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "location": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 0,
+        "unsupported_missed": 1,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "us_ssn": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 0,
+        "unsupported_missed": 1,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "payment_card": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 0,
+        "unsupported_missed": 1,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "ip_address": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 0,
+        "unsupported_missed": 1,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "custom_identifier": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 0,
+        "unsupported_missed": 1,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      },
+      "sensitive_topic": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "unsupported_detected": 0,
+        "unsupported_missed": 1,
+        "precision_supported": 1.0,
+        "recall_supported": 1.0
+      }
+    },
+    "supported_spans_detected": 34,
+    "supported_false_positives": 0,
+    "supported_false_negatives": 0,
+    "benign_rows": 21,
+    "unsupported_detected": 1,
+    "unsupported_missed": 13,
+    "labels_changed": false,
+    "training": false,
+    "remote_inference_calls": 0,
+    "scope": "Fixed declared examples only. No anonymity, universal coverage or general precision/recall claim."
+  },
+  "scenario_first_run": {
+    "passed": 20,
+    "pending": 4,
+    "failed": 0,
+    "seconds": 11.02,
+    "evidence": "322-sn-first.log",
+    "statuses": [
+      {
+        "id": "SN01",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN02",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN03",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN04",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN05",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN06",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN07",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN08",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN09",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN10",
+        "duckdb": "passed",
+        "postgresql": "passed"
+      },
+      {
+        "id": "SN11",
+        "duckdb": "pending",
+        "postgresql": "pending"
+      },
+      {
+        "id": "SN12",
+        "duckdb": "pending",
+        "postgresql": "pending"
+      }
+    ]
+  },
+  "pending_original_gates": [
+    {
+      "criteria": [
+        1,
+        6
+      ],
+      "scenario": "SN11",
+      "requirement": "Successful real query/display-name/read-graph admission and disclosure integration, with genuine benign provider controls.",
+      "owner_issues": [
+        323
+      ]
+    },
+    {
+      "criteria": [
+        1,
+        4,
+        6
+      ],
+      "scenario": "SN12",
+      "requirement": "Successful real guarded profile/summary publication and source-only/prohibited reintroduction withholding at those boundaries. Plan/index projection alone is insufficient.",
+      "owner_issues": [
+        323,
+        324
+      ]
+    },
+    {
+      "criteria": [
+        1,
+        4
+      ],
+      "requirement": "Durable atomic consumption of continuation across replay/concurrent claims and multi-item asynchronous extraction; complete generated/no-node report retention. Existing refusals are not successful coverage.",
+      "owner_issues": [
+        324
+      ]
+    },
+    {
+      "criteria": [
+        3
+      ],
+      "requirement": "Real native PseudonymKeyProvider custody/inventory/erasure integration. Scoped test handles prove only sanitizer boundary behavior.",
+      "owner_issues": [
+        321,
+        325
+      ]
+    }
+  ],
+  "adapter_evidence": {
+    "source": "322-adapters-first.log",
+    "passed": 15,
+    "deselected": 1,
+    "seconds": 9.78,
+    "includes": [
+      "synchronous MemoryClient",
+      "HTTP",
+      "MCP on DuckDB and PostgreSQL",
+      "explicit refusal of lossless framework history",
+      "native SDK MockTransport send guard, zero retries, content-free logging",
+      "early Presidio pattern timeout propagation"
+    ],
+    "not_claimed": [
+      "live model behavior",
+      "positive lossless framework history",
+      "protected query or profile/summary success"
+    ]
+  },
+  "projection_and_supervisor": {
+    "source": "322-projection-and-supervisor.log",
+    "passed": 4,
+    "deselected": 26,
+    "seconds": 3.77,
+    "scope": "SN06 speaker/source clock preservation; real missing recognizer attestation; supervised worker stall"
+  },
+  "preserved_failed_evidence": [
+    {
+      "source": "322-projection-first.log",
+      "failed": 2,
+      "passed": 3,
+      "pending": 2,
+      "cause": "Test assertion used speaker instead of the established SPEAKER_METADATA_KEY; corrected assertion, no product fallback or fixture relabel."
+    }
+  ],
+  "final_required_checks": {
+    "status": "pending_final_revision"
+  },
+  "external_boundaries": [
+    "No production key custody was replaced with test keys.",
+    "No paid/live extraction, answer, embedding or classifier calls.",
+    "No deployment, release or default promotion."
+  ],
+  "final_targeted": {
+    "source": "322-final-targeted.log",
+    "passed": 37,
+    "pending": 4,
+    "deselected": 1,
+    "seconds": 15.36,
+    "scope": "Frozen scenarios and adapter/mechanism checks, excluding repeated69-row recognition"
+  }
+}

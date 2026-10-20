@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 
 from prme import MemoryEngine
+from prme.models.speaker import SPEAKER_METADATA_KEY
 from prme.privacy import CategoryAction, PrivacyDenied
 from prme.privacy.capabilities import SourceOnlyRegion
 from prme.privacy.local_analyzer import Detection
@@ -223,10 +224,23 @@ async def test_SN06_conditions_negation_and_strict_values(tmp_path, layout, anal
     engine, runtime, policy, _ = await opened(tmp_path, layout, analyzer)
     owner = str(policy.owner_id)
     try:
-        identifier = await engine.ingest(SOURCE, user_id=owner, wait_for_extraction=True)
+        identifier = await engine.ingest(SOURCE, speaker="John Smith", event_time=runtime.clock(),
+                                         user_id=owner, wait_for_extraction=True)
         nodes = await engine.get_event_nodes(identifier, user_id=owner)
         fact = next(node for node in nodes if node.metadata.get("polarity") == "negative")
         assert fact.metadata["condition"] == "unless it is cold" and "John Smith" in fact.content
+        assert fact.content.startswith("It is not true that ") and fact.event_time == runtime.clock()
+        assert fact.metadata[SPEAKER_METADATA_KEY] == "John Smith" and "evidence_quote" not in fact.metadata
+        timed = json.loads((Path(__file__).parent / "fixtures/privacy/source-separation-v1.json").read_text())["qualifiers"][3]
+        prior = runtime.extractor.result
+        runtime.extractor.result = {"entities": [], "relationships": [], "summary": None, "facts": [{
+            "subject": timed["subject"], "predicate": timed["predicate"], "object": timed["object"],
+            "polarity": timed["polarity"], "evidence_quote": timed["source"]}]}
+        before = len(runtime.embedder.sends)
+        with pytest.raises(PrivacyDenied, match="privacy_evidence_ambiguous"):
+            await engine.ingest(timed["source"], user_id=owner, wait_for_extraction=True)
+        assert len(runtime.embedder.sends) == before
+        runtime.extractor.result = prior
         runtime.extractor.result["facts"][0]["polarity"] = "positive"
         before = len(runtime.embedder.sends)
         with pytest.raises(PrivacyDenied, match="privacy_evidence_ambiguous"):
@@ -337,12 +351,18 @@ async def test_SN10_deadline_and_aggregate_bounds(tmp_path, layout, analyzer, mo
         await no_writes(engine, runtime, owner)
         from types import SimpleNamespace
         import prme.privacy.sanitizer as sanitizer
-        ticks = iter((0, 0, 2_000_000_001))
+        import prme.privacy.recognizers as recognizers
+        ticks = iter((0, 0))
+        clock = SimpleNamespace(monotonic_ns=lambda: next(ticks, 2_000_000_001))
         with monkeypatch.context() as patch:
-            patch.setattr(sanitizer, "time", SimpleNamespace(monotonic_ns=lambda: next(ticks)))
+            patch.setattr(sanitizer, "time", clock)
+            patch.setattr(recognizers, "time", clock)
             with pytest.raises(PrivacyDenied):
                 await engine.store("The cup is on the table.", user_id=owner)
         await no_writes(engine, runtime, owner)
+        with pytest.raises(PrivacyDenied, match="privacy_capability_unavailable"):
+            recognizers.bounded_spans("x" * MAX_INPUT_BYTES,
+                                     (CustomRule("literal_identifier", "x"), CustomRule("literal_identifier", "xx")))
         runtime.sanitizer.analyzer = analyzer
         assert await engine.store("The cup is on the table.", user_id=owner)
     finally:
@@ -394,6 +414,6 @@ async def test_SN12_generated_reintroduction_and_publication_gate(tmp_path, layo
         runtime.sanitizer._classifier = None
         identifier = await engine.ingest(SOURCE, user_id=owner, wait_for_extraction=True)
         assert await engine.get_event_nodes(identifier, user_id=owner)
-        pytest.xfail("original SN12 positive guarded profile/summary publication and #323 source projection remain pending")
+        pytest.xfail("original SN12 positive guarded profile/summary publication remains pending")
     finally:
         await engine.close()

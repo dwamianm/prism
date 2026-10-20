@@ -442,6 +442,7 @@ class AdmissionCoordinator:
 
     def direct_node(self, prepared: PreparedAdmission, **options) -> MemoryNode:
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
+        from prme.ingestion.admitted_statements import project_direct_node
         from prme.models.speaker import attach_speaker
         from prme.models.value_bindings import attach_value_bindings
         data = json.loads(prepared.source.fields_json)
@@ -465,10 +466,11 @@ class AdmissionCoordinator:
         ttl = options.get("ttl_days", ...)
         if ttl is ...:
             ttl = self.engine._config.organizer.default_ttl_days.get(node_type.value)
-        return MemoryNode(user_id=prepared.event.user_id, session_id=prepared.event.session_id, scope=prepared.event.scope,
+        node = MemoryNode(user_id=prepared.event.user_id, session_id=prepared.event.session_id, scope=prepared.event.scope,
                           node_type=node_type, content=content, metadata=metadata, evidence_refs=[prepared.event.id],
                           event_time=prepared.event.event_time, epistemic_type=epistemic, source_type=source_type,
                           confidence=confidence, confidence_base=confidence, ttl_days=ttl, **values)
+        return project_direct_node(node)
 
     async def encode(self, texts: tuple[str, ...], saved: PolicySnapshot, *, processing: bool = False):
         runtime = self.require_runtime()

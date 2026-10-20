@@ -139,7 +139,7 @@ async def test_AP04_complete_minimal_capture_keeps_attribution_time_and_negation
         assert evidence["event_time"] == r.clock().isoformat() and evidence["representation"] == "sanitized"
         nodes = await engine.get_event_nodes(event_id, user_id=str(p.owner_id))
         fact = next(n for n in nodes if n.metadata and "polarity" in n.metadata)
-        assert "does not" in fact.content and "unless it is cold" in fact.content
+        assert fact.content.startswith("It is not true that ") and "unless it is cold" in fact.content
         assert fact.metadata["condition"] == "unless it is cold" and fact.metadata["polarity"] == "negative"
         assert "evidence_quote" not in fact.metadata
     finally:

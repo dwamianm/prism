@@ -216,8 +216,10 @@ class PlanningIndexes:
         ),
     ) -> DerivationPlan:
         if privacy is not None:
+            from prme.ingestion.admitted_statements import project_admitted_graph
             from prme.privacy.records import PRIVACY_KEY
             coordinator, prepared = privacy
+            project_admitted_graph(self.graph, self, prepared.source)
             for key, node in tuple(self.graph.nodes.items()):
                 metadata = dict(node.metadata or {})
                 # New plans do not become a hidden evidence archive. Grounded

@@ -9,7 +9,8 @@ and Ollama backends through a single unified interface.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from contextvars import ContextVar
 import copy
 from dataclasses import dataclass
@@ -1778,6 +1779,36 @@ class InstructorExtractionProvider:
 _PROTECTED_PROVIDER: ContextVar[bool] = ContextVar("prme_protected_provider", default=False)
 
 
+@contextmanager
+def protected_provider_logs() -> Iterator[None]:
+    """Fixed SDK diagnostics for the current protected transmission context."""
+    import logging
+
+    class ContentFree(logging.Filter):
+        def filter(self, record):
+            if _PROTECTED_PROVIDER.get():
+                safe = logging.LogRecord(record.name, record.levelno, record.pathname, record.lineno,
+                                         "privacy_provider_event", (), None, func=record.funcName)
+                record.__dict__.clear()
+                record.__dict__.update(safe.__dict__)
+            return True
+
+    names = {"openai._base_client", "anthropic._base_client", "httpx", "httpcore"}
+    names.update(name for name in logging.Logger.manager.loggerDict
+                 if name.startswith(("openai.", "anthropic.", "httpx.", "httpcore.")))
+    filter_ = ContentFree()
+    loggers = [logging.getLogger(name) for name in names]
+    for item in loggers:
+        item.addFilter(filter_)
+    token = _PROTECTED_PROVIDER.set(True)
+    try:
+        yield
+    finally:
+        _PROTECTED_PROVIDER.reset(token)
+        for item in loggers:
+            item.removeFilter(filter_)
+
+
 class GuardedExtractionProvider:
     """Explicit native-SDK single send for protected OpenAI/Anthropic/Ollama.
 
@@ -1794,9 +1825,18 @@ class GuardedExtractionProvider:
         return self._provider.provider_name
 
     async def extract(self, content, snapshot, *, guard):
-        from contextlib import contextmanager
-        import logging
+        return await self.generate(
+            content, snapshot, schema=ExtractionResult.model_json_schema(),
+            system_prompt=_extraction_prompt_for_role(content.source_role, windowed=False, resolving=False),
+            guard=guard,
+        )
 
+    async def generate(self, content, snapshot, *, schema: dict, system_prompt: str, guard):
+        """Trusted internal request shape; callers must admit output immediately.
+
+        Query and publication coordinators can reuse the same guarded transport.
+        This method does not grant a public request authority over prompts/schema.
+        """
         import httpx
 
         from prme.model_runtime import resolve_provider_connection
@@ -1808,31 +1848,6 @@ class GuardedExtractionProvider:
         provider = self._provider
         if self.provider_name not in {"openai", "anthropic", "ollama"} or not provider._resolve_model_id():
             raise PrivacyDenied("privacy_provider_unavailable")
-
-        class ContentFree(logging.Filter):
-            def filter(self, record):
-                if _PROTECTED_PROVIDER.get():
-                    record.msg, record.args = "privacy_provider_event", ()
-                    record.exc_info = record.exc_text = record.stack_info = None
-                return True
-
-        @contextmanager
-        def safe_logs():
-            # Context-local suppression does not modify other concurrent calls.
-            names = {"openai._base_client", "anthropic._base_client", "httpx", "httpcore"}
-            names.update(name for name in logging.Logger.manager.loggerDict
-                         if name.startswith(("openai.", "anthropic.", "httpx.", "httpcore.")))
-            filter_ = ContentFree()
-            loggers = [logging.getLogger(name) for name in names]
-            for item in loggers:
-                item.addFilter(filter_)
-            token = _PROTECTED_PROVIDER.set(True)
-            try:
-                yield
-            finally:
-                _PROTECTED_PROVIDER.reset(token)
-                for item in loggers:
-                    item.removeFilter(filter_)
 
         client = None
         http = None
@@ -1849,11 +1864,11 @@ class GuardedExtractionProvider:
             http = httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(retries=0), follow_redirects=False)
             common = {"api_key": key, "base_url": url, "http_client": http, "max_retries": 0,
                       "timeout": provider._timeout}
-            schema = ExtractionResult.model_json_schema()
-            prompt = (_extraction_prompt_for_role(content.source_role, windowed=False, resolving=False)
-                      + "\nReturn only a JSON object matching this schema:\n" + canonical(schema))
+            if not isinstance(schema, dict) or not isinstance(system_prompt, str):
+                raise PrivacyDenied("privacy_configuration_invalid")
+            prompt = system_prompt + "\nReturn only a JSON object matching this schema:\n" + canonical(schema)
             message = canonical({"source": fields, "role": content.source_role, "event_time": content.source_time})
-            with safe_logs():
+            with protected_provider_logs():
                 if self.provider_name == "anthropic":
                     client = anthropic.AsyncAnthropic(**common)
                     async with guard():
@@ -1890,10 +1905,11 @@ class GuardedExtractionProvider:
             raise PrivacyDenied("privacy_provider_unavailable") from None
         finally:
             try:
-                if client is not None:
-                    await client.close()
-                elif http is not None:
-                    await http.aclose()
+                with protected_provider_logs():
+                    if client is not None:
+                        await client.close()
+                    elif http is not None:
+                        await http.aclose()
             except Exception:
                 raise PrivacyDenied("privacy_provider_unavailable") from None
 
