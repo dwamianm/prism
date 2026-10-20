@@ -78,6 +78,18 @@ async def test_ER04_intent_and_each_stage_survive_interruption_and_failure(tmp_p
         [complete] = await engine.process_erasures(user_id=owner, budget_ms=60000)
         assert complete.state == "live_purged" and complete.failure is None
         assert await engine.request_erasure(request, user_id=owner) == complete
+        # A completed node-only selection no longer has a node row to resolve.
+        # Its exact persisted request must still be safely retryable.
+        selected = (await engine.get_event_nodes(positive, user_id=owner))[0]
+        node_request = ErasureRequest(request_id=uuid4(), node_ids=(selected.id,))
+        await engine.request_erasure(node_request, user_id=owner)
+        results = await engine.process_erasures(user_id=owner, budget_ms=60000)
+        node_status = next(value for value in results if value.request_id == node_request.request_id)
+        assert node_status.state == "live_purged"
+        assert await engine._graph_store.get_node(str(selected.id)) is None
+        assert await engine.request_erasure(node_request, user_id=owner) == node_status
+        with pytest.raises(PrivacyDenied, match="privacy_erasure_conflict"):
+            await engine.request_erasure(ErasureRequest(request_id=node_request.request_id, event_ids=(UUID(positive),)), user_id=owner)
         # A completed low-ID request cannot starve later work with limit=1.
         another = ErasureRequest(request_id=uuid4(), event_ids=(UUID(positive),))
         await engine.request_erasure(another, user_id=owner)

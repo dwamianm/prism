@@ -63,6 +63,15 @@
       "resolved": true,
       "passingLog": "/tmp/privacy325-retirement-cli-control-2.log",
       "correction": "Always retry the existing exact-version NativeKeyCustody.retire operation; public retired state alone does not prove private-part disposal."
+    },
+    "node_selector_duplicate_after_purge": {
+      "initialFailure": "/tmp/privacy325-node-retry-1.log",
+      "failureKind": "ER04 exact node-only retry denied after successful purge removed the selected node on all three layouts",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true,
+      "passingLog": "/tmp/privacy325-node-retry-2.log",
+      "correction": "Under current ledger and policy approval, compare the exact persisted owned request before resolving live targets; return saved status for an identical request and reject changed requests."
     }
   },
   "checks": [
@@ -227,6 +236,29 @@
       "result": "passed",
       "log": "/tmp/privacy325-final-stage-lint.log",
       "command": ".venv/bin/ruff check tests/test_privacy_erasure_native_faults.py"
+    },
+    {
+      "name": "ER04 completed node-only retry and changed-request rejection",
+      "result": "passed",
+      "count": 3,
+      "deselected": 6,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-node-retry-2.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_recovery.py -k ER04 -q",
+      "sourceBase": "4aaf58b6bc58feedb45e507b9b1e311d67ed56c9",
+      "limitations": [
+        "Targeted rerun after the request retry correction; the preceding 80-pass composition command was not rerun for this narrow edit."
+      ]
+    },
+    {
+      "name": "Node-only retry scoped Ruff",
+      "result": "passed",
+      "log": "/tmp/privacy325-node-retry-lint.log",
+      "command": ".venv/bin/ruff check src/prme/storage/erasure.py tests/test_privacy_erasure_recovery.py"
     }
   ],
   "pending": [
@@ -235,7 +267,7 @@
     "#327 full frozen protected product gate",
     "Final #323 dependency composition after its separately owned known-failing classifier repair",
     "Root-owned required reviews, final full checks/CI, PR and merge; no claim of acceptance completion",
-    "Cross-store shared key-version custody is an unresolved #321/#326/hosted-provider integration constraint. Local zero-reference inventory is not a global proof; no independently managed shared-custody safety claim."
+    "Cross-store shared key-version custody is an unresolved #321/#326/hosted-provider integration constraint and possible original AC4 survivor blocker. Local zero-reference inventory is not a global proof. Managed multi-store wiring must prove exclusive lineage or complete authorized reference ownership, or refuse destructive cross-store retirement; documentation alone cannot waive survivor loss."
   ],
   "setupFailures": [
     {
@@ -289,7 +321,13 @@
     ],
     "conflictResolution": "One supported-effect set: retain both implemented #324 lifecycle/organizer/alias and #325 rebuild; every remaining unsupported effect denied. Normal merge, no discarded parent.",
     "runtimeDiffBase": "ec2213bb",
-    "runtimeDiffSha256": "d57b2538e6f9a711ee8ffc328fa8e37f4e683a9e66875a2a9c0b386c555b98ef"
+    "runtimeDiffSha256": "9c30ba0dab2ac9a5dcee9c6f17231bc1bd55316c746f0a73dd0d66db1d69632e",
+    "priorCompositionRuntimeDiffSha256": "d57b2538e6f9a711ee8ffc328fa8e37f4e683a9e66875a2a9c0b386c555b98ef",
+    "priorSourceCheckpoint": "62b1d2fa",
+    "reviewBase": "418c7ed8e1c99b3bbbb7b90725bf88c8591e42aa",
+    "artifactOnlyMerge": "4aaf58b6bc58feedb45e507b9b1e311d67ed56c9",
+    "nodeRetryDiffBase": "4aaf58b6bc58feedb45e507b9b1e311d67ed56c9",
+    "nodeRetryRuntimeDiffSha256": "18cb8979fdd134008c0acb9e9933efce38c3c851d8cf2a74689cfe8a0f6c97bc"
   },
   "validationFailures": [
     {

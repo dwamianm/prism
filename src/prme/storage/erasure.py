@@ -76,6 +76,15 @@ class ErasureRepository(ExtractionWorkRepository):
                                        str(request_id), str(user_id))
         return ErasureStatus.model_validate_json(rows[0]["status"]) if rows else None
 
+    async def existing_request(self, request_id, *, user_id):
+        async with self.session() as session:
+            rows = await session.fetch("SELECT intent,status FROM privacy_erasure_jobs WHERE request_id=$1 AND owner_id=$2",
+                                       str(request_id), str(user_id))
+        if not rows:
+            return None
+        return (ErasureIntent.model_validate_json(rows[0]["intent"]).request,
+                ErasureStatus.model_validate_json(rows[0]["status"]))
+
     async def save_status(self, status):
         async with self.session(transaction=True) as session:
             await session.execute("UPDATE privacy_erasure_jobs SET status=$1 WHERE request_id=$2",
@@ -263,6 +272,14 @@ class ErasureCoordinator:
             raise PrivacyDenied("privacy_boundary_mismatch")
         saved = self.admission.effective(None, user_id=user_id, scope=request.scope)
         async with self.guard(), runtime.authority.guard(saved, "publication"):
+            # A completed node selection has no live row left to resolve. The
+            # current ledger has already been applied; retry its exact owned
+            # intent before resolving targets for a new request.
+            existing = await self.repository.existing_request(request.request_id, user_id=user_id)
+            if existing is not None:
+                if existing[0] != request:
+                    raise PrivacyDenied("privacy_erasure_conflict")
+                return existing[1]
             # Resolve selected identities in the actual store and owner boundary.
             for event_id in request.event_ids:
                 record = await self.admission.repository.get(str(event_id), user_id=user_id)

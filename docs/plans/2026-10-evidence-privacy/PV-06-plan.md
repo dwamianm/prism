@@ -290,7 +290,7 @@ Expected: Archive/clear is not erase; report live_purged then backup_expiry_pend
 
 ## Implementation clarification (2026-10-20)
 
-PolicyAuthority remains the existing injected policy contract. PV-06 supplies the real independent ledger and composes both approvals in AdmissionCoordinator's one actual-effect guard; no policy-revision service is introduced. Synthetic policy/model fixtures are not evidence of production policy management. Protected engine opens require an explicit ledger; shared synthetic fixtures now explicitly provision an external temporary ledger. Missing binding on existing protected admissions requires authorized versioned migration. PostgreSQL namespace/workspace-catalog runtime threading and the existing consolidation native-stage node-ID argument are approved narrow AC2/6 integration paths. Root owns full-suite/CI/review/delivery; no push is authorized yet.
+PolicyAuthority remains the existing injected policy contract. PV-06 supplies the real independent ledger and composes both approvals in AdmissionCoordinator's one actual-effect guard; no policy-revision service is introduced. Synthetic policy/model fixtures are not evidence of production policy management. Protected engine opens require an explicit ledger; shared synthetic fixtures now explicitly provision an external temporary ledger. Missing binding on existing protected admissions requires authorized versioned migration. PostgreSQL namespace/workspace-catalog runtime threading and the existing consolidation native-stage node-ID argument are approved narrow AC2/6 integration paths. Root owns full-suite/CI/review/delivery; normal checkpoint push was subsequently authorized, with no PR or known-failing dependency CI.
 
 Checkpoint scope: explicit evidence/source cleanup removes processing work too while preserving admitted memory. Memory erasure additionally discovers exact typed prepared outputs and full dependency closure, saves target IDs, removes covered SQL copies, compacts native indexes, retires zero-reference applicable keys and verifies saved targets. Native physical pages/WAL remain outside logical purge. Pseudonym epoch is now an optional opaque admission reference (omitted when absent, preserving prior bytes); a pseudonymized old record without its epoch cannot claim complete memory/key purge and requires classified migration. No full ER02–ER08/shared case is claimed merely from the initial subchecks.
 
@@ -341,3 +341,18 @@ backup/operator-export workflows. #327's full product gate, final #323
 composition, root-owned reviews/full checks/CI and final PR delivery remain
 pending. Passing independently testable erasure rows does not close the six
 original acceptance criteria or make `protected_product_ready` true.
+
+The final ER04 subcheck reproduced a completed node-only retry denial on all
+three layouts: the selected node was already gone. The first correction checks
+the exact owned durable request under the current ledger and policy guard before
+resolving new targets. Identical retries return the persisted status; changed
+requests under that identity fail. All three layouts passed the same subcheck.
+The initial failure and one successful correction are retained in the results.
+
+The normal artifact-only merge `4aaf58b6` includes reviewed #324 checkpoint
+`418c7ed8`, which is the comparison base for the owned #325 review. That merge
+changed no runtime/test code. Root authorized the remote checkpoint; PR creation,
+final CI, merge and issue closure remain root-owned and pending. Cross-store key
+custody remains a possible original AC4 blocker: actual managed multi-store
+wiring must prove exclusive lineage/complete references or refuse destructive
+cross-store retirement. Documentation cannot waive a known surviving-store loss.
