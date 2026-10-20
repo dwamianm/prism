@@ -746,10 +746,14 @@ async def _retire_keys(coordinator, intent):
 
 
 async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):
-    """Explicit resumable local maintenance; no offline scheduler is promised."""
+    """Maintain the configured owner/scope; no offline scheduler is promised."""
     import time
     if type(limit) is not int or not 1 <= limit <= 128 or type(budget_ms) is not int or not 1 <= budget_ms <= 60000:
         raise PrivacyDenied("privacy_configuration_invalid")
+    default = coordinator.admission.default
+    if default is None:
+        raise PrivacyDenied("privacy_configuration_invalid")
+    selected = coordinator.admission.effective(None, user_id=user_id, scope=default.scope).policy
     expires = time.monotonic() + budget_ms / 1000
     results = []
     async with coordinator.guard():
@@ -757,10 +761,15 @@ async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):
         async with coordinator.repository.session() as session:
             # Completed requests must not consume the bounded pending-work
             # window forever. Keep the JSON status portable across backends.
-            rows = await session.fetch("SELECT intent,status FROM privacy_erasure_jobs WHERE owner_id=$1 ORDER BY CASE WHEN status LIKE '%\"logical_live_copies\":\"purged\"%' THEN 1 ELSE 0 END,request_id LIMIT $2", user_id, limit)
+            # Foreign-scope jobs, completed or pending, cannot grant a different
+            # immutable policy boundary or consume this worker's bounded window.
+            rows = await session.fetch("SELECT intent,status FROM privacy_erasure_jobs WHERE owner_id=$1 AND scope=$2 ORDER BY CASE WHEN status LIKE '%\"logical_live_copies\":\"purged\"%' THEN 1 ELSE 0 END,request_id LIMIT $3", user_id, selected.scope.value, limit)
         for row in rows:
             intent = ErasureIntent.model_validate_json(row["intent"])
             status = ErasureStatus.model_validate_json(row["status"])
+            if (intent.owner_id, intent.request.scope, intent.project_id) != (
+                    selected.owner_id, selected.scope, selected.project_id):
+                raise PrivacyDenied("privacy_boundary_mismatch")
             saved = coordinator.admission.effective(None, user_id=user_id, scope=intent.request.scope)
             async with runtime.authority.guard(saved, "publication"):
                 while status.logical_live_copies != "purged" and time.monotonic() < expires:

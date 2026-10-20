@@ -1707,6 +1707,11 @@ class MemoryEngine:
         return await self.process_erasures(user_id=user_id, limit=limit, budget_ms=budget_ms)
 
     async def process_erasures(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000) -> tuple[ErasureStatus, ...]:
+        """Maintain only the owner/scope authorized by this engine's default.
+
+        A different scope requires its own independently authorized configured
+        engine; foreign jobs do not consume this call's bounded work window.
+        """
         from prme.storage.erasure import process_erasures
         return await process_erasures(self._privacy.erasure, user_id=user_id, limit=limit, budget_ms=budget_ms)
 

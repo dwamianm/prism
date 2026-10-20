@@ -1290,6 +1290,82 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T234037521352-restore-native-directory-path-fix-source.json",
       "source_manifest_sha256": "06110e2c29d35ae0046748f2719f0f97eba5643228809bb53f11aad6deeeb203",
       "tracked_diff_sha256": "5fdb31df03edaa1c03fc92fdc0a2e293528e1c62c14b93b42f2f8150a0d60191"
+    },
+    {
+      "name": "mixed-scope-erasure-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_erasure_recovery.py::test_ER04_scope_bound_maintenance_does_not_scan_foreign_jobs[directory]"
+      ],
+      "started_at": "2026-10-20T23:45:16.098245+00:00",
+      "elapsed_seconds": 4.059,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T234516098245-mixed-scope-erasure-initial.log",
+      "log_sha256": "238ad8e20af57903ec2622f9f66fe804f3d2564c472050332817cc2d398f264e",
+      "head": "51c19a9fd59796cfdd31dbf029bc959fda3204ff",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T234516098245-mixed-scope-erasure-initial-source.json",
+      "source_manifest_sha256": "f62f619ff8d79050862f8fb7aff7244681ab4bd3be038a12ea1e3c55361e607f",
+      "tracked_diff_sha256": "772a84f1ce708a31f88e79baf85c5c991939880e03d39e66d61110241a97e3cf"
+    },
+    {
+      "name": "mixed-scope-initial-status",
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import duckdb; path=\"/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-881/test_ER04_scope_bound_maintena0/pack/memory.duckdb\"; conn=duckdb.connect(path, read_only=True, config={\"threads\":1}); print(conn.execute(\"SELECT status FROM privacy_erasure_jobs ORDER BY request_id\").fetchall()); print(conn.execute(\"SELECT count(*) FROM vector_metadata\").fetchall()); conn.close()"
+      ],
+      "started_at": "2026-10-20T23:45:45.324629+00:00",
+      "elapsed_seconds": 0.096,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T234545324629-mixed-scope-initial-status.log",
+      "log_sha256": "f8b38c829a567326fa39af18d076e2e24103b8c3cbca67dbf5fe40eecf100a37",
+      "head": "51c19a9fd59796cfdd31dbf029bc959fda3204ff",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T234545324629-mixed-scope-initial-status-source.json",
+      "source_manifest_sha256": "f62f619ff8d79050862f8fb7aff7244681ab4bd3be038a12ea1e3c55361e607f",
+      "tracked_diff_sha256": "772a84f1ce708a31f88e79baf85c5c991939880e03d39e66d61110241a97e3cf"
+    },
+    {
+      "name": "mixed-scope-erasure-static",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "src/prme/storage/erasure.py",
+        "src/prme/storage/engine.py",
+        "tests/test_privacy_erasure_recovery.py"
+      ],
+      "started_at": "2026-10-20T23:47:12.062705+00:00",
+      "elapsed_seconds": 0.091,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T234712062705-mixed-scope-erasure-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "51c19a9fd59796cfdd31dbf029bc959fda3204ff",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T234712062705-mixed-scope-erasure-static-source.json",
+      "source_manifest_sha256": "5657c58194dbac545f1f2553d0fb72dd3ccdd1462bb6ae561cbea8063a18c84f",
+      "tracked_diff_sha256": "8b7f3b51b541cf52f76f47618159ce55f89738a1d44e886c7826b4034a21ebce"
+    },
+    {
+      "name": "mixed-scope-erasure-correction",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_erasure_recovery.py::test_ER04_scope_bound_maintenance_does_not_scan_foreign_jobs"
+      ],
+      "started_at": "2026-10-20T23:47:17.106398+00:00",
+      "elapsed_seconds": 6.281,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T234717106398-mixed-scope-erasure-correction.log",
+      "log_sha256": "bc8cf6fef738ff5de1804603ecfdb9111483fd43d011ccf97a3efd7246947f71",
+      "head": "51c19a9fd59796cfdd31dbf029bc959fda3204ff",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T234717106398-mixed-scope-erasure-correction-source.json",
+      "source_manifest_sha256": "5657c58194dbac545f1f2553d0fb72dd3ccdd1462bb6ae561cbea8063a18c84f",
+      "tracked_diff_sha256": "8b7f3b51b541cf52f76f47618159ce55f89738a1d44e886c7826b4034a21ebce"
     }
   ],
   "repair_cycles": {
@@ -1339,6 +1415,15 @@
       "fix1": "Partition physical directories and exact shared in-memory index objects; apply current authority and own SQL/native fences/artifact rows per group. 3 executions: pack/PostgreSQL passed; directory passed original failure and copy-isolation/shared-handle assertions, then failed the native-copy lexical survivor assertion because the fixture mapped retained lexical/ to a fresh lexical_index/ path.",
       "fix2": "Only correct native directory fixture paths to their original source-relative names; runtime unchanged. The affected directory parameter passed once. Passing pack/PostgreSQL were not rerun.",
       "unsuccessful_fix_validation_cycles": 1
+    },
+    "hosted_mixed_scope_transition": {
+      "shared_strategy": "#281 HS11/PP12 transition; counts persist across repositories and layouts",
+      "prior_unsuccessful_cycles": 1,
+      "engine_initial": "One directory attempt failed before scope selection: simultaneous immutable scope engines had different loaded native vectors, leaving personal evidence purge at verify/coverage_unavailable. Read-only status diagnostic preserved; not a reproduction of the hosted boundary failure.",
+      "fixture_adaptation": "Root authorized sequential immutable scope engines matching the hosted worker lifecycle, retaining all three sources and original assertions. No further red run or native verification repair.",
+      "second_cycle_engine": "Filter actual immutable owner/scope before bounded selection and validate intent/index boundary. Exactly directory and PostgreSQL passed once; public method docstring updated.",
+      "second_cycle_hosted": "pending one #281 affected rerun against pushed checkpoint",
+      "stop_condition": "If the ensuing hosted rerun fails this behavior, stop; no third correction without USER approval."
     }
   },
   "held_dependencies": [
@@ -1505,6 +1590,35 @@
         "restore-native-fix1"
       ],
       "copy_separation": "One real post-snapshot source node remains only in source; distinct native index objects/paths do not union documents. A second same-target directory handle or pack shared-index handle retains the expected survivor. Each group records completed artifacts in its own SQL store."
+    },
+    "hosted_281_scope_maintenance": {
+      "attribution": "#281 original HS11/PP12 composition prerequisite; no added #326 acceptance criterion",
+      "original_hosted_failure": {
+        "path": "processing-transition-real-02/output.log",
+        "sha256": "cf44b144044998c7cda285ef955a0c08f796f69bfd88b4b880ebf9e5fda610be",
+        "source_manifest_sha256": "14c30fc3ed5091935fb457bd69fa43531d1646ceae9b46935a1e9559ea3a291e"
+      },
+      "executions": 3,
+      "initial_failed": 1,
+      "correction_passed": 2,
+      "layouts": [
+        "directory",
+        "postgres"
+      ],
+      "assertions": [
+        "completed foreign-scope jobs do not fail processing",
+        "pending low-ID foreign-scope jobs cannot consume limit=1 before own pending work",
+        "exact authorized scope results and status progress",
+        "wrong owner and mismatched intent/query-column scope refuse",
+        "foreign pending job status unchanged",
+        "three original source records retain their original policy scopes"
+      ],
+      "public_contract": "process_erasures maintains only this engine default owner/scope; other scopes require separately authorized immutable engines.",
+      "runtime_scope": [
+        "storage/erasure.py::process_erasures",
+        "storage/engine.py::process_erasures docstring only"
+      ],
+      "held": "No held #323 path, native verification correction, broad erasure rerun or full hosted scenario verdict."
     }
   },
   "remaining_original_work": [

@@ -713,3 +713,35 @@ passes. The final three-layout evidence combines the directory-only pass with
 the two unaffected passing layouts; neither failed composite is relabeled.
 One unsuccessful fix-and-validation cycle is retained. No further broad check
 or public classifier/rebuild invocation was made.
+
+## Authorized #281 mixed-scope maintenance prerequisite (2026-10-20)
+
+The actual hosted HS11/PP12 transition reached purged jobs, then failed because
+`process_erasures` selected owner-wide jobs and applied an immutable single-scope
+default even to completed foreign-scope intents. Root authorized only that
+function's selection/validation and public method docstring,
+`tests/test_privacy_erasure_recovery.py`, and this plan/results pair. Existing
+owner_id/scope columns filter the effective immutable boundary before ordering
+and LIMIT; current-ledger and per-request authority guards remain. A different
+scope requires a separately authorized configured engine, never a copied or
+mutated default policy used as permission.
+
+Finite validation is one initial directory reproduction, then exactly directory
+and PostgreSQL variants after the correction. Reuse three actual sources (two
+personal, one project), separately provisioned real key boundaries and policies:
+completed foreign-scope jobs, pending low-ID foreign jobs versus limit=1, exact
+scope/status progress, wrong-owner denial and intent/index consistency. No held
+reader/classifier or broader erasure suite runs. The hosted transition already
+has one unsuccessful correction cycle; this engine correction plus the one
+ensuing hosted rerun is its second cycle. A failure at either point stops the
+strategy pending explicit USER approval, without resetting by repository/layout.
+
+The initial directory attempt stopped before scope selection: simultaneous
+scope engines had different loaded vectors and native verification returned
+coverage_unavailable. That failed run and its read-only persisted-status
+diagnostic remain preserved, without being presented as the hosted boundary
+reproduction. Root authorized sequential immutable scope engines to match the
+hosted worker lifecycle, with all three sources and assertions retained. The
+single correction passed exactly directory and PostgreSQL (two executions).
+The shared second cycle remains pending the one affected hosted rerun. Native
+verification, held readers and the broader erasure suite were not changed/run.
