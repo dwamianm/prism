@@ -745,3 +745,43 @@ hosted worker lifecycle, with all three sources and assertions retained. The
 single correction passed exactly directory and PostgreSQL (two executions).
 The shared second cycle remains pending the one affected hosted rerun. Native
 verification, held readers and the broader erasure suite were not changed/run.
+
+## Independent remaining EM04 integration
+
+The original EM04 row above already requires three evidence objects, one
+committed wrapper change, actual erasure authority, exact-job resume and
+export/reopen. Existing #321 rotation tests exercise a synthetic denied-record
+callback; the verified #326 CLI checks exercise separate recovery and key loss
+but never rotate/resume. Extend only `tests/test_privacy_portability_cli.py` and
+this plan/results pair for the missing integration. No runtime change is planned.
+The finite command selects only
+`test_EM04_cli_rotation_real_erasure_export_reopen`, with the existing directory,
+single-file and PostgreSQL parametrizations: three executions, no other cohort.
+
+Use real CLI rotate with limit=1, persistent rotation status and resume, and a
+real independent-ledger evidence erasure on the second UUID-ordered object.
+Keep that source engine open for the first resume so its actual effect guard
+must deny the still-present fenced envelope; reopening then applies the pending
+purge before the final exact-job resume. Compare immutable payload context,
+nonce/ciphertext and independently unwrapped DEK, while only the wrapper changes.
+Closed export and same-lineage restore preserve the new exact versions and
+erased-source availability. Directory-to-single-file transfer is the already
+supported protected layout migration route; PostgreSQL remains an empty unbound
+task schema. Retain the pre-rotation export and deliberate encrypted recovery
+key outside the pack, and demonstrate offline readability explicitly as the
+backup/recovery limit. This does not authorize live access to erased evidence.
+
+The inherited native OS adapter is a named double around actual custody and
+crypto; do not relabel it as fresh native-platform execution. The old #321 native
+custody evidence and Windows/Linux limits remain separate. No held #323 public
+retrieval, broad regression run, generic close change, journal format change,
+bound namespace recovery or hosted replacement is part of this selection.
+
+The single finite EM04 run passed all three parametrizations (14.52 seconds
+pytest; 21.028 seconds captured command). Its exact pre-run source manifest and
+log hashes are in PV-07-results.json. No runtime change or repair was needed,
+and no already passing cohort was repeated. Whole frozen cases and the public
+read/dependency/final delivery gates remain open. Root verified the separate #281 worker
+cycle-2 transition on exact 42f87e07 and its consumed wheel; its canonical
+281-mixed-scope-transition-prerequisite.json records resolution in that second
+cycle. No repeated transition run is needed.

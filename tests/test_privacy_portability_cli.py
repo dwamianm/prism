@@ -3,21 +3,26 @@
 These are CLI subchecks, not complete frozen cases or held #323 retrieval proof.
 """
 from dataclasses import replace
+from datetime import timedelta
+import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
 import sys
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from prme import MemoryEngine
 from prme.cli import build_parser
 from prme.privacy.cli import failure_guidance
+from prme.privacy.crypto import decode64, decode_envelope
+from prme.privacy.erasure import ErasureRequest
 from prme.privacy.policy import PrivacyDenied
 from prme.privacy.portability import PrivacyPortabilityError
 from prme.privacy.retry_commitments import NativeRetryCommitter
-from prme.storage.privacy_export import read_protected_export
+from prme.storage.privacy_export import export_protected_pack, read_protected_export, restore_protected_export
 from prme.storage.privacy_migration import _read_snapshot
 from tests.privacy_portability_support import fresh_config
 from tests.privacy_journal_support import LAYOUTS, journal_engine, isolated_privacy_postgres, local_analyzer_fixture  # noqa: F401
@@ -132,6 +137,158 @@ async def test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure(tm
     assert not status["physical_wipe"] and status["backup_copies"] == status["external_copies"] == "not_managed"
     assert all(value._closed for value in opened)
     assert artifact.exists() and recovery.exists()  # No automatic offline disposal.
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_EM04_cli_rotation_real_erasure_export_reopen(tmp_path, layout, analyzer, native, monkeypatch, capsys):
+    """Original three-object rotation case joined to real current-ledger effects.
+
+    The retained recovery key deliberately demonstrates the offline-copy limit.
+    It is never a current live erasure authorization or an ordinary export field.
+    """
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    import structlog
+
+    monkeypatch.setattr(structlog._config._CONFIG, "logger_factory", structlog.PrintLoggerFactory(file=sys.stderr))
+    engine, runtime, policy, custody, original, *_ = await journal_engine(tmp_path, layout, analyzer)
+    owner = str(policy.owner_id)
+    source_only = "ROTATION_SOURCE_ONLY_326"
+    opened = [engine]
+    pending = None
+    config = engine._config
+
+    async def fresh():
+        nonlocal pending
+        if pending is not None:
+            value, pending = pending, None
+        else:
+            value = await MemoryEngine.create(config, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            opened.append(value)
+        return value
+
+    def unwrap(private, envelope):
+        return private.decrypt(decode64(envelope.wrapped_key, minimum=1, maximum=6144), padding.OAEP(
+            mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=envelope.wrapper.bytes()))
+
+    monkeypatch.setattr(__name__ + ".engine_factory", fresh)
+    selected = ["--engine-factory", __name__ + ":engine_factory"]
+    base = ["--registry", str(custody.path), "--project", str(policy.project_id), "--owner", owner, *selected]
+    audited = [*base, "--audit", str(tmp_path / "rotation-audit.jsonl")]
+    try:
+        for index in range(3):
+            await engine.store(f"Mara likes tea. {source_only}_{index}.", retrieval_content="Mara likes tea.", user_id=owner)
+        before = sorted(await engine._privacy.repository.for_owner(owner), key=lambda record: record.event_id)
+        assert len(before) == 3
+        erased = before[1]
+        store_id = (await engine._privacy.erasure.repository.state())[1].store_id
+        exports = tmp_path / "rotation-exports"
+        exports.mkdir()
+        backup = exports / "before-rotation.json"
+        await export_protected_pack(engine, backup)
+        backup_hash = hashlib.sha256(backup.read_bytes()).digest()
+        recovery = tmp_path / "retained-recovery.pem"
+        password = b"task-owned-offline-backup-326"
+        await custody.export_recovery(original.ref, recovery, passphrase=password, pack_path=backup)
+        recovery_hash = hashlib.sha256(recovery.read_bytes()).digest()
+        offline_private = serialization.load_pem_private_key(recovery.read_bytes(), password=password)
+        target = await custody.provision_wrapping(original.boundary, "evidence", key_id=original.ref.key_id)
+        await engine.close()
+        capsys.readouterr()
+
+        # A bounded CLI step commits exactly one wrapper then releases its engine.
+        await run(["privacy-keys", "rotate", *audited, "--source-version", str(original.ref.key_version),
+                   "--target-version", str(target.ref.key_version), "--limit", "1"])
+        interrupted = json.loads(capsys.readouterr().out)
+        assert interrupted["state"] == "running" and interrupted["changed"] == 1
+        assert interrupted["cursor"] == str(before[0].event_id)
+        job_id = interrupted["job_id"]
+        engine = await fresh()
+        after_one = sorted(await engine._privacy.repository.for_owner(owner), key=lambda record: record.event_id)
+        assert [record.evidence.key_version for record in after_one] == [
+            target.ref.key_version, original.ref.key_version, original.ref.key_version]
+        request = ErasureRequest(request_id=uuid4(), mode="evidence", event_ids=(erased.event_id,))
+        await engine.request_erasure(request, user_id=owner)
+        assert (await engine._privacy.repository.get(str(erased.event_id), user_id=owner)).evidence == erased.evidence
+        with pytest.raises(PrivacyDenied, match="^privacy_erased$"):
+            async with engine._privacy.guard(erased.snapshot, "publication", records=(erased,), purpose="evidence"):
+                pytest.fail("erased evidence received a publication lease")
+
+        # Preserve the still-present envelope for this resume, so refusal comes
+        # from the actual effect fence, not merely an absent SQL slot on reopen.
+        pending = engine
+        await run(["privacy-keys", "resume", *audited, "--job", job_id])
+        blocked = json.loads(capsys.readouterr().out)
+        assert blocked["state"] == "blocked" and blocked["blocked"] == 1 and blocked["changed"] == 2
+        await run(["privacy-keys", "resume", *audited, "--job", job_id])
+        completed = json.loads(capsys.readouterr().out)
+        assert completed["state"] == "complete" and completed["blocked"] == 0 and completed["changed"] == 2
+        await run(["privacy-keys", "resume", *audited, "--job", job_id])
+        assert json.loads(capsys.readouterr().out) == completed
+        await run(["privacy-keys", "rotation-status", *base, "--job", job_id])
+        assert json.loads(capsys.readouterr().out) == completed
+
+        engine = await fresh()
+        after = sorted(await engine._privacy.repository.for_owner(owner), key=lambda record: record.event_id)
+        assert [record.event_id for record in after] == [record.event_id for record in before]
+        for old, current in zip(before, after, strict=True):
+            assert current.snapshot == old.snapshot
+            if current.event_id == erased.event_id:
+                assert current.evidence is None
+                assert (await engine.inspect_source(str(current.event_id), user_id=owner)).state == "erased"
+                continue
+            old_envelope = decode_envelope(old.evidence, old.snapshot)
+            new_envelope = decode_envelope(current.evidence, current.snapshot)
+            assert (new_envelope.payload, new_envelope.nonce, new_envelope.ciphertext) == (
+                old_envelope.payload, old_envelope.nonce, old_envelope.ciphertext)
+            assert new_envelope.wrapper.ref == target.ref
+            assert new_envelope.wrapper.revision == old_envelope.wrapper.revision + 1
+            async with engine._privacy.guard(current.snapshot, "disclosure", records=(current,), purpose="evidence"):
+                with custody.unlocked((target.ref,), expires_at=runtime.clock() + timedelta(minutes=1)) as private:
+                    assert hmac.compare_digest(unwrap(offline_private, old_envelope),
+                                               unwrap(private._private_keys[target.ref], new_envelope))
+        rotated = exports / "after-rotation.json"
+        native_reads = native.reads
+        await export_protected_pack(engine, rotated)
+        assert native.reads == native_reads
+        bundle = read_protected_export(rotated)
+        assert all(record.evidence is None or record.evidence.key_version == target.ref.key_version for record in bundle.admissions)
+        assert source_only not in rotated.read_text() and "PRIVATE KEY" not in rotated.read_text()
+        await engine.close()
+
+        # This is the supported protected layout transfer, not a generic import.
+        destination_layout = "pack" if layout == "directory" else layout
+        async with fresh_config(config, tmp_path / "rotation-restored", destination_layout, restore=True) as destination:
+            result = await restore_protected_export(rotated, destination, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            assert UUID(result["store_id"]) == store_id and result["source_retained"]
+            restored = await MemoryEngine.create(destination, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            opened.append(restored)
+            assert (await restored._privacy.erasure.repository.state())[1].store_id == store_id
+            assert sorted(await restored._privacy.repository.for_owner(owner), key=lambda record: record.event_id) == after
+            assert (await restored.inspect_source(str(erased.event_id), user_id=owner)).state == "erased"
+            assert len(await restored._privacy.repository._query("SELECT id FROM nodes", ())) == 3
+            await restored.close()
+        entries = {entry.version: entry for entry in custody.inventory()}
+        assert entries[original.ref.key_version].managed_lineages == (store_id,)
+        assert entries[target.ref.key_version].managed_lineages == (store_id,)
+
+        # A deliberate old key plus the retained old export can still decrypt
+        # offline, including the live-erased object's old snapshot. This proves
+        # the documented backup limit, not permission from current authority.
+        for record in read_protected_export(backup).admissions:
+            envelope = decode_envelope(record.evidence, record.snapshot)
+            key = unwrap(offline_private, envelope)
+            plaintext = AESGCM(key).decrypt(decode64(envelope.nonce, minimum=12, maximum=12),
+                decode64(envelope.ciphertext, minimum=16, maximum=8 * 1024 * 1024), envelope.payload.bytes())
+            assert source_only.encode() in plaintext
+        assert hashlib.sha256(backup.read_bytes()).digest() == backup_hash
+        assert hashlib.sha256(recovery.read_bytes()).digest() == recovery_hash
+        assert source_only not in (tmp_path / "rotation-audit.jsonl").read_text()
+    finally:
+        for value in opened:
+            if not value._closed:
+                await value.close()
 
 
 @pytest.mark.parametrize("layout", LAYOUTS)

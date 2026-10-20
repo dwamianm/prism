@@ -1366,6 +1366,43 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T234717106398-mixed-scope-erasure-correction-source.json",
       "source_manifest_sha256": "5657c58194dbac545f1f2553d0fb72dd3ccdd1462bb6ae561cbea8063a18c84f",
       "tracked_diff_sha256": "8b7f3b51b541cf52f76f47618159ce55f89738a1d44e886c7826b4034a21ebce"
+    },
+    {
+      "name": "rotation-portability-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_portability_cli.py"
+      ],
+      "started_at": "2026-10-20T23:53:49.429640+00:00",
+      "elapsed_seconds": 0.072,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T235349429640-rotation-portability-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "42f87e07dcbf91d92ba3dee58d167454bd1ad13e",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T235349429640-rotation-portability-static-source.json",
+      "source_manifest_sha256": "387468d376ab950dfb4f4466e9c9d55945d834d1748993b73126d7e3a293678b",
+      "tracked_diff_sha256": "caadc90f77da0eee72af792b72c7e449defd2830975f252e71f67c311dab8bd8"
+    },
+    {
+      "name": "rotation-portability-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_portability_cli.py::test_EM04_cli_rotation_real_erasure_export_reopen",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T23:53:56.069280+00:00",
+      "elapsed_seconds": 21.028,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T235356069280-rotation-portability-initial.log",
+      "log_sha256": "51c5c72c7f1d75379854cc9cd2708ab546537f734801c2c6cf26b635bcfb6e41",
+      "head": "42f87e07dcbf91d92ba3dee58d167454bd1ad13e",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T235356069280-rotation-portability-initial-source.json",
+      "source_manifest_sha256": "387468d376ab950dfb4f4466e9c9d55945d834d1748993b73126d7e3a293678b",
+      "tracked_diff_sha256": "caadc90f77da0eee72af792b72c7e449defd2830975f252e71f67c311dab8bd8"
     }
   ],
   "repair_cycles": {
@@ -1422,8 +1459,8 @@
       "engine_initial": "One directory attempt failed before scope selection: simultaneous immutable scope engines had different loaded native vectors, leaving personal evidence purge at verify/coverage_unavailable. Read-only status diagnostic preserved; not a reproduction of the hosted boundary failure.",
       "fixture_adaptation": "Root authorized sequential immutable scope engines matching the hosted worker lifecycle, retaining all three sources and original assertions. No further red run or native verification repair.",
       "second_cycle_engine": "Filter actual immutable owner/scope before bounded selection and validate intent/index boundary. Exactly directory and PostgreSQL passed once; public method docstring updated.",
-      "second_cycle_hosted": "pending one #281 affected rerun against pushed checkpoint",
-      "stop_condition": "If the ensuing hosted rerun fails this behavior, stop; no third correction without USER approval."
+      "second_cycle_hosted": "Root verified passed on exact42f87e07 and wheel c77a9a40739e51b9d9a0613b741d857b90d682b238ba59d8abe11b1d606030fd; 1 test6.81s/7.275s. Resolved within second correction cycle; original failures retained.",
+      "stop_condition": "Resolved in second cycle. No repeated run or new repair authorized by this evidence."
     }
   },
   "held_dependencies": [
@@ -1618,15 +1655,191 @@
         "storage/erasure.py::process_erasures",
         "storage/engine.py::process_erasures docstring only"
       ],
-      "held": "No held #323 path, native verification correction, broad erasure rerun or full hosted scenario verdict."
+      "held": "No held #323 path, native verification correction, broad erasure rerun or full hosted scenario verdict.",
+      "external_hosted_result": {
+        "status": "root_verified_affected_pass",
+        "source": "42f87e07dcbf91d92ba3dee58d167454bd1ad13e",
+        "log": "/Users/dwamianm/Sites/prism-monorepo/.claude/worktrees/privacy-281-diagnostic-broker/.github-ticket-loop/privacy-281/processing-transition-cycle2/output.log",
+        "log_sha256": "b2a6fdc3b132927f1d230cdf2c803804da5228e4c8f83f5da346282b2f1b2958",
+        "source_manifest_sha256": "df9653be827a7980a4afdc62371cc689b3af8d8b48c51775f1a8e9b6222e101d",
+        "limits": "One affected hosted transition; original failed fixture job retained and locked only during the affected claim. No whole HS11/PP12 verdict.",
+        "wheel_sha256": "c77a9a40739e51b9d9a0613b741d857b90d682b238ba59d8abe11b1d606030fd",
+        "canonical_record": "hosted run/281-mixed-scope-transition-prerequisite.json"
+      }
+    },
+    "rotation_erasure_portability": {
+      "requirements": [
+        "AC2",
+        "AC3",
+        "AC4",
+        "AC5",
+        "AC6",
+        "EM04"
+      ],
+      "test": "tests/test_privacy_portability_cli.py::test_EM04_cli_rotation_real_erasure_export_reopen",
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "executions": 3,
+      "passed": 3,
+      "failed": 0,
+      "runtime_changes": false,
+      "assertions": [
+        "Exactly three real evidence objects; CLI rotate limit1 commits one exact wrapper and stores its cursor",
+        "Real independent-ledger evidence erasure denies the still-present second object under the current effect lease",
+        "First same-engine resume blocked1/changed2; reopening purges fenced evidence and exact job then completes idempotently",
+        "Payload AAD/nonce/ciphertext and independently unwrapped DEK unchanged for surviving wrappers; exact target version/revision",
+        "Default export uses no native private lookup and contains neither source-only plaintext nor recovery key",
+        "Current-ledger closed restore preserves records, original lineage, erased availability and three admitted nodes",
+        "Directory-to-single-file transfer; pack/PG restore only into empty task-owned destinations",
+        "Actual native custody usage entries retain the single original managed lineage through rewrap/export/restore",
+        "Retained pre-rotation export and deliberate encrypted recovery artifact remain byte-identical and decryptable offline",
+        "Content-free rotation audit has no source marker"
+      ],
+      "limits": [
+        "NativeDouble replaces OS get/set/delete; no new macOS/Windows/Linux custody execution claim",
+        "No ordinary public retrieval/classifier, pending work, whole frozen EM04/EM08 or shared full acceptance claim",
+        "No automatic old-key retirement, physical erasure or offline revocation; retained artifacts prove that limit",
+        "No bound PostgreSQL namespace replacement or current hosted recovery guard implementation"
+      ]
     }
   },
   "remaining_original_work": [
     "Complete protected journal/export family coverage and original mixed standard-mode public retrieval parity; broader whole-case verdict remains pending",
     "Public/recovered pending-work restore gates remain held; three-layout authority negatives/native-copy components passed, with bound hosted recovery separately pending",
     "Bound same-lineage hosted PostgreSQL workspace restore into current live control authority",
-    "EM04 rotation/erasure and remaining EM01-EM08 shared integration",
+    "Remaining EM01-EM08 shared integration; the original EM04 three-layout rotation/real-erasure/export-reopen component passed",
     "Saved fixed-clock standard-mode public retrieval comparison: blocked by held #323",
     "Full suite/package/simulation/CI and root review/PR/delivery remain mandatory"
-  ]
+  ],
+  "remaining_key_rotation_recovery_inventory": {
+    "source_revision": "42f87e07dcbf91d92ba3dee58d167454bd1ad13e",
+    "boundary": "Original EM01-EM08 only; reused evidence is not a fresh combined revision run or a whole-case pass.",
+    "EM01": {
+      "reuse": "Reviewed #321 fixed codec vectors, canonical payload/wrapper context and PyCA cross-check; root delivery-321-terminal.json/qa-321-merged.json preserve exact prior validation.",
+      "pending": "Exported envelope composition remains component-only; the planned EM04 check will independently unwrap/decrypt retained actual exports, without repeating the vector cohort."
+    },
+    "EM02": {
+      "reuse": "Reviewed #321 exact context/version/purpose tamper and wrong-key controls; current #326 source/format/restoration refusal evidence remains recorded above.",
+      "pending": "Complete shared exact-version/context/swap checks on exported envelopes and public protected reads remain unpassed."
+    },
+    "EM03": {
+      "reuse": "Reviewed #321 protect/write failure controls; #326 source, protected-format and migration interruption/commit/publication checks preserve actual storage evidence.",
+      "pending": "Shared complete destination-failure/artifact scan integration is not established by these partial controls."
+    },
+    "EM04": {
+      "existing_gap": "#321 test_privacy_rotation.py uses a synthetic denied-record callback; existing #326 CLI cases do not rotate or resume.",
+      "selected": "tests/test_privacy_portability_cli.py::test_EM04_cli_rotation_real_erasure_export_reopen",
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "expected_executions": 3,
+      "runtime_changes_planned": false,
+      "status": "three_layout_component_pass_whole_case_pending",
+      "evidence": "rotation-portability-initial: exactly 3 passed,14.52s pytest/21.028s wrapper; no runtime changes or correction cycles"
+    },
+    "EM05": {
+      "reuse": "#326 actual CLI evidence/key-loss/recovery-export/import/selected-unlock/default-export cases: directory and pack in preserved 11-pass/1-fail composite; corrected PostgreSQL case passed separately. #321 wrong recovery-passphrase and native custody evidence retained.",
+      "pending": "Separate admitted rows remain stored; public usable-memory validation is held by #323. NativeDouble is not fresh OS custody evidence; existing Windows/Linux platform limits remain."
+    },
+    "EM06": {
+      "reuse": "#326 ordinary migration/export checks preserve no-private-lookup assertions; reviewed #321 separation/audit controls remain prior evidence.",
+      "pending": "Complete shared ordinary public reader guarantees require held #323, never same-process adversary isolation."
+    },
+    "EM07": {
+      "reuse": "Verified direct4/mixed4, original legacy identity, interruptions, typed unavailable history, source preservation, historical reader34 paired outcomes and source8 controls.",
+      "pending": "Fixed-clock standard public parity and full scenario closure remain held; no component pass substitutes."
+    },
+    "EM08": {
+      "reuse": "Verified default/active export, CLI migration/restore, directory-to-single-file and three-layout current-ledger negatives/native-copy positives.",
+      "pending": "Bound PostgreSQL workspace destination capability remains design-only; recovered pending work/public survivor gates and protected journal-family coverage remain open."
+    },
+    "next_check_limit": "Only the independent original EM04 three-layout sequence is selected now. No repeated passing cohort, broad suite, held classifier or hosted recovery implementation."
+  },
+  "current_remaining_inventory": {
+    "original_acceptance": "All six original ACs remain partial; zero whole frozen case passes. Additional findings are not new criteria.",
+    "approval_held_323": [
+      {
+        "criteria": [
+          "AC1",
+          "AC2",
+          "AC3",
+          "AC5"
+        ],
+        "remaining": "Fixed-clock standard public mixed-memory parity, public usable survivors after restore/key loss, and public read/recovered-publication checks that enter held ReadContext.create/project_public_result/get_event_nodes.",
+        "constraint": "Two unsuccessful classifier correction cycles; no third repair or execution without USER approval. No generic native SIGABRT close rewrite."
+      }
+    ],
+    "independent_implementation": [
+      {
+        "criteria": [
+          "AC2",
+          "AC3",
+          "AC5"
+        ],
+        "remaining": "Complete protected journal export dispatch using existing #324 formats/readers, then reuse the existing export family and pending-work metadata fixture.",
+        "source_evidence": [
+          "storage/privacy_export.py::_operation permits direct/derivation/receipts/generated publications/protected_snapshot but rejects all other kinds",
+          "storage/privacy_journals.py::finish_processing emits PRIVACY_PROCESSING_TERMINAL with processing_terminal body, currently unmatched",
+          "storage/alias_proposal.py::ProtectedAliasProposalRecord/read_record and storage/alias_review.py::ProtectedAliasReviewRecord/read_review_record emit checksummed protected record envelopes, not protected_snapshot"
+        ],
+        "boundary": "Consume existing codecs; do not introduce a competing journal format. This is a source-backed implementation gap, not a newly run failure or a complete list inferred from tests."
+      }
+    ],
+    "independent_missing_components": [
+      {
+        "criteria": [
+          "AC3",
+          "AC5"
+        ],
+        "remaining": "Original EM02 wrong-key/context/version/purpose and swapped exported-envelope refusals in the closed export/restore boundary; reuse #321 crypto evidence and current negative evidence rather than rerun the primitive cohort."
+      },
+      {
+        "criteria": [
+          "AC1",
+          "AC2",
+          "AC3"
+        ],
+        "remaining": "Original EM03 destination-effect failure/artifact scans and current independent-ledger change at export/publication boundaries, after relevant journal dispatch is complete."
+      },
+      {
+        "criteria": [
+          "AC2",
+          "AC5"
+        ],
+        "remaining": "Typed restored work retains original finite deadlines/generations and unavailable history before any actual surviving-work publication. Public processing paths that reach held readers remain gated."
+      },
+      {
+        "criteria": [
+          "AC1",
+          "AC2",
+          "AC3",
+          "AC4",
+          "AC5",
+          "AC6"
+        ],
+        "remaining": "Consolidate exact fixture/layout/subcheck evidence through the planned frozen scenario harness without relabeling partial/mocked results as full passes."
+      }
+    ],
+    "design_held": [
+      {
+        "criteria": [
+          "AC5"
+        ],
+        "handoff": "Hosted #283 AC3/AC6; bound same-lineage PostgreSQL destination into the current catalog/control authority",
+        "remaining": "Actual held recovery/effect capability and safe nested lock order must be settled with #280/#283 before coding. Existing supported empty unbound PG restore is verified.",
+        "limit": "Published ACs do not explicitly require occupied-schema replacement. Frozen preparation refuses occupied/unquiesced destinations; preserve its positive-A ambiguity, no new automatic replacement requirement."
+      }
+    ],
+    "final_required_gates": [
+      "Root-coordinated affected integration and required full suite/package/simulation/CI on final revision",
+      "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
+      "Root reviews, PR and normal delivery; no PR/CI created by this worker"
+    ],
+    "next_action": "Test/docs EM04 checkpoint only. No additional cohort or independent implementation begun while root reconciles this inventory."
+  }
 }
