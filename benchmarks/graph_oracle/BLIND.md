@@ -50,7 +50,7 @@ same questions asked in other words.
    `DESIGN.md` (`derive_cues` in `gold.py`): the words of each relation's name
    and definition, minus a fixed stop list (English stop words and the schema's
    own words, such as role, status and polarity), minus capitalized words
-   (example names) and digits, with each word's verb forms (s, ed, ing).
+   (example names) and digits, with each word's verb forms (s, ed, ing, a dropped e restored, a doubled consonant reduced).
    Nothing about a question informs it.
 7. **One run, no tuning.** `python -m benchmarks.graph_oracle blind` runs once
    over (a) the 53 original items, (b) the blind questions and (c) their
