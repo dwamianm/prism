@@ -216,8 +216,10 @@ class PlanningIndexes:
         ),
     ) -> DerivationPlan:
         if privacy is not None:
+            from prme.ingestion.admitted_statements import project_admitted_graph
             from prme.privacy.records import PRIVACY_KEY
             coordinator, prepared = privacy
+            project_admitted_graph(self.graph, self, prepared.source)
             for key, node in tuple(self.graph.nodes.items()):
                 metadata = dict(node.metadata or {})
                 # New plans do not become a hidden evidence archive. Grounded
@@ -226,6 +228,30 @@ class PlanningIndexes:
                 metadata.pop("resolution", None)
                 metadata[PRIVACY_KEY] = prepared.record.reference()
                 self.graph.nodes[key] = node.model_copy(update={"metadata": metadata})
+            keys = tuple(self.graph.nodes)
+            vector_keys = tuple(self.vectors)
+            lexical_keys = tuple(self.lexical)
+            bundle = {
+                "nodes": [{"content": self.graph.nodes[key].content,
+                           "metadata": {name: value for name, value in (self.graph.nodes[key].metadata or {}).items()
+                                        if name != PRIVACY_KEY}} for key in keys],
+                "vectors": [self.vectors[key] for key in vector_keys],
+                "lexical": [self.lexical[key].content for key in lexical_keys],
+            }
+            admitted, report = await coordinator.final_generated_bundle(prepared, bundle)
+            if (set(admitted) != set(bundle) or any(len(admitted[name]) != len(bundle[name]) for name in bundle)):
+                from prme.privacy.policy import PrivacyDenied
+                raise PrivacyDenied("privacy_invalid_result")
+            for key, value in zip(keys, admitted["nodes"], strict=True):
+                metadata = dict(value["metadata"])
+                metadata[PRIVACY_KEY] = prepared.record.reference()
+                if report is not None:
+                    metadata[PRIVACY_KEY]["sanitization"] = report.model_dump(mode="json")
+                self.graph.nodes[key] = self.graph.nodes[key].model_copy(
+                    update={"content": value["content"], "metadata": metadata})
+            self.vectors = dict(zip(vector_keys, admitted["vectors"], strict=True))
+            self.lexical = {key: PreparedLexicalDocument(node_id=key, content=value)
+                            for key, value in zip(lexical_keys, admitted["lexical"], strict=True)}
         # Snapshot before provider I/O, including referenced existing nodes.
         nodes = tuple(node.model_copy(deep=True) for node in self.graph.nodes.values())
         references = await self.graph.references()
