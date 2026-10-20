@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Graph oracle (`python -m benchmarks.graph_oracle`, tooling only, no engine or
+  default change; part of dwamianm/prism#351): hand written gold graphs for the
+  `defects-v1`, `store-v1` and `chat-v1` corpora (`benchmarks/fixtures/graph-oracle/`),
+  a design for the ideal graph (`benchmarks/graph_oracle/DESIGN.md`) and a
+  deterministic probe that writes a gold graph into the graph store over
+  memories stored with `store()` and ranks every question by `retrieve()`, by
+  the gold query spec (the upper bound of the shape), by a generic typed walk
+  and by rank fusion of the walk with the text list, with ablations, a cost
+  table, a `compare` command and a `fidelity` command that scores an extracted
+  graph against a gold graph. It stores relation labels in edge metadata on the
+  existing edge types and adds no edge type. See `BENCHMARKS.md`.
 - `MemoryEngine.get_events()` and both event stores accept `until`, an
   ingestion time: only events recorded at or before it are returned.
 - Add `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), on
