@@ -47,6 +47,7 @@ from prme.models import (
     Event,
     FastIngestItem,
     MemoryNode,
+    MemoryEdge,
     MemoryValueBinding,
     ProcessingResult,
     ProcessingStatus,
@@ -2416,6 +2417,7 @@ class MemoryEngine:
         min_fidelity: RepresentationLevel | None = None,
         include_cross_scope: bool = True,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
+        source_access=None,
     ) -> RetrievalResponse:
         """Retrieve memories via the hybrid retrieval pipeline.
 
@@ -2498,6 +2500,10 @@ class MemoryEngine:
                 "to initialize with all backends, or pass a retrieval_pipeline "
                 "to the constructor."
             )
+        from prme.privacy.reads import prepare_retrieval
+        retrieval_pipeline, query, private_read = await prepare_retrieval(
+            self, query, user_id=user_id, scopes=scope, source_access=source_access,
+        )
 
         profile_application: dict[str, str | None]
         if ranking_multipliers is not None:
@@ -2526,7 +2532,7 @@ class MemoryEngine:
                     ranking_multipliers = profile.multipliers
 
         # Drain materialization queue before retrieval (issue #25)
-        if await self._materialization_queue.debt() > 0:
+        if private_read is None and await self._materialization_queue.debt() > 0:
             try:
                 drained = await self._materialization_queue.drain(
                     self, budget_ms=self._config.materialization_budget_ms, user_id=user_id,
@@ -2541,7 +2547,7 @@ class MemoryEngine:
                     exc_info=True,
                 )
 
-        result = await self._retrieval_pipeline.retrieve(
+        result = await retrieval_pipeline.retrieve(
             query,
             user_id=user_id,
             scope=scope,
@@ -2567,9 +2573,11 @@ class MemoryEngine:
         # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather
         # than awaited: nothing in the response depends on it, so its time
         # budget must not land on the caller's latency (issue #62).
-        if self._maintenance_runner:
+        if private_read is None and self._maintenance_runner:
             self._maintenance_runner.schedule(user_id=user_id)
-
+        if private_read is not None:
+            async with private_read.guard():
+                return result
         return result
 
     async def search(
@@ -2594,6 +2602,8 @@ class MemoryEngine:
         Returns:
             Dict with 'vector_results' and 'lexical_results' keys.
         """
+        from prme.privacy.reads import require_legacy_history
+        await require_legacy_history(self._privacy, user_id)
         warnings.warn(
             "MemoryEngine.search() is deprecated. Use retrieve() for "
             "hybrid retrieval with scoring, filtering, and context packing.",
@@ -2814,7 +2824,51 @@ class MemoryEngine:
         Returns:
             List of matching MemoryNodes.
         """
-        return await self._graph_store.query_nodes(**kwargs)
+        graph = await self._ordinary_graph(kwargs.get("user_id"))
+        return await graph.query_nodes(**kwargs)
+
+    async def _ordinary_graph(self, user_id: str | None, *, scopes=None):
+        """Resolve the read facade without changing the engine's storage handles."""
+        if user_id is None:
+            if self._privacy.selected() or await self._privacy.repository._read("1=1", ()):
+                raise PrivacyDenied("privacy_boundary_mismatch")
+            return self._graph_store
+        from prme.privacy.read_graph import AdmittedGraphView
+        from prme.privacy.reads import ReadContext
+        context = await ReadContext.create(self._privacy, user_id=user_id, scopes=scopes)
+        return AdmittedGraphView(self._graph_store, context) if context.protected else self._graph_store
+
+    async def inspect_source(self, event_id: str, *, user_id: str, scope: Scope | None = None):
+        from prme.privacy.reads import inspect_source
+        return await inspect_source(self._privacy, event_id, user_id=user_id, scope=scope)
+
+    async def read_source(self, event_id: str, *, user_id: str, access, scope: Scope | None = None):
+        from prme.privacy.reads import read_source
+        return await read_source(self._privacy, event_id, user_id=user_id, access=access, scope=scope)
+
+    async def require_legacy_history(self, *, user_id: str) -> None:
+        from prme.privacy.reads import require_legacy_history
+        await require_legacy_history(self._privacy, user_id)
+
+    async def get_edges(self, *, user_id: str, **kwargs) -> list[MemoryEdge]:
+        """Owner-scoped ordinary graph inspection, including protected projection."""
+        graph = await self._ordinary_graph(user_id)
+        if graph is self._graph_store:
+            kwargs.pop("include_superseded", None)
+        edges = await graph.get_edges(**kwargs)
+        return [edge for edge in edges if edge.user_id == user_id]
+
+    async def get_nodes(self, node_ids: list[str], *, user_id: str,
+                        include_superseded: bool = False) -> list[MemoryNode]:
+        graph = await self._ordinary_graph(user_id)
+        return [node for node in await graph.get_nodes(node_ids, include_superseded=include_superseded)
+                if node.user_id == user_id]
+
+    async def get_neighborhood(self, node_id: str, *, user_id: str, **kwargs) -> list[MemoryNode]:
+        graph = await self._ordinary_graph(user_id)
+        if await self.get_node(node_id, user_id=user_id, include_superseded=kwargs.get("include_superseded", False)) is None:
+            return []
+        return [node for node in await graph.get_neighborhood(node_id, **kwargs) if node.user_id == user_id]
 
     @privacy_disclosure
     async def count_nodes(self, **kwargs) -> int:
@@ -2827,7 +2881,8 @@ class MemoryEngine:
         Returns:
             Number of matching nodes.
         """
-        return await self._graph_store.count_nodes(**kwargs)
+        graph = await self._ordinary_graph(kwargs.get("user_id"))
+        return await graph.count_nodes(**kwargs)
 
     @privacy_disclosure
     async def scan_nodes(
@@ -2841,7 +2896,8 @@ class MemoryEngine:
         This enumerates stored nodes without semantic ranking. Defaults to
         active states. Independent pages do not form a transaction snapshot.
         """
-        return await self._graph_store.scan_nodes(
+        graph = await self._ordinary_graph(user_id, scopes=[scope] if scope else None)
+        return await graph.scan_nodes(
             user_id=user_id, scope=scope, node_type=node_type,
             lifecycle_states=lifecycle_states, after_id=after_id, limit=limit,
         )
@@ -2994,7 +3050,8 @@ class MemoryEngine:
         event = await self.get_event(event_id, user_id=user_id)
         if event is None:
             return []
-        return await self._graph_store.get_event_nodes(event_id, user_id=user_id)
+        graph = await self._ordinary_graph(user_id)
+        return await graph.get_event_nodes(event_id, user_id=user_id)
 
     @privacy_disclosure
     async def get_provenance(
@@ -3027,8 +3084,8 @@ class MemoryEngine:
         evidence_events = []
         missing_evidence_refs = []
         for evidence_id in dict.fromkeys(node.evidence_refs):
-            event = await self.get_event(str(evidence_id), user_id=node.user_id)
-            if event is None or event.scope != node.scope:
+            event = await self._event_store.get(str(evidence_id))
+            if event is None or event.user_id != node.user_id or event.scope != node.scope:
                 missing_evidence_refs.append(evidence_id)
             else:
                 evidence_events.append(event)

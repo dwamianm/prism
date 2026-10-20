@@ -998,8 +998,17 @@ class MemoryClient:
         ))
 
     def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
-        """Read original source content, optionally enforcing owner identity."""
+        """Read an owned event or its protected source-availability envelope."""
         return self._run(self._engine.get_event(event_id, user_id=user_id))
+
+    def inspect_source(self, event_id: str, *, user_id: str, scope: Scope | None = None):
+        return self._run(self._engine.inspect_source(event_id, user_id=user_id, scope=scope))
+
+    def read_source(self, event_id: str, *, user_id: str, access, scope: Scope | None = None):
+        return self._run(self._engine.read_source(event_id, user_id=user_id, access=access, scope=scope))
+
+    def require_legacy_history(self, *, user_id: str) -> None:
+        self._run(self._engine.require_legacy_history(user_id=user_id))
 
     def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
         """Read saved grounded output; this does not imply graph completion."""

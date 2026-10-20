@@ -106,12 +106,13 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
         if records and owner is None:
             raise PrivacyDenied("privacy_boundary_mismatch")
         await coordinator.check_disclosure(records)
-        return result
+        from prme.privacy.reads import project_public_result
+        return await project_public_result(coordinator, function.__name__, result, arguments, records)
     return guarded
 
 
 _UNAVAILABLE_EFFECTS = frozenset({
-    "retrieve", "organize", "consolidate_knowledge", "resume_profile", "process_profiles", "end_session",
+    "organize", "consolidate_knowledge", "resume_profile", "process_profiles", "end_session",
     "rebuild_indexes", "snapshot", "embed_texts", "propose_product_alignment", "find_product_alignment_candidates",
     "evaluate_full_retrieval", "create_ranking_profile", "record_relevance", "record_answer_citations",
     "promote", "evaluate_condition", "supersede", "contradict", "resolve_contradiction", "archive", "reinforce",

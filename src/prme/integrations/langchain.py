@@ -247,6 +247,7 @@ class PRMEChatMessageHistory(BaseChatMessageHistory):
 
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
         """Store messages in PRME."""
+        self._client.require_legacy_history(user_id=self._user_id)
         for msg in messages:
             role = _message_role(msg)
             serialized = {

@@ -22,6 +22,7 @@ def visible_chat_events(
     scope: Scope,
 ) -> list[Event]:
     """Return the logical chat history while retaining immutable source events."""
+    client.require_legacy_history(user_id=user_id)
     events: list[Event] = []
     offset = 0
 
@@ -66,6 +67,7 @@ def append_chat_control(
     target_event_id: str | None = None,
 ) -> None:
     """Append a logical mutation without materializing it as a memory node."""
+    client.require_legacy_history(user_id=user_id)
     control: dict[str, Any] = {
         "version": CHAT_HISTORY_FORMAT_VERSION,
         "operation": operation,

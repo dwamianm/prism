@@ -242,6 +242,7 @@ class PRMEChatStore(BaseChatStore):
     def _store_message(
         self, user_id: str, session_id: str, message: ChatMessage
     ) -> None:
+        self._client.require_legacy_history(user_id=user_id)
         serialized = message.model_dump(mode="json")
         self._client.store(
             message.content or "",
