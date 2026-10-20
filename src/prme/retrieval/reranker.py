@@ -50,6 +50,13 @@ class CrossEncoderReranker:
         self._model = None  # Lazy init
         self._prediction_lock = threading.Lock()
 
+    def privacy_adapter(self, context):
+        """Bind one admitted request without changing the shared reranker."""
+        from copy import copy
+        result = copy(self)
+        result._privacy_context = context
+        return result
+
     def _ensure_model(self) -> None:
         if self._model is None:
             try:
@@ -124,7 +131,18 @@ class CrossEncoderReranker:
         pairs = [(query, c.node.content or "") for c in to_rerank]
 
         # Run cross-encoder in thread (CPU-bound)
-        ce_scores = await asyncio.to_thread(self._predict_sync, pairs)
+        context = getattr(self, "_privacy_context", None)
+        if context is None:
+            ce_scores = await asyncio.to_thread(self._predict_sync, pairs)
+        else:
+            from prme.storage._threading import run_to_completion
+            from prme.privacy.admission import capability_call
+            # Cancellation does not release authority while local inference
+            # still owns the admitted input in its worker thread.
+            async with context.transmission_guard():
+                ce_scores = await capability_call(
+                    run_to_completion(self._predict_sync, pairs), "privacy_provider_unavailable",
+                )
 
         # Blend: (1 - prior_weight) * ce_score + prior_weight * original_composite
         for candidate, ce_score in zip(to_rerank, ce_scores):

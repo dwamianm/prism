@@ -603,3 +603,19 @@ success and integration evidence remains `not_run`.
 The source fixture was frozen before execution: `source-separation-v1.json` SHA-256 `8e5094399c848c66d9830ce3128f91ef25ba7889f4fd093792546fc50d7d0a09`. The eight qualifier rows are component subchecks of the accepted AP04/AC2 criteria, not additional counted acceptance cases. Full original multi-source, grounding/correction and backend assertions remain pending actual integration. Root approved the narrow shared `privacy/admission.py` delegate needed for AC3/AC4; #322 owns reconciliation of that edit.
 
 Root approved `src/prme/retrieval/temporal_relations.py` solely to propagate typed PrivacyDenied through its two existing fallback catches (original AC4). Existing unrelated provider failures keep their fallback. Projection component check: initial 13 passed/1 failed because the test Event omitted required role; corrected cycle1 passed all14. Both logs are preserved under the assigned runroot. The missing pytest environment setup was installed only in this worktree using the lockfile. This is component evidence, not the eight-case backend acceptance matrix.
+
+Root additionally approved `retrieval/temporal_relation_providers.py` for the
+existing per-send guard and generated-output admission contract, and
+`retrieval/reranker.py` for the local inference guard (original AC4/AC06).
+Algorithms, defaults and legacy behavior remain unchanged. The shared native
+SDK generator and content-free provider logging window remain owned by #322.
+These changes reuse the already frozen positive routing and compatibility cases.
+
+Deliberate dependency adoption: #322 checkpoints
+`572e1d079f93e64bb1b7332282b88569c4982b3b` and
+`8446fbb5cb29303331940a327aed2dac50253ecd` are local
+`987c43e3` and `a6feadc8`; their shared admission changes were preserved.
+They are prerequisite source, not independent #323 completion. The scoped
+compatibility run (graph seeds, provenance, API provenance, both frameworks,
+temporal pipeline and projection components) passed 95 tests with 13 skips.
+The skipped checks are not backend acceptance evidence.

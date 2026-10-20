@@ -141,6 +141,9 @@ class PRMERetriever(BaseRetriever):
             if response.metadata.min_score_skipped:
                 # The vector path failed, so the floor could not be applied.
                 metadata["min_score_skipped"] = True
+            if response.metadata.source_limitation:
+                metadata["source_limitation"] = response.metadata.source_limitation
+                metadata["source_availability"] = (node.metadata or {}).get("source_availability", [])
 
             text_node = TextNode(
                 text=node.content,

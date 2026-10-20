@@ -44,6 +44,11 @@ class SourceUnavailable(FrozenModel):
     status: Literal["unavailable"] = "unavailable"
 
 
+class LegacySourceAvailability(FrozenModel):
+    schema_version: Literal[1] = 1
+    state: Literal["legacy_unclassified"] = "legacy_unclassified"
+
+
 class ProtectedEventView(FrozenModel):
     schema_version: Literal[1] = 1
     kind: Literal["protected_event"] = "protected_event"
@@ -52,7 +57,7 @@ class ProtectedEventView(FrozenModel):
     scope: Scope
     timestamp: AwareDatetime
     event_time: AwareDatetime | None = None
-    source_availability: SourceAvailability
+    source_availability: SourceAvailability | LegacySourceAvailability
 
     @property
     def content(self) -> str:
@@ -70,7 +75,7 @@ class ProtectedExtractionView(FrozenModel):
 
 class ProtectedOperationView(FrozenModel):
     id: UUID
-    op_type: str
+    op_type: Literal["unavailable"] = "unavailable"
     target_id: UUID | None = None
     created_at: AwareDatetime
     payload_status: Literal["unavailable"] = "unavailable"

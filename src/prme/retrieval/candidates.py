@@ -399,7 +399,7 @@ async def _generate_vector_candidates(
         logger.warning(
             "Vector search detected incompatible embedding metadata; "
             "falling back to empty vector candidates",
-            exc_info=True,
+            exc_info=not bool(getattr(vector_index, "protected_reads", False)),
         )
         return [], True
 

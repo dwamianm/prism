@@ -45,6 +45,7 @@ class EntitySnapshot:
         default_factory=lambda: datetime.now(timezone.utc)
     )
     summary_text: str = ""
+    source_limitation: str | None = None
 
 
 def _build_summary_text(entity_node: MemoryNode, grouped: dict[NodeType, list[MemoryNode]]) -> str:
@@ -91,6 +92,7 @@ async def generate_entity_snapshot(
     entity_node_id: str,
     *,
     at_time: datetime | None = None,
+    user_id: str | None = None,
 ) -> EntitySnapshot:
     """Generate a point-in-time snapshot for a single entity.
 
@@ -111,7 +113,8 @@ async def generate_entity_snapshot(
         ValueError: If the entity node does not exist or is not an ENTITY type.
     """
     # Fetch the entity node
-    entity_node = await engine._graph_store.get_node(
+    graph = await engine._ordinary_graph(user_id) if hasattr(engine, "_ordinary_graph") else engine._graph_store
+    entity_node = await graph.get_node(
         entity_node_id, include_superseded=False
     )
     if entity_node is None:
@@ -122,7 +125,7 @@ async def generate_entity_snapshot(
         )
 
     # Get 1-hop neighborhood
-    neighbors = await engine._graph_store.get_neighborhood(
+    neighbors = await graph.get_neighborhood(
         entity_node_id,
         max_hops=1,
         valid_at=at_time,
@@ -137,11 +140,11 @@ async def generate_entity_snapshot(
         grouped.setdefault(node.node_type, []).append(node)
 
     # Collect edges involving this entity (both directions)
-    edges_out = await engine._graph_store.get_edges(
+    edges_out = await graph.get_edges(
         source_id=entity_node_id,
         valid_at=at_time,
     )
-    edges_in = await engine._graph_store.get_edges(
+    edges_in = await graph.get_edges(
         target_id=entity_node_id,
         valid_at=at_time,
     )
@@ -149,6 +152,16 @@ async def generate_entity_snapshot(
 
     # Build summary
     summary_text = _build_summary_text(entity_node, grouped)
+    limitation = None
+    if getattr(graph, "protected_reads", False):
+        from prme.models.privacy_reads import SOURCE_LIMITATION
+        context = graph.context
+        sources = await context.generated_sources({
+            "entity": entity_node.content, "nodes": [node.content for node in neighbors],
+        })
+        summary_text = (await context.generated({"summary": summary_text}, sources=sources))["summary"]
+        await context.check()
+        limitation = SOURCE_LIMITATION
 
     return EntitySnapshot(
         entity_node=entity_node,
@@ -159,6 +172,7 @@ async def generate_entity_snapshot(
         relationships=all_edges,
         generated_at=datetime.now(timezone.utc),
         summary_text=summary_text,
+        source_limitation=limitation,
     )
 
 
@@ -183,7 +197,8 @@ async def generate_all_entity_snapshots(
     Returns:
         List of EntitySnapshot instances.
     """
-    entities = await engine._graph_store.query_nodes(
+    graph = await engine._ordinary_graph(user_id) if hasattr(engine, "_ordinary_graph") else engine._graph_store
+    entities = await graph.query_nodes(
         node_type=NodeType.ENTITY,
         user_id=user_id,
         lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
@@ -194,7 +209,7 @@ async def generate_all_entity_snapshots(
     for entity in entities:
         try:
             snap = await generate_entity_snapshot(
-                engine, str(entity.id), at_time=at_time
+                engine, str(entity.id), at_time=at_time, user_id=user_id,
             )
             snapshots.append(snap)
         except ValueError:
@@ -224,6 +239,8 @@ def render_snapshot_text(snapshot: EntitySnapshot) -> str:
         f"  ID: {snapshot.entity_node.id}",
         f"  Generated: {snapshot.generated_at.isoformat()}",
     ]
+    if snapshot.source_limitation:
+        lines.append(snapshot.source_limitation)
 
     if snapshot.facts:
         lines.append("  Facts:")

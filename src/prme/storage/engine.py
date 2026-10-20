@@ -2308,6 +2308,7 @@ class MemoryEngine:
         keeps its schema as it is.
         """
         from prme.storage.blobs import put_blob
+        await self.require_legacy_history(user_id=None)
 
         if self._conn is None:
             raise RuntimeError("Blobs need a local DuckDB pack; this engine has no DuckDB connection")
@@ -2317,6 +2318,7 @@ class MemoryEngine:
     async def get_blob(self, key: str) -> bytes | None:
         """Return the blob stored under *key*, such as an observation's thumbnail, or None."""
         from prme.storage.blobs import get_blob
+        await self.require_legacy_history(user_id=None)
 
         if self._conn is None:
             return None
@@ -2335,6 +2337,7 @@ class MemoryEngine:
         differ between decoders. Only local DuckDB packs are checked; another
         backend returns None.
         """
+        await self.require_legacy_history(user_id=user_id)
         if self._conn is None:
             return None
 
@@ -2846,7 +2849,7 @@ class MemoryEngine:
         from prme.privacy.reads import read_source
         return await read_source(self._privacy, event_id, user_id=user_id, access=access, scope=scope)
 
-    async def require_legacy_history(self, *, user_id: str) -> None:
+    async def require_legacy_history(self, *, user_id: str | None) -> None:
         from prme.privacy.reads import require_legacy_history
         await require_legacy_history(self._privacy, user_id)
 
@@ -2869,6 +2872,11 @@ class MemoryEngine:
         if await self.get_node(node_id, user_id=user_id, include_superseded=kwargs.get("include_superseded", False)) is None:
             return []
         return [node for node in await graph.get_neighborhood(node_id, **kwargs) if node.user_id == user_id]
+
+    async def get_supersedence_chain(self, node_id: str, *, user_id: str | None = None,
+                                    direction: str = "forward") -> list[MemoryNode]:
+        graph = await self._ordinary_graph(user_id)
+        return await graph.get_supersedence_chain(node_id, direction=direction)
 
     @privacy_disclosure
     async def count_nodes(self, **kwargs) -> int:
@@ -3565,6 +3573,7 @@ class MemoryEngine:
         entity_id: str,
         *,
         at_time: datetime | None = None,
+        user_id: str | None = None,
     ) -> Any:
         """Generate a point-in-time snapshot for an entity.
 
@@ -3584,7 +3593,7 @@ class MemoryEngine:
         """
         from prme.retrieval.snapshots import generate_entity_snapshot
 
-        return await generate_entity_snapshot(self, entity_id, at_time=at_time)
+        return await generate_entity_snapshot(self, entity_id, at_time=at_time, user_id=user_id)
 
     # --- Reinforcement ---
 

@@ -79,6 +79,7 @@ async def _contradiction_edges(engine, records: list[_Record]):
         for edge in await graph.get_edges(
             node_ids=batch,
             edge_type=EdgeType.CONTRADICTS,
+            **({"include_superseded": True} if getattr(graph, "protected_reads", False) else {}),
         ):
             edges[edge.id] = edge
     return list(edges.values())

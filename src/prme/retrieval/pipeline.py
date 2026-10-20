@@ -1357,16 +1357,20 @@ class RetrievalPipeline:
         """
         from prme.retrieval.reformulation import reformulate_query
 
-        alt_queries = await reformulate_query(
-            query,
-            provider=self._query_reformulation_provider,
-            model=self._query_reformulation_model,
-            count=self._query_reformulation_count,
-            api_key=self._query_reformulation_api_key,
-            base_url=self._query_reformulation_base_url,
-            timeout=self._query_reformulation_timeout,
-            client_cache=self._query_reformulation_clients,
-        )
+        private_read = getattr(self, "_privacy_context", None)
+        if private_read is None:
+            alt_queries = await reformulate_query(
+                query,
+                provider=self._query_reformulation_provider,
+                model=self._query_reformulation_model,
+                count=self._query_reformulation_count,
+                api_key=self._query_reformulation_api_key,
+                base_url=self._query_reformulation_base_url,
+                timeout=self._query_reformulation_timeout,
+                client_cache=self._query_reformulation_clients,
+            )
+        else:
+            alt_queries = await private_read.reformulate(self, query)
         merge_signals_enabled = self._query_reformulation_merge_policy == "max_signals"
         if not alt_queries and not merge_signals_enabled:
             return 0

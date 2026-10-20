@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from prme.ingestion.admitted_statements import project_admitted_edge
 from prme.privacy.policy import PrivacyDenied
-from prme.types import ACTIVE_LIFECYCLE_STATES, NodeType, Scope
+from prme.types import ACTIVE_LIFECYCLE_STATES, EdgeType, NodeType, Scope
 
 
 class AdmittedGraphView:
@@ -200,6 +200,31 @@ class AdmittedGraphView:
 
     async def get_neighborhood(self, node_id, **kwargs):
         return [node for node, _ in await self.get_neighborhood_with_depth(node_id, **kwargs)]
+
+    async def get_supersedence_chain(self, node_id, *, direction="forward"):
+        if direction not in {"forward", "backward"}:
+            raise ValueError("direction must be forward or backward")
+        seed = await self.get_node(node_id, include_superseded=True)
+        if seed is None:
+            return []
+        seen, result = {str(seed.id)}, []
+        current = str(seed.id)
+        for _ in range(100):
+            selector = {"target_id": current} if direction == "forward" else {"source_id": current}
+            edges = await self.get_edges(**selector, edge_type=EdgeType.SUPERSEDES, include_superseded=True)
+            if not edges:
+                break
+            selected = edges[0]
+            identifier = str(selected.source_id if direction == "forward" else selected.target_id)
+            if identifier in seen:
+                break
+            node = await self.get_node(identifier, include_superseded=True)
+            if node is None or node.scope != seed.scope:
+                break
+            result.append(node)
+            seen.add(identifier)
+            current = identifier
+        return result
 
     async def get_session_neighbors(self, trigger_ids, *, user_id, window, scopes=None):
         self._owner(user_id)

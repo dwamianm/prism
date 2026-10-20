@@ -19,11 +19,11 @@ from prme.models import Event, MemoryNode
 from prme.models.privacy_reads import (
     ProtectedEventView, ProtectedExtractionView, ProtectedOperationView,
     ProtectedProvenanceView, ProtectedReceiptView, SanitizedEvidenceView,
-    SourceAvailability, SourceUnavailable,
+    SourceAvailability, SourceUnavailable, LegacySourceAvailability,
 )
-from prme.privacy.capabilities import EvidenceAccess, OperationBudget
+from prme.privacy.capabilities import EvidenceAccess, OperationBudget, SanitizedContent
 from prme.privacy.policy import PrivacyDenied
-from prme.privacy.records import PRIVACY_KEY, PrivacyRecord
+from prme.privacy.records import PRIVACY_KEY, PrivacyRecord, SanitizationReport
 from prme.types import NodeType, Scope
 
 if TYPE_CHECKING:
@@ -39,7 +39,8 @@ class ReadContext:
     protected: bool = False
     source_access: EvidenceAccess | None = None
     budget: OperationBudget = field(default_factory=lambda: OperationBudget(uuid4()))
-    query_source: object | None = None
+    query_source: SanitizedContent | None = None
+    query_sources: tuple[SanitizedContent, ...] = ()
     fallback_snapshot: object | None = None
 
     @classmethod
@@ -118,8 +119,14 @@ class ReadContext:
         if not isinstance(reference, dict):
             raise PrivacyDenied("privacy_processing_unavailable")
         origin = next((row for row in rows if str(row.event_id) == reference.get("event_id")), None)
-        if origin is None or reference != origin.reference():
+        base_reference = {key: value for key, value in reference.items() if key != "sanitization"}
+        if origin is None or base_reference != origin.reference():
             raise PrivacyDenied("privacy_invalid_result")
+        if "sanitization" in reference:
+            try:
+                SanitizationReport.model_validate(reference["sanitization"])
+            except ValueError:
+                raise PrivacyDenied("privacy_invalid_result") from None
         if any(row.snapshot.policy.scope != node.scope for row in rows):
             raise PrivacyDenied("privacy_boundary_mismatch")
         if origin.kind == "direct":
@@ -159,10 +166,14 @@ class ReadContext:
             return None
         record = await self.record_for_event(str(event.id))
         if record is None:
-            return None if self.protected else event
+            if not self.protected:
+                return event
+            availability = LegacySourceAvailability()
+        else:
+            availability = self.availability(record)
         return ProtectedEventView(id=event.id, user_id=event.user_id, scope=event.scope,
                                   timestamp=event.timestamp, event_time=event.event_time,
-                                  source_availability=self.availability(record))
+                                  source_availability=availability)
 
     async def sanitize_query(self, query: str) -> str:
         from prme.privacy.admission import _fields
@@ -175,17 +186,91 @@ class ReadContext:
         # Every applicable saved policy must permit this query. Multiple
         # boundaries may sanitize differently; never mix their source tokens.
         admitted = []
-        for saved in dict.fromkeys(snapshot.model_dump_json() for snapshot in snapshots):
-            from prme.privacy.policy import PolicySnapshot
+        unique = {}
+        for saved in snapshots:
+            unique.setdefault((saved.policy, saved.references), saved)
+        for saved in unique.values():
             result = await self.coordinator.sanitize(
-                _fields(query, None), PolicySnapshot.model_validate_json(saved), self.budget, mode="query",
+                _fields(query, None), saved, self.budget, mode="query",
             )
             admitted.append(result)
         texts = [json.loads(result.fields_json)["content"] for result in admitted]
         if not texts or len(set(texts)) != 1:
             raise PrivacyDenied("privacy_policy_conflict")
         self.query_source = admitted[0]
+        self.query_sources = tuple(admitted)
         return texts[0]
+
+    async def generated(self, value, *, sources=None):
+        """Admit generated text before parsing, retrying, logging or reuse."""
+        from prme.privacy.sanitizer import canonical
+        sources = tuple(sources or self.query_sources)
+        if not sources:
+            raise PrivacyDenied("privacy_boundary_mismatch")
+        admitted = []
+        for source in sources:
+            result = await self.coordinator.sanitize(
+                canonical(value), source.source_snapshot, self.budget,
+                mode="generated_output", source=source,
+            )
+            admitted.append(result.fields_json)
+        if len(set(admitted)) != 1:
+            raise PrivacyDenied("privacy_policy_conflict")
+        return json.loads(admitted[0])
+
+    async def generated_sources(self, value):
+        """Admit a request-local collection of already admitted memory."""
+        from prme.privacy.admission import _fields
+        from prme.privacy.sanitizer import canonical
+        fields = _fields(canonical(value), None)
+        saved = { (row.snapshot.policy, row.snapshot.references): row.snapshot
+                 for row in self.records.values() }
+        if not saved and self.fallback_snapshot is not None:
+            saved[None] = self.fallback_snapshot
+        return tuple([
+            await self.coordinator.sanitize(fields, snapshot, self.budget, mode="query")
+            for snapshot in saved.values()
+        ])
+
+    @asynccontextmanager
+    async def transmission_guard(self):
+        from prme.ingestion.extraction import protected_provider_logs
+        with protected_provider_logs():
+            async with self.guard("transmission"):
+                yield
+
+    async def reformulate(self, pipeline, query):
+        from prme.ingestion.extraction import InstructorExtractionProvider
+        from prme.retrieval.reformulation import QueryReformulations, REFORMULATION_SYSTEM_PROMPT
+        from prme.privacy.admission import capability_call
+        provider = InstructorExtractionProvider(
+            f"{pipeline._query_reformulation_provider}/{pipeline._query_reformulation_model}",
+            model=pipeline._query_reformulation_model, max_retries=0,
+            api_key=pipeline._query_reformulation_api_key,
+            base_url=pipeline._query_reformulation_base_url,
+            timeout=pipeline._query_reformulation_timeout or 60.0,
+        ).privacy_adapter()
+        count = max(1, min(pipeline._query_reformulation_count, 5))
+        raw = await capability_call(provider.generate(
+            self.query_source, self.query_source.source_snapshot,
+            schema=QueryReformulations.model_json_schema(),
+            system_prompt=REFORMULATION_SYSTEM_PROMPT + f"\nReturn at most {count} queries.",
+            guard=self.transmission_guard,
+        ), "privacy_provider_unavailable")
+        admitted = await self.generated(raw)
+        try:
+            result = QueryReformulations.model_validate(admitted)
+        except ValueError:
+            raise PrivacyDenied("privacy_invalid_result") from None
+        original = query.strip().casefold()
+        seen = {original}
+        values = []
+        for value in result.queries:
+            clean = value.strip()
+            if clean and clean.casefold() not in seen:
+                values.append(clean)
+                seen.add(clean.casefold())
+        return values[:count]
 
     @property
     def snapshot(self):
@@ -252,10 +337,21 @@ async def prepare_retrieval(engine, query, *, user_id, scopes, source_access=Non
     # that integration is present, return receipt_persisted=False truthfully.
     pipeline._conn = None
     pipeline._pool = None
-    if pipeline._enable_query_reformulation or pipeline._reranker is not None:
-        raise PrivacyDenied("privacy_provider_unavailable")
+    if source_access is not None and source_access.kind != "runtime":
+        raise PrivacyDenied("privacy_denied")
+    if pipeline._reranker is not None:
+        adapter = getattr(pipeline._reranker, "privacy_adapter", None)
+        if adapter is None:
+            raise PrivacyDenied("privacy_provider_unavailable")
+        pipeline._reranker = adapter(context)
     if pipeline._temporal_relation_enricher is not None:
-        raise PrivacyDenied("privacy_provider_unavailable")
+        enricher = copy(pipeline._temporal_relation_enricher)
+        for name in ("_resolver", "_gate"):
+            adapter = getattr(getattr(enricher, name), "privacy_adapter", None)
+            if adapter is None:
+                raise PrivacyDenied("privacy_provider_unavailable")
+            setattr(enricher, name, adapter(context))
+        pipeline._temporal_relation_enricher = enricher
     return pipeline, query, context
 
 
@@ -303,8 +399,10 @@ async def read_source(coordinator, event_id: str, *, user_id: str, access: Evide
         raise PrivacyDenied("privacy_invalid_result") from None
 
 
-async def require_legacy_history(coordinator, user_id: str) -> None:
-    if coordinator.selected() or await coordinator.repository.for_owner(user_id):
+async def require_legacy_history(coordinator, user_id: str | None) -> None:
+    rows = (await coordinator.repository.for_owner(user_id) if user_id is not None
+            else await coordinator.repository._read("1=1", ()))
+    if coordinator.selected() or rows:
         raise PrivacyDenied("privacy_unsupported_input")
 
 
@@ -340,12 +438,8 @@ async def project_public_result(coordinator, method: str, result, arguments: dic
         evidence = [await context.event_view(event) for event in result.evidence_events]
         operations = []
         for operation in result.operations:
-            # Known engine operation names are codes; arbitrary journal names
-            # cannot become a new unclassified content field.
-            if not operation.op_type.isupper() or not operation.op_type.replace("_", "").isalnum():
-                raise PrivacyDenied("privacy_invalid_result")
             operations.append(ProtectedOperationView(
-                id=operation.id, op_type=operation.op_type, target_id=operation.target_id,
+                id=operation.id, target_id=operation.target_id,
                 created_at=operation.created_at,
             ))
         from prme.privacy.read_graph import AdmittedGraphView
@@ -367,7 +461,7 @@ async def project_public_result(coordinator, method: str, result, arguments: dic
         )
     if method in {
         "retrieve", "aggregate_assertions", "aggregate_quantities", "aggregate_quantities_from_text",
-        "get_assertion_state", "count_nodes", "processing_status", "extraction_status",
+        "get_assertion_state", "count_nodes", "processing_status", "extraction_status", "snapshot",
     }:
         return result
     # Unsupported raw receipts, alias payloads, historical evaluation and
