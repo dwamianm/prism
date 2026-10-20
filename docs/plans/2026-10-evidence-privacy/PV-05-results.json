@@ -119,6 +119,69 @@
       "result": "107 passed, 1 skipped",
       "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_supersedence_journal.py tests/test_condition_evaluation.py tests/test_atomic_oscillation_penalty.py tests/test_atomic_organizer_merges.py -q --tb=short",
       "seconds": 47.95
+    },
+    {
+      "log": "dependency-composition.log",
+      "exit": 0,
+      "result": "21 passed; final323 disclosure/Q04/marker helpers plus persisted receipt",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_receipts.py tests/test_privacy_source_reads.py -q --tb=short",
+      "seconds": 44.97
+    },
+    {
+      "log": "profile-components-1.log",
+      "exit": 1,
+      "result": "3 failed; test used enqueue-only ingress without the real worker; preceding same-source capture had wrong log path (capture-note retained)",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k CL05 -q --tb=short",
+      "seconds": 4.22
+    },
+    {
+      "log": "profile-components-2.log",
+      "exit": 143,
+      "result": "terminated owned stalled check; producer authority was held across queue consumer authority; source diagnosis retained",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k CL05 -q --tb=short",
+      "seconds": 40.12
+    },
+    {
+      "log": "profile-components-3.log",
+      "exit": 1,
+      "result": "2 passed, 1 failed; queue repair succeeded; PostgreSQL replay-branch indentation returned before publication",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k CL05 -q --tb=short",
+      "seconds": 6.27
+    },
+    {
+      "log": "profile-components-4.log",
+      "exit": 0,
+      "result": "1 passed, 8 deselected; PostgreSQL replay indentation repaired",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k \"CL05 and postgres\" -q --tb=short",
+      "seconds": 3.41
+    },
+    {
+      "log": "profile-compatibility.log",
+      "exit": 1,
+      "result": "150 passed, 6 failed, 23 skipped; damaged-plan failure handler re-decoded the invalid plan",
+      "command": "uv run --no-sync python -m pytest tests/test_profile_work.py tests/test_profile_registry.py tests/test_profile_publication.py tests/test_profile_excerpts.py tests/test_profile_collection.py tests/test_profile_retirement.py tests/test_knowledge_profile_scopes.py -q --tb=short",
+      "seconds": 55.41
+    },
+    {
+      "log": "profile-damaged-repair.log",
+      "exit": 0,
+      "result": "6 passed; original damaged-work failure semantics preserved using metadata-only protected classification",
+      "command": "uv run --no-sync python -m pytest tests/test_profile_work.py::test_damaged_owned_work_is_a_failure_not_a_success -q --tb=short",
+      "seconds": 2.42
+    },
+    {
+      "log": "summary-components-1.log",
+      "exit": 0,
+      "result": "3 passed, 9 deselected; real daily/weekly/monthly/consolidation, prepare interruption, keyless resume and retirement",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k summary_generations -q --tb=short",
+      "seconds": 7.44
+    },
+    {
+      "log": "summary-compatibility.log",
+      "exit": 0,
+      "result": "65 passed, 8 skipped",
+      "command": "uv run --no-sync python -m pytest tests/test_consolidation_publication.py tests/test_consolidation_retirement_atomic.py tests/test_consolidation_retirement_records.py tests/test_consolidation_safety.py tests/test_summarization.py -q --tb=short",
+      "seconds": 23.7
     }
   ],
   "repairCycles": {
@@ -131,6 +194,22 @@
       "successful": 1
     },
     "legacy_feedback_crash_hook": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_worker_fixture": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_queue_authority": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_postgres_replay_indentation": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_damaged_work_handler": {
       "unsuccessful": 0,
       "successful": 1
     }
@@ -157,5 +236,20 @@
     "326 export/restoration",
     "327 combined gate",
     "root final reviews/full validation/delivery"
+  ],
+  "remaining": [
+    "merge c4531a0e same-tree upstream352/currentmain dependency composition",
+    "remaining 324 alias, organizer routing and recovery/diagnostic component coverage",
+    "325 authoritative erasure/current-policy integration",
+    "326 export/restoration",
+    "327 combined gate",
+    "root final reviews/full validation/delivery"
+  ],
+  "sourceObservations": [
+    {
+      "case": "CL08",
+      "log": "profile-components-3.log",
+      "finding": "protected extraction entity_merge.py emits name=Mara; root approved one logger-wrapper extra path; pending correction and concurrent-legacy positive"
+    }
   ]
 }

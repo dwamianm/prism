@@ -230,7 +230,10 @@ class ReadContext:
                 raise PrivacyDenied("privacy_invalid_result") from None
         if any(row.snapshot.policy.scope != node.scope for row in rows):
             raise PrivacyDenied("privacy_boundary_mismatch")
-        if origin.kind == "direct":
+        from prme.privacy.journals import JOURNAL_KEY, project_generated_node
+        if JOURNAL_KEY in (node.metadata or {}):
+            result = project_generated_node(node)
+        elif origin.kind == "direct":
             result = project_direct_node(node)
         else:
             if (node.node_type != NodeType.ENTITY
@@ -614,6 +617,16 @@ async def _project_public_result(context, method, result, arguments, records):
         values = result if isinstance(result, list) else [result]
         if all(value is None or isinstance(value, ProtectedCitationRecord) for value in values):
             return result
+    if method == "consolidate_knowledge" and type(result) is int and result >= 0:
+        return result
+    if method == "resume_profile" and (result is None or str(UUID(result)) == result):
+        return result
+    if method == "profile_jobs":
+        from prme.privacy.diagnostics import project_jobs
+        return project_jobs(result, identity="plan_id")
+    if method == "process_profiles":
+        from prme.privacy.diagnostics import project_processing
+        return project_processing(result)
     if method in {
         "retrieve", "aggregate_assertions", "aggregate_quantities", "aggregate_quantities_from_text",
         "get_assertion_state", "count_nodes", "processing_status", "extraction_status", "snapshot",

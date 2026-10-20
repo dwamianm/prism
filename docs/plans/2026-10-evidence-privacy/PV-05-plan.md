@@ -163,3 +163,28 @@ the retired text. These are components, not completed source erasure.
 
 See PV-05-results.json for preserved failures, successful bounded repairs and
 remaining owned work. No original acceptance box or frozen full case is passed.
+
+## Profile and summary checkpoint
+
+Protected profile lineage uses an actual admitted entity UUID within the owner
+and scope (root approved); missing/ambiguous identity fails explicitly. V2
+profile and consolidation plans carry a JournalManifest with original saved
+policy/source/representation dependencies and admitted snapshots. V1 optional
+fields are omitted, preserving legacy bytes. Daily, weekly, monthly and clustered
+summaries use the shared local generated-output boundary and guarded embedder.
+Prepared recovery uses no private evidence key. Consolidation retirement uses
+explicit selected admitted identities and exact rendered source coverage; the
+protected node omits the legacy text hash and coverage-fingerprint map.
+
+Native staging retains its actual work/registry fence under current authority;
+the queue consumer separately acquires current authority at SQL publication.
+Holding the producer's non-reentrant authority across that queue deadlocked,
+so those real effects are guarded separately. Failed evidence and the successful
+correction are retained. Existing profile generation and collection semantics
+remain; whole erasure and export gates still await PV-06/PV-07.
+
+One extra source path is approved for CL08/AC3/AC5: ingestion/entity_merge.py
+logs the admitted entity name during protected extraction (observed in the
+profile-components-3.log capture). The planned change is solely the common
+operation-scoped logger wrapper, with a concurrent legacy logging positive.
+No entity matching, provider behavior, scenario or cohort is changed.

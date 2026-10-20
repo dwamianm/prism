@@ -13,6 +13,7 @@ from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage import _snapshot_json
 from prme.storage._threading import run_to_completion
+from prme.privacy.journals import snapshot_payload, validate_snapshot, protected_mutation, journal_deadline, JOURNAL_KEY, project_generated_node
 from prme.types import EdgeType, LifecycleState, NodeType
 
 
@@ -38,6 +39,15 @@ def eligible(source, summary, *, user_id, at, preserve_recent_days, min_confiden
     if source is None or summary is None:
         return False
     meta = summary.metadata or {}
+    protected = JOURNAL_KEY in meta
+    if protected:
+        summary = project_generated_node(summary)
+        meta = summary.metadata
+        covered = str(source.id) in meta.get("selected_source_node_ids", ())
+    else:
+        covered = (meta.get('consolidation_content_sha256') == hashlib.sha256(summary.content.encode()).hexdigest()
+                   and isinstance(meta.get('consolidation_coverage'), dict)
+                   and meta['consolidation_coverage'].get(str(source.id)) == _source_fingerprint(source))
     return (
         source.id != summary.id
         and summary.node_type == NodeType.SUMMARY
@@ -47,15 +57,16 @@ def eligible(source, summary, *, user_id, at, preserve_recent_days, min_confiden
         and not source.pinned
         and source.confidence < min_confidence_preserve
         and source.created_at <= at - timedelta(days=preserve_recent_days)
-        and meta.get('consolidation_content_sha256') == hashlib.sha256(summary.content.encode()).hexdigest()
-        and isinstance(meta.get('consolidation_coverage'), dict)
-        and meta['consolidation_coverage'].get(str(source.id)) == _source_fingerprint(source)
+        and covered
         and _render_source(source) in summary.content
         and set(source.evidence_refs) <= set(summary.evidence_refs)
     )
 
 
 def payload(record):
+    protected = snapshot_payload(record, "consolidation_retirement")
+    if protected is not None:
+        return protected
     raw = _snapshot_json.dumps(record.model_dump(mode='python'))
     return json.dumps({'record': raw, 'sha256': hashlib.sha256(raw.encode()).hexdigest()})
 
@@ -65,6 +76,7 @@ def read_record(value):
     if hashlib.sha256(value['record'].encode()).hexdigest() != value['sha256']:
         raise ValueError('Consolidation retirement checksum mismatch')
     record = RetirementRecord.model_validate(_snapshot_json.loads(value['record']))
+    validate_snapshot(value, record, 'consolidation_retirement')
     if not eligible(record.before, record.summary, user_id=record.before.user_id, at=record.at,
                     preserve_recent_days=record.preserve_recent_days,
                     min_confidence_preserve=record.min_confidence_preserve):
@@ -82,6 +94,7 @@ def read_record(value):
 
 def _checkpoint(stage):
     """Native transaction fault-injection boundary; no external work."""
+    journal_deadline()
 
 
 def _edge(source, summary, at):
@@ -90,6 +103,7 @@ def _edge(source, summary, at):
                       user_id=source.user_id, confidence=1.0, created_at=at, valid_from=at)
 
 
+@protected_mutation
 async def retire_duckdb(store, source_id, summary_id, **policy):
     source_id, summary_id = str(UUID(source_id)), str(UUID(summary_id))
     async with store._conn_lock:
@@ -136,6 +150,7 @@ def _retire_duckdb(store, source_id, summary_id, policy):
         raise
 
 
+@protected_mutation
 async def retire_postgres(store, source_id, summary_id, **policy):
     from prme.storage.pg.graph_store import _NODE_COLUMNS
     source_id, summary_id = str(UUID(source_id)), str(UUID(summary_id))
