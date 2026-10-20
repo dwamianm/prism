@@ -1,0 +1,92 @@
+"""Frozen synthetic detector observations, separate from product coverage."""
+
+import hashlib
+import json
+import os
+from pathlib import Path
+
+import pytest
+
+from prme.privacy.local_analyzer import CompletePattern, LocalAnalyzer, RecognizerIncomplete, VERSIONS
+from prme.privacy.recognizers import CustomRule, bounded_spans
+
+FIXTURES = Path(__file__).parent / "fixtures" / "privacy"
+
+
+@pytest.mark.asyncio
+async def test_frozen_detector_rows(tmp_path):
+    fixture = FIXTURES / "sanitizer-v1.json"
+    manifest = json.loads((FIXTURES / "sanitizer-v1-artifacts.json").read_text())
+    assert hashlib.sha256(fixture.read_bytes()).hexdigest() == manifest["fixture_sha256"]
+    rows = json.loads(fixture.read_text())["rows"]
+    assert len(rows) == 69
+    analyzer = LocalAnalyzer()
+    observations = []
+    counts = {}
+    try:
+        await analyzer.ready()
+        for row in rows:
+            result = await analyzer.analyze((row["text"],), seconds=2)
+            assert result.complete and result.versions == VERSIONS
+            rules = tuple(CustomRule(**rule) for rule in row["rules"])
+            spans = result.spans[0] + tuple(bounded_spans(row["text"], rules))
+            actual = {(span.start, span.end) for span in spans if span.category == row["category"]}
+            expected = {(span["start"], span["end"]) for span in row["expected_spans"]}
+            matrix = counts.setdefault(row["category"], {"tp": 0, "fp": 0, "fn": 0, "tn": 0,
+                                                        "unsupported_detected": 0, "unsupported_missed": 0})
+            if row["label"] == "unsupported":
+                matrix["unsupported_detected" if actual else "unsupported_missed"] += 1
+            else:
+                matrix["tp"] += len(actual & expected)
+                matrix["fp"] += len(actual - expected)
+                matrix["fn"] += len(expected - actual)
+                matrix["tn"] += int(not actual and not expected)
+            observations.append({"id": row["id"], "category": row["category"], "label": row["label"],
+                                 "expected_spans": sorted(expected), "actual_spans": sorted(actual),
+                                 "other_categories": sorted({span.category for span in spans} - {row["category"]})})
+    finally:
+        analyzer.close()
+    report = {"fixture_sha256": manifest["fixture_sha256"], "detector_versions": VERSIONS,
+              "rows": observations, "counts": counts, "scope": "local synthetic recognition only"}
+    path = Path(os.environ.get("PRME_SANITIZER_DETECTOR_REPORT", tmp_path / "detector-results.json"))
+    path.write_text(json.dumps(report, indent=2) + "\n")
+    # Deterministic credential/literal forms are mandatory. NLP observations are
+    # retained as precision/recall evidence, without tuning a new threshold.
+    assert counts["credential"]["fn"] == counts["credential"]["fp"] == 0
+    assert counts["custom_identifier"]["fn"] == counts["custom_identifier"]["fp"] == 0
+    assert counts["sensitive_topic"]["fn"] == counts["sensitive_topic"]["fp"] == 0
+
+
+@pytest.mark.parametrize("during_iteration", [False, True])
+def test_early_pattern_timeout_is_not_swallowed(during_iteration):
+    class EarlyTimeout:
+        def finditer(self, text, *, timeout):
+            if not during_iteration:
+                raise TimeoutError("synthetic private pattern detail")
+            return self.iterate()
+
+        def iterate(self):
+            yield object()
+            raise TimeoutError("synthetic private pattern detail")
+
+    with pytest.raises(RecognizerIncomplete, match="privacy_capability_unavailable") as error:
+        list(CompletePattern(EarlyTimeout()).finditer("synthetic input", timeout=60))
+    assert not isinstance(error.value, TimeoutError)
+    assert error.value.__cause__ is None
+
+
+def test_offline_suffix_configuration_has_no_network_or_cache(tmp_path, monkeypatch):
+    import socket
+    import tldextract
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("offline suffix adapter attempted a network/cache effect")
+
+    monkeypatch.setattr(socket, "create_connection", forbidden)
+    monkeypatch.setattr(socket.socket, "connect", forbidden)
+    monkeypatch.setattr(tldextract.cache.DiskCache, "set", forbidden)
+    suffixes = tldextract.TLDExtract(cache_dir=None, suffix_list_urls=(),
+                                   fallback_to_snapshot=True, include_psl_private_domains=False)
+    assert suffixes("sample.person@example.com").fqdn == "example.com"
+    assert not suffixes("invalid.invalidtld").fqdn
+    assert not list(tmp_path.iterdir())
