@@ -269,3 +269,120 @@ def test_a_candidate_equal_to_the_gold_graph_scores_one_and_missing_or_wrong_cla
     contained = _as_candidate(gold)
     contained["relations"].append({"s": "x-tokyo", "r": "located_in", "o": "x-japan"})
     assert fidelity(gold, contained)["inferred_containment_found"] > 0
+
+
+# --- Blind validation --------------------------------------------------------------------------------
+
+
+def test_the_blind_file_is_rebuilt_exactly_from_the_committed_candidates_and_decisions():
+    from benchmarks.graph_oracle import blind
+
+    frozen = blind.load_blind()
+    rebuilt = blind.freeze(json.loads(blind.CANDIDATES_FILE.read_text()), json.loads(blind.REVIEW_FILE.read_text()))
+    assert rebuilt == frozen
+    review = frozen["review"]
+    assert review["kept"] == len(frozen["questions"]) == 86 and review["candidates"] == 147
+    assert sum(review["dropped"].values()) == review["candidates"] - review["kept"]
+    assert {question["type"] for question in frozen["questions"]} == set(blind.TYPES)
+    # Every answer is a memory of its own corpus, and no question repeats an existing one word for word.
+    assert len({question["id"] for question in frozen["questions"]}) == 86
+    asked = {" ".join(sorted(blind._words(item["question"]))) for name in blind.CORPORA
+             for item in json.loads((gold_module.FIXTURES / f"{name}.json").read_text())["questions"]}
+    assert not asked & {" ".join(sorted(blind._words(question["question"]))) for question in frozen["questions"]}
+
+
+def test_the_paraphrases_belong_to_the_frozen_file_and_are_three_for_every_question():
+    from benchmarks.graph_oracle import blind
+
+    paraphrases = blind.load_paraphrases()
+    assert set(paraphrases) == {question["id"] for question in blind.load_blind()["questions"]}
+    assert all(len(texts) == 3 and all(texts) for texts in paraphrases.values())
+    with pytest.raises(ValueError, match="not the paraphrases"):
+        blind.load_paraphrases(blind_path=gold_module.FIXTURES / "defects-v1.json")
+
+
+def test_the_generator_only_uses_a_loopback_server_and_sees_no_gold_graph():
+    from benchmarks.graph_oracle import blind
+
+    with pytest.raises(ValueError, match="loopback"):
+        blind.check_endpoint("http://example.com/v1")
+    blind.check_endpoint(blind.ENDPOINT)
+    prompt = blind.SYSTEM.format(count=3, type="lookup", instruction=blind.INSTRUCTIONS["lookup"])
+    assert "relation" not in prompt.lower() and "gold" not in prompt.lower() and "graph" not in prompt.lower()
+
+
+def test_cue_words_derived_from_the_definitions_cover_every_relation_and_leave_out_example_names():
+    cues = gold_module.derive_cues()
+    assert set(cues) == set(RELATIONS)
+    assert {"employ", "work"} <= cues["works_at"] and {"allergy", "allergic"} <= cues["allergic_to"]
+    assert "live" in cues["lives_in"] and "run" in cues["friend_of"] and "mentor" in cues["manager_of"]
+    assert not any({"tokyo", "japan", "brooklyn", "role", "status", "polarity"} & words for words in cues.values())
+    assert relation_cues("Where do I live now?", "derived") == {"lives_in"}
+    assert relation_cues("What is the plan?", "derived") == set()
+    small = gold_module.derive_cues("## The relation vocabulary\n| `owns` | a, b | owns, keeps |\n")
+    assert set(small) == {"owns"} and {"own", "keep"} <= small["owns"]
+
+
+async def test_the_owner_is_seeded_by_first_person_words_only_when_asked(mock_embeddings, tmp_path):  # noqa: F811
+    async with _stored(tmp_path, "chat-v1") as (engine, gold, handles, data):
+        question = "Where do I work now?"
+        plain = await generic_scores(question, gold, MemorySource(data), Params(cue_source="derived"))
+        seeded = await generic_scores(question, gold, MemorySource(data), Params(cue_source="derived", first_person_seed=True))
+        assert plain.seeds == [] and plain.scores == {}
+        assert seeded.seeds == ["dana"] and set(graph_order(seeded.scores, [])[:2]) <= {
+            "s4-offer#0", "s4-offer#1", "s5-race#4", "s5-race#5"}
+
+
+def _table(strategy, baseline, counts):
+    """A by type table with the given top 3 counts: counts maps type to (strategy, baseline, n)."""
+    entry = lambda top3, n: {"n": n, "top3": top3, "top5": top3, "top1": 0, "mrr": 0.0, "missing": 0, "recall5": 0.0}  # noqa: E731
+    types = {kind: {strategy: entry(s, n), "baseline": entry(b, n)} for kind, (s, b, n) in counts.items()}
+    total = [sum(values[index] for values in counts.values()) for index in range(3)]
+    blind = {**types, "all": {strategy: entry(total[0], total[2]), "baseline": entry(total[1], total[2])}}
+    return {"blind": blind, "paraphrase": {"all": {strategy: entry(0, 1), "baseline": entry(0, 1)}}}
+
+
+def test_the_decision_rule_checks_the_four_conditions_of_blind_md():
+    from benchmarks.graph_oracle import blind_run
+
+    counts = {"lookup": (10, 10, 12), "list": (8, 5, 10), "negation": (4, 5, 6)}
+    table = _table("g", "baseline", counts)
+    table["paraphrase"]["all"] = {"g": {"n": 100, "top3": 70, "top1": 0, "top5": 0, "mrr": 0.0, "missing": 0, "recall5": 0.0},
+                                  "baseline": {"n": 100, "top3": 60, "top1": 0, "top5": 0, "mrr": 0.0, "missing": 0, "recall5": 0.0}}
+    result = blind_run.verdict(table, "g")
+    # 22 of 28 against 20 of 28 is 7.1 points, the worst type loses 1, lookups tie, paraphrases are 70 percent against 78.6.
+    assert [item["pass"] for item in result["conditions"].values()] == [False, True, True, False] and not result["passes"]
+    counts["list"] = (9, 5, 10)
+    passing = blind_run.verdict(_with_paraphrase(_table("g", "baseline", counts), 78), "g")
+    assert passing["passes"], passing
+    counts["negation"] = (3, 5, 6)
+    assert not blind_run.verdict(_with_paraphrase(_table("g", "baseline", counts), 78), "g")["conditions"][
+        "2 loses on no type by more than 1 question"]["pass"]
+    counts.update(negation=(4, 5, 6), lookup=(9, 10, 12))
+    assert not blind_run.verdict(_with_paraphrase(_table("g", "baseline", counts), 78), "g")["conditions"][
+        "3 ties or beats the baseline on lookups"]["pass"]
+
+
+def _with_paraphrase(table, top3):
+    table["paraphrase"]["all"] = {"g": {"n": 100, "top3": top3, "top1": 0, "top5": 0, "mrr": 0.0, "missing": 0, "recall5": 0.0},
+                                  "baseline": {"n": 100, "top3": 60, "top1": 0, "top5": 0, "mrr": 0.0, "missing": 0, "recall5": 0.0}}
+    return table
+
+
+async def test_a_blind_run_writes_its_report_and_a_latency_run_measures_a_small_synthetic_pack(mock_embeddings, tmp_path):  # noqa: F811
+    from benchmarks.graph_oracle import blind_run, latency
+
+    report = await blind_run.run(tmp_path / "blind", work=tmp_path / "work")
+    assert report["blind_questions"] == 86 and report["blind_sha256"] == blind_run.digest(
+        gold_module.FIXTURES / "blind-v1.json")
+    assert set(report["table"]) == {"original", "blind", "paraphrase"} and set(report["verdict"]) >= {blind_run.PRIMARY}
+    assert report["table"]["original"]["all"]["baseline"]["n"] == 53 and report["table"]["blind"]["all"]["baseline"]["n"] == 86
+    assert report["paraphrases_scored"] + report["paraphrases_unchanged_and_left_out"] == 258
+    assert "## Verdict by the rule in BLIND.md" in (tmp_path / "blind" / "report.md").read_text()
+    result = await latency.run(tmp_path / "latency", backend="duckdb", turns=[200])
+    row = result["results"][0]
+    assert row["turns"] == 200 and row["owner_mentions"] > 30 and row["naive_reads"]["store_reads"]["max"] == 3
+    # The owner-aware reads fetch the owner by claim edge types, so they read fewer edges when the owner is a seed.
+    assert row["owner_aware_reads"]["edges_read"]["mean"] < row["naive_reads"]["edges_read"]["mean"]
+    # Claims alone are a fraction of what the frontier's edges hold, which is mostly mentions.
+    assert row["claims_only_reads"]["edges_read"]["mean"] < row["owner_aware_reads"]["edges_read"]["mean"]
