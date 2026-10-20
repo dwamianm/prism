@@ -16,6 +16,17 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
 
 ### Added
 
+- Graph oracle (`python -m benchmarks.graph_oracle`, tooling only, no engine or
+  default change; part of dwamianm/prism#351): hand written gold graphs for the
+  `defects-v1`, `store-v1` and `chat-v1` corpora (`benchmarks/fixtures/graph-oracle/`),
+  a design for the ideal graph (`benchmarks/graph_oracle/DESIGN.md`) and a
+  deterministic probe that writes a gold graph into the graph store over
+  memories stored with `store()` and ranks every question by `retrieve()`, by
+  the gold query spec (the upper bound of the shape), by a generic typed walk
+  and by rank fusion of the walk with the text list, with ablations, a cost
+  table, a `compare` command and a `fidelity` command that scores an extracted
+  graph against a gold graph. It stores relation labels in edge metadata on the
+  existing edge types and adds no edge type. See `BENCHMARKS.md`.
 - Add `enable_owner_window_extraction` (`PRME_ENABLE_OWNER_WINDOW_EXTRACTION`,
   off by default; dwamianm/prism#345 and #347): with `enable_windowed_extraction`,
   a turn with no `session_id` gets the owner's preceding memories in the same

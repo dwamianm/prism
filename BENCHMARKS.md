@@ -3509,6 +3509,198 @@ from two turns was the same fact. The labels, the reasons, the sensitivity of
 the top band to one label and the commands are in
 `benchmarks/results/research/2026-10-15/PARAPHRASED-DUPLICATE-CLAIMS.md`.
 
+### Graph oracle: what a well shaped graph answers (store packs, no model)
+
+Part of #351. The graph today holds `has_fact` and `mentions` edges, and `store()`
+writes neither entity nor edge, so a question about a list ("which cities will
+Alex visit in Japan?") finds the answer only by its words. This probe works
+backwards. It writes the graph a good extractor would hand us by hand (a gold
+graph, [`DESIGN.md`](benchmarks/graph_oracle/DESIGN.md) says what shape and
+why), writes it into the real graph store over memories stored with `store()`
+and real local embeddings (no extraction), and asks the questions of three
+strategies. That separates two questions that were mixed: whether a well shaped
+graph plus a good traversal answers the questions, and whether extraction can
+produce that graph. Nothing here changes a default or the engine: the graph
+uses the existing edge types, with the relation label in edge metadata.
+
+```sh
+uv run python -m benchmarks.graph_oracle run --out /tmp/oracle
+uv run python -m benchmarks.graph_oracle run --out /tmp/oracle --set hops=3 --set cue_filter=false
+uv run python -m benchmarks.graph_oracle compare /tmp/before/report.json /tmp/after/report.json
+uv run python -m benchmarks.graph_oracle fidelity --gold store-v1 --graph extracted.json
+```
+
+A run takes about 20 seconds on a laptop, is deterministic (two runs give the
+same report) and calls no model. Gold graphs are in
+`benchmarks/fixtures/graph-oracle/`: `defects-v1` (14 turns, 21 entities, 33
+claims), `store-v1` (the 75 memory store fixture, 72 entities, 127 claims) and
+`chat-v1` (54 turns, 22 entities, 40 claims). Each question has a query spec
+(seeds, relation path, target) and the memories that answer it. They cover all 7
+defect probes, all 17 store questions and all 18 chat probes, plus 7 added two
+and three hop questions, and two spellings of the cities question for each of
+the two corpora that ask it (53 items in all). `corrections-v1` is not annotated
+yet. The memories the gold graph says nothing about are still stored, so every
+question has distractors.
+
+The strategies, each ranking the stored memories:
+
+- `baseline`: `retrieve()` as it is, before any gold graph exists.
+- `oracle`: the gold query spec followed exactly from the gold seeds, selected
+  memories first. The upper bound of the shape: if it does not rank the answers
+  first, the shape cannot answer the question.
+- `generic`: no gold path. Seeds come from the question text by entity name,
+  the walk follows claims up to `hops` with hop decay and a weight per
+  relation, and a memory scores by the reached entities it names and the
+  reached claims it evidences. The owner entity touches nearly every memory,
+  so the walk never passes through it unless it is a seed (hub damping).
+  Question words that name an entity subtype ("cities", "dog") boost reached
+  entities of that subtype, and question words that point at a relation
+  ("manager", "allergic", "visit") restrict the walk to that relation and
+  containment. Memories it reaches come first, then the text list.
+- `fused@w`: reciprocal rank fusion of the `retrieve()` list and the generic
+  graph list, the graph list weighted `w`. `fused-gated` uses 4 when the
+  question names a subtype and 0.5 otherwise; that rule was chosen after the
+  first table, so treat it as exploratory.
+
+The answer of a question is the first stored memory that states it, as the gold
+file lists them (a memory that restates a fact counts, one that only mentions a
+name does not). Measured on 2026-10-20 at `50d22d4e`, on a laptop:
+
+| Strategy | Rank 1 | Top 3 | Top 5 | MRR | Stale above answer |
+|---|---:|---:|---:|---:|---:|
+| baseline | 21 | 39 | 41 | 0.564 | 6/8 |
+| oracle | 53 | 53 | 53 | 1.000 | 0/8 |
+| generic | 33 | 51 | 51 | 0.757 | 1/8 |
+| fused@0.5 | 26 | 45 | 49 | 0.671 | 3/8 |
+| fused@1 | 28 | 46 | 50 | 0.710 | 3/8 |
+| fused@2 | 32 | 48 | 51 | 0.760 | 2/8 |
+| fused@4 | 34 | 50 | 50 | 0.780 | 1/8 |
+| fused-gated | 30 | 48 | 51 | 0.725 | 3/8 |
+
+Top 3 of 53 items, and MRR in brackets, by question kind:
+
+| Strategy | Lookup (28) | List (7) | Correction (8) | Two hop (8) | Three hop (2) |
+|---|---|---|---|---|---|
+| baseline | 26 (0.761) | 4 (0.225) | 4 (0.340) | 4 (0.476) | 1 (0.250) |
+| oracle | 28 (1.000) | 7 (1.000) | 8 (1.000) | 8 (1.000) | 2 (1.000) |
+| generic | 27 (0.771) | 7 (0.929) | 8 (0.625) | 8 (0.750) | 1 (0.528) |
+| fused@1 | 28 (0.881) | 4 (0.355) | 7 (0.635) | 6 (0.542) | 1 (0.528) |
+| fused@2 | 27 (0.878) | 4 (0.588) | 8 (0.667) | 8 (0.646) | 1 (0.528) |
+| fused@4 | 27 (0.874) | 6 (0.619) | 8 (0.729) | 8 (0.708) | 1 (0.528) |
+
+The cities question (rank of the memory "They chose Tokyo, Kyoto, Kanazawa, and
+Osaka." among the stored memories):
+
+| Corpus and spelling | baseline | oracle | generic | fused@1 | fused@2 | fused@4 |
+|---|---:|---:|---:|---:|---:|---:|
+| store, "which cities will Alex and jordan visit in Japan?" | 26 | 1 | 1 | 7 | 5 | 3 |
+| store, "which cities will alex visit in japan?" | 51 | 1 | 1 | 7 | 6 | 6 |
+| store, "which cities will Alex visit?" | 52 | 1 | 1 | 5 | 4 | 3 |
+| defects, the same three spellings | 3 | 1 | 1 | 2 | 1 | 1 |
+
+Twenty-eight further store questions (`store-heldout-v1`, single fact lookups,
+never used to choose a setting; the answer is any memory holding the answer
+terms) check that a graph helps where it should and does no harm where it
+cannot:
+
+| Strategy | Rank 1 | Top 3 | Top 5 | MRR |
+|---|---:|---:|---:|---:|
+| baseline | 16 | 22 | 25 | 0.690 |
+| generic | 13 | 19 | 22 | 0.586 |
+| fused@0.5 | 17 | 22 | 25 | 0.713 |
+| fused@1 | 17 | 22 | 25 | 0.698 |
+| fused@2 | 15 | 20 | 23 | 0.641 |
+| fused@4 | 16 | 19 | 22 | 0.642 |
+
+What the numbers say:
+
+- **The shape is sufficient.** Following the gold spec ranks the answer first for
+  all 53 items (baseline: 21 first, 39 in the top 3), including the three
+  spellings of the cities question, every correction (the old date, role,
+  preference or diet sits behind the superseded claim) and the two and three hop
+  questions. The first oracle run ranked 48 of 53 first; the five misses were
+  errors in the gold files (a polarity left out of a spec, claims whose
+  evidence listed memories that do not state them, one missing `partner_of`
+  claim), repaired once. A sixth, a memory listed as evidence for who is on call
+  that only asks for a swap, showed only when the test suite ran the corpora
+  with a different embedding order, and was repaired too. None needed a
+  different shape.
+- **A graph list ahead of the text list is the right tool for lists,
+  corrections and multi hop questions, and the wrong one for single fact
+  lookups.** The generic walk puts the cities memory first for all six
+  spellings (baseline 3 to 52). On the held-out lookups it is 3 questions
+  behind the baseline in the top 3, because a lookup is already answered by its
+  words. Fused at weight 1 keeps the lookups (28 of 28 gold lookups in the top
+  3, held-out top 3 equal to the baseline, MRR 0.698 against 0.690) and lifts
+  corrections (4 to 7), two hop questions (4 to 6) and the list MRR (0.225 to
+  0.355). Weight 2 adds two hop 8 of 8 and costs 2 held-out top 3 places.
+  Fusion with the text list keeps the cities memory from rank 1 (5 to 7 of 75
+  at weight 1, 3 to 6 at weight 4) because the text list, which ranks it 26th to
+  52nd, still contributes.
+- **What mattered, by ablation of the generic walk over the 53 items (top 3
+  with the graph list first):** relation cues that restrict the walk (51 against
+  35 when they only boost, 29 with no cues: the query compiler that picks the
+  relation is the largest lever); hub damping of the owner (51 against 47 with
+  none, 44 when the owner's own score also counts; a walk that passes through
+  the owner reaches the whole graph in two hops); intent edges (49 without
+  containment, 42 with containment alone); relations `works_at` and `uses` (dropping
+  one costs 3 and 4 top 3 places), `friend_of`, `owns`, `prefers`, `involved_in`
+  and `partner_of` (2 each; the others cost 0 or 1). A hop limit of 2 is enough (1 hop: 49;
+  3 and 4 hops: the same 51); a decay of 0.4 and 0.6 are equal in the top 3.
+- **Containment is what makes the country level chain work.** With the claims
+  "Alex visits Tokyo" hidden and only "Alex visits Japan" kept, the cities
+  memory is still reached through `located_in` (51 of 53, the same as with the
+  claims); with those inferred containment edges removed too it drops to 45.
+  Claims between memories and entities that the text states ("We chose Tokyo,
+  ...") are therefore not required for list questions if containment is there,
+  and a per city claim is not enough without a connected graph for the
+  questions that name only the country.
+- **Claim nodes cost two hops per step and give no better answers here.** With
+  claim nodes the same walk needs a hop limit of 4 (50 against 51 top 3 at
+  hops 4, 48 at hops 2). A claim node is worth its cost only for what direct
+  edges cannot hold: a correction between two claims is a `supersedes` edge
+  between claim nodes, but an edge between two edges has no representation in
+  the store, so the direct shape keeps `supersedes` as edge metadata.
+- **Stale values.** The old value ranks above the answer for 6 of 8 correction
+  questions at baseline, 1 of 8 for the generic walk and 0 of 8 for the oracle.
+
+Cost, on packs of 14, 75 and 54 memories (DuckDB, a laptop). `retrieve()` took 27
+ms at the median. The generic walk read the store 3 times for two hops (one read
+per hop and one for the last frontier) and 181 edges at the median (512 at the
+95th percentile), which took 3.6 ms at the median and 12 ms at the 95th
+percentile. The oracle, in memory, took 0.03 ms. The store backed walk and the
+in memory copy of the graph rank every question identically. The 10,000 turn
+latency budget of #351 is not measured here.
+
+Limits. One person wrote the gold graphs while reading the questions, the
+oracle follows specs written in the same sitting, and the relation cue words
+are a hand written lexicon, so the oracle is an upper bound of the shape, and
+the generic walk's numbers on the 53 items are optimistic; the 28 held-out
+questions are the check, and they show no gain for lookups, only parity at
+weight 1 or below. The gold graphs hold every claim the memories state, so a
+real extractor, which will miss some and invent some, will land below these
+numbers by an amount `fidelity` measures. The probe uses `store()` packs (no
+chat turns through `ingest()`), DuckDB only, and one fixed fusion rule (RRF at
+k 60).
+
+#### What extraction has to produce
+
+The target is the gold file format: for each memory the entities it names (a
+kind, a subtype, and every name the text uses, "Alex" as well as "Alex
+Rivera"), the claims it states with a relation from the vocabulary (16 relations and
+`has` for a literal), polarity, status, a role and a time, the evidence memory ids, a
+`supersedes` link when it changes an earlier claim, and a `located_in` claim
+for each pair of well known places that sit together in a chat. A claim needs
+its subject and object resolved to entities, "We" and "They" included (the
+gold claims for "We chose Tokyo, Kyoto, Kanazawa, and Osaka." name Alex and
+Jordan, marked `via: we`). `fidelity` scores any graph in that format against
+a gold graph: entity recall and precision (by name), relation recall and
+precision (subject, relation, object, or subject and attribute for a literal),
+polarity and status accuracy on the matched claims, and the share of inferred
+containment found. A first extraction target is entity recall and relation
+recall of 0.8 with relation precision of 0.9 and polarity accuracy of 0.95.
+Those thresholds are a proposal; this probe did not validate them.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
