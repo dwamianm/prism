@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from prme.retrieval.pipeline import RetrievalPipeline
 
 from prme.config import PRMEConfig
+from prme.privacy import CategoryAction, MemoryRetention, PolicySnapshot, PrivacyDenied, PrivacyPolicy, PrivacyRuntime
 from prme.config_audit import (
     HypothesisAudit as HypothesisAudit,
     HypothesisSetting as HypothesisSetting,
@@ -197,6 +198,7 @@ def __getattr__(name: str):
 
 
 __all__ = [
+    "CategoryAction", "MemoryRetention", "PolicySnapshot", "PrivacyDenied", "PrivacyPolicy", "PrivacyRuntime",
     "AnswerCitationRecord",
     "AnswerCitationSubmission",
     "AliasProposalDecision",

@@ -31,6 +31,7 @@ from prme.models.extraction import ExtractionBatchRecord, ExtractionRecord
 from prme.models.reingest import ReingestRecord, reingest_extraction_id, reingest_marker_id
 from prme.storage._threading import run_to_completion
 from prme.storage.derivation import apply_duckdb, apply_postgres
+from prme.storage.privacy import require_legacy_duck, require_legacy_pg, require_legacy_session
 from prme.types import ACTIVE_LIFECYCLE_STATES, Scope
 
 if TYPE_CHECKING:
@@ -89,6 +90,7 @@ class ReingestRepository:
             where += f" AND ({order}) > (${len(args) + 1}, ${len(args) + 2}, ${len(args) + 3})"
             args += [after.effective, after.stamp, after.event_id]
         async with self._work.session() as session:
+            await require_legacy_session(session, user_id, scope)
             rows = await session.fetch(
                 f"SELECT CAST(e.id AS VARCHAR) AS id, {effective} AS effective, e.timestamp AS stamp, "
                 "w.status AS work_status FROM events e "
@@ -124,6 +126,10 @@ class ReingestRepository:
         saved: dict[str, ExtractionRecord] = {}
         ids = list(by_operation)
         async with self._work.session() as session:
+            for event_id in event_ids:
+                rows = await session.fetch("SELECT scope FROM events WHERE id=$1 AND user_id=$2", event_id, user_id)
+                for row in rows:
+                    await require_legacy_session(session, user_id, row["scope"])
             for start in range(0, len(ids), 500):
                 chunk = ids[start:start + 500]
                 rows = await session.fetch(
@@ -148,6 +154,22 @@ class ReingestRepository:
         batch (a turn asked on its own) only the turn's output is saved.
         """
         async with self._work.session(transaction=True) as session:
+            await require_legacy_session(session, batch.user_id, batch.scope.value)
+            # The saved batch includes omitted/retried turns and prior context,
+            # not only the records this particular response happened to yield.
+            for turn in batch.turns:
+                rows = await session.fetch(
+                    "SELECT user_id,scope,content_hash FROM events WHERE id=$1", str(turn.event_id))
+                if not rows:
+                    raise ValueError("Extraction requires a matching persisted source event")
+                row = rows[0]
+                batch.verify_turn(turn.event_id, row["user_id"], row["scope"], row["content_hash"])
+                await require_legacy_session(session, row["user_id"], row["scope"])
+            for memory in batch.memories:
+                rows = await session.fetch("SELECT user_id,scope FROM nodes WHERE id=$1", str(memory.node_id))
+                if not rows or (rows[0]["user_id"], rows[0]["scope"]) != (batch.user_id, batch.scope.value):
+                    from prme.privacy.policy import PrivacyDenied
+                    raise PrivacyDenied("privacy_provider_unavailable")
             for record in records:
                 rows = await session.fetch(
                     "SELECT user_id, scope, content_hash FROM events WHERE id = $1", str(record.event_id),
@@ -223,6 +245,7 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, record: Reing
     conn = store._conn
     conn.execute("BEGIN TRANSACTION")
     try:
+        require_legacy_duck(conn, plan.user_id, plan.scope.value)
         row = conn.execute(
             "SELECT payload FROM operations WHERE id = ? AND op_type = ?", [record.operation_id, MARKER_TYPE],
         ).fetchone()
@@ -265,6 +288,7 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, record: Rei
     plan = DerivationPlan.model_validate_json(plan.model_dump_json())
     _check(plan, record)
     async with store._pool.acquire() as conn, conn.transaction():
+        await require_legacy_pg(conn, plan.user_id, plan.scope.value)
         vector_sql = await resolve_vector_sql(conn)
         # Serialize attempts for this immutable source, as a derivation commit does.
         source = await conn.fetchrow(
@@ -272,6 +296,7 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, record: Rei
         )
         if source is None:
             raise ValueError("A re-derivation requires a persisted source event")
+        await require_legacy_pg(conn, plan.user_id, plan.scope.value)
         row = await conn.fetchrow(
             "SELECT payload FROM operations WHERE id = $1 AND op_type = $2", record.operation_id, MARKER_TYPE,
         )

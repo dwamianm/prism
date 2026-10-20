@@ -32,11 +32,13 @@ engine derives:
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import json
 import unicodedata
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from types import SimpleNamespace
 from uuid import UUID
 
 import structlog
@@ -49,6 +51,7 @@ from prme.models.derivation import StaleDerivationPlanError
 from prme.models.events import Event
 from prme.models.nodes import MemoryNode
 from prme.models.reingest import ReingestArchive, ReingestRecord, ReingestResult
+from prme.privacy.policy import PrivacyDenied
 from prme.storage.index_eviction import evict_from_indexes
 from prme.storage.reingest import REINGEST_KEY, SourceRef, scope_value
 from prme.types import ACTIVE_LIFECYCLE_STATES, EpistemicType, LifecycleState, NodeType, Scope
@@ -191,9 +194,23 @@ class Reingester:
     def __init__(self, pipeline: IngestionPipeline) -> None:
         self._pipeline = pipeline
         self._running: set[str] = set()
+        self._scopes: dict[str, Scope | None] = {}
+
+    async def _check(self, user_id: str, scope=None, *, events=(), nodes=()) -> None:
+        coordinator = self._pipeline._privacy
+        if coordinator is not None:
+            await coordinator.require_legacy_reingest(user_id, self._scopes.get(user_id, scope))
+            await coordinator.require_legacy_inputs(events, nodes)
+
+    async def _submit(self, operation, *, label, user_id, scope, nodes=()):
+        async def checked():
+            await self._check(user_id, scope, nodes=nodes)
+            return await operation()
+        return await self._pipeline._write_queue.submit(checked, label=label)
 
     async def run(self, *, user_id: str, scope: Scope | str | None = None, limit: int | None = None,
                   cursor: str | None = None, dry_run: bool = False) -> ReingestResult:
+        await self._check(user_id, scope)
         if not user_id:
             raise ValueError("Reingest requires user_id")
         if limit is not None and limit < 0:
@@ -203,15 +220,18 @@ class Reingester:
         if user_id in self._running:
             raise ReingestBusyError("A re-derivation of this owner's sources is already running")
         self._running.add(user_id)
+        self._scopes[user_id] = scope
         try:
             return await self._run(user_id, scope, limit, after, dry_run)
         finally:
             self._running.discard(user_id)
+            self._scopes.pop(user_id, None)
 
     async def _run(self, user_id: str, scope: Scope | None, limit: int | None, after: SourceRef | None,
                    dry_run: bool) -> ReingestResult:
         pipeline = self._pipeline
         repo = pipeline._event_store.reingest
+        await self._check(user_id, scope)
         extraction_key = _digest(extraction_settings(pipeline))
         fingerprint = _digest(derivation_settings(pipeline))
 
@@ -229,6 +249,7 @@ class Reingester:
         sources = [ref for ref in refs if ref.work_status in (None, "complete")]
         current: set[str] = set()
         for start in range(0, len(sources), _SCAN_PAGE):
+            await self._check(user_id, scope)
             ids = [ref.event_id for ref in sources[start:start + _SCAN_PAGE]]
             current |= await repo.current(ids, fingerprint)
         pending = [ref for ref in sources if ref.event_id not in current]
@@ -243,6 +264,7 @@ class Reingester:
             await self._derive_all(user_id, selected, extraction_key, fingerprint, counts)
         attempted = selected[:counts["attempted"]]
         after_attempted = ahead[len(attempted):]
+        await self._check(user_id, scope)
         return ReingestResult(
             user_id=user_id, scope=scope, dry_run=dry_run, total=len(sources), current=len(current),
             unfinished=len(refs) - len(sources), selected=len(attempted), processed=counts["processed"],
@@ -254,8 +276,10 @@ class Reingester:
     async def _events(self, user_id: str, refs: list[SourceRef]) -> list[Event]:
         events = []
         for ref in refs:
+            await self._check(user_id)
             event = await self._pipeline._event_store.get(ref.event_id)
             if event is not None and event.user_id == user_id:
+                await self._check(user_id, event.scope, events=(event,))
                 events.append(event)
         return events
 
@@ -268,6 +292,7 @@ class Reingester:
             events = await self._events(user_id, selected[start:start + WINDOW])
             saved = await repo.saved_extractions([str(event.id) for event in events], user_id=user_id,
                                                  extraction_key=extraction_key)
+            await self._check(user_id, events=events)
             asked = [event for event in events if str(event.id) not in saved]
             counts["calls"] += len(request_groups(asked, self._pipeline._batch_target_tokens))
             counts["tokens"] += sum(count_tokens(event.content) for event in asked)
@@ -279,7 +304,8 @@ class Reingester:
         pipeline = self._pipeline
         repo = pipeline._event_store.reingest
         run = BatchRun(save=lambda batch, records: repo.save_extractions(batch, records,
-                                                                         extraction_key=extraction_key))
+                                                                         extraction_key=extraction_key),
+                       check=lambda: self._check(user_id))
         in_a_row = 0
         try:
             for start in range(0, len(selected), WINDOW):
@@ -287,6 +313,7 @@ class Reingester:
                 events = await self._events(user_id, window)
                 by_id = {str(event.id): event for event in events}
                 saved = await repo.saved_extractions(list(by_id), user_id=user_id, extraction_key=extraction_key)
+                await self._check(user_id, events=events)
                 groups = request_groups([event for event in events if str(event.id) not in saved],
                                         pipeline._batch_target_tokens)
                 group_of = {str(event.id): index for index, group in enumerate(groups) for event in group}
@@ -311,6 +338,8 @@ class Reingester:
                         continue
                     try:
                         await self._derive(event, record, fingerprint, extraction_key)
+                    except PrivacyDenied:
+                        raise
                     except Exception as exc:
                         logger.error("reingest.source_failed", event_id=ref.event_id, error_type=type(exc).__name__)
                         counts["failed"] += 1
@@ -342,6 +371,7 @@ class Reingester:
         """
         pipeline = self._pipeline
         nodes = await pipeline._graph_store.get_event_nodes(str(event.id), user_id=event.user_id)
+        await self._check(event.user_id, event.scope, events=(event,), nodes=nodes)
         derived = await pipeline._event_store.reingest.derived_node_ids(str(event.id))
         owned = []
         for node in nodes:
@@ -354,6 +384,7 @@ class Reingester:
 
     async def _derive(self, event: Event, record: ExtractionRecord, fingerprint: str, extraction_key: str) -> None:
         pipeline = self._pipeline
+        await self._check(event.user_id, event.scope, events=(event,))
         result = ExtractionResult.model_validate(record.result)
         direct = await pipeline._event_store.get_direct_store(str(event.id), user_id=event.user_id)
         note_id = str(direct.node.id) if direct is not None else str(event.id)
@@ -365,7 +396,8 @@ class Reingester:
                 async def before_prepare(graph: PlanningGraph) -> None:
                     await self._retire(graph, event, owned, fingerprint, archived)
 
-                plan = await pipeline._prepare_plan(result, event, before_prepare=before_prepare)
+                plan = await pipeline._prepare_plan(result, event, before_prepare=before_prepare,
+                    effect_check=lambda: self._check(event.user_id, event.scope, events=(event,)))
                 await self._stage(plan)
                 planned = ReingestRecord(
                     event_id=event.id, user_id=event.user_id, scope=event.scope, fingerprint=fingerprint,
@@ -375,9 +407,10 @@ class Reingester:
                     superseded=tuple(edge.target_id for edge in plan.replacements), archived=tuple(archived),
                 )
                 try:
-                    committed = await pipeline._write_queue.submit(
+                    committed = await self._submit(
                         lambda: pipeline._graph_store.commit_reingest(plan, planned),
                         label=f"reingest.commit:{event.id}",
+                        user_id=event.user_id, scope=event.scope, nodes=plan.references,
                     )
                 except StaleDerivationPlanError:
                     # Something this plan read changed since: the saved output plans again, with no model call.
@@ -414,16 +447,19 @@ class Reingester:
     async def _stage(self, plan: DerivationPlan) -> None:
         """Stage the plan's vectors and lexical documents before the graph commit, as a derivation does."""
         pipeline = self._pipeline
+        await self._check(plan.user_id, plan.scope, nodes=plan.references)
         if getattr(pipeline._graph_store, "_conn", None) is None:
             # PostgreSQL writes its prepared vector and text columns in the commit's own transaction.
             return
         for embedding in plan.embeddings:
-            await pipeline._write_queue.submit(
+            await self._submit(
                 lambda item=embedding: pipeline._vector_index.stage(item, user_id=plan.user_id),
                 label=f"reingest.vector:{embedding.node_id}",
+                user_id=plan.user_id, scope=plan.scope, nodes=plan.references,
             )
-        await pipeline._write_queue.submit(
+        await self._submit(
             lambda: pipeline._lexical_index.stage(plan), label=f"reingest.lexical:{plan.id}",
+            user_id=plan.user_id, scope=plan.scope, nodes=plan.references,
         )
 
     async def _after(self, plan: DerivationPlan, marker: ReingestRecord, event: Event, record: ExtractionRecord,
@@ -434,12 +470,27 @@ class Reingester:
         and the index compaction job and ``prme rebuild`` repair an eviction this misses.
         """
         pipeline = self._pipeline
+        await self._check(plan.user_id, plan.scope, events=(event,), nodes=plan.references)
+
+        async def submit(operation, *, label):
+            return await self._submit(operation, label=label, user_id=plan.user_id,
+                                      scope=plan.scope, nodes=plan.references)
+
+        queue = SimpleNamespace(submit=submit)
         retired = [str(edge.target_id) for edge in plan.replacements] + [str(item.node_id) for item in marker.archived]
         for node_id in retired:
-            await evict_from_indexes(pipeline._write_queue, pipeline._lexical_index, pipeline._vector_index, node_id)
-        create_edge = (
+            await evict_from_indexes(queue, pipeline._lexical_index, pipeline._vector_index, node_id)
+            await self._check(plan.user_id, plan.scope)
+        writer = (
             pipeline._graph_writer or WriteQueueGraphWriter(pipeline._graph_store, pipeline._write_queue)
-        ).create_edge
+        )
+        if isinstance(writer, WriteQueueGraphWriter):
+            writer = copy.copy(writer)
+            writer._write_queue = queue
+
+        async def create_edge(edge):
+            await self._check(plan.user_id, plan.scope)
+            return await writer.create_edge(edge)
         if pipeline._link_mentions:
             from prme.ingestion.mention_links import link_event_mentions
 
@@ -451,7 +502,14 @@ class Reingester:
         if pipeline._link_owner_groups:
             from prme.ingestion.group_links import link_group_claims
 
-            await link_group_claims(
-                str(event.id), plan.nodes, user_id=event.user_id, graph_store=pipeline._graph_store,
-                event_store=pipeline._event_store, create_edge=create_edge,
-            )
+            if pipeline._privacy is not None:
+                await pipeline._privacy.link_legacy_groups(
+                    str(event.id), plan.nodes, user_id=event.user_id, scope=event.scope, event=event,
+                    effect_check=lambda: self._check(
+                        plan.user_id, plan.scope, events=(event,), nodes=plan.references),
+                    submit=submit)
+            else:
+                await link_group_claims(
+                    str(event.id), plan.nodes, user_id=event.user_id, graph_store=pipeline._graph_store,
+                    event_store=pipeline._event_store, create_edge=create_edge,
+                )

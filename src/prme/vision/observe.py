@@ -146,6 +146,7 @@ async def observe_source(
     session_id: str | None = None,
     metadata: dict[str, Any] | None = None,
     scope: Scope = Scope.PERSONAL,
+    policy=None,
 ) -> ObservationReport:
     """Observe one image or video through *engine* and report every decision.
 
@@ -156,6 +157,9 @@ async def observe_source(
     :class:`~prme.vision.errors.ObservationError`, whose ``report`` lists
     the events admitted before it. Calls on one engine run one at a time.
     """
+    if engine._privacy.selected(policy):
+        from prme.privacy.policy import PrivacyDenied
+        raise PrivacyDenied("privacy_unsupported_input")
     config: VisionConfig = engine._config.vision
     if not config.enabled:
         raise VisionDisabledError(

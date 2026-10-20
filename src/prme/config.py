@@ -12,6 +12,8 @@ from uuid import UUID
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
+from prme.privacy.policy import PrivacyPolicy
+
 from prme.retrieval.config import (
     DEFAULT_PACKING_SETTINGS,
     DEFAULT_RERANKER_PRIOR_WEIGHT,
@@ -549,6 +551,8 @@ class PRMEConfig(_ProjectSettings):
     .env files, and direct arguments. Nested configs use
     double-underscore delimiter (e.g., PRME_EMBEDDING__DIMENSION=384).
     """
+
+    privacy_policy: PrivacyPolicy | None = Field(default=None, description="Explicit immutable evidence policy; missing runtime capabilities deny protected operation.")
 
     database_url: SecretStr | None = Field(
         default=None,

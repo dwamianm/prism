@@ -21,7 +21,7 @@ from prme.config import PRMEConfig
 logger = logging.getLogger(__name__)
 
 
-def create_app(config: PRMEConfig | None = None) -> FastAPI:
+def create_app(config: PRMEConfig | None = None, *, privacy_runtime=None, embedding_provider=None) -> FastAPI:
     """Create and configure the PRME FastAPI application.
 
     Args:
@@ -39,7 +39,7 @@ def create_app(config: PRMEConfig | None = None) -> FastAPI:
         from prme.storage.engine import MemoryEngine
 
         logger.info("Starting PRME MemoryEngine...")
-        engine = await MemoryEngine.create(config)
+        engine = await MemoryEngine.create(config, privacy_runtime=privacy_runtime, embedding_provider=embedding_provider)
         app.state.engine = engine
         logger.info("PRME MemoryEngine ready (backend=%s)", config.backend)
 
@@ -83,16 +83,31 @@ def create_app(config: PRMEConfig | None = None) -> FastAPI:
             allow_headers=["*"],
         )
 
+    from fastapi.exceptions import RequestValidationError
+    from fastapi.exception_handlers import request_validation_exception_handler
+    from prme.privacy.policy import PrivacyDenied
+
+    @app.exception_handler(PrivacyDenied)
+    async def privacy_denied(request: Request, exc: PrivacyDenied) -> JSONResponse:
+        return JSONResponse(status_code=422, content={"detail": exc.code})
+
+    @app.exception_handler(RequestValidationError)
+    async def privacy_validation(request: Request, exc: RequestValidationError):
+        body = exc.body
+        if config.privacy_policy is not None or (isinstance(body, dict) and body.get("policy") is not None):
+            return JSONResponse(status_code=422, content={"detail": "privacy_configuration_invalid"})
+        return await request_validation_exception_handler(request, exc)
+
     # Generic handler for unexpected errors: log details server-side,
     # never echo internals to the caller (issue #34).
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(
         request: Request, exc: Exception
     ) -> JSONResponse:
-        logger.error(
-            "Unhandled error on %s %s", request.method, request.url.path,
-            exc_info=exc,
-        )
+        if config.privacy_policy is None and privacy_runtime is None:
+            logger.error("Unhandled error on %s %s", request.method, request.url.path, exc_info=exc)
+        else:
+            logger.error("privacy_request_failed")
         return JSONResponse(
             status_code=500, content={"detail": "Internal server error"}
         )

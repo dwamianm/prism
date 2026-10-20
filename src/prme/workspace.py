@@ -134,11 +134,12 @@ class MemoryWorkspace:
 
     def __init__(self, directory: str | Path, *, config: PRMEConfig | None = None,
                  embedding_provider: EmbeddingProvider | None = None, max_open: int = 4,
-                 single_file_packs: bool = False):
+                 single_file_packs: bool = False, privacy_runtime_factory=None):
         self._config = (config or PRMEConfig()).model_copy(deep=True)
         if self._config.backend != "duckdb" or self._config.namespace_id is not None:
             raise ValueError("Workspace requires local configuration without a preselected namespace_id")
         self._directory = Path(directory).resolve()
+        self._privacy_runtime_factory = privacy_runtime_factory
         self._single_file_packs = bool(single_file_packs)
         self._initialize_state(embedding_provider, max_open)
 
@@ -161,9 +162,9 @@ class MemoryWorkspace:
     @asynccontextmanager
     async def open(cls, directory: str | Path, *, config: PRMEConfig | None = None,
                    embedding_provider: EmbeddingProvider | None = None,
-                   max_open: int = 4, single_file_packs: bool = False) -> AsyncIterator[MemoryWorkspace]:
+                   max_open: int = 4, single_file_packs: bool = False, privacy_runtime_factory=None) -> AsyncIterator[MemoryWorkspace]:
         async with cls(directory, config=config, embedding_provider=embedding_provider, max_open=max_open,
-                       single_file_packs=single_file_packs) as workspace:
+                       single_file_packs=single_file_packs, privacy_runtime_factory=privacy_runtime_factory) as workspace:
             yield workspace
 
     @classmethod
@@ -171,7 +172,7 @@ class MemoryWorkspace:
     async def open_postgres(cls, config: PRMEConfig, *, name: str = "default",
                             embedding_provider: EmbeddingProvider | None = None,
                             max_open: int = 4, min_connections: int = 1,
-                            max_connections: int = 10) -> AsyncIterator[MemoryWorkspace]:
+                            max_connections: int = 10, privacy_runtime_factory=None) -> AsyncIterator[MemoryWorkspace]:
         """Open named PostgreSQL projects using one bounded connection pool.
 
         ``name`` identifies a workspace in this database. Project names are
@@ -179,7 +180,7 @@ class MemoryWorkspace:
         """
         async with _PostgresWorkspace(config, name=name, embedding_provider=embedding_provider,
                                       max_open=max_open, min_connections=min_connections,
-                                      max_connections=max_connections) as workspace:
+                                      max_connections=max_connections, privacy_runtime_factory=privacy_runtime_factory) as workspace:
             yield workspace
 
     def _path(self, relative: str) -> Path:
@@ -273,6 +274,9 @@ class MemoryWorkspace:
         }, deep=True)
 
     async def _publish_open(self, namespace: NamespaceInfo):
+        runtime = self._privacy_runtime_factory(namespace.id) if self._privacy_runtime_factory else None
+        from prme.privacy.admission import preflight_runtime
+        await preflight_runtime(self._config.model_copy(update={"namespace_id": namespace.id}), runtime)
         config = self._pack_config(namespace)
         initialized = self._registry.execute("SELECT initialized FROM namespaces WHERE id = ?",
                                              [str(namespace.id)]).fetchone()[0]
@@ -282,7 +286,7 @@ class MemoryWorkspace:
             present = Path(config.db_path).exists() or Path(config.db_path + ".enc").exists()
         if initialized and not present:
             raise WorkspaceError("Initialized namespace database is missing; restore its pack before opening")
-        engine = await MemoryEngine.create(config, embedding_provider=self._provider)
+        engine = await MemoryEngine.create(config, embedding_provider=self._provider, privacy_runtime=runtime)
         try:
             with self._registry:
                 self._registry.execute("UPDATE namespaces SET initialized = 1 WHERE id = ?", [str(namespace.id)])
@@ -403,7 +407,8 @@ def _validate_name(name: str):
 class _PostgresWorkspace(MemoryWorkspace):
     """PostgreSQL storage hooks using the same lease/cache lifecycle as local packs."""
 
-    def __init__(self, config, *, name, embedding_provider, max_open, min_connections, max_connections):
+    def __init__(self, config, *, name, embedding_provider, max_open, min_connections, max_connections, privacy_runtime_factory=None):
+        self._privacy_runtime_factory = privacy_runtime_factory
         self._config = config.model_copy(deep=True)
         if self._config.backend != "postgres" or self._config.namespace_id is not None:
             raise ValueError("PostgreSQL workspace requires database_url without a preselected namespace_id")
@@ -459,9 +464,13 @@ class _PostgresWorkspace(MemoryWorkspace):
         return [NamespaceInfo(name, identifier) for name, identifier in await self._catalog.list_namespaces()]
 
     async def _publish_open(self, namespace: NamespaceInfo):
+        runtime = self._privacy_runtime_factory(namespace.id) if self._privacy_runtime_factory else None
+        from prme.privacy.admission import preflight_runtime
+        await preflight_runtime(self._config.model_copy(update={"namespace_id": namespace.id}), runtime)
         pool = await self._catalog.prepare(namespace.name, namespace.id, embedding_dim=self._config.embedding.dimension)
         config = self._config.model_copy(update={"namespace_id": namespace.id}, deep=True)
         engine = await MemoryEngine._create_postgres(config, embedding_provider=self._provider, namespace_pool=pool)
+        engine._privacy.runtime = runtime
         self._entries[namespace.id] = _Entry(engine)
         self._condition.notify_all()
 
