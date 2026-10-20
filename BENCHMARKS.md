@@ -1885,8 +1885,9 @@ on its own. The full benchmark audit and the default-change rule's answer runs a
 
 `scoring.rrf_graph_seed_count` makes the graph count in rank fusion with a list that tells records apart. It took three
 versions of the rule; the third passed the alpha fast tiers and is on by default in the alpha channel
-(`PRME_SCORING__RRF_GRAPH_SEED_COUNT=false` restores the scoring of 0.16.0a4). Every run used
+(`PRME_SCORING__RRF_GRAPH_SEED_COUNT=false` restores the scoring of 0.16.0a5). Every run used
 `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.6) replayed from the extraction caches, so no model call was made.
+The branch is stacked on prism-monorepo#275 (`ecb127d6`, on the 0.16.0a5 release `46422fd5`).
 
 **The rule** (third version). The hop count list of "Graph fusion" gives every graph candidate a rank by its distance
 from a seed, so the owner's own claims, all one hop from the owner, rise together. The seed count list holds only a
@@ -1900,10 +1901,17 @@ record that
 - is not an entity, whose text is only its name.
 
 It ranks more seeds first, then the smaller total hop count, and adds `weight / (rrf_k + rank)` before the scale, as
-the hop count list does; the weight is `rrf_graph_weight`, 0.5 when unset, and the settings record it. A session
-context neighbor inherits its trigger's score without the graph term, which only the trigger's own links earned, and
-its saved provenance drops the trigger's `graph_rank` so it replays. The walk reads the links of the nodes the graph
-search found nearer than `graph_max_hops` once more, and nothing for a question with fewer than two seeds.
+the hop count list does; the weight is `rrf_graph_weight`, 0.5 when unset, and the settings record it, and the
+version id names the rule and its constant (`graph_rule=seed_count:top=10`). A record that session, episode or
+evidence augmentation context pulls in inherits its trigger's score without the graph term, which only the trigger's
+own links earned, and its saved provenance drops the trigger's `graph_rank` so it replays; evidence projection, which
+replaces a claim with its source, keeps the claim's whole score. The walk reads the links of the nodes the graph
+search found nearer than `graph_max_hops` once more, never those of an owner entity the question does not name, and
+nothing for a question with fewer than two seeds. Past 5,000 nodes to read it is skipped, and a failed read keeps
+every graph candidate; the response metadata's `graph_seed_reach` then says `neighborhood_limit` or `backend_error`.
+Only a record among the graph search's kept candidates (`graph_max_candidates`, newest first at equal confidence) can
+join, and a first-person question ("which cities will we visit in Japan?") has one seed at most, so the list does
+nothing for it.
 
 **The three versions.** The first ran on `origin/main` at `22b7239c` and the second at `19210c2b` (the entity skip a
 default; for the first, criterion 2 set it too), with the links of prism-monorepo#275 added by hand to a copy of the
@@ -1963,10 +1971,35 @@ inheritance rule the notes would rise with their trigger, and the claim would ne
   the narrower link read below.
 - Corrections probe: no measure differs; in the birthday context an assistant line moves down one place.
 
-**Cost.** A question that names two or more entities reads the links around them once more. On `conv-26` of the
-LoCoMo packs, retrieval took 339 ms against 260 ms (median of 16 questions, the walk itself 71 ms); reading only the
-links of the nodes nearer than `graph_max_hops`, which gives the same reach on all 13 questions checked against reading
-every link, brought the walk down from about 100 ms.
+**Cost.** A question that names two or more entities reads the links around them once more, so the cost grows with
+their neighborhood. On `conv-26` of the LoCoMo packs, retrieval takes 353 ms against 283 ms with the list off (median
+of 16 questions, the walk itself 58 ms; about 100 ms before the walk read only the nodes nearer than `graph_max_hops`,
+and 71 ms before it left out the owner's links). Both narrower reads give the same reach as reading every link, on all
+the questions with two or more seeds checked (13 and 10). On the review's synthetic DuckDB packs
+(`_generate_graph_candidates` alone, off against on):
+
+| Pack | Question | Before the review fixes | After |
+|---|---|---:|---:|
+| 2,000 turns (5,262 nodes) | names the owner | +0.6 s | +0 (skipped: `neighborhood_limit`) |
+| 2,000 turns | names two other entities | +0.12 s | +0.1 s |
+| 10,000 turns (25,246 nodes) | names the owner | +3 s | +0 (skipped) |
+| 10,000 turns | names two other entities | +0.7 s | +0.47 s |
+
+The walk is skipped where the owner is a seed on those packs, so the list does nothing there; on the probes, the
+fast cycle and LoCoMo it never reaches the limit.
+
+**An unmarked owner** (review scenario 2). A pack ingested before `enable_owner_name_carry` became a default has no
+owner marker, so the walk passes through the owner's entity. Both probes built with `enable_owner_name_carry=false`
+(cache replays, 0 model calls), off against on: defect probes 7/7 in the top 3 and the top 5 on both sides (cities 2
+to 3, travel 2 to 3), chat probe 14/18 and 15/18 on both sides with no rank moved, and every other measure equal. The
+group links need the carry too, so the cities claim is not on the list there.
+
+**On the final tree** (after the review fixes, rebased on `ecb127d6`), off against on: defect probes 7/7 and 7/7 on
+both sides (travel 2 to 3); chat probe 14/18 and 15/18 on both sides (job-now 7 to 8, coffee 4 to 5); criterion 2 the
+cities claim 6th off and 4th on; fast cycle pass on both sides against #275's baseline (on: the three watched answers
+one place lower); corrections probe with no measure different. The offline gate and the mid tier were not run again:
+the walk never reaches the node limit on their LoCoMo packs and their store packs hold no entities, and the other
+fixes change nothing under the default settings, so their results stand.
 
 **Decision.** Version 3 passes the alpha rule (defect probes 7/7, chat probe counts not below off, fast cycle pass,
 offline gate without loss, mid tier without loss) and meets criterion 2 on a real build, so it is on by default in the
