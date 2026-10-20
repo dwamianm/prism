@@ -606,9 +606,17 @@ score(obj) =
   record never joins. It ranks more seeds first, then the smaller total hop
   count (dense ranks), and its weight is `rrf_graph_weight`, 0.5 when unset, so
   it reorders records that already match the question instead of lifting the
-  ones near its names. A session context neighbor inherits its trigger's score
-  without that graph term, and its saved provenance drops the trigger's
-  `graph_rank` so it replays. The hop count list stays opt-in. The query-specific weight shifts for current-state,
+  ones near its names. A record that session, episode or evidence augmentation
+  context pulls in inherits its trigger's score without that graph term, and its
+  saved provenance drops the trigger's `graph_rank` so it replays; evidence
+  projection, which replaces a claim with its source, keeps the claim's whole
+  score. The walk reads the links of the nodes it can continue from, never
+  those of an owner entity the question does not name, and is skipped when more
+  than 5,000 nodes would be read; the response metadata's `graph_seed_reach`
+  then says `neighborhood_limit`, or `backend_error` when the read failed, and
+  every graph candidate is kept. Only the graph search's kept candidates
+  (`graph_max_candidates`) can join the list, and a first-person question has at
+  most one seed. The hop count list stays opt-in. The query-specific weight shifts for current-state,
   episodic and relational questions do not apply. Non-neutral ranking
   multipliers are rejected before retrieval runs (HTTP 422), weighted ranking
   profiles are reported as inapplicable (`rank_fusion_scoring`), learning skips
