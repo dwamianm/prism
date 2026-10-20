@@ -176,6 +176,25 @@ the owner's queue in that scope or calls `memory_process_extractions`. Call
 `memory_process_extractions` before ending a session to extract its last
 messages while it is open.
 
+### memory_reingest
+
+Re-derive the caller's stored memories after an engine change improved how they
+are derived (see [Re-deriving stored memories](async-engine.md#re-deriving-stored-memories)).
+It runs the batched extraction over the caller's memories in event order and
+replaces the claims derived from each; source events and raw notes are never
+changed. The server must run with `PRME_ENABLE_REINGEST=true`.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | optional | The most memories this call re-derives |
+| `cursor` | string | optional | The `cursor` of an earlier result |
+| `dry_run` | boolean | `false` | Count the memories and model requests; do no work |
+| `scope` | string | optional | Only the caller's memories in this scope |
+
+Returns the result as JSON (`total`, `current`, `selected`, `processed`,
+`failed`, `remaining`, `cursor`, `model_calls`, `source_tokens`, `fingerprint`),
+or `{"error": "..."}` when the option is off or a run is already going.
+
 ### memory_organize
 
 Run maintenance jobs (promotion, decay, deduplication, etc.).

@@ -213,6 +213,37 @@ event_ids = client.ingest_batch(
 )
 ```
 
+## reingest()
+
+Re-derive one owner's stored memories after an engine change improved how they
+are derived (see [Re-deriving stored memories](async-engine.md#re-deriving-stored-memories)).
+It runs the batched extraction `ingest()` runs over the owner's memories in event
+order, replaces the claims derived from each with new ones, and never changes the
+source events or raw notes. It needs `enable_reingest` (off by default); without
+it the call raises `ReingestDisabledError`.
+
+```python
+def reingest(
+    user_id: str,
+    *,
+    scope: Scope | str | None = None,
+    limit: int | None = None,
+    cursor: str | None = None,
+    dry_run: bool = False,
+) -> ReingestResult
+```
+
+A dry run sends no model request and changes nothing; its `model_calls` is the
+number of requests a run would send. A second run skips memories already derived
+under the same settings, and `result.cursor` continues after the last memory a
+capped call took.
+
+```python
+client = MemoryClient(config=PRMEConfig(enable_reingest=True))
+preview = client.reingest("alice", dry_run=True)
+result = client.reingest("alice", limit=500)
+```
+
 ## observe()
 
 ```python

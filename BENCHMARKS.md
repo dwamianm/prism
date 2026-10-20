@@ -2347,6 +2347,109 @@ the timer is set aside, so the number of requests in the hosted service
 depends on how far apart a user's stores are; the options' live runs were taken
 before they were merged, and only replayed on `main`.
 
+### Fast cycle: re-ingest plain stores (`reingest`, #278)
+
+A memory that `store()` saved plainly has no entities, claims or links, and one
+stored before an engine change keeps what the engine derived then.
+`MemoryEngine.reingest()` (behind `enable_reingest`, off by default) re-derives
+one owner's stored memories with the batched extraction `ingest()` runs, and
+the opt-in `reingest` stage measures it on the store stage's fixture, so the
+next engine change can be checked in minutes: store plainly, re-derive, compare
+the ranks.
+
+```sh
+uv run python -m benchmarks.fast_cycle run --label reingest --out /tmp/cycle --stages reingest --baseline none
+```
+
+The stage stores the 75 memories with plain `store()` (the store stage's calls,
+no `session_id`), asks the 17 questions, runs `reingest(dry_run=True)` and
+`reingest()`, runs `reingest()` once more, and asks the questions again. Its
+requests are the store-extract stage's one-memory requests, so that stage's
+committed cache entries answer for them: a run of the committed tree makes 75
+requests, all replayed, and no model call. A live run (`--no-cache`, or a
+changed prompt or model) asks `deepseek-v4.1-flash:cloud` through Ollama once
+per memory, and `--update-cache` copies the stage's own usage into the committed
+cache. The stage reports the sources and the nodes stored with them before and
+after the re-derivation (they must be identical), and the second run's
+`processed` as the measure `reingest_second_run_processed`, which is 0 when the
+re-derivation is idempotent.
+
+Measured on `13b25058` plus this change (0.16.0a4, defaults, replayed from the
+committed cache, 0 model calls, 23 s for the stage: 12 s for the re-derivation
+of 75 memories):
+
+| Question | Before (plain store) | After `reingest()` |
+|---|---:|---:|
+| what coding language is alex learning? | 3 | 1 |
+| which cities will Alex and jordan visit in Japan? | 26 | 30 |
+| When is the production cutover? | 3 | 1 |
+| When is the Japan trip? | 4 | 2 |
+| Does Alex like pair programming? | 2 | 1 |
+| Is Alex leading the observability rewrite? | 3 | 9 |
+| Who is on call the week of 2026-10-26? | 1 | 1 |
+| Who is Alex's manager? | 1 | 1 |
+| What is Jordan allergic to? | 1 | 1 |
+| What is Alex's dog called? | 19 | 24 |
+| How much is the Japan trip budget? | 1 | 1 |
+| What is the Datadog dashboard for the migration called? | 2 | 1 |
+| How many rows does the shipment_events table have? | 2 | 1 |
+| Why did Alex reject TimescaleDB? | 1 | 1 |
+| Which gravel race did Alex sign up for? | 3 | 1 |
+| Which airline did Alex book for the Japan trip? | 3 | 4 |
+| How does Alex format SQL? | 1 | 1 |
+
+Answers ranked first go from 6 to 12 of 17, in the top 3 from 14 to 13, the
+mean reciprocal rank from 0.559 to 0.761, and questions with a stale value above
+the answer from 4 to 1; the answer is in the context for all 17 either way, and
+the context grows from 1,786 to 3,201 tokens. The pack goes from 75 nodes and no
+edge to 377 nodes (132 entities) and 567 edges. The first run re-derives all 75
+memories with 75 requests (the dry run said 75 requests and 1,491 source
+tokens), the second re-derives 0 and sends none, and the 75 events and raw nodes
+are the same before and after.
+
+**The Japan cities question does not improve here.** It goes from 26th to 30th,
+and the dog and airline questions drop too, as in the store-extract stage: the
+re-derivation reproduces that stage's ranks and nodes for every question (the
+same 17 ranks, 377 nodes, 132 entities), because the requests, the checks and the
+plan are the same. The memory that holds the four cities ("They chose Tokyo, Kyoto,
+Kanazawa, and Osaka. They dropped Hiroshima to save time.") names neither Alex nor
+Japan, so nothing in it ties it to the question's words (a live request to the model
+extracted "They chose Tokyo, Kyoto, Kanazawa, and Osaka." as a decision of the pronoun
+entity "They"), and the records about the
+Japan trip (its claims and the notes the new entities link to) rank above it. What
+the re-derivation adds is the structure those questions need, and the ranking
+changes of the graph fusion work (prism-monorepo #259 and #260) decide whether the
+answer rises. With `scoring.rrf_graph_weight` at 0.25 and 0.5 the question goes from 30th
+to 57th and 80th on this fixture, and the other ranks do not move except the dog
+(21st and 16th), so that option is not the fix. Re-deriving does move the answers
+that were stored with their subject named; criterion 2 of #278 (the hosted `alex`
+memories) needs the same measurement on the service once it runs a release with
+this change.
+
+Edges per memory are 7.56 against the store-extract stage's 4.91: this path links
+the raw note of a stored memory to the entities its text names (`enable_mention_links`),
+which `store(extract=True)` does not (it looks for a note with the event's ID, and
+`store()` saved the note under its own, so a stored note has no link after
+extraction: checked, 0 edges). The ranks do not move because of it, and the
+`store(extract=True)` path is left as it is, so its baseline does not change.
+
+**Rules.** The stage is not in the committed baseline, so a default run leaves it
+out and `compare` says it was not compared. It uses the store-extract tolerances
+(`live_by_stage` entries copied under `reingest`) until three live runs of it say
+otherwise, and `reingest_second_run_processed` gates at zero. With the option
+off nothing changes: the fast cycle's default stages and store-extract pass
+against the committed baseline with 168 measures unchanged; `defects-v1` (7 of 7
+in the top 3), `chat-v1` (14 of 18 in the top 3, 15 in the top 5) and the corrections
+probe are identical to `0.16.0a4`'s with the option off and on, from the extraction
+cache, so no model call was made.
+
+**What it cannot show.** One fixture of 75 memories of one user, 17 questions and
+one model; DuckDB only (the unit tests run both backends); a memory without a
+`session_id` is its own request, so it does not show the cost with sessions (the
+batching is the pipeline's and is tested in `tests/test_reingest.py`); the
+rank counts every result, repeated records included; no reader answers; and the
+hosted service's ranks on its own memories are not measured.
+
 ### Fast cycle: situating sentences at store time (`store-contextual`)
 
 A memory that does not name its subject ("They chose Tokyo, Kyoto, Kanazawa,

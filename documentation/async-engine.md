@@ -114,7 +114,7 @@ changed (`StaleDerivationPlanError`), call `retry_extraction(..., replan=True)`
 before processing: it creates a new plan revision from the same extraction and
 may compute new embeddings. It does not preempt live or completed work, or repeat
 the model's extraction. Legacy sources without work records are not automatically
-enrolled.
+enrolled; [`reingest()`](#re-deriving-stored-memories) derives them.
 
 With `PRME_EXTRACTION_BATCH_TARGET_TOKENS` above zero, extraction runs in
 batches of a session's turns (see
@@ -136,6 +136,65 @@ extraction by default.
 scope classifications do not grant write access elsewhere; fact classifications
 are retained as `metadata.suggested_scope`. Entity matching also stays within
 the same user and scope.
+
+## Re-deriving stored memories
+
+A memory keeps the entities, claims and links the engine derived from it when
+it was stored, or none when `store()` saved it plainly. When an engine change
+improves how memories are derived, `reingest()` brings one owner's stored
+memories up to date. It is off unless `enable_reingest` is set
+(`PRME_ENABLE_REINGEST=true`); an engine that did not turn it on raises
+`ReingestDisabledError`.
+
+```python
+config = PRMEConfig(enable_reingest=True)  # also needs extraction_batch_target_tokens above 0 (the default)
+async with MemoryEngine.open(config) as engine:
+    preview = await engine.reingest("alice", dry_run=True)   # no model call, no change
+    print(preview.selected, preview.model_calls, preview.source_tokens)
+    result = await engine.reingest("alice", limit=500)
+    while result.cursor:                                     # more sources are left after the cap
+        result = await engine.reingest("alice", limit=500, cursor=result.cursor)
+```
+
+It reads the owner's sources (every memory saved through `store()`, `ingest()`
+and the like) in event order and runs the same batched extraction `ingest()`
+runs: memories of one session share a request up to
+`extraction_batch_target_tokens`, and one without a `session_id` goes alone.
+Then it publishes what the present engine derives from each. The source events
+and their raw notes are never changed or deleted, and only the named owner's
+sources are touched.
+
+- **Replacing old records.** An earlier claim the new derivation states again is
+  superseded by it (`superseded_by` and a `SUPERSEDES` edge). One it no longer
+  states is archived, with `metadata.reingest.replaced_by` naming the claims that
+  replaced it. Both leave retrieval and the search indexes, and both stay
+  readable with `get_node(..., include_superseded=True)`. Entities are kept and
+  reused, because every memory that names an entity shares it.
+- **Idempotent and resumable.** Each source is saved with a marker that names the
+  settings it was derived under: the engine version, the extraction model and
+  prompt, and the options that decide what is derived. A second run skips the
+  sources that have it and creates nothing. The model's output is saved before
+  anything is published, so a run that stops after a request does not ask the
+  model again, and the next call continues with the sources that are not current.
+  An option that only changes what is derived makes every source stale again but
+  needs no new model calls while the saved output is current.
+- **Counts.** `ReingestResult` has `total` sources, how many are `current`,
+  how many are `unfinished` (their own extraction job has not finished: run
+  `process_extractions()` first), the `selected` sources of this call, how many
+  were `processed` and `failed`, how many are `remaining`, a `cursor` to
+  continue after the last selected source, the `model_calls` made (or, for a dry
+  run, expected) and the `source_tokens` those requests carry, for a cost
+  estimate. A failed source stays not current and is tried by the next call
+  without a cursor. Three failed requests in a row end the call.
+- **Limits.** `limit` caps the sources one call re-derives; `scope` restricts the
+  call to one scope. A second call for the same owner in the same engine raises
+  `ReingestBusyError`. Between two calls of a long run, a claim an older memory
+  states may be current beside the later memory that corrected it until that
+  memory is reached, so run to the end. Retrieval and other writes continue
+  during a run.
+
+The same call is on `MemoryClient.reingest()`, `POST /v1/reingest`, the
+`memory_reingest` MCP tool and `prme reingest`.
 
 ## ingest_fast()
 
