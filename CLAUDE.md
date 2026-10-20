@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
 PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.15.0); design specs live in `docs/`.
@@ -13,7 +11,7 @@ Four storage layers behind a unified retrieval API. The default backend is local
 - **Event Store (DuckDB)** — Append-only immutable event log. All derived structures must be rebuildable from this log.
 - **Graph Store (DuckDB)** — Typed nodes (Entity, Event, Fact, Decision, Preference, Task, Summary) and typed edges with temporal validity windows (`valid_from`/`valid_to`), confidence scores, and provenance references. Implemented in `src/prme/storage/duckpgq_graph.py` using DuckDB tables with recursive CTEs for traversal (DuckPGQ SQL/PGQ is not available on the supported DuckDB build, so recursive CTEs are the only code path — there is no Kùzu dependency).
 - **Vector Index (USearch HNSW)** — Approximate nearest neighbor search via the `usearch` library (`src/prme/storage/vector_index.py`), persisted to `vectors.usearch`, with versioned embeddings (model name, version, dimension tracked per embedding).
-- **Visual memory (RFC-0018, phase 1)** — `src/prme/vision/` turns a photo or a saved video into observation events: `ffmpeg` samples frames, `keyframes.py` keeps the ones that changed (pixel change plus a heartbeat), a local vision model (Ollama) writes a facts-first description of each, `repeat.py` drops a description that repeats the previous kept frame's, and `observe.py` admits each description through `ingest()` (default, with an extraction retry) or `store()` as an event of role `tool` with the capture clock as `event_time` and the RFC-0018 metadata. Thumbnails live in a `blobs` table of the pack's DuckDB database in both layouts (`src/prme/storage/blobs.py`), created on first use. Everything is behind `VisionConfig` (`vision`, `PRME_VISION_*`), off by default; `prme observe` turns it on for its own run. The spike harness `benchmarks/vision/spike.py` drives this code; local Ollama runs only.
+- **Visual memory (RFC-0018, phase 1)** — `src/prme/vision/` turns a photo or a saved video into observation events. Thumbnails live in a `blobs` table of the pack's DuckDB database in both layouts (`src/prme/storage/blobs.py`), created on first use. Everything is behind `VisionConfig` (`vision`, `PRME_VISION_*`), off by default; `prme observe` turns it on for its own run. The spike harness `benchmarks/vision/spike.py` drives this code; local Ollama runs only.
 - **Lexical Index (Tantivy)** — BM25 full-text search via `tantivy-py` (`src/prme/storage/lexical_index.py`), persisted to a `lexical_index/` directory, over event content, facts, and summaries. Entity nodes that extraction creates get a vector but no lexical document; the ingestion write path, `rebuild_indexes` (`prme rebuild`) and a single-file pack's open share that rule (`has_lexical_document` and `LEXICAL_DOCUMENT_SQL` in that module), so change it only there. A node that a lifecycle transition or an `ingest()` derivation retires leaves both indexes when it is retired (`src/prme/storage/index_eviction.py`; best effort, `index_compaction` retries), and an in-memory lexical index drops Tantivy's deleted-document markers before its next search, so the indexes a single-file session builds match a rebuild.
 
 ## Key Design Constraints
@@ -22,17 +20,13 @@ Four storage layers behind a unified retrieval API. The default backend is local
 - **Deterministic**: Given identical event logs and config, retrieval results must be reproducible. Scoring weights must be configurable and versioned.
 - **Portable artifact**: The memory pack — `memory.duckdb` (event store + graph tables), `vectors.usearch` (USearch index), `lexical_index/` (Tantivy directory), and `manifest.json` (encryption/version metadata) — must be copyable, encryptable, and rebuildable. Derived indexes can be regenerated from the durable graph with `prme rebuild`. That directory layout is the default; the opt-in single-file pack (a `.prme` file) is one DuckDB database holding the same tables plus `vector_snapshot` and a `prme_manifest` row (`src/prme/storage/pack_manifest.py`), uses native DuckDB encryption instead of Fernet (PRME also turns on DuckDB's `temp_file_encryption`, which is off by default), is shrunk with `prme compact` and is created from a directory pack with `prme migrate` (both in `src/prme/storage/pack_tools.py`; RFC-0014, single-file pack amendment). Making the single file the default is a separate decision (issue #247).
 
-## Hybrid Retrieval Pipeline
-
-Query → intent classification + entity extraction + time detection → candidate generation (graph neighborhood, stable facts, vector similarity, lexical, recent high-salience) → deterministic re-ranking → context packing into memory bundles (entity snapshots, stable facts, recent decisions, active tasks, provenance refs).
-
 ## Memory Object Lifecycle
 
 Objects progress through: Tentative → Stable → Superseded → Archived. Each object carries: id, type, scope (personal/project/org), confidence, salience, validity window, evidence references, and supersedence pointer.
 
 ## Organizer
 
-The organizer (`src/prme/organizer/`, RFC-0015) provides maintenance jobs that handle: salience/confidence recalculation, promotion/demotion of assertions, summarization, deduplication/entity alias resolution, policy-based archival with TTL enforcement, tombstone and index compaction sweeps, and snapshot generation. `ALL_JOBS` currently registers eleven jobs; `DEFAULT_JOBS` is all of them except the legacy engine-global `feedback_apply` tuner.
+The organizer (`src/prme/organizer/`, RFC-0015) runs the maintenance jobs registered in `ALL_JOBS`; `DEFAULT_JOBS` is all of them except the legacy engine-global `feedback_apply` tuner.
 
 Despite the name "scheduled," there is **no built-in cron or daemon scheduler**. Jobs run in two ways: (1) an opportunistic in-process pass triggered during retrieve/ingest, gated by a cooldown (`opportunistic_cooldown`, default 3600s) and a per-pass time budget (`opportunistic_budget_ms`, default 200ms); and (2) explicit invocation via `prme organize` (optionally `--user-id`, `--jobs`, and `--budget-ms`). Continuous scheduling, if needed, must be driven by an external cron/timer calling `prme organize`.
 
@@ -40,17 +34,7 @@ Despite the name "scheduled," there is **no built-in cron or daemon scheduler**.
 
 ## RFCs
 
-Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0018). See `docs/INDEX.md` for the full listing. Key RFCs include:
-
-- **RFC-0000** — Suite overview
-- **RFC-0001** — Core data model
-- **RFC-0002** — Event store
-- **RFC-0003** — Epistemic state model
-- **RFC-0005** — Hybrid retrieval pipeline
-- **RFC-0014** — Portability, sync, and federation
-- **RFC-0015** — Self-organizing memory (organizer execution model)
-
-Always consult the relevant RFC before implementing or modifying a subsystem.
+Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0018); `docs/INDEX.md` lists them. Always consult the relevant RFC before implementing or modifying a subsystem.
 
 ## Configuration Surface
 
@@ -58,27 +42,11 @@ Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retri
 
 ## Storage Backends
 
-- **DuckDB (default)** — local-first; no `database_url` set.
-- **PostgreSQL** — used when `database_url` is set; implemented in `src/prme/storage/pg/`. Its test suite (`tests/test_pg_*.py`) is skipped unless `PRME_TEST_DATABASE_URL` points at a live database, so those tests are skipped locally without a database. CI runs them against a live PostgreSQL service on Python 3.11–3.13.
-
-## MVP Phases (delivered)
-
-The originally planned MVP scope is implemented as of v0.9.0:
-
-1. Event store, graph schema, vector search, hybrid retrieval
-2. Organizer jobs, stable fact promotion, snapshot generation, supersedence handling (store-time supersedence opt-in; see Key Design Constraints)
-3. Encryption, CLI tooling, evaluation harness, deterministic rebuild validation (`prme rebuild`)
+- **PostgreSQL** — its test suite (`tests/test_pg_*.py`) is skipped unless `PRME_TEST_DATABASE_URL` points at a live database, so those tests are skipped locally without a database. CI runs them against a live PostgreSQL service on Python 3.11–3.13.
 
 ## Browser Automation
 
 Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
-
-Core workflow:
-
-1. `agent-browser open <url>` - Navigate to page
-2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
-3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
-4. Re-snapshot after page changes
 
 ## Github
 
