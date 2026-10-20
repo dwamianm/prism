@@ -894,3 +894,100 @@ Root will receive the exact merge head/tree and both parent-relative diffs in
 the current handoff before scheduling final reviews and the required full suite.
 Actual #325 authority/erasure and #324 durable publication/recovery remain
 pending; this composition is not issue closure or publication authorization.
+
+## Required review repairs authorized after 41e2cad5
+
+Root read the immutable CORE and SECURITY reports and approved only the following
+original-criterion repairs, with a later specific DATA classification finding:
+
+- CORE-323-01 (AC2): preserve admitted effective-time qualifiers in both protected
+  snapshot text paths and their generated-source input. Reuse existing reader
+  time formatting; unprotected text/bytes and frozen Q04 source remain unchanged.
+- SEC-323-1 (AC1/AC3): prevent ordinary A/B reads from returning A after its memory
+  deadline passes during B's later authorization await. Reuse ReadContext and
+  its final disclosure guard, checking all contributing deadlines after waits
+  and guard exits. No lock spans a nested graph/provider operation or a streaming
+  consumer yield. Selected evidence retains the existing grant-only lease.
+- DATA-323-01 missing classification (AC3/AC6): an owner or
+  unscoped read with privacy-marked events/nodes but no admission row must fail
+  closed, using the existing metadata-only protected-range detector. No migration,
+  row repair, policy authority or cache is introduced; legacy positives remain.
+
+Finite validation first reproduces each issue on actual public paths with the
+existing frozen Q04 and backend/layout fixtures. The A/B regression uses the
+existing authority fixture with its real nonreentrant lock, a live positive,
+deadline-minus/at controls and an awaited B authorization. These are additional
+subchecks of existing AC01/AC03 and Q04, not new source/scenario cohorts. Then
+run one bounded source correction and affected tests, existing legacy snapshots,
+and selected-source lease/effect controls. Preserve each failed log and immutable
+review. Each behavior starts its first review-repair cycle; previous Q04 source
+resolution/ambiguity successes remain distinct and do not certify snapshot text.
+Actual #325 authority/scoped-revocation/erasure remains pending.
+
+Root interrupted the known-incomplete head41e full suite: 679 passed, 11 skipped,
+exit 2 at 129.81 seconds. This is not a passing full suite. Root-owned packaging,
+Ruff and wheel checks at41e remain saved under validation-323. No broad/full
+checks will be repeated by this worker; root schedules final validation and
+affected review after the cohesive repair handoff.
+
+### Review repair implementation and evidence
+
+All three findings have a first successful bounded source repair. CORE-323-01
+uses one protected snapshot-node formatter and the existing reader time label
+for summary_text, render_snapshot_text and generated-source inputs. Legacy
+snapshot bytes retain the content-only path. No temporal parser or frozen Q04
+source was changed in this repair.
+
+SEC-323-1 uses ReadContext.disclose for completed graph/public/snapshot results,
+with all contributor lifetime checks after awaited authorization and after guard
+release. The existing scoped policy guards are acquired only after the result is
+assembled. No policy lock wraps nested graph/provider work, and iter_nodes checks
+each item before yielding without holding a lock across the caller's suspension.
+Selected evidence still uses its existing grant-only lease and effect-specific
+guards. The component tests do not establish actual #325 scoped revocation.
+
+DATA-323-01 reuses require_legacy_range and its existing marker-aware SQL before
+choosing raw owner or unscoped paths. The SQL accepts an unscoped range without
+reading content. Missing admissions and malformed event-only/node-only markers
+deny; a separate legacy owner remains readable. Only disposable test state loses
+its admission row to reproduce an interrupted enrollment; product code performs
+no data rewrite, migration or cleanup. The narrowly added storage/privacy.py
+path is this metadata classifier extension, within root's specific authorization.
+
+Preserved reproductions and first repair results, all in the runroot:
+
+- `323-review-core-security-reproduction.log`: three actual CORE Q04 snapshot
+  failures and three setup-only policy-identity failures. Both protected text
+  outputs visibly omitted the date; the original source/clock fixture is intact.
+- `323-review-security-data-reproduction.log`: six setup failures because the
+  probe used event IDs as node IDs. These are not target-behavior reproductions.
+- `323-review-security-data-public-reproduction.log`: six actual public-path
+  failures in 6.96s: three SEC deadline violations and three DATA orphan-marker
+  bypasses. Together with CORE, these are nine actual failed executions.
+- `323-review-repair-cycle1.log`: 9 passed, 9 deselected in 14.45s. All three
+  findings across directory DuckDB, single-file DuckDB and PostgreSQL. A/B checks
+  include live positives, deadline-minus/at boundaries, awaited B guard entry/exit,
+  graph/scan/query/history/provenance siblings and iterator resumption. DATA checks
+  cover owner and unscoped siblings plus malformed event-only/node-only markers.
+- `323-review-repair-read-compatibility.log`: 9 passed, 27 deselected in 15.34s;
+  existing ordinary reads and selected-source/denial routes on all three layouts.
+- `323-review-repair-snapshot-compatibility.log`: all 23 existing legacy snapshot
+  tests passed in 1.31s.
+- `323-review-repair-ruff.log`, `323-review-repair-types.log`,
+  `323-review-repair-contract.log`: scoped Ruff, strict public types and structural
+  contract pass; seven moved anchors were updated without changing mappings.
+  Diff whitespace passes.
+
+The initial compatibility selector accidentally matched every test name and was
+stopped after four passes at 10.78s. Its interrupted exit-2 log remains
+`323-review-repair-compatibility.log`; it is not a completed check. The two
+explicit targeted commands above are the completed compatibility evidence.
+
+No behavior received an unsuccessful source-repair cycle. Setup corrections are
+identified separately, not hidden or relabeled as product failures. The initial
+CORE/SECURITY/DATA reports remain immutable. Earlier date resolution/ambiguity
+results and the .test detector/oracle failure remain separate historical evidence.
+The two new regression functions are subchecks of existing AC01/AC03, not new
+source cohorts or acceptance IDs. Full suite and affected/adversarial reviews
+remain root-owned; #324 durable publication/recovery and #325 actual authority/
+erasure remain original pending integration obligations.

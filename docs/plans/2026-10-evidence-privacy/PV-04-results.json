@@ -149,13 +149,37 @@
       "result": "18 passed, 35 deselected in 26.94s",
       "log": "323-q04-single-file-final-targeted.log",
       "command": "pytest tests/test_privacy_source_reads.py tests/test_privacy_source_routing.py tests/test_privacy_source_interfaces.py tests/test_privacy_source_separation.py tests/test_shared_temporal_parser.py -q -k 'single_file or Q04 or AP04 or mixed_parser or mixed_parsing'"
+    },
+    {
+      "kind": "review_regressions_actual_public_paths",
+      "result": "9 passed, 9 deselected in 14.45s",
+      "log": "323-review-repair-cycle1.log"
+    },
+    {
+      "kind": "review_ordinary_selected_compatibility",
+      "result": "9 passed, 27 deselected in 15.34s",
+      "log": "323-review-repair-read-compatibility.log"
+    },
+    {
+      "kind": "review_legacy_snapshot_compatibility",
+      "result": "23 passed in 1.31s",
+      "log": "323-review-repair-snapshot-compatibility.log"
+    },
+    {
+      "kind": "review_lint_types_contract",
+      "result": "Scoped Ruff, strict public mypy, 45 copy classes / 171 anchors / 17 surfaces and diff whitespace passed",
+      "logs": [
+        "323-review-repair-ruff.log",
+        "323-review-repair-types.log",
+        "323-review-repair-contract.log"
+      ]
     }
   ],
   "pending": [
     "Actual PV-06 local current-ledger policy/erasure authority and original authority/fence gates; FakeAuthority evidence is component only",
     "PV-05 protected profile/summary publication, durable receipt/work codecs and AC06 historical recovery",
     "CL07 full covered-erasure subchecks owned by PV-06",
-    "Final exact-head genuine-clone full suite/build/installed-wheel/simulations; independent reviews and actual merged-dependency reconciliation",
+    "Final exact-head genuine-clone full suite/build/installed-wheel/simulations; affected/adversarial reviews and final merged-source identity confirmation",
     "Root release for push and PR; no issue closure from this checkpoint"
   ],
   "liveModelCalls": 0,
@@ -232,6 +256,22 @@
     {
       "log": "323-q04-competing-span-before-repair.log",
       "classification": "Additional numeric source date escaped original cue regex; bounded existing-parser span validation passed."
+    },
+    {
+      "log": "323-review-core-security-reproduction.log",
+      "classification": "Three actual CORE Q04 snapshot date failures; three separate setup policy-identity errors."
+    },
+    {
+      "log": "323-review-security-data-reproduction.log",
+      "classification": "Six setup errors from using event IDs where node IDs were required; not target-behavior evidence."
+    },
+    {
+      "log": "323-review-security-data-public-reproduction.log",
+      "classification": "Six actual public-path failures: three SEC deadline violations and three DATA marker-classification bypasses."
+    },
+    {
+      "log": "323-review-repair-compatibility.log",
+      "classification": "Overbroad test-name selector interrupted after 4 passes at 10.78s, exit 2; not a completed check. Explicit affected compatibility commands passed separately."
     }
   ],
   "oracleCorrection": {
@@ -246,7 +286,12 @@
     "duckdb_directory": 12,
     "duckdb_single_file": 12,
     "postgresql": 12,
-    "countedScenarioIdsUnchanged": true
+    "countedScenarioIdsUnchanged": true,
+    "sourceCheckpoint": "01cd5a4d; original 12-function execution counts are historical, not a claim of a final full rerun",
+    "reviewRegressionFunctions": 2,
+    "reviewRegressionExecutions": 6,
+    "currentAvailableFunctions": 14,
+    "finalFullRun": "pending_root"
   },
   "q04": {
     "frozenSourceUnchanged": true,
@@ -256,7 +301,8 @@
     "exactStateAt": "single",
     "retrievalBoundary": "explicit time_to; reference_time alone is not an effective-time filter",
     "missingRefRefusalRetained": true,
-    "authorityEvidence": "component fixture only"
+    "authorityEvidence": "component fixture only",
+    "snapshot_text": "CORE-323-01 fixed with first successful review repair: existing frozen source date retained in summary_text and render_snapshot_text; prior source-date tests alone did not establish this."
   },
   "reviewed_dependency_composition": {
     "prior_head": "01cd5a4d36584df2faded941c128682f452f094d",
@@ -278,5 +324,60 @@
       "cause": "Import probe used nonexistent ProtectedReads instead of existing ReadContext; corrected probe passed without a source change."
     },
     "pending": "Final required reviews/full validation and actual #325 authority/erasure plus #324 durable publication/recovery."
+  },
+  "review_repairs": {
+    "reviewed_head": "41e2cad52b4753c57ea0da32ebba9bc152b631e2",
+    "findings": [
+      {
+        "id": "CORE-323-01",
+        "criteria": [
+          2
+        ],
+        "repair": "Shared protected snapshot time formatter for both returned text paths and generated-source input; unchanged legacy text.",
+        "actual_failed_executions": 3,
+        "source_repair_cycles": 1,
+        "unsuccessful_source_repair_cycles": 0
+      },
+      {
+        "id": "SEC-323-1",
+        "criteria": [
+          1,
+          3
+        ],
+        "repair": "Final completed-result disclosure guards and all-contributor checks after authorization/guard-exit awaits, including resumed ordinary iteration.",
+        "actual_failed_executions": 3,
+        "source_repair_cycles": 1,
+        "unsuccessful_source_repair_cycles": 0
+      },
+      {
+        "id": "DATA-323-01",
+        "criteria": [
+          3,
+          6
+        ],
+        "repair": "Existing metadata-only marker-aware classifier used before raw owner/unscoped reads; malformed or missing enrollment fails closed with legacy positives retained.",
+        "actual_failed_executions": 3,
+        "source_repair_cycles": 1,
+        "unsuccessful_source_repair_cycles": 0
+      }
+    ],
+    "runtime_paths": [
+      "src/prme/privacy/admission.py",
+      "src/prme/privacy/read_graph.py",
+      "src/prme/privacy/reads.py",
+      "src/prme/retrieval/snapshots.py",
+      "src/prme/storage/engine.py",
+      "src/prme/storage/privacy.py"
+    ],
+    "component_scope": "Real storage, sanitizer and crypto; existing nonreentrant FakeAuthority plus native OS and external-model fixtures. Actual #325 authority/scoped revocation/erasure is not certified.",
+    "full_suite_at_reviewed_head": {
+      "status": "interrupted_not_passed",
+      "passed": 679,
+      "skipped": 11,
+      "exit_code": 2,
+      "seconds": 129.81,
+      "owner": "root"
+    },
+    "final_full_validation": "Pending root-owned final revision and affected review; no full suite run by this worker."
   }
 }

@@ -53,6 +53,9 @@ class ReadContext:
         scopes = tuple(Scope(value) for value in scopes) if scopes else None
         rows = await coordinator.owner_records(user_id, scopes)
         protected = bool(rows or coordinator.selected())
+        if not protected:
+            for scope in scopes or (None,):
+                await coordinator.repository.require_legacy_range(user_id, scope.value if scope else None)
         if protected:
             try:
                 if str(UUID(user_id)) != user_id:
@@ -74,7 +77,20 @@ class ReadContext:
     async def check(self) -> None:
         self.check_selected()
         await self.coordinator.check_disclosure(tuple(self.records.values()))
+        self.check_lifetimes()
+
+    def check_lifetimes(self) -> None:
+        """Recheck every contributor without awaiting another authorization."""
         self.check_selected()
+        for row in self.records.values():
+            self.coordinator.check_deadlines(row.snapshot)
+        if self.fallback_snapshot is not None:
+            self.coordinator.check_deadlines(self.fallback_snapshot)
+
+    async def disclose(self, value):
+        """Fence a completed result; never hold a policy lock around more I/O."""
+        async with self.guard():
+            return value
 
     def check_selected(self) -> None:
         if self.source_access is None:
@@ -117,6 +133,9 @@ class ReadContext:
                 self.coordinator.check_deadlines(row.snapshot)
             if self.fallback_snapshot is not None:
                 self.coordinator.check_deadlines(self.fallback_snapshot)
+        # Guard release can itself await. Earlier contributors must still be
+        # live after the final release, immediately before returning the value.
+        self.check_lifetimes()
 
     @property
     def source_limitation(self):
@@ -513,20 +532,30 @@ async def read_source(coordinator, event_id: str, *, user_id: str, access: Evide
 
 
 async def require_legacy_history(coordinator, user_id: str | None) -> None:
-    rows = (await coordinator.repository.for_owner(user_id) if user_id is not None
-            else await coordinator.repository._read("1=1", ()))
-    if coordinator.selected() or rows:
+    if coordinator.selected():
         raise PrivacyDenied("privacy_unsupported_input")
+    try:
+        await coordinator.repository.require_legacy_range(user_id, None)
+    except PrivacyDenied:
+        raise PrivacyDenied("privacy_unsupported_input") from None
 
 
 async def project_public_result(coordinator, method: str, result, arguments: dict, records):
     """Final closed projections for the ordinary public response siblings."""
-    if not records and not coordinator.selected():
-        return result
     owner = arguments.get("user_id") or arguments.get("kwargs", {}).get("user_id")
+    if not records and not coordinator.selected():
+        await coordinator.repository.require_legacy_range(owner, None)
+        return result
     if not owner:
         raise PrivacyDenied("privacy_boundary_mismatch")
     context = await ReadContext.create(coordinator, user_id=owner)
+    context.records.update((record.event_id, record) for record in records)
+    projected = await _project_public_result(context, method, result, arguments, records)
+    return await context.disclose(projected)
+
+
+async def _project_public_result(context, method, result, arguments, records):
+    coordinator, owner = context.coordinator, context.user_id
     if method == "get_event":
         return None if result is None else await context.event_view(result)
     if method == "get_events":

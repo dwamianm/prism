@@ -80,8 +80,8 @@ T = TypeVar("T")
 def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) -> Callable[Concatenate[Any, P], Awaitable[T]]:
     """Public read fence, including reopening with no configured policy/runtime.
 
-    Source projection is PV-05's responsibility. This wraps the actual public
-    return boundary; it does not decode any payload or rewrite historic receipts.
+    The final read projection closes ordinary response shapes and fences their
+    return; this wrapper does not decode payloads or rewrite historic receipts.
     """
     import functools
     import inspect
@@ -97,6 +97,8 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
         if records and owner is None:
             raise PrivacyDenied("privacy_boundary_mismatch")
         await coordinator.check_disclosure(records)
+        if not records and not coordinator.selected():
+            await coordinator.repository.require_legacy_range(owner, None)
         if function.__name__ in _UNAVAILABLE_EFFECTS and (records or coordinator.selected()):
             # The legacy retrieval pipeline includes unguarded optional providers
             # and receipt source augmentation. PV-04/PV-05 integrate those paths.
