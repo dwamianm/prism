@@ -148,10 +148,20 @@ def _documents(index, excluded):
     return documents
 
 
+def _lexical_identity(index):
+    # Lineage follows a backup into another physical store. It does not mean
+    # that independent copies share native readers, buffered documents or paths.
+    # Single-file packs share only the actual in-memory index object.
+    path = index._index_path
+    return ("directory", os.path.realpath(path)) if path is not None else ("memory", id(index))
+
+
 def compact_lexical(indexes, excluded, artifact_id):
     """Replace every known handle with a fresh index, propagating every failure."""
     import tantivy
     indexes = list(dict.fromkeys(indexes))
+    if not indexes or len({_lexical_identity(index) for index in indexes}) != 1:
+        raise PrivacyDenied("privacy_invalid_result")
     documents = {}
     for index in indexes:
         index._commit_locked()
@@ -226,31 +236,56 @@ async def purge_indexes(engine, intent):
         # Both PG native indexes are SQL columns/documents removed atomically
         # with the graph; WAL/base-page residue is reported separately.
         return
-    repository = engine._privacy.erasure.repository
-    async with repository.session() as session:
-        rows = await session.fetch("SELECT DISTINCT object_id FROM privacy_erasure_targets WHERE kind='node'")
-    excluded = {str(row["object_id"]) for row in rows}
+    artifact_id = uuid5(intent.request.request_id, "prme:lexical-erasure:v1")
+    await _compact_managed_groups(engine, intent.request.request_id, artifact_id)
+
+
+async def _compact_managed_groups(engine, request_id, artifact_id):
+    """Reconcile each physical copy under the caller's current-ledger lease."""
+    from prme.storage.erasure import _discover, _purge_sql
+    runtime = engine._privacy.require_runtime()
     handles = list(_ENGINES.get(engine._erasure_store_id, ()))
     handles = [handle for handle in handles if getattr(handle, "_conn", None) is not None and not handle._closed]
-    # Save each independently loaded vector object from current durable SQL;
-    # its own changing-epoch fence rejects a concurrent purge or stale save.
+    groups = {}
     for handle in handles:
-        await handle._vector_index.save()
-    indexes = list(dict.fromkeys(handle._lexical_index for handle in handles))
-    artifact_id = uuid5(intent.request.request_id, "prme:lexical-erasure:v1")
-    async with repository.session(transaction=True) as session:
-        await session.execute("INSERT INTO privacy_erasure_artifacts VALUES($1,$2,'prepared') ON CONFLICT DO NOTHING",
-                              str(intent.request.request_id), str(artifact_id))
-    async with _locks(indexes):
-        async with engine._event_store._conn_lock:
-            def compact():
-                with native_fence(engine._conn):
-                    if indexes[0]._index_path is not None:
-                        recover_lexical_swaps(engine._conn, indexes[0]._index_path)
-                    compact_lexical(indexes, excluded, artifact_id)
-            await run_to_completion(compact)
-    async with repository.session(transaction=True) as session:
-        await session.execute("UPDATE privacy_erasure_artifacts SET state='complete' WHERE request_id=$1", str(intent.request.request_id))
+        groups.setdefault(_lexical_identity(handle._lexical_index), []).append(handle)
+    if not groups:
+        raise PrivacyDenied("privacy_ledger_unavailable")
+    for key in sorted(groups):
+        group = groups[key]
+        owner = group[0]
+        repository = owner._privacy.erasure.repository
+        project, checkpoint = await repository.state()
+        if project != runtime.project_id or str(checkpoint.store_id) != engine._erasure_store_id:
+            raise PrivacyDenied("privacy_boundary_mismatch")
+        # The outer coordinator already owns this independent authority lease.
+        # A second live copy may not yet have applied its latest entries. Its
+        # native snapshot must be saved from its OWN fenced SQL closure.
+        for entry in await runtime.erasure_ledger.entries_since(checkpoint):
+            await repository.apply(entry)
+        for current in await repository.intents():
+            await _discover(repository, current)
+            await _purge_sql(repository, current)
+        async with repository.session() as session:
+            rows = await session.fetch("SELECT DISTINCT object_id FROM privacy_erasure_targets WHERE kind='node'")
+        excluded = {str(row["object_id"]) for row in rows}
+        for handle in group:
+            await handle._vector_index.save()
+        indexes = list(dict.fromkeys(handle._lexical_index for handle in group))
+        async with repository.session(transaction=True) as session:
+            await session.execute("INSERT INTO privacy_erasure_artifacts VALUES($1,$2,'prepared') "
+                                  "ON CONFLICT(request_id) DO UPDATE SET artifact_id=excluded.artifact_id,state='prepared'",
+                                  str(request_id), str(artifact_id))
+        async with _locks(indexes):
+            async with owner._event_store._conn_lock:
+                def compact():
+                    with native_fence(owner._conn):
+                        if indexes[0]._index_path is not None:
+                            recover_lexical_swaps(owner._conn, indexes[0]._index_path)
+                        compact_lexical(indexes, excluded, artifact_id)
+                await run_to_completion(compact)
+        async with repository.session(transaction=True) as session:
+            await session.execute("UPDATE privacy_erasure_artifacts SET state='complete' WHERE request_id=$1", str(request_id))
 
 
 async def rebuild_protected(engine, *, user_id, batch_size):
@@ -308,19 +343,7 @@ async def rebuild_protected(engine, *, user_id, batch_size):
                         vector._persist_snapshot()
                 await run_to_completion(rebuild_vector)
         artifact = uuid4()
-        async with repository.session(transaction=True) as session:
-            await session.execute("INSERT INTO privacy_erasure_artifacts VALUES($1,$1,'prepared')", str(artifact))
-            targets = await session.fetch("SELECT DISTINCT object_id FROM privacy_erasure_targets WHERE kind='node'")
-        excluded = {str(row["object_id"]) for row in targets}
-        indexes = list(dict.fromkeys(handle._lexical_index for handle in _ENGINES[engine._erasure_store_id] if not handle._closed))
-        async with _locks(indexes):
-            async with engine._event_store._conn_lock:
-                def rebuild_lexical():
-                    with native_fence(engine._conn):
-                        compact_lexical(indexes, excluded, artifact)
-                await run_to_completion(rebuild_lexical)
-        async with repository.session(transaction=True) as session:
-            await session.execute("UPDATE privacy_erasure_artifacts SET state='complete' WHERE request_id=$1", str(artifact))
+        await _compact_managed_groups(engine, artifact, artifact)
         return await context.disclose(counts)
 
 

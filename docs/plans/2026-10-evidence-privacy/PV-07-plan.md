@@ -663,3 +663,53 @@ failure, commands, hashes, times and zero unsuccessful runtime correction count
 are retained in PV-07-results.json. Existing #325 regression tests that invoke
 the held #323 ordinary read classifier remain pending, not passing evidence.
 No whole shared scenario is closed by this prerequisite.
+
+## Original restore/copy continuation (2026-10-20)
+
+The next bounded change touches only `tests/test_privacy_restore.py` and this
+plan/results pair. Extend the existing three-layout restore fixture, keeping
+its original erased event and surviving event: refuse missing/snapshot-only,
+foreign and behind-head current authority plus ambiguous lineage; restore the
+original closed artifact with the real current ledger; reopen a closed native
+directory/single-file copy or a real PostgreSQL schema dump restored into the
+assigned `privacy_engine_326_restore` database. Retain and hash the source
+backup, and verify both erased-node absence and the same surviving admitted
+row/evidence. Directory additionally exercises protected logical export to
+single-file. PostgreSQL tools are installed major 16 (client 16.11, assigned
+server 16.15); only the task fixture schema is dumped/restored, with no copied
+hosted control catalog. Run exactly the three existing parametrized restore
+cases and their static check. No passing unrelated selection is repeated.
+
+A behind-head authority check compares a real newer applied checkpoint to the
+pre-erasure independent-ledger copy. Rolling back both the pack and its local
+authority remains outside the freshness guarantee. Held #323 public retrieval
+and recovered pending-work assertions remain explicitly pending. Occupied
+hosted namespace replacement remains design-only; current catalog UUID,
+quiescence and guarded publication need a separately bounded released API.
+
+The first native-copy run executed exactly three cases: pack and PostgreSQL
+passed, directory failed after publication when a native lexical handle still
+pointed to the moved staging directory. `erasure_indexes.compact_lexical`
+previously grouped all engines by lineage and assigned one native index across
+distinct physical copies. Root authorized the narrow prerequisite in
+`storage/erasure_indexes.py` plus the same test/plan/results scope. The first
+correction partitions physical lexical directories and actual shared in-memory
+index objects, applying the held current ledger and each group's own SQL/native
+fences and artifact ownership. No separate copy's documents are unioned.
+
+Validation remains the same three restore parametrizations, extended with one
+real post-snapshot source-only node and a second same-target handle. They assert
+both copy separation and same-path/shared-index semantics. Existing ER06/native
+fault checks enter held `get_event_nodes` and remain pending. The rebuild final
+compaction reuses this helper, but its public `ReadContext` path is not invoked
+or repaired. Initial failure and correction counts remain in PV-07-results.json.
+
+The first correction's three-case run passed pack/PostgreSQL and the original
+directory publication/copy-separation failure, then failed a fixture-only native
+directory path mismatch (`lexical/` was copied but `lexical_index/` selected).
+Correcting only that source-relative path mapping passed the affected directory
+case. This sequence executed seven cases in total: two failures and five
+passes. The final three-layout evidence combines the directory-only pass with
+the two unaffected passing layouts; neither failed composite is relabeled.
+One unsuccessful fix-and-validation cycle is retained. No further broad check
+or public classifier/rebuild invocation was made.

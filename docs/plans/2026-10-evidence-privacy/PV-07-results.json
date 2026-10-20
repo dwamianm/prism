@@ -1174,6 +1174,122 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T233022138000-summary-erasure-static-source.json",
       "source_manifest_sha256": "8ef70c69ae8d55d73e39ee0ea388531b8a3ab136cfbc6d0e40c41a81324b35b4",
       "tracked_diff_sha256": "99d4475743aa4611201f9dc9dce6d8f56b83e65c77355f110052eb172addc450"
+    },
+    {
+      "name": "restore-native-static",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-20T23:36:37.228336+00:00",
+      "elapsed_seconds": 0.092,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T233637228336-restore-native-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "51d60e371d6ff23162fb554b92f7196cac83bba2",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T233637228336-restore-native-static-source.json",
+      "source_manifest_sha256": "ccb082f6ca2e1d6b21613eac40ce810c731faf12ec18c37cc147a747e0867dcb",
+      "tracked_diff_sha256": "74533e7a89401203e41d32e54baae3240dce8b5b91e89da539db582ab91b93e9"
+    },
+    {
+      "name": "restore-native-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_restore.py",
+        "-q"
+      ],
+      "started_at": "2026-10-20T23:36:39.418780+00:00",
+      "elapsed_seconds": 7.285,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T233639418780-restore-native-initial.log",
+      "log_sha256": "45addaabf9826fec9d5172af98286ef311ec19b9fc2de203af09975747fcf945",
+      "head": "51d60e371d6ff23162fb554b92f7196cac83bba2",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T233639418780-restore-native-initial-source.json",
+      "source_manifest_sha256": "ccb082f6ca2e1d6b21613eac40ce810c731faf12ec18c37cc147a747e0867dcb",
+      "tracked_diff_sha256": "74533e7a89401203e41d32e54baae3240dce8b5b91e89da539db582ab91b93e9"
+    },
+    {
+      "name": "restore-native-fix1-static",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "src/prme/storage/erasure_indexes.py",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-20T23:39:48.141387+00:00",
+      "elapsed_seconds": 0.083,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T233948141387-restore-native-fix1-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "51d60e371d6ff23162fb554b92f7196cac83bba2",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T233948141387-restore-native-fix1-static-source.json",
+      "source_manifest_sha256": "13680e23bfb1966d0c3e2887f1dc4278727516d1ac15b336dcf1d0fe9332118e",
+      "tracked_diff_sha256": "a8c2726ee9c8d3da430dd2247fe4de38273893b669f1124b98c9341ed75766ef"
+    },
+    {
+      "name": "restore-native-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_restore.py",
+        "-q"
+      ],
+      "started_at": "2026-10-20T23:39:55.214365+00:00",
+      "elapsed_seconds": 8.913,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T233955214365-restore-native-fix1.log",
+      "log_sha256": "c6b4a894b15ad4e5fad0b3f2537a60b46856530f0f1798c8e7ac76bb1fe650a6",
+      "head": "51d60e371d6ff23162fb554b92f7196cac83bba2",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T233955214365-restore-native-fix1-source.json",
+      "source_manifest_sha256": "13680e23bfb1966d0c3e2887f1dc4278727516d1ac15b336dcf1d0fe9332118e",
+      "tracked_diff_sha256": "a8c2726ee9c8d3da430dd2247fe4de38273893b669f1124b98c9341ed75766ef"
+    },
+    {
+      "name": "restore-native-path-static",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "src/prme/storage/erasure_indexes.py",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-20T23:40:32.156988+00:00",
+      "elapsed_seconds": 0.078,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T234032156988-restore-native-path-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "51d60e371d6ff23162fb554b92f7196cac83bba2",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T234032156988-restore-native-path-static-source.json",
+      "source_manifest_sha256": "06110e2c29d35ae0046748f2719f0f97eba5643228809bb53f11aad6deeeb203",
+      "tracked_diff_sha256": "5fdb31df03edaa1c03fc92fdc0a2e293528e1c62c14b93b42f2f8150a0d60191"
+    },
+    {
+      "name": "restore-native-directory-path-fix",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py::test_same_lineage_restore_applies_current_ledger_before_recovery[directory]"
+      ],
+      "started_at": "2026-10-20T23:40:37.521352+00:00",
+      "elapsed_seconds": 5.214,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T234037521352-restore-native-directory-path-fix.log",
+      "log_sha256": "6fae9338bb6fd97caba00cfa347c412d014ea0186fc729c9f9e33027960f567a",
+      "head": "51d60e371d6ff23162fb554b92f7196cac83bba2",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T234037521352-restore-native-directory-path-fix-source.json",
+      "source_manifest_sha256": "06110e2c29d35ae0046748f2719f0f97eba5643228809bb53f11aad6deeeb203",
+      "tracked_diff_sha256": "5fdb31df03edaa1c03fc92fdc0a2e293528e1c62c14b93b42f2f8150a0d60191"
     }
   ],
   "repair_cycles": {
@@ -1215,6 +1331,14 @@
       "fix1": "Parse only validated generated memory dependencies, verify exact owner/scope nodes, reject event/node ambiguity, traverse complete event closure. 7 authorized tests passed.",
       "unsuccessful_runtime_corrections": 0,
       "fixture_correction": "Before the correction run, the unreached purge call was corrected to existing engine.process_erasures and backend UUID assertion normalized to str. Positive closure/survivor assertions retained; missing/foreign/ambiguous controls added as authorized."
+    },
+    "independent_copy_lexical_restore": {
+      "initial": "restore-native-initial: 1 directory failure, 2 passes (pack/PostgreSQL). Current erasure compaction assigns one Tantivy native handle to separate same-lineage copy paths; directory publication moves its staging path, leaving a live handle pointing to a missing path.",
+      "unsuccessful_runtime_corrections": 0,
+      "state": "Resolved within two corrections; first composite remains failed. Public rebuild/ER06 classifier paths remain held.",
+      "fix1": "Partition physical directories and exact shared in-memory index objects; apply current authority and own SQL/native fences/artifact rows per group. 3 executions: pack/PostgreSQL passed; directory passed original failure and copy-isolation/shared-handle assertions, then failed the native-copy lexical survivor assertion because the fixture mapped retained lexical/ to a fresh lexical_index/ path.",
+      "fix2": "Only correct native directory fixture paths to their original source-relative names; runtime unchanged. The affected directory parameter passed once. Passing pack/PostgreSQL were not rerun.",
+      "unsuccessful_fix_validation_cycles": 1
     }
   },
   "held_dependencies": [
@@ -1344,11 +1468,48 @@
       "positive_evidence": "Direct summary selection resolves full source event closure; actual process_erasures removes dependent memory and leaves the independent survivor; exact retry returns live_purged.",
       "regressions": "Four existing mixed-profile migration/erasure layout cases passed once after resolver change.",
       "held": "Existing test_privacy_erasure*.py paths through held get_event_nodes/ReadContext were not rerun. Full shared ER/EM cases remain pending."
+    },
+    "restore_native": {
+      "executions": 7,
+      "passed_layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "failure_preserved": true,
+      "positive_paths": "Closed directory/single-file copies, protected directory export to single-file, and real pg_dump/pg_restore of the assigned unbound fixture schema; actual same-lineage current-ledger engine opening, erased-node absence and the original surviving admitted row/evidence.",
+      "negative_variants": [
+        "missing/snapshot-only independent authority",
+        "foreign registered independent ledger",
+        "genuinely behind-head pre-erasure ledger against newer checkpoint",
+        "ambiguous format/checkpoint lineage",
+        "occupied logical destination"
+      ],
+      "retained_artifacts": "Original closed protected export and native snapshot hashes remain unchanged; selected native rows unchanged after refused opens.",
+      "limits": [
+        "No bound hosted catalog or occupied replacement implementation.",
+        "Held #323 public retrieval and recovered pending-work gate remain pending.",
+        "Existing ER06/native-fault tests invoke held get_event_nodes and were not executed.",
+        "The rebuild final-compaction helper is adapted, but its public ReadContext path remains unverified.",
+        "No physical backup erasure or adversarial dual-rollback detection claim."
+      ],
+      "failed_executions": 2,
+      "passed_executions": 5,
+      "final_layout_evidence": {
+        "directory": "restore-native-directory-path-fix: 1 passed; fixture path mapping corrected only",
+        "pack": "restore-native-fix1: passed within failed 3-case composite",
+        "postgres": "restore-native-fix1: passed within failed 3-case composite"
+      },
+      "failed_runs_preserved": [
+        "restore-native-initial",
+        "restore-native-fix1"
+      ],
+      "copy_separation": "One real post-snapshot source node remains only in source; distinct native index objects/paths do not union documents. A second same-target directory handle or pack shared-index handle retains the expected survivor. Each group records completed artifacts in its own SQL store."
     }
   },
   "remaining_original_work": [
     "Complete protected journal/export family coverage and original mixed standard-mode public retrieval parity; broader whole-case verdict remains pending",
-    "Wrong/stale/foreign ledger restore negatives; copied pack and native PostgreSQL quarantine restore paths",
+    "Public/recovered pending-work restore gates remain held; three-layout authority negatives/native-copy components passed, with bound hosted recovery separately pending",
     "Bound same-lineage hosted PostgreSQL workspace restore into current live control authority",
     "EM04 rotation/erasure and remaining EM01-EM08 shared integration",
     "Saved fixed-clock standard-mode public retrieval comparison: blocked by held #323",
