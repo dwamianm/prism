@@ -686,6 +686,18 @@ class PRMEConfig(_ProjectSettings):
             "store() needs no LLM."
         ),
     )
+    enable_reingest: bool = Field(
+        default=False,
+        description=(
+            "Whether the engine can re-derive an owner's stored sources: "
+            "reingest() runs the batched extraction ingest() runs over the "
+            "owner's memories again, in event order, and replaces the claims "
+            "derived from each with new ones (prism-monorepo #278). The source "
+            "events and raw notes are never changed. It calls the extraction "
+            "model once per batched request, so it is off by default and an "
+            "engine that did not turn it on refuses the call."
+        ),
+    )
     reinforce_similarity_threshold: float | None = Field(
         default=None,
         description=(

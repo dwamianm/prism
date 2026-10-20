@@ -613,6 +613,25 @@ async def cmd_organize(args: argparse.Namespace) -> None:
         await engine.close()
 
 
+async def cmd_reingest(args: argparse.Namespace) -> None:
+    """Re-derive one owner's stored memories after an engine change (needs PRME_ENABLE_REINGEST=true)."""
+    engine = await _create_engine(args.db_path)
+    try:
+        result = await engine.reingest(args.user_id, scope=args.scope, limit=args.limit, cursor=args.cursor,
+                                       dry_run=args.dry_run)
+        values = result.model_dump(mode="json")
+        if args.format == "json":
+            print(json.dumps(values, indent=2))
+        else:
+            for name, value in values.items():
+                if value is not None:
+                    print(f"{name}: {value}")
+        if result.failed:
+            raise SystemExit(1)
+    finally:
+        await engine.close()
+
+
 async def cmd_extractions(args: argparse.Namespace) -> None:
     """Inspect, queue or execute explicitly scoped durable extraction work."""
     engine = await _create_engine(args.db_path)
@@ -1414,6 +1433,17 @@ def build_parser() -> argparse.ArgumentParser:
         if action == "retry":
             sub.add_argument("--replan", action="store_true", help="Prepare a new revision from saved extraction")
         sub.set_defaults(func=cmd_extractions, action=action)
+
+    p_reingest = subparsers.add_parser(
+        "reingest", help="Re-derive one owner's stored memories under the present engine (may call a model)",
+    )
+    add_common(p_reingest)
+    p_reingest.add_argument("--user-id", required=True, help="The owner whose memories are re-derived")
+    p_reingest.add_argument("--scope", choices=[s.value for s in Scope], help="Omit to visit every scope for this owner")
+    p_reingest.add_argument("--limit", type=int, help="The most memories to re-derive in this run")
+    p_reingest.add_argument("--cursor", help="The cursor of an earlier run, to continue after it")
+    p_reingest.add_argument("--dry-run", action="store_true", help="Count the memories and model requests; do no work")
+    p_reingest.set_defaults(func=cmd_reingest)
 
     p_info = subparsers.add_parser("info", help="Show memory pack info")
     add_common(p_info)

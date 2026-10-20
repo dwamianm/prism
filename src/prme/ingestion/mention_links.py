@@ -27,6 +27,7 @@ from prme.models.entity_identity import unresolved_personal_reference
 from prme.types import ACTIVE_LIFECYCLE_STATES, EdgeType, NodeType
 
 if TYPE_CHECKING:
+    from prme.models.extraction import ExtractionRecord
     from prme.models.nodes import MemoryNode
     from prme.storage.event_store import EventStore
     from prme.storage.graph_store import GraphStore
@@ -46,13 +47,15 @@ def is_text_link(edge: MemoryEdge) -> bool:
 async def link_event_mentions(
     event_id: str, sources: Sequence[MemoryNode], *, user_id: str, graph_store: GraphStore,
     event_store: EventStore, create_edge: Callable[[MemoryEdge], Awaitable[object]],
-    with_note: bool = False,
+    with_note: bool = False, extraction: ExtractionRecord | None = None, note_id: str | None = None,
 ) -> int:
     """MENTIONS-link an event's nodes to the entities their text names.
 
     ``sources`` are the nodes derived from the event that exist now, such as
-    its claims; ``with_note`` adds its raw note when that exists. The entities
-    are the ones the event's saved extraction lists. A name that two listed
+    its claims; ``with_note`` adds its raw note when that exists (the node
+    ``note_id``, for a source that ``store()`` saved, or else the node with the
+    event's ID). The entities are the ones the event's saved extraction lists,
+    or the ``extraction`` given when a re-derivation saved its own. A name that two listed
     entities share, or that no single active entity of the owner carries, is
     skipped rather than guessed, as is a literal I or we. Best effort: a
     failure is logged and returns what was linked so far, because the
@@ -62,7 +65,7 @@ async def link_event_mentions(
     created = 0
     try:
         sources = list(sources)
-        if with_note and (note := await graph_store.get_node(event_id)) is not None:
+        if with_note and (note := await graph_store.get_node(note_id or event_id)) is not None:
             sources.append(note)
         sources = [
             node for node in sources
@@ -70,7 +73,8 @@ async def link_event_mentions(
         ]
         if not sources:
             return 0
-        extraction = await event_store.get_extraction(event_id, user_id=user_id)
+        if extraction is None:
+            extraction = await event_store.get_extraction(event_id, user_id=user_id)
         if extraction is None:
             return 0
         listed: dict[str, tuple[str, set[str | None]]] = {}

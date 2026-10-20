@@ -182,6 +182,7 @@ support client idempotency keys.
 |---|---|---|
 | Supplied node or raw-source indexes | `GET /v1/events/{event_id}/processing-status` | `POST /v1/materializations/process` |
 | LLM extraction and its derived artifacts | `GET /v1/events/{event_id}/extraction-status` | `POST /v1/events/{event_id}/retry-extraction`, then `POST /v1/extractions/process` |
+| One owner's stored memories, derived again after an engine change (needs `enable_reingest`) | the result's `remaining` and `cursor` | `POST /v1/reingest` (`dry_run` first) |
 
 For raw imports, `POST /v1/ingest/fast` accepts `{"user_id": "...", "items":
 [...]}`. Each item can set `content`, `role`, `speaker`, `session_id`, `scope`, `metadata`,

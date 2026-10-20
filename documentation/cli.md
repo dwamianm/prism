@@ -261,6 +261,34 @@ prme organize ./memory.duckdb
 prme organize ./memory.duckdb --jobs promote,deduplicate --budget-ms 10000
 ```
 
+### prme reingest
+
+Re-derive one owner's stored memories after an engine change improved how they
+are derived: the batched extraction `ingest()` runs, over the owner's memories in
+event order, replaces the claims derived from each with new ones. Source events
+and raw notes are never changed. It calls the extraction model and needs
+`PRME_ENABLE_REINGEST=true` (off by default).
+
+```bash
+prme reingest <db_path> --user-id USER [--scope SCOPE] [--limit N] [--cursor CURSOR] [--dry-run] [--format {table,json}]
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--user-id` | The owner whose memories are re-derived (required) | |
+| `--scope` | Only this scope | Every scope of the owner |
+| `--limit` | The most memories this run re-derives | All not yet re-derived |
+| `--cursor` | The `cursor` of an earlier run | Start at the first memory not yet re-derived |
+| `--dry-run` | Count the memories and model requests; do no work | Off |
+
+```bash
+PRME_ENABLE_REINGEST=true prme reingest ./memory.duckdb --user-id alice --dry-run
+PRME_ENABLE_REINGEST=true prme reingest ./memory.duckdb --user-id alice --limit 500
+```
+
+The command exits 1 when a memory failed. A repeated run skips the memories
+already re-derived. See [Re-deriving stored memories](async-engine.md#re-deriving-stored-memories).
+
 ## Pack Files
 
 ### prme compact

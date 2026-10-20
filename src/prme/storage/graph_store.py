@@ -21,6 +21,7 @@ from prme.storage.alias_review import (
 )
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
+from prme.models.reingest import ReingestRecord
 from prme.models.profile import ProfilePublication
 from prme.types import ConditionState, EdgeType, LifecycleState, NodeType, Scope
 
@@ -60,6 +61,10 @@ class GraphStore(Protocol):
 
     async def commit_derivation(self, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
         """Atomically publish the exact journaled plan or return its receipt."""
+        ...
+
+    async def commit_reingest(self, plan: DerivationPlan, record: ReingestRecord) -> ReingestRecord:
+        """Atomically publish a re-derived source's plan, retire its earlier claims and mark it current."""
         ...
 
     async def profile_generation(self, key: str) -> int:

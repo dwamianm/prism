@@ -124,6 +124,10 @@ class PlanningGraph:
         return [edge.model_copy(deep=True) for edge in durable + self.edges
                 if str(edge.source_id) == source_id and edge.user_id == self.event.user_id]
 
+    def is_retired(self, node_id: str) -> bool:
+        """Whether this plan replaces the node."""
+        return UUID(node_id) in self._retired
+
     async def supersede(self, old_node_id: str, new_node_id: str, *, evidence_id: str | None = None) -> None:
         old, new = await self.get_node(old_node_id), await self.get_node(new_node_id)
         if old is None or new is None or new.id not in self.nodes or evidence_id != str(self.event.id):

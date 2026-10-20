@@ -61,6 +61,7 @@ from prme.api.models import (
     ContradictionResolutionRequest,
     ErrorResponse,
     ExtractionProcessRequest,
+    ReingestRequest,
     FastIngestBatchRequest,
     FastIngestBatchResponse,
     HealthResponse,
@@ -95,7 +96,10 @@ from prme.types import LifecycleState, NodeType, Scope
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.models.processing import ProcessingStatus, ProcessingResult
-from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
+from prme.ingestion.errors import (
+    ExtractionError, MaterializationError, ReingestBusyError, ReingestDisabledError, extraction_failure_code,
+)
+from prme.models.reingest import ReingestResult
 
 logger = logging.getLogger(__name__)
 
@@ -403,6 +407,24 @@ async def retry_extraction(request: Request, event_id: UUID, replan: bool = Fals
 async def process_extractions(request: Request, body: ExtractionProcessRequest):
     owner = _user_id(request, body.user_id, required=True)
     return await _get_engine(request).process_extractions(user_id=owner, limit=body.limit, budget_ms=body.budget_ms)
+
+
+@router.post("/reingest", response_model=ReingestResult,
+             summary="Re-derive one owner's stored memories after an engine change")
+async def reingest(request: Request, body: ReingestRequest):
+    """Run the batched extraction over the owner's stored memories again; a dry run only counts.
+
+    409 when the engine has `enable_reingest` off or is already re-deriving this owner's memories.
+    """
+    owner = _user_id(request, body.user_id, required=True)
+    try:
+        return await _get_engine(request).reingest(
+            owner, scope=body.scope, limit=body.limit, cursor=body.cursor, dry_run=body.dry_run,
+        )
+    except (ReingestDisabledError, ReingestBusyError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

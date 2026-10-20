@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from benchmarks.diagnostics import chat_probe
-from benchmarks.fast_cycle import compare, contextual, cycle, ingest, store, store_extract
+from benchmarks.fast_cycle import compare, contextual, cycle, ingest, reingest, store, store_extract
 from prme.ingestion.extraction import BatchTurn
 from prme.types import NodeType
 from tests.test_chat_probe import CLAIMS, HOME, NURSE, ScriptedExtraction, _conversation, mock_embeddings  # noqa: F401
@@ -637,7 +637,7 @@ def test_the_store_extract_stages_run_only_when_asked_for(tmp_path, monkeypatch,
     monkeypatch.setattr(store_extract, "run", fake_extract)
     monkeypatch.setattr(cycle, "_quiet_logs", lambda: None)
     assert cycle.DEFAULT_STAGES == ("store", "ingest") and set(cycle.STAGES) - set(cycle.DEFAULT_STAGES) == {
-        "store-session", "store-extract", "store-extract-session", "store-contextual"}
+        "store-session", "store-extract", "store-extract-session", "store-contextual", "reingest"}
     command = ["run", "--label", "x", "--out", str(tmp_path), "--baseline", "none"]
     assert cycle.main([*command, "--stages", "store,store-extract,store-extract-session"]) == 0
     assert calls == [False, True]
@@ -647,6 +647,102 @@ def test_the_store_extract_stages_run_only_when_asked_for(tmp_path, monkeypatch,
     assert "## Store with extraction against plain store" in (tmp_path / "report.md").read_text()
     with pytest.raises(SystemExit):
         cycle.main([*command, "--stages", "store,extract"])
+
+
+# --- The reingest stage -----------------------------------------------------------------------------------
+
+
+async def test_the_reingest_stage_stores_plainly_re_derives_and_asks_before_and_after(
+        tmp_path, mock_embeddings, monkeypatch):  # noqa: F811
+    scripted = []
+    options = _scripted_stage(tmp_path, monkeypatch, scripted)
+    monkeypatch.setattr(reingest, "model_identity", store_extract.model_identity)
+    # The requests are the store-extract stage's, so its cache entries answer for them.
+    await store_extract.run(tmp_path / "extract", use_cache=False, **options)
+    assert ingest.update_cache(tmp_path / "extract" / "extraction-cache", options["cache_dir"]) == 75
+    scripted.clear()
+
+    replayed = await reingest.run(tmp_path / "replay", **options)
+    assert len(scripted[0].calls) == 0 and replayed["mode"] == "replay" and replayed["cache_hits"] == 75
+    info = replayed["reingest"]
+    # A plain store made one node per memory and no edge; the re-derivation added entities, claims and links.
+    assert (replayed["plain_nodes"], replayed["plain_edges"]) == (75, 0)
+    assert replayed["nodes"] > 75 and replayed["edges"] > 0 and replayed["settings"]["enable_reingest"]
+    assert "enable_store_extraction" not in replayed["settings"]
+    assert info["dry_run"]["model_calls"] == 75 and info["dry_run"]["processed"] == 0
+    assert (info["first"]["processed"], info["first"]["remaining"], info["first"]["model_calls"]) == (75, 0, 75)
+    # The second run did nothing, and the sources and their raw notes are what they were.
+    assert info["second"]["processed"] == 0 and info["second"]["model_calls"] == 0 and info["sources_unchanged"]
+    measures = replayed["measures"]
+    assert (measures["extraction_requests"], measures["extractions_incomplete"]) == (75, 0)
+    assert measures["reingest_second_run_processed"] == 0
+    assert measures["extraction_tokens"] == 75 * 110 and measures["entities_made"] >= 2
+    ids = [question["id"] for question in store.load_fixture()["key"]["questions"]]
+    assert [row["id"] for row in replayed["before"]] == ids == [row["id"] for row in replayed["questions"]]
+    assert all(f"answer_rank:{question}" in measures for question in ids)
+    # Asking the same cache again gives the same measures, and the stage's own entries add nothing.
+    again = await reingest.run(tmp_path / "again", **options)
+    assert again["measures"] == measures and again["mode"] == "replay"
+    assert ingest.update_cache(tmp_path / "again" / "extraction-cache", options["cache_dir"]) == 0
+
+
+async def test_the_reingest_stage_asks_the_model_once_for_a_memory_on_a_cold_cache(
+        tmp_path, mock_embeddings, monkeypatch):  # noqa: F811
+    scripted = []
+    options = _scripted_stage(tmp_path, monkeypatch, scripted)
+    monkeypatch.setattr(reingest, "model_identity", store_extract.model_identity)
+    cold = await reingest.run(tmp_path / "cold", use_cache=False, **options)
+    assert len(scripted[0].calls) == 75 and cold["mode"] == "live" and cold["live_calls"] == 75
+    assert cold["reingest"]["first"]["model_calls"] == 75 and cold["measures"]["reingest_second_run_processed"] == 0
+    assert ingest.update_cache(tmp_path / "cold" / "extraction-cache", options["cache_dir"]) == 75
+    usage = json.loads((options["cache_dir"] / ingest.USAGE_FILE).read_text())
+    assert len(usage[reingest.STAGE]) == 75
+
+
+def test_the_reingest_stage_is_in_the_comparison_by_its_own_name_and_the_rules_cover_its_measure():
+    assert "reingest" in compare.STORE_STAGES and "reingest" in cycle.STAGES
+    assert "reingest" not in cycle.DEFAULT_STAGES and compare.stage_of("reingest") == "reingest"
+    rule = RULES["measures"]["reingest_second_run_processed"]
+    assert rule["gate"] and rule["good"] == "lower" and rule["group"] == "storage"
+    # It is judged by the store-extract tolerances until its own live runs say otherwise.
+    for measure, entry in RULES["measures"].items():
+        by_stage = entry.get("live_by_stage", {})
+        if "store-extract" in by_stage:
+            assert by_stage.get("reingest") == by_stage["store-extract"], measure
+
+
+def test_the_reingest_stage_runs_only_when_asked_for_and_the_report_sets_the_ranks_before_and_after(
+        tmp_path, monkeypatch):
+    calls = []
+
+    async def fake_store(work, **options):
+        return _results()["store"]
+
+    async def fake_reingest(work, **options):
+        calls.append(options)
+        stage = _extract_stage("reingest", ranks=(1, 8))
+        first = {"total": 75, "processed": 75, "remaining": 0, "model_calls": 75}
+        stage.update(plain_nodes=75, plain_edges=0, nodes=400, edges=300, reingest={
+            "first": first, "second": {"processed": 0, "model_calls": 0}, "sources_unchanged": True, "dry_run": first})
+        stage["before"] = [{**row, "answer_rank": rank, "stale_above_answer": False}
+                           for row, rank in zip(stage["questions"], (3, 26))]
+        stage["measures"]["reingest_second_run_processed"] = 0
+        return stage
+
+    monkeypatch.setattr(store, "run", fake_store)
+    monkeypatch.setattr(reingest, "run", fake_reingest)
+    monkeypatch.setattr(cycle, "_quiet_logs", lambda: None)
+    command = ["run", "--label", "x", "--out", str(tmp_path), "--baseline", "none"]
+    assert cycle.main([*command, "--stages", "store"]) == 0 and calls == []
+    assert cycle.main([*command, "--stages", "store,reingest"]) == 0 and len(calls) == 1
+    saved = json.loads((tmp_path / "report.json").read_text())
+    assert set(saved["stages"]) == {"store", "reingest"} and "working_cache" not in json.dumps(saved)
+    assert saved["measures"]["storage"]["reingest/reingest_second_run_processed"] == 0
+    text = (tmp_path / "report.md").read_text()
+    assert "## Re-ingest against plain store" in text and "| Question | Before | After |" in text
+    assert "| what coding language is alex learning? | 3 | 1 |" in text
+    assert "75 of 75 memories re-derived with 75 model requests" in text and "are unchanged" in text
+    assert "a second run re-derived 0" in text
 
 
 # --- The store-contextual stage ------------------------------------------------------------------------

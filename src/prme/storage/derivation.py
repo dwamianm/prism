@@ -75,6 +75,58 @@ def _new_receipt(plan: DerivationPlan, claim: ExtractionClaim | None = None) -> 
     )
 
 
+def apply_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> None:
+    """Check a plan's dependencies and staged vectors, then write its nodes, edges and replacements.
+
+    The caller holds the open transaction and has validated its own journal
+    and claim; this is the part of the commit every kind of publication shares.
+    """
+    import numpy as np
+
+    conn = store._conn
+    current = {}
+    for reference in plan.references:
+        node = store._get_node_sync(str(reference.id), True)
+        if node is not None:
+            current[str(node.id)] = node
+    _validate_dependencies(plan, current)
+    # Numerical staging must already be durable. A saved plan alone
+    # is not evidence that the external vector index was prepared.
+    for embedding in plan.embeddings:
+        rows = conn.execute(
+            "SELECT vm.embedding_model, vm.embedding_version, vm.embedding_dim, vp.vector_data "
+            "FROM vector_metadata vm JOIN vector_payloads vp USING (vector_key) "
+            "WHERE vm.node_id = ? AND vm.user_id = ?",
+            [str(embedding.node_id), plan.user_id],
+        ).fetchall()
+        expected = (embedding.model, embedding.version, embedding.dimension,
+                    np.asarray(embedding.values, dtype="<f4").tobytes())
+        if not rows or any(tuple(row) != expected for row in rows):
+            raise ValueError("Prepared vectors must be durably staged before graph publication")
+    for node in plan.nodes:
+        store._create_node_sync(node)
+    for edge in plan.edges:
+        store._create_edge_sync(edge)
+    published_nodes = {node.id: node for node in plan.nodes}
+    for edge in plan.replacements:
+        if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"}:
+            replacement = published_nodes[edge.source_id]
+            conn.execute(
+                "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, "
+                "valid_to = CASE WHEN ? >= valid_from AND "
+                "(valid_to IS NULL OR valid_to > ?) THEN ? ELSE valid_to END, "
+                "updated_at = ? WHERE id = ?",
+                [str(edge.source_id), replacement.valid_from, replacement.valid_from,
+                 replacement.valid_from, edge.created_at, str(edge.target_id)],
+            )
+        else:
+            conn.execute(
+                "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, updated_at = ? WHERE id = ?",
+                [str(edge.source_id), edge.created_at, str(edge.target_id)],
+            )
+        store._create_edge_sync(edge)
+
+
 async def commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
     snapshot = DerivationPlan.model_validate_json(plan.model_dump_json())
     async with store._conn_lock:
@@ -82,7 +134,6 @@ async def commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, *, claim
 
 
 def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, claim: ExtractionClaim | None = None) -> DerivationReceipt:
-    import numpy as np
     from prme.storage.event_store import EventStore
 
     conn = store._conn
@@ -98,47 +149,7 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, claim: Extrac
         receipt = _receipt(plan, row[0] if row else None)
         if receipt is None:
             managed = validate_duck_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
-            current = {}
-            for reference in plan.references:
-                node = store._get_node_sync(str(reference.id), True)
-                if node is not None:
-                    current[str(node.id)] = node
-            _validate_dependencies(plan, current)
-            # Numerical staging must already be durable. A saved plan alone
-            # is not evidence that the external vector index was prepared.
-            for embedding in plan.embeddings:
-                rows = conn.execute(
-                    "SELECT vm.embedding_model, vm.embedding_version, vm.embedding_dim, vp.vector_data "
-                    "FROM vector_metadata vm JOIN vector_payloads vp USING (vector_key) "
-                    "WHERE vm.node_id = ? AND vm.user_id = ?",
-                    [str(embedding.node_id), plan.user_id],
-                ).fetchall()
-                expected = (embedding.model, embedding.version, embedding.dimension,
-                            np.asarray(embedding.values, dtype="<f4").tobytes())
-                if not rows or any(tuple(row) != expected for row in rows):
-                    raise ValueError("Prepared vectors must be durably staged before graph publication")
-            for node in plan.nodes:
-                store._create_node_sync(node)
-            for edge in plan.edges:
-                store._create_edge_sync(edge)
-            published_nodes = {node.id: node for node in plan.nodes}
-            for edge in plan.replacements:
-                if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"}:
-                    replacement = published_nodes[edge.source_id]
-                    conn.execute(
-                        "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, "
-                        "valid_to = CASE WHEN ? >= valid_from AND "
-                        "(valid_to IS NULL OR valid_to > ?) THEN ? ELSE valid_to END, "
-                        "updated_at = ? WHERE id = ?",
-                        [str(edge.source_id), replacement.valid_from, replacement.valid_from,
-                         replacement.valid_from, edge.created_at, str(edge.target_id)],
-                    )
-                else:
-                    conn.execute(
-                        "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = ?, updated_at = ? WHERE id = ?",
-                        [str(edge.source_id), edge.created_at, str(edge.target_id)],
-                    )
-                store._create_edge_sync(edge)
+            apply_duckdb(store, plan)
             validate_duck_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
             receipt = _new_receipt(plan, claim)
             conn.execute(
@@ -159,9 +170,54 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan, claim: Extrac
         raise
 
 
+async def apply_postgres(store: PgGraphStore, conn, plan: DerivationPlan, vector_sql) -> None:
+    """Check a plan's dependencies, then write its nodes, vectors, edges and replacements.
+
+    The caller holds the open transaction and has validated its own journal
+    and claim; this is the part of the commit every kind of publication shares.
+    """
+    from prme.storage.pg.graph_store import _NODE_COLUMNS
+
+    ids = sorted(str(node.id) for node in plan.references)
+    rows = await conn.fetch(
+        f"SELECT {_NODE_COLUMNS} FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE", ids,
+    )
+    current = {str(row["id"]): store._record_to_node(row) for row in rows}
+    _validate_dependencies(plan, current)
+    for node in plan.nodes:
+        await store._create_node_on_connection(conn, node)
+    # pgvector and generated text columns become visible in this same
+    # transaction, using already-computed numerical values.
+    for embedding in plan.embeddings:
+        await conn.execute(
+            f"UPDATE nodes SET embedding = $1::{vector_sql.type}, embedding_model = $2, embedding_version = $3 WHERE id = $4",
+            "[" + ",".join(str(value) for value in embedding.values) + "]",
+            embedding.model, embedding.version, str(embedding.node_id),
+        )
+    for edge in plan.edges:
+        await store._create_edge_on_connection(conn, edge)
+    published_nodes = {node.id: node for node in plan.nodes}
+    for edge in plan.replacements:
+        if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"}:
+            replacement = published_nodes[edge.source_id]
+            await conn.execute(
+                "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, "
+                "valid_to = CASE WHEN $2 >= valid_from AND "
+                "(valid_to IS NULL OR valid_to > $2) THEN $2 ELSE valid_to END, "
+                "updated_at = $3 WHERE id = $4",
+                str(edge.source_id), replacement.valid_from, edge.created_at,
+                str(edge.target_id),
+            )
+        else:
+            await conn.execute(
+                "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, updated_at = $2 WHERE id = $3",
+                str(edge.source_id), edge.created_at, str(edge.target_id),
+            )
+        await store._create_edge_on_connection(conn, edge)
+
+
 async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, *, claim: ExtractionClaim | None = None) -> DerivationReceipt:
     from prme.storage.pg.event_store import PgEventStore
-    from prme.storage.pg.graph_store import _NODE_COLUMNS
 
     plan = DerivationPlan.model_validate_json(plan.model_dump_json())
     async with store._pool.acquire() as conn, conn.transaction():
@@ -181,42 +237,7 @@ async def commit_postgres(store: PgGraphStore, plan: DerivationPlan, *, claim: E
         if receipt is not None:
             return receipt
         managed = await validate_pg_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
-        ids = sorted(str(node.id) for node in plan.references)
-        rows = await conn.fetch(
-            f"SELECT {_NODE_COLUMNS} FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE", ids,
-        )
-        current = {str(row["id"]): store._record_to_node(row) for row in rows}
-        _validate_dependencies(plan, current)
-        for node in plan.nodes:
-            await store._create_node_on_connection(conn, node)
-        # pgvector and generated text columns become visible in this same
-        # transaction, using already-computed numerical values.
-        for embedding in plan.embeddings:
-            await conn.execute(
-                f"UPDATE nodes SET embedding = $1::{vector_sql.type}, embedding_model = $2, embedding_version = $3 WHERE id = $4",
-                "[" + ",".join(str(value) for value in embedding.values) + "]",
-                embedding.model, embedding.version, str(embedding.node_id),
-            )
-        for edge in plan.edges:
-            await store._create_edge_on_connection(conn, edge)
-        published_nodes = {node.id: node for node in plan.nodes}
-        for edge in plan.replacements:
-            if plan.materialization_policy in {"temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"}:
-                replacement = published_nodes[edge.source_id]
-                await conn.execute(
-                    "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, "
-                    "valid_to = CASE WHEN $2 >= valid_from AND "
-                    "(valid_to IS NULL OR valid_to > $2) THEN $2 ELSE valid_to END, "
-                    "updated_at = $3 WHERE id = $4",
-                    str(edge.source_id), replacement.valid_from, edge.created_at,
-                    str(edge.target_id),
-                )
-            else:
-                await conn.execute(
-                    "UPDATE nodes SET lifecycle_state = 'superseded', superseded_by = $1, updated_at = $2 WHERE id = $3",
-                    str(edge.source_id), edge.created_at, str(edge.target_id),
-                )
-            await store._create_edge_on_connection(conn, edge)
+        await apply_postgres(store, conn, plan, vector_sql)
         await validate_pg_claim(conn, str(plan.event_id), plan.user_id, claim, plan_id=str(plan.id))
         receipt = _new_receipt(plan, claim)
         await conn.execute(

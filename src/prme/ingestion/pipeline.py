@@ -19,6 +19,8 @@ import inspect
 import math
 import time
 import weakref
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Literal
 from uuid import UUID
@@ -53,6 +55,9 @@ from prme.types import EdgeType, EpistemicType, LifecycleState, NodeType, Scope,
 
 if TYPE_CHECKING:
     from prme.ingestion.extraction import ExtractionProvider
+    from prme.ingestion.planning import PlanningGraph
+    from prme.ingestion.reingest import Reingester
+    from prme.models.reingest import ReingestResult
     from prme.storage.event_store import EventStore
     from prme.storage.graph_store import GraphStore
     from prme.storage.lexical_index import LexicalIndex
@@ -100,6 +105,21 @@ _CORRECTION_MEMORIES = 20
 
 class BatchSplitStopped(ExtractionError):
     """A single turn of a split request timed out or was refused, so the rest of the split is not asked."""
+
+
+@dataclass
+class BatchRun:
+    """Where a batched request's checked output goes, and how many requests it sent.
+
+    ``_request_batch`` without one saves each turn's output as the source's
+    extraction record, under the job's claim. A re-derivation of a source that
+    already has a record (``reingest()``) hands in its own ``save`` instead,
+    so the saved record stays the source's first extraction, and reads
+    ``requests`` for the model calls it made.
+    """
+
+    save: Callable[..., Awaitable[None]]
+    requests: int = 0
 
 # Fact type to NodeType mapping
 _FACT_TYPE_TO_NODE_TYPE: dict[str, NodeType] = {
@@ -345,6 +365,7 @@ class IngestionPipeline:
         self._background_tasks: set[asyncio.Task] = set()
         self._retry_delays = (5, 30, 180)
         self._closing = False
+        self._reingester: Reingester | None = None
 
     async def ingest(
         self,
@@ -796,6 +817,15 @@ class IngestionPipeline:
                     await asyncio.gather(heartbeat, return_exceptions=True)
                 await run_async_to_completion(stop_heartbeat())
 
+    async def reingest(self, *, user_id: str, scope: Scope | str | None = None, limit: int | None = None,
+                       cursor: str | None = None, dry_run: bool = False) -> ReingestResult:
+        """Re-derive an owner's stored sources under the present settings; see ``MemoryEngine.reingest``."""
+        from prme.ingestion.reingest import Reingester
+
+        if self._reingester is None:
+            self._reingester = Reingester(self)
+        return await self._reingester.run(user_id=user_id, scope=scope, limit=limit, cursor=cursor, dry_run=dry_run)
+
     async def process_extractions(self, *, user_id: str, limit: int = 100,
                                   budget_ms: float = 5000) -> ExtractionProcessingResult:
         """Process due owned jobs within a cooperative budget, without a daemon.
@@ -975,7 +1005,8 @@ class IngestionPipeline:
         return events
 
     async def _request_batch(self, head: Event, events: list[Event], *,
-                             claim: ExtractionClaim | None, ask_again: bool = True) -> None:
+                             claim: ExtractionClaim | None, ask_again: bool = True,
+                             run: BatchRun | None = None) -> None:
         """Send one batched request and save each turn's output, or ask again in halves.
 
         A response that fails validation as a whole, or a request that times
@@ -1017,6 +1048,8 @@ class IngestionPipeline:
         # enable_extraction_corrections keeps working while it is off.
         extra = {"memories": memories} if memories else {}
         try:
+            if run is not None:
+                run.requests += 1
             async with self._extraction_semaphore:
                 raw = await self._extraction_provider.extract_batch(turns, **extra)
             if hasattr(raw, "model_dump"):
@@ -1037,7 +1070,7 @@ class IngestionPipeline:
             failure: ExtractionError | None = None
             for half in (events[:middle], events[middle:]):
                 try:
-                    await self._request_batch(head, half, claim=claim, ask_again=ask_again)
+                    await self._request_batch(head, half, claim=claim, ask_again=ask_again, run=run)
                 except BatchSplitStopped:
                     raise
                 except ExtractionError as half_failure:
@@ -1083,8 +1116,11 @@ class IngestionPipeline:
                 result=result.model_dump(mode="json"),
                 batch_id=batch.id,
             ))
+        save = run.save if run is not None else (
+            lambda saved, saved_records: self._event_store.record_extraction_batch(saved, saved_records, claim=claim)
+        )
         await self._write_queue.submit(
-            lambda: self._event_store.record_extraction_batch(batch, records, claim=claim),
+            lambda: save(batch, records),
             label=f"extraction.batch:{batch.id}",
         )
         logger.info("ingestion.extraction_batch_saved", event_id=str(head.id), batch_id=str(batch.id),
@@ -1095,7 +1131,7 @@ class IngestionPipeline:
             logger.warning("ingestion.extraction_batch_turns_asked_again", event_id=str(head.id),
                            batch_id=str(batch.id), turns=len(missing))
             await self._request_batch(head, [events[index - 1] for index in missing], claim=claim,
-                                      ask_again=False)
+                                      ask_again=False, run=run)
         elif without_entry:
             logger.warning("ingestion.extraction_batch_turns_missing", event_id=str(head.id),
                            batch_id=str(batch.id), turns=without_entry, batch_turns=len(turns))
@@ -1189,8 +1225,14 @@ class IngestionPipeline:
         materialization_policy: Literal[
             "temporal_validity_v7", "speech_act_v8", "speech_act_v9", "speech_act_v10", "speech_act_v11", "speech_act_v12", "speech_act_v13", "speech_act_v14"
         ] = "speech_act_v14",
+        before_prepare: Callable[[PlanningGraph], Awaitable[None]] | None = None,
     ) -> DerivationPlan:
-        """Prepare fixed graph/index inputs without publishing any artifacts."""
+        """Prepare fixed graph/index inputs without publishing any artifacts.
+
+        ``before_prepare`` sees the planned graph after the extraction is
+        applied and before the embeddings are computed, so a caller can
+        add replacements or adjust the planned nodes (``reingest()``).
+        """
         from prme.ingestion.planning import PlanningGraph, PlanningIndexes, PlanningQueue
 
         event = Event.model_validate_json(event.model_dump_json())
@@ -1233,6 +1275,8 @@ class IngestionPipeline:
             grounding_speaker=(metadata_speaker(event.metadata)
                                if self._speaker_grounding and current_policy else None),
         )
+        if before_prepare is not None:
+            await before_prepare(graph)
         return await indexes.prepare(
             self._vector_index._provider,
             materialization_policy=materialization_policy,

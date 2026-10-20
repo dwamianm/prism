@@ -18,6 +18,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "loss" when either interval of a measure lies wholly below zero and names the
   level, and it cannot read "no loss" without both, as the stable gate in
   `CLAUDE.md` asks.
+- Add `MemoryEngine.reingest()` (and `MemoryClient.reingest()`, `POST /v1/reingest`,
+  the `memory_reingest` MCP tool and `prme reingest`), which re-derives one
+  owner's stored memories after an engine change improved how they are derived
+  (prism-monorepo #278). Until now the only way to refresh a memory was to store
+  its text again, and a memory that `store()` saved plainly could not be
+  extracted at all: it has no extraction job for `retry_extraction()` or
+  `process_extractions()` to run, and the derivation journal keys one extraction,
+  plan and receipt to each event. `reingest()` runs the batched extraction
+  `ingest()` runs over the owner's sources in event order and publishes what the
+  present engine derives from each, with the old claims of a source superseded by
+  the claims that restate them or archived with `metadata.reingest.replaced_by`
+  naming their replacements. The source events and raw notes are never changed or
+  deleted, and only the named owner's sources are touched. It is idempotent and
+  resumable: each source gets a marker naming the engine version, the extraction
+  model and prompt and the options that decide what is derived, so a second run
+  does nothing and a stopped run continues, and the model's output is saved
+  before anything is published, so it is never asked twice. `limit` and `cursor`
+  run it in capped steps, and `dry_run=True` counts the memories, the model
+  requests and the source tokens without calling a model. It is off by default:
+  set `enable_reingest` (`PRME_ENABLE_REINGEST=true`), or the call raises
+  `ReingestDisabledError` and the route answers `409`. The hosted service turns it
+  on. The fast cycle has a `reingest` stage (opt-in, `--stages reingest`) that
+  stores the 75-memory fixture plainly, re-derives it and compares the 17 answer
+  ranks before and after, and RFC-0016 describes the records it adds
+  (`REINGEST_EXTRACTED` and `REINGEST_COMMITTED`).
 
 ## [0.16.0a4] - 2026-10-19
 

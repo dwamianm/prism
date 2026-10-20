@@ -27,6 +27,7 @@ from prme.storage.organizer_merge import MergeResult
 from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
+from prme.models.reingest import ReingestRecord
 from prme.models.profile import ProfilePublication
 from prme.models.consolidation import ConsolidationPublication
 from prme.types import (
@@ -80,6 +81,11 @@ class DuckPGQGraphStore:
         """Publish a journaled graph derivation and its receipt atomically."""
         from prme.storage.derivation import commit_duckdb
         return await commit_duckdb(self, plan, claim=claim)
+
+    async def commit_reingest(self, plan: DerivationPlan, record: ReingestRecord) -> ReingestRecord:
+        """Publish a re-derived source's plan, retire its earlier claims and mark it current atomically."""
+        from prme.storage.reingest import commit_duckdb
+        return await commit_duckdb(self, plan, record)
 
     async def profile_generation(self, key: str) -> int:
         from prme.storage.profile_publication import generation_duckdb

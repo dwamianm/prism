@@ -551,3 +551,40 @@ therefore specifies that `observe()` retries a failed extraction as the extracte
 builder (`benchmarks/diagnostics/extracted_packs.py`) does, with `retry_extraction`
 and then `process_extractions`. These are the owner-scoped calls this RFC already
 defines, and nothing in this RFC changes.
+
+## Re-deriving a derived source (2026-10-19)
+
+The journal above derives a source once. Its extraction, prepared plan and
+commit receipt have IDs fixed by the event, `replan` is refused for a complete
+job, and a source that `store()` saved plainly has no work row at all, so
+`retry_extraction` and `process_extractions` cannot reach it. After an engine
+change improves extraction or linking, a memory stored earlier could only be
+refreshed by storing its text again (prism-monorepo #278).
+
+`MemoryEngine.reingest()` (off unless `enable_reingest`) re-derives one owner's
+sources beside the journal instead of inside it, so a source's first extraction,
+plan and receipt stay as they were. It adds two operation types, both with IDs
+fixed by the source and the settings:
+
+- `REINGEST_EXTRACTED` holds the checked model output for a source, saved before
+  anything is planned, so a stopped run never asks the model again.
+- `REINGEST_COMMITTED` is written in the transaction that publishes the new nodes
+  and edges (the same plan checks, vector staging and dependency validation as a
+  derivation commit) and retires the source's earlier claims. It is the marker: a
+  source that has one under the engine's present settings is current, and a second
+  commit of it finds the first and changes nothing.
+
+Planning and the model request are the ones `ingest()` uses. The settings that
+name a marker are the engine version, the extraction model and prompt and the
+options that decide what is derived; the settings that name the saved output are
+the first three alone, so an option that only changes derivation plans again
+without a model call. A claim of the source that the new derivation states again
+is superseded by the new claim, through the plan's replacements. One it no longer
+states is archived in the same transaction, with `metadata.reingest.replaced_by`
+naming the new claims. Entities are shared by every source that names them, so
+they are reused and never retired. The source events and raw notes are not written.
+
+The owner's earlier claims are those the source's receipt lists, those an earlier
+re-derivation stamped with `metadata.reingest.source_event_id`, and a claim that
+cites the source alone. A source whose own extraction job has not finished is left
+for `process_extractions()`, since deriving it twice would double it.

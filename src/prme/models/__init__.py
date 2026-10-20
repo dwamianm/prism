@@ -27,6 +27,7 @@ from prme.models.edges import MemoryEdge
 from prme.models.events import Event
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.models.reingest import ReingestResult
 from prme.models.nodes import MemoryNode
 from prme.models.processing import (
     FastIngestItem,
@@ -65,6 +66,7 @@ __all__ = [
     "ExtractionRecord",
     "ExtractionStatus",
     "ExtractionProcessingResult",
+    "ReingestResult",
     "MemoryEdge",
     "MemoryNode",
     "MemoryObject",

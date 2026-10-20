@@ -27,7 +27,7 @@ from prme.config_audit import (
     HypothesisSetting as HypothesisSetting,
     audit_hypotheses as audit_hypotheses,
 )
-from prme.ingestion.errors import ExtractionError, MaterializationError
+from prme.ingestion.errors import ExtractionError, MaterializationError, ReingestBusyError, ReingestDisabledError
 from prme.models.aggregation import (
     AssertionAggregation,
     AssertionGroup,
@@ -106,6 +106,7 @@ from prme.models.learning import (
 )
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.models.reingest import ReingestResult
 from prme.storage.engine import MemoryEngine
 from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.ranking_profiles import StaleRankingProfileError
@@ -253,6 +254,7 @@ __all__ = [
     "ExtractionRecord",
     "ExtractionStatus",
     "ExtractionProcessingResult",
+    "ReingestResult",
     "FastIngestItem",
     "FastIngestConflict",
     "IngestionPipeline",
@@ -264,6 +266,8 @@ __all__ = [
     "FullRetrievalQueryResult",
     "FullRetrievalTrial",
     "MaterializationError",
+    "ReingestBusyError",
+    "ReingestDisabledError",
     "MemoryClient",
     "MemoryEngine",
     "MemoryValueBinding",

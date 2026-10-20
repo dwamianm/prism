@@ -32,6 +32,7 @@ from prme.storage.extraction_work import (
     validate_duck_claim,
 )
 from prme.models.extraction_work import ExtractionClaim, StaleExtractionClaimError
+from prme.storage.reingest import ReingestRepository
 from prme.types import Scope
 
 # Explicit column list used in all SELECT queries to avoid positional
@@ -59,6 +60,7 @@ class EventStore:
         self._conn = conn
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
         self.extraction_work = ExtractionWorkRepository(conn=conn, conn_lock=self._conn_lock)
+        self.reingest = ReingestRepository(self.extraction_work)
 
     # --- Public async API ---
 

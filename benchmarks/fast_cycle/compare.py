@@ -36,8 +36,9 @@ SCHEMA_VERSION = 1
 GROUPS = ("storage", "meaning", "results")
 # Stages that store the fixture's memories; their measures are scoped by the stage's name. The "-session"
 # stages store each memory under its session as session_id; store-session is the control for store-extract-session.
-# store-contextual stores each memory with a situating sentence as retrieval_content.
-STORE_STAGES = ("store", "store-session", "store-extract", "store-extract-session", "store-contextual")
+# store-contextual stores each memory with a situating sentence as retrieval_content. reingest stores them plainly
+# and re-derives them with reingest(); its measures are those of the pack after.
+STORE_STAGES = ("store", "store-session", "store-extract", "store-extract-session", "store-contextual", "reingest")
 EXTRACT_STAGES = ("store-extract", "store-extract-session")
 VERDICT_ORDER = ("FAIL", "worse, accepted", "worse (watched)", "worse, within tolerance", "moved", "better")
 

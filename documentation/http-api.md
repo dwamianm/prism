@@ -121,6 +121,49 @@ Run the LLM extraction pipeline on content. `role` and `speaker` work as for
 }
 ```
 
+### POST /v1/reingest
+
+Re-derive one owner's stored memories after an engine change improved how they
+are derived: the batched extraction `POST /v1/ingest` runs, over the owner's
+memories in event order, replaces the claims derived from each with new ones.
+The source events and raw notes are never changed. Only the engine's
+`enable_reingest` setting turns it on (`PRME_ENABLE_REINGEST=true`, off by
+default); without it the route returns `409`.
+
+**Request:**
+
+```json
+{
+  "user_id": "alice",
+  "scope": "personal",
+  "limit": 500,
+  "cursor": null,
+  "dry_run": false
+}
+```
+
+Every field is optional. `user_id` is required without a bound identity and must
+match the authenticated owner. `limit` caps the memories one call re-derives and
+`cursor` continues after an earlier result. With `dry_run` the route sends no
+model request and changes nothing.
+
+**Response (200):**
+
+```json
+{
+  "user_id": "alice", "scope": null, "dry_run": false,
+  "total": 76, "current": 0, "unfinished": 0, "selected": 76,
+  "processed": 76, "failed": 0, "remaining": 0, "cursor": null,
+  "model_calls": 76, "source_tokens": 1491, "fingerprint": "cf4228e0..."
+}
+```
+
+`remaining` memories are not yet derived under the engine's present settings,
+and `cursor` is set while any are left after the last memory this call took.
+A second call over the same data does nothing for memories already derived.
+`409` also means a re-derivation of this owner is already running. See
+[Re-deriving stored memories](async-engine.md#re-deriving-stored-memories).
+
 ### POST /v1/retrieve
 
 Run hybrid retrieval.
