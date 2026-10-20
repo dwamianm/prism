@@ -101,17 +101,33 @@ class FakeProtector:
     async def ready(self, snapshot, purposes):
         self.calls.append(("ready", purposes))
 
-    async def seal(self, plaintext, context):
+    @asynccontextmanager
+    async def writer_guard(self, payloads):
+        yield
+
+    async def seal(self, plaintext, context, *, original_snapshot):
+        assert context.policy_id == original_snapshot.policy.policy_id
         self.calls.append(("seal", context.purpose))
         return ProtectedPayload(context=context, envelope=base64.b64encode(plaintext).decode(),
             provider_id=self.provider_id, key_id=self.key_id, key_version=self.key_version)
 
-    async def open(self, payload, access, *, guard):
+    async def open(self, payload, access, *, original_snapshot, guard):
+        async with self.open_held(payload, access, original_snapshot=original_snapshot, guard=guard) as value:
+            return value
+
+    @asynccontextmanager
+    async def open_held(self, payload, access, *, original_snapshot, guard):
+        assert payload.context.policy_id == original_snapshot.policy.policy_id
         async with guard():
             self.calls.append(("open", payload.context.purpose))
             assert payload.context.purpose == "processing"
             assert payload.context.event_id in access.claimed_event_ids
-            return base64.b64decode(payload.envelope)
+            yield base64.b64decode(payload.envelope)
+
+    @asynccontextmanager
+    async def unwrap_processing_key_held(self, payload, access, *, original_snapshot, guard):
+        raise PrivacyDenied("privacy_capability_unavailable")
+        yield  # This storage-effect double never supplies key material.
 
 
 class FakeEmbedding:

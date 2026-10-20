@@ -10,12 +10,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, AsyncContextManager, Callable, Literal, Protocol
+from typing import TYPE_CHECKING, Any, AsyncContextManager, Callable, Literal, Protocol
 from uuid import UUID
 
 from pydantic import Field
 
 from prme.privacy.policy import FrozenModel, PolicySnapshot
+
+if TYPE_CHECKING:
+    from prme.privacy.crypto import ProcessingKeyLease
 
 Effect = Literal["admission", "transmission", "publication", "disclosure"]
 Guard = Callable[[], AsyncContextManager[None]]
@@ -136,10 +139,17 @@ class EvidenceAccess(FrozenModel):
 
 
 class PayloadProtector(Protocol):
+    def writer_guard(self, payloads: tuple[ProtectedPayload, ...]) -> AsyncContextManager[None]: ...
     async def ready(self, snapshot: PolicySnapshot, purposes: tuple[str, ...]) -> None: ...
-    async def seal(self, plaintext: bytes, context: PayloadContext) -> ProtectedPayload: ...
+    async def seal(self, plaintext: bytes, context: PayloadContext, *,
+                   original_snapshot: PolicySnapshot) -> ProtectedPayload: ...
     async def open(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess,
-                   *, guard: Guard) -> bytes: ...
+                   *, original_snapshot: PolicySnapshot, guard: Guard) -> bytes: ...
+    def open_held(self, payload: ProtectedPayload, access: ProcessingAccess | EvidenceAccess, *,
+                  original_snapshot: PolicySnapshot, guard: Guard) -> AsyncContextManager[bytes]: ...
+    def unwrap_processing_key_held(self, payload: ProtectedPayload, access: ProcessingAccess, *,
+                                  original_snapshot: PolicySnapshot,
+                                  guard: Guard) -> AsyncContextManager[ProcessingKeyLease]: ...
 
 
 class PrivacyExtractor(Protocol):
