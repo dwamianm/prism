@@ -14,8 +14,7 @@ from prme import MemoryEngine
 from prme.ingestion.group_links import is_group_link
 from prme.ingestion.schema import ExtractionResult
 from prme.types import EdgeType, NodeType
-from tests import test_durable_ingestion
-from tests.conftest import STRUCTURE_OPTIONS
+from tests import conftest, test_durable_ingestion
 from tests.test_ingest_names_and_claims import CITIES, DROPPED, SENTENCE, batched, claims, ingest_trip
 
 config = test_durable_ingestion.config
@@ -24,8 +23,7 @@ user = test_durable_ingestion.user
 
 @pytest.fixture
 def product_defaults(monkeypatch):
-    for name in STRUCTURE_OPTIONS:
-        monkeypatch.delenv(name)
+    conftest.product_defaults(monkeypatch)
 
 
 async def test_the_structure_options_are_on(product_defaults, config):
@@ -33,6 +31,7 @@ async def test_the_structure_options_are_on(product_defaults, config):
     assert config.packing.graph_seed_words and config.packing.folded_records_keep_rank
     assert config.packing.session_context_skip_entities
     assert config.enable_owner_group_links
+    assert config.scoring.rrf_graph_seed_count
 
 
 def test_a_packing_config_built_in_code_keeps_the_packing_options_off(product_defaults):

@@ -184,7 +184,10 @@ class RankFusion(BaseModel):
     ``ScoringWeights.rrf_tie_break`` is set. ``graph_rank`` is the candidate's
     place among the graph search's results by hop count (1 for one hop, 2 for
     two, 3 for three); it is present only for such a candidate, and only when
-    ``ScoringWeights.rrf_graph_weight`` is set.
+    ``ScoringWeights.rrf_graph_weight`` is set. With
+    ``ScoringWeights.rrf_graph_seed_count`` it is the candidate's place by how
+    many of the question's seeds reach it, then by their total hop count. The
+    score replays from the saved rank either way.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -376,6 +379,11 @@ class RetrievalCandidate(BaseModel):
     # relevance among the memories that added this candidate as session,
     # episode or evidence context, whether or not their score replaced its own.
     context_relevance: float = Field(default=0.0, ge=0, allow_inf_nan=False, exclude=True)
+    # Working state for ScoringWeights.rrf_graph_seed_count, never serialized:
+    # how many of the question's graph seeds reach this candidate without
+    # passing through the owner's entity, the total of their hop counts and
+    # the fewest. None when the graph search did not measure it.
+    graph_seed_reach: tuple[int, int, int] | None = Field(default=None, exclude=True)
     # Set only with PackingConfig.session_context_packing and omitted
     # otherwise, so results and bundles keep their bytes. Serialized so that a
     # saved candidate list packs the same way again.
@@ -434,6 +442,31 @@ def rank_fusion_relevance(candidate: RetrievalCandidate) -> float:
         if candidate.score_provenance is not None else 0.0
     )
     return max(0.0, candidate.semantic_score, inherited, candidate.context_relevance)
+
+
+def inherited_score(candidate: RetrievalCandidate) -> tuple[float, ScoreProvenance | None]:
+    """The score and score provenance a context record inherits from ``candidate``.
+
+    Session, episode and evidence augmentation context take the candidate's
+    score less a seed count graph term (``ScoringWeights.rrf_graph_seed_count``):
+    the term rewards the candidate's own links to the question's names, which
+    the records it pulls in do not share, and a record linked to them earns its
+    own. The provenance drops the graph rank so it replays that score. Without
+    such a term both are the candidate's own.
+    """
+    provenance = candidate.score_provenance
+    rank_fusion = provenance.rank_fusion if provenance is not None else None
+    if (provenance is None or rank_fusion is None or rank_fusion.graph_rank is None
+            or not provenance.weights.rrf_graph_seed_count):
+        return candidate.composite_score, provenance
+    assert provenance.weights.rrf_k is not None
+    rank_fusion = rank_fusion.model_copy(update={"graph_rank": None})
+    base = rank_fusion.score(provenance.weights.rrf_k, provenance.weights.rrf_graph_weight)
+    provenance = provenance.model_copy(update={
+        "rank_fusion": rank_fusion,
+        "trace": provenance.trace.model_copy(update={"composite_score": base}),
+    })
+    return provenance.replay_score(), provenance
 
 
 class MemoryBundle(BaseModel):
@@ -684,6 +717,17 @@ class RetrievalMetadata(BaseModel):
     backend_failures: dict[str, str] = Field(
         default_factory=dict,
         description="Failed primary candidate paths with sanitized reason codes; empty means no detected failure",
+    )
+    # Omitted when the walk ran or was not asked for, so other responses keep their bytes.
+    graph_seed_reach: Literal["neighborhood_limit", "backend_error"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "With ScoringWeights.rrf_graph_seed_count, why its walk did not run: "
+            "neighborhood_limit when the seeds' neighborhood held more nodes to read "
+            "than the walk's limit, backend_error when its read failed. The graph "
+            "candidates are kept either way, and none of them gets a graph rank"
+        ),
     )
     min_score_skipped: bool = Field(
         default=False,

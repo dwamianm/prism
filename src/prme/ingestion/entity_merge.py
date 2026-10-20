@@ -41,10 +41,10 @@ class EntityMerger:
     async def find_or_create_owner_reference(self, user_id: str, *, scope: Scope,
                                              evidence_event_id: str) -> tuple[str, bool]:
         """Reuse only this owner's declared singular identity in this scope."""
-        from prme.models.owner_reference import owner_reference_id
+        from prme.models.owner_reference import OWNER_REFERENCE_STATUS, owner_reference_id
 
         node_id = owner_reference_id(user_id, scope.value)
-        expected = {"entity_type": "person", "identity_status": "owner_reference", "owner_id": user_id}
+        expected = {"entity_type": "person", "identity_status": OWNER_REFERENCE_STATUS, "owner_id": user_id}
         existing = await self._graph_store.get_node(str(node_id), include_superseded=True)
         if existing is not None:
             if (existing.user_id != user_id or existing.scope != scope

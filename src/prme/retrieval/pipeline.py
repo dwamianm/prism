@@ -553,6 +553,7 @@ class RetrievalPipeline:
             time_to=effective_time_to,
             config=candidate_config,
             diagnostics=candidate_diagnostics,
+            graph_seed_reach=effective_weights.fusion == "rrf" and effective_weights.rrf_graph_seed_count,
         )
 
         aggregation_candidate_limit_paths: list[str] = []
@@ -1172,6 +1173,9 @@ class RetrievalPipeline:
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
                 "backend_failures": candidate_diagnostics.backend_failures,
+                # Only when the seed count walk did not run, so other entries keep their bytes.
+                **({"graph_seed_reach": candidate_diagnostics.graph_seed_reach}
+                   if candidate_diagnostics.graph_seed_reach is not None else {}),
                 # Always present, like the two keys above; true only under
                 # rank fusion (issue #150).
                 "min_score_skipped": min_score_skipped,
@@ -1241,6 +1245,7 @@ class RetrievalPipeline:
             backends_used=list(candidate_counts.keys()),
             embedding_mismatch=embedding_mismatch,
             backend_failures=candidate_diagnostics.backend_failures,
+            graph_seed_reach=candidate_diagnostics.graph_seed_reach,
             min_score_skipped=min_score_skipped,
             aggregation_coverage=aggregation_coverage,
             historical_coverage=historical_coverage,

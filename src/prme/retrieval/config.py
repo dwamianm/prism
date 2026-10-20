@@ -20,7 +20,7 @@ import math
 import warnings
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
 
 from prme.types import RepresentationLevel
 
@@ -28,9 +28,19 @@ from prme.types import RepresentationLevel
 DEFAULT_RRF_K = 60
 # Rank fusion terms that ScoringWeights() leaves unset and PRMEConfig sets by
 # default, recorded only in version 19 receipts (issue #168).
-RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break", "rrf_graph_weight")
+RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break", "rrf_graph_weight", "rrf_graph_seed_count")
+# The graph list's weight when rrf_graph_seed_count is on and rrf_graph_weight
+# is unset (prism-monorepo issue 276). The validator writes it into the
+# settings, so receipts record the weight their scores used.
+RRF_GRAPH_SEED_COUNT_WEIGHT = 0.5
+# Only a record the semantic channel ranks this high can join the seed count
+# list, so the list reorders records that already match the question. Receipts
+# replay from the saved graph ranks, which already reflect it.
+RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP = 10
 # Settings that only rank fusion reads; weighted scoring drops them.
 RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
+# Rank fusion opt-ins that are on or off; off, they are not set.
+RANK_FUSION_SWITCHES = ("rrf_graph_seed_count",)
 # Settings that only the weighted formula reads; rank fusion drops them.
 # Receipts record them from version 20 (issue #83).
 WEIGHTED_ONLY_SETTINGS = ("recency_time",)
@@ -48,6 +58,20 @@ LEGACY_PRIOR_WEIGHT_ERROR = (
     "('score_envelope' or 'anchored_score_envelope'): under 'legacy' the reranked "
     "candidates would carry blended model scores next to the other candidates' own scores"
 )
+
+
+_BOOL = TypeAdapter(bool)
+
+
+def _switched_on(value: Any) -> bool:
+    """Whether a raw switch reads as on, as field validation will read it ("true" from the environment too)."""
+    if value is None:
+        return False
+    try:
+        return _BOOL.validate_python(value)
+    except ValidationError:
+        # Field validation reports the bad value.
+        return False
 
 
 def normalize_reranker_prior_weight(value: float) -> float:
@@ -77,6 +101,10 @@ DEFAULT_SCORING_SETTINGS: dict[str, Any] = {
     "fusion": "rrf",
     "rrf_recency_boost": 0.25,
     "rrf_tie_break": "event_time",
+    # Alpha channel, 2026-10-19: on the fast tiers, by the owner's directive
+    # (prism-monorepo issue 276). It brings rrf_graph_weight's seed count
+    # default with it; a ScoringWeights built in code keeps both unset.
+    "rrf_graph_seed_count": True,
 }
 DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
     "context_format": "reader",
@@ -295,7 +323,39 @@ class ScoringWeights(BaseModel):
             "candidate the graph did not return gains nothing, and one only "
             "the graph returned now scores above 0. Unset, rank fusion "
             "ignores graph proximity. Weighted fusion ignores a supplied "
-            "value with a warning."
+            "value with a warning. With rrf_graph_seed_count on, it is the "
+            "weight of that rule's list instead."
+        ),
+    )
+    rrf_graph_seed_count: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "[HYPOTHESIS] fusion='rrf' only; off in this class, and on in "
+            "PRMEConfig since 2026-10-19 in the alpha channel, on the fast "
+            "tiers (prism-monorepo issue 276), where it also sets "
+            "rrf_graph_weight. Ranks the graph list by how many of the entities the "
+            "question names reach a record, instead of by hop count. A seed "
+            "reaches a record within graph_max_hops along links that never "
+            "pass through the memory owner's own entity (an entity a user "
+            "turn named as the owner, or the owner reference), because "
+            "nearly every claim of the owner is one hop from it. A record "
+            "joins the list only when two or more seeds reach it, one of "
+            "them links to it directly, and the semantic channel ranks it in "
+            "its top RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP (10), so the list "
+            "reorders records that already match the question. The list "
+            "ranks more seeds first, then the smaller total hop count. Entity "
+            "records never join it. A record that session, episode or "
+            "evidence augmentation context pulls in inherits its trigger's "
+            "score without the graph term, which only the trigger's own links "
+            "earned; evidence projection, which replaces a claim with its "
+            "source, keeps it. The list's weight is rrf_graph_weight, set to "
+            "RRF_GRAPH_SEED_COUNT_WEIGHT when unset. Turning the switch off in "
+            "a dump of settings it filled (PRMEConfig().scoring.model_dump()) "
+            "leaves that weight behind, which turns on the hop count list, so "
+            "drop rrf_graph_weight too; PRME_SCORING__RRF_GRAPH_SEED_COUNT=false "
+            "never leaves it. Weighted fusion ignores a supplied value with a "
+            "warning."
         ),
     )
     # Omitted when unset, so configurations, receipts and version ids that do
@@ -336,7 +396,9 @@ class ScoringWeights(BaseModel):
             return value
         rank_fused = value.get("fusion", "weighted") == "rrf"
         ignored = WEIGHTED_ONLY_SETTINGS if rank_fused else RANK_FUSION_ONLY_SETTINGS
-        stray = [name for name in ignored if value.get(name) is not None]
+        # A switch that is off, in code (False) or in the environment ("false"), is not a stray setting.
+        stray = [name for name in ignored if value.get(name) is not None
+                 and not (name in RANK_FUSION_SWITCHES and not _switched_on(value.get(name)))]
         if stray:
             one = len(stray) == 1
             warnings.warn(
@@ -347,6 +409,9 @@ class ScoringWeights(BaseModel):
                 stacklevel=2,
             )
             value = {key: item for key, item in value.items() if key not in stray}
+        if rank_fused and value.get("rrf_graph_weight") is None and _switched_on(value.get("rrf_graph_seed_count")):
+            # The seed count list's default weight, recorded with the settings.
+            value = {**value, "rrf_graph_weight": RRF_GRAPH_SEED_COUNT_WEIGHT}
         if rank_fused and value.get("rrf_k") is None:
             return {**value, "rrf_k": DEFAULT_RRF_K}
         return value
@@ -370,6 +435,8 @@ class ScoringWeights(BaseModel):
             )
         if self.fusion == "rrf" and self.recency_time is not None:
             raise ValueError("recency_time applies only when fusion is 'weighted'")
+        if self.rrf_graph_seed_count and self.rrf_graph_weight is None:
+            raise ValueError("rrf_graph_seed_count needs rrf_graph_weight")
         additive_sum = (
             self.w_semantic
             + self.w_lexical
@@ -393,7 +460,7 @@ class ScoringWeights(BaseModel):
         """The opt-in rank fusion terms that are set, by name; empty when none is."""
         return {
             name: value for name in RANK_FUSION_OPT_INS
-            if (value := getattr(self, name)) is not None
+            if (value := getattr(self, name)) is not None and value is not False
         }
 
     @property
@@ -424,6 +491,11 @@ class ScoringWeights(BaseModel):
                 payload += f":tie_break={self.rrf_tie_break}"
             if self.rrf_graph_weight is not None:
                 payload += f":graph={self.rrf_graph_weight}"
+            if self.rrf_graph_seed_count:
+                # The rule and its tunable constant: any change to the seed
+                # count rule must change this label, so that scores it gives
+                # never share a version with scores the old rule gave.
+                payload += f":graph_rule=seed_count:top={RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP}"
         elif self.recency_time is not None:
             # Weighted configurations without it keep their version.
             payload += f":recency_time={self.recency_time}"

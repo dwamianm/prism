@@ -11,14 +11,13 @@ from pydantic import BaseModel, Field, SecretStr
 from prme import PRMEConfig, audit_hypotheses
 from prme.cli import build_parser, cmd_config_audit
 from prme.retrieval.config import PackingConfig, ScoringWeights
-from tests.conftest import STRUCTURE_OPTIONS
+from tests import conftest
 
 
 @pytest.fixture(autouse=True)
 def product_defaults(monkeypatch):
     """The audit reports the product defaults, which include the structure options (0.16.0a3)."""
-    for name in STRUCTURE_OPTIONS:
-        monkeypatch.delenv(name)
+    conftest.product_defaults(monkeypatch)
 
 
 EXPECTED_HYPOTHESES = {
@@ -26,6 +25,7 @@ EXPECTED_HYPOTHESES = {
     "scoring.rrf_k",
     "scoring.rrf_recency_boost",
     "scoring.rrf_graph_weight",
+    "scoring.rrf_graph_seed_count",
     "packing.session_context_rank_fusion_score_decay",
     "packing.session_context_packing",
     "packing.session_context_skip_entities",
@@ -91,8 +91,9 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert set(settings) == EXPECTED_HYPOTHESES
     assert report.hypothesis_count == len(EXPECTED_HYPOTHESES)
     # Speaker references, claim sentence text and folding became defaults together, so they apply,
-    # and batched extraction became a default later (#254), then the group links (prism-monorepo #275).
-    assert report.effective_count == 27
+    # and batched extraction became a default later (#254), then the group links (prism-monorepo #275), then the
+    # seed count graph list with its weight (prism-monorepo #276).
+    assert report.effective_count == 29
     assert report.customized_count == 0
     for name in ("enable_speaker_references", "enable_claim_sentence_text", "packing.fold_repeated_text"):
         setting = settings[name]
@@ -125,9 +126,14 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     # and the group links after them (prism-monorepo #275).
     for name in ("enable_ingest_claim_fixes", "enable_mention_links", "enable_owner_name_carry",
                  "packing.graph_seed_words", "packing.folded_records_keep_rank",
-                 "packing.session_context_skip_entities", "enable_owner_group_links"):
+                 "packing.session_context_skip_entities", "enable_owner_group_links",
+                 "scoring.rrf_graph_seed_count"):
         setting = settings[name]
         assert (setting.effective, setting.value, setting.default, setting.customized) == (True, True, True, False), name
+    # The seed count list brings its weight, so the graph weight applies by default too.
+    graph_weight = settings["scoring.rrf_graph_weight"]
+    assert (graph_weight.effective, graph_weight.value, graph_weight.default, graph_weight.customized) == (
+        True, .5, .5, False)
     assert settings["novelty_high_threshold"].effective is False
     assert settings["query_reformulation_count"].effective is False
     # Visual memory is off by default, so its provisional thresholds are dormant.
@@ -182,8 +188,8 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values(monkeypatch):
 
     # A PackingConfig built in code has no rank fusion session decay, does not fold, and keeps the three structure
     # options off (graph seed words, folded records keep rank, session context skips entities), which the audit
-    # reports as customized.
-    assert report.effective_count == 34
+    # reports as customized. The default scoring's seed count list and its weight apply (prism-monorepo #276).
+    assert report.effective_count == 36
     assert report.customized_count == 9
     assert settings["packing.session_context_skip_entities"].customized is True
     assert settings["packing.graph_seed_words"].customized is True

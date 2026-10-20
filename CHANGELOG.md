@@ -11,6 +11,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `MemoryEngine.get_events()` and both event stores accept `until`, an
   ingestion time: only events recorded at or before it are returned.
+- Add `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), on
+  by default in the alpha channel (prism-monorepo issue 276): rank fusion's graph
+  list now tells records apart, so a "We" claim linked to the people a question
+  names can rise. A record joins the list only when two or more of the
+  question's seeds reach it within `graph_max_hops`, one of them by a direct
+  link, along links that never pass through the owner's entity, and when the
+  semantic search ranks it in its top 10; the list ranks more seeds first, then
+  fewer total hops, and its weight is `rrf_graph_weight`, 0.5 when unset. A
+  record that session, episode or evidence augmentation context pulls in
+  inherits its trigger's score without that graph term; evidence projection,
+  which replaces a claim with its source, keeps it. With the group links of
+  prism-monorepo issue 275 it puts "We chose Tokyo, Kyoto, Kanazawa, and Osaka."
+  4th for "which cities will alex visit in japan?" on the `defects-v1` chat probe
+  (6th without it). On the fast tiers the defect probes keep 7 of 7 answers in
+  the top 3 and the chat probe 14 of 18 (15 of 18 in the top 5), the fast cycle
+  passes with three answers one place lower (travel 2 to 3, coffee 4 to 5,
+  job-now 7 to 8), and the offline evidence gate and the mid tier show no change
+  (LoCoMo evidence in the top 25 70.3% on both sides). Two earlier versions of
+  the rule failed: without the semantic gate the defect probes lost an answer
+  from the top 3 and the mid tier lost 5.2 points of LoCoMo evidence in the top
+  25.
+  - Limits: only a record the graph search keeps among its candidates
+    (`graph_max_candidates`, 150, newest first at equal confidence) can join the
+    list, so on a large memory an old answer may not; and retrieval does not
+    read I, my or we as the owner, so a first-person question ("which cities will
+    we visit in Japan?") has one seed at most and the list does nothing for it.
+  - Cost: a question that names two or more entities reads the links around
+    them once more, so the cost grows with their neighborhood. On a 400-turn
+    LoCoMo conversation it adds about 60 ms per retrieval (median); on synthetic
+    DuckDB packs about 0.1 s at 2,000 turns and 0.5 s at 10,000 when the question
+    names two entities other than the owner. The walk leaves out the links of an
+    owner entity the question does not name, and it is skipped when more than
+    5,000 nodes would be read (the response metadata reports
+    `graph_seed_reach: neighborhood_limit`); before those two changes it added
+    about 0.6 s at 2,000 turns and 3 s at 10,000 for a question naming the
+    owner, which is now skipped there. A failed read is reported as
+    `graph_seed_reach: backend_error` and keeps every graph candidate.
+  - Upgrading: if you set `PRME_SCORING__RRF_GRAPH_WEIGHT` for the hop count
+    list of 0.16.0a4, set `PRME_SCORING__RRF_GRAPH_SEED_COUNT=false` too to keep
+    it; otherwise that weight now drives the seed count list.
+  `false` restores the scoring of 0.16.0a5, with its scores, ranks and receipts.
+  The default rests on the fast tiers by the owner's directive of 2026-10-19; the
+  full benchmark audit is pending. `BENCHMARKS.md` ("Graph seed count") has the
+  measurements of all three versions.
 
 ### Changed
 

@@ -38,7 +38,7 @@ from prme.retrieval.models import MemoryBundle, RankFusion, RetrievalCandidate, 
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, NodeType, Scope
-from tests import test_durable_ingestion
+from tests import conftest, test_durable_ingestion
 from tests.test_mention_links import claim, person, place
 from tests.test_owner_carry_batch import RECORDED, T0, hosted, replay_dev_run
 from tests.test_owner_name_carry import on
@@ -275,17 +275,20 @@ class TestGraphList:
         with pytest.warns(UserWarning, match="rrf_graph_weight applies only"):
             assert ScoringWeights(rrf_graph_weight=WEIGHT) == ScoringWeights()
 
-    def test_the_product_defaults_leave_only_the_graph_weight_off(self, monkeypatch):
+    def test_the_product_defaults_rank_the_graph_list_by_seed_count_not_by_hop_count(self, monkeypatch):
         from prme import PRMEConfig
+        from prme.retrieval.config import RRF_GRAPH_SEED_COUNT_WEIGHT
 
-        # tests/conftest.py turns the group links and the entity skip off for every other test.
-        monkeypatch.delenv("PRME_ENABLE_OWNER_GROUP_LINKS")
-        monkeypatch.delenv("PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES")
+        # tests/conftest.py turns the group links, the entity skip and the seed count list off for every other test.
+        conftest.product_defaults(monkeypatch)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             config = PRMEConfig(_env_file=None)
-        assert config.scoring.rrf_graph_weight is None
-        # On in the alpha channel: the entity skip since 0.16.0a4, the group links since prism-monorepo issue 275.
+        # The graph weight is the seed count list's; the hop count list is never the default.
+        assert config.scoring.rrf_graph_seed_count is True
+        assert config.scoring.rrf_graph_weight == RRF_GRAPH_SEED_COUNT_WEIGHT
+        # On in the alpha channel: the entity skip since 0.16.0a4, the group links since prism-monorepo issue 275,
+        # the seed count list since prism-monorepo issue 276.
         assert config.enable_owner_group_links is True
         assert config.packing.session_context_skip_entities is True
 
