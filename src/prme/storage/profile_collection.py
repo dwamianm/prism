@@ -265,8 +265,12 @@ async def collect(
             if confirmed:
                 result["collected"] += 1
                 continue
-            reason = ("privacy_work_failed" if diagnostics_protected()
-                      or (plan is not None and plan.privacy_manifest is not None) else extraction_failure_code(exc))
+            reason = (
+                "privacy_work_failed"
+                if diagnostics_protected()
+                or (plan is not None and plan.privacy_manifest is not None)
+                else extraction_failure_code(exc)
+            )
             await execute(
                 store,
                 "UPDATE profile_work SET last_attempt_at=current_timestamp,attempts=attempts+1,last_error=? "

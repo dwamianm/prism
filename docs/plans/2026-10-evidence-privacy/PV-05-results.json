@@ -1,5 +1,5 @@
 {
-  "stage": "implementation-component-checkpoint",
+  "stage": "owned-foundation-frozen-for-review",
   "issue": "#324",
   "acceptanceComplete": false,
   "ownedCases": [
@@ -256,6 +256,78 @@
       "exit": 1,
       "result": "Two F401 findings on imported autouse fixtures in the two new test modules; corrected with explicit fixture noqa, not removal",
       "test_scope": "all changed and new Python files"
+    },
+    {
+      "log": "final-components.log",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py tests/test_privacy_retry_commitments.py tests/test_privacy_receipts.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py -q --tb=short",
+      "exit": 0,
+      "seconds": 74.92,
+      "result": "49 passed; all six new privacy modules, real directory/single-file/PostgreSQL component behavior",
+      "tested_head": "3016d80dc25447a506c2c24e6db6f435ffa17d6c"
+    },
+    {
+      "log": "final-compatibility.log",
+      "command": "uv run --no-sync python -m pytest tests/test_profile_collection.py tests/test_profile_retirement.py tests/test_knowledge_profile_scopes.py tests/test_encryption.py tests/test_single_file_pack_encryption.py -q --tb=short",
+      "exit": 0,
+      "seconds": 52.32,
+      "result": "154 passed, 11 skipped; affected legacy profile cleanup/scope/encrypted close behavior; skips are not backend passes",
+      "tested_head": "3016d80dc25447a506c2c24e6db6f435ffa17d6c"
+    },
+    {
+      "log": "final-scoped-ruff.log",
+      "command": "uv run --no-sync ruff check src/prme/api/routes.py src/prme/client.py src/prme/ingestion/entity_merge.py src/prme/ingestion/pipeline.py src/prme/models/consolidation.py src/prme/models/privacy_receipts.py src/prme/models/profile.py src/prme/organizer/alias_resolution.py src/prme/organizer/consolidation.py src/prme/organizer/deduplication.py src/prme/organizer/jobs.py src/prme/organizer/maintenance.py src/prme/organizer/summarization.py src/prme/privacy/admission.py src/prme/privacy/diagnostics.py src/prme/privacy/journals.py src/prme/privacy/reads.py src/prme/privacy/records.py src/prme/privacy/retry_commitments.py src/prme/retrieval/pipeline.py src/prme/retrieval/reformulation.py src/prme/storage/alias_proposal.py src/prme/storage/alias_review.py src/prme/storage/citations.py src/prme/storage/condition_evaluation.py src/prme/storage/consolidation_publication.py src/prme/storage/consolidation_retirement.py src/prme/storage/duckpgq_graph.py src/prme/storage/durable_queue.py src/prme/storage/engine.py src/prme/storage/extraction_work.py src/prme/storage/lexical_index.py src/prme/storage/lifecycle.py src/prme/storage/organizer_merge.py src/prme/storage/oscillation_penalty.py src/prme/storage/pg/graph_store.py src/prme/storage/privacy.py src/prme/storage/privacy_journals.py src/prme/storage/profile_collection.py src/prme/storage/profile_publication.py src/prme/storage/profile_registry.py src/prme/storage/profile_retirement.py src/prme/storage/profile_work.py src/prme/storage/reinforcement.py src/prme/storage/relevance.py src/prme/storage/retention.py src/prme/storage/supersedence.py src/prme/storage/vector_index.py src/prme/storage/write_queue.py tests/privacy_journal_support.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_privacy_retry_commitments.py tests/test_privacy_source_reads.py",
+      "exit": 1,
+      "seconds": 0.06,
+      "result": "F401 [*] `tests.privacy_journal_support.isolated_privacy_postgres` imported but unused\n  --> tests/test_privacy_processing_work.py:16:5\n   |\n14 |     operation_bytes,\n15 |     processing_keys,\n16 |     isolated_privacy_postgres,\n   |     ^^^^^^^^^^^^^^^^^^^^^^^^^\n17 |     local_analyzer_fixture,  # noqa: F401\n18 | )\n   |\nhelp: Remove unused import: `tests.privacy_journal_support.isolated_privacy_postgres`\n\nF401 [*] `tests.privacy_journal_support.isolated_privacy_postgres` imported but unused\n  --> tests/test_privacy_receipts.py:21:5\n   |\n19 |     journal_engine,\n20 |     operation_bytes,\n21 |     isolated_privacy_postgres,\n   |     ^^^^^^^^^^^^^^^^^^^^^^^^^\n22 |     local_analyzer_fixture,  # noqa: F401\n23 | )\n   |\nhelp: Remove unused import: `tests.privacy_journal_support.isolated_privacy_postgres`\n\nFound 2 errors.\n[*] 2 fixable with the `--fix` option."
+    },
+    {
+      "log": "final-new-format.log",
+      "command": "uv run --no-sync ruff format --check src/prme/models/privacy_receipts.py src/prme/privacy/diagnostics.py src/prme/privacy/journals.py src/prme/privacy/retry_commitments.py src/prme/storage/privacy_journals.py tests/privacy_journal_support.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_privacy_retry_commitments.py",
+      "exit": 0,
+      "seconds": 0.02,
+      "result": "12 files already formatted"
+    },
+    {
+      "log": "final-types.log",
+      "command": "uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py",
+      "exit": 1,
+      "seconds": 18.32,
+      "result": "tests/typing/public_api.py:93: error: Expression is of type \"RetrievalReceipt | ProtectedReceiptView | ProtectedRetrievalReceipt | None\", not \"RetrievalReceipt | ProtectedReceiptView | None\"  [assert-type]\ntests/typing/public_api.py:195: error: Expression is of type \"AnswerCitationRecord | ProtectedCitationRecord\", not \"AnswerCitationRecord\"  [assert-type]\ntests/typing/public_api.py:196: error: Expression is of type \"AnswerCitationRecord | ProtectedCitationRecord | None\", not \"AnswerCitationRecord | None\"  [assert-type]\ntests/typing/public_api.py:197: error: Expression is of type \"list[AnswerCitationRecord | ProtectedCitationRecord]\", not \"list[AnswerCitationRecord]\"  [assert-type]\nFound 4 errors in 1 file (checked 1 source file)"
+    },
+    {
+      "log": "final-contract.log",
+      "command": "uv run --no-sync python docs/plans/2026-10-evidence-privacy/validate-contract.py",
+      "exit": 0,
+      "seconds": 0.06,
+      "result": "PASS: 45 copy classes, 182 exact source anchors, 17 architecture surfaces\nPASS: 10 categories, 14 versioned recognizers, en-only closed action matrix\nPASS: original 40 (8 x 5) plus 12 named sanitation cases; 104 planned backend-case executions\nPASS: E1-E9 and every copy mapped; 9 published issues and 26 unchanged dependency edges; 18 local links\nNOT RUN: privacy behavior, detector metrics, 104 backend executions, 24-query parity and 24 sealed cases. These belong to implementation/PV-11."
+    },
+    {
+      "log": "final-scoped-ruff-repair.log",
+      "command": "uv run --no-sync ruff check src/prme/api/routes.py src/prme/client.py src/prme/ingestion/entity_merge.py src/prme/ingestion/pipeline.py src/prme/models/consolidation.py src/prme/models/privacy_receipts.py src/prme/models/profile.py src/prme/organizer/alias_resolution.py src/prme/organizer/consolidation.py src/prme/organizer/deduplication.py src/prme/organizer/jobs.py src/prme/organizer/maintenance.py src/prme/organizer/summarization.py src/prme/privacy/admission.py src/prme/privacy/diagnostics.py src/prme/privacy/journals.py src/prme/privacy/reads.py src/prme/privacy/records.py src/prme/privacy/retry_commitments.py src/prme/retrieval/pipeline.py src/prme/retrieval/reformulation.py src/prme/storage/alias_proposal.py src/prme/storage/alias_review.py src/prme/storage/citations.py src/prme/storage/condition_evaluation.py src/prme/storage/consolidation_publication.py src/prme/storage/consolidation_retirement.py src/prme/storage/duckpgq_graph.py src/prme/storage/durable_queue.py src/prme/storage/engine.py src/prme/storage/extraction_work.py src/prme/storage/lexical_index.py src/prme/storage/lifecycle.py src/prme/storage/organizer_merge.py src/prme/storage/oscillation_penalty.py src/prme/storage/pg/graph_store.py src/prme/storage/privacy.py src/prme/storage/privacy_journals.py src/prme/storage/profile_collection.py src/prme/storage/profile_publication.py src/prme/storage/profile_registry.py src/prme/storage/profile_retirement.py src/prme/storage/profile_work.py src/prme/storage/reinforcement.py src/prme/storage/relevance.py src/prme/storage/retention.py src/prme/storage/supersedence.py src/prme/storage/vector_index.py src/prme/storage/write_queue.py tests/privacy_journal_support.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_privacy_retry_commitments.py tests/test_privacy_source_reads.py tests/typing/public_api.py",
+      "exit": 0,
+      "seconds": 0.03,
+      "result": "All checks passed!"
+    },
+    {
+      "log": "final-format-repair.log",
+      "command": "uv run --no-sync ruff format --check src/prme/models/privacy_receipts.py src/prme/models/profile.py src/prme/privacy/diagnostics.py src/prme/privacy/journals.py src/prme/privacy/retry_commitments.py src/prme/storage/privacy_journals.py src/prme/storage/profile_collection.py src/prme/storage/reinforcement.py tests/privacy_journal_support.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_privacy_retry_commitments.py",
+      "exit": 0,
+      "seconds": 0.02,
+      "result": "15 files already formatted"
+    },
+    {
+      "log": "final-types-repair.log",
+      "command": "uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py",
+      "exit": 0,
+      "seconds": 2.49,
+      "result": "Success: no issues found in 1 source file"
+    },
+    {
+      "log": "final-contract-after-format.log",
+      "command": "uv run --no-sync python docs/plans/2026-10-evidence-privacy/validate-contract.py",
+      "exit": 0,
+      "seconds": 0.04,
+      "result": "PASS: 45 copy classes, 182 exact source anchors, 17 architecture surfaces\nPASS: 10 categories, 14 versioned recognizers, en-only closed action matrix\nPASS: original 40 (8 x 5) plus 12 named sanitation cases; 104 planned backend-case executions\nPASS: E1-E9 and every copy mapped; 9 published issues and 26 unchanged dependency edges; 18 local links\nNOT RUN: privacy behavior, detector metrics, 104 backend executions, 24-query parity and 24 sealed cases. These belong to implementation/PV-11."
     }
   ],
   "repairCycles": {
@@ -316,8 +388,18 @@
       "successful": 1
     },
     "autouse_fixture_lint_annotation": {
+      "unsuccessful": 1,
+      "successful": 1,
+      "note": "Conservative shared-behavior count: first two-module correction passed checkpoint scope, but final all-owned-file check exposed the same omitted annotation in two earlier modules. Second correction passed the complete scoped Ruff command; no third attempt."
+    },
+    "protected_receipt_citation_consumer_types": {
       "unsuccessful": 0,
       "successful": 1
+    },
+    "current_only_format_regressions": {
+      "unsuccessful": 0,
+      "successful": 1,
+      "note": "Only three files that formatted at dependency base were corrected; AST equality verified. Existing baseline formatting was preserved."
     }
   },
   "evidenceBoundary": {
@@ -336,20 +418,18 @@
     ]
   },
   "pending": [
-    "normal merge c42af439 final 323 test/docs dependency delta",
-    "affected component/static/compatibility checks and freeze",
-    "325 authoritative erasure/current-policy integration",
-    "326 export/restoration",
-    "327 combined gate",
-    "root independent reviews/final full suite/wheel/CI/delivery"
+    "root independent affected-source reviews and required final full suite/wheel/CI/delivery",
+    "reconcile any concrete corrected PV-04 dependency checkpoint from root before final delivery",
+    "325 authoritative erasure/current-policy integration and original full erase/replay gates",
+    "326 protected export/restoration and complete original adapter/artifact gates",
+    "327 combined end-to-end gate; all nine full scenarios and six original acceptance criteria remain pending"
   ],
   "remaining": [
-    "normal merge c42af439 final 323 test/docs dependency delta",
-    "affected component/static/compatibility checks and freeze",
-    "325 authoritative erasure/current-policy integration",
-    "326 export/restoration",
-    "327 combined gate",
-    "root independent reviews/final full suite/wheel/CI/delivery"
+    "root independent affected-source reviews and required final full suite/wheel/CI/delivery",
+    "reconcile any concrete corrected PV-04 dependency checkpoint from root before final delivery",
+    "325 authoritative erasure/current-policy integration and original full erase/replay gates",
+    "326 protected export/restoration and complete original adapter/artifact gates",
+    "327 combined end-to-end gate; all nine full scenarios and six original acceptance criteria remain pending"
   ],
   "sourceObservations": [
     {
@@ -372,7 +452,8 @@
   "dependencyCommits": [
     "01cd5a4d36584df2faded941c128682f452f094d",
     "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
-    "c4531a0e7ad8c3a558eadbe3ed18278ea1f346c9"
+    "c4531a0e7ad8c3a558eadbe3ed18278ea1f346c9",
+    "c42af43926ca95a42f8b05facc8606b2df61023c"
   ],
   "componentCoverage": {
     "AP06": "Actual encrypted claimed input, continuation, retry, completion/cancel cleanup and strict no-durable behavior; fixture current-policy authority only.",
@@ -390,5 +471,20 @@
     "PV-03 native adapter and PV-13 pinned detector evidence is inherited unchanged, not re-run or replaced.",
     "Logical dump is a test-owned scan, not a protected export API. PostgreSQL server WAL/temp/base files and unmanaged backups are not visible.",
     "No physical wipe, heap zeroization, anonymity, same-process isolation or already-delivered copy revocation claim."
-  ]
+  ],
+  "composition": {
+    "owned_checkpoint": "a4fecf810b7a009b4428b49d51b61c9577d43ed0",
+    "merge": "3016d80dc25447a506c2c24e6db6f435ffa17d6c",
+    "tree": "5ad806290ba338b6b6dcb0526bfc6fcd29da9eff",
+    "conflicts": false,
+    "post_check_delta": "fixture noqa, exact public consumer type expectations, docs/evidence and three AST-identical production formatting changes only"
+  },
+  "formatting": {
+    "existing_files": 46,
+    "dependency_format_failures": 40,
+    "remaining_inherited_format_failures": 37,
+    "new_format_regressions": []
+  },
+  "currentFailedRuntimeChecks": [],
+  "evidenceEquivalence": "The 49 component checks ran at c42 composition 3016d80d. Later production changes are formatting only with AST equality; fixture noqa and static consumer type assertions do not alter runtime behavior. The affected 154-pass compatibility run used that equivalent production source. Root runs final full validation on the frozen commit."
 }

@@ -1,6 +1,6 @@
 # PV-05 / #324 implementation plan
 
-Status: implementing the approved bounded plan. Original acceptance is not complete.
+Status: owned foundation frozen for review. Original acceptance is not complete.
 Base: `b0e642834f59cd5ce9b69d1c76634df97efa09f0`, branch `issue-324-protected-journals`.
 Root released the committed dependency stack on 2026-10-20. Final #321/#323
 commits must be reconciled before final review. #325 current-ledger authority,
@@ -243,14 +243,29 @@ sanitizer stack or new serializer was introduced.
 Preserved evidence separates production repairs (profile queue authority,
 PostgreSQL profile replay/discard guard placement, damaged-work handling,
 scope=None routing and oscillation contributor resolution) from new test setup
-corrections. Each resolved behavior passed its first correction; no behavior
-has two unsuccessful repair cycles. The repeated PostgreSQL indentation issue
+corrections. Runtime behaviors passed their first corrections. The fixture lint
+annotation counts one unsuccessful narrow repair conservatively: final all-owned
+lint found the same omission in two earlier modules; the second correction passed.
+No behavior has two unsuccessful repair cycles. The repeated PostgreSQL indentation issue
 triggered a bounded review of the already changed publication/work/discard/
 collection guard and return branches, reusing the existing three-layout cases.
 
-Before root review: commit this owned checkpoint, normally merge the final
-PV-04 test/docs delta c42af439, run affected component/static/compatibility checks
-and freeze. Root owns independent affected-source reviews and the required final
+The owned checkpoint a4fecf81 normally merged the final PV-04 test/docs delta
+c42af439 into 3016d80d with no conflicts. All 49 new privacy component checks
+pass. Affected profile cleanup/scope/encrypted-close compatibility has 154 passes
+and 11 explicit skips; skips are not backend passes. Scoped Ruff, the exact public
+consumer type contract, all 12 new Python files plus three corrected existing
+files' format checks, and the structural contract validator pass. The public
+consumer assertions now name the actual protected receipt/citation return types;
+this test-path adjustment implements AC4's existing public contract. Formatting
+remains noncompliant on 37 inherited files, each also failing at the dependency
+base; no current-only formatting regression remains. The three formatting-only
+source corrections were verified AST-identical, preserving runtime test evidence.
+All earlier failed commands, including the first static command, remain recorded.
+
+Root owns independent affected-source reviews and the required final
 full suite, wheel, CI and delivery. PV-06 authoritative erase/current-policy,
 PV-07 export/restore and PV-14 combined release evidence remain required; the
 delivery must reference #324 without closing it until those original gates pass.
+Any later concrete PV-04 repair is reconciled through root before final delivery;
+the current review snapshot uses the explicit c42 dependency.

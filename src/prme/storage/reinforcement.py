@@ -10,7 +10,12 @@ from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import BaseModel, ConfigDict
 
-from prme.privacy.journals import protected_mutation, snapshot_payload, validate_snapshot, journal_deadline
+from prme.privacy.journals import (
+    protected_mutation,
+    snapshot_payload,
+    validate_snapshot,
+    journal_deadline,
+)
 from prme.models.nodes import MemoryNode
 from prme.storage._threading import run_to_completion
 from prme.storage import _snapshot_json

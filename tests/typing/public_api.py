@@ -8,6 +8,7 @@ from prme import AliasProposalInboxItem, AliasProposalReviewResult, AnswerCitati
 from prme import (NodeType, SourceType, ProtectedEventView, ProtectedExtractionView,
                   ProtectedReceiptView, SourceAvailability, SourceUnavailable, SanitizedEvidenceView, EvidenceAccess)
 from prme.models import Event, MemoryNode, ProcessingResult
+from prme.models.privacy_receipts import ProtectedCitationRecord, ProtectedRetrievalReceipt
 from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
 from prme import PrivacyPolicy, PrivacyRuntime, PRMEConfig
@@ -90,7 +91,7 @@ def consume(client: MemoryClient) -> None:
                                captured_at=datetime(2026, 10, 14, 10, tzinfo=timezone.utc)), list[str])
     assert_type(client.observe(b"\xff\xd8\xff", user_id="alice", source_name="frame.jpg"), list[str])
     assert_type(client.get_blob("frames/abc.jpg"), bytes | None)
-    assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | ProtectedReceiptView | None)
+    assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | ProtectedReceiptView | ProtectedRetrievalReceipt | None)
     assert_type(client.get_relevance("feedback-id", user_id="alice"), RelevanceRecord | None)
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])
     assert_type(client.retrieve("preferences", user_id="alice",
@@ -192,9 +193,9 @@ def submit_relevance(client: MemoryClient, submission: RelevanceSubmission) -> N
 
 
 def submit_citations(client: MemoryClient, submission: AnswerCitationSubmission) -> None:
-    assert_type(client.record_answer_citations(submission, user_id="alice"), AnswerCitationRecord)
-    assert_type(client.get_answer_citations(str(submission.citation_id), user_id="alice"), AnswerCitationRecord | None)
-    assert_type(client.list_answer_citations(user_id="alice"), list[AnswerCitationRecord])
+    assert_type(client.record_answer_citations(submission, user_id="alice"), AnswerCitationRecord | ProtectedCitationRecord)
+    assert_type(client.get_answer_citations(str(submission.citation_id), user_id="alice"), AnswerCitationRecord | ProtectedCitationRecord | None)
+    assert_type(client.list_answer_citations(user_id="alice"), list[AnswerCitationRecord | ProtectedCitationRecord])
 
 
 def assess_citation(record: AnswerCitationRecord, response: RetrievalResponse) -> None:

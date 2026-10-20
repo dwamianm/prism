@@ -77,7 +77,9 @@ class ProfilePublication(BaseModel):
     previous: tuple[MemoryNode, ...]
     embedding: PreparedEmbedding
     generation: int = Field(ge=0)
-    privacy_manifest: JournalManifest | None = Field(default=None, exclude_if=lambda value: value is None)
+    privacy_manifest: JournalManifest | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @property
     def entity_name(self) -> str:
@@ -88,7 +90,12 @@ class ProfilePublication(BaseModel):
     def key(self) -> str:
         if self.privacy_manifest is not None:
             from prme.privacy.journals import GeneratedNodeReference, JOURNAL_KEY
-            return str(GeneratedNodeReference.model_validate(self.node.metadata[JOURNAL_KEY]).lineage_id)
+
+            return str(
+                GeneratedNodeReference.model_validate(
+                    self.node.metadata[JOURNAL_KEY]
+                ).lineage_id
+            )
         return profile_key(self.node.user_id, self.node.scope, self.entity_name)
 
     @property
@@ -169,5 +176,6 @@ class ProfilePublication(BaseModel):
         if (self.embedding.node_id, self.embedding.content) != (node.id, node.content):
             raise ValueError("Prepared embedding must describe this exact profile")
         from prme.privacy.journals import validate_generated_publication
+
         validate_generated_publication(self, kind="profile")
         return self
