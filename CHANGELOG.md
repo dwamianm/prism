@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a5] - 2026-10-19
+
+This is an alpha. It passed CI and the fast tiers, and it has not been through
+the full benchmark. The stable release stays at 0.15.0 until the full benchmark
+audit, so `pip install prme` still installs 0.15.0. Install the alpha with
+`pip install --pre prme` or `pip install prme==0.16.0a5`.
+
 ### Added
 
 - Add `python -m benchmarks.diagnostics.product_packing gate-conversations`
@@ -43,6 +50,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stores the 75-memory fixture plainly, re-derives it and compares the 17 answer
   ranks before and after, and RFC-0016 describes the records it adds
   (`REINGEST_EXTRACTED` and `REINGEST_COMMITTED`).
+
+### Documentation
+
+- Specify the evidence privacy contract (RFC-0019, "Sanitized memory, protected
+  evidence and erasure"; engine issue 319, part of the epic in issue 318). It is
+  a frozen v1 specification and changes no code and no default. It defines the
+  data classes and what each protection claim does and does not promise, and it
+  ships three machine-readable artifacts: an inventory of every place the engine
+  keeps a copy of memory content, a registry of sanitizer presets, and a
+  manifest of 40 privacy scenarios and 12 more. RFC-0002 and RFC-0014 gain
+  amendments for erasure and for portability of protected stores. No store
+  sanitizes, seals or erases content yet: the implementation is tracked in issues
+  320 to 327, and a store must not call itself protected until it and its
+  migration gates pass.
+
+### Tooling and tests
+
+These do not ship in the wheel and change no behavior.
+
+- The scheduled full benchmark report shows LoCoMo's conversation-level intervals
+  beside the question-level ones (see Added), with new tests in
+  `tests/test_weekly_benchmark.py` and `tests/test_product_packing_diagnostic.py`.
+- New `tests/test_reingest.py`, a `reingest` stage test in `tests/test_fast_cycle.py`
+  and the public API typing check for the new call.
+
+### Upgrade notes
+
+- No default changed since 0.16.0a4. `enable_reingest` is new and off, so an
+  engine refuses `reingest()` until it is set (`PRME_ENABLE_REINGEST=true`). A
+  hosted service that wants to re-derive its owners' memories sets it. The call
+  makes one batched extraction request per batch of up to
+  `extraction_batch_target_tokens` (2,048 by default) tokens of source, so run it
+  with `dry_run=True` first to see the count.
+- The defaults of 0.16.0a4 are unchanged: `lexical_term_weights` (PostgreSQL
+  only), `enable_ingest_claim_fixes`, `packing.folded_records_keep_rank`,
+  `enable_mention_links`, `packing.graph_seed_words`, `enable_owner_name_carry`
+  and `packing.session_context_skip_entities` are on, each with the environment
+  variable that turns it off (see the notes of 0.16.0a3 and 0.16.0a4).
+  `enable_store_extraction`, `enable_extraction_corrections`,
+  `enable_superseded_source_suppression`, `enable_owner_group_links` and
+  `scoring.rrf_graph_weight` stay off.
+- Known weaknesses are as in 0.16.0a4.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a4] - 2026-10-19
 
@@ -2643,7 +2696,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a4...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a5...HEAD
+[0.16.0a5]: https://github.com/dwamianm/prism/compare/v0.16.0a4...v0.16.0a5
 [0.16.0a4]: https://github.com/dwamianm/prism/compare/v0.16.0a3...v0.16.0a4
 [0.16.0a3]: https://github.com/dwamianm/prism/compare/v0.16.0a2...v0.16.0a3
 [0.16.0a2]: https://github.com/dwamianm/prism/compare/v0.16.0a1...v0.16.0a2
