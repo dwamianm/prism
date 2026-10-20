@@ -11,14 +11,13 @@ from pydantic import BaseModel, Field, SecretStr
 from prme import PRMEConfig, audit_hypotheses
 from prme.cli import build_parser, cmd_config_audit
 from prme.retrieval.config import PackingConfig, ScoringWeights
-from tests.conftest import STRUCTURE_OPTIONS
+from tests import conftest
 
 
 @pytest.fixture(autouse=True)
 def product_defaults(monkeypatch):
     """The audit reports the product defaults, which include the structure options (0.16.0a3)."""
-    for name in STRUCTURE_OPTIONS:
-        monkeypatch.delenv(name)
+    conftest.product_defaults(monkeypatch)
 
 
 EXPECTED_HYPOTHESES = {

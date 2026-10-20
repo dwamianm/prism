@@ -38,7 +38,7 @@ from prme.retrieval.models import MemoryBundle, RankFusion, RetrievalCandidate, 
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, NodeType, Scope
-from tests import test_durable_ingestion
+from tests import conftest, test_durable_ingestion
 from tests.test_mention_links import claim, person, place
 from tests.test_owner_carry_batch import RECORDED, T0, hosted, replay_dev_run
 from tests.test_owner_name_carry import on
@@ -280,9 +280,7 @@ class TestGraphList:
         from prme.retrieval.config import RRF_GRAPH_SEED_COUNT_WEIGHT
 
         # tests/conftest.py turns the group links, the entity skip and the seed count list off for every other test.
-        monkeypatch.delenv("PRME_ENABLE_OWNER_GROUP_LINKS")
-        monkeypatch.delenv("PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES")
-        monkeypatch.delenv("PRME_SCORING__RRF_GRAPH_SEED_COUNT")
+        conftest.product_defaults(monkeypatch)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             config = PRMEConfig(_env_file=None)

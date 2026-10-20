@@ -50,8 +50,21 @@ STRUCTURE_OPTIONS = (
     "PRME_PACKING__GRAPH_SEED_WORDS",
     "PRME_PACKING__FOLDED_RECORDS_KEEP_RANK",
     "PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES",
-    "PRME_SCORING__RRF_GRAPH_SEED_COUNT",
 )
+# Scoring defaults the alpha channel turned on. They are kept off by taking them out of the product's default
+# settings, not by an environment variable: a PRME_SCORING__ variable would make PRMEConfig fill rank fusion's
+# defaults into weighted scoring that a test passes in code as a dict, which leaves out the weighted fusion.
+ALPHA_SCORING = {"rrf_graph_seed_count": True}
+
+
+def product_defaults(monkeypatch):
+    """Undo ``structure_options_off`` for a test that checks the defaults."""
+    from prme.retrieval.config import DEFAULT_SCORING_SETTINGS
+
+    for name in STRUCTURE_OPTIONS:
+        monkeypatch.delenv(name)
+    for name, value in ALPHA_SCORING.items():
+        monkeypatch.setitem(DEFAULT_SCORING_SETTINGS, name, value)
 
 
 @pytest.fixture(autouse=True)
@@ -67,11 +80,15 @@ def structure_options_off(monkeypatch):
     claims, edges and ranks that those options change, and the off path stays supported, so a test starts with all
     eight off, as the batching variable above starts every test at one call per turn, and turns
     on what it tests. The tests of the options themselves compare each on against off, and a test
-    that checks the defaults removes these variables first (``tests/test_default_structure_options.py``
+    that checks the defaults calls ``product_defaults`` first (``tests/test_default_structure_options.py``
     runs the issue's repro with the defaults).
     """
+    from prme.retrieval.config import DEFAULT_SCORING_SETTINGS
+
     for name in STRUCTURE_OPTIONS:
         monkeypatch.setenv(name, "false")
+    for name in ALPHA_SCORING:
+        monkeypatch.delitem(DEFAULT_SCORING_SETTINGS, name)
 
 
 @pytest.fixture

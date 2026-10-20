@@ -26,7 +26,7 @@ from prme.retrieval.models import MemoryBundle, RetrievalCandidate, ScoreProvena
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, NodeType, Scope
-from tests import test_durable_ingestion, test_graph_fusion
+from tests import conftest, test_durable_ingestion, test_graph_fusion
 from tests.test_graph_fusion import (
     EXECUTION, NOW, QUESTIONS, RRF, SessionStore, candidate, dev_settings, fused, record, scores,
 )
@@ -236,6 +236,8 @@ class TestTheSetting:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             assert ScoringWeights(rrf_graph_seed_count=False) == ScoringWeights()
+            # As the environment gives it.
+            assert ScoringWeights.model_validate({"rrf_graph_seed_count": "false"}) == ScoringWeights()
 
     def test_the_environment_turns_it_on_and_off(self, monkeypatch):
         monkeypatch.setenv("PRME_SCORING__RRF_GRAPH_SEED_COUNT", "true")
@@ -246,7 +248,8 @@ class TestTheSetting:
         assert (scoring.rrf_graph_seed_count, scoring.rrf_graph_weight) == (False, None)
 
     def test_the_product_defaults_turn_it_on_and_false_restores_the_scoring_before(self, monkeypatch):
-        monkeypatch.delenv("PRME_SCORING__RRF_GRAPH_SEED_COUNT")
+        # tests/conftest.py keeps the alpha defaults off for every other test.
+        conftest.product_defaults(monkeypatch)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             scoring = PRMEConfig(_env_file=None).scoring

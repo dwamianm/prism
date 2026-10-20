@@ -39,6 +39,8 @@ RRF_GRAPH_SEED_COUNT_WEIGHT = 0.5
 RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP = 10
 # Settings that only rank fusion reads; weighted scoring drops them.
 RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
+# Rank fusion opt-ins that are on or off; off, they are not set.
+RANK_FUSION_SWITCHES = ("rrf_graph_seed_count",)
 # Settings that only the weighted formula reads; rank fusion drops them.
 # Receipts record them from version 20 (issue #83).
 WEIGHTED_ONLY_SETTINGS = ("recency_time",)
@@ -389,8 +391,9 @@ class ScoringWeights(BaseModel):
             return value
         rank_fused = value.get("fusion", "weighted") == "rrf"
         ignored = WEIGHTED_ONLY_SETTINGS if rank_fused else RANK_FUSION_ONLY_SETTINGS
-        # A switch that is off is not a stray setting.
-        stray = [name for name in ignored if value.get(name) is not None and value.get(name) is not False]
+        # A switch that is off, in code (False) or in the environment ("false"), is not a stray setting.
+        stray = [name for name in ignored if value.get(name) is not None
+                 and not (name in RANK_FUSION_SWITCHES and not _switched_on(value.get(name)))]
         if stray:
             one = len(stray) == 1
             warnings.warn(
