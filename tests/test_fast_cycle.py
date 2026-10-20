@@ -317,7 +317,10 @@ async def test_the_request_meter_counts_live_tokens_and_the_tokens_recorded_for_
     async def extract_batch(turns, **extra):
         return {"turns": turns}
 
-    provider = SimpleNamespace(extract_batch=extract_batch)
+    async def extract(content, **extra):
+        return content
+
+    provider = SimpleNamespace(extract_batch=extract_batch, extract=extract)
     cache, usage = Cache(), Usage()
     meter = store_extract.RequestMeter(provider, cache, usage, {"replayed": {"prompt_tokens": 40, "completion_tokens": 2}})
 
@@ -335,6 +338,44 @@ async def test_the_request_meter_counts_live_tokens_and_the_tokens_recorded_for_
     # A replayed request with no record leaves the total unknown instead of understating it.
     await provider.extract_batch(["unrecorded"])
     assert meter.requests == 3 and meter.total_tokens is None
+
+
+async def test_the_request_meter_counts_a_turn_asked_on_its_own_with_its_window():
+    class Cache:
+        misses = 0
+
+        @staticmethod
+        def _key(provider, content, role, context=(), resolve=None):
+            return f"{content}|{role}|{'/'.join(context)}|{resolve}"
+
+    class Usage:
+        total = 0
+
+        def snapshot(self):
+            return 1, self.total, 0
+
+    async def extract(content, **extra):
+        return content
+
+    async def extract_batch(turns, **extra):
+        return {"turns": turns}
+
+    provider = SimpleNamespace(extract_batch=extract_batch, extract=extract)
+    cache, usage = Cache(), Usage()
+    meter = store_extract.RequestMeter(provider, cache, usage, {"They chose|user|Alex and Jordan plan a trip|None": {
+        "prompt_tokens": 40, "completion_tokens": 2}})
+
+    async def live(content, **extra):
+        cache.misses += 1
+        usage.total += 7
+        return content
+
+    meter._cached_turn = live
+    assert await provider.extract("They chose", role="user", context=["", "Alex plans"]) == "They chose"
+    assert meter.live == {"They chose|user|Alex plans|None": {"calls": 0, "prompt_tokens": 7, "completion_tokens": 0}}
+    meter._cached_turn = extract
+    await provider.extract("They chose", role="user", context=["Alex and Jordan plan a trip"])
+    assert (meter.requests, meter.total_tokens) == (2, 49)
 
 
 def test_the_extraction_measures_count_cost_entities_and_graph_candidates():

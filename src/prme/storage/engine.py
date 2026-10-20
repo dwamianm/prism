@@ -704,6 +704,7 @@ class MemoryEngine:
                 extraction_window_turns=(
                     config.extraction_window_turns if config.enable_windowed_extraction else 0
                 ),
+                extraction_window_owner_wide=config.enable_owner_window_extraction,
                 resolve_fact_text=config.enable_fact_text_resolution,
                 bind_speaker_references=config.enable_speaker_references,
                 claim_sentence_text=config.enable_claim_sentence_text,
@@ -861,6 +862,7 @@ class MemoryEngine:
                 extraction_window_turns=(
                     config.extraction_window_turns if config.enable_windowed_extraction else 0
                 ),
+                extraction_window_owner_wide=config.enable_owner_window_extraction,
                 resolve_fact_text=config.enable_fact_text_resolution,
                 bind_speaker_references=config.enable_speaker_references,
                 claim_sentence_text=config.enable_claim_sentence_text,
@@ -2164,7 +2166,9 @@ class MemoryEngine:
         A memory stored before the change keeps the entities, claims and links
         the engine derived then, or none when ``store()`` saved it plainly. This
         runs the batched extraction ``ingest()`` runs over the owner's sources
-        again, in event order, and publishes what the present engine derives:
+        again, in event order (each source on its own request while
+        ``enable_windowed_extraction`` or ``enable_fact_text_resolution`` has
+        turned batching off), and publishes what the present engine derives:
         new entities, claims and links, with the owner's earlier claims from the
         same source superseded by the claims that restate them, or archived with
         a pointer to the claims that replaced them. The source events and their
@@ -2196,9 +2200,8 @@ class MemoryEngine:
             ReingestDisabledError: When ``enable_reingest`` is off.
             ReingestBusyError: When this engine is already running a
                 re-derivation for the owner.
-            ValueError: Without an ingestion pipeline or batched extraction
-                (``extraction_batch_target_tokens`` above 0), or for a bad
-                ``limit`` or ``cursor``.
+            ValueError: Without an ingestion pipeline, or for a bad ``limit``
+                or ``cursor``.
         """
         if not self._config.enable_reingest:
             raise ReingestDisabledError(

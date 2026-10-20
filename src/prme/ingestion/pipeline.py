@@ -288,6 +288,7 @@ class IngestionPipeline:
         extraction_lease_seconds: float = 300,
         merge_repeated_claims: bool = True,
         extraction_window_turns: int = 0,
+        extraction_window_owner_wide: bool = False,
         resolve_fact_text: bool = False,
         bind_speaker_references: bool = False,
         claim_sentence_text: bool = False,
@@ -323,6 +324,8 @@ class IngestionPipeline:
         # Preceding turns of the same session shown to the extractor (#91).
         # Zero sends the new turn alone, which is the default.
         self._extraction_window_turns = max(0, extraction_window_turns)
+        # A turn with no session gets the owner's preceding memories as its window.
+        self._extraction_window_owner_wide = extraction_window_owner_wide
         # Ask for self-contained fact text and keep what passes its check (#91).
         self._resolve_fact_text = resolve_fact_text
         # Bind I, me and my in a turn with a named speaker to that speaker's entity.
@@ -883,22 +886,96 @@ class IngestionPipeline:
 
 
     async def _extraction_window(self, event: Event) -> list[Event]:
-        """The turns before this one in its session, oldest first (#91).
+        """The turns before this one, oldest first (#91).
 
-        Empty unless the window is on and the event names a session. Without a
-        session there is nothing to bound the window to, and turns from another
-        conversation would be worse than none. The event itself is already
-        stored by this point, so it is dropped from its own window.
+        Empty unless the window is on. A turn in a session gets the turns
+        before it in that session. A turn with no session gets none, because
+        turns from another conversation would be worse than none, unless
+        ``enable_owner_window_extraction`` is on: ``store()`` carries no
+        session, so then the owner's memories before it in the same scope are
+        its window. The event itself is already stored by this point, and
+        turns stored after it are never shown.
         """
-        if self._extraction_window_turns <= 0 or not event.session_id:
+        if self._extraction_window_turns <= 0:
             return []
-        recent = await self._event_store.get_by_user(
+        if not event.session_id and not self._extraction_window_owner_wide:
+            return []
+        from prme.privacy.records import PRIVACY_KEY
+
+        if PRIVACY_KEY in (event.metadata or {}):
+            # Protected work shows the provider only what its snapshot admits, never other memories.
+            return []
+        earlier = await self._event_store.get_by_user(
             event.user_id,
             session_id=event.session_id,
-            limit=self._extraction_window_turns + 1,
+            scopes=None if event.session_id else [event.scope],
+            limit=self._extraction_window_turns,
+            before=event,
         )
-        earlier = [item for item in recent if str(item.id) != str(event.id)]
-        return [item for item in reversed(earlier[: self._extraction_window_turns]) if item.content]
+        window = [item for item in reversed(earlier) if item.content]
+        if window and self._privacy is not None:
+            # The window goes to the provider, so it holds no memory the privacy policy protects.
+            await self._privacy.require_legacy_inputs(window)
+        return window
+
+    async def _extract_turn(self, event: Event) -> ExtractionRecord:
+        """Ask for one turn's own extraction, with its window and resolved text when on, and check the output."""
+        window = await self._extraction_window(event)
+        # A turn's speaker labels it, so the extractor can tell who said
+        # what; a turn whose text already names its speaker is unchanged.
+        lines = [speaker_labeled(item.content, metadata_speaker(item.metadata)) for item in window]
+        # Each option is named only when on, so a provider written against
+        # the earlier signature keeps working while they are off.
+        extra: dict = {"context": lines} if lines else {}
+        if self._resolve_fact_text:
+            from prme.ingestion.extraction import FactTextResolution
+
+            extra["resolve"] = FactTextResolution(
+                speaker=metadata_speaker(event.metadata),
+                source_time=event.event_time or event.timestamp,
+            )
+        speaker = metadata_speaker(event.metadata) if self._speaker_grounding else None
+        if speaker is not None:
+            extra["speaker"] = speaker
+        if self._claim_fixes and _accepts_keyword(self._extraction_provider.extract, "plural_first_person"):
+            # A provider written against the earlier signature is not asked, so the default that turned
+            # the option on does not break it; its "I" for a "we" is discarded as before.
+            extra["plural_first_person"] = True
+        async with self._extraction_semaphore:
+            result = await self._extraction_provider.extract(
+                event.content, role=event.role, **extra
+            )
+        result = validate_grounding(result, event.content, speaker=speaker)
+        result = self._check_resolved_text(result, event, window)
+        # This request showed no earlier memories, so no fact names one.
+        result = _correction_targets(result)
+        return ExtractionRecord(
+            event_id=event.id, user_id=event.user_id, scope=event.scope,
+            content_hash=event.content_hash,
+            provider=self._extraction_provider.provider_name,
+            model=self._extraction_provider.model_name,
+            grounding_policy=_GROUNDING_POLICY,
+            result=result.model_dump(mode="json"),
+        )
+
+    async def _request_single(self, event: Event, *, run: BatchRun) -> None:
+        """One turn's own request for ``reingest()`` when extraction is not batched.
+
+        Extraction is not batched while the window or fact text resolution is
+        on (#91). There is no batch record then: the checked output is saved as
+        the turn's alone, through the run.
+        """
+        async def check():
+            if self._privacy is not None:
+                await self._privacy.require_legacy_inputs([event])
+            if run.check is not None:
+                await run.check()
+
+        await check()
+        run.requests += 1
+        record = await self._extract_turn(event)
+        await check()
+        await self._write_queue.submit(lambda: run.save(None, [record]), label=f"extraction.record:{event.id}")
 
     async def _extract_or_load(self, event: Event, *, claim: ExtractionClaim | None = None,
                                through: int | None = None) -> ExtractionResult:
@@ -914,43 +991,7 @@ class IngestionPipeline:
         if saved is None and self._batch_target_tokens > 0:
             saved = await self._extract_in_batch(event, claim=claim, through=through)
         elif saved is None:
-            window = await self._extraction_window(event)
-            # A turn's speaker labels it, so the extractor can tell who said
-            # what; a turn whose text already names its speaker is unchanged.
-            lines = [speaker_labeled(item.content, metadata_speaker(item.metadata)) for item in window]
-            # Each option is named only when on, so a provider written against
-            # the earlier signature keeps working while they are off.
-            extra: dict = {"context": lines} if lines else {}
-            if self._resolve_fact_text:
-                from prme.ingestion.extraction import FactTextResolution
-
-                extra["resolve"] = FactTextResolution(
-                    speaker=metadata_speaker(event.metadata),
-                    source_time=event.event_time or event.timestamp,
-                )
-            speaker = metadata_speaker(event.metadata) if self._speaker_grounding else None
-            if speaker is not None:
-                extra["speaker"] = speaker
-            if self._claim_fixes and _accepts_keyword(self._extraction_provider.extract, "plural_first_person"):
-                # A provider written against the earlier signature is not asked, so the default that turned
-                # the option on does not break it; its "I" for a "we" is discarded as before.
-                extra["plural_first_person"] = True
-            async with self._extraction_semaphore:
-                result = await self._extraction_provider.extract(
-                    event.content, role=event.role, **extra
-                )
-            result = validate_grounding(result, event.content, speaker=speaker)
-            result = self._check_resolved_text(result, event, window)
-            # This request showed no earlier memories, so no fact names one.
-            result = _correction_targets(result)
-            record = ExtractionRecord(
-                event_id=event.id, user_id=event.user_id, scope=event.scope,
-                content_hash=event.content_hash,
-                provider=self._extraction_provider.provider_name,
-                model=self._extraction_provider.model_name,
-                grounding_policy=_GROUNDING_POLICY,
-                result=result.model_dump(mode="json"),
-            )
+            record = await self._extract_turn(event)
             saved = await self._write_queue.submit(
                 lambda: self._event_store.record_extraction(record, claim=claim),
                 label=f"extraction.record:{event.id}",

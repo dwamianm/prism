@@ -744,6 +744,19 @@ class PRMEConfig(_ProjectSettings):
             "tokens on every extraction, so this bounds that cost."
         ),
     )
+    enable_owner_window_extraction: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, a turn with no session_id gets a window "
+            "too: the owner's preceding memories in the same scope, in the "
+            "order they were stored, up to extraction_window_turns of them. "
+            "store() carries no session_id, so without this option a plainly "
+            "stored memory such as \"They chose Tokyo and Kyoto.\" is read "
+            "with nothing before it. Only has an effect with "
+            "enable_windowed_extraction. Default False, which gives a turn "
+            "with no session_id no window."
+        ),
+    )
     enable_fact_text_resolution: bool = Field(
         default=False,
         description=(
