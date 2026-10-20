@@ -124,7 +124,7 @@ class LocalSanitizer:
 
     def __init__(self, *, analyzer: LocalAnalyzer | None = None, rule_provider: RuleProvider | None = None,
                  schema_provider: SchemaProvider | None = None, key_provider: Any = None,
-                 pseudonym_epoch: UUID | None = None, source_classifier: SourceClassifier | None = None):
+                 pseudonym_epoch: UUID | None = None, source_classifier: SourceClassifier | None = None) -> None:
         self.analyzer = analyzer or LocalAnalyzer()
         self._rules = rule_provider
         self._schemas = schema_provider
@@ -273,7 +273,10 @@ class LocalSanitizer:
         await self.analyzer.ready()
         started = time.monotonic_ns()
         try:
-            bounded = tuple(bounded_spans(text, rules) for text in scans)
+            deadline = started + int(DETECTOR_SECONDS * 1e9) - state.detector_nanoseconds
+            bounded = tuple(bounded_spans(text, rules, deadline_ns=deadline) for text in scans)
+            if sum(len(spans) for spans in bounded) > MAX_INPUT_BYTES:
+                raise PrivacyDenied("privacy_capability_unavailable")
             if any(span.category == "credential" for spans in bounded for span in spans):
                 raise PrivacyDenied()
             remaining = DETECTOR_SECONDS - (state.detector_nanoseconds + time.monotonic_ns() - started) / 1e9
@@ -302,11 +305,14 @@ class LocalSanitizer:
                 selected = sorted((span for span in spans if actions[span.category] != "allow"),
                                   key=lambda span: (span.start, span.end, span.category))
                 groups: list[list[Span]] = []
+                group_end = 0
                 for span in selected:
-                    if groups and span.start < max(member.end for member in groups[-1]):
+                    if groups and span.start < group_end:
                         groups[-1].append(span)
+                        group_end = max(group_end, span.end)
                     else:
                         groups.append([span])
+                        group_end = span.end
                 replacements = []
                 for group in groups:
                     start, end = min(span.start for span in group), max(span.end for span in group)

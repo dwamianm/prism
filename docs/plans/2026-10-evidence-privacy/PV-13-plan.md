@@ -1,9 +1,10 @@
 # PV-13: shared local sanitizer implementation
 
-Issue: #322. Target branch: `main`. Local implementation is authorized on
-provisional prerequisite `b84a866cd3b46db8c018ca608bb5079e96f90fd9` (#320).
-Dependency delivery, final reconciliation, push and PR creation remain held by
-the orchestrator. This plan reuses the accepted preparation and its source
+Issue: #322. Target branch: `main`. Implementation began on reviewed prerequisite
+`b84a866cd3b46db8c018ca608bb5079e96f90fd9` (#320) and was reconciled onto its
+identical merged tree at `50d22d4e365b52ce78300fe2d2e21d6f753b3a78`.
+The orchestrator authorized staged delivery with `Refs #322`; original gates
+remain open. This plan reuses the accepted preparation and its source
 reconciliations; it does not begin a new investigation or evaluation cohort.
 
 ## Original acceptance criteria
@@ -156,7 +157,15 @@ reconciled revision, after actual dependency delivery: Ruff, strict public API
 typing, contract structure/anchors, wheel/source build, installed-wheel check,
 and full pytest with required extras and the assigned live PostgreSQL service.
 Root schedules independent reviews. No push/PR/rebase/publication is authorized
-until root releases final reconciliation.
+before the orchestrator's required review and final dependency reconciliation.
+
+The pure #323 statement projection checkpoint `717f1cf2` was deliberately
+adopted and wired before the final generated bundle. It adds no read routing
+and does not complete SN11 or SN12. The original AP04 negative statement check
+now asserts canonical negative wording plus the same negative polarity and
+condition. The first SN06 attribution assertion used the wrong metadata key;
+its failed evidence is retained, and the assertion uses `SPEAKER_METADATA_KEY`.
+No detector label or expected detection was changed.
 
 ## Explicit remaining integration gates
 

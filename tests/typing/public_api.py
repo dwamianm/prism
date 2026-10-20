@@ -10,6 +10,16 @@ from prme.models import Event, MemoryNode, ProcessingResult
 from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
 from prme import PrivacyPolicy, PrivacyRuntime, PRMEConfig
+from prme.privacy import ClosedSchema, CustomRule, LocalSanitizer, ValueValidator
+from prme.privacy.capabilities import AdmissionContent, SanitizedContent
+
+
+async def sanitizer_consumer(content: AdmissionContent, schema_id: UUID) -> None:
+    sanitizer = LocalSanitizer()
+    assert_type(await sanitizer.admit(content), SanitizedContent)
+    assert_type(sanitizer.close(), None)
+    assert_type(CustomRule("literal_topic", "restricted topic"), CustomRule)
+    assert_type(ClosedSchema(schema_id, (("active", ValueValidator("boolean")),)), ClosedSchema)
 
 
 def protected_consumer(client: MemoryClient, policy: PrivacyPolicy, runtime: PrivacyRuntime) -> None:

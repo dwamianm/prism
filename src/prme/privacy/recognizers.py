@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+import time
 from typing import Literal, Protocol
 from uuid import UUID
 
@@ -165,8 +166,15 @@ def obfuscated_email_spans(text: str) -> list[Span]:
     return spans
 
 
-def bounded_spans(text: str, rules: tuple[CustomRule, ...] = ()) -> list[Span]:
+def bounded_spans(text: str, rules: tuple[CustomRule, ...] = (), *, deadline_ns: int | None = None) -> list[Span]:
+    def check(size: int) -> None:
+        # Bound the complete offset response as well as the input. Never
+        # truncate a pathological overlapping-rule result into a clean scan.
+        if size > MAX_INPUT_BYTES or (deadline_ns is not None and time.monotonic_ns() >= deadline_ns):
+            raise PrivacyDenied("privacy_capability_unavailable")
+
     spans = credential_spans(text) + obfuscated_email_spans(text)
+    check(len(spans))
     for rule in rules:
         if rule.kind == "typed_identifier":
             continue  # the same explicit local registry already scans this category
@@ -174,6 +182,7 @@ def bounded_spans(text: str, rules: tuple[CustomRule, ...] = ()) -> list[Span]:
         category = "sensitive_topic" if rule.kind == "literal_topic" else "custom_identifier"
         start = text.find(rule.literal)
         while start != -1:
+            check(len(spans) + 1)
             spans.append(Span(category, start, start + len(rule.literal), f"{rule.kind}-v1"))
             start = text.find(rule.literal, start + 1)
     return spans

@@ -97,3 +97,43 @@ def test_offline_suffix_configuration_has_no_network_or_cache(tmp_path, monkeypa
     assert suffixes("sample.person@example.com").fqdn == "example.com"
     assert not suffixes("invalid.invalidtld").fqdn
     assert not list(tmp_path.iterdir())
+
+
+def test_complete_registry_rejects_missing_recognizer(monkeypatch):
+    from presidio_analyzer.recognizer_registry import RecognizerRegistry
+    from prme.privacy.local_analyzer import build_engine
+
+    analyze = build_engine()
+    original = RecognizerRegistry.get_recognizers
+
+    def missing(self, *args, **kwargs):
+        return [item for item in original(self, *args, **kwargs) if item.name != "UsSsnRecognizer"]
+
+    monkeypatch.setattr(RecognizerRegistry, "get_recognizers", missing)
+    with pytest.raises(RecognizerIncomplete, match="privacy_capability_unavailable"):
+        analyze("The cup is on the table.")
+
+
+def _stalled_worker(connection):
+    import time
+
+    connection.send(("ready", VERSIONS))
+    connection.recv()
+    time.sleep(1)
+    connection.send(("complete", ((),)))
+
+
+@pytest.mark.asyncio
+async def test_supervisor_discards_late_worker_result(monkeypatch):
+    import prme.privacy.local_analyzer as local
+    from prme.privacy.policy import PrivacyDenied
+
+    monkeypatch.setattr(local, "_worker", _stalled_worker)
+    analyzer = LocalAnalyzer()
+    try:
+        await analyzer.ready()
+        with pytest.raises(PrivacyDenied, match="privacy_capability_unavailable"):
+            await analyzer.analyze(("The cup is on the table.",), seconds=0.01)
+        assert analyzer._connection is None and analyzer._process is None
+    finally:
+        analyzer.close()

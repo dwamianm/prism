@@ -7,6 +7,11 @@ must be supplied explicitly through `PrivacyRuntime`. Missing capabilities
 fail closed. Existing installations keep their current behavior when no policy
 is selected.
 
+The optional `privacy` dependency extra provides the explicit
+[`LocalSanitizer`](SANITIZATION.md) capability. It does not construct authority,
+key custody or provider capabilities automatically, and it does not complete
+the pending protected query, generated-publication or work-lifecycle gates.
+
 ## Policy selection
 
 `PRMEConfig(privacy_policy=...)` supplies a project default. Text write methods
