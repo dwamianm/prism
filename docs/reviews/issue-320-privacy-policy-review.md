@@ -1,12 +1,14 @@
 # Issue 320 evidence policy admission review
 
-Status: all four affected reviews are COMPLETE and APPROVED. The final full
-suite is running from a verified plain clone of the exact reviewed source.
-Earlier failures and their bounded repairs remain recorded below.
-Provisional base: `01a39705b173c1b994e662927275fc57f98e6b88`.
-Implementation snapshot: `b0b1d49b0854258cdd38c76c9f84305f6b48625f271b73c761f59e481130f757`.
-The final result is conditional on confirming that the actual merged base has
-identical source. This document is the sole review-hash exclusion.
+Status: all planned local checks pass and all four affected reviews are
+COMPLETE and APPROVED. The final full suite passed with 7040 tests and 104
+existing skips. Both final simulation sets passed all 74 checkpoints.
+Final base: `976821c6b07e99775845f5ebfeeeb0fb6454be39`.
+Final helper snapshot: `852c9f72468207a25e204f94a034fcda31d7460437579c700ce8a24e74cde36a`.
+Reviewed provisional snapshot: `b0b1d49b0854258cdd38c76c9f84305f6b48625f271b73c761f59e481130f757`.
+The actual and provisional base trees are identical, as are the feature trees
+before and after rebase and all 35 reviewed source hashes. This document is the
+sole review-hash exclusion. Earlier failed evidence remains recorded below.
 
 The original six acceptance criteria and unchanged AP01 through AP08 definitions
 are in [the approved plan](../plans/2026-10-evidence-privacy/PV-02-plan.md).
@@ -115,7 +117,7 @@ uses its own explicit scoped capability and contains no public raw-input hash.
 
 The initial tier-L review covered snapshot
 `29a183d7a8f0a0df5398222115927e91ba0e4da4e1c34829b640a0a4769b7116`
-against the base above. All four reports are COMPLETE. Core combined
+against original base `33222b54a85fa90fd23d47ae9a9170564bf24828`. All four reports are COMPLETE. Core combined
 correctness, quality, configuration/pattern comparison and runtime wiring;
 security and adversarial independently confirmed the same five findings. Data
 and persisted-field review passed with no additional finding. The adversarial
@@ -308,10 +310,39 @@ forward; all eight are Accept. There is no new unresolved finding.
 | Offline wheel and source build | Exit 0; 0.16.0a5 | `privacy320-reingest-build-1.log` |
 | Locked installed-wheel check | Exit 0; site-packages import and dependency versions verified | `privacy320-reingest-wheel-1.log` |
 | Exact plain-clone setup | Exit 0; 35 source hashes and helper metadata match, 141 installed distributions match the lock | `privacy320-reingest-clone-provenance.json` |
-| Final full suite | Running; true result pending | `privacy320-full-reingest-final.log` |
+| Final full suite | Exit 0; 7040 passed, 104 skipped, 1586.17 seconds | `privacy320-full-reingest-final.log` |
+| Final current-default simulations | Exit 0; 74/74 checkpoints, zero errors | `privacy320-simulations-current-final.log` and `.json` |
+| Final previous-default simulations | Exit 0; 74/74 checkpoints, zero errors | `privacy320-simulations-previous-final.log` and `.json` |
 
 The final suite uses the same isolated task database, no root override, and no
 live model credentials. The frozen product scenarios remain `not_run`: component
 capability doubles do not certify production sanitizer, crypto or the later
-protected-product gate. Delivery also requires actual merged-base source
-equality and normal pull-request checks.
+protected-product gate. Actual merged-base source equality is verified. Normal pull-request checks
+remain part of delivery.
+
+
+## Final validation provenance
+
+The final suite used `python -m pytest tests/ -q -rs` with the locked Python 3.11
+and all required installed extras, only the isolated task database, and clone
+imports verified before execution. It ran once from 16:17:07 UTC on
+2026-10-20. It returned exit 0 with 7040 passed and 104 skipped in 1586.17
+seconds. The 64 skip-reason groups are unchanged backend-specific, local
+benchmark-fixture, optional external-checkout and opt-in stress cases; none
+was added for this change. Framework integration tests are included in the
+full `tests/` run and do not appear among the skips.
+
+The final log SHA256 is
+`cdf8137b888ad21109cad9396f5b7d1d7b52b3cd837382e590bd5c1abc2324fa`.
+Both current and previous-default simulation commands then passed sequentially
+on the exact final source. Their earlier pre-repair results remain separate.
+No tests, assertions, root override or default setting was altered to obtain
+these passes.
+
+Actual main `976821c6` and provisional base `01a39705` both have tree
+`5d35d9022f8e61732daf74a15c8f74975f53f01b`. Rebase preserved feature tree
+`b23457b358463e2efb1a9eff5c173e49f9b0bb0b`; only this excluded report is updated
+afterward. All 35 source hashes in the running clone and implementation checkout
+matched the reviewed manifest again after pytest completed. This establishes
+final-source coverage without a duplicate suite or an assertion that a changed
+base was reviewed.
