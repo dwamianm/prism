@@ -9,46 +9,46 @@
   "ownedCases": [
     {
       "id": "AP04",
-      "duckdb": "component_subchecks_passed_directory; single_file_pending; actual_authority_pending",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
       "postgres": "component_subchecks_passed; actual_authority_pending",
-      "pending": "Q04 positive future-effective before/at-boundary; conservative refusal is not positive retention."
+      "pending": "Actual current-ledger authority; Q04 source-effective positive and ambiguity controls now pass as component integration."
     },
     {
       "id": "AC01",
-      "duckdb": "component_subchecks_passed_directory; single_file_pending; actual_authority_pending",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
       "postgres": "component_subchecks_passed; actual_authority_pending"
     },
     {
       "id": "AC04",
-      "duckdb": "component_subchecks_passed_directory; single_file_pending; actual_authority_pending",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
       "postgres": "component_subchecks_passed; actual_authority_pending"
     },
     {
       "id": "AC06",
-      "duckdb": "component_subchecks_passed_directory; single_file_pending; actual_authority_pending",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
       "postgres": "component_subchecks_passed; actual_authority_pending",
       "pending": "PV-05 historical recovery, actual current authority/fences."
     },
     {
       "id": "AC07",
-      "duckdb": "component_subchecks_passed_directory; single_file_pending; actual_authority_pending",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
       "postgres": "component_subchecks_passed; actual_authority_pending"
     },
     {
       "id": "AC08",
-      "duckdb": "component_subchecks_passed_directory; single_file_pending; actual_authority_pending",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
       "postgres": "component_subchecks_passed; actual_authority_pending"
     },
     {
       "id": "CL02",
-      "duckdb": "component_subchecks_passed_directory; single_file_pending; actual_authority_pending",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
       "postgres": "component_subchecks_passed; actual_authority_pending"
     },
     {
       "id": "CL07",
-      "duckdb": "component_subchecks_passed_directory; single_file_pending; actual_authority_pending",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
       "postgres": "component_subchecks_passed; actual_authority_pending",
-      "pending": "single-file read/staging, PV-05 recovery and PV-06 covered erasure; no whole-case pass."
+      "pending": "PV-05 recovery and PV-06 covered erasure; read/staging/reopen subchecks pass on all planned layouts, no whole-case pass."
     }
   ],
   "verified": [
@@ -138,12 +138,21 @@
       "kind": "explorer_component_ui",
       "result": "desktop and 390x844 mobile: retired neighbor, sealed source notice, no source markers or horizontal overflow",
       "log": "323-ui-mobile-check.json"
+    },
+    {
+      "kind": "q04_actual_positive_and_temporal_compatibility",
+      "result": "55 passed, 6 deselected in 13.49s",
+      "log": "323-q04-repair-cycle1.log"
+    },
+    {
+      "kind": "q04_ambiguity_and_single_file_layouts",
+      "result": "18 passed, 35 deselected in 26.94s",
+      "log": "323-q04-single-file-final-targeted.log",
+      "command": "pytest tests/test_privacy_source_reads.py tests/test_privacy_source_routing.py tests/test_privacy_source_interfaces.py tests/test_privacy_source_separation.py tests/test_shared_temporal_parser.py -q -k 'single_file or Q04 or AP04 or mixed_parser or mixed_parsing'"
     }
   ],
   "pending": [
     "Actual PV-06 local current-ledger policy/erasure authority and original authority/fence gates; FakeAuthority evidence is component only",
-    "Q04 original positive future-effective before/at-boundary behavior; conservative refusal and positive event_time retention are separate",
-    "PV-04 single-file DuckDB read/staging subchecks",
     "PV-05 protected profile/summary publication, durable receipt/work codecs and AC06 historical recovery",
     "CL07 full covered-erasure subchecks owned by PV-06",
     "Final exact-head genuine-clone full suite/build/installed-wheel/simulations; independent reviews and actual merged-dependency reconciliation",
@@ -215,6 +224,14 @@
     {
       "log": "323-contract-final.log",
       "classification": "31 moved exact source anchors refreshed without changing contract cases; validator passed"
+    },
+    {
+      "log": "323-q04-positive-before-repair.log",
+      "classification": "Actual original AC2 positive ingestion rejected by blanket temporal gate; first bounded source repair passed."
+    },
+    {
+      "log": "323-q04-competing-span-before-repair.log",
+      "classification": "Additional numeric source date escaped original cue regex; bounded existing-parser span validation passed."
     }
   ],
   "oracleCorrection": {
@@ -223,5 +240,22 @@
     "detectorChanged": false,
     "limitation": ".test is outside pinned email-v1 recognizer grammar and remains in explicit sanitized evidence",
     "positive": "Existing frozen sanitizer-v1 email-01 sample.person@example.com removed on the same actual selected-source route"
+  },
+  "layoutExecutions": {
+    "testFunctions": 12,
+    "duckdb_directory": 12,
+    "duckdb_single_file": 12,
+    "postgresql": 12,
+    "countedScenarioIdsUnchanged": true
+  },
+  "q04": {
+    "frozenSourceUnchanged": true,
+    "sourceClock": "2026-10-19T12:00:00+00:00",
+    "expectedAndObservedEffectiveTime": "2026-10-21T00:00:00+00:00",
+    "exactStateBefore": "unknown",
+    "exactStateAt": "single",
+    "retrievalBoundary": "explicit time_to; reference_time alone is not an effective-time filter",
+    "missingRefRefusalRetained": true,
+    "authorityEvidence": "component fixture only"
   }
 }

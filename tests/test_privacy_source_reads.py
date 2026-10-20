@@ -91,6 +91,7 @@ async def test_AC01_ordinary_reads_return_admitted_memory_without_evidence_open(
 
 async def test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots(tmp_path, layout, analyzer, native):
     from dataclasses import asdict
+    from datetime import datetime, timedelta
     from prme.models.aggregation import QuantityAggregationQuery
     from prme.models.temporal import AssertionStateQuery
     from prme.privacy import PrivacyDenied
@@ -101,7 +102,7 @@ async def test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots(tmp_path, 
     engine, runtime, policy, *_ = await opened(tmp_path, layout, analyzer, policy_options={"capture": "minimal"})
     owner = str(policy.owner_id)
     try:
-        for row in FIXTURE["qualifiers"]:
+        for row in sorted(FIXTURE["qualifiers"], key=lambda item: item["id"] != "Q04"):
             claim = {key: row[key] for key in ("subject", "predicate", "object", "polarity", "condition") if key in row}
             claim["evidence_quote"] = row["source"]
             claim["epistemic_type"] = "conditional" if row.get("condition") else "asserted"
@@ -113,11 +114,33 @@ async def test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots(tmp_path, 
                                         "facts": [] if row.get("relationship") else [claim],
                                         "relationships": [claim] if row.get("relationship") else [], "summary": None}
             if row["id"] == "Q04":
-                # Existing grounding gate rejects unsupported source-time interpretation.
+                # Preserve the original missing-ref refusal, then exercise the
+                # supported literal ref through actual source-time resolution.
                 before = len(runtime.embedder.sends)
                 with pytest.raises(PrivacyDenied, match="privacy_evidence_ambiguous"):
                     await engine.ingest(row["source"], user_id=owner, wait_for_extraction=True)
                 assert len(runtime.embedder.sends) == before
+                claim["temporal_ref"] = "October 21"
+                source_clock = datetime.fromisoformat(FIXTURE["clock"])
+                identifier = await engine.ingest(row["source"], user_id=owner,
+                    event_time=source_clock, wait_for_extraction=True)
+                fact = next(node for node in await engine.get_event_nodes(identifier, user_id=owner)
+                            if node.node_type == NodeType.FACT)
+                effective = datetime.fromisoformat(row["effective_time"])
+                assert fact.event_time == fact.valid_from == effective
+                assert fact.metadata["resolved_date"] == row["effective_time"]
+                assert fact.content == row["expected"] and identifier in {str(ref) for ref in fact.evidence_refs}
+                for moment, expected_state in ((effective - timedelta(microseconds=1), "unknown"), (effective, "single")):
+                    state = await engine.get_assertion_state(AssertionStateQuery(
+                        subject=row["subject"], predicate=row["predicate"], scope=policy.scope, valid_at=moment,
+                    ), user_id=owner)
+                    assert state.status == expected_state
+                    assert state.timeline[0].valid_from == effective
+                    response = await engine.retrieve("TeaDB", user_id=owner, time_to=moment,
+                                                     reference_time=moment)
+                    assert (fact.id in {candidate.node.id for candidate in response.results}) == (moment == effective)
+                    assert_no_source(response.model_dump_json())
+                    assert response.metadata.source_limitation
                 continue
             identifier = await engine.ingest(row["source"], user_id=owner, speaker=row.get("speaker"),
                                              event_time=runtime.clock(), wait_for_extraction=True)
@@ -189,6 +212,8 @@ async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, l
         repository = engine._privacy.repository
         tables = ["events", "privacy_admissions", "operations", "nodes", "edges", "event_materializations", "event_extractions"]
         tables += ["lexical_documents"] if layout == "postgres" else ["vector_metadata", "vector_payloads", "vector_staging"]
+        if layout == "pack":
+            tables.append("vector_snapshot")
         for table in tables:
             assert_no_source(await repository._query(f"SELECT * FROM {table}", ()))
         monkeypatch.setattr(engine._graph_store, "commit_derivation", original)
@@ -201,7 +226,7 @@ async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, l
         with pytest.raises(RuntimeError, match="synthetic stage interruption"):
             await store_pair(engine, owner)
         monkeypatch.setattr(engine._graph_store, "commit_derivation", original)
-        if layout == "directory":
+        if layout != "postgres":
             save = engine._vector_index._save_snapshot
             def interrupted_snapshot():
                 save()
