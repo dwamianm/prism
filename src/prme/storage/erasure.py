@@ -288,7 +288,7 @@ class ErasureCoordinator:
 _ID_FIELDS = frozenset({"id", "event_id", "source_id", "representation_id", "node_id", "target_id",
     "source_node_id", "target_node_id", "old_node_id", "new_node_id", "request_id", "plan_id",
     "evidence_refs", "event_ids", "node_ids", "admitted_node_ids", "source_node_ids", "selected_source_node_ids",
-    "provenance_event_id", "winner_id", "loser_id", "candidate_id", "operation_id"})
+    "provenance_event_id", "winner_id", "loser_id", "candidate_id", "operation_id", "chain_node_ids"})
 
 
 def _identities(value, key=""):
@@ -634,7 +634,9 @@ async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):
     async with coordinator.guard():
         runtime = coordinator.admission.require_runtime()
         async with coordinator.repository.session() as session:
-            rows = await session.fetch("SELECT intent,status FROM privacy_erasure_jobs WHERE owner_id=$1 ORDER BY request_id LIMIT $2", user_id, limit)
+            # Completed requests must not consume the bounded pending-work
+            # window forever. Keep the JSON status portable across backends.
+            rows = await session.fetch("SELECT intent,status FROM privacy_erasure_jobs WHERE owner_id=$1 ORDER BY CASE WHEN status LIKE '%\"logical_live_copies\":\"purged\"%' THEN 1 ELSE 0 END,request_id LIMIT $2", user_id, limit)
         for row in rows:
             intent = ErasureIntent.model_validate_json(row["intent"])
             status = ErasureStatus.model_validate_json(row["status"])
@@ -659,11 +661,13 @@ async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):
                             next_stage = "verify"
                         else:
                             await _verify_purge(coordinator, intent)
-                            status = status.model_copy(update={"state": "live_purged", "logical_live_copies": "purged", "failure": None})
-                            await coordinator.repository.save_status(status)
+                            completed = status.model_copy(update={"state": "live_purged", "logical_live_copies": "purged", "failure": None})
+                            await coordinator.repository.save_status(completed)
+                            status = completed
                             break
-                        status = status.model_copy(update={"stage": next_stage, "failure": None})
-                        await coordinator.repository.save_status(status)
+                        advanced = status.model_copy(update={"stage": next_stage, "failure": None})
+                        await coordinator.repository.save_status(advanced)
+                        status = advanced
                     except Exception:
                         failure = {"indexes": "index_unavailable", "keys": "provider_unavailable", "verify": "coverage_unavailable"}.get(status.stage, "storage_unavailable")
                         status = status.model_copy(update={"failure": failure, "attempts": status.attempts + 1})

@@ -3462,7 +3462,7 @@ class MemoryEngine:
     # --- Rebuild (issue #45) ---
 
     @privacy_disclosure
-    async def rebuild_indexes(self, *, batch_size: int = 256) -> dict[str, int]:
+    async def rebuild_indexes(self, *, batch_size: int = 256, user_id: str | None = None) -> dict[str, int]:
         """Rebuild the vector and lexical indexes from the durable graph.
 
         Drops both derived search indexes and re-materializes them from the
@@ -3503,6 +3503,9 @@ class MemoryEngine:
             ``nodes_skipped`` (active rows with empty content, which cannot
             be embedded), and ``total_active`` (active rows seen).
         """
+        if self._privacy.selected() or await self._privacy.repository.for_owner(user_id):
+            from prme.storage.erasure_indexes import rebuild_protected
+            return await rebuild_protected(self, user_id=user_id, batch_size=batch_size)
         if self._conn is None:
             raise RuntimeError(
                 "rebuild_indexes is only supported on the DuckDB backend"
@@ -4550,7 +4553,13 @@ class MemoryEngine:
 
         if self._conn is not None:
             try:
-                self._conn.close()
+                if self._privacy.runtime is not None:
+                    # A shared protected lexical handle may resolve this
+                    # connection while another engine closes its own owner.
+                    async with self._lexical_index._write_lock:
+                        self._conn.close()
+                else:
+                    self._conn.close()
             except Exception:
                 logger.warning("Error closing DuckDB connection", exc_info=True)
 

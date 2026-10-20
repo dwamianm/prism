@@ -637,6 +637,10 @@ async def _project_public_result(context, method, result, arguments, records):
             return result
     if method == "consolidate_knowledge" and type(result) is int and result >= 0:
         return result
+    if method == "rebuild_indexes" and isinstance(result, dict):
+        fields = {"nodes_indexed", "nodes_skipped", "total_active"}
+        if set(result) == fields and all(type(value) is int and value >= 0 for value in result.values()):
+            return result
     if method == "resume_profile" and (result is None or str(UUID(result)) == result):
         return result
     if method == "profile_jobs":
