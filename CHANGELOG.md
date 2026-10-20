@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a6] - 2026-10-20
+
+This is an alpha. It passed CI and the fast tiers, and it has not been through
+the full benchmark. The stable release stays at 0.15.0 until the full benchmark
+audit, so `pip install prme` still installs 0.15.0. Install the alpha with
+`pip install --pre prme` or `pip install prme==0.16.0a6`.
+
 ### Added
 
 - Add `enable_owner_window_extraction` (`PRME_ENABLE_OWNER_WINDOW_EXTRACTION`,
@@ -33,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MemoryEngine.get_events()` and both event stores accept `until`, an
   ingestion time: only events recorded at or before it are returned.
 - Add `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), on
-  by default in the alpha channel (prism-monorepo issue 276): rank fusion's graph
+  by default in the alpha channel: rank fusion's graph
   list now tells records apart, so a "We" claim linked to the people a question
   names can rise. A record joins the list only when two or more of the
   question's seeds reach it within `graph_max_hops`, one of them by a direct
@@ -42,8 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fewer total hops, and its weight is `rrf_graph_weight`, 0.5 when unset. A
   record that session, episode or evidence augmentation context pulls in
   inherits its trigger's score without that graph term; evidence projection,
-  which replaces a claim with its source, keeps it. With the group links of
-  prism-monorepo issue 275 it puts "We chose Tokyo, Kyoto, Kanazawa, and Osaka."
+  which replaces a claim with its source, keeps it. With the group links
+  (`enable_owner_group_links`) it puts "We chose Tokyo, Kyoto, Kanazawa, and Osaka."
   4th for "which cities will alex visit in japan?" on the `defects-v1` chat probe
   (6th without it). On the fast tiers the defect probes keep 7 of 7 answers in
   the top 3 and the chat probe 14 of 18 (15 of 18 in the top 5), the fast cycle
@@ -77,6 +84,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   full benchmark audit is pending. `BENCHMARKS.md` ("Graph seed count") has the
   measurements of all three versions.
 
+- Add explicit evidence capture, retention and admission policies (dwamianm/prism#342,
+  issue #320), opt in. `PRMEConfig.privacy_policy` (an immutable policy, default none)
+  or a `policy` on one request of `store()`, `ingest()`, `ingest_batch()`, fast
+  ingest, the HTTP routes and the MCP tools selects them; the Python, HTTP and MCP
+  paths share one validation and the same authority checks at the provider,
+  persistence and disclosure boundaries. An accepted record keeps its effective
+  policy and its original deadlines, a caller can tighten a default, and a retry
+  cannot weaken it. A no-evidence admission keeps the admitted memory without a
+  completed evidence payload, extraction of a protected admission runs in its own
+  finite processing slot, and an unsupported operation or an unavailable
+  capability is refused before any protected effect. Protected profiles turn
+  owner-group links off. Retrieval of a protected owner, owner-group linking and
+  `reingest()` stay unavailable for it until their dependencies land (issues
+  #321 to #326); the pull request says its component tests do not certify the
+  complete protected product (issue #327). With no policy set, existing defaults
+  and ordinary group matching are unchanged: the same records come out of
+  `store()`, `ingest()` and `retrieve()`. Opening a store now also creates an
+  empty table `privacy_admissions` (`CREATE TABLE IF NOT EXISTS`, DuckDB and
+  PostgreSQL), and a few legacy entry points (fast ingest, adapter control
+  events and `reingest()`) look the owner up in it, so that a legacy call
+  against an owner admitted under a policy is refused.
+- Add bounded local source sanitization to that opt-in path (dwamianm/prism#355,
+  part of issue #322). Source bodies and metadata are checked before they are
+  stored or sent to a provider, and generated extraction and the final memory and
+  index projections are checked again before they are published, with pinned
+  offline recognizers, scoped pseudonyms, strict structured values, cumulative
+  operation budgets and reports that hold no content. Sanitization is heuristic
+  and does not certify that text holds no sensitive information, and the issue
+  stays open until it is verified with the real key custody, read, durable-work
+  and authority components. Nothing changes while no policy is set.
+
+- Add authenticated evidence encryption to that opt-in path (dwamianm/prism#356,
+  part of issue #321). Public-write and private-read are separate capabilities.
+  Each object gets a fresh data key and nonce, and its policy, identity, owner,
+  scope and purpose are authenticated with it. Key versions are exact, grants name
+  finite selected sources, audits hold no content, recovery is deliberate and
+  encrypted, and rewrapping resumes after a stop. `prme privacy-keys` provisions
+  and diagnoses local keys, and the optional extra `local-privacy` (`keyring`)
+  adds native local key custody. Opening a store creates one more empty table,
+  `privacy_rotation_jobs`. The pull request lists what this does not do: a
+  local same-process capability does not isolate secrets from malicious code in
+  that process or from a local administrator, rotation does not erase older backup
+  or recovery copies, a missing key never falls back to plaintext, native custody
+  was checked on macOS only, and the issue stays open until its integration
+  criteria are verified with the real authority, read, durable-work and migration
+  components (issues #323 to #326). Nothing changes while no policy is set.
+
 ### Changed
 
 - The window's guidance to the model now says to keep every subject, object and
@@ -89,7 +143,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an extraction that runs later no longer shows it turns stored after it.
 - `enable_owner_group_links` (`PRME_ENABLE_OWNER_GROUP_LINKS`) is on by default
   in the alpha channel, and a "We" claim is now linked to the people it speaks
-  for (prism-monorepo issue 275). A claim stated with "We" was attached only to
+  for. A claim stated with "We" was attached only to
   an entity named `We` that exists for one message, so the graph did not know
   who made the decision, and "We" claims from different messages never shared a
   subject. Each such claim of a `user` turn keeps its literal "We" and its group
@@ -114,6 +168,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and links of 0.16.0a3. The default rests on the fast tiers by the owner's
   directive of 2026-10-19; the full benchmark audit is pending.
   `BENCHMARKS.md` ("We claims linked to their members") has the measurements.
+
+- The runtime dependency `cryptography` is now pinned to exactly 50.0.2 for every
+  install (dwamianm/prism#356). It was `>=43.0`. The pin comes with the evidence
+  encryption above, but it applies whether or not a privacy policy is used: an
+  environment that needs another `cryptography` release cannot install this
+  release next to it. The optional extra `local-privacy` pins `keyring` to 25.7.0.
+
+### Fixed
+
+- A close no longer cancels an extraction batch whose output is saved but not yet
+  published to the graph (dwamianm/prism#332). The concurrent count of unfinished
+  work at close time treated saved output as finished, which could reduce the
+  remaining wait to zero and cancel the batch before its graph publication
+  completed. The close now reserves the existing batch allowance for pending or
+  running work, including saved output awaiting publication; the cap on the wait
+  is unchanged.
+
+### Upgrade notes
+
+- Two defaults changed since 0.16.0a5, both in the alpha channel and both with an
+  environment variable that turns them off: `enable_owner_group_links` is on
+  (`PRME_ENABLE_OWNER_GROUP_LINKS=false`) and `scoring.rrf_graph_seed_count` is on
+  (`PRME_SCORING__RRF_GRAPH_SEED_COUNT=false`). Neither rewrites a stored memory.
+  With the second on, a `PRME_SCORING__RRF_GRAPH_WEIGHT` you set for the
+  hop-count list of 0.16.0a4 now drives the seed count list; see its entry.
+- Everything else new is off by default: `enable_owner_window_extraction`, the
+  windowed extraction options it extends, and the privacy admission policies
+  (`privacy_policy`), with their sanitization and evidence encryption. `scoring.rrf_graph_weight` and the other options that were
+  off in 0.16.0a5 stay off. The defaults turned on in earlier alphas are still
+  on (`lexical_term_weights` for PostgreSQL, `enable_ingest_claim_fixes`,
+  `packing.folded_records_keep_rank`, `enable_mention_links`,
+  `packing.graph_seed_words`, `enable_owner_name_carry` and
+  `packing.session_context_skip_entities`).
+- A store gains two empty tables, `privacy_admissions` and `privacy_rotation_jobs`, the
+  first time this release opens it, and `reingest()` and a few other entry points read it (see the
+  privacy entry). Code from earlier releases does not use the table.
+- Install: `cryptography` is pinned to exactly 50.0.2 (see Changed). If another
+  package in your environment needs a different release, the resolver will refuse
+  this alpha; a later alpha may relax the pin.
+- Known weaknesses are as in 0.16.0a5. On the fast cycle three answers rank one
+  place lower with `scoring.rrf_graph_seed_count` on (travel 2 to 3, coffee 4 to
+  5, job-now 7 to 8), and the `reingest()` limits of 0.16.0a5 stand.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a5] - 2026-10-19
 
@@ -2804,7 +2904,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a5...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a6...HEAD
+[0.16.0a6]: https://github.com/dwamianm/prism/compare/v0.16.0a5...v0.16.0a6
 [0.16.0a5]: https://github.com/dwamianm/prism/compare/v0.16.0a4...v0.16.0a5
 [0.16.0a4]: https://github.com/dwamianm/prism/compare/v0.16.0a3...v0.16.0a4
 [0.16.0a3]: https://github.com/dwamianm/prism/compare/v0.16.0a2...v0.16.0a3
