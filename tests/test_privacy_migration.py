@@ -329,3 +329,60 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
         assert (await _read_snapshot(original)).fingerprint == before.fingerprint
         if source_files is not None:
             assert hashes(tmp_path / "legacy") == source_files
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+async def test_EM07_mixed_summary_erasure_closure(tmp_path, layout, analyzer, native):
+    template, runtime, policy, custody, *_ = await journal_engine(tmp_path / "template", "directory", analyzer)
+    base = template._config
+    await template.close()
+    runtime = replace(runtime, retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    owner = str(policy.owner_id)
+    async with fresh_config(base, tmp_path / "legacy", layout) as original, fresh_config(base, tmp_path / "migrated", layout, restore=True) as target:
+        original = original.model_copy(update={"privacy_policy": None})
+        async with MemoryEngine.open(original, embedding_provider=runtime.embedder) as source:
+            direct, fact, entity, generated, visual, survivor = await mixed_legacy_family(source, runtime, owner)
+        await migrate_privacy_pack(original, target, privacy_runtime=runtime, embedding_provider=runtime.embedder,
+            job_path=tmp_path / "job", unavailable_legacy_history=True, allow_reembedding=True,
+            remove_event_ids=() if visual is None else (visual.id,))
+        async with MemoryEngine.open(target, privacy_runtime=runtime, embedding_provider=runtime.embedder) as engine:
+            repository = engine._privacy.repository
+            from prme.privacy.journals import JOURNAL_KEY
+            summary_id = generated[-1][0].id
+            raw_metadata = (await repository._query("SELECT metadata FROM nodes WHERE id=?", (str(summary_id),)))[0][0]
+            metadata = json.loads(raw_metadata) if isinstance(raw_metadata, str) else raw_metadata
+            erasure = engine._privacy.erasure
+            async with runtime.erasure_ledger.guard():
+                before_head = await runtime.erasure_ledger.current_head((await erasure.repository.state())[1].store_id)
+            async def refused():
+                with pytest.raises(PrivacyDenied, match="^privacy_migration_required$"):
+                    await erasure.request(ErasureRequest(request_id=uuid4(), node_ids=(summary_id,)), user_id=owner)
+                assert await erasure.repository.intents() == ()
+                async with runtime.erasure_ledger.guard():
+                    assert await runtime.erasure_ledger.current_head(before_head.store_id) == before_head
+            # Missing declared node, then a real declared node outside the owner
+            # boundary, then one UUID naming both memory and an admission. Each
+            # fault uses task-owned SQL and restores the exact original row.
+            missing = json.loads(json.dumps(metadata))
+            missing[JOURNAL_KEY]["source_node_ids"].append(str(uuid4()))
+            await repository._query("UPDATE nodes SET metadata=? WHERE id=?", (json.dumps(missing), str(summary_id)))
+            await refused()
+            await repository._query("UPDATE nodes SET metadata=? WHERE id=?", (json.dumps(metadata), str(summary_id)))
+            await repository._query("UPDATE nodes SET user_id=? WHERE id=?", (str(uuid4()), str(fact.id)))
+            await refused()
+            await repository._query("UPDATE nodes SET user_id=? WHERE id=?", (owner, str(fact.id)))
+            await repository._query("INSERT INTO privacy_admissions(event_id,user_id,scope,request_id,request_index,body) "
+                "SELECT ?,user_id,scope,NULL,request_index,body FROM privacy_admissions WHERE event_id=? RETURNING event_id",
+                (str(direct.id), str(direct.evidence_refs[0])))
+            await refused()
+            await repository._query("DELETE FROM privacy_admissions WHERE event_id=?", (str(direct.id),))
+            request = ErasureRequest(request_id=uuid4(), node_ids=(generated[-1][0].id,))
+            status = await engine._privacy.erasure.request(request, user_id=owner)
+            assert status.state == "blocked_from_access"
+            intents = await engine._privacy.erasure.repository.intents()
+            intent = next(value for value in intents if value.request.request_id == request.request_id)
+            assert set(intent.source_event_ids) == set(fact.evidence_refs)
+            await engine.process_erasures(user_id=owner, budget_ms=60000)
+            rows = await repository._query("SELECT id,content FROM nodes", ())
+            assert {str(row[0]): row[1] for row in rows} == {str(survivor.id): FIXTURE["admitted"][2]}
+            assert (await engine._privacy.erasure.request(request, user_id=owner)).state == "live_purged"

@@ -1117,6 +1117,63 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232644398867-mixed-checkpoint-static-source.json",
       "source_manifest_sha256": "f16820b7dc290795ce7b9d21a83b467b626926d335ffb492c4d252f603da0a71",
       "tracked_diff_sha256": "72df9e85cfcb41d97c988a79063a6919ef7a7708b32c515c7fd3710281efa57e"
+    },
+    {
+      "name": "summary-erasure-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_summary_erasure_closure[directory]"
+      ],
+      "started_at": "2026-10-20T23:28:18.118591+00:00",
+      "elapsed_seconds": 4.035,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T232818118591-summary-erasure-initial.log",
+      "log_sha256": "06abd434abad189d07dbf35fdf917a42d7c138538380153cd3503b46c073d157",
+      "head": "7e1537dde2d0406592115a045c9a8f06c6140dde",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232818118591-summary-erasure-initial-source.json",
+      "source_manifest_sha256": "aab878bc993ef262a51905b72dbdf0b352c27abb15744001741b81c5e33d36de",
+      "tracked_diff_sha256": "7d989f5ad7fea5b15e318cbcd08f4534343b97d077946fc00f903819d57c81fe"
+    },
+    {
+      "name": "summary-erasure-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_summary_erasure_closure",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions"
+      ],
+      "started_at": "2026-10-20T23:29:12.384764+00:00",
+      "elapsed_seconds": 26.213,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T232912384764-summary-erasure-fix1.log",
+      "log_sha256": "0e7e54135481ae086fa1a068441aeec1c7222efd3444a495ddf0028c8118d3f0",
+      "head": "7e1537dde2d0406592115a045c9a8f06c6140dde",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T232912384764-summary-erasure-fix1-source.json",
+      "source_manifest_sha256": "8ef70c69ae8d55d73e39ee0ea388531b8a3ab136cfbc6d0e40c41a81324b35b4",
+      "tracked_diff_sha256": "99d4475743aa4611201f9dc9dce6d8f56b83e65c77355f110052eb172addc450"
+    },
+    {
+      "name": "summary-erasure-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/erasure.py",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-20T23:30:22.138000+00:00",
+      "elapsed_seconds": 0.063,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T233022138000-summary-erasure-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "7e1537dde2d0406592115a045c9a8f06c6140dde",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T233022138000-summary-erasure-static-source.json",
+      "source_manifest_sha256": "8ef70c69ae8d55d73e39ee0ea388531b8a3ab136cfbc6d0e40c41a81324b35b4",
+      "tracked_diff_sha256": "99d4475743aa4611201f9dc9dce6d8f56b83e65c77355f110052eb172addc450"
     }
   ],
   "repair_cycles": {
@@ -1152,6 +1209,12 @@
       "initial": "mixed-family-fixture-fix2: a freshly committed generated node was removed from pending before the same-loop known map was updated, so a dependent summary was wrongly omitted.",
       "fix1": "Update known only after committed insertion; omit only proven removed/erased dependencies and refuse unexplained missing IDs. Directory passed, then remaining original three layouts passed.",
       "unsuccessful_runtime_corrections": 0
+    },
+    "summary_source_closure": {
+      "initial": "Directory direct-summary request fails privacy_migration_required at event lookup for a legitimate source memory UUID; runtime unchanged from 7e1537dd.",
+      "fix1": "Parse only validated generated memory dependencies, verify exact owner/scope nodes, reject event/node ambiguity, traverse complete event closure. 7 authorized tests passed.",
+      "unsuccessful_runtime_corrections": 0,
+      "fixture_correction": "Before the correction run, the unreached purge call was corrected to existing engine.process_erasures and backend UUID assertion normalized to str. Positive closure/survivor assertions retained; missing/foreign/ambiguous controls added as authorized."
     }
   },
   "held_dependencies": [
@@ -1260,14 +1323,31 @@
       "limitations": [
         "PostgreSQL has no native visual blob layout; no invented visual adapter",
         "No public standard-mode retrieval parity or replay continuity claim",
-        "Summary-selected erasure source closure is an upstream source-backed gap: memory UUID evidence refs currently treated as event admissions in storage/erasure.py:_resolve_intent_sources",
         "Whole frozen EM07 and other shared cases remain unpassed"
       ]
+    },
+    "summary_source_closure": {
+      "attribution": "Original #325 erasure/#326 AC2 integration, root-authorized narrow storage/erasure.py prerequisite",
+      "failed_executions": 1,
+      "passed_executions": 7,
+      "summary_layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "negative_variants": [
+        "missing declared generated dependency",
+        "declared dependency in foreign owner boundary",
+        "same UUID names node and admission"
+      ],
+      "negative_evidence": "Every refused request leaves independent ledger head unchanged and records no intent.",
+      "positive_evidence": "Direct summary selection resolves full source event closure; actual process_erasures removes dependent memory and leaves the independent survivor; exact retry returns live_purged.",
+      "regressions": "Four existing mixed-profile migration/erasure layout cases passed once after resolver change.",
+      "held": "Existing test_privacy_erasure*.py paths through held get_event_nodes/ReadContext were not rerun. Full shared ER/EM cases remain pending."
     }
   },
   "remaining_original_work": [
     "Complete protected journal/export family coverage and original mixed standard-mode public retrieval parity; broader whole-case verdict remains pending",
-    "Upstream #325 typed summary evidence closure: distinguish source memory UUIDs from event UUIDs when resolving erasure intent sources",
     "Wrong/stale/foreign ledger restore negatives; copied pack and native PostgreSQL quarantine restore paths",
     "Bound same-lineage hosted PostgreSQL workspace restore into current live control authority",
     "EM04 rotation/erasure and remaining EM01-EM08 shared integration",

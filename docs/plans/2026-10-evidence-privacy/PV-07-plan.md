@@ -644,3 +644,22 @@ memory UUIDs as well. The mixed check erases an old profile and verifies the ful
 source closure plus an unrelated survivor; it does not prove summary-selected
 erasure. This was reported to root for #325 coordination without changing its
 consumer or the held #323 paths.
+
+
+## Authorized summary erasure prerequisite (2026-10-20)
+
+The source-backed gap above was reproduced before runtime changes with the same
+mixed fixture: a direct summary request failed at the event lookup for a source
+memory UUID. Root authorized only `storage/erasure.py` and the existing migration
+test family. The resolver now distinguishes typed generated memory dependencies
+from event references, verifies same-owner/scope nodes, rejects missing/foreign
+and ambiguous identities, and traverses the full source closure before durable
+intent acknowledgment. It never drops a reference to make erasure succeed.
+
+The first correction passed exactly seven executions: summary selection on
+directory/pack/PostgreSQL, with missing/foreign/ambiguous refusals and unchanged
+ledger heads, plus all four existing mixed-profile layout cases. The original
+failure, commands, hashes, times and zero unsuccessful runtime correction count
+are retained in PV-07-results.json. Existing #325 regression tests that invoke
+the held #323 ordinary read classifier remain pending, not passing evidence.
+No whole shared scenario is closed by this prerequisite.

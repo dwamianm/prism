@@ -143,11 +143,31 @@ async def _resolve_intent_sources(session, intent):
             if "sanitization" in metadata[PRIVACY_KEY]:
                 SanitizationReport.model_validate(metadata[PRIVACY_KEY]["sanitization"])
             dependencies = {origin, *(UUID(str(value)) for value in refs or ())}
+            node_dependencies = set()
             if JOURNAL_KEY in metadata:
-                pending.update(GeneratedNodeReference.model_validate(metadata[JOURNAL_KEY]).source_node_ids)
+                generated = GeneratedNodeReference.model_validate(metadata[JOURNAL_KEY])
+                node_dependencies = set(generated.source_node_ids)
+                if (not node_dependencies or identifier in node_dependencies
+                        or len(node_dependencies) != len(generated.source_node_ids)
+                        or origin in node_dependencies):
+                    raise ValueError()
         except (KeyError, ValueError, TypeError):
             raise PrivacyDenied("privacy_migration_required") from None
-        for event_id in dependencies:
+        # Summaries cite selected memory identities as well as event identities.
+        # Only a validated generated reference may classify a citation as memory;
+        # every declared dependency must be a real node in this exact boundary.
+        # A UUID naming both a node and an admission is ambiguous, not permission
+        # to choose whichever interpretation would let the request proceed.
+        for node_id in node_dependencies:
+            owned = await session.fetch("SELECT id FROM nodes WHERE id=$1 AND user_id=$2 AND scope=$3",
+                                        str(node_id), str(intent.owner_id), intent.request.scope.value)
+            admission = await session.fetch("SELECT event_id FROM privacy_admissions WHERE event_id=$1", str(node_id))
+            if len(owned) != 1 or admission:
+                raise PrivacyDenied("privacy_migration_required")
+        pending.update(node_dependencies)
+        for event_id in dependencies - node_dependencies:
+            if await session.fetch("SELECT id FROM nodes WHERE id=$1", str(event_id)):
+                raise PrivacyDenied("privacy_migration_required")
             rows = await session.fetch("SELECT body FROM privacy_admissions WHERE event_id=$1 AND user_id=$2 AND scope=$3",
                                        str(event_id), str(intent.owner_id), intent.request.scope.value)
             if len(rows) != 1:
