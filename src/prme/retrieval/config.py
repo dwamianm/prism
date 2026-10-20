@@ -33,6 +33,10 @@ RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break", "rrf_graph_weight",
 # is unset (prism-monorepo issue 276). The validator writes it into the
 # settings, so receipts record the weight their scores used.
 RRF_GRAPH_SEED_COUNT_WEIGHT = 0.5
+# Only a record the semantic channel ranks this high can join the seed count
+# list, so the list reorders records that already match the question. Receipts
+# replay from the saved graph ranks, which already reflect it.
+RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP = 10
 # Settings that only rank fusion reads; weighted scoring drops them.
 RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
 # Settings that only the weighted formula reads; rank fusion drops them.
@@ -328,10 +332,12 @@ class ScoringWeights(BaseModel):
             "pass through the memory owner's own entity (an entity a user "
             "turn named as the owner, or the owner reference), because "
             "nearly every claim of the owner is one hop from it. A record "
-            "joins the list only when two or more seeds reach it and one of "
-            "them links to it directly, and the list ranks more seeds first, "
-            "then the smaller total hop count. Entity records never join "
-            "it. A record that inherits a session "
+            "joins the list only when two or more seeds reach it, one of "
+            "them links to it directly, and the semantic channel ranks it in "
+            "its top RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP (10), so the list "
+            "reorders records that already match the question. The list "
+            "ranks more seeds first, then the smaller total hop count. Entity "
+            "records never join it. A record that inherits a session "
             "context score inherits its trigger's score without the graph "
             "term, which only the trigger's own links earned. The list's "
             "weight is rrf_graph_weight, set to RRF_GRAPH_SEED_COUNT_WEIGHT "

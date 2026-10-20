@@ -3,8 +3,8 @@
 Under rank fusion a graph link changed no score unless ``scoring.rrf_graph_weight`` was set, and that list ranks
 every graph candidate by hop count, so the owner's own claims, all one hop from the owner, rise together. The seed
 count list holds only a record that two or more of the question's seeds reach without passing through the owner's
-entity, one of them by a direct link, and ranks more seeds first, then fewer total hops. A session context neighbor
-inherits its trigger's score without that graph term.
+entity, one of them by a direct link, and that the semantic channel ranks in its top 10; it ranks more seeds first,
+then fewer total hops. A session context neighbor inherits its trigger's score without that graph term.
 """
 
 import json
@@ -19,7 +19,9 @@ from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.models.relevance import RetrievalReceipt, make_receipt
 from prme.retrieval.candidates import _seed_reach
-from prme.retrieval.config import RRF_GRAPH_SEED_COUNT_WEIGHT, PackingConfig, ScoringWeights
+from prme.retrieval.config import (
+    RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP, RRF_GRAPH_SEED_COUNT_WEIGHT, PackingConfig, ScoringWeights,
+)
 from prme.retrieval.models import MemoryBundle, RetrievalCandidate, ScoreProvenance
 from prme.retrieval.scoring import score_and_rank
 from prme.retrieval.session_context import expand_session_context
@@ -58,6 +60,15 @@ class TestTheList:
                 reached(4, (2, 2, 1)), candidate(5, semantic=.5, graph=1.0)]
         # Near one seed, only between two, an entity, and a graph hit that was not measured: none joins.
         assert graph_ranks(scores(pool, SEEDS), (1, 2, 3, 4, 5)) == [None, None, None, 1, None]
+
+    def test_only_a_record_the_semantic_channel_ranks_in_its_top_ten_joins(self):
+        top = RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP
+        pool = [candidate(number, semantic=1 - number / 100) for number in range(1, top)]
+        pool += [reached(top, (2, 2, 1), semantic=1 - top / 100), reached(top + 1, (3, 3, 1), semantic=.5),
+                 reached(top + 2, (3, 3, 1), semantic=None)]
+        found = scores(pool, SEEDS)
+        # Tenth by meaning joins; eleventh, and a record only the graph found, do not, however many seeds reach them.
+        assert graph_ranks(found, (top, top + 1, top + 2)) == [1, None, None]
 
     def test_a_record_on_the_list_gains_the_weighted_reciprocal_rank_and_the_score_replays(self):
         found = scores([reached(1, (2, 2, 1), semantic=.9), reached(2, (2, 4, 1), semantic=.8),
@@ -249,17 +260,6 @@ def seed_count(settings):
         {**settings.scoring.model_dump(), "rrf_graph_seed_count": True})})
 
 
-async def link_to_jordan(engine, owner):
-    """The member link prism-monorepo#275 adds: each "we" claim of the trip to Jordan."""
-    nodes = await engine.query_nodes(user_id=owner, limit=500)
-    [jordan] = [node for node in nodes if node.node_type == NodeType.ENTITY and node.content == "Jordan"]
-    for node in nodes:
-        if node.node_type != NodeType.ENTITY and (node.metadata or {}).get("subject") == "We":
-            await engine._graph_store.create_edge(MemoryEdge(
-                source_id=node.id, target_id=jordan.id, edge_type=EdgeType.MENTIONS, user_id=owner,
-                provenance_event_id=node.evidence_refs[0], metadata=dict(GROUP_LINK_METADATA)))
-
-
 class TestRetrieval:
     async def test_a_retrieval_ranks_the_records_that_connect_the_names_and_replays_its_receipt(self, recorded, user):
         async with MemoryEngine.open(seed_count(dev_settings(recorded, group_links=True))) as engine:
@@ -275,22 +275,17 @@ class TestRetrieval:
         assert saved.scoring.rrf_graph_seed_count is True and saved.scoring.rrf_graph_weight == WEIGHT
         assert saved.replay_ranking() == tuple(item.node.id for item in response.results)
 
-    async def test_the_cities_claim_joins_the_list_once_it_links_to_jordan(self, recorded, user):
-        async with MemoryEngine.open(seed_count(dev_settings(recorded, group_links=True))) as engine:
+    @pytest.mark.parametrize("group_links", [True, False])
+    async def test_the_cities_claim_joins_the_list_through_its_member_links(self, recorded, user, group_links):
+        async with MemoryEngine.open(seed_count(dev_settings(recorded, group_links=group_links))) as engine:
             await replay_dev_run(engine, user)
             await engine.process_extractions(user_id=user)
-
-            async def cities_rank():
-                results = (await engine.retrieve(QUESTIONS[0], user_id=user)).results
-                [cities] = [item for item in results if item.node.content.startswith("We chose Tokyo, Kyoto")
-                            and item.node.node_type != NodeType.NOTE]
-                return cities.score_provenance.rank_fusion.graph_rank
-
-            before = await cities_rank()
-            await link_to_jordan(engine, user)
-            after = await cities_rank()
-        # Linked to Alex alone it is one seed's record; with Jordan, Japan reaches it through Jordan.
-        assert before is None and after is not None
+            results = (await engine.retrieve(QUESTIONS[0], user_id=user)).results
+        [cities] = [item for item in results if item.node.content.startswith("We chose Tokyo, Kyoto")
+                    and item.node.node_type != NodeType.NOTE]
+        # The group links (prism-monorepo#275) tie it to Alex and Jordan, so Japan reaches it through Jordan;
+        # without them it hangs on its "We" entity alone and no seed reaches it.
+        assert (cities.score_provenance.rank_fusion.graph_rank is not None) is group_links
 
     async def test_off_no_record_has_a_graph_rank(self, recorded, user):
         async with MemoryEngine.open(dev_settings(recorded, group_links=True)) as engine:

@@ -177,6 +177,7 @@ async def _seed_reach(
     seeds: list[MemoryNode],
     nodes: dict[str, MemoryNode],
     max_hops: int,
+    depths: dict[str, int] | None = None,
 ) -> dict[str, tuple[int, int, int]]:
     """How many seeds reach each node, their total hop count and the fewest hops (``rrf_graph_seed_count``).
 
@@ -186,11 +187,21 @@ async def _seed_reach(
     of the owner is one hop from it and would otherwise be near every other
     seed too. ``nodes`` are the records the graph search returned, which hold
     every node within ``max_hops`` of a seed that the search's filters admit,
-    so the walk stays among them and the seeds. One query reads their links.
+    so the walk stays among them and the seeds. One query reads the links of
+    the nodes a walk can continue from: with ``depths``, each node's fewest
+    hops from any seed in that search, only those nearer than ``max_hops``,
+    because a walk that avoids the owner is never shorter. With fewer than
+    two seeds no node can count two, so nothing is read.
     """
+    if len(seeds) < 2:
+        return {}
     known = {**nodes, **{str(seed.id): seed for seed in seeds}}
+    expandable = (
+        set(known) if depths is None
+        else {str(seed.id) for seed in seeds} | {node_id for node_id, depth in depths.items() if depth < max_hops}
+    )
     adjacency: dict[str, set[str]] = defaultdict(set)
-    for edge in await graph_store.get_edges(node_ids=list(known)):
+    for edge in await graph_store.get_edges(node_ids=list(expandable)):
         source, target = str(edge.source_id), str(edge.target_id)
         if source != target and source in known and target in known and not _unverified_alias(edge):
             adjacency[source].add(target)
@@ -258,6 +269,7 @@ async def _generate_graph_candidates(
     # For each seed, determine hop distances via a single depth-aware
     # neighborhood query (one traversal instead of one per hop level).
     node_proximity: dict[str, float] = {}  # node_id -> best proximity
+    node_depth: dict[str, int] = {}  # node_id -> fewest hops from a seed
     node_map: dict[str, MemoryNode] = {}  # node_id -> MemoryNode
 
     # Node types exempt from temporal filtering (persistent knowledge).
@@ -296,6 +308,8 @@ async def _generate_graph_candidates(
             if nid not in node_proximity or proximity > node_proximity[nid]:
                 node_proximity[nid] = proximity
             node_map[nid] = neighbor
+            if depth < node_depth.get(nid, depth + 1):
+                node_depth[nid] = depth
 
     # Post-filter to max_candidates: sort by confidence DESC, created_at DESC.
     candidates = [
@@ -308,7 +322,7 @@ async def _generate_graph_candidates(
     )
     candidates = candidates[: config.graph_max_candidates]
     if seed_reach:
-        reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops)
+        reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops, node_depth)
         for candidate in candidates:
             candidate["graph_seed_reach"] = reach.get(str(candidate["node"].id))
     return candidates

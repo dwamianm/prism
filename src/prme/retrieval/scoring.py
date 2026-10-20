@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING
 from prme.models.nodes import MemoryNode
 from prme.models.learning import RankingMultipliers
 from prme.retrieval.ranking_adjustments import adjusted_weights
-from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, ScoringWeights
+from prme.retrieval.config import DEFAULT_SCORING_WEIGHTS, RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP, ScoringWeights
 from prme.retrieval.models import (
     QueryAnalysis,
     RankFusion,
@@ -584,20 +584,27 @@ def _dense_ranks(scores: list[float | None]) -> list[int | None]:
     return [None if score is None else place[score] for score in scores]
 
 
-def _seed_count_ranks(candidates: list[RetrievalCandidate]) -> list[int | None]:
+def _seed_count_ranks(
+    candidates: list[RetrievalCandidate], semantic_ranks: list[int | None],
+) -> list[int | None]:
     """The graph list of ``rrf_graph_seed_count``: dense ranks, more seeds first, then fewer total hops.
 
     A candidate joins only when two or more of the question's seeds reach it
-    without passing through the owner's entity, and one of them links to it
-    directly (``graph_seed_reach``). A record near one name, or near the owner
-    alone, gains nothing, and neither does one that only sits between names it
-    is not about. An entity, whose text is only its name, never joins.
+    without passing through the owner's entity, one of them links to it
+    directly (``graph_seed_reach``), and the semantic channel ranks it in its
+    top ``RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP``. A record near one name, or near
+    the owner alone, gains nothing, and neither does one that only sits
+    between names it is not about. The list reorders records that already
+    match the question; one that does not, however near the question's names,
+    is not lifted over them. An entity, whose text is only its name, never
+    joins.
     """
     keys = [
         (reach[0], -reach[1])
         if (reach := candidate.graph_seed_reach) is not None and reach[0] >= 2 and reach[2] == 1
+        and semantic_rank is not None and semantic_rank <= RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP
         and candidate.node.node_type != NodeType.ENTITY else None
-        for candidate in candidates
+        for candidate, semantic_rank in zip(candidates, semantic_ranks)
     ]
     place = {key: rank for rank, key in enumerate(
         sorted({key for key in keys if key is not None}, reverse=True), start=1,
@@ -655,7 +662,8 @@ def _rank_fused_scores(
     only through ``rrf_graph_weight``: with it, the graph path is a third
     ranked list, ordered by proximity, that adds its weighted reciprocal rank.
     With ``rrf_graph_seed_count`` that list holds only records two or more of
-    the question's seeds reach, ordered by how many (``_seed_count_ranks``).
+    the question's seeds reach and the semantic channel ranks near the top,
+    ordered by how many seeds (``_seed_count_ranks``).
 
     On a current-state question, ``rrf_recency_boost`` adds the weighted
     formula's current-state recency, measured from the newest stated time in
@@ -678,7 +686,7 @@ def _rank_fused_scores(
     lexical_ranks = _competition_ranks(lexical)
     graph_ranks: list[int | None] = [None] * len(candidates)
     if weights.rrf_graph_weight is not None and weights.rrf_graph_seed_count:
-        graph_ranks = _seed_count_ranks(candidates)
+        graph_ranks = _seed_count_ranks(candidates, semantic_ranks)
     elif weights.rrf_graph_weight is not None:
         graph = [
             candidate.graph_proximity if "GRAPH" in candidate.paths or candidate.graph_proximity > 0 else None
