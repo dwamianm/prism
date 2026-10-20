@@ -64,6 +64,8 @@ class AdmissionContent:
     issued_tokens: tuple[str, ...] = ()
     pseudonym_epoch: UUID | None = None
     source: SanitizedContent | None = None
+    source_role: str = "user"
+    source_time: str | None = None
 
 
 @dataclass(frozen=True, repr=False)
@@ -84,6 +86,8 @@ class SanitizedContent:
     source_snapshot: PolicySnapshot | None = None
     continuation: BudgetContinuation | None = None
     source_only: tuple[SourceOnlyRegion, ...] = ()
+    source_role: str = "user"
+    source_time: str | None = None
 
 
 class Sanitizer(Protocol):

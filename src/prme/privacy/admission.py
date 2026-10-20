@@ -8,7 +8,7 @@ production implementations are supplied by the separately owned integrations.
 from __future__ import annotations
 
 from contextlib import AsyncExitStack, asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 import json
 from types import SimpleNamespace
@@ -22,7 +22,7 @@ from prme.privacy.capabilities import (
     RetryContext, SanitizedContent, SourceOnlyRegion,
 )
 from prme.privacy.policy import PolicySnapshot, PrivacyDenied, PrivacyPolicy, snapshot
-from prme.privacy.records import PRIVACY_KEY, PrivacyRecord
+from prme.privacy.records import PRIVACY_KEY, PrivacyRecord, SanitizationReport
 from prme.storage._threading import run_async_to_completion
 from prme.storage.privacy import PrivacyRepository
 from prme.types import NodeType, Scope
@@ -141,6 +141,7 @@ class PreparedAdmission:
     event: Event
     source: SanitizedContent
     budget: OperationBudget
+    generated_reports: list[SanitizationReport] = field(default_factory=list)
 
 
 class AdmissionCoordinator:
@@ -286,14 +287,17 @@ class AdmissionCoordinator:
             raise PrivacyDenied("privacy_expired")
 
     async def sanitize(self, fields: str, saved: PolicySnapshot, budget: OperationBudget,
-                       *, mode="ingress", source: SanitizedContent | None = None) -> SanitizedContent:
+                       *, mode="ingress", source: SanitizedContent | None = None,
+                       source_role: str = "user", source_time: str | None = None) -> SanitizedContent:
         runtime = self.require_runtime()
         try:
             async with self.guard(saved, "admission"):
                 result = await runtime.sanitizer.admit(AdmissionContent(
                     fields_json=fields, snapshot=saved, mode=mode, budget=budget,
                     issued_tokens=source.issued_tokens if source else (),
-                    pseudonym_epoch=source.pseudonym_epoch if source else None, source=source))
+                    pseudonym_epoch=source.pseudonym_epoch if source else None, source=source,
+                    source_role=source.source_role if source else source_role,
+                    source_time=source.source_time if source else source_time))
             if not isinstance(result, SanitizedContent):
                 raise PrivacyDenied("privacy_invalid_result")
             if (result.sanitizer_version, result.registry_version) != (saved.policy.sanitizer_version, saved.policy.registry_version):
@@ -333,7 +337,8 @@ class AdmissionCoordinator:
         except (TypeError, ValueError):
             raise PrivacyDenied("privacy_unsupported_input") from None
         budget = budget or OperationBudget(uuid4())
-        source = await self.sanitize(fields, saved, budget)
+        source = await self.sanitize(fields, saved, budget, source_role=role,
+                                     source_time=event_time.isoformat() if event_time else None)
         data = json.loads(source.fields_json)
         if not isinstance(data, dict) or set(data) != {"content", "retrieval_content", "metadata", "speaker", "value_bindings"}:
             raise PrivacyDenied("privacy_invalid_result")
@@ -344,7 +349,7 @@ class AdmissionCoordinator:
         evidence_bytes = finite_json({**data, "role": role,
                                      "event_time": event_time.isoformat() if event_time else None,
                                      "representation": "sanitized", "private_checksum": source.private_checksum,
-                                     "checksum_scope": "sanitized_operation_fields",
+                                     "checksum_scope": "sanitized_source_unit_v1" if source.source_snapshot else "sanitized_operation_fields",
                                      "sanitizer_version": source.sanitizer_version,
                                      "registry_version": source.registry_version,
                                      "detector_versions": source.detector_versions,
@@ -353,7 +358,8 @@ class AdmissionCoordinator:
             raise PrivacyDenied("privacy_evidence_too_large")
         event_id = uuid4()
         record = PrivacyRecord(event_id=event_id, snapshot=saved, source_id=source.source_id,
-                               representation_id=source.representation_id, kind=kind)
+                               representation_id=source.representation_id, kind=kind,
+                               sanitization=self.sanitization_report(source))
         purposes = tuple(p for p, needed in (("evidence", saved.policy.capture != "none"),
                                             ("processing", kind == "extraction" and asynchronous)) if needed)
         runtime = self.require_runtime()
@@ -378,6 +384,13 @@ class AdmissionCoordinator:
         return PreparedAdmission(record, event, source, budget)
 
     @staticmethod
+    def sanitization_report(source: SanitizedContent) -> SanitizationReport | None:
+        # Older explicit component capabilities have no production provenance.
+        if source.source_snapshot is None:
+            return None
+        return SanitizationReport(detector_versions=source.detector_versions, action_counts=source.action_counts)
+
+    @staticmethod
     def context(record: PrivacyRecord, purpose: str) -> PayloadContext:
         p = record.snapshot.policy
         return PayloadContext(project_id=p.project_id, owner_id=p.owner_id, scope=p.scope.value,
@@ -396,6 +409,7 @@ class AdmissionCoordinator:
                             "issued_tokens": source.issued_tokens,
                             "pseudonym_epoch": str(source.pseudonym_epoch) if source.pseudonym_epoch else None,
                             "source_snapshot": source.source_snapshot.model_dump(mode="json") if source.source_snapshot else None,
+                            "source_role": source.source_role, "source_time": source.source_time,
                             "continuation": {**asdict(source.continuation), "operation_id": str(source.continuation.operation_id)}
                                             if source.continuation else None,
                             "source_only": [asdict(region) for region in source.source_only]}).encode()
@@ -542,11 +556,17 @@ class AdmissionCoordinator:
         result_fields = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
         admitted = await self.sanitize(finite_json({"extraction": result_fields}), saved, prepared.budget,
                                        mode="generated_output", source=prepared.source)
+        report = self.sanitization_report(admitted)
+        if report is not None:
+            prepared.generated_reports.append(report)
         try:
             result = ExtractionResult.model_validate(json.loads(admitted.fields_json)["extraction"])
         except (TypeError, ValueError, KeyError):
             raise PrivacyDenied("privacy_invalid_result") from None
         source = json.loads(prepared.source.fields_json)
+        if prepared.source.source_snapshot is not None:
+            from prme.ingestion.grounding import validate_private_grounding
+            validate_private_grounding(result, source["content"], speaker=source["speaker"])
         result = validate_grounding(result, source["content"], speaker=source["speaker"], content_free_logs=True)
         # This transient event's identity/hash refers to the durable empty envelope.
         # Its actual sanitized checksum remains in the private source representation.
@@ -555,6 +575,21 @@ class AdmissionCoordinator:
                                                   "metadata": attach_speaker(source["metadata"], source["speaker"])})
         return await capability_call(self.engine._pipeline._prepare_plan(result, event, privacy=(self, prepared)),
                                      "privacy_invalid_result")
+
+    async def final_generated_bundle(self, prepared: PreparedAdmission, fields: dict) -> tuple[dict, SanitizationReport | None]:
+        """The exact final copies are checked before plan/index preparation."""
+        result = await self.sanitize(finite_json(fields), prepared.record.snapshot, prepared.budget,
+                                     mode="generated_output", source=prepared.source)
+        report = self.sanitization_report(result)
+        if report is not None:
+            from collections import Counter
+            prepared.generated_reports.append(report)
+            counts = Counter()
+            for item in prepared.generated_reports:
+                counts.update(dict(item.action_counts))
+            report = SanitizationReport(detector_versions=report.detector_versions,
+                                        action_counts=tuple(sorted(counts.items())))
+        return json.loads(result.fields_json), report
 
     async def validate_references(self, record: PrivacyRecord, nodes) -> tuple[PrivacyRecord, ...]:
         """Refuse unclassified/cross-policy planner inputs until integrated replay.
@@ -583,6 +618,10 @@ class AdmissionCoordinator:
         for msg in messages:
             prepared.append(await self.prepare(policy=policy, kind="extraction", asynchronous=not wait_for_extraction,
                 user_id=user_id, scope=scope, session_id=session_id, budget=budget, **dict(msg)))
+        if not wait_for_extraction and len(prepared) > 1 and any(item.source.continuation for item in prepared):
+            # Disjoint durable grants and replay accounting belong to the live
+            # claim integration. Never let every item reuse the batch remainder.
+            raise PrivacyDenied("privacy_processing_unavailable")
         plans = []
         if wait_for_extraction:
             try:
@@ -626,6 +665,10 @@ class AdmissionCoordinator:
             if source.continuation is not None:
                 from prme.privacy.sanitizer import restore_budget, validate_source
                 validate_source(source, record.snapshot)
+                if status.attempts != 1 or claim.attempts != 1:
+                    # A retry cannot replenish detector time/bytes. PV-06 must
+                    # durably consume continuation before allowing another try.
+                    raise PrivacyDenied("privacy_processing_unavailable")
                 budget = restore_budget(source.continuation)
             else:
                 # Explicit component capabilities can omit production accounting.

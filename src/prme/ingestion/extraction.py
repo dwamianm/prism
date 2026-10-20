@@ -1628,6 +1628,10 @@ class InstructorExtractionProvider:
             return self._provider_string.split("/", 1)[1]
         return None
 
+    def privacy_adapter(self) -> GuardedExtractionProvider:
+        """Explicit single-send protected adapter; legacy extraction is unchanged."""
+        return GuardedExtractionProvider(self)
+
     async def extract(
         self, content: str, *, role: str = "user", context: Sequence[str] = (),
         resolve: FactTextResolution | None = None, speaker: str | None = None,
@@ -1769,6 +1773,129 @@ class InstructorExtractionProvider:
             )
             reason = extraction_failure_code(exc)
             raise ExtractionError(f"Extraction failed ({reason})", reason_code=reason) from exc
+
+
+_PROTECTED_PROVIDER: ContextVar[bool] = ContextVar("prme_protected_provider", default=False)
+
+
+class GuardedExtractionProvider:
+    """Explicit native-SDK single send for protected OpenAI/Anthropic/Ollama.
+
+    SDK and Instructor retries are disabled. Unvalidated output returns only to
+    AdmissionCoordinator, which admits it before parsing ExtractionResult or
+    entering any existing repair/logging path. No model is called at startup.
+    """
+
+    def __init__(self, provider: InstructorExtractionProvider):
+        self._provider = provider
+
+    @property
+    def provider_name(self) -> str:
+        return self._provider.provider_name
+
+    async def extract(self, content, snapshot, *, guard):
+        from contextlib import contextmanager
+        import logging
+
+        import httpx
+
+        from prme.model_runtime import resolve_provider_connection
+        from prme.privacy.policy import PrivacyDenied
+        from prme.privacy.sanitizer import canonical, validate_source
+        from prme.privacy.strict_schema import parse_json
+
+        fields = validate_source(content, snapshot)
+        provider = self._provider
+        if self.provider_name not in {"openai", "anthropic", "ollama"} or not provider._resolve_model_id():
+            raise PrivacyDenied("privacy_provider_unavailable")
+
+        class ContentFree(logging.Filter):
+            def filter(self, record):
+                if _PROTECTED_PROVIDER.get():
+                    record.msg, record.args = "privacy_provider_event", ()
+                    record.exc_info = record.exc_text = record.stack_info = None
+                return True
+
+        @contextmanager
+        def safe_logs():
+            # Context-local suppression does not modify other concurrent calls.
+            names = {"openai._base_client", "anthropic._base_client", "httpx", "httpcore"}
+            names.update(name for name in logging.Logger.manager.loggerDict
+                         if name.startswith(("openai.", "anthropic.", "httpx.", "httpcore.")))
+            filter_ = ContentFree()
+            loggers = [logging.getLogger(name) for name in names]
+            for item in loggers:
+                item.addFilter(filter_)
+            token = _PROTECTED_PROVIDER.set(True)
+            try:
+                yield
+            finally:
+                _PROTECTED_PROVIDER.reset(token)
+                for item in loggers:
+                    item.removeFilter(filter_)
+
+        client = None
+        http = None
+        try:
+            # Import SDKs before collecting their logger names. No credential
+            # or endpoint is resolved until this explicit capability is used.
+            import openai
+            if self.provider_name == "anthropic":
+                import anthropic
+            key, url = resolve_provider_connection(
+                provider._provider_string, api_key=provider._api_key, base_url=provider._base_url)
+            if self.provider_name == "ollama":
+                key, url = key or "ollama", url or "http://localhost:11434/v1"
+            http = httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(retries=0), follow_redirects=False)
+            common = {"api_key": key, "base_url": url, "http_client": http, "max_retries": 0,
+                      "timeout": provider._timeout}
+            schema = ExtractionResult.model_json_schema()
+            prompt = (_extraction_prompt_for_role(content.source_role, windowed=False, resolving=False)
+                      + "\nReturn only a JSON object matching this schema:\n" + canonical(schema))
+            message = canonical({"source": fields, "role": content.source_role, "event_time": content.source_time})
+            with safe_logs():
+                if self.provider_name == "anthropic":
+                    client = anthropic.AsyncAnthropic(**common)
+                    async with guard():
+                        response = await asyncio.wait_for(client.messages.create(
+                            model=provider._resolve_model_id(), system=prompt, max_tokens=4096,
+                            temperature=provider._temperature, messages=[{"role": "user", "content": message}]),
+                            timeout=provider._timeout)
+                    blocks = response.content
+                    if not blocks or any(getattr(block, "type", None) != "text" for block in blocks):
+                        raise PrivacyDenied("privacy_invalid_result")
+                    output = "".join(block.text for block in blocks)
+                else:
+                    client = openai.AsyncOpenAI(**common)
+                    arguments = dict(model=provider._resolve_model_id(),
+                                     messages=[{"role": "system", "content": prompt},
+                                               {"role": "user", "content": message}],
+                                     response_format={"type": "json_object"}, temperature=provider._temperature)
+                    if provider._reasoning_effort is not None:
+                        arguments["reasoning_effort"] = provider._reasoning_effort
+                    async with guard():
+                        response = await asyncio.wait_for(client.chat.completions.create(**arguments),
+                                                          timeout=provider._timeout)
+                    if len(response.choices) != 1 or response.choices[0].finish_reason != "stop":
+                        raise PrivacyDenied("privacy_invalid_result")
+                    output = response.choices[0].message.content
+                if not isinstance(output, str):
+                    raise PrivacyDenied("privacy_invalid_result")
+                # No output model validation, logging or retry can precede the
+                # coordinator's generated-output admission.
+                return parse_json(output)
+        except PrivacyDenied:
+            raise
+        except Exception:
+            raise PrivacyDenied("privacy_provider_unavailable") from None
+        finally:
+            try:
+                if client is not None:
+                    await client.close()
+                elif http is not None:
+                    await http.aclose()
+            except Exception:
+                raise PrivacyDenied("privacy_provider_unavailable") from None
 
 
 def create_extraction_provider(

@@ -15,8 +15,8 @@ from prme.privacy.sanitizer import LocalSanitizer
 from tests.privacy_fakes import make_runtime, policy_for
 
 
-@pytest.fixture(scope="module")
-def analyzer():
+@pytest.fixture(scope="module", name="analyzer")
+def local_analyzer_fixture():
     local = LocalAnalyzer()
     yield local
     local.close()
@@ -85,4 +85,5 @@ async def admit(sanitizer, saved, text, *, metadata=None, budget=None, mode="ing
         snapshot=saved, mode=mode, budget=budget or OperationBudget(uuid4()),
         issued_tokens=source.issued_tokens if source else (),
         pseudonym_epoch=source.pseudonym_epoch if source else None, source=source,
+        source_role=source.source_role if source else "user", source_time=source.source_time if source else None,
     ))
