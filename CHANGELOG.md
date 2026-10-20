@@ -110,7 +110,11 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
   stored or sent to a provider, and generated extraction and the final memory and
   index projections are checked again before they are published, with pinned
   offline recognizers, scoped pseudonyms, strict structured values, cumulative
-  operation budgets and reports that hold no content. Sanitization is heuristic
+  operation budgets and reports that hold no content. The optional extra `privacy`
+  installs `presidio-analyzer` and `spacy`; the model `en_core_web_sm` 3.8.0 is not part of
+  it, because PyPI does not accept a direct URL dependency. Install it from its release
+  (see `docs/SANITIZATION.md`); initialization checks its version and file digest and
+  refuses a missing or different model. Sanitization is heuristic
   and does not certify that text holds no sensitive information, and the issue
   stays open until it is verified with the real key custody, read, durable-work
   and authority components. Nothing changes while no policy is set.
