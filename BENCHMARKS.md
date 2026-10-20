@@ -1957,9 +1957,10 @@ inheritance rule the notes would rise with their trigger, and the claim would ne
 - Chat probe: 14/18 in the top 3 and 15/18 in the top 5 on both sides; job-now 7 to 8 and coffee 4 to 5, every other
   measure equal.
 - Fast cycle: pass, 3 measures moved, all watched (travel 2 to 3, coffee 4 to 5, job-now 7 to 8). The baseline
-  (`baseline-main.json`) was taken again on a clean tree after the flip, with the store, ingest and store-extract
-  stages: against #275's baseline, those three, and in the store-extract stage "flights" 4 to 2, answers in the top 3
-  13 to 14 and the mean reciprocal rank 0.761 to 0.776, moved; 162 measures are unchanged.
+  (`baseline-main.json`) was taken again at the final head `631e6301` (clean tree, no other test or benchmark running,
+  48 s in all), with the store, ingest and store-extract stages: against #275's 0.16.0a5 baseline, those three, and
+  in the store-extract stage "flights" 4 to 2, answers in the top 3 13 to 14 and the mean reciprocal rank 0.761 to
+  0.776, moved; 162 measures are unchanged.
 - Offline evidence gate (`gate-compare`): no row differs (LoCoMo all evidence packed 84.0% on both sides, 1,536 ties;
   LongMemEval-S 94.7%, 470 ties), and no question lost its candidates. Its packs hold no extracted entities, so this
   shows only that plain retrieval is untouched; retrieval p50 0.153 s against 0.160 s on LoCoMo and 0.162 s against

@@ -2,18 +2,18 @@
  "kind": "prme-fast-cycle-report",
  "schema_version": 1,
  "label": "main",
- "created_at": "2026-10-20T16:35:35.996145+00:00",
+ "created_at": "2026-10-20T16:15:29.904394+00:00",
  "provenance": {
-  "commit": "b459381c4158b7038adea3b80d4c113173930f7f",
-  "src_tree": "a8324d3091ebcd342c7f66966ab9b64f1c972128",
+  "commit": "631e630177571bf27ffec1cdda3bbff8f1c10d90",
+  "src_tree": "49dfd92ea321a8ecaac7242e25c3a9b6d88123c2",
   "src_modified": false,
   "settings": {}
  },
  "seconds": {
-  "store": 9.175088332995074,
-  "ingest": 24.728349750002963,
-  "store-extract": 30.87633591600752,
-  "total": 64.77977399900556
+  "store": 6.99961354098923,
+  "ingest": 19.22750254199491,
+  "store-extract": 21.783013124993886,
+  "total": 48.010129207978025
  },
  "stages": {
   "store": {
@@ -25,8 +25,8 @@
    "calls": 75,
    "nodes": 75,
    "edges": 0,
-   "store_seconds": 8.394861249995301,
-   "retrieve_seconds": 0.6869052909896709,
+   "store_seconds": 6.370702790998621,
+   "retrieve_seconds": 0.5932795000117039,
    "measures": {
     "nodes_per_store_call": 1.0,
     "edges_per_store_call": 0.0,
@@ -394,7 +394,7 @@
      ]
     }
    ],
-   "seconds": 9.175088332995074
+   "seconds": 6.99961354098923
   },
   "ingest": {
    "mode": "replay",
@@ -406,7 +406,7 @@
     "defects-v1": {
      "turns": 14,
      "speaker": false,
-     "seconds": 5.3548351250065025,
+     "seconds": 4.219698166009039,
      "conversation_sha256": "a198c2be1f27c0b5522f52316855f2b6a788cac0afc2703fc46edbbd4f3d703d",
      "live_calls": 0,
      "cache_hits": 14,
@@ -433,7 +433,7 @@
       "cities": [
        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
        "decision: We chose Tokyo, Kyoto, Kanazawa, and Osaka.",
-       "fact: Hi, I am Alex Rivera."
+       "note: Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year."
       ],
       "learning": [
        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
@@ -447,8 +447,8 @@
       ],
       "travel": [
        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
-       "preference: I prefer trains to flights, so I want a JR Pass.",
-       "fact: Hi, I am Alex Rivera."
+       "note: Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+       "preference: I prefer trains to flights, so I want a JR Pass."
       ],
       "allergy": [
        "fact: Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
@@ -470,7 +470,7 @@
     "corrections-v1": {
      "turns": 16,
      "speaker": true,
-     "seconds": 4.331305583007634,
+     "seconds": 3.433025833001011,
      "conversation_sha256": "7ef185ed2e365fffc713f37aa8f4d312aa24ca69d159df3023c5b7ad13a8e1a9",
      "live_calls": 0,
      "cache_hits": 16,
@@ -520,7 +520,7 @@
        "probe": "move-city",
        "records": [
         {
-         "id": "b738a3a7-22d6-432b-a9bf-e7396c9696e6",
+         "id": "cd6b7f1f-e1e9-41ad-a596-8fd7c19db81b",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -532,7 +532,7 @@
          "replacement": null
         },
         {
-         "id": "8384a6f4-9fea-480c-bbf9-f74aef991aa8",
+         "id": "3478b15a-97fc-42f8-8d96-9ad0c1bd5611",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -544,7 +544,7 @@
          "replacement": null
         },
         {
-         "id": "75861f93-1e05-4b27-a0b6-193628c24d35",
+         "id": "d1d23f7d-9ad5-413b-9874-be81b0441f01",
          "type": "decision",
          "state": "tentative",
          "mentions": [
@@ -556,7 +556,7 @@
          "replacement": null
         },
         {
-         "id": "08c17d74-ec38-4292-b16a-0885d70a415c",
+         "id": "09a2433c-9124-460d-bdbf-c917cadfc67a",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -569,7 +569,7 @@
          "replacement": null
         },
         {
-         "id": "9eb8b388-cb84-4e76-8f94-741f997d99e2",
+         "id": "8840d373-25dc-47bf-9469-f34c9ef2afd6",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -581,7 +581,7 @@
          "replacement": null
         },
         {
-         "id": "2664fe35-421b-4066-b197-e5b8d0062a95",
+         "id": "aba5b19f-ba4c-4b07-9e45-6f46ab5eb165",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -634,7 +634,7 @@
        "probe": "jo-birthday",
        "records": [
         {
-         "id": "d342bc0a-dd50-48fc-a092-39d1613c1536",
+         "id": "f514ac88-25ea-489a-93c0-b9954bf48fd4",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -646,7 +646,7 @@
          "replacement": null
         },
         {
-         "id": "c3d9fafc-fbb1-411a-8f27-d7206ba7d5bd",
+         "id": "364ade88-6e13-4222-930d-b9b2fd2b386e",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -658,7 +658,7 @@
          "replacement": null
         },
         {
-         "id": "e4772bd1-a13a-4366-ae66-55e101b2e757",
+         "id": "dd793913-3672-42a7-be2b-b331849e8ff1",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -670,7 +670,7 @@
          "replacement": null
         },
         {
-         "id": "ce48b0af-ad58-4ad1-adee-d72880e6b0d2",
+         "id": "a1a62c39-6cb9-4a2a-817b-417added5296",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -682,7 +682,7 @@
          "replacement": null
         },
         {
-         "id": "3cf55d88-c442-496c-9923-c15a66e8e819",
+         "id": "5bb89f85-21f1-4287-a473-b5a596feb02f",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -734,7 +734,7 @@
        "probe": "coffee",
        "records": [
         {
-         "id": "7f79c5a5-d90d-4968-aaaf-4e8161bd7b35",
+         "id": "ffc1a8db-f89b-4cf2-a8ed-4b8446281c55",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -746,7 +746,7 @@
          "replacement": null
         },
         {
-         "id": "2c497550-a06c-4f3d-b3a9-6e0e8e614fce",
+         "id": "9f7714d0-2652-44d9-9389-31a615dfb6e7",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -758,7 +758,7 @@
          "replacement": null
         },
         {
-         "id": "8adcc2d0-3689-42ad-864d-cb7640488a92",
+         "id": "ec5ac3f4-c2f0-4c8b-9980-1ca81c6306f6",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -770,7 +770,7 @@
          "replacement": null
         },
         {
-         "id": "17902b38-b03e-4b87-bc37-9c8b0b96b4fd",
+         "id": "65510182-64a6-4c02-9142-0e00b0dd5627",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -822,7 +822,7 @@
        "probe": "job",
        "records": [
         {
-         "id": "8c52aa4e-c858-4e72-b8e9-2a7ed7451bd2",
+         "id": "2229ccde-d795-4ee4-88e1-781b52f47e66",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -834,7 +834,7 @@
          "replacement": null
         },
         {
-         "id": "a99a601b-c10e-44d8-9565-7529c5adcba0",
+         "id": "037145aa-13ce-4360-bbba-8b1963ca4640",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -875,7 +875,7 @@
     "chat-v1": {
      "turns": 54,
      "speaker": false,
-     "seconds": 14.729064792001736,
+     "seconds": 11.524779792001937,
      "conversation_sha256": "535a76267ea20486e0d5afdace7c7ff277f649ccc8c4687c448ee169c374af8d",
      "live_calls": 0,
      "cache_hits": 54,
@@ -928,7 +928,7 @@
       "old-manager": [
        "fact: I gave notice at Northwind yesterday.",
        "fact: We use Tableau at Northwind.",
-       "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards."
+       "note: I gave notice at Northwind yesterday. Priya was really nice about it."
       ],
       "partner-job": [
        "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
@@ -968,7 +968,7 @@
       "race-time": [
        "fact: I signed up for the Cherry Creek Half Marathon on May 17!",
        "fact: In February you signed up for the Cherry Creek Half Marathon on May 17, and you finished it in 1:58:30.",
-       "fact: I finished the Cherry Creek Half on Sunday in 1:58:30!"
+       "fact: Amazing, Dana! 1:58:30 for your first half marathon, and under two hours."
       ],
       "coffee": [
        "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
@@ -1031,7 +1031,7 @@
      "answer_rank:cities": 2,
      "answer_rank:learning": 3,
      "answer_rank:work-languages": 1,
-     "answer_rank:travel": 2,
+     "answer_rank:travel": 3,
      "answer_rank:allergy": 1,
      "answer_rank:shipments": 1,
      "answer_rank:reviewer": 1
@@ -1094,7 +1094,7 @@
      "answers_in_top5": 15,
      "stale_in_context": 3,
      "repeated_records_in_contexts": 18,
-     "answer_rank:job-now": 7,
+     "answer_rank:job-now": 8,
      "answer_rank:title-now": 10,
      "answer_rank:start-date": 2,
      "answer_rank:old-manager": 3,
@@ -1106,7 +1106,7 @@
      "answer_rank:sister-city": 3,
      "answer_rank:running-partner": 2,
      "answer_rank:race-time": 2,
-     "answer_rank:coffee": 4,
+     "answer_rank:coffee": 5,
      "answer_rank:diet": 1,
      "answer_rank:mel-news": 3,
      "answer_rank:trip": 1,
@@ -1114,7 +1114,7 @@
      "answer_rank:language": 2
     }
    },
-   "seconds": 24.728349750002963
+   "seconds": 19.22750254199491
   },
   "store-extract": {
    "backend": "duckdb",
@@ -1133,9 +1133,9 @@
    "live_calls": 0,
    "cache_hits": 75,
    "unreproduced": 0,
-   "store_seconds": 9.54133516701404,
-   "extract_seconds": 19.308688375007478,
-   "retrieve_seconds": 1.6569664999988163,
+   "store_seconds": 6.213897084002383,
+   "extract_seconds": 13.511054832997615,
+   "retrieve_seconds": 1.809001708010328,
    "measures": {
     "nodes_per_store_call": 5.026666666666666,
     "edges_per_store_call": 4.906666666666666,
@@ -1144,9 +1144,9 @@
     "questions_with_a_graph_candidate": 17,
     "questions_with_a_word_candidate": 17,
     "answers_in_top1": 12,
-    "answers_in_top3": 13,
+    "answers_in_top3": 14,
     "answers_in_context": 17,
-    "mean_reciprocal_rank": 0.7609477124183006,
+    "mean_reciprocal_rank": 0.7756535947712417,
     "stale_above_answer": 1,
     "stale_in_context": 5,
     "repeated_records_in_contexts": 102,
@@ -1165,7 +1165,7 @@
     "answer_rank:table-size": 1,
     "answer_rank:timescale": 1,
     "answer_rank:gravel-race": 1,
-    "answer_rank:flights": 4,
+    "answer_rank:flights": 2,
     "answer_rank:sql-style": 1,
     "extraction_requests": 75,
     "extraction_tokens": 462676,
@@ -1205,10 +1205,10 @@
      "lexical_candidates": 177,
      "graph_candidates": 150,
      "top_results": [
-      "fact: The Japan trip budget is 8,500 USD, not including flights.",
       "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
       "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "fact: The Japan trip budget is 8,500 USD, not including flights.",
+      "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
       "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
      ]
     },
@@ -1270,9 +1270,9 @@
      "top_results": [
       "fact: Correction: pair programming drains Alex.",
       "preference: Alex likes pair programming and does it most Thursdays.",
-      "preference: Alex likes pair programming and does it most Thursdays.",
-      "preference: Correction: pair programming drains Alex. Alex prefers short 30 minute bursts and not full sessions.",
-      "preference: Alex writes table-driven tests in Go and wants subtests named after the scenario."
+      "preference: Alex writes table-driven tests in Go and wants subtests named after the scenario.",
+      "preference: Alex went back to VS Code for the Go debugger but keeps Neovim for quick edits and writing.",
+      "preference: Alex prefers Go for services and TypeScript for internal tooling."
      ]
     },
     {
@@ -1387,10 +1387,10 @@
      "graph_candidates": 90,
      "top_results": [
       "fact: The Japan trip budget is 8,500 USD, not including flights.",
-      "fact: The Japan trip budget is 8,500 USD, not including flights.",
-      "fact: Correction: the Japan trip moved earlier, to 2027-03-28 through 2027-04-11, because the blossoms peak in late March.",
       "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "fact: The Japan trip budget is 8,500 USD, not including flights.",
+      "fact: Correction: the Japan trip moved earlier, to 2027-03-28 through 2027-04-11, because the blossoms peak in late March."
      ]
     },
     {
@@ -1444,9 +1444,9 @@
      "graph_candidates": 150,
      "top_results": [
       "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
-      "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
       "fact: TimescaleDB gives compression but needs extra operations work.",
       "decision: I think we should look at TimescaleDB instead of native partitioning.",
+      "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
       "fact: Correction: pair programming drains Alex."
      ]
     },
@@ -1463,16 +1463,16 @@
      "graph_candidates": 150,
      "top_results": [
       "fact: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07.",
+      "fact: Alex rides gravel bikes on weekends, about 60 miles a week.",
       "event: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07.",
-      "fact: Alex rides gravel bikes on weekends, about 60 miles a week.",
-      "fact: Alex rides gravel bikes on weekends, about 60 miles a week.",
-      "fact: Alex is learning Rust on weekends and is reading Rust for Rustaceans."
+      "preference: Alex writes table-driven tests in Go and wants subtests named after the scenario.",
+      "fact: Alex strained a calf on 2026-10-09 and is skipping long rides for two weeks."
      ]
     },
     {
      "id": "flights",
      "question": "Which airline did Alex book for the Japan trip?",
-     "answer_rank": 4,
+     "answer_rank": 2,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
@@ -1482,10 +1482,10 @@
      "graph_candidates": 150,
      "top_results": [
       "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
-      "fact: The Japan trip budget is 8,500 USD, not including flights.",
-      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
       "fact: Alex booked United flights from Denver to Tokyo Haneda departing 2027-03-28.",
-      "event: Alex booked United flights from Denver to Tokyo Haneda departing 2027-03-28."
+      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+      "fact: The Japan trip budget is 8,500 USD, not including flights.",
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
      ]
     },
     {
@@ -1508,7 +1508,7 @@
      ]
     }
    ],
-   "seconds": 30.87633591600752
+   "seconds": 21.783013124993886
   }
  },
  "measures": {
@@ -1613,9 +1613,9 @@
    "store/answer_rank:flights": 3,
    "store/answer_rank:sql-style": 1,
    "store-extract/answers_in_top1": 12,
-   "store-extract/answers_in_top3": 13,
+   "store-extract/answers_in_top3": 14,
    "store-extract/answers_in_context": 17,
-   "store-extract/mean_reciprocal_rank": 0.7609477124183006,
+   "store-extract/mean_reciprocal_rank": 0.7756535947712417,
    "store-extract/stale_above_answer": 1,
    "store-extract/stale_in_context": 5,
    "store-extract/repeated_records_in_contexts": 102,
@@ -1634,7 +1634,7 @@
    "store-extract/answer_rank:table-size": 1,
    "store-extract/answer_rank:timescale": 1,
    "store-extract/answer_rank:gravel-race": 1,
-   "store-extract/answer_rank:flights": 4,
+   "store-extract/answer_rank:flights": 2,
    "store-extract/answer_rank:sql-style": 1,
    "defects-v1/answers_in_context": 7,
    "defects-v1/answers_in_top3": 7,
@@ -1644,7 +1644,7 @@
    "defects-v1/answer_rank:cities": 2,
    "defects-v1/answer_rank:learning": 3,
    "defects-v1/answer_rank:work-languages": 1,
-   "defects-v1/answer_rank:travel": 2,
+   "defects-v1/answer_rank:travel": 3,
    "defects-v1/answer_rank:allergy": 1,
    "defects-v1/answer_rank:shipments": 1,
    "defects-v1/answer_rank:reviewer": 1,
@@ -1667,7 +1667,7 @@
    "chat-v1/answers_in_top5": 15,
    "chat-v1/stale_in_context": 3,
    "chat-v1/repeated_records_in_contexts": 18,
-   "chat-v1/answer_rank:job-now": 7,
+   "chat-v1/answer_rank:job-now": 8,
    "chat-v1/answer_rank:title-now": 10,
    "chat-v1/answer_rank:start-date": 2,
    "chat-v1/answer_rank:old-manager": 3,
@@ -1679,7 +1679,7 @@
    "chat-v1/answer_rank:sister-city": 3,
    "chat-v1/answer_rank:running-partner": 2,
    "chat-v1/answer_rank:race-time": 2,
-   "chat-v1/answer_rank:coffee": 4,
+   "chat-v1/answer_rank:coffee": 5,
    "chat-v1/answer_rank:diet": 1,
    "chat-v1/answer_rank:mel-news": 3,
    "chat-v1/answer_rank:trip": 1,
