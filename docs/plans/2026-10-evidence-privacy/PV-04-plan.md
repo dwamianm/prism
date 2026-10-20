@@ -844,3 +844,53 @@ other evidence remain unchanged. Actual PV-06 policy/fence/erasure acceptance,
 PV-05 protected publication/receipts/recovery, full CL07 erasure, final mandatory
 checks, independent review and publication remain pending. The new checkpoint
 is suitable for deliberate adoption by the #324 branch stacked on `b0e64283`.
+
+## Reviewed dependency composition, 2026-10-20
+
+Root authorized composing reviewed #321 head
+`d8b75a078195aabc89c6a41a4ab506e6399ba1a3`, including actual merged #322
+ancestry, into the frozen Q04 head `01cd5a4d`. This is a normal two-parent
+merge so the reviewed dependency ancestry remains available. No new behavior,
+acceptance criterion, scenario or broad test rerun belongs to this step.
+
+The twelve additive conflict dispositions are:
+
+- Preserve the complete approved upstream #321 review record and SANITIZATION.md
+  evidence, rather than the older copies inherited by this branch.
+- Preserve approved PV-13 plan/results, including explicit FakeAuthority and
+  product-case qualifications. Add only a separate Q04 integration qualification
+  that points to the existing PV-04 evidence; original SN outcomes stay intact.
+- Take upstream pyproject.toml and uv.lock byte-for-byte. Their previous local
+  difference was optional-extra order only, with no version or package change.
+- Take upstream privacy/__init__.py byte-for-byte, retaining both crypto and
+  sanitizer lazy exports. The top-level #323 read exports remain intact.
+- Retain the checked #323 grounding, admission delegate and Q04 tests. Admission
+  keeps all reviewed writer guards, original snapshots, sanitized source binding
+  and final admitted-projection hooks. Preserve both existing public consumer
+  type functions and the #323 read signatures.
+- Retain all PV-03/PV-13 inventory values and all 45 copy IDs, plus the intended
+  PV-04 annotations and source anchors. Restore upstream C41 field order.
+
+`323-dependency-composition-conflicts.log` and `.patch` preserve the initial
+merge conflicts. `323-composition-source-audit.json` checks 685 prior tracked
+source/test/web files: the only byte change is the reviewed lazy-export module.
+All Q04/read, sanitizer, crypto/custody, storage and test bodies retain the
+passing checkpoint bytes. Twenty-two dependency paths, including the reviewed
+review record, dependency manifests and all existing privacy modules except
+the deliberately extended admission coordinator, match upstream exactly. Every
+existing non-anchor inventory value is preserved. The dependency-relative scope
+is 39 files after removing five inherited-only differences.
+
+`323-composition-types.log`, `323-composition-ruff.log` and
+`323-composition-contract.log` pass strict public mypy, changed-export Ruff and
+the structural contract. `323-composition-exports-2.log` passes all 20 privacy
+exports, seven #323 read exports and actual admission/read/pipeline imports.
+The first import probe referred to a nonexistent class name; its ImportError
+is preserved in `323-composition-exports.log`. Correcting that probe to the
+existing ReadContext required no product change. Previous runtime evidence is
+reused; no detector inference or broad behavioral rerun was added.
+
+Root will receive the exact merge head/tree and both parent-relative diffs in
+the current handoff before scheduling final reviews and the required full suite.
+Actual #325 authority/erasure and #324 durable publication/recovery remain
+pending; this composition is not issue closure or publication authorization.

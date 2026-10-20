@@ -143,66 +143,94 @@
       {
         "id": "SN01",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN02",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN03",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN04",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN05",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN06",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN07",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN08",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN09",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN10",
         "duckdb": "passed",
-        "postgresql": "passed"
+        "postgresql": "passed",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN11",
         "duckdb": "pending",
-        "postgresql": "pending"
+        "postgresql": "pending",
+        "product_case_status": "pending_actual_integration"
       },
       {
         "id": "SN12",
         "duckdb": "pending",
-        "postgresql": "pending"
+        "postgresql": "pending",
+        "product_case_status": "pending_actual_integration"
       }
-    ]
+    ],
+    "evidence_scope": "Pytest component/subcheck outcomes using real local recognition and databases with FakeAuthority and FakeProtector. These do not establish complete frozen SN product-case passes."
   },
   "pending_original_gates": [
+    {
+      "criteria": [
+        1,
+        2,
+        3,
+        4,
+        6
+      ],
+      "requirement": "Concrete local current-ledger/policy authority and native custody integrated with actual routes. FakeAuthority/FakeProtector establish component effects only; every frozen SN product case remains pending. Hosted authority belongs to issue280.",
+      "owner_issues": [
+        321,
+        325,
+        280
+      ]
+    },
     {
       "criteria": [
         1,
@@ -265,7 +293,8 @@
       "live model behavior",
       "positive lossless framework history",
       "protected query or profile/summary success"
-    ]
+    ],
+    "authority_scope": "FakeAuthority and FakeProtector are test capabilities; actual native authority/custody integration remains pending."
   },
   "projection_and_supervisor": {
     "source": "322-projection-and-supervisor.log",
@@ -298,5 +327,19 @@
     "deselected": 1,
     "seconds": 15.36,
     "scope": "Frozen scenarios and adapter/mechanism checks, excluding repeated69-row recognition"
+  },
+  "pv04_qualifier_integration": {
+    "source_head": "01cd5a4d36584df2faded941c128682f452f094d",
+    "scope": "Frozen Q04 positive source-effective time through actual sanitizer, crypto, ingestion, storage and before/at-boundary reads; retrieval uses explicit time_to. Existing SN results above are preserved historical component evidence, not whole-product passes.",
+    "evidence": [
+      "323-q04-repair-cycle1.log",
+      "323-q04-single-file-final-targeted.log"
+    ],
+    "preserved_failures": [
+      "323-q04-positive-before-repair.log",
+      "323-q04-competing-span-before-repair.log"
+    ],
+    "authority_scope": "FakeAuthority and synthetic external model responses remain component boundaries. Actual #325 current authority/erasure and #324 durable publication/recovery remain pending.",
+    "details": "PV-04-plan.md and PV-04-results.json"
   }
 }

@@ -629,13 +629,13 @@
       "source_refs": [{"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 214, "anchor": "`evidence-envelope-v1`"}, {"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 239, "anchor": "provider boundary"}, {"path": "src/prme/storage/privacy.py", "line": 16, "anchor": "DDL ="}, {"path": "src/prme/privacy/pseudonyms.py", "line": 30, "anchor": "class Pseudonyms:"}],
       "current_access": ["worker", "diagnostic", "hosted"],
       "current_retention": "PV-03 crypto/custody is implemented at the component boundary. Source, work, key and backup deadlines remain distinct; full lifecycle/erasure gates are pending.",
-      "pv13_implementation": "PV-13 consumes purpose-bound project/owner/scope/epoch key handles without provisioning or reverse maps. Native custody and erasure remain PV-03/PV-06; private custom-rule material is supplied by trusted capabilities.",
       "required_treatment": "Ciphertext/context include no plaintext. Purpose keys stay outside ordinary pack grants. Full custom-rule custody and erasure across provider/backup state remain separate dependent obligations.",
       "pv02_implementation": "PV-02 persists versioned opaque payload envelopes through an explicit protector capability and supplies expected-body compare-and-swap for rewrap.",
+      "pv03_implementation": "PV-03 supplies authenticated AES/RSA envelopes with immutable original policy snapshot binding, exact-purpose/version providers and wrapper-only held CAS. Current-policy/lifecycle integration and managed disposal remain separately gated.",
+      "pv13_implementation": "PV-13 consumes purpose-bound project/owner/scope/epoch key handles without provisioning or reverse maps. Native custody and erasure remain PV-03/PV-06; private custom-rule material is supplied by trusted capabilities.",
       "retention": "provider_key",
       "erasure_owners": ["engine", "key_provider", "storage_operator", "hosted_service"],
-      "requirements": ["E1", "E2", "E5", "E8"],
-      "pv03_implementation": "PV-03 supplies authenticated AES/RSA envelopes with immutable original policy snapshot binding, exact-purpose/version providers and wrapper-only held CAS. Current-policy/lifecycle integration and managed disposal remain separately gated."
+      "requirements": ["E1", "E2", "E5", "E8"]
     },
     {
       "id": "C42",

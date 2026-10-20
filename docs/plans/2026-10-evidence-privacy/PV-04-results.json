@@ -257,5 +257,26 @@
     "retrievalBoundary": "explicit time_to; reference_time alone is not an effective-time filter",
     "missingRefRefusalRetained": true,
     "authorityEvidence": "component fixture only"
+  },
+  "reviewed_dependency_composition": {
+    "prior_head": "01cd5a4d36584df2faded941c128682f452f094d",
+    "dependency_head": "d8b75a078195aabc89c6a41a4ab506e6399ba1a3",
+    "merge_strategy": "Normal two-parent merge; reviewed dependency ancestry retained.",
+    "conflicts": 12,
+    "dependency_relative_files": 39,
+    "runtime_disposition": "685 source/test/web files compared with the prior checkpoint; only reviewed upstream lazy exports differ. Existing runtime test evidence is reused.",
+    "evidence_disposition": "Approved #321 review and #322 evidence preserved; PV-13 adds only Q04 qualification. Manifests and privacy exports match upstream. Both admission/read and inventory changes retained.",
+    "verified": [
+      "323-composition-source-audit.json",
+      "323-composition-types.log",
+      "323-composition-ruff.log",
+      "323-composition-contract.log",
+      "323-composition-exports-2.log"
+    ],
+    "preserved_probe_failure": {
+      "source": "323-composition-exports.log",
+      "cause": "Import probe used nonexistent ProtectedReads instead of existing ReadContext; corrected probe passed without a source change."
+    },
+    "pending": "Final required reviews/full validation and actual #325 authority/erasure plus #324 durable publication/recovery."
   }
 }
