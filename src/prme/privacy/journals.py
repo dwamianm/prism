@@ -7,6 +7,7 @@ ordinary operation payloads or diagnostic evidence.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import hashlib
 from contextlib import contextmanager
@@ -358,12 +359,19 @@ class SnapshotEnvelope(BaseModel):
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
-@dataclass(frozen=True)
+@dataclass
 class JournalScope:
     coordinator: object
     records: tuple
+    task: asyncio.Task | None
+    active: bool = True
+
+    def owns_current_task(self):
+        return self.active and self.task is asyncio.current_task()
 
     def check(self):
+        if not self.active:
+            raise PrivacyDenied("privacy_processing_unavailable")
         for record in self.records:
             self.coordinator.check_deadlines(record.snapshot)
 
@@ -380,13 +388,17 @@ def journal_scope(coordinator, records):
     This is no authorization token: writers still acquire the coordinator's
     policy guard, and protected nodes cannot serialize without that scope.
     """
-    scope = JournalScope(coordinator, tuple(records))
+    scope = JournalScope(coordinator, tuple(records), asyncio.current_task())
     scope.check()
     token = _journal_scope.set(scope)
+    from prme.privacy.diagnostics import protected_diagnostics
+
     try:
-        yield scope
-        scope.check()
+        with protected_diagnostics():
+            yield scope
+            scope.check()
     finally:
+        scope.active = False
         _journal_scope.reset(token)
 
 
@@ -409,7 +421,11 @@ def protected_mutation(function):
         if coordinator is None:
             return await function(store, *args, **kwargs)
         current = _journal_scope.get()
-        if current is not None and current.coordinator is coordinator:
+        if (
+            current is not None
+            and current.coordinator is coordinator
+            and current.owns_current_task()
+        ):
             current.check()
             return await function(store, *args, **kwargs)
         arguments = signature.bind(store, *args, **kwargs).arguments
@@ -430,7 +446,7 @@ def protected_mutation(function):
         if not records:
             raise PrivacyDenied("privacy_processing_unavailable")
         # Actor identifiers are opaque; display text is not an authority ID.
-        for key in ("actor_id", "reviewer_id"):
+        for key in ("actor_id", "reviewer_id", "resolver_actor_id"):
             if kwargs.get(key) not in (None, "system", "organizer", "privacy"):
                 try:
                     if str(UUID(kwargs[key])) != kwargs[key]:
@@ -558,6 +574,17 @@ def validate_snapshot(value, record, family):
         or envelope.sha256 != hashlib.sha256(envelope.record.encode()).hexdigest()
     ):
         raise PrivacyDenied("privacy_invalid_result")
+    from prme.models.derivation import node_checksum
+
+    nodes = []
+    _snapshot_projection(record, lambda node: nodes.append(node) or node, edges=False)
+    if set(envelope.manifest.admitted_node_ids) != {node.id for node in nodes}:
+        raise PrivacyDenied("privacy_invalid_result")
+    for node in nodes:
+        if node_checksum(
+            project_manifest_node(node, envelope.manifest)
+        ) != node_checksum(node):
+            raise PrivacyDenied("privacy_invalid_result")
 
 
 def partition_continuations(continuation, count):
@@ -633,6 +660,8 @@ def load_checkpoint(value: bytes) -> tuple[bytes, dict | None]:
 async def generation_context(engine, *, user_id, scope=None):
     from prme.privacy.reads import ReadContext
 
+    if not hasattr(engine, "_privacy"):
+        return None
     if user_id is None:
         if engine._privacy.selected():
             raise PrivacyDenied("privacy_boundary_mismatch")
@@ -698,3 +727,68 @@ async def matching_summaries(engine, previous, request_hash, context):
         ):
             result.append(node)
     return result
+
+
+def scoped_manifest(nodes, journal_id):
+    from types import SimpleNamespace
+    from prme.privacy.records import PRIVACY_KEY
+
+    scope = _journal_scope.get()
+    if scope is None:
+        if any(PRIVACY_KEY in (node.metadata or {}) for node in nodes):
+            raise PrivacyDenied("privacy_processing_unavailable")
+        return None
+    context = SimpleNamespace(
+        records={record.event_id: record for record in scope.records}
+    )
+    head = SimpleNamespace(
+        id=UUID(str(journal_id)), created_at=scope.coordinator.require_runtime().clock()
+    )
+    manifest = generation_manifest(context, head, nodes)
+    return manifest.model_copy(
+        update={"admitted_node_ids": tuple(node.id for node in nodes)}
+    )
+
+
+async def generation_search(engine, *, user_id):
+    from prme.privacy.reads import ProtectedVectorSearch
+
+    context = await generation_context(engine, user_id=user_id)
+    return (
+        ProtectedVectorSearch(engine._vector_index, context)
+        if context
+        else engine._vector_index
+    )
+
+
+def compatible_admitted_pair(rule, a, b):
+    """Apply existing semantic rules without comparing opaque copy identities.
+
+    A held journal scope projects backend rows using their exact source records.
+    Organizer callers already hold admitted read projections. Neither path grants
+    permission to publish: the existing transaction still guards both sources.
+    """
+    from prme.privacy.records import PRIVACY_KEY
+
+    marked = [PRIVACY_KEY in (node.metadata or {}) for node in (a, b)]
+    if not any(marked):
+        return rule(a, b)
+    if not all(marked) or (a.user_id, a.scope) != (b.user_id, b.scope):
+        return False
+    if _journal_scope.get() is not None:
+        manifest = scoped_manifest((a, b), a.id)
+        a, b = (project_manifest_node(node, manifest) for node in (a, b))
+    nodes = [
+        node.model_copy(
+            deep=True,
+            update={
+                "metadata": {
+                    key: value
+                    for key, value in (node.metadata or {}).items()
+                    if key not in {PRIVACY_KEY, "source_availability"}
+                }
+            },
+        )
+        for node in (a, b)
+    ]
+    return rule(*nodes)

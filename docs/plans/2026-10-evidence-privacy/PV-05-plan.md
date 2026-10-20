@@ -62,7 +62,7 @@ schema carries redaction/unavailability instead of rewriting old checksums.
 5. Record real component evidence and pending original integration obligations;
    root owns independent reviews and final full-suite/wheel/CI delivery.
 
-## Finite validation plan (reused, not yet run)
+## Finite validation plan (reused; component results below)
 
 
 ### Core scenario execution and AC mapping
@@ -185,6 +185,72 @@ remain; whole erasure and export gates still await PV-06/PV-07.
 
 One extra source path is approved for CL08/AC3/AC5: ingestion/entity_merge.py
 logs the admitted entity name during protected extraction (observed in the
-profile-components-3.log capture). The planned change is solely the common
+profile-components-3.log capture). The implemented change is solely the common
 operation-scoped logger wrapper, with a concurrent legacy logging positive.
 No entity matching, provider behavior, scenario or cohort is changed.
+
+## Final owned component checkpoint
+
+The frozen nine scenarios and all six original acceptance criteria above remain
+unchanged and pending as full integration gates. Actual component results cover
+directory DuckDB, single-file DuckDB and the assigned PostgreSQL schema. The
+inherited OS adapter and current-policy authority are fixtures; actual crypto,
+claims, persistence, publication and cleanup run. Reviewed PV-03 native-adapter
+and PV-13 pinned detector evidence is carried forward without a replacement
+cohort. No whole purge/export or protected-product pass is inferred.
+
+Protected alias proposals retain admitted snapshots and bounded numeric
+assessment in a new version; reviews retain the manifest and decision without
+nesting the proposal payload. Existing legacy codecs and operation types stay
+readable. Actual accepted/rejected review, compatible merge, organizer and
+session promotion remain useful. Protected profile discard and collection use
+the existing native work/registry fences, remove real owned staging and preserve
+immutable abandoned history. Missing mutable rows reconstruct that state;
+an expired generation cannot publish, while a live generation succeeds keylessly.
+
+JournalScope records its creating asyncio task and active lifetime. Only the
+same task can reuse a held mutation scope. An inherited child reacquires real
+publication authority; joined native work can still check active deadlines
+without requiring a thread-local asyncio task. PV-06 owns the corresponding
+current-ledger guard and exact internally derived node-target extension. Its
+consumer should use manifest.admitted_node_ids, scalar lifecycle IDs, actual
+oscillation chain_node_ids, merge/alias pair IDs and decoded proposal manifests;
+none of those caller references grants authority by itself.
+
+The last CL04 subcheck found a concrete contributor defect: the existing call
+resolver included the oscillation target but omitted its copied chain. The
+first correction resolves every actual chain_node_id through the same repository
+identity resolver before publication. All three layouts then published and
+retried idempotently. A separate new-test count error included two existing
+fixed contradiction transitions in the four snapshot count; the corrected test
+checks all six records and each distinct closed shape. Both failures are kept.
+
+Protected diagnostic context follows the actual worker queue and joined native
+work, with fixed error/status/report shapes. Real provider, schema, SQL and native
+close faults are captured through stdlib/structlog plus HTTP/MCP responses.
+Concurrent legacy logs remain unchanged. Every managed SQL table is included in
+a test-owned logical dump and owned directory/pack/index/temp files are scanned
+after close. PostgreSQL server physical WAL/base/temp files are not accessible
+to this harness. This is no protected export or physical-erasure claim.
+
+All C01-C45 inventory entries now have explicit implementation, inherited or
+pending dispositions. The shared typed boundary supplies the copy treatment;
+the original 74-path preparation remains an upper boundary, not a mandate for
+blanket edits. The only added runtime path outside that upper bound is the
+approved entity_merge diagnostic wrapper. No duplicate authority/custody/
+sanitizer stack or new serializer was introduced.
+
+Preserved evidence separates production repairs (profile queue authority,
+PostgreSQL profile replay/discard guard placement, damaged-work handling,
+scope=None routing and oscillation contributor resolution) from new test setup
+corrections. Each resolved behavior passed its first correction; no behavior
+has two unsuccessful repair cycles. The repeated PostgreSQL indentation issue
+triggered a bounded review of the already changed publication/work/discard/
+collection guard and return branches, reusing the existing three-layout cases.
+
+Before root review: commit this owned checkpoint, normally merge the final
+PV-04 test/docs delta c42af439, run affected component/static/compatibility checks
+and freeze. Root owns independent affected-source reviews and the required final
+full suite, wheel, CI and delivery. PV-06 authoritative erase/current-policy,
+PV-07 export/restore and PV-14 combined release evidence remain required; the
+delivery must reference #324 without closing it until those original gates pass.

@@ -111,7 +111,10 @@ if TYPE_CHECKING:
     from prme.storage.lexical_index import LexicalIndex
     from prme.storage.vector_index import VectorIndex
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 _AGGREGATION_COVERAGE_NOTICE = (
     "Aggregation coverage: semantic candidates only; this is not an exhaustive "

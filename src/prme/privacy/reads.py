@@ -617,6 +617,29 @@ async def _project_public_result(context, method, result, arguments, records):
         values = result if isinstance(result, list) else [result]
         if all(value is None or isinstance(value, ProtectedCitationRecord) for value in values):
             return result
+    if method in {"contradict", "resolve_contradiction"}:
+        return tuple([await context.project_node(node) for node in result])
+    if method == "review_alias_proposal":
+        from prme.storage.alias_review import AliasProposalReviewResult
+
+        if isinstance(result, AliasProposalReviewResult):
+            return result
+    if method == "list_alias_proposals":
+        from prme.storage.alias_proposal import ProtectedAliasProposalRecord
+
+        if all(
+            isinstance(item.proposal, ProtectedAliasProposalRecord) for item in result
+        ):
+            return result
+    if method in {"organize", "end_session"}:
+        from prme.privacy.diagnostics import project_organize
+
+        return project_organize(result)
+    if method == "discard_profile" and type(result) is bool:
+        return result
+    if method == "collect_profile_staging":
+        from prme.privacy.diagnostics import project_collection
+        return project_collection(result)
     if method == "consolidate_knowledge" and type(result) is int and result >= 0:
         return result
     if method == "resume_profile" and (result is None or str(UUID(result)) == result):

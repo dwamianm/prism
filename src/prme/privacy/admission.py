@@ -103,7 +103,11 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
             # The legacy retrieval pipeline includes unguarded optional providers
             # and receipt source augmentation. PV-04/PV-05 integrate those paths.
             raise PrivacyDenied("privacy_provider_unavailable")
-        result = await function(self, *args, **kwargs)
+        from prme.privacy.diagnostics import protected_diagnostics
+        protected = bool(records or coordinator.selected())
+        with protected_diagnostics(protected):
+            result = (await capability_call(function(self, *args, **kwargs), "privacy_processing_unavailable")
+                      if protected else await function(self, *args, **kwargs))
         records = await coordinator.records_for_call(owner, arguments)
         if records and owner is None:
             raise PrivacyDenied("privacy_boundary_mismatch")
@@ -114,11 +118,9 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
 
 
 _UNAVAILABLE_EFFECTS = frozenset({
-    "organize", "end_session",
     "rebuild_indexes", "embed_texts", "propose_product_alignment", "find_product_alignment_candidates",
     "evaluate_full_retrieval", "create_ranking_profile",
-    "contradict", "resolve_contradiction",
-    "review_alias_proposal", "feedback",
+    "feedback",
 })
 
 
@@ -509,8 +511,10 @@ class AdmissionCoordinator:
         references = await self.validate_references(record, plan.references)
 
         async def publish_plan():
-            await self.engine._event_store.record_derivation_plan(plan, claim=claim)
-            await self.engine._pipeline._publish_plan(plan, claim=claim)
+            from prme.privacy.diagnostics import protected_diagnostics
+            with protected_diagnostics():
+                await self.engine._event_store.record_derivation_plan(plan, claim=claim)
+                await self.engine._pipeline._publish_plan(plan, claim=claim)
 
         async with self.guard(record.snapshot, "publication", processing=record.processing_state == "pending"):
             for reference in references:
@@ -520,7 +524,7 @@ class AdmissionCoordinator:
             # Queue consumers own already-enqueued effects independently of
             # the caller. Keep this lease until they settle, then propagate
             # cancellation. This preserves serialization, not rollback.
-            await run_async_to_completion(publish_plan())
+            await capability_call(run_async_to_completion(publish_plan()), "privacy_processing_unavailable")
 
     async def store(self, content: str, *, policy=None, deferred=False, extract=False, **kwargs) -> str:
         from prme.ingestion.temporal import validate_validity_window
@@ -597,8 +601,12 @@ class AdmissionCoordinator:
         from prme.models.speaker import attach_speaker
         event = prepared.event.model_copy(update={"content": source["content"],
                                                   "metadata": attach_speaker(source["metadata"], source["speaker"])})
-        return await capability_call(self.engine._pipeline._prepare_plan(result, event, privacy=(self, prepared)),
-                                     "privacy_invalid_result")
+        from prme.privacy.diagnostics import protected_diagnostics
+        with protected_diagnostics():
+            return await capability_call(
+                self.engine._pipeline._prepare_plan(result, event, privacy=(self, prepared)),
+                "privacy_invalid_result",
+            )
 
     async def final_generated_bundle(self, prepared: PreparedAdmission, fields: dict) -> tuple[dict, SanitizationReport | None]:
         """The exact final copies are checked before plan/index preparation."""
@@ -800,6 +808,9 @@ class AdmissionCoordinator:
                        for name, value in arguments.items() if value is not None and name in {
                            "node_id", "old_node_id", "new_node_id", "node_a_id", "node_b_id",
                            "winner_id", "loser_id", "event_id"}]
+        # Oscillation snapshots copy every member of the actual bounded chain,
+        # so the target's policy alone cannot authorize its sibling copies.
+        identifiers.extend(("nodes", value) for value in arguments.get("chain_node_ids", ()))
         if identifiers:
             records = await self.repository.records_for_objects(identifiers, owner=owner,
                                                                  supplemental_evidence=supplemental_evidence)

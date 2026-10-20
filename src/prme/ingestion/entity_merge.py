@@ -23,7 +23,10 @@ from prme.models.entity_identity import unresolved_personal_reference
 from prme.storage.graph_store import GraphStore
 from prme.types import LifecycleState, NodeType, Scope
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = structlog.get_logger(__name__)
+logger = ScopedLogger(logger)
 
 
 class EntityMerger:

@@ -54,7 +54,10 @@ from prme.privacy.journals import (
     matching_summaries, admit_generated_node, encode_generated,
 )
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 
 class SummarizationLevel(str, Enum):

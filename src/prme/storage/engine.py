@@ -159,7 +159,10 @@ if TYPE_CHECKING:
 from prme.organizer.maintenance import MaintenanceRunner
 from prme.storage.durable_queue import DurableMaterializationQueue
 
+from prme.privacy.diagnostics import ScopedLogger, closing_diagnostics
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 # The nodes the derived search indexes hold, in rebuild order: every active
 # node of every owner, by id. Callers skip rows without indexable content.
@@ -2095,7 +2098,8 @@ class MemoryEngine:
             try:
                 await self._materialize_event(event, pending_lexical=documents)
             except Exception as exc:
-                failures[str(event.id)] = extraction_failure_code(exc)
+                from prme.privacy.diagnostics import event_failure_code
+                failures[str(event.id)] = event_failure_code(event, exc)
         if documents:
             replacements = tuple((str(n.id), n.content, n.user_id, n.node_type.value, n.scope.value)
                                  for n in documents.values())
@@ -4152,8 +4156,17 @@ class MemoryEngine:
         if scope is None:
             # Profiles have one namespace. Never pool evidence from different
             # scopes, even when the explicit owner and entity name match.
+            namespaces = tuple(Scope)
+            protected_records = await self._privacy.owner_records(user_id)
+            if protected_records:
+                namespaces = tuple(sorted(
+                    {record.snapshot.policy.scope for record in protected_records},
+                    key=lambda value: value.value,
+                ))
+            elif self._privacy.selected():
+                namespaces = (self._privacy.default.scope,)
             total = 0
-            for namespace in Scope:
+            for namespace in namespaces:
                 total += await self.consolidate_knowledge(
                     user_id=user_id, scope=namespace, entity_names=entity_names,
                     max_profile_tokens=max_profile_tokens,
@@ -4353,9 +4366,12 @@ class MemoryEngine:
                 await stage()
         # The queue consumer acquires its own backend publication guard. Holding
         # the producer's non-reentrant authority across submit would deadlock.
-        return await self._write_queue.submit(
-            lambda: self._graph_store.publish_profile(plan), label=f'consolidate.publish:{plan.node.id}',
-        )
+        from prme.privacy.diagnostics import protected_diagnostics
+        with protected_diagnostics(plan.privacy_manifest is not None):
+            return await self._write_queue.submit(
+                lambda: self._graph_store.publish_profile(plan),
+                label=f"consolidate.publish:{plan.node.id}",
+            )
 
     @privacy_disclosure
     async def profile_jobs(self, *, user_id: str, scope: Scope | None = None, status: str = 'pending', limit: int = 100) -> list[ProfileJobStatus]:
@@ -4378,12 +4394,14 @@ class MemoryEngine:
             return None
         return await self._publish_prepared_profile(plan)
 
+    @privacy_disclosure
     async def collect_profile_staging(self, *, user_id: str, scope: Scope | None = None,
                                       limit: int = 100, budget_ms: float = 5000) -> ProfileCollectionResult:
         """Reclaim abandoned preparation indexes, preserving graph and journal."""
         from prme.storage.profile_collection import collect
         return await collect(self, user_id=user_id, scope=scope, limit=limit, budget_ms=budget_ms)
 
+    @privacy_disclosure
     async def discard_profile(self, profile_id: str, *, user_id: str) -> bool:
         """Abandon owned unpublished work; preserve its journal and source nodes.
 
@@ -4455,6 +4473,7 @@ class MemoryEngine:
 
     # --- Resource Management ---
 
+    @closing_diagnostics
     async def close(self) -> None:
         """Close and save all backends.
 

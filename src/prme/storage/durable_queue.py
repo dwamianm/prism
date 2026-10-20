@@ -13,12 +13,15 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from prme.ingestion.errors import extraction_failure_code
+from prme.privacy.diagnostics import event_failure_code
 
 if TYPE_CHECKING:
     from prme.storage.engine import MemoryEngine
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 
 class DurableMaterializationQueue:
@@ -50,7 +53,7 @@ class DurableMaterializationQueue:
             try:
                 await engine._materialize_event(event)
             except Exception as exc:
-                await self._store.finish_materialization(str(event.id), error=extraction_failure_code(exc))
+                await self._store.finish_materialization(str(event.id), error=event_failure_code(event, exc))
                 raise
             else:
                 await self._store.finish_materialization(str(event.id))
@@ -87,7 +90,7 @@ class DurableMaterializationQueue:
                 except Exception as exc:
                     # Retain only exception type, not provider responses which
                     # could contain secrets or source content.
-                    reason = extraction_failure_code(exc)
+                    reason = event_failure_code(event, exc)
                     await self._store.finish_materialization(str(event.id), error=reason)
                     logger.warning("Materialization failed for %s (%s)", event.id, reason)
                 else:

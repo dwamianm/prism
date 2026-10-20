@@ -1,5 +1,5 @@
 {
-  "stage": "implementation-checkpoint",
+  "stage": "implementation-component-checkpoint",
   "issue": "#324",
   "acceptanceComplete": false,
   "ownedCases": [
@@ -182,6 +182,80 @@
       "result": "65 passed, 8 skipped",
       "command": "uv run --no-sync python -m pytest tests/test_consolidation_publication.py tests/test_consolidation_retirement_atomic.py tests/test_consolidation_retirement_records.py tests/test_consolidation_safety.py tests/test_summarization.py -q --tb=short",
       "seconds": 23.7
+    },
+    {
+      "log": "alias-organizer-components-1.log",
+      "exit": 0,
+      "result": "3 passed, 12 deselected; actual aliases, acceptance/rejection, merge and organizer positive",
+      "test_scope": "test_privacy_journal_records.py CL05 alias/organizer component selection",
+      "seconds": 9.77
+    },
+    {
+      "log": "alias-organizer-compatibility.log",
+      "exit": 0,
+      "result": "228 passed; unchanged legacy aliases/merges/organizer/contradiction behavior",
+      "test_scope": "tests/test_atomic_alias_proposals.py tests/test_alias_proposal_review.py tests/test_typesafe_integration.py tests/test_atomic_organizer_merges.py tests/test_organizer_tenancy.py tests/test_organizer_scope_boundaries.py tests/test_organizer.py tests/test_atomic_contradictions.py",
+      "seconds": 61.73,
+      "command": "uv run --no-sync python -m pytest tests/test_atomic_alias_proposals.py tests/test_alias_proposal_review.py tests/test_typesafe_integration.py tests/test_atomic_organizer_merges.py tests/test_organizer_tenancy.py tests/test_organizer_scope_boundaries.py tests/test_organizer.py tests/test_atomic_contradictions.py -q --tb=short"
+    },
+    {
+      "log": "diagnostics-recovery-components-1.log",
+      "exit": 1,
+      "result": "6 failed, 3 passed, 12 deselected; new diagnostic fixture used nonexistent fault hook (3); production scope=None visited unrelated protected scope (2); PostgreSQL discard returned before transaction mutation (1)",
+      "test_scope": "new diagnostics/recovery and existing protected profile components",
+      "seconds": 21.53
+    },
+    {
+      "log": "diagnostics-recovery-components-2.log",
+      "exit": 1,
+      "result": "3 failed, 3 passed; both production repairs passed on all layouts; new MCP test incorrectly supplied list instead of CSV jobs string",
+      "test_scope": "diagnostics and profile cleanup/recovery components",
+      "seconds": 15.9
+    },
+    {
+      "log": "diagnostics-scope-components-3.log",
+      "exit": 1,
+      "result": "3 failed, 3 passed, 3 deselected; MCP correction passed; new diagnostic assertion inspected caplog only although structlog legacy positive was captured in stdout; inherited-task authority checks all passed",
+      "test_scope": "diagnostics and inherited JournalScope components",
+      "seconds": 13.73
+    },
+    {
+      "log": "diagnostics-components-4.log",
+      "exit": 0,
+      "result": "3 passed; real provider/schema/SQL/native-close failures, HTTP/MCP, concurrent legacy logging, managed SQL dump and owned artifact scans",
+      "test_scope": "tests/test_privacy_journal_scenarios.py",
+      "seconds": 10.64,
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_scenarios.py -q --tb=short"
+    },
+    {
+      "log": "lifecycle-siblings-components.log",
+      "exit": 1,
+      "result": "3 failed, 12 deselected; oscillation snapshot correctly refused missing chain source dependencies because resolver included only target",
+      "test_scope": "test_privacy_journal_records.py -k actual_lifecycle",
+      "seconds": 7.83,
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k actual_lifecycle -q --tb=short"
+    },
+    {
+      "log": "lifecycle-siblings-components-repair.log",
+      "exit": 1,
+      "result": "3 failed, 12 deselected; chain-source repair reached actual successful publication and idempotent retry; new fixture incorrectly expected 4 total records instead of 4 snapshots plus 2 fixed contradiction transitions",
+      "test_scope": "test_privacy_journal_records.py -k actual_lifecycle",
+      "seconds": 8.07,
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k actual_lifecycle -q --tb=short"
+    },
+    {
+      "log": "lifecycle-siblings-components-count-repair.log",
+      "exit": 0,
+      "result": "3 passed, 12 deselected; all four snapshots decoded and both fixed contradiction transition shapes validated",
+      "test_scope": "test_privacy_journal_records.py -k actual_lifecycle",
+      "seconds": 6.84,
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k actual_lifecycle -q --tb=short"
+    },
+    {
+      "log": "final-scoped-ruff-1.log",
+      "exit": 1,
+      "result": "Two F401 findings on imported autouse fixtures in the two new test modules; corrected with explicit fixture noqa, not removal",
+      "test_scope": "all changed and new Python files"
     }
   ],
   "repairCycles": {
@@ -212,6 +286,38 @@
     "profile_damaged_work_handler": {
       "unsuccessful": 0,
       "successful": 1
+    },
+    "diagnostics_test_fault_hook": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_scope_none": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_discard_postgres_guard_indentation": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "diagnostics_mcp_argument": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "diagnostics_log_capture": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "oscillation_chain_sources": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "lifecycle_fixture_record_count": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "autouse_fixture_lint_annotation": {
+      "unsuccessful": 0,
+      "successful": 1
     }
   },
   "evidenceBoundary": {
@@ -230,26 +336,59 @@
     ]
   },
   "pending": [
-    "reconcile eb457646 final 321/323 dependency composition",
-    "remaining 324 profile/summary/alias and recovery/diagnostic component coverage",
+    "normal merge c42af439 final 323 test/docs dependency delta",
+    "affected component/static/compatibility checks and freeze",
     "325 authoritative erasure/current-policy integration",
     "326 export/restoration",
     "327 combined gate",
-    "root final reviews/full validation/delivery"
+    "root independent reviews/final full suite/wheel/CI/delivery"
   ],
   "remaining": [
-    "merge c4531a0e same-tree upstream352/currentmain dependency composition",
-    "remaining 324 alias, organizer routing and recovery/diagnostic component coverage",
+    "normal merge c42af439 final 323 test/docs dependency delta",
+    "affected component/static/compatibility checks and freeze",
     "325 authoritative erasure/current-policy integration",
     "326 export/restoration",
     "327 combined gate",
-    "root final reviews/full validation/delivery"
+    "root independent reviews/final full suite/wheel/CI/delivery"
   ],
   "sourceObservations": [
     {
       "case": "CL08",
       "log": "profile-components-3.log",
-      "finding": "protected extraction entity_merge.py emits name=Mara; root approved one logger-wrapper extra path; pending correction and concurrent-legacy positive"
+      "finding": "protected extraction entity_merge.py emits name=Mara; root approved one logger-wrapper extra path; pending correction and concurrent-legacy positive",
+      "resolution": "Operation-scoped wrapper implemented; diagnostics-components-4.log proves protected suppression and concurrent legacy logging on all three layouts."
+    },
+    {
+      "case": "ER05",
+      "finding": "Source-derived inherited ContextVar concern, not an observed pre-fix runtime failure: child tasks could reuse a parent JournalScope fast path.",
+      "resolution": "Scope is active and tied to creating asyncio task; native deadline checks remain usable under joined parent lease. New actual child transaction check passed all three layouts in diagnostics-scope-components-3.log."
+    },
+    {
+      "case": "CL07",
+      "finding": "PostgreSQL guard indentation recurred in distinct profile replay/discard paths.",
+      "resolution": "Reassessed only the changed profile publication/work/discard/collection transaction guards and return branches, including AST unreachable-after-return check. Existing three-layout staging/discard/recovery cases passed after one repair for each behavior; no new cohort."
     }
+  ],
+  "dependencyCommits": [
+    "01cd5a4d36584df2faded941c128682f452f094d",
+    "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
+    "c4531a0e7ad8c3a558eadbe3ed18278ea1f346c9"
+  ],
+  "componentCoverage": {
+    "AP06": "Actual encrypted claimed input, continuation, retry, completion/cancel cleanup and strict no-durable behavior; fixture current-policy authority only.",
+    "AC06": "Saved admitted plans publish with private processing/evidence keys locked; inherited PV-04 source availability and provider routing evidence remains.",
+    "CL03": "Actual private extraction checkpoints and admitted plans; no new provider calls after complete plan; terminal work cannot recover from missing mutable rows.",
+    "CL04": "Real promote/archive/reinforce/TTL/supersede/condition/oscillation and contradiction mutations; all three layouts. Full erase-to-unavailable portion still PV-06.",
+    "CL05": "Real admitted entity profiles; daily/weekly/monthly/consolidation summaries; duplicate/alias proposal and accepted/rejected review. External assessment is a fixture; actual journals and effects are real.",
+    "CL06": "Actual persisted minimized receipts, numeric replay, labels/citations and explicit unavailable query-dependent learning; legacy receipt regression evidence retained.",
+    "CL07": "Real native/SQL profile staging/discard/collection, live control and immutable missing-work reconstruction; full erasure of covered derivatives remains PV-06.",
+    "CL08": "Real protected success/failure diagnostic output, concurrent legacy positive, HTTP/MCP, managed SQL logical dump and owned local artifacts; other adapters inherit unchanged evidence. Protected export remains PV-07; PostgreSQL physical files not visible.",
+    "ER05": "Actual completion/cancel/expiry, missing mutable rows, abandoned profile reconstruction and active creating-task JournalScope authority; erased-input replay/current independent ledger remains PV-06."
+  },
+  "visibilityLimits": [
+    "OS get/set/delete and current-policy authority use inherited fixtures; actual crypto/claims/persistence/publication/cleanup are real.",
+    "PV-03 native adapter and PV-13 pinned detector evidence is inherited unchanged, not re-run or replaced.",
+    "Logical dump is a test-owned scan, not a protected export API. PostgreSQL server WAL/temp/base files and unmanaged backups are not visible.",
+    "No physical wipe, heap zeroization, anonymity, same-process isolation or already-delivered copy revocation claim."
   ]
 }

@@ -17,6 +17,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from prme.privacy.journals import compatible_admitted_pair
 from prme.organizer.merge_policy import alias_pair_allowed
 from prme.types import LifecycleState, NodeType
 
@@ -25,7 +26,10 @@ if TYPE_CHECKING:
     from prme.models.nodes import MemoryNode
     from prme.storage.engine import MemoryEngine
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +172,8 @@ async def find_aliases(
     Returns:
         List of AliasCandidate pairs, never spanning two users.
     """
+    from prme.privacy.journals import generation_search
+    index = await generation_search(engine, user_id=user_id)
     start = time.monotonic()
     threshold = config.alias_similarity_threshold
 
@@ -190,7 +196,7 @@ async def find_aliases(
 
         for j in range(i + 1, len(entities)):
             # Names alone do not authorize combining owners or scopes.
-            if not alias_pair_allowed(entities[i], entities[j]):
+            if not compatible_admitted_pair(alias_pair_allowed, entities[i], entities[j]):
                 continue
 
             a_id = str(entities[i].id)
@@ -223,7 +229,7 @@ async def find_aliases(
         entity_id = str(entity.id)
 
         try:
-            results = await engine._vector_index.search(
+            results = await index.search(
                 entity.content,
                 entity.user_id,
                 k=10,
@@ -251,7 +257,7 @@ async def find_aliases(
 
             # Verify the durable node is an ENTITY in the same namespace
             other_node = await engine.get_node(other_id, user_id=entity.user_id)
-            if other_node is None or not alias_pair_allowed(entity, other_node):
+            if other_node is None or not compatible_admitted_pair(alias_pair_allowed, entity, other_node):
                 continue
 
             seen_pairs.add(pair_key)
@@ -273,6 +279,7 @@ _MERGE_CONFIDENCE_THRESHOLD = 0.90
 async def resolve_aliases(
     engine: MemoryEngine,
     aliases: list[AliasCandidate],
+    *, user_id: str | None = None,
 ) -> int:
     """Resolve alias relationships between entity nodes.
 
@@ -297,8 +304,8 @@ async def resolve_aliases(
         if alias.entity_a_id in merged_ids or alias.entity_b_id in merged_ids:
             continue
 
-        node_a = await engine.get_node(alias.entity_a_id)
-        node_b = await engine.get_node(alias.entity_b_id)
+        node_a = await engine.get_node(alias.entity_a_id, **({"user_id": user_id} if user_id else {}))
+        node_b = await engine.get_node(alias.entity_b_id, **({"user_id": user_id} if user_id else {}))
 
         if node_a is None or node_b is None:
             continue
@@ -312,7 +319,7 @@ async def resolve_aliases(
             )
             continue
 
-        if not alias_pair_allowed(node_a, node_b):
+        if not compatible_admitted_pair(alias_pair_allowed, node_a, node_b):
             logger.debug("Retaining incompatible alias candidates (%s, %s)", alias.entity_a_id, alias.entity_b_id)
             continue
 
