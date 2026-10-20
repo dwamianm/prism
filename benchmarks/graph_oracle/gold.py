@@ -202,11 +202,67 @@ def target_cues(gold: Gold, question: str) -> dict[str, set[str]]:
     return {"subtype": subtypes, "type": types}
 
 
-def relation_cues(question: str) -> set[str]:
-    """The relations whose cue words the question holds."""
+# The schema's own words in a relation's definition: they describe the fields, not the relation.
+SCHEMA_WORDS = frozenset("role status polarity attr says say holds hold may key symmetric intent negative positive "
+                         "value non".split())
+DESIGN = Path(__file__).with_name("DESIGN.md")
+
+
+def _verb_forms(base: str) -> set[str]:
+    """A stem and the forms a verb takes: restore a dropped e (liv, live), add s, ed and ing, drop a final e before ing."""
+    forms = {base, base + "e", base + "s", base + "ed", base + "ing"}
+    if base.endswith("e"):
+        forms.add(base[:-1] + "ing")
+    return forms
+
+
+def derive_cues(design: str | None = None) -> dict[str, frozenset[str]]:
+    """Cue stems for each relation, derived from the definitions in DESIGN.md's vocabulary table, with no question in view.
+
+    For each row: the words of the relation's name and of its definition, less the stop words, the schema's own
+    words, capitalized words (example names, kept out because "Tokyo" says nothing about a relation) and digits;
+    each word contributes its stem and the stems of its verb forms (s, ed, ing).
+    """
+    text = (design if design is not None else DESIGN.read_text()).split("## The relation vocabulary", 1)[1]
+    cues: dict[str, frozenset[str]] = {}
+    for row in re.finditer(r"^\| `(\w+)` \|[^|]*\| (.+?) \|$", text, re.MULTILINE):
+        name, definition = row.groups()
+        if name not in RELATIONS:
+            continue
+        definition = re.sub(r"`[^`]*`", " ", definition)
+        words = [word for word in re.findall(r"[A-Za-z]+", definition) if word[0].islower()]
+        words += name.split("_")
+        stems_: set[str] = set()
+        for word in words:
+            word = word.lower()
+            if word in STOPWORDS or word in SCHEMA_WORDS or len(word) < 3:
+                continue
+            base = stem(word)
+            stems_ |= {stem(form) for form in _verb_forms(base)} | {base}
+            # A doubled final consonant (runn from running) also stands for the plain stem.
+            stems_ |= {item[:-1] for item in set(stems_) if len(item) > 3 and item[-1] == item[-2] and item[-1] not in "aeiou"}
+        cues[name] = frozenset(stems_)
+    return cues
+
+
+def relation_cues(question: str, source: str = "hand") -> set[str]:
+    """The relations whose cue words the question holds: the hand written lexicon ("hand", a prefix match) or the
+    one derived from DESIGN.md ("derived", an exact match of stems)."""
     question_stems = stems(question)
+    if source == "derived":
+        derived = _derived()
+        return {name for name, words in derived.items() if words & question_stems}
     return {name for name, relation in RELATIONS.items()
             if any(any(stem_ == cue or stem_.startswith(cue) for stem_ in question_stems) for cue in relation["cues"])}
+
+
+_DERIVED: dict[str, frozenset[str]] = {}
+
+
+def _derived() -> dict[str, frozenset[str]]:
+    if not _DERIVED:
+        _DERIVED.update(derive_cues())
+    return _DERIVED
 
 
 def load_gold(name_or_path: str | Path) -> Gold:

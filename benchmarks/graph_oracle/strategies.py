@@ -13,10 +13,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 import math
 
-from benchmarks.graph_oracle.gold import Gold, mentions, relation_cues, stems, target_cues
+from benchmarks.graph_oracle.gold import Gold, _words, mentions, relation_cues, stems, target_cues
 from benchmarks.graph_oracle.graph import CLAIM, DIRECT, Edge, GraphData
 
 RRF_K = 60
+FIRST_PERSON = frozenset("i me my mine myself we us our ours".split())
 HUBS = ("none", "owner_seed", "owner_block", "degree")
 
 
@@ -38,6 +39,8 @@ class Params:
     cue_weight: float = 0.5          # per relation cue or role word, up to two
     target_cues: bool = True
     relation_cues: bool = True
+    cue_source: str = "hand"         # hand | derived (the cue lexicon: hand written, or derived from DESIGN.md)
+    first_person_seed: bool = False  # I, me and my in the question seed the owner entity (exploratory)
     cue_filter: bool = True          # with a relation cue, walk and score only the cued relations and containment
     superseded: float = 0.0          # factor on a claim a later claim replaced
     past: float = 0.7
@@ -74,11 +77,13 @@ def _edge_factor(edge: Edge, params: Params, cued: frozenset | None = None) -> f
 async def generic_scores(question: str, gold: Gold, source, params: Params) -> GraphResult:
     """Score the memories of a graph for one question, with no gold path."""
     seeds = mentions(gold, question)
+    if params.first_person_seed and FIRST_PERSON & set(_words(question)) and gold.owner_entity not in seeds:
+        seeds = [*seeds, gold.owner_entity]
     result = GraphResult(seeds=seeds)
     if not seeds:
         return result
     owner = gold.owner_entity
-    cues = relation_cues(question) if params.relation_cues or params.cue_filter else set()
+    cues = relation_cues(question, params.cue_source) if params.relation_cues or params.cue_filter else set()
     cued = frozenset(cues) if params.cue_filter and cues else None
     damped = params.hub in ("owner_seed", "owner_block")
     best = {seed: {seed: params.hub_factor if seed == owner and damped else 1.0} for seed in seeds}

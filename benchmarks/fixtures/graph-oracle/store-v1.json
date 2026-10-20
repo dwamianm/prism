@@ -136,6 +136,7 @@
     {"id": "oc_old", "s": "alex", "r": "involved_in", "o": "oncall_oct26", "ev": ["m30"], "status": "superseded", "role": "on call"},
     {"s": "priya", "r": "involved_in", "o": "oncall_oct26", "ev": ["m32"], "role": "on call", "supersedes": "oc_old"},
     {"s": "priya", "r": "involved_in", "o": "oncall_oct26", "ev": ["m31"], "role": "agreed to swap shifts"},
+    {"s": "alex", "r": "involved_in", "o": "oncall_oct26", "ev": ["m31"], "role": "asked to swap out so the cutover is not in the shift", "added_for": "blind-v1"},
     {"s": "alex", "r": "involved_in", "o": "oncall_nov02", "ev": ["m32"], "role": "on call"},
     {"s": "cutover", "r": "has", "attr": "checklist", "value": "freeze writes, final sync, verify row counts, flip the view, watch Datadog", "ev": ["m33"]},
     {"s": "alex", "r": "prefers", "o": "sql", "ev": ["m34"], "role": "lowercase keywords and one clause per line"},

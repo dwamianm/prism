@@ -95,8 +95,11 @@ def percentiles(values: list[float]) -> dict:
 # --- Building the pack -----------------------------------------------------------------------------
 
 
-async def build_corpus(engine, gold: Gold, heldout: bool) -> tuple[dict[str, str], list[Item]]:
-    """Store a corpus, then run the baseline over its questions (and the held-out ones for the store corpus)."""
+async def build_corpus(engine, gold: Gold, heldout: bool, extra: list[dict] | None = None) -> tuple[dict[str, str], list[Item]]:
+    """Store a corpus, then run the baseline over its questions (and the held-out ones for the store corpus).
+
+    ``extra`` adds questions with no query spec: dicts with ``id``, ``text``, ``kind``, ``answers``, ``stale``, ``group``.
+    """
     owner = gold.owner
     node_ids: dict[str, str] = {}
     for memory in gold.memories:
@@ -128,6 +131,11 @@ async def build_corpus(engine, gold: Gold, heldout: bool) -> tuple[dict[str, str
             base, elapsed = await baseline(question["question"])
             items.append(Item(gold.name, question["id"], question["question"], question["question"], "heldout", answers,
                               terms, tuple(question.get("stale", ())), None, "heldout", base, elapsed))
+    for question in extra or []:
+        base, elapsed = await baseline(question["text"])
+        items.append(Item(gold.name, question["id"], question["text"], question["text"], question["kind"],
+                          tuple(question["answers"]), {}, tuple(question.get("stale", ())), None, question["group"], base,
+                          elapsed))
     return node_ids, items
 
 
@@ -411,6 +419,16 @@ def main(argv: list[str] | None = None) -> None:
     command = commands.add_parser("fidelity", help="Score an extracted graph (the gold file format) against a gold graph")
     command.add_argument("--gold", required=True)
     command.add_argument("--graph", type=Path, required=True)
+    command = commands.add_parser("blind", help="The blind validation run (BLIND.md): original items, blind questions, paraphrases")
+    command.add_argument("--out", type=Path, required=True)
+    command = commands.add_parser("latency", help="Time the typed walk on synthetic packs")
+    command.add_argument("--out", type=Path, required=True)
+    command.add_argument("--backend", choices=("duckdb", "postgres"), default="duckdb")
+    command.add_argument("--database-url", default=None)
+    command.add_argument("--turns", type=int, nargs="+", default=[2000, 10000])
+    for name in ("blind-generate", "blind-paraphrase"):
+        command = commands.add_parser(name, help="Ask the local model for candidate questions or paraphrases (blind.py)")
+        command.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "compare":
         print(compare_markdown(json.loads(args.before.read_text()), json.loads(args.after.read_text())))
@@ -421,6 +439,25 @@ def main(argv: list[str] | None = None) -> None:
         print(fidelity_markdown(fidelity(load_gold(args.gold), json.loads(args.graph.read_text()))))
         return
     _quiet_offline_cli()
+    if args.command == "blind":
+        from benchmarks.graph_oracle import blind_run
+
+        report = asyncio.run(blind_run.run(args.out))
+        print((args.out / "report.md").read_text())
+        print(f"graph oracle blind: {report['seconds']}s, report in {args.out}", file=sys.stderr)
+        return
+    if args.command == "latency":
+        from benchmarks.graph_oracle import latency
+
+        report = asyncio.run(latency.run(args.out, backend=args.backend, turns=args.turns, database_url=args.database_url))
+        print(latency.markdown([report]))
+        return
+    if args.command in ("blind-generate", "blind-paraphrase"):
+        from benchmarks.graph_oracle import blind
+
+        result = asyncio.run(blind.generate(args.out) if args.command == "blind-generate" else blind.paraphrase(args.out))
+        print(f"{result['calls']} requests, written under {args.out}", file=sys.stderr)
+        return
     try:
         params = parse_params(args.settings)
     except ValueError as exc:

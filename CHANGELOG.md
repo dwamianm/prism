@@ -27,6 +27,12 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
   table, a `compare` command and a `fidelity` command that scores an extracted
   graph against a gold graph. It stores relation labels in edge metadata on the
   existing edge types and adds no edge type. See `BENCHMARKS.md`.
+- Blind validation of the typed walk (`python -m benchmarks.graph_oracle blind`, `latency`;
+  tooling only; part of dwamianm/prism#351): 86 questions a local model wrote about the
+  three memory sets from the memories alone, three paraphrases of each, relation cue
+  words derived from the vocabulary definitions, a decision rule fixed before the run
+  (`benchmarks/graph_oracle/BLIND.md`) and the walk's latency on synthetic 2,000 and
+  10,000 memory packs in DuckDB and PostgreSQL. The result is in `BENCHMARKS.md`.
 - Add `enable_owner_window_extraction` (`PRME_ENABLE_OWNER_WINDOW_EXTRACTION`,
   off by default; dwamianm/prism#345 and #347): with `enable_windowed_extraction`,
   a turn with no `session_id` gets the owner's preceding memories in the same
