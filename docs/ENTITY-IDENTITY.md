@@ -95,7 +95,9 @@ repeated in another session stays separate, because a session may speak for anot
 sentence names the owner still gets its group link beside the text link, so it can merge too. The statements built for a duplicate sentence
 keep "the speaker's group" and never name the members. The links are made after the derivation commits,
 outside the plan, so saved plans keep their bytes; memories ingested before the option was on are not linked
-or merged. The default rests on the fast tiers by the owner's directive of 2026-10-19; the full benchmark
+or merged. `reingest()` makes the same links and merges, with one gap: it re-derives a session in event-time
+order while the links follow ingestion order, so when a session's turns were ingested out of event-time order,
+a repeated `we` claim can be re-derived before its earlier copy has a link, and that merge is missed. The default rests on the fast tiers by the owner's directive of 2026-10-19; the full benchmark
 audit and the default-change rule on the `ingest()` track are pending.
 
 `ingest(first_person_owner=True)` provides a separate per-message declaration
