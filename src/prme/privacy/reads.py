@@ -123,7 +123,7 @@ class ReadContext:
             groups[None] = self.fallback_snapshot
         async with AsyncExitStack() as stack:
             for saved in groups.values():
-                await stack.enter_async_context(self.coordinator.guard(saved, effect))
+                await stack.enter_async_context(self.coordinator.guard(saved, effect, records=rows))
             self.check_selected()
             for row in rows:
                 self.coordinator.check_deadlines(row.snapshot)
@@ -214,6 +214,8 @@ class ReadContext:
             # A configured protected read does not silently reinterpret an old
             # source note as newly admitted memory. Migration owns classification.
             return None if self.protected else node.model_copy(deep=True)
+        if len(await self.coordinator.erasure.current_records(rows)) != len(rows):
+            return None
         self.protected = True
         self.records.update((row.event_id, row) for row in rows)
         await self.coordinator.check_disclosure(rows)
@@ -504,7 +506,7 @@ async def read_source(coordinator, event_id: str, *, user_id: str, access: Evide
         raise PrivacyDenied("privacy_capability_unavailable")
     try:
         async with opened(row.evidence, access, original_snapshot=row.snapshot,
-                          guard=lambda: coordinator.guard(row.snapshot, "disclosure")) as raw:
+                          guard=lambda: coordinator.guard(row.snapshot, "disclosure", records=(row,), purpose="evidence")) as raw:
             from prme.privacy.sanitizer import canonical, sanitized_checksum
             data = json.loads(raw)
             fields = {name: data[name] for name in (

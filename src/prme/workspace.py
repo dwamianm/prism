@@ -467,9 +467,9 @@ class _PostgresWorkspace(MemoryWorkspace):
         runtime = self._privacy_runtime_factory(namespace.id) if self._privacy_runtime_factory else None
         from prme.privacy.admission import preflight_runtime
         await preflight_runtime(self._config.model_copy(update={"namespace_id": namespace.id}), runtime)
-        pool = await self._catalog.prepare(namespace.name, namespace.id, embedding_dim=self._config.embedding.dimension)
+        pool = await self._catalog.prepare(namespace.name, namespace.id, embedding_dim=self._config.embedding.dimension, privacy_runtime=runtime)
         config = self._config.model_copy(update={"namespace_id": namespace.id}, deep=True)
-        engine = await MemoryEngine._create_postgres(config, embedding_provider=self._provider, namespace_pool=pool)
+        engine = await MemoryEngine._create_postgres(config, embedding_provider=self._provider, namespace_pool=pool, privacy_runtime=runtime)
         engine._privacy.runtime = runtime
         self._entries[namespace.id] = _Entry(engine)
         self._condition.notify_all()

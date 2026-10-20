@@ -51,7 +51,7 @@ async def preflight_runtime(config, runtime: PrivacyRuntime | None) -> None:
         return
     validate_protected_config(config)
     if runtime is None or any(getattr(runtime, name, None) is None
-                              for name in ("authority", "sanitizer", "protector", "embedder")):
+                              for name in ("authority", "sanitizer", "protector", "embedder", "erasure_ledger")):
         raise PrivacyDenied("privacy_capability_unavailable")
     policy = config.privacy_policy
     if policy.project_id != runtime.project_id or (config.namespace_id is not None and config.namespace_id != policy.project_id):
@@ -59,7 +59,7 @@ async def preflight_runtime(config, runtime: PrivacyRuntime | None) -> None:
     if policy.unlimited_evidence and not runtime.allow_unlimited_evidence:
         raise PrivacyDenied("privacy_configuration_invalid")
     saved = snapshot(policy, None, runtime.clock())
-    async with runtime.authority.guard(saved, "admission"):
+    async with runtime.erasure_ledger.guard(), runtime.authority.guard(saved, "admission"):
         purposes = tuple(p for p, required in (("evidence", policy.capture != "none"),
                                                ("processing", policy.durable_processing_input)) if required)
         await capability_call(runtime.protector.ready(saved, purposes))
@@ -154,6 +154,8 @@ class AdmissionCoordinator:
         policy = engine._config.privacy_policy
         self.default = PrivacyPolicy.model_validate_json(policy.model_dump_json()) if policy else None
         self.repository = PrivacyRepository(engine._event_store)
+        from prme.storage.erasure import ErasureCoordinator
+        self.erasure = ErasureCoordinator(self)
         from prme.storage.privacy_journals import ProcessingJournal
         self.processing = ProcessingJournal(engine._event_store.extraction_work,
             clock=lambda: self.runtime.clock() if self.runtime else datetime.now(timezone.utc))
@@ -254,7 +256,7 @@ class AdmissionCoordinator:
     def require_runtime(self) -> PrivacyRuntime:
         validate_protected_config(self.engine._config)
         if self.runtime is None or any(getattr(self.runtime, name, None) is None
-                                       for name in ("authority", "sanitizer", "protector", "embedder")):
+                                       for name in ("authority", "sanitizer", "protector", "embedder", "erasure_ledger")):
             raise PrivacyDenied("privacy_capability_unavailable")
         return self.runtime
 
@@ -275,15 +277,16 @@ class AdmissionCoordinator:
         return saved
 
     @asynccontextmanager
-    async def guard(self, saved: PolicySnapshot, effect: str, *, processing: bool = False):
+    async def guard(self, saved: PolicySnapshot, effect: str, *, processing: bool = False, records=(), purpose="memory", node_ids=()):
         runtime = self.require_runtime()
         if saved.policy.project_id != runtime.project_id:
             raise PrivacyDenied("privacy_boundary_mismatch")
         self.check_deadlines(saved, processing=processing)
-        async with runtime.authority.guard(saved, effect):
+        async with self.erasure.guard(records, purpose="processing" if processing else purpose, snapshots=(saved,), node_ids=node_ids), runtime.authority.guard(saved, effect):
             # A lease can wait behind policy activation or another writer.
             self.check_deadlines(saved, processing=processing)
             yield
+            self.check_deadlines(saved, processing=processing)
 
     def check_deadlines(self, saved: PolicySnapshot, *, processing: bool = False) -> None:
         now = self.require_runtime().clock()
@@ -480,14 +483,14 @@ class AdmissionCoordinator:
                           confidence=confidence, confidence_base=confidence, ttl_days=ttl, **values)
         return project_direct_node(node)
 
-    async def encode(self, texts: tuple[str, ...], saved: PolicySnapshot, *, processing: bool = False):
+    async def encode(self, texts: tuple[str, ...], saved: PolicySnapshot, *, processing: bool = False, records=()):
         runtime = self.require_runtime()
         # Each capability acquires the guard at the actual send, including retries.
-        async with self.guard(saved, "transmission", processing=processing):
+        async with self.guard(saved, "transmission", processing=processing, records=records):
             pass
         try:
             return await runtime.embedder.encode(texts, saved,
-                guard=lambda: self.guard(saved, "transmission", processing=processing))
+                guard=lambda: self.guard(saved, "transmission", processing=processing, records=records))
         except PrivacyDenied:
             raise
         except Exception:
@@ -495,7 +498,7 @@ class AdmissionCoordinator:
 
     async def direct_plan(self, record: PrivacyRecord, event: Event, node: MemoryNode) -> DerivationPlan:
         embedder = self.require_runtime().embedder
-        values = await self.encode((node.content,), record.snapshot)
+        values = await self.encode((node.content,), record.snapshot, records=(record,))
         if len(values) != 1:
             raise PrivacyDenied("privacy_invalid_result")
         return DerivationPlan(event_id=event.id, user_id=event.user_id, scope=event.scope, content_hash=event.content_hash,
@@ -512,7 +515,7 @@ class AdmissionCoordinator:
             await self.engine._event_store.record_derivation_plan(plan, claim=claim)
             await self.engine._pipeline._publish_plan(plan, claim=claim)
 
-        async with self.guard(record.snapshot, "publication", processing=record.processing_state == "pending"):
+        async with self.guard(record.snapshot, "publication", processing=record.processing_state == "pending", records=(record, *references), node_ids=tuple(node.id for node in plan.nodes)):
             for reference in references:
                 # validate_references requires the same authority/revisions;
                 # the held lease covers them, but each has its own deadline.
@@ -543,7 +546,7 @@ class AdmissionCoordinator:
             raise PrivacyDenied("privacy_invalid_result") from None
         # Synchronous store computes embeddings before accepting durable state.
         plan = None if deferred else await self.direct_plan(prepared.record, prepared.event, node)
-        async with self.guard(prepared.record.snapshot, "publication"), self.writer_guard((prepared.record,)):
+        async with self.guard(prepared.record.snapshot, "publication", records=(prepared.record,)), self.writer_guard((prepared.record,)):
             await self.repository.accept((prepared.event,), (prepared.record,), (node,))
         if plan is not None:
             await self.publish(prepared.record, plan)
@@ -568,10 +571,10 @@ class AdmissionCoordinator:
         saved = prepared.record.snapshot
         source = json.loads(prepared.source.fields_json)
         if checkpoint is None:
-            async with self.guard(saved, "transmission", processing=True):
+            async with self.guard(saved, "transmission", processing=True, records=(prepared.record,)):
                 pass
             result = await capability_call(runtime.extractor.extract(prepared.source, saved,
-                guard=lambda: self.guard(saved, "transmission", processing=True)), "privacy_resubmit_required")
+                guard=lambda: self.guard(saved, "transmission", processing=True, records=(prepared.record,))), "privacy_resubmit_required")
             result_fields = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
             admitted = await self.sanitize(finite_json({"extraction": result_fields}), saved, prepared.budget,
                                            mode="generated_output", source=prepared.source)
@@ -650,7 +653,7 @@ class AdmissionCoordinator:
                 source = replace(item.source, continuation=grant)
                 payload = item.record.processing
                 context = payload.context.model_copy(update={"object_generation": payload.context.object_generation + 1})
-                async with self.guard(item.record.snapshot, "admission", processing=True):
+                async with self.guard(item.record.snapshot, "admission", processing=True, records=(item.record,)):
                     payload = await capability_call(self.require_runtime().protector.seal(
                         self.source_bytes(source), context, original_snapshot=item.record.snapshot))
                 prepared[index] = replace(item, source=source, record=item.record.model_copy(update={"processing": payload}))
@@ -677,7 +680,7 @@ class AdmissionCoordinator:
         record = await self.repository.get(str(event.id), user_id=event.user_id)
         if record is None or claim is None or claim.event_id != event.id or claim.user_id != event.user_id:
             raise PrivacyDenied("privacy_processing_unavailable")
-        async with self.guard(record.snapshot, "admission", processing=True):
+        async with self.guard(record.snapshot, "admission", processing=True, records=(record,)):
             status = await self.engine._event_store.extraction_work.status(str(event.id), user_id=event.user_id)
             if status is None or status.status != "running" or status.generation != claim.generation or status.lease_expires_at != claim.lease_expires_at:
                 raise PrivacyDenied("privacy_processing_unavailable")
@@ -705,7 +708,7 @@ class AdmissionCoordinator:
                 source = replace(source, continuation=budget.state.continuation())
             context = record.processing.context.model_copy(update={
                 "object_generation": record.processing.context.object_generation + 1})
-            async with self.guard(record.snapshot, "admission", processing=True):
+            async with self.guard(record.snapshot, "admission", processing=True, records=(record,)):
                 payload = await capability_call(self.require_runtime().protector.seal(
                     save_checkpoint(self.source_bytes(source), checkpoint), context,
                     original_snapshot=record.snapshot), "privacy_processing_unavailable")
@@ -728,7 +731,7 @@ class AdmissionCoordinator:
                 claimed_event_ids=(event.id,))
             raw = await capability_call(self.require_runtime().protector.open(record.processing, access,
                 original_snapshot=record.snapshot,
-                guard=lambda: self.guard(record.snapshot, "disclosure", processing=True)),
+                guard=lambda: self.guard(record.snapshot, "disclosure", processing=True, records=(record,))),
                 "privacy_processing_unavailable")
             source_bytes, checkpoint = load_checkpoint(raw)
             source = self.load_source(source_bytes)
@@ -759,7 +762,7 @@ class AdmissionCoordinator:
             raise PrivacyDenied("privacy_processing_unavailable")
         if record.kind != "direct":
             raise PrivacyDenied("privacy_processing_unavailable")
-        async with self.guard(record.snapshot, "publication"):
+        async with self.guard(record.snapshot, "publication", records=(record,)):
             intent = await self.engine._event_store.get_direct_store(str(event.id), user_id=event.user_id)
             if intent is None:
                 raise PrivacyDenied("privacy_processing_unavailable")
@@ -789,7 +792,8 @@ class AdmissionCoordinator:
 
     async def owner_records(self, user_id: str, scopes=None):
         rows = await self.repository.for_owner(user_id)
-        return tuple(row for row in rows if scopes is None or row.snapshot.policy.scope in scopes)
+        rows = tuple(row for row in rows if scopes is None or row.snapshot.policy.scope in scopes)
+        return await self.erasure.current_records(rows) if rows or self.selected() else rows
 
     async def records_for_call(self, owner, arguments) -> tuple[PrivacyRecord, ...]:
         # Unscoped operator calls to unrelated legacy objects remain supported.
@@ -809,13 +813,13 @@ class AdmissionCoordinator:
                 return await self.repository._read("1=1", ())
             return records
         if owner is not None:
-            return await self.repository.for_owner(owner)
+            return await self.owner_records(owner, None)
         # A global scan has no narrower declared boundary.
         return await self.repository._read("1=1", ())
 
     async def check_disclosure(self, records) -> None:
         for record in records:
-            async with self.guard(record.snapshot, "disclosure"):
+            async with self.guard(record.snapshot, "disclosure", records=(record,)):
                 pass
 
     async def receipt_write_guard(self, user_id, request_id):
@@ -835,21 +839,25 @@ class AdmissionCoordinator:
         return lambda: context.guard("publication")
 
     @asynccontextmanager
-    async def publication_guards(self, records):
-        # Validate every snapshot, then hold one lease per scoped authority.
-        # Re-entering the same non-reentrant scoped lock would deadlock a batch.
-        by_boundary = {}
-        for record in records:
-            async with self.guard(record.snapshot, "publication"):
-                pass
-            p = record.snapshot.policy
-            by_boundary.setdefault((str(p.project_id), str(p.owner_id), p.scope.value), record.snapshot)
-        async with AsyncExitStack() as stack:
-            for key in sorted(by_boundary):
-                await stack.enter_async_context(self.guard(by_boundary[key], "publication"))
+    async def publication_guards(self, records, *, node_ids=()):
+        records = tuple(records)
+        runtime = self.require_runtime()
+        async with self.erasure.guard(records, node_ids=node_ids):
+            by_boundary = {}
             for record in records:
                 self.check_deadlines(record.snapshot)
-            yield
+                p = record.snapshot.policy
+                async with runtime.authority.guard(record.snapshot, "publication"):
+                    pass
+                by_boundary.setdefault((str(p.project_id), str(p.owner_id), p.scope.value), record.snapshot)
+            async with AsyncExitStack() as stack:
+                for key in sorted(by_boundary):
+                    await stack.enter_async_context(runtime.authority.guard(by_boundary[key], "publication"))
+                for record in records:
+                    self.check_deadlines(record.snapshot)
+                yield
+                for record in records:
+                    self.check_deadlines(record.snapshot)
 
     async def fast_many(self, items, *, user_id: str, request_id=None, policy=None):
         from prme.models.processing import FastIngestItem

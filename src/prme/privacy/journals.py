@@ -451,7 +451,7 @@ def protected_mutation(function):
                 )
                 reason = json.loads(sanitized.fields_json)["retrieval_content"]
             kwargs = {**kwargs, "reason": reason}
-        async with coordinator.publication_guards(records):
+        async with coordinator.publication_guards(records, node_ids=manifest.admitted_node_ids if manifest else ()):
             with journal_scope(coordinator, records):
                 return await function(store, *args, **kwargs)
 

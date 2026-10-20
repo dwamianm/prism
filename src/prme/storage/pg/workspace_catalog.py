@@ -59,7 +59,7 @@ class WorkspaceCatalog:
             return [(r['name'], r['id']) for r in await conn.fetch(
                 "SELECT name, id FROM prme_workspace.namespaces WHERE workspace=$1 ORDER BY name", self.name)]
 
-    async def prepare(self, name: str, identifier: UUID, *, embedding_dim: int) -> NamespacePool:
+    async def prepare(self, name: str, identifier: UUID, *, embedding_dim: int, privacy_runtime=None) -> NamespacePool:
         async with self.pool.acquire() as conn:
             await conn.execute("DISCARD TEMP")
             async with conn.transaction():
@@ -70,6 +70,6 @@ class WorkspaceCatalog:
                 # Registry publication and initial schema/identity creation have
                 # one commit, including on cancellation or process failure.
                 prepared = await prepare_namespace(_ConnectionPool(conn), identifier, embedding_dim=embedding_dim,
-                                                    create=not row['initialized'])
+                                                    create=not row['initialized'], privacy_runtime=privacy_runtime)
                 await conn.execute("UPDATE prme_workspace.namespaces SET initialized=true WHERE id=$1", identifier)
         return NamespacePool(self.pool, identifier, prepared.vector_sql)

@@ -19,6 +19,7 @@ from prme.privacy.policy import FrozenModel, PolicySnapshot
 
 if TYPE_CHECKING:
     from prme.privacy.crypto import ProcessingKeyLease
+    from prme.privacy.erasure import ErasureLedger
 
 Effect = Literal["admission", "transmission", "publication", "disclosure"]
 Guard = Callable[[], AsyncContextManager[None]]
@@ -198,5 +199,6 @@ class PrivacyRuntime:
     embedder: PrivacyEmbedder
     extractor: PrivacyExtractor | None = None
     retry_committer: RetryCommitter | None = None
+    erasure_ledger: ErasureLedger | None = None
     allow_unlimited_evidence: bool = False
     clock: Callable[[], datetime] = field(default=lambda: datetime.now(timezone.utc), repr=False)

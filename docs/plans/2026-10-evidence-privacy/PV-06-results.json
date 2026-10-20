@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "issue": 325,
+  "acceptanceComplete": false,
+  "implementationStatus": "in_progress",
+  "sourcePlan": "PV-06-plan.md",
+  "originalAcceptanceCount": 6,
+  "frozenRows": [
+    "ER01",
+    "ER02",
+    "ER03",
+    "ER04",
+    "ER05",
+    "ER06",
+    "ER07",
+    "ER08",
+    "CL04",
+    "CL05",
+    "CL07"
+  ],
+  "backendRowLimit": 22,
+  "repairCycles": {},
+  "checks": [
+    {
+      "name": "unchanged protected admission smoke",
+      "result": "passed",
+      "count": 1,
+      "log": "/tmp/privacy325-initial-smoke.log"
+    },
+    {
+      "name": "ledger fence/restart subcheck",
+      "result": "passed",
+      "count": 3,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-ledger-fence-2.log",
+      "limitations": [
+        "deterministic policy/model/sanitizer component inputs; no full ER row claimed"
+      ]
+    }
+  ],
+  "pending": [
+    "final324 profile/summary/copy-manifest integration",
+    "ER07 actual326 restore",
+    "ER08 actual326 export/backup",
+    "327 full frozen product gate"
+  ],
+  "setupFailures": [
+    {
+      "log": "/tmp/privacy325-ledger-fence-1.log",
+      "reason": "fixture function imported as fixture name; collection only",
+      "resolved": true
+    }
+  ]
+}

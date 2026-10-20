@@ -499,9 +499,9 @@ class MemoryEngine:
         if config.backend == "postgres":
             if config.namespace_id is not None:
                 raise ValueError("namespace_id currently requires an isolated local pack")
-            engine = await cls._create_postgres(config, embedding_provider=embedding_provider)
+            engine = await cls._create_postgres(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
         else:
-            engine = await cls._create_duckdb(config, embedding_provider=embedding_provider)
+            engine = await cls._create_duckdb(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
         engine._privacy.runtime = privacy_runtime
         await engine._privacy.processing.expire()
         return engine
@@ -509,6 +509,7 @@ class MemoryEngine:
     @classmethod
     async def _create_duckdb(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
+        privacy_runtime: PrivacyRuntime | None = None,
     ) -> "MemoryEngine":
         """Create a MemoryEngine backed by DuckDB (file-based).
 
@@ -630,6 +631,9 @@ class MemoryEngine:
             # host timezone by default. A portable pack uses canonical UTC.
             conn.execute("SET TimeZone = 'UTC'")
 
+            # Current independent erasure state precedes registry/native recovery.
+            from prme.storage.erasure import prepare_store
+            await prepare_store(conn=conn, runtime=privacy_runtime, namespace_id=config.namespace_id)
             # Initialize schema (tables, indexes, DuckPGQ attempt)
             initialize_database(conn)
 
@@ -804,7 +808,7 @@ class MemoryEngine:
     @classmethod
     async def _create_postgres(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
-        namespace_pool=None,
+        namespace_pool=None, privacy_runtime: PrivacyRuntime | None = None,
     ) -> "MemoryEngine":
         """Create a MemoryEngine backed by PostgreSQL."""
         from prme.storage.pg import (
@@ -822,6 +826,8 @@ class MemoryEngine:
             # Create asyncpg pool and initialize schema
             pool = namespace_pool if namespace_pool is not None else await create_pool(config.database_url.get_secret_value())
             startup.push_async_callback(pool.close)
+            from prme.storage.erasure import prepare_store
+            await prepare_store(pool=pool, runtime=privacy_runtime, namespace_id=config.namespace_id)
             if namespace_pool is None:
                 vector_sql = await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
             else:
@@ -1665,6 +1671,16 @@ class MemoryEngine:
                     osc.oscillating_node_ids,
                     user_id=node.user_id,
                 )
+
+    async def request_erasure(self, request, *, user_id: str):
+        """Durably fence selected evidence or memory; purge is explicit maintenance."""
+        return await self._privacy.erasure.request(request, user_id=user_id)
+
+    async def get_erasure_status(self, request_id, *, user_id: str):
+        async with self._privacy.erasure.guard():
+            saved = self._privacy.effective(None, user_id=user_id, scope=self._privacy.default.scope)
+            async with self._privacy.require_runtime().authority.guard(saved, "disclosure"):
+                return await self._privacy.erasure.repository.status(request_id, user_id=user_id)
 
     async def inspect_privacy_policy(self, *, user_id: str, scope: Scope = Scope.PERSONAL, policy: PrivacyPolicy | None = None) -> dict:
         """Inspect effective policy and provider/retention limits without opening evidence."""
@@ -4346,7 +4362,7 @@ class MemoryEngine:
             if plan.privacy_manifest is not None:
                 from prme.privacy.journals import manifest_records, journal_scope
                 records = await manifest_records(self._privacy, plan.privacy_manifest, user_id=plan.node.user_id)
-                async with self._privacy.publication_guards(records):
+                async with self._privacy.publication_guards(records, node_ids=plan.privacy_manifest.admitted_node_ids):
                     with journal_scope(self._privacy, records):
                         await run_async_to_completion(stage())
             else:

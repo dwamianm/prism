@@ -197,9 +197,15 @@ class FakeCommitter:
 
 
 def make_runtime():
+    # Explicit synthetic authority outside every pack restore domain. This is a
+    # real durable erasure ledger; policy/model inputs below remain named doubles.
+    import tempfile
+    from pathlib import Path
+    from prme.privacy.ledger import LocalErasureLedger
+    ledger = LocalErasureLedger.create(Path(tempfile.mkdtemp(prefix="prme-test-ledger-")) / "ledger.sqlite")
     return PrivacyRuntime(project_id=uuid4(), authority=FakeAuthority(), sanitizer=FakeSanitizer(),
                           protector=FakeProtector(), embedder=FakeEmbedding(), extractor=FakeExtractor(),
-                          retry_committer=FakeCommitter(), clock=FakeClock())
+                          retry_committer=FakeCommitter(), erasure_ledger=ledger, clock=FakeClock())
 
 
 def policy_for(runtime, *, owner=None, **changes):

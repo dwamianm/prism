@@ -29,6 +29,8 @@ class PrivacyDenied(ValueError):
 
 
 _CODES = frozenset({
+    "privacy_erased", "privacy_ledger_unavailable", "privacy_ledger_stale",
+    "privacy_migration_required", "privacy_erasure_conflict",
     "privacy_denied", "privacy_configuration_invalid", "privacy_capability_unavailable",
     "privacy_policy_conflict", "privacy_boundary_mismatch", "privacy_stale_policy",
     "privacy_expired", "privacy_unsupported_input", "privacy_evidence_ambiguous",
