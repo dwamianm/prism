@@ -1,0 +1,447 @@
+{
+  "schema_version": 1,
+  "contract_id": "prme-sanitizer-v1",
+  "registry_version": "prme-recognizers-v1",
+  "status": "frozen_contract_not_implemented",
+  "implementation_issue": "PV-13",
+  "source_revision": "72360483",
+  "languages": [
+    "en"
+  ],
+  "language_contract": "Caller declares en. Missing/unsupported declaration rejects; no reliable automatic language detection is claimed. Misdeclared and mixed-language text may evade recognition.",
+  "packages": [
+    {
+      "name": "presidio-analyzer",
+      "version": "2.2.364",
+      "source": "https://pypi.org/project/presidio-analyzer/2.2.364/"
+    },
+    {
+      "name": "spacy",
+      "version": "3.8.11",
+      "source": "https://pypi.org/project/spacy/3.8.11/"
+    },
+    {
+      "name": "en_core_web_sm",
+      "version": "3.8.0",
+      "source": "https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0"
+    }
+  ],
+  "installation": "PV-13 locks transitive dependencies and artifact hashes, verifies model compatibility on supported Python platforms, and refuses missing/incompatible artifacts; no runtime downloads or unlisted recognizers.",
+  "actions": [
+    "allow",
+    "redact",
+    "pseudonymize",
+    "block"
+  ],
+  "presets": {
+    "balanced-v1": "Use balanced action in every category. Strict schema off. Mandatory rules always on.",
+    "strict-v1": "Use strict action in every category plus closed structured memory fields with declared typed validators.",
+    "custom-v1": "Explicit per-category supported actions layered on balanced-v1; mandatory block cannot change."
+  },
+  "limits": {
+    "max_input_utf8_bytes": 65536,
+    "max_custom_rules": 64,
+    "max_literal_utf8_bytes": 256,
+    "max_total_custom_utf8_bytes": 8192,
+    "max_metadata_depth": 8,
+    "max_metadata_leaves": 1024,
+    "detector_deadline_ms": 2000
+  },
+  "limit_semantics": "Per operation, aggregate body, metadata keys/values, display names and generated output. Oversize/depth, timeout or detector error rejects before content side effects. No prefix truncation. A batch fails atomically before enqueue if any item fails. These are explicit v1 contract bounds, not performance evidence.",
+  "pipeline": [
+    "validate_policy_and_language",
+    "escape_reserved_tokens",
+    "mandatory_credential_scan",
+    "bounded_custom_scan",
+    "local_entity_scan",
+    "resolve_overlaps",
+    "apply_actions",
+    "validate_qualifiers_and_schema",
+    "emit_sanitized_representation"
+  ],
+  "overlap_order": [
+    "block",
+    "redact",
+    "pseudonymize",
+    "allow"
+  ],
+  "overlap_semantics": "Any block rejects entire input. Merge overlapping redact spans to their union. Redact wins over pseudonymize. Different-category overlapping pseudonym spans reject as ambiguous; identical same-category spans deduplicate. Nonoverlapping replacements apply from right to left with original offsets. An allow never cancels another applicable rule.",
+  "error_semantics": "Fail the whole admission/query/output before provider, embedding, durable write or content logging; return fixed reason code only, never offending values.",
+  "redaction": "Replace detected span with category-specific [CATEGORY_REMOVED]; reject a claim/input if preserved source qualifiers or participant relationships become ambiguous. Do not retain matched spans in reports.",
+  "pseudonyms": {
+    "algorithm": "HMAC-SHA-256",
+    "key_bytes": 32,
+    "boundary": [
+      "project_id",
+      "owner_id",
+      "scope",
+      "epoch"
+    ],
+    "input_encoding": "Length-prefixed UTF-8 category and exact detected value, with domain prme-pseudonym-v1; no case-fold identity merging.",
+    "token_syntax": "[PRME_PSEUDONYM_V1:<category>:<opaque_epoch>:<43-character-base64url-mac>]",
+    "source_spoofing": "Escape all source occurrences of the reserved [PRME_PSEUDONYM_V1: prefix to literal inert text before scanning. Generated outputs may use only source-issued tokens in the same boundary.",
+    "reverse_map": "none",
+    "key_loss": "Refuse continuity under the old epoch. Explicit new epoch creates new tokens; never silently merge identities.",
+    "erasure": "Tokens and all derivatives remain in the copy inventory; keys live in purpose-separated external provider state. Fact erasure still required."
+  },
+  "custom_rules": {
+    "kinds": [
+      "literal_identifier",
+      "literal_topic",
+      "typed_identifier"
+    ],
+    "matching": "Literals use exact case-sensitive Unicode scalar matching, maximum lengths above; no arbitrary regex or callable. typed_identifier selects only a listed built-in category recognizer. A literal topic block rejects the whole input.",
+    "config_protection": "Custom literals may themselves be sensitive; encrypt policy rule material, exclude from routine policy inspection/logs and bind its opaque version. Never use removed text as a public rule ID."
+  },
+  "strict_schema": {
+    "version": "prme-strict-schema-v1",
+    "additional_fields": "forbidden",
+    "validators": [
+      "opaque_id",
+      "issued_scoped_pseudonym",
+      "boolean",
+      "bounded_integer",
+      "exact_decimal",
+      "timezone_aware_timestamp",
+      "finite_enum"
+    ],
+    "rules": "Deployment supplies a versioned immutable field-name/validator schema. Field names are non-content ASCII identifiers, enum values pass the same sanitizer, all strings require opaque ID/pseudonym/timestamp/finite enum validators. No arbitrary notes/free text. Required conditions, negation and attribution must fit the schema or admission rejects. Do not guess a missing qualifier."
+  },
+  "known_unsupported": [
+    "Other languages, unreliable or false en declarations and mixed-language semantic coverage",
+    "Base64/hex encoded secrets, arbitrary homoglyphs, images and binary attachments",
+    "Secret types not matching a listed credential grammar, indirect hints and contextual confidential facts",
+    "US identifiers other than SSN; international identifiers not explicitly listed",
+    "Reversible pseudonym lookup, global cross-project identity and automatic semantic topic classification"
+  ],
+  "metrics_contract": "PV-13/PV-11 publish per-category labeled true/false positives/negatives and benign-damage counts. Unsupported examples are reported separately, never counted as true negatives or omitted to inflate recall.",
+  "recognizers": [
+    {
+      "id": "credential-assignment-v1",
+      "version": 1,
+      "category": "credential",
+      "language": "en",
+      "implementation": "PRME bounded scanner",
+      "score_threshold": 1.0,
+      "scope": "ASCII case-insensitive whole keys password, passwd, pwd, api_key, access_token, client_secret; 0-8 spaces/tabs then : or = then 0-8 spaces/tabs and an optional single/double quote, followed by 1-4096 non-whitespace non-quote characters. Presence of this supported assignment blocks the whole input."
+    },
+    {
+      "id": "credential-pem-v1",
+      "version": 1,
+      "category": "credential",
+      "language": "en",
+      "implementation": "PRME literal header scanner",
+      "score_threshold": 1.0,
+      "scope": "Exact -----BEGIN PRIVATE KEY-----, -----BEGIN RSA PRIVATE KEY-----, -----BEGIN EC PRIVATE KEY-----, -----BEGIN OPENSSH PRIVATE KEY----- or -----BEGIN ENCRYPTED PRIVATE KEY----- header blocks, even if the key body is incomplete."
+    },
+    {
+      "id": "credential-bearer-v1",
+      "version": 1,
+      "category": "credential",
+      "language": "en",
+      "implementation": "PRME bounded scanner",
+      "score_threshold": 1.0,
+      "scope": "ASCII case-insensitive whole Bearer followed by 1-8 spaces/tabs and 8-4096 ASCII letters/digits or . _ ~ + / - with 0-2 trailing = characters. No network validation."
+    },
+    {
+      "id": "credential-ghp-v1",
+      "version": 1,
+      "category": "credential",
+      "language": "en",
+      "implementation": "PRME bounded scanner",
+      "score_threshold": 1.0,
+      "scope": "Whole ghp_ followed by exactly 36 ASCII alphanumeric characters. This fixture grammar does not claim support for every GitHub credential format."
+    },
+    {
+      "id": "email-v1",
+      "version": 1,
+      "category": "email",
+      "language": "en",
+      "implementation": "presidio_analyzer.EmailRecognizer",
+      "score_threshold": 0.5,
+      "scope": "Upstream EMAIL_ADDRESS; ASCII/international email formats are supported only as recognized by the pinned implementation.",
+      "source": "https://github.com/data-privacy-stack/presidio/tree/2.2.364/presidio-analyzer/presidio_analyzer/predefined_recognizers"
+    },
+    {
+      "id": "phone-v1",
+      "version": 1,
+      "category": "phone",
+      "language": "en",
+      "implementation": "presidio_analyzer.PhoneRecognizer",
+      "score_threshold": 0.4,
+      "scope": "PHONE_NUMBER with supported_regions=[US,GB], leniency=1; no implicit additional country registry.",
+      "source": "https://github.com/data-privacy-stack/presidio/tree/2.2.364/presidio-analyzer/presidio_analyzer/predefined_recognizers"
+    },
+    {
+      "id": "person-v1",
+      "version": 1,
+      "category": "person",
+      "language": "en",
+      "implementation": "presidio_analyzer.SpacyRecognizer",
+      "score_threshold": 0.5,
+      "scope": "PERSON only from en_core_web_sm; named English persons are heuristic, no identity resolution.",
+      "source": "https://github.com/data-privacy-stack/presidio/tree/2.2.364/presidio-analyzer/presidio_analyzer/predefined_recognizers"
+    },
+    {
+      "id": "location-v1",
+      "version": 1,
+      "category": "location",
+      "language": "en",
+      "implementation": "presidio_analyzer.SpacyRecognizer",
+      "score_threshold": 0.5,
+      "scope": "LOCATION only using the pinned spaCy entity mapping; not a promise to detect every street address.",
+      "source": "https://github.com/data-privacy-stack/presidio/tree/2.2.364/presidio-analyzer/presidio_analyzer/predefined_recognizers"
+    },
+    {
+      "id": "ssn-v1",
+      "version": 1,
+      "category": "us_ssn",
+      "language": "en",
+      "implementation": "presidio_analyzer.UsSsnRecognizer",
+      "score_threshold": 0.5,
+      "scope": "US_SSN only; upstream validation/context rules apply.",
+      "source": "https://github.com/data-privacy-stack/presidio/tree/2.2.364/presidio-analyzer/presidio_analyzer/predefined_recognizers"
+    },
+    {
+      "id": "card-v1",
+      "version": 1,
+      "category": "payment_card",
+      "language": "en",
+      "implementation": "presidio_analyzer.CreditCardRecognizer",
+      "score_threshold": 0.5,
+      "scope": "CREDIT_CARD with upstream checksum/format validation; not bank account detection.",
+      "source": "https://github.com/data-privacy-stack/presidio/tree/2.2.364/presidio-analyzer/presidio_analyzer/predefined_recognizers"
+    },
+    {
+      "id": "ip-v1",
+      "version": 1,
+      "category": "ip_address",
+      "language": "en",
+      "implementation": "presidio_analyzer.IpRecognizer",
+      "score_threshold": 0.5,
+      "scope": "IP_ADDRESS with upstream IPv4/IPv6 validation; not hostnames or location inference.",
+      "source": "https://github.com/data-privacy-stack/presidio/tree/2.2.364/presidio-analyzer/presidio_analyzer/predefined_recognizers"
+    },
+    {
+      "id": "obfuscated-email-v1",
+      "version": 1,
+      "category": "email",
+      "language": "en",
+      "implementation": "PRME bounded scanner",
+      "score_threshold": 1.0,
+      "scope": "ASCII email local part 1-64 letters/digits or . _ % + -, then optional 0-1 spaces around [at] or (at), domain labels 1-63 letters/digits/hyphen separated by [dot] or (dot) with optional 0-1 spaces, final suffix 2-24 ASCII letters. Match spans cover the full original form, not just the projected @/. version; reject invalid offset mappings. Other obfuscation unsupported."
+    },
+    {
+      "id": "literal-identifier-v1",
+      "version": 1,
+      "category": "custom_identifier",
+      "language": "en",
+      "implementation": "PRME bounded literal scanner",
+      "score_threshold": 1.0,
+      "scope": "Exact configured literals, no automatic guessing. Overlap/action rules apply."
+    },
+    {
+      "id": "literal-topic-v1",
+      "version": 1,
+      "category": "sensitive_topic",
+      "language": "en",
+      "implementation": "PRME bounded literal scanner",
+      "score_threshold": 1.0,
+      "scope": "Exact configured topic literals, not semantic inference; block affects entire input."
+    }
+  ],
+  "categories": [
+    {
+      "id": "credential",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "block"
+      ],
+      "balanced": "block",
+      "strict": "block",
+      "mandatory": true,
+      "recognizer_ids": [
+        "credential-assignment-v1",
+        "credential-pem-v1",
+        "credential-bearer-v1",
+        "credential-ghp-v1"
+      ],
+      "activation": "always"
+    },
+    {
+      "id": "email",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "redact",
+        "pseudonymize",
+        "block"
+      ],
+      "balanced": "redact",
+      "strict": "redact",
+      "mandatory": false,
+      "recognizer_ids": [
+        "email-v1",
+        "obfuscated-email-v1"
+      ],
+      "activation": "always"
+    },
+    {
+      "id": "phone",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "redact",
+        "pseudonymize",
+        "block"
+      ],
+      "balanced": "redact",
+      "strict": "redact",
+      "mandatory": false,
+      "recognizer_ids": [
+        "phone-v1"
+      ],
+      "activation": "always"
+    },
+    {
+      "id": "person",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "redact",
+        "pseudonymize",
+        "block"
+      ],
+      "balanced": "allow",
+      "strict": "pseudonymize",
+      "mandatory": false,
+      "recognizer_ids": [
+        "person-v1"
+      ],
+      "activation": "always"
+    },
+    {
+      "id": "location",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "redact",
+        "block"
+      ],
+      "balanced": "allow",
+      "strict": "redact",
+      "mandatory": false,
+      "recognizer_ids": [
+        "location-v1"
+      ],
+      "activation": "always"
+    },
+    {
+      "id": "us_ssn",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "redact",
+        "block"
+      ],
+      "balanced": "redact",
+      "strict": "block",
+      "mandatory": false,
+      "recognizer_ids": [
+        "ssn-v1"
+      ],
+      "activation": "always"
+    },
+    {
+      "id": "payment_card",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "redact",
+        "block"
+      ],
+      "balanced": "redact",
+      "strict": "block",
+      "mandatory": false,
+      "recognizer_ids": [
+        "card-v1"
+      ],
+      "activation": "always"
+    },
+    {
+      "id": "ip_address",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "redact",
+        "block"
+      ],
+      "balanced": "allow",
+      "strict": "redact",
+      "mandatory": false,
+      "recognizer_ids": [
+        "ip-v1"
+      ],
+      "activation": "always"
+    },
+    {
+      "id": "custom_identifier",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "redact",
+        "pseudonymize",
+        "block"
+      ],
+      "balanced": "redact",
+      "strict": "redact",
+      "mandatory": false,
+      "recognizer_ids": [
+        "literal-identifier-v1"
+      ],
+      "activation": "only when explicit literals are configured"
+    },
+    {
+      "id": "sensitive_topic",
+      "languages": [
+        "en"
+      ],
+      "supported_actions": [
+        "allow",
+        "block"
+      ],
+      "balanced": "block",
+      "strict": "block",
+      "mandatory": false,
+      "recognizer_ids": [
+        "literal-topic-v1"
+      ],
+      "activation": "only when explicit literals are configured"
+    }
+  ],
+  "nlp_entity_mapping": {
+    "PERSON": "PERSON",
+    "GPE": "LOCATION",
+    "LOC": "LOCATION",
+    "FAC": "LOCATION"
+  },
+  "context_enhancement": "Disabled. Ignore all unlisted NLP labels; use exact per-recognizer thresholds, not upstream dynamic registry defaults."
+}
