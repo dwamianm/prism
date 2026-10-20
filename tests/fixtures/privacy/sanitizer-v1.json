@@ -1,0 +1,884 @@
+{
+  "schema_version": 1,
+  "fixture_id": "prme-sanitizer-fixtures-v1",
+  "status": "frozen_before_first_local_inference",
+  "synthetic_only": true,
+  "registry_version": "prme-recognizers-v1",
+  "rows": [
+    {
+      "id": "credential-01",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "password = \"synthetic-test-value\"",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 33,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-02",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "passwd = \"synthetic-test-value\"",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 31,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-03",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "pwd = \"synthetic-test-value\"",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 28,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-04",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "api_key = \"synthetic-test-value\"",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 32,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-05",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "access_token = \"synthetic-test-value\"",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 37,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-06",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "client_secret = \"synthetic-test-value\"",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 38,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-07",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "-----BEGIN PRIVATE KEY-----",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 27,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-08",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "-----BEGIN RSA PRIVATE KEY-----",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 31,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-09",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "-----BEGIN EC PRIVATE KEY-----",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 30,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-10",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "-----BEGIN OPENSSH PRIVATE KEY-----",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 35,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-11",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "-----BEGIN ENCRYPTED PRIVATE KEY-----",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 37,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-12",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "Bearer synthetic_TOKEN_1234",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 27,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-13",
+      "category": "credential",
+      "label": "supported_positive",
+      "text": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 40,
+          "category": "credential"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-14",
+      "category": "credential",
+      "label": "benign",
+      "text": "The password policy is documented.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-15",
+      "category": "credential",
+      "label": "benign",
+      "text": "Please rotate the access token tomorrow.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-16",
+      "category": "credential",
+      "label": "benign",
+      "text": "A public key identifies a participant.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "credential-17",
+      "category": "credential",
+      "label": "unsupported",
+      "text": "cGFzc3dvcmQ9c3ludGhldGlj",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Base64 is unsupported."
+    },
+    {
+      "id": "credential-18",
+      "category": "credential",
+      "label": "unsupported",
+      "text": "secret_key=synthetic-value",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Unlisted assignment key."
+    },
+    {
+      "id": "credential-19",
+      "category": "credential",
+      "label": "unsupported",
+      "text": "pаssword=synthetic-value",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Cyrillic homoglyph is unsupported."
+    },
+    {
+      "id": "credential-20",
+      "category": "credential",
+      "label": "unsupported",
+      "text": "password is synthetic-value",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Indirect assignment grammar is unsupported."
+    },
+    {
+      "id": "email-01",
+      "category": "email",
+      "label": "supported_positive",
+      "text": "Contact sample.person@example.com.",
+      "expected_spans": [
+        {
+          "start": 8,
+          "end": 33,
+          "category": "email"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "email-02",
+      "category": "email",
+      "label": "supported_positive",
+      "text": "sample [at] example [dot] com",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 29,
+          "category": "email"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "email-03",
+      "category": "email",
+      "label": "supported_positive",
+      "text": "sample [at] example (dot) com",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 29,
+          "category": "email"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "email-04",
+      "category": "email",
+      "label": "supported_positive",
+      "text": "sample (at) example [dot] com",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 29,
+          "category": "email"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "email-05",
+      "category": "email",
+      "label": "supported_positive",
+      "text": "sample (at) example (dot) com",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 29,
+          "category": "email"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "email-06",
+      "category": "email",
+      "label": "benign",
+      "text": "Use the at sign in documentation.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "email-07",
+      "category": "email",
+      "label": "benign",
+      "text": "The example has a dotted line.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "email-08",
+      "category": "email",
+      "label": "unsupported",
+      "text": "sample at example dot com",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Outside the frozen email forms."
+    },
+    {
+      "id": "email-09",
+      "category": "email",
+      "label": "unsupported",
+      "text": "c2FtcGxlQGV4YW1wbGUuY29t",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Outside the frozen email forms."
+    },
+    {
+      "id": "phone-01",
+      "category": "phone",
+      "label": "supported_positive",
+      "text": "Telephone +1 202-555-0123.",
+      "expected_spans": [
+        {
+          "start": 10,
+          "end": 25,
+          "category": "phone"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "phone-02",
+      "category": "phone",
+      "label": "supported_positive",
+      "text": "Telephone +44 20 7946 0958.",
+      "expected_spans": [
+        {
+          "start": 10,
+          "end": 26,
+          "category": "phone"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "phone-03",
+      "category": "phone",
+      "label": "benign",
+      "text": "There are 42 boxes.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "phone-04",
+      "category": "phone",
+      "label": "benign",
+      "text": "The room is 204.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "phone-05",
+      "category": "phone",
+      "label": "unsupported",
+      "text": "Call zero two zero seven nine four six zero nine five eight.",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Outside the declared recognizer coverage."
+    },
+    {
+      "id": "person-01",
+      "category": "person",
+      "label": "supported_positive",
+      "text": "John Smith ordered tea.",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 10,
+          "category": "person"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "person-02",
+      "category": "person",
+      "label": "supported_positive",
+      "text": "Mary Wilson ordered coffee.",
+      "expected_spans": [
+        {
+          "start": 0,
+          "end": 11,
+          "category": "person"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "person-03",
+      "category": "person",
+      "label": "benign",
+      "text": "The cup is on the table.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "person-04",
+      "category": "person",
+      "label": "benign",
+      "text": "A person ordered water.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "person-05",
+      "category": "person",
+      "label": "unsupported",
+      "text": "J0hn Sm1th ordered tea.",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Outside the declared recognizer coverage."
+    },
+    {
+      "id": "location-01",
+      "category": "location",
+      "label": "supported_positive",
+      "text": "The meeting is in London.",
+      "expected_spans": [
+        {
+          "start": 18,
+          "end": 24,
+          "category": "location"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "location-02",
+      "category": "location",
+      "label": "supported_positive",
+      "text": "The meeting is in New York.",
+      "expected_spans": [
+        {
+          "start": 18,
+          "end": 26,
+          "category": "location"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "location-03",
+      "category": "location",
+      "label": "benign",
+      "text": "The meeting is nearby.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "location-04",
+      "category": "location",
+      "label": "benign",
+      "text": "The room is upstairs.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "location-05",
+      "category": "location",
+      "label": "unsupported",
+      "text": "The meeting is at the place we discussed.",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Outside the declared recognizer coverage."
+    },
+    {
+      "id": "us_ssn-01",
+      "category": "us_ssn",
+      "label": "supported_positive",
+      "text": "Synthetic SSN: 219-09-8765.",
+      "expected_spans": [
+        {
+          "start": 15,
+          "end": 26,
+          "category": "us_ssn"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "us_ssn-02",
+      "category": "us_ssn",
+      "label": "supported_positive",
+      "text": "Synthetic SSN: 321-54-6789.",
+      "expected_spans": [
+        {
+          "start": 15,
+          "end": 26,
+          "category": "us_ssn"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "us_ssn-03",
+      "category": "us_ssn",
+      "label": "benign",
+      "text": "The tracking number is 000-00-0000.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "us_ssn-04",
+      "category": "us_ssn",
+      "label": "benign",
+      "text": "There are 123 items.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "us_ssn-05",
+      "category": "us_ssn",
+      "label": "unsupported",
+      "text": "SSN two one nine zero nine eight seven six five.",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Outside the declared recognizer coverage."
+    },
+    {
+      "id": "payment_card-01",
+      "category": "payment_card",
+      "label": "supported_positive",
+      "text": "Test credit card 4111 1111 1111 1111.",
+      "expected_spans": [
+        {
+          "start": 17,
+          "end": 36,
+          "category": "payment_card"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "payment_card-02",
+      "category": "payment_card",
+      "label": "supported_positive",
+      "text": "Test credit card 5555 5555 5555 4444.",
+      "expected_spans": [
+        {
+          "start": 17,
+          "end": 36,
+          "category": "payment_card"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "payment_card-03",
+      "category": "payment_card",
+      "label": "benign",
+      "text": "The order contains 12 cards.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "payment_card-04",
+      "category": "payment_card",
+      "label": "benign",
+      "text": "Invoice 4111111111111112.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "payment_card-05",
+      "category": "payment_card",
+      "label": "unsupported",
+      "text": "Card four one one one repeated.",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Outside the declared recognizer coverage."
+    },
+    {
+      "id": "ip_address-01",
+      "category": "ip_address",
+      "label": "supported_positive",
+      "text": "Documentation host 192.0.2.23.",
+      "expected_spans": [
+        {
+          "start": 19,
+          "end": 29,
+          "category": "ip_address"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "ip_address-02",
+      "category": "ip_address",
+      "label": "supported_positive",
+      "text": "Documentation host 2001:db8::8.",
+      "expected_spans": [
+        {
+          "start": 19,
+          "end": 30,
+          "category": "ip_address"
+        }
+      ],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "ip_address-03",
+      "category": "ip_address",
+      "label": "benign",
+      "text": "Version 1.2 is ready.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "ip_address-04",
+      "category": "ip_address",
+      "label": "benign",
+      "text": "Address 999.999.999.999 is invalid.",
+      "expected_spans": [],
+      "rules": [],
+      "note": ""
+    },
+    {
+      "id": "ip_address-05",
+      "category": "ip_address",
+      "label": "unsupported",
+      "text": "Host one nine two dot zero dot two dot twenty-three.",
+      "expected_spans": [],
+      "rules": [],
+      "note": "Outside the declared recognizer coverage."
+    },
+    {
+      "id": "custom_identifier-01",
+      "category": "custom_identifier",
+      "label": "supported_positive",
+      "text": "Use SYNTH-ID-482 today.",
+      "expected_spans": [
+        {
+          "start": 4,
+          "end": 16,
+          "category": "custom_identifier"
+        }
+      ],
+      "rules": [
+        {
+          "kind": "literal_identifier",
+          "literal": "SYNTH-ID-482"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "custom_identifier-02",
+      "category": "custom_identifier",
+      "label": "supported_positive",
+      "text": "Use SYNTH-ID-731 today.",
+      "expected_spans": [
+        {
+          "start": 4,
+          "end": 16,
+          "category": "custom_identifier"
+        }
+      ],
+      "rules": [
+        {
+          "kind": "literal_identifier",
+          "literal": "SYNTH-ID-731"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "custom_identifier-03",
+      "category": "custom_identifier",
+      "label": "benign",
+      "text": "Use the public identifier today.",
+      "expected_spans": [],
+      "rules": [
+        {
+          "kind": "literal_identifier",
+          "literal": "SYNTH-ID-482"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "custom_identifier-04",
+      "category": "custom_identifier",
+      "label": "benign",
+      "text": "Use synth-id-482 today.",
+      "expected_spans": [],
+      "rules": [
+        {
+          "kind": "literal_identifier",
+          "literal": "SYNTH-ID-482"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "custom_identifier-05",
+      "category": "custom_identifier",
+      "label": "unsupported",
+      "text": "Use the identifier we discussed.",
+      "expected_spans": [],
+      "rules": [
+        {
+          "kind": "literal_identifier",
+          "literal": "SYNTH-ID-482"
+        }
+      ],
+      "note": "Outside the declared recognizer coverage."
+    },
+    {
+      "id": "sensitive_topic-01",
+      "category": "sensitive_topic",
+      "label": "supported_positive",
+      "text": "Discuss synthetic violet orchard.",
+      "expected_spans": [
+        {
+          "start": 8,
+          "end": 32,
+          "category": "sensitive_topic"
+        }
+      ],
+      "rules": [
+        {
+          "kind": "literal_topic",
+          "literal": "synthetic violet orchard"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "sensitive_topic-02",
+      "category": "sensitive_topic",
+      "label": "supported_positive",
+      "text": "Discuss synthetic amber harbor.",
+      "expected_spans": [
+        {
+          "start": 8,
+          "end": 30,
+          "category": "sensitive_topic"
+        }
+      ],
+      "rules": [
+        {
+          "kind": "literal_topic",
+          "literal": "synthetic amber harbor"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "sensitive_topic-03",
+      "category": "sensitive_topic",
+      "label": "benign",
+      "text": "Discuss the public agenda.",
+      "expected_spans": [],
+      "rules": [
+        {
+          "kind": "literal_topic",
+          "literal": "synthetic violet orchard"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "sensitive_topic-04",
+      "category": "sensitive_topic",
+      "label": "benign",
+      "text": "Discuss Synthetic Violet Orchard.",
+      "expected_spans": [],
+      "rules": [
+        {
+          "kind": "literal_topic",
+          "literal": "synthetic violet orchard"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "sensitive_topic-05",
+      "category": "sensitive_topic",
+      "label": "unsupported",
+      "text": "Discuss that purple gardening project.",
+      "expected_spans": [],
+      "rules": [
+        {
+          "kind": "literal_topic",
+          "literal": "synthetic violet orchard"
+        }
+      ],
+      "note": "Outside the declared recognizer coverage."
+    }
+  ]
+}
