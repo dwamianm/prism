@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "readers": [
+    {"tag": "v0.15.0", "commit": "6963c574065aaf7ef8552b6076c80726c1c167bf", "lock_sha256": "e4cad0461c7904b78658ca73812bcb5e80284cd5d222988003606c4083f0e53c"},
+    {"tag": "v0.16.0a4", "commit": "13b25058e2bb1612e5a0dfafc5b30c5ae2d671b0", "lock_sha256": "5a93d42ac10967021539f0fa0d68a019d32ed0a130e016a503f57d16c47da1f1"}
+  ],
+  "adapters": ["engine", "client", "cli", "http", "mcp", "workspace"],
+  "postgres_cli": "not_supported_by_these_historical_local_export_paths",
+  "refusal": "events.content_hash_absent_and_idx_events_hash_absent_before_schema_initializer_index_creation",
+  "control": "same_reader_successful_existing_legacy_memory_read_with_correct_provider_dimension_and_namespace",
+  "limits": ["only_the_pinned_releases", "trusted_operator_raw_sql_not_a_hostile_reader_boundary", "harmless_ddl_or_open_file_effects_may_occur"]
+}

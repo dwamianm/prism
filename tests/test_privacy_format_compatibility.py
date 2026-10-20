@@ -9,6 +9,7 @@ import traceback
 import os
 from uuid import uuid4
 from urllib.parse import urlsplit, urlunsplit
+from pathlib import Path
 
 import pytest
 
@@ -19,6 +20,118 @@ from tests.privacy_journal_support import (
     LAYOUTS, journal_engine, isolated_privacy_postgres, local_analyzer_fixture,  # noqa: F401
 )
 from tests.privacy_journal_support import native as native_fixture  # noqa: F401
+
+
+@pytest.mark.parametrize("reader", ["v0.15.0", "v0.16.0a4"])
+@pytest.mark.parametrize("layout,adapter", [(layout, adapter) for layout in LAYOUTS
+    for adapter in ("engine", "client", "cli", "http", "mcp", "workspace") if (layout, adapter) != ("postgres", "cli")])
+async def test_pinned_historical_reader_control_and_format_refusal(tmp_path, reader, layout, adapter, analyzer, native):
+    """AC2 bounded actual readers. No key/dependency/config failure is success."""
+    import asyncio
+    import hashlib
+    from tests.privacy_portability_support import fresh_config, HISTORICAL_PROBE
+    from prme.storage.privacy_migration import _source
+    from prme import MemoryWorkspace
+    reader_dir = Path(__file__).parents[1] / ".github-ticket-loop/privacy-326/historical-readers" / reader
+    if not (reader_dir / ".venv/bin/python").exists():
+        pytest.skip("explicit isolated historical environment required; no acceptance success")
+    fixture = json.loads((Path(__file__).parent / "fixtures/privacy/historical-readers-v1.json").read_text())
+    pin = next(row for row in fixture["readers"] if row["tag"] == reader)
+    assert hashlib.sha256((reader_dir / "uv.lock").read_bytes()).hexdigest() == pin["lock_sha256"]
+    template, runtime, policy, *_ = await journal_engine(tmp_path / "template", "directory", analyzer)
+    base = template._config
+    await template.close()
+    async def content_snapshot(config):
+        async with _source(config) as query:
+            tables = await query("SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema() AND table_type='BASE TABLE'")
+            names = sorted(row["table_name"] for row in tables)
+            result = {}
+            for name in names:
+                if name.startswith("privacy_") or name in {"events", "nodes", "edges", "operations", "event_materializations", "event_extractions",
+                        "vector_metadata", "vector_payloads", "vector_staging", "derivation_registered_plans", "profile_work",
+                        "profile_publication_heads", "profile_preparation_heads", "consolidation_publication_heads"}:
+                    result[name] = sorted(json.dumps(row, sort_keys=True, default=str) for row in await query(f'SELECT * FROM "{name}"'))
+            return names, result
+    for protected in (False, True):
+        async with fresh_config(base, tmp_path / ("protected" if protected else "legacy"), layout) as config:
+            config = config.model_copy(update={"privacy_policy": policy if protected else None})
+            selected_runtime = runtime if protected else None
+            workspace_dir = tmp_path / ("protected-workspace" if protected else "legacy-workspace")
+            workspace_name = "pv326_reader_" + uuid4().hex
+            admin = None
+            namespace_id = policy.project_id if protected else uuid4()
+            try:
+                if adapter == "workspace":
+                    if layout == "postgres":
+                        import asyncpg
+                        admin = await asyncpg.connect(os.environ["PRME_TEST_DATABASE_URL"])
+                        context = MemoryWorkspace.open_postgres(config, name=workspace_name, embedding_provider=runtime.embedder,
+                            privacy_runtime_factory=(lambda _: runtime) if protected else None)
+                    else:
+                        context = MemoryWorkspace.open(workspace_dir, config=config, embedding_provider=runtime.embedder,
+                            privacy_runtime_factory=(lambda _: runtime) if protected else None, single_file_packs=layout == "pack")
+                    async with context as workspace:
+                        if admin is None:
+                            with workspace._registry:
+                                workspace._registry.execute("INSERT INTO namespaces(name,id) VALUES('existing',?)", [str(namespace_id)])
+                        else:
+                            await admin.execute("INSERT INTO prme_workspace.namespaces(workspace,name,id) VALUES($1,'existing',$2)", workspace_name, namespace_id)
+                        async with workspace.namespace("existing") as memory:
+                            event_id = await memory.store("Historical reader usable control.", user_id=str(policy.owner_id))
+                            actual = memory._engine._config
+                    if layout == "postgres":
+                        from prme.storage.pg.namespace import namespace_schema
+                        from urllib.parse import parse_qsl, urlencode
+                        parts = urlsplit(actual.database_url.get_secret_value())
+                        query = [(key, value) for key, value in parse_qsl(parts.query) if key != "search_path"] + [("search_path", namespace_schema(namespace_id))]
+                        inspection = type(actual).model_validate({**actual.model_dump(), "database_url": urlunsplit(parts._replace(query=urlencode(query)))})
+                    else:
+                        inspection = actual
+                else:
+                    engine = await MemoryEngine.create(config, privacy_runtime=selected_runtime, embedding_provider=runtime.embedder)
+                    try:
+                        event_id = await engine.store("Historical reader usable control.", user_id=str(policy.owner_id))
+                        actual = inspection = engine._config
+                    finally:
+                        await engine.close()
+                before_names, before = await content_snapshot(inspection)
+                # The same supported opening configuration for both pinned
+                # releases; newer unrelated feature flags are not reader input.
+                serializable = actual.model_dump(mode="json", include={"database_url", "namespace_id", "db_path", "vector_path",
+                    "lexical_path", "pack_path", "embedding", "duckdb_threads", "encryption_enabled", "encryption_key"})
+                if actual.database_url is not None:
+                    serializable["database_url"] = actual.database_url.get_secret_value()
+                # Historical HTTP/MCP do not expose provider injection. Select
+                # a supported factory-backed configuration; the isolated probe
+                # replaces only the external model factory, preserving exact
+                # model/version/dimension and all actual storage opening code.
+                serializable["embedding"]["provider"] = "fastembed"
+                spec = {"config": serializable, "owner": str(policy.owner_id), "event_id": event_id,
+                    "adapter": adapter, "protected": protected, "workspace_dir": str(workspace_dir), "workspace_name": workspace_name}
+                spec_path = tmp_path / ("protected-spec.json" if protected else "legacy-spec.json")
+                spec_path.write_text(json.dumps(spec))
+                spec_path.chmod(0o600)
+                environment = {key: value for key, value in os.environ.items() if not key.startswith("PRME_") and key != "PYTHONPATH"}
+                process = await asyncio.create_subprocess_exec(str(reader_dir / ".venv/bin/python"), "-c", HISTORICAL_PROBE, str(spec_path),
+                    cwd=reader_dir, env=environment, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=45)
+                spec_path.with_suffix(".stdout").write_bytes(stdout)
+                spec_path.with_suffix(".stderr").write_bytes(stderr)
+                assert stdout.decode().splitlines(), stderr.decode()[-2000:]
+                result = json.loads(stdout.decode().splitlines()[-1])
+                print(json.dumps({"reader": reader, "layout": layout, **result}))
+                assert process.returncode == 0, (result, stderr.decode()[-2000:])
+                after_names, after = await content_snapshot(inspection)
+                if protected:
+                    assert after == before
+                    assert result["format_refusal"] and result["provider_creations"] == 0
+                    print(json.dumps({"harmless_created_tables": sorted(set(after_names) - set(before_names)), "record_mutation": False}))
+            finally:
+                if admin is not None:
+                    from prme.storage.pg.namespace import namespace_schema
+                    await admin.execute(f'DROP SCHEMA IF EXISTS "{namespace_schema(namespace_id)}" CASCADE')
+                    await admin.execute("DELETE FROM prme_workspace.namespaces WHERE workspace=$1", workspace_name)
+                    await admin.close()
 
 
 @pytest.mark.parametrize("layout", LAYOUTS)

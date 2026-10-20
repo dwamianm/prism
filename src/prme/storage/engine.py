@@ -1722,6 +1722,15 @@ class MemoryEngine:
         """Inspect effective policy and provider/retention limits without opening evidence."""
         return await self._privacy.inspect(user_id=user_id, scope=scope, policy=policy)
 
+    async def export_protected(self, destination, *, mode: str = "protected"):
+        """Write a closed encrypted-evidence export under current effect guards.
+
+        ``active_memory_only`` is an explicit sensitive admitted-memory view;
+        it is not a restorable snapshot. Recovery keys are never included.
+        """
+        from prme.storage.privacy_export import export_protected_pack
+        return await export_protected_pack(self, destination, mode=mode)
+
     # --- Ingestion Operations ---
 
     async def ingest(

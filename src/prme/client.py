@@ -494,6 +494,10 @@ class MemoryClient:
         """Inspect policy limits without opening retained source payloads."""
         return self._run(self._engine.inspect_privacy_policy(user_id=user_id, scope=scope, policy=policy))
 
+    def export_protected(self, destination, *, mode: str = "protected"):
+        """Write a closed protected export; private recovery keys stay separate."""
+        return self._run(self._engine.export_protected(destination, mode=mode))
+
     def request_erasure(self, request: ErasureRequest, *, user_id: str) -> ErasureStatus:
         """Persist a denial fence; explicit maintenance performs logical purge."""
         return self._run(self._engine.request_erasure(request, user_id=user_id))

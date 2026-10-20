@@ -342,8 +342,27 @@ class AdmissionCoordinator:
                       kind: str, asynchronous: bool, session_id: str | None = None, role: str = "user",
                       speaker: str | None = None, metadata: dict | None = None, event_time: datetime | None = None,
                       retrieval_content: str | None = None, value_bindings=None, first_person_owner: bool = False,
-                      budget: OperationBudget | None = None) -> PreparedAdmission:
+                      budget: OperationBudget | None = None,
+                      _migration_identity: tuple[UUID, PolicySnapshot] | None = None) -> PreparedAdmission:
         saved = self.effective(policy, user_id=user_id, scope=scope)
+        event_id = None
+        if _migration_identity is not None:
+            # Private explicit migration only. Its authenticated owned job has
+            # frozen this snapshot; a resume cannot choose a fresh lifetime.
+            try:
+                event_id, original = _migration_identity
+                if (not isinstance(event_id, UUID) or not isinstance(original, PolicySnapshot)
+                        or original.policy != saved.policy or original.references != saved.references
+                        or original.admitted_at > saved.admitted_at
+                        or snapshot(original.policy, None, original.admitted_at) != original):
+                    raise ValueError()
+            except (TypeError, ValueError):
+                raise PrivacyDenied("privacy_boundary_mismatch") from None
+            saved = original
+            fence_subject = PrivacyRecord(event_id=event_id, snapshot=saved, source_id=uuid4(),
+                representation_id=uuid4(), kind=kind)
+            async with self.guard(saved, "admission", records=(fence_subject,)):
+                pass
         if asynchronous and not saved.policy.durable_processing_input:
             raise PrivacyDenied("privacy_async_forbidden")
         try:
@@ -380,14 +399,14 @@ class AdmissionCoordinator:
                                      "action_counts": source.action_counts}).encode()
         if saved.policy.capture == "minimal" and len(evidence_bytes) > saved.policy.minimal_max_bytes:
             raise PrivacyDenied("privacy_evidence_too_large")
-        event_id = uuid4()
+        event_id = event_id or uuid4()
         record = PrivacyRecord(event_id=event_id, snapshot=saved, source_id=source.source_id,
                                representation_id=source.representation_id, kind=kind,
                                sanitization=self.sanitization_report(source), pseudonym_epoch=source.pseudonym_epoch)
         purposes = tuple(p for p, needed in (("evidence", saved.policy.capture != "none"),
                                             ("processing", kind == "extraction" and asynchronous)) if needed)
         runtime = self.require_runtime()
-        async with self.guard(saved, "admission"):
+        async with self.guard(saved, "admission", records=(record,)):
             await capability_call(runtime.protector.ready(saved, purposes))
             evidence = await capability_call(runtime.protector.seal(evidence_bytes, self.context(record, "evidence"),
                 original_snapshot=record.snapshot)) if "evidence" in purposes else None

@@ -4,12 +4,12 @@
   "base": "4058b00dc693c9903ba302d677accfe8cf988295",
   "status": "in_progress",
   "original_ac_status": {
-    "AC1": "not_run",
-    "AC2": "not_run",
-    "AC3": "not_run",
-    "AC4": "not_run",
-    "AC5": "not_run",
-    "AC6": "not_run"
+    "AC1": "partial_component_evidence_pending_integration",
+    "AC2": "partial_component_evidence_pending_integration",
+    "AC3": "partial_component_evidence_pending_integration",
+    "AC4": "partial_component_evidence_pending_integration",
+    "AC5": "partial_component_evidence_pending_integration",
+    "AC6": "partial_component_evidence_pending_integration"
   },
   "frozen_cases": [
     {
@@ -622,9 +622,378 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224100037985-runtime-open-static-source.json",
       "source_manifest_sha256": "ebb545ca818df3a9ab54dc39d4e25b5028c833dc1b4db9e173619e730d10f183",
       "tracked_diff_sha256": "7fc5303ab69db85cf2f79a0a1a7a9bc04805c4cb7074ef600264c7c129c252b1"
+    },
+    {
+      "name": "runtime-api-diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-20T22:42:12.025866+00:00",
+      "elapsed_seconds": 0.082,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224212025866-runtime-api-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224212025866-runtime-api-diff-check-source.json",
+      "source_manifest_sha256": "0b2444542208713a68720fb58611ee379202a71de140e704efc25bdc287e66b8",
+      "tracked_diff_sha256": "7fc5303ab69db85cf2f79a0a1a7a9bc04805c4cb7074ef600264c7c129c252b1"
+    },
+    {
+      "name": "runtime-api-remaining-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/event_store.py",
+        "src/prme/storage/pg/event_store.py",
+        "src/prme/storage/schema.py",
+        "src/prme/storage/privacy.py",
+        "src/prme/privacy/portability.py"
+      ],
+      "started_at": "2026-10-20T22:42:12.457396+00:00",
+      "elapsed_seconds": 0.064,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224212457396-runtime-api-remaining-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "4058b00dc693c9903ba302d677accfe8cf988295",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224212457396-runtime-api-remaining-static-source.json",
+      "source_manifest_sha256": "0b2444542208713a68720fb58611ee379202a71de140e704efc25bdc287e66b8",
+      "tracked_diff_sha256": "7fc5303ab69db85cf2f79a0a1a7a9bc04805c4cb7074ef600264c7c129c252b1"
+    },
+    {
+      "name": "closed-export-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_export.py"
+      ],
+      "started_at": "2026-10-20T22:44:02.588910+00:00",
+      "elapsed_seconds": 4.441,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224402588910-closed-export-initial.log",
+      "log_sha256": "3aa977d55e8080fdac0e60bb29c52e5d09ec1b2f19f4a15420c0a4cdad06d606",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224402588910-closed-export-initial-source.json",
+      "source_manifest_sha256": "2ec8ab5b3ba8e42da81f51306f0ffbce91bab9708fe0a19f9fe4aea8e499a1e6",
+      "tracked_diff_sha256": "4aa5a09abcf7e5ffd2dcec5e2fd7c3db2fd8eeb05e86b743a500c5099ca1cf3a"
+    },
+    {
+      "name": "closed-export-context-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_export.py"
+      ],
+      "started_at": "2026-10-20T22:44:30.145308+00:00",
+      "elapsed_seconds": 1.054,
+      "exit_code": 2,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224430145308-closed-export-context-fix1.log",
+      "log_sha256": "c265945698432e6b9a01fc97d6e6223e95730a4fc308f108bdc6276fdc471e90",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224430145308-closed-export-context-fix1-source.json",
+      "source_manifest_sha256": "6f9f08c21985cdebbd4cfa0e230f60115118defb594ca6471387ff50236040b5",
+      "tracked_diff_sha256": "8d4e84cc01b23d107ee97f2cb9e20fd7c65245f6bff4dd5937ef0fb6a6db335a"
+    },
+    {
+      "name": "closed-export-context-fix2",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_export.py"
+      ],
+      "started_at": "2026-10-20T22:44:48.105176+00:00",
+      "elapsed_seconds": 4.886,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224448105176-closed-export-context-fix2.log",
+      "log_sha256": "14054763b27deffe009aeb31afaa061217689352a3b83156628be0a13405581e",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224448105176-closed-export-context-fix2-source.json",
+      "source_manifest_sha256": "5a0cc201f078153e57d0ef3ebb4dc90858e429fe7a57fdc31207da6c68a97e63",
+      "tracked_diff_sha256": "8d4e84cc01b23d107ee97f2cb9e20fd7c65245f6bff4dd5937ef0fb6a6db335a"
+    },
+    {
+      "name": "restore-code-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/privacy/portability.py",
+        "src/prme/storage/privacy_export.py",
+        "tests/test_privacy_export.py"
+      ],
+      "started_at": "2026-10-20T22:47:46.706352+00:00",
+      "elapsed_seconds": 0.068,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224746706352-restore-code-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224746706352-restore-code-static-source.json",
+      "source_manifest_sha256": "7f9ae10d12310aa554ffdd4f3c6b333d7044d5b33394ebfe68d7adf7e28d1dc5",
+      "tracked_diff_sha256": "8d4e84cc01b23d107ee97f2cb9e20fd7c65245f6bff4dd5937ef0fb6a6db335a"
+    },
+    {
+      "name": "protected-restore-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-20T22:48:12.611216+00:00",
+      "elapsed_seconds": 5.621,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224812611216-protected-restore-initial.log",
+      "log_sha256": "7de90772aba001143f4523cc04d09eb4356f0cd98496e5e1929aead730c8041b",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224812611216-protected-restore-initial-source.json",
+      "source_manifest_sha256": "d9115f7c4ba7547971a731fb6e9d76325d71604f8143ed1067f9abc8587ab266",
+      "tracked_diff_sha256": "8d4e84cc01b23d107ee97f2cb9e20fd7c65245f6bff4dd5937ef0fb6a6db335a"
+    },
+    {
+      "name": "protected-restore-request-fixture",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_restore.py",
+        "-q"
+      ],
+      "started_at": "2026-10-20T22:49:59.265755+00:00",
+      "elapsed_seconds": 5.809,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T224959265755-protected-restore-request-fixture.log",
+      "log_sha256": "6be18f71891a89285d6fb0b850dc02e3754e549d742fb9f46332665e87702c9f",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T224959265755-protected-restore-request-fixture-source.json",
+      "source_manifest_sha256": "7536d48cd2e01834084dea3e6cfab7ce51a7046fee30e25833438deee698ccc8",
+      "tracked_diff_sha256": "8d4e84cc01b23d107ee97f2cb9e20fd7c65245f6bff4dd5937ef0fb6a6db335a"
+    },
+    {
+      "name": "migration-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_migration.py",
+        "-q"
+      ],
+      "started_at": "2026-10-20T22:58:13.645657+00:00",
+      "elapsed_seconds": 5.904,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T225813645657-migration-initial.log",
+      "log_sha256": "8a647ba7447f9cd7c7b7d69e81c70ef122f2ec57b489b889c6f20203a6b32772",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T225813645657-migration-initial-source.json",
+      "source_manifest_sha256": "27b0936bb4c6d06c6478d3eb0ae7a3ec050aac684ddad6f796d580843796f6f3",
+      "tracked_diff_sha256": "7435c0417e620cf95a14e28c7e864139dbbb471bad8b6daacaf21f065a8130b8"
+    },
+    {
+      "name": "migration-marker-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_migration.py",
+        "-q"
+      ],
+      "started_at": "2026-10-20T22:58:34.946075+00:00",
+      "elapsed_seconds": 12.665,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T225834946075-migration-marker-fix1.log",
+      "log_sha256": "615b491bdcefaca3365c573f22a88c755b531a2af747ea5dd9c186d0f340d961",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T225834946075-migration-marker-fix1-source.json",
+      "source_manifest_sha256": "84eb468281d2122617cec4ef7a017009f3f39ee7d24c8a78c8fc9c64bb7cac18",
+      "tracked_diff_sha256": "7435c0417e620cf95a14e28c7e864139dbbb471bad8b6daacaf21f065a8130b8"
+    },
+    {
+      "name": "historical-reader-controls-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_format_compatibility.py",
+        "-k",
+        "pinned_historical",
+        "-q",
+        "-s"
+      ],
+      "started_at": "2026-10-20T23:01:03.873036+00:00",
+      "elapsed_seconds": 62.066,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T230103873036-historical-reader-controls-initial.log",
+      "log_sha256": "a313064b606bdddecd27d453f83b68718f391c9d5b0187a720a5b09a2cbf615a",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T230103873036-historical-reader-controls-initial-source.json",
+      "source_manifest_sha256": "703e43bcb310ef9db2cd9460620ba4f794a41407fe0eca351ebdb4039149cc95",
+      "tracked_diff_sha256": "a7d63e2818c028be3b9d47a03c2da49ac111c19a4d29f1ea4620d9aa7379d2d6"
+    },
+    {
+      "name": "historical-reader-diagnostic",
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import subprocess,sys; from pathlib import Path; from tests.privacy_portability_support import HISTORICAL_PROBE; p=Path(\".github-ticket-loop/privacy-326/historical-readers/v0.15.0\").absolute(); r=subprocess.run([str(p/\".venv/bin/python\"),\"-c\",HISTORICAL_PROBE,\"/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-849/test_pinned_historical_reader_0/legacy-spec.json\"],cwd=p,capture_output=True,text=True); print(r.stdout); print(r.stderr); sys.exit(r.returncode)"
+      ],
+      "started_at": "2026-10-20T23:02:15.808276+00:00",
+      "elapsed_seconds": 0.618,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T230215808276-historical-reader-diagnostic.log",
+      "log_sha256": "9bf771d50cbb42b4ec0b09e3f2db0f2f3bea76dc4188e1118a62c38c00f4112a",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T230215808276-historical-reader-diagnostic-source.json",
+      "source_manifest_sha256": "703e43bcb310ef9db2cd9460620ba4f794a41407fe0eca351ebdb4039149cc95",
+      "tracked_diff_sha256": "a7d63e2818c028be3b9d47a03c2da49ac111c19a4d29f1ea4620d9aa7379d2d6"
+    },
+    {
+      "name": "historical-reader-config-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_format_compatibility.py",
+        "-k",
+        "pinned_historical",
+        "-q",
+        "-s",
+        "-x"
+      ],
+      "started_at": "2026-10-20T23:02:24.085650+00:00",
+      "elapsed_seconds": 25.628,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T230224085650-historical-reader-config-fix1.log",
+      "log_sha256": "998e425957ff89243541f2fce8efe1a56795e715f4ad0d3db5636affc506eee8",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T230224085650-historical-reader-config-fix1-source.json",
+      "source_manifest_sha256": "90d9292c4248f7e4777bb813ab4deda392a767398f9dccf6d536cb6367336194",
+      "tracked_diff_sha256": "4d012a88b60da3991df21045305136f41b3469b655fca098df61b7f05185cbdd"
+    },
+    {
+      "name": "historical-reader-provider-fix2",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_format_compatibility.py",
+        "-k",
+        "pinned_historical",
+        "-q",
+        "-s",
+        "-x"
+      ],
+      "started_at": "2026-10-20T23:05:49.973181+00:00",
+      "elapsed_seconds": 98.53,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T230549973181-historical-reader-provider-fix2.log",
+      "log_sha256": "05e126503eb4b5717d0baaf6d0c57a3aeab881e0ba6f0b5d7c5a11d85c69739d",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T230549973181-historical-reader-provider-fix2-source.json",
+      "source_manifest_sha256": "55e37d3a646565426ba1b512e54a2db063967a9d6e2381ee855cbd05299cf65d",
+      "tracked_diff_sha256": "eff97d7ccaf2ecc7e75ec9f71e024a560fc0f502ea510c320bfdf08b054b47c5"
+    },
+    {
+      "name": "portability-cli-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/privacy/cli.py",
+        "src/prme/privacy/portability.py",
+        "src/prme/privacy/admission.py",
+        "src/prme/storage/privacy_export.py",
+        "src/prme/storage/privacy_migration.py",
+        "src/prme/storage/engine.py",
+        "src/prme/client.py",
+        "src/prme/cli.py",
+        "tests/test_privacy_migration.py",
+        "tests/test_privacy_export.py",
+        "tests/test_privacy_restore.py",
+        "tests/privacy_portability_support.py",
+        "tests/test_privacy_format_compatibility.py"
+      ],
+      "started_at": "2026-10-20T23:09:04.921465+00:00",
+      "elapsed_seconds": 0.506,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T230904921465-portability-cli-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T230904921465-portability-cli-static-source.json",
+      "source_manifest_sha256": "daddd6cbdf972283af018cab0aace3094baf4ee553bae4b37e2bfa9e3ce61469",
+      "tracked_diff_sha256": "ec8b065875550251af5763ee530f9eaaed22501ea1e3966c56085365b13d1017"
+    },
+    {
+      "name": "portability-cli-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_portability_cli.py",
+        "tests/test_privacy_export.py",
+        "tests/test_privacy_restore.py",
+        "-q",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T23:09:52.385969+00:00",
+      "elapsed_seconds": 24.442,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T230952385969-portability-cli-initial.log",
+      "log_sha256": "248482d790c8e220e8ce3fdc614449f6c1597bac1b034bedf9f3d8156b0d19c2",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T230952385969-portability-cli-initial-source.json",
+      "source_manifest_sha256": "0704f7a080e4c57d87518079f06f5870bdff29f98478da5877c484650172e3f2",
+      "tracked_diff_sha256": "ec8b065875550251af5763ee530f9eaaed22501ea1e3966c56085365b13d1017"
+    },
+    {
+      "name": "portability-cli-recovery-path-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[postgres]",
+        "-q",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-20T23:10:34.156765+00:00",
+      "elapsed_seconds": 5.427,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261020T231034156765-portability-cli-recovery-path-fix1.log",
+      "log_sha256": "c26b5f84fdb21dd8a152021f7e4a54b5abf35c98b0599aa80afb23809487fe0c",
+      "head": "b7fd4ba8f746ebfb9c15a47b97c6e36afd37995d",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T231034156765-portability-cli-recovery-path-fix1-source.json",
+      "source_manifest_sha256": "81aecbcad6368c526e97e4f41abd6412fa2c685d7cbb17e09883019891bb1c94",
+      "tracked_diff_sha256": "ec8b065875550251af5763ee530f9eaaed22501ea1e3966c56085365b13d1017"
     }
   ],
-  "repair_cycles": {},
+  "repair_cycles": {
+    "historical_reader_harness": {
+      "initial": "34 failures due old PRMEConfig rejecting 10 unrelated newer flags; empty-stdout diagnostic obscured cause",
+      "fix1": "6 passed then HTTP legacy control refused custom-provider config; unsuccessful correction",
+      "fix2": "Supported factory-backed config and exact fixture model version; 34 passed; no runtime format changes"
+    },
+    "export": {
+      "initial": "Fresh-slot comparison failed",
+      "fix1": "Indentation error; unsuccessful correction",
+      "fix2": "3 passed"
+    },
+    "restore": {
+      "initial": "Missing required request_id in fixture before restore",
+      "fix1": "3 passed"
+    },
+    "migration": {
+      "initial": "Three staging marker failures and one closed-Fernet fixture SecretStr failure",
+      "fix1": "Explicit staging marker transaction and validated fixture key; 4 passed"
+    },
+    "cli": {
+      "initial": "Composite 11 passed/1 failed; nonexistent PG local db_path incorrectly used as recovery exclusion domain",
+      "fix1": "Use actual protected export artifact in separate directory; failed PG case passed"
+    }
+  },
   "held_dependencies": [
     "323 classifier correction strategy: two failed cycles; USER approval required for third",
     "323 native SIGABRT unresolved; no generic close rewrite"
@@ -644,7 +1013,7 @@
     },
     "current_format": {
       "passed": 6,
-      "historical_reader_refusal": "not_run"
+      "historical_reader_refusal": "34 paired controls/refusals passed; exact pinned readers and paths only"
     },
     "hosted_281_runtime_open": {
       "attribution": "#281 original AC1/AC2 engine prerequisite",
@@ -678,6 +1047,39 @@
         "Assert the actual protected format refusal code; no runtime behavior changed"
       ],
       "cycle_accounting": "One unsuccessful fixture fix-and-validation cycle; second expectation correction passed. No third cycle."
+    },
+    "historical_readers": {
+      "readers": [
+        "v0.15.0@6963c574065aaf7ef8552b6076c80726c1c167bf",
+        "v0.16.0a4@13b25058e2bb1612e5a0dfafc5b30c5ae2d671b0"
+      ],
+      "passed": 34,
+      "legacy_controls": 34,
+      "provider_creation_before_refusal": 0,
+      "selected_content_rows_changed": false,
+      "new_tables_observed": false,
+      "limitations": [
+        "Only the pinned versions and supported paths",
+        "Open-file/harmless schema effects are not a byte-identical-file claim",
+        "Historical CLI local export has no PostgreSQL path"
+      ],
+      "provenance": "root 326-historical-reader-provenance.json verifies 184/189 source files against exact git blobs, .pth/direct_url and locks; local historical-readers/source-pins.json and *-isolated-install.log"
+    },
+    "portability": {
+      "export": "3 affected checks passed in portability-cli-initial",
+      "restore": "3 affected checks passed in portability-cli-initial; direct rows + source availability only, no held ordinary retrieval parity",
+      "migration": "4 direct-intent layout checks passed migration-marker-fix1; closed Fernet intact-native vectors retained; mixed families pending",
+      "cli": "Initial composite failed with 11 passes and 1 PG recovery exclusion-path fixture failure; corrected PG case passed. Includes actual parser/handler, policy, scoped diagnostics/audit, separate key recovery/loss, erasure/status, export, dry-run/migration/status/restore",
+      "whole_frozen_cases_passed": 0
     }
-  }
+  },
+  "remaining_original_work": [
+    "Mixed legacy saved derivation/profile/summary conversion and visual/history dispositions",
+    "Lost-ack migration resume and current-authority target validation",
+    "Wrong/stale/foreign ledger restore negatives; copied pack and native PostgreSQL quarantine restore paths",
+    "Bound same-lineage hosted PostgreSQL workspace restore into current live control authority",
+    "EM04 rotation/erasure and remaining EM01-EM08 shared integration",
+    "Saved fixed-clock standard-mode public retrieval comparison: blocked by held #323",
+    "Full suite/package/simulation/CI and root review/PR/delivery remain mandatory"
+  ]
 }

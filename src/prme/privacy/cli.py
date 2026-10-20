@@ -306,6 +306,109 @@ async def erasure_command(args):
         raise PrivacyDenied("privacy_capability_unavailable") from None
 
 
+def _portability_config(args, selection, *, policy=None, provider=None):
+    """Explicit target selection; ambient database/pack/key settings cannot win."""
+    from prme.config import PRMEConfig
+    from prme.storage.embedding import validate_embedding_provider
+    path, variable = getattr(args, selection, None), getattr(args, selection + "_database_env", None)
+    if bool(path) == bool(variable):
+        raise PrivacyDenied("privacy_configuration_invalid")
+    password_variable = getattr(args, selection + "_key_env", None)
+    password = os.environ.get(password_variable) if password_variable else None
+    if password_variable and not password:
+        raise PrivacyDenied("privacy_configuration_invalid")
+    values = {"database_url": None, "namespace_id": None, "pack_path": None, "privacy_policy": policy,
+              "encryption_enabled": bool(password), "encryption_key": password, "duckdb_threads": 1}
+    if variable:
+        values["database_url"] = os.environ.get(variable)
+        if not values["database_url"] or password_variable:
+            raise PrivacyDenied("privacy_configuration_invalid")
+    else:
+        selected = Path(path).absolute()
+        if selected.suffix == ".prme":
+            values["pack_path"] = str(selected)
+        else:
+            # A directory or explicit memory.duckdb[.enc] names the same
+            # existing directory layout; closed Fernet is read in RAM only.
+            database = selected if selected.suffix in {".duckdb", ".enc"} else selected / "memory.duckdb"
+            if database.suffix == ".enc":
+                database = database.with_suffix("")
+            values.update(db_path=str(database), vector_path=str(database.parent / "vectors.usearch"),
+                          lexical_path=str(database.parent / "lexical_index"))
+    config = PRMEConfig(**values)
+    if provider is not None:
+        model, _, dimension = validate_embedding_provider(provider)
+        config = config.model_copy(update={"embedding": config.embedding.model_copy(update={
+            "provider": "custom", "model_name": model, "dimension": dimension, "api_key": None})})
+    return config
+
+
+async def portability_command(args):
+    from prme.privacy.portability import PrivacyPortabilityError
+    from prme.storage.privacy_migration import inspect_privacy_migration, migrate_privacy_pack, migration_status
+    from prme.storage.privacy_export import restore_protected_export
+    try:
+        name = args.erasure_command
+        if name == "migration-status":
+            result = migration_status(args.job)
+        elif name in {"export", "policy"}:
+            async with _engine(args.engine_factory) as engine:
+                result = (await engine.export_protected(args.output, mode=args.mode) if name == "export"
+                          else await engine.inspect_privacy_policy(user_id=str(args.owner), scope=Scope(args.scope)))
+        else:
+            policy = None
+            if args.policy_file is not None:
+                from prme.privacy.policy import PrivacyPolicy
+                from prme.storage.privacy_source import _read_bounded
+                policy = PrivacyPolicy.model_validate_json(_read_bounded(Path(args.policy_file), 65536))
+            if name == "dry-run":
+                result = await inspect_privacy_migration(_portability_config(args, "source"), policy=policy)
+            else:
+                from prme.privacy.capabilities import PrivacyRuntime
+                runtime = await _factory(args.runtime_factory)
+                provider = await _factory(args.embedding_factory)
+                if not isinstance(runtime, PrivacyRuntime):
+                    raise PrivacyDenied("privacy_configuration_invalid")
+                target = _portability_config(args, "target", policy=policy, provider=provider)
+                if name == "restore":
+                    result = await restore_protected_export(args.artifact, target,
+                        privacy_runtime=runtime, embedding_provider=provider)
+                else:
+                    result = await migrate_privacy_pack(_portability_config(args, "source"), target,
+                        privacy_runtime=runtime, embedding_provider=provider, job_path=args.job, resume=args.resume,
+                        unavailable_legacy_history=args.unavailable_legacy_history,
+                        remove_event_ids=tuple(args.remove_event or ()), remove_node_ids=tuple(args.remove_node or ()),
+                        allow_reembedding=args.allow_reembedding)
+        print(json.dumps(result.model_dump(mode="json") if hasattr(result, "model_dump") else result, sort_keys=True))
+    except (PrivacyDenied, PrivacyPortabilityError):
+        raise
+    except Exception:
+        raise PrivacyDenied("privacy_capability_unavailable") from None
+
+
+def failure_guidance(error):
+    """Static guidance only; never interpolate source/provider/credential text."""
+    from prme.privacy.portability import PrivacyPortabilityError
+    if not isinstance(error, (PrivacyDenied, PrivacyPortabilityError)):
+        return None
+    return {
+        "privacy_source_key_unavailable": "Use the original store key; source files were not decrypted to disk.",
+        "privacy_provider_unavailable": "Check the exact saved key version. A permanently lost private key requires a separately retained recovery artifact; there is no plaintext fallback.",
+        "privacy_capability_unavailable": "Supply the explicit current runtime and required keys. Permanent key loss cannot be repaired from an ordinary pack export.",
+        "privacy_ledger_unavailable": "Supply the current independent erasure ledger; a snapshot checkpoint is not current authority.",
+        "privacy_ledger_stale": "Use the current independent erasure authority before restoring or serving this copy.",
+        "privacy_format_unsupported": "Use a supported format and explicit privacy migration; opening does not convert legacy content.",
+        "privacy_migration_required": "Inspect with privacy dry-run, then explicitly migrate to a separate empty destination.",
+        "privacy_legacy_unclassified": "Inspect the legacy copy dispositions and explicitly resolve unsupported history, visual data, or identities before migration.",
+        "privacy_migration_incomplete": "Resume the same owned migration job; incomplete output is not a serving store.",
+        "privacy_source_not_quiescent": "Close/checkpoint the selected source and preserve its WAL; migration will not ignore it.",
+        "privacy_source_capacity": "The selected artifact exceeds the bounded reader; no plaintext spill or disk fallback is enabled.",
+        "privacy_destination_occupied": "Select an empty destination. This command never overwrites an existing store.",
+        "privacy_source_changed": "The source or authenticated job changed; resume requires the original frozen inputs.",
+        "privacy_export_invalid": "Use a complete, compatible protected export. Active-memory-only exports are not restorable snapshots.",
+    }.get(error.code, "Inspect the explicit policy, selected boundary, saved deadlines and required capabilities.")
+
+
 def register(subparsers):
     parser = subparsers.add_parser("privacy-keys", help="Explicit privacy key provisioning and diagnostics")
     commands = parser.add_subparsers(dest="key_command", required=True)
@@ -351,7 +454,7 @@ def register(subparsers):
             child.add_argument("--target-version", type=UUID, required=True)
         if name in {"resume", "rotation-status"}:
             child.add_argument("--job", type=UUID, required=True)
-    privacy = subparsers.add_parser("privacy", help="Explicit managed erasure and expiry; no media-wipe promise")
+    privacy = subparsers.add_parser("privacy", help="Explicit policy, portability, managed erasure and expiry")
     actions = privacy.add_subparsers(dest="erasure_command", required=True)
     for name in ("erase", "status", "purge", "expire"):
         child = actions.add_parser(name)
@@ -369,3 +472,36 @@ def register(subparsers):
         if name in {"purge", "expire"}:
             child.add_argument("--limit", type=int, choices=range(1, 129), default=16, metavar="1..128")
             child.add_argument("--budget-ms", type=int, default=1000)
+    for name in ("policy", "export", "dry-run", "migrate", "migration-status", "restore"):
+        child = actions.add_parser(name)
+        child.set_defaults(func=portability_command)
+        if name in {"policy", "export"}:
+            child.add_argument("--engine-factory", required=True, help="module:factory; command owns and closes the returned protected engine")
+        if name == "policy":
+            child.add_argument("--owner", type=UUID, required=True)
+            child.add_argument("--scope", choices=("personal", "project", "org"), default="personal")
+        if name == "export":
+            child.add_argument("--output", required=True)
+            child.add_argument("--mode", choices=("protected", "active_memory_only"), default="protected")
+        if name in {"dry-run", "migrate", "restore"}:
+            child.add_argument("--policy-file", required=name != "dry-run", help="Explicit target PrivacyPolicy JSON")
+        for selected, included in (("source", {"dry-run", "migrate"}), ("target", {"migrate", "restore"})):
+            if name not in included:
+                continue
+            choice = child.add_mutually_exclusive_group(required=True)
+            choice.add_argument("--" + selected, help="Explicit local directory, memory.duckdb[.enc], or .prme path")
+            choice.add_argument("--" + selected + "-database-env", help="Name of explicitly selected PostgreSQL URL environment variable")
+            child.add_argument("--" + selected + "-key-env", help="Name of the existing local store-key environment variable")
+        if name in {"migrate", "restore"}:
+            child.add_argument("--runtime-factory", required=True, help="module:factory supplying current policy, ledger, sanitizer and key capabilities")
+            child.add_argument("--embedding-factory", required=True, help="module:factory supplying the exact saved model/version/dimension")
+        if name in {"migrate", "migration-status"}:
+            child.add_argument("--job", required=True)
+        if name == "migrate":
+            child.add_argument("--resume", action="store_true")
+            child.add_argument("--unavailable-legacy-history", action="store_true", help="Explicitly retain original history only in the source; migrated history is typed unavailable")
+            child.add_argument("--remove-event", type=UUID, action="append")
+            child.add_argument("--remove-node", type=UUID, action="append")
+            child.add_argument("--allow-reembedding", action="store_true", help="Permit the explicit provider to encode changed admitted statements")
+        if name == "restore":
+            child.add_argument("--artifact", required=True)
