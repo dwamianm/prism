@@ -2206,6 +2206,7 @@ class MemoryEngine:
             )
         if self._pipeline is None:
             raise ValueError("reingest() needs an ingestion pipeline, and this engine has none")
+        await self._privacy.require_legacy_reingest(user_id, scope)
         return await self._pipeline.reingest(user_id=user_id, scope=scope, limit=limit, cursor=cursor,
                                              dry_run=dry_run)
 

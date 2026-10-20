@@ -27,6 +27,36 @@ async def initialize_pg(conn) -> None:
     await conn.execute(DDL)
 
 
+def _protected_range_sql(postgres: bool, scope: str | None) -> str:
+    # Opaque enrollment metadata only, including orphaned or malformed markers.
+    # An empty event body or missing work row cannot establish legacy status.
+    where = "user_id=$1" + (" AND scope=$2" if scope is not None else "")
+    marker = (f"metadata ? '{PRIVACY_KEY}'" if postgres else
+              f"json_extract(metadata,'$.{PRIVACY_KEY}') IS NOT NULL")
+    return (f"SELECT 1 FROM privacy_admissions WHERE {where} UNION ALL "
+            f"SELECT 1 FROM events WHERE {where} AND {marker} UNION ALL "
+            f"SELECT 1 FROM nodes WHERE {where} AND {marker} LIMIT 1")
+
+
+def require_legacy_duck(conn, user_id: str, scope: str | None) -> None:
+    args = [user_id] + ([scope] if scope is not None else [])
+    if conn.execute(_protected_range_sql(False, scope), args).fetchone() is not None:
+        raise PrivacyDenied("privacy_provider_unavailable")
+
+
+async def require_legacy_pg(conn, user_id: str, scope: str | None) -> None:
+    args = [user_id] + ([scope] if scope is not None else [])
+    if await conn.fetchrow(_protected_range_sql(True, scope), *args) is not None:
+        raise PrivacyDenied("privacy_provider_unavailable")
+
+
+async def require_legacy_session(session, user_id: str, scope: str | None) -> None:
+    if session.postgres:
+        await require_legacy_pg(session.conn, user_id, scope)
+    else:
+        await run_to_completion(require_legacy_duck, session.conn, user_id, scope)
+
+
 def _values(record: PrivacyRecord) -> tuple:
     return (str(record.event_id), str(record.snapshot.policy.owner_id), record.snapshot.policy.scope.value,
             str(record.retry.context.request_id) if record.retry else None,
@@ -58,6 +88,14 @@ class PrivacyRepository:
 
     async def for_owner(self, user_id: str) -> tuple[PrivacyRecord, ...]:
         return await self._read("user_id=?", (user_id,))
+
+    async def require_legacy_range(self, user_id: str, scope: str | None) -> None:
+        if self.pool is not None:
+            async with self.pool.acquire() as conn:
+                await require_legacy_pg(conn, user_id, scope)
+        else:
+            async with self.lock:
+                await run_to_completion(require_legacy_duck, self.conn, user_id, scope)
 
     async def request(self, request_id: UUID, *, user_id: str) -> tuple[PrivacyRecord, ...]:
         return await self._read("user_id=? AND request_id=?", (user_id, str(request_id)))

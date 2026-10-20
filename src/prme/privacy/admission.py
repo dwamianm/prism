@@ -153,6 +153,28 @@ class AdmissionCoordinator:
     def selected(self, policy: PrivacyPolicy | None = None) -> bool:
         return policy is not None or self.default is not None
 
+    async def require_legacy_reingest(self, user_id: str, scope=None) -> None:
+        """Reingestion has no claimed protected processing capability."""
+        if self.selected():
+            raise PrivacyDenied("privacy_provider_unavailable")
+        await self.repository.require_legacy_range(user_id, None if scope is None else Scope(scope).value)
+
+    async def require_legacy_inputs(self, events=(), nodes=()) -> None:
+        """Recheck actual participating identities at an ordinary provider edge.
+
+        This never authorizes protected work through an absent claim. Supported
+        protected work uses the coordinator's saved-snapshot capability guards.
+        """
+        if self.selected():
+            raise PrivacyDenied("privacy_provider_unavailable")
+        for table, objects in (("events", events), ("nodes", nodes)):
+            for item in objects:
+                if PRIVACY_KEY in (item.metadata or {}):
+                    raise PrivacyDenied("privacy_provider_unavailable")
+                records = await self.repository.records_for_objects([(table, str(item.id))], owner=item.user_id)
+                if records:
+                    raise PrivacyDenied("privacy_provider_unavailable")
+
     def require_runtime(self) -> PrivacyRuntime:
         validate_protected_config(self.engine._config)
         if self.runtime is None or any(getattr(self.runtime, name, None) is None
@@ -543,6 +565,7 @@ class AdmissionCoordinator:
                                   "embedding": runtime.embedder.model_name},
                     "provider_use": "sanitized input and admitted memory may be sent to the explicitly configured providers",
                     "protected_product_ready": False,
+                    "unsupported_operations": ["protected_reingest"],
                     "integration_status": "requires sanitizer, cryptography, source separation, journals, erasure and release gate"}
 
     async def owner_records(self, user_id: str, scopes=None):

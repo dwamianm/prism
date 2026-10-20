@@ -1,6 +1,10 @@
 # PV-02 / #320 preparation
 
 Status: approved implementation plan. Prerequisite #319 merged; implementation released on base 33222b54a85fa90fd23d47ae9a9170564bf24828.
+The reviewed original-base source passed the full suite (6965 passed, 104 skipped).
+Main subsequently added reingestion. The approved bounded integration is based
+provisionally on CI repair commit 01a39705b173c1b994e662927275fc57f98e6b88;
+publication waits for its actual merge and source equality verification.
 Prepared against main 72360483 and reviewed contract 15594f2ef0fd0509dea826c472448b00c0b084a3.
 Worktree: /Users/dwamianm/Sites/prism/.claude/worktrees/privacy-320-admission-policy
 Branch: issue-320-privacy-policy. Base: main, explicitly assigned by root.
@@ -224,6 +228,18 @@ model or universally rejected request a successful valid-profile admission.
 
 ## Exact planned file scope
 
+The reingestion integration adds only `src/prme/ingestion/reingest.py` and
+`src/prme/storage/reingest.py` to the original 42 paths, for a maximum of 44.
+This follows original AC3's shared side-effect boundary and AC6's inspection
+requirements. Protected reingestion is explicitly unsupported, including dry
+runs, zero limits, cursors, reopened stores and mixed owner/scope ranges. An
+authoritative metadata check precedes filtering, source reads and providers;
+participating sources/context are checked again after awaits and at native
+transaction boundaries. Preserve the shared batch/custom-save/planning fences,
+normal commit processing-slot consumption, historical bytes and legacy controls.
+This does not create a cross-process legacy-enrollment lease or a protected
+reingestion feature. No durable fields or frozen AP cases are added.
+
 New runtime files:
 - src/prme/privacy/__init__.py
 - src/prme/privacy/policy.py
@@ -248,6 +264,8 @@ Existing runtime files:
 - src/prme/ingestion/pipeline.py
 - src/prme/ingestion/planning.py
 - src/prme/ingestion/grounding.py
+- src/prme/ingestion/reingest.py
+- src/prme/storage/reingest.py
 - src/prme/retrieval/pipeline.py
 - src/prme/api/models.py
 - src/prme/api/routes.py
@@ -299,6 +317,15 @@ report the reason and AC linkage before expanding the plan.
   completed evidence while admitted memory remains.
 
 **Backend/public integration evidence.**
+- Reingestion delta: real directory, pack and PostgreSQL refusal for configured
+  and persisted protection before filters or source loads; exact other-owner
+  and other-scope legacy controls. Barrier tests cover correction embedding,
+  batch send/custom save, plan preparation, index stage and native commit,
+  including an existing-marker return. Sync Python, HTTP, MCP and full CLI
+  open/refuse/close must return fixed errors without protected content effects.
+  Reuse `test_reingest.py`, `test_batched_extraction.py` and
+  `test_derivation_commits.py` plus the existing privacy tests. Keep prior
+  S2/object-enrollment repair counts; this integration does not reset them.
 - Run new admission/fence/ephemeral tests on DuckDB directory, DuckDB single-file
   and the assigned PostgreSQL database, with every applicable layout recorded.
 - Exercise async engine, sync MemoryClient, HTTP and MCP for AP01/AP02/AP03/AP06.

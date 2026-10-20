@@ -1,9 +1,12 @@
 # Issue 320 evidence policy admission review
 
-Status: bounded final-suite repairs pass 33 affected tests plus 8 PostgreSQL admission cases. Affected review and the final full suite are pending. The earlier full-suite failure and exact baseline comparisons remain preserved below.
-Base: `33222b54a85fa90fd23d47ae9a9170564bf24828`.
-Implementation snapshot: `a03a8cfffc9528ed6ed1661c66da18006027720a347f0cb08a068e140abf465d`
-(recomputed before the review handoff).
+Status: all four affected reviews are COMPLETE and APPROVED. The final full
+suite is running from a verified plain clone of the exact reviewed source.
+Earlier failures and their bounded repairs remain recorded below.
+Provisional base: `01a39705b173c1b994e662927275fc57f98e6b88`.
+Implementation snapshot: `b0b1d49b0854258cdd38c76c9f84305f6b48625f271b73c761f59e481130f757`.
+The final result is conditional on confirming that the actual merged base has
+identical source. This document is the sole review-hash exclusion.
 
 The original six acceptance criteria and unchanged AP01 through AP08 definitions
 are in [the approved plan](../plans/2026-10-evidence-privacy/PV-02-plan.md).
@@ -11,8 +14,8 @@ This review covers the opt-in admission component. It does not certify the
 separately owned sanitizer, cryptography, sealed projections, journal cleanup,
 erasure, migration or protected-product release gate.
 
-The approved maximum was 42 paths. The implementation changes 33 paths plus
-this review document. Existing event-store modules, `fast_ingest`, durable
+The approved maximum is 44 paths after integrating the newly added reingest
+entry points. The implementation changes 35 paths plus this review document. Existing event-store modules, `fast_ingest`, durable
 queue and framework adapters need no edits because the coordinator uses their
 existing primitives or intercepts their public engine/client boundary. The
 legacy retrieval pipeline remains explicitly unavailable for protected
@@ -255,3 +258,60 @@ isolation are resolved in cycle 1. Required affected reviews precede one final
 full suite from a verified identical plain-clone validation checkout, using
 the same locked environment and task database. No checkout test is changed,
 skipped or overridden.
+
+
+## Final affected review and base integration
+
+All four final compatibility-repair reports approved snapshot `a03a8cff`.
+The exact old-base full suite then passed with exit 0: 6965 passed and 104
+skipped in 1362.18 seconds (`privacy320-full-clone-final.log`). It ran in a
+plain clone with verified source hashes, import paths and locked dependencies;
+no checkout override or test skip was added. Earlier base/current timing and
+checkout failures remain historical evidence and grouped follow-up work.
+
+Main subsequently added reingestion and version 0.16.0a5. The bounded integration
+adds configured or persisted owner/scope protection refusal before reingest
+source selection, including dry-run, zero limit and cursor calls. Shared batch,
+correction context, retry, planning, queued save and native publication paths
+recheck their actual participating identities. Normal protected processing
+retains its existing authority and transactional payload consumption. No new
+protected reingest feature, durable field or historical checksum format is added.
+These per-effect checks do not provide a global cross-process legacy-enrollment
+lease.
+
+The unchanged transport validation selects fixed errors from configured or
+explicit request policy. A valid typed call on a reopened legacy-configured
+engine consults persisted protection. Malformed reingest arguments on that
+legacy-configured transport retain legacy validation formatting; they accept
+no new source passage and do not load or disclose protected store content.
+Security and adversarial reviews independently accepted this documented limit.
+
+The integration's pre-fix reproduction remains exit 1 with seven failures and
+28 deselected cases (`privacy320-reingest-prefixed.log`). Its first finite
+validation passed with exit 0: 290 passed and six expected backend-specific
+skips in 112.41 seconds (`privacy320-reingest-integration-1.log`). This selection
+retains successful protected admissions and memory publication alongside refusal
+and legacy controls. The existing S2 and object-enrollment cycle-2 limits remain
+unchanged; no third repair was attempted.
+
+Core, security, data and adversarial affected reports are COMPLETE and APPROVED
+at `b0b1d49b`. Each independently verified the same provisional base and source
+snapshot. The reports are retained as `privacy320-review-<role>-reingest.md`.
+Unchanged field inventory and eight adversarial scenario dispositions carry
+forward; all eight are Accept. There is no new unresolved finding.
+
+| Final-source check | Result | Log |
+| --- | --- | --- |
+| Ruff | Exit 0 | `privacy320-reingest-ruff-1.log` |
+| Strict public typing | Exit 0 | `privacy320-reingest-mypy-1.log` |
+| Frozen contract structure and source anchors | Exit 0; 42 copy classes, 145 anchors, 17 surfaces | `privacy320-reingest-contract-1.log` |
+| Offline wheel and source build | Exit 0; 0.16.0a5 | `privacy320-reingest-build-1.log` |
+| Locked installed-wheel check | Exit 0; site-packages import and dependency versions verified | `privacy320-reingest-wheel-1.log` |
+| Exact plain-clone setup | Exit 0; 35 source hashes and helper metadata match, 141 installed distributions match the lock | `privacy320-reingest-clone-provenance.json` |
+| Final full suite | Running; true result pending | `privacy320-full-reingest-final.log` |
+
+The final suite uses the same isolated task database, no root override, and no
+live model credentials. The frozen product scenarios remain `not_run`: component
+capability doubles do not certify production sanitizer, crypto or the later
+protected-product gate. Delivery also requires actual merged-base source
+equality and normal pull-request checks.

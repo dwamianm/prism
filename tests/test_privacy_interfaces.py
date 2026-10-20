@@ -12,6 +12,112 @@ from tests.privacy_fakes import config_for, make_runtime, open_engine, policy_fo
 SOURCE = "Alex does not like tea unless it is cold."
 
 
+def test_reingest_sync_and_HTTP_reopened_refusal(tmp_path, monkeypatch, caplog, capsys):
+    from unittest.mock import AsyncMock
+    from fastapi.testclient import TestClient
+    from prme.api.app import create_app
+    from tests.test_reingest import settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    config = settings(config_for(tmp_path))
+    with MemoryClient(config=config, embedding_provider=r.embedder, privacy_runtime=r) as client:
+        client.store(SOURCE, user_id=str(p.owner_id), policy=p)
+    embed = AsyncMock(side_effect=AssertionError("unexpected provider effect"))
+    monkeypatch.setattr(r.embedder, "embed", embed)
+    with MemoryClient(config=config, embedding_provider=r.embedder) as client:
+        with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+            client.reingest(str(p.owner_id), dry_run=True, limit=0)
+    with TestClient(create_app(config, embedding_provider=r.embedder)) as client:
+        result = client.post("/v1/reingest", json={"user_id": str(p.owner_id), "dry_run": True, "limit": 0})
+        assert result.status_code == 422 and result.json()["detail"] == "privacy_provider_unavailable"
+    embed.assert_not_awaited()
+    captured = capsys.readouterr()
+    assert SOURCE not in captured.out + captured.err + caplog.text
+
+
+async def test_reingest_MCP_actual_dispatch_fixed_refusal(tmp_path, caplog, capsys):
+    from mcp.shared.memory import create_connected_server_and_client_session
+    from prme import MemoryEngine
+    from prme.config import MCPConfig
+    from prme.mcp.server import create_mcp_server
+    from tests.test_reingest import settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    config = settings(config_for(tmp_path), mcp=MCPConfig(user_id=str(p.owner_id)))
+    engine = await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)
+    await engine.store(SOURCE, user_id=str(p.owner_id), policy=p)
+    await engine.close()
+    before = len(r.embedder.sends)
+    server = create_mcp_server(config, embedding_provider=r.embedder)
+    async with create_connected_server_and_client_session(server._mcp_server, raise_exceptions=True) as client:
+        await client.initialize()
+        response = await client.call_tool("memory_reingest", {"dry_run": True, "limit": 0})
+        assert json.loads(response.content[0].text) == {"error": "privacy_provider_unavailable"}
+    assert len(r.embedder.sends) == before and not r.extractor.sends
+    captured = capsys.readouterr()
+    assert SOURCE not in captured.out + captured.err + caplog.text
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack"])
+def test_reingest_CLI_real_open_refuse_close_keeps_pending_protected_work(tmp_path, monkeypatch, capsys, caplog, layout):
+    import asyncio
+    import sys
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    import structlog
+    from prme import MemoryEngine, cli
+    import prme.ingestion.extraction as extraction
+    import prme.storage.engine as engine_module
+    from tests.test_reingest import settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    config = settings(config_for(tmp_path, layout=layout))
+
+    async def prepare():
+        engine = await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)
+        engine._pipeline.queue_extraction = lambda *args: None
+        event_id = await engine.ingest(SOURCE, user_id=str(p.owner_id), policy=p)
+        status = await engine._event_store.extraction_work.status(event_id, user_id=str(p.owner_id))
+        await engine.close()
+        return event_id, status
+
+    event_id, before = asyncio.run(prepare())
+    embed, extract = AsyncMock(), AsyncMock()
+    monkeypatch.setattr(r.embedder, "embed", embed)
+    monkeypatch.setattr(engine_module, "create_embedding_provider", lambda *args: r.embedder)
+    monkeypatch.setattr(extraction, "create_extraction_provider", lambda *args: SimpleNamespace(
+        provider_name="unused", model_name="unused", extract=extract, extract_batch=extract))
+    monkeypatch.setenv("PRME_ENABLE_REINGEST", "true")
+    path = config.pack_path or config.db_path
+    monkeypatch.setattr(sys, "argv", ["prme", "reingest", path, "--user-id", str(p.owner_id), "--dry-run"])
+    logging_config = structlog.get_config()
+    try:
+        with pytest.raises(SystemExit) as stopped:
+            cli.main()
+        assert stopped.value.code == 1
+    finally:
+        structlog.configure(**logging_config)
+    output = capsys.readouterr()
+    assert "privacy_provider_unavailable" in output.err
+    assert SOURCE not in output.out + output.err + caplog.text
+    embed.assert_not_awaited()
+    extract.assert_not_awaited()
+
+    async def inspect():
+        engine = await MemoryEngine.create(config, embedding_provider=r.embedder)
+        try:
+            status = await engine._event_store.extraction_work.status(event_id, user_id=str(p.owner_id))
+            assert status == before
+            assert await engine._graph_store.query_nodes(user_id=str(p.owner_id)) == []
+            assert await engine._event_store.get_extraction(event_id, user_id=str(p.owner_id)) is None
+        finally:
+            await engine.close()
+    asyncio.run(inspect())
+
+
 def test_AP01_sync_python_retains_sanitized_memory_with_policy(tmp_path):
     r = make_runtime()
     p = policy_for(r, durable_processing_input=False)

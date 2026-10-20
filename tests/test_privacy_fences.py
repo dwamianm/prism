@@ -3,7 +3,7 @@
 import asyncio
 from datetime import timedelta
 import os
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -13,6 +13,245 @@ from tests.privacy_fakes import config_for, make_runtime, open_engine, policy_fo
 from tests.privacy_fakes import isolated_privacy_postgres as isolated_privacy_postgres
 
 SOURCE = "Alex does not like tea unless it is cold."
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+@pytest.mark.parametrize("reopened", [False, True])
+async def test_reingest_protection_precedes_source_filtering(tmp_path, monkeypatch, layout, reopened):
+    from unittest.mock import AsyncMock
+    from prme.ingestion.reingest import encode_cursor
+    from prme.storage.reingest import SourceRef
+    from tests.test_reingest import settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    owner = str(p.owner_id)
+    config = settings(config_for(tmp_path, layout=layout, policy=None if reopened else p))
+    engine = await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)
+    if reopened:
+        await engine.store("A legacy source", user_id=owner)
+    event_id = await engine.store(SOURCE, user_id=owner, policy=p)
+    event = await engine._event_store.get(event_id)
+    saved = await engine._privacy.repository.get(event_id, user_id=owner)
+    assert event.content == "" and saved.evidence is None
+    # Completed no-evidence sources must not disappear into a zero-work result.
+    if reopened:
+        await engine.close()
+        r.clock.now = saved.snapshot.processing_deadline + timedelta(seconds=1)
+        engine = await MemoryEngine.create(config, embedding_provider=r.embedder)
+    scan = AsyncMock(side_effect=AssertionError("protected source scan"))
+    monkeypatch.setattr(engine._event_store.reingest, "scan_sources", scan)
+    cursor = encode_cursor(SourceRef(event.event_time or event.timestamp, event.timestamp, event_id, None))
+    try:
+        for options in ({}, {"dry_run": True}, {"limit": 0}, {"cursor": cursor}):
+            with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+                await engine.reingest(owner, **options)
+        scan.assert_not_awaited()
+    finally:
+        await engine.close()
+
+
+async def test_shared_batch_refuses_a_protected_participant_before_correction_embedding(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+    from tests.test_reingest import Scripted, install, settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    engine = await MemoryEngine.create(settings(config_for(tmp_path)), embedding_provider=r.embedder, privacy_runtime=r)
+    owner = str(p.owner_id)
+    legacy = await engine.store("A legacy source", user_id=owner)
+    protected = await engine.store(SOURCE, user_id=owner, policy=p)
+    events = [await engine._event_store.get(identifier) for identifier in (legacy, protected)]
+    model = install(engine, Scripted())
+    search = AsyncMock(side_effect=AssertionError("protected correction query"))
+    monkeypatch.setattr(engine._vector_index, "search", search)
+    engine._pipeline._extraction_corrections = True
+    try:
+        with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+            await engine._pipeline._request_batch(events[0], events, claim=None)
+        assert not model.calls
+        search.assert_not_awaited()
+    finally:
+        await engine.close()
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+async def test_reingest_legacy_controls_keep_exact_owner_and_scope(tmp_path, layout):
+    from prme.types import Scope
+    from tests.test_reingest import FOUND, LAKE, Scripted, install, settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    owner, other = str(p.owner_id), str(uuid4())
+    engine = await MemoryEngine.create(settings(config_for(tmp_path, layout=layout)),
+                                      embedding_provider=r.embedder, privacy_runtime=r)
+    try:
+        await engine.store(SOURCE, user_id=owner, policy=p)
+        await engine.store(LAKE, user_id=owner, scope=Scope.PROJECT)
+        await engine.store(LAKE, user_id=other)
+        model = install(engine, Scripted(FOUND))
+        assert (await engine.reingest(owner, scope=Scope.PROJECT)).processed == 1
+        assert (await engine.reingest(other)).processed == 1
+        assert model.calls == [[LAKE], [LAKE]]
+        with pytest.raises(PrivacyDenied):
+            await engine.reingest(owner)
+    finally:
+        await engine.close()
+
+
+@pytest.mark.parametrize("boundary", ["correction", "send", "save", "native_save", "plan", "vector", "commit"])
+async def test_reingest_rechecks_after_awaited_boundaries(tmp_path, monkeypatch, boundary):
+    from contextlib import asynccontextmanager
+    from prme.ingestion.reingest import Reingester
+    from tests.test_reingest import FOUND, LAKE, Scripted, install, settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    owner = str(p.owner_id)
+    engine = await MemoryEngine.create(settings(config_for(tmp_path)), embedding_provider=r.embedder, privacy_runtime=r)
+    await engine.store(LAKE, user_id=owner)
+    model = install(engine, Scripted(FOUND))
+    enrolled = False
+    before = None
+
+    async def counts():
+        async with engine._event_store.extraction_work.session() as session:
+            values = []
+            for table in ("nodes", "operations", "vector_metadata"):
+                values.append((await session.fetch(f"SELECT count(*) AS n FROM {table}"))[0]["n"])
+            return tuple(values)
+
+    async def activate():
+        nonlocal enrolled, before
+        if not enrolled:
+            enrolled = True
+            # A real concurrent protected admission, not a mocked policy check.
+            await engine.ingest_fast(SOURCE, user_id=owner, policy=p)
+            r.authority.revisions[p.policy_id] = 2
+            before = await counts()
+
+    if boundary == "correction":
+        original = engine._pipeline._correction_memories
+
+        async def correction(*args, **kwargs):
+            await activate()
+            return await original(*args, **kwargs)
+        monkeypatch.setattr(engine._pipeline, "_correction_memories", correction)
+        engine._pipeline._extraction_corrections = True
+    elif boundary == "send":
+        @asynccontextmanager
+        async def semaphore():
+            await activate()
+            yield
+        monkeypatch.setattr(engine._pipeline, "_extraction_semaphore", semaphore())
+    elif boundary == "native_save":
+        original = engine._event_store.reingest.save_extractions
+
+        async def save(*args, **kwargs):
+            await activate()
+            return await original(*args, **kwargs)
+        monkeypatch.setattr(engine._event_store.reingest, "save_extractions", save)
+    elif boundary == "plan":
+        original = Reingester._retire
+
+        async def retire(self, *args, **kwargs):
+            await original(self, *args, **kwargs)
+            await activate()
+        monkeypatch.setattr(Reingester, "_retire", retire)
+    else:
+        original = engine._write_queue.submit
+        prefix = {"save": "extraction.batch:", "vector": "reingest.vector:", "commit": "reingest.commit:"}[boundary]
+
+        async def submit(operation, *, label):
+            async def delayed():
+                if label.startswith(prefix):
+                    await activate()
+                return await operation()
+            return await original(delayed, label=label)
+        monkeypatch.setattr(engine._write_queue, "submit", submit)
+    try:
+        with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+            await engine.reingest(owner)
+        assert enrolled and await counts() == before
+        assert len(model.calls) == (0 if boundary in {"correction", "send"} else 1)
+    finally:
+        await engine.close()
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+async def test_reingest_native_commit_rechecks_before_existing_marker(tmp_path, monkeypatch, layout):
+    from tests.test_reingest import FOUND, LAKE, Scripted, install, settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    owner = str(p.owner_id)
+    engine = await MemoryEngine.create(settings(config_for(tmp_path, layout=layout)),
+                                      embedding_provider=r.embedder, privacy_runtime=r)
+    captured = []
+    original = engine._graph_store.commit_reingest
+
+    async def commit(plan, record):
+        captured.append((plan, record))
+        return await original(plan, record)
+    monkeypatch.setattr(engine._graph_store, "commit_reingest", commit)
+    try:
+        await engine.store(LAKE, user_id=owner)
+        install(engine, Scripted(FOUND))
+        assert (await engine.reingest(owner)).processed == 1
+        await engine.ingest_fast(SOURCE, user_id=owner, policy=p)
+        before = [node.model_dump_json() for node in await engine._graph_store.query_nodes(user_id=owner)]
+        with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+            await original(*captured[0])
+        assert [node.model_dump_json() for node in await engine._graph_store.query_nodes(user_id=owner)] == before
+    finally:
+        await engine.close()
+
+
+async def test_shared_batch_rechecks_discovered_context_and_split_retry(tmp_path, monkeypatch):
+    from prme.ingestion.errors import ExtractionError
+    from tests.test_reingest import LAKE, Scripted, install, settings
+
+    r = make_runtime()
+    p = policy_for(r)
+    owner = str(p.owner_id)
+    engine = await MemoryEngine.create(settings(config_for(tmp_path)), embedding_provider=r.embedder, privacy_runtime=r)
+    legacy = [await engine.store(LAKE, user_id=owner, session_id="batch") for _ in range(2)]
+    events = [await engine._event_store.get(identifier) for identifier in legacy]
+    model = install(engine, Scripted())
+    try:
+        protected = await engine.store(SOURCE, user_id=owner, policy=p)
+        node = (await engine._graph_store.get_event_nodes(protected, user_id=owner))[0]
+
+        async def search(*args, **kwargs):
+            return [{"node_id": str(node.id)}]
+        monkeypatch.setattr(engine._vector_index, "search", search)
+        engine._pipeline._extraction_corrections = True
+        with pytest.raises(PrivacyDenied):
+            await engine._pipeline._request_batch(events[0], events, claim=None)
+        assert not model.calls
+    finally:
+        await engine.close()
+
+    # A different legacy owner remains allowed initially; enrollment after the
+    # first failed send must prevent every recursively split request.
+    engine = await MemoryEngine.create(settings(config_for(tmp_path)), embedding_provider=r.embedder, privacy_runtime=r)
+    owner = str(uuid4())
+    p = policy_for(r, owner=UUID(owner))
+    try:
+        await engine.store(LAKE, user_id=owner, session_id="batch")
+        await engine.store(LAKE, user_id=owner, session_id="batch")
+        sends = []
+
+        async def fail(turns):
+            sends.append(turns)
+            await engine.ingest_fast(SOURCE, user_id=owner, policy=p)
+            raise ExtractionError("retry", reason_code="TimeoutError")
+        monkeypatch.setattr(engine._pipeline._extraction_provider, "extract_batch", fail)
+        with pytest.raises(PrivacyDenied):
+            await engine.reingest(owner)
+        assert len(sends) == 1
+    finally:
+        await engine.close()
 
 
 @pytest.mark.parametrize("layout", ["directory", "pack"])

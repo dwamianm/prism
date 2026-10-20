@@ -89,6 +89,23 @@ Protected visual input rejects before decoder, temporary-file, blob or provider
 effects. `store(extract=True)` currently rejects on this path; use the explicit
 ingestion method for extraction.
 
+`reingest()` is unavailable for protected input. It returns the fixed
+`privacy_provider_unavailable` error for a configured protected profile or
+persisted protection in the requested owner/scope, including reopened and mixed
+stores, dry runs, zero limits and cursors. Empty source envelopes and missing or
+expired processing work do not turn protection into an empty successful result.
+The legacy reingestion path rechecks its participating sources and context at
+provider, queue and native transaction boundaries. This is an unsupported
+operation boundary, not a cross-process lease preventing all future enrollment
+of legacy data. Supported protected admission and claimed processing retain
+their separate saved-policy authority guards.
+
+Transport validation suppresses raw invalid values when a configured or explicit
+request policy selects protection. Persisted protection gates valid typed data
+operations after reopen; it does not currently select pre-tool validation
+formatting for malformed arguments on an otherwise legacy-configured transport.
+Such formatting does not load or disclose stored protected content.
+
 ## Authority and integration boundaries
 
 `PolicyAuthority.guard(snapshot, effect)` must serialize authoritative policy
@@ -117,6 +134,7 @@ disposal and protected-format migration remain separate integrations.
 `inspect_privacy_policy(user_id=...)`, HTTP `POST /v1/privacy/policy`, and MCP
 `memory_inspect_privacy_policy` report the effective policy, finite/unlimited
 choices, provider names, processing failure recovery and integration status.
+Inspection also lists protected reingestion as unsupported.
 Inspection never opens an evidence payload. `protected_product_ready` remains
 false until the complete release gate is implemented and verified.
 
