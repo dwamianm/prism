@@ -18,14 +18,19 @@ DDL = """CREATE TABLE IF NOT EXISTS privacy_admissions (
     request_id UUID, request_index INTEGER NOT NULL, body TEXT NOT NULL,
     UNIQUE(user_id, request_id, request_index)
 )"""
+ROTATION_DDL = """CREATE TABLE IF NOT EXISTS privacy_rotation_jobs (
+    job_id UUID PRIMARY KEY, body TEXT NOT NULL
+)"""
 
 
 def initialize_duck(conn) -> None:
     conn.execute(DDL)
+    conn.execute(ROTATION_DDL)
 
 
 async def initialize_pg(conn) -> None:
     await conn.execute(DDL)
+    await conn.execute(ROTATION_DDL)
 
 
 def _protected_range_sql(postgres: bool, scope: str | None) -> str:
@@ -82,6 +87,43 @@ class PrivacyRepository:
         self.conn = getattr(event_store, "_conn", None)
         self.pool = getattr(event_store, "_pool", None)
         self.lock = getattr(event_store, "_conn_lock", None)
+
+    async def page(self, *, user_id: str, scope: str, after: UUID | None,
+                   limit: int = 128) -> tuple[PrivacyRecord, ...]:
+        if type(limit) is not int or not 1 <= limit <= 128:
+            raise PrivacyDenied("privacy_configuration_invalid")
+        args = (user_id, scope, str(after or UUID(int=0)), limit)
+        operator = ">=" if after is None else ">"
+        sql = f"SELECT body FROM privacy_admissions WHERE user_id=? AND scope=? AND event_id{operator}? ORDER BY event_id LIMIT ?"
+        rows = await self._query(sql, args)
+        return tuple(PrivacyRecord.model_validate_json(row[0]) for row in rows)
+
+    async def _query(self, sql: str, args: tuple):
+        if self.pool is not None:
+            for index in range(len(args)):
+                sql = sql.replace("?", f"${index + 1}", 1)
+            async with self.pool.acquire() as conn:
+                return await conn.fetch(sql, *args)
+        async with self.lock:
+            return await run_to_completion(lambda: self.conn.execute(sql, args).fetchall())
+
+    async def rotation_job(self, job_id: UUID):
+        from prme.privacy.rotation import RotationJob
+        rows = await self._query("SELECT body FROM privacy_rotation_jobs WHERE job_id=?", (str(job_id),))
+        return RotationJob.model_validate_json(rows[0][0]) if rows else None
+
+    async def save_rotation(self, job, *, before=None) -> bool:
+        if before is None:
+            rows = await self._query(
+                "INSERT INTO privacy_rotation_jobs VALUES (?,?) ON CONFLICT DO NOTHING RETURNING job_id",
+                (str(job.job_id), job.model_dump_json()))
+        else:
+            if job.job_id != before.job_id or job.revision != before.revision + 1:
+                raise PrivacyDenied("privacy_invalid_result")
+            rows = await self._query(
+                "UPDATE privacy_rotation_jobs SET body=? WHERE job_id=? AND body=? RETURNING job_id",
+                (job.model_dump_json(), str(job.job_id), before.model_dump_json()))
+        return bool(rows)
 
     async def get(self, event_id: str, *, user_id: str) -> PrivacyRecord | None:
         rows = await self._read("event_id=? AND user_id=?", (event_id, user_id))

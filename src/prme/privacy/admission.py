@@ -365,8 +365,10 @@ class AdmissionCoordinator:
         runtime = self.require_runtime()
         async with self.guard(saved, "admission"):
             await capability_call(runtime.protector.ready(saved, purposes))
-            evidence = await capability_call(runtime.protector.seal(evidence_bytes, self.context(record, "evidence"))) if "evidence" in purposes else None
-            processing = await capability_call(runtime.protector.seal(self.source_bytes(source), self.context(record, "processing"))) if "processing" in purposes else None
+            evidence = await capability_call(runtime.protector.seal(evidence_bytes, self.context(record, "evidence"),
+                original_snapshot=record.snapshot)) if "evidence" in purposes else None
+            processing = await capability_call(runtime.protector.seal(self.source_bytes(source), self.context(record, "processing"),
+                original_snapshot=record.snapshot)) if "processing" in purposes else None
         record = record.model_copy(update={"evidence": evidence, "processing": processing,
                                            "processing_state": "pending" if processing else "not_required"})
         for purpose, payload in (("evidence", evidence), ("processing", processing)):
@@ -535,7 +537,7 @@ class AdmissionCoordinator:
             raise PrivacyDenied("privacy_invalid_result") from None
         # Synchronous store computes embeddings before accepting durable state.
         plan = None if deferred else await self.direct_plan(prepared.record, prepared.event, node)
-        async with self.guard(prepared.record.snapshot, "publication"):
+        async with self.guard(prepared.record.snapshot, "publication"), self.writer_guard((prepared.record,)):
             await self.repository.accept((prepared.event,), (prepared.record,), (node,))
         if plan is not None:
             await self.publish(prepared.record, plan)
@@ -543,6 +545,13 @@ class AdmissionCoordinator:
         else:
             self.engine._materialization_queue.note_added()
         return str(prepared.event.id)
+
+    @asynccontextmanager
+    async def writer_guard(self, records):
+        async with self.require_runtime().protector.writer_guard(tuple(
+            payload for record in records for payload in (record.evidence, record.processing)
+            if payload is not None)):
+            yield
 
     async def extraction_plan(self, prepared: PreparedAdmission) -> DerivationPlan:
         from prme.ingestion.grounding import validate_grounding
@@ -633,7 +642,7 @@ class AdmissionCoordinator:
                 raise
             except Exception:
                 raise PrivacyDenied("privacy_resubmit_required") from None
-        async with self.publication_guards([item.record for item in prepared]):
+        async with self.publication_guards([item.record for item in prepared]), self.writer_guard([p.record for p in prepared]):
             await self.repository.accept([p.event for p in prepared], [p.record for p in prepared],
                                           [None] * len(prepared), extraction=not wait_for_extraction)
         for index, item in enumerate(prepared):
@@ -660,6 +669,7 @@ class AdmissionCoordinator:
             access = ProcessingAccess(work_id=event.id, work_generation=claim.generation, lease_deadline=claim.lease_expires_at,
                                       processing_deadline=record.snapshot.processing_deadline, claimed_event_ids=(event.id,))
             raw = await capability_call(self.require_runtime().protector.open(record.processing, access,
+                original_snapshot=record.snapshot,
                 guard=lambda: self.guard(record.snapshot, "disclosure", processing=True)), "privacy_processing_unavailable")
             source = self.load_source(raw)
             if (source.source_id, source.representation_id) != (record.source_id, record.representation_id):
@@ -794,7 +804,7 @@ class AdmissionCoordinator:
                                            p.event, p.source, p.budget) for i, p in enumerate(prepared)]
         nodes = [self.direct_node(p) for p in prepared]
         try:
-            async with self.publication_guards([p.record for p in prepared]):
+            async with self.publication_guards([p.record for p in prepared]), self.writer_guard([p.record for p in prepared]):
                 await self.repository.accept([p.event for p in prepared], [p.record for p in prepared], nodes)
         except Exception as exc:
             import duckdb

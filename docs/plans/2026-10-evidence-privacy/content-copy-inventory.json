@@ -139,7 +139,7 @@
       "surface": "metadata",
       "layouts": ["duckdb_directory", "duckdb_single_file", "postgresql"],
       "current_fields": ["edges.metadata", "provenance_event_id", "relationship labels and identity metadata", "legacy group-member edges.metadata.named_in naming-event identity"],
-      "source_refs": [{"path": "src/prme/storage/schema.py", "line": 173, "anchor": "CREATE TABLE IF NOT EXISTS edges"}, {"path": "src/prme/models/edges.py", "line": 15, "anchor": "class MemoryEdge"}, {"path": "src/prme/ingestion/group_links.py", "line": 65, "anchor": "NAMED_IN_KEY ="}, {"path": "src/prme/storage/privacy.py", "line": 101, "anchor": "async def create_legacy_group_edge("}],
+      "source_refs": [{"path": "src/prme/storage/schema.py", "line": 173, "anchor": "CREATE TABLE IF NOT EXISTS edges"}, {"path": "src/prme/models/edges.py", "line": 15, "anchor": "class MemoryEdge"}, {"path": "src/prme/ingestion/group_links.py", "line": 65, "anchor": "NAMED_IN_KEY ="}, {"path": "src/prme/storage/privacy.py", "line": 143, "anchor": "async def create_legacy_group_edge("}],
       "current_access": ["operator", "worker"],
       "current_retention": "Current content has no privacy-erasure deadline; logical archival/supersedence does not erase payloads.",
       "required_treatment": "Sanitize content fields; retain only necessary opaque provenance; erase affected edge/alias copies with their sources.",
@@ -167,7 +167,7 @@
       "surface": "derivation_retry",
       "layouts": ["duckdb_directory", "duckdb_single_file", "postgresql"],
       "current_fields": ["operations.payload: ExtractionRecord.result", "ExtractionBatchRecord.response", "turns.speaker/content_hash", "operations.payload: REINGEST_EXTRACTED ExtractionRecord; versioned by source/extraction settings", "BatchRun custom save retains complete batch response, including omitted turns and correction references"],
-      "source_refs": [{"path": "src/prme/models/extraction.py", "line": 14, "anchor": "class ExtractionRecord"}, {"path": "src/prme/models/extraction.py", "line": 86, "anchor": "class ExtractionBatchRecord"}, {"path": "src/prme/storage/event_store.py", "line": 170, "anchor": "record_extraction"}, {"path": "src/prme/storage/reingest.py", "line": 147, "anchor": "async def save_extractions("}, {"path": "src/prme/storage/reingest.py", "line": 120, "anchor": "async def saved_extractions("}, {"path": "src/prme/privacy/admission.py", "line": 547, "anchor": "async def extraction_plan("}],
+      "source_refs": [{"path": "src/prme/models/extraction.py", "line": 14, "anchor": "class ExtractionRecord"}, {"path": "src/prme/models/extraction.py", "line": 86, "anchor": "class ExtractionBatchRecord"}, {"path": "src/prme/storage/event_store.py", "line": 170, "anchor": "record_extraction"}, {"path": "src/prme/storage/reingest.py", "line": 147, "anchor": "async def save_extractions("}, {"path": "src/prme/storage/reingest.py", "line": 120, "anchor": "async def saved_extractions("}, {"path": "src/prme/privacy/admission.py", "line": 556, "anchor": "async def extraction_plan("}],
       "current_access": ["operator", "worker"],
       "current_retention": "Current content has no privacy-erasure deadline; logical archival/supersedence does not erase payloads.",
       "pv13_implementation": "PV-13 admits generated provider JSON before extraction validation, grounding or durable plan construction; it does not claim historical journal cleanup.",
@@ -183,7 +183,7 @@
       "surface": "derivation_retry",
       "layouts": ["duckdb_directory", "duckdb_single_file", "postgresql"],
       "current_fields": ["operations.payload: DerivationPlan.nodes/references/edges/replacements", "PreparedEmbedding.content/values", "PreparedLexicalDocument.content", "plan_checksum", "opt-in plans carry admitted generated memory, structured qualifiers and opaque privacy references", "legacy reingest in-memory DerivationPlan and REINGEST_COMMITTED plan_checksum/IDs; no additional durable full prepared-plan record", "legacy repeated group-claim planning reads selected session event IDs and prior group-linked node/reference snapshots"],
-      "source_refs": [{"path": "src/prme/models/derivation.py", "line": 88, "anchor": "class DerivationPlan"}, {"path": "src/prme/models/derivation.py", "line": 47, "anchor": "class PreparedEmbedding"}, {"path": "src/prme/models/derivation.py", "line": 68, "anchor": "class PreparedLexicalDocument"}, {"path": "src/prme/models/reingest.py", "line": 70, "anchor": "class ReingestRecord"}, {"path": "src/prme/ingestion/reingest.py", "line": 383, "anchor": "plan = await pipeline._prepare_plan"}, {"path": "src/prme/ingestion/pipeline.py", "line": 1342, "anchor": "group_session = {str(turn.id)"}, {"path": "src/prme/ingestion/planning.py", "line": 127, "anchor": "async def get_edges("}, {"path": "src/prme/privacy/admission.py", "line": 581, "anchor": "async def final_generated_bundle("}],
+      "source_refs": [{"path": "src/prme/models/derivation.py", "line": 88, "anchor": "class DerivationPlan"}, {"path": "src/prme/models/derivation.py", "line": 47, "anchor": "class PreparedEmbedding"}, {"path": "src/prme/models/derivation.py", "line": 68, "anchor": "class PreparedLexicalDocument"}, {"path": "src/prme/models/reingest.py", "line": 70, "anchor": "class ReingestRecord"}, {"path": "src/prme/ingestion/reingest.py", "line": 383, "anchor": "plan = await pipeline._prepare_plan"}, {"path": "src/prme/ingestion/pipeline.py", "line": 1342, "anchor": "group_session = {str(turn.id)"}, {"path": "src/prme/ingestion/planning.py", "line": 127, "anchor": "async def get_edges("}, {"path": "src/prme/privacy/admission.py", "line": 590, "anchor": "async def final_generated_bundle("}],
       "current_access": ["operator", "worker"],
       "current_retention": "Current content has no privacy-erasure deadline; logical archival/supersedence does not erase payloads.",
       "pv13_implementation": "PV-13 checks exact projected node, vector and lexical text together before embedding and plan persistence; supporting source passages are not fallback statements.",
@@ -564,7 +564,7 @@
       "surface": "recovery",
       "layouts": ["duckdb_directory", "duckdb_single_file", "postgresql"],
       "current_fields": ["event_materializations -> raw NOTE recovery", "event_extractions -> saved extraction/plan", "profile/derivation registries reconstruct work", "rebuild_indexes graph->index", "privacy_admissions.body.processing_state and immutable processing_deadline/slot context", "legacy explicit reingest retry may load versioned REINGEST_EXTRACTED/REINGEST_COMMITTED without original work row; protected ranges refused"],
-      "source_refs": [{"path": "src/prme/storage/engine.py", "line": 3349, "anchor": "async def rebuild_indexes"}, {"path": "src/prme/storage/derivation_registry.py", "line": 55, "anchor": "_PENDING"}, {"path": "src/prme/storage/profile_registry.py", "line": 29, "anchor": "PROFILE_PREPARED"}, {"path": "src/prme/storage/engine.py", "line": 1842, "anchor": "Materialization creates a raw NOTE"}, {"path": "src/prme/storage/privacy.py", "line": 16, "anchor": "DDL ="}, {"path": "src/prme/storage/reingest.py", "line": 281, "anchor": "async def commit_postgres("}, {"path": "src/prme/storage/reingest.py", "line": 240, "anchor": "def _commit_duckdb("}, {"path": "src/prme/privacy/capabilities.py", "line": 36, "anchor": "class BudgetContinuation:"}],
+      "source_refs": [{"path": "src/prme/storage/engine.py", "line": 3349, "anchor": "async def rebuild_indexes"}, {"path": "src/prme/storage/derivation_registry.py", "line": 55, "anchor": "_PENDING"}, {"path": "src/prme/storage/profile_registry.py", "line": 29, "anchor": "PROFILE_PREPARED"}, {"path": "src/prme/storage/engine.py", "line": 1842, "anchor": "Materialization creates a raw NOTE"}, {"path": "src/prme/storage/privacy.py", "line": 16, "anchor": "DDL ="}, {"path": "src/prme/storage/reingest.py", "line": 281, "anchor": "async def commit_postgres("}, {"path": "src/prme/storage/reingest.py", "line": 240, "anchor": "def _commit_duckdb("}, {"path": "src/prme/privacy/capabilities.py", "line": 39, "anchor": "class BudgetContinuation:"}],
       "current_access": ["operator", "worker"],
       "current_retention": "Current content has no privacy-erasure deadline; logical archival/supersedence does not erase payloads.",
       "pv13_implementation": "PV-13 authenticates typed continuation fields inside processing input and refuses repeated real-sanitizer attempts and multi-item asynchronous extraction. Durable concurrent/replay consumption remains PV-05.",
@@ -618,13 +618,14 @@
       "id": "C41",
       "surface": "encryption",
       "layouts": ["duckdb_directory", "duckdb_single_file", "postgresql"],
-      "current_fields": ["planned evidence-envelope-v1 ciphertext/wrapped DEK/context", "planned processing encrypted work body", "planned provider evidence/processing/pseudonym keys", "planned custom literal policy material", "privacy_admissions.body evidence/processing ProtectedPayload slots with context, provider/key selectors and envelope_revision"],
-      "source_refs": [{"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 214, "anchor": "`evidence-envelope-v1`"}, {"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 230, "anchor": "provider boundary"}, {"path": "src/prme/storage/privacy.py", "line": 16, "anchor": "DDL ="}, {"path": "src/prme/privacy/pseudonyms.py", "line": 30, "anchor": "class Pseudonyms:"}],
+      "current_fields": ["PV-03 closed AES-256-GCM evidence ciphertext/wrapped DEK/context", "PV-03 purpose-distinct encrypted pending work", "PV-03 provider evidence/processing/pseudonym/retry_commitment keys", "planned custom literal policy material", "privacy_admissions.body evidence/processing ProtectedPayload slots with context, provider/key selectors and envelope_revision"],
+      "source_refs": [{"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 214, "anchor": "`evidence-envelope-v1`"}, {"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 239, "anchor": "provider boundary"}, {"path": "src/prme/storage/privacy.py", "line": 16, "anchor": "DDL ="}, {"path": "src/prme/privacy/pseudonyms.py", "line": 30, "anchor": "class Pseudonyms:"}],
       "current_access": ["worker", "diagnostic", "hosted"],
-      "current_retention": "Not implemented; no current retention guarantee. Source, work, key and backup deadlines are distinct.",
+      "current_retention": "PV-03 crypto/custody is implemented at the component boundary. Source, work, key and backup deadlines remain distinct; full lifecycle/erasure gates are pending.",
+      "required_treatment": "Ciphertext/context include no plaintext. Purpose keys stay outside ordinary pack grants. Full custom-rule custody and erasure across provider/backup state remain separate dependent obligations.",
+      "pv02_implementation": "PV-02 persists versioned opaque payload envelopes through an explicit protector capability and supplies expected-body compare-and-swap for rewrap.",
+      "pv03_implementation": "PV-03 supplies authenticated AES/RSA envelopes with immutable original policy snapshot binding, exact-purpose/version providers and wrapper-only held CAS. Current-policy/lifecycle integration and managed disposal remain separately gated.",
       "pv13_implementation": "PV-13 consumes purpose-bound project/owner/scope/epoch key handles without provisioning or reverse maps. Native custody and erasure remain PV-03/PV-06; private custom-rule material is supplied by trusted capabilities.",
-      "required_treatment": "Planned, not present in current schema. Ciphertext/context include no plaintext. Purpose keys and sensitive custom rules stay protected outside ordinary pack grants; scope erasure across provider and backup state.",
-      "pv02_implementation": "PV-02 persists versioned opaque payload envelopes through an explicit protector capability and supplies expected-body compare-and-swap for rewrap. It supplies no cryptographic implementation; evidence/processing/key disposal and authenticated envelope checks remain PV-03/PV-06.",
       "retention": "provider_key",
       "erasure_owners": ["engine", "key_provider", "storage_operator", "hosted_service"],
       "requirements": ["E1", "E2", "E5", "E8"]
@@ -634,13 +635,158 @@
       "surface": "export_backup",
       "layouts": ["duckdb_directory", "duckdb_single_file", "postgresql"],
       "current_fields": ["planned erasure-status-v1 ledger and unavailable historical envelopes", "planned hosted current ledger/snapshot references"],
-      "source_refs": [{"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 286, "anchor": "`erasure-status-v1`"}, {"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 309, "anchor": "independently current erasure ledger"}],
+      "source_refs": [{"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 307, "anchor": "`erasure-status-v1`"}, {"path": "docs/RFC-0019-Evidence-Privacy.md", "line": 330, "anchor": "independently current erasure ledger"}],
       "current_access": ["operator", "hosted"],
       "current_retention": "Not implemented; retain non-content denial/identity until all managed resurrecting copies expire. External copies have no engine revocation.",
       "required_treatment": "Minimal opaque identity/reason/status only, no raw snapshots or public predictable hash. Hosted independent ledger must outlive snapshots it invalidates; local operator supplies current ledger on supported restore.",
       "retention": "metadata",
       "erasure_owners": ["engine", "application", "hosted_service", "storage_operator"],
       "requirements": ["E1", "E2", "E5", "E8"]
+    },
+    {
+      "layouts": [
+        "duckdb_directory",
+        "duckdb_single_file",
+        "postgresql"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E5",
+        "E8"
+      ],
+      "id": "C43",
+      "surface": "encryption",
+      "current_fields": [
+        "public native registry descriptors and purpose/boundary/version/epoch/request/retention references",
+        "bounded native private-key parts and completeness binding/checksum",
+        "transient non-serializable purpose key handles"
+      ],
+      "source_refs": [
+        {
+          "path": "src/prme/privacy/local_keys.py",
+          "line": 68,
+          "anchor": "class _NativeParts:"
+        },
+        {
+          "path": "src/prme/privacy/local_keys.py",
+          "line": 162,
+          "anchor": "class PublicKeyStore"
+        },
+        {
+          "path": "src/prme/privacy/keys.py",
+          "line": 116,
+          "anchor": "class SecretKeyHandle:"
+        }
+      ],
+      "current_access": [
+        "operator",
+        "worker",
+        "diagnostic"
+      ],
+      "current_retention": "Native private keys persist until explicit exact-version retirement; finite unlock/handle expiry is separate. Public retired references prevent implicit reprovision. PV-07 connects erasure inventory.",
+      "required_treatment": "No private material in public registry/pack/logs. Purpose keys remain separate; native and recovery copies are key-provider-owned. Retire/recovery cannot erase previously copied bytes.",
+      "retention": "provider_key",
+      "erasure_owners": [
+        "key_provider",
+        "storage_operator"
+      ]
+    },
+    {
+      "layouts": [
+        "duckdb_directory",
+        "duckdb_single_file",
+        "postgresql"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E5",
+        "E8"
+      ],
+      "id": "C44",
+      "surface": "metadata",
+      "current_fields": [
+        "privacy_rotation_jobs.body exact source/target refs and bounded cursor/progress",
+        "content-free local audit opaque identity/policy/key/action/outcome/timestamp metadata"
+      ],
+      "source_refs": [
+        {
+          "path": "src/prme/privacy/rotation.py",
+          "line": 21,
+          "anchor": "class RotationJob"
+        },
+        {
+          "path": "src/prme/privacy/keys.py",
+          "line": 194,
+          "anchor": "class AuditEvent"
+        },
+        {
+          "path": "src/prme/storage/privacy.py",
+          "line": 21,
+          "anchor": "ROTATION_DDL ="
+        }
+      ],
+      "current_access": [
+        "operator",
+        "diagnostic",
+        "hosted"
+      ],
+      "current_retention": "Durable operator-owned metadata; no source plaintext or DEK. Retention/purge integration remains PV-07/operator-owned.",
+      "required_treatment": "Require durable audit before disclosure and held current authority through effects. Rotation CAS cannot restore consumed/erased slots; blocked rows never imply complete.",
+      "retention": "metadata",
+      "erasure_owners": [
+        "engine",
+        "application",
+        "storage_operator"
+      ]
+    },
+    {
+      "layouts": [
+        "duckdb_directory",
+        "duckdb_single_file",
+        "postgresql"
+      ],
+      "requirements": [
+        "E1",
+        "E2",
+        "E5",
+        "E8"
+      ],
+      "id": "C45",
+      "surface": "export_backup",
+      "current_fields": [
+        "explicit separately encrypted PKCS8 recovery artifact outside pack directory",
+        "transient hidden-prompt/inherited-FD recovery passphrase"
+      ],
+      "source_refs": [
+        {
+          "path": "src/prme/privacy/local_keys.py",
+          "line": 470,
+          "anchor": "async def export_recovery("
+        },
+        {
+          "path": "src/prme/privacy/local_keys.py",
+          "line": 500,
+          "anchor": "async def import_recovery("
+        },
+        {
+          "path": "src/prme/privacy/cli.py",
+          "line": 25,
+          "anchor": "def _passphrase("
+        }
+      ],
+      "current_access": [
+        "operator"
+      ],
+      "current_retention": "Only deliberate export; recipient/operator decides recovery retention independently. No default pack export/private-key artifact.",
+      "required_treatment": "Exclusive restrictive creation, maintained password encryption, exact public-key match on restore. Permanently lost unbacked evidence cannot be recovered. Live key retirement does not erase recovery artifacts/backups.",
+      "retention": "provider_key",
+      "erasure_owners": [
+        "key_provider",
+        "storage_operator",
+        "recipient"
+      ]
     }
   ]
 }
