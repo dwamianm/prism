@@ -15,9 +15,10 @@ import pytest
 from benchmarks.diagnostics import product_packing
 from benchmarks.diagnostics.product_packing import (
     GATE_CONDITIONAL_ACCURACY, GATE_MEASURED_ACCURACY, GATE_UNSCORED_ACCURACY, GateCase, _locomo_cases,
-    _longmemeval_cases, _source_key, check_lme_captures, compare, compare_gates, comparison_markdown, gate_config,
-    gate_main, gate_markdown, gate_report, main, measure, pack_identity, pack_records, parse_overrides,
-    plain_ranking, plain_record, projected_correct, replay_gate, run_gate, summarize_gate,
+    _longmemeval_cases, _source_key, check_lme_captures, compare, compare_gates, comparison_markdown,
+    conversation_intervals, gate_config, gate_main, gate_markdown, gate_report, main, measure, pack_identity,
+    pack_records, parse_overrides, plain_ranking, plain_record, projected_correct, replay_gate, run_gate,
+    summarize_gate,
 )
 from benchmarks.evidence import reciprocal_rank_fusion
 from prme import MemoryEngine, NodeType
@@ -705,6 +706,103 @@ def test_gate_markdown_labels_the_projection_and_flags_mismatches_and_ineffectiv
     longmemeval = gate_markdown(gate_fixture([gate_row("q1", "multi-session", all_packed=True,
                                                        benchmark="longmemeval")]))
     assert "all evidence packed for 403/470 annotated questions. This run: 25.0, 30.0%, 1/1." in longmemeval
+
+
+def locomo_rows(packed):
+    """LoCoMo rows, one per question: ``packed`` maps a conversation to who packed all evidence per question."""
+    return [gate_row(f"{conversation}-q{index:04d}", "multi-hop", all_packed=state)
+            for conversation, states in packed.items() for index, state in enumerate(states)]
+
+
+def test_conversation_intervals_resample_whole_conversations_over_the_comparison_questions():
+    # Four conversations of five questions. The second loses one question, the third gains one, and one extra
+    # question has no annotated evidence, so it counts for projected accuracy only.
+    before = {"conv-1": [True] * 5, "conv-2": [True] * 5, "conv-3": [True, True, True, True, False],
+              "conv-4": [True] * 5}
+    after = {"conv-1": [True] * 5, "conv-2": [True, True, True, True, False], "conv-3": [True] * 5,
+             "conv-4": [True] * 5}
+    unannotated = [gate_row("conv-4-q0099", "open-domain")]
+    old = gate_fixture(locomo_rows(before) + unannotated)
+    new = gate_fixture(locomo_rows(after) + unannotated)
+    result = conversation_intervals(old, new, samples=200)
+    measures = result["benchmarks"]["locomo"]
+    assert list(measures) == ["all_evidence_packed", "all_evidence_packed_with_text", "evidence_recall",
+                              "all_evidence_returned", "projected_accuracy"]
+    packed = measures["all_evidence_packed"]
+    assert (packed["queries"], packed["groups"], packed["wins"], packed["losses"]) == (20, 4, 1, 1)
+    assert measures["projected_accuracy"]["queries"] == 21 and measures["projected_accuracy"]["groups"] == 4
+    assert result["bootstrap_seed"] == 42 and len(packed["interval_95"]) == 2
+    # The same questions and the same change as gate-compare's question-level result.
+    questions = compare_gates(old, new, samples=200)["benchmarks"]["locomo"]["all_evidence_packed"]
+    assert questions["queries"] == packed["queries"] and questions["delta"] == pytest.approx(packed["delta"])
+
+
+def even_loss_fixtures():
+    """Ten conversations of 100 questions, each losing 3 questions and gaining 2: net one lost question in every one."""
+    before = {f"conv-{n}": [index not in (0, 1) for index in range(100)] for n in range(10)}
+    after = {f"conv-{n}": [index not in (2, 3, 4) for index in range(100)] for n in range(10)}
+    return gate_fixture(locomo_rows(before)), gate_fixture(locomo_rows(after))
+
+
+def test_a_conversation_level_interval_can_lie_below_zero_where_the_question_level_one_does_not():
+    """Every conversation loses exactly one question net (3 lost, 2 gained). Resampling conversations draws the same
+    change every time, so that interval is a point below zero. Resampling the 1,000 questions sees 30 losses and 20
+    gains and cannot rule out zero. Both levels count for the stable gate, so this is a loss."""
+    old, new = even_loss_fixtures()
+    conversations = conversation_intervals(old, new)["benchmarks"]["locomo"]["all_evidence_packed"]
+    questions = compare_gates(old, new)["benchmarks"]["locomo"]["all_evidence_packed"]
+    assert (questions["wins"], questions["losses"]) == (20, 30)
+    assert questions["interval_95"][0] < 0 < questions["interval_95"][1]
+    assert conversations["interval_95"][0] <= conversations["interval_95"][1] < 0
+
+
+def test_conversation_intervals_refuse_reports_that_do_not_pair():
+    old = gate_fixture(locomo_rows({"conv-1": [True, False], "conv-2": [True, True]}))
+    with pytest.raises(ValueError, match="Question sets differ"):
+        conversation_intervals(old, gate_fixture(locomo_rows({"conv-1": [True, False]})))
+    relabeled = gate_fixture([gate_row("conv-1-q0000", "temporal", all_packed=True),
+                              *locomo_rows({"conv-1": [True, False], "conv-2": [True, True]})[1:]])
+    with pytest.raises(ValueError, match="category or evidence annotation differs"):
+        conversation_intervals(old, relabeled)
+    lme = gate_fixture([gate_row("q1", "multi-session", all_packed=True, benchmark="longmemeval")])
+    with pytest.raises(ValueError, match="no LoCoMo questions"):
+        conversation_intervals(lme, lme)
+    with pytest.raises(ValueError, match="not a complete evidence gate report"):
+        conversation_intervals({**old, "complete": False}, old)
+
+
+def test_the_gate_conversations_command_writes_json_and_markdown_beside_it(tmp_path, capsys):
+    old = gate_fixture(locomo_rows({"conv-1": [True, False], "conv-2": [True, True]}))
+    new = gate_fixture(locomo_rows({"conv-1": [True, True], "conv-2": [True, True]}))
+    paths = [tmp_path / "before.json", tmp_path / "after.json"]
+    for path, report in zip(paths, (old, new)):
+        path.write_text(json.dumps(report))
+    output = tmp_path / "out" / "conversations.json"
+    main(["gate-conversations", *map(str, paths), "--output", str(output), "--samples", "50"])
+    written = json.loads(output.read_text())
+    assert written["kind"] == "gate-conversation-intervals" and written["bootstrap_samples"] == 50
+    assert written["inputs"]["after_sha256"] == hashlib.sha256(paths[1].read_bytes()).hexdigest()
+    assert (tmp_path / "out" / "conversations.md").read_text() in capsys.readouterr().out
+    for refused in (str(paths[0]), str(tmp_path / "conversations.md")):
+        with pytest.raises(SystemExit):
+            main(["gate-conversations", *map(str, paths), "--output", refused])
+
+
+BATCHED = Path(__file__).resolve().parents[1] / "benchmarks/results/research/2026-10-15/batched-extraction"
+
+
+def test_conversation_intervals_reproduce_the_published_batched_extraction_numbers():
+    """The 2026-10-16 full builds' LoCoMo comparison, as conversation_intervals.py published it for #254."""
+    published = json.loads((BATCHED / "locomo-conversation-intervals.json").read_text())["comparisons"]
+    expected = next(item for item in published if item["after"] == "locomo-full-defaults-gate.json"
+                    and item["before"] == "locomo-full-per-turn-gate.json")
+    before = json.loads((BATCHED / "locomo-full-per-turn-gate.json").read_text())
+    after = json.loads((BATCHED / "locomo-full-defaults-gate.json").read_text())
+    measures = conversation_intervals(before, after)["benchmarks"]["locomo"]
+    for name in ("all_evidence_packed", "evidence_recall", "all_evidence_returned", "projected_accuracy"):
+        assert measures[name]["interval_95"] == expected[name]["interval_95"]
+        assert measures[name]["delta"] == expected[name]["delta"]
+    assert measures["all_evidence_packed"]["groups"] == 10
 
 
 def test_comparison_pairs_questions_and_rejects_mismatched_inputs(tmp_path, capsys):

@@ -54,8 +54,19 @@ def compare_result(benchmark, **overrides):
             "after": {"provenance": {"commit": "a" * 40}}, "benchmarks": {benchmark: data}}
 
 
-def make_run(tmp_path, stable=None, previous=None, previous_id="", dry=False):
-    """A run folder as weekly-run.sh leaves it. stable and previous map a benchmark to a compare result or a refusal."""
+def conversation_result(**overrides):
+    """A gate-conversations result for LoCoMo: every measure ties unless given a (low, high) interval."""
+    measures = {key: {"queries": 100, "groups": 10, "delta": 0.0, "interval_95": [0.0, 0.0]} for key in MEASURE_KEYS}
+    for key, (low, high) in overrides.items():
+        measures[key] = {**measures[key], "interval_95": [low, high]}
+    return {"kind": "gate-conversation-intervals", "benchmarks": {"locomo": measures}}
+
+
+def make_run(tmp_path, stable=None, previous=None, previous_id="", dry=False, conversations="ties"):
+    """A run folder as weekly-run.sh leaves it. stable and previous map a benchmark to a compare result or a refusal.
+
+    ``conversations`` is "ties" (LoCoMo's conversation-level intervals tie wherever a LoCoMo comparison exists),
+    False (none were computed), or a mapping of "stable" and "previous" to a result or a refusal text."""
     run_dir = tmp_path / "20261022-053000-aaaaaaaa"
     run_dir.mkdir()
     (run_dir / "run.env").write_text("\n".join([
@@ -71,6 +82,15 @@ def make_run(tmp_path, stable=None, previous=None, previous_id="", dry=False):
                 base.with_suffix(".refused").write_text(result + "\n")
             else:
                 base.with_suffix(".json").write_text(json.dumps(result))
+    for name, results in (("stable", stable), ("previous", previous)):
+        found = conversations if isinstance(conversations, dict) else (
+            {name: conversation_result()} if conversations == "ties" and isinstance((results or {}).get("locomo"), dict)
+            else {})
+        base = run_dir / "compare-{}-locomo-conversations".format(name)
+        if isinstance(found.get(name), str):
+            base.with_suffix(".refused").write_text(found[name] + "\n")
+        elif found.get(name) is not None:
+            base.with_suffix(".json").write_text(json.dumps(found[name]))
     (run_dir / "summary-weekly-locomo-x.json").write_text(json.dumps({
         "packs": 10, "turns": 5882, "calls": 100, "cache_hits": 175, "prompt_tokens": 1, "completion_tokens": 1,
         "wall_seconds": 800.0, "claims_per_turn": 0.87, "evidence_claim_coverage": 0.84}))
@@ -103,8 +123,9 @@ class TestRowStatus:
 
 
 class TestVerdict:
-    def comparison(self, weekly, locomo, longmemeval):
-        return {"locomo": weekly.compared_benchmark(locomo, "locomo"),
+    def comparison(self, weekly, locomo, longmemeval, conversations=None):
+        conversations = conversation_result() if conversations is None else conversations
+        return {"locomo": weekly.compared_benchmark(locomo, "locomo", conversations["benchmarks"]["locomo"]),
                 "longmemeval": weekly.compared_benchmark(longmemeval, "longmemeval")}
 
     def test_no_loss_when_every_interval_reaches_zero(self, weekly):
@@ -117,7 +138,7 @@ class TestVerdict:
         locomo = compare_result("locomo", all_evidence_packed=entry(0.84, 0.826, -0.028, -0.001))
         verdict = weekly.judge(self.comparison(weekly, locomo, compare_result("longmemeval")))
         assert verdict["result"] == "loss"
-        assert verdict["line"] == ("loss: LoCoMo all evidence packed -1.4 pp "
+        assert verdict["line"] == ("loss: LoCoMo all evidence packed, question level -1.4 pp "
                                    "(95% interval -2.8 to -0.1 pp)")
 
     def test_two_losses_are_both_named(self, weekly):
@@ -133,7 +154,8 @@ class TestVerdict:
         assert weekly.judge(self.comparison(weekly, locomo, compare_result("longmemeval")))["result"] == "no loss"
 
     def test_a_missing_benchmark_is_not_no_loss(self, weekly):
-        comparison = {"locomo": weekly.compared_benchmark(compare_result("locomo"), "locomo"),
+        comparison = {"locomo": weekly.compared_benchmark(compare_result("locomo"), "locomo",
+                                                          conversation_result()["benchmarks"]["locomo"]),
                       "longmemeval": {"state": "refused", "reason": "gate-compare refused the pair (exit 1): The reports use different datasets"}}
         verdict = weekly.judge(comparison)
         assert verdict["result"] == "not compared"
@@ -141,11 +163,68 @@ class TestVerdict:
 
     def test_a_loss_wins_over_a_missing_benchmark(self, weekly):
         comparison = {"locomo": weekly.compared_benchmark(
-            compare_result("locomo", evidence_recall=entry(0.9, 0.8, -0.2, -0.1)), "locomo"),
+            compare_result("locomo", evidence_recall=entry(0.9, 0.8, -0.2, -0.1)), "locomo",
+            conversation_result()["benchmarks"]["locomo"]),
             "longmemeval": {"state": "missing", "reason": "no gate report to compare"}}
         verdict = weekly.judge(comparison)
         assert verdict["result"] == "loss"
         assert "; not compared: LongMemEval-S" in verdict["line"]
+
+    def test_a_loss_only_at_the_conversation_level_is_a_loss(self, weekly):
+        """The question-level interval reaches zero; the conversation-level one lies wholly below it."""
+        locomo = compare_result("locomo", all_evidence_packed=entry(0.84, 0.834, -0.015, 0.003))
+        conversations = conversation_result(all_evidence_packed=(-0.011, -0.002))
+        verdict = weekly.judge(self.comparison(weekly, locomo, compare_result("longmemeval"), conversations))
+        assert verdict["result"] == "loss"
+        assert verdict["line"] == ("loss: LoCoMo all evidence packed, conversation level -0.6 pp "
+                                   "(95% interval -1.1 to -0.2 pp)")
+        assert [(item["measure"], item["level"]) for item in verdict["losses"]] == [
+            ("all_evidence_packed", "conversation level")]
+
+    def test_a_loss_only_at_the_question_level_is_a_loss_too(self, weekly):
+        """Both levels count: the conversation-level interval reaching zero does not excuse the question level."""
+        locomo = compare_result("locomo", all_evidence_packed=entry(0.84, 0.826, -0.028, -0.001))
+        conversations = conversation_result(all_evidence_packed=(-0.05, 0.01))
+        verdict = weekly.judge(self.comparison(weekly, locomo, compare_result("longmemeval"), conversations))
+        assert verdict["result"] == "loss" and "question level" in verdict["line"]
+        assert "conversation level" not in verdict["line"]
+
+    def test_a_loss_at_both_levels_names_both(self, weekly):
+        locomo = compare_result("locomo", evidence_recall=entry(0.9, 0.85, -0.07, -0.03))
+        conversations = conversation_result(evidence_recall=(-0.08, -0.02))
+        verdict = weekly.judge(self.comparison(weekly, locomo, compare_result("longmemeval"), conversations))
+        assert [item["level"] for item in verdict["losses"]] == ["question level", "conversation level"]
+        assert "LoCoMo evidence recall, question level -5.0 pp (95% interval -7.0 to -3.0 pp); " in verdict["line"]
+        assert "LoCoMo evidence recall, conversation level -5.0 pp (95% interval -8.0 to -2.0 pp)" in verdict["line"]
+
+    def test_locomo_without_conversation_intervals_cannot_read_no_loss(self, weekly):
+        locomo = weekly.compared_benchmark(compare_result("locomo"), "locomo", None, "gate-conversations failed (exit 1)")
+        comparison = {"locomo": locomo, "longmemeval": weekly.compared_benchmark(
+            compare_result("longmemeval"), "longmemeval")}
+        verdict = weekly.judge(comparison)
+        assert verdict["result"] == "not compared"
+        assert verdict["line"] == "not compared: LoCoMo conversation-level intervals (gate-conversations failed (exit 1))"
+
+    def test_conversation_intervals_with_a_measure_missing_cannot_read_no_loss(self, weekly):
+        partial = conversation_result()["benchmarks"]["locomo"]
+        del partial["evidence_recall"]
+        comparison = {"locomo": weekly.compared_benchmark(compare_result("locomo"), "locomo", partial),
+                      "longmemeval": weekly.compared_benchmark(compare_result("longmemeval"), "longmemeval")}
+        assert weekly.judge(comparison)["result"] == "not compared"
+
+    def test_longmemeval_has_the_question_level_only_and_a_loss_there_needs_no_conversations(self, weekly):
+        lme = compare_result("longmemeval", projected_accuracy=entry(0.92, 0.9, -0.03, -0.01))
+        verdict = weekly.judge(self.comparison(weekly, compare_result("locomo"), lme))
+        assert verdict["line"] == "loss: LongMemEval-S projected accuracy -2.0 pp (95% interval -3.0 to -1.0 pp)"
+
+    def test_a_gain_needs_both_levels_above_zero(self, weekly):
+        locomo = compare_result("locomo", all_evidence_packed=entry(0.84, 0.86, 0.005, 0.03))
+        both_levels = weekly.compared_benchmark(locomo, "locomo", conversation_result(
+            all_evidence_packed=(0.004, 0.035))["benchmarks"]["locomo"])
+        one_level = weekly.compared_benchmark(locomo, "locomo", conversation_result(
+            all_evidence_packed=(-0.01, 0.04))["benchmarks"]["locomo"])
+        assert weekly.row_result(both_levels["rows"][0]) == "gain"
+        assert weekly.row_result(one_level["rows"][0]) == "within noise"
 
 
 class TestReport:
@@ -217,6 +296,93 @@ class TestReport:
         weekly.write_report(str(run_dir))
         assert weekly.main(["verdict", str(run_dir)]) == 0
         assert capsys.readouterr().out.splitlines()[0] == "stable: no loss"
+
+
+class TestConversationLevel:
+    """LoCoMo's conversation-level intervals in the report, over fixtures with no model and no Mac mini."""
+
+    def losing_at_the_conversation_level(self):
+        locomo = compare_result("locomo", all_evidence_packed=entry(0.84, 0.834, -0.015, 0.003))
+        return both(locomo, compare_result("longmemeval")), {"stable": conversation_result(
+            all_evidence_packed=(-0.011, -0.002))}
+
+    def test_the_table_shows_both_intervals_and_the_level_of_a_loss(self, weekly, tmp_path):
+        stable, conversations = self.losing_at_the_conversation_level()
+        run_dir = make_run(tmp_path, stable=stable, conversations=conversations)
+        report = weekly.write_report(str(run_dir))
+        text = (run_dir / "report.md").read_text()
+        assert "| Benchmark | Measure | Before | After | Change | Question-level 95% interval | Conversation-level 95% interval |" in text
+        assert ("| LoCoMo | All evidence packed | 84.0% | 83.4% | -0.6 pp | -1.5 to +0.3 pp | -1.1 to -0.2 pp | "
+                "1 | 1 | 98 | loss (conversation level) |") in text
+        assert "| LoCoMo | Evidence recall | 90.0% | 90.0% | +0.0 pp | +0.0 to +0.0 pp | +0.0 to +0.0 pp | 0 | 0 | 100 | unchanged |" in text
+        assert "| LongMemEval-S | Evidence recall | 90.0% | 90.0% | +0.0 pp | +0.0 to +0.0 pp | n/a | 0 | 0 | 100 | unchanged |" in text
+        assert text.startswith("# Scheduled full benchmark") and (
+            "**Verdict against the last stable release (version unknown): loss.** LoCoMo all evidence packed, "
+            "conversation level -0.6 pp (95% interval -1.1 to -0.2 pp).") in text
+        row = report["comparisons"]["stable"]["locomo"]["rows"][0]
+        assert row["status"] == "within noise" and row["conversation"]["status"] == "loss"
+
+    def test_a_loss_at_either_level_is_the_headline_verdict_the_release_rule_reads(self, weekly, tmp_path):
+        stable, conversations = self.losing_at_the_conversation_level()
+        weekly.write_report(str(make_run(tmp_path, stable=stable, conversations=conversations)))
+        data = json.loads((tmp_path / "20261022-053000-aaaaaaaa" / "report.json").read_text())
+        assert data["verdict"]["stable"]["result"] == "loss"
+        assert data["verdict"]["stable"]["losses"][0]["level"] == "conversation level"
+
+    def test_conversation_intervals_that_were_not_computed_read_not_compared(self, weekly, tmp_path):
+        run_dir = make_run(tmp_path, stable=both(compare_result("locomo"), compare_result("longmemeval")),
+                           conversations=False)
+        report = weekly.write_report(str(run_dir))
+        assert report["verdict"]["stable"]["result"] == "not compared"
+        text = (run_dir / "report.md").read_text()
+        assert "not compared.** LoCoMo conversation-level intervals (the conversation-level intervals were not computed)." in text
+        assert "| not computed |" in text
+
+    def test_a_failed_resampling_says_why(self, weekly, tmp_path):
+        run_dir = make_run(tmp_path, stable=both(compare_result("locomo"), compare_result("longmemeval")),
+                           conversations={"stable": "gate-conversations failed (exit 1): ValueError: Question sets differ"})
+        report = weekly.write_report(str(run_dir))
+        assert report["verdict"]["stable"]["result"] == "not compared"
+        assert "gate-conversations failed (exit 1): ValueError: Question sets differ" in (run_dir / "report.md").read_text()
+
+    def test_the_previous_run_is_judged_at_both_levels_too(self, weekly, tmp_path):
+        stable = both(compare_result("locomo"), compare_result("longmemeval"))
+        previous = both(compare_result("locomo", evidence_recall=entry(0.9, 0.89, -0.03, 0.01)),
+                        compare_result("longmemeval"))
+        conversations = {"stable": conversation_result(),
+                         "previous": conversation_result(evidence_recall=(-0.02, -0.004))}
+        run_dir = make_run(tmp_path, stable=stable, previous=previous, previous_id="20261019-053000-bbbbbbbb",
+                           conversations=conversations)
+        report = weekly.write_report(str(run_dir))
+        assert report["verdict"]["stable"]["result"] == "no loss"
+        assert report["verdict"]["previous"]["result"] == "loss"
+        assert "LoCoMo evidence recall, conversation level" in report["verdict"]["previous"]["line"]
+
+    def test_a_refused_question_level_comparison_is_not_rescued_by_the_conversation_level(self, weekly, tmp_path):
+        run_dir = make_run(tmp_path, stable=both("gate-compare refused the pair (exit 1): Question sets differ",
+                                                 compare_result("longmemeval")),
+                           conversations={"stable": conversation_result()})
+        assert weekly.write_report(str(run_dir))["verdict"]["stable"]["result"] == "not compared"
+
+    def test_real_gate_compare_and_gate_conversations_output_give_a_loss_where_only_one_level_shows_it(
+            self, weekly, tmp_path):
+        """Fixture gate reports through the real comparison code: the question-level interval spans zero and the
+        conversation-level one lies below it, so the report must say loss at the conversation level."""
+        from benchmarks.diagnostics.product_packing import compare_gates, conversation_intervals
+        from tests.test_product_packing_diagnostic import even_loss_fixtures
+
+        before, after = even_loss_fixtures()
+        questions = compare_gates(before, after, samples=500)
+        conversations = conversation_intervals(before, after, samples=500)
+        locomo = questions["benchmarks"]["locomo"]["all_evidence_packed"]
+        assert locomo["interval_95"][0] < 0 < locomo["interval_95"][1]
+        run_dir = make_run(tmp_path, stable=both(questions, compare_result("longmemeval")),
+                           conversations={"stable": conversations})
+        report = weekly.write_report(str(run_dir))
+        assert report["verdict"]["stable"]["result"] == "loss"
+        levels = {(item["measure"], item["level"]) for item in report["verdict"]["stable"]["losses"]}
+        assert ("all_evidence_packed", "conversation level") in levels
+        assert ("all_evidence_packed", "question level") not in levels
 
 
 class TestOutboundText:
@@ -313,6 +479,18 @@ if "product_packing" in module and verb == "gate-compare":
     output.write_text(json.dumps({"benchmarks": {after["benchmark"]: data},
                                   "before": {"provenance": {"commit": "d810ee55"}}}))
     output.with_suffix(".md").write_text("# compare\\n")
+    sys.exit(0)
+if "product_packing" in module and verb == "gate-conversations":
+    before, after = (json.loads(Path(args[args.index("gate-conversations") + k]).read_text()) for k in (1, 2))
+    if os.environ.get("FAKE_CONV_FAIL") == "1":
+        sys.stderr.write("ValueError: the conversation resampling failed\\n")
+        sys.exit(2)
+    delta = after["quality"] - before["quality"]
+    width = float(os.environ.get("FAKE_CONV_WIDTH", "0.01"))
+    measures = {key: {"queries": 100, "groups": 10, "delta": delta, "interval_95": [delta - width, delta + width]}
+                for key in ("all_evidence_packed", "all_evidence_packed_with_text", "evidence_recall",
+                            "all_evidence_returned", "projected_accuracy")}
+    Path(opt("--output")).write_text(json.dumps({"benchmarks": {"locomo": measures}}))
     sys.exit(0)
 sys.stderr.write("fake uv: unhandled " + " ".join(args) + "\\n")
 sys.exit(3)
@@ -491,7 +669,45 @@ class TestWeeklyRun:
         (run_id,) = sched.runs()
         report = json.loads((sched.home / "runs" / run_id / "report.json").read_text())
         assert report["verdict"]["stable"]["result"] == "loss"
-        assert "loss: LoCoMo all evidence packed -10.0 pp" in sched.schedule_log()
+        assert "loss: LoCoMo all evidence packed, question level -10.0 pp" in sched.schedule_log()
+
+    def test_locomo_conversation_intervals_are_resampled_for_the_stable_and_the_previous_comparison(self, sched):
+        sched.run()
+        sched.advance()
+        time.sleep(1.1)
+        assert sched.run().returncode == 0
+        first, second = sched.runs()
+        for name in ("stable", "previous"):
+            assert (sched.home / "runs" / second / "compare-{}-locomo-conversations.json".format(name)).is_file()
+        assert not (sched.home / "runs" / first / "compare-previous-locomo-conversations.json").exists()
+        commands = sched.uv_log.read_text().splitlines()
+        assert sum("product_packing gate-conversations" in line for line in commands) == 3
+        assert not any("gate-conversations" in line and "longmemeval" in line for line in commands)
+        report = json.loads((sched.home / "runs" / second / "report.json").read_text())
+        assert report["comparisons"]["stable"]["locomo"]["rows"][0]["conversation"]["status"] == "within noise"
+        assert report["comparisons"]["stable"]["longmemeval"]["rows"][0]["conversation"] is None
+
+    def test_a_loss_that_only_the_conversation_level_shows_is_the_verdict(self, sched):
+        # 0.895 against the stable 0.9: the question-level interval (+/- 0.01) reaches zero, the conversation-level
+        # one (+/- 0.002) lies wholly below it.
+        done = sched.run(FAKE_QUALITY="0.895", FAKE_CONV_WIDTH="0.002")
+        assert done.returncode == 0, done.stdout + done.stderr
+        (run_id,) = sched.runs()
+        report = json.loads((sched.home / "runs" / run_id / "report.json").read_text())
+        assert report["verdict"]["stable"]["result"] == "loss"
+        assert {item["level"] for item in report["verdict"]["stable"]["losses"]} == {"conversation level"}
+        assert "LoCoMo all evidence packed, conversation level -0.5 pp" in sched.schedule_log()
+
+    def test_a_failed_conversation_resampling_reads_not_compared_but_the_run_still_completes(self, sched):
+        done = sched.run(FAKE_CONV_FAIL="1")
+        assert done.returncode == 0, done.stdout + done.stderr
+        (run_id,) = sched.runs()
+        assert sched.run_env(run_id)["STATUS"] == "complete"
+        run_dir = sched.home / "runs" / run_id
+        assert "gate-conversations failed (exit 2)" in (run_dir / "compare-stable-locomo-conversations.refused").read_text()
+        report = json.loads((run_dir / "report.json").read_text())
+        assert report["verdict"]["stable"]["result"] == "not compared"
+        assert "conversations stable: skipped" in sched.schedule_log()
 
     def test_a_pause_resumes_inside_the_run(self, sched):
         done = sched.run(FAKE_BUILD_PAUSE_ONCE="1")

@@ -21,8 +21,9 @@
 # A run: fetch origin, a detached worktree at origin/main under ../prism-weekly-<sha>,
 # LoCoMo and LongMemEval-S built with the defaults through run-builds.sh
 # (BUILDS=defaults, one shared extraction cache), the offline evidence gate over
-# each, gate-compare against the stable reference and the previous scheduled
-# run, then report.md and report.json (weekly_report.py). The answer track does
+# each, gate-compare (and, for LoCoMo, the conversation-level intervals) against
+# the stable reference and the previous scheduled run, then report.md and
+# report.json (weekly_report.py). The answer track does
 # not run. Then the packs and worktrees of runs beyond the newest KEEP_RUNS are
 # deleted; run folders (reports) are kept.
 set -u
@@ -239,6 +240,28 @@ compare_gates() {  # name before-report after-report benchmark
   log "compare $name $benchmark: written"
 }
 
+# LoCoMo's conversation-level intervals for the same pair: the stable gate counts them with the question-level
+# ones (CLAUDE.md), and gate-compare resamples questions only.
+compare_conversations() {  # name before-report after-report
+  local name=$1 before=$2 after=$3 base="$RUN_DIR/compare-$1-locomo-conversations" status
+  if valid_json "$base.json"; then log "conversations $name: already written"; return 0; fi
+  rm -f "$base.refused"
+  if ! valid_json "$before" || ! valid_json "$after"; then
+    echo "no readable gate report to resample ($before and $after)" > "$base.refused"
+    log "conversations $name: skipped, $(cat "$base.refused")"
+    return 2
+  fi
+  in_worktree uv run --no-sync python -m benchmarks.diagnostics.product_packing gate-conversations \
+    "$before" "$after" --output "$base.json" > "$base.log" 2>&1
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "gate-conversations failed (exit $status): $(tail -1 "$base.log")" > "$base.refused"
+    log "conversations $name: skipped, $(cat "$base.refused")"
+    return 2
+  fi
+  log "conversations $name: written"
+}
+
 # ---- The trigger ------------------------------------------------------------
 log "trigger: starting, free disk $(free_gb) GB"
 acquire_lock || exit 0
@@ -382,10 +405,12 @@ fi
 
 # ---- Comparisons and the report ---------------------------------------------
 compare_gates stable "$REFERENCE/gate-locomo.json" "$RUN_DIR/gate-$LABEL_LOCOMO.json" locomo
+compare_conversations stable "$REFERENCE/gate-locomo.json" "$RUN_DIR/gate-$LABEL_LOCOMO.json"
 compare_gates stable "$REFERENCE/gate-longmemeval.json" "$RUN_DIR/gate-$LABEL_LME.json" longmemeval
 if [ -n "$PREVIOUS" ]; then
   PREV_ENV="$RUNS/$PREVIOUS/run.env"
   compare_gates previous "$RUNS/$PREVIOUS/gate-$(env_value "$PREV_ENV" LABEL_LOCOMO).json" "$RUN_DIR/gate-$LABEL_LOCOMO.json" locomo
+  compare_conversations previous "$RUNS/$PREVIOUS/gate-$(env_value "$PREV_ENV" LABEL_LOCOMO).json" "$RUN_DIR/gate-$LABEL_LOCOMO.json"
   compare_gates previous "$RUNS/$PREVIOUS/gate-$(env_value "$PREV_ENV" LABEL_LME).json" "$RUN_DIR/gate-$LABEL_LME.json" longmemeval
 fi
 
