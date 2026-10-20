@@ -48,7 +48,17 @@ class EntitySnapshot:
     source_limitation: str | None = None
 
 
-def _build_summary_text(entity_node: MemoryNode, grouped: dict[NodeType, list[MemoryNode]]) -> str:
+def _snapshot_node_text(node: MemoryNode, *, protected: bool) -> str:
+    """Use admitted clocks in protected text without changing legacy bytes."""
+    if not protected:
+        return node.content
+    from prme.retrieval.packing import _reader_time_label
+    when = _reader_time_label(node, node.content)
+    return f"[{when}] {node.content}" if when else node.content
+
+
+def _build_summary_text(entity_node: MemoryNode, grouped: dict[NodeType, list[MemoryNode]],
+                        *, protected: bool = False) -> str:
     """Build a concise structured summary from an entity and its neighbors.
 
     Format:
@@ -62,26 +72,26 @@ def _build_summary_text(entity_node: MemoryNode, grouped: dict[NodeType, list[Me
     Returns:
         Structured summary string.
     """
-    parts: list[str] = [f"Entity: {entity_node.content}"]
+    parts: list[str] = [f"Entity: {_snapshot_node_text(entity_node, protected=protected)}"]
 
     facts = grouped.get(NodeType.FACT, [])
     if facts:
-        fact_texts = ", ".join(f.content for f in facts)
+        fact_texts = ", ".join(_snapshot_node_text(f, protected=protected) for f in facts)
         parts.append(f"Known facts: {fact_texts}")
 
     preferences = grouped.get(NodeType.PREFERENCE, [])
     if preferences:
-        pref_texts = ", ".join(p.content for p in preferences)
+        pref_texts = ", ".join(_snapshot_node_text(p, protected=protected) for p in preferences)
         parts.append(f"Preferences: {pref_texts}")
 
     tasks = grouped.get(NodeType.TASK, [])
     if tasks:
-        task_texts = ", ".join(t.content for t in tasks)
+        task_texts = ", ".join(_snapshot_node_text(t, protected=protected) for t in tasks)
         parts.append(f"Active tasks: {task_texts}")
 
     decisions = grouped.get(NodeType.DECISION, [])
     if decisions:
-        dec_texts = ", ".join(d.content for d in decisions)
+        dec_texts = ", ".join(_snapshot_node_text(d, protected=protected) for d in decisions)
         parts.append(f"Recent decisions: {dec_texts}")
 
     return ". ".join(parts) + "."
@@ -151,19 +161,21 @@ async def generate_entity_snapshot(
     all_edges = edges_out + edges_in
 
     # Build summary
-    summary_text = _build_summary_text(entity_node, grouped)
+    protected = getattr(graph, "protected_reads", False)
+    summary_text = _build_summary_text(entity_node, grouped, protected=protected)
     limitation = None
-    if getattr(graph, "protected_reads", False):
+    if protected:
         from prme.models.privacy_reads import SOURCE_LIMITATION
         context = graph.context
         sources = await context.generated_sources({
-            "entity": entity_node.content, "nodes": [node.content for node in neighbors],
+            "entity": _snapshot_node_text(entity_node, protected=True),
+            "nodes": [_snapshot_node_text(node, protected=True) for node in neighbors],
         })
         summary_text = (await context.generated({"summary": summary_text}, sources=sources))["summary"]
         await context.check()
         limitation = SOURCE_LIMITATION
 
-    return EntitySnapshot(
+    snapshot = EntitySnapshot(
         entity_node=entity_node,
         facts=grouped.get(NodeType.FACT, []),
         preferences=grouped.get(NodeType.PREFERENCE, []),
@@ -174,6 +186,7 @@ async def generate_entity_snapshot(
         summary_text=summary_text,
         source_limitation=limitation,
     )
+    return await graph.context.disclose(snapshot) if protected else snapshot
 
 
 async def generate_all_entity_snapshots(
@@ -219,7 +232,7 @@ async def generate_all_entity_snapshots(
                 exc_info=True,
             )
 
-    return snapshots
+    return await graph.context.disclose(snapshots) if getattr(graph, "protected_reads", False) else snapshots
 
 
 def render_snapshot_text(snapshot: EntitySnapshot) -> str:
@@ -234,8 +247,9 @@ def render_snapshot_text(snapshot: EntitySnapshot) -> str:
     Returns:
         Formatted text representation.
     """
+    protected = snapshot.source_limitation is not None
     lines: list[str] = [
-        f"[Entity Snapshot: {snapshot.entity_node.content}]",
+        f"[Entity Snapshot: {_snapshot_node_text(snapshot.entity_node, protected=protected)}]",
         f"  ID: {snapshot.entity_node.id}",
         f"  Generated: {snapshot.generated_at.isoformat()}",
     ]
@@ -245,22 +259,22 @@ def render_snapshot_text(snapshot: EntitySnapshot) -> str:
     if snapshot.facts:
         lines.append("  Facts:")
         for f in snapshot.facts:
-            lines.append(f"    - {f.content}")
+            lines.append(f"    - {_snapshot_node_text(f, protected=protected)}")
 
     if snapshot.preferences:
         lines.append("  Preferences:")
         for p in snapshot.preferences:
-            lines.append(f"    - {p.content}")
+            lines.append(f"    - {_snapshot_node_text(p, protected=protected)}")
 
     if snapshot.decisions:
         lines.append("  Decisions:")
         for d in snapshot.decisions:
-            lines.append(f"    - {d.content}")
+            lines.append(f"    - {_snapshot_node_text(d, protected=protected)}")
 
     if snapshot.tasks:
         lines.append("  Tasks:")
         for t in snapshot.tasks:
-            lines.append(f"    - {t.content}")
+            lines.append(f"    - {_snapshot_node_text(t, protected=protected)}")
 
     if snapshot.relationships:
         lines.append(f"  Relationships: {len(snapshot.relationships)} edges")

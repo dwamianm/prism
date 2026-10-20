@@ -132,8 +132,13 @@ The frozen local detector report has 69 synthetic rows: 34 supported positive
 spans detected, 21 benign rows without a target-category false positive, and
 14 separately labelled unsupported examples (1 detected, 13 missed). It is a
 small declared fixture result, not a general precision/recall guarantee. The
-12 scenario matrix on DuckDB and PostgreSQL remains **20 passed / 4 pending**;
-SN11 query and SN12 profile/summary success gates remain open. See the
+12 scenario pytest matrix on DuckDB and PostgreSQL remains **20 passed /
+4 pending**. These are component/subcheck results using real local recognition
+and databases with test `FakeAuthority` and `FakeProtector` capabilities;
+they do not mark complete frozen SN product cases as passed. Native custody,
+the local current-ledger authority in #325 (hosted authority in #280), and
+remaining routes require integration evidence. SN11 query and SN12
+profile/summary success gates remain open. See the
 [implementation plan](plans/2026-10-evidence-privacy/PV-13-plan.md) and
 [results](plans/2026-10-evidence-privacy/PV-13-results.json). Native custody,
 combined product behavior and lifecycle erasure need their own evidence.

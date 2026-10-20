@@ -27,8 +27,7 @@ class AdmittedGraphView:
         await self.context.check()
         node = await self._graph.get_node(node_id, include_superseded=include_superseded)
         projected = await self.context.project_node(node)
-        await self.context.check()
-        return projected
+        return await self.context.disclose(projected)
 
     async def get_nodes(self, node_ids, *, include_superseded=False):
         await self.context.check()
@@ -37,8 +36,7 @@ class AdmittedGraphView:
             projected = await self.context.project_node(node)
             if projected is not None:
                 result.append(projected)
-        await self.context.check()
-        return result
+        return await self.context.disclose(result)
 
     async def get_evidence_nodes(self, event_ids):
         """Selected runtime evidence is reachable only from evidence packing."""
@@ -46,9 +44,10 @@ class AdmittedGraphView:
             return []
         if not self.context.evidence_lease_active:
             raise PrivacyDenied("privacy_denied")
-        await self.context.check()
-        return [self.context.source_nodes[key].model_copy(deep=True)
-                for key in dict.fromkeys(event_ids) if key in self.context.source_nodes]
+        return await self.context.disclose([
+            self.context.source_nodes[key].model_copy(deep=True)
+            for key in dict.fromkeys(event_ids) if key in self.context.source_nodes
+        ])
 
     async def scan_nodes(self, *, user_id=None, scope=None, node_type=None, lifecycle_states=None,
                          after_id=None, limit=100, operator_unscoped=False):
@@ -78,8 +77,7 @@ class AdmittedGraphView:
             if next_cursor == cursor:
                 raise PrivacyDenied("privacy_invalid_result")
             cursor = next_cursor
-        await self.context.check()
-        return result
+        return await self.context.disclose(result)
 
     async def _all_nodes(self, *, scope=None, node_type=None, lifecycle_states=None):
         cursor = None
@@ -124,14 +122,14 @@ class AdmittedGraphView:
                     continue
                 matches.append(node)
         matches.sort(key=lambda item: item.created_at, reverse=not oldest_first)
-        return matches[:limit]
+        return await self.context.disclose(matches[:limit])
 
     async def count_nodes(self, *, user_id=None, lifecycle_states=None):
         self._owner(user_id)
         count = 0
         async for page in self._all_nodes(lifecycle_states=lifecycle_states):
             count += len(page)
-        return count
+        return await self.context.disclose(count)
 
     async def get_event_nodes(self, event_id, *, user_id):
         self._owner(user_id)
@@ -142,8 +140,7 @@ class AdmittedGraphView:
             admitted = await self.context.project_node(node)
             if admitted is not None:
                 result.append(admitted)
-        await self.context.check()
-        return result
+        return await self.context.disclose(result)
 
     async def get_edges(self, *, source_id=None, target_id=None, node_ids=None, edge_type=None,
                         valid_at=None, min_confidence=None, include_superseded=False):
@@ -168,8 +165,7 @@ class AdmittedGraphView:
             if origin is None or origin.snapshot.policy.scope != source.scope:
                 continue
             admitted.append(project_admitted_edge(edge))
-        await self.context.check()
-        return admitted
+        return await self.context.disclose(admitted)
 
     async def get_neighborhood_with_depth(self, node_id, *, max_hops=2, edge_types=None,
                                           valid_at=None, min_confidence=None,
@@ -205,8 +201,7 @@ class AdmittedGraphView:
                         continue
                 found[str(node.id)] = (node, depth)
                 frontier.add(str(node.id))
-        await self.context.check()
-        return [value for key, value in found.items() if key != str(seed.id)]
+        return await self.context.disclose([value for key, value in found.items() if key != str(seed.id)])
 
     async def get_neighborhood(self, node_id, **kwargs):
         return [node for node, _ in await self.get_neighborhood_with_depth(node_id, **kwargs)]
@@ -234,7 +229,7 @@ class AdmittedGraphView:
             result.append(node)
             seen.add(identifier)
             current = identifier
-        return result
+        return await self.context.disclose(result)
 
     async def get_session_neighbors(self, trigger_ids, *, user_id, window, scopes=None):
         self._owner(user_id)
@@ -254,5 +249,4 @@ class AdmittedGraphView:
             result[str(trigger.id)] = [] if position is None else values[
                 max(0, position - window):position + window + 1
             ]
-        await self.context.check()
-        return result
+        return await self.context.disclose(result)

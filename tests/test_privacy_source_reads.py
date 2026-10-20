@@ -141,6 +141,16 @@ async def test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots(tmp_path, 
                     assert (fact.id in {candidate.node.id for candidate in response.results}) == (moment == effective)
                     assert_no_source(response.model_dump_json())
                     assert response.metadata.source_limitation
+                # CORE-323-01: both independently consumed protected text paths
+                # must retain the effective date, including the default snapshot.
+                from prme.retrieval.snapshots import render_snapshot_text
+                alex = next(node for node in await engine.get_event_nodes(identifier, user_id=owner)
+                            if node.node_type == NodeType.ENTITY and node.content == "Alex")
+                snapshot = await engine.snapshot(str(alex.id), user_id=owner)
+                texts = (snapshot.summary_text, render_snapshot_text(snapshot))
+                assert all(effective.date().isoformat() in text and row["expected"] in text for text in texts), texts
+                assert snapshot.source_limitation
+                assert_no_source(asdict(snapshot))
                 continue
             identifier = await engine.ingest(row["source"], user_id=owner, speaker=row.get("speaker"),
                                              event_time=runtime.clock(), wait_for_extraction=True)
@@ -250,3 +260,163 @@ async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, l
     finally:
         await reopened.close()
     # No erasure or journal crash-recovery success is inferred here; PV-05/06 own those gates.
+
+
+async def test_AC01_AC03_ordinary_final_deadlines(tmp_path, layout, analyzer, native, monkeypatch):
+    """Existing ordinary-read case: A expires while B's authorization awaits."""
+    import asyncio
+    from datetime import timedelta
+    from uuid import UUID, uuid4
+    import pytest
+    from prme.privacy import MemoryRetention, PrivacyDenied
+
+    engine, runtime, policy, *_ = await opened(tmp_path, layout, analyzer)
+    owner, initial = str(policy.owner_id), runtime.clock()
+    try:
+        ids = []
+        for identifier, seconds in ((UUID(int=1), 60), (UUID(int=(1 << 128) - 1), 120)):
+            # Deterministic opaque identities order A before B in the existing
+            # repository. Sanitizer, admission, crypto and storage remain real.
+            with monkeypatch.context() as fixed_ids:
+                fixed_ids.setattr("prme.privacy.admission.uuid4", lambda: identifier)
+                ids.append(await engine.store(f"{MEMORY}. {SOURCE}.", retrieval_content=MEMORY,
+                    user_id=owner, policy=policy.model_copy(update={
+                        "policy_id": uuid4(), "memory_retention": MemoryRetention(mode="erase_after", seconds=seconds),
+                    })))
+        ids = [str((await engine.get_event_nodes(event_id, user_id=owner))[0].id) for event_id in ids]
+        rows = await engine._privacy.repository.for_owner(owner)
+        assert len(rows) == 2
+        early, later = (row.snapshot.memory_deadline for row in rows)
+        assert early < later
+        original_guard = runtime.authority.guard
+        trace, trigger = [], {}
+
+        @asynccontextmanager
+        async def delayed_guard(saved, effect):
+            trace.append((saved.memory_deadline, effect))
+            position = len(trace)
+            async with original_guard(saved, effect):
+                if trigger.get("position") == position and trigger["phase"] == "entry":
+                    await asyncio.sleep(0)
+                    runtime.clock.now = trigger["time"]
+                    trigger["advanced"] = True
+                yield
+                if trigger.get("position") == position and trigger["phase"] == "exit":
+                    await asyncio.sleep(0)
+                    runtime.clock.now = trigger["time"]
+                    trigger["advanced"] = True
+
+        monkeypatch.setattr(runtime.authority, "guard", delayed_guard)
+        calls = {
+            "get_nodes": lambda: engine.get_nodes(ids, user_id=owner),
+            "query_nodes": lambda: engine.query_nodes(user_id=owner),
+            "scan_nodes": lambda: engine.scan_nodes(user_id=owner),
+            "get_events": lambda: engine.get_events(owner),
+            "get_provenance": lambda: engine.get_provenance(ids[0], user_id=owner),
+        }
+        for name, call in calls.items():
+            runtime.clock.now = initial
+            trace.clear()
+            trigger.clear()
+            live = await asyncio.wait_for(call(), 5)
+            assert live, name
+            if name != "get_provenance":
+                assert len(live) == 2, name
+            assert_no_source(live if isinstance(live, list) else live.model_dump_json())
+            # Record the actual public route's last B guard, avoiding a fixed
+            # implementation call count. B is still live at A's boundary.
+            position = max(i for i, (deadline, effect) in enumerate(trace, 1)
+                           if deadline == later and effect == "disclosure")
+            for phase in ("entry", "exit"):
+                for moment in (early - timedelta(microseconds=1), early):
+                    runtime.clock.now = initial
+                    trace.clear()
+                    trigger.update(position=position, phase=phase, time=moment, advanced=False)
+                    if moment < early:
+                        assert await asyncio.wait_for(call(), 5), (name, phase)
+                    else:
+                        with pytest.raises(PrivacyDenied, match="privacy_expired"):
+                            await asyncio.wait_for(call(), 5)
+                    assert trigger["advanced"], (name, phase)
+            trigger.clear()
+        # A resumed public iterator must recheck before disclosing the next
+        # member of a page after the caller has awaited elsewhere.
+        runtime.clock.now = initial
+        stream = engine.iter_nodes(user_id=owner, batch_size=2)
+        assert await anext(stream)
+        runtime.clock.now = early
+        with pytest.raises(PrivacyDenied, match="privacy_expired"):
+            await anext(stream)
+        await stream.aclose()
+    finally:
+        runtime.clock.now = initial
+        await engine.close()
+
+
+async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout, analyzer, native):
+    """Existing classification case: missing enrollment cannot imply legacy."""
+    import json
+    from uuid import uuid4
+    from prme import MemoryEngine
+    from prme.models import MemoryNode
+    from prme.privacy import PrivacyDenied
+    from prme.privacy.records import PRIVACY_KEY
+    from prme.types import NodeType
+
+    engine, runtime, policy, *_ = await opened(tmp_path, layout, analyzer)
+    owner = str(policy.owner_id)
+    identifier = await store_pair(engine, owner)
+    # Simulate the reported interrupted enrollment in this disposable fixture.
+    await engine._privacy.repository._query("DELETE FROM privacy_admissions WHERE user_id=?", (owner,))
+    config = engine._config.model_copy(update={"privacy_policy": None})
+    await engine.close()
+    engine = await MemoryEngine.create(config, embedding_provider=runtime.embedder)
+    try:
+        # A source-bearing historical node with a malformed marker is also
+        # protected by the existing metadata classifier, without a valid record.
+        orphan = MemoryNode(user_id=owner, node_type=NodeType.NOTE, content=SOURCE,
+                            metadata={PRIVACY_KEY: None})
+        await engine._graph_store.create_node(orphan)
+        legacy_owner = str(uuid4())
+        legacy_event = await engine.store(MEMORY, user_id=legacy_owner)
+        legacy_id = str((await engine.get_event_nodes(legacy_event, user_id=legacy_owner))[0].id)
+        assert (await engine.get_nodes([legacy_id], user_id=legacy_owner))[0].content == MEMORY
+        assert (await engine.get_events(legacy_owner))[0].content == MEMORY
+        await engine.require_legacy_history(user_id=legacy_owner)
+        calls = {
+            "get_events": lambda: engine.get_events(owner),
+            "query_nodes": lambda: engine.query_nodes(user_id=owner),
+            "scan_nodes": lambda: engine.scan_nodes(user_id=owner),
+            "get_nodes": lambda: engine.get_nodes([identifier, str(orphan.id)], user_id=owner),
+            "count_nodes": lambda: engine.count_nodes(user_id=owner),
+            "query_nodes_unscoped": lambda: engine.query_nodes(),
+            "count_nodes_unscoped": lambda: engine.count_nodes(),
+            "history": lambda: engine.require_legacy_history(user_id=owner),
+            "history_unscoped": lambda: engine.require_legacy_history(user_id=None),
+            "search": lambda: engine.search(SOURCE, user_id=owner),
+        }
+        bypassed = []
+        for name, call in calls.items():
+            try:
+                await call()
+            except PrivacyDenied:
+                pass
+            else:
+                bypassed.append(name)
+        assert not bypassed, bypassed
+        # Reuse the same fixture to isolate a node-only and then event-only
+        # malformed marker; both use the existing database classifier.
+        repo = engine._privacy.repository
+        for marked_table, cleared_table in (("nodes", "events"), ("events", "nodes")):
+            await repo._query(f"UPDATE {cleared_table} SET metadata=? WHERE user_id=?", ("{}", owner))
+            await repo._query(f"UPDATE {marked_table} SET metadata=? WHERE user_id=?",
+                              (json.dumps({PRIVACY_KEY: "malformed"}), owner))
+            for name, call in calls.items():
+                try:
+                    await call()
+                except PrivacyDenied:
+                    pass
+                else:
+                    raise AssertionError((marked_table, name))
+    finally:
+        await engine.close()

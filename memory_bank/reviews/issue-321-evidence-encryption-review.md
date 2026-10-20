@@ -1,6 +1,6 @@
 # #321 / PV-03 implementation evidence for scheduled review
 
-Status: grouped AC5/EM06 review repair prepared for affected review; unpublished. This is
+Status: reviewed #321/#322 composition prepared for final validation; unpublished. This is
 implementation evidence, not an independent approval or a protected-product gate
 claim. Original six acceptance criteria and finite EM01–EM08 definitions remain
 in `docs/plans/2026-10-evidence-privacy/PV-03-plan.md` unchanged.
@@ -155,7 +155,50 @@ passed **111 tests, 1 skipped** in 54.94 seconds, recorded in
 `expiry-typing-2.log/json` passed. The skipped physical scan was already executed;
 no native platform or artifact-scan claim is renewed by these component tests.
 Unchanged full-suite and simulation work was not duplicated. Affected independent
-review remains pending.
+review subsequently completed: all four required affected reports approved
+a63e78a7, and root read and accepted each report.
+
+## Bounded #321/#322 composition
+
+Root authorized merging reviewed sanitizer head
+`002fbbe76315efe56eea32da12f0df769e256641` into #321 head
+`a63e78a7b64810a4b127a00e9102732e393272aa` before the final full suite. The exact
+five additive conflicts were `content-copy-inventory.json`, `pyproject.toml`,
+`privacy/__init__.py`, `tests/typing/public_api.py` and `uv.lock`.
+Resolutions preserve both lazy export sets, both consumer functions, the exact
+crypto/keyring pins and sanitizer optional dependencies, the C41 implementation
+and source references, and C43–C45 plus their existing scenario mappings.
+The automatically merged admission/capability/stub paths retain all three
+writer guards, explicit original snapshots, authenticated source/continuation
+serialization, sanitizer provenance and final admitted projection hooks.
+No #323 source or new privacy behavior is introduced by this merge.
+
+`composition-merge-1.log/json` preserves the expected conflict result. Offline
+lock regeneration changed no merged package/version/source record, recorded in
+`composition-lock-1.log/json`. Locked offline sync installed the sanitizer extra
+only in the assigned #321 venv while retaining crypto/native-keyring and the
+existing API/MCP/framework/PostgreSQL/dev extras (`composition-sync-1.log/json`).
+
+Finite composition validation is scoped Ruff, strict public consumer typing,
+the existing contract validator/diff check, and one combined invocation of the
+existing admission, crypto, ciphertext-storage, sanitizer-scenario/interface and
+source-projection test files. The original 69-row detector report and source
+reviews remain unchanged; no detector refitting, new cohort or .test-domain
+repair is included. Root owns the final full suite in a genuine plain clone
+bound to its source, plus final wheel/package validation after this freeze.
+
+Composition results: `composition-targeted-1.log/json` passed **159 tests,
+1 skipped, 4 xfailed** in 49.10 seconds. The skip is the previously executed
+physical scan; the four expected failures retain the existing gated sanitizer
+routes. `composition-ruff-1.log/json` and `composition-typing-1.log/json` passed.
+`composition-contract-1.log/json` preserves only three stale line anchors after
+the reviewed source composition: C08 extraction_plan, C09 final_generated_bundle
+and C37 BudgetContinuation. Exact line-only corrections (547→556, 581→590 and
+36→39) passed `composition-contract-2.log/json`: 45 copy classes, 171 exact source
+anchors and unchanged original 40 plus 12 sanitation cases. No coverage mapping
+or runtime repair was added. Both tickets' separately owned runtime modules and
+the frozen detector fixture/results were verified byte-identical to their
+reviewed parents; only the agreed shared paths were composed. Diff check passed.
 
 ## Preserved failures and bounded repairs
 

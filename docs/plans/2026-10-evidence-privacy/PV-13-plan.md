@@ -169,10 +169,35 @@ No detector label or expected detection was changed.
 
 ## Explicit remaining integration gates
 
-Real #321 custody and #323/#324 query/generated/profile/source/copy integration
+Real #321 custody, #325 local current-ledger/policy authority (#280 hosted),
+and #323/#324 query/generated/profile/source/copy integration
 are dependencies, not successful fake-provider evidence. Positive query,
 profile and summary controls remain required and pending until the corresponding
 actual route exists. Unavailable routes cannot manufacture an SN pass. The
 fixed 69-row report and actual local recognition are separate from the combined
 protected-product gate in #327. No anonymity, leak-proof, universal detection or
 semantic entailment claim is made.
+
+The preserved 20 passed / 4 pending pytest count is component/subcheck evidence
+with real recognition/backends and test `FakeAuthority`/`FakeProtector`
+capabilities. It does not establish an entire frozen SN product-case pass.
+All product-case statuses remain pending the concrete authority, custody and
+route integration; no replacement authority is part of this ticket.
+
+## PV-04 source-effective-time qualification
+
+The later #323 checkpoint `01cd5a4d` replaces blanket protected date refusal
+with the bounded original Q04 positive path. A unique exact source-present
+reference directly attached to a starting/beginning cue resolves with the trusted
+source clock through the existing locked resolver and event_time/valid_from
+materialization. Missing, ambiguous, incomplete or competing references still
+refuse. The frozen Q04 now passes actual ingestion and reads before and at its
+boundary; retrieval supplies an explicit time_to. The original missing-ref
+refusal and pre-repair failures remain preserved in PV-04 results.
+
+This is component integration with real sanitizer, crypto and storage plus
+FakeAuthority and synthetic external model responses. It does not relabel the
+original 20 passed / 4 pending SN component matrix or complete any frozen SN
+product case. Actual #325 authority/erasure and #324 durable publication/recovery
+remain pending. See PV-04-plan.md and PV-04-results.json for the exact 55-check
+and final 18-check evidence, including the original single-file layout subchecks.

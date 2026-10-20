@@ -53,13 +53,13 @@ prme = "prme.cli:main"
 prme-mcp = "prme.mcp:main"
 
 [project.optional-dependencies]
+local-privacy = [
+    "keyring==25.7.0",
+]
 privacy = [
     "presidio-analyzer==2.2.364; python_version < '3.15'",
     "spacy==3.8.11; python_version < '3.15'",
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl ; python_version < '3.15'",
-]
-local-privacy = [
-    "keyring==25.7.0",
 ]
 postgres = [
     "asyncpg>=0.29.0",

@@ -2846,6 +2846,7 @@ class MemoryEngine:
         if user_id is None:
             if self._privacy.selected() or await self._privacy.repository._read("1=1", ()):
                 raise PrivacyDenied("privacy_boundary_mismatch")
+            await self._privacy.repository.require_legacy_range(None, None)
             return self._graph_store
         from prme.privacy.read_graph import AdmittedGraphView
         from prme.privacy.reads import ReadContext
@@ -2938,8 +2939,11 @@ class MemoryEngine:
                 user_id=user_id, scope=scope, node_type=node_type,
                 lifecycle_states=lifecycle_states, after_id=cursor, limit=batch_size,
             )
+            graph = await self._ordinary_graph(user_id, scopes=[scope] if scope else None)
             for node in page:
-                yield node
+                # The caller may await between yields from the same page. Do
+                # not retain a policy lock across that external suspension.
+                yield await graph.context.disclose(node) if getattr(graph, "protected_reads", False) else node
             if len(page) < batch_size:
                 break
             cursor = str(page[-1].id)
