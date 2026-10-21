@@ -41,6 +41,11 @@ CORPORA = {
     "store-v1": {"kind": "store", "path": "benchmarks/fixtures/fast-cycle/store-v1.json"},
     "chat-v1": {"kind": "conversation", "path": "benchmarks/conversations/chat-v1.json"},
 }
+# The routing gate's new draw: a memory set written for it, with a gold graph and no earlier questions.
+CORPORA_DRAW2 = {"draw2-v1": {"kind": "memories", "path": "benchmarks/fixtures/graph-oracle/draw2-memories-v1.json"}}
+BLIND2_FILE = FIXTURES / "blind-v2.json"
+CANDIDATES2_FILE = FIXTURES / "blind-candidates-v2.json"
+REVIEW2_FILE = FIXTURES / "blind-review-v2.json"
 # How many candidates to ask for, per type, in each corpus. A small chat gets fewer.
 PER_TYPE = {"defects-v1": 3, "store-v1": 5, "chat-v1": 5}
 
@@ -87,7 +92,7 @@ PROMPT_SHA256 = hashlib.sha256((SYSTEM + json.dumps(INSTRUCTIONS, sort_keys=True
 
 def memories_of(name: str) -> list[Memory]:
     """A corpus's memories in storage order, read without opening its gold graph."""
-    return _corpus_memories(CORPORA[name])[2]
+    return _corpus_memories({**CORPORA, **CORPORA_DRAW2}[name])[2]
 
 
 def memory_lines(memories: list[Memory]) -> str:
@@ -212,7 +217,7 @@ def _words(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9']+", text.lower()))
 
 
-def freeze(candidates: dict, review: dict) -> dict:
+def freeze(candidates: dict, review: dict, corpora: dict | None = None, name: str = "blind-v1") -> dict:
     """The frozen question file: the candidates the reviewer judged answerable, less the repeats.
 
     A candidate repeats when 80 percent of its words are shared with a question the gold files already ask (or the
@@ -220,12 +225,14 @@ def freeze(candidates: dict, review: dict) -> dict:
     same answer memories under the same type. A question that one memory answers is a lookup whatever the model
     called it. The result is a pure function of the candidates and the reviewer's decisions.
     """
-    gold = {name: json.loads((FIXTURES / f"{name}.json").read_text())["questions"] for name in CORPORA}
-    known: dict[str, list[set[str]]] = {name: [_words(item["question"]) for item in gold[name]]
-                                        + [_words(variant) for item in gold[name] for variant in item.get("variants", [])]
-                                        for name in CORPORA}
-    heldout = json.loads((FIXTURES.parent / "fast-cycle" / "store-heldout-v1.json").read_text())
-    known["store-v1"] += [_words(item["question"]) for item in heldout["key"]["questions"]]
+    corpora = corpora or CORPORA
+    gold = {corpus: json.loads((FIXTURES / f"{corpus}.json").read_text())["questions"] for corpus in corpora}
+    known: dict[str, list[set[str]]] = {corpus: [_words(item["question"]) for item in gold[corpus]]
+                                        + [_words(variant) for item in gold[corpus] for variant in item.get("variants", [])]
+                                        for corpus in corpora}
+    if "store-v1" in known:
+        heldout = json.loads((FIXTURES.parent / "fast-cycle" / "store-heldout-v1.json").read_text())
+        known["store-v1"] += [_words(item["question"]) for item in heldout["key"]["questions"]]
     dropped = {"not answerable, ambiguous or several answers": 0,
                "repeats an existing or earlier question (word overlap 0.8 or more)": 0,
                "asks the same fact and type as an earlier kept question": 0}
@@ -257,9 +264,9 @@ def freeze(candidates: dict, review: dict) -> dict:
                      **({"retagged_from": candidate["type"]} if kind != candidate["type"] else {}),
                      **({"ids_corrected": True} if fixed else {})})
     requests = sum(item["requests"] for item in candidates["rounds"])
-    return {"kind": KIND, "schema_version": SCHEMA_VERSION, "name": "blind-v1",
-            "description": "Questions a local model wrote about the three memory sets from the memories alone, then "
-                           "reviewed for answerability. See benchmarks/graph_oracle/BLIND.md.",
+    return {"kind": KIND, "schema_version": SCHEMA_VERSION, "name": name,
+            "description": "Questions a local model wrote about the memory sets from the memories alone, then "
+                           "reviewed for answerability. See benchmarks/graph_oracle/BLIND.md and GATE.md.",
             "generator": {"model": candidates["model"], "requests": requests, "prompt_sha256": candidates["prompt_sha256"],
                           "rounds": len(candidates["rounds"])},
             "review": {"candidates": len(candidates["candidates"]), "kept": len(kept), "dropped": dropped,
@@ -272,10 +279,10 @@ def load_blind(path: Path = BLIND_FILE) -> dict:
     value = json.loads(path.read_text())
     if value.get("kind") != KIND or value.get("schema_version") != SCHEMA_VERSION:
         raise ValueError(f"{path} is not a blind question file")
-    known = {name: {memory.id for memory in memories_of(name)} for name in CORPORA}
+    known = {name: {memory.id for memory in memories_of(name)} for name in {**CORPORA, **CORPORA_DRAW2}}
     seen = set()
     for question in value["questions"]:
-        if question["id"] in seen or question["corpus"] not in CORPORA or question["type"] not in TYPES:
+        if question["id"] in seen or question["corpus"] not in known or question["type"] not in TYPES:
             raise ValueError(f"{path}: bad question {question['id']}")
         seen.add(question["id"])
         if not question["answers"] or set(question["answers"] + question.get("support", []) + question.get("stale", [])) - known[question["corpus"]]:
