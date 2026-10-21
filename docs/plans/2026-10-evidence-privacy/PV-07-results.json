@@ -1997,6 +1997,61 @@
       "source_manifest_sha256": "78ae4a3633b97ef3d40a3637530a30eb393b0e9a3ae4323e2beee1ea6833d2e2",
       "tracked_diff_sha256": "63d33acfcbe29a433ccd7f9843383519d298fd059fda43a989e451ff6367fa9a",
       "scope": "Final iteration5 scoped static/integrity on current passing test source; no behavioral rerun"
+    },
+    {
+      "name": "standard-migration-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-21T02:36:09.765449+00:00",
+      "elapsed_seconds": 0.072,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T023609765449-standard-migration-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "09b711f403e7b4795dd394335c7de570d7c38153",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T023609765449-standard-migration-static-source.json",
+      "source_manifest_sha256": "64d3af68fef31ed70a8a80c955d35fafc09bfe07418d84f52cc5a0b719f18104",
+      "tracked_diff_sha256": "59417720aa04d6b5a6f011893cce8e1e762cd942eae2b70e89dc91bf5d1121d6",
+      "scope": "Iteration6 original standard matched-input migration control; first directory failure stops all behavioral execution"
+    },
+    {
+      "name": "standard-migration-directory",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_migration.py::test_EM07_standard_matched_input_migration_parity[directory]",
+        "-q"
+      ],
+      "started_at": "2026-10-21T02:36:16.336517+00:00",
+      "elapsed_seconds": 6.678,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T023616336517-standard-migration-directory.log",
+      "log_sha256": "522f69b83ef6727200bd943175235ccd7e0a21f66dc6ec68f9deca59e90d6ab2",
+      "head": "09b711f403e7b4795dd394335c7de570d7c38153",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T023616336517-standard-migration-directory-source.json",
+      "source_manifest_sha256": "64d3af68fef31ed70a8a80c955d35fafc09bfe07418d84f52cc5a0b719f18104",
+      "tracked_diff_sha256": "59417720aa04d6b5a6f011893cce8e1e762cd942eae2b70e89dc91bf5d1121d6",
+      "scope": "Iteration6 original standard matched-input migration control; first directory failure stops all behavioral execution"
+    },
+    {
+      "name": "standard-migration-integrity",
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import ast, hashlib, json, subprocess\nfrom pathlib import Path\nroot = Path.cwd()\nbase = \"09b711f403e7b4795dd394335c7de570d7c38153\"\nfrozen = json.loads(Path(\"/Users/dwamianm/Sites/prism/.github-ticket-loop/privacy-318-279/326-public-assertions-frozen-runtime.json\").read_text())\nassert len(frozen[\"files\"]) == 226\nfor name, digest in frozen[\"files\"].items():\n    assert hashlib.sha256(Path(name).read_bytes()).hexdigest() == digest, name\ntest = \"tests/test_privacy_migration.py\"\nold_text = subprocess.check_output([\"git\", \"show\", base + \":\" + test], text=True)\nold = {n.name: ast.dump(n) for n in ast.parse(old_text).body if isinstance(n, ast.AsyncFunctionDef) and n.name.startswith(\"test_\")}\nnew = {n.name: ast.dump(n) for n in ast.parse(Path(test).read_text()).body if isinstance(n, ast.AsyncFunctionDef) and n.name.startswith(\"test_\")}\nassert all(new[name] == value for name, value in old.items())\nassert set(new) - set(old) == {\"test_EM07_standard_matched_input_migration_parity\"}\nfixture = \"tests/fixtures/privacy/migration-v1.json\"\nassert subprocess.check_output([\"git\", \"show\", base + \":\" + fixture]) == Path(fixture).read_bytes()\npath = \"docs/plans/2026-10-evidence-privacy/PV-07-results.json\"\nbefore = json.loads(subprocess.check_output([\"git\", \"show\", base + \":\" + path]))\nafter = json.loads(Path(path).read_text())\nassert after[\"frozen_cases\"] == before[\"frozen_cases\"] and after[\"whole_case_passes\"] == 0\nassert after[\"evidence\"][:len(before[\"evidence\"])] == before[\"evidence\"]\nassert all(after[\"repair_cycles\"][name] == value for name, value in before[\"repair_cycles\"].items())\nrecords = [json.loads(line) for line in Path(\".github-ticket-loop/privacy-326/checks.jsonl\").read_text().splitlines()]\nrecord = next(v for v in records if v[\"name\"] == \"standard-migration-directory\")\nassert record[\"exit_code\"] == 1\nmanifest = json.loads(Path(record[\"source_manifest\"]).read_text())\ndigest = hashlib.sha256(Path(test).read_bytes()).hexdigest()\nassert manifest[test] == digest\nfor name, expected in frozen[\"files\"].items():\n    assert manifest[name] == expected, name\nfor item in after[\"standard_migration_iteration6\"][\"artifacts\"]:\n    assert hashlib.sha256(Path(item[\"path\"]).read_bytes()).hexdigest() == item[\"sha256\"], item[\"path\"]\nchanged = set(subprocess.check_output([\"git\", \"diff\", \"--name-only\"], text=True).splitlines())\nassert changed == {test, path, \"docs/plans/2026-10-evidence-privacy/PV-07-plan.md\"}, changed\nsubprocess.run([\"git\", \"diff\", \"--check\"], check=True)\nprint(json.dumps({\"runtime_unchanged\":226,\"test_sha256\":digest,\"previous_test_functions_unchanged\":len(old),\"fixture_and_previous_evidence_unchanged\":True,\"failed_test_bytes_unchanged\":True,\"artifact_hashes_verified\":9,\"JSON_and_diff\":\"passed\",\"new_behavioral_executions\":0}))\n"
+      ],
+      "started_at": "2026-10-21T02:39:49.037039+00:00",
+      "elapsed_seconds": 0.174,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T023949037039-standard-migration-integrity.log",
+      "log_sha256": "ea03e6226c34708061a5353fafc46bda2c10f3fe678d67ade2e577034c85bde7",
+      "head": "09b711f403e7b4795dd394335c7de570d7c38153",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T023949037039-standard-migration-integrity-source.json",
+      "source_manifest_sha256": "64d3af68fef31ed70a8a80c955d35fafc09bfe07418d84f52cc5a0b719f18104",
+      "tracked_diff_sha256": "59417720aa04d6b5a6f011893cce8e1e762cd942eae2b70e89dc91bf5d1121d6"
     }
   ],
   "repair_cycles": {
@@ -2088,6 +2143,24 @@
       "unsuccessful_fix_validation_cycles": 0,
       "runtime_changes": false,
       "prior_counters_preserved": true
+    },
+    "standard_matched_migration": {
+      "initial": "Directory failed ordered result-ID equality for tea after six completed public retrieval calls. All raw captures retained.",
+      "executions": 1,
+      "failed": 1,
+      "passed": 0,
+      "unrun_layouts": [
+        "pack",
+        "postgres"
+      ],
+      "new_correction_budget": 0,
+      "corrections_attempted": 0,
+      "prior_comparison_corrections_attempted": 2,
+      "prior_comparison_unsuccessful_cycles": 1,
+      "prior_failed_comparisons": 2,
+      "cumulative_failed_comparisons": 3,
+      "counts_reset": false,
+      "state": "Stopped; no correction, alternative selector or behavioral rerun."
     }
   },
   "held_dependencies": [
@@ -2596,7 +2669,8 @@
     }
   },
   "remaining_original_work": [
-    "Original same-sanitized-input/same-policy fixed-clock standard parity: original mixed-family finite proposal recorded, not executed. #327 frozen24-query storage-parity and separate24 sealed-behavior gates remain distinct; legacy-to-sealed observations do not substitute.",
+    "Original standard matched-input migration control failed directory after six public calls; pack/PostgreSQL unrun and no correction authorized. Literal same-policy storage and #327 frozen24 parity/sealed24 gates remain mandatory.",
+    "Original ER08 archive/chat-clear distinction with retained real backup/operator export remains a potential independent next action; no implementation or validation in iteration6.",
     "Actual #283 hosted recovery capability composition with the bound same-lineage PostgreSQL restore API.",
     "Remaining original EM01-EM08/shared scenario harness closure; fourteen public portability component passes do not establish whole-case acceptance.",
     "Held #323 third classifier correction and original22+3 regression reruns require USER approval; unresolved native SIGABRT has no generic close workaround.",
@@ -2673,8 +2747,16 @@
           "AC2",
           "AC5"
         ],
-        "remaining": "Original standard-mode fixed-clock matched-input legacy-to-protected migration control on existing eight-node/three-source family and three queries. Literal saved-policy equality remains a concrete legacy-format limitation; proposal only, no execution.",
-        "dependency": "No demonstrated held failure in this proposed single-boundary selection; proposal/fixture freeze is the next workflow action, not a claim that user authorization is missing. Stop if actual held classifier/native behavior appears."
+        "remaining": "Standard matched-input actual migration comparison failed directory; two layouts remain unrun. Exact IDs/order/context differ. Original same-policy storage gate remains distinct.",
+        "dependency": "Zero correction budget in iteration6; no further comparison repair/rerun authorized. Literal policy equality cannot be asserted for policy-less legacy v1."
+      },
+      {
+        "criteria": [
+          "AC4",
+          "AC5"
+        ],
+        "remaining": "Original ER08 archive/chat-clear distinction and retained real backup/operator export. Root identified existing legacy clear -> explicit migration as the supported path; protected clear refuses.",
+        "dependency": "Potential independent original work for separately bounded scope; not categorically dependent on #323. Engine backups/external copies remain not_managed; managed backup expiry belongs to hosted283."
       },
       {
         "criteria": [
@@ -2695,7 +2777,7 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Commit/push only this passing eligible restored-work test/docs checkpoint. Same-policy standard parity is independently proposed using the original mixed fixture and three queries; not executed in this phase. Root coordinates the next finite ownership/selector. Full acceptance remains incomplete for actual held dependencies and final gates.",
+    "next_action": "Push the preserved failing standard-control test/docs checkpoint. No remaining layout or correction is authorized. Root may separately scope original ER08; final gates and held strategies remain unchanged.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
@@ -2996,6 +3078,183 @@
       "unrelated_tests_unchanged": true,
       "previous_frozen_cases_evidence_and_counters_preserved": true,
       "script": ".github-ticket-loop/privacy-326/verify_eligible_work_checkpoint.py"
+    }
+  },
+  "standard_migration_iteration6": {
+    "start_commit": "09b711f403e7b4795dd394335c7de570d7c38153",
+    "runtime_commit": "a1bce140aeccf8999dcf42594592390b2438845c",
+    "original_requirement": "Saved standard-mode public retrieval before/after actual migration at a fixed clock before expiry.",
+    "test": "tests/test_privacy_migration.py::test_EM07_standard_matched_input_migration_parity[directory]",
+    "test_sha256": "9af0584b57b3b68c692666842751399c3d26e7ddac13a07f18952e3c9d12ae3d",
+    "fixture_sha256": "bac7a8784953349b2f8140ee0d9830539b2a321783a63b06b2ca8462d9c7bdf0",
+    "max_layout_executions": 3,
+    "max_public_calls": 18,
+    "executed_layouts": [
+      "directory"
+    ],
+    "public_calls_completed": 6,
+    "passed": 0,
+    "failed": 1,
+    "unrun_layouts": [
+      "pack",
+      "postgres"
+    ],
+    "corrections": 0,
+    "pytest_seconds": 5.69,
+    "wrapper_seconds": 6.678,
+    "failure": "Exact ordered result_ids comparison for tea fails; test/assertions/options unchanged after failure.",
+    "observations": {
+      "selected_counts": {
+        "tea": [
+          5,
+          3
+        ],
+        "oranges": [
+          5,
+          4
+        ],
+        "mornings": [
+          6,
+          5
+        ]
+      },
+      "packed_counts": {
+        "tea": [
+          4,
+          3
+        ],
+        "oranges": [
+          4,
+          3
+        ],
+        "mornings": [
+          4,
+          4
+        ]
+      },
+      "all_contexts_differ": true,
+      "tea_context": "Oranges statement and inferred profile lost; finite-grant guidance and entity snapshot added.",
+      "oranges_context": "Three admitted statements retained; inferred profile lost and guidance added.",
+      "mornings_context": "Source order and inferred summary text differ, with guidance added.",
+      "projection": "Protected selected source-event UUIDs replace derived UUIDs with original anchor scores preserved; no raw-row loss found."
+    },
+    "closed_source_comparison": {
+      "nodes": 8,
+      "retained_admissions": 3,
+      "core_fields_equal": true,
+      "fields": [
+        "content",
+        "node_type",
+        "user_id",
+        "scope",
+        "lifecycle_state",
+        "event_time",
+        "valid_from",
+        "valid_to",
+        "created_at",
+        "updated_at",
+        "evidence_refs"
+      ],
+      "source_file_sha256": "0fde02cccb9d385de05cdcc3108cc56473cdfe55d979595bc3d997beb2500299",
+      "source_unchanged_during_inspection": true,
+      "earlier_public_nodes_promoted_before_close": 4,
+      "limit": "This distinguishes preserved closed-source fields from earlier public observations; it does not make the failed public parity assertion pass."
+    },
+    "direct_source_refs": [
+      "src/prme/retrieval/evidence_context.py:85",
+      "src/prme/retrieval/evidence_context.py:125",
+      "src/prme/retrieval/pipeline.py:842"
+    ],
+    "evidence": [
+      "standard-migration-static",
+      "standard-migration-directory"
+    ],
+    "artifacts": [
+      {
+        "source": "/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-922/test_EM07_standard_matched_inp0/standard-frozen-inputs.json",
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/standard-frozen-inputs.json",
+        "sha256": "400e37d55e8b682ca125aa17e50fd66ebea06271384eefb5bceeb44f5d33dd67",
+        "bytes": 2950,
+        "capture": "Copied after failed execution; not pre-run evidence"
+      },
+      {
+        "source": "/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-922/test_EM07_standard_matched_inp0/standard-original-family.json",
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/standard-original-family.json",
+        "sha256": "ce0aa5fddf0ac7ea519ace7baffe7958d2b1c16e2a7ad2d523dde994871517a4",
+        "bytes": 10727,
+        "capture": "Copied after failed execution; not pre-run evidence"
+      },
+      {
+        "source": "/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-922/test_EM07_standard_matched_inp0/standard-before-retrieval.json",
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/standard-before-retrieval.json",
+        "sha256": "0f652af0b3078bca2c9a94cfa4be6f2905ab5974f849a38fd1c97c61e8b8593a",
+        "bytes": 135750,
+        "capture": "Copied after failed execution; not pre-run evidence"
+      },
+      {
+        "source": "/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-922/test_EM07_standard_matched_inp0/standard-after-retrieval.json",
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/standard-after-retrieval.json",
+        "sha256": "400f5799888f6aad1dbeaa5dacf7322fef0574187571d777c884ced8ae273090",
+        "bytes": 124568,
+        "capture": "Copied after failed execution; not pre-run evidence"
+      },
+      {
+        "source": "/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-922/test_EM07_standard_matched_inp0/standard-public-differences.json",
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/standard-public-differences.json",
+        "sha256": "96430a26d838199d7c5a5e32a68079905e926fe415df86fa71366932cc180284",
+        "bytes": 8574,
+        "capture": "Copied after failed execution; not pre-run evidence"
+      },
+      {
+        "source": "/private/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-922/test_EM07_standard_matched_inp0/standard-migration-job/protected-export.json",
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/protected-export.json",
+        "sha256": "69559f0acae45ddc5093c49e244c7cce34038b88ff4289bdc3d7e1025b6843e3",
+        "bytes": 84606,
+        "capture": "Copied after failed execution; not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/closed-source-rows.json",
+        "sha256": "f4ed25047e8ea2b7959da08f8c268fbae5b009ab059ca9f0a8ae59b70b681977",
+        "bytes": 12746,
+        "capture": "After failed execution: read-only inspection of existing native source artifact/captured JSON; no behavioral rerun",
+        "status": "retained"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/read-only-diagnosis-before-ref-decoding.json",
+        "sha256": "da88d00a68af1ddb21d1be7743f6eb6e95756cecd87298034d60f131ba4045b1",
+        "bytes": 23650,
+        "capture": "After failed execution: read-only inspection of existing native source artifact/captured JSON; no behavioral rerun",
+        "status": "superseded diagnostic formatting draft"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/read-only-diagnosis.json",
+        "sha256": "08530fa1c5218cbfe791feaa49cbfea30eaa0e058a7d19285bd5f477a89b4cc0",
+        "bytes": 12852,
+        "capture": "After failed execution: read-only inspection of existing native source artifact/captured JSON; no behavioral rerun",
+        "status": "retained"
+      }
+    ],
+    "artifact_index": {
+      "path": ".github-ticket-loop/privacy-326/standard-migration/directory-initial/artifacts.json",
+      "sha256": "21d6016d024f8962b626929df4b1d5d2816a6a889faf96c6a7fae0d210813fb5"
+    },
+    "limits": [
+      "Original standard migration comparison failed; no entire AC/scenario pass.",
+      "Legacy lacks a saved policy; same-policy storage-only and #327 gates remain separate and unproved.",
+      "No runtime change, known held repair, benchmark, live provider, hosted fixture or PR/closure.",
+      "Prior correction counts and failures retained; zero new corrections authorized or attempted."
+    ],
+    "final_static": {
+      "Ruff": "passed on exact unchanged failed test bytes",
+      "integrity": "standard-migration-integrity",
+      "runtime_files_unchanged": 226,
+      "previous_test_functions_unchanged": 3,
+      "original_fixture_unchanged": true,
+      "failed_source_unchanged": true,
+      "artifact_hashes_verified": 9,
+      "prior_evidence_and_counters_preserved": true,
+      "new_generic_verifier": false,
+      "new_behavioral_execution": false
     }
   }
 }

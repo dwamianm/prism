@@ -1283,3 +1283,93 @@ stops immediately. Root records this exact next selector/ownership before its
 execution phase. No #327 24-query baseline is captured. The original same-policy
 storage gate, #327 parity/sealed sets, real hosted283 composition, shared-case
 closure and final full/package/simulation/CI/review/delivery remain incomplete.
+
+## Standard matched-input migration control, iteration 6
+
+Root released only the proposed direct control at clean pushed09b711f4. Own
+test_privacy_migration.py and this plan/results pair. All226 runtime files stay
+at a1bce140. Original AC1-AC6 and the standard saved-retrieval validation remain
+binding. This phase records a bounded result; it does not close the issue.
+
+Before execution, freeze the existing helper's optional matched-source input to
+tuple(FIXTURE["admitted"]): tea, oranges and mornings in their declared order.
+Its default remains the exact prior source-only/private-tail construction for
+every existing test. The new control alone supplies the three declared source
+texts; fact content, supporting_passage and saved extraction quote follow its
+oranges source. Retain the eight original nodes, three retained event IDs and
+complete dependency graph, including both profile/consolidation generations.
+The original JSON and every previous test remain unchanged.
+
+Freeze runtime.clock at FIXTURE["clock"], target evidence_use=runtime with full
+capture, and packing.evidence_projection_top_k=3 before either store is built;
+all other retrieval settings remain inherited and identical. Save exact policy,
+packing/scoring options and declared control inputs before the first public
+call. Legacy source still has no saved policy. Its public calls use the same
+query, owner, personal scope, reference_time and include_cross_scope=False.
+The target uses an exact runtime grant for its same three retained events and
+finite native custody, before all deadlines. No diagnostic grant is used.
+
+The real migrate_privacy_pack call lies between captures, with the existing
+explicit visual/history dispositions and allow_reembedding. Save all six raw
+responses (three before and three after), complete rendered contexts and raw
+availability observations before comparing ordered selected/packed IDs and
+byte-identical usable context. Also assert required admitted facts, full node/
+source identity, semantic fields and source preservation. Any differences stay
+visible; there is no guidance normalization, query replacement or row-only
+substitute. Literal persisted-policy equality remains outside what a legacy
+source can prove; the separate same-policy storage and #327 gates stay open.
+
+Exact selector:
+`tests/test_privacy_migration.py::test_EM07_standard_matched_input_migration_parity[directory]`.
+Only if it passes, run the same `[pack]` and `[postgres]` once. Maximum three
+layout executions/eighteen public calls. ZERO new correction cycles authorized:
+first failure stops all behavioral execution; preserve and diagnose read-only,
+without edits to inputs/options/queries/assertions/runtime or alternate runs.
+Prior two comparison corrections, one unsuccessful cycle and two failed
+executions carry forward. Scoped Ruff/JSON/diff checks and unchanged-runtime
+hash comparison only; no new generic verifier or broad cohort. Commit/push the
+passing or explicitly failed test/docs checkpoint; no PR or closure.
+
+Iteration6 stopped at its first directory execution: 1 failed in5.69 seconds
+pytest (6.678 seconds wrapper), after all six public captures completed. The
+first ordered result-ID assertion for tea failed. Pack/PostgreSQL were not run;
+no test, input, option, policy, query, runtime or expectation correction followed.
+Scoped Ruff passed on those exact test bytes. This is a failed original standard
+migration control, not a parity pass or a waived criterion.
+
+Preserved responses show selected counts tea5→3, oranges5→4, mornings6→5 and
+packed counts4→3,4→3,4→4. Every rendered context differs. Tea loses the oranges
+statement and inferred profile; oranges retains the three statements but loses
+the inferred profile; mornings changes source order and inferred summary text.
+Target responses also contain explicit finite-runtime-grant guidance and three
+available source descriptors, absent from legacy responses. These differences
+are retained verbatim, not normalized away.
+
+The target's evidence projection substitutes selected source-event identities
+for derived-node identities, with the original anchor scores retained in saved
+score_provenance (tea0.8695652174). The directly relevant source seam is
+retrieval/evidence_context.py:85 and125–211: the source reader prefers
+get_evidence_nodes when available, and projection replaces eligible groups.
+This is a source-backed explanation of the observed representation difference,
+not a runtime repair or a conclusion that the failed public requirement is
+acceptable. No broad ranking or held classifier investigation was started.
+
+Read-only inspection of the already closed source artifact distinguishes this
+from data loss during migration. All eight IDs and compared content/type/owner/
+scope/lifecycle/clock/evidence-ref values equal the protected export. Four nodes
+shown as tentative in earlier public captures became stable before source close;
+the target preserved that closed state. The source file SHA256 remained unchanged
+during inspection. Full native row capture, unmodified public outputs, exact
+scores/order/context differences and input hashes are retained under the ignored
+standard-migration/directory-initial evidence directory. Diagnostic JSON decoding
+and timestamp representation were corrected only in the derived inspection
+report, with its earlier draft retained; no test assertion or public output was
+changed and no behavior was rerun.
+
+The prior two comparison corrections/one unsuccessful cycle/two failures remain
+unchanged; this adds one failed execution and zero corrections. Literal saved-
+policy equality and the separate same-policy/#327 gates remain unproved. Root
+also identified original ER08 archive/chat-clear versus retained backup/export
+behavior as a potentially independent next action; no ER08 code/run is included
+here, and it is not automatically blocked by #323. Full original acceptance,
+held dependency reconciliation and final validation/review/delivery remain open.

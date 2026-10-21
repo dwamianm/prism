@@ -118,7 +118,7 @@ async def test_EM07_direct_migration_resume_exact_identity_current_erasure(tmp_p
                 job_path=job_path, unavailable_legacy_history=True, resume=True)
 
 
-async def mixed_legacy_family(engine, runtime, owner):
+async def mixed_legacy_family(engine, runtime, owner, *, source_contents=None):
     """One frozen EM07 family through real saved-plan/publication protocols.
 
     Only numerical model output is synthetic. Native event, plan, graph, vector,
@@ -138,11 +138,21 @@ async def mixed_legacy_family(engine, runtime, owner):
     from prme.types import NodeType, EpistemicType, SourceType, EdgeType, Scope
     stamp = datetime.fromisoformat(FIXTURE["clock"])
     scope = Scope.PERSONAL
-    event_id = await engine.store(FIXTURE["admitted"][0] + " " + FIXTURE["source_only"] + " " + FIXTURE["prohibited"],
+    if source_contents is None:
+        source_contents = (
+            FIXTURE["admitted"][0] + " " + FIXTURE["source_only"] + " " + FIXTURE["prohibited"],
+            FIXTURE["admitted"][1] + " " + FIXTURE["source_only"] + " " + FIXTURE["prohibited"],
+            FIXTURE["admitted"][2] + " " + FIXTURE["source_only"],
+        )
+    else:
+        # The standard matched-input control declares this projection before
+        # persistence. It does not alter the original mixed-family defaults.
+        assert source_contents == tuple(FIXTURE["admitted"])
+    event_id = await engine.store(source_contents[0],
         retrieval_content=FIXTURE["admitted"][0], user_id=owner, event_time=stamp)
     async with engine._privacy.erasure.repository.session() as session:
         direct = PgGraphStore._record_to_node((await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))[0])
-    event = Event(role="user", content=FIXTURE["admitted"][1] + " " + FIXTURE["source_only"] + " " + FIXTURE["prohibited"],
+    event = Event(role="user", content=source_contents[1],
         user_id=owner, scope=scope, timestamp=stamp, created_at=stamp, event_time=stamp)
     await engine._event_store.append(event)
     fact = MemoryNode(node_type=NodeType.FACT, content=event.content, user_id=owner, scope=scope,
@@ -239,12 +249,124 @@ async def mixed_legacy_family(engine, runtime, owner):
             created_at=stamp, event_time=stamp, metadata={"frame_sha256": digest, "thumbnail": thumbnail_key(digest)})
         await engine._event_store.append(visual)
         put_blob(engine._conn, thumbnail_key(digest), "image/jpeg", raw)
-    survivor_event = await engine.store(FIXTURE["admitted"][2] + " " + FIXTURE["source_only"],
+    survivor_event = await engine.store(source_contents[2],
         retrieval_content=FIXTURE["admitted"][2], user_id=owner, event_time=stamp)
     async with engine._privacy.erasure.repository.session() as session:
         survivor = next(node for node in map(PgGraphStore._record_to_node, await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))
             if UUID(survivor_event) in node.evidence_refs)
     return direct, fact, entity, generated, visual, survivor
+
+
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+async def test_EM07_standard_matched_input_migration_parity(tmp_path, layout, analyzer, native):
+    """Direct conversion control; legacy has no literal saved privacy policy."""
+    from datetime import timedelta
+    from prme.privacy.local_keys import public_registry
+    from prme.storage.privacy_export import read_protected_export
+
+    template, runtime, policy, custody, evidence, _ = await journal_engine(
+        tmp_path / "template", "directory", analyzer, evidence_use="runtime")
+    base = template._config.model_copy(update={
+        "packing": template._config.packing.model_copy(update={"evidence_projection_top_k": 3})})
+    await template.close()
+    runtime.clock.now = datetime.fromisoformat(FIXTURE["clock"])
+    runtime = replace(runtime, retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    owner = str(policy.owner_id)
+    source_contents = tuple(FIXTURE["admitted"])
+    frozen = {
+        "clock": FIXTURE["clock"], "queries": FIXTURE["queries"], "source_contents": source_contents,
+        "legacy_policy": None, "target_policy": policy.model_dump(mode="json"),
+        "packing": base.packing.model_dump(mode="json"), "scoring": base.scoring.model_dump(mode="json"),
+        "scope": policy.scope.value, "include_cross_scope": False,
+        "fixture_sha256": hashlib.sha256((Path(__file__).parent / "fixtures/privacy/migration-v1.json").read_bytes()).hexdigest(),
+    }
+    (tmp_path / "standard-frozen-inputs.json").write_text(json.dumps(frozen, indent=2) + "\n")
+
+    async def capture(memory, label, *, access=None):
+        saved = {}
+        for query in FIXTURE["queries"]:
+            response = await asyncio.wait_for(memory.retrieve(query, user_id=owner,
+                scope=policy.scope, reference_time=runtime.clock(), include_cross_scope=False,
+                source_access=access), 20)
+            saved[query] = {
+                "result_ids": [str(item.node.id) for item in response.results],
+                "packed_ids": [str(item.node.id) for section in response.bundle.sections.values() for item in section],
+                "context": response.bundle.render(), "response": response.model_dump(mode="json"),
+            }
+            # Preserve every completed public response even if a later call
+            # fails. Do not strip policy guidance or source availability.
+            (tmp_path / f"standard-{label}-retrieval.json").write_text(json.dumps(saved, indent=2) + "\n")
+            assert response.results and response.bundle.included_count
+        return saved
+
+    async with fresh_config(base, tmp_path / "legacy", layout) as original, fresh_config(
+            base, tmp_path / "standard", layout, restore=True) as target:
+        original = original.model_copy(update={"privacy_policy": None})
+        assert original.packing == target.packing and original.scoring == target.scoring
+        async with MemoryEngine.open(original, embedding_provider=runtime.embedder) as source:
+            direct, fact, entity, generated, visual, survivor = await mixed_legacy_family(
+                source, runtime, owner, source_contents=source_contents)
+            nodes = (direct, fact, entity, *(item[0] for item in generated), survivor)
+            expected_ids = {node.id for node in nodes}
+            source_ids = (direct.evidence_refs[0], entity.evidence_refs[0], survivor.evidence_refs[0])
+            assert len(expected_ids) == 8 and len(set(source_ids)) == 3
+            assert tuple([(await source._event_store.get(str(identifier))).content for identifier in source_ids]) == source_contents
+            (tmp_path / "standard-original-family.json").write_text(json.dumps({
+                "nodes": [node.model_dump(mode="json") for node in nodes],
+                "source_ids": [str(identifier) for identifier in source_ids],
+                "excluded_visual_id": None if visual is None else str(visual.id),
+            }, indent=2) + "\n")
+            before = await capture(source, "before")
+        closed_source = await _read_snapshot(original)
+        job = tmp_path / "standard-migration-job"
+        result = await migrate_privacy_pack(original, target, privacy_runtime=runtime,
+            embedding_provider=runtime.embedder, job_path=job, unavailable_legacy_history=True,
+            remove_event_ids=() if visual is None else (visual.id,), allow_reembedding=True)
+        assert result.state == "complete"
+        assert (await _read_snapshot(original)).fingerprint == closed_source.fingerprint
+        bundle = read_protected_export(job / "protected-export.json")
+        assert {node.id for node in bundle.nodes} == expected_ids
+        assert {record.event_id for record in bundle.admissions} == set(source_ids)
+        assert all(record.snapshot.policy == policy for record in bundle.admissions)
+        assert all(record.snapshot.evidence_deadline > runtime.clock() for record in bundle.admissions)
+        async with MemoryEngine.open(target, privacy_runtime=runtime, embedding_provider=runtime.embedder) as restored:
+            records = [await restored._privacy.repository.get(str(identifier), user_id=owner) for identifier in source_ids]
+            access = await runtime.protector.authority.grant("runtime",
+                tuple((record.evidence.context, record.snapshot) for record in records),
+                expires_at=runtime.clock() + timedelta(minutes=1))
+            with custody.unlocked((evidence.ref,), expires_at=runtime.clock() + timedelta(minutes=2)) as private:
+                runtime.protector.registry = public_registry(custody.path, private_wrapper=private)
+                try:
+                    after = await capture(restored, "after", access=access)
+                finally:
+                    runtime.protector.registry = public_registry(custody.path)
+        differences = {}
+        for query in FIXTURE["queries"]:
+            prior, current = before[query], after[query]
+            differences[query] = {
+                "before_result_ids": prior["result_ids"], "after_result_ids": current["result_ids"],
+                "before_packed_ids": prior["packed_ids"], "after_packed_ids": current["packed_ids"],
+                "before_availability": prior["response"]["metadata"].get("source_availability"),
+                "after_availability": current["response"]["metadata"].get("source_availability"),
+                "before_limitation": prior["response"]["metadata"].get("source_limitation"),
+                "after_limitation": current["response"]["metadata"].get("source_limitation"),
+                "context_diff": "".join(difflib.unified_diff(prior["context"].splitlines(True),
+                    current["context"].splitlines(True), fromfile="legacy-matched", tofile="standard-matched")),
+            }
+        (tmp_path / "standard-public-differences.json").write_text(json.dumps(differences, indent=2) + "\n")
+        for query, required in zip(FIXTURE["queries"], (direct, fact, survivor), strict=True):
+            prior, current = before[query], after[query]
+            assert current["result_ids"] == prior["result_ids"], query
+            assert current["packed_ids"] == prior["packed_ids"], query
+            assert current["context"].encode() == prior["context"].encode(), query
+            assert str(required.id) in current["result_ids"] and str(required.id) in current["packed_ids"]
+            assert all(text in current["context"] for text in source_contents)
+            prior_nodes = {item["node"]["id"]: item["node"] for item in prior["response"]["results"]}
+            for item in current["response"]["results"]:
+                node = item["node"]
+                for field in ("content", "user_id", "scope", "node_type", "epistemic_type", "source_type",
+                              "event_time", "valid_from", "valid_to", "evidence_refs"):
+                    assert node[field] == prior_nodes[node["id"]][field], (query, node["id"], field)
 
 
 @pytest.mark.parametrize("layout", ["directory", "pack", "postgres", "closed_fernet"])
