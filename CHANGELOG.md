@@ -61,6 +61,11 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
   and DuckDB with per entity caps, a new memory set with its gold graph, a new blind draw of 65
   questions and a gate fixed before the run (`benchmarks/graph_oracle/GATE.md`). The gate failed on
   two of six conditions; the result is in `BENCHMARKS.md`.
+- Scale test for the typed walk (`python -m benchmarks.graph_oracle scale`, tooling only; part of
+  dwamianm/prism#351): the four fixtures combined for one owner and padded to 500, 2,000 and 10,000
+  memories with ordinary conversation turns or renamed look-alike copies, a gate fixed before the run
+  (`benchmarks/graph_oracle/SCALE.md`), an embedding cache and the walk's latency on DuckDB and PostgreSQL.
+  The graph's advantage did not grow with store size; the result is in `BENCHMARKS.md`.
 - Add `enable_owner_window_extraction` (`PRME_ENABLE_OWNER_WINDOW_EXTRACTION`,
   off by default; dwamianm/prism#345 and #347): with `enable_windowed_extraction`,
   a turn with no `session_id` gets the owner's preceding memories in the same

@@ -424,6 +424,13 @@ def main(argv: list[str] | None = None) -> None:
     command = commands.add_parser("routed", help="The routing gate's run on the new blind draw (GATE.md)")
     command.add_argument("--out", type=Path, required=True)
     command.add_argument("--latency", type=Path, default=None, help="The PostgreSQL latency file for condition 6")
+    command = commands.add_parser("scale", help="The scale test (SCALE.md): padded stores, baseline and routed graph")
+    command.add_argument("--out", type=Path, required=True)
+    command.add_argument("--kinds", nargs="+", choices=("conversation", "lookalike"), default=["conversation", "lookalike"])
+    command.add_argument("--sizes", type=int, nargs="+", default=[500, 2000, 10000])
+    command.add_argument("--embedding-cache", type=Path, default=None, help="A file that keeps each text's vector")
+    command.add_argument("--database-url", default=None, help="PostgreSQL for the graph stores; DuckDB only without it")
+    command.add_argument("--no-resume", action="store_true", help="Build the text stores again even when their lists exist")
     command = commands.add_parser("latency", help="Time the typed walk on synthetic packs")
     command.add_argument("--out", type=Path, required=True)
     command.add_argument("--backend", choices=("duckdb", "postgres"), default="duckdb")
@@ -455,6 +462,15 @@ def main(argv: list[str] | None = None) -> None:
         report = asyncio.run(routed_run.run(args.out, latency=args.latency))
         print((args.out / "report.md").read_text())
         print(f"graph oracle routed: {report['seconds']}s, report in {args.out}", file=sys.stderr)
+        return
+    if args.command == "scale":
+        from benchmarks.graph_oracle import scale_run
+
+        backends = ("duckdb", "postgres") if args.database_url else ("duckdb",)
+        report = asyncio.run(scale_run.run(args.out, kinds=tuple(args.kinds), sizes=tuple(args.sizes), cache_path=args.embedding_cache,
+                                           database_url=args.database_url, backends=backends, resume=not args.no_resume))
+        print((args.out / "report.md").read_text())
+        print(f"graph oracle scale: {report['seconds']}s, report in {args.out}", file=sys.stderr)
         return
     if args.command == "latency":
         from benchmarks.graph_oracle import latency
