@@ -1611,3 +1611,87 @@ not become additional engine-only completion criteria. This coverage correction
 neither reruns nor passes the original failed migration comparison. Its three
 historical failed executions, two earlier comparison corrections and one earlier
 unsuccessful comparison cycle remain recorded, as do the two held #323 cycles.
+
+## Iteration 11: fixed-policy directory-to-encrypted-single-file comparison
+
+Original #326 validation requires saved standard retrieval before and after
+migration at a fixed clock before expiry; the original user story requires
+retaining usable memory. The released independent comparison is S to transformed
+S. It does not reinterpret the failed legacy-to-protected test or consume #327's
+once-only 24-query baseline. Own only `tests/test_privacy_migration.py`, this plan
+and PV-07-results; runtime remains exactly checkpoint `8d0817e8`.
+
+Exact new selector:
+`tests/test_privacy_migration.py::test_EM07_fixed_policy_directory_to_encrypted_pack_parity`.
+Reuse unchanged `migration-v1.json`, its tea/oranges/mornings queries and the full
+existing eight-node, three-source `mixed_legacy_family` with its default original
+source contents, provenance and historical records. No query/input rewrite or
+new cohort. Construct standard S with the real `migrate_privacy_pack` API and
+existing explicit history/visual disposition. Set the privacy/reference clock to
+the fixture clock and disable opportunistic maintenance before constructing the
+source. Retain the configured projection top-k of three from the existing
+standard comparison; keep its source cap and every other retrieval option.
+
+Before the first public result, save all admitted records, complete node values
+including semantic/lifecycle/clock fields, source-event identities/clocks,
+current store/ledger identity, immutable policy and complete configuration.
+Freeze one real runtime evidence grant for exactly the three source envelopes,
+including its selection, purpose and deadline; reuse that exact authority on
+both sides with the same custody and current independent ledger. Physical
+paths/encryption are the declared storage differences, not retrieval options.
+Explicitly compare these frozen semantic/input preconditions after source
+capture, in the actual protected export and before/after destination capture.
+Receipts may be newly written; admitted-state changes must fail instead of being
+masked or used as a later baseline.
+
+Capture the three public `MemoryEngine.retrieve` responses from the standard
+directory. Call `export_protected_pack`, then `restore_protected_export` into a
+new actual DuckDB-native-encrypted `.prme`, reopen it with the matching explicit
+policy/runtime and capture the same three calls. Require useful nonempty result
+and context controls, exact returned IDs/order, exact packed section IDs/order
+and complete rendered UTF-8 bytes. Preserve full responses, source/target
+preconditions and differences before assertions; do not sort/normalize public
+output, drop guidance, remap IDs, tune options or replace a failed query.
+
+Finite behavioral command: `.venv/bin/python -m pytest
+ tests/test_privacy_migration.py::test_EM07_fixed_policy_directory_to_encrypted_pack_parity
+ -q -x`. One case, six public calls maximum, through the existing evidence
+harness with a 180-second process deadline; interrupt once on timeout and allow
+at most ten seconds for settlement. First behavioral failure stops this
+checkpoint. Zero behavioral correction cycles or additional executions are
+released. Only affected Ruff/new-test formatting, JSON and diff checks follow;
+one static-only correction is permitted. Root reviews the exact three-file
+change and captured manifests/results before releasing commit/push.
+
+Historical counts remain three failed comparison executions, two prior public
+comparison corrections and one unsuccessful corrected comparison cycle; #323
+retains its two unsuccessful corrections. This particular fixed-policy S
+comparison has zero prior executions. It is not a reset for any recurring
+behavior. No held classifier/native-close repair, #327 capture, full suite,
+release or whole-issue completion is authorized.
+
+Iteration 11 result: one case passed on the first execution (8.76s pytest,
+10.395s wrapper), completing exactly six public retrieval calls within the
+180-second bound. Tea, oranges and mornings each returned six selected records
+and four packed records on both sides. Exact selected order, packed section order
+and context bytes matched (650, 619 and 676 UTF-8 bytes respectively). All frozen
+admission, node, event, policy/config and ledger preconditions remained equal
+after source reads/export and before/after target reads; the same finite grant
+was used. These are actual directory-to-native-encrypted-single-file observations.
+
+Affected Ruff passed before execution on the exact tested bytes, and new-test
+range formatting passed afterward. Root read the complete test and supported
+restore route without a behavioral finding. Nine raw artifacts, including the
+protected export and encrypted native pack, are retained under ignored
+`fixed-policy-directory-to-encrypted-pack/`; manifest SHA256 is
+`423aeaa4a45158a36e4befd7370c8e468b63a493d583a0b07cf9b5030c3ce826`.
+Final JSON/diff checks and exact three-file root evidence review precede delivery.
+
+No behavioral failure, repair or rerun occurred in this checkpoint. The three
+historical failed comparisons and prior correction counts remain unchanged;
+none of their assertions or saved outputs was edited. This proves one bounded
+fixed-policy storage edge, not legacy-to-protected equality, all layouts, the
+once-only #327 24-query gate, integrated52x2 scenarios or whole-issue acceptance.
+Required complete-revision suites/build/simulation/local-CI, reviews and normal
+delivery remain pending. Hosted-only recovery/managed backup obligations remain
+separate from these original engine gates.

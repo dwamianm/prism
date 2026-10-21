@@ -307,6 +307,300 @@ async def mixed_legacy_family(engine, runtime, owner, *, source_contents=None):
     return direct, fact, entity, generated, visual, survivor
 
 
+async def test_EM07_fixed_policy_directory_to_encrypted_pack_parity(
+    tmp_path, analyzer, native
+):
+    """Compare standard S across the real directory-to-encrypted-pack edge."""
+    from datetime import timedelta
+
+    from prme.privacy.local_keys import public_registry
+    from prme.privacy.portability import ExportEvent
+    from prme.storage.privacy_export import (
+        export_protected_pack,
+        read_protected_export,
+        restore_protected_export,
+    )
+
+    template, runtime, policy, custody, evidence, _ = await journal_engine(
+        tmp_path / "template", "directory", analyzer, evidence_use="runtime"
+    )
+    base = template._config.model_copy(
+        update={
+            "organizer": template._config.organizer.model_copy(
+                update={"opportunistic_enabled": False}
+            ),
+            "packing": template._config.packing.model_copy(
+                update={"evidence_projection_top_k": 3}
+            ),
+        }
+    )
+    await template.close()
+    runtime.clock.now = datetime.fromisoformat(FIXTURE["clock"])
+    runtime = replace(
+        runtime, retry_committer=NativeRetryCommitter(custody, clock=runtime.clock)
+    )
+    owner = str(policy.owner_id)
+    physical_fields = {
+        "db_path",
+        "vector_path",
+        "lexical_path",
+        "pack_path",
+        "encryption_enabled",
+        "encryption_key",
+    }
+
+    def write(name, value):
+        (tmp_path / name).write_text(json.dumps(value, indent=2) + "\n")
+
+    async with (
+        fresh_config(base, tmp_path / "legacy", "directory") as original,
+        fresh_config(base, tmp_path / "standard", "directory") as standard,
+        fresh_config(base, tmp_path / "encrypted", "pack") as encrypted,
+    ):
+        original = original.model_copy(update={"privacy_policy": None})
+        encrypted = type(encrypted).model_validate(
+            {
+                **encrypted.model_dump(),
+                "encryption_enabled": True,
+                "encryption_key": "passphrase:task-owned-fixed-policy-326",
+            }
+        )
+        assert standard.model_dump(exclude=physical_fields) == encrypted.model_dump(
+            exclude=physical_fields
+        )
+        async with MemoryEngine.open(
+            original, embedding_provider=runtime.embedder
+        ) as source:
+            (
+                direct,
+                fact,
+                entity,
+                generated,
+                visual,
+                survivor,
+            ) = await mixed_legacy_family(source, runtime, owner)
+            node_ids = {
+                str(node.id)
+                for node in (
+                    direct,
+                    fact,
+                    entity,
+                    *(item[0] for item in generated),
+                    survivor,
+                )
+            }
+            source_ids = {
+                direct.evidence_refs[0],
+                entity.evidence_refs[0],
+                survivor.evidence_refs[0],
+            }
+            assert len(node_ids) == 8 and len(source_ids) == 3
+        original_snapshot = await _read_snapshot(original)
+        job = tmp_path / "standard-seed-job"
+        result = await migrate_privacy_pack(
+            original,
+            standard,
+            privacy_runtime=runtime,
+            embedding_provider=runtime.embedder,
+            job_path=job,
+            unavailable_legacy_history=True,
+            remove_event_ids=() if visual is None else (visual.id,),
+            allow_reembedding=True,
+        )
+        assert result.state == "complete"
+        assert (
+            await _read_snapshot(original)
+        ).fingerprint == original_snapshot.fingerprint
+
+        async def semantic_state(memory):
+            records = await memory._privacy.repository._read("1=1", ())
+            nodes = await memory._graph_store.get_nodes(
+                sorted(node_ids), include_superseded=True
+            )
+            async with memory._privacy.erasure.repository.session() as session:
+                events = await session.fetch(
+                    "SELECT id,timestamp,role,user_id,session_id,scope,created_at,event_time "
+                    "FROM events ORDER BY id"
+                )
+            _, head = await memory._privacy.erasure.repository.state()
+            return {
+                "admissions": {
+                    str(record.event_id): record.model_dump(mode="json")
+                    for record in records
+                },
+                "nodes": {str(node.id): node.model_dump(mode="json") for node in nodes},
+                "events": {
+                    str(event.id): event.model_dump(mode="json")
+                    for event in (ExportEvent.model_validate(row) for row in events)
+                },
+                "ledger": head.model_dump(mode="json"),
+                "config": memory._config.model_dump(
+                    mode="json", exclude=physical_fields
+                ),
+            }
+
+        async def capture(memory, label, access):
+            saved = {}
+            for query, required in zip(
+                FIXTURE["queries"], FIXTURE["admitted"], strict=True
+            ):
+                response = await asyncio.wait_for(
+                    memory.retrieve(
+                        query,
+                        user_id=owner,
+                        scope=policy.scope,
+                        reference_time=runtime.clock(),
+                        include_cross_scope=False,
+                        source_access=access,
+                    ),
+                    20,
+                )
+                saved[query] = {
+                    "result_ids": [str(item.node.id) for item in response.results],
+                    "packed_sections": [
+                        [name, [str(item.node.id) for item in section]]
+                        for name, section in response.bundle.sections.items()
+                    ],
+                    "context": response.bundle.render(),
+                    "response": response.model_dump(mode="json"),
+                }
+                write(f"fixed-policy-{label}-retrieval.json", saved)
+                assert response.results and response.bundle.included_count
+                assert required in response.bundle.render()
+                assert not response.metadata.backend_failures
+                assert not response.metadata.embedding_mismatch
+            return saved
+
+        artifact = tmp_path / "standard-export.json"
+        with custody.unlocked(
+            (evidence.ref,), expires_at=runtime.clock() + timedelta(minutes=2)
+        ) as private:
+            runtime.protector.registry = public_registry(
+                custody.path, private_wrapper=private
+            )
+            try:
+                async with MemoryEngine.open(
+                    standard,
+                    privacy_runtime=runtime,
+                    embedding_provider=runtime.embedder,
+                ) as source:
+                    records = await source._privacy.repository._read("1=1", ())
+                    assert {record.event_id for record in records} == source_ids
+                    assert all(record.snapshot.policy == policy for record in records)
+                    assert all(
+                        record.snapshot.evidence_deadline > runtime.clock()
+                        for record in records
+                    )
+                    access = await runtime.protector.authority.grant(
+                        "runtime",
+                        tuple(
+                            (record.evidence.context, record.snapshot)
+                            for record in records
+                        ),
+                        expires_at=runtime.clock() + timedelta(minutes=1),
+                    )
+                    frozen = await semantic_state(source)
+                    assert set(frozen["nodes"]) == node_ids
+                    assert set(frozen["events"]) == set(frozen["admissions"])
+                    frozen_grant = access.model_dump(mode="json")
+                    write(
+                        "fixed-policy-frozen-inputs.json",
+                        {
+                            "fixture_sha256": hashlib.sha256(
+                                (
+                                    Path(__file__).parent
+                                    / "fixtures/privacy/migration-v1.json"
+                                ).read_bytes()
+                            ).hexdigest(),
+                            "queries": FIXTURE["queries"],
+                            "clock": runtime.clock().isoformat(),
+                            "source_state": frozen,
+                            "grant": frozen_grant,
+                            "source_config": standard.model_dump(mode="json"),
+                            "target_config": encrypted.model_dump(mode="json"),
+                        },
+                    )
+                    before = await capture(source, "before", access)
+                    source_after = await semantic_state(source)
+                    write("fixed-policy-source-after.json", source_after)
+                    assert source_after == frozen
+                    assert access.model_dump(mode="json") == frozen_grant
+                    await export_protected_pack(source, artifact)
+                    assert await semantic_state(source) == frozen
+
+                exported = read_protected_export(artifact)
+                assert {
+                    str(record.event_id): record.model_dump(mode="json")
+                    for record in exported.admissions
+                } == frozen["admissions"]
+                assert {
+                    str(node.id): node.model_dump(mode="json")
+                    for node in exported.nodes
+                } == frozen["nodes"]
+                assert {
+                    str(event.id): event.model_dump(mode="json")
+                    for event in exported.events
+                } == frozen["events"]
+                assert (
+                    exported.manifest.ledger_checkpoint.model_dump(mode="json")
+                    == frozen["ledger"]
+                )
+                restored = await restore_protected_export(
+                    artifact,
+                    encrypted,
+                    privacy_runtime=runtime,
+                    embedding_provider=runtime.embedder,
+                )
+                assert restored["state"] == "complete"
+                assert Path(encrypted.pack_path).is_file()
+                async with MemoryEngine.open(
+                    encrypted,
+                    privacy_runtime=runtime,
+                    embedding_provider=runtime.embedder,
+                ) as target:
+                    target_before = await semantic_state(target)
+                    write("fixed-policy-target-before.json", target_before)
+                    assert target_before == frozen
+                    assert (
+                        target._config.encryption_enabled and target._config.pack_path
+                    )
+                    assert access.model_dump(mode="json") == frozen_grant
+                    after = await capture(target, "after", access)
+                    target_after = await semantic_state(target)
+                    write("fixed-policy-target-after.json", target_after)
+                    assert target_after == frozen
+                    assert access.model_dump(mode="json") == frozen_grant
+            finally:
+                runtime.protector.registry = public_registry(custody.path)
+
+        differences = {
+            query: {
+                "before_result_ids": before[query]["result_ids"],
+                "after_result_ids": after[query]["result_ids"],
+                "before_packed_sections": before[query]["packed_sections"],
+                "after_packed_sections": after[query]["packed_sections"],
+                "context_diff": "".join(
+                    difflib.unified_diff(
+                        before[query]["context"].splitlines(True),
+                        after[query]["context"].splitlines(True),
+                        fromfile="standard-directory",
+                        tofile="standard-encrypted-pack",
+                    )
+                ),
+            }
+            for query in FIXTURE["queries"]
+        }
+        write("fixed-policy-differences.json", differences)
+        for query in FIXTURE["queries"]:
+            assert after[query]["result_ids"] == before[query]["result_ids"], query
+            assert (
+                after[query]["packed_sections"] == before[query]["packed_sections"]
+            ), query
+            assert after[query]["context"].encode("utf-8") == before[query][
+                "context"
+            ].encode("utf-8"), query
+
+
 @pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
 async def test_EM07_standard_matched_input_migration_parity(tmp_path, layout, analyzer, native):
     """Direct conversion control; legacy has no literal saved privacy policy."""

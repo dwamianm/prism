@@ -2312,6 +2312,65 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T034212524802-protected-projection-static-source.json",
       "source_manifest_sha256": "48c6501368866ff4368f88692187878022810e7e993f4b469c027f7d7d237dca",
       "tracked_diff_sha256": "0143e3732c7c5f8f1eaab1b56698c270a76da947fef5fbce8c65a98e8d02fa69"
+    },
+    {
+      "name": "fixed-policy-preflight-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-21T04:50:39.488395+00:00",
+      "elapsed_seconds": 0.146,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T045039488395-fixed-policy-preflight-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "8d0817e8385725b62f8cc6daa05c008af491209a",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T045039488395-fixed-policy-preflight-static-source.json",
+      "source_manifest_sha256": "6263c6e0e28623d651342a62babef4c0c9271d83be435f9801eb97ea09cb517a",
+      "tracked_diff_sha256": "a48792c9990e12fc27fea931c76b03ab06aa2aa2963cb2674c0bc7cea7b7abd9"
+    },
+    {
+      "name": "fixed-policy-directory-to-encrypted-pack",
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,signal,subprocess,sys\np=subprocess.Popen(sys.argv[1:],start_new_session=True)\ntry:\n code=p.wait(timeout=180)\nexcept subprocess.TimeoutExpired:\n print(\"CASE DEADLINE: interrupting owned pytest process group after 180 seconds\",flush=True)\n os.killpg(p.pid,signal.SIGINT)\n try:\n  code=p.wait(timeout=10)\n except subprocess.TimeoutExpired:\n  os.killpg(p.pid,signal.SIGKILL)\n  p.wait()\n code=124\nsys.exit(code)",
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_migration.py::test_EM07_fixed_policy_directory_to_encrypted_pack_parity",
+        "-q",
+        "-x"
+      ],
+      "started_at": "2026-10-21T04:50:56.657238+00:00",
+      "elapsed_seconds": 10.395,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T045056657238-fixed-policy-directory-to-encrypted-pack.log",
+      "log_sha256": "9ed7e0b9c61958251bd153abf191cee164c643ee3b50d8782dcc76f05aff748b",
+      "head": "8d0817e8385725b62f8cc6daa05c008af491209a",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T045056657238-fixed-policy-directory-to-encrypted-pack-source.json",
+      "source_manifest_sha256": "6263c6e0e28623d651342a62babef4c0c9271d83be435f9801eb97ea09cb517a",
+      "tracked_diff_sha256": "a48792c9990e12fc27fea931c76b03ab06aa2aa2963cb2674c0bc7cea7b7abd9"
+    },
+    {
+      "name": "fixed-policy-format",
+      "command": [
+        ".venv/bin/ruff",
+        "format",
+        "--check",
+        "--range=310-602",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-21T04:51:31.338531+00:00",
+      "elapsed_seconds": 0.165,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T045131338531-fixed-policy-format.log",
+      "log_sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50",
+      "head": "8d0817e8385725b62f8cc6daa05c008af491209a",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T045131338531-fixed-policy-format-source.json",
+      "source_manifest_sha256": "6263c6e0e28623d651342a62babef4c0c9271d83be435f9801eb97ea09cb517a",
+      "tracked_diff_sha256": "a48792c9990e12fc27fea931c76b03ab06aa2aa2963cb2674c0bc7cea7b7abd9"
     }
   ],
   "repair_cycles": {
@@ -2461,6 +2520,21 @@
       "held_323_unsuccessful_corrections": 2,
       "counts_reset": false,
       "state": "Conservative complete-dependency projection component passed. Original configured comparison remains failed and was neither edited nor rerun; full parity remains unproven."
+    },
+    "fixed_policy_directory_to_encrypted_pack": {
+      "executions": 1,
+      "public_retrieve_calls": 6,
+      "passed": 1,
+      "failed": 0,
+      "corrections_attempted": 0,
+      "unsuccessful_fix_validation_cycles": 0,
+      "behavioral_corrections_authorized": 0,
+      "historical_failed_comparisons": 3,
+      "prior_public_comparison_corrections": 2,
+      "prior_unsuccessful_comparison_cycles": 1,
+      "held_323_unsuccessful_corrections": 2,
+      "counts_reset": false,
+      "state": "Independent fixed-policy S-to-transformed-S storage edge passed once. Historical legacy-to-protected comparison remains failed, unchanged and not rerun. No whole #327 baseline or parity completion."
     }
   },
   "held_dependencies": [
@@ -2991,7 +3065,7 @@
     }
   },
   "remaining_original_work": [
-    "Configured standard matched-input migration comparison (projection_top_k=3) failed directory after six public calls; pack/PostgreSQL unrun. Source lifecycle changes before close remain a limitation. Literal same-policy storage and #327 frozen24 parity/sealed24 gates remain mandatory.",
+    "Historical configured legacy-to-standard comparison (projection_top_k=3) remains failed with three preserved failed executions and unchanged assertions. Independent fixed-policy S directory-to-encrypted-pack comparison passed one case/six calls; original #327 fixed24 storage/encryption parity and sealed24 gates remain mandatory and unrun.",
     "ER08 engine archive/framework-clear, explicit migration, retained native backup/operator export and truthful unmanaged-copy status components passed all three layouts. Remaining original engine erasure/shared integration requirements retain their own evidence; unmanaged copies are not erased.",
     "Remaining original engine EM01-EM08/shared harness closure, held #323 classifier/native strategies, and required final full suite/package/simulation/authorized local CI/review/PR/normal delivery remain mandatory. Hosted HTTP/MCP recovery composition, managed backup expiry, UI and cloud deployment are separate handoffs, not engine completion prerequisites."
   ],
@@ -3035,8 +3109,9 @@
     },
     "EM07": {
       "reuse": "Verified direct4/mixed4, original legacy identity, interruptions, typed unavailable history, source preservation, historical reader34 paired outcomes and source8 controls.",
-      "pending": "Fixed-clock standard public parity and full scenario closure remain held; no component pass substitutes.",
-      "public_iteration4": "Four-layout same original mixed queries now prove legacy-to-sealed admitted-memory usability; exact observed differences retained. Standard same-policy parity remains unproven."
+      "pending": "One original fixed-policy directory-to-encrypted-single-file three-query component passed. Full frozen #327 storage/encryption comparison and original scenario closure remain pending; historical legacy-to-protected comparison remains failed.",
+      "public_iteration4": "Four-layout same original mixed queries now prove legacy-to-sealed admitted-memory usability; exact observed differences retained. Standard same-policy parity remains unproven.",
+      "fixed_policy_iteration11": "1 passed, six public calls, immutable S preserved through actual export/encrypted-pack restore; exact selected order, packed section order and rendered context equality. No once-only #327 baseline capture."
     },
     "EM08": {
       "reuse": "Verified default/active export, CLI migration/restore, directory-to-single-file and three-layout current-ledger negatives/native-copy positives.",
@@ -3068,8 +3143,8 @@
           "AC2",
           "AC5"
         ],
-        "remaining": "Configured standard matched-input migration comparison (projection_top_k=3) failed directory after six public calls; pack/PostgreSQL unrun. Source lifecycle changes before close remain a limitation. Literal same-policy storage and #327 frozen24 parity/sealed24 gates remain mandatory.",
-        "dependency": "Zero correction budget in iteration6; no further comparison repair/rerun authorized. Literal policy equality cannot be asserted for policy-less legacy v1."
+        "remaining": "Historical configured legacy-to-standard comparison (projection_top_k=3) remains failed with three preserved failed executions and unchanged assertions. Independent fixed-policy S directory-to-encrypted-pack comparison passed one case/six calls; original #327 fixed24 storage/encryption parity and sealed24 gates remain mandatory and unrun.",
+        "dependency": "The successful fixed-policy storage component does not replace the historical policy-mismatched test or consume #327 baseline. Full frozen shared validation requires verified dependencies; no held repair is approved."
       },
       {
         "criteria": [
@@ -3090,7 +3165,7 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Commit/push the four-file conservative projection checkpoint after affected static checks, then stop this finite iteration. Original failed comparison, fixed-policy parity and final engine integration/delivery remain open; no additional repair, rerun, full suite or PR is authorized by this checkpoint.",
+    "next_action": "Finish final scoped JSON/diff evidence and exact three-file root review, then commit/push only upon root delivery release. No behavioral rerun, additional layout, full-suite claim or issue closure.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
@@ -3110,7 +3185,8 @@
       "eligible_restored_work": "Iteration5: three original layout parameters passed on first executions; actual process_extractions claims the untouched second job, publishes a real plan/receipt, and returns public packed memory. Consumed first job explicitly cancelled; original no-send/expiry arm unchanged.",
       "ER08": "Iteration7: three engine layout passes plus four direct migration regressions; two initial/correction failures preserved. Explicit known framework-history disposition and archived retention.",
       "AC1_session_reporting": "Iteration8: directory, pack and PostgreSQL passed first executions; dry-run names unsupported legacy sessions without values, rewrites or protected label. Historical ER08 failure and named-session migration limitation remain preserved.",
-      "protected_projection_coverage": "Iteration10: one actual-directory multi-source case plus five existing selectors passed on first executions. Capped/missing/filtered sources preserve eligible admitted memory; full authorized coverage still projects. No parity completion claim."
+      "protected_projection_coverage": "Iteration10: one actual-directory multi-source case plus five existing selectors passed on first executions. Capped/missing/filtered sources preserve eligible admitted memory; full authorized coverage still projects. No parity completion claim.",
+      "fixed_policy_migration": "Iteration11: exact standard S directory-to-encrypted .prme saved retrieval equality passed for the three original queries, six public calls; full frozen input/state/config/grant preconditions held. No runtime change, correction or #327 baseline."
     },
     "separate_hosted_handoffs": [
       {
@@ -4145,5 +4221,59 @@
     "review": "Root reviewed the exact runtime/test diff, found no source finding and authorized reuse of that review before final documentation/commit.",
     "limit": "This repairs the demonstrated incomplete protected source-substitution loss only. No changed failed comparison/assertions, full migration parity, held classifier correction, whole-case pass or issue completion is claimed.",
     "dependency_boundary_correction": "Root original-dependency-boundary-audit.json distinguishes engine current-ledger/fence/restore and local integration contracts from separate hosted HTTP/MCP composition, managed backup expiry, UI and cloud deployment. Historical failures/evidence remain unchanged; engine not_managed never proves hosted backup completion."
+  },
+  "fixed_policy_migration_iteration11": {
+    "base": "8d0817e8385725b62f8cc6daa05c008af491209a",
+    "original_requirement": "#326 saved standard retrieval before/after migration at a fixed clock before expiry, with admitted input and policy held constant. Original usable-memory requirement; not a new benchmark.",
+    "selector": "tests/test_privacy_migration.py::test_EM07_fixed_policy_directory_to_encrypted_pack_parity",
+    "fixture": "Unchanged migration-v1.json and full default mixed_legacy_family: eight nodes, three source events, original source content/provenance/history; tea/oranges/mornings queries. Real explicit migration constructs standard S before any query result.",
+    "preconditions": "Opportunistic maintenance disabled before construction; original configured projection top-k three and source cap unchanged; fixed privacy/reference clock. Full admission envelopes, all node semantic/lifecycle/clock fields, event identities/clocks, current ledger identity and all nonphysical config equal before/after capture/export/restore. Same actual finite runtime grant, selection, purpose and deadline used on both sides.",
+    "transformation": "Actual protected directory -> export_protected_pack -> restore_protected_export into DuckDB-native-encrypted .prme -> reopen. No reingestion, ID remapping, private-key export, same-layout substitute or post-hoc state edits.",
+    "result": "1 passed in8.76s pytest/10.395s wrapper on the first execution. Six public retrieval calls; exact selected IDs/order, packed section IDs/order and rendered UTF-8 bytes equal, with useful nonempty controls and no reported primary-backend failures.",
+    "observations": [
+      {
+        "query": "tea",
+        "selected_before": 6,
+        "selected_after": 6,
+        "packed_before": 4,
+        "packed_after": 4,
+        "context_bytes_before": 650,
+        "context_bytes_after": 650
+      },
+      {
+        "query": "oranges",
+        "selected_before": 6,
+        "selected_after": 6,
+        "packed_before": 4,
+        "packed_after": 4,
+        "context_bytes_before": 619,
+        "context_bytes_after": 619
+      },
+      {
+        "query": "mornings",
+        "selected_before": 6,
+        "selected_after": 6,
+        "packed_before": 4,
+        "packed_after": 4,
+        "context_bytes_before": 676,
+        "context_bytes_after": 676
+      }
+    ],
+    "budget": "One actual case, six public calls,180s timeout plus10s settlement; finished within budget with no timeout, failure or correction.",
+    "evidence_names": [
+      "fixed-policy-preflight-static",
+      "fixed-policy-directory-to-encrypted-pack",
+      "fixed-policy-format"
+    ],
+    "artifact_manifest": {
+      "path": ".github-ticket-loop/privacy-326/fixed-policy-directory-to-encrypted-pack/manifest.json",
+      "sha256": "423aeaa4a45158a36e4befd7370c8e468b63a493d583a0b07cf9b5030c3ce826",
+      "artifacts": 9,
+      "contents": "Complete frozen inputs, six raw public responses, source/target state snapshots, exact differences, protected export and encrypted native pack; copied after the run with original paths/time recorded."
+    },
+    "runtime_change": false,
+    "test_sha256": "52b7537f66c9c079411979ca3941901cc391095ccb9ee3d52928b082b4cdbae4",
+    "source_review": "Root read the complete new test and existing restore route without a behavioral finding; final three-file evidence review pending before commit.",
+    "limits": "One original three-query directory-to-encrypted-pack component only. Historical unmatched comparison is still failed; original #327 fixed24 storage/encryption comparison, integrated52x2 scenarios and final engine checks/reviews/delivery remain pending. No #327 baseline was consumed."
   }
 }
