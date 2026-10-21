@@ -155,6 +155,269 @@ async def _copied_rows(config):
         return [conn.execute(sql).fetchall() for sql in statements]
 
 
+def _er08_engine_factory():
+    raise AssertionError("explicit task-owned engine factory required")
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_ER08_archive_clear_retained_copies(tmp_path, layout, analyzer, native, monkeypatch, capsys):
+    """Actual framework clears, explicit migration, live purge and retained copies."""
+    import copy
+    import sys
+    import structlog
+    from langchain_core.messages import HumanMessage
+    from llama_index.core.base.llms.types import ChatMessage
+    from prme.cli import build_parser
+    from prme.integrations.langchain import PRMEChatMessageHistory
+    from prme.integrations.llamaindex import PRMEChatStore
+    from prme.privacy.cli import erasure_command
+    from prme.privacy.local_keys import public_registry
+    from prme.privacy.retry_commitments import NativeRetryCommitter
+    from prme.storage.privacy_export import read_protected_export
+    from prme.storage.privacy_migration import inspect_privacy_migration, migrate_privacy_pack, _read_snapshot
+
+    monkeypatch.setattr(structlog._config._CONFIG, "logger_factory", structlog.PrintLoggerFactory(file=sys.stderr))
+    template, runtime, policy, custody, evidence, _ = await journal_engine(tmp_path / "template", "directory", analyzer)
+    base = template._config
+    await template.close()
+    runtime = replace(runtime, key_custody=custody,
+        retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    owner, scope = str(policy.owner_id), policy.scope
+    langchain_session, llamaindex_session = str(uuid4()), str(uuid4())
+    async with fresh_config(base, tmp_path / "legacy", layout) as original, fresh_config(base, tmp_path / "migrated", layout, restore=True) as target:
+        original = original.model_copy(update={"privacy_policy": None})
+        source = await MemoryEngine.create(original, embedding_provider=runtime.embedder)
+        try:
+            archived_event = await source.store("Mara likes tea.", user_id=owner, metadata={"kept": "archive metadata"})
+            [archived_node] = await source.get_event_nodes(archived_event, user_id=owner)
+            await source.archive(str(archived_node.id), user_id=owner)
+            assert (await source.get_node(str(archived_node.id), user_id=owner, include_superseded=True)).lifecycle_state.value == "archived"
+            assert (await source.get_events(owner))[0].content == "Mara likes tea."
+        finally:
+            await source.close()
+
+        def write_and_clear():
+            history = PRMEChatMessageHistory(config=original, embedding_provider=runtime.embedder,
+                user_id=owner, session_id=langchain_session, scope=scope)
+            try:
+                history.add_messages([HumanMessage(content="Hello")])
+                [message] = history._client.get_events(owner, session_id=langchain_session)
+                assert history.messages[0].content == "Hello"
+                history.clear()
+                assert history.messages == []
+                retained = history._client.get_events(owner, session_id=langchain_session)
+                assert len(retained) == 2 and message in retained
+                assert all(event.content_hash for event in retained)
+            finally:
+                history.close()
+            store = PRMEChatStore(config=original, embedding_provider=runtime.embedder, scope=scope)
+            key = owner + ":" + llamaindex_session
+            try:
+                store.add_message(key, ChatMessage(role="user", content="one"))
+                store.add_message(key, ChatMessage(role="assistant", content="two"))
+                before = store._client.get_events(owner, session_id=llamaindex_session)
+                assert [item.content for item in store.delete_messages(key)] == ["one", "two"]
+                assert store.get_messages(key) == [] and key not in store.get_keys()
+                retained = store._client.get_events(owner, session_id=llamaindex_session)
+                assert len(retained) == 3 and all(event in retained for event in before)
+            finally:
+                store.close()
+            return message.metadata
+        message_metadata = await asyncio.to_thread(write_and_clear)
+        before = await _read_snapshot(original)
+        assert len(before.tables["events"]) == 6 and len(before.tables["nodes"]) == 4
+        expected = {str(row["id"]): row["content"] for row in before.tables["events"] if row["content"]}
+        assert set(expected.values()) == {"Mara likes tea.", "Hello", "one", "two"}
+        control_ids = {str(row["id"]) for row in before.tables["events"] if not row["content"]}
+        assert len(control_ids) == 2
+        original_path = Path(original.pack_path or original.db_path).parent if layout == "directory" else Path(original.pack_path or original.db_path)
+        original_hashes = _hashes(original_path) if layout != "postgres" else None
+        plan = await inspect_privacy_migration(original, policy=policy)
+        assert {"lossless_framework_history_requires_explicit_disposition",
+            "legacy_chat_controls_require_explicit_disposition"} <= set(plan.unavailable_features)
+        assert plan.retained_copies and plan.legacy_plaintext_present and not plan.protected
+        assert "Hello" not in plan.model_dump_json() and "archive metadata" not in plan.model_dump_json()
+
+        async def unpublished(job):
+            assert not job.exists()
+            if layout == "postgres":
+                import asyncpg
+                conn = await asyncpg.connect(target.database_url.get_secret_value())
+                try:
+                    assert not await conn.fetch("SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema()")
+                finally:
+                    await conn.close()
+            else:
+                assert not Path(target.pack_path or target.db_path).exists()
+        job = tmp_path / "default-refused"
+        with pytest.raises(PrivacyPortabilityError, match="^privacy_legacy_unclassified$"):
+            await migrate_privacy_pack(original, target, privacy_runtime=runtime, embedding_provider=runtime.embedder, job_path=job)
+        await unpublished(job)
+
+        # These are the fixed ER08 negative subchecks, each an actual legacy
+        # source/journal. The successful source artifact is never patched.
+        for variant in ("message_version", "message_format", "message_shape", "control_shape", "foreign_control"):
+            async with fresh_config(base, tmp_path / variant, layout) as invalid:
+                invalid = invalid.model_copy(update={"privacy_policy": None})
+                source = await MemoryEngine.create(invalid, embedding_provider=runtime.embedder)
+                try:
+                    if variant.startswith("message"):
+                        metadata = copy.deepcopy(message_metadata)
+                        envelope = metadata["_prme_chat_message"]
+                        if variant == "message_version":
+                            envelope["version"] = 2
+                        elif variant == "message_format":
+                            envelope["format"] = "unknown-v1"
+                        else:
+                            envelope["message"] = []
+                        await source.store("Hello", user_id=owner, metadata=metadata)
+                    else:
+                        control_session = str(uuid4())
+                        foreign = await source.store("Hello", user_id=str(uuid4()), session_id=control_session)
+                        await source._append_control_event("", user_id=owner, session_id=control_session, scope=scope,
+                            metadata={"_prme_chat_history_control": {"version": 1, "operation": "delete",
+                                "target_event_id": "invalid" if variant == "control_shape" else foreign}})
+                finally:
+                    await source.close()
+                job = tmp_path / (variant + "-refused")
+                with pytest.raises(PrivacyPortabilityError, match="^privacy_legacy_unclassified$"):
+                    await migrate_privacy_pack(invalid, target, privacy_runtime=runtime, embedding_provider=runtime.embedder,
+                        job_path=job, unavailable_legacy_history=True)
+                await unpublished(job)
+
+        migrated = await migrate_privacy_pack(original, target, privacy_runtime=runtime, embedding_provider=runtime.embedder,
+            job_path=tmp_path / "migration-job", unavailable_legacy_history=True)
+        assert migrated.state == "complete" and migrated.completed == 6
+        assert (await _read_snapshot(original)).fingerprint == before.fingerprint
+        if original_hashes is not None:
+            assert _hashes(original_path) == original_hashes
+        engine = await MemoryEngine.create(target, embedding_provider=runtime.embedder, privacy_runtime=runtime)
+        artifact = tmp_path / "retained-operator-export.json"
+        try:
+            with pytest.raises(PrivacyDenied, match="^privacy_unsupported_input$"):
+                await engine.require_legacy_history(user_id=owner)
+            records = [await engine._privacy.repository.get(identifier, user_id=owner) for identifier in expected]
+            expiry = runtime.clock() + timedelta(minutes=1)
+            with ExitStack() as private, monkeypatch.context() as selected:
+                async with engine._privacy.guard(records[0].snapshot, "disclosure", records=tuple(records), purpose="evidence"):
+                    grant = await runtime.protector.authority.grant("diagnostic",
+                        tuple((record.evidence.context, record.snapshot) for record in records), expires_at=expiry)
+                    wrapper = private.enter_context(custody.unlocked((evidence.ref,), expires_at=expiry))
+                selected.setattr(runtime.protector, "registry", public_registry(custody.path, private_wrapper=wrapper))
+                for identifier, content in expected.items():
+                    assert (await engine.inspect_source(identifier, user_id=owner)).state == "sealed"
+                    view = await engine.read_source(identifier, user_id=owner, scope=scope, access=grant)
+                    assert str(view.event_id) == identifier and view.content == content
+                    record = next(value for value in records if str(value.event_id) == identifier)
+                    def selected_guard():
+                        return engine._privacy.guard(record.snapshot, "disclosure", records=(record,), purpose="evidence")
+                    async with runtime.protector.open_held(record.evidence, grant,
+                            original_snapshot=record.snapshot, guard=selected_guard) as plaintext:
+                        fields = json.loads(plaintext)
+                        original_row = next(row for row in before.tables["events"] if str(row["id"]) == identifier)
+                        metadata = original_row["metadata"]
+                        metadata = json.loads(metadata) if isinstance(metadata, str) else metadata
+                        retained_metadata = {key: value for key, value in (metadata or {}).items()
+                            if key not in {"_prme_chat_message", "_prme_chat_history_control"}}
+                        assert fields["metadata"] == retained_metadata
+                        if identifier == archived_event:
+                            assert fields["metadata"]["kept"] == "archive metadata"
+            await export_protected_pack(engine, artifact)
+            bundle = read_protected_export(artifact)
+            assert "lossless_framework_history" in bundle.manifest.omitted
+            assert {str(event.id) for event in bundle.events} == set(expected) | control_ids
+            assert {str(node.id) for node in bundle.nodes} == {str(row["id"]) for row in before.tables["nodes"]}
+            assert {node.content for node in bundle.nodes} == set(expected.values())
+            archived = next(node for node in bundle.nodes if node.id == archived_node.id)
+            assert archived.lifecycle_state.value == "archived"
+            assert archived.id not in {value.node_id for value in bundle.embeddings}
+            if layout == "postgres":
+                [row] = await engine._privacy.repository._query("SELECT embedding FROM nodes WHERE id=?", (str(archived.id),))
+                assert row[0] is None
+            else:
+                assert not await engine._privacy.repository._query(
+                    "SELECT vector_key FROM vector_metadata WHERE node_id=?", (str(archived.id),))
+            assert all(not {"_prme_chat_message", "_prme_chat_history_control"}.intersection(node.metadata or {}) for node in bundle.nodes)
+            original_operations = {str(row["id"]) for row in before.tables["operations"]}
+            assert {str(row.id) for row in bundle.unavailable_history} == original_operations
+            assert not control_ids.intersection(str(row.id) for row in bundle.unavailable_history)
+            assert all(record.evidence is not None for record in bundle.admissions)
+            assert b"PRIVATE KEY" not in artifact.read_bytes()
+        finally:
+            await engine.close()
+        artifact_hash = _hashes(artifact)
+
+        # Closed native backup is deliberately retained outside the current
+        # ledger domain. No restore or physical media deletion is claimed here.
+        backup = tmp_path / "retained-native-backup"
+        if layout == "postgres":
+            url = target.database_url.get_secret_value()
+            schema = dict(parse_qsl(urlsplit(url).query))["search_path"]
+            assert re.fullmatch(r"pv326_[0-9a-f]{32}", schema)
+            await _pg_tool(["pg_dump", "--no-owner", "--no-acl", "--inserts", "--schema", schema,
+                "--file", str(backup)], _pg_environment(url, "privacy_engine_326_restore"))
+            native_rows = backup.read_bytes()
+            assert all(identifier.encode() in native_rows for identifier in expected)
+            assert all(content.encode() in native_rows for content in expected.values())
+        else:
+            backup_config = _local_target(target, backup, single=layout == "pack")
+            source_path = Path(target.pack_path) if layout == "pack" else Path(target.db_path).parent
+            backup = Path(backup_config.pack_path) if layout == "pack" else backup
+            if layout == "pack":
+                shutil.copy2(source_path, backup)
+            else:
+                shutil.copytree(source_path, backup)
+            native_rows = await _copied_rows(backup_config)
+            assert all(identifier in repr(native_rows) for identifier in expected)
+            assert all(content in repr(native_rows) for content in expected.values())
+        backup_hashes = _hashes(backup)
+        assert backup_hashes
+        request = ErasureRequest(request_id=uuid4(), event_ids=tuple(map(UUID, expected)), scope=scope)
+        opened = []
+        async def fresh():
+            value = await MemoryEngine.create(target, embedding_provider=runtime.embedder, privacy_runtime=runtime)
+            opened.append(value)
+            return value
+        monkeypatch.setattr("tests.test_privacy_restore._er08_engine_factory", fresh)
+        engine = await fresh()
+        try:
+            assert (await engine.request_erasure(request, user_id=owner)).state == "blocked_from_access"
+            assert (await engine.get_erasure_status(request.request_id, user_id=owner)).logical_live_copies == "pending"
+        finally:
+            await engine.close()
+        cli = ["--owner", owner, "--engine-factory", "tests.test_privacy_restore:_er08_engine_factory"]
+        capsys.readouterr()
+        await erasure_command(build_parser().parse_args(["privacy", "status", *cli, "--request", str(request.request_id)]))
+        assert json.loads(capsys.readouterr().out)["state"] == "blocked_from_access"
+        await erasure_command(build_parser().parse_args(["privacy", "purge", *cli, "--budget-ms", "60000"]))
+        [purged] = json.loads(capsys.readouterr().out)
+        assert purged["state"] == "live_purged" and purged["logical_live_copies"] == "purged"
+        assert purged["backup_copies"] == purged["external_copies"] == "not_managed"
+        assert purged["failure"] is None and not purged["physical_wipe"]
+        engine = await fresh()
+        try:
+            status = await engine.get_erasure_status(request.request_id, user_id=owner)
+            assert status.model_dump(mode="json") == purged
+            for identifier in expected:
+                with pytest.raises(PrivacyDenied):
+                    await engine.read_source(identifier, user_id=owner, scope=scope, access=grant)
+            assert not await engine._privacy.repository._query("SELECT id FROM nodes", ())
+        finally:
+            await engine.close()
+        assert all(value._closed for value in opened)
+        assert _hashes(artifact) == artifact_hash and read_protected_export(artifact) == bundle
+        assert _hashes(backup) == backup_hashes
+        assert (backup.read_bytes() if layout == "postgres" else await _copied_rows(backup_config)) == native_rows
+        assert (await _read_snapshot(original)).fingerprint == before.fingerprint
+        if original_hashes is not None:
+            assert _hashes(original_path) == original_hashes
+        (tmp_path / "ER08-evidence.json").write_text(json.dumps({"layout": layout,
+            "source_fingerprint": before.fingerprint, "events": len(before.tables["events"]), "nodes": len(before.tables["nodes"]),
+            "erased_events": sorted(expected), "retained_controls": sorted(control_ids), "status": purged,
+            "backup_hashes": backup_hashes, "operator_export_hashes": artifact_hash,
+            "unavailable_features": plan.unavailable_features, "omitted": bundle.manifest.omitted}, indent=2) + "\n")
+
+
 async def _assert_survivor(engine, owner, erased_id, survivor_id, survives, evidence, *,
                            retrieve=None, unavailable_ids=()):
     assert await engine._graph_store.get_node(erased_id, include_superseded=True) is None

@@ -1373,3 +1373,105 @@ also identified original ER08 archive/chat-clear versus retained backup/export
 behavior as a potentially independent next action; no ER08 code/run is included
 here, and it is not automatically blocked by #323. Full original acceptance,
 held dependency reconciliation and final validation/review/delivery remain open.
+
+## Iteration 7: original ER08 archive, clear and retained copies
+
+Root released the reviewed ER08 disposition on clean eb97166. Done is bounded
+to original AC1/AC4/AC6 and the engine portion of frozen ER08: actual archive,
+LangChain message writes/clear and LlamaIndex message writes/delete_messages in
+legacy mode retain source events; explicit migration preserves source identities
+and artifacts while naming unavailable framework history; real scoped erasure
+and engine/CLI status report live purge with retained native backup/export.
+Engine `not_managed` does not prove hosted #283 managed backup expiry/completion.
+
+Owned runtime is only `storage/privacy_migration.py` and `privacy_export.py`.
+Recognize version-1 `langchain-v1` text-message envelopes, `llamaindex-v1` text
+blocks and version-1 clear/delete controls under their exact known metadata keys.
+Unknown, malformed, nonfinite or cross-boundary control inputs refuse. Dry-run
+uses existing unavailable-feature fields. Original event, direct journal and
+node validation completes before explicit `unavailable_legacy_history` projects
+only known history metadata out of destination admissions; other metadata,
+contents, IDs, source checksums and source artifacts remain. No default change,
+admission bypass, invented operation view for controls or protected raw-history
+support. Newly generated manifests name `lossless_framework_history`; old
+artifact acceptance is unchanged.
+
+Owned test is `test_privacy_restore.py::test_ER08_archive_clear_retained_copies`,
+directory first then pack/PostgreSQL once on success. Its fixed subchecks are
+default refusal, unknown message version/format, malformed known envelope, and
+malformed/cross-boundary delete control refusal before publication. Reuse real
+framework messages from their existing clear tests, existing real journal/
+migration/export/CLI/copy harnesses and assigned fixture databases. Real archive
+plus one LangChain message and two LlamaIndex messages produce four retained
+memory sources and two clear controls; positive evidence is recorded before
+erasure. No plain-event surrogate for serialized messages. Retained copies are
+checked by hashes and actual positive rows/payloads, not empty marker scans.
+
+Only after ER08 passes, run the existing
+`test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure`
+on directory, pack, PostgreSQL and closed_fernet once: shared decoder regression,
+seven initial case/layout executions total. Then affected Ruff, JSON and diff
+checks, no new verifier or broad cohort. Preserve pre-run source manifests and
+all failures. At most two unsuccessful repair cycles for the same ER08 behavior;
+prior counters remain. The failed configured standard projection test, its
+captures and all held #323/#280/#283 strategies are untouched and unrun.
+
+Initial ER08 directory execution failed (7.19s pytest, 8.775s wrapper), after
+actual archive, both framework clears, dry-run and all six refusal subchecks.
+The shared migration helper required a vector for an archived retained node;
+actual archive had correctly evicted it. The failure and exact source manifest
+are retained. A proposed first correction preserves the validated archived node
+without recreating an embedding, consistent with existing export validation and
+active-only native rebuild. Remaining layouts/regressions were not run. Source
+inspection also found unreached fixture type/placement mistakes: parsed export
+nodes are models, and ordinary custom metadata is retained in sanitized evidence
+but not the existing closed direct-node projection. The original fixture input
+and assertions of content/identity/lifecycle preservation must remain.
+
+Root approved the first correction after checking the affected vector/export
+seams. `_event_nodes` now retains already validated ARCHIVED nodes without
+reconstructing/re-embedding their native vectors; other lifecycles still require
+their original vector material. The same ER08 case asserts absence from exported
+embeddings and the actual target vector rows. Unreached fixture assertions now
+use MemoryNode attributes and prove arbitrary retained metadata by real selected
+decryption of sanitized source, leaving its input and node content/lifecycle/ID
+assertions intact. First correction attempt: rerun directory only, then remaining
+two layouts and the four named regressions only on success.
+
+First correction validation failed at the existing protected admission requirement
+that session IDs be UUIDs (4.54s pytest, 5.705s wrapper). The newly written fixture
+had used descriptive session strings. This is not an archive/migration pass, nor
+permission to rewrite historical sessions. Second correction is test-only:
+create both real adapter histories with opaque UUID sessions from the outset,
+and keep those exact IDs through migration; the foreign-control negative also
+uses a valid UUID session so its owner violation is isolated. Messages, counts,
+archive behavior and every content/identity/copy/status assertion remain. Both
+failed executions are retained; one unsuccessful correction cycle is recorded.
+Non-UUID legacy sessions are not newly supported. Directory alone is retried;
+a further unsuccessful correction ends this ER08 strategy before any third.
+
+The second corrected directory execution passed (6.16s pytest, 7.45s wrapper).
+Unchanged pack/PostgreSQL then passed (two cases, 9.57s/10.817s), followed by all
+four named direct migration regressions (12.51s/13.578s). Total this phase:
+nine case/layout executions, seven passes and two preserved failures; two
+correction attempts, one unsuccessful cycle. Final three ER08 layouts include
+18 fixed refusal subchecks. Passing source manifest is
+`b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c`.
+Retained native copies, operator exports, source artifacts, per-layout evidence
+and hashes are preserved under the ignored `privacy-326/er08/` run directory.
+
+The named-session sources are valid legacy input, not corrupt fixture data.
+Protected migration still cannot preserve those sessions through its existing
+UUID admission boundary; no ID rewrite or admission exception was introduced.
+The observed AC1 gap remains: dry-run does not specifically explain that
+incompatibility. This phase did not add a separate repair or cohort for it.
+The recognized history projection supports the stated text-envelope schemas;
+unknown fields, versions, formats and unsupported representations refuse.
+
+ER08's engine component now proves archive/clear is not erasure, explicit
+migration preserves source evidence/identity, and live purge leaves the actual
+retained backup/export untouched. `backup_copies=external_copies=not_managed`
+and `physical_wipe=false` are reported truthfully by engine and CLI. This does
+not prove hosted #283 managed backup expiry/completion or offline revocation.
+Configured standard projection parity remains failed; original same-policy,
+shared-case, held dependency and final validation/review/delivery gates remain.

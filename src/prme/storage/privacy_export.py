@@ -29,7 +29,7 @@ from prme.storage.privacy_format import preflight_format
 MAX_EXPORT_BYTES = 64 * 1024 * 1024
 MAX_EXPORT_ROWS = 10000
 _OMITTED = ("private_keys", "independent_erasure_authority", "external_backups",
-            "operator_rotation_jobs", "native_index_snapshots")
+            "operator_rotation_jobs", "native_index_snapshots", "lossless_framework_history")
 
 
 def _json(value):

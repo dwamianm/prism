@@ -44,6 +44,113 @@ _COPY_TABLES = {
 }
 _EXTERNAL = {"C24", "C25", "C26", "C27", "C29", "C30", "C31", "C32", "C33", "C34", "C35", "C36", "C40", "C43", "C45"}
 _REBUILD = {"C11", "C12", "C13", "C14"}
+_HISTORY_MESSAGE = "_prme_chat_message"
+_HISTORY_CONTROL = "_prme_chat_history_control"
+_HISTORY_KEYS = frozenset({_HISTORY_MESSAGE, _HISTORY_CONTROL})
+
+
+def _history_metadata(metadata):
+    """Recognize closed text-history envelopes, never deserialize framework objects.
+
+    Optional framework packages and their arbitrary model extras are not trusted
+    migration codecs. Unknown shapes stay unsupported even with the disposition.
+    The returned text/role must also match the original immutable source event.
+    """
+    if metadata is None:
+        return frozenset(), None, None
+    if not isinstance(metadata, dict):
+        raise ValueError("Unclassified legacy history")
+    keys = _HISTORY_KEYS.intersection(metadata)
+    if not keys:
+        return keys, None, None
+    if len(keys) != 1:
+        raise ValueError("Ambiguous legacy history")
+    key = next(iter(keys))
+    value = metadata[key]
+    json.dumps(value, allow_nan=False)
+    if not isinstance(value, dict) or type(value.get("version")) is not int or value["version"] != 1:
+        raise ValueError("Unclassified legacy history version")
+    if key == _HISTORY_CONTROL:
+        operation = value.get("operation")
+        expected = {"version", "operation"} | ({"target_event_id"} if operation == "delete" else set())
+        if operation not in {"clear", "delete"} or set(value) != expected:
+            raise ValueError("Unclassified legacy history control")
+        if operation == "delete":
+            target = value["target_event_id"]
+            if not isinstance(target, str) or str(UUID(target)) != target:
+                raise ValueError("Unclassified legacy history target")
+        return keys, "", "system"
+    if set(value) != {"version", "format", "message"} or not isinstance(value["message"], dict):
+        raise ValueError("Unclassified legacy history envelope")
+    message = value["message"]
+    if value["format"] == "langchain-v1":
+        if set(message) != {"type", "data"} or not isinstance(message["data"], dict):
+            raise ValueError("Unclassified LangChain message")
+        data, kind = message["data"], message["type"]
+        roles = {"human": "user", "ai": "assistant", "system": "system"}
+        common = {"content", "additional_kwargs", "response_metadata", "type", "name", "id"}
+        extra = {"example"} | ({"tool_calls", "invalid_tool_calls", "usage_metadata"} if kind == "ai" else set())
+        if (not isinstance(kind, str) or kind not in roles or not common <= data.keys()
+                or not data.keys() <= common | extra or data["type"] != kind
+                or not isinstance(data["content"], str)
+                or not isinstance(data["additional_kwargs"], dict) or not isinstance(data["response_metadata"], dict)
+                or any(data[name] is not None and not isinstance(data[name], str) for name in ("name", "id"))
+                or ("example" in data and type(data["example"]) is not bool)
+                or any(name in data and (not isinstance(data[name], list) or any(not isinstance(item, dict) for item in data[name]))
+                       for name in ("tool_calls", "invalid_tool_calls"))
+                or (data.get("usage_metadata") is not None and not isinstance(data["usage_metadata"], dict))):
+            raise ValueError("Unclassified LangChain message data")
+        return keys, data["content"], roles[kind]
+    if value["format"] == "llamaindex-v1":
+        roles = {"user": "user", "developer": "user", "system": "system", "assistant": "assistant",
+                 "function": "tool", "tool": "tool", "chatbot": "assistant", "model": "assistant"}
+        if (set(message) != {"role", "additional_kwargs", "blocks"}
+                or not isinstance(message["role"], str) or message["role"] not in roles
+                or not isinstance(message["additional_kwargs"], dict) or not isinstance(message["blocks"], list)
+                or any(not isinstance(block, dict) or set(block) != {"block_type", "text"}
+                       or block["block_type"] != "text" or not isinstance(block["text"], str) for block in message["blocks"])):
+            raise ValueError("Unclassified LlamaIndex message data")
+        return keys, "\n".join(block["text"] for block in message["blocks"]), roles[message["role"]]
+    raise ValueError("Unclassified legacy history format")
+
+
+def _project_legacy_history(events, by_event, nodes, kinds, *, unavailable_history):
+    """Called only after original event/journal/node identity validation."""
+    event_keys = {}
+    for identifier, event in events.items():
+        keys, text, role = _history_metadata(event.metadata)
+        event_keys[identifier] = keys
+        if not keys:
+            continue
+        if not unavailable_history or (event.content, event.role) != (text, role):
+            raise ValueError("Legacy history requires an explicit matching disposition")
+        if _HISTORY_CONTROL in keys:
+            control = event.metadata[_HISTORY_CONTROL]
+            if not event.session_id or by_event[identifier]:
+                raise ValueError("Invalid legacy history control source")
+            if control["operation"] == "delete":
+                target = events.get(UUID(control["target_event_id"]))
+                if (target is None or target.id == event.id or _HISTORY_CONTROL in (target.metadata or {})
+                        or (target.user_id, target.scope, target.session_id) != (event.user_id, event.scope, event.session_id)
+                        or target.timestamp > event.timestamp):
+                    raise ValueError("Foreign legacy history control")
+    primary = {node.id: identifier for identifier, values in by_event.items() for node in values}
+    for node in nodes.values():
+        keys, _, _ = _history_metadata(node.metadata)
+        if not keys:
+            continue
+        identifier = primary.get(node.id)
+        if (not unavailable_history or identifier is None or kinds[identifier] != "direct"
+                or keys != event_keys[identifier] or _HISTORY_CONTROL in keys
+                or any(node.metadata[key] != events[identifier].metadata[key] for key in keys)):
+            raise ValueError("Unclassified legacy history node")
+    def projected(value):
+        metadata = value.metadata
+        if not _HISTORY_KEYS.intersection(metadata or {}):
+            return value
+        return value.model_copy(update={"metadata": {key: item for key, item in metadata.items() if key not in _HISTORY_KEYS} or None})
+    return ({identifier: projected(event) for identifier, event in events.items()},
+            {identifier: [projected(node) for node in values] for identifier, values in by_event.items()})
 
 
 def _password(config):
@@ -127,6 +234,22 @@ async def inspect_privacy_migration(config, *, policy=None) -> PrivacyMigrationP
                        "physical_media_erasure_unavailable"]
         if not protected:
             unavailable.extend(("legacy_history_requires_explicit_disposition", "legacy_source_checksum_retained_only_in_original"))
+            # Report feature names only; serialized messages never enter a dry-run.
+            for table in ("events", "nodes"):
+                if counts[table] > MAX_ROWS:
+                    continue
+                for row in await query(f"SELECT metadata FROM {table} LIMIT {MAX_ROWS + 1}"):
+                    try:
+                        metadata = json.loads(row["metadata"]) if isinstance(row["metadata"], str) else row["metadata"]
+                        keys, _, _ = _history_metadata(metadata)
+                        features = []
+                        if _HISTORY_MESSAGE in keys:
+                            features.append("lossless_framework_history_requires_explicit_disposition")
+                        if _HISTORY_CONTROL in keys:
+                            features.append("legacy_chat_controls_require_explicit_disposition")
+                    except (ValueError, TypeError, KeyError):
+                        features = ["legacy_framework_history_unclassified"]
+                    unavailable.extend(feature for feature in features if feature not in unavailable)
         if counts.get("blobs", 0):
             unavailable.append("visual_conversion_requires_explicit_removal")
         if any(count > MAX_ROWS for count in counts.values()):
@@ -333,6 +456,10 @@ def _decode_legacy_objects(source, *, remove_event_ids, remove_node_ids, unavail
             if any(key in (event.metadata or {}) for key in ("frame_sha256", "thumbnail", "observation_id", "frame_id"))}
         if not visual or not visual <= set(remove_event_ids):
             raise PrivacyPortabilityError("privacy_legacy_unclassified")
+    # Preserve every original source/checksum and journal/node comparison above.
+    # Only the new admitted copy receives the explicitly unavailable projection.
+    events, by_event = _project_legacy_history(events, by_event, nodes, kinds,
+        unavailable_history=unavailable_history)
     return events, by_event, kinds, retained_generated
 
 
@@ -397,6 +524,7 @@ async def _event_nodes(coordinator, prepared, nodes, vectors, *, allow_reembeddi
     """Use the existing closed projections; never admit a supporting paragraph."""
     from prme.privacy.records import PRIVACY_KEY
     from prme.models.derivation import PreparedEmbedding
+    from prme.types import LifecycleState
     if not nodes:
         return (), ()
     if prepared.record.kind == "direct":
@@ -427,6 +555,10 @@ async def _event_nodes(coordinator, prepared, nodes, vectors, *, allow_reembeddi
     embeddings = []
     runtime = coordinator.require_runtime()
     for node in admitted:
+        if node.lifecycle_state == LifecycleState.ARCHIVED:
+            # Archive deliberately evicts indexes while retaining source/node
+            # history. Keep that validated terminal state without recreating it.
+            continue
         existing = vectors.get(node.id)
         if existing is None:
             raise PrivacyPortabilityError("privacy_legacy_unclassified")

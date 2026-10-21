@@ -2052,6 +2052,145 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T023949037039-standard-migration-integrity-source.json",
       "source_manifest_sha256": "64d3af68fef31ed70a8a80c955d35fafc09bfe07418d84f52cc5a0b719f18104",
       "tracked_diff_sha256": "59417720aa04d6b5a6f011893cce8e1e762cd942eae2b70e89dc91bf5d1121d6"
+    },
+    {
+      "name": "er08-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/privacy_migration.py",
+        "src/prme/storage/privacy_export.py",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-21T02:53:44.668512+00:00",
+      "elapsed_seconds": 0.157,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T025344668512-er08-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025344668512-er08-static-source.json",
+      "source_manifest_sha256": "ed0c65908dada9e8ce51e19e93cbac56bd52ee37c482e2548f969f56f2836eff",
+      "tracked_diff_sha256": "8395ff0d4daa0247eaddee88b8d97bbb31ee30d41283f48010ce48bc6e0d1d97"
+    },
+    {
+      "name": "er08-directory-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[directory]",
+        "-q"
+      ],
+      "started_at": "2026-10-21T02:53:47.392233+00:00",
+      "elapsed_seconds": 8.775,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T025347392233-er08-directory-initial.log",
+      "log_sha256": "c871897f8dbaaa9e69369936e269668b7f270135262054a0f8cdbc0bf3e7da3b",
+      "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025347392233-er08-directory-initial-source.json",
+      "source_manifest_sha256": "ed0c65908dada9e8ce51e19e93cbac56bd52ee37c482e2548f969f56f2836eff",
+      "tracked_diff_sha256": "8395ff0d4daa0247eaddee88b8d97bbb31ee30d41283f48010ce48bc6e0d1d97"
+    },
+    {
+      "name": "er08-directory-fix1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[directory]",
+        "-q"
+      ],
+      "started_at": "2026-10-21T02:56:57.005466+00:00",
+      "elapsed_seconds": 5.705,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T025657005466-er08-directory-fix1.log",
+      "log_sha256": "74eff1b35354746e607ff3ce55ffdc358df62dc309f47f3d69233d0871172265",
+      "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025657005466-er08-directory-fix1-source.json",
+      "source_manifest_sha256": "26662ffb8b183b6e8be1c235ffdf032015ea1fb51ecc7c0601b847d9ceaba498",
+      "tracked_diff_sha256": "aa7d9342a9b670a989515da5a973d3728cf538011c9fd5bdbcdc099492eb22dd"
+    },
+    {
+      "name": "er08-directory-fix2",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[directory]",
+        "-q"
+      ],
+      "started_at": "2026-10-21T02:57:47.134821+00:00",
+      "elapsed_seconds": 7.45,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T025747134821-er08-directory-fix2.log",
+      "log_sha256": "b59b51e393fae3f7cc06e32fa6624aeb05bcd5de5da0b9ae370611a493cca813",
+      "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025747134821-er08-directory-fix2-source.json",
+      "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
+      "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
+    },
+    {
+      "name": "er08-pack-postgres",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[pack]",
+        "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[postgres]",
+        "-q",
+        "-x"
+      ],
+      "started_at": "2026-10-21T02:58:21.780525+00:00",
+      "elapsed_seconds": 10.817,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T025821780525-er08-pack-postgres.log",
+      "log_sha256": "6f8f0cd9bd1913a6ddca7a8560d61ac663f1a0c695c8fc442c42187b88f7cf90",
+      "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025821780525-er08-pack-postgres-source.json",
+      "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
+      "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
+    },
+    {
+      "name": "er08-direct-regression",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[directory]",
+        "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[pack]",
+        "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[postgres]",
+        "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[closed_fernet]",
+        "-q",
+        "-x"
+      ],
+      "started_at": "2026-10-21T02:58:45.275683+00:00",
+      "elapsed_seconds": 13.578,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T025845275683-er08-direct-regression.log",
+      "log_sha256": "fbc27ef1b1c01d75a96e2f96344775c29624839bb45fd6491ff334dfc818b9df",
+      "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025845275683-er08-direct-regression-source.json",
+      "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
+      "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
+    },
+    {
+      "name": "er08-static-final",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/privacy_migration.py",
+        "src/prme/storage/privacy_export.py",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-21T03:00:06.979552+00:00",
+      "elapsed_seconds": 0.098,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T030006979552-er08-static-final.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030006979552-er08-static-final-source.json",
+      "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
+      "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
     }
   ],
   "repair_cycles": {
@@ -2161,6 +2300,20 @@
       "cumulative_failed_comparisons": 3,
       "counts_reset": false,
       "state": "Stopped; no correction, alternative selector or behavioral rerun."
+    },
+    "ER08_archive_retained_history": {
+      "initial": "Directory failed after real archive/adapter clear and all six refusal subchecks. Existing migration required a vector already evicted by actual archive.",
+      "executions": 5,
+      "failed": 2,
+      "passed": 3,
+      "corrections_attempted": 2,
+      "unsuccessful_fix_validation_cycles": 1,
+      "state": "Finite engine ER08 component resolved; hosted managed-copy completion and original gates remain open.",
+      "fix1": "Skip vector reconstruction only for the originally validated archived lifecycle. Preserve all source/node identities, contents and journal checks; require vectors for every other lifecycle. Same-case export/target absence assertions. Unreached fixture uses MemoryNode attributes and asserts custom metadata through actual sanitized-source decryption without changing input.",
+      "fix1_result": "Failed at existing UUID session validation before full migration; does not establish archive/pass. Fixture descriptive session strings were unsupported protected input.",
+      "fix2": "Only seed UUID adapter/control sessions consistently from source creation. No runtime changes, session rewrite, content/query/expected count changes.",
+      "fix2_result": "Directory passed, then unchanged pack and PostgreSQL passed once. Four named direct migration regressions passed once. No third correction or broad rerun.",
+      "named_session_limit": "Descriptive sessions are valid legacy input; protected admission requires UUID sessions. Passing UUID setup does not prove named-session migration. Dry-run does not yet specifically report this incompatibility (original AC1 gap)."
     }
   },
   "held_dependencies": [
@@ -2666,15 +2819,35 @@
       "failed": 2,
       "detail": "public_assertions_iteration4",
       "limits": "Same-input/same-policy storage parity, held #323 strategy, eligible restored-work publication, actual hosted283 composition and final shared/full validation remain independent mandatory gates."
+    },
+    "ER08_archive_clear_retained_copies": {
+      "requirements": [
+        "AC1",
+        "AC4",
+        "AC6",
+        "ER08"
+      ],
+      "status": "three_layout_engine_component_pass_managed_copy_completion_pending",
+      "detail": "er08_iteration7",
+      "final_layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "source_boundary": "Six retained source/control events, four nodes. Actual archive, real LangChain write/clear and two LlamaIndex writes/delete_messages.",
+      "proof": "Strict default/unknown/malformed/foreign-control refusals; exact source identity/artifact preservation; selected real diagnostic evidence; archived node without vectors; retained populated native backup/protected export; engine/CLI live_purged with unmanaged copies.",
+      "limits": [
+        "Recognized text envelope schemas only; unsupported history remains in original source.",
+        "Descriptive sessions are valid legacy input; protected admission requires UUID sessions. Passing UUID setup does not prove named-session migration. Dry-run does not yet specifically report this incompatibility (original AC1 gap).",
+        "No hosted managed backup expiry or offline-copy revocation proof."
+      ]
     }
   },
   "remaining_original_work": [
-    "Original standard matched-input migration control failed directory after six public calls; pack/PostgreSQL unrun and no correction authorized. Literal same-policy storage and #327 frozen24 parity/sealed24 gates remain mandatory.",
-    "Original ER08 archive/chat-clear distinction with retained real backup/operator export remains a potential independent next action; no implementation or validation in iteration6.",
-    "Actual #283 hosted recovery capability composition with the bound same-lineage PostgreSQL restore API.",
-    "Remaining original EM01-EM08/shared scenario harness closure; fourteen public portability component passes do not establish whole-case acceptance.",
-    "Held #323 third classifier correction and original22+3 regression reruns require USER approval; unresolved native SIGABRT has no generic close workaround.",
-    "Required final full suite/package/simulation/CI, root-coordinated review, PR and normal delivery remain mandatory."
+    "Configured standard matched-input migration comparison (projection_top_k=3) failed directory after six public calls; pack/PostgreSQL unrun. Source lifecycle changes before close remain a limitation. Literal same-policy storage and #327 frozen24 parity/sealed24 gates remain mandatory.",
+    "Original AC1 gap: dry-run does not specifically explain named-session incompatibility; valid legacy named sessions still refuse protected admission. ER08 UUID fixture does not prove named-session migration.",
+    "ER08 engine archive/framework-clear, explicit migration, retained native backup/operator export and unmanaged-copy status components passed all three layouts; hosted283 verified managed backup expiry/completion remains pending.",
+    "Actual #283 hosted recovery capability composition with bound same-lineage PostgreSQL restore, remaining original EM01-EM08/shared harness closure, held #323 classifier/native strategies, and required final full suite/package/simulation/CI/review/PR/normal delivery remain mandatory."
   ],
   "remaining_key_rotation_recovery_inventory": {
     "source_revision": "42f87e07dcbf91d92ba3dee58d167454bd1ad13e",
@@ -2747,16 +2920,16 @@
           "AC2",
           "AC5"
         ],
-        "remaining": "Standard matched-input actual migration comparison failed directory; two layouts remain unrun. Exact IDs/order/context differ. Original same-policy storage gate remains distinct.",
+        "remaining": "Configured standard matched-input migration comparison (projection_top_k=3) failed directory after six public calls; pack/PostgreSQL unrun. Source lifecycle changes before close remain a limitation. Literal same-policy storage and #327 frozen24 parity/sealed24 gates remain mandatory.",
         "dependency": "Zero correction budget in iteration6; no further comparison repair/rerun authorized. Literal policy equality cannot be asserted for policy-less legacy v1."
       },
       {
         "criteria": [
           "AC4",
-          "AC5"
+          "AC6"
         ],
-        "remaining": "Original ER08 archive/chat-clear distinction and retained real backup/operator export. Root identified existing legacy clear -> explicit migration as the supported path; protected clear refuses.",
-        "dependency": "Potential independent original work for separately bounded scope; not categorically dependent on #323. Engine backups/external copies remain not_managed; managed backup expiry belongs to hosted283."
+        "remaining": "ER08 engine archive/framework-clear, explicit migration, retained native backup/operator export and unmanaged-copy status components passed all three layouts; hosted283 verified managed backup expiry/completion remains pending.",
+        "dependency": "Engine component is complete within this finite selection. Managed backup expiry belongs to hosted283; engine not_managed is not an equivalent completion state."
       },
       {
         "criteria": [
@@ -2769,6 +2942,13 @@
         ],
         "remaining": "Planned frozen scenario harness consolidation remains pending actual shared/public/hosted adapter dependencies. Existing exact component evidence is retained; no new whole-case runner may relabel these partial results as passes.",
         "dependency": "Known held #323 strategy, actual #283 bound recovery composition and final #327 shared gate; selected single-boundary public usability components now passed."
+      },
+      {
+        "criteria": [
+          "AC1"
+        ],
+        "remaining": "Descriptive sessions are valid legacy input; protected admission requires UUID sessions. Passing UUID setup does not prove named-session migration. Dry-run does not yet specifically report this incompatibility (original AC1 gap).",
+        "dependency": "Concrete independent dry-run reporting limitation recorded from this phase; no additional repair/cohort authorized here."
       }
     ],
     "design_held": [],
@@ -2777,7 +2957,7 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Push the preserved failing standard-control test/docs checkpoint. No remaining layout or correction is authorized. Root may separately scope original ER08; final gates and held strategies remain unchanged.",
+    "next_action": "Commit/push the authorized five-file ER08 checkpoint after scoped static checks. No additional improvement round, parity repair or whole-case/issue closure; root retains final gate ownership.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
@@ -2794,7 +2974,8 @@
       "restored_work": "5e0a28acf4703bd9c997a617e248b7f60a4fec5f: three-layout exact running/pending state, consumed allowance and original deadline component pass",
       "bound_postgres_restore": "Current checkpoint: one actual PostgreSQL lock-backed current-catalog restore variant passed after first runtime correction; initial committed-before-error failure preserved.",
       "public_portability": "This iteration:14 passed/2 failed retained over16 executions; no runtime change from a1bce140. Actual public read_source, key-loss retrieve, native/logical restore retrieve, bound namespace retrieve and mixed legacy-to-sealed usability verified in the original selected layouts.",
-      "eligible_restored_work": "Iteration5: three original layout parameters passed on first executions; actual process_extractions claims the untouched second job, publishes a real plan/receipt, and returns public packed memory. Consumed first job explicitly cancelled; original no-send/expiry arm unchanged."
+      "eligible_restored_work": "Iteration5: three original layout parameters passed on first executions; actual process_extractions claims the untouched second job, publishes a real plan/receipt, and returns public packed memory. Consumed first job explicitly cancelled; original no-send/expiry arm unchanged.",
+      "ER08": "Iteration7: three engine layout passes plus four direct migration regressions; two initial/correction failures preserved. Explicit known framework-history disposition and archived retention."
     },
     "integration_pending": [
       {
@@ -3255,6 +3436,383 @@
       "prior_evidence_and_counters_preserved": true,
       "new_generic_verifier": false,
       "new_behavioral_execution": false
+    }
+  },
+  "er08_iteration7": {
+    "base": "eb97166bf610d6543958c279c74cef6438b710cd",
+    "original_requirements": [
+      "AC1",
+      "AC4",
+      "AC6",
+      "ER08"
+    ],
+    "new_selector": "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies",
+    "regression_selector": "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure",
+    "initial_maximum_case_layout_executions": 7,
+    "evidence": [
+      {
+        "name": "er08-static",
+        "command": [
+          ".venv/bin/ruff",
+          "check",
+          "src/prme/storage/privacy_migration.py",
+          "src/prme/storage/privacy_export.py",
+          "tests/test_privacy_restore.py"
+        ],
+        "started_at": "2026-10-21T02:53:44.668512+00:00",
+        "elapsed_seconds": 0.157,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T025344668512-er08-static.log",
+        "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+        "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025344668512-er08-static-source.json",
+        "source_manifest_sha256": "ed0c65908dada9e8ce51e19e93cbac56bd52ee37c482e2548f969f56f2836eff",
+        "tracked_diff_sha256": "8395ff0d4daa0247eaddee88b8d97bbb31ee30d41283f48010ce48bc6e0d1d97"
+      },
+      {
+        "name": "er08-directory-initial",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[directory]",
+          "-q"
+        ],
+        "started_at": "2026-10-21T02:53:47.392233+00:00",
+        "elapsed_seconds": 8.775,
+        "exit_code": 1,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T025347392233-er08-directory-initial.log",
+        "log_sha256": "c871897f8dbaaa9e69369936e269668b7f270135262054a0f8cdbc0bf3e7da3b",
+        "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025347392233-er08-directory-initial-source.json",
+        "source_manifest_sha256": "ed0c65908dada9e8ce51e19e93cbac56bd52ee37c482e2548f969f56f2836eff",
+        "tracked_diff_sha256": "8395ff0d4daa0247eaddee88b8d97bbb31ee30d41283f48010ce48bc6e0d1d97"
+      },
+      {
+        "name": "er08-directory-fix1",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[directory]",
+          "-q"
+        ],
+        "started_at": "2026-10-21T02:56:57.005466+00:00",
+        "elapsed_seconds": 5.705,
+        "exit_code": 1,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T025657005466-er08-directory-fix1.log",
+        "log_sha256": "74eff1b35354746e607ff3ce55ffdc358df62dc309f47f3d69233d0871172265",
+        "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025657005466-er08-directory-fix1-source.json",
+        "source_manifest_sha256": "26662ffb8b183b6e8be1c235ffdf032015ea1fb51ecc7c0601b847d9ceaba498",
+        "tracked_diff_sha256": "aa7d9342a9b670a989515da5a973d3728cf538011c9fd5bdbcdc099492eb22dd"
+      },
+      {
+        "name": "er08-directory-fix2",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[directory]",
+          "-q"
+        ],
+        "started_at": "2026-10-21T02:57:47.134821+00:00",
+        "elapsed_seconds": 7.45,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T025747134821-er08-directory-fix2.log",
+        "log_sha256": "b59b51e393fae3f7cc06e32fa6624aeb05bcd5de5da0b9ae370611a493cca813",
+        "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025747134821-er08-directory-fix2-source.json",
+        "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
+        "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
+      },
+      {
+        "name": "er08-pack-postgres",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[pack]",
+          "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[postgres]",
+          "-q",
+          "-x"
+        ],
+        "started_at": "2026-10-21T02:58:21.780525+00:00",
+        "elapsed_seconds": 10.817,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T025821780525-er08-pack-postgres.log",
+        "log_sha256": "6f8f0cd9bd1913a6ddca7a8560d61ac663f1a0c695c8fc442c42187b88f7cf90",
+        "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025821780525-er08-pack-postgres-source.json",
+        "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
+        "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
+      },
+      {
+        "name": "er08-direct-regression",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[directory]",
+          "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[pack]",
+          "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[postgres]",
+          "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[closed_fernet]",
+          "-q",
+          "-x"
+        ],
+        "started_at": "2026-10-21T02:58:45.275683+00:00",
+        "elapsed_seconds": 13.578,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T025845275683-er08-direct-regression.log",
+        "log_sha256": "fbc27ef1b1c01d75a96e2f96344775c29624839bb45fd6491ff334dfc818b9df",
+        "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T025845275683-er08-direct-regression-source.json",
+        "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
+        "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
+      },
+      {
+        "name": "er08-static-final",
+        "command": [
+          ".venv/bin/ruff",
+          "check",
+          "src/prme/storage/privacy_migration.py",
+          "src/prme/storage/privacy_export.py",
+          "tests/test_privacy_restore.py"
+        ],
+        "started_at": "2026-10-21T03:00:06.979552+00:00",
+        "elapsed_seconds": 0.098,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T030006979552-er08-static-final.log",
+        "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+        "head": "eb97166bf610d6543958c279c74cef6438b710cd",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030006979552-er08-static-final-source.json",
+        "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
+        "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
+      }
+    ],
+    "status": "engine_component_pass_original_case_incomplete",
+    "unrun": [],
+    "limits": [
+      "Configured standard projection control remains failed/unrun; prior counters unchanged.",
+      "Engine unmanaged-copy status cannot prove hosted managed backup expiry.",
+      "No whole-case/full-suite/PR completion claim."
+    ],
+    "artifacts": [
+      {
+        "layout": "directory",
+        "path": ".github-ticket-loop/privacy-326/er08/directory-pass",
+        "index": ".github-ticket-loop/privacy-326/er08/directory-pass/artifact-hashes.json",
+        "sha256": "432b5007bce1ae00260ff363d6937889b5b13f62ef7611797620b4c8f6bfe563",
+        "result": {
+          "layout": "directory",
+          "source_fingerprint": "5cf45eacf6acda2e8f044fd7827edd3433d92bc33a6a7d3f80023f32b07b8c9d",
+          "events": 6,
+          "nodes": 4,
+          "erased_events": [
+            "37348271-6e43-4ac7-8459-1af45868f0c1",
+            "49a15f67-6f98-473f-99a8-253c303171f7",
+            "56302feb-3b40-4b3f-8783-8af0c48c0b78",
+            "7142ed19-8cc7-4881-9887-fa4251d855e3"
+          ],
+          "retained_controls": [
+            "3bf59fa0-6093-4aad-b7ff-f7f958479ef2",
+            "3e8da956-7e1c-421e-9db7-3b273ededa9e"
+          ],
+          "status": {
+            "attempts": 0,
+            "backup_copies": "not_managed",
+            "external_copies": "not_managed",
+            "facts_may_remain": false,
+            "failure": null,
+            "logical_live_copies": "purged",
+            "mode": "memory",
+            "physical_wipe": false,
+            "request_id": "c1e1ec15-87ef-4a73-b117-12f3a4ff5f65",
+            "schema_version": 1,
+            "stage": "verify",
+            "state": "live_purged"
+          },
+          "backup_hashes": {
+            "retained-native-backup/lexical_index/.managed.json": "1b6354d34c671b8d08abd59b110fd5bb07ad2c6f7cf3ec5557c878ec3855aa25",
+            "retained-native-backup/lexical_index/.tantivy-meta.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retained-native-backup/lexical_index/.tantivy-writer.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retained-native-backup/lexical_index/f6c13c8539a64eee9c932a8fc3f76ba1.fast": "78964f91557a78665f714d5a66e24cf87ac4d1df56eb046dbbabda578a1c9d72",
+            "retained-native-backup/lexical_index/f6c13c8539a64eee9c932a8fc3f76ba1.fieldnorm": "25777be4453950ba6ca2cd475bcb908be716bb5f92d150442e097c9b091e7bed",
+            "retained-native-backup/lexical_index/f6c13c8539a64eee9c932a8fc3f76ba1.idx": "e18cbba34cb7821041b751ed1819d68f4973ed7c61bf727afb02414d7481138d",
+            "retained-native-backup/lexical_index/f6c13c8539a64eee9c932a8fc3f76ba1.pos": "b8b540baaa5e97f7d1de661a12d9641f948797c2aabd3d6f998d8cb212a6a529",
+            "retained-native-backup/lexical_index/f6c13c8539a64eee9c932a8fc3f76ba1.store": "59da737fb78a369e7acbe942c7c0835756c38a0b369a9a359a8b36949f58373c",
+            "retained-native-backup/lexical_index/f6c13c8539a64eee9c932a8fc3f76ba1.term": "3ed124df71f025a4c2c02b69bfe99142c589e9450c5c04b85576150be48858d7",
+            "retained-native-backup/lexical_index/meta.json": "767442f216c8a57fa952991908f3a5c60293cfe16da2c6083bddee81b1d20ffb",
+            "retained-native-backup/memory.duckdb": "64419bc4113ff6d3bc18a0460a3db7f9eb719f918388937af09a1321752b69b1",
+            "retained-native-backup/vectors.usearch": "6e245d17e99c2da97aff8650473f585e31e3c9111f6364dd14ad9c3d10f174b2"
+          },
+          "operator_export_hashes": {
+            "retained-operator-export.json": "132d85d7048d85a66f9dfa50678f323c416f93df69ace2acffe307b504b60768"
+          },
+          "unavailable_features": [
+            "external_backup_inventory_unknown",
+            "offline_copy_revocation_unavailable",
+            "physical_media_erasure_unavailable",
+            "legacy_history_requires_explicit_disposition",
+            "legacy_source_checksum_retained_only_in_original",
+            "lossless_framework_history_requires_explicit_disposition",
+            "legacy_chat_controls_require_explicit_disposition"
+          ],
+          "omitted": [
+            "private_keys",
+            "independent_erasure_authority",
+            "external_backups",
+            "operator_rotation_jobs",
+            "native_index_snapshots",
+            "lossless_framework_history",
+            "legacy_originals_retained_separately",
+            "legacy_history_checksum_and_replay"
+          ]
+        }
+      },
+      {
+        "layout": "pack",
+        "path": ".github-ticket-loop/privacy-326/er08/pack-pass",
+        "index": ".github-ticket-loop/privacy-326/er08/pack-pass/artifact-hashes.json",
+        "sha256": "2f7675979958d40a7b13dff94f2da592c32569289f2ccfcf37dc5a373969acd0",
+        "result": {
+          "layout": "pack",
+          "source_fingerprint": "93ccbcaaa42e535122523058dc29a4639553bc4034659ad7a3ae231d21f62d43",
+          "events": 6,
+          "nodes": 4,
+          "erased_events": [
+            "3ed85626-d151-473f-aa6e-aa2a40e4181b",
+            "857f3184-0d49-4923-a674-5694aad14e10",
+            "d9dbdf1f-7987-4485-8404-e9f95981207d",
+            "ee9ed95c-9b0c-43ec-9e69-63474659c508"
+          ],
+          "retained_controls": [
+            "094ca3c2-3b06-4398-a32c-0f8b624b27d6",
+            "1808f251-92c3-4ac6-9d49-b266d023a99c"
+          ],
+          "status": {
+            "attempts": 0,
+            "backup_copies": "not_managed",
+            "external_copies": "not_managed",
+            "facts_may_remain": false,
+            "failure": null,
+            "logical_live_copies": "purged",
+            "mode": "memory",
+            "physical_wipe": false,
+            "request_id": "ad9fc9ac-6d00-47a0-ba67-a8fb0ca8b034",
+            "schema_version": 1,
+            "stage": "verify",
+            "state": "live_purged"
+          },
+          "backup_hashes": {
+            "retained-native-backup.prme": "df435c6c30fbb15c59a01a3c0344377ae956e80c350b8096cd1c3dabceb70b49"
+          },
+          "operator_export_hashes": {
+            "retained-operator-export.json": "bc6ab0afe7a97eec4857b9d15a9b0be6542f3ed69ba79db2fc1175b705714f96"
+          },
+          "unavailable_features": [
+            "external_backup_inventory_unknown",
+            "offline_copy_revocation_unavailable",
+            "physical_media_erasure_unavailable",
+            "legacy_history_requires_explicit_disposition",
+            "legacy_source_checksum_retained_only_in_original",
+            "lossless_framework_history_requires_explicit_disposition",
+            "legacy_chat_controls_require_explicit_disposition"
+          ],
+          "omitted": [
+            "private_keys",
+            "independent_erasure_authority",
+            "external_backups",
+            "operator_rotation_jobs",
+            "native_index_snapshots",
+            "lossless_framework_history",
+            "legacy_originals_retained_separately",
+            "legacy_history_checksum_and_replay"
+          ]
+        }
+      },
+      {
+        "layout": "postgres",
+        "path": ".github-ticket-loop/privacy-326/er08/postgres-pass",
+        "index": ".github-ticket-loop/privacy-326/er08/postgres-pass/artifact-hashes.json",
+        "sha256": "0c45fa08ccd641e6b55ae115325f4874dc75370809f2b64ce1a3fbb574951de8",
+        "result": {
+          "layout": "postgres",
+          "source_fingerprint": "aa12568f4dbbf7262fa75910b9902b3c448fde2341ee91b2f0a3d5531a4ae70e",
+          "events": 6,
+          "nodes": 4,
+          "erased_events": [
+            "85fc4c0a-438a-4c4f-aa85-1ac86d36f254",
+            "d7ace434-7b17-44ae-951b-30f464955a5b",
+            "ef6b09dd-8a29-43c4-a00a-179af27534ef",
+            "fb8864ec-3d77-461e-8c89-d037eb7791e2"
+          ],
+          "retained_controls": [
+            "38b09469-b4c4-4c0d-a55b-2a89d29b1bcb",
+            "4a421516-d8c7-4e44-9e2d-6aaf7a15273c"
+          ],
+          "status": {
+            "attempts": 0,
+            "backup_copies": "not_managed",
+            "external_copies": "not_managed",
+            "facts_may_remain": false,
+            "failure": null,
+            "logical_live_copies": "purged",
+            "mode": "memory",
+            "physical_wipe": false,
+            "request_id": "4b6315b6-6c71-4927-b8fe-c4388e6cfa25",
+            "schema_version": 1,
+            "stage": "verify",
+            "state": "live_purged"
+          },
+          "backup_hashes": {
+            "retained-native-backup": "1a80572b9b69e9322887bd472989bf9bae127afd40733ea9e78a8c56d8fc275c"
+          },
+          "operator_export_hashes": {
+            "retained-operator-export.json": "43aca8e8c033c96b75cfac6a0260e734f9c24dedbd6e2dd66908848be283a86a"
+          },
+          "unavailable_features": [
+            "external_backup_inventory_unknown",
+            "offline_copy_revocation_unavailable",
+            "physical_media_erasure_unavailable",
+            "legacy_history_requires_explicit_disposition",
+            "legacy_source_checksum_retained_only_in_original",
+            "lossless_framework_history_requires_explicit_disposition",
+            "legacy_chat_controls_require_explicit_disposition"
+          ],
+          "omitted": [
+            "private_keys",
+            "independent_erasure_authority",
+            "external_backups",
+            "operator_rotation_jobs",
+            "native_index_snapshots",
+            "lossless_framework_history",
+            "legacy_originals_retained_separately",
+            "legacy_history_checksum_and_replay"
+          ]
+        }
+      }
+    ],
+    "case_layout_executions": 9,
+    "passed": 7,
+    "failed": 2,
+    "ER08_final_layout_passes": 3,
+    "regression_passes": 4,
+    "final_layout_negative_subchecks": 18,
+    "runtime_changes": [
+      "src/prme/storage/privacy_migration.py",
+      "src/prme/storage/privacy_export.py"
+    ],
+    "named_session_limit": "Descriptive sessions are valid legacy input; protected admission requires UUID sessions. Passing UUID setup does not prove named-session migration. Dry-run does not yet specifically report this incompatibility (original AC1 gap).",
+    "tested_file_sha256": {
+      "src/prme/storage/privacy_migration.py": "101ba80acc07085a5f60d483e21f39cb98425666073e88a4122d9d56f11b67f9",
+      "src/prme/storage/privacy_export.py": "0dcea2386069df51cb5ff4379d2e052805a5f4783ec7a9874242ac2a434e2067",
+      "tests/test_privacy_restore.py": "58fbd115efd8fd022b1679f07b63bd3cf0f2a70a44c9db277d088f2df2c03585"
+    },
+    "final_static": {
+      "ruff": "passed on exact final behavioral source bytes",
+      "json_diff_run_record": "er08-json-diff in .github-ticket-loop/privacy-326/checks.jsonl",
+      "scope": "Five owned files; only migration/export runtime changed. Configured standard test and held runtime paths unchanged."
     }
   }
 }
