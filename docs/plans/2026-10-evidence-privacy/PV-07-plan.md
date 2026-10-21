@@ -923,3 +923,73 @@ on held #323 or the committed/verified #283 recovery contract; no further
 independent component cohort is selected. Final full/package/simulation/CI and
 review/delivery remain required and root-coordinated. All six original ACs stay
 partial and zero whole frozen case passes are claimed.
+
+## Released bound PostgreSQL restore variant
+
+Root released the earlier bounded proposal after verifying hosted capability
+checkpoint 90f26e4842b7e8db622a8c752f404c92bcab1897 and its real PostgreSQL
+guard proof. The engine consumes its settled structural protocol, with no
+hosted imports or copied hosted implementation. Runtime ownership is
+`privacy/portability.py` and `storage/privacy_export.py`; reuse the existing
+PostgreSQL namespace identity/relation/schema helpers. Edit PG catalog/namespace
+helpers only if that reuse needs a concrete seam. Test ownership is the existing
+`test_privacy_restore.py` plus `privacy_portability_support.py`, with docs in
+WORKSPACES.md, PRIVACY-MIGRATION.md and this plan/results pair.
+
+The typed PostgresRestoreTarget binds current workspace/name, namespace UUID,
+operation UUID and exact artifact SHA-256. Its recovery capability has the
+runtime's exact ledger and authority instances, artifact_hash, and a held
+guard(namespace_id, operation_id). Acquire that guard before preflight_runtime,
+which itself enters current ledger/policy guards. Preserve the same task and
+hold it through actual destination COMMIT. Current initialized catalog mapping
+and canonical schema identity must match; no current catalog authority row is
+rewritten. An absent or genuinely empty canonical namespace is the only new
+destination. Existing occupied state refuses except an exact previously
+committed operation/hash receipt, validated under fresh current authority and
+without reloading snapshot content. Original AAD/lineage remain unchanged;
+ledger/expiry purge precedes recovery, and managed key usage plus actual final
+publication guards remain required. Receipt metadata is not current authority.
+
+Finite selection: only
+`tests/test_privacy_restore.py::test_bound_postgres_restore_current_catalog_and_recovery_lease`,
+one PostgreSQL variant in the existing ER07/EM08 family. Use the assigned two
+databases, real pg_dump/pg_restore quarantine, existing erased/surviving fixture,
+actual current engine ledger/catalog/transaction and an engine-owned caller
+capability backed by a real PostgreSQL row lock, not an always-success callback.
+Check missing capability, wrong UUID/hash and occupied refusals; current-ledger
+positive; interrupted transaction rollback; exact lost-ack retry; real competing
+lock exclusion and same-task ownership; unchanged other namespace/control
+sentinels; preserved backup hashes; real MemoryWorkspace reopen with surviving
+stored row/evidence. Public #323 reader and actual hosted capability composition
+remain separate mandatory gates, owned by their existing tickets. No existing
+passing cohort is repeated. The two unsuccessful repair limit still applies.
+
+
+The initial single PostgreSQL variant failed after destination COMMIT: a
+transaction-local search path reset before the existing publication/erasure
+exit guards read their namespace tables. Preserve that committed-before-error
+failure (1 failed, 4.70 seconds pytest / 6.741 seconds wrapper). It did not reach
+the deliberate lost-acknowledgement retry or reopen assertions. The first runtime
+correction confines a session search path to the operation-owned connection,
+retaining it through all final guard exits and closing that connection afterward.
+The unchanged single variant then passed (1 passed, 3.96 seconds pytest / 5.113
+seconds wrapper), including real held-lock exclusion, rollback, committed lost
+acknowledgement, exact receipt retry without reload, current-ledger erasure and
+actual workspace reopening. Two executions total: one failed, one passed; zero
+unsuccessful correction cycles. Both source manifests and logs are retained.
+
+After that runtime proof, the protocol's ledger/authority/hash annotations became
+read-only properties so the caller's frozen concrete capability can satisfy the
+structural contract. This declaration-only change has separate static evidence;
+it is not retroactively included in the runtime run's source hash. No runtime,
+test assertion or helper behavior changed after the passing run. No PG catalog
+or namespace helper edit was needed. Documentation names the Python operator
+API, current identity/authority requirements and occupied-target refusal.
+
+The engine variant is component evidence for original AC5/EM08/ER07. Actual
+hosted PostgresRecoveryLease composition remains #283's mandatory integration;
+public surviving-memory/publication and fixed-clock parity remain held by #323.
+All six original ACs remain partial, with zero whole frozen case passes. No new
+independent case or full/package/simulation/CI run is selected; root owns final
+review and delivery. The unrelated #282 impact-projection seam is not part of
+this implementation or acceptance scope.

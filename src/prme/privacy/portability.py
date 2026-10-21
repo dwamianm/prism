@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import AsyncContextManager, Literal, Protocol
 from uuid import UUID
 
 from pydantic import AwareDatetime, Field, ConfigDict
@@ -13,6 +13,35 @@ from prme.privacy.erasure import LedgerHead
 from prme.privacy.records import PrivacyRecord
 from prme.types import Scope
 from prme.privacy.policy import FrozenModel
+
+
+class PostgresRestoreTarget(FrozenModel):
+    """One existing current catalog identity and explicit recovery operation."""
+    workspace: str = Field(min_length=1, max_length=255)
+    namespace: str = Field(min_length=1, max_length=255)
+    namespace_id: UUID
+    operation_id: UUID
+    artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class PostgresRecoveryCapability(Protocol):
+    """Caller-owned current recovery lease, held by this task through COMMIT.
+
+    The caller drains ordinary leases before granting recovery. Its ledger and
+    policy authority must support same-task reentry under this held capability;
+    inherited child-task acquisition must not grant a new lease. Engine never
+    treats a snapshot or an unheld quiescence Boolean as this authority.
+    """
+    @property
+    def ledger(self) -> object: ...
+
+    @property
+    def authority(self) -> object: ...
+
+    @property
+    def artifact_hash(self) -> str: ...
+
+    def guard(self, *, namespace_id: UUID, operation_id: UUID) -> AsyncContextManager[None]: ...
 
 
 class ProtectedStoreFormat(FrozenModel):

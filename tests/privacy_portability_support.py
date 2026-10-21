@@ -5,6 +5,134 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from uuid import uuid4
 
 
+class HeldLocalLedger:
+    """Test adapter: actual independent SQLite ledger, same-task nested lease.
+
+    No hosted implementation or synthetic erasure entries are substituted.
+    The original file lock remains held; only the engine's settled methods may
+    consume it from a child, never acquire a nested child guard.
+    """
+    def __init__(self, source):
+        from contextvars import ContextVar
+        self.source, self.path, self.ledger_id = source, source.path, source.ledger_id
+        self._lease = ContextVar("pv326_held_local_ledger", default=None)
+
+    @asynccontextmanager
+    async def guard(self):
+        import asyncio
+        from prme.privacy.policy import PrivacyDenied
+        current = self._lease.get()
+        if current is not None and current[1]:
+            if current[0] is not asyncio.current_task():
+                raise PrivacyDenied("privacy_ledger_unavailable")
+            yield
+            return
+        async with self.source.guard():
+            held = [asyncio.current_task(), True]
+            token = self._lease.set(held)
+            try:
+                yield
+            finally:
+                held[1] = False
+                self._lease.reset(token)
+
+    def _require_lease(self):
+        from prme.privacy.policy import PrivacyDenied
+        current = self._lease.get()
+        if current is None or not current[1]:
+            raise PrivacyDenied("privacy_ledger_unavailable")
+
+    async def register_store(self, *args):
+        self._require_lease()
+        return await self.source.register_store(*args)
+
+    async def current_head(self, *args):
+        self._require_lease()
+        return await self.source.current_head(*args)
+
+    async def entries_since(self, *args):
+        self._require_lease()
+        return await self.source.entries_since(*args)
+
+    async def append_intent(self, *args):
+        self._require_lease()
+        return await self.source.append_intent(*args)
+
+
+class PgRestoreAuthority:
+    """Engine test's persisted policy/control row, with real PG locking.
+
+    This small test capability is not the hosted policy implementation. Every
+    effect validates the saved policy against the current stored descriptor;
+    recovery alone can reuse its exclusive same-task transaction.
+    """
+    def __init__(self, pool, table, ledger):
+        from contextvars import ContextVar
+        self.pool, self.table, self.ledger = pool, table, ledger
+        self._lease = ContextVar("pv326_recovery_policy", default=None)
+
+    async def row(self, connection, *, lock=""):
+        from prme.privacy.policy import PrivacyDenied
+        rows = await connection.fetch(f"SELECT * FROM {self.table}" + lock)
+        if len(rows) != 1:
+            raise PrivacyDenied("privacy_capability_unavailable")
+        return rows[0]
+
+    @asynccontextmanager
+    async def guard(self, saved, effect):
+        import asyncio
+        from prme.privacy.policy import PrivacyDenied, PrivacyPolicy
+        held = self._lease.get()
+        if held is not None and held[2]:
+            if held[0] is not asyncio.current_task():
+                raise PrivacyDenied("privacy_capability_unavailable")
+            row = await self.row(held[1])
+            if saved.policy != PrivacyPolicy.model_validate_json(row["policy"]):
+                raise PrivacyDenied("privacy_stale_policy")
+            yield
+            return
+        async with self.ledger.guard(), self.pool.acquire() as conn, conn.transaction():
+            row = await self.row(conn, lock=" FOR SHARE")
+            if row["state"] != "active" or saved.policy != PrivacyPolicy.model_validate_json(row["policy"]):
+                raise PrivacyDenied("privacy_stale_policy")
+            yield
+
+
+class PgRestoreCapability:
+    """Actual external ledger then exclusive PG control lock through COMMIT."""
+    def __init__(self, authority, target):
+        self.authority, self.ledger, self.target = authority, authority.ledger, target
+        self.artifact_hash = target.artifact_sha256
+        self.fail_acknowledgement = False
+
+    @asynccontextmanager
+    async def guard(self, *, namespace_id, operation_id):
+        import asyncio
+        from prme.privacy.policy import PrivacyDenied
+        if (namespace_id, operation_id) != (self.target.namespace_id, self.target.operation_id):
+            raise PrivacyDenied("privacy_boundary_mismatch")
+        if self.authority._lease.get() is not None:
+            raise PrivacyDenied("privacy_capability_unavailable")
+        async with self.ledger.guard(), self.authority.pool.acquire() as conn, conn.transaction():
+            await conn.execute("SET LOCAL lock_timeout='5s'")
+            row = await self.authority.row(conn, lock=" FOR UPDATE")
+            if (row["state"], row["namespace_id"], row["operation_id"], row["artifact_hash"]) != (
+                    "recovering", namespace_id, operation_id, self.artifact_hash):
+                raise PrivacyDenied("privacy_boundary_mismatch")
+            held = [asyncio.current_task(), conn, True]
+            token = self.authority._lease.set(held)
+            try:
+                yield
+                if await self.authority.row(conn) != row:
+                    raise PrivacyDenied("privacy_stale_policy")
+                if self.fail_acknowledgement:
+                    self.fail_acknowledgement = False
+                    raise RuntimeError("synthetic lost restore acknowledgement")
+            finally:
+                held[2] = False
+                self.authority._lease.reset(token)
+
+
 @asynccontextmanager
 async def fresh_config(base, path, layout, *, restore=False):
     if layout != "postgres":

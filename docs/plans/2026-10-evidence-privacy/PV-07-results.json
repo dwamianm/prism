@@ -1590,6 +1590,86 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000932445960-restored-pending-work-initial-source.json",
       "source_manifest_sha256": "fa53f8cde70fc87681877da35ffb8d22a54bfebfbcff26dea402a4bddeb56770",
       "tracked_diff_sha256": "74295fa1395232ac2679c90d47e734d4e13d74e4afe2b219ebbc022969ad9bdb"
+    },
+    {
+      "name": "bound-restore-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/privacy/portability.py",
+        "src/prme/storage/privacy_export.py",
+        "tests/privacy_portability_support.py",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-21T00:21:01.318441+00:00",
+      "elapsed_seconds": 0.141,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T002101318441-bound-restore-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "5e0a28acf4703bd9c997a617e248b7f60a4fec5f",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T002101318441-bound-restore-static-source.json",
+      "source_manifest_sha256": "72e40a2308dfa20023030aea1720bdfcbac7becfc7d8a5a11ec29377f80aeef2",
+      "tracked_diff_sha256": "785924bb21639128f250b052490c84eadc2b83db3643f01262d9eda5771c7406"
+    },
+    {
+      "name": "bound-restore-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py::test_bound_postgres_restore_current_catalog_and_recovery_lease",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T00:21:12.711599+00:00",
+      "elapsed_seconds": 6.741,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T002112711599-bound-restore-initial.log",
+      "log_sha256": "503320d7622c9105b80fb1eccfcc6ce8c23f03bd0f56b24ed6bc0cef0e6e9df8",
+      "head": "5e0a28acf4703bd9c997a617e248b7f60a4fec5f",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T002112711599-bound-restore-initial-source.json",
+      "source_manifest_sha256": "72e40a2308dfa20023030aea1720bdfcbac7becfc7d8a5a11ec29377f80aeef2",
+      "tracked_diff_sha256": "785924bb21639128f250b052490c84eadc2b83db3643f01262d9eda5771c7406"
+    },
+    {
+      "name": "bound-restore-guard-exit-correction",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py::test_bound_postgres_restore_current_catalog_and_recovery_lease",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T00:21:41.340914+00:00",
+      "elapsed_seconds": 5.113,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T002141340914-bound-restore-guard-exit-correction.log",
+      "log_sha256": "57bfc241797c3c6785b044cceb49c8c5937ea0843be4ed756c663e85cdf26e3e",
+      "head": "5e0a28acf4703bd9c997a617e248b7f60a4fec5f",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T002141340914-bound-restore-guard-exit-correction-source.json",
+      "source_manifest_sha256": "963b65d05020600b818dd12b28263c943fc3ef397de10688d8bc2957941dbd4e",
+      "tracked_diff_sha256": "e7ffbdfdc403012acabded74d3f652b56e34e96b74804557ce2f3179178554b5"
+    },
+    {
+      "name": "bound-restore-checkpoint-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/privacy/portability.py",
+        "src/prme/storage/privacy_export.py",
+        "tests/privacy_portability_support.py",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-21T00:25:01.036379+00:00",
+      "elapsed_seconds": 0.177,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T002501036379-bound-restore-checkpoint-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "5e0a28acf4703bd9c997a617e248b7f60a4fec5f",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T002501036379-bound-restore-checkpoint-static-source.json",
+      "source_manifest_sha256": "cdb36cfe5fc70226580647f9cfbfce232cd3241349c621c58f726a4b3ae651d0",
+      "tracked_diff_sha256": "80c1eb8dda1b34b975cbfbbad387ad9347bebff98fd9b5144b0930874184f3ba"
     }
   ],
   "repair_cycles": {
@@ -1656,6 +1736,14 @@
       "unsuccessful_fix_validation_cycles": 0,
       "pending": "none within this finite family selection",
       "correction_result": "Same three parametrizations passed once; 18 negative subchecks completed. One successful fixture correction, no runtime repair for this failure."
+    },
+    "bound_postgres_restore": {
+      "initial": "Single variant failed after destination COMMIT: SET LOCAL search_path reset before existing publication/erasure guard exit queried privacy_erasure_jobs; committed-before-error evidence retained.",
+      "fix1": "Session search_path confined to operation-owned connection through guard exit/close; same unchanged single variant passed, including deliberate post-commit lost acknowledgement and exact receipt retry.",
+      "executions": 2,
+      "unsuccessful_fix_validation_cycles": 0,
+      "fixture_changes_after_initial": false,
+      "limits": "No further runtime correction or test selection; declarations/docs/static checkpoint only after passing variant."
     }
   },
   "held_dependencies": [
@@ -2073,13 +2161,77 @@
       ],
       "test_sha256": "d91f9743f2ef0cda70aad96415b2c928e4c555bf5053b996f00f5871f1088a14",
       "limits": "Only pre-publication work lifecycle is exercised. Public surviving processing/publication remains held by #323. No whole frozen case or new native-platform claim; no repeated terminal/alias/primitive cohort."
+    },
+    "bound_postgres_restore": {
+      "requirements": [
+        "AC5"
+      ],
+      "frozen_references": [
+        "EM08",
+        "ER07"
+      ],
+      "status": "single_postgres_component_pass_whole_case_pending",
+      "api": "restore_protected_export(..., postgres_target=PostgresRestoreTarget(...), recovery=PostgresRecoveryCapability)",
+      "files": [
+        "src/prme/privacy/portability.py",
+        "src/prme/storage/privacy_export.py",
+        "tests/privacy_portability_support.py",
+        "tests/test_privacy_restore.py",
+        "docs/PRIVACY-MIGRATION.md",
+        "docs/WORKSPACES.md",
+        "docs/plans/2026-10-evidence-privacy/PV-07-plan.md",
+        "docs/plans/2026-10-evidence-privacy/PV-07-results.json"
+      ],
+      "test": "tests/test_privacy_restore.py::test_bound_postgres_restore_current_catalog_and_recovery_lease",
+      "layouts": [
+        "postgres"
+      ],
+      "executions": 2,
+      "passed": 1,
+      "failed": 1,
+      "evidence": [
+        "bound-restore-initial",
+        "bound-restore-guard-exit-correction"
+      ],
+      "pytest_seconds": 3.96,
+      "wrapper_seconds": 5.113,
+      "hosted_protocol_source": {
+        "commit": "90f26e4842b7e8db622a8c752f404c92bcab1897",
+        "file": "apps/api/src/prism_api/restore_preflight.py",
+        "sha256": "b30a80baff14ede8108e20a21b4d99712b62d2946807c55b54a68a1da369d873",
+        "scope": "Source-verified structural contract and prior real held-guard proof; actual hosted restore composition is not this engine test."
+      },
+      "assertions": [
+        "Native pg_dump/pg_restore of only owned memory namespace into quarantine; exact original namespace UUID/AAD and protected export retained",
+        "Current initialized catalog/control and unrelated namespace remain unchanged; runtime never drops or replaces schema",
+        "Missing capability, wrong namespace/hash and occupied target refuse before load",
+        "Current independent ledger erasure and imported-work invalidation finish before recovery and final publication",
+        "Interrupted actual SQL load rolls back missing canonical schema creation",
+        "Real PostgreSQL lock-backed caller capability blocks competing current-control update; inherited-child ledger acquisition denies",
+        "Deliberate lost acknowledgement after COMMIT retries exact UUID/operation/artifact receipt without reloading snapshot; changed operation refuses occupied state",
+        "Actual MemoryWorkspace initialize=False/create=False reopens and owned stored-row/evidence survivor controls pass; managed key lineage and source hashes retained"
+      ],
+      "runtime_tested_source_hashes": {
+        "src/prme/privacy/portability.py": "dd403e4be02107efe105dcc3b0d72dd5adcaa3c1e8f726f09e0957a78d5c5c00",
+        "src/prme/storage/privacy_export.py": "1158addaf4f27efd1eaa58d957794cecb4b041364e2e89b6710c1cbc1cedd3f3",
+        "tests/privacy_portability_support.py": "aba39a6c139c07fa6c5bbdd28072403b9709cb00b2d0dcc1325ef811b34a3582",
+        "tests/test_privacy_restore.py": "7b2e704482a6d7d03da2573a116b737bc2db864bce6974f177c62434aba2212f"
+      },
+      "post_runtime_declaration_change": "Only capability attribute annotations became read-only Protocol properties to accept frozen concrete capability implementations. Separate final static evidence; runtime proof source hash retained unchanged.",
+      "limits": [
+        "Engine-owned capability holds a real PostgreSQL lock and actual local independent ledger, with external models/native OS lookup named doubles; no hosted implementation is imported or copied",
+        "Actual hosted PostgresRecoveryLease composition remains mandatory in #283",
+        "Public surviving-memory/publication and fixed-clock standard parity remain held by #323; stored-row/evidence checks are not a public parity pass",
+        "Only missing/empty canonical schema or exact committed operation retry is supported; no occupied replacement or restored control authority",
+        "No new native-platform proof, physical erase, external-copy revocation or whole frozen case acceptance"
+      ]
     }
   },
   "remaining_original_work": [
-    "Finish original shared export/history case evidence and mixed standard-mode public retrieval parity; terminal/alias export-history component now passes, broader whole-case verdict remains pending",
-    "Public/recovered pending-work restore gates remain held; three-layout authority negatives/native-copy components passed, with bound hosted recovery separately pending",
-    "Bound same-lineage hosted PostgreSQL workspace restore into current live control authority",
-    "Remaining EM01-EM08 shared integration; the original EM04 three-layout rotation/real-erasure/export-reopen component passed",
+    "Complete original shared export/history and mixed standard-mode public retrieval parity; all recorded component evidence remains partial",
+    "Public recovered processing/publication and usable surviving-memory gates remain held by #323",
+    "Actual #283 hosted recovery capability composition with the now-implemented bound same-lineage PostgreSQL restore API",
+    "Remaining EM01-EM08/shared scenario harness closure using unchanged original cases and verified real dependencies",
     "Saved fixed-clock standard-mode public retrieval comparison: blocked by held #323",
     "Full suite/package/simulation/CI and root review/PR/delivery remain mandatory"
   ],
@@ -2088,15 +2240,15 @@
     "boundary": "Original EM01-EM08 only; reused evidence is not a fresh combined revision run or a whole-case pass.",
     "EM01": {
       "reuse": "Reviewed #321 fixed codec vectors, canonical payload/wrapper context and PyCA cross-check; root delivery-321-terminal.json/qa-321-merged.json preserve exact prior validation.",
-      "pending": "Exported envelope composition remains component-only; the planned EM04 check will independently unwrap/decrypt retained actual exports, without repeating the vector cohort."
+      "pending": "Complete shared envelope/public-read composition remains pending; original EM04 actual export unwrap component passed and is reused without repeating primitive vectors."
     },
     "EM02": {
       "reuse": "Reviewed #321 exact context/version/purpose tamper and wrong-key controls; current #326 source/format/restoration refusal evidence remains recorded above.",
-      "pending": "Complete shared exact-version/context/swap checks on exported envelopes and public protected reads remain unpassed."
+      "pending": "Three-layout exported context/swap component passed; public protected-read and whole shared EM02 gates remain pending."
     },
     "EM03": {
       "reuse": "Reviewed #321 protect/write failure controls; #326 source, protected-format and migration interruption/commit/publication checks preserve actual storage evidence.",
-      "pending": "Shared complete destination-failure/artifact scan integration is not established by these partial controls."
+      "pending": "Three-layout real export publication fault/artifact/current-ledger serialization component passed; complete shared EM03/public integration remains pending."
     },
     "EM04": {
       "existing_gap": "#321 test_privacy_rotation.py uses a synthetic denied-record callback; existing #326 CLI cases do not rotate or resume.",
@@ -2125,9 +2277,9 @@
     },
     "EM08": {
       "reuse": "Verified default/active export, CLI migration/restore, directory-to-single-file and three-layout current-ledger negatives/native-copy positives.",
-      "pending": "Bound PostgreSQL workspace recovery capability/API and complete public surviving-memory/publication/final shared gate remain open. Terminal/alias history and independent pending-work lifecycle now have their separately recorded three-layout component evidence."
+      "pending": "Bound PostgreSQL engine variant now passed under actual lock-backed caller capability; actual hosted composition, public surviving-memory/publication and final shared gate remain pending."
     },
-    "next_check_limit": "Original independent EM04, exported EM02, export-effect EM03 and restored-work components are recorded. Do not repeat them absent an affected change. Bound PG recovery/public readers and final shared harness await real dependencies/root release."
+    "next_check_limit": "No additional independent check selected. Reuse verified rotation/export/context/effect/restored-work/bound-PG components; held #323, actual #283 composition and final root-coordinated full validation remain."
   },
   "current_remaining_inventory": {
     "original_acceptance": "All six original ACs remain partial; zero whole frozen case passes. Additional findings are not new criteria.",
@@ -2155,25 +2307,16 @@
           "AC6"
         ],
         "remaining": "Planned frozen scenario harness consolidation remains pending actual shared/public/hosted adapter dependencies. Existing exact component evidence is retained; no new whole-case runner may relabel these partial results as passes.",
-        "dependency": "Held #323 public paths, #283 committed bound recovery guard/API and final #327 shared gate"
+        "dependency": "Held #323 public paths, actual #283 bound recovery composition and final #327 shared gate"
       }
     ],
-    "design_held": [
-      {
-        "criteria": [
-          "AC5"
-        ],
-        "handoff": "Hosted #283 AC3/AC6; bound same-lineage PostgreSQL destination into the current catalog/control authority",
-        "remaining": "Actual held recovery/effect capability and safe nested lock order must be settled with #280/#283 before coding. Existing supported empty unbound PG restore is verified.",
-        "limit": "Published ACs do not explicitly require occupied-schema replacement. Frozen preparation refuses occupied/unquiesced destinations; preserve its positive-A ambiguity, no new automatic replacement requirement."
-      }
-    ],
+    "design_held": [],
     "final_required_gates": [
       "Root-coordinated affected integration and required full suite/package/simulation/CI on final revision",
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "No additional independent component selection. Await actual #283 committed recovery/effect capability evidence and root-bounded API reconciliation, plus USER release of the held #323 strategy. Required final validation remains root-coordinated; no full/package/CI or public-reader rerun now.",
+    "next_action": "Push this coherent partial checkpoint and return terminal needs-human handoff to root. No additional independent case/full suite; root owns remaining dependency reconciliation and delivery. Do not start #325 impact projection in this task.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
@@ -2187,7 +2330,18 @@
     "independent_component_checkpoints": {
       "EM02": "695e61a16aa746d4e9cbbbe06db0cd90daaa02b2: three-layout exported context/actual unwrap component pass",
       "EM03": "1232838e34c83fc3ccbded98223f7bc530711724: three-layout actual publication fault/current-ledger serialization component pass",
-      "restored_work": "Current test/docs checkpoint: three-layout exact running/pending state, consumed allowance and original deadline component pass"
-    }
+      "restored_work": "5e0a28acf4703bd9c997a617e248b7f60a4fec5f: three-layout exact running/pending state, consumed allowance and original deadline component pass",
+      "bound_postgres_restore": "Current checkpoint: one actual PostgreSQL lock-backed current-catalog restore variant passed after first runtime correction; initial committed-before-error failure preserved."
+    },
+    "integration_pending": [
+      {
+        "criteria": [
+          "AC5"
+        ],
+        "handoff": "Hosted #283 AC3/AC6 and engine ER07/EM08",
+        "remaining": "Compose committed real hosted PostgresRecoveryLease with the typed bound target adapter in the actual hosted native/HTTP/MCP restore fixture. Engine lock-backed variant passed; hosted composition not claimed.",
+        "limit": "Missing/empty current canonical target and exact receipt retry only; no automatic occupied-schema replacement requirement."
+      }
+    ]
   }
 }

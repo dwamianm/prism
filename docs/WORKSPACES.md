@@ -193,6 +193,20 @@ provides the same check for an existing unbound PostgreSQL store; it is not a
 local pack option. Standalone protected restore still needs explicit lineage
 and current authority; a copied descriptor is not proof of ledger freshness.
 
+Bound protected recovery uses `restore_protected_export` with an explicit
+`PostgresRestoreTarget` and `PostgresRecoveryCapability`; see
+[protected migration](PRIVACY-MIGRATION.md). The target names the current
+initialized catalog UUID, an operation UUID and the protected artifact hash.
+The caller drains ordinary namespace leases and holds live ledger/policy
+authority through the restore transaction in the same task. The engine acquires
+that capability before runtime preflight, retains the current catalog mapping,
+and applies current erasure/expiry state before registry recovery. A missing or
+empty canonical schema is required. Occupied targets refuse except an exact
+committed operation receipt, whose retry rechecks current authority without
+reloading old memory. The operator API does not replace an occupied schema or
+restore authentication/control tables. Actual hosted capability composition
+and public surviving-memory validation remain separate integration gates.
+
 ## Current boundary
 
 This API implements named local and PostgreSQL physical partitions. It does not

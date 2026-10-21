@@ -21,6 +21,7 @@ from prme.privacy.policy import PrivacyDenied
 from prme.privacy.portability import (
     ExportEvent, ExportOperation, ExportWork, ProtectedExport,
     ProtectedExportManifest, ProtectedStoreFormat, PrivacyPortabilityError,
+    PostgresRestoreTarget, PostgresRecoveryCapability,
 )
 from prme.privacy.records import PrivacyRecord
 from prme.storage.privacy_format import preflight_format
@@ -580,12 +581,17 @@ async def _restore_database(conn, pool, config, runtime, bundle):
     return (await repository.state())[1]
 
 
-async def restore_protected_export(source, config, *, privacy_runtime, embedding_provider):
+async def restore_protected_export(source, config, *, privacy_runtime, embedding_provider,
+                                   postgres_target: PostgresRestoreTarget | None = None,
+                                   recovery: PostgresRecoveryCapability | None = None):
     """Restore this closed format into an empty, explicitly selected destination.
 
     Local publication is exclusive and retains the source artifact. PostgreSQL
     accepts an explicitly selected empty schema/database only; it does not
     import SQL, replace an occupied namespace, or restore authentication data.
+    A bound catalog target additionally requires the caller's live recovery
+    capability. It permits only a missing/empty canonical schema or the exact
+    receipt of this operation; current authority stays held through COMMIT.
     """
     import asyncio
     import shutil
@@ -596,6 +602,11 @@ async def restore_protected_export(source, config, *, privacy_runtime, embedding
     from prme.storage.privacy_source import _read_bounded
     from prme.storage.pack_tools import _attach, _duckdb_key, _secret
     from prme.privacy.keys import managed_key_usage
+    if postgres_target is not None:
+        return await _restore_bound_postgres(source, config, privacy_runtime, embedding_provider,
+                                             postgres_target, recovery)
+    if recovery is not None:
+        raise PrivacyDenied("privacy_configuration_invalid")
     await preflight_runtime(config, privacy_runtime)
     raw = _read_bounded(Path(source), MAX_EXPORT_BYTES)
     bundle = _read_export(raw)
@@ -745,3 +756,147 @@ async def _restore_postgres(source, config, runtime, bundle, original):
         if not committed:
             await transaction.rollback()
         await conn.close()
+
+
+async def _restore_bound_postgres(source, config, runtime, embedding_provider, target, recovery):
+    """One current catalog identity, held recovery lease and transactional load.
+
+    The caller owns quiescence/control authority. This adapter never restores
+    that authority, replaces a schema or treats a receipt as a fresh permit.
+    """
+    import hashlib
+    import asyncpg
+    from types import SimpleNamespace
+    from prme.privacy.admission import AdmissionCoordinator, preflight_runtime
+    from prme.privacy.crypto import _pairs
+    from prme.privacy.erasure import LedgerHead
+    from prme.privacy.keys import managed_key_usage
+    from prme.storage.erasure import prepare_store
+    from prme.storage.pg.event_store import PgEventStore
+    from prme.storage.pg.namespace import _ConnectionPool, _identity, _relations, namespace_schema
+    from prme.storage.pg.schema import initialize_pg_database, validate_pg_runtime
+    from prme.storage.pg.vector_sql import quote_identifier
+    from prme.storage.privacy_source import _read_bounded
+    from prme.workspace import _validate_name
+
+    target = PostgresRestoreTarget.model_validate(target)
+    _validate_name(target.workspace)
+    _validate_name(target.namespace)
+    if (config.backend != "postgres" or config.namespace_id not in (None, target.namespace_id)
+            or runtime is None or runtime.project_id != target.namespace_id):
+        raise PrivacyDenied("privacy_boundary_mismatch")
+    if (recovery is None or getattr(recovery, "ledger", None) is not runtime.erasure_ledger
+            or getattr(recovery, "authority", None) is not runtime.authority
+            or getattr(recovery, "artifact_hash", None) != target.artifact_sha256
+            or not callable(getattr(recovery, "guard", None))):
+        raise PrivacyDenied("privacy_capability_unavailable")
+    raw = _read_bounded(Path(source), MAX_EXPORT_BYTES)
+    original = hashlib.sha256(raw).hexdigest()
+    if original != target.artifact_sha256:
+        raise PrivacyPortabilityError("privacy_source_changed")
+    bundle = _read_export(raw)
+    del raw
+    if (bundle.manifest.mode != "protected" or bundle.manifest.format.store_id != target.namespace_id
+            or bundle.manifest.format.project_id != runtime.project_id):
+        raise PrivacyDenied("privacy_boundary_mismatch")
+    for embedding in bundle.embeddings:
+        if (embedding.model, embedding.version, embedding.dimension) != (
+                embedding_provider.model_name, embedding_provider.model_version, embedding_provider.dimension):
+            raise PrivacyPortabilityError("privacy_export_invalid")
+    config = config.model_copy(update={"namespace_id": target.namespace_id})
+    # Readiness enters the actual ledger/policy authority. It must run inside
+    # this same-task recovery capability, never as ordinary recovering traffic.
+    async with recovery.guard(namespace_id=target.namespace_id, operation_id=target.operation_id):
+        await preflight_runtime(config, runtime)
+        async with runtime.erasure_ledger.guard():
+            await runtime.erasure_ledger.entries_since(bundle.manifest.ledger_checkpoint)
+        conn = await asyncpg.connect(config.database_url.get_secret_value())
+        transaction = conn.transaction()
+        committed = False
+        try:
+            await conn.execute("DISCARD TEMP")
+            await transaction.start()
+            await conn.execute("SET LOCAL lock_timeout='5s'")
+            # Current catalog ownership is never loaded from the artifact.
+            try:
+                versions = await conn.fetch("SELECT version FROM prme_workspace.metadata")
+                row = await conn.fetchrow("SELECT id,initialized FROM prme_workspace.namespaces "
+                    "WHERE workspace=$1 AND name=$2 FOR UPDATE", target.workspace, target.namespace)
+            except asyncpg.UndefinedTableError:
+                raise PrivacyDenied("privacy_boundary_mismatch") from None
+            if [item["version"] for item in versions] != [1] or row is None or row["id"] != target.namespace_id or not row["initialized"]:
+                raise PrivacyDenied("privacy_boundary_mismatch")
+            schema = namespace_schema(target.namespace_id)
+            quoted = quote_identifier(schema)
+            await conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended($1, 0))", schema)
+            exists = await conn.fetchval("SELECT oid FROM pg_catalog.pg_namespace WHERE nspname=$1", schema)
+            if not exists:
+                await conn.execute(f"CREATE SCHEMA {quoted}")
+            # Post-effect guard checks still query this namespace after COMMIT.
+            # This connection is owned and closed by this one operation.
+            await conn.execute("SELECT pg_catalog.set_config('search_path',$1,false)", quoted)
+            occupied = await conn.fetchval("SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_class WHERE relnamespace=$1) "
+                "OR EXISTS(SELECT 1 FROM pg_catalog.pg_proc WHERE pronamespace=$1) "
+                "OR EXISTS(SELECT 1 FROM pg_catalog.pg_type WHERE typnamespace=$1)",
+                exists or await conn.fetchval("SELECT oid FROM pg_catalog.pg_namespace WHERE nspname=$1", schema))
+            pool = _ConnectionPool(conn)
+            if occupied:
+                # A lost acknowledgement can repeat only this exact completed
+                # operation. Another occupied target is never overwritten.
+                if not await conn.fetchval("SELECT pg_catalog.to_regclass($1)", quoted + ".privacy_restore_receipt"):
+                    raise PrivacyPortabilityError("privacy_destination_occupied")
+                try:
+                    receipts = await conn.fetch("SELECT body FROM privacy_restore_receipt")
+                    body = json.loads(receipts[0]["body"], object_pairs_hook=_pairs) if len(receipts) == 1 else {}
+                    checkpoint = LedgerHead.model_validate(body["ledger_checkpoint"])
+                    if (body != {"schema_version": 1, "target": target.model_dump(mode="json"),
+                            "ledger_checkpoint": checkpoint.model_dump(mode="json")}
+                            or checkpoint.store_id != target.namespace_id
+                            or checkpoint.ledger_id != bundle.manifest.ledger_checkpoint.ledger_id):
+                        raise ValueError()
+                except (ValueError, KeyError, TypeError):
+                    raise PrivacyPortabilityError("privacy_destination_occupied") from None
+                identity = await _identity(conn, schema, target.namespace_id)
+                if not set(identity["relations"]).issubset(await _relations(conn, schema)):
+                    raise PrivacyPortabilityError("privacy_format_unsupported")
+                await preflight_format(pool=pool, runtime=runtime, namespace_id=target.namespace_id)
+                await validate_pg_runtime(pool, embedding_dim=config.embedding.dimension, protected=True)
+                async with runtime.erasure_ledger.guard():
+                    await runtime.erasure_ledger.entries_since(checkpoint)
+                # Apply newer erasure/expiry state, without loading the old copy.
+                await prepare_store(pool=pool, runtime=runtime, namespace_id=target.namespace_id, initialize=False)
+            else:
+                await _restore_database(None, pool, config, runtime, bundle)
+                # Actual recovery runs only after imported work invalidation
+                # and current ledger/expiry purge in _restore_database.
+                await initialize_pg_database(pool, embedding_dim=config.embedding.dimension, protected=True)
+                await conn.execute("CREATE TABLE prme_namespace_identity ("
+                    "singleton BOOLEAN PRIMARY KEY CHECK(singleton), version INTEGER NOT NULL CHECK(version=1), "
+                    "namespace_id UUID NOT NULL, relations TEXT[] NOT NULL)")
+                await conn.execute("CREATE TABLE privacy_restore_receipt (singleton INTEGER PRIMARY KEY CHECK(singleton=1),body VARCHAR NOT NULL)")
+                await conn.execute("INSERT INTO prme_namespace_identity VALUES(true,1,$1,$2)",
+                    target.namespace_id, await _relations(conn, schema))
+            coordinator = AdmissionCoordinator(SimpleNamespace(_config=config,
+                _event_store=PgEventStore(pool, protected=True)), runtime)
+            async with coordinator.erasure.guard():
+                head = (await coordinator.erasure.repository.state())[1]
+                records = await coordinator.erasure.current_records(await coordinator.repository._read("1=1", ()))
+                nodes = await conn.fetch("SELECT id FROM nodes")
+                async with coordinator.publication_guards(records, node_ids=tuple(row[0] for row in nodes)):
+                    with managed_key_usage(head.store_id):
+                        async with coordinator.writer_guard(records):
+                            if hashlib.sha256(_read_bounded(Path(source), MAX_EXPORT_BYTES)).hexdigest() != original:
+                                raise PrivacyPortabilityError("privacy_source_changed")
+                            if not occupied:
+                                receipt = {"schema_version": 1, "target": target.model_dump(mode="json"),
+                                           "ledger_checkpoint": head.model_dump(mode="json")}
+                                await conn.execute("INSERT INTO privacy_restore_receipt VALUES(1,$1)", json.dumps(receipt, sort_keys=True))
+                            await transaction.commit()
+                            committed = True
+            return {"schema_version": 1, "state": "complete", "source_retained": True,
+                    "store_id": str(head.store_id), "ledger_sequence": head.sequence, "physical_erasure": False,
+                    "operation_id": str(target.operation_id), "artifact_sha256": original}
+        finally:
+            if not committed and conn.is_in_transaction():
+                await transaction.rollback()
+            await conn.close()

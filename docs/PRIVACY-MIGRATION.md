@@ -94,14 +94,51 @@ continuity proof. Active-memory-only output and arbitrary old CLI JSON are not
 accepted by this reader.
 
 Current logical restore supports local directory/single-file destinations and
-an explicitly selected empty PostgreSQL schema. Occupied replacement and bound
-PostgreSQL workspace recovery are not yet supported by this API. Native
-PostgreSQL backup/restore and copied-pack reopening remain distinct integration
+an explicitly selected empty PostgreSQL schema. Bound PostgreSQL workspace
+recovery requires the existing initialized catalog UUID and a caller-owned
+recovery capability, as described below. Native PostgreSQL backup/restore and
+copied-pack reopening remain distinct integration
 routes; no arbitrary SQL importer or authentication-database restoration is
 provided. Whole-directory Fernet encryption is accepted for source reading;
 protected logical restore currently requires an unencrypted directory destination
 or a native encrypted `.prme` destination. Evidence remains independently
 protected in either supported destination.
+
+For a bound PostgreSQL workspace, the operator first drains ordinary namespace
+leases and obtains a real current recovery capability. Supply the same ledger
+and policy authority instances in that capability and `PrivacyRuntime`:
+
+```python
+from prme.privacy.portability import PostgresRestoreTarget
+from prme.storage.privacy_export import restore_protected_export
+
+target = PostgresRestoreTarget(
+    workspace="hosted", namespace=project_name, namespace_id=current_namespace_id,
+    operation_id=recovery_operation_id, artifact_sha256=protected_export_sha256,
+)
+await restore_protected_export(
+    artifact_path, postgres_config, privacy_runtime=runtime,
+    embedding_provider=provider, postgres_target=target,
+    recovery=operator_recovery_capability,
+)
+```
+
+`PostgresRecoveryCapability.guard(namespace_id=..., operation_id=...)` must
+validate the live recovery operation and artifact hash, hold current ledger and
+policy authority, and allow their same-task reentry through the actual restore
+commit. The engine enters this guard before ordinary runtime readiness checks.
+It locks and verifies the current initialized catalog mapping, restores only
+into its missing or empty canonical schema, and leaves catalog/control authority
+unchanged. The original UUID and payload AAD remain intact. Occupied replacement
+is refused. A lost acknowledgement may retry only the exact operation, target
+and artifact hash recorded by the committed receipt, under freshly checked
+current authority; that retry applies newer fences without loading old content
+again. A receipt alone never authorizes recovery. This is a Python operator API;
+the generic CLI does not provide a recovery capability.
+
+The engine's component check uses a real PostgreSQL lock-backed caller
+capability and native backup quarantine. Composition with hosted recovery and
+the complete public surviving-memory checks remain pending in PV-07.
 
 The source reader uses bounded native DuckDB ATTACH over an operation-owned
 read-only memory filesystem. It authenticates closed Fernet bytes in memory,

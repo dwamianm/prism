@@ -402,6 +402,200 @@ async def test_restored_pending_work_keeps_deadline_budget_and_claim_fences(tmp_
             await engine.close()
 
 
+async def test_bound_postgres_restore_current_catalog_and_recovery_lease(tmp_path, analyzer, native, monkeypatch):
+    """One real PG variant; hosted capability composition/public reads stay separate."""
+    import asyncpg
+    from prme import MemoryWorkspace
+    from prme.privacy.portability import PostgresRestoreTarget
+    from prme.storage import privacy_export
+    from prme.storage.pg.namespace import namespace_schema
+    from tests.privacy_portability_support import HeldLocalLedger, PgRestoreAuthority, PgRestoreCapability
+
+    template, runtime, policy, custody, evidence, _ = await journal_engine(tmp_path / "template", "directory", analyzer)
+    base = template._config
+    await template.close()
+    primary_url, quarantine_url = os.environ["PRME_TEST_DATABASE_URL"], os.environ["PRME_TEST_RESTORE_DATABASE_URL"]
+    primary_env = _pg_environment(primary_url, "privacy_engine_326")
+    quarantine_env = _pg_environment(quarantine_url, "privacy_engine_326_restore")
+    primary = await asyncpg.connect(primary_url)
+    quarantine = await asyncpg.connect(quarantine_url)
+    control_pool = await asyncpg.create_pool(primary_url, min_size=1, max_size=3)
+    namespace_id, other_id = policy.project_id, uuid4()
+    schema, other_schema = namespace_schema(namespace_id), namespace_schema(other_id)
+    workspace_name, control_schema = "pv326_recovery_" + uuid4().hex, "pv326_control_" + uuid4().hex
+    table = f'"{control_schema}".recovery_control'
+    config = type(base).model_validate({**base.model_dump(), "database_url": primary_url})
+    quarantine_config = type(base).model_validate({**base.model_dump(), "database_url": quarantine_url})
+    task = None
+    try:
+        await primary.execute(f'CREATE SCHEMA "{control_schema}"')
+        await primary.execute(f"CREATE TABLE {table}(namespace_id UUID PRIMARY KEY,policy TEXT NOT NULL,"
+            "state TEXT NOT NULL,operation_id UUID,artifact_hash TEXT,sentinel TEXT NOT NULL)")
+        await primary.execute(f"INSERT INTO {table} VALUES($1,$2,'active',NULL,NULL,'current-control')",
+            namespace_id, policy.model_dump_json())
+        ledger = HeldLocalLedger(runtime.erasure_ledger)
+        authority = PgRestoreAuthority(control_pool, table, ledger)
+        runtime = replace(runtime, erasure_ledger=ledger, authority=authority)
+        def opened(current_config, *, initialize=True):
+            return MemoryWorkspace.open_postgres(current_config, name=workspace_name, initialize=initialize,
+                embedding_provider=runtime.embedder, privacy_runtime_factory=lambda _: runtime)
+        owner = str(policy.owner_id)
+        async with opened(config) as workspace:
+            # Explicit fixture bootstrap uses the real current catalog. Its ID
+            # is the already provisioned privacy/key boundary, never a path.
+            await primary.execute("INSERT INTO prme_workspace.namespaces(workspace,name,id) VALUES($1,'A',$2)", workspace_name, namespace_id)
+            await primary.execute("INSERT INTO prme_workspace.namespaces(workspace,name,id,initialized) VALUES($1,'other',$2,true)", workspace_name, other_id)
+            await primary.execute(f'CREATE SCHEMA "{other_schema}"')
+            await primary.execute(f'CREATE TABLE "{other_schema}".sentinel(value TEXT NOT NULL)')
+            await primary.execute(f'INSERT INTO "{other_schema}".sentinel VALUES(\'other-project\')')
+            async with workspace.namespace("A", create=False) as memory:
+                erased = await memory.store("Mara likes oranges.", user_id=owner)
+                survives = await memory.store("Mara prefers tea.", user_id=owner)
+                engine = memory._engine
+                rows = await engine._privacy.repository._query("SELECT id,content FROM nodes", ())
+                erased_id = str(next(row[0] for row in rows if row[1] == "Mara likes oranges."))
+                survivor_id = str(next(row[0] for row in rows if row[1] == "Mara prefers tea."))
+                original_evidence = (await engine._privacy.repository.get(survives, user_id=owner)).evidence
+        # All source leases are closed before the real native archive.
+        archive = tmp_path / "namespace.dump"
+        fd = os.open(archive, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        os.close(fd)
+        await _pg_tool(["pg_dump", "--no-owner", "--no-acl", "--format=custom", "--schema", schema, "--file", str(archive)], primary_env)
+        archive_hashes = _hashes(archive)
+        async with opened(quarantine_config):
+            # A quarantine fixture registry binds the saved UUID. No public
+            # authorization/control table is copied from the archive.
+            await quarantine.execute("INSERT INTO prme_workspace.namespaces(workspace,name,id,initialized) VALUES($1,'A',$2,true)", workspace_name, namespace_id)
+        await _pg_tool(["pg_restore", "--exit-on-error", "--no-owner", "--no-acl", "--dbname", "privacy_engine_326_restore", str(archive)], quarantine_env)
+        artifact = tmp_path / "quarantined-namespace.json"
+        async with opened(quarantine_config, initialize=False) as workspace:
+            async with workspace.namespace("A", create=False) as memory:
+                manifest = await export_protected_pack(memory._engine, artifact)
+        assert manifest.format.store_id == namespace_id
+        artifact_hash = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        async with opened(config, initialize=False) as workspace:
+            async with workspace.namespace("A", create=False) as memory:
+                await memory.request_erasure(ErasureRequest(request_id=uuid4(), scope=policy.scope,
+                    event_ids=(UUID(erased),)), user_id=owner)
+        async with ledger.guard():
+            current_head = await ledger.current_head(namespace_id)
+        assert current_head.sequence > manifest.ledger_checkpoint.sequence
+        # Explicit task-owned loss simulation, after the engine/leases closed.
+        # The restoration API itself never drops or replaces this schema.
+        await primary.execute(f'DROP SCHEMA "{schema}" CASCADE')
+        target = PostgresRestoreTarget(workspace=workspace_name, namespace="A", namespace_id=namespace_id,
+            operation_id=uuid4(), artifact_sha256=artifact_hash)
+        capability = PgRestoreCapability(authority, target)
+        await primary.execute(f"UPDATE {table} SET state='recovering',operation_id=$1,artifact_hash=$2",
+            target.operation_id, artifact_hash)
+        catalog_before = await primary.fetch("SELECT * FROM prme_workspace.namespaces WHERE workspace=$1 ORDER BY name", workspace_name)
+        control_before = await primary.fetch(f"SELECT * FROM {table}")
+
+        async def restore(selected=target, permit=capability):
+            return await restore_protected_export(artifact, config, privacy_runtime=runtime,
+                embedding_provider=runtime.embedder, postgres_target=selected, recovery=permit)
+        with pytest.raises(PrivacyDenied, match="^privacy_capability_unavailable$"):
+            await restore(permit=None)
+        with pytest.raises(PrivacyDenied, match="^privacy_boundary_mismatch$"):
+            await restore(target.model_copy(update={"namespace_id": other_id}))
+        wrong_hash = target.model_copy(update={"artifact_sha256": "0" * 64})
+        with pytest.raises(PrivacyPortabilityError, match="^privacy_source_changed$"):
+            await restore(wrong_hash, PgRestoreCapability(authority, wrong_hash))
+        assert not await primary.fetchval("SELECT oid FROM pg_namespace WHERE nspname=$1", schema)
+
+        # An unrelated occupied target must survive unchanged even with a
+        # currently authorized recovery operation.
+        await primary.execute(f'CREATE SCHEMA "{schema}"')
+        await primary.execute(f'CREATE TABLE "{schema}".occupied(value TEXT)')
+        await primary.execute(f'INSERT INTO "{schema}".occupied VALUES(\'retained\')')
+        with pytest.raises(PrivacyPortabilityError, match="^privacy_destination_occupied$"):
+            await restore()
+        assert await primary.fetchval(f'SELECT value FROM "{schema}".occupied') == "retained"
+        await primary.execute(f'DROP SCHEMA "{schema}" CASCADE')
+        load = privacy_export._load_export
+        async def fail_load(*args, **kwargs):
+            await load(*args, **kwargs)
+            raise RuntimeError("synthetic bound restore interruption")
+        with monkeypatch.context() as patch:
+            patch.setattr(privacy_export, "_load_export", fail_load)
+            with pytest.raises(RuntimeError, match="^synthetic bound restore interruption$"):
+                await restore()
+        assert not await primary.fetchval("SELECT oid FROM pg_namespace WHERE nspname=$1", schema)
+        assert await primary.fetch(f"SELECT * FROM {table}") == control_before
+
+        entered, release = asyncio.Event(), asyncio.Event()
+        restore_database = privacy_export._restore_database
+        async def paused_database(*args, **kwargs):
+            result = await restore_database(*args, **kwargs)
+            async def inherited_child():
+                with pytest.raises(PrivacyDenied):
+                    async with ledger.guard():
+                        pytest.fail("child inherited the recovery lease")
+            await asyncio.create_task(inherited_child())
+            entered.set()
+            await release.wait()
+            return result
+        capability.fail_acknowledgement = True
+        with monkeypatch.context() as patch:
+            patch.setattr(privacy_export, "_restore_database", paused_database)
+            task = asyncio.create_task(restore())
+            await asyncio.wait_for(entered.wait(), 10)
+            assert not await primary.fetchval("SELECT oid FROM pg_namespace WHERE nspname=$1", schema)
+            # A real conflicting transaction cannot alter current recovery
+            # authority while the engine's load/publication transaction runs.
+            async with primary.transaction():
+                await primary.execute("SET LOCAL lock_timeout='100ms'")
+                with pytest.raises(asyncpg.LockNotAvailableError):
+                    await primary.execute(f"UPDATE {table} SET state='active'")
+            release.set()
+            with pytest.raises(RuntimeError, match="^synthetic lost restore acknowledgement$"):
+                await asyncio.wait_for(task, 10)
+        assert await primary.fetchval("SELECT oid FROM pg_namespace WHERE nspname=$1", schema)
+        receipt_before = await primary.fetchval(f'SELECT body FROM "{schema}".privacy_restore_receipt')
+        rows_before = await primary.fetch(f'SELECT * FROM "{schema}".nodes ORDER BY id')
+        assert [str(row["id"]) for row in rows_before] == [survivor_id]
+        async def no_reload(*args, **kwargs):
+            pytest.fail("completed operation reloaded snapshot content")
+        with monkeypatch.context() as patch:
+            patch.setattr(privacy_export, "_load_export", no_reload)
+            result = await restore()
+        assert result["store_id"] == str(namespace_id) and result["operation_id"] == str(target.operation_id)
+        assert result["artifact_sha256"] == artifact_hash and result["ledger_sequence"] == current_head.sequence
+        assert await primary.fetchval(f'SELECT body FROM "{schema}".privacy_restore_receipt') == receipt_before
+        assert await primary.fetch(f'SELECT * FROM "{schema}".nodes ORDER BY id') == rows_before
+        # New operation identity never turns an occupied destination into an
+        # authorized replacement, even when the caller owns its new lease.
+        other_target = target.model_copy(update={"operation_id": uuid4()})
+        await primary.execute(f"UPDATE {table} SET operation_id=$1", other_target.operation_id)
+        with pytest.raises(PrivacyPortabilityError, match="^privacy_destination_occupied$"):
+            await restore(other_target, PgRestoreCapability(authority, other_target))
+        await primary.execute(f"UPDATE {table} SET operation_id=$1", target.operation_id)
+        assert await primary.fetch(f"SELECT * FROM {table}") == control_before
+        assert await primary.fetch("SELECT * FROM prme_workspace.namespaces WHERE workspace=$1 ORDER BY name", workspace_name) == catalog_before
+        assert await primary.fetchval(f'SELECT value FROM "{other_schema}".sentinel') == "other-project"
+        # The operator completes current recovery only after the engine commit;
+        # ordinary startup uses the existing public workspace API.
+        await primary.execute(f"UPDATE {table} SET state='active'")
+        async with opened(config, initialize=False) as workspace:
+            async with workspace.namespace("A", create=False) as memory:
+                await _assert_survivor(memory._engine, owner, erased_id, survivor_id, survives, original_evidence)
+        assert {entry.version: entry for entry in custody.inventory()}[evidence.ref.key_version].managed_lineages == (namespace_id,)
+        assert _hashes(archive) == archive_hashes and hashlib.sha256(artifact.read_bytes()).hexdigest() == artifact_hash
+    finally:
+        if task is not None and not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        await control_pool.close()
+        for conn in (primary, quarantine):
+            await conn.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+            if conn is primary:
+                await conn.execute(f'DROP SCHEMA IF EXISTS "{other_schema}" CASCADE')
+                await conn.execute(f'DROP SCHEMA IF EXISTS "{control_schema}" CASCADE')
+            if await conn.fetchval("SELECT pg_catalog.to_regclass('prme_workspace.namespaces')"):
+                await conn.execute("DELETE FROM prme_workspace.namespaces WHERE workspace=$1", workspace_name)
+            await conn.close()
+
+
 @pytest.mark.parametrize("layout", LAYOUTS)
 async def test_same_lineage_restore_applies_current_ledger_before_recovery(tmp_path, layout, analyzer, native):
     engine, runtime, policy, *_ = await journal_engine(tmp_path, layout, analyzer)
