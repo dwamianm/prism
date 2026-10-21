@@ -28,7 +28,7 @@ from prme.models.privacy_reads import (
 from prme.privacy.capabilities import EvidenceAccess
 
 from prme.privacy.policy import PrivacyPolicy, PrivacyDenied
-from prme.privacy.erasure import ErasureRequest, ErasureStatus
+from prme.privacy.erasure import ErasureImpact, ErasureRequest, ErasureStatus
 from prme.privacy.capabilities import PrivacyRuntime
 from prme.privacy.admission import privacy_disclosure
 
@@ -1695,9 +1695,14 @@ class MemoryEngine:
                     user_id=node.user_id,
                 )
 
-    async def request_erasure(self, request: ErasureRequest, *, user_id: str) -> ErasureStatus:
+    async def preview_erasure(self, request: ErasureRequest, *, user_id: str) -> ErasureImpact:
+        """Read-only scoped impact; no fence, reservation or evidence unwrap."""
+        return await self._privacy.erasure.preview(request, user_id=user_id)
+
+    async def request_erasure(self, request: ErasureRequest, *, user_id: str,
+                              expected_impact: ErasureImpact | None = None) -> ErasureStatus:
         """Durably fence selected evidence or memory; purge is explicit maintenance."""
-        return await self._privacy.erasure.request(request, user_id=user_id)
+        return await self._privacy.erasure.request(request, user_id=user_id, expected_impact=expected_impact)
 
     async def expire_privacy(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000) -> tuple[ErasureStatus, ...]:
         from prme.storage.erasure import prepare_store

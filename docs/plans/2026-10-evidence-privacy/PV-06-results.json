@@ -2,7 +2,7 @@
   "schema_version": 1,
   "issue": 325,
   "acceptanceComplete": false,
-  "implementationStatus": "corrected_checkpoint_pending_affected_review",
+  "implementationStatus": "impact_prerequisite_component_passed_remaining_original_gates_preserved",
   "sourcePlan": "PV-06-plan.md",
   "originalAcceptanceCount": 6,
   "frozenRows": [
@@ -458,5 +458,230 @@
     "Backups, exports, recovery artifacts, external provider/application copies are not managed by this implementation.",
     "Same-user rollback of both independent local ledger and pack needs an external current authority for freshness proof.",
     "No production data/key deletion or deployment performed."
-  ]
+  ],
+  "impactPrerequisite": {
+    "base": "a1bce140aeccf8999dcf42594592390b2438845c",
+    "requirements": [
+      "325 AC1/2/4/5",
+      "hosted 282 AC4"
+    ],
+    "status": "two_backend_component_and_scoped_static_passed_pending_hosted_composition_and_original_gates",
+    "selection": "tests/test_privacy_erasure.py::test_ER02_scoped_impact_is_read_only_and_confirms_actual_closure",
+    "layouts": [
+      "directory",
+      "postgres"
+    ],
+    "commands": [
+      {
+        "name": "impact-static",
+        "command": [
+          ".venv/bin/ruff",
+          "check",
+          "src/prme/privacy/erasure.py",
+          "src/prme/privacy/__init__.py",
+          "src/prme/storage/erasure.py",
+          "src/prme/storage/engine.py",
+          "src/prme/client.py",
+          "tests/test_privacy_erasure.py",
+          "tests/typing/public_api.py"
+        ],
+        "started_at": "2026-10-21T00:35:06.869697+00:00",
+        "elapsed_seconds": 0.177,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-325/impact/logs/20261021T003506869697-impact-static.log",
+        "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+        "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+        "source_manifest": ".github-ticket-loop/privacy-325/impact/logs/20261021T003506869697-impact-static-source.json",
+        "source_manifest_sha256": "9ac86441bf846ea790dace6ccf91a9861d68c9959d23ddcd51b6280258a04241",
+        "tracked_diff_sha256": "4f0cdb6b5b9d7aa7c2677111f850cdc95ef63cc53db7fdd3507b4cc62176eb41"
+      },
+      {
+        "name": "impact-initial",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_privacy_erasure.py::test_ER02_scoped_impact_is_read_only_and_confirms_actual_closure",
+          "--tb=short"
+        ],
+        "started_at": "2026-10-21T00:35:16.233345+00:00",
+        "elapsed_seconds": 7.264,
+        "exit_code": 1,
+        "log": ".github-ticket-loop/privacy-325/impact/logs/20261021T003516233345-impact-initial.log",
+        "log_sha256": "588c29fca06eac56d12d526df5acc95e5533157a45fdd319c56bc604ec83e076",
+        "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+        "source_manifest": ".github-ticket-loop/privacy-325/impact/logs/20261021T003516233345-impact-initial-source.json",
+        "source_manifest_sha256": "9ac86441bf846ea790dace6ccf91a9861d68c9959d23ddcd51b6280258a04241",
+        "tracked_diff_sha256": "4f0cdb6b5b9d7aa7c2677111f850cdc95ef63cc53db7fdd3507b4cc62176eb41"
+      },
+      {
+        "name": "impact-fixture-event-correction",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_privacy_erasure.py::test_ER02_scoped_impact_is_read_only_and_confirms_actual_closure",
+          "--tb=short"
+        ],
+        "started_at": "2026-10-21T00:35:34.014935+00:00",
+        "elapsed_seconds": 10.127,
+        "exit_code": 1,
+        "log": ".github-ticket-loop/privacy-325/impact/logs/20261021T003534014935-impact-fixture-event-correction.log",
+        "log_sha256": "636fd6325baf68a6261fb49077b35eb85abfcc0532d6fbd8895defee8ba2cb0b",
+        "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+        "source_manifest": ".github-ticket-loop/privacy-325/impact/logs/20261021T003534014935-impact-fixture-event-correction-source.json",
+        "source_manifest_sha256": "1b3e597ab8234cc70d6e9a74fbc327e980ff18552b36d9af3efbcc26998871cd",
+        "tracked_diff_sha256": "dd4b50e1d2ef64567bdb6a331fecd04c9d8482f34c5dbe0e5fa96c6862180aa3"
+      },
+      {
+        "name": "impact-public-types",
+        "command": [
+          ".venv/bin/mypy",
+          "--follow-imports=silent",
+          "--ignore-missing-imports",
+          "--strict",
+          "tests/typing/public_api.py"
+        ],
+        "started_at": "2026-10-21T00:35:41.280380+00:00",
+        "elapsed_seconds": 3.331,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-325/impact/logs/20261021T003541280380-impact-public-types.log",
+        "log_sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e",
+        "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+        "source_manifest": ".github-ticket-loop/privacy-325/impact/logs/20261021T003541280380-impact-public-types-source.json",
+        "source_manifest_sha256": "1b3e597ab8234cc70d6e9a74fbc327e980ff18552b36d9af3efbcc26998871cd",
+        "tracked_diff_sha256": "dd4b50e1d2ef64567bdb6a331fecd04c9d8482f34c5dbe0e5fa96c6862180aa3"
+      },
+      {
+        "name": "impact-failed-fixture-inspection",
+        "command": [
+          ".venv/bin/python",
+          ".github-ticket-loop/privacy-325/impact/inspect_failed_fixture.py"
+        ],
+        "started_at": "2026-10-21T00:36:23.735388+00:00",
+        "elapsed_seconds": 0.738,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-325/impact/logs/20261021T003623735388-impact-failed-fixture-inspection.log",
+        "log_sha256": "59e51bf024b2a0000653810878e7f64c08b66667bf20c91ce125cc857e54b9ea",
+        "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+        "source_manifest": ".github-ticket-loop/privacy-325/impact/logs/20261021T003623735388-impact-failed-fixture-inspection-source.json",
+        "source_manifest_sha256": "1b3e597ab8234cc70d6e9a74fbc327e980ff18552b36d9af3efbcc26998871cd",
+        "tracked_diff_sha256": "dd4b50e1d2ef64567bdb6a331fecd04c9d8482f34c5dbe0e5fa96c6862180aa3"
+      },
+      {
+        "name": "impact-concrete-support-fixture",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_privacy_erasure.py::test_ER02_scoped_impact_is_read_only_and_confirms_actual_closure",
+          "--tb=short"
+        ],
+        "started_at": "2026-10-21T00:39:22.805387+00:00",
+        "elapsed_seconds": 9.578,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-325/impact/logs/20261021T003922805387-impact-concrete-support-fixture.log",
+        "log_sha256": "ca751b4acdf20265e6f0c7b5909995c508349071184474a2b3bd9242eb6bb95e",
+        "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+        "source_manifest": ".github-ticket-loop/privacy-325/impact/logs/20261021T003922805387-impact-concrete-support-fixture-source.json",
+        "source_manifest_sha256": "6e0f320f8d0b0c9ef66b822fbc7fdec2a5c9d00a8736df715174a57a46837144",
+        "tracked_diff_sha256": "316203e3057acbe3168ebf34555361f51ae958555891529f62c0572625d1b343"
+      },
+      {
+        "name": "impact-final-static",
+        "command": [
+          ".venv/bin/ruff",
+          "check",
+          "src/prme/privacy/erasure.py",
+          "src/prme/privacy/__init__.py",
+          "src/prme/storage/erasure.py",
+          "src/prme/storage/engine.py",
+          "src/prme/client.py",
+          "tests/test_privacy_erasure.py",
+          "tests/typing/public_api.py"
+        ],
+        "started_at": "2026-10-21T00:41:31.242207+00:00",
+        "elapsed_seconds": 0.154,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-325/impact/logs/20261021T004131242207-impact-final-static.log",
+        "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+        "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+        "source_manifest": ".github-ticket-loop/privacy-325/impact/logs/20261021T004131242207-impact-final-static-source.json",
+        "source_manifest_sha256": "6e0f320f8d0b0c9ef66b822fbc7fdec2a5c9d00a8736df715174a57a46837144",
+        "tracked_diff_sha256": "316203e3057acbe3168ebf34555361f51ae958555891529f62c0572625d1b343"
+      }
+    ],
+    "initialFailures": [
+      {
+        "run": "impact-initial",
+        "executions": 2,
+        "cause": "Fixture read metadata.get on a reused legacy direct node whose metadata is None; preview was not reached.",
+        "correction": "Use exact existing direct.evidence_refs[0]; preserves original event identity."
+      },
+      {
+        "run": "impact-fixture-event-correction",
+        "executions": 2,
+        "cause": "Preview reports five derivatives and zero independent survivors against fixture expected six/one. Read-only failed-artifact inspection proves the entity depends only on the untouched source and migrated legacy direct claim has no executable DIRECT_STORE_REQUESTED proof.",
+        "runtimeChanged": false,
+        "correction": "Preserved untouched migrated survivor/entity; created independently supported direct claim through actual store and reinforce. Actual queued admission/claim supplies the generation change. Original exact affected-ID, survivor, no-side-effect, stale-confirmation and retry requirements retained."
+      }
+    ],
+    "inspection": {
+      "path": ".github-ticket-loop/privacy-325/impact/inspect_failed_fixture.py",
+      "sha256ObservedAfterInspection": "97415317bc31b7e58db72e0b4d86013e0f30ecfcaa299143b35331a279525939",
+      "limit": "Diagnostic script hash recorded after the read-only command, not claimed as captured by its pre-run source manifest."
+    },
+    "remaining": [
+      "Original six ACs and ER01-08/CL04/05/07 unchanged",
+      "Held 323 public classifier/native SIGABRT",
+      "Actual hosted preview/reservation/submit composition and final 327 gates",
+      "Root-owned final full/package/simulation/CI/review/PR/merge"
+    ],
+    "fixtureContract": {
+      "singleSource": {
+        "sources": 1,
+        "memories": 6,
+        "derivatives": 5,
+        "independent_survivors": 1
+      },
+      "ownerAllBeforeQueuedAdmission": {
+        "sources": 4,
+        "memories": 9,
+        "derivatives": 6,
+        "independent_survivors": 0
+      },
+      "summarySelection": {
+        "sources": 2,
+        "memories": 7
+      },
+      "affectedNodes": "Original direct node, mixed fact and four generated nodes; exact UUID set asserted.",
+      "survivingNodes": "Untouched migrated legacy direct claim, entity supported only by the untouched extraction source, fresh independently supported direct claim and foreign-owner node.",
+      "generation": "Actual queued admission then extraction-work claim changes revision while selected counts remain unchanged; no model/extraction execution."
+    },
+    "executionAccounting": {
+      "caseExecutions": 6,
+      "passed": 2,
+      "failed": 4,
+      "failedCommands": 2,
+      "successfulCommands": 1,
+      "runtimeCorrectionsBetweenTestRuns": 0,
+      "fixtureCorrections": 2,
+      "limit": "Both failed fixture commands preserved. Root authorized the final concrete-support fixture correction with a stop if construction failed again; it passed both unchanged layout parameters."
+    },
+    "componentResult": {
+      "run": "impact-concrete-support-fixture",
+      "pytest": "2 passed in 8.41s",
+      "wrapperSeconds": 9.578,
+      "proof": "Actual shared dependency traversal, exact source/full counts and affected UUIDs, independent survivor, read-only table/ledger/key/native state, no unwrap, wrong-boundary/missing/foreign dependency refusal, real work-generation/selection/expiry/policy/ledger stale confirmation refusal, actual confirmed purge and post-purge exact retry.",
+      "limitations": "Migration setup creates protected dependencies without the held public classifier. This does not validate public generation, hosted reservation composition, all frozen ER02/other rows or whole-ticket acceptance."
+    },
+    "staticResult": {
+      "ruff": "Final seven owned Python files passed in 0.154s; same source manifest as the two passing parameters.",
+      "publicTypes": "Existing strict public consumer passed in 3.331s before the last fixture-only change; API/runtime/public-consumer source unchanged since that pass.",
+      "diffCheck": "git diff --check passed before final results-only recording."
+    }
+  }
 }

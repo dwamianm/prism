@@ -98,3 +98,162 @@ async def test_ER02_evidence_and_memory_purge_preserve_unrelated_owned_memory(tm
         assert any("Mara likes apples." in json.dumps(payload) for _, payload in operations)
     finally:
         await engine.close()
+
+
+@pytest.mark.parametrize("layout", ["directory", "postgres"])
+async def test_ER02_scoped_impact_is_read_only_and_confirms_actual_closure(tmp_path, layout, analyzer, native, monkeypatch):
+    """Existing ER02 mixed-support family; no held ordinary reader execution."""
+    from datetime import timedelta
+    import hashlib
+    import os
+    from pathlib import Path
+    from urllib.parse import urlsplit
+    from prme import MemoryEngine
+    from prme.privacy.erasure import ErasureIntent
+    from prme.privacy.journals import JOURNAL_KEY
+    from prme.privacy.retry_commitments import NativeRetryCommitter
+    from prme.storage.privacy_migration import migrate_privacy_pack
+    from prme.types import Scope
+    from tests.privacy_journal_support import logical_dump
+    from tests.privacy_portability_support import fresh_config
+    from tests.test_privacy_migration import mixed_legacy_family, FIXTURE
+
+    template, runtime, policy, custody, *_ = await journal_engine(tmp_path / "template", "directory", analyzer)
+    base = template._config
+    await template.close()
+    runtime = replace(runtime, retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    owner = str(policy.owner_id)
+    # The established migration route supplies real admitted generated records.
+    # It is fixture setup, not a public organizer/classifier success claim.
+    async with fresh_config(base, tmp_path / "legacy", "directory") as original:
+        async with MemoryEngine.open(original.model_copy(update={"privacy_policy": None}), embedding_provider=runtime.embedder) as source:
+            direct, fact, entity, generated, visual, survivor = await mixed_legacy_family(source, runtime, owner)
+        async with fresh_config(base, tmp_path / "target", "directory") as target:
+            if layout == "postgres":
+                url = os.environ["PRME_TEST_DATABASE_URL"]
+                parts = urlsplit(url)
+                assert parts.hostname == "127.0.0.1" and parts.port == 55432 and parts.path == "/privacy_engine_325_impact_test"
+                target = type(target).model_validate({**target.model_dump(), "database_url": url})
+            await migrate_privacy_pack(original, target, privacy_runtime=runtime, embedding_provider=runtime.embedder,
+                job_path=tmp_path / "job", unavailable_legacy_history=True, allow_reembedding=True,
+                remove_event_ids=() if visual is None else (visual.id,))
+            async with MemoryEngine.open(target, privacy_runtime=runtime, embedding_provider=runtime.embedder) as engine:
+                repo, erasure = engine._privacy.repository, engine._privacy.erasure
+                event_id = UUID(str(direct.evidence_refs[0]))
+                independent_event = await engine.store("Mara grows basil. Independent source bronze.",
+                    retrieval_content="Mara grows basil.", user_id=owner)
+                candidates = await repo._query("SELECT id,evidence_refs FROM nodes WHERE user_id=?", (owner,))
+                independent_id = next(UUID(str(identifier)) for identifier, refs in candidates
+                    if UUID(independent_event) in {UUID(str(value)) for value in (json.loads(refs) if isinstance(refs, str) else refs)})
+                await engine.reinforce(str(independent_id), evidence_id=str(event_id), user_id=owner)
+                foreign, foreign_event = await admit_foreign(engine, runtime, policy, custody)
+                expected_nodes = {direct.id, fact.id, *(item[0].id for item in generated)}
+                raw = await engine._graph_store.get_node(str(independent_id))
+                assert event_id in raw.evidence_refs and UUID(independent_event) in raw.evidence_refs
+                request = ErasureRequest(request_id=uuid4(), node_ids=(direct.id,))
+                evidence_request = ErasureRequest(request_id=uuid4(), mode="evidence", event_ids=(event_id,))
+                all_request = ErasureRequest(request_id=uuid4(), owner_all=True)
+                before = await logical_dump(engine, tmp_path / "before.json")
+                _, head = await erasure.repository.state()
+                ledger_bytes = Path(runtime.erasure_ledger.path).read_bytes()
+                registry_bytes = Path(custody.path).read_bytes()
+                native_before = (native.reads, native.writes, dict(native.values))
+                async def forbidden(*args, **kwargs):
+                    raise AssertionError("preview attempted durable authority mutation or unwrap")
+                with monkeypatch.context() as patch:
+                    patch.setattr(runtime.erasure_ledger, "append_intent", forbidden)
+                    patch.setattr(erasure.repository, "apply", forbidden)
+                    patch.setattr(runtime.protector, "open", forbidden)
+                    impact = await engine.preview_erasure(request, user_id=owner)
+                    assert await engine.preview_erasure(request.model_copy(update={"request_id": uuid4()}), user_id=owner) == impact
+                    evidence = await engine.preview_erasure(evidence_request, user_id=owner)
+                    assert evidence.counts.model_dump() == {"sources": 1, "memories": 0, "derivatives": 0, "independent_survivors": 0}
+                    assert evidence.facts_may_remain and not evidence.physical_wipe
+                    assert impact.counts.model_dump() == {"sources": 1, "memories": 6, "derivatives": 5, "independent_survivors": 1}
+                    assert not impact.facts_may_remain and impact.ledger_head == head
+                    whole_owner = await engine.preview_erasure(all_request, user_id=owner)
+                    assert whole_owner.counts.model_dump() == {"sources": 4, "memories": 9, "derivatives": 6, "independent_survivors": 0}
+                    summary = await engine.preview_erasure(ErasureRequest(request_id=uuid4(), node_ids=(generated[-1][0].id,)), user_id=owner)
+                    assert summary.counts.sources == 2 and summary.counts.memories == 7
+                    for invalid, invalid_owner in ((request, str(foreign.owner_id)),
+                            (request.model_copy(update={"scope": Scope.PROJECT}), owner),
+                            (ErasureRequest(request_id=uuid4(), event_ids=(UUID(foreign_event),)), owner)):
+                        with pytest.raises(PrivacyDenied, match="^privacy_boundary_mismatch$"):
+                            await engine.preview_erasure(invalid, user_id=invalid_owner)
+                assert await logical_dump(engine, tmp_path / "after.json") == before
+                assert Path(runtime.erasure_ledger.path).read_bytes() == ledger_bytes
+                assert Path(custody.path).read_bytes() == registry_bytes
+                assert (native.reads, native.writes, native.values) == native_before
+                assert await erasure.repository.intents() == ()
+                output = impact.model_dump_json() + evidence.model_dump_json()
+                for value in (*FIXTURE["admitted"], FIXTURE["source_only"], FIXTURE["prohibited"]):
+                    assert value not in output and hashlib.sha256(value.encode()).hexdigest() not in output
+
+                # Invalid typed dependencies refuse before any count or append.
+                summary_id = generated[-1][0].id
+                original_metadata = (await repo._query("SELECT metadata FROM nodes WHERE id=?", (str(summary_id),)))[0][0]
+                metadata = json.loads(original_metadata) if isinstance(original_metadata, str) else original_metadata
+                foreign_node = (await repo._query("SELECT id FROM nodes WHERE user_id=?", (str(foreign.owner_id),)))[0][0]
+                for bad_id in (uuid4(), UUID(str(foreign_node))):
+                    changed = json.loads(json.dumps(metadata))
+                    changed[JOURNAL_KEY]["source_node_ids"].append(str(bad_id))
+                    await repo._query("UPDATE nodes SET metadata=? WHERE id=?", (json.dumps(changed), str(summary_id)))
+                    with pytest.raises(PrivacyDenied, match="^privacy_migration_required$"):
+                        await engine.preview_erasure(ErasureRequest(request_id=uuid4(), node_ids=(summary_id,)), user_id=owner)
+                await repo._query("UPDATE nodes SET metadata=? WHERE id=?", (json.dumps(metadata), str(summary_id)))
+                assert await erasure.repository.intents() == ()
+
+                # The migrated family has no extraction work; establish a real
+                # queued source before freezing the generation comparison.
+                pending_source = await engine.ingest("Mara enjoys pears. Queued source copper.", user_id=owner)
+                generation_before = await engine.preview_erasure(request, user_id=owner)
+                claim = await engine._event_store.extraction_work.claim(user_id=owner, event_id=pending_source)
+                assert claim is not None and claim.generation > 0
+                changed = await engine.preview_erasure(request, user_id=owner)
+                assert changed.counts == generation_before.counts == impact.counts
+                assert changed.revision != generation_before.revision
+                with pytest.raises(PrivacyDenied, match="^privacy_erasure_conflict$"):
+                    await engine.request_erasure(request, user_id=owner, expected_impact=generation_before)
+                with pytest.raises(PrivacyDenied, match="^privacy_erasure_conflict$"):
+                    await engine.request_erasure(all_request, user_id=owner, expected_impact=changed)
+                stamp = runtime.clock.now
+                runtime.clock.now = stamp + timedelta(hours=1)
+                with pytest.raises(PrivacyDenied, match="^privacy_erasure_conflict$"):
+                    await engine.request_erasure(request, user_id=owner, expected_impact=changed)
+                runtime.clock.now = stamp
+                runtime.authority.revisions[policy.policy_id] = policy.revision + 1
+                with pytest.raises(PrivacyDenied, match="^privacy_stale_policy$"):
+                    await engine.request_erasure(request, user_id=owner, expected_impact=changed)
+                runtime.authority.revisions.clear()
+                assert await erasure.repository.intents() == ()
+                async with runtime.erasure_ledger.guard():
+                    assert await runtime.erasure_ledger.current_head(head.store_id) == head
+                    pending_request = ErasureRequest(request_id=uuid4(), mode="evidence", event_ids=(UUID(str(fact.evidence_refs[0])),))
+                    pending = await runtime.erasure_ledger.append_intent(ErasureIntent(request=pending_request, store_id=head.store_id,
+                        project_id=runtime.project_id, owner_id=policy.owner_id, created_at=runtime.clock()))
+                before_pending = await logical_dump(engine, tmp_path / "pending-before.json")
+                with pytest.raises(PrivacyDenied, match="^privacy_ledger_stale$"):
+                    await engine.preview_erasure(request, user_id=owner)
+                assert await logical_dump(engine, tmp_path / "pending-after.json") == before_pending
+                with pytest.raises(PrivacyDenied, match="^privacy_erasure_conflict$"):
+                    await engine.request_erasure(request, user_id=owner, expected_impact=changed)
+                async with runtime.erasure_ledger.guard():
+                    assert await runtime.erasure_ledger.current_head(head.store_id) == pending.head
+                assert len(await erasure.repository.intents()) == 1
+                confirmed = await engine.preview_erasure(request, user_id=owner)
+                actual = request.model_copy(update={"request_id": uuid4()})
+                ack = await engine.request_erasure(actual, user_id=owner, expected_impact=confirmed)
+                assert ack.state == "blocked_from_access"
+                assert await engine.request_erasure(actual, user_id=owner, expected_impact=confirmed) == ack
+                statuses = await engine.process_erasures(user_id=owner, budget_ms=60000)
+                final = next(status for status in statuses if status.request_id == actual.request_id)
+                assert final.failure is None and final.state == "live_purged", final
+                remaining = {UUID(str(row[0])) for row in await repo._query("SELECT id FROM nodes", ())}
+                assert not remaining.intersection(expected_nodes)
+                assert remaining == {survivor.id, entity.id, independent_id, UUID(str(foreign_node))}
+                kept = await engine._graph_store.get_node(str(independent_id))
+                assert kept.content == "Mara grows basil." and event_id not in kept.evidence_refs
+                assert UUID(independent_event) in kept.evidence_refs
+                assert (await engine._graph_store.get_node(str(survivor.id))).content == survivor.content
+                assert (await engine._graph_store.get_node(str(entity.id))).content == entity.content
+                assert await engine.request_erasure(actual, user_id=owner, expected_impact=confirmed) == final

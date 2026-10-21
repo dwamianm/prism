@@ -5,7 +5,7 @@ from prme.privacy.policy import CategoryAction, MemoryRetention, PolicySnapshot,
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from prme.privacy.erasure import ErasureRequest, ErasureStatus
+    from prme.privacy.erasure import ErasureImpact, ErasureImpactCounts, ErasureRequest, ErasureStatus
     from prme.privacy.ledger import LocalErasureLedger
     from prme.privacy.crypto import CryptoProtector
     from prme.privacy.keys import KeyBoundary, LocalAccessAuthority, SecretKeyHandle, StoredProcessingAuthorizer
@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from prme.privacy.strict_schema import ClosedSchema, SchemaProvider, ValueValidator
 
 _LAZY = {
+    "ErasureImpact": "prme.privacy.erasure",
+    "ErasureImpactCounts": "prme.privacy.erasure",
     "ErasureRequest": "prme.privacy.erasure",
     "ErasureStatus": "prme.privacy.erasure",
     "LocalErasureLedger": "prme.privacy.ledger",
@@ -43,7 +45,7 @@ def __getattr__(name):
     globals()[name] = result
     return result
 
-__all__ = ["ErasureRequest", "ErasureStatus", "LocalErasureLedger", "CategoryAction", "MemoryRetention", "PolicySnapshot", "PrivacyDenied", "PrivacyPolicy", "PrivacyRuntime",
+__all__ = ["ErasureImpact", "ErasureImpactCounts", "ErasureRequest", "ErasureStatus", "LocalErasureLedger", "CategoryAction", "MemoryRetention", "PolicySnapshot", "PrivacyDenied", "PrivacyPolicy", "PrivacyRuntime",
            "CryptoProtector", "KeyBoundary", "LocalAccessAuthority", "SecretKeyHandle", "StoredProcessingAuthorizer",
            "NativeKeyCustody", "public_registry", "ClosedSchema", "CustomRule", "LocalSanitizer",
            "RuleProvider", "SchemaProvider", "SourceClassifier", "ValueValidator"]

@@ -404,3 +404,123 @@ existing native-key, crypto, rotation and retry tests passed on the final provid
 revision. Scoped Ruff and strict public consumer typing also passed. Earlier
 failures and all original 31 logs remain preserved; this checkpoint still awaits
 affected review and the separately owned integration/full-check obligations.
+
+## Resumed scoped impact seam (2026-10-21)
+
+Root assigned lane 3 iteration 3 at reviewed prerequisite
+`a1bce140aeccf8999dcf42594592390b2438845c`. This supersedes the earlier
+checkpoint/environment status, not the six original ACs or frozen rows. The
+only database for this iteration is `privacy_engine_325_impact_test` on owned
+loopback port 55432. The parked #326 worktree is read-only. No subagents, new
+review cohort, held #323 classifier execution or #280 third repair is released.
+
+Original hosted #282 AC4 requires scoped impact before submission and a truthful
+distinction between supporting-evidence removal and memory/derivative erasure.
+This is a consumer of #325's existing AC1/2/4/5 engine erasure API and ER02/ER04
+semantics, not a seventh acceptance criterion. Done for this prerequisite means
+a real read-only engine preview and atomically revalidated confirmation are
+usable by hosted controls. Full original #325 integration/delivery is still
+pending; preview component checks do not close an ER row or whole issue.
+
+Source evidence: `_discover_step` persists targets/progress and
+`_independent_direct_support` updates surviving evidence links. Calling either
+as a dry run or rolling back a real request cannot provide a read-only preview,
+because the independent ledger append is separately durable. Factor the same
+page/closure and independent-support calculation into pure readers. Durable
+discovery alone applies their returned targets, link changes and cursor. Preview
+accumulates the exact same results in memory. Preserve existing source-node
+closure validation, typed allocated outputs, receipt copy closure and request
+idempotency. No hosted dependency code, classifier copy or new crypto/ledger.
+
+Public contract: `preview_erasure(ErasureRequest, *, user_id) -> ErasureImpact`
+on MemoryEngine and MemoryClient; typed counts name source representations,
+affected stored memories, derived/generated subset, and proven independent
+survivors. Evidence/processing mode reports zero affected memory removal and
+`facts_may_remain=true`. Exact current owner/scope, policy references and ledger
+head accompany a non-content revision over opaque identities, dependency edges,
+work generations and deadline state. Never digest or return source/admitted
+text, source checksums, ciphertext or exception payloads. Hosted controls own
+opaque reservation IDs, actor/current membership binding and five-minute expiry.
+The preview does not create a server reservation or claim an erasure fence.
+
+Preview holds the actual independent ledger then policy guard. It checks the
+applied checkpoint without calling the mutating coordinator guard; pending
+ledger entries refuse without applying them. No intent, job, target, progress,
+admission, native-key or evidence unwrap effect is allowed. Submission adds an
+optional `expected_impact` value, recomputes under its existing ledger/policy
+lease and refuses `privacy_erasure_conflict` before appending on any mismatch.
+The preview request UUID is excluded from the impact revision; selection,
+owner/scope/mode and current state are bound. Existing exact committed-request
+retries return saved status before live-target resolution, even after purge.
+Raw privileged SQL is outside the guarded writer contract.
+
+Owned files: `src/prme/privacy/{erasure,__init__}.py`,
+`src/prme/storage/{erasure,engine}.py`, `src/prme/client.py`,
+`tests/test_privacy_erasure.py`, `tests/typing/public_api.py`,
+`docs/PRIVACY-ERASURE.md`, and this PV-06 plan/results pair. No other runtime
+files or schemas are planned. New helpers are only the shared pure discovery
+reader and impact construction; existing purge persistence remains explicit.
+
+Finite validation before coding: exactly
+`tests/test_privacy_erasure.py::test_ER02_scoped_impact_is_read_only_and_confirms_actual_closure`
+parametrized for directory and PostgreSQL (two executions). Reuse the existing
+mixed saved migration fixture to create real protected generated dependencies
+without entering the held ordinary reader/organizer classifier. This is fixture
+setup, not a repeated migration acceptance cohort. The same ER02 family retains
+one independent direct claim with an added erased-support edge, uncertain mixed
+generated nodes and an actual unrelated owner. Assert exact source/full counts,
+source/node closure, actual independent survivor, wrong owner/scope refusal,
+byte-identical logical table/ledger/key state across repeated previews, no unwrap,
+changed generation/selection/policy/ledger refusal before a new append, current
+confirmed request, real purge and exact post-purge retry. Missing/foreign typed
+dependencies must fail rather than invent impact. Use actual guards, SQL/native
+storage and ledger; policy/model/native-OS boundaries retain their named fixture
+limits. Also run scoped Ruff and the existing strict public consumer type check.
+No additional case/full suite/package/simulation/CI run is selected while held
+dependencies persist. Preserve every failure and stop after two unsuccessful
+fix-and-validation cycles of the same behavior.
+
+
+### Frozen fixture correction before the next impact run
+
+The initial two executions stopped before preview because legacy direct-node
+metadata was None. Correcting selection to its existing evidence_refs[0]
+reached preview, where the next two executions failed the assumed 7 memories /
+6 derivatives / 1 independent survivor. Read-only inspection retained at
+`impact-failed-fixture-inspection` proves the entity cites only the untouched
+extraction source, and the migrated direct survivor has no executable
+DIRECT_STORE_REQUESTED record. Its legacy proof is explicitly unavailable.
+Those failures remain failures; they do not justify inventing support or simply
+lowering counts. No runtime correction has been made between these runs.
+
+Root approved this one bounded fixture correction: keep the migrated untouched
+survivor and entity, create an independently admitted direct claim via actual
+engine.store, and attach erased support via actual reinforce. The selected
+single-source request must affect exactly the direct node, mixed fact and four
+generated nodes: 1 source, 6 memories, 5 derivatives, 1 independent survivor.
+Owner-all must show 4 sources, 9 memories, 6 derivatives and no survivors.
+Selecting the summary resolves both source events and also affects the entity:
+2 sources and 7 memories. After actual selected purge the entity, migrated
+unrelated survivor, independently supported fresh direct claim and foreign owner
+node must all remain; the exact six selected/dependent UUIDs must be absent.
+
+The retained fixture has zero extraction work rows. To make the already planned
+generation assertion real, admit one queued source only after these fixed-count
+checks, freeze a new impact, and take an actual extraction-work claim. The claim
+must change the revision with identical selected counts; old confirmation must
+refuse before append. No extraction, provider/model send or public classifier
+runs. Same two parametrizations only. If this correction still fails fixture or
+closure construction, stop this strategy and report rather than add another
+fixture variation. Existing failure logs/source manifests stay unchanged.
+
+
+The final frozen fixture passed both layout executions (2 passed in 8.41s;
+9.578s wrapper). Both earlier commands remain failed: four failed executions,
+then two passing executions. No runtime change occurred between these three
+commands; the two fixture corrections repaired selection and established the
+required independent proof/generation through actual public writers. No
+assertion was removed. Exact affected UUIDs, independent survival, no side
+effects, stale confirmation and post-purge idempotency all passed. This is
+component evidence for the impact prerequisite only. Existing public typing
+passed on unchanged API source; scoped Ruff is repeated only for the final
+changed fixture. Original frozen acceptance and hosted composition remain open.

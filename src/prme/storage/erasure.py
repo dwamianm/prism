@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from uuid import UUID, uuid4, uuid5
 
-from prme.privacy.erasure import ErasureIntent, ErasureRequest, ErasureStatus, LedgerHead
+from prme.privacy.erasure import ErasureImpact, ErasureImpactCounts, ErasureIntent, ErasureRequest, ErasureStatus, LedgerHead
 from prme.privacy.policy import PrivacyDenied
 from prme.privacy.records import PrivacyRecord
 from prme.storage.extraction_work import ExtractionWorkRepository
@@ -352,35 +352,57 @@ class ErasureCoordinator:
             return tuple(row for row in records if not any(affected(intent, row) for intent in intents)
                          and (row.snapshot.memory_deadline is None or self.admission.require_runtime().clock() < row.snapshot.memory_deadline))
 
-    async def request(self, request: ErasureRequest, *, user_id: str):
+    async def _new_intent(self, request, user_id, head):
+        runtime = self.admission.require_runtime()
+        for event_id in request.event_ids:
+            record = await self.admission.repository.get(str(event_id), user_id=user_id)
+            if record is None or (record.snapshot.policy.project_id, record.snapshot.policy.scope) != (runtime.project_id, request.scope):
+                raise PrivacyDenied("privacy_boundary_mismatch")
+        for node_id in request.node_ids:
+            row = await self.admission.repository._object_identity("nodes", node_id, owner=user_id, scope=request.scope.value)
+            if row is None or not row[2]:
+                raise PrivacyDenied("privacy_boundary_mismatch")
+        intent = ErasureIntent(request=request, store_id=head.store_id, project_id=runtime.project_id,
+                               owner_id=UUID(user_id), created_at=runtime.clock())
+        async with self.repository.session() as session:
+            return await _resolve_intent_sources(session, intent)
+
+    async def preview(self, request: ErasureRequest, *, user_id: str) -> ErasureImpact:
         request = ErasureRequest.model_validate(request)
+        runtime = self.admission.require_runtime()
+        saved = self.admission.effective(None, user_id=user_id, scope=request.scope)
+        # Do not use self.guard(): it applies pending ledger entries. A preview
+        # requires a current store but never repairs or mutates that store.
+        async with runtime.erasure_ledger.guard():
+            project, head = await self.repository.state()
+            if project != runtime.project_id:
+                raise PrivacyDenied("privacy_boundary_mismatch")
+            if await runtime.erasure_ledger.entries_since(head):
+                raise PrivacyDenied("privacy_ledger_stale")
+            async with runtime.authority.guard(saved, "disclosure"):
+                intent = await self._new_intent(request, user_id, head)
+                return await _project_impact(self.repository, intent, saved, head)
+
+    async def request(self, request: ErasureRequest, *, user_id: str, expected_impact: ErasureImpact | None = None):
+        request = ErasureRequest.model_validate(request)
+        if expected_impact is not None:
+            expected_impact = ErasureImpact.model_validate(expected_impact)
         runtime = self.admission.require_runtime()
         if str(UUID(user_id)) != user_id:
             raise PrivacyDenied("privacy_boundary_mismatch")
         saved = self.admission.effective(None, user_id=user_id, scope=request.scope)
         async with self.guard(), runtime.authority.guard(saved, "publication"):
-            # A completed node selection has no live row left to resolve. The
-            # current ledger has already been applied; retry its exact owned
-            # intent before resolving targets for a new request.
+            # Exact acknowledged retries precede preview/target resolution;
+            # erasure has legitimately changed their old impact and live rows.
             existing = await self.repository.existing_request(request.request_id, user_id=user_id)
             if existing is not None:
                 if existing[0] != request:
                     raise PrivacyDenied("privacy_erasure_conflict")
                 return existing[1]
-            # Resolve selected identities in the actual store and owner boundary.
-            for event_id in request.event_ids:
-                record = await self.admission.repository.get(str(event_id), user_id=user_id)
-                if record is None or record.snapshot.policy.scope != request.scope:
-                    raise PrivacyDenied("privacy_boundary_mismatch")
-            for node_id in request.node_ids:
-                row = await self.admission.repository._object_identity("nodes", node_id, owner=user_id, scope=request.scope.value)
-                if row is None or not row[2]:
-                    raise PrivacyDenied("privacy_boundary_mismatch")
             _, head = await self.repository.state()
-            intent = ErasureIntent(request=request, store_id=head.store_id, project_id=runtime.project_id,
-                                   owner_id=UUID(user_id), created_at=runtime.clock())
-            async with self.repository.session() as session:
-                intent = await _resolve_intent_sources(session, intent)
+            intent = await self._new_intent(request, user_id, head)
+            if expected_impact is not None and await _project_impact(self.repository, intent, saved, head) != expected_impact:
+                raise PrivacyDenied("privacy_erasure_conflict")
             async def commit():
                 # Independent fsync commit precedes the local transactional
                 # fence. An interrupted apply is replayed before the next effect.
@@ -478,7 +500,7 @@ async def _target(session, request_id, kind, identifier):
                           str(request_id), kind, str(identifier)))
 
 
-async def _independent_direct_support(session, identifier, metadata, event_roots, intent):
+async def _independent_direct_remainder(session, identifier, metadata, event_roots, intent):
     """Retain only a full unchanged claim explicitly admitted by a live source.
 
     An evidence_refs membership is never itself support. This intentionally
@@ -489,36 +511,41 @@ async def _independent_direct_support(session, identifier, metadata, event_roots
     try:
         origin = UUID(metadata["_prme_privacy_v1"]["event_id"])
     except (KeyError, ValueError, TypeError):
-        return False
+        return None
     if origin in event_roots or UUID(str(identifier)) in intent.request.node_ids:
-        return False
+        return None
     rows = await session.fetch("SELECT body FROM privacy_admissions WHERE event_id=$1", str(origin))
     if not rows:
-        return False
+        return None
     record = PrivacyRecord.model_validate_json(rows[0]["body"])
     if record.kind != "direct" or (record.snapshot.memory_deadline is not None and record.snapshot.memory_deadline <= intent.created_at):
         # A finite original policy cannot be implicitly extended by a surviving
         # source. Its independently computed expiry remains a separate root.
-        return False
+        return None
+    if (record.snapshot.policy.project_id, record.snapshot.policy.owner_id, record.snapshot.policy.scope) != (
+            intent.project_id, intent.owner_id, intent.request.scope):
+        return None
+    for row in await session.fetch("SELECT intent FROM privacy_erasure_jobs"):
+        if affected(ErasureIntent.model_validate_json(row["intent"]), record):
+            return None
     originals = await session.fetch("SELECT payload FROM operations WHERE target_id=$1 AND op_type='DIRECT_STORE_REQUESTED'", str(origin))
     if len(originals) != 1:
-        return False
+        return None
     original = DirectStoreRecord.from_operation_payload(originals[0]["payload"]).node
     columns = ("content", "node_type", "epistemic_type", "source_type", "valid_from", "valid_to", "event_time")
     actual = await session.fetch("SELECT " + ",".join(columns) + " FROM nodes WHERE id=$1 AND user_id=$2", str(identifier), str(intent.owner_id))
     if not actual or original.id != UUID(str(identifier)) or original.metadata != metadata:
-        return False
+        return None
     for name in columns:
         expected = getattr(original, name)
         if getattr(expected, "value", expected) != actual[0][name]:
-            return False
-    # Remove only the erased evidence edge; content, qualifiers and original
+            return None
+    # The caller may remove only the erased evidence edge; content, qualifiers and original
     # immutable admission remain unchanged and independently justified.
     refs = await session.fetch("SELECT evidence_refs FROM nodes WHERE id=$1", str(identifier))
     values = json.loads(refs[0]["evidence_refs"]) if isinstance(refs[0]["evidence_refs"], str) else refs[0]["evidence_refs"]
     remaining = [str(value) for value in values if UUID(str(value)) not in event_roots]
-    await session.execute("UPDATE nodes SET evidence_refs=$1 WHERE id=$2", json.dumps(remaining), str(identifier))
-    return True
+    return remaining
 
 
 async def _progress(session, request_id, stage, default=None):
@@ -533,70 +560,153 @@ async def _save_progress(session, request_id, stage, body):
                           str(request_id), stage, json.dumps(body, sort_keys=True))
 
 
-async def _discover_step(repository, intent):
-    """One durable keyset page; interrupted discovery resumes its exact cursor."""
+async def _discovery_page(session, intent, progress, targets):
+    """Read one shared closure page; return effects without applying any of them."""
     import json
     request = intent.request
-    async with repository.session(transaction=True) as session:
-        progress = await _progress(session, request.request_id, "discover", {"phase": "events", "after": "", "changed": False})
-        if progress["phase"] == "done":
-            return True
-        for event in (*request.event_ids, *(intent.source_event_ids or ())):
-            await _target(session, request.request_id, "event", event)
-        for node in request.node_ids:
-            await _target(session, request.request_id, "node", node)
-        phase, cursor = progress["phase"], progress["after"]
-        if phase == "events":
-            rows = await session.fetch("SELECT event_id,body FROM privacy_admissions WHERE user_id=$1 AND scope=$2 AND event_id>$3 ORDER BY event_id LIMIT 128",
+    progress = dict(progress)
+    additions, remainders = set(), {}
+    for event in (*request.event_ids, *(intent.source_event_ids or ())):
+        additions.add(("event", event))
+    for node in request.node_ids:
+        additions.add(("node", node))
+    targets = targets | additions
+    phase, cursor = progress["phase"], progress["after"]
+    if phase == "events":
+        rows = await session.fetch("SELECT event_id,body FROM privacy_admissions WHERE user_id=$1 AND scope=$2 AND event_id>$3 ORDER BY event_id LIMIT 128",
+            str(intent.owner_id), request.scope.value, cursor or str(UUID(int=0)))
+        for row in rows:
+            progress["after"] = str(row["event_id"])
+            record = PrivacyRecord.model_validate_json(row["body"])
+            if request.owner_all and record.snapshot.admitted_at <= intent.created_at:
+                additions.add(("event", record.event_id))
+        if len(rows) < 128:
+            progress.update(phase="nodes" if request.mode == "memory" else "done", after="")
+    else:
+        roots = {identifier for _, identifier in targets}
+        event_roots = {identifier for kind, identifier in targets if kind == "event"}
+        if phase == "nodes":
+            rows = await session.fetch("SELECT id,metadata,evidence_refs FROM nodes WHERE user_id=$1 AND scope=$2 AND id>$3 ORDER BY id LIMIT 128",
                 str(intent.owner_id), request.scope.value, cursor or str(UUID(int=0)))
             for row in rows:
-                progress["after"] = str(row["event_id"])
-                record = PrivacyRecord.model_validate_json(row["body"])
-                if request.owner_all and record.snapshot.admitted_at <= intent.created_at:
-                    await _target(session, request.request_id, "event", record.event_id)
+                progress["after"] = str(row["id"])
+                metadata = json.loads(row["metadata"]) if isinstance(row["metadata"], str) else row["metadata"]
+                references = json.loads(row["evidence_refs"]) if isinstance(row["evidence_refs"], str) else row["evidence_refs"]
+                if _identities(metadata).intersection(roots) or {UUID(str(v)) for v in references or ()}.intersection(event_roots):
+                    remaining = await _independent_direct_remainder(session, row["id"], metadata, event_roots, intent)
+                    if remaining is not None:
+                        remainders[UUID(str(row["id"]))] = remaining
+                    else:
+                        additions.add(("node", UUID(str(row["id"]))))
             if len(rows) < 128:
-                progress.update(phase="nodes" if request.mode == "memory" else "done", after="")
+                progress.update(phase="operations", after="")
         else:
-            targets = await _targets(session, request.request_id)
-            roots = {identifier for _, identifier in targets}
-            event_roots = {identifier for kind, identifier in targets if kind == "event"}
-            if phase == "nodes":
-                rows = await session.fetch("SELECT id,metadata,evidence_refs FROM nodes WHERE user_id=$1 AND scope=$2 AND id>$3 ORDER BY id LIMIT 128",
-                    str(intent.owner_id), request.scope.value, cursor or str(UUID(int=0)))
-                for row in rows:
-                    progress["after"] = str(row["id"])
-                    metadata = json.loads(row["metadata"]) if isinstance(row["metadata"], str) else row["metadata"]
-                    references = json.loads(row["evidence_refs"]) if isinstance(row["evidence_refs"], str) else row["evidence_refs"]
-                    if _identities(metadata).intersection(roots) or {UUID(str(v)) for v in references or ()}.intersection(event_roots):
-                        if await _independent_direct_support(session, row["id"], metadata, event_roots, intent):
-                            continue
-                        if await _target(session, request.request_id, "node", row["id"]):
-                            progress["changed"] = True
-                if len(rows) < 128:
-                    progress.update(phase="operations", after="")
-            else:
-                rows = await session.fetch("SELECT id,op_type,target_id,payload FROM operations WHERE id>$1 AND op_type<>'PRIVACY_ERASED' ORDER BY id LIMIT 128", cursor)
-                for row in rows:
-                    progress["after"] = row["id"]
-                    try:
-                        output = UUID(str(row["target_id"]))
-                    except ValueError:
-                        output = None
-                    if output in roots or _identities(row["payload"]).intersection(roots):
-                        if await _target(session, request.request_id, "operation", UUID(row["id"])):
-                            progress["changed"] = True
-                        # A receipt's public request ID differs from its journal
-                        # row ID. Feedback/citations depend on that exact logical
-                        # copy identity, so include it in the next closure pass.
-                        if row["op_type"] == "RETRIEVAL_REQUEST" and output is not None and await _target(session, request.request_id, "copy", output):
-                            progress["changed"] = True
-                        allocated = _allocated_nodes(row["op_type"], row["payload"])
-                        for identifier in allocated:
-                            if await _target(session, request.request_id, "node", identifier):
-                                progress["changed"] = True
-                if len(rows) < 128:
-                    progress.update(phase="nodes" if progress["changed"] else "done", after="", changed=False)
-        await _save_progress(session, request.request_id, "discover", progress)
+            rows = await session.fetch("SELECT id,op_type,target_id,payload FROM operations WHERE id>$1 AND op_type<>'PRIVACY_ERASED' ORDER BY id LIMIT 128", cursor)
+            for row in rows:
+                progress["after"] = row["id"]
+                try:
+                    output = UUID(str(row["target_id"]))
+                except ValueError:
+                    output = None
+                if output in roots or _identities(row["payload"]).intersection(roots):
+                    additions.add(("operation", UUID(row["id"])))
+                    # Public receipt IDs differ from operation row IDs.
+                    if row["op_type"] == "RETRIEVAL_REQUEST" and output is not None:
+                        additions.add(("copy", output))
+                    additions.update(("node", value) for value in _allocated_nodes(row["op_type"], row["payload"]))
+        progress["changed"] = progress["changed"] or bool(additions - targets)
+        if phase == "operations" and len(rows) < 128:
+            progress.update(phase="nodes" if progress["changed"] else "done", after="", changed=False)
+    return progress, additions, remainders
+
+
+async def _project_impact(repository, intent, saved, head):
+    """The same discovery closure in memory; return only non-content metadata."""
+    import hashlib
+    import json
+    from prme.privacy.journals import JOURNAL_KEY, GeneratedNodeReference
+    from prme.privacy.records import PRIVACY_KEY
+
+    targets, survivors = set(), {}
+    progress = {"phase": "events", "after": "", "changed": False}
+    try:
+        async with repository.session() as session:
+            while progress["phase"] != "done":
+                progress, additions, remainders = await _discovery_page(session, intent, progress, targets)
+                targets.update(additions)
+                survivors.update(remainders)
+            rows = await session.fetch("SELECT body FROM privacy_admissions WHERE user_id=$1 AND scope=$2 ORDER BY event_id",
+                                       str(intent.owner_id), intent.request.scope.value)
+            records = {record.event_id: record for record in map(lambda row: PrivacyRecord.model_validate_json(row["body"]), rows)}
+            sources, memories = ({identifier for kind, identifier in targets if kind == name} for name in ("event", "node"))
+            nodes = await session.fetch("SELECT id,metadata,evidence_refs,lifecycle_state,updated_at FROM nodes WHERE user_id=$1 AND scope=$2 ORDER BY id",
+                                       str(intent.owner_id), intent.request.scope.value)
+            live_nodes, derivatives, node_state = set(), set(), []
+            for row in nodes:
+                identifier = UUID(str(row["id"]))
+                live_nodes.add(identifier)
+                metadata = json.loads(row["metadata"]) if isinstance(row["metadata"], str) else row["metadata"]
+                refs = json.loads(row["evidence_refs"]) if isinstance(row["evidence_refs"], str) else row["evidence_refs"]
+                origin = UUID(metadata[PRIVACY_KEY]["event_id"])
+                if origin not in records:
+                    raise PrivacyDenied("privacy_migration_required")
+                generated = GeneratedNodeReference.model_validate(metadata[JOURNAL_KEY]) if JOURNAL_KEY in metadata else None
+                if generated or records[origin].kind == "extraction":
+                    derivatives.add(identifier)
+                # No content, checksums or arbitrary metadata enters revision.
+                node_state.append((str(identifier), str(origin), sorted(map(str, _identities(metadata))),
+                    sorted(str(UUID(str(value))) for value in refs or ()), row["lifecycle_state"], str(row["updated_at"]),
+                    generated.model_dump(mode="json") if generated else None))
+            admissions = []
+            for record in records.values():
+                clocks = tuple(getattr(record.snapshot, name) for name in ("evidence_deadline", "memory_deadline", "processing_deadline"))
+                slots = [None if value is None else (value.context.model_dump(mode="json"), str(value.key_version), value.envelope_revision)
+                         for value in (record.evidence, record.processing)]
+                admissions.append((record.reference(), record.kind, str(record.snapshot.admitted_at),
+                    tuple(None if value is None else str(value) for value in clocks),
+                    tuple(value is not None and intent.created_at >= value for value in clocks),
+                    record.processing_state, record.processing_attempt, record.evidence_disposition, slots))
+            work = await session.fetch("SELECT w.event_id,w.status,w.generation,w.plan_id,w.plan_revision,w.attempts,w.lease_expires_at "
+                "FROM event_extractions w JOIN privacy_admissions a ON a.event_id=w.event_id "
+                "WHERE a.user_id=$1 AND a.scope=$2 ORDER BY w.event_id", str(intent.owner_id), intent.request.scope.value)
+            epoch = await session.fetch("SELECT epoch FROM privacy_erasure_epoch WHERE singleton=1")
+            if len(epoch) != 1:
+                raise PrivacyDenied("privacy_ledger_unavailable")
+            counts = ErasureImpactCounts(sources=len(sources & records.keys()), memories=len(memories & live_nodes),
+                derivatives=len(memories & derivatives), independent_survivors=len((survivors.keys() & live_nodes) - memories))
+            boundary = dict(project_id=intent.project_id, owner_id=intent.owner_id, scope=intent.request.scope,
+                mode=intent.request.mode, policy_id=saved.policy.policy_id, policy_revision=saved.policy.revision,
+                policy_references=saved.references, ledger_head=head, counts=counts, facts_may_remain=intent.request.mode != "memory")
+            selection = intent.request.model_dump(mode="json", exclude={"request_id"})
+            selection["event_ids"].sort()
+            selection["node_ids"].sort()
+            revision = {"schema": "prme-erasure-impact-v1", "selection": selection,
+                "boundary": ErasureImpact(revision="0" * 64, **boundary).model_dump(mode="json"),
+                "epoch": epoch[0]["epoch"], "admissions": admissions, "nodes": node_state, "work": work,
+                "targets": sorted((kind, str(identifier)) for kind, identifier in targets),
+                "survivors": sorted((str(identifier), sorted(refs)) for identifier, refs in survivors.items() if identifier not in memories)}
+            digest = hashlib.sha256(json.dumps(revision, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
+            return ErasureImpact(revision=digest, **boundary)
+    except PrivacyDenied:
+        raise
+    except (ValueError, KeyError, TypeError):
+        raise PrivacyDenied("privacy_migration_required") from None
+
+
+async def _discover_step(repository, intent):
+    """Persist one shared page; only this path changes targets/progress/links."""
+    import json
+    request_id = intent.request.request_id
+    async with repository.session(transaction=True) as session:
+        progress = await _progress(session, request_id, "discover", {"phase": "events", "after": "", "changed": False})
+        if progress["phase"] == "done":
+            return True
+        progress, additions, remainders = await _discovery_page(session, intent, progress, await _targets(session, request_id))
+        for kind, identifier in additions:
+            await _target(session, request_id, kind, identifier)
+        for identifier, remaining in remainders.items():
+            await session.execute("UPDATE nodes SET evidence_refs=$1 WHERE id=$2", json.dumps(remaining), str(identifier))
+        await _save_progress(session, request_id, "discover", progress)
         return progress["phase"] == "done"
 
 

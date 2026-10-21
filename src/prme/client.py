@@ -25,7 +25,7 @@ from prme.models.privacy_reads import (
 from prme.privacy.capabilities import EvidenceAccess
 
 from prme.privacy import PrivacyPolicy, PrivacyRuntime
-from prme.privacy.erasure import ErasureRequest, ErasureStatus
+from prme.privacy.erasure import ErasureImpact, ErasureRequest, ErasureStatus
 
 
 import asyncio
@@ -498,9 +498,14 @@ class MemoryClient:
         """Write a closed protected export; private recovery keys stay separate."""
         return self._run(self._engine.export_protected(destination, mode=mode))
 
-    def request_erasure(self, request: ErasureRequest, *, user_id: str) -> ErasureStatus:
+    def preview_erasure(self, request: ErasureRequest, *, user_id: str) -> ErasureImpact:
+        """Read-only scoped impact; no fence, reservation or evidence unwrap."""
+        return self._run(self._engine.preview_erasure(request, user_id=user_id))
+
+    def request_erasure(self, request: ErasureRequest, *, user_id: str,
+                        expected_impact: ErasureImpact | None = None) -> ErasureStatus:
         """Persist a denial fence; explicit maintenance performs logical purge."""
-        return self._run(self._engine.request_erasure(request, user_id=user_id))
+        return self._run(self._engine.request_erasure(request, user_id=user_id, expected_impact=expected_impact))
 
     def get_erasure_status(self, request_id: UUID | str, *, user_id: str) -> ErasureStatus | None:
         return self._run(self._engine.get_erasure_status(request_id, user_id=user_id))

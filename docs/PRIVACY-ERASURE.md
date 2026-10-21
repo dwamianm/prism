@@ -85,6 +85,52 @@ trusting an old completion status.
   original explicit admission justifies the unchanged content. Membership in an
   evidence-reference list alone is insufficient.
 
+### Preview and confirmation
+
+`MemoryEngine.preview_erasure(request, user_id=...)` and synchronous
+`MemoryClient.preview_erasure` return a closed `ErasureImpact`. The calculation
+shares the actual purge dependency traversal and independent-admission support
+check. It returns metadata only and never unwraps evidence or writes an intent,
+job, target, progress cursor, admission, evidence link or native key. A store
+with unapplied ledger entries refuses preview until authorized recovery applies
+them; preview does not perform that maintenance itself.
+
+```python
+impact = await engine.preview_erasure(request, user_id=owner_uuid)
+# Present impact.counts and the retained-copy limits, then confirm:
+ack = await engine.request_erasure(
+    request, user_id=owner_uuid, expected_impact=impact,
+)
+```
+
+Counts describe targeted existing source representations (`sources`), affected
+stored nodes (`memories`), their extraction/generated subset (`derivatives`),
+and direct claims proven unchanged under independent surviving admission
+(`independent_survivors`). The last category keeps its admitted content while
+losing the erased evidence link. Missing legacy executable admission proof
+cannot establish independent support. Evidence/processing-only requests report
+zero memory-removal counts and `facts_may_remain=true`. Counts do not describe
+physical bytes, inaccessible backups or external application copies.
+
+The result binds exact project/owner/scope/mode, policy references and current
+ledger head. Its revision covers non-content identities, dependency closure,
+work generations and deadline state; it is not a hash of sensitive text or a
+source checksum. A change within the selected owner/scope may conservatively
+require a refresh even if displayed counts are unchanged. Confirmation
+recomputes under the existing ledger and policy lease immediately before the
+durable request. Changed impact refuses with `privacy_erasure_conflict`.
+Current policy denial remains authoritative.
+
+The eventual `request_id` is excluded from impact identity. A caller can preview
+with a placeholder UUID, choose its stable request UUID before submission, and
+reuse it after an uncertain response. An exact already-committed retry returns
+its saved status even after purge changes live impact. A different request
+under that UUID still refuses. The engine does not create an impact reservation;
+applications must bind their confirmation to the authenticated actor, current
+project authority and a finite expiry. A preview is not an erasure fence or
+permission to skip current authorization. Raw privileged SQL access remains
+outside the cooperating guarded-writer boundary.
+
 The independent intent is durably committed before the live fence is
 acknowledged. In-flight authorized work must settle first; later stale effects
 refuse, including recovered work. Returned application/provider copies cannot
@@ -122,7 +168,7 @@ reference service or automatic conversion of ambiguous custody is provided.
 Keep the current native registry independent of pack snapshots; tampering with
 or rolling back this local authority is outside same-user isolation guarantees.
 
-The same four methods are available on synchronous `MemoryClient`. Protected
+The same erasure methods are available on synchronous `MemoryClient`. Protected
 DuckDB `rebuild_indexes(user_id=...)` reconstructs current native indexes from
 surviving admitted graph text and saved numeric vectors, preserving unrelated
 owners/stages. It does not re-extract evidence or migrate embedding models;

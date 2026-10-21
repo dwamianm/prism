@@ -12,7 +12,7 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from prme.privacy.policy import FrozenModel
+from prme.privacy.policy import FrozenModel, PolicyReference
 from prme.types import Scope
 
 ErasureMode = Literal["evidence", "processing", "memory"]
@@ -68,6 +68,38 @@ class LedgerEntry(FrozenModel):
     head: LedgerHead
     previous_token: UUID
     intent: ErasureIntent
+
+
+class ErasureImpactCounts(FrozenModel):
+    """Stored objects in this projection, not physical bytes or backup copies."""
+    sources: int = Field(ge=0, strict=True)
+    memories: int = Field(ge=0, strict=True)
+    derivatives: int = Field(ge=0, strict=True)
+    independent_survivors: int = Field(ge=0, strict=True)
+
+
+class ErasureImpact(FrozenModel):
+    """Read-only scoped projection; confirmation is not an erasure permit.
+
+    The revision binds opaque identities/generations and current authority,
+    never source text/checksums. The eventual request UUID is excluded. Callers
+    own actor binding and reservation expiry; submission checks current impact.
+    """
+    schema_version: Literal[1] = 1
+    project_id: UUID
+    owner_id: UUID
+    scope: Scope
+    mode: ErasureMode
+    policy_id: UUID
+    policy_revision: int = Field(gt=0, strict=True)
+    policy_references: tuple[PolicyReference, ...]
+    ledger_head: LedgerHead
+    revision: str = Field(pattern=r"^[0-9a-f]{64}$")
+    counts: ErasureImpactCounts
+    facts_may_remain: bool
+    backup_copies: Literal["not_managed"] = "not_managed"
+    external_copies: Literal["not_managed"] = "not_managed"
+    physical_wipe: Literal[False] = False
 
 
 class ErasureLedger(Protocol):
