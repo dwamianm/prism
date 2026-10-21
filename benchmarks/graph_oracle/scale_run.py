@@ -163,6 +163,11 @@ async def graph_stage_runs(kind: str, backend: str, core: Gold, pads: Pads, item
             written = 0
 
             async def stage(label: str, count: int) -> None:
+                if backend == "postgres":
+                    # A deployment's autovacuum has analyzed tables this size; a store just bulk loaded has not, and its first plans are bad.
+                    async with store._pool.acquire() as connection:
+                        await connection.execute("ANALYZE edges")
+                        await connection.execute("ANALYZE nodes")
                 scores: dict[str, dict[str, dict]] = {name: {} for name in CONFIGS}
                 timings, routed_timings = [], []
                 for item in items:
