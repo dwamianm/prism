@@ -90,6 +90,15 @@ candidate for the stable release with no flip planned; the gate is the same. A r
 worker may merge the pull requests and publish the release. Without them, open the pull requests and leave both to the
 owner. `CONTRIBUTING.md` ("Releases") has the steps to cut and publish a release.
 
+**`DERIVATION_VERSION`** (`src/prme/ingestion/reingest.py`, dwamianm/prism#350). `reingest()` treats a stored memory as current
+while its marker names the engine's settings, and a release does not change them. Bump the integer by one, in the pull
+request that makes the change, when you alter what an unchanged source derives or the model output it gets in a way no
+setting shows: the grounding checks, planning, linking, supersedence or claim text rules, or the extraction schema.
+Do not bump it for a version bump, retrieval, packing or API changes, or anything that leaves the derived records as
+they were. A bump makes every stored memory stale once and costs a model request each, so it must be needed.
+`tests/test_derivation_version.py` fails when the records derived from a recorded extraction change, and says to bump the
+number and refresh `tests/fixtures/derivation/trip_derived.json`.
+
 ### Alpha and beta gate: the fast tiers
 
 The fast tiers are a regression screen over small fixtures and one recorded extraction. They are not accuracy

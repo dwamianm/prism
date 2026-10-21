@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `reingest()` no longer reads the package version into its settings fingerprint
+  (part of dwamianm/prism#350). Every release changed the fingerprint, so after
+  an upgrade every stored memory read as stale and a dry run offered to
+  re-derive all of them, with a model request each, though the release had not
+  touched extraction. The fingerprint now carries `DERIVATION_VERSION`, an
+  integer in `src/prme/ingestion/reingest.py` that a developer bumps by one only
+  when a change alters what an unchanged source derives (the grounding checks,
+  planning, linking, supersedence or claim text rules, or the extraction schema).
+  The prompts, the model, the window options and the other options that decide
+  what is derived are in it as before, and with the window options off the
+  settings keep the keys they had. A release that changes none of those leaves
+  every source current. `tests/test_derivation_version.py` derives a recorded
+  extraction (`tests/fixtures/extraction/trip_batch_haiku45.json`) with a stub
+  provider and no model, and fails when the nodes and edges differ from the saved
+  dump (`tests/fixtures/derivation/trip_derived.json`), with a message that says
+  to bump the number and refresh the dump. Migration: a source marked under an
+  earlier fingerprint reads as stale once, by design, because the new settings
+  differ from the old ones; after one more `reingest()` it is current under the
+  new fingerprint and stays so across releases. `CONTRIBUTING.md` and `CLAUDE.md`
+  say when to bump.
+
 ## [0.16.0a6] - 2026-10-20
 
 This is an alpha. It passed CI and the fast tiers, and it has not been through
