@@ -155,6 +155,11 @@ def _corpus_memories(corpus: dict) -> tuple[str, datetime | None, list[Memory]]:
         return conversation["owner"], datetime.fromisoformat(conversation["reference_time"]), [
             Memory(turn["key"], turn["content"], turn["role"], None, NodeType.NOTE, Scope.PERSONAL, turn["session_id"],
                    turn["event_time"]) for turn in chat_turns(conversation)]
+    if corpus["kind"] == "memories":
+        fixture = json.loads(path.read_text())
+        return fixture["owner"], None, [
+            Memory(f"n{number:02d}", memory["content"], memory["role"], memory.get("speaker"), NodeType(memory["node_type"]),
+                   Scope(memory["scope"]), memory["session"]) for number, memory in enumerate(fixture["memories"])]
     fixture = fast_store.load_fixture(path)
     return fixture["owner"], None, [
         Memory(f"m{number:02d}", memory["content"], memory["role"], memory.get("speaker"),
