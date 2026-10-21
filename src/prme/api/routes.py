@@ -50,6 +50,7 @@ from prme.models.aggregation import (
 )
 from prme.models.temporal import AssertionState
 from prme.models.provenance import NodeProvenance
+from prme.models.privacy_reads import ProtectedExtractionView, ProtectedProvenanceView, ProtectedReceiptView
 from prme.api.models import (
     PrivacyInspectionRequest,
     AcceptedWorkErrorResponse,
@@ -326,7 +327,7 @@ async def ingest_fast_many(
     return FastIngestBatchResponse(event_ids=event_ids, accepted=len(event_ids))
 
 
-@router.get("/events/{event_id}", summary="Read original source evidence")
+@router.get("/events/{event_id}", summary="Read an owned event or protected source availability")
 async def get_event(request: Request, event_id: UUID):
     event_key = str(event_id)
     event = await _get_engine(request).get_event(event_key, user_id=_user_id(request))
@@ -366,7 +367,8 @@ async def process_materializations(request: Request, body: MaterializationProces
     return await _get_engine(request).process_pending(user_id=owner, budget_ms=body.budget_ms)
 
 
-@router.get("/events/{event_id}/extraction", response_model=ExtractionRecord, summary="Read saved model extraction")
+@router.get("/events/{event_id}/extraction", response_model=ExtractionRecord | ProtectedExtractionView,
+            summary="Read saved model extraction or protected source availability")
 async def get_extraction(request: Request, event_id: UUID):
     engine = _get_engine(request)
     event = await engine.get_event(str(event_id), user_id=_user_id(request))
@@ -713,7 +715,7 @@ async def get_node(request: Request, node_id: UUID) -> NodeResponse:
 
 @router.get(
     "/nodes/{node_id}/provenance",
-    response_model=NodeProvenance,
+    response_model=NodeProvenance | ProtectedProvenanceView,
     summary="Get node evidence and transition history",
     responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
 )
@@ -722,7 +724,7 @@ async def get_node_provenance(
     node_id: UUID,
     operation_cursor: str | None = None,
     operation_limit: int = Query(default=100, ge=1, le=1000),
-) -> NodeProvenance:
+) -> NodeProvenance | ProtectedProvenanceView:
     """Read a tenant-scoped chronological page of node provenance."""
     try:
         result = await _get_engine(request).get_provenance(
@@ -1175,7 +1177,7 @@ async def stats(request: Request, user_id: str | None = None) -> StatsResponse:
     )
 
 
-@router.get("/retrievals/{request_id}", response_model=RetrievalReceipt,
+@router.get("/retrievals/{request_id}", response_model=RetrievalReceipt | ProtectedReceiptView,
             responses={404: {"model": ErrorResponse}})
 async def get_retrieval_receipt(request: Request, request_id: UUID, user_id: str | None = None):
     engine = _get_engine(request)

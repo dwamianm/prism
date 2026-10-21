@@ -80,8 +80,8 @@ T = TypeVar("T")
 def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) -> Callable[Concatenate[Any, P], Awaitable[T]]:
     """Public read fence, including reopening with no configured policy/runtime.
 
-    Source projection is PV-05's responsibility. This wraps the actual public
-    return boundary; it does not decode any payload or rewrite historic receipts.
+    The final read projection closes ordinary response shapes and fences their
+    return; this wrapper does not decode payloads or rewrite historic receipts.
     """
     import functools
     import inspect
@@ -97,6 +97,8 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
         if records and owner is None:
             raise PrivacyDenied("privacy_boundary_mismatch")
         await coordinator.check_disclosure(records)
+        if not records and not coordinator.selected():
+            await coordinator.require_legacy_call(owner, arguments)
         if function.__name__ in _UNAVAILABLE_EFFECTS and (records or coordinator.selected()):
             # The legacy retrieval pipeline includes unguarded optional providers
             # and receipt source augmentation. PV-04/PV-05 integrate those paths.
@@ -106,13 +108,14 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
         if records and owner is None:
             raise PrivacyDenied("privacy_boundary_mismatch")
         await coordinator.check_disclosure(records)
-        return result
+        from prme.privacy.reads import project_public_result
+        return await project_public_result(coordinator, function.__name__, result, arguments, records)
     return guarded
 
 
 _UNAVAILABLE_EFFECTS = frozenset({
-    "retrieve", "organize", "consolidate_knowledge", "resume_profile", "process_profiles", "end_session",
-    "rebuild_indexes", "snapshot", "embed_texts", "propose_product_alignment", "find_product_alignment_candidates",
+    "organize", "consolidate_knowledge", "resume_profile", "process_profiles", "end_session",
+    "rebuild_indexes", "embed_texts", "propose_product_alignment", "find_product_alignment_candidates",
     "evaluate_full_retrieval", "create_ranking_profile", "record_relevance", "record_answer_citations",
     "promote", "evaluate_condition", "supersede", "contradict", "resolve_contradiction", "archive", "reinforce",
     "review_alias_proposal", "feedback",
@@ -577,7 +580,9 @@ class AdmissionCoordinator:
         source = json.loads(prepared.source.fields_json)
         if prepared.source.source_snapshot is not None:
             from prme.ingestion.grounding import validate_private_grounding
-            validate_private_grounding(result, source["content"], speaker=source["speaker"])
+            result = validate_private_grounding(result, source["content"], speaker=source["speaker"],
+                reference_time=prepared.event.event_time or prepared.event.timestamp,
+                resolve_date=self.engine._pipeline._resolve_temporal)
         result = validate_grounding(result, source["content"], speaker=source["speaker"], content_free_logs=True)
         # This transient event's identity/hash refers to the durable empty envelope.
         # Its actual sanitized checksum remains in the private source representation.
@@ -727,15 +732,31 @@ class AdmissionCoordinator:
         rows = await self.repository.for_owner(user_id)
         return tuple(row for row in rows if scopes is None or row.snapshot.policy.scope in scopes)
 
+    @staticmethod
+    def _call_identifiers(arguments):
+        return [("events" if name == "event_id" else "nodes", value)
+                for name, value in arguments.items() if value is not None and name in {
+                    "node_id", "old_node_id", "new_node_id", "node_a_id", "node_b_id",
+                    "winner_id", "loser_id", "event_id"}]
+
+    async def require_legacy_call(self, owner, arguments) -> None:
+        """Keep exact legacy objects independent of protected siblings."""
+        identifiers = self._call_identifiers(arguments)
+        if identifiers:
+            records = await self.repository.records_for_objects(
+                identifiers, owner=owner, supplemental_evidence=arguments.get("evidence_id"),
+            )
+            if records == ():
+                return
+        # Broad or unresolved calls still require the marker-aware range check.
+        await self.repository.require_legacy_range(owner, None)
+
     async def records_for_call(self, owner, arguments) -> tuple[PrivacyRecord, ...]:
         # Unscoped operator calls to unrelated legacy objects remain supported.
         # Resolve only identity metadata, never a source payload. This resolution is
         # not authorization: a protected object still requires explicit owner.
         supplemental_evidence = arguments.get("evidence_id")
-        identifiers = [("events" if name == "event_id" else "nodes", value)
-                       for name, value in arguments.items() if value is not None and name in {
-                           "node_id", "old_node_id", "new_node_id", "node_a_id", "node_b_id",
-                           "winner_id", "loser_id", "event_id"}]
+        identifiers = self._call_identifiers(arguments)
         if identifiers:
             records = await self.repository.records_for_objects(identifiers, owner=owner,
                                                                  supplemental_evidence=supplemental_evidence)

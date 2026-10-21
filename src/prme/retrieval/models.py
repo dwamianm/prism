@@ -16,6 +16,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from prme.models.nodes import MemoryNode
+from prme.models.privacy_reads import SourceAvailability
 from prme.models.learning import RankingMultipliers
 from prme.retrieval.config import ScoringWeights
 from prme.retrieval.temporal_relation_models import TemporalRelationMetadata
@@ -660,6 +661,10 @@ class RetrievalMetadata(BaseModel):
     for observability and debugging.
     """
 
+    source_availability: tuple[SourceAvailability, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None,
+    )
+    source_limitation: str | None = Field(default=None, exclude_if=lambda value: value is None)
     request_id: UUID = Field(description="Request identifier from QueryAnalysis")
     receipt_persisted: bool = Field(default=False, description="An owner-scoped feedback receipt was durably logged")
     reference_time: datetime | None = Field(

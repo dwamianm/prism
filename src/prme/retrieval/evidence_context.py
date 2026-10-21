@@ -82,7 +82,8 @@ async def _source_groups(
         return []
 
     source_ids = sorted({source_id for key in selected_keys for source_id in key})
-    sources = await graph_store.get_nodes(source_ids)
+    source_reader = getattr(graph_store, "get_evidence_nodes", graph_store.get_nodes)
+    sources = await source_reader(source_ids)
     sources_by_id = {str(node.id): node for node in sources}
     allowed_scopes = set(scopes) if scopes is not None else None
     resolved = []

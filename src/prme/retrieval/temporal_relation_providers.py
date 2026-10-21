@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
+from contextlib import nullcontext, suppress
 from datetime import timezone
 import hashlib
 import json
@@ -17,6 +17,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
+from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.temporal_relations import (
     CONFIRMED_GATE_MODEL,
     EvidenceRecord,
@@ -127,12 +128,14 @@ async def _post_json(
     *,
     headers: dict[str, str] | None,
     max_attempts: int,
+    privacy_context=None,
 ) -> tuple[dict[str, Any], int]:
     last_error: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         response: httpx.Response | None = None
         try:
-            response = await client.post(url, json=body, headers=headers)
+            async with privacy_context.transmission_guard() if privacy_context else nullcontext():
+                response = await client.post(url, json=body, headers=headers)
             if response.status_code in _RETRYABLE_STATUS and attempt < max_attempts:
                 await asyncio.sleep(_retry_delay(response, attempt))
                 continue
@@ -148,7 +151,7 @@ async def _post_json(
             if attempt >= max_attempts:
                 break
             await asyncio.sleep(_retry_delay(response, attempt))
-        except TemporalRelationProviderError:
+        except (PrivacyDenied, TemporalRelationProviderError):
             raise
         except (httpx.HTTPStatusError, json.JSONDecodeError, ValueError) as exc:
             raise TemporalRelationProviderError("provider request failed") from exc
@@ -160,12 +163,14 @@ async def _get_json(
     url: str,
     *,
     max_attempts: int,
+    privacy_context=None,
 ) -> dict[str, Any]:
     last_error: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         response: httpx.Response | None = None
         try:
-            response = await client.get(url)
+            async with privacy_context.transmission_guard() if privacy_context else nullcontext():
+                response = await client.get(url)
             if response.status_code in _RETRYABLE_STATUS and attempt < max_attempts:
                 await asyncio.sleep(_retry_delay(response, attempt))
                 continue
@@ -181,7 +186,7 @@ async def _get_json(
             if attempt >= max_attempts:
                 break
             await asyncio.sleep(_retry_delay(response, attempt))
-        except TemporalRelationProviderError:
+        except (PrivacyDenied, TemporalRelationProviderError):
             raise
         except (httpx.HTTPStatusError, json.JSONDecodeError, ValueError) as exc:
             raise TemporalRelationProviderError(
@@ -281,11 +286,13 @@ def _optional_usage(value: dict[str, Any], name: str) -> int | None:
 async def _ollama_digest(
     client: httpx.AsyncClient,
     config: TemporalRelationConfig,
+    privacy_context=None,
 ) -> str:
     tags = await _get_json(
         client,
         f"{config.resolver_base_url}/api/tags",
         max_attempts=config.resolver_max_attempts,
+        privacy_context=privacy_context,
     )
     models = tags.get("models")
     matches = [
@@ -313,12 +320,14 @@ async def _ollama_digest(
 async def _ollama_identity(
     client: httpx.AsyncClient,
     config: TemporalRelationConfig,
+    privacy_context=None,
 ) -> tuple[str, str]:
-    digest = await _ollama_digest(client, config)
+    digest = await _ollama_digest(client, config, privacy_context)
     version_response = await _get_json(
         client,
         f"{config.resolver_base_url}/api/version",
         max_attempts=config.resolver_max_attempts,
+        privacy_context=privacy_context,
     )
     version = version_response.get("version")
     if not isinstance(version, str) or not version.strip():
@@ -338,6 +347,12 @@ class OllamaTemporalResolver:
         self.config = config.model_copy(deep=True)
         self._transport = transport
 
+    def privacy_adapter(self, context):
+        from copy import copy
+        result = copy(self)
+        result._privacy_context = context
+        return result
+
     async def resolve(
         self,
         query: str,
@@ -348,6 +363,13 @@ class OllamaTemporalResolver:
         original = _resolver_body(
             self.config, query.strip(), question_time, records
         )
+        context = getattr(self, "_privacy_context", None)
+        sources = None
+        if context is not None:
+            sources = await context.generated_sources({
+                "query": query, "records": [record.model_dump(mode="json") for record in records],
+            })
+            original = await context.generated(original, sources=sources)
         bodies: list[dict[str, Any]] = []
         responses: list[dict[str, Any]] = []
         transport_attempts = 0
@@ -358,8 +380,12 @@ class OllamaTemporalResolver:
             transport=self._transport,
         ) as client:
             model_digest, provider_version = await _ollama_identity(
-                client, self.config
+                client, self.config, context,
             )
+            if context is not None:
+                provider_version = (await context.generated(
+                    {"version": provider_version}, sources=sources,
+                ))["version"]
             while True:
                 bodies.append(body)
                 response, attempts = await _post_json(
@@ -368,14 +394,24 @@ class OllamaTemporalResolver:
                     body,
                     headers=None,
                     max_attempts=self.config.resolver_max_attempts,
+                    privacy_context=context,
                 )
                 transport_attempts += attempts
-                responses.append(response)
-                if await _ollama_digest(client, self.config) != model_digest:
+                if await _ollama_digest(client, self.config, context) != model_digest:
                     raise TemporalRelationProviderError(
                         "Ollama resolver identity changed during the request"
                     )
                 content = _resolver_content(response, self.config.resolver_model)
+                if context is not None:
+                    # No unadmitted output can enter schema repair or an audit.
+                    from prme.privacy.strict_schema import parse_json
+                    from prme.privacy.sanitizer import canonical
+                    admitted = await context.generated(parse_json(content), sources=sources)
+                    content = canonical(admitted)
+                    response = {"message": {"content": content},
+                                "prompt_eval_count": response.get("prompt_eval_count"),
+                                "eval_count": response.get("eval_count")}
+                responses.append(response)
                 try:
                     resolution = RawResolution.model_validate_json(content)
                     break
@@ -509,11 +545,22 @@ class JevTemporalRelationGate:
         self.config = config.model_copy(deep=True)
         self._transport = transport
 
+    def privacy_adapter(self, context):
+        from copy import copy
+        result = copy(self)
+        result._privacy_context = context
+        return result
+
     async def assess(
         self, query: str, relation: TemporalRelation
     ) -> GateAudit:
         started = time.perf_counter()
         body = _gate_body(self.config, query.strip(), relation)
+        context = getattr(self, "_privacy_context", None)
+        sources = None
+        if context is not None:
+            sources = await context.generated_sources({"query": query, "relation": relation.model_dump(mode="json")})
+            body = await context.generated(body, sources=sources)
         key = _gate_credential(self.config)
         async with httpx.AsyncClient(
             timeout=self.config.gate_timeout_seconds,
@@ -525,7 +572,10 @@ class JevTemporalRelationGate:
                 body,
                 headers={"Authorization": f"Bearer {key}"},
                 max_attempts=self.config.gate_max_attempts,
+                privacy_context=context,
             )
+        if context is not None:
+            response = await context.generated(response, sources=sources)
         probabilities, input_tokens, output_tokens = _validate_gate_response(
             response, len(relation.operands)
         )

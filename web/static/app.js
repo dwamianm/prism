@@ -381,7 +381,9 @@ function renderDetails(node) {
         sources.replaceChildren();
         for (const event of provenance.evidence_events)
           sources.append(
-            el("blockquote", "", event.content),
+            event.source_availability
+              ? el("p", "", `Source evidence: ${event.source_availability.state}. Ordinary reads include admitted memory only.`)
+              : el("blockquote", "", event.content),
             el(
               "p",
               "source-id",

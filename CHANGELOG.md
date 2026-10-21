@@ -14,6 +14,30 @@ through the full benchmark. The stable release stays at 0.15.0 until the full
 benchmark audit, so `pip install prme` still installs 0.15.0. Install the alpha
 with `pip install --pre prme` or `pip install prme==0.16.0a7`.
 
+### Added
+
+- Separate admitted memory from sealed source evidence in reads (dwamianm/prism#359,
+  part of issue #323). This is protected-store work, opt in with the privacy
+  policies of 0.16.0a6. Ordinary sealed-mode reads return admitted statements and
+  permitted metadata across retrieval, graph, history, snapshots, the exact-state
+  and aggregate APIs, HTTP and MCP, the CLI, the explorer and the supported
+  framework adapters, and source-only text needs explicit selected-source access.
+  Responses keep conditions, negation, effective time and provenance, and report
+  unavailable source coverage. Exact event, node, provenance and source-inspection
+  reads now authorize their actual contributing records, so a protected record in
+  another scope or project no longer makes an unrelated exact read fail or
+  deadlock; broad and ambiguous reads keep the complete-range checks, and orphan
+  markers, ownership, selected-source grants and final deadlines still fail
+  closed. The pull request lists what it does not do: shared whole-case
+  acceptance is pending (issues #324 and #325), sanitization stays bounded,
+  permitted facts can remain sensitive, and source access does not establish that
+  a fact is true or allow an exact historical replay. It changes 26 source files,
+  among them the retrieval pipeline, candidate generation, session and evidence
+  context, the reranker and the temporal modules, and the pull request does not
+  say what it does to a store with no policy. So this release was checked on
+  such a store: the defect probes, chat probe, corrections probe, fast cycle and
+  offline evidence gate are unchanged from 0.16.0a6.
+
 ### Changed
 
 - `reingest()` no longer reads the package version into its settings fingerprint
@@ -37,6 +61,12 @@ with `pip install --pre prme` or `pip install prme==0.16.0a7`.
   new fingerprint and stays so across releases. `CONTRIBUTING.md` and `CLAUDE.md`
   say when to bump.
 
+### Fixed
+
+- Candidate generation waits for both nested pinned and task queries before it
+  propagates a failure (dwamianm/prism#359). Before, a caller could begin
+  database teardown while a sibling query was still running.
+
 ### Tooling
 
 These do not ship in the wheel and change no behavior.
@@ -57,7 +87,8 @@ These do not ship in the wheel and change no behavior.
   is current, and it stays current across later releases that leave what is
   derived as it was. Stores that never ran `reingest()` are not affected, and
   nothing is rewritten by the upgrade.
-- No default changed since 0.16.0a6, and no option was added. Every default of
+- No default changed since 0.16.0a6, and no option was added. The sealed-store read
+  separation of #359 applies to stores that use a privacy policy. Every default of
   0.16.0a6 is as it was, including the exact pin of `cryptography` to 50.0.2 (see
   the notes of 0.16.0a6).
 - Known weaknesses are as in 0.16.0a6.

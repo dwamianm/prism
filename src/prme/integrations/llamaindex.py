@@ -43,6 +43,8 @@ except ImportError:
 
 from prme.client import MemoryClient
 from prme.config import PRMEConfig
+from prme.privacy.capabilities import PrivacyRuntime
+from prme.storage.embedding import EmbeddingProvider
 from prme.integrations._chat_history import (
     append_chat_control,
     chat_message_metadata,
@@ -77,6 +79,8 @@ class PRMERetriever(BaseRetriever):
         directory: Path to the PRME memory directory.
         user_id: User ID for scoped retrieval.
         config: Optional PRMEConfig override.
+        privacy_runtime: Explicit protected execution capabilities, when configured.
+        embedding_provider: Embedding provider matching the configured index.
         scope: Scope filter(s) for retrieval.
         token_budget: Token budget for context packing.
         top_k: Maximum number of nodes to return.
@@ -92,6 +96,8 @@ class PRMERetriever(BaseRetriever):
         *,
         user_id: str,
         config: PRMEConfig | None = None,
+        privacy_runtime: PrivacyRuntime | None = None,
+        embedding_provider: EmbeddingProvider | None = None,
         scope: Scope | list[Scope] | None = None,
         token_budget: int | None = None,
         top_k: int = 10,
@@ -100,7 +106,8 @@ class PRMERetriever(BaseRetriever):
     ) -> None:
         validate_selection(min_score, None)
         super().__init__(**kwargs)
-        self._client = MemoryClient(directory, config=config)
+        self._client = MemoryClient(directory, config=config, privacy_runtime=privacy_runtime,
+                                    embedding_provider=embedding_provider)
         self._user_id = user_id
         self._scope = scope
         self._token_budget = token_budget
@@ -141,6 +148,9 @@ class PRMERetriever(BaseRetriever):
             if response.metadata.min_score_skipped:
                 # The vector path failed, so the floor could not be applied.
                 metadata["min_score_skipped"] = True
+            if response.metadata.source_limitation:
+                metadata["source_limitation"] = response.metadata.source_limitation
+                metadata["source_availability"] = (node.metadata or {}).get("source_availability", [])
 
             text_node = TextNode(
                 text=node.content,
@@ -190,6 +200,8 @@ class PRMEChatStore(BaseChatStore):
     Args:
         directory: Path to the PRME memory directory.
         config: Optional PRMEConfig override.
+        privacy_runtime: Explicit protected execution capabilities, when configured.
+        embedding_provider: Embedding provider matching the configured index.
         scope: Scope for stored messages.
     """
 
@@ -198,9 +210,12 @@ class PRMEChatStore(BaseChatStore):
         directory: str = ".",
         *,
         config: PRMEConfig | None = None,
+        privacy_runtime: PrivacyRuntime | None = None,
+        embedding_provider: EmbeddingProvider | None = None,
         scope: Scope = Scope.PERSONAL,
     ) -> None:
-        self._client = MemoryClient(directory, config=config)
+        self._client = MemoryClient(directory, config=config, privacy_runtime=privacy_runtime,
+                                    embedding_provider=embedding_provider)
         self._scope = scope
         # Track keys we've seen for get_keys()
         self._known_keys: set[str] = set()
@@ -242,6 +257,7 @@ class PRMEChatStore(BaseChatStore):
     def _store_message(
         self, user_id: str, session_id: str, message: ChatMessage
     ) -> None:
+        self._client.require_legacy_history(user_id=user_id)
         serialized = message.model_dump(mode="json")
         self._client.store(
             message.content or "",

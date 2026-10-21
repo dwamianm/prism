@@ -69,6 +69,32 @@ def test_frozen_qualifier_projection(row):
     if row.get("quantity"):
         assert projected.metadata["quantity"] == row["quantity"]
     assert node.content == row["source"] and "evidence_quote" in node.metadata
+    if row["id"] == "Q04":
+        from prme.ingestion.grounding import validate_private_grounding
+        from prme.ingestion.pipeline import IngestionPipeline
+        from prme.ingestion.schema import ExtractedFact, ExtractionResult
+        def extraction(text, reference):
+            return ExtractionResult(facts=[ExtractedFact(
+                subject=row["subject"], predicate=row["predicate"], object=row["object"],
+                polarity=row["polarity"], evidence_quote=text, temporal_ref=reference,
+            )])
+        original = extraction(row["source"], "October 21")
+        checked = validate_private_grounding(original, row["source"], reference_time=NOW,
+                                             resolve_date=IngestionPipeline._resolve_temporal)
+        assert checked.facts[0].temporal_ref == row["effective_time"]
+        assert original.facts[0].temporal_ref == "October 21"
+        # Controls within frozen Q04: no arbitrary model timestamp, borrowed
+        # start cue, incomplete/ambiguous calendar date or competing source date.
+        for text, reference in (
+            (row["source"], None), (row["source"], "21"),
+            (row["source"], "2026-10-21"), (row["source"], "October"),
+            ("Starting November 2, Jordan uses TeaDB. Alex uses TeaDB on October 21.", "October 21"),
+            (row["source"].replace("October 21", "10/11"), "10/11"),
+            (row["source"] + " It changes on 11/01.", "October 21"),
+        ):
+            with pytest.raises(PrivacyDenied, match="privacy_evidence_ambiguous"):
+                validate_private_grounding(extraction(text, reference), text, reference_time=NOW,
+                                           resolve_date=IngestionPipeline._resolve_temporal)
 
 
 def test_unknown_polarity_and_missing_condition_do_not_become_truth():

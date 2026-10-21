@@ -70,12 +70,16 @@ def _eligibility_reasons(engine, node: MemoryNode, query: AssertionStateQuery) -
 async def _contradiction_edges(engine, records: list[_Record]):
     """Load touching contradiction edges in bounded ID batches."""
     edges = {}
+    graph = engine._graph_store
+    if records and hasattr(engine, "_ordinary_graph"):
+        graph = await engine._ordinary_graph(records[0].node.user_id)
     node_ids = [str(record.node.id) for record in records]
     for offset in range(0, len(node_ids), 200):
         batch = node_ids[offset : offset + 200]
-        for edge in await engine._graph_store.get_edges(
+        for edge in await graph.get_edges(
             node_ids=batch,
             edge_type=EdgeType.CONTRADICTS,
+            **({"include_superseded": True} if getattr(graph, "protected_reads", False) else {}),
         ):
             edges[edge.id] = edge
     return list(edges.values())

@@ -5,17 +5,25 @@ from typing import Any, assert_type
 from uuid import UUID
 
 from prme import AliasProposalInboxItem, AliasProposalReviewResult, AnswerCitationRecord, AnswerCitationSubmission, AssertionAggregation, AssertionQuery, AssertionState, AssertionStateQuery, ContextAblation, ContextPresenceCredit, FastIngestConflict, FastIngestItem, FullRetrievalEvaluation, FullRetrievalTrial, LearningEvaluation, MemoryValueBinding, ProductAlignmentCandidate, ProductCandidateEntity, QuantityAggregation, QuantityAggregationQuery, RankingMultipliers, RankingProfile, RankingProfileApplication, RankingProfileState, RankingProfileStatus, RelevanceRecord, RelevanceSubmission, RetrievedValueBinding, RetrievalMode, RetrievalReceipt, ExtractionRecord, ExtractionStatus, ExtractionProcessingResult, MemoryClient, ReingestResult, RetrievalResponse, Scope, StoreReceipt, ToolArgumentBindingUse, ToolArgumentResolution, ablate_context, assess_context_presence, evaluate_full_retrieval
-from prme import NodeType, SourceType
+from prme import (NodeType, SourceType, ProtectedEventView, ProtectedExtractionView,
+                  ProtectedReceiptView, SourceAvailability, SourceUnavailable, SanitizedEvidenceView, EvidenceAccess)
 from prme.models import Event, MemoryNode, ProcessingResult
 from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
 from prme import PrivacyPolicy, PrivacyRuntime, PRMEConfig
-from prme.privacy import CryptoProtector, NativeKeyCustody, PolicySnapshot, SecretKeyHandle, public_registry
-from prme.privacy.capabilities import EvidenceAccess, Guard, PayloadContext, ProtectedPayload, PayloadProtector
-from prme.privacy.keys import PseudonymKeyProvider
 from prme.privacy import ClosedSchema, CustomRule, LocalSanitizer, ValueValidator
 from prme.privacy.capabilities import AdmissionContent, SanitizedContent
+from prme.privacy import CryptoProtector, NativeKeyCustody, PolicySnapshot, SecretKeyHandle, public_registry
+from prme.privacy.capabilities import Guard, PayloadContext, ProtectedPayload, PayloadProtector
+from prme.privacy.keys import PseudonymKeyProvider
 
+
+async def sanitizer_consumer(content: AdmissionContent, schema_id: UUID) -> None:
+    sanitizer = LocalSanitizer()
+    assert_type(await sanitizer.admit(content), SanitizedContent)
+    assert_type(sanitizer.close(), None)
+    assert_type(CustomRule("literal_topic", "restricted topic"), CustomRule)
+    assert_type(ClosedSchema(schema_id, (("active", ValueValidator("boolean")),)), ClosedSchema)
 
 async def privacy_key_consumer(protector: CryptoProtector, custody: NativeKeyCustody,
                                context: PayloadContext, snapshot: PolicySnapshot,
@@ -38,13 +46,6 @@ async def privacy_key_consumer(protector: CryptoProtector, custody: NativeKeyCus
     handle.close()
     assert_type(CryptoProtector(public_registry("/operator/public.json")), CryptoProtector)
 
-
-async def sanitizer_consumer(content: AdmissionContent, schema_id: UUID) -> None:
-    sanitizer = LocalSanitizer()
-    assert_type(await sanitizer.admit(content), SanitizedContent)
-    assert_type(sanitizer.close(), None)
-    assert_type(CustomRule("literal_topic", "restricted topic"), CustomRule)
-    assert_type(ClosedSchema(schema_id, (("active", ValueValidator("boolean")),)), ClosedSchema)
 
 
 def protected_consumer(client: MemoryClient, policy: PrivacyPolicy, runtime: PrivacyRuntime) -> None:
@@ -89,7 +90,7 @@ def consume(client: MemoryClient) -> None:
                                captured_at=datetime(2026, 10, 14, 10, tzinfo=timezone.utc)), list[str])
     assert_type(client.observe(b"\xff\xd8\xff", user_id="alice", source_name="frame.jpg"), list[str])
     assert_type(client.get_blob("frames/abc.jpg"), bytes | None)
-    assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | None)
+    assert_type(client.get_retrieval_receipt("request-id", user_id="alice"), RetrievalReceipt | ProtectedReceiptView | None)
     assert_type(client.get_relevance("feedback-id", user_id="alice"), RelevanceRecord | None)
     assert_type(client.list_relevance(user_id="alice"), list[RelevanceRecord])
     assert_type(client.retrieve("preferences", user_id="alice",
@@ -148,9 +149,9 @@ def consume(client: MemoryClient) -> None:
         AliasProposalReviewResult,
     )
     assert_type(client.query_nodes(user_id="alice"), list[MemoryNode])
-    assert_type(client.get_events("alice"), list[Event])
-    assert_type(client.get_event("event-id", user_id="alice"), Event | None)
-    assert_type(client.get_extraction("event-id", user_id="alice"), ExtractionRecord | None)
+    assert_type(client.get_events("alice"), list[Event | ProtectedEventView])
+    assert_type(client.get_event("event-id", user_id="alice"), Event | ProtectedEventView | None)
+    assert_type(client.get_extraction("event-id", user_id="alice"), ExtractionRecord | ProtectedExtractionView | None)
     assert_type(client.get_event_nodes("event-id", user_id="alice"), list[MemoryNode])
     assert_type(client.process_pending(user_id="alice"), ProcessingResult)
     assert_type(client.extraction_status("event-id", user_id="alice"), ExtractionStatus | None)
@@ -261,3 +262,9 @@ async def postgres_workspace_consumer() -> None:
         async with workspace.namespace("project") as memory:
             assert_type(memory, NamespaceMemory)
             assert_type(await memory.retrieve("query", user_id="alice"), RetrievalResponse)
+
+
+def selected_source_consumer(client: MemoryClient, grant: EvidenceAccess) -> None:
+    assert_type(client.inspect_source("event-id", user_id="owner"), SourceAvailability | SourceUnavailable)
+    assert_type(client.read_source("event-id", user_id="owner", access=grant), SanitizedEvidenceView)
+    assert_type(client.retrieve("question", user_id="owner", source_access=grant), RetrievalResponse)

@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.models import (
     RetrievalCandidate,
@@ -154,11 +155,13 @@ async def expand_session_context(
                         trigger_windows[str(trigger.node.id)] = nodes[
                             max(0, pos - window) : pos + window + 1
                         ]
+    except PrivacyDenied:
+        raise
     except Exception:
         logger.warning(
             "Failed to fetch session nodes for user_id=%s; skipping expansion",
-            user_id,
-            exc_info=True,
+            "[protected]" if getattr(graph_store, "protected_reads", False) else user_id,
+            exc_info=not bool(getattr(graph_store, "protected_reads", False)),
         )
 
     # Apply each context signal while preserving the strongest inherited score.
