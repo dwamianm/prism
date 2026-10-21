@@ -10,7 +10,9 @@ enable_claim_sentence_text narrows it to the claim's own sentences
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
+from datetime import datetime
 import re
+from typing import Callable
 import unicodedata
 
 import structlog
@@ -19,8 +21,19 @@ from prme.ingestion.schema import ExtractedQuantity, ExtractionResult
 
 logger = structlog.get_logger(__name__)
 
+_PRIVATE_TIME_CUE = re.compile(
+    r"\b(?:starting|beginning|since|until|yesterday|today|tomorrow|"
+    r"currently|previously|formerly|next|last|"
+    r"January|February|March|April|May|June|July|August|September|October|November|December|"
+    r"Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b"
+    r"|\b\d{4}-\d{2}-\d{2}\b", re.IGNORECASE,
+)
+_FORWARD_START = re.compile(r"\b(?:starting|beginning)\s+(?:(?:on|in)\s+)?$", re.IGNORECASE)
 
-def validate_private_grounding(result: ExtractionResult, source: str, *, speaker: str | None = None) -> None:
+
+def validate_private_grounding(result: ExtractionResult, source: str, *, speaker: str | None = None,
+                               reference_time: datetime | None = None,
+                               resolve_date: Callable[..., str | None] | None = None) -> ExtractionResult:
     """Reject ambiguous protected claims before the legacy repair/logging path.
 
     The complete source paragraph must remain in the citation. This conservative
@@ -28,6 +41,7 @@ def validate_private_grounding(result: ExtractionResult, source: str, *, speaker
     """
     from prme.privacy.policy import PrivacyDenied
 
+    result = result.model_copy(deep=True)
     for claim in (*result.facts, *result.relationships):
         quote = claim.evidence_quote
         if not quote or quote not in source:
@@ -50,23 +64,42 @@ def validate_private_grounding(result: ExtractionResult, source: str, *, speaker
         negative = re.search(r"\b(?:not|never|neither|without|no\s+longer)\b|n['’]t\b", quote, re.IGNORECASE)
         if negative and claim.polarity != "negative":
             raise PrivacyDenied("privacy_evidence_ambiguous")
-        # A projected triple must not silently become timeless. The ordinary
-        # temporal resolver is heuristic; until its effective-time result is
-        # source-validated, reject declared refs and these explicit source cues.
-        # This is a conservative gate, not general temporal language coverage.
-        if getattr(claim, "temporal_ref", None) or re.search(
-            r"\b(?:starting|beginning|since|until|yesterday|today|tomorrow|"
-            r"currently|previously|formerly|next|last|"
-            r"January|February|March|April|May|June|July|August|September|October|November|December|"
-            r"Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b"
-            r"|\b\d{4}-\d{2}-\d{2}\b",
-            quote, re.IGNORECASE,
-        ):
-            raise PrivacyDenied("privacy_evidence_ambiguous")
+        temporal_ref = getattr(claim, "temporal_ref", None)
+        cues = list(_PRIVATE_TIME_CUE.finditer(quote))
+        if temporal_ref or cues:
+            # Only a unique source-present ref attached directly to an explicit
+            # forward start can select future resolution. A cue elsewhere in the
+            # paragraph is not authority for the model's chosen reference.
+            if (not temporal_ref or temporal_ref != temporal_ref.strip() or resolve_date is None
+                    or reference_time is None or reference_time.utcoffset() is None):
+                raise PrivacyDenied("privacy_evidence_ambiguous")
+            references = list(re.finditer(r"(?<!\w)" + re.escape(temporal_ref) + r"(?!\w)", quote))
+            if len(references) != 1:
+                raise PrivacyDenied("privacy_evidence_ambiguous")
+            reference = references[0]
+            forward = _FORWARD_START.search(quote[:reference.start()])
+            if forward is None or any(cue.start() < forward.start() or cue.end() > reference.end() for cue in cues):
+                raise PrivacyDenied("privacy_evidence_ambiguous")
+            # Ranges and alternatives are not one source-effective instant.
+            if re.search(r"\b(?:or|and|to|through|until|between)\b|[–—]", temporal_ref, re.IGNORECASE):
+                raise PrivacyDenied("privacy_evidence_ambiguous")
+            try:
+                resolved = resolve_date(temporal_ref, reference_time=reference_time,
+                                        prefer_dates_from="future", source_text=quote)
+                supported_future = resolved is not None and datetime.fromisoformat(resolved) > reference_time
+            except Exception:
+                raise PrivacyDenied("privacy_evidence_ambiguous") from None
+            if not supported_future:
+                raise PrivacyDenied("privacy_evidence_ambiguous")
+            # Existing materialization consumes this checked UTC value through
+            # its normal resolver/event_time/valid_from path. Source bytes stay
+            # unchanged and the untrusted caller's extraction is not mutated.
+            claim.temporal_ref = resolved
         quantity = getattr(claim, "quantity", None)
         if quantity is not None and validate_extracted_quantity(
                 quantity, object_value=object_value, claim_passage=quote) is None:
             raise PrivacyDenied("privacy_evidence_ambiguous")
+    return result
 
 _SOURCE_QUOTE_TRANSLATION = str.maketrans({
     "'": '"', "‘": '"', "’": '"', "“": '"', "”": '"',

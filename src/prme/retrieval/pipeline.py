@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol
 import duckdb
 
 from prme.models.learning import RankingMultipliers
+from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
 from prme.retrieval.candidates import (
     CandidateDiagnostics,
@@ -509,6 +510,8 @@ class RetrievalPipeline:
             )
             successful_term_results: list[list[dict]] = []
             for term_index, hits in enumerate(term_results):
+                if isinstance(hits, PrivacyDenied):
+                    raise hits
                 if isinstance(hits, BaseException):
                     aggregation_scan_failed = True
                     continue
@@ -533,11 +536,13 @@ class RetrievalPipeline:
                                 path_count=1,
                                 lexical_score=hit.get("normalized_score", 0.0),
                             ))
+                except PrivacyDenied:
+                    raise
                 except Exception:
                     aggregation_scan_failed = True
                     logger.debug(
                         "Aggregation candidate resolution failed; continuing",
-                        exc_info=True,
+                        exc_info=not bool(getattr(self, "_privacy_context", None)),
                     )
 
         # --- Stages 2-3: Candidate Generation + Merging ---
@@ -606,11 +611,13 @@ class RetrievalPipeline:
             )
             successful_entity_results: list[list[dict]] = []
             for name, hits in zip(entity_names, entity_results):
+                if isinstance(hits, PrivacyDenied):
+                    raise hits
                 if isinstance(hits, BaseException):
                     logger.debug(
                         "Entity-focused retrieval failed for '%s'; continuing",
-                        name,
-                        exc_info=hits,
+                        "[protected]" if getattr(self, "_privacy_context", None) else name,
+                        exc_info=False if getattr(self, "_privacy_context", None) else hits,
                     )
                     continue
                 successful_entity_results.append(hits)
@@ -636,10 +643,12 @@ class RetrievalPipeline:
                                 lexical_score=hit.get("normalized_score", 0.0),
                             ))
                             candidate_counts["LEXICAL"] = candidate_counts.get("LEXICAL", 0) + 1
+                except PrivacyDenied:
+                    raise
                 except Exception:
                     logger.debug(
                         "Entity-focused node resolution failed; continuing",
-                        exc_info=True,
+                        exc_info=not bool(getattr(self, "_privacy_context", None)),
                     )
 
         # --- Stage 2.6: Multi-Query Reformulation (opt-in, issue #43) ---
@@ -787,10 +796,12 @@ class RetrievalPipeline:
                     ):
                         ranking_policy = "score_id"
                 scored = expanded
+            except PrivacyDenied:
+                raise
             except Exception:
                 logger.warning(
                     "Session context expansion failed; continuing without expansion",
-                    exc_info=True,
+                    exc_info=not bool(getattr(self, "_privacy_context", None)),
                 )
 
         # --- Stage 5.5c: Two-stage Episode Context Expansion ---
@@ -813,10 +824,12 @@ class RetrievalPipeline:
                 ):
                     ranking_policy = "score_id"
                 scored = expanded
+            except PrivacyDenied:
+                raise
             except Exception:
                 logger.warning(
                     "Episode context expansion failed; continuing without expansion",
-                    exc_info=True,
+                    exc_info=not bool(getattr(self, "_privacy_context", None)),
                 )
 
         # --- Stage 5.5d: Direct Evidence Projection ---
@@ -845,10 +858,12 @@ class RetrievalPipeline:
                 if projected is not scored:
                     ranking_policy = "score_id"
                 scored = projected
+            except PrivacyDenied:
+                raise
             except Exception:
                 logger.warning(
                     "Evidence projection failed; continuing without projection",
-                    exc_info=True,
+                    exc_info=not bool(getattr(self, "_privacy_context", None)),
                 )
 
         # Preserve concise semantic candidates while adding a bounded direct
@@ -876,10 +891,12 @@ class RetrievalPipeline:
                 if augmented is not scored:
                     ranking_policy = "score_id"
                 scored = augmented
+            except PrivacyDenied:
+                raise
             except Exception:
                 logger.warning(
                     "Evidence augmentation failed; continuing without augmentation",
-                    exc_info=True,
+                    exc_info=not bool(getattr(self, "_privacy_context", None)),
                 )
 
         # --- Stage 5.5e: Claim Statement Folding ---
@@ -973,10 +990,12 @@ class RetrievalPipeline:
                     cross_scope_hints = scored_hints[
                         : effective_packing_config.cross_scope_top_n
                     ]
+            except PrivacyDenied:
+                raise
             except Exception:
                 logger.warning(
                     "Cross-scope hint generation failed; continuing without hints",
-                    exc_info=True,
+                    exc_info=not bool(getattr(self, "_privacy_context", None)),
                 )
 
         aggregation_candidate_count = len(scored) if analysis.is_aggregation else 0
@@ -1018,6 +1037,9 @@ class RetrievalPipeline:
 
         # --- Stage 6: Context Packing ---
         coverage_notices = []
+        private_read = getattr(self, "_privacy_context", None)
+        if private_read is not None:
+            coverage_notices.append(private_read.source_limitation)
         if analysis.is_aggregation:
             coverage_notices.append(_AGGREGATION_COVERAGE_NOTICE)
         if knowledge_at is not None:
@@ -1209,16 +1231,21 @@ class RetrievalPipeline:
                         [op_id, "RETRIEVAL_REQUEST", str(analysis.request_id), payload, user_id],
                     )
             receipt_persisted = self._pool is not None or self._conn is not None
+        except PrivacyDenied:
+            raise
         except Exception:
             logger.warning(
                 "Failed to log RETRIEVAL_REQUEST operation for request %s",
                 analysis.request_id,
-                exc_info=True,
+                exc_info=not bool(getattr(self, "_privacy_context", None)),
             )
 
         # --- Assemble RetrievalResponse ---
         completed_at = time.monotonic()
         metadata = RetrievalMetadata(
+            source_limitation=private_read.source_limitation if private_read is not None else None,
+            source_availability=tuple(private_read.availability(row) for row in private_read.records.values())
+                if private_read is not None else None,
             receipt_persisted=receipt_persisted,
             request_id=analysis.request_id,
             reference_time=scoring_now,
@@ -1280,10 +1307,12 @@ class RetrievalPipeline:
             return await suppress_replaced_sources(
                 candidates, graph_store=self._graph_store, user_id=user_id
             )
+        except PrivacyDenied:
+            raise
         except Exception:
             logger.warning(
                 "Replaced source suppression failed; continuing without it",
-                exc_info=True,
+                exc_info=not bool(getattr(self, "_privacy_context", None)),
             )
             return candidates, []
 
@@ -1327,16 +1356,20 @@ class RetrievalPipeline:
         """
         from prme.retrieval.reformulation import reformulate_query
 
-        alt_queries = await reformulate_query(
-            query,
-            provider=self._query_reformulation_provider,
-            model=self._query_reformulation_model,
-            count=self._query_reformulation_count,
-            api_key=self._query_reformulation_api_key,
-            base_url=self._query_reformulation_base_url,
-            timeout=self._query_reformulation_timeout,
-            client_cache=self._query_reformulation_clients,
-        )
+        private_read = getattr(self, "_privacy_context", None)
+        if private_read is None:
+            alt_queries = await reformulate_query(
+                query,
+                provider=self._query_reformulation_provider,
+                model=self._query_reformulation_model,
+                count=self._query_reformulation_count,
+                api_key=self._query_reformulation_api_key,
+                base_url=self._query_reformulation_base_url,
+                timeout=self._query_reformulation_timeout,
+                client_cache=self._query_reformulation_clients,
+            )
+        else:
+            alt_queries = await private_read.reformulate(self, query)
         merge_signals_enabled = self._query_reformulation_merge_policy == "max_signals"
         if not alt_queries and not merge_signals_enabled:
             return 0
@@ -1389,11 +1422,13 @@ class RetrievalPipeline:
         existing_ids = {str(c.node.id) for c in candidates}
         added = 0
         for alt_q, alt_candidates in zip(alt_queries, results):
+            if isinstance(alt_candidates, PrivacyDenied):
+                raise alt_candidates
             if isinstance(alt_candidates, BaseException):
                 logger.debug(
                     "Reformulated query retrieval failed for %r; skipping",
-                    alt_q,
-                    exc_info=alt_candidates,
+                    "[protected]" if getattr(self, "_privacy_context", None) else alt_q,
+                    exc_info=False if getattr(self, "_privacy_context", None) else alt_candidates,
                 )
                 continue
             for c in alt_candidates:

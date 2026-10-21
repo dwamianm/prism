@@ -22,6 +22,12 @@ if TYPE_CHECKING:
     from prme.retrieval.pipeline import RetrievalPipeline
 
 from prme.config import PRMEConfig
+from prme.models.privacy_reads import (
+    ProtectedEventView, ProtectedExtractionView, ProtectedProvenanceView,
+    ProtectedReceiptView, SanitizedEvidenceView, SourceAvailability, SourceUnavailable,
+)
+from prme.privacy.capabilities import EvidenceAccess
+
 from prme.privacy import CategoryAction, MemoryRetention, PolicySnapshot, PrivacyDenied, PrivacyPolicy, PrivacyRuntime
 from prme.config_audit import (
     HypothesisAudit as HypothesisAudit,
@@ -198,6 +204,8 @@ def __getattr__(name: str):
 
 
 __all__ = [
+    "ProtectedEventView", "ProtectedExtractionView", "ProtectedProvenanceView",
+    "ProtectedReceiptView", "SanitizedEvidenceView", "SourceAvailability", "SourceUnavailable", "EvidenceAccess",
     "CategoryAction", "MemoryRetention", "PolicySnapshot", "PrivacyDenied", "PrivacyPolicy", "PrivacyRuntime",
     "AnswerCitationRecord",
     "AnswerCitationSubmission",

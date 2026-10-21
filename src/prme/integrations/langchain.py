@@ -45,10 +45,12 @@ except ImportError as e:
         "Install with: pip install prme[langchain]"
     ) from e
 
-from pydantic import Field, PrivateAttr
+from pydantic import Field, PrivateAttr, field_validator
 
 from prme.client import MemoryClient
 from prme.config import PRMEConfig
+from prme.privacy.capabilities import PrivacyRuntime
+from prme.storage.embedding import EmbeddingProvider
 from prme.integrations._chat_history import (
     append_chat_control,
     chat_message_metadata,
@@ -96,6 +98,8 @@ class PRMERetriever(BaseRetriever):
         directory: Path to the PRME memory directory.
         user_id: User ID for scoped retrieval.
         config: Optional PRMEConfig override.
+        privacy_runtime: Explicit protected execution capabilities, when configured.
+        embedding_provider: Embedding provider matching the configured index.
         scope: Scope filter(s) for retrieval.
         token_budget: Token budget for context packing.
         top_k: Maximum number of documents to return.
@@ -108,6 +112,9 @@ class PRMERetriever(BaseRetriever):
     directory: str = "."
     user_id: str
     config: PRMEConfig | None = None
+    # Capabilities are opaque Python instances, never Pydantic-parsed request data.
+    privacy_runtime: Any = Field(default=None, exclude=True, repr=False)
+    embedding_provider: Any = Field(default=None, exclude=True, repr=False)
     scope: Scope | list[Scope] | None = None
     token_budget: int | None = None
     top_k: int = 10
@@ -115,8 +122,16 @@ class PRMERetriever(BaseRetriever):
 
     _client: MemoryClient = PrivateAttr()
 
+    @field_validator("privacy_runtime")
+    @classmethod
+    def _runtime_instance(cls, value: Any) -> Any:
+        if value is not None and not isinstance(value, PrivacyRuntime):
+            raise ValueError("privacy_runtime must be an explicit PrivacyRuntime instance")
+        return value
+
     def model_post_init(self, __context: Any) -> None:
-        self._client = MemoryClient(self.directory, config=self.config)
+        self._client = MemoryClient(self.directory, config=self.config,
+                                    privacy_runtime=self.privacy_runtime, embedding_provider=self.embedding_provider)
 
     def _get_relevant_documents(
         self,
@@ -158,6 +173,9 @@ class PRMERetriever(BaseRetriever):
             if response.metadata.min_score_skipped:
                 # The vector path failed, so the floor could not be applied.
                 metadata["min_score_skipped"] = True
+            if response.metadata.source_limitation:
+                metadata["source_limitation"] = response.metadata.source_limitation
+                metadata["source_availability"] = (node.metadata or {}).get("source_availability", [])
 
             docs.append(
                 Document(
@@ -190,6 +208,8 @@ class PRMEChatMessageHistory(BaseChatMessageHistory):
         user_id: User ID for scoping.
         session_id: Session identifier for grouping messages.
         config: Optional PRMEConfig override.
+        privacy_runtime: Explicit protected execution capabilities, when configured.
+        embedding_provider: Embedding provider matching the configured index.
         scope: Scope for stored messages.
     """
 
@@ -200,9 +220,12 @@ class PRMEChatMessageHistory(BaseChatMessageHistory):
         user_id: str,
         session_id: str | None = None,
         config: PRMEConfig | None = None,
+        privacy_runtime: PrivacyRuntime | None = None,
+        embedding_provider: EmbeddingProvider | None = None,
         scope: Scope = Scope.PERSONAL,
     ) -> None:
-        self._client = MemoryClient(directory, config=config)
+        self._client = MemoryClient(directory, config=config, privacy_runtime=privacy_runtime,
+                                    embedding_provider=embedding_provider)
         self._user_id = user_id
         self._session_id = session_id or str(uuid.uuid4())
         self._scope = scope
@@ -247,6 +270,7 @@ class PRMEChatMessageHistory(BaseChatMessageHistory):
 
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
         """Store messages in PRME."""
+        self._client.require_legacy_history(user_id=self._user_id)
         for msg in messages:
             role = _message_role(msg)
             serialized = {

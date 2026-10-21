@@ -33,10 +33,12 @@ async def initialize_pg(conn) -> None:
     await conn.execute(ROTATION_DDL)
 
 
-def _protected_range_sql(postgres: bool, scope: str | None) -> str:
+def _protected_range_sql(postgres: bool, scope: str | None, *, unscoped: bool = False) -> str:
     # Opaque enrollment metadata only, including orphaned or malformed markers.
     # An empty event body or missing work row cannot establish legacy status.
-    where = "user_id=$1" + (" AND scope=$2" if scope is not None else "")
+    where = "1=1" if unscoped else "user_id=$1"
+    if scope is not None:
+        where += " AND scope=$1" if unscoped else " AND scope=$2"
     marker = (f"metadata ? '{PRIVACY_KEY}'" if postgres else
               f"json_extract(metadata,'$.{PRIVACY_KEY}') IS NOT NULL")
     return (f"SELECT 1 FROM privacy_admissions WHERE {where} UNION ALL "
@@ -44,15 +46,15 @@ def _protected_range_sql(postgres: bool, scope: str | None) -> str:
             f"SELECT 1 FROM nodes WHERE {where} AND {marker} LIMIT 1")
 
 
-def require_legacy_duck(conn, user_id: str, scope: str | None) -> None:
-    args = [user_id] + ([scope] if scope is not None else [])
-    if conn.execute(_protected_range_sql(False, scope), args).fetchone() is not None:
+def require_legacy_duck(conn, user_id: str | None, scope: str | None) -> None:
+    args = ([] if user_id is None else [user_id]) + ([scope] if scope is not None else [])
+    if conn.execute(_protected_range_sql(False, scope, unscoped=user_id is None), args).fetchone() is not None:
         raise PrivacyDenied("privacy_provider_unavailable")
 
 
-async def require_legacy_pg(conn, user_id: str, scope: str | None) -> None:
-    args = [user_id] + ([scope] if scope is not None else [])
-    if await conn.fetchrow(_protected_range_sql(True, scope), *args) is not None:
+async def require_legacy_pg(conn, user_id: str | None, scope: str | None) -> None:
+    args = ([] if user_id is None else [user_id]) + ([scope] if scope is not None else [])
+    if await conn.fetchrow(_protected_range_sql(True, scope, unscoped=user_id is None), *args) is not None:
         raise PrivacyDenied("privacy_provider_unavailable")
 
 
@@ -132,7 +134,7 @@ class PrivacyRepository:
     async def for_owner(self, user_id: str) -> tuple[PrivacyRecord, ...]:
         return await self._read("user_id=?", (user_id,))
 
-    async def require_legacy_range(self, user_id: str, scope: str | None) -> None:
+    async def require_legacy_range(self, user_id: str | None, scope: str | None) -> None:
         if self.pool is not None:
             async with self.pool.acquire() as conn:
                 await require_legacy_pg(conn, user_id, scope)

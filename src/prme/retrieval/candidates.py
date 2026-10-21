@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from prme.models.owner_reference import OWNER_REFERENCE_STATUS
+from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.config import DEFAULT_PACKING_CONFIG, PackingConfig
 from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
 from prme.types import EdgeType, LifecycleState, NodeType, Scope
@@ -344,10 +345,13 @@ async def _generate_graph_candidates(
     if seed_reach:
         try:
             reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops, node_depth)
+        except PrivacyDenied:
+            raise
         except Exception:
             # Only the graph list's ordering depends on the walk, so a failed
             # read costs that term and keeps every graph candidate.
-            logger.warning("Graph seed reach failed; no candidate gets a graph rank", exc_info=True)
+            logger.warning("Graph seed reach failed; no candidate gets a graph rank",
+                           exc_info=not getattr(graph_store, "protected_reads", False))
             reach = None
             if diagnostics is not None:
                 diagnostics.graph_seed_reach = "backend_error"
@@ -395,7 +399,7 @@ async def _generate_vector_candidates(
         logger.warning(
             "Vector search detected incompatible embedding metadata; "
             "falling back to empty vector candidates",
-            exc_info=True,
+            exc_info=not bool(getattr(vector_index, "protected_reads", False)),
         )
         return [], True
 
@@ -461,7 +465,19 @@ async def _generate_pinned_candidates(
             lifecycle_states=active_states,
             limit=500,
         ),
+        return_exceptions=True,
     )
+
+    # The outer candidate gather can only settle this branch if both of its
+    # queries have finished. Otherwise a denial can race the caller's database
+    # close while the other query still uses the native connection.
+    for result in (pinned_nodes, task_nodes):
+        if isinstance(result, PrivacyDenied):
+            raise result
+    if isinstance(pinned_nodes, BaseException):
+        raise pinned_nodes
+    if isinstance(task_nodes, BaseException):
+        raise task_nodes
 
     pinned: list[MemoryNode] = []
     seen_ids: set[str] = set()
@@ -668,6 +684,14 @@ async def generate_candidates(
         if include_pinned else _empty_pinned_candidates(),
         return_exceptions=True,
     )
+    # Authorization and privacy failures are not degradable backend failures.
+    # Settle every branch first, then propagate without formatting an exception.
+    for result in results:
+        if isinstance(result, PrivacyDenied):
+            raise result
+        if isinstance(result, BaseException) and not isinstance(result, Exception):
+            raise result
+    protected = bool(getattr(graph_store, "protected_reads", False))
 
     # Process results, treating exceptions as empty. Counts alone cannot
     # distinguish a healthy empty index from an unavailable backend.
@@ -684,22 +708,22 @@ async def generate_candidates(
     embedding_mismatch = False
 
     if isinstance(results[0], BaseException):
-        logger.warning("Graph candidate generation failed", exc_info=results[0])
+        logger.warning("Graph candidate generation failed", exc_info=False if protected else results[0])
     else:
         graph_cands = results[0]
 
     if isinstance(results[1], BaseException):
-        logger.warning("Vector candidate generation failed", exc_info=results[1])
+        logger.warning("Vector candidate generation failed", exc_info=False if protected else results[1])
     else:
         vector_cands, embedding_mismatch = results[1]
 
     if isinstance(results[2], BaseException):
-        logger.warning("Lexical candidate generation failed", exc_info=results[2])
+        logger.warning("Lexical candidate generation failed", exc_info=False if protected else results[2])
     else:
         lexical_cands = results[2]
 
     if isinstance(results[3], BaseException):
-        logger.warning("Pinned candidate generation failed", exc_info=results[3])
+        logger.warning("Pinned candidate generation failed", exc_info=False if protected else results[3])
     else:
         pinned_cands = results[3]
 

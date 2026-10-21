@@ -1,0 +1,657 @@
+{
+  "stage": "implementation-checkpoint",
+  "issue": "#323",
+  "acceptanceComplete": false,
+  "fixture": {
+    "path": "tests/fixtures/privacy/source-separation-v1.json",
+    "sha256": "8e5094399c848c66d9830ce3128f91ef25ba7889f4fd093792546fc50d7d0a09"
+  },
+  "ownedCases": [
+    {
+      "id": "AP04",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
+      "postgres": "component_subchecks_passed; actual_authority_pending",
+      "pending": "Actual current-ledger authority; Q04 source-effective positive and ambiguity controls now pass as component integration."
+    },
+    {
+      "id": "AC01",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
+      "postgres": "component_subchecks_passed; actual_authority_pending"
+    },
+    {
+      "id": "AC04",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
+      "postgres": "component_subchecks_passed; actual_authority_pending"
+    },
+    {
+      "id": "AC06",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
+      "postgres": "component_subchecks_passed; actual_authority_pending",
+      "pending": "PV-05 historical recovery, actual current authority/fences."
+    },
+    {
+      "id": "AC07",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
+      "postgres": "component_subchecks_passed; actual_authority_pending"
+    },
+    {
+      "id": "AC08",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
+      "postgres": "component_subchecks_passed; actual_authority_pending"
+    },
+    {
+      "id": "CL02",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
+      "postgres": "component_subchecks_passed; actual_authority_pending"
+    },
+    {
+      "id": "CL07",
+      "duckdb": "component_subchecks_passed_directory_and_single_file; actual_authority_pending",
+      "postgres": "component_subchecks_passed; actual_authority_pending",
+      "pending": "PV-05 recovery and PV-06 covered erasure; read/staging/reopen subchecks pass on all planned layouts, no whole-case pass."
+    }
+  ],
+  "verified": [
+    {
+      "kind": "projection_component",
+      "result": "14 passed",
+      "initialResult": "13 passed, 1 failed: fixture Event omitted required role",
+      "repairCycles": 1,
+      "log": "323-projection-component-cycle1.log"
+    },
+    {
+      "kind": "legacy_compatibility_and_components",
+      "result": "95 passed, 13 skipped in 23.29s",
+      "command": ".venv/bin/python -m pytest tests/test_graph_seed_count.py tests/test_node_provenance.py tests/test_event_provenance_api.py tests/test_integrations_langchain.py tests/test_integrations_llamaindex.py tests/test_temporal_relation_pipeline.py tests/test_privacy_source_separation.py -q"
+    },
+    {
+      "kind": "legacy_provider_and_snapshot_compatibility",
+      "result": "48 passed in 3.23s",
+      "command": ".venv/bin/python -m pytest tests/test_entity_snapshots.py tests/test_temporal_relation_providers.py tests/test_reformulation.py -q"
+    },
+    {
+      "kind": "public_types",
+      "result": "Success: no issues found in 1 source file",
+      "command": ".venv/bin/mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py"
+    },
+    {
+      "kind": "ordinary_reads",
+      "result": "2 passed in 12.00s",
+      "log": "323-reads-component-initial.log"
+    },
+    {
+      "kind": "qualifiers_and_selected_denials",
+      "result": "4 passed, 2 failed, 4 deselected in 23.01s; passing qualifier and denial subchecks reused; selected oracle failure preserved",
+      "log": "323-selected-and-qualifiers-cycle1-run.log"
+    },
+    {
+      "kind": "query_provider_routing",
+      "result": "4 passed, 4 deselected in 5.42s",
+      "log": "323-query-routing-initial.log"
+    },
+    {
+      "kind": "graph_seed_routing",
+      "result": "2 passed, 8 deselected in 3.66s",
+      "log": "323-graph-routing-cycle1.log"
+    },
+    {
+      "kind": "staging_and_reopen",
+      "result": "2 passed, 6 deselected in 3.73s",
+      "log": "323-staging-reopen-initial.log"
+    },
+    {
+      "kind": "temporal_guard_propagation",
+      "result": "2 passed, 10 deselected in 3.76s",
+      "log": "323-temporal-routing-cycle1.log"
+    },
+    {
+      "kind": "public_adapters_and_legacy_compatibility",
+      "result": "60 passed in 23.58s",
+      "log": "323-adapter-compatibility-final.log"
+    },
+    {
+      "kind": "session_episode_answerability_and_legacy_expansion",
+      "result": "30 passed, 2 failed, 16 deselected in 14.82s; failed augmentation top-k fixture retained separately",
+      "log": "323-expansion-routing-cycle1.log"
+    },
+    {
+      "kind": "selected_projection_augmentation_and_diagnostic_adapters",
+      "result": "2 passed, 10 deselected in 5.47s",
+      "log": "323-selected-augmentation-cycle1.log"
+    },
+    {
+      "kind": "full_ruff",
+      "result": "passed",
+      "log": "323-ruff-final-cycle1.log"
+    },
+    {
+      "kind": "public_types",
+      "result": "Success: no issues found in 1 source file",
+      "log": "323-types-final.log"
+    },
+    {
+      "kind": "contract_structure",
+      "result": "45 copies, 171 source anchors; no runtime acceptance inferred",
+      "log": "323-contract-final-cycle1.log"
+    },
+    {
+      "kind": "explorer_component_ui",
+      "result": "desktop and 390x844 mobile: retired neighbor, sealed source notice, no source markers or horizontal overflow",
+      "log": "323-ui-mobile-check.json"
+    },
+    {
+      "kind": "q04_actual_positive_and_temporal_compatibility",
+      "result": "55 passed, 6 deselected in 13.49s",
+      "log": "323-q04-repair-cycle1.log"
+    },
+    {
+      "kind": "q04_ambiguity_and_single_file_layouts",
+      "result": "18 passed, 35 deselected in 26.94s",
+      "log": "323-q04-single-file-final-targeted.log",
+      "command": "pytest tests/test_privacy_source_reads.py tests/test_privacy_source_routing.py tests/test_privacy_source_interfaces.py tests/test_privacy_source_separation.py tests/test_shared_temporal_parser.py -q -k 'single_file or Q04 or AP04 or mixed_parser or mixed_parsing'"
+    },
+    {
+      "kind": "review_regressions_actual_public_paths",
+      "result": "9 passed, 9 deselected in 14.45s",
+      "log": "323-review-repair-cycle1.log"
+    },
+    {
+      "kind": "review_ordinary_selected_compatibility",
+      "result": "9 passed, 27 deselected in 15.34s",
+      "log": "323-review-repair-read-compatibility.log"
+    },
+    {
+      "kind": "review_legacy_snapshot_compatibility",
+      "result": "23 passed in 1.31s",
+      "log": "323-review-repair-snapshot-compatibility.log"
+    },
+    {
+      "kind": "review_lint_types_contract",
+      "result": "Scoped Ruff, strict public mypy, 45 copy classes / 171 anchors / 17 surfaces and diff whitespace passed",
+      "logs": [
+        "323-review-repair-ruff.log",
+        "323-review-repair-types.log",
+        "323-review-repair-contract.log"
+      ]
+    }
+  ],
+  "pending": [
+    "Actual PV-06 local current-ledger policy/erasure authority and original authority/fence gates; FakeAuthority evidence is component only",
+    "PV-05 protected profile/summary publication, durable receipt/work codecs and AC06 historical recovery",
+    "CL07 full covered-erasure subchecks owned by PV-06",
+    "Final exact-head genuine-clone full suite/build/installed-wheel/simulations; affected/adversarial reviews and final merged-source identity confirmation",
+    "Root release for push and PR; no issue closure from this checkpoint"
+  ],
+  "liveModelCalls": 0,
+  "longBenchmarks": 0,
+  "published": false,
+  "sourcePrerequisites": {
+    "policy": "50d22d4e365b52ce78300fe2d2e21d6f753b3a78",
+    "crypto": "a63e78a7b64810a4b127a00e9102732e393272aa",
+    "sanitizerRuntime": "9ce3af6c3b1c5d3081bc9bb4561a10678956dc1a"
+  },
+  "componentBoundary": "Actual storage, sanitizer, crypto, routing, grounding and packing; external model responses, OS adapter and PolicyAuthority are named fixtures. Not whole product acceptance.",
+  "runtimeVersions": {
+    "pydantic": "2.12.5",
+    "presidio-analyzer": "2.2.364",
+    "spacy": "3.8.11",
+    "cryptography": "50.0.2",
+    "keyring": "25.7.0",
+    "duckdb": "1.4.4",
+    "asyncpg": "0.31.0"
+  },
+  "failedEvidence": [
+    {
+      "log": "323-selected-positive-unmasked.log",
+      "classification": "original stronger .test removal assertion failed on both backends; never relabeled passed"
+    },
+    {
+      "log": "323-selected-supported-oracle.log",
+      "classification": "root-authorized admitted-byte equality and frozen email-01 supported removal passed; frozen .test miss remains visible"
+    },
+    {
+      "log": "323-temporal-routing-initial.log",
+      "classification": "actual PrivacyDenied swallowed by generic HTTP provider catches; first source repair passed"
+    },
+    {
+      "log": "323-expansion-routing-fence-repro.log",
+      "classification": "actual PrivacyDenied swallowed/logged by session fallback; first source repair passed; same generic-catch group"
+    },
+    {
+      "log": "323-expansion-routing-initial.log",
+      "classification": "fixture denial targeted unused backend neighbor method; actual guarded scan reproduction saved separately"
+    },
+    {
+      "log": "323-expansion-routing-cycle1.log",
+      "classification": "augmentation top_k=2 excluded one selected group among three; original projection top_k=3 reused and passed"
+    },
+    {
+      "log": "323-reads-qualifiers-initial.log",
+      "classification": "snapshot fixture selected first entity rather than Alex; corrected existing selector passed"
+    },
+    {
+      "log": "323-interfaces-initial.log",
+      "classification": "new Pydantic runtime schema integration failure repaired; stronger foreign 404 expectation corrected to equal fixed existing 422 denial"
+    },
+    {
+      "log": "323-interfaces-cycle1.log",
+      "classification": "framework fixture invalid session UUID; valid UUID fixture passed"
+    },
+    {
+      "log": "323-graph-routing-initial.log",
+      "classification": "query fixture yielded only one entity seed; existing two-entity question corrected and passed"
+    },
+    {
+      "log": "323-ruff-final.log",
+      "classification": "shared dependency consumer imports landed after a function; reordered and passed"
+    },
+    {
+      "log": "323-contract-final.log",
+      "classification": "31 moved exact source anchors refreshed without changing contract cases; validator passed"
+    },
+    {
+      "log": "323-q04-positive-before-repair.log",
+      "classification": "Actual original AC2 positive ingestion rejected by blanket temporal gate; first bounded source repair passed."
+    },
+    {
+      "log": "323-q04-competing-span-before-repair.log",
+      "classification": "Additional numeric source date escaped original cue regex; bounded existing-parser span validation passed."
+    },
+    {
+      "log": "323-review-core-security-reproduction.log",
+      "classification": "Three actual CORE Q04 snapshot date failures; three separate setup policy-identity errors."
+    },
+    {
+      "log": "323-review-security-data-reproduction.log",
+      "classification": "Six setup errors from using event IDs where node IDs were required; not target-behavior evidence."
+    },
+    {
+      "log": "323-review-security-data-public-reproduction.log",
+      "classification": "Six actual public-path failures: three SEC deadline violations and three DATA marker-classification bypasses."
+    },
+    {
+      "log": "323-review-repair-compatibility.log",
+      "classification": "Overbroad test-name selector interrupted after 4 passes at 10.78s, exit 2; not a completed check. Explicit affected compatibility commands passed separately."
+    }
+  ],
+  "oracleCorrection": {
+    "approvedBy": "root",
+    "fixtureBytesChanged": false,
+    "detectorChanged": false,
+    "limitation": ".test is outside pinned email-v1 recognizer grammar and remains in explicit sanitized evidence",
+    "positive": "Existing frozen sanitizer-v1 email-01 sample.person@example.com removed on the same actual selected-source route"
+  },
+  "layoutExecutions": {
+    "testFunctions": 12,
+    "duckdb_directory": 12,
+    "duckdb_single_file": 12,
+    "postgresql": 12,
+    "countedScenarioIdsUnchanged": true,
+    "sourceCheckpoint": "01cd5a4d; original 12-function execution counts are historical, not a claim of a final full rerun",
+    "reviewRegressionFunctions": 2,
+    "reviewRegressionExecutions": 6,
+    "currentAvailableFunctions": 14,
+    "finalFullRun": "pending_root"
+  },
+  "q04": {
+    "frozenSourceUnchanged": true,
+    "sourceClock": "2026-10-19T12:00:00+00:00",
+    "expectedAndObservedEffectiveTime": "2026-10-21T00:00:00+00:00",
+    "exactStateBefore": "unknown",
+    "exactStateAt": "single",
+    "retrievalBoundary": "explicit time_to; reference_time alone is not an effective-time filter",
+    "missingRefRefusalRetained": true,
+    "authorityEvidence": "component fixture only",
+    "snapshot_text": "CORE-323-01 fixed with first successful review repair: existing frozen source date retained in summary_text and render_snapshot_text; prior source-date tests alone did not establish this."
+  },
+  "reviewed_dependency_composition": {
+    "prior_head": "01cd5a4d36584df2faded941c128682f452f094d",
+    "dependency_head": "d8b75a078195aabc89c6a41a4ab506e6399ba1a3",
+    "merge_strategy": "Normal two-parent merge; reviewed dependency ancestry retained.",
+    "conflicts": 12,
+    "dependency_relative_files": 39,
+    "runtime_disposition": "685 source/test/web files compared with the prior checkpoint; only reviewed upstream lazy exports differ. Existing runtime test evidence is reused.",
+    "evidence_disposition": "Approved #321 review and #322 evidence preserved; PV-13 adds only Q04 qualification. Manifests and privacy exports match upstream. Both admission/read and inventory changes retained.",
+    "verified": [
+      "323-composition-source-audit.json",
+      "323-composition-types.log",
+      "323-composition-ruff.log",
+      "323-composition-contract.log",
+      "323-composition-exports-2.log"
+    ],
+    "preserved_probe_failure": {
+      "source": "323-composition-exports.log",
+      "cause": "Import probe used nonexistent ProtectedReads instead of existing ReadContext; corrected probe passed without a source change."
+    },
+    "pending": "Final required reviews/full validation and actual #325 authority/erasure plus #324 durable publication/recovery."
+  },
+  "review_repairs": {
+    "reviewed_head": "41e2cad52b4753c57ea0da32ebba9bc152b631e2",
+    "findings": [
+      {
+        "id": "CORE-323-01",
+        "criteria": [
+          2
+        ],
+        "repair": "Shared protected snapshot time formatter for both returned text paths and generated-source input; unchanged legacy text.",
+        "actual_failed_executions": 3,
+        "source_repair_cycles": 1,
+        "unsuccessful_source_repair_cycles": 0
+      },
+      {
+        "id": "SEC-323-1",
+        "criteria": [
+          1,
+          3
+        ],
+        "repair": "Final completed-result disclosure guards and all-contributor checks after authorization/guard-exit awaits, including resumed ordinary iteration.",
+        "actual_failed_executions": 3,
+        "source_repair_cycles": 1,
+        "unsuccessful_source_repair_cycles": 0
+      },
+      {
+        "id": "DATA-323-01",
+        "criteria": [
+          3,
+          6
+        ],
+        "repair": "Existing metadata-only marker-aware classifier used before raw owner/unscoped reads; malformed or missing enrollment fails closed with legacy positives retained.",
+        "actual_failed_executions": 3,
+        "source_repair_cycles": 1,
+        "unsuccessful_source_repair_cycles": 0
+      }
+    ],
+    "runtime_paths": [
+      "src/prme/privacy/admission.py",
+      "src/prme/privacy/read_graph.py",
+      "src/prme/privacy/reads.py",
+      "src/prme/retrieval/snapshots.py",
+      "src/prme/storage/engine.py",
+      "src/prme/storage/privacy.py"
+    ],
+    "component_scope": "Real storage, sanitizer and crypto; existing nonreentrant FakeAuthority plus native OS and external-model fixtures. Actual #325 authority/scoped revocation/erasure is not certified.",
+    "full_suite_at_reviewed_head": {
+      "status": "interrupted_not_passed",
+      "passed": 679,
+      "skipped": 11,
+      "exit_code": 2,
+      "seconds": 129.81,
+      "owner": "root"
+    },
+    "final_full_validation": "Pending root-owned final revision and affected review; no full suite run by this worker."
+  },
+  "upstream_window_composition": {
+    "approved_checkpoint": "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
+    "main": "b5fa5be5294dbf28e63536fce4836dad8644561e",
+    "merge_strategy": "Normal two-parent merge; both reviewed dependency and upstream ancestry retained.",
+    "conflicts": [],
+    "runtime_repairs": 0,
+    "source_disposition": "16 of 19 upstream files are byte-identical to main. Configuration documentation, pipeline and engine compose existing privacy changes with upstream hunks. The actual private grounding route, temporal resolver and protected reads/crypto/sanitizer are preserved.",
+    "source_anchors": "23 line-number-only changes, mapped from unchanged lines in the approved source.",
+    "upstream_ci_reused": {
+      "head": "1f462591c1aa94f249c4b42f32128565f9804720",
+      "required_checks_succeeded": 10,
+      "scope": "Byte-identical upstream config-audit, fast-cycle and PostgreSQL event-store paths; root verified PR352 evidence."
+    },
+    "verified": [
+      {
+        "kind": "affected_window_reingest_privacy_fences",
+        "result": "103 passed, 69 deselected in 40.87s",
+        "log": "323-upstream352-window-reingest-final.log"
+      },
+      {
+        "kind": "protected_q04_staging_and_provider",
+        "result": "8 passed in 19.78s",
+        "log": "323-upstream352-protected-ingest.log",
+        "scope": "Real crypto/storage/sanitizer for the existing Q04 and staging cases across three layouts; existing native provider MockTransport checks. Component authority only; full CL07 remains pending."
+      },
+      {
+        "kind": "public_types",
+        "result": "passed",
+        "log": "323-upstream352-public-types.log"
+      },
+      {
+        "kind": "composed_runtime_lint",
+        "result": "passed",
+        "log": "323-upstream352-ruff.log"
+      },
+      {
+        "kind": "structural_contract",
+        "result": "passed",
+        "log": "323-upstream352-contract.log"
+      }
+    ],
+    "preserved_initial_command_issue": {
+      "log": "323-upstream352-window-reingest.log",
+      "exit_code": 4,
+      "cause": "Unavailable --no-cov argument; no tests collected. Corrected command omitted only that argument."
+    },
+    "preserved_anchor_failure": {
+      "log": "323-upstream352-contract-before-anchors.log",
+      "cause": "Upstream source line shifts; only mapped line numbers updated."
+    },
+    "prior_full_suite": {
+      "head": "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
+      "status": "interrupted_not_passed",
+      "passed": 1074,
+      "skipped": 12,
+      "reason": "Root stopped after main advanced to PR352; not a repair failure.",
+      "log": "validation-323-review-repair/final-interruption-upstream352.json"
+    },
+    "review_status": "All four required reviews approved eb457646; affected composition review remains root-owned.",
+    "pending": "Root final combined suite and affected review; #324 durable publication/recovery and #325 actual authority/scoped revocation/erasure remain original gates."
+  },
+  "legacy_chat_history_fixture_repair": {
+    "parent_head": "4f1deb7784d8ebb67688fcd0f3db9b74ee810d3f",
+    "criteria": [
+      3,
+      6
+    ],
+    "scope": "Existing pagination-only legacy double explicitly authorizes alice, records the owner and requires authorization before every page. Existing pagination/clear/version assertions and all production code are unchanged.",
+    "initial_failure": {
+      "ci_run": 39495180277,
+      "job": 118878294206,
+      "python": "3.13",
+      "result": "3 failed, 45 passed in 22.19s",
+      "log": "323-ci-integration313-initial.log",
+      "sha256": "4b975aef55a2326b13452b21418050ec4d419fc019fa6f3163564b2ae0a9115c",
+      "cause": "_PagedEvents lacked the required MemoryClient.require_legacy_history method."
+    },
+    "repair_cycles": 1,
+    "unsuccessful_repair_cycles": 0,
+    "targeted_validation": {
+      "python": "3.11.6",
+      "result": "48 passed in 9.61s",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_integration_chat_history.py",
+        "tests/test_integrations_langchain.py",
+        "tests/test_integrations_llamaindex.py"
+      ],
+      "log": "323-ci-fixture-repair-cycle1.log"
+    },
+    "lint": {
+      "result": "passed",
+      "log": "323-ci-fixture-ruff.log"
+    },
+    "interrupted_full_suite": {
+      "status": "interrupted_not_passed",
+      "passed": 1966,
+      "skipped": 46,
+      "exit_code": 2,
+      "seconds": 361.39,
+      "reason": "Root deliberately stopped the obsolete fixture revision.",
+      "evidence": "validation-323-upstream352/final-interruption-ci-fixture.json"
+    },
+    "pending": "Root affected review, push/CI including Python 3.13 and final complete suite; original #324/#325 integration gates remain pending."
+  },
+  "current_validation_status": {
+    "status": "focused_repairs_passed; affected_review_and_final_validation_pending",
+    "starting_head": "55b0517dd340551d50fb92f8fec04bb3445669ab",
+    "working_changes": "Third exact-contributor correction, first deadline-probe correction and first nested-child settlement correction.",
+    "acceptance_complete": false,
+    "historical_evidence": "All prior failed/interrupted results remain unchanged; earlier status entries are historical."
+  },
+  "full_suite_DATA_compatibility_repair": {
+    "criteria": [
+      3,
+      6
+    ],
+    "original_finding": "DATA-323-01 orphan-marker classification",
+    "initial_full_suite_failure": {
+      "ci_run": 39496148208,
+      "job": 118881583879,
+      "python": "3.13",
+      "result": "9 failed, 6229 passed, 1268 skipped, 2 xfailed",
+      "log": "323-ci-duckdb313-fullsuite-initial.log",
+      "sha256": "89e61f9a60bf429f6b96bc370b8a63c14dd30f8582f6b3cf05c657059e9407cf",
+      "classification": {
+        "DATA_regression": "Seven failures: exact legacy calls become owner-wide protected refusals after the first orphan-marker correction.",
+        "AP06_contract": "Two failures: native payload removal assertions pass, then the obsolete public extraction-is-None assertion rejects the closed unavailable view."
+      }
+    },
+    "repair_cycles": [
+      {
+        "cycle": 1,
+        "source": "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
+        "outcome": "Focused orphan checks passed; the subsequent full suite exposed seven mixed legacy regressions. Unsuccessful for the same compatibility requirement."
+      },
+      {
+        "cycle": 2,
+        "source": "Uncommitted changes on c42af43926ca95a42f8b05facc8606b2df61023c",
+        "change": "Reuse exact metadata-only records_for_objects at both legacy disclosure edges; retain marker-aware broad/ambiguous checks and validate legacy event-node outputs.",
+        "outcome": "Interrupted after nine passes at the existing directory/scope reinforcement fixture. Incomplete and uncertified."
+      }
+    ],
+    "unsuccessful_repair_cycles": 2,
+    "targeted_validation": {
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_admission.py::test_AP06_no_evidence_async_work_removed_on_actual_commit",
+        "tests/test_privacy_fences.py::test_protected_owner_does_not_change_other_legacy_object_calls",
+        "tests/test_privacy_fences.py::test_legacy_reinforcement_evidence_uses_primary_boundary",
+        "tests/test_privacy_source_reads.py::test_AC01_AC03_orphan_markers_never_select_raw_reads",
+        "tests/test_privacy_source_reads.py::test_AC01_AC03_ordinary_final_deadlines"
+      ],
+      "expected_executions": 22,
+      "completed_passes": 9,
+      "result": "incomplete_interrupted_not_passed",
+      "exit_code": 2,
+      "pytest_seconds": 149.31,
+      "wrapper_seconds": 150.35,
+      "signal": "One SIGINT to owned PID 42570; process is now absent.",
+      "log": "323-data-repair-cycle2.log",
+      "command_metadata": "323-data-repair-cycle2.json",
+      "live_process_evidence": "323-data-repair-cycle2-stall.json",
+      "captured_stack": "asyncio/runners.py:123 KeyboardInterrupt; no full coroutine wait stack was captured.",
+      "diagnosis": "Static inference: exact protected event reads seed all owner records including an unrelated scope; ReadContext.guard then holds multiple per-scope guards on the existing FakeAuthority single nonreentrant lock."
+    },
+    "structural_checks": [
+      {
+        "kind": "ruff",
+        "result": "passed",
+        "log": "323-data-repair-ruff.log"
+      },
+      {
+        "kind": "contract",
+        "result": "passed; structural only",
+        "log": "323-data-repair-contract.log"
+      }
+    ],
+    "stop": "Root instructed no third classifier implementation or validation until explicit user approval. No source/test changes or further test executions after this stop; only evidence documentation and read-only diagnosis.",
+    "proposed_alternative": {
+      "status": "not_implemented; awaiting_user_approval",
+      "scope": "Seed exact-object contexts from authoritative contributing records; retain dynamic dependency validation and final all-contributor deadlines. Preserve marker-aware broad/ambiguous routes and selected grant/effect guards.",
+      "paths": [
+        "src/prme/privacy/reads.py",
+        "src/prme/storage/engine.py"
+      ],
+      "seams": [
+        "ReadContext.create",
+        "project_public_result",
+        "MemoryEngine._ordinary_graph",
+        "MemoryEngine.get_event_nodes"
+      ],
+      "authority_source": "Existing storage/privacy.py records_for_objects and admission.py records_for_call; no new authority, cache, migration or lock mechanism.",
+      "validation": "Same five existing test functions and layouts; no new cohort, relaxed assertion or general multi-scope certification."
+    }
+  },
+  "AP06_public_extraction_contract_update": {
+    "criteria": [
+      3
+    ],
+    "repair_cycle": 1,
+    "status": "Uncommitted; finite targeted batch incomplete, not independently certified.",
+    "preserved_assertions": "Existing processing/evidence removal, completed snapshot and positive admitted-node assertions stay unchanged.",
+    "new_assertions": "Native event-store extraction is None; public result is ProtectedExtractionView for the requested event with unavailable/not_captured status and no source text.",
+    "evidence": "323-data-repair-cycle2.log records nine aggregate passes before interruption, not a full AP06 acceptance certificate."
+  },
+  "native_close_full_suite_abort": {
+    "source": "54aa261ce37e81d74b7ab326bdc24fde882e27d6",
+    "status": "unresolved; separate_from_CI_failures_and_DATA_stall",
+    "exit_code": -6,
+    "signal": "SIGABRT",
+    "runner_exit_code": 250,
+    "seconds": 1162.61,
+    "finished_at": "2026-10-20T21:13:42.856235Z",
+    "log": "validation-323-ci-fixture/final-full-pytest.log",
+    "sha256": "84f4ca9314f9350740b94ca63bd0a84060a24ada256e40807ae38bfb9e13e921",
+    "observed_frame": "engine.py:4474 self._conn.close(), from tests/test_privacy_source_routing.py:124 test_AC06_selected_deadline_and_effect_denials_stop_response",
+    "counts": "17 preceding F markers; no final pass/failure totals exist locally.",
+    "read_only_evidence": "323-native-close-readonly.json",
+    "close_method_sha256": "86e7ad8d400a4ec5cac7066f1770bb85d47840e360626448158e0ccad108e016",
+    "finding": "MemoryEngine.close is byte-identical in upstream b5fa5be5, validated54aa261, committedc42af439 and working source. This is not proof of a baseline defect and does not exclude a caller/resource-lifetime regression.",
+    "next_gate": "No reproduction or repair run yet. Root requests the existing AC06 teardown/resource-lifetime path be investigated before another full suite; while classifier approval is pending, only read-only diagnosis is authorized."
+  },
+  "remaining_delivery_gates": [
+    "Complete affected review and required final suite/package/types/simulations/CI on the final revision.",
+    "Reassess the preserved native-close SIGABRT with final-suite evidence; its cause is not proven by the child-settlement reproduction.",
+    "Original #324 durable journal/publication/recovery and #325 actual policy/scoped-revocation/erasure integration; component authority is not whole-product acceptance."
+  ],
+  "authorized_third_repair_2026_10_21": {
+    "authorization": "User directed focus on fixing #323, approving the prepared third classifier attempt.",
+    "starting_head": "55b0517dd340551d50fb92f8fec04bb3445669ab",
+    "production_change": "Seed exact-event/node/source inspection contexts from authoritative contributing records; broad/ambiguous classification and final contributor checks remain.",
+    "initial_validation": {
+      "result": "21 passed, 3 failed in 17.87s",
+      "log": "323-data-repair-cycle3.log",
+      "sha256": "8445274fd9a4931c0254f2a3fcf8ceb19e275546a393149b7a900545bf1a2ef3",
+      "failure": "Exact provenance no longer authorizes unrelated B; the deadline probe failed locating that nonexistent authorization before reaching its expiry assertion."
+    },
+    "probe_correction": {
+      "attempt": 1,
+      "production_unchanged": true,
+      "change": "For exact provenance, advance time at actual contributor A final authorization; retain broad A/B checks and all before/at-deadline, guard entry/exit and iterator assertions. Assert unrelated B is never consulted.",
+      "result": "3 passed in 5.41s",
+      "log": "323-exact-provenance-deadline-probe-cycle1.log",
+      "sha256": "71fa212817f2a6e2a97cd53857ba593cfecd1caf4d6ef67f348dbcd5a6bcde6a"
+    },
+    "unique_planned_cases": "24 cases have passing evidence: 21 unchanged first-run passes plus the three corrected probe executions. The initial failed batch remains failed. SN04 has two layouts, correcting the planned estimate of 25.",
+    "affected_compatibility": {
+      "result": "9 passed in 17.44s",
+      "scope": "Ordinary reads without evidence decrypt; selected-source finite leases; selected deadlines/effect denials across directory, pack and PostgreSQL.",
+      "log": "323-cycle3-affected-source-compatibility.log",
+      "sha256": "3878cd31913c0b0877202f4e2d436bf827294562830355d29f789982a5d35dc5"
+    },
+    "prior_unsuccessful_classifier_cycles": 2,
+    "production_attempt": 3,
+    "fourth_classifier_strategy": false,
+    "whole_acceptance_complete": false
+  },
+  "native_child_settlement_correction": {
+    "requirement": "AC3/AC4 failure propagation and original AC06 teardown resource lifetime.",
+    "reproduction": "A denial returned while the other pinned/task candidate query was still pending; 323-native-child-settlement-reproduction.json.",
+    "change": "Await both nested candidate queries with return_exceptions, then propagate privacy denial ahead of ordinary backend failure. No database-close rewrite.",
+    "repair_attempt": 1,
+    "result": "2 targeted regression cases passed; full-suite validation pending.",
+    "log": "323-native-child-settlement-cycle1.log",
+    "sha256": "b424282e14c24f0417090e98f5989e4be45f0a9eef9b8791a075b35fa9e92447",
+    "allocator_crash_cause": "Not proven. Original SIGABRT evidence is preserved; passing small probes do not clear it."
+  }
+}

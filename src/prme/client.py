@@ -17,6 +17,12 @@ Usage::
 
 from __future__ import annotations
 
+from prme.models.privacy_reads import (
+    ProtectedEventView, ProtectedExtractionView, ProtectedProvenanceView,
+    ProtectedReceiptView, SanitizedEvidenceView, SourceAvailability, SourceUnavailable,
+)
+from prme.privacy.capabilities import EvidenceAccess
+
 from prme.privacy import PrivacyPolicy, PrivacyRuntime
 
 
@@ -453,6 +459,7 @@ class MemoryClient:
         min_fidelity: RepresentationLevel | None = None,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
+        source_access: EvidenceAccess | None = None,
     ) -> RetrievalResponse:
         """Retrieve memories with engine-equivalent temporal and ranking controls.
 
@@ -477,7 +484,7 @@ class MemoryClient:
                 max_per_evidence=max_per_evidence,
                 exclude_node_types=exclude_node_types, source_types=source_types,
                 weights=weights, ranking_multipliers=ranking_multipliers, min_fidelity=min_fidelity,
-                retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope,
+                retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope, source_access=source_access,
             )
         )
 
@@ -611,7 +618,7 @@ class MemoryClient:
             reason=reason, actor_id=actor_id, evaluated_at=evaluated_at,
         ))
 
-    def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | None:
+    def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | ProtectedReceiptView | None:
         return self._run(self._engine.get_retrieval_receipt(request_id, user_id=user_id))
 
     def record_relevance(self, submission: RelevanceSubmission, *, user_id: str) -> RelevanceRecord:
@@ -825,7 +832,7 @@ class MemoryClient:
     def get_provenance(
         self, node_id: str, *, user_id: str | None = None,
         operation_cursor: str | None = None, operation_limit: int = 100,
-    ) -> NodeProvenance | None:
+    ) -> NodeProvenance | ProtectedProvenanceView | None:
         """Read owned evidence and a chronological page of node operations."""
         return self._run(self._engine.get_provenance(
             node_id, user_id=user_id, operation_cursor=operation_cursor,
@@ -997,11 +1004,20 @@ class MemoryClient:
             query, user_id=user_id, batch_size=batch_size,
         ))
 
-    def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | None:
-        """Read original source content, optionally enforcing owner identity."""
+    def get_event(self, event_id: str, *, user_id: str | None = None) -> Event | ProtectedEventView | None:
+        """Read an owned event or its protected source-availability envelope."""
         return self._run(self._engine.get_event(event_id, user_id=user_id))
 
-    def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | None:
+    def inspect_source(self, event_id: str, *, user_id: str, scope: Scope | None = None) -> SourceAvailability | SourceUnavailable:
+        return self._run(self._engine.inspect_source(event_id, user_id=user_id, scope=scope))
+
+    def read_source(self, event_id: str, *, user_id: str, access: EvidenceAccess, scope: Scope | None = None) -> SanitizedEvidenceView:
+        return self._run(self._engine.read_source(event_id, user_id=user_id, access=access, scope=scope))
+
+    def require_legacy_history(self, *, user_id: str) -> None:
+        self._run(self._engine.require_legacy_history(user_id=user_id))
+
+    def get_extraction(self, event_id: str, *, user_id: str) -> ExtractionRecord | ProtectedExtractionView | None:
         """Read saved grounded output; this does not imply graph completion."""
         return self._run(self._engine.get_extraction(event_id, user_id=user_id))
 
@@ -1016,7 +1032,7 @@ class MemoryClient:
         session_id: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[Event]:
+    ) -> list[Event | ProtectedEventView]:
         """Retrieve events for a user. Returns list of Event."""
         return self._run(
             self._engine.get_events(

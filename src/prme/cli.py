@@ -258,6 +258,8 @@ async def cmd_nodes(args: argparse.Namespace) -> None:
     engine = await _create_engine(args.db_path)
     try:
         kwargs: dict[str, Any] = {"limit": args.limit}
+        if getattr(args, "user_id", None):
+            kwargs["user_id"] = args.user_id
 
         if args.type:
             try:
@@ -330,7 +332,8 @@ async def cmd_edges(args: argparse.Namespace) -> None:
         if args.target:
             kwargs["target_id"] = args.target
 
-        edges = await engine._graph_store.get_edges(**kwargs)
+        graph = await engine._ordinary_graph(getattr(args, "user_id", None))
+        edges = await graph.get_edges(**kwargs)
 
         if args.format == "json":
             print(json.dumps([_edge_to_dict(e) for e in edges], indent=2))
@@ -356,7 +359,7 @@ async def cmd_node(args: argparse.Namespace) -> None:
     engine = await _create_engine(args.db_path)
     try:
         node = await engine.get_node(
-            args.node_id, include_superseded=True
+            args.node_id, include_superseded=True, user_id=getattr(args, "user_id", None),
         )
         if node is None:
             print(f"Error: node '{args.node_id}' not found", file=sys.stderr)
@@ -397,18 +400,18 @@ async def cmd_chain(args: argparse.Namespace) -> None:
     engine = await _create_engine(args.db_path)
     try:
         # Verify node exists
-        node = await engine.get_node(args.node_id, include_superseded=True)
+        node = await engine.get_node(args.node_id, include_superseded=True, user_id=getattr(args, "user_id", None))
         if node is None:
             print(f"Error: node '{args.node_id}' not found", file=sys.stderr)
             sys.exit(1)
 
         # Get forward chain (what replaced this node)
-        forward = await engine._graph_store.get_supersedence_chain(
-            args.node_id, direction="forward"
+        forward = await engine.get_supersedence_chain(
+            args.node_id, direction="forward", user_id=getattr(args, "user_id", None),
         )
         # Get backward chain (what this node replaced)
-        backward = await engine._graph_store.get_supersedence_chain(
-            args.node_id, direction="backward"
+        backward = await engine.get_supersedence_chain(
+            args.node_id, direction="backward", user_id=getattr(args, "user_id", None),
         )
 
         if args.format == "json":
@@ -805,6 +808,7 @@ async def cmd_export(args: argparse.Namespace) -> None:
     """Export the entire memory pack as JSON."""
     engine = await _create_engine(args.db_path)
     try:
+        await engine.require_legacy_history(user_id=None)
         conn = engine._conn
 
         # Export all nodes
@@ -1476,6 +1480,8 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p_chain)
     p_chain.add_argument("node_id", help="Node UUID")
     p_chain.set_defaults(func=cmd_chain)
+    for scoped_reader in (p_nodes, p_edges, p_node, p_chain):
+        scoped_reader.add_argument("--user-id", help="Owner; required for protected memory")
 
     # search
     p_search = subparsers.add_parser("search", help="Run a retrieval query")

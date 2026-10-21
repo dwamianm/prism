@@ -22,6 +22,7 @@ import dateparser  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from prme.retrieval.config import PackingConfig
+from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.models import MemoryBundle, RetrievalCandidate
 from prme.retrieval.packing import pack_context
 from prme.retrieval.temporal_relation_models import (
@@ -605,6 +606,8 @@ class TemporalRelationEnricher:
             )
         try:
             resolved = await self._resolver.resolve(query, question_time, records)
+        except PrivacyDenied:
+            raise
         except Exception as exc:
             if self.config.failure_policy == "raise":
                 raise
@@ -635,6 +638,8 @@ class TemporalRelationEnricher:
             )
         try:
             gate = await self._gate.assess(query, relation)
+        except PrivacyDenied:
+            raise
         except Exception as exc:
             if self.config.failure_policy == "raise":
                 raise

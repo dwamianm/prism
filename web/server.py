@@ -54,7 +54,7 @@ async def connections(
     if node is None:
         raise HTTPException(status_code=404, detail="Memory not found")
 
-    edges = await engine._graph_store.get_edges(node_ids=[str(node_id)])
+    edges = await engine.get_edges(user_id=owner, node_ids=[str(node_id)], include_superseded=True)
     candidates = []
     for edge in edges:
         metadata = edge.metadata or {}
@@ -73,8 +73,8 @@ async def connections(
     visible = {node.id: node}
     # Batch hydration to avoid one query per edge and oversized SQL parameter lists.
     for start in range(0, len(counterpart_ids), 200):
-        neighbors = await engine._graph_store.get_nodes(
-            counterpart_ids[start:start + 200], include_superseded=True,
+        neighbors = await engine.get_nodes(
+            counterpart_ids[start:start + 200], user_id=owner, include_superseded=True,
         )
         visible.update({n.id: n for n in neighbors if n.scope == node.scope and n.user_id == owner})
     eligible = sorted(
@@ -133,8 +133,8 @@ def explorer_config() -> PRMEConfig:
     return PRMEConfig(**paths) if paths else config
 
 
-def create_explorer_app(config: PRMEConfig | None = None):
-    app = create_app(config)
+def create_explorer_app(config: PRMEConfig | None = None, *, privacy_runtime=None, embedding_provider=None):
+    app = create_app(config, privacy_runtime=privacy_runtime, embedding_provider=embedding_provider)
     app.include_router(router)
 
     @app.middleware("http")

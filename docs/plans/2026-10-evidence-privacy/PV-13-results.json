@@ -327,5 +327,19 @@
     "deselected": 1,
     "seconds": 15.36,
     "scope": "Frozen scenarios and adapter/mechanism checks, excluding repeated69-row recognition"
+  },
+  "pv04_qualifier_integration": {
+    "source_head": "01cd5a4d36584df2faded941c128682f452f094d",
+    "scope": "Frozen Q04 positive source-effective time through actual sanitizer, crypto, ingestion, storage and before/at-boundary reads; retrieval uses explicit time_to. Existing SN results above are preserved historical component evidence, not whole-product passes.",
+    "evidence": [
+      "323-q04-repair-cycle1.log",
+      "323-q04-single-file-final-targeted.log"
+    ],
+    "preserved_failures": [
+      "323-q04-positive-before-repair.log",
+      "323-q04-competing-span-before-repair.log"
+    ],
+    "authority_scope": "FakeAuthority and synthetic external model responses remain component boundaries. Actual #325 current authority/erasure and #324 durable publication/recovery remain pending.",
+    "details": "PV-04-plan.md and PV-04-results.json"
   }
 }

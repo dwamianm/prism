@@ -1398,10 +1398,10 @@ async def memory_get_provenance(
 
 
 async def memory_get_event(event_id: str, ctx: Context = None) -> str:
-    """Read the original source event behind a node's evidence_refs.
+    """Read an owned event or protected source availability behind evidence_refs.
 
-    Use this when retrieved assertions omit surrounding actions or conditions.
-    Returns original content, source timestamps, role, session, scope, and IDs.
+    Protected sources return an availability envelope without source content.
+    This ordinary tool cannot unlock evidence or recover source-only details.
     """
     engine = _get_engine(ctx)
     try:
@@ -1417,7 +1417,7 @@ async def memory_get_event(event_id: str, ctx: Context = None) -> str:
 
 
 async def memory_get_extraction(event_id: str, ctx: Context = None) -> str:
-    """Inspect saved grounded model output for an owned source event.
+    """Inspect saved grounded model output or protected source availability.
 
     Does not run inference. Saved output does not imply graph processing has
     completed, and source grounding does not prove semantic correctness.
