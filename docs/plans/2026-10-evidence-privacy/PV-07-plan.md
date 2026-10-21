@@ -1475,3 +1475,62 @@ and `physical_wipe=false` are reported truthfully by engine and CLI. This does
 not prove hosted #283 managed backup expiry/completion or offline revocation.
 Configured standard projection parity remains failed; original same-policy,
 shared-case, held dependency and final validation/review/delivery gates remain.
+
+## Iteration 8: AC1 legacy session compatibility reporting
+
+Original AC1 requires migration dry-run to report unavailable features before
+adopting a protected policy. The preserved ER08 first correction failed because
+valid legacy named sessions do not satisfy protected admission's existing
+`UUID(session_id)` check. This reporting gap is independent of adding support
+for those sessions. Done is a content-free unavailable-feature indication for
+the incompatible event session, with the original identifiers/source untouched.
+`None` and every UUID spelling accepted by that parser remain supported; no
+canonical-spelling requirement, mapping or admission relaxation is introduced.
+
+The only runtime change is a bounded legacy event-session scan in
+`storage/privacy_migration.py::inspect_privacy_migration`, using the existing
+source reader and row limit. Report `legacy_non_uuid_sessions_unsupported` once
+without returning values or content. Oversized sources retain the existing
+capacity refusal; protected inspection is unchanged. The test and records are
+limited to `tests/test_privacy_migration.py`, this plan and PV-07-results.json.
+
+Exact finite selector:
+`tests/test_privacy_migration.py::test_AC1_dry_run_reports_unsupported_legacy_sessions`.
+Run `[directory]` first; only on success run `[pack]` and `[postgres]` once, using
+the assigned disposable databases and existing native journal factory. Each
+case creates actual legacy stores with None, canonical UUID and uppercase-hex
+UUID sessions, checks their prior feature report, then appends the observed
+`er08-langchain` session shape. Assert the one specific added feature, no session
+values or source content in the report, exact preserved stored sessions,
+unchanged source fingerprints/local files during inspection, and no protected
+label. No migration execution or named-session compatibility claim is added.
+
+Three initial case/layout executions only, followed by affected Ruff, JSON and
+diff checks. Reuse the seven unchanged ER08/direct-migration passes. Preserve all
+failures and ER08's two correction attempts/one unsuccessful corrected run; this
+phase fixes reporting, not its admission/fixture boundary. No parity or held
+#323/#280/#283 retry, extra cohort, full suite or PR. Stop before any third
+unsuccessful correction of the same behavior. Original configured-standard
+comparison and remaining integration/final-validation gates remain open; the
+user's local-CI authorization does not waive them.
+
+All three original layout parameters passed on their first executions:
+directory 1.89s pytest/3.448s wrapper, then pack/PostgreSQL together
+2.91s/3.862s. The same source manifest and diff identify both runs; no correction
+or passing-behavior rerun occurred. Affected Ruff passed on those exact bytes.
+Saved feature-only reports for all three layouts are copied into the ignored
+`privacy-326/ac1-session-reporting/` directory with hashes and actual copy times.
+Each source retained None, canonical/uppercase-hex UUID and named session values
+exactly; inspection did not mutate its fingerprint/native files or label it
+protected. The new feature was absent for supported controls and the only
+additional unavailable feature after the named session was appended.
+
+This closes the demonstrated original AC1 named-session reporting gap. Valid
+legacy named sessions still cannot be migrated through the existing protected
+admission boundary, and the report now states that limitation before adoption.
+ER08's two failures/two correction attempts/one unsuccessful corrected run
+remain unchanged. This reporting phase adds three passes, zero failures and
+zero corrections. All six ACs remain partial pending their other original
+integration and final-validation requirements; configured standard comparison,
+same-policy/#327, held dependencies and hosted managed-copy completion are not
+relabelled by this checkpoint.

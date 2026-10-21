@@ -234,6 +234,15 @@ async def inspect_privacy_migration(config, *, policy=None) -> PrivacyMigrationP
                        "physical_media_erasure_unavailable"]
         if not protected:
             unavailable.extend(("legacy_history_requires_explicit_disposition", "legacy_source_checksum_retained_only_in_original"))
+            if counts["events"] <= MAX_ROWS:
+                for row in await query(f"SELECT session_id FROM events WHERE session_id IS NOT NULL LIMIT {MAX_ROWS + 1}"):
+                    try:
+                        # Match admission's parsing acceptance, not a canonical
+                        # spelling check. Original identifiers remain untouched.
+                        UUID(row["session_id"])
+                    except (TypeError, ValueError):
+                        unavailable.append("legacy_non_uuid_sessions_unsupported")
+                        break
             # Report feature names only; serialized messages never enter a dry-run.
             for table in ("events", "nodes"):
                 if counts[table] > MAX_ROWS:

@@ -28,6 +28,56 @@ def hashes(path):
         for file in path.rglob("*") if file.is_file()}
 
 
+@pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
+async def test_AC1_dry_run_reports_unsupported_legacy_sessions(tmp_path, layout, analyzer, native):
+    template, runtime, policy, *_ = await journal_engine(tmp_path / "template", "directory", analyzer)
+    base = template._config
+    await template.close()
+    supported = (None, str(uuid4()), uuid4().hex.upper())
+    named = "er08-langchain"
+    feature = "legacy_non_uuid_sessions_unsupported"
+    reports, expected_sessions = [], {}
+    async with fresh_config(base, tmp_path / "legacy", layout) as original:
+        original = original.model_copy(update={"privacy_policy": None})
+        for sessions in (supported, (named,)):
+            source = await MemoryEngine.create(original, embedding_provider=runtime.embedder)
+            try:
+                for session in sessions:
+                    identifier = await source.store(
+                        FIXTURE["admitted"][0] + " " + FIXTURE["source_only"],
+                        user_id=str(policy.owner_id), session_id=session,
+                    )
+                    expected_sessions[identifier] = session
+            finally:
+                await source.close()
+            before = await _read_snapshot(original)
+            assert {str(row["id"]): row["session_id"] for row in before.tables["events"]} == expected_sessions
+            if layout == "pack":
+                source_files = {original.pack_path: hashlib.sha256(Path(original.pack_path).read_bytes()).hexdigest()}
+            elif layout == "directory":
+                source_files = hashes(tmp_path / "legacy")
+            else:
+                source_files = None
+            report = await inspect_privacy_migration(original, policy=policy)
+            assert report.source_format == "legacy" and not report.protected and report.legacy_plaintext_present
+            assert report.source_events == report.admitted_nodes == len(expected_sessions)
+            rendered = report.model_dump_json()
+            assert all(value not in rendered for value in (*supported[1:], named, FIXTURE["admitted"][0], FIXTURE["source_only"]))
+            after = await _read_snapshot(original)
+            assert after.fingerprint == before.fingerprint
+            assert "privacy_format" not in after.tables
+            if layout == "pack":
+                assert {original.pack_path: hashlib.sha256(Path(original.pack_path).read_bytes()).hexdigest()} == source_files
+            elif layout == "directory":
+                assert hashes(tmp_path / "legacy") == source_files
+            if not reports:
+                assert feature not in report.unavailable_features
+            else:
+                assert report.unavailable_features == (*reports[0]["unavailable_features"], feature)
+            reports.append(report.model_dump(mode="json"))
+        (tmp_path / "AC1-session-report.json").write_text(json.dumps(reports, indent=2) + "\n")
+
+
 @pytest.mark.parametrize("layout", ["directory", "pack", "postgres", "closed_fernet"])
 async def test_EM07_direct_migration_resume_exact_identity_current_erasure(tmp_path, layout, analyzer, native):
     template, runtime, policy, custody, *_ = await journal_engine(tmp_path / "template", "directory", analyzer)

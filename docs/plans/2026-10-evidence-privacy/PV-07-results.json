@@ -2191,6 +2191,65 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030006979552-er08-static-final-source.json",
       "source_manifest_sha256": "b0f1f94ee13b411a94dd3c9ee76dfe5156e8c99e9950164f0f4779880f7a659c",
       "tracked_diff_sha256": "7c44d424b6e397c0ee7226fb903cb01d8ac3105381e42c5f5a50608613582084"
+    },
+    {
+      "name": "ac1-session-directory",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_migration.py::test_AC1_dry_run_reports_unsupported_legacy_sessions[directory]",
+        "-q",
+        "-x"
+      ],
+      "started_at": "2026-10-21T03:06:04.992863+00:00",
+      "elapsed_seconds": 3.448,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T030604992863-ac1-session-directory.log",
+      "log_sha256": "b3ae31be6e4a8db7a6dc34a6435e6b00ad06346c7a88e3edfe15604cec7c473e",
+      "head": "57bea8994aa8a48ed29e60092bec3eaf876818ee",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030604992863-ac1-session-directory-source.json",
+      "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
+      "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
+    },
+    {
+      "name": "ac1-session-pack-postgres",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_migration.py::test_AC1_dry_run_reports_unsupported_legacy_sessions[pack]",
+        "tests/test_privacy_migration.py::test_AC1_dry_run_reports_unsupported_legacy_sessions[postgres]",
+        "-q",
+        "-x"
+      ],
+      "started_at": "2026-10-21T03:06:18.815268+00:00",
+      "elapsed_seconds": 3.862,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T030618815268-ac1-session-pack-postgres.log",
+      "log_sha256": "a7aeba456fdc9e535fb64212f640d1ef009e54261c248edb3b555aa4e826d5fb",
+      "head": "57bea8994aa8a48ed29e60092bec3eaf876818ee",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030618815268-ac1-session-pack-postgres-source.json",
+      "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
+      "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
+    },
+    {
+      "name": "ac1-session-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/privacy_migration.py",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-21T03:06:37.391659+00:00",
+      "elapsed_seconds": 0.106,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T030637391659-ac1-session-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "57bea8994aa8a48ed29e60092bec3eaf876818ee",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030637391659-ac1-session-static-source.json",
+      "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
+      "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
     }
   ],
   "repair_cycles": {
@@ -2314,6 +2373,18 @@
       "fix2": "Only seed UUID adapter/control sessions consistently from source creation. No runtime changes, session rewrite, content/query/expected count changes.",
       "fix2_result": "Directory passed, then unchanged pack and PostgreSQL passed once. Four named direct migration regressions passed once. No third correction or broad rerun.",
       "named_session_limit": "Descriptive sessions are valid legacy input; protected admission requires UUID sessions. Passing UUID setup does not prove named-session migration. Dry-run does not yet specifically report this incompatibility (original AC1 gap)."
+    },
+    "AC1_session_reporting": {
+      "executions": 3,
+      "passed": 3,
+      "failed": 0,
+      "corrections_attempted": 0,
+      "unsuccessful_fix_validation_cycles": 0,
+      "prior_ER08_corrections_attempted": 2,
+      "prior_ER08_unsuccessful_fix_validation_cycles": 1,
+      "prior_ER08_failed_executions": 2,
+      "counts_reset": false,
+      "state": "Original AC1 named-session dry-run reporting gap resolved; no admission or identifier changes."
     }
   },
   "held_dependencies": [
@@ -2845,7 +2916,6 @@
   },
   "remaining_original_work": [
     "Configured standard matched-input migration comparison (projection_top_k=3) failed directory after six public calls; pack/PostgreSQL unrun. Source lifecycle changes before close remain a limitation. Literal same-policy storage and #327 frozen24 parity/sealed24 gates remain mandatory.",
-    "Original AC1 gap: dry-run does not specifically explain named-session incompatibility; valid legacy named sessions still refuse protected admission. ER08 UUID fixture does not prove named-session migration.",
     "ER08 engine archive/framework-clear, explicit migration, retained native backup/operator export and unmanaged-copy status components passed all three layouts; hosted283 verified managed backup expiry/completion remains pending.",
     "Actual #283 hosted recovery capability composition with bound same-lineage PostgreSQL restore, remaining original EM01-EM08/shared harness closure, held #323 classifier/native strategies, and required final full suite/package/simulation/CI/review/PR/normal delivery remain mandatory."
   ],
@@ -2942,22 +3012,15 @@
         ],
         "remaining": "Planned frozen scenario harness consolidation remains pending actual shared/public/hosted adapter dependencies. Existing exact component evidence is retained; no new whole-case runner may relabel these partial results as passes.",
         "dependency": "Known held #323 strategy, actual #283 bound recovery composition and final #327 shared gate; selected single-boundary public usability components now passed."
-      },
-      {
-        "criteria": [
-          "AC1"
-        ],
-        "remaining": "Descriptive sessions are valid legacy input; protected admission requires UUID sessions. Passing UUID setup does not prove named-session migration. Dry-run does not yet specifically report this incompatibility (original AC1 gap).",
-        "dependency": "Concrete independent dry-run reporting limitation recorded from this phase; no additional repair/cohort authorized here."
       }
     ],
     "design_held": [],
     "final_required_gates": [
-      "Root-coordinated affected integration and required full suite/package/simulation/CI on final revision",
+      "Root-coordinated affected integration and required full suite/package/simulation/authorized local CI on final revision",
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Commit/push the authorized five-file ER08 checkpoint after scoped static checks. No additional improvement round, parity repair or whole-case/issue closure; root retains final gate ownership.",
+    "next_action": "Commit/push the four-file AC1 reporting checkpoint after affected static checks. No extra improvement round, parity/held repair, full-suite or issue closure; original integration and final delivery gates remain open.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
@@ -2975,7 +3038,8 @@
       "bound_postgres_restore": "Current checkpoint: one actual PostgreSQL lock-backed current-catalog restore variant passed after first runtime correction; initial committed-before-error failure preserved.",
       "public_portability": "This iteration:14 passed/2 failed retained over16 executions; no runtime change from a1bce140. Actual public read_source, key-loss retrieve, native/logical restore retrieve, bound namespace retrieve and mixed legacy-to-sealed usability verified in the original selected layouts.",
       "eligible_restored_work": "Iteration5: three original layout parameters passed on first executions; actual process_extractions claims the untouched second job, publishes a real plan/receipt, and returns public packed memory. Consumed first job explicitly cancelled; original no-send/expiry arm unchanged.",
-      "ER08": "Iteration7: three engine layout passes plus four direct migration regressions; two initial/correction failures preserved. Explicit known framework-history disposition and archived retention."
+      "ER08": "Iteration7: three engine layout passes plus four direct migration regressions; two initial/correction failures preserved. Explicit known framework-history disposition and archived retention.",
+      "AC1_session_reporting": "Iteration8: directory, pack and PostgreSQL passed first executions; dry-run names unsupported legacy sessions without values, rewrites or protected label. Historical ER08 failure and named-session migration limitation remain preserved."
     },
     "integration_pending": [
       {
@@ -3813,6 +3877,154 @@
       "ruff": "passed on exact final behavioral source bytes",
       "json_diff_run_record": "er08-json-diff in .github-ticket-loop/privacy-326/checks.jsonl",
       "scope": "Five owned files; only migration/export runtime changed. Configured standard test and held runtime paths unchanged."
+    }
+  },
+  "ac1_session_reporting_iteration8": {
+    "base": "57bea8994aa8a48ed29e60092bec3eaf876818ee",
+    "original_criterion": "AC1: migration dry-run reports unavailable features before adopting a protected policy.",
+    "selector": "tests/test_privacy_migration.py::test_AC1_dry_run_reports_unsupported_legacy_sessions",
+    "status": "Three finite layout components passed; original full acceptance remains partial.",
+    "layouts": [
+      "directory",
+      "pack",
+      "postgres"
+    ],
+    "case_layout_executions": 3,
+    "passed": 3,
+    "failed": 0,
+    "feature": "legacy_non_uuid_sessions_unsupported",
+    "acceptance_rule": "None or UUID(session_id), matching existing protected admission without canonical-spelling restrictions.",
+    "fixture": "Each layout persists three actual legacy events with None, canonical UUID and uppercase-hex UUID sessions; inspects; appends the previously observed named-session shape; inspects again. All four original IDs and session values remain untouched.",
+    "assertions": [
+      "Unsupported feature absent for all supported controls and the only added feature after the named session.",
+      "No session values or admitted/source-only text in either returned report.",
+      "Source fingerprints and local native file hashes unchanged across each inspection.",
+      "Report remains source_format=legacy, protected=false and legacy_plaintext_present=true; no privacy_format table appears."
+    ],
+    "runtime_delta": "Nine lines in inspect_privacy_migration only: bounded read of legacy event sessions and feature-only UUID parse refusal reporting. Protected inspection, admission, IDs, history codecs and migration execution unchanged.",
+    "evidence": [
+      {
+        "name": "ac1-session-directory",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "tests/test_privacy_migration.py::test_AC1_dry_run_reports_unsupported_legacy_sessions[directory]",
+          "-q",
+          "-x"
+        ],
+        "started_at": "2026-10-21T03:06:04.992863+00:00",
+        "elapsed_seconds": 3.448,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T030604992863-ac1-session-directory.log",
+        "log_sha256": "b3ae31be6e4a8db7a6dc34a6435e6b00ad06346c7a88e3edfe15604cec7c473e",
+        "head": "57bea8994aa8a48ed29e60092bec3eaf876818ee",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030604992863-ac1-session-directory-source.json",
+        "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
+        "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
+      },
+      {
+        "name": "ac1-session-pack-postgres",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "tests/test_privacy_migration.py::test_AC1_dry_run_reports_unsupported_legacy_sessions[pack]",
+          "tests/test_privacy_migration.py::test_AC1_dry_run_reports_unsupported_legacy_sessions[postgres]",
+          "-q",
+          "-x"
+        ],
+        "started_at": "2026-10-21T03:06:18.815268+00:00",
+        "elapsed_seconds": 3.862,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T030618815268-ac1-session-pack-postgres.log",
+        "log_sha256": "a7aeba456fdc9e535fb64212f640d1ef009e54261c248edb3b555aa4e826d5fb",
+        "head": "57bea8994aa8a48ed29e60092bec3eaf876818ee",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030618815268-ac1-session-pack-postgres-source.json",
+        "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
+        "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
+      },
+      {
+        "name": "ac1-session-static",
+        "command": [
+          ".venv/bin/ruff",
+          "check",
+          "src/prme/storage/privacy_migration.py",
+          "tests/test_privacy_migration.py"
+        ],
+        "started_at": "2026-10-21T03:06:37.391659+00:00",
+        "elapsed_seconds": 0.106,
+        "exit_code": 0,
+        "log": ".github-ticket-loop/privacy-326/logs/20261021T030637391659-ac1-session-static.log",
+        "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+        "head": "57bea8994aa8a48ed29e60092bec3eaf876818ee",
+        "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030637391659-ac1-session-static-source.json",
+        "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
+        "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
+      }
+    ],
+    "artifacts": [
+      {
+        "layout": "directory",
+        "path": ".github-ticket-loop/privacy-326/ac1-session-reporting/directory-report.json",
+        "sha256": "4256c1f5fe6c2c329d2dd732454bccc2c93723b8c7fc7ca34ec2b377813c3bd5",
+        "source_path": "/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-930/test_AC1_dry_run_reports_unsup0/AC1-session-report.json",
+        "copied_at": "2026-10-21T03:07:13.907862+00:00"
+      },
+      {
+        "layout": "pack",
+        "path": ".github-ticket-loop/privacy-326/ac1-session-reporting/pack-report.json",
+        "sha256": "51d9961f5f7b6b2ba770286379199d28943964d152a2bca8e524b2adac83924a",
+        "source_path": "/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-931/test_AC1_dry_run_reports_unsup0/AC1-session-report.json",
+        "copied_at": "2026-10-21T03:07:13.908345+00:00"
+      },
+      {
+        "layout": "postgres",
+        "path": ".github-ticket-loop/privacy-326/ac1-session-reporting/postgres-report.json",
+        "sha256": "c128f184ea158d772e74c54e43a109ae0bf11d3b0294c25253a1aaa4de7aeffe",
+        "source_path": "/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-931/test_AC1_dry_run_reports_unsup1/AC1-session-report.json",
+        "copied_at": "2026-10-21T03:07:13.908569+00:00"
+      }
+    ],
+    "repair_accounting": {
+      "executions": 3,
+      "passed": 3,
+      "failed": 0,
+      "corrections_attempted": 0,
+      "unsuccessful_fix_validation_cycles": 0,
+      "prior_ER08_corrections_attempted": 2,
+      "prior_ER08_unsuccessful_fix_validation_cycles": 1,
+      "prior_ER08_failed_executions": 2,
+      "counts_reset": false,
+      "state": "Original AC1 named-session dry-run reporting gap resolved; no admission or identifier changes."
+    },
+    "reused_evidence": "Iteration7 seven passing ER08/direct-migration cases unchanged and not rerun.",
+    "limits": [
+      "Named sessions are still valid legacy data unsupported by protected admission; this adds reporting, not conversion support.",
+      "Over-capacity sources retain existing migration_capacity_exceeded; no claim to enumerate unsupported sessions beyond the bounded inspection.",
+      "Configured standard projection comparison remains failed; held strategies and final integration/full-suite/package/simulation/local-CI/review/delivery gates remain open."
+    ],
+    "tested_file_sha256": {
+      "src/prme/storage/privacy_migration.py": "072a4c87b111059c2907c1662d9d06409798ebeb808adb5d1398bba016c6fa37",
+      "tests/test_privacy_migration.py": "e21bc7b7c33e1c9863ce1dff5440d6c9f23bd0f6943a45834106ae781d7e53e4"
+    },
+    "final_static": {
+      "name": "ac1-session-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/privacy_migration.py",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-21T03:06:37.391659+00:00",
+      "elapsed_seconds": 0.106,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T030637391659-ac1-session-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "57bea8994aa8a48ed29e60092bec3eaf876818ee",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030637391659-ac1-session-static-source.json",
+      "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
+      "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
     }
   }
 }
