@@ -442,7 +442,7 @@ def test_the_new_memory_set_has_a_gold_graph_that_covers_every_memory_and_its_bl
         memory_id for claim in new.claims for memory_id in claim.ev}
     frozen = blind.load_blind(blind.BLIND2_FILE)
     rebuilt = blind.freeze(json.loads(blind.CANDIDATES2_FILE.read_text()), json.loads(blind.REVIEW2_FILE.read_text()),
-                           corpora=blind.CORPORA_DRAW2, name="blind-v2")
+                           corpora=blind.CORPORA_DRAW2, name="blind-v2", description=blind.DESCRIPTION_V2)
     assert rebuilt == frozen and len(frozen["questions"]) == 65 and {q["corpus"] for q in frozen["questions"]} == {"draw2-v1"}
     assert sum(frozen["review"]["dropped"].values()) == frozen["review"]["candidates"] - frozen["review"]["kept"]
 

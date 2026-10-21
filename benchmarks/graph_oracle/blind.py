@@ -217,7 +217,14 @@ def _words(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9']+", text.lower()))
 
 
-def freeze(candidates: dict, review: dict, corpora: dict | None = None, name: str = "blind-v1") -> dict:
+DESCRIPTION_V1 = ("Questions a local model wrote about the three memory sets from the memories alone, then reviewed for "
+                  "answerability. See benchmarks/graph_oracle/BLIND.md.")
+DESCRIPTION_V2 = ("Questions a local model wrote about the memory sets from the memories alone, then reviewed for "
+                  "answerability. See benchmarks/graph_oracle/BLIND.md and GATE.md.")
+
+
+def freeze(candidates: dict, review: dict, corpora: dict | None = None, name: str = "blind-v1",
+           description: str = DESCRIPTION_V1) -> dict:
     """The frozen question file: the candidates the reviewer judged answerable, less the repeats.
 
     A candidate repeats when 80 percent of its words are shared with a question the gold files already ask (or the
@@ -265,8 +272,7 @@ def freeze(candidates: dict, review: dict, corpora: dict | None = None, name: st
                      **({"ids_corrected": True} if fixed else {})})
     requests = sum(item["requests"] for item in candidates["rounds"])
     return {"kind": KIND, "schema_version": SCHEMA_VERSION, "name": name,
-            "description": "Questions a local model wrote about the memory sets from the memories alone, then "
-                           "reviewed for answerability. See benchmarks/graph_oracle/BLIND.md and GATE.md.",
+            "description": description,
             "generator": {"model": candidates["model"], "requests": requests, "prompt_sha256": candidates["prompt_sha256"],
                           "rounds": len(candidates["rounds"])},
             "review": {"candidates": len(candidates["candidates"]), "kept": len(kept), "dropped": dropped,
