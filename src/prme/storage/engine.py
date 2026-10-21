@@ -2841,7 +2841,7 @@ class MemoryEngine:
         graph = await self._ordinary_graph(kwargs.get("user_id"))
         return await graph.query_nodes(**kwargs)
 
-    async def _ordinary_graph(self, user_id: str | None, *, scopes=None):
+    async def _ordinary_graph(self, user_id: str | None, *, scopes=None, records=None):
         """Resolve the read facade without changing the engine's storage handles."""
         if user_id is None:
             if self._privacy.selected() or await self._privacy.repository._read("1=1", ()):
@@ -2850,7 +2850,7 @@ class MemoryEngine:
             return self._graph_store
         from prme.privacy.read_graph import AdmittedGraphView
         from prme.privacy.reads import ReadContext
-        context = await ReadContext.create(self._privacy, user_id=user_id, scopes=scopes)
+        context = await ReadContext.create(self._privacy, user_id=user_id, scopes=scopes, records=records)
         return AdmittedGraphView(self._graph_store, context) if context.protected else self._graph_store
 
     async def inspect_source(self, event_id: str, *, user_id: str, scope: Scope | None = None) -> SourceAvailability | SourceUnavailable:
@@ -3077,7 +3077,8 @@ class MemoryEngine:
             nodes = await self._graph_store.get_event_nodes(event_id, user_id=user_id)
             await self._privacy.require_legacy_inputs(events=(event,), nodes=nodes)
             return nodes
-        graph = await self._ordinary_graph(user_id)
+        records = await self._privacy.records_for_call(user_id, {"event_id": event_id})
+        graph = await self._ordinary_graph(user_id, records=records)
         return await graph.get_event_nodes(event_id, user_id=user_id)
 
     @privacy_disclosure

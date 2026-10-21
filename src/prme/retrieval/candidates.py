@@ -465,7 +465,19 @@ async def _generate_pinned_candidates(
             lifecycle_states=active_states,
             limit=500,
         ),
+        return_exceptions=True,
     )
+
+    # The outer candidate gather can only settle this branch if both of its
+    # queries have finished. Otherwise a denial can race the caller's database
+    # close while the other query still uses the native connection.
+    for result in (pinned_nodes, task_nodes):
+        if isinstance(result, PrivacyDenied):
+            raise result
+    if isinstance(pinned_nodes, BaseException):
+        raise pinned_nodes
+    if isinstance(task_nodes, BaseException):
+        raise task_nodes
 
     pinned: list[MemoryNode] = []
     seen_ids: set[str] = set()

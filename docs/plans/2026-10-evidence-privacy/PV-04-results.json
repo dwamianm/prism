@@ -489,11 +489,11 @@
     "pending": "Root affected review, push/CI including Python 3.13 and final complete suite; original #324/#325 integration gates remain pending."
   },
   "current_validation_status": {
-    "status": "paused_after_two_unsuccessful_DATA_cycles; not_certified",
-    "committed_head": "c42af43926ca95a42f8b05facc8606b2df61023c",
-    "working_changes": "Uncommitted bounded second DATA correction and separate AP06 storage/public-view assertion update.",
+    "status": "focused_repairs_passed; affected_review_and_final_validation_pending",
+    "starting_head": "55b0517dd340551d50fb92f8fec04bb3445669ab",
+    "working_changes": "Third exact-contributor correction, first deadline-probe correction and first nested-child settlement correction.",
     "acceptance_complete": false,
-    "supersedes_current_certification": "Earlier passing component/review evidence remains historical evidence for its exact source. It does not certify the current mixed legacy/scope behavior or the incomplete final suite."
+    "historical_evidence": "All prior failed/interrupted results remain unchanged; earlier status entries are historical."
   },
   "full_suite_DATA_compatibility_repair": {
     "criteria": [
@@ -610,10 +610,48 @@
     "next_gate": "No reproduction or repair run yet. Root requests the existing AC06 teardown/resource-lifetime path be investigated before another full suite; while classifier approval is pending, only read-only diagnosis is authorized."
   },
   "remaining_delivery_gates": [
-    "User approval for bounded exact-contributor alternative after two unsuccessful DATA cycles.",
-    "Resolve and validate original mixed legacy/scope compatibility without weakening orphan classification or final deadlines.",
-    "Inspect/reproduce the existing AC06 native-close failure before another full suite, coordinated with root.",
-    "Root-owned affected review, final full suite, CI and publication.",
-    "Original #324 durable journal/publication/recovery and #325 actual policy/scoped-revocation/erasure gates; component FakeAuthority is not whole-product authority evidence."
-  ]
+    "Complete affected review and required final suite/package/types/simulations/CI on the final revision.",
+    "Reassess the preserved native-close SIGABRT with final-suite evidence; its cause is not proven by the child-settlement reproduction.",
+    "Original #324 durable journal/publication/recovery and #325 actual policy/scoped-revocation/erasure integration; component authority is not whole-product acceptance."
+  ],
+  "authorized_third_repair_2026_10_21": {
+    "authorization": "User directed focus on fixing #323, approving the prepared third classifier attempt.",
+    "starting_head": "55b0517dd340551d50fb92f8fec04bb3445669ab",
+    "production_change": "Seed exact-event/node/source inspection contexts from authoritative contributing records; broad/ambiguous classification and final contributor checks remain.",
+    "initial_validation": {
+      "result": "21 passed, 3 failed in 17.87s",
+      "log": "323-data-repair-cycle3.log",
+      "sha256": "8445274fd9a4931c0254f2a3fcf8ceb19e275546a393149b7a900545bf1a2ef3",
+      "failure": "Exact provenance no longer authorizes unrelated B; the deadline probe failed locating that nonexistent authorization before reaching its expiry assertion."
+    },
+    "probe_correction": {
+      "attempt": 1,
+      "production_unchanged": true,
+      "change": "For exact provenance, advance time at actual contributor A final authorization; retain broad A/B checks and all before/at-deadline, guard entry/exit and iterator assertions. Assert unrelated B is never consulted.",
+      "result": "3 passed in 5.41s",
+      "log": "323-exact-provenance-deadline-probe-cycle1.log",
+      "sha256": "71fa212817f2a6e2a97cd53857ba593cfecd1caf4d6ef67f348dbcd5a6bcde6a"
+    },
+    "unique_planned_cases": "24 cases have passing evidence: 21 unchanged first-run passes plus the three corrected probe executions. The initial failed batch remains failed. SN04 has two layouts, correcting the planned estimate of 25.",
+    "affected_compatibility": {
+      "result": "9 passed in 17.44s",
+      "scope": "Ordinary reads without evidence decrypt; selected-source finite leases; selected deadlines/effect denials across directory, pack and PostgreSQL.",
+      "log": "323-cycle3-affected-source-compatibility.log",
+      "sha256": "3878cd31913c0b0877202f4e2d436bf827294562830355d29f789982a5d35dc5"
+    },
+    "prior_unsuccessful_classifier_cycles": 2,
+    "production_attempt": 3,
+    "fourth_classifier_strategy": false,
+    "whole_acceptance_complete": false
+  },
+  "native_child_settlement_correction": {
+    "requirement": "AC3/AC4 failure propagation and original AC06 teardown resource lifetime.",
+    "reproduction": "A denial returned while the other pinned/task candidate query was still pending; 323-native-child-settlement-reproduction.json.",
+    "change": "Await both nested candidate queries with return_exceptions, then propagate privacy denial ahead of ordinary backend failure. No database-close rewrite.",
+    "repair_attempt": 1,
+    "result": "2 targeted regression cases passed; full-suite validation pending.",
+    "log": "323-native-child-settlement-cycle1.log",
+    "sha256": "b424282e14c24f0417090e98f5989e4be45f0a9eef9b8791a075b35fa9e92447",
+    "allocator_crash_cause": "Not proven. Original SIGABRT evidence is preserved; passing small probes do not clear it."
+  }
 }

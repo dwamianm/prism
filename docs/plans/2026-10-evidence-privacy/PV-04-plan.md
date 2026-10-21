@@ -1177,3 +1177,46 @@ introduced caller/resource-lifetime problem. No crash reproduction or close
 repair was run. Preserve the local SIGABRT independently from CI's nine failures
 and this interrupted targeted batch. Root owns subsequent review/full validation
 and publication; original #324/#325 gates remain open.
+
+## Authorized third DATA repair, 2026-10-21
+
+The user instructed: "Concentrate on fixing #323. It is the blocker for many of
+the other tickets currently." This approves the previously prepared third
+repair in `323-third-cycle-request.md`, starting from pushed `55b0517`. The two
+unsuccessful cycles and all earlier failed/interrupted results remain unchanged.
+
+Done for this repair means exact-object reads use only their authoritative
+contributors, legacy object/reinforcement behavior works beside protected
+records, and broad/orphan, source-authority and final-deadline checks remain
+intact. Reuse ReadContext and the existing identity resolver; do not change the
+authority fixture, policy locks, source payloads or the frozen scenario inputs.
+
+Run the same five functions from the interrupted second-cycle selection (22
+executions), plus the existing SN04 boundary-isolation function on its three
+layouts, for 25 executions. Preserve the AP06 native extraction-removal and
+public metadata-view assertions. Stop this strategy if the behavior fails or
+stalls again; no fourth attempt is approved. If it passes, run the affected
+source/read compatibility checks, review and required final project checks.
+The separate native-close SIGABRT remains unresolved until verified; this repair
+does not authorize a generic close rewrite. Whole-ticket #324/#325 integration
+obligations and the original six acceptance criteria remain unchanged.
+
+The first run completed in 17.87 seconds with 21 passes and three failures. All
+mixed legacy/reinforcement, orphan-marker, AP06 and SN04 executions passed. The
+three deadline-test failures occur before the expiry assertion: exact provenance
+now correctly omits unrelated B, so the probe cannot find B's authorization in
+its trace. The production correction is frozen. One test-only probe correction
+uses A's actual final authorization for exact provenance, preserves the existing
+A/B probe for broad reads, and retains every before/at-deadline and guard-entry/
+exit assertion. Rerun only that function's three layouts. This is its first probe
+correction, not a fourth production classifier strategy; the initial failed log
+remains immutable and does not become a pass. Pytest collected 24 tests because
+the existing SN04 fixture has two layouts, correcting the plan's estimate of 25.
+
+The corrected deadline probe passed all three layouts in 5.41 seconds, with
+production unchanged. Nine existing ordinary/selected-source and AC06 teardown
+executions passed in 17.44 seconds. The native-close investigation additionally
+reproduced an outstanding nested candidate query after PrivacyDenied returned.
+One separate first repair now settles both pinned/task queries before propagating
+errors; its two focused regression cases passed. This is not proof of the
+allocator crash cause. The final suite and affected review remain required.

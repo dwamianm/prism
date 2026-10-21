@@ -323,10 +323,14 @@ async def test_AC01_AC03_ordinary_final_deadlines(tmp_path, layout, analyzer, na
             if name != "get_provenance":
                 assert len(live) == 2, name
             assert_no_source(live if isinstance(live, list) else live.model_dump_json())
-            # Record the actual public route's last B guard, avoiding a fixed
-            # implementation call count. B is still live at A's boundary.
+            # Broad reads include A and B: expire A during B's final guard.
+            # Exact provenance has only A as a contributor and must not consult
+            # unrelated B; expire A during its own final awaited authorization.
+            guarded_deadline = early if name == "get_provenance" else later
+            if name == "get_provenance":
+                assert all(deadline == early for deadline, _ in trace)
             position = max(i for i, (deadline, effect) in enumerate(trace, 1)
-                           if deadline == later and effect == "disclosure")
+                           if deadline == guarded_deadline and effect == "disclosure")
             for phase in ("entry", "exit"):
                 for moment in (early - timedelta(microseconds=1), early):
                     runtime.clock.now = initial
