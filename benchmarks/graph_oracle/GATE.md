@@ -86,3 +86,19 @@ On the new draw, one run, all six must hold. The baseline is `retrieve()` as it 
    PostgreSQL (the latency harness, 100 questions, half naming the owner).
 
 A failure of any one is a fail; the report says which.
+
+## Amendments before the run
+
+Both were made after this file's first commit and before any run on the new draw.
+
+- **Seed pivots get a larger cap: 128 claim edges.** The 32 edge cap held for every
+  entity but the owner, and a question that names the owner makes it a seed: the
+  owner has 58 claims in `store-v1`, so a cap of 32 would cut a seed's older claims,
+  and the SQL walk would no longer match the Python walk. The question names a seed,
+  so reading more of its claims is intended; every other entity keeps 32.
+- **The router is unchanged from its first commit.** Its accuracy on the spent blind
+  set was measured once: 81.4 percent on the 86 questions, 2 of 28 lookups routed to
+  the graph (11 of 11 lists and 5 of 5 aggregation questions routed; 0 of 12 multi-hop
+  questions, because most multi-hop questions are not a chain of two relational
+  nouns). That is below condition 5 on the spent set. No rule was changed in response,
+  so the new draw tests the router as committed.

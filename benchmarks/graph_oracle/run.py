@@ -421,6 +421,9 @@ def main(argv: list[str] | None = None) -> None:
     command.add_argument("--graph", type=Path, required=True)
     command = commands.add_parser("blind", help="The blind validation run (BLIND.md): original items, blind questions, paraphrases")
     command.add_argument("--out", type=Path, required=True)
+    command = commands.add_parser("routed", help="The routing gate's run on the new blind draw (GATE.md)")
+    command.add_argument("--out", type=Path, required=True)
+    command.add_argument("--latency", type=Path, default=None, help="The PostgreSQL latency file for condition 6")
     command = commands.add_parser("latency", help="Time the typed walk on synthetic packs")
     command.add_argument("--out", type=Path, required=True)
     command.add_argument("--backend", choices=("duckdb", "postgres"), default="duckdb")
@@ -445,6 +448,13 @@ def main(argv: list[str] | None = None) -> None:
         report = asyncio.run(blind_run.run(args.out))
         print((args.out / "report.md").read_text())
         print(f"graph oracle blind: {report['seconds']}s, report in {args.out}", file=sys.stderr)
+        return
+    if args.command == "routed":
+        from benchmarks.graph_oracle import routed_run
+
+        report = asyncio.run(routed_run.run(args.out, latency=args.latency))
+        print((args.out / "report.md").read_text())
+        print(f"graph oracle routed: {report['seconds']}s, report in {args.out}", file=sys.stderr)
         return
     if args.command == "latency":
         from benchmarks.graph_oracle import latency
