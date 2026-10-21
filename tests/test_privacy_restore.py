@@ -5,8 +5,9 @@ public contributor classifier is not repaired or re-tested here. Its public
 surviving-memory gate remains pending, so these are not complete ER07/EM08.
 """
 import asyncio
-from contextlib import AsyncExitStack, asynccontextmanager, closing
+from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, closing
 from dataclasses import replace
+from datetime import timedelta
 import hashlib
 import json
 import os
@@ -30,6 +31,7 @@ from tests.privacy_journal_support import (
     LAYOUTS, journal_engine, isolated_privacy_postgres, local_analyzer_fixture,  # noqa: F401
 )
 from tests.privacy_journal_support import native as native_fixture  # noqa: F401
+from tests.privacy_portability_support import fresh_config
 
 
 def _local_target(config, path, *, single=False):
@@ -158,6 +160,130 @@ async def _assert_survivor(engine, owner, erased_id, survivor_id, survives, evid
     assert (await engine._graph_store.get_node(survivor_id)).content == "Mara prefers tea."
     assert (await engine.inspect_source(survives, user_id=owner)).state == "sealed"
     assert (await engine._privacy.repository.get(survives, user_id=owner)).evidence == evidence
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_EM02_exported_context_and_wrapped_key_refusals(tmp_path, layout, analyzer, native, monkeypatch):
+    """Artifact context refusal and real unwrap after metadata-only restoration."""
+    from prme.privacy.crypto import CryptoProtector, canonical, decode_envelope
+    from prme.privacy.local_keys import public_registry
+    from prme.storage.privacy_export import read_protected_export
+
+    engine, runtime, policy, custody, evidence, _ = await journal_engine(tmp_path, layout, analyzer)
+    owner = str(policy.owner_id)
+    source_only = ("EM02_EXPORTED_SOURCE_FIRST", "EM02_EXPORTED_SOURCE_SECOND")
+    restored = None
+    try:
+        identifiers = [await engine.store(f"Mara likes tea. {marker}.",
+            retrieval_content="Mara likes tea.", user_id=owner) for marker in source_only]
+        artifact = tmp_path / "original-export.json"
+        await export_protected_pack(engine, artifact)
+        original = artifact.read_bytes()
+        original_hash = hashlib.sha256(original).hexdigest()
+        bundle = read_protected_export(artifact)
+        indexes = [next(i for i, record in enumerate(bundle.admissions) if str(record.event_id) == identifier)
+                   for identifier in identifiers]
+        first, second = indexes
+        config = engine._config
+        await engine.close()
+        engine = None
+
+        lookups = []
+        get_password = native.get_password
+        def recorded_lookup(service, username):
+            lookups.append(username)
+            return get_password(service, username)
+        monkeypatch.setattr(native, "get_password", recorded_lookup)
+        native_before = dict(native.values)
+        registry_before = custody.path.read_bytes()
+        async with fresh_config(config, tmp_path / "restored", layout, restore=True) as target:
+            async def assert_empty():
+                if layout == "postgres":
+                    import asyncpg
+                    conn = await asyncpg.connect(target.database_url.get_secret_value())
+                    try:
+                        assert not await conn.fetch("SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema()")
+                    finally:
+                        await conn.close()
+                else:
+                    assert not Path(target.pack_path or target.db_path).exists()
+                    assert not (tmp_path / "restored").exists()
+                    assert not list(tmp_path.glob(".*.restore"))
+
+            for variant in ("source_swap", "owner", "scope", "purpose", "key_version"):
+                body = json.loads(original)
+                payload = body["admissions"][first]["evidence"]
+                if variant == "source_swap":
+                    body["admissions"][first]["evidence"] = body["admissions"][second]["evidence"]
+                elif variant == "owner":
+                    payload["context"]["owner_id"] = str(uuid4())
+                elif variant == "scope":
+                    payload["context"]["scope"] = "project" if policy.scope.value != "project" else "personal"
+                elif variant == "purpose":
+                    payload["context"]["purpose"] = "processing"
+                else:
+                    payload["key_version"] = str(uuid4())
+                altered = tmp_path / (variant + ".json")
+                altered.write_bytes(canonical(body))
+                with pytest.raises((PrivacyDenied, PrivacyPortabilityError)):
+                    await restore_protected_export(altered, target, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+                await assert_empty()
+                assert not lookups and native.values == native_before
+                assert custody.path.read_bytes() == registry_before
+
+            # The bounded public parser verifies metadata, never opaque
+            # ciphertext authenticity. The private diagnostic operation must
+            # reject a DEK wrapped for a different immutable payload context.
+            body = json.loads(original)
+            wrong = json.loads(body["admissions"][first]["evidence"]["envelope"])
+            other = json.loads(body["admissions"][second]["evidence"]["envelope"])
+            wrong["wrapped_key"] = other["wrapped_key"]
+            body["admissions"][first]["evidence"]["envelope"] = canonical(wrong).decode("ascii")
+            swapped = tmp_path / "wrapped-key-swap.json"
+            swapped.write_bytes(canonical(body))
+            parsed = read_protected_export(swapped)
+            assert parsed.admissions[second] == bundle.admissions[second]
+            await restore_protected_export(swapped, target, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            assert not lookups and native.values == native_before
+            restored = await MemoryEngine.create(target, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            assert not lookups
+            for index, identifier in enumerate(identifiers):
+                record = await restored._privacy.repository.get(identifier, user_id=owner)
+                ref = decode_envelope(record.evidence, record.snapshot).wrapper.ref
+                assert ref == evidence.ref
+                expiry = runtime.clock() + timedelta(minutes=1)
+                def selected_guard():
+                    return restored._privacy.guard(record.snapshot, "disclosure", records=(record,), purpose="evidence")
+                with ExitStack() as private:
+                    async with selected_guard():
+                        grant = await runtime.protector.authority.grant("diagnostic",
+                            ((record.evidence.context, record.snapshot),), expires_at=expiry)
+                        wrapper = private.enter_context(custody.unlocked((ref,), expires_at=expiry))
+                    protector = CryptoProtector(public_registry(custody.path, private_wrapper=wrapper),
+                        authority=runtime.protector.authority)
+                    if index == 0:
+                        with pytest.raises(PrivacyDenied, match="^privacy_capability_unavailable$"):
+                            async with protector.open_held(record.evidence, grant,
+                                original_snapshot=record.snapshot, guard=selected_guard):
+                                pytest.fail("swapped wrapped key disclosed plaintext")
+                    else:
+                        async with protector.open_held(record.evidence, grant,
+                            original_snapshot=record.snapshot, guard=selected_guard) as plaintext:
+                            assert source_only[1].encode() in plaintext
+                            assert source_only[0].encode() not in plaintext
+                assert not wrapper._private_keys
+            assert lookups and all(name.startswith(str(evidence.ref.key_version) + ":") for name in lookups)
+            assert native.values == native_before
+            assert hashlib.sha256(artifact.read_bytes()).hexdigest() == original_hash
+            assert all(marker.encode() not in original for marker in source_only)
+            assert b"PRIVATE KEY" not in original
+            await restored.close()
+            restored = None
+    finally:
+        if restored is not None:
+            await restored.close()
+        if engine is not None:
+            await engine.close()
 
 
 @pytest.mark.parametrize("layout", LAYOUTS)

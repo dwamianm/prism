@@ -1479,6 +1479,43 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000127964724-terminal-alias-export-fixture-correction-source.json",
       "source_manifest_sha256": "b29691be7326db7624f306f20d18fff4248d3ab4da254ca03d97356172b02958",
       "tracked_diff_sha256": "65d5c3f2f36f09f7de92cb03eb6611b38a6535cb6be12bb8f3252a3b328d7c3b"
+    },
+    {
+      "name": "exported-context-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-21T00:05:42.004335+00:00",
+      "elapsed_seconds": 0.168,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000542004335-exported-context-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "17b2d9ba56b8cc3b9364fdcbe62364253bf71b8f",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000542004335-exported-context-static-source.json",
+      "source_manifest_sha256": "d3d65edf10d6b39bcfa6e0cb9cacbbc082cea802c0a44c38daef7114d96c370a",
+      "tracked_diff_sha256": "eb510d7d200d789430538457ce8dc43dc3a2d6382c8ee794d54cdcffce677e29"
+    },
+    {
+      "name": "exported-context-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py::test_EM02_exported_context_and_wrapped_key_refusals",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T00:05:45.641463+00:00",
+      "elapsed_seconds": 7.99,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000545641463-exported-context-initial.log",
+      "log_sha256": "44f2bd91428f83f0d51e47be598399062943198ef35f6e24ba3c5ef9bf07bf79",
+      "head": "17b2d9ba56b8cc3b9364fdcbe62364253bf71b8f",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000545641463-exported-context-initial-source.json",
+      "source_manifest_sha256": "d3d65edf10d6b39bcfa6e0cb9cacbbc082cea802c0a44c38daef7114d96c370a",
+      "tracked_diff_sha256": "eb510d7d200d789430538457ce8dc43dc3a2d6382c8ee794d54cdcffce677e29"
     }
   ],
   "repair_cycles": {
@@ -1837,6 +1874,52 @@
         "terminal-alias-export-fixture-correction"
       ],
       "initial_failure_classification": "Stricter fixture assertion, not a runtime failure. Initial run did not reach malformed-history refusals; retained unchanged."
+    },
+    "exported_context_refusals": {
+      "requirements": [
+        "AC3",
+        "AC5"
+      ],
+      "frozen_reference": "EM02",
+      "status": "three_layout_component_pass_whole_case_pending",
+      "test": "tests/test_privacy_restore.py::test_EM02_exported_context_and_wrapped_key_refusals",
+      "files": [
+        "tests/test_privacy_restore.py",
+        "docs/plans/2026-10-evidence-privacy/PV-07-plan.md",
+        "docs/plans/2026-10-evidence-privacy/PV-07-results.json"
+      ],
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "executions": 3,
+      "passed": 3,
+      "failed": 0,
+      "negative_subchecks_executed": 18,
+      "negative_subchecks": [
+        "whole-source envelope swap",
+        "owner metadata",
+        "scope metadata",
+        "purpose metadata",
+        "exact key-version metadata",
+        "wrapped DEK swap at actual guarded authentication"
+      ],
+      "evidence": [
+        "exported-context-initial"
+      ],
+      "pytest_seconds": 6.56,
+      "runtime_changes": false,
+      "corrections": 0,
+      "assertions": [
+        "Five metadata mutations refuse before destination or native key effects",
+        "Structurally valid opaque wrapped-key swap remains unauthenticated through metadata-only restore",
+        "Actual selected diagnostic CryptoProtector guarded by current policy/ledger refuses wrong wrapped key without plaintext",
+        "Untouched source decrypts and exact native key version is the only lookup",
+        "Original artifact hash and native secrets unchanged; original default export has no source-only marker/private key"
+      ],
+      "test_sha256": "9f56e0fb65b6dbb2264886171023c6688516982a2dc54dbc67a8b433265e947a",
+      "limits": "Native OS boundary remains a named double. No held #323 public reader or repeated crypto primitive cohort. Metadata presence/restore never certifies ciphertext authenticity; whole frozen EM02 remains pending shared integration."
     }
   },
   "remaining_original_work": [
@@ -1911,13 +1994,6 @@
     "independent_missing_components": [
       {
         "criteria": [
-          "AC3",
-          "AC5"
-        ],
-        "remaining": "Original EM02 wrong-key/context/version/purpose and swapped exported-envelope refusals in the closed export/restore boundary; reuse #321 crypto evidence and current negative evidence rather than rerun the primitive cohort."
-      },
-      {
-        "criteria": [
           "AC1",
           "AC2",
           "AC3"
@@ -1958,7 +2034,7 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Checkpoint the completed terminal/alias family. Remaining exact exported-envelope/failure components and shared harness stay open; bound PG recovery is design-only pending actual hosted guard.",
+    "next_action": "Only original remaining EM03 export destination faults/current-ledger publication and finite restored-pending-work components; freeze each exact selection before execution. Bound PG recovery and held public readers remain separate.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",

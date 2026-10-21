@@ -834,3 +834,31 @@ layout, 18 negative subchecks total. The failed three executions remain failed;
 the successful correction changes the fixture only, and the captured source
 manifests prove privacy_export.py is identical between those runs. No repeated
 codec/rotation/mixed-scope cohort or held public reader was executed.
+
+## Remaining exported-envelope EM02 component
+
+Original AC3/AC5 still need the exported-artifact composition of EM02; existing
+#321 crypto primitive checks and #326 current-ledger/lineage refusals are reused.
+Exact affected files are `tests/test_privacy_restore.py` and this plan/results
+pair; no runtime edits are planned. The finite selection is only
+`test_EM02_exported_context_and_wrapped_key_refusals`, using the same directory,
+single-file and PostgreSQL layouts (three executions).
+
+Export two real admitted sources. Five altered artifacts swap the complete
+source envelope or change owner, scope, purpose or exact key-version metadata;
+each must refuse before destination creation/rows or native key access. A sixth
+artifact retains structurally valid metadata but swaps the first source's
+wrapped DEK with the second source's wrapped DEK. Metadata-only restoration is
+not ciphertext authentication: restore that opaque artifact, then require the
+actual selected diagnostic CryptoProtector access under current policy/ledger
+to deny the swapped key without plaintext, while the untouched second source
+decrypts using its exact native key version. Retain the original artifact hash
+and assert no fallback version lookup. These are six negative subchecks per
+layout, not a new primitive cohort or a claim that uninspected encrypted bytes
+are authenticated. No held public ReadContext/get_event_nodes paths run.
+
+The single finite exported-context run passed all three layouts (6.56 seconds
+pytest; 7.990 seconds captured command), with 18 refusal subchecks and three
+untouched-source decrypt controls. No runtime correction or repeat was needed.
+Exact log/source hashes are retained in PV-07-results.json. This proves the
+artifact composition only, with no whole EM02/public-reader/native-OS claim.
