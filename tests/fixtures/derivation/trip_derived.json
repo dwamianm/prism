@@ -1,0 +1,1107 @@
+{
+ "derivation_version": 1,
+ "records": {
+  "edges": [
+   {
+    "confidence": 0.5,
+    "edge_type": "has_fact",
+    "metadata": null,
+    "provenance_event_id": "event-1",
+    "source_id": "node-1",
+    "target_id": "node-17",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "has_fact",
+    "metadata": null,
+    "provenance_event_id": "event-1",
+    "source_id": "node-1",
+    "target_id": "node-20",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "has_fact",
+    "metadata": null,
+    "provenance_event_id": "event-3",
+    "source_id": "node-10",
+    "target_id": "node-21",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "has_fact",
+    "metadata": null,
+    "provenance_event_id": "event-3",
+    "source_id": "node-10",
+    "target_id": "node-22",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "has_fact",
+    "metadata": null,
+    "provenance_event_id": "event-4",
+    "source_id": "node-1",
+    "target_id": "node-18",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "has_fact",
+    "metadata": null,
+    "provenance_event_id": "event-4",
+    "source_id": "node-1",
+    "target_id": "node-19",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": null,
+    "provenance_event_id": "event-1",
+    "source_id": "node-17",
+    "target_id": "node-5",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": null,
+    "provenance_event_id": "event-4",
+    "source_id": "node-18",
+    "target_id": "node-3",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "group_member",
+     "named_in": "event-1"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-21",
+    "target_id": "node-5",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "group_member",
+     "named_in": "event-1"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-22",
+    "target_id": "node-5",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "group_member"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-21",
+    "target_id": "node-1",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "group_member"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-22",
+    "target_id": "node-1",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-1",
+    "source_id": "node-14",
+    "target_id": "node-1",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-1",
+    "source_id": "node-14",
+    "target_id": "node-4",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-1",
+    "source_id": "node-14",
+    "target_id": "node-5",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-1",
+    "source_id": "node-20",
+    "target_id": "node-4",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-1",
+    "source_id": "node-20",
+    "target_id": "node-5",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-16",
+    "target_id": "node-2",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-16",
+    "target_id": "node-6",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-16",
+    "target_id": "node-7",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-16",
+    "target_id": "node-8",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-16",
+    "target_id": "node-9",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-21",
+    "target_id": "node-6",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-21",
+    "target_id": "node-7",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-21",
+    "target_id": "node-8",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-21",
+    "target_id": "node-9",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-3",
+    "source_id": "node-22",
+    "target_id": "node-2",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-4",
+    "source_id": "node-15",
+    "target_id": "node-11",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-4",
+    "source_id": "node-15",
+    "target_id": "node-12",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-4",
+    "source_id": "node-15",
+    "target_id": "node-3",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-4",
+    "source_id": "node-19",
+    "target_id": "node-11",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "edge_type": "mentions",
+    "metadata": {
+     "basis": "text_mention"
+    },
+    "provenance_event_id": "event-4",
+    "source_id": "node-19",
+    "target_id": "node-12",
+    "user_id": "derivation-guard",
+    "valid_to": null
+   }
+  ],
+  "nodes": [
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "Alex Rivera",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-1"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "person",
+     "owner_name": {
+      "basis": "self_introduction",
+      "event_id": "event-1"
+     }
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "Hiroshima",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "location"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "JR Pass",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-4"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "product"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "Japan",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-1"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "location"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "Jordan",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-1"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "person"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "Kanazawa",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "location"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "Kyoto",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "location"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "Osaka",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "location"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "Tokyo",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "location"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "We",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "personal_reference",
+     "identity_status": "unresolved_reference",
+     "reference_event_id": "event-3"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "allergy card",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-4"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "product"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.5,
+    "confidence_base": 0.5,
+    "content": "shellfish",
+    "decay_profile": "slow",
+    "epistemic_type": "asserted",
+    "event_time": null,
+    "evidence_refs": [
+     "event-4"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "entity_type": "concept"
+    },
+    "node_type": "entity",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.550000011920929,
+    "confidence_base": 0.550000011920929,
+    "content": "That is cherry blossom season. Which places are you thinking about?",
+    "decay_profile": "fast",
+    "epistemic_type": "inferred",
+    "event_time": "2026-10-17T10:01:00Z",
+    "evidence_refs": [
+     "event-2"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": null,
+    "node_type": "note",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "system_inferred",
+    "superseded_by": null,
+    "ttl_days": 90,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.800000011920929,
+    "confidence_base": 0.800000011920929,
+    "content": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+    "decay_profile": "medium",
+    "epistemic_type": "asserted",
+    "event_time": "2026-10-17T10:00:00Z",
+    "evidence_refs": [
+     "event-1"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": null,
+    "node_type": "note",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": 90,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.800000011920929,
+    "confidence_base": 0.800000011920929,
+    "content": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+    "decay_profile": "medium",
+    "epistemic_type": "asserted",
+    "event_time": "2026-10-17T10:03:00Z",
+    "evidence_refs": [
+     "event-4"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": null,
+    "node_type": "note",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": 90,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.800000011920929,
+    "confidence_base": 0.800000011920929,
+    "content": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.",
+    "decay_profile": "medium",
+    "epistemic_type": "asserted",
+    "event_time": "2026-10-17T10:02:00Z",
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": null,
+    "node_type": "note",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": 90,
+    "user_id": "derivation-guard",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.8999999761581421,
+    "confidence_base": 0.8999999761581421,
+    "content": "Alex Rivera partner Jordan.",
+    "decay_profile": "slow",
+    "epistemic_type": "observed",
+    "event_time": "2026-10-17T10:00:00Z",
+    "evidence_refs": [
+     "event-1"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "evidence_quote": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+     "extraction_kind": "relationship",
+     "grounding_method": "claim_statement_v1",
+     "object": "Jordan",
+     "object_entity_type": null,
+     "object_link_status": "resolved",
+     "polarity": "positive",
+     "predicate": "partner",
+     "reingest": {
+      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "source_event_id": "event-1"
+     },
+     "replaces_object": null,
+     "speaker_reference": {
+      "basis": "self_introduction",
+      "fields": [
+       "subject"
+      ],
+      "speaker": "Alex Rivera"
+     },
+     "subject": "I",
+     "subject_entity_type": null,
+     "subject_link_status": "resolved",
+     "temporal_intent": null
+    },
+    "node_type": "fact",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_from": "2026-10-17T10:00:00Z",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.8999999761581421,
+    "confidence_base": 0.8999999761581421,
+    "content": "I prefer trains to flights, so I want a JR Pass.",
+    "decay_profile": "slow",
+    "epistemic_type": "observed",
+    "event_time": "2026-10-17T10:03:00Z",
+    "evidence_refs": [
+     "event-4"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "evidence_quote": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+     "extraction_kind": "fact",
+     "grounding_method": "claim_sentences_v1",
+     "object": "JR Pass",
+     "object_entity_type": null,
+     "object_link_status": "resolved",
+     "polarity": "positive",
+     "predicate": "wants",
+     "reingest": {
+      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "source_event_id": "event-4"
+     },
+     "replaces_object": null,
+     "speaker_reference": {
+      "basis": "owner_name",
+      "fields": [
+       "subject"
+      ],
+      "speaker": "Alex Rivera"
+     },
+     "subject": "I",
+     "subject_entity_type": null,
+     "subject_link_status": "resolved",
+     "suggested_scope": "personal",
+     "temporal_intent": null
+    },
+    "node_type": "decision",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_from": "2026-10-17T10:03:00Z",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.8999999761581421,
+    "confidence_base": 0.8999999761581421,
+    "content": "Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+    "decay_profile": "slow",
+    "epistemic_type": "observed",
+    "event_time": "2026-10-17T10:03:00Z",
+    "evidence_refs": [
+     "event-4"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "evidence_quote": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+     "extraction_kind": "fact",
+     "grounding_method": "claim_sentences_v1",
+     "object": "allergy card for restaurants",
+     "object_entity_type": null,
+     "object_link_status": "missing",
+     "polarity": "positive",
+     "predicate": "needs",
+     "reingest": {
+      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "source_event_id": "event-4"
+     },
+     "replaces_object": null,
+     "speaker_reference": {
+      "basis": "owner_name",
+      "fields": [
+       "subject"
+      ],
+      "speaker": "Alex Rivera"
+     },
+     "subject": "I",
+     "subject_entity_type": null,
+     "subject_link_status": "resolved",
+     "suggested_scope": "personal",
+     "temporal_intent": null
+    },
+    "node_type": "decision",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_from": "2026-10-17T10:03:00Z",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.8999999761581421,
+    "confidence_base": 0.8999999761581421,
+    "content": "My partner Jordan and I are planning a trip to Japan in late March next year.",
+    "decay_profile": "slow",
+    "epistemic_type": "observed",
+    "event_time": "2026-10-17T10:00:00Z",
+    "evidence_refs": [
+     "event-1"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "evidence_quote": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+     "extraction_kind": "fact",
+     "grounding_method": "claim_sentences_v1",
+     "object": "Japan in late March next year",
+     "object_entity_type": null,
+     "object_link_status": "missing",
+     "polarity": "positive",
+     "predicate": "planning_trip_to",
+     "reingest": {
+      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "source_event_id": "event-1"
+     },
+     "replaces_object": null,
+     "speaker_reference": {
+      "basis": "self_introduction",
+      "fields": [
+       "subject"
+      ],
+      "speaker": "Alex Rivera"
+     },
+     "subject": "I",
+     "subject_entity_type": null,
+     "subject_link_status": "resolved",
+     "suggested_scope": "personal",
+     "temporal_intent": null,
+     "temporal_ref": "late March next year"
+    },
+    "node_type": "fact",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_from": "2026-10-17T10:00:00Z",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.8999999761581421,
+    "confidence_base": 0.8999999761581421,
+    "content": "We chose Tokyo, Kyoto, Kanazawa, and Osaka.",
+    "decay_profile": "slow",
+    "epistemic_type": "observed",
+    "event_time": "2026-10-17T10:02:00Z",
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "evidence_quote": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.",
+     "extraction_kind": "fact",
+     "grounding_method": "claim_sentences_v1",
+     "object": "Tokyo, Kyoto, Kanazawa, and Osaka",
+     "object_entity_type": null,
+     "object_link_status": "missing",
+     "polarity": "positive",
+     "predicate": "chose_destinations",
+     "reingest": {
+      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "source_event_id": "event-3"
+     },
+     "replaces_object": null,
+     "subject": "We",
+     "subject_entity_type": null,
+     "subject_link_status": "resolved",
+     "suggested_scope": "personal",
+     "temporal_intent": null
+    },
+    "node_type": "fact",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_from": "2026-10-17T10:02:00Z",
+    "valid_to": null
+   },
+   {
+    "confidence": 0.8999999761581421,
+    "confidence_base": 0.8999999761581421,
+    "content": "We dropped Hiroshima to save time.",
+    "decay_profile": "slow",
+    "epistemic_type": "observed",
+    "event_time": "2026-10-17T10:02:00Z",
+    "evidence_refs": [
+     "event-3"
+    ],
+    "lifecycle_state": "tentative",
+    "metadata": {
+     "evidence_quote": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time.",
+     "extraction_kind": "fact",
+     "grounding_method": "claim_sentences_v1",
+     "object": "Hiroshima to save time",
+     "object_entity_type": null,
+     "object_link_status": "missing",
+     "polarity": "positive",
+     "predicate": "dropped_destination",
+     "reingest": {
+      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "source_event_id": "event-3"
+     },
+     "replaces_object": null,
+     "subject": "We",
+     "subject_entity_type": null,
+     "subject_link_status": "resolved",
+     "suggested_scope": "personal",
+     "temporal_intent": null
+    },
+    "node_type": "fact",
+    "pinned": false,
+    "reinforcement_boost": 0.0,
+    "salience": 0.5,
+    "salience_base": 0.5,
+    "scope": "personal",
+    "session_id": "trip-1",
+    "source_type": "user_stated",
+    "superseded_by": null,
+    "ttl_days": null,
+    "user_id": "derivation-guard",
+    "valid_from": "2026-10-17T10:02:00Z",
+    "valid_to": null
+   }
+  ]
+ }
+}
