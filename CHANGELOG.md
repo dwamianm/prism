@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a7] - 2026-10-21
+
+This is an alpha. It passed CI and the cheap fast tiers, and it has not been
+through the full benchmark. The stable release stays at 0.15.0 until the full
+benchmark audit, so `pip install prme` still installs 0.15.0. Install the alpha
+with `pip install --pre prme` or `pip install prme==0.16.0a7`.
+
 ### Changed
 
 - `reingest()` no longer reads the package version into its settings fingerprint
@@ -21,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   what is derived are in it as before, and with the window options off the
   settings keep the keys they had. A release that changes none of those leaves
   every source current. `tests/test_derivation_version.py` derives a recorded
-  extraction (`tests/fixtures/extraction/trip_batch_haiku45.json`) with a stub
+  extraction (a fixture under `tests/fixtures/extraction/`) with a stub
   provider and no model, and fails when the nodes and edges differ from the saved
   dump (`tests/fixtures/derivation/trip_derived.json`), with a message that says
   to bump the number and refresh the dump. Migration: a source marked under an
@@ -29,6 +36,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   differ from the old ones; after one more `reingest()` it is current under the
   new fingerprint and stays so across releases. `CONTRIBUTING.md` and `CLAUDE.md`
   say when to bump.
+
+### Tooling
+
+These do not ship in the wheel and change no behavior.
+
+- Routing gate for the typed walk (`python -m benchmarks.graph_oracle routed`, tooling only; part of
+  dwamianm/prism#351): a rule based question shape router, a one statement SQL walk for PostgreSQL
+  and DuckDB with per entity caps, a new memory set with its gold graph, a new blind draw of 65
+  questions and a gate fixed before the run (`benchmarks/graph_oracle/GATE.md`). The gate failed on
+  two of six conditions; the result is in `BENCHMARKS.md`.
+
+### Upgrade notes
+
+- One change since 0.16.0a6, and it is not a default: the settings fingerprint of
+  `reingest()` now carries `DERIVATION_VERSION` (1) instead of the package
+  version. A source that `reingest()` marked under 0.16.0a5 or 0.16.0a6 was marked
+  under the old fingerprint, so it reads as stale once, and a dry run offers to
+  re-derive it, with one model request per batch. After one more `reingest()` it
+  is current, and it stays current across later releases that leave what is
+  derived as it was. Stores that never ran `reingest()` are not affected, and
+  nothing is rewritten by the upgrade.
+- No default changed since 0.16.0a6, and no option was added. Every default of
+  0.16.0a6 is as it was, including the exact pin of `cryptography` to 50.0.2 (see
+  the notes of 0.16.0a6).
+- Known weaknesses are as in 0.16.0a6.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a6] - 2026-10-20
 
@@ -56,11 +92,6 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
   words derived from the vocabulary definitions, a decision rule fixed before the run
   (`benchmarks/graph_oracle/BLIND.md`) and the walk's latency on synthetic 2,000 and
   10,000 memory packs in DuckDB and PostgreSQL. The result is in `BENCHMARKS.md`.
-- Routing gate for the typed walk (`python -m benchmarks.graph_oracle routed`, tooling only; part of
-  dwamianm/prism#351): a rule based question shape router, a one statement SQL walk for PostgreSQL
-  and DuckDB with per entity caps, a new memory set with its gold graph, a new blind draw of 65
-  questions and a gate fixed before the run (`benchmarks/graph_oracle/GATE.md`). The gate failed on
-  two of six conditions; the result is in `BENCHMARKS.md`.
 - Add `enable_owner_window_extraction` (`PRME_ENABLE_OWNER_WINDOW_EXTRACTION`,
   off by default; dwamianm/prism#345 and #347): with `enable_windowed_extraction`,
   a turn with no `session_id` gets the owner's preceding memories in the same
@@ -2953,7 +2984,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a6...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a7...HEAD
+[0.16.0a7]: https://github.com/dwamianm/prism/compare/v0.16.0a6...v0.16.0a7
 [0.16.0a6]: https://github.com/dwamianm/prism/compare/v0.16.0a5...v0.16.0a6
 [0.16.0a5]: https://github.com/dwamianm/prism/compare/v0.16.0a4...v0.16.0a5
 [0.16.0a4]: https://github.com/dwamianm/prism/compare/v0.16.0a3...v0.16.0a4
