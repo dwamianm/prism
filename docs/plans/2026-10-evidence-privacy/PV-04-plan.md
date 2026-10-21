@@ -1087,3 +1087,93 @@ assert the recorded owner, including the unknown-control-version refusal.
 There are zero unsuccessful repair cycles for this behavior. Python 3.13 CI
 and the final complete suite remain root-owned pending checks, not inferred
 from this local Python 3.11 pass.
+
+## Full-suite classification and bounded second DATA repair
+
+CI run 39496148208, Python 3.13 DuckDB job 118881583879, completed with 9 failed,
+6,229 passed, 1,268 skipped and 2 xfailed. The immutable log is
+`323-ci-duckdb313-fullsuite-initial.log` (SHA256
+89e61f9a60bf429f6b96bc370b8a63c14dd30f8582f6b3cf05c657059e9407cf).
+The AP06 failures reach the old public extraction-is-None assertion after
+processing/evidence removal has passed. The bounded test update will additionally
+assert the native extraction store has no record while asserting the closed
+public unavailable/not_captured view required by original AC3. Existing payload
+removal checks remain unchanged; this is AP06's first test-contract correction.
+
+The seven other CI failures expose a real compatibility regression: the first
+DATA-323-01 repair added owner/global legacy-range checks even for an exact legacy
+object whose metadata already establishes its independent boundary. Its focused
+orphan tests passed, but that repair strategy has now failed the full suite.
+This is the second DATA/classifier repair cycle, not a reset counter. Root
+authorized reusing records_for_objects for exact calls at both disclosure edges,
+retaining range checks for broad/ambiguous calls, and checking every returned
+legacy event-node identity before its raw result. Protected routing and final
+deadline fences remain unchanged. No new authority, cache or migration is added.
+
+Finite validation reuses the three failed test functions across their original
+layouts, the existing DATA orphan and final-deadline cases, then the existing
+affected read/routing compatibility cases. The orphan fixture additionally checks
+its same already-marked event/node identities through exact public calls. No
+frozen source or cohort changes. After two unsuccessful DATA repair cycles, stop
+that strategy and report instead of starting a third.
+
+Separately, the local full suite at source54aa261 terminated with SIGABRT (-6)
+after 1162.61s in engine.close at the DuckDB connection close, called by the
+existing AC06 selected-deadline/effect-denial test. Its log hash is
+84f4ca9314f9350740b94ca63bd0a84060a24ada256e40807ae38bfb9e13e921.
+The 17 F markers are not final failure details or pass totals. Preserve the crash
+separately; root released the assigned DB only after confirming termination.
+Inspect and reproduce the same AC06 teardown path before any further full suite;
+no generic close rewrite or broad test run is authorized. Root owns affected
+review, publication and final validation. The #324/#325 gates remain pending.
+
+### Second DATA cycle stopped; approval required for an alternative
+
+The finite validation did not complete. `323-data-repair-cycle2.log` records
+nine passes before a single SIGINT, exit 2 after 149.31s (150.35s wrapper time).
+The planned 22 executions are not a passing batch. The process held the database
+for the existing directory/scope reinforcement fixture when it stalled;
+`323-data-repair-cycle2-stall.json` preserves the PID, exact command and live
+file-descriptor evidence. PID 42570 is now absent. Ruff and the structural
+contract passed, but neither certifies the runtime correction or the added
+orphan assertions that the interrupted batch did not reach.
+
+Static inspection identifies a likely lock conflict: the exact protected event
+read creates a ReadContext from all owner records, including an unrelated scope.
+ReadContext.guard then enters one policy guard per scope while holding the prior
+guard. The existing FakeAuthority has one nonreentrant lock. The interrupt stack
+only identifies asyncio.runners.py:123; no captured coroutine stack proves the
+precise wait site. Preserve that distinction in the handoff.
+
+The first DATA classification repair passed focused orphan checks but regressed
+mixed legacy calls in the full suite. This second correction restored the first
+nine executions but stalled the existing mixed-scope call. The same availability
+requirement remains unresolved after two unsuccessful cycles. All current
+runtime/test changes stay uncommitted and uncertified. Root instructed this
+worker to stop and will request the user's approval before a third strategy.
+There is no new implementation, validation run or relaxed assertion after that
+instruction. The AP06 native-store assertion and public unavailable view change
+remain a separate first test-contract correction; the interrupted aggregate
+does not certify the complete batch or whole AP06 requirement.
+
+The proposed bounded alternative is to seed exact-object disclosure contexts
+with the authoritative contributing records already resolved for those objects,
+and let existing node/event projection add and recheck actual dependencies.
+The named seams are ReadContext.create/project_public_result in privacy/reads.py
+and _ordinary_graph/get_event_nodes in storage/engine.py. Exact identity
+resolution in storage/privacy.py stays authoritative. Broad or ambiguous calls
+retain marker-aware classification; all final contributor deadlines, selected
+grant leases and effect-specific guards remain intact. No authority/cache or
+lock replacement is proposed. Reuse the same five test functions, including
+their original scope/owner boundaries and final-deadline checks. This proposal
+does not certify general multi-scope authority composition and is not authorized
+for implementation yet.
+
+The separate native-close investigation remains read-only while approval is
+pending. `323-native-close-readonly.json` establishes that MemoryEngine.close is
+byte-identical in upstream b5fa5be5, validated54aa261, committedc42af439 and the
+current working source. That does not establish a baseline defect or exclude an
+introduced caller/resource-lifetime problem. No crash reproduction or close
+repair was run. Preserve the local SIGABRT independently from CI's nine failures
+and this interrupted targeted batch. Root owns subsequent review/full validation
+and publication; original #324/#325 gates remain open.

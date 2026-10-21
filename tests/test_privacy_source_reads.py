@@ -377,6 +377,16 @@ async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout,
         orphan = MemoryNode(user_id=owner, node_type=NodeType.NOTE, content=SOURCE,
                             metadata={PRIVACY_KEY: None})
         await engine._graph_store.create_node(orphan)
+        # Exact-object legacy classification must still reject the same
+        # marked identities when their admission row is missing or malformed.
+        import pytest
+        for call in (
+            lambda: engine.get_event(identifier, user_id=owner),
+            lambda: engine.get_event_nodes(identifier, user_id=owner),
+            lambda: engine.get_node(str(orphan.id), user_id=owner),
+        ):
+            with pytest.raises(PrivacyDenied):
+                await call()
         legacy_owner = str(uuid4())
         legacy_event = await engine.store(MEMORY, user_id=legacy_owner)
         legacy_id = str((await engine.get_event_nodes(legacy_event, user_id=legacy_owner))[0].id)

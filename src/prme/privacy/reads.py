@@ -544,7 +544,9 @@ async def project_public_result(coordinator, method: str, result, arguments: dic
     """Final closed projections for the ordinary public response siblings."""
     owner = arguments.get("user_id") or arguments.get("kwargs", {}).get("user_id")
     if not records and not coordinator.selected():
-        await coordinator.repository.require_legacy_range(owner, None)
+        await coordinator.require_legacy_call(owner, arguments)
+        if method == "get_event_nodes":
+            await coordinator.require_legacy_inputs(nodes=result)
         return result
     if not owner:
         raise PrivacyDenied("privacy_boundary_mismatch")

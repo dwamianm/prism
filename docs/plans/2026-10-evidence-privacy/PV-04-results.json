@@ -487,5 +487,133 @@
       "evidence": "validation-323-upstream352/final-interruption-ci-fixture.json"
     },
     "pending": "Root affected review, push/CI including Python 3.13 and final complete suite; original #324/#325 integration gates remain pending."
-  }
+  },
+  "current_validation_status": {
+    "status": "paused_after_two_unsuccessful_DATA_cycles; not_certified",
+    "committed_head": "c42af43926ca95a42f8b05facc8606b2df61023c",
+    "working_changes": "Uncommitted bounded second DATA correction and separate AP06 storage/public-view assertion update.",
+    "acceptance_complete": false,
+    "supersedes_current_certification": "Earlier passing component/review evidence remains historical evidence for its exact source. It does not certify the current mixed legacy/scope behavior or the incomplete final suite."
+  },
+  "full_suite_DATA_compatibility_repair": {
+    "criteria": [
+      3,
+      6
+    ],
+    "original_finding": "DATA-323-01 orphan-marker classification",
+    "initial_full_suite_failure": {
+      "ci_run": 39496148208,
+      "job": 118881583879,
+      "python": "3.13",
+      "result": "9 failed, 6229 passed, 1268 skipped, 2 xfailed",
+      "log": "323-ci-duckdb313-fullsuite-initial.log",
+      "sha256": "89e61f9a60bf429f6b96bc370b8a63c14dd30f8582f6b3cf05c657059e9407cf",
+      "classification": {
+        "DATA_regression": "Seven failures: exact legacy calls become owner-wide protected refusals after the first orphan-marker correction.",
+        "AP06_contract": "Two failures: native payload removal assertions pass, then the obsolete public extraction-is-None assertion rejects the closed unavailable view."
+      }
+    },
+    "repair_cycles": [
+      {
+        "cycle": 1,
+        "source": "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
+        "outcome": "Focused orphan checks passed; the subsequent full suite exposed seven mixed legacy regressions. Unsuccessful for the same compatibility requirement."
+      },
+      {
+        "cycle": 2,
+        "source": "Uncommitted changes on c42af43926ca95a42f8b05facc8606b2df61023c",
+        "change": "Reuse exact metadata-only records_for_objects at both legacy disclosure edges; retain marker-aware broad/ambiguous checks and validate legacy event-node outputs.",
+        "outcome": "Interrupted after nine passes at the existing directory/scope reinforcement fixture. Incomplete and uncertified."
+      }
+    ],
+    "unsuccessful_repair_cycles": 2,
+    "targeted_validation": {
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_admission.py::test_AP06_no_evidence_async_work_removed_on_actual_commit",
+        "tests/test_privacy_fences.py::test_protected_owner_does_not_change_other_legacy_object_calls",
+        "tests/test_privacy_fences.py::test_legacy_reinforcement_evidence_uses_primary_boundary",
+        "tests/test_privacy_source_reads.py::test_AC01_AC03_orphan_markers_never_select_raw_reads",
+        "tests/test_privacy_source_reads.py::test_AC01_AC03_ordinary_final_deadlines"
+      ],
+      "expected_executions": 22,
+      "completed_passes": 9,
+      "result": "incomplete_interrupted_not_passed",
+      "exit_code": 2,
+      "pytest_seconds": 149.31,
+      "wrapper_seconds": 150.35,
+      "signal": "One SIGINT to owned PID 42570; process is now absent.",
+      "log": "323-data-repair-cycle2.log",
+      "command_metadata": "323-data-repair-cycle2.json",
+      "live_process_evidence": "323-data-repair-cycle2-stall.json",
+      "captured_stack": "asyncio/runners.py:123 KeyboardInterrupt; no full coroutine wait stack was captured.",
+      "diagnosis": "Static inference: exact protected event reads seed all owner records including an unrelated scope; ReadContext.guard then holds multiple per-scope guards on the existing FakeAuthority single nonreentrant lock."
+    },
+    "structural_checks": [
+      {
+        "kind": "ruff",
+        "result": "passed",
+        "log": "323-data-repair-ruff.log"
+      },
+      {
+        "kind": "contract",
+        "result": "passed; structural only",
+        "log": "323-data-repair-contract.log"
+      }
+    ],
+    "stop": "Root instructed no third classifier implementation or validation until explicit user approval. No source/test changes or further test executions after this stop; only evidence documentation and read-only diagnosis.",
+    "proposed_alternative": {
+      "status": "not_implemented; awaiting_user_approval",
+      "scope": "Seed exact-object contexts from authoritative contributing records; retain dynamic dependency validation and final all-contributor deadlines. Preserve marker-aware broad/ambiguous routes and selected grant/effect guards.",
+      "paths": [
+        "src/prme/privacy/reads.py",
+        "src/prme/storage/engine.py"
+      ],
+      "seams": [
+        "ReadContext.create",
+        "project_public_result",
+        "MemoryEngine._ordinary_graph",
+        "MemoryEngine.get_event_nodes"
+      ],
+      "authority_source": "Existing storage/privacy.py records_for_objects and admission.py records_for_call; no new authority, cache, migration or lock mechanism.",
+      "validation": "Same five existing test functions and layouts; no new cohort, relaxed assertion or general multi-scope certification."
+    }
+  },
+  "AP06_public_extraction_contract_update": {
+    "criteria": [
+      3
+    ],
+    "repair_cycle": 1,
+    "status": "Uncommitted; finite targeted batch incomplete, not independently certified.",
+    "preserved_assertions": "Existing processing/evidence removal, completed snapshot and positive admitted-node assertions stay unchanged.",
+    "new_assertions": "Native event-store extraction is None; public result is ProtectedExtractionView for the requested event with unavailable/not_captured status and no source text.",
+    "evidence": "323-data-repair-cycle2.log records nine aggregate passes before interruption, not a full AP06 acceptance certificate."
+  },
+  "native_close_full_suite_abort": {
+    "source": "54aa261ce37e81d74b7ab326bdc24fde882e27d6",
+    "status": "unresolved; separate_from_CI_failures_and_DATA_stall",
+    "exit_code": -6,
+    "signal": "SIGABRT",
+    "runner_exit_code": 250,
+    "seconds": 1162.61,
+    "finished_at": "2026-10-20T21:13:42.856235Z",
+    "log": "validation-323-ci-fixture/final-full-pytest.log",
+    "sha256": "84f4ca9314f9350740b94ca63bd0a84060a24ada256e40807ae38bfb9e13e921",
+    "observed_frame": "engine.py:4474 self._conn.close(), from tests/test_privacy_source_routing.py:124 test_AC06_selected_deadline_and_effect_denials_stop_response",
+    "counts": "17 preceding F markers; no final pass/failure totals exist locally.",
+    "read_only_evidence": "323-native-close-readonly.json",
+    "close_method_sha256": "86e7ad8d400a4ec5cac7066f1770bb85d47840e360626448158e0ccad108e016",
+    "finding": "MemoryEngine.close is byte-identical in upstream b5fa5be5, validated54aa261, committedc42af439 and working source. This is not proof of a baseline defect and does not exclude a caller/resource-lifetime regression.",
+    "next_gate": "No reproduction or repair run yet. Root requests the existing AC06 teardown/resource-lifetime path be investigated before another full suite; while classifier approval is pending, only read-only diagnosis is authorized."
+  },
+  "remaining_delivery_gates": [
+    "User approval for bounded exact-contributor alternative after two unsuccessful DATA cycles.",
+    "Resolve and validate original mixed legacy/scope compatibility without weakening orphan classification or final deadlines.",
+    "Inspect/reproduce the existing AC06 native-close failure before another full suite, coordinated with root.",
+    "Root-owned affected review, final full suite, CI and publication.",
+    "Original #324 durable journal/publication/recovery and #325 actual policy/scoped-revocation/erasure gates; component FakeAuthority is not whole-product authority evidence."
+  ]
 }

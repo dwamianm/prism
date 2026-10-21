@@ -160,6 +160,8 @@ async def test_AP05_unsafe_minimal_never_truncates_or_upgrades(tmp_path, text, b
 
 
 async def test_AP06_no_evidence_async_work_removed_on_actual_commit(tmp_path, layout, monkeypatch):
+    from prme.models.privacy_reads import ProtectedExtractionView
+
     engine, r, p = await open_engine(tmp_path, layout=layout)
     owner = str(p.owner_id)
     monkeypatch.setattr(engine._pipeline, "queue_extraction", lambda *args: None)
@@ -174,7 +176,11 @@ async def test_AP06_no_evidence_async_work_removed_on_actual_commit(tmp_path, la
         assert complete.processing is None and complete.evidence is None
         assert complete.processing_state == "complete" and complete.snapshot == pending.snapshot
         assert await engine.get_event_nodes(event_id, user_id=owner)
-        assert await engine.get_extraction(event_id, user_id=owner) is None
+        assert await engine._event_store.get_extraction(event_id, user_id=owner) is None
+        view = await engine.get_extraction(event_id, user_id=owner)
+        assert isinstance(view, ProtectedExtractionView) and str(view.event_id) == event_id
+        assert view.status == "unavailable" and view.source_availability.state == "not_captured"
+        assert SOURCE not in view.model_dump_json()
     finally:
         await engine.close()
 

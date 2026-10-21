@@ -3073,6 +3073,10 @@ class MemoryEngine:
         event = await self.get_event(event_id, user_id=user_id)
         if event is None:
             return []
+        if isinstance(event, Event):
+            nodes = await self._graph_store.get_event_nodes(event_id, user_id=user_id)
+            await self._privacy.require_legacy_inputs(events=(event,), nodes=nodes)
+            return nodes
         graph = await self._ordinary_graph(user_id)
         return await graph.get_event_nodes(event_id, user_id=user_id)
 
