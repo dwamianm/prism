@@ -43,7 +43,10 @@ SIZES = (500, 2000, 10000)
 KINDS = ("conversation", "lookalike")
 TYPES = ("lookup", "list", "multi-hop", "temporal", "correction", "negation", "aggregation")
 CONFIGS = {"derived": Params(cue_source="derived"), "hand": Params()}
-STRATEGIES = ("baseline", "routed[derived]", "routed[hand]")
+# graph[derived] (the walk for every question) and tagged[derived] (the walk for every question tagged list, multi-hop or
+# aggregation: a router that knows the tags) are information only; the conditions use the routed columns.
+STRATEGIES = ("baseline", "routed[derived]", "routed[hand]", "graph[derived]", "tagged[derived]")
+GRAPH_TAGS = ("list", "multi-hop", "aggregation")
 UNROUTED = ("lookup", "temporal", "correction")
 OWNER = "scale"
 GROWTH_POINTS = 0.08
@@ -228,6 +231,9 @@ def rows_for(items: list[dict], baseline: dict[str, list[str]], scores: dict[str
         for name in CONFIGS:
             graph = graph_first(scores[name][item["id"]], base)
             ranks[f"routed[{name}]"] = first_rank(graph, item["answers"]) if route == "graph" else ranks["baseline"]
+            if name == "derived":
+                ranks["graph[derived]"] = first_rank(graph, item["answers"])
+                ranks["tagged[derived]"] = ranks["graph[derived]"] if item["type"] in GRAPH_TAGS else ranks["baseline"]
         rows.append({"id": item["id"], "set": item["set"], "type": item["type"], "route": route, "ranks": ranks})
     return rows
 

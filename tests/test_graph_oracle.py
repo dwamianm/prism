@@ -598,7 +598,7 @@ def test_the_scale_conditions_are_computed_from_the_rows_at_each_size():
     def rows(baseline_hits, routed_hits, kind="list", route="graph", total=100):
         return [{"id": f"{kind}{number}", "set": "x", "type": kind, "route": route,
                  "ranks": {"baseline": 1 if number < baseline_hits else 9, "routed[derived]": 1 if number < routed_hits else 9,
-                           "routed[hand]": 1}} for number in range(total)]
+                           "routed[hand]": 1, "graph[derived]": 1, "tagged[derived]": 1}} for number in range(total)]
 
     def sizes(core, grown):
         return {"core": rows(*core), "500": rows(*grown), "2000": rows(*grown)}
