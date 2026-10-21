@@ -785,3 +785,52 @@ read/dependency/final delivery gates remain open. Root verified the separate #28
 cycle-2 transition on exact 42f87e07 and its consumed wheel; its canonical
 281-mixed-scope-transition-prerequisite.json records resolution in that second
 cycle. No repeated transition run is needed.
+
+## Protected terminal and alias export history
+
+Original AC2/AC3/AC5 require the existing #324 protected histories to pass through
+the closed exporter. Exact affected files: `storage/privacy_export.py`, existing
+`tests/test_privacy_export.py`, and this plan/results pair. No journal writer,
+wire version, checksum scheme or replay implementation changes. Consume
+processing_terminal v1 cancelled/expired fields exactly as `finish_processing`
+writes them, protected alias proposal v3 through `alias_proposal.read_record`,
+and protected alias review v2 accepted/rejected through `read_review_record`.
+Preserve original record strings/checksums and reject unknown members, wrong
+operation context or checksums and unsupported legacy records.
+
+Alias edges have no event provenance; their exact proposal/review identities
+instead bind them to those records. Existing review writers leave the proposal
+edge unchanged; acceptance adds a separate verified edge, rejection adds no
+edge. Preserve those actual bytes, without inventing a review-time valid_to
+closure. Protected export retains all alias edges and validates the existing
+record proofs. Root approved active-memory-only omission of those alias edges
+because its executable journals are excluded: keep all admitted nodes and add
+`alias_relationships` to manifest.omitted. No replay claim follows from either
+variant; terminal markers retain replay=unavailable.
+
+Finite validation selects only
+`tests/test_privacy_export.py::test_terminal_and_alias_history_export_restore`
+in directory/single-file/PostgreSQL (three executions). Reuse the current export
+family, real direct entities/alias writers, real ingestion claims and terminal
+processing writers, current ledger, closed export/restore and original codecs.
+Check both accepted/rejected proposals and cancelled/expired work, exact record
+bytes/checksums, preserved deadlines/generations, current context/checksum/unknown
+content refusals and explicit active-only dispositions. Obtain direct node IDs
+from owned SQL; no held get_event_nodes/ReadContext, model send, repeated passing
+codec/rotation cohort, broad suite or native coverage repair. Two unsuccessful
+corrections of this behavior still stop pending USER approval.
+
+Initial history validation failed all three parametrizations at a fixture
+expectation: restore intentionally invalidates imported extraction claims by
+advancing generation once and clearing the lease, as already required above.
+The corrected assertion retains exact remaining work fields and admission
+deadlines, and also denies the original claim. No runtime behavior is changed
+for that failure; the original failed log is retained and its later malformed
+history checks were not reached. The same three cases are the only rerun.
+
+The corrected same three-layout run passed (5.51 seconds pytest; 6.421
+seconds captured command). All six named malformed-history refusals ran in each
+layout, 18 negative subchecks total. The failed three executions remain failed;
+the successful correction changes the fixture only, and the captured source
+manifests prove privacy_export.py is identical between those runs. No repeated
+codec/rotation/mixed-scope cohort or held public reader was executed.

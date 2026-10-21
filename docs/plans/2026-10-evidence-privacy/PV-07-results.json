@@ -1403,6 +1403,82 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261020T235356069280-rotation-portability-initial-source.json",
       "source_manifest_sha256": "387468d376ab950dfb4f4466e9c9d55945d834d1748993b73126d7e3a293678b",
       "tracked_diff_sha256": "caadc90f77da0eee72af792b72c7e449defd2830975f252e71f67c311dab8bd8"
+    },
+    {
+      "name": "terminal-alias-export-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/privacy_export.py",
+        "tests/test_privacy_export.py"
+      ],
+      "started_at": "2026-10-21T00:00:28.850024+00:00",
+      "elapsed_seconds": 0.07,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000028850024-terminal-alias-export-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "54726b89b6629745618dab5e8870aa941446a5a5",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000028850024-terminal-alias-export-static-source.json",
+      "source_manifest_sha256": "3247049feed3b32f9c113e215a1073ce680f232f80d36376f04f5070cce08995",
+      "tracked_diff_sha256": "063470921c6492b6939924543b2764ea8e5ee623f1c6b86597130a1d86fce567"
+    },
+    {
+      "name": "terminal-alias-export-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_export.py::test_terminal_and_alias_history_export_restore",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T00:00:32.765576+00:00",
+      "elapsed_seconds": 6.255,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000032765576-terminal-alias-export-initial.log",
+      "log_sha256": "05e48c6e63feb08a12bcfa8584fbf4b2c01ed4349c5171c7e2f081e85d02c9d8",
+      "head": "54726b89b6629745618dab5e8870aa941446a5a5",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000032765576-terminal-alias-export-initial-source.json",
+      "source_manifest_sha256": "3247049feed3b32f9c113e215a1073ce680f232f80d36376f04f5070cce08995",
+      "tracked_diff_sha256": "063470921c6492b6939924543b2764ea8e5ee623f1c6b86597130a1d86fce567"
+    },
+    {
+      "name": "terminal-alias-export-fixture-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/storage/privacy_export.py",
+        "tests/test_privacy_export.py"
+      ],
+      "started_at": "2026-10-21T00:01:24.625500+00:00",
+      "elapsed_seconds": 0.061,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000124625500-terminal-alias-export-fixture-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "54726b89b6629745618dab5e8870aa941446a5a5",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000124625500-terminal-alias-export-fixture-static-source.json",
+      "source_manifest_sha256": "b29691be7326db7624f306f20d18fff4248d3ab4da254ca03d97356172b02958",
+      "tracked_diff_sha256": "65d5c3f2f36f09f7de92cb03eb6611b38a6535cb6be12bb8f3252a3b328d7c3b"
+    },
+    {
+      "name": "terminal-alias-export-fixture-correction",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_export.py::test_terminal_and_alias_history_export_restore",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T00:01:27.964724+00:00",
+      "elapsed_seconds": 6.421,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000127964724-terminal-alias-export-fixture-correction.log",
+      "log_sha256": "d3da1f186703bc9b249d65574ee3c23361392c2ebd8b3f5918d7191248d13991",
+      "head": "54726b89b6629745618dab5e8870aa941446a5a5",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000127964724-terminal-alias-export-fixture-correction-source.json",
+      "source_manifest_sha256": "b29691be7326db7624f306f20d18fff4248d3ab4da254ca03d97356172b02958",
+      "tracked_diff_sha256": "65d5c3f2f36f09f7de92cb03eb6611b38a6535cb6be12bb8f3252a3b328d7c3b"
     }
   ],
   "repair_cycles": {
@@ -1461,6 +1537,14 @@
       "second_cycle_engine": "Filter actual immutable owner/scope before bounded selection and validate intent/index boundary. Exactly directory and PostgreSQL passed once; public method docstring updated.",
       "second_cycle_hosted": "Root verified passed on exact42f87e07 and wheel c77a9a40739e51b9d9a0613b741d857b90d682b238ba59d8abe11b1d606030fd; 1 test6.81s/7.275s. Resolved within second correction cycle; original failures retained.",
       "stop_condition": "Resolved in second cycle. No repeated run or new repair authorized by this evidence."
+    },
+    "terminal_alias_export_history": {
+      "initial": "Three failed executions after exact journal and edge roundtrip checks: fixture incorrectly required copied extraction generations to remain unchanged.",
+      "source_evidence": "Existing _load_export always advances extraction generation by1 and clears the imported lease, preserving saved deadlines/attempts/order. Original approved plan115/145 requires recovered-work invalidation.",
+      "correction": "Fixture asserts that exact existing transformation, all other work fields, unchanged admissions/deadlines, plus rejection of the original claim. No runtime correction for this expected behavior.",
+      "unsuccessful_fix_validation_cycles": 0,
+      "pending": "none within this finite family selection",
+      "correction_result": "Same three parametrizations passed once; 18 negative subchecks completed. One successful fixture correction, no runtime repair for this failure."
     }
   },
   "held_dependencies": [
@@ -1704,10 +1788,59 @@
         "No automatic old-key retirement, physical erasure or offline revocation; retained artifacts prove that limit",
         "No bound PostgreSQL namespace replacement or current hosted recovery guard implementation"
       ]
+    },
+    "terminal_alias_export_history": {
+      "requirements": [
+        "AC2",
+        "AC3",
+        "AC5"
+      ],
+      "status": "three_layout_component_pass_whole_case_pending",
+      "files": [
+        "src/prme/storage/privacy_export.py",
+        "tests/test_privacy_export.py",
+        "docs/plans/2026-10-evidence-privacy/PV-07-plan.md",
+        "docs/plans/2026-10-evidence-privacy/PV-07-results.json"
+      ],
+      "test": "tests/test_privacy_export.py::test_terminal_and_alias_history_export_restore",
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "expected_executions": 3,
+      "families": [
+        "processing_terminal v1 cancelled/expired",
+        "ProtectedAliasProposalRecord v3",
+        "ProtectedAliasReviewRecord v2 accepted/rejected"
+      ],
+      "negative_subchecks": [
+        "checksum",
+        "operation context",
+        "terminal unknown content",
+        "terminal source context",
+        "duplicate hidden content",
+        "valid legacy alias family unsupported"
+      ],
+      "disposition": "Protected mode preserves exact proposal/review edge and original record/checksum bytes. Active-memory-only keeps all admitted nodes and explicitly omits alias_relationships with executable history.",
+      "writer_semantics": "Reviews do not close the proposal edge; accepted review adds a separate verified edge and rejection adds none.",
+      "limits": "Existing codecs remain unchanged. Terminal marker has replay unavailable; diagnostics not retained. No held #323 path, broad codec/rotation cohort or new replay guarantee.",
+      "executions": 6,
+      "passed": 3,
+      "failed": 3,
+      "negative_subchecks_executed": 18,
+      "runtime_sha256": "3e138e32af5edff97e6bdec5934fe2e32587e3cf1a338231d3fa74eca1b66220",
+      "test_sha256": "7354a9900d24d72f5aac3d49da4f6c327c946c529b1385b6356155e2b86442df",
+      "correction": "Exact original restore invalidation: generation+1, cleared copied lease; every remaining work field and original admission/deadline retained. Source runtime unchanged between failed/pass manifests.",
+      "evidence": [
+        "terminal-alias-export-initial",
+        "terminal-alias-export-fixture-correction"
+      ],
+      "initial_failure_classification": "Stricter fixture assertion, not a runtime failure. Initial run did not reach malformed-history refusals; retained unchanged."
     }
   },
   "remaining_original_work": [
-    "Complete protected journal/export family coverage and original mixed standard-mode public retrieval parity; broader whole-case verdict remains pending",
+    "Finish original shared export/history case evidence and mixed standard-mode public retrieval parity; terminal/alias export-history component now passes, broader whole-case verdict remains pending",
     "Public/recovered pending-work restore gates remain held; three-layout authority negatives/native-copy components passed, with bound hosted recovery separately pending",
     "Bound same-lineage hosted PostgreSQL workspace restore into current live control authority",
     "Remaining EM01-EM08 shared integration; the original EM04 three-layout rotation/real-erasure/export-reopen component passed",
@@ -1774,22 +1907,7 @@
         "constraint": "Two unsuccessful classifier correction cycles; no third repair or execution without USER approval. No generic native SIGABRT close rewrite."
       }
     ],
-    "independent_implementation": [
-      {
-        "criteria": [
-          "AC2",
-          "AC3",
-          "AC5"
-        ],
-        "remaining": "Complete protected journal export dispatch using existing #324 formats/readers, then reuse the existing export family and pending-work metadata fixture.",
-        "source_evidence": [
-          "storage/privacy_export.py::_operation permits direct/derivation/receipts/generated publications/protected_snapshot but rejects all other kinds",
-          "storage/privacy_journals.py::finish_processing emits PRIVACY_PROCESSING_TERMINAL with processing_terminal body, currently unmatched",
-          "storage/alias_proposal.py::ProtectedAliasProposalRecord/read_record and storage/alias_review.py::ProtectedAliasReviewRecord/read_review_record emit checksummed protected record envelopes, not protected_snapshot"
-        ],
-        "boundary": "Consume existing codecs; do not introduce a competing journal format. This is a source-backed implementation gap, not a newly run failure or a complete list inferred from tests."
-      }
-    ],
+    "independent_implementation": [],
     "independent_missing_components": [
       {
         "criteria": [
@@ -1840,6 +1958,16 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Test/docs EM04 checkpoint only. No additional cohort or independent implementation begun while root reconciles this inventory."
+    "next_action": "Checkpoint the completed terminal/alias family. Remaining exact exported-envelope/failure components and shared harness stay open; bound PG recovery is design-only pending actual hosted guard.",
+    "completed_independent_gap": {
+      "criteria": [
+        "AC2",
+        "AC3",
+        "AC5"
+      ],
+      "component": "Existing terminal-processing and protected alias proposal/review export dispatch and exact edge proof",
+      "evidence": "Same existing export family three-layout component passed; original failed stricter generation expectation retained.",
+      "limit": "No entire journal/publication replay claim; protected history and full public parity gates remain independently scoped."
+    }
   }
 }

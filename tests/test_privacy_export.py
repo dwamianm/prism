@@ -1,10 +1,16 @@
 """Actual closed exports; component evidence, not full EM08 restoration proof."""
+import copy
+import hashlib
 import json
+from uuid import UUID, uuid4
 
 import pytest
 
+from prme import MemoryEngine
+from prme.privacy.policy import PrivacyDenied
 from prme.privacy.portability import PrivacyPortabilityError
-from prme.storage.privacy_export import export_protected_pack, read_protected_export
+from prme.storage.privacy_export import export_protected_pack, read_protected_export, restore_protected_export
+from tests.privacy_portability_support import fresh_config
 from tests.privacy_journal_support import (
     LAYOUTS, journal_engine, isolated_privacy_postgres, local_analyzer_fixture,  # noqa: F401
 )
@@ -52,3 +58,159 @@ async def test_closed_default_and_active_exports(tmp_path, layout, analyzer, nat
         assert not refused.exists()
     finally:
         await engine.close()
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_terminal_and_alias_history_export_restore(tmp_path, layout, analyzer, native):
+    """Actual existing history writers; no held public reader or replay claim."""
+    from prme.storage import _snapshot_json
+    from prme.storage.alias_proposal import AliasProposalRecord, ProtectedAliasProposalRecord, read_record
+    from prme.storage.alias_review import ProtectedAliasReviewRecord, read_review_record
+    from prme.types import NodeType
+
+    engine, runtime, policy, *_ = await journal_engine(tmp_path, layout, analyzer, processing_ceiling_seconds=60)
+    owner = str(policy.owner_id)
+    source_only = "SOURCE_ONLY_HISTORY_EXPORT_326"
+    nodes = set()
+    proposals, reviews = [], []
+    try:
+        for decision in ("accepted", "rejected"):
+            pair = []
+            for name in (f"Acme {decision} Pro", f"Acme {decision} Professional"):
+                await engine.store(f"{name}. {source_only}.", retrieval_content=name,
+                                   user_id=owner, node_type=NodeType.ENTITY)
+                present = {str(row[0]) for row in await engine._privacy.repository._query("SELECT id FROM nodes", ())}
+                created = present - nodes
+                assert len(created) == 1
+                pair.extend(created)
+                nodes = present
+            proposal = await engine._graph_store.propose_alias(*pair, user_id=owner, alias_type="semantic", score=0.92)
+            assert proposal.applied
+            proposals.append(UUID(proposal.operation_id))
+            review = await engine._graph_store.review_alias_proposal(proposal.operation_id, user_id=owner,
+                decision=decision, reviewer_id=str(uuid4()), reason="Catalog reviewed.")
+            assert review.applied
+            reviews.append(UUID(review.operation_id))
+
+        # Real queued claims/slot transactions produce both existing terminal
+        # records. No extraction/model send or reconstructed source is needed.
+        cancelled = await engine.ingest("Mara likes tea. " + source_only, user_id=owner)
+        claim = await engine._event_store.extraction_work.claim(user_id=owner, event_id=cancelled)
+        assert await engine._privacy.processing.terminate(claim, state="cancelled")
+        expired = await engine.ingest("Mara likes apples. " + source_only, user_id=owner)
+        pending = await engine._privacy.repository.get(expired, user_id=owner)
+        runtime.clock.now = pending.snapshot.processing_deadline
+        assert await engine._privacy.processing.expire(user_id=owner) == 1
+        assert not runtime.extractor.sends
+        records = {record.event_id: record for record in await engine._privacy.repository.for_owner(owner)}
+        assert records[UUID(cancelled)].processing_state == "cancelled" and records[UUID(cancelled)].processing is None
+        assert records[UUID(expired)].processing_state == "expired" and records[UUID(expired)].processing is None
+        original = {str(row[0]): row[1] for row in await engine._privacy.repository._query("SELECT id,payload FROM operations", ())}
+        native_reads = native.reads
+        artifact = tmp_path / "history-protected.json"
+        await export_protected_pack(engine, artifact)
+        bundle = read_protected_export(artifact)
+        assert native.reads == native_reads
+        assert {str(op.id): op.payload for op in bundle.operations} == original
+        assert len(bundle.nodes) == 4 and len(bundle.edges) == 3
+        assert source_only not in artifact.read_text() and "PRIVATE KEY" not in artifact.read_text()
+        by_operation = {op.id: op for op in bundle.operations}
+        for identifier in proposals:
+            record = read_record(by_operation[identifier].payload)
+            assert isinstance(record, ProtectedAliasProposalRecord) and record.diagnostics == "not_retained"
+        for identifier in reviews:
+            record = read_review_record(by_operation[identifier].payload)
+            assert isinstance(record, ProtectedAliasReviewRecord) and record.diagnostics == "not_retained"
+        terminals = [op for op in bundle.operations if op.op_type == "PRIVACY_PROCESSING_TERMINAL"]
+        assert {json.loads(op.payload)["state"] for op in terminals} == {"cancelled", "expired"}
+        assert all(json.loads(op.payload)["replay"] == "unavailable" for op in terminals)
+        terminal_work = {work.event_id: work for work in bundle.work if work.kind == "extraction"}
+        assert all(terminal_work[identifier].status == "failed" and terminal_work[identifier].generation > 0
+                   for identifier in (UUID(cancelled), UUID(expired)))
+        active_path = tmp_path / "history-active.json"
+        await export_protected_pack(engine, active_path, mode="active_memory_only")
+        active = read_protected_export(active_path)
+        assert {node.id for node in active.nodes} == {node.id for node in bundle.nodes}
+        assert not active.edges and not active.operations and not active.work
+        assert "alias_relationships" in active.manifest.omitted and "restoration" in active.manifest.omitted
+        assert native.reads == native_reads
+        source_hash = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        config = engine._config
+        await engine.close()
+
+        async with fresh_config(config, tmp_path / "restored-history", layout, restore=True) as destination:
+            await restore_protected_export(artifact, destination, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            restored = await MemoryEngine.create(destination, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            try:
+                roundtrip_path = tmp_path / "history-roundtrip.json"
+                await export_protected_pack(restored, roundtrip_path)
+                roundtrip = read_protected_export(roundtrip_path)
+                assert {op.id: op.payload for op in roundtrip.operations} == {op.id: op.payload for op in bundle.operations}
+                assert roundtrip.edges == bundle.edges
+                # Restore invalidates every incoming extraction claim exactly
+                # once. It preserves the saved attempt/order/status/deadlines;
+                # a snapshot lease is not authority in the restored store.
+                expected_work = tuple(work.model_copy(update={"generation": work.generation + 1,
+                    "lease_expires_at": None, "status": "pending" if work.status == "running" else work.status})
+                    if work.kind == "extraction" else work for work in bundle.work)
+                assert roundtrip.work == expected_work
+                assert roundtrip.admissions == bundle.admissions
+                with pytest.raises(PrivacyDenied, match="^privacy_processing_unavailable$"):
+                    await restored._privacy.processing.begin(claim)
+                assert not await restored._event_store.extraction_work.retry(cancelled, user_id=owner)
+                assert not await restored._event_store.extraction_work.retry(expired, user_id=owner)
+
+                # Six finite refusals inside this same family/layout selection.
+                # Restore parses before touching this already-restored target.
+                invalid = []
+                def changed(identifier):
+                    data = bundle.model_dump(mode="json")
+                    return data, next(op for op in data["operations"] if op["id"] == str(identifier))
+                data, operation = changed(proposals[0])
+                body = json.loads(operation["payload"])
+                body["sha256"] = "0" * 64
+                operation["payload"] = json.dumps(body)
+                invalid.append(("checksum", data))
+                data, operation = changed(reviews[0])
+                operation["actor_id"] = str(uuid4())
+                invalid.append(("context", data))
+                data, operation = changed(terminals[0].id)
+                body = json.loads(operation["payload"])
+                body["unknown_source"] = source_only
+                operation["payload"] = json.dumps(body)
+                invalid.append(("terminal-extra", data))
+                data, operation = changed(terminals[0].id)
+                body = json.loads(operation["payload"])
+                body["source_id"] = str(uuid4())
+                operation["payload"] = json.dumps(body)
+                invalid.append(("terminal-context", data))
+                data, operation = changed(proposals[0])
+                operation["payload"] = '{"record":"' + source_only + '",' + operation["payload"][1:]
+                invalid.append(("duplicate-hidden-content", data))
+                data, operation = changed(proposals[0])
+                protected = read_record(operation["payload"])
+                edge = protected.edge.model_copy(update={"metadata": {"relation": "alias",
+                    "alias_type": protected.alias_type, "identity_verified": False,
+                    "alias_operation_id": str(protected.operation_id)}})
+                legacy = AliasProposalRecord(operation_id=protected.operation_id, alias_type=protected.alias_type,
+                    score=protected.score, left_before=protected.left_before, right_before=protected.right_before, edge=edge)
+                raw = _snapshot_json.dumps(legacy.model_dump(mode="python"))
+                legacy_payload = {"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()}
+                assert type(read_record(legacy_payload)) is AliasProposalRecord
+                operation["payload"] = json.dumps(legacy_payload)
+                invalid.append(("legacy-family", data))
+                for name, data in invalid:
+                    rejected = tmp_path / (name + ".json")
+                    rejected.write_text(json.dumps(copy.deepcopy(data)))
+                    with pytest.raises(PrivacyPortabilityError) as denied:
+                        await restore_protected_export(rejected, destination, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+                    assert denied.value.code in {"privacy_export_invalid", "privacy_legacy_unclassified"}
+                after = {str(row[0]): row[1] for row in await restored._privacy.repository._query("SELECT id,payload FROM operations", ())}
+                assert after == original
+            finally:
+                await restored.close()
+        assert hashlib.sha256(artifact.read_bytes()).hexdigest() == source_hash
+        assert native.reads == native_reads and not runtime.extractor.sends
+    finally:
+        if not engine._closed:
+            await engine.close()

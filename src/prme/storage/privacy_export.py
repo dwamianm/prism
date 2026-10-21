@@ -6,11 +6,12 @@ Recovery secrets and the independent erasure authority are never serialized.
 """
 from __future__ import annotations
 
+from datetime import datetime
 import importlib
 import json
 import os
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 from prme.models.derivation import PreparedEmbedding, node_checksum
 from prme.privacy.crypto import decode_envelope
@@ -58,7 +59,16 @@ def _original_model(raw, model):
         raise PrivacyPortabilityError("privacy_legacy_unclassified")
 
 
-def _operation(operation, records, manifest, plans):
+def _alias_record_bytes(raw, record):
+    """Check ignored/duplicate bytes without rewriting the existing snapshot."""
+    from prme.privacy.crypto import _pairs
+    from prme.storage import _snapshot_json
+    json.loads(raw, object_pairs_hook=_pairs)
+    if _snapshot_json.loads(raw) != _snapshot_json.loads(_snapshot_json.dumps(record.model_dump(mode="python"))):
+        raise PrivacyPortabilityError("privacy_legacy_unclassified")
+
+
+def _operation(operation, records, manifest, plans, aliases, alias_edges):
     """Consume existing codecs; keep their original serialized record bytes."""
     from prme.models.direct_store import DirectStoreRecord
     from prme.models.derivation import DerivationReceipt
@@ -138,6 +148,64 @@ def _operation(operation, records, manifest, plans):
         _original_model(body["publication"], plan)
         _same_manifest(plan.privacy_manifest, records)
         validate_generated_publication(plan, kind=family)
+    elif kind == "PRIVACY_PROCESSING_TERMINAL":
+        from prme.privacy.crypto import _pairs
+        body = json.loads(operation.payload, object_pairs_hook=_pairs)
+        record = records.get(UUID(body["event_id"]))
+        state = body["state"]
+        created = datetime.fromisoformat(body["created_at"])
+        if (record is None or record.kind != "extraction" or state not in {"cancelled", "expired"}
+                or record.processing_state != state or record.processing is not None
+                or type(body["schema_version"]) is not int or type(body["policy_revision"]) is not int
+                or operation.id != uuid5(record.event_id, "prme:processing-terminal:v1:" + state)
+                or operation.target_id != str(record.event_id) or operation.actor_id != "privacy"
+                or operation.namespace_id != record.snapshot.policy.scope.value or operation.created_at != created
+                or body != {"schema_version": 1, "kind": "processing_terminal", "event_id": str(record.event_id),
+                    "source_id": str(record.source_id), "representation_id": str(record.representation_id),
+                    "policy_id": str(record.snapshot.policy.policy_id), "policy_revision": record.snapshot.policy.revision,
+                    "state": state, "replay": "unavailable", "created_at": body["created_at"]}):
+            raise ValueError()
+    elif kind == "ALIAS_PROPOSED":
+        from prme.privacy.crypto import _pairs
+        from prme.storage.alias_proposal import ProtectedAliasProposalRecord, read_record
+        body = json.loads(operation.payload, object_pairs_hook=_pairs)
+        if set(body) != {"record", "sha256"}:
+            raise ValueError()
+        record = read_record(body)
+        if not isinstance(record, ProtectedAliasProposalRecord):
+            raise PrivacyPortabilityError("privacy_legacy_unclassified")
+        _alias_record_bytes(body["record"], record)
+        _same_manifest(record.manifest, records)
+        if (record.operation_id != operation.id or operation.target_id != str(record.right_before.id)
+                or operation.actor_id != record.left_before.user_id
+                or operation.namespace_id != record.left_before.scope.value
+                or operation.created_at != record.edge.created_at):
+            raise ValueError()
+        aliases[record.operation_id] = record
+        alias_edges[record.edge.id] = record.edge
+    elif kind in {"ALIAS_PROPOSAL_ACCEPTED", "ALIAS_PROPOSAL_REJECTED"}:
+        from prme.privacy.crypto import _pairs
+        from prme.storage.alias_review import ProtectedAliasReviewRecord, read_review_record
+        body = json.loads(operation.payload, object_pairs_hook=_pairs)
+        if set(body) != {"record", "sha256"}:
+            raise ValueError()
+        record = read_review_record(body)
+        if not isinstance(record, ProtectedAliasReviewRecord):
+            raise PrivacyPortabilityError("privacy_legacy_unclassified")
+        _alias_record_bytes(body["record"], record)
+        _same_manifest(record.manifest, records)
+        proposal = aliases.get(record.proposal_operation_id)
+        if (proposal is None or record.operation_id != operation.id
+                or operation.target_id != str(record.proposal_operation_id) or operation.actor_id != record.user_id
+                or operation.namespace_id != record.scope.value or operation.created_at != record.decided_at
+                or kind != ("ALIAS_PROPOSAL_ACCEPTED" if record.decision == "accepted" else "ALIAS_PROPOSAL_REJECTED")
+                or record.manifest != proposal.manifest.model_copy(update={"journal_id": record.operation_id})
+                or (record.source_id, record.target_id, record.score, record.user_id, record.scope) != (
+                    proposal.edge.source_id, proposal.edge.target_id, proposal.score,
+                    proposal.left_before.user_id, proposal.left_before.scope)):
+            raise ValueError()
+        if record.verified_edge is not None:
+            alias_edges[record.verified_edge.id] = record.verified_edge
     elif body.get("kind") == "protected_snapshot":
         envelope = SnapshotEnvelope.model_validate(body)
         _same_manifest(envelope.manifest, records)
@@ -211,14 +279,24 @@ def validate_export(bundle: ProtectedExport) -> ProtectedExport:
                 raise ValueError()
             for identifier in ready:
                 del pending[identifier]
+        alias_edges = {}
+        if info.mode == "protected":
+            if len({op.id for op in bundle.operations}) != len(bundle.operations):
+                raise ValueError()
+            plans, aliases = {}, {}
+            ordered = sorted(bundle.operations, key=lambda op: op.op_type not in {"DERIVATION_PREPARED", "ALIAS_PROPOSED"})
+            for operation in ordered:
+                _operation(operation, records, manifest, plans, aliases, alias_edges)
         node_ids = {node.id for node in bundle.nodes}
         from prme.ingestion.admitted_statements import project_admitted_edge
         for edge in bundle.edges:
             if edge.source_id not in node_ids or edge.target_id not in node_ids:
                 raise ValueError()
-            if edge.provenance_event_id not in records and not (
+            alias = alias_edges.get(edge.id)
+            proven_alias = alias is not None and edge.model_dump(mode="json") == alias.model_dump(mode="json")
+            if edge.provenance_event_id not in records and not (proven_alias or (
                     edge.provenance_event_id is None and edge.target_id in dependencies[edge.source_id]
-                    and edge.edge_type.value == "derived_from"):
+                    and edge.edge_type.value == "derived_from")):
                 raise ValueError()
             if edge.model_dump(mode="json") != project_admitted_edge(edge).model_dump(mode="json"):
                 raise ValueError()
@@ -240,12 +318,6 @@ def validate_export(bundle: ProtectedExport) -> ProtectedExport:
             for embedding in bundle.embeddings:
                 if embedding.node_id not in by_node or embedding.content != by_node[embedding.node_id].content:
                     raise ValueError()
-            if len({op.id for op in bundle.operations}) != len(bundle.operations):
-                raise ValueError()
-            plans = {}
-            ordered = sorted(bundle.operations, key=lambda op: op.op_type != "DERIVATION_PREPARED")
-            for operation in ordered:
-                _operation(operation, records, manifest, plans)
             for work in bundle.work:
                 if work.event_id not in records or (work.kind == "extraction" and work.work_order is None):
                     raise ValueError()
@@ -277,6 +349,7 @@ async def _capture(engine, mode, *, _migration_id=None):
         nodes = tuple(PgGraphStore._record_to_node(row) for row in await rows(f"SELECT {_NODE_COLUMNS} FROM nodes ORDER BY id"))
         edges = tuple(PgGraphStore._record_to_edge(row) for row in await rows(f"SELECT {_EDGE_COLUMNS} FROM edges ORDER BY id"))
         events, operations, work, embeddings = (), (), [], []
+        alias_relationships_omitted = False
         if mode == "protected":
             events = tuple(ExportEvent.model_validate(row) for row in await rows(
                 "SELECT id,timestamp,role,user_id,session_id,scope,created_at,event_time FROM events ORDER BY id"))
@@ -306,6 +379,9 @@ async def _capture(engine, mode, *, _migration_id=None):
             nodes = tuple(node for node in nodes if node.lifecycle_state.value in active)
             ids = {node.id for node in nodes}
             edges = tuple(edge for edge in edges if edge.source_id in ids and edge.target_id in ids)
+            aliases = {edge.id for edge in edges if edge.provenance_event_id is None and (edge.metadata or {}).get("relation") == "alias"}
+            alias_relationships_omitted = bool(aliases)
+            edges = tuple(edge for edge in edges if edge.id not in aliases)
             records = tuple(record.model_copy(update={"evidence": None, "processing": None, "retry": None}) for record in records)
         unavailable_history = ()
         names = await rows("SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='privacy_migration_history'")
@@ -313,6 +389,8 @@ async def _capture(engine, mode, *, _migration_id=None):
             from prme.models.privacy_reads import ProtectedOperationView
             unavailable_history = tuple(ProtectedOperationView.model_validate_json(row["body"]) for row in await rows("SELECT body FROM privacy_migration_history ORDER BY id"))
         omitted = _OMITTED + (() if mode == "protected" else ("evidence", "processing_input", "executable_history", "vectors", "restoration"))
+        if alias_relationships_omitted:
+            omitted += ("alias_relationships",)
         if unavailable_history:
             omitted += ("legacy_originals_retained_separately", "legacy_history_checksum_and_replay",)
         return validate_export(ProtectedExport(manifest=ProtectedExportManifest(mode=mode, format=descriptor,
