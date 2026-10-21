@@ -1,4 +1,7 @@
 """Actual closed exports; component evidence, not full EM08 restoration proof."""
+import asyncio
+import base64
+from contextlib import asynccontextmanager
 import copy
 import hashlib
 import json
@@ -7,14 +10,133 @@ from uuid import UUID, uuid4
 import pytest
 
 from prme import MemoryEngine
+from prme.privacy.erasure import ErasureRequest
 from prme.privacy.policy import PrivacyDenied
 from prme.privacy.portability import PrivacyPortabilityError
 from prme.storage.privacy_export import export_protected_pack, read_protected_export, restore_protected_export
 from tests.privacy_portability_support import fresh_config
 from tests.privacy_journal_support import (
-    LAYOUTS, journal_engine, isolated_privacy_postgres, local_analyzer_fixture,  # noqa: F401
+    LAYOUTS, journal_engine, isolated_privacy_postgres, local_analyzer_fixture, logical_dump,  # noqa: F401
 )
 from tests.privacy_journal_support import native as native_fixture  # noqa: F401
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_EM03_export_effect_failure_and_current_ledger(tmp_path, layout, analyzer, native, monkeypatch, capsys):
+    """Actual destination fault and erasure serialization at export publication."""
+    from prme.storage import privacy_export
+
+    engine, runtime, policy, *_ = await journal_engine(tmp_path, layout, analyzer)
+    owner = str(policy.owner_id)
+    source_only = b"EM03_EXPORT_ONLY_SOURCE"
+    markers = [source_only, b"BEGIN PRIVATE KEY", b"BEGIN ENCRYPTED PRIVATE KEY"]
+    tasks = []
+    try:
+        wrapper = next(iter(runtime.protector.registry._wrappers.values()))
+        wrap = wrapper.wrap_key
+        async def observed_wrap(key, descriptor, context):
+            markers.extend((key, base64.b64encode(key), key.hex().encode()))
+            return await wrap(key, descriptor, context)
+        with monkeypatch.context() as patch:
+            patch.setattr(wrapper, "wrap_key", observed_wrap)
+            event = await engine.store("Mara likes tea. " + source_only.decode(),
+                retrieval_content="Mara likes tea.", user_id=owner)
+        assert len(markers) > 3
+        record = await engine._privacy.repository.get(event, user_id=owner)
+        before = await logical_dump(engine, tmp_path / "source-before.jsonl")
+        native_reads = native.reads
+
+        failed = tmp_path / "failed-export.json"
+        temporary_seen = []
+        def failed_link(source, destination):
+            assert destination == failed and source.suffix == ".export"
+            assert source.parent == failed.parent and not source.stat().st_mode & 0o077
+            data = source.read_bytes()
+            assert data and all(marker not in data for marker in markers)
+            temporary_seen.append(source)
+            raise OSError("synthetic export publication failure")
+        with monkeypatch.context() as patch:
+            patch.setattr(privacy_export.os, "link", failed_link)
+            with pytest.raises(OSError, match="^synthetic export publication failure$"):
+                await export_protected_pack(engine, failed)
+        assert len(temporary_seen) == 1 and not temporary_seen[0].exists()
+        assert not failed.exists() and not list(tmp_path.glob(".*.export"))
+        assert await engine._privacy.repository.get(event, user_id=owner) == record
+        assert await logical_dump(engine, tmp_path / "source-after-fault.jsonl") == before
+        assert native.reads == native_reads
+
+        captured, release, attempted, acquired = (asyncio.Event() for _ in range(4))
+        capture, publish, ledger_guard = privacy_export._capture, privacy_export._publish_bytes, runtime.erasure_ledger.guard
+        order = []
+        erasing = None
+        async def paused_capture(*args, **kwargs):
+            bundle = await capture(*args, **kwargs)
+            captured.set()
+            await release.wait()
+            return bundle
+        @asynccontextmanager
+        async def observed_guard():
+            is_request = asyncio.current_task() is erasing
+            if is_request:
+                attempted.set()
+            async with ledger_guard():
+                if is_request:
+                    acquired.set()
+                yield
+        def observed_publish(path, data):
+            assert attempted.is_set() and not acquired.is_set()
+            assert all(marker not in data for marker in markers)
+            publish(path, data)
+            order.append("published")
+        async def erase():
+            status = await engine.request_erasure(ErasureRequest(request_id=uuid4(),
+                scope=policy.scope, event_ids=(UUID(event),)), user_id=owner)
+            order.append("erasure_acknowledged")
+            return status
+        retained = tmp_path / "pre-acknowledgement-export.json"
+        with monkeypatch.context() as patch:
+            patch.setattr(privacy_export, "_capture", paused_capture)
+            patch.setattr(privacy_export, "_publish_bytes", observed_publish)
+            patch.setattr(runtime.erasure_ledger, "guard", observed_guard)
+            exporting = asyncio.create_task(export_protected_pack(engine, retained))
+            tasks.append(exporting)
+            await asyncio.wait_for(captured.wait(), 5)
+            erasing = asyncio.create_task(erase())
+            tasks.append(erasing)
+            await asyncio.wait_for(attempted.wait(), 5)
+            assert not acquired.is_set() and not erasing.done() and not retained.exists()
+            release.set()
+            manifest = await asyncio.wait_for(exporting, 5)
+            status = await asyncio.wait_for(erasing, 5)
+        assert acquired.is_set() and order == ["published", "erasure_acknowledged"]
+        assert status.state == "blocked_from_access"
+        retained_hash = hashlib.sha256(retained.read_bytes()).hexdigest()
+        assert read_protected_export(retained).admissions[0].evidence == record.evidence
+        async with runtime.erasure_ledger.guard():
+            current = await runtime.erasure_ledger.current_head(manifest.format.store_id)
+        assert current.sequence > manifest.ledger_checkpoint.sequence
+        after = tmp_path / "after-acknowledgement-export.json"
+        with pytest.raises(PrivacyDenied, match="^privacy_erased$"):
+            await export_protected_pack(engine, after)
+        assert not after.exists() and not list(tmp_path.glob(".*.export"))
+        assert hashlib.sha256(retained.read_bytes()).hexdigest() == retained_hash
+        assert native.reads == native_reads
+        await logical_dump(engine, tmp_path / "source-after-fence.jsonl")
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        await engine.close()
+    # Local native database/WAL/index files, fixture logical SQL dumps, ledger,
+    # public registry and export are all task-owned. PostgreSQL server files and
+    # external backups are deliberately outside this fresh scan's scope.
+    for path in tmp_path.rglob("*"):
+        if path.is_file() and not path.is_symlink():
+            assert all(marker not in path.read_bytes() for marker in markers), path.name
+    captured_output = capsys.readouterr()
+    assert all(marker not in (captured_output.out + captured_output.err).encode() for marker in markers)
 
 
 @pytest.mark.parametrize("layout", LAYOUTS)

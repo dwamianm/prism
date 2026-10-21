@@ -862,3 +862,31 @@ pytest; 7.990 seconds captured command), with 18 refusal subchecks and three
 untouched-source decrypt controls. No runtime correction or repeat was needed.
 Exact log/source hashes are retained in PV-07-results.json. This proves the
 artifact composition only, with no whole EM02/public-reader/native-OS claim.
+
+## Remaining export-effect EM03 component
+
+Original AC3/AC4/AC5 require the actual export destination failure and current
+authority at publication. Reuse existing missing-key/protect/store primitive
+checks, migration interruption evidence and native source scans. Change only
+`tests/test_privacy_export.py` and this plan/results pair. Select exactly
+`test_EM03_export_effect_failure_and_current_ledger` in directory/single-file/
+PostgreSQL (three executions), without repeating those other cohorts.
+
+Fail the real final os.link after the export's owned temporary has been written
+and fsynced. Inspect its real bytes for source and captured real DEK markers,
+then require cleanup, no completed destination and unchanged source records.
+Separately pause the same real exporter after capture; a concurrent actual
+request_erasure must wait on its independently current ledger lease through
+the actual publication effect. Once erasure acknowledges, a new export must
+refuse under that durable fence. Keep the pre-ack export and record it as an
+external copy, with no retroactive deletion claim. The barriers control only
+scheduling; no permission/fence/ledger/storage double substitutes for the real
+path. Scan task-owned local files and PostgreSQL fixture logical rows, without
+claiming a fresh scan of server WAL/base files or held public readers. No
+runtime change is planned; the two unsuccessful correction limit remains.
+
+The single finite export-effect run passed all three layouts (3.45 seconds
+pytest; 4.478 seconds captured command). The fault, lease serialization and
+post-acknowledgement refusal assertions all executed; no runtime repair was
+needed. Exact log/source hashes are in PV-07-results.json. Retained exports and
+PostgreSQL server/WAL scan limits remain explicit, with no whole-case claim.

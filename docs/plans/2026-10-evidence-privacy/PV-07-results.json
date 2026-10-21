@@ -1516,6 +1516,43 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000545641463-exported-context-initial-source.json",
       "source_manifest_sha256": "d3d65edf10d6b39bcfa6e0cb9cacbbc082cea802c0a44c38daef7114d96c370a",
       "tracked_diff_sha256": "eb510d7d200d789430538457ce8dc43dc3a2d6382c8ee794d54cdcffce677e29"
+    },
+    {
+      "name": "export-effect-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_export.py"
+      ],
+      "started_at": "2026-10-21T00:07:30.304284+00:00",
+      "elapsed_seconds": 0.077,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000730304284-export-effect-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "695e61a16aa746d4e9cbbbe06db0cd90daaa02b2",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000730304284-export-effect-static-source.json",
+      "source_manifest_sha256": "79aeb902780163a61b58818f0da92fb73e0dab11bba65c6f8a3d32bceb0e3f82",
+      "tracked_diff_sha256": "728cc17b4b957f5f30e188ab175745f4bd67314a4c91a11c14ddaea57cc23bfa"
+    },
+    {
+      "name": "export-effect-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_export.py::test_EM03_export_effect_failure_and_current_ledger",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T00:07:34.098351+00:00",
+      "elapsed_seconds": 4.478,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000734098351-export-effect-initial.log",
+      "log_sha256": "28e17a83a437ef0318af69f3bea6e0a19a0a6bd344d79889061e7d7296ea3dec",
+      "head": "695e61a16aa746d4e9cbbbe06db0cd90daaa02b2",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000734098351-export-effect-initial-source.json",
+      "source_manifest_sha256": "79aeb902780163a61b58818f0da92fb73e0dab11bba65c6f8a3d32bceb0e3f82",
+      "tracked_diff_sha256": "728cc17b4b957f5f30e188ab175745f4bd67314a4c91a11c14ddaea57cc23bfa"
     }
   ],
   "repair_cycles": {
@@ -1920,6 +1957,44 @@
       ],
       "test_sha256": "9f56e0fb65b6dbb2264886171023c6688516982a2dc54dbc67a8b433265e947a",
       "limits": "Native OS boundary remains a named double. No held #323 public reader or repeated crypto primitive cohort. Metadata presence/restore never certifies ciphertext authenticity; whole frozen EM02 remains pending shared integration."
+    },
+    "export_effect_failure_ledger": {
+      "requirements": [
+        "AC3",
+        "AC4",
+        "AC5"
+      ],
+      "frozen_reference": "EM03",
+      "status": "three_layout_component_pass_whole_case_pending",
+      "test": "tests/test_privacy_export.py::test_EM03_export_effect_failure_and_current_ledger",
+      "files": [
+        "tests/test_privacy_export.py",
+        "docs/plans/2026-10-evidence-privacy/PV-07-plan.md",
+        "docs/plans/2026-10-evidence-privacy/PV-07-results.json"
+      ],
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "executions": 3,
+      "passed": 3,
+      "failed": 0,
+      "evidence": [
+        "export-effect-initial"
+      ],
+      "pytest_seconds": 3.45,
+      "runtime_changes": false,
+      "corrections": 0,
+      "assertions": [
+        "Real export temporary after fsync excludes source and captured actual DEK markers",
+        "Final os.link failure removes owned temp and creates no completed destination; source admission and logical SQL unchanged",
+        "Actual erasure request cannot acquire current independent ledger or acknowledge before the export publication effect completes",
+        "A subsequent export refuses after durable erasure acknowledgement; retained pre-ack export remains unchanged",
+        "No native private lookup; local owned files plus task SQL dumps/captured output scanned"
+      ],
+      "test_sha256": "0fa1a11fe246b30f8d0be3cc658cbcd7995a16faa0d13d4cceaa11deb932f8b3",
+      "limits": "Scheduling barriers and file fault are explicit controls around real guards/ledger/storage. This does not revoke retained exports or scan PostgreSQL server/WAL files anew; reviewed #321 primitive evidence remains separate. No whole EM03/public-reader pass."
     }
   },
   "remaining_original_work": [
@@ -1994,14 +2069,6 @@
     "independent_missing_components": [
       {
         "criteria": [
-          "AC1",
-          "AC2",
-          "AC3"
-        ],
-        "remaining": "Original EM03 destination-effect failure/artifact scans and current independent-ledger change at export/publication boundaries, after relevant journal dispatch is complete."
-      },
-      {
-        "criteria": [
           "AC2",
           "AC5"
         ],
@@ -2034,7 +2101,7 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Only original remaining EM03 export destination faults/current-ledger publication and finite restored-pending-work components; freeze each exact selection before execution. Bound PG recovery and held public readers remain separate.",
+    "next_action": "Only the original restored-pending-work deadline/claim component remains independently selectable; freeze exact missing assertions before executing. Bound PG recovery/public surviving publication and final whole-case harness remain pending their real dependencies.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
