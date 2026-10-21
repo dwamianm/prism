@@ -4,6 +4,7 @@ These are CLI subchecks, not complete frozen cases or held #323 retrieval proof.
 """
 from dataclasses import replace
 from datetime import timedelta
+import asyncio
 import hashlib
 import hmac
 import json
@@ -120,6 +121,15 @@ async def test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure(tm
                 try:
                     rows = await current._privacy.repository._query("SELECT content FROM nodes", ())
                     assert sorted(row[0] for row in rows) == ["Mara likes apples.", "Mara likes tea."]
+                    private_reads = native.reads
+                    response = await asyncio.wait_for(current.retrieve("Mara likes tea.", user_id=owner,
+                        scope=policy.scope, reference_time=runtime.clock(), include_cross_scope=False), 20)
+                    assert {item.node.content for item in response.results} == {"Mara likes apples.", "Mara likes tea."}
+                    context = response.bundle.render()
+                    assert "Mara likes apples." in context and "Mara likes tea." in context
+                    public = response.model_dump_json()
+                    assert "CLI_ONLY_SOURCE_326" not in public and "private326@example.com" not in public
+                    assert native.reads == private_reads
                 finally:
                     await current.close()
             await run(key_args)

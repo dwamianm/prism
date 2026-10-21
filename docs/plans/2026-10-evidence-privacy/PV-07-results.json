@@ -1670,6 +1670,239 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T002501036379-bound-restore-checkpoint-static-source.json",
       "source_manifest_sha256": "cdb36cfe5fc70226580647f9cfbfce232cd3241349c621c58f726a4b3ae651d0",
       "tracked_diff_sha256": "80c1eb8dda1b34b975cbfbbad387ad9347bebff98fd9b5144b0930874184f3ba"
+    },
+    {
+      "name": "public-assertions-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_migration.py",
+        "tests/test_privacy_portability_cli.py",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-21T01:04:51.740924+00:00",
+      "elapsed_seconds": 1.416,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T010451740924-public-assertions-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T010451740924-public-assertions-static-source.json",
+      "source_manifest_sha256": "649122168d1e8ecd3517a23810eacdd49545012f0fcfb0fa83912d026e719e9e",
+      "tracked_diff_sha256": "6e7c55498b6ba5864583d983f9e58722569278f9554385c81d8eb1f3db8b764b"
+    },
+    {
+      "name": "public-EM02-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py::test_EM02_exported_context_and_wrapped_key_refusals",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T01:05:02.167255+00:00",
+      "elapsed_seconds": 13.86,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T010502167255-public-EM02-initial.log",
+      "log_sha256": "90f78d8d9c1e13abb8662d0b5aac8f7ae87a537bd844fd2f33f5e8272c87983f",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T010502167255-public-EM02-initial-source.json",
+      "source_manifest_sha256": "649122168d1e8ecd3517a23810eacdd49545012f0fcfb0fa83912d026e719e9e",
+      "tracked_diff_sha256": "6e7c55498b6ba5864583d983f9e58722569278f9554385c81d8eb1f3db8b764b"
+    },
+    {
+      "name": "public-EM05-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T01:05:18.473527+00:00",
+      "elapsed_seconds": 16.021,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T010518473527-public-EM05-initial.log",
+      "log_sha256": "66af989e45657d9b860ab42f4ee353da0ddc7e0886678c2f79ebb6eecc1ae968",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T010518473527-public-EM05-initial-source.json",
+      "source_manifest_sha256": "649122168d1e8ecd3517a23810eacdd49545012f0fcfb0fa83912d026e719e9e",
+      "tracked_diff_sha256": "6e7c55498b6ba5864583d983f9e58722569278f9554385c81d8eb1f3db8b764b"
+    },
+    {
+      "name": "public-native-restore-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py::test_same_lineage_restore_applies_current_ledger_before_recovery",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T01:05:37.355547+00:00",
+      "elapsed_seconds": 9.875,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T010537355547-public-native-restore-initial.log",
+      "log_sha256": "469fd27bc39fbcbf6e87242f23eb0cee1684f32683c860890a4c3cf763afd019",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T010537355547-public-native-restore-initial-source.json",
+      "source_manifest_sha256": "649122168d1e8ecd3517a23810eacdd49545012f0fcfb0fa83912d026e719e9e",
+      "tracked_diff_sha256": "6e7c55498b6ba5864583d983f9e58722569278f9554385c81d8eb1f3db8b764b"
+    },
+    {
+      "name": "public-bound-PG-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py::test_bound_postgres_restore_current_catalog_and_recovery_lease",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T01:05:52.095984+00:00",
+      "elapsed_seconds": 4.59,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T010552095984-public-bound-PG-initial.log",
+      "log_sha256": "e33e1a75089f358bb0af279ab6fa77893616202d3831ea5d74bdc9213b1ac576",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T010552095984-public-bound-PG-initial-source.json",
+      "source_manifest_sha256": "649122168d1e8ecd3517a23810eacdd49545012f0fcfb0fa83912d026e719e9e",
+      "tracked_diff_sha256": "6e7c55498b6ba5864583d983f9e58722569278f9554385c81d8eb1f3db8b764b"
+    },
+    {
+      "name": "public-EM07-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions",
+        "-x",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T01:06:11.469593+00:00",
+      "elapsed_seconds": 5.629,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T010611469593-public-EM07-initial.log",
+      "log_sha256": "6afac6cf67bad09ebd58ab368b0e9778b8df4f87260a3274d8efaf29c8adbe61",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T010611469593-public-EM07-initial-source.json",
+      "source_manifest_sha256": "649122168d1e8ecd3517a23810eacdd49545012f0fcfb0fa83912d026e719e9e",
+      "tracked_diff_sha256": "6e7c55498b6ba5864583d983f9e58722569278f9554385c81d8eb1f3db8b764b"
+    },
+    {
+      "name": "public-EM07-correction-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-21T01:12:33.586126+00:00",
+      "elapsed_seconds": 0.157,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T011233586126-public-EM07-correction-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T011233586126-public-EM07-correction-static-source.json",
+      "source_manifest_sha256": "0c5ed08161267cb59970857e9a04cd949e7096c1cc56e10110fba193946d58d2",
+      "tracked_diff_sha256": "676532f5732a967e7aa78f315d27942cd2c3c7249dd0cf84b53044d728406273"
+    },
+    {
+      "name": "public-EM07-directory-correction1",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[directory]",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T01:12:34.064519+00:00",
+      "elapsed_seconds": 6.257,
+      "exit_code": 1,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T011234064519-public-EM07-directory-correction1.log",
+      "log_sha256": "39351d1707dcec9b6018764035f76e6477f5214b2ce106f1a3da2d3a206e1ad1",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T011234064519-public-EM07-directory-correction1-source.json",
+      "source_manifest_sha256": "0c5ed08161267cb59970857e9a04cd949e7096c1cc56e10110fba193946d58d2",
+      "tracked_diff_sha256": "676532f5732a967e7aa78f315d27942cd2c3c7249dd0cf84b53044d728406273"
+    },
+    {
+      "name": "public-EM07-correction2-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_migration.py"
+      ],
+      "started_at": "2026-10-21T01:16:11.353360+00:00",
+      "elapsed_seconds": 0.278,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T011611353360-public-EM07-correction2-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T011611353360-public-EM07-correction2-static-source.json",
+      "source_manifest_sha256": "7c7e1853762a71ba6cd7bd784f98f4c4b44489817cdd61f72050b6bf2bd17bd6",
+      "tracked_diff_sha256": "b4f955bf71889da4c2a8e940ddeed547df16637d686e2739635f22f986a3c5cf"
+    },
+    {
+      "name": "public-EM07-directory-correction2",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[directory]",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T01:16:12.019420+00:00",
+      "elapsed_seconds": 8.224,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T011612019420-public-EM07-directory-correction2.log",
+      "log_sha256": "990e7b65edd84b666e2b7b57fd7e16a6a66521fd1065747f2a2e8c69ee2a32f6",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T011612019420-public-EM07-directory-correction2-source.json",
+      "source_manifest_sha256": "7c7e1853762a71ba6cd7bd784f98f4c4b44489817cdd61f72050b6bf2bd17bd6",
+      "tracked_diff_sha256": "b4f955bf71889da4c2a8e940ddeed547df16637d686e2739635f22f986a3c5cf"
+    },
+    {
+      "name": "public-EM07-remaining-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[pack]",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[postgres]",
+        "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[closed_fernet]",
+        "-x",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T01:16:28.507195+00:00",
+      "elapsed_seconds": 37.521,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T011628507195-public-EM07-remaining-initial.log",
+      "log_sha256": "1777504efd7c969bfc6bd4fda50b25909fd1e5ad3ed3293e84575aae9fffdc3d",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T011628507195-public-EM07-remaining-initial-source.json",
+      "source_manifest_sha256": "7c7e1853762a71ba6cd7bd784f98f4c4b44489817cdd61f72050b6bf2bd17bd6",
+      "tracked_diff_sha256": "b4f955bf71889da4c2a8e940ddeed547df16637d686e2739635f22f986a3c5cf"
+    },
+    {
+      "name": "public-checkpoint-integrity",
+      "command": [
+        ".venv/bin/python",
+        ".github-ticket-loop/privacy-326/verify_public_checkpoint.py"
+      ],
+      "started_at": "2026-10-21T01:19:13.800139+00:00",
+      "elapsed_seconds": 0.296,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T011913800139-public-checkpoint-integrity.log",
+      "log_sha256": "0d1187d7d44ef1bc3c7b8b5631548fcbd31d07bf92bbd9d3b0c4b9dc0e6d72f5",
+      "head": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T011913800139-public-checkpoint-integrity-source.json",
+      "source_manifest_sha256": "7c7e1853762a71ba6cd7bd784f98f4c4b44489817cdd61f72050b6bf2bd17bd6",
+      "tracked_diff_sha256": "b4f955bf71889da4c2a8e940ddeed547df16637d686e2739635f22f986a3c5cf"
     }
   ],
   "repair_cycles": {
@@ -1744,6 +1977,14 @@
       "unsuccessful_fix_validation_cycles": 0,
       "fixture_changes_after_initial": false,
       "limits": "No further runtime correction or test selection; declarations/docs/static checkpoint only after passing variant."
+    },
+    "public_EM07_comparison": {
+      "initial": "One directory failure at strict whole-context equality; source legacy policy and target sealed policy/admitted projection differ. Raw saved outputs and all three unrun layouts preserved.",
+      "corrections_attempted": 2,
+      "unsuccessful_fix_validation_cycles": 1,
+      "state": "Resolved within second authorized test correction; both failed executions retained. No further correction or added selection authorized.",
+      "correction1": "Strict cross-policy context equality replaced with approved admitted-memory usability/semantic checks. Directory failed newly added pre-read lifecycle comparison; closed-source lifecycle is correctly preserved. Exact failed log and diagnosis retained.",
+      "correction2": "Compare lifecycle_state/updated_at to actual existing closed-source migration input. Directory passed once, then original pack/PostgreSQL/closed-Fernet passed once. Runtime, data, policy, queries and every other assertion unchanged."
     }
   },
   "held_dependencies": [
@@ -2225,15 +2466,39 @@
         "Only missing/empty canonical schema or exact committed operation retry is supported; no occupied replacement or restored control authority",
         "No new native-platform proof, physical erase, external-copy revocation or whole frozen case acceptance"
       ]
+    },
+    "public_portability_iteration4": {
+      "requirements": [
+        "AC1",
+        "AC2",
+        "AC3",
+        "AC5",
+        "AC6"
+      ],
+      "frozen_references": [
+        "EM02",
+        "EM05",
+        "EM07",
+        "EM08",
+        "ER07"
+      ],
+      "status": "fourteen_original_case_layout_public_component_passes_whole_cases_pending",
+      "runtime_commit": "a1bce140aeccf8999dcf42594592390b2438845c",
+      "runtime_changed": false,
+      "executions": 16,
+      "passed": 14,
+      "failed": 2,
+      "detail": "public_assertions_iteration4",
+      "limits": "Same-input/same-policy storage parity, held #323 strategy, eligible restored-work publication, actual hosted283 composition and final shared/full validation remain independent mandatory gates."
     }
   },
   "remaining_original_work": [
-    "Complete original shared export/history and mixed standard-mode public retrieval parity; all recorded component evidence remains partial",
-    "Public recovered processing/publication and usable surviving-memory gates remain held by #323",
-    "Actual #283 hosted recovery capability composition with the now-implemented bound same-lineage PostgreSQL restore API",
-    "Remaining EM01-EM08/shared scenario harness closure using unchanged original cases and verified real dependencies",
-    "Saved fixed-clock standard-mode public retrieval comparison: blocked by held #323",
-    "Full suite/package/simulation/CI and root review/PR/delivery remain mandatory"
+    "Original same-sanitized-input/same-policy fixed-clock standard parity and #327 frozen24-query storage-parity plus separate24 sealed-behavior gates; EM07 legacy-to-sealed observations do not substitute.",
+    "Eligible restored pending-work successful processing/publication integration remains pending; prior no-send/consumed-allowance/deadline component stays unchanged.",
+    "Actual #283 hosted recovery capability composition with the bound same-lineage PostgreSQL restore API.",
+    "Remaining original EM01-EM08/shared scenario harness closure; fourteen public portability component passes do not establish whole-case acceptance.",
+    "Held #323 third classifier correction and original22+3 regression reruns require USER approval; unresolved native SIGABRT has no generic close workaround.",
+    "Required final full suite/package/simulation/CI, root-coordinated review, PR and normal delivery remain mandatory."
   ],
   "remaining_key_rotation_recovery_inventory": {
     "source_revision": "42f87e07dcbf91d92ba3dee58d167454bd1ad13e",
@@ -2244,7 +2509,8 @@
     },
     "EM02": {
       "reuse": "Reviewed #321 exact context/version/purpose tamper and wrong-key controls; current #326 source/format/restoration refusal evidence remains recorded above.",
-      "pending": "Three-layout exported context/swap component passed; public protected-read and whole shared EM02 gates remain pending."
+      "pending": "Three-layout exported context/swap component passed; public protected-read and whole shared EM02 gates remain pending.",
+      "public_iteration4": "Three-layout actual public read_source swap refusal/intact positive now passed; complete shared EM02 gate remains pending."
     },
     "EM03": {
       "reuse": "Reviewed #321 protect/write failure controls; #326 source, protected-format and migration interruption/commit/publication checks preserve actual storage evidence.",
@@ -2265,7 +2531,8 @@
     },
     "EM05": {
       "reuse": "#326 actual CLI evidence/key-loss/recovery-export/import/selected-unlock/default-export cases: directory and pack in preserved 11-pass/1-fail composite; corrected PostgreSQL case passed separately. #321 wrong recovery-passphrase and native custody evidence retained.",
-      "pending": "Separate admitted rows remain stored; public usable-memory validation is held by #323. NativeDouble is not fresh OS custody evidence; existing Windows/Linux platform limits remain."
+      "pending": "Separate admitted rows remain stored; public usable-memory validation is held by #323. NativeDouble is not fresh OS custody evidence; existing Windows/Linux platform limits remain.",
+      "public_iteration4": "Three-layout actual public admitted-memory retrieval during original key-loss interval now passed with no private lookup. NativeDouble/platform limitations and whole-case requirements remain."
     },
     "EM06": {
       "reuse": "#326 ordinary migration/export checks preserve no-private-lookup assertions; reviewed #321 separation/audit controls remain prior evidence.",
@@ -2273,11 +2540,13 @@
     },
     "EM07": {
       "reuse": "Verified direct4/mixed4, original legacy identity, interruptions, typed unavailable history, source preservation, historical reader34 paired outcomes and source8 controls.",
-      "pending": "Fixed-clock standard public parity and full scenario closure remain held; no component pass substitutes."
+      "pending": "Fixed-clock standard public parity and full scenario closure remain held; no component pass substitutes.",
+      "public_iteration4": "Four-layout same original mixed queries now prove legacy-to-sealed admitted-memory usability; exact observed differences retained. Standard same-policy parity remains unproven."
     },
     "EM08": {
       "reuse": "Verified default/active export, CLI migration/restore, directory-to-single-file and three-layout current-ledger negatives/native-copy positives.",
-      "pending": "Bound PostgreSQL engine variant now passed under actual lock-backed caller capability; actual hosted composition, public surviving-memory/publication and final shared gate remain pending."
+      "pending": "Bound PostgreSQL engine variant now passed under actual lock-backed caller capability; actual hosted composition, public surviving-memory/publication and final shared gate remain pending.",
+      "public_iteration4": "Three-layout logical/native plus directory-to-pack public survivor and bound PostgreSQL namespace public retrieval now passed. Actual hosted capability composition and successful publication remain pending."
     },
     "next_check_limit": "No additional independent check selected. Reuse verified rotation/export/context/effect/restored-work/bound-PG components; held #323, actual #283 composition and final root-coordinated full validation remain."
   },
@@ -2291,8 +2560,8 @@
           "AC3",
           "AC5"
         ],
-        "remaining": "Fixed-clock standard public mixed-memory parity, public usable survivors after restore/key loss, and public read/recovered-publication checks that enter held ReadContext.create/project_public_result/get_event_nodes.",
-        "constraint": "Two unsuccessful classifier correction cycles; no third repair or execution without USER approval. No generic native SIGABRT close rewrite."
+        "remaining": "Known all-owner/contributor/multi-scope classifier correction strategy and original22+3 regression reruns, with native SIGABRT unresolved.",
+        "constraint": "Two unsuccessful classifier correction cycles; third repair requires USER approval. Unchanged single-boundary public API use was separately authorized and fourteen selected portability components now pass. No broad execution ban is inferred."
       }
     ],
     "independent_implementation": [],
@@ -2307,7 +2576,7 @@
           "AC6"
         ],
         "remaining": "Planned frozen scenario harness consolidation remains pending actual shared/public/hosted adapter dependencies. Existing exact component evidence is retained; no new whole-case runner may relabel these partial results as passes.",
-        "dependency": "Held #323 public paths, actual #283 bound recovery composition and final #327 shared gate"
+        "dependency": "Known held #323 strategy, actual #283 bound recovery composition and final #327 shared gate; selected single-boundary public usability components now passed."
       }
     ],
     "design_held": [],
@@ -2316,7 +2585,7 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Push this coherent partial checkpoint and return terminal needs-human handoff to root. No additional independent case/full suite; root owns remaining dependency reconciliation and delivery. Do not start #325 impact projection in this task.",
+    "next_action": "Commit/push only this test/docs checkpoint and return terminal needs-human. No further independent cohort, runtime edit, full-suite/CI or PR authorized from this held stack.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
@@ -2331,7 +2600,8 @@
       "EM02": "695e61a16aa746d4e9cbbbe06db0cd90daaa02b2: three-layout exported context/actual unwrap component pass",
       "EM03": "1232838e34c83fc3ccbded98223f7bc530711724: three-layout actual publication fault/current-ledger serialization component pass",
       "restored_work": "5e0a28acf4703bd9c997a617e248b7f60a4fec5f: three-layout exact running/pending state, consumed allowance and original deadline component pass",
-      "bound_postgres_restore": "Current checkpoint: one actual PostgreSQL lock-backed current-catalog restore variant passed after first runtime correction; initial committed-before-error failure preserved."
+      "bound_postgres_restore": "Current checkpoint: one actual PostgreSQL lock-backed current-catalog restore variant passed after first runtime correction; initial committed-before-error failure preserved.",
+      "public_portability": "This iteration:14 passed/2 failed retained over16 executions; no runtime change from a1bce140. Actual public read_source, key-loss retrieve, native/logical restore retrieve, bound namespace retrieve and mixed legacy-to-sealed usability verified in the original selected layouts."
     },
     "integration_pending": [
       {
@@ -2341,7 +2611,207 @@
         "handoff": "Hosted #283 AC3/AC6 and engine ER07/EM08",
         "remaining": "Compose committed real hosted PostgresRecoveryLease with the typed bound target adapter in the actual hosted native/HTTP/MCP restore fixture. Engine lock-backed variant passed; hosted composition not claimed.",
         "limit": "Missing/empty current canonical target and exact receipt retry only; no automatic occupied-schema replacement requirement."
+      },
+      {
+        "criteria": [
+          "AC2",
+          "AC5"
+        ],
+        "handoff": "Original restored-work/publication gate",
+        "remaining": "Actual successful processing/publication after restore beyond existing no-send/consumed-allowance test; no claim based on public retrieval or snapshot-local state."
       }
     ]
+  },
+  "public_assertions_iteration4": {
+    "runtime_commit": "a1bce140aeccf8999dcf42594592390b2438845c",
+    "runtime_files_frozen": 226,
+    "initial_execution_budget": 14,
+    "initial_executed": 11,
+    "initial_passed": 10,
+    "initial_failed": 1,
+    "initial_unrun": 3,
+    "whole_case_passes_claimed": 0,
+    "components": {
+      "EM02": {
+        "passed": 3,
+        "layouts": [
+          "directory",
+          "pack",
+          "postgres"
+        ],
+        "pytest_seconds": 9.79,
+        "assertion": "Actual public read_source: same original diagnostic grant/private capability, swapped-key refusal and intact source positive."
+      },
+      "EM05": {
+        "passed": 3,
+        "layouts": [
+          "directory",
+          "pack",
+          "postgres"
+        ],
+        "pytest_seconds": 14.97,
+        "assertion": "Actual public retrieve during original key-loss interval returns both admitted memories without source-only content or native private lookup."
+      },
+      "ER07_EM08": {
+        "passed": 3,
+        "layouts": [
+          "directory",
+          "pack",
+          "postgres"
+        ],
+        "pytest_seconds": 8.86,
+        "assertion": "Actual public retrieve after original logical/native restores and directory-to-pack transfer returns packed survivor, excludes erased and post-snapshot records."
+      },
+      "bound_postgres": {
+        "passed": 1,
+        "layouts": [
+          "postgres"
+        ],
+        "pytest_seconds": 3.63,
+        "assertion": "Actual current MemoryWorkspace namespace public retrieve returns packed survivor after current recovery authority becomes active."
+      },
+      "EM07": {
+        "passed": 0,
+        "failed": 1,
+        "failed_layout": "directory",
+        "unrun_layouts": [
+          "pack",
+          "postgres",
+          "closed_fernet"
+        ],
+        "pytest_seconds": 4.71,
+        "assertion": "Initial strict equality of saved original three-query public selected IDs/order, packed IDs/order and full rendered context.",
+        "finding": "Selected and packed UUID/order match for all three queries (6 selected/4 packed each). Context differs only in added sealed-source guidance and removal of source-only/prohibited tail from the admitted oranges fact.",
+        "scope": "Original source explicitly has privacy_policy=None and zero admissions. Target is capture=full/evidence_use=diagnostics_only (sealed), with changed admitted projection. This failed stricter/mismatched comparison is not a same-input/same-policy storage-parity pass or evidence of an engine defect.",
+        "state": "Initial strict comparison remains failed; correction1 lifecycle comparison remains failed; second correction passed directory then original remaining layouts passed once.",
+        "final_status": "four_layout_public_legacy_to_sealed_usability_component_pass",
+        "final_passed_layouts": [
+          "directory",
+          "pack",
+          "postgres",
+          "closed_fernet"
+        ],
+        "final_pytest_seconds": {
+          "directory": 6.6,
+          "remaining_three": 35.38
+        }
+      }
+    },
+    "diagnosis_artifacts": [
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-after-public-retrieval.json",
+        "sha256": "df0ee8de2e4db1d4de7f10d0293ad2a186c93f6b3728d8fb90f4edd9468fe5a5",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-before-public-retrieval.json",
+        "sha256": "1eaa27576ccbb3fb97fd24c3a14f654733d82cd31aa0f8a1b0393ca907785b34",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-correction1-after-public-retrieval.json",
+        "sha256": "3c8c402e7749f5865d875df9fdb57b62142b60dab460003109bdb4f7ad8a85de",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-correction1-before-public-retrieval.json",
+        "sha256": "c0c981a3cfe196bcddc0f42b9f2f112d8a73237df9b093fbdc2b0ae12d849bd3",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-correction1-diagnosis.json",
+        "sha256": "be820f618a9ec73d909e9a79a762c9a41ae560f90ca4ce83a495c7f0a1d94ac9",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-correction1-lifecycle-source.json",
+        "sha256": "97376d2f7806e2263f22d86b3e5f8dfa85f9c876a3ac2ea51bc38e8d211969b6",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-correction1-public-retrieval-differences.json",
+        "sha256": "880a938c4a36567a2d5cd83eb7a6677aef6f0e2f14d6616b4e5d3184df4a6cb6",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-diagnosis.md",
+        "sha256": "24807573f1dbf95a0c4f5b66c9012ffb73b73decca96f393dab244d4f82b94d8",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-observed-diff.json",
+        "sha256": "076daf6312bbb1a1572d7e767d85a036c7468373efd20639ccac386e666bd134",
+        "capture": "after failed execution, not pre-run evidence"
+      },
+      {
+        "path": ".github-ticket-loop/privacy-326/public-assertions/em07-directory-policy-and-content.json",
+        "sha256": "65af2c0b4e19674ba8e21ec6273cbba99149f4dee2bd77e09f95ba479d856d40",
+        "capture": "after failed execution, not pre-run evidence"
+      }
+    ],
+    "limits": [
+      "Engine runtime frozen; no classifier repair or known held 22+3 rerun.",
+      "No native SIGABRT or known classifier exception occurred in these16 executions; this does not resolve the held #323 strategy.",
+      "Actual hosted283 concrete recovery integration, original same-policy #327 parity/sealed gates and full/package/simulation/CI/review/delivery remain mandatory.",
+      "Restored pending-work no-send/consumed-allowance case unchanged; no successful publication claim."
+    ],
+    "correction1": {
+      "scope": "Root-authorized assertion correction after cross-policy parity reconciliation; no runtime/fixture/query/policy change.",
+      "executions": 1,
+      "failed": 1,
+      "layout": "directory",
+      "pytest_seconds": 4.93,
+      "unrun_layouts": [
+        "pack",
+        "postgres",
+        "closed_fernet"
+      ],
+      "failure": "Public pre-maintenance lifecycle was tentative while returned target lifecycle is stable.",
+      "diagnosis": "Existing legacy retrieve schedules maintenance; close drains it before migration snapshot. Four old nodes were promoted in the source using real wall time. All 8 closed-source lifecycle/updated_at values match the export. Runtime/query privacy clock does not control legacy maintenance clock.",
+      "state": "Failed execution preserved; source maintenance boundary reconciled explicitly before second test-only correction."
+    },
+    "correction2": {
+      "scope": "Only lifecycle_state and updated_at compare to the existing closed-source before snapshot, actual migration input; every other assertion retained.",
+      "directory_passed": 1,
+      "remaining_passed": 3,
+      "directory_pytest_seconds": 6.6,
+      "remaining_pytest_seconds": 35.38,
+      "runtime_changed": false,
+      "claim": "Public legacy-to-sealed memory usability; no same-policy parity claim."
+    },
+    "final_accounting": {
+      "case_layout_executions": 16,
+      "passed": 14,
+      "failed_preserved": 2,
+      "unique_original_case_layouts": 14,
+      "original_case_layouts_with_current_component_pass": 14,
+      "remaining_unrun_in_this_selection": 0,
+      "correction_attempts": 2,
+      "unsuccessful_correction_cycles": 1,
+      "whole_case_passes_claimed": 0
+    },
+    "passing_snapshot_index": {
+      "path": ".github-ticket-loop/privacy-326/public-assertions/em07-passing-artifacts.json",
+      "sha256": "e33a5e78c6fff86c1cd5e03b7ca95f2141143524876d050b114413efbf9d5229",
+      "capture": "after execution; complete raw response/context snapshots and exact differences, not pre-run evidence"
+    },
+    "final_observation": "All12 EM07 query/layout pairs retain6 selected and4 packed IDs/order. Context equality is false and preserved; original declared admitted records, semantics, evidence references and clocks remain usable, sealed availability explicit. Closed-source lifecycle/update instants preserved.",
+    "final_integrity": {
+      "evidence": "public-checkpoint-integrity",
+      "result": "passed",
+      "elapsed_seconds": 0.296,
+      "script": ".github-ticket-loop/privacy-326/verify_public_checkpoint.py",
+      "script_sha256": "7f55cc0940550f9d53f46fca05a087053f6017776bc8023d8f1da9c26d090b6e",
+      "script_hash_capture": "after run; script unchanged from invocation",
+      "checks": [
+        "all226 runtime hashes unchanged",
+        "only5 authorized files changed",
+        "pending-work no-send/allowance function unchanged",
+        "original migration fixture and all frozen case objects unchanged",
+        "current3 test files match their corresponding passing source manifests",
+        "all public execution logs/source-manifest hashes retained",
+        "git diff --check"
+      ]
+    }
   }
 }

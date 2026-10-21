@@ -155,11 +155,26 @@ async def _copied_rows(config):
         return [conn.execute(sql).fetchall() for sql in statements]
 
 
-async def _assert_survivor(engine, owner, erased_id, survivor_id, survives, evidence):
+async def _assert_survivor(engine, owner, erased_id, survivor_id, survives, evidence, *,
+                           retrieve=None, unavailable_ids=()):
     assert await engine._graph_store.get_node(erased_id, include_superseded=True) is None
     assert (await engine._graph_store.get_node(survivor_id)).content == "Mara prefers tea."
     assert (await engine.inspect_source(survives, user_id=owner)).state == "sealed"
     assert (await engine._privacy.repository.get(survives, user_id=owner)).evidence == evidence
+    # Public usability is separate from the retained storage/availability checks.
+    retrieve = retrieve or engine.retrieve
+    response = await asyncio.wait_for(retrieve("Mara prefers tea.", user_id=owner,
+        scope=engine._privacy.default.scope, reference_time=engine._privacy.require_runtime().clock(),
+        include_cross_scope=False), 20)
+    result_ids = {str(item.node.id) for item in response.results}
+    packed_ids = {str(item.node.id) for section in response.bundle.sections.values() for item in section}
+    assert survivor_id in result_ids and survivor_id in packed_ids
+    assert "Mara prefers tea." in response.bundle.render()
+    denied_ids = {erased_id, *unavailable_ids}
+    assert not denied_ids.intersection(result_ids | packed_ids)
+    assert not denied_ids.intersection(str(item.node.id) for item in response.cross_scope_hints)
+    assert "Mara likes oranges." not in response.bundle.render()
+    assert "Mara paints murals." not in response.bundle.render()
 
 
 @pytest.mark.parametrize("layout", LAYOUTS)
@@ -271,6 +286,19 @@ async def test_EM02_exported_context_and_wrapped_key_refusals(tmp_path, layout, 
                             original_snapshot=record.snapshot, guard=selected_guard) as plaintext:
                             assert source_only[1].encode() in plaintext
                             assert source_only[0].encode() not in plaintext
+                    # The public API receives the same finite custody/grant;
+                    # no private capability is installed beyond this lease.
+                    with monkeypatch.context() as selected:
+                        selected.setattr(runtime.protector, "registry", protector.registry)
+                        if index == 0:
+                            with pytest.raises(PrivacyDenied, match="^privacy_capability_unavailable$"):
+                                await asyncio.wait_for(restored.read_source(identifier,
+                                    user_id=owner, scope=policy.scope, access=grant), 20)
+                        else:
+                            public = await asyncio.wait_for(restored.read_source(identifier,
+                                user_id=owner, scope=policy.scope, access=grant), 20)
+                            assert str(public.event_id) == identifier
+                            assert source_only[1] in public.content and source_only[0] not in public.content
                 assert not wrapper._private_keys
             assert lookups and all(name.startswith(str(evidence.ref.key_version) + ":") for name in lookups)
             assert native.values == native_before
@@ -578,7 +606,8 @@ async def test_bound_postgres_restore_current_catalog_and_recovery_lease(tmp_pat
         await primary.execute(f"UPDATE {table} SET state='active'")
         async with opened(config, initialize=False) as workspace:
             async with workspace.namespace("A", create=False) as memory:
-                await _assert_survivor(memory._engine, owner, erased_id, survivor_id, survives, original_evidence)
+                await _assert_survivor(memory._engine, owner, erased_id, survivor_id, survives, original_evidence,
+                    retrieve=memory.retrieve)
         assert {entry.version: entry for entry in custody.inventory()}[evidence.ref.key_version].managed_lineages == (namespace_id,)
         assert _hashes(archive) == archive_hashes and hashlib.sha256(artifact.read_bytes()).hexdigest() == artifact_hash
     finally:
@@ -666,7 +695,8 @@ async def test_same_lineage_restore_applies_current_ledger_before_recovery(tmp_p
         assert result["ledger_sequence"] > exported.ledger_checkpoint.sequence
         assert hashlib.sha256(artifact.read_bytes()).hexdigest() == original
         restored = await MemoryEngine.create(config, privacy_runtime=runtime, embedding_provider=runtime.embedder)
-        await _assert_survivor(restored, owner, erased_id, survivor_id, survives, evidence)
+        await _assert_survivor(restored, owner, erased_id, survivor_id, survives, evidence,
+            unavailable_ids=(source_only_id,))
         assert await restored._graph_store.get_node(source_only_id) is None
         if layout != "postgres":
             from prme.storage.erasure_indexes import _documents
@@ -688,7 +718,8 @@ async def test_same_lineage_restore_applies_current_ledger_before_recovery(tmp_p
         with pytest.raises(PrivacyPortabilityError, match="^privacy_destination_occupied$"):
             await restore_protected_export(artifact, config, privacy_runtime=runtime, embedding_provider=runtime.embedder)
         native_restored = await MemoryEngine.create(native_config, privacy_runtime=runtime, embedding_provider=runtime.embedder)
-        await _assert_survivor(native_restored, owner, erased_id, survivor_id, survives, evidence)
+        await _assert_survivor(native_restored, owner, erased_id, survivor_id, survives, evidence,
+            unavailable_ids=(source_only_id,))
         assert await native_restored._graph_store.get_node(source_only_id) is None
         if layout != "postgres":
             assert set(_documents(native_restored._lexical_index, set())) == {survivor_id}
@@ -705,7 +736,8 @@ async def test_same_lineage_restore_applies_current_ledger_before_recovery(tmp_p
             single = _local_target(source_config, tmp_path / "directory-to-single", single=True)
             await restore_protected_export(artifact, single, privacy_runtime=runtime, embedding_provider=runtime.embedder)
             native_restored = await MemoryEngine.create(single, privacy_runtime=runtime, embedding_provider=runtime.embedder)
-            await _assert_survivor(native_restored, owner, erased_id, survivor_id, survives, evidence)
+            await _assert_survivor(native_restored, owner, erased_id, survivor_id, survives, evidence,
+                unavailable_ids=(source_only_id,))
         assert _hashes(backup) == backup_hashes
         assert hashlib.sha256(artifact.read_bytes()).hexdigest() == original
     finally:

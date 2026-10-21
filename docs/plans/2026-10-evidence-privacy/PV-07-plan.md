@@ -993,3 +993,152 @@ All six original ACs remain partial, with zero whole frozen case passes. No new
 independent case or full/package/simulation/CI run is selected; root owns final
 review and delivery. The unrelated #282 impact-projection seam is not part of
 this implementation or acceptance scope.
+
+
+## Original public assertions, runtime frozen (2026-10-21)
+
+Root released lane 3 iteration 4 at exact a1bce140. The 226 runtime file
+hashes in 326-public-assertions-frozen-runtime.json match before changes. Own
+only test_privacy_migration.py, test_privacy_portability_cli.py,
+test_privacy_restore.py, and this plan/results pair. All six original ACs and
+shared case definitions remain unchanged. No runtime repair is authorized.
+
+The earlier blanket public-execution hold was too broad. prepare_retrieval
+currently does not forward scopes to ReadContext.create; eligibility relies on
+the original fixtures containing one actual owner/project/scope boundary. The
+bound PostgreSQL fixture has another catalog project with a sentinel only, in a
+separate schema. No fixture is simplified and no classifier is bypassed.
+
+Before coding, freeze these five selections (14 initial executions total):
+
+- EM02/AC3/AC5: test_EM02_exported_context_and_wrapped_key_refusals, directory,
+  pack, PostgreSQL (3). Add actual engine.read_source under the already selected
+  diagnostic grant and unlocked custody capability. Keep direct crypto checks;
+  swapped wrapping key refuses and intact control returns its original source.
+- EM05/AC3/AC6: test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure,
+  directory, pack, PostgreSQL (3). During the existing key-loss interval, actual
+  retrieve must return both original admitted memories and packed text, without
+  source-only/prohibited content or additional native private lookup. Keep all
+  existing CLI, key-loss, recovery and SQL assertions.
+- ER07/EM08/AC5: test_same_lineage_restore_applies_current_ledger_before_recovery,
+  directory, pack, PostgreSQL (3). Extend existing survivor assertions with
+  actual retrieve after each logical/native restore and existing directory-to-
+  pack transfer. Exact surviving node must occur in results and packed context;
+  erased and post-snapshot source-only node IDs must not occur.
+- Bound restore/AC5: test_bound_postgres_restore_current_catalog_and_recovery_lease
+  (1 PostgreSQL). Invoke the current namespace facade's retrieve after authority
+  becomes active; retain current catalog, other-project and receipt checks.
+- EM07/AC1/AC2: test_EM07_mixed_saved_family_identity_closure_interruptions,
+  directory, pack, PostgreSQL, closed Fernet (4). Freeze the existing runtime
+  clock to migration-v1.json's original clock before source setup/migration.
+  Save public standard retrieval for exactly tea/oranges/mornings before source
+  closure and again after destination publication but before erasure. Compare
+  exact result identity/order, packed identities/order and rendered context;
+  preserve the complete fixture, source snapshots and all existing assertions.
+  Do not normalize away differences or replace failed queries. This is not the
+  held #327 24-query baseline/parity capture.
+
+Run affected families sequentially, with a finite wait around each new public
+call. Preserve all output/source manifests and exact failures. If the known
+contributor/multi-scope failure or native SIGABRT appears, stop that affected
+strategy without runtime correction or fixture weakening. The original 22+3
+regression repair selection remains held. New test-assertion behavior retains
+the two-unsuccessful-correction cap; prior counts do not reset. Pending-work
+no-send/consumed-allowance tests stay unchanged and do not prove publication.
+Only scoped Ruff for these three changed test files and diff/runtime-hash checks
+are selected. Full/package/simulation/CI, hosted283 and original final gates
+remain mandatory and unrun here. No new cohort, model call or reviewer.
+
+
+The initial public selection ran 11 of 14 parameters: EM02 (3), EM05 (3),
+original logical/native restore (3) and bound PostgreSQL restore (1) passed.
+The first EM07 directory parameter failed strict full-context equality; the
+other three EM07 layouts remain unrun. All three original queries completed
+on both sides. Each preserved six selected and four packed UUIDs in exactly
+the same order. Every rendered context added the sealed-source limitation and
+replaced the oranges supporting paragraph with its admitted sentence; all
+other rendered bytes matched. All eight stored node IDs remained, with only
+that fact content changing. Original failure, raw outputs and after-run
+diagnosis hashes are retained; no correction has run.
+
+The earlier wording "public standard retrieval" did not describe this fixture's
+actual policy. It explicitly clears the legacy source privacy policy; the target
+uses capture=full/evidence_use=diagnostics_only (sealed). Target ingress and
+generated-output admission project the original fact, and ordinary sealed
+retrieval adds its existing availability guidance. Actual sanitizer reports
+have empty action_counts, so the removed tail is not proof of detector redaction.
+This is a failed stricter/mismatched comparison, not storage-only standard-mode
+parity: RFC-0019 lines 168-172 and frozen storage_parity require unchanged
+sanitized admitted input and policy. The original #327 same-policy 24-query
+gate remains mandatory and unrun. Root is reconciling the assertion scope; no
+normalization, fixture/query replacement, runtime edit or failure relabeling
+is authorized by this diagnosis. The ten passing parameters are not repeated.
+
+
+Root recorded the EM07 scope reconciliation before this first test-only
+correction. Preserve full response snapshots and exact selected/packed order
+and rendered-context differences as observations. Require the same original
+selected and packed identity sets, each original tea/oranges/mornings record
+selected and packed for its query, retained semantic/evidence/time fields, the
+original declared oranges statement without its source-only/private tail, and
+unchanged other admitted content. Check actual sealed availability and explicit
+source-unavailable guidance. This is public legacy-to-sealed usability evidence;
+it is not same-policy storage parity. No normalization or fixture/runtime edit.
+Run only test_EM07_mixed_saved_family_identity_closure_interruptions[directory]
+first; if it passes, run the original pack, postgres and closed_fernet parameters
+once. Keep the initial failure and three initially unrun layouts distinct.
+
+
+The first corrected directory assertion run failed (1 failed, 4.93 seconds
+pytest / 6.257 seconds wrapper). A generated node's public lifecycle changed
+from tentative to stable. The three other layouts remain unrun. Read-only
+inspection found four older nodes already promoted in the closed legacy source;
+all eight closed-source lifecycle/updated_at values equal the protected export.
+Legacy retrieve schedules opportunistic maintenance, which engine close drains
+before the existing migration snapshot. That maintenance uses real wall time,
+not the query/privacy clock. The added comparison therefore crossed a source
+maintenance boundary. No runtime edit or further correction has run; the one
+unsuccessful test-correction cycle and both failed executions are preserved.
+Root is adjudicating use of the existing closed-source migration snapshot for
+lifecycle preservation, retaining public source-time/validity/semantic checks
+and all raw pre/post observations. No maintenance disable or new fixture is
+proposed.
+
+
+Root verified the closed-source/export lifecycle evidence and released the
+second and last currently authorized test-only correction. Compare returned
+lifecycle_state and updated_at to the already captured closed-source before
+snapshot, with datetime instant equality across backend timezone formatting.
+Every other semantic/content/qualifier/evidence/availability assertion and raw
+public response difference remains unchanged. One directory execution first;
+only on success, the three originally unrun parameters once. Stop on any further
+unresolved failure; no third correction or layout exception without user
+approval. Runtime remains exact a1bce140.
+
+
+The second directory correction passed (1 passed, 6.60 seconds pytest / 8.224
+seconds wrapper). The three originally unrun pack, PostgreSQL and closed-Fernet
+parameters then passed once (3 passed, 35.38 seconds / 37.521 seconds wrapper),
+on unchanged runtime and test source. All original migration/source/history/
+erasure assertions remain. Complete raw response snapshots and exact context
+differences are copied into the ignored evidence directory and hash-indexed.
+Across all12 query/layout observations, six selected and four packed IDs/order
+match; rendered text differs and is retained. This does not prove standard-mode
+parity. The selected public requirements passed in14 unique case/layouts over
+16 executions, with both failed directory executions preserved. Two test-only
+corrections were attempted: the first unsuccessful, the second successful.
+
+The ten prior public component passes are reused without repetition. Final
+scoped integrity checks verify owned-file scope, all226 frozen runtime hashes,
+the unchanged no-send/allowance test, exact current test hashes against their
+passing evidence and diff whitespace. The existing Ruff passes cover the final
+three test files; no code changed after their relevant passing checks. No new
+cohort, full suite, package/simulation/CI, benchmark or reviewer is added.
+
+All six original ACs remain partial with zero whole frozen case passes. Remaining
+mandatory gates include original same-policy standard parity and #327's frozen
+quality sets, actual eligible restored-work publication, real hosted283 restore
+composition, shared scenario closure, final full/package/simulation/CI and root
+review/delivery. The narrow #323 third-repair/original22+3 hold remains; the
+previous blanket ban on unchanged public API use is superseded. This checkpoint
+contains tests and evidence only, with runtime frozen at a1bce140.

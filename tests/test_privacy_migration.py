@@ -1,5 +1,8 @@
 """EM07/AC2 real migration components; full public parity remains held on #323."""
 from dataclasses import replace
+from datetime import datetime
+import asyncio
+import difflib
 import hashlib
 import json
 from pathlib import Path
@@ -254,7 +257,22 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
     base = template._config
     await template.close()
     runtime = replace(runtime, retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    runtime.clock.now = datetime.fromisoformat(FIXTURE["clock"])
     owner = str(policy.owner_id)
+    async def public_retrieval(memory, label):
+        saved = {}
+        for query in FIXTURE["queries"]:
+            response = await asyncio.wait_for(memory.retrieve(query, user_id=owner,
+                scope=policy.scope, reference_time=runtime.clock(), include_cross_scope=False), 20)
+            assert response.results and response.bundle.included_count
+            saved[query] = {
+                "result_ids": [str(item.node.id) for item in response.results],
+                "packed_ids": [str(item.node.id) for section in response.bundle.sections.values() for item in section],
+                "context": response.bundle.render(),
+                "response": response.model_dump(mode="json"),
+            }
+        (tmp_path / (label + "-public-retrieval.json")).write_text(json.dumps(saved, indent=2) + "\n")
+        return saved
     local_layout = "directory" if layout == "closed_fernet" else layout
     async with fresh_config(base, tmp_path / "legacy", local_layout) as original, fresh_config(base, tmp_path / "migrated", local_layout, restore=True) as target:
         original = original.model_copy(update={"privacy_policy": None})
@@ -262,6 +280,7 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
             original = type(original).model_validate({**original.model_dump(), "encryption_enabled": True, "encryption_key": "passphrase:task-owned-migration-source"})
         async with MemoryEngine.open(original, embedding_provider=runtime.embedder) as source:
             direct, fact, entity, generated, visual, survivor = await mixed_legacy_family(source, runtime, owner)
+            before_retrieval = await public_retrieval(source, "before")
             if layout == "closed_fernet":
                 source._conn.execute("DELETE FROM vector_payloads")
         before = await _read_snapshot(original)
@@ -316,6 +335,52 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
         with pytest.raises(PrivacyPortabilityError):
             validate_export(broken)
         async with MemoryEngine.open(target, privacy_runtime=runtime, embedding_provider=runtime.embedder) as restored:
+            after_retrieval = await public_retrieval(restored, "after")
+            # This fixture changes legacy content/policy into sealed admitted
+            # memory. Preserve every observed difference; it cannot establish
+            # same-input/same-policy storage parity (the separate PV-11 gate).
+            observations = {}
+            for query in FIXTURE["queries"]:
+                prior, current = before_retrieval[query], after_retrieval[query]
+                observations[query] = {
+                    "before_result_ids": prior["result_ids"], "after_result_ids": current["result_ids"],
+                    "before_packed_ids": prior["packed_ids"], "after_packed_ids": current["packed_ids"],
+                    "context_diff": "".join(difflib.unified_diff(prior["context"].splitlines(True),
+                        current["context"].splitlines(True), fromfile="legacy", tofile="sealed")),
+                }
+            (tmp_path / "public-retrieval-differences.json").write_text(json.dumps(observations, indent=2) + "\n")
+            closed_source_nodes = {str(node.id): node for node in map(PgGraphStore._record_to_node, before.tables["nodes"])}
+            for query, required in zip(FIXTURE["queries"], (direct, fact, survivor), strict=True):
+                prior, current = before_retrieval[query], after_retrieval[query]
+                assert set(current["result_ids"]) == set(prior["result_ids"])
+                assert set(current["packed_ids"]) == set(prior["packed_ids"])
+                assert str(required.id) in current["result_ids"] and str(required.id) in current["packed_ids"]
+                prior_nodes = {item["node"]["id"]: item["node"] for item in prior["response"]["results"]}
+                current_nodes = {item["node"]["id"]: item["node"] for item in current["response"]["results"]}
+                for identifier, node in current_nodes.items():
+                    previous = prior_nodes[identifier]
+                    for field in ("user_id", "scope", "node_type", "epistemic_type", "source_type",
+                                  "event_time", "valid_from", "valid_to", "created_at", "evidence_refs"):
+                        assert node[field] == previous[field], (query, identifier, field)
+                    # Legacy retrieve schedules maintenance, drained on close.
+                    # Migration must preserve that actual closed-source state.
+                    assert node["lifecycle_state"] == closed_source_nodes[identifier].lifecycle_state.value
+                    assert datetime.fromisoformat(node["updated_at"]) == closed_source_nodes[identifier].updated_at
+                    expected = FIXTURE["admitted"][1] if identifier == str(fact.id) else previous["content"]
+                    assert node["content"] == expected, (query, identifier)
+                for field in ("subject", "predicate", "object", "polarity"):
+                    assert current_nodes[str(fact.id)]["metadata"][field] == prior_nodes[str(fact.id)]["metadata"][field]
+                for admitted in FIXTURE["admitted"]:
+                    assert admitted in current["context"]
+                assert "[2026-10-01 12:00]" in current["context"] and "[inferred]" in current["context"]
+                returned = json.dumps(current["response"])
+                assert FIXTURE["source_only"] not in returned and FIXTURE["prohibited"] not in returned
+                assert FIXTURE["source_only"] not in current["context"] and FIXTURE["prohibited"] not in current["context"]
+                availability = current["response"]["metadata"]["source_availability"]
+                assert availability and {item["state"] for item in availability} == {"sealed"}
+                limitation = current["response"]["metadata"]["source_limitation"]
+                assert "Source evidence is unavailable to this ordinary read." in limitation
+                assert current["context"].startswith(limitation + "\n")
             # Managed memory erasure after target publication, before job ack.
             await restored._privacy.erasure.request(ErasureRequest(request_id=uuid4(), node_ids=(generated[0][0].id,)), user_id=owner)
         result = await migrate_privacy_pack(original, target, **arguments, resume=True)
