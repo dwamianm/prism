@@ -287,6 +287,122 @@ async def test_EM02_exported_context_and_wrapped_key_refusals(tmp_path, layout, 
 
 
 @pytest.mark.parametrize("layout", LAYOUTS)
+async def test_restored_pending_work_keeps_deadline_budget_and_claim_fences(tmp_path, layout, analyzer, native):
+    """Pre-publication recovery only; no held public reader or model execution."""
+    from prme.privacy.admission import AdmissionCoordinator
+    from prme.privacy.capabilities import ProcessingAccess
+    from prme.privacy.journals import load_checkpoint
+    from prme.privacy.keys import StoredProcessingAuthorizer
+    from prme.privacy.sanitizer import DETECTOR_SECONDS, MAX_INPUT_BYTES, MAX_LEAVES, restore_budget
+    from prme.storage.privacy_export import read_protected_export
+    from tests.privacy_journal_support import processing_keys
+
+    engine, runtime, policy, custody, _, processing = await journal_engine(
+        tmp_path, layout, analyzer, processing_ceiling_seconds=180)
+    owner = str(policy.owner_id)
+    restored = None
+    try:
+        ids = [await engine.ingest(f"Mara likes tea. RESTORED_PENDING_{index}.", user_id=owner) for index in range(2)]
+        work = engine._event_store.extraction_work
+        original_claim = await work.claim(user_id=owner, event_id=ids[0], lease_seconds=86400)
+        first = await engine._privacy.repository.get(ids[0], user_id=owner)
+        assert original_claim.lease_expires_at == first.snapshot.processing_deadline
+        async with engine._privacy.guard(first.snapshot, "admission", processing=True, records=(first,)):
+            consumed = await engine._privacy.processing.begin(original_claim)
+        assert consumed.processing_attempt == original_claim.generation
+        assert await work.claim(user_id=owner, event_id=ids[1]) is None  # Retain queue order.
+        artifact = tmp_path / "pending-work.json"
+        await export_protected_pack(engine, artifact)
+        original_bytes = artifact.read_bytes()
+        bundle = read_protected_export(artifact)
+        originals = {str(row.event_id): row for row in bundle.admissions}
+        assert originals[ids[0]] == consumed and originals[ids[1]].processing_attempt == 0
+        exported_work = {str(row.event_id): row for row in bundle.work if row.kind == "extraction"}
+        assert [exported_work[event].status for event in ids] == ["running", "pending"]
+        assert exported_work[ids[0]].work_order < exported_work[ids[1]].work_order
+        config = engine._config
+        await engine.close()
+        engine = None
+        native_reads = native.reads
+        async with fresh_config(config, tmp_path / "restored-work", layout, restore=True) as target:
+            await restore_protected_export(artifact, target, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            restored = await MemoryEngine.create(target, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+            roundtrip = tmp_path / "restored-pending-work.json"
+            await export_protected_pack(restored, roundtrip)
+            after = read_protected_export(roundtrip)
+            assert after.admissions == bundle.admissions
+            expected = tuple(row.model_copy(update={"generation": row.generation + 1,
+                "lease_expires_at": None, "status": "pending" if row.status == "running" else row.status})
+                if row.kind == "extraction" else row for row in bundle.work)
+            assert after.work == expected
+            assert native.reads == native_reads
+            work = restored._event_store.extraction_work
+            runtime.protector.authority.processing = StoredProcessingAuthorizer(restored._privacy.repository, work)
+            with pytest.raises(PrivacyDenied, match="^privacy_processing_unavailable$"):
+                await restored._privacy.processing.begin(original_claim)
+            replacement = await work.claim(user_id=owner, event_id=ids[0], lease_seconds=86400)
+            assert replacement.generation == original_claim.generation + 2
+            assert replacement.attempts == original_claim.attempts + 1
+            assert replacement.lease_expires_at == consumed.snapshot.processing_deadline
+            with pytest.raises(PrivacyDenied, match="^privacy_processing_unavailable$"):
+                async with restored._privacy.guard(consumed.snapshot, "admission", processing=True, records=(consumed,)):
+                    await restored._privacy.processing.begin(replacement)
+            assert await restored._privacy.repository.get(ids[0], user_id=owner) == consumed
+            async with restored._privacy.guard(consumed.snapshot, "admission", processing=True, records=(consumed,)):
+                assert await restored._privacy.processing.terminate(replacement, state="cancelled")
+            assert not await work.retry(ids[0], user_id=owner)
+
+            original = originals[ids[1]]
+            claim = await work.claim(user_id=owner, event_id=ids[1], lease_seconds=86400)
+            assert claim.generation == exported_work[ids[1]].generation + 2
+            assert claim.attempts == exported_work[ids[1]].attempts + 1
+            assert claim.lease_expires_at == original.snapshot.processing_deadline
+            async with restored._privacy.guard(original.snapshot, "admission", processing=True, records=(original,)):
+                reserved = await restored._privacy.processing.begin(claim)
+            assert reserved.processing == original.processing and reserved.snapshot == original.snapshot
+            access = ProcessingAccess(work_id=original.event_id, work_generation=claim.generation,
+                lease_deadline=claim.lease_expires_at, processing_deadline=original.snapshot.processing_deadline,
+                claimed_event_ids=(original.event_id,))
+            def selected_guard():
+                return restored._privacy.guard(original.snapshot, "disclosure", processing=True, records=(original,))
+            with processing_keys(runtime, custody, processing):
+                async with runtime.protector.open_held(original.processing, access,
+                    original_snapshot=original.snapshot, guard=selected_guard) as raw:
+                    source_bytes, checkpoint = load_checkpoint(raw)
+                    source = AdmissionCoordinator.load_source(source_bytes)
+                    assert checkpoint is None
+                    assert (source.source_id, source.representation_id) == (original.source_id, original.representation_id)
+                    continuation = source.continuation
+                    assert 0 < continuation.input_bytes < MAX_INPUT_BYTES
+                    assert 0 < continuation.leaves < MAX_LEAVES
+                    assert 0 <= continuation.detector_nanoseconds < int(DETECTOR_SECONDS * 1e9)
+                    budget = restore_budget(continuation)
+                    assert budget.operation_id == continuation.operation_id
+                    assert budget.state.continuation() == continuation
+                # No subsequent claim or restore grants a new original lifetime.
+                runtime.clock.now = original.snapshot.processing_deadline
+                assert await restored._privacy.processing.expire(user_id=owner) == 1
+                with pytest.raises(PrivacyDenied):
+                    await runtime.protector.open(original.processing, access,
+                        original_snapshot=original.snapshot, guard=selected_guard)
+            ended = await restored._privacy.repository.get(ids[1], user_id=owner)
+            assert ended.snapshot == original.snapshot and ended.processing is None
+            assert ended.processing_state == "expired"
+            assert await work.claim(user_id=owner, event_id=ids[1]) is None
+            assert not await work.retry(ids[1], user_id=owner)
+            assert not await work.renew(claim, lease_seconds=86400)
+            assert not runtime.extractor.sends and not runtime.embedder.sends
+            assert artifact.read_bytes() == original_bytes
+            await restored.close()
+            restored = None
+    finally:
+        if restored is not None:
+            await restored.close()
+        if engine is not None:
+            await engine.close()
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
 async def test_same_lineage_restore_applies_current_ledger_before_recovery(tmp_path, layout, analyzer, native):
     engine, runtime, policy, *_ = await journal_engine(tmp_path, layout, analyzer)
     owner = str(policy.owner_id)

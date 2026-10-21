@@ -890,3 +890,36 @@ pytest; 4.478 seconds captured command). The fault, lease serialization and
 post-acknowledgement refusal assertions all executed; no runtime repair was
 needed. Exact log/source hashes are in PV-07-results.json. Retained exports and
 PostgreSQL server/WAL scan limits remain explicit, with no whole-case claim.
+
+## Remaining restored pending-work component
+
+Original AC2/AC5 require retained processing lifetimes and honest recovery of
+work. Existing terminal-history coverage verified cancelled/expired slots but
+not restored running/pending claims or consumed reservations. Change only
+`tests/test_privacy_restore.py` and this plan/results pair. The finite selection
+is `test_restored_pending_work_keeps_deadline_budget_and_claim_fences`, exactly
+the same directory/single-file/PostgreSQL layouts (three executions).
+
+Queue two real sources. The first has a live SQL claim and a consumed actual
+ProcessingJournal.begin reservation; the second remains pending. Export and
+restore preserve exact admission snapshots, opaque processing envelopes,
+original deadlines, queue order, attempts and reservation state. Each imported
+generation advances exactly once and leases clear; running becomes pending.
+The original claim refuses, and a fresh claim cannot replenish the consumed
+reservation. Explicit terminal cancellation frees the next source, whose new
+claim remains capped by its original deadline. Its processing payload opens
+through actual current policy/ledger and StoredProcessingAuthorizer checks,
+and its authenticated finite budget remains the saved continuation rather than
+a fresh allowance. Original-deadline expiry removes the slot and denies later
+claim/retry/access. No extraction/model send, public publication or held #323
+path executes; this is the independent pre-publication component only. No
+runtime edit or repeat of the terminal/alias/primitive cohort is planned.
+
+The single finite restored-work run passed all three layouts (4.98 seconds
+pytest; 5.941 seconds captured command), with no runtime change or correction.
+Exact log/source hashes and pre-publication limits are in PV-07-results.json.
+The remaining public serving/publication paths and shared frozen harness depend
+on held #323 or the committed/verified #283 recovery contract; no further
+independent component cohort is selected. Final full/package/simulation/CI and
+review/delivery remain required and root-coordinated. All six original ACs stay
+partial and zero whole frozen case passes are claimed.

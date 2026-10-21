@@ -1553,6 +1553,43 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000734098351-export-effect-initial-source.json",
       "source_manifest_sha256": "79aeb902780163a61b58818f0da92fb73e0dab11bba65c6f8a3d32bceb0e3f82",
       "tracked_diff_sha256": "728cc17b4b957f5f30e188ab175745f4bd67314a4c91a11c14ddaea57cc23bfa"
+    },
+    {
+      "name": "restored-pending-work-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "tests/test_privacy_restore.py"
+      ],
+      "started_at": "2026-10-21T00:09:29.304511+00:00",
+      "elapsed_seconds": 0.066,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000929304511-restored-pending-work-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "1232838e34c83fc3ccbded98223f7bc530711724",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000929304511-restored-pending-work-static-source.json",
+      "source_manifest_sha256": "fa53f8cde70fc87681877da35ffb8d22a54bfebfbcff26dea402a4bddeb56770",
+      "tracked_diff_sha256": "74295fa1395232ac2679c90d47e734d4e13d74e4afe2b219ebbc022969ad9bdb"
+    },
+    {
+      "name": "restored-pending-work-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_privacy_restore.py::test_restored_pending_work_keeps_deadline_budget_and_claim_fences",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-21T00:09:32.445960+00:00",
+      "elapsed_seconds": 5.941,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T000932445960-restored-pending-work-initial.log",
+      "log_sha256": "99f8b38f15aba2f6d7a2eaa68ccfcf71c555a5c3ef2ff03fad08587910a5c06a",
+      "head": "1232838e34c83fc3ccbded98223f7bc530711724",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T000932445960-restored-pending-work-initial-source.json",
+      "source_manifest_sha256": "fa53f8cde70fc87681877da35ffb8d22a54bfebfbcff26dea402a4bddeb56770",
+      "tracked_diff_sha256": "74295fa1395232ac2679c90d47e734d4e13d74e4afe2b219ebbc022969ad9bdb"
     }
   ],
   "repair_cycles": {
@@ -1995,6 +2032,47 @@
       ],
       "test_sha256": "0fa1a11fe246b30f8d0be3cc658cbcd7995a16faa0d13d4cceaa11deb932f8b3",
       "limits": "Scheduling barriers and file fault are explicit controls around real guards/ledger/storage. This does not revoke retained exports or scan PostgreSQL server/WAL files anew; reviewed #321 primitive evidence remains separate. No whole EM03/public-reader pass."
+    },
+    "restored_pending_work": {
+      "requirements": [
+        "AC2",
+        "AC5"
+      ],
+      "frozen_references": [
+        "EM08",
+        "ER07",
+        "AP06"
+      ],
+      "status": "three_layout_component_pass_whole_case_pending",
+      "test": "tests/test_privacy_restore.py::test_restored_pending_work_keeps_deadline_budget_and_claim_fences",
+      "files": [
+        "tests/test_privacy_restore.py",
+        "docs/plans/2026-10-evidence-privacy/PV-07-plan.md",
+        "docs/plans/2026-10-evidence-privacy/PV-07-results.json"
+      ],
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "executions": 3,
+      "passed": 3,
+      "failed": 0,
+      "evidence": [
+        "restored-pending-work-initial"
+      ],
+      "pytest_seconds": 4.98,
+      "runtime_changes": false,
+      "corrections": 0,
+      "assertions": [
+        "Real running/pending extraction work restores with exactly generation+1, lease cleared, running to pending; attempts/order/other work and exact admission/envelope unchanged",
+        "Original claim is stale; fresh re-claim cannot replenish consumed ProcessingJournal.begin allowance",
+        "Explicit cancellation frees queue; eligible source has a new claim bounded by its original processing deadline",
+        "Actual current policy/ledger/StoredProcessingAuthorizer-gated processing decrypt retains original authenticated nonzero finite continuation",
+        "At original deadline actual expiry removes slot; claim/retry/renew/decrypt denied; no model sends and original artifact unchanged"
+      ],
+      "test_sha256": "d91f9743f2ef0cda70aad96415b2c928e4c555bf5053b996f00f5871f1088a14",
+      "limits": "Only pre-publication work lifecycle is exercised. Public surviving processing/publication remains held by #323. No whole frozen case or new native-platform claim; no repeated terminal/alias/primitive cohort."
     }
   },
   "remaining_original_work": [
@@ -2047,9 +2125,9 @@
     },
     "EM08": {
       "reuse": "Verified default/active export, CLI migration/restore, directory-to-single-file and three-layout current-ledger negatives/native-copy positives.",
-      "pending": "Bound PostgreSQL workspace destination capability remains design-only; recovered pending work/public survivor gates and protected journal-family coverage remain open."
+      "pending": "Bound PostgreSQL workspace recovery capability/API and complete public surviving-memory/publication/final shared gate remain open. Terminal/alias history and independent pending-work lifecycle now have their separately recorded three-layout component evidence."
     },
-    "next_check_limit": "Only the independent original EM04 three-layout sequence is selected now. No repeated passing cohort, broad suite, held classifier or hosted recovery implementation."
+    "next_check_limit": "Original independent EM04, exported EM02, export-effect EM03 and restored-work components are recorded. Do not repeat them absent an affected change. Bound PG recovery/public readers and final shared harness await real dependencies/root release."
   },
   "current_remaining_inventory": {
     "original_acceptance": "All six original ACs remain partial; zero whole frozen case passes. Additional findings are not new criteria.",
@@ -2069,13 +2147,6 @@
     "independent_missing_components": [
       {
         "criteria": [
-          "AC2",
-          "AC5"
-        ],
-        "remaining": "Typed restored work retains original finite deadlines/generations and unavailable history before any actual surviving-work publication. Public processing paths that reach held readers remain gated."
-      },
-      {
-        "criteria": [
           "AC1",
           "AC2",
           "AC3",
@@ -2083,7 +2154,8 @@
           "AC5",
           "AC6"
         ],
-        "remaining": "Consolidate exact fixture/layout/subcheck evidence through the planned frozen scenario harness without relabeling partial/mocked results as full passes."
+        "remaining": "Planned frozen scenario harness consolidation remains pending actual shared/public/hosted adapter dependencies. Existing exact component evidence is retained; no new whole-case runner may relabel these partial results as passes.",
+        "dependency": "Held #323 public paths, #283 committed bound recovery guard/API and final #327 shared gate"
       }
     ],
     "design_held": [
@@ -2101,7 +2173,7 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Only the original restored-pending-work deadline/claim component remains independently selectable; freeze exact missing assertions before executing. Bound PG recovery/public surviving publication and final whole-case harness remain pending their real dependencies.",
+    "next_action": "No additional independent component selection. Await actual #283 committed recovery/effect capability evidence and root-bounded API reconciliation, plus USER release of the held #323 strategy. Required final validation remains root-coordinated; no full/package/CI or public-reader rerun now.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
@@ -2111,6 +2183,11 @@
       "component": "Existing terminal-processing and protected alias proposal/review export dispatch and exact edge proof",
       "evidence": "Same existing export family three-layout component passed; original failed stricter generation expectation retained.",
       "limit": "No entire journal/publication replay claim; protected history and full public parity gates remain independently scoped."
+    },
+    "independent_component_checkpoints": {
+      "EM02": "695e61a16aa746d4e9cbbbe06db0cd90daaa02b2: three-layout exported context/actual unwrap component pass",
+      "EM03": "1232838e34c83fc3ccbded98223f7bc530711724: three-layout actual publication fault/current-ledger serialization component pass",
+      "restored_work": "Current test/docs checkpoint: three-layout exact running/pending state, consumed allowance and original deadline component pass"
     }
   }
 }
