@@ -77,6 +77,12 @@ These do not ship in the wheel and change no behavior.
   questions and a gate fixed before the run (`benchmarks/graph_oracle/GATE.md`). The gate failed on
   two of six conditions; the result is in `BENCHMARKS.md`.
 
+- Scale test for the typed walk (`python -m benchmarks.graph_oracle scale`, tooling only; part of
+  dwamianm/prism#351): the four fixtures combined for one owner and padded to 500, 2,000 and 10,000
+  memories with ordinary conversation turns or renamed look-alike copies, a gate fixed before the run
+  (`benchmarks/graph_oracle/SCALE.md`), an embedding cache and the walk's latency on DuckDB and PostgreSQL.
+  The graph's advantage did not grow with store size; the result is in `BENCHMARKS.md`.
+
 ### Upgrade notes
 
 - One change since 0.16.0a6, and it is not a default: the settings fingerprint of

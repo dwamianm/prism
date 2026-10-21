@@ -3950,6 +3950,124 @@ and a walk. A cheaper route to the same list questions (the memory that names th
 cities is found when "They" is resolved to the people at store time, #347) is worth
 comparing before any port.
 
+#### Scale test: does the graph's advantage grow with store size?
+
+Part of #351; the gate is [`SCALE.md`](benchmarks/graph_oracle/SCALE.md), committed before any
+padded store was built. The hypothesis the owner asked to test: the graph's value shows when a
+store is large and the vector list is crowded, which fixtures of 46 to 75 memories cannot show.
+
+```sh
+uv run --extra postgres python -m benchmarks.graph_oracle scale --out /tmp/scale \
+  --embedding-cache /tmp/scale/vectors.pkl --database-url <postgresql url>
+```
+
+**The stores.** One owner. The core is the four fixtures combined (store-v1, defects-v1, chat-v1,
+draw2-v1: 189 memories, ids prefixed with the fixture, the four gold graphs kept). They share 25
+names (Alex and Jordan, Dana, Sam, Priya, Northwind, Denver, Japan, Tokyo, Postgres, among
+others), which stay separate entities with the same name, so a question naming one seeds all of
+them: extra natural distractors for both channels. Combining them costs the baseline a lot before
+any padding: 128 of the 204 questions in the top 3 (62.7 percent), against 164 (80.4 percent) when
+each fixture is its own store, because the fixtures repeat topics (two Japan trips, two
+Northwinds) and a question's answer id names one fixture's memory. The core is the reference for
+every delta below, so that offset does not enter the advantage.
+
+The core is padded in nested steps to 500, 2,000 and 10,000 memories with two kinds of distractor,
+reported separately:
+
+- **Conversation**: ordinary turns of real conversations, no graph edges: the 5,882 LoCoMo turns in a
+  fixed shuffled order, then, because LoCoMo has fewer turns than the 10,000 size needs, 3,929
+  LongMemEval user turns (the 500 and 2,000 pads are LoCoMo only).
+- **Look-alike**: renamed copies of the core (74 clones; every person, place, organization, project,
+  pet and book renamed from fixed pools, deterministic, no model), so sentence shapes and topics match
+  the questions' and names do not. 4,052 clone memories that substitution left identical to an earlier
+  text (memories with no name in them) were dropped. The clones have gold edges too (direct edges), which
+  the walk cannot reach because no question names a clone's entities: they only enlarge the edge table.
+
+Real local embeddings for everything: 19,081 distinct texts in 82 seconds on a laptop (4.3 ms each,
+`BAAI/bge-small-en-v1.5` through ONNX), kept in a cache so every store holds the same vectors. Storing
+the 9,811 padding memories took about 0.1 second each with indexing (17 minutes for conversation, 20 for look-alikes).
+The baseline is taken from a store with no graph in it; the walk (one SQL statement, caps as in #362)
+runs in separate graph stores on DuckDB and PostgreSQL. The router and the cues are as committed in
+#362; the 204 questions are the 53 original items, the 86 of `blind-v1` and the 65 of `blind-v2`,
+with their tags and answer ids. Nothing was tuned at any size.
+
+Pooled over the 204 questions: top 3 / top 5 / rank 1, MRR.
+
+| Distractors | Memories | Baseline | Routed graph | Advantage (points) | Baseline retrieve p50 / p95 ms |
+|---|---:|---|---|---:|---|
+| conversation | 189 | 128/144/80, 0.54 | 142/158/86, 0.58 | +6.9 | 51 / 77 |
+| | 500 | 131/146/85, 0.55 | 145/159/91, 0.59 | +6.9 | 135 / 190 |
+| | 2,000 | 134/143/81, 0.54 | 147/157/87, 0.58 | +6.4 | 223 / 404 |
+| | 10,000 | 133/141/86, 0.55 | 146/156/89, 0.59 | +6.4 | 261 / 644 |
+| look-alike | 189 | 128/144/80, 0.54 | 142/158/86, 0.58 | +6.9 | 56 / 105 |
+| | 500 | 124/140/85, 0.53 | 138/154/90, 0.58 | +6.9 | 132 / 205 |
+| | 2,000 | 120/131/93, 0.54 | 132/144/94, 0.58 | +5.9 | 236 / 432 |
+| | 10,000 | 118/128/99, 0.55 | 130/141/100, 0.58 | +5.9 | 287 / 710 |
+
+Top 3 of the baseline by type, and routed minus baseline in brackets (the cue words derived from the
+vocabulary; the hand written cues give the same pooled numbers):
+
+| Type (n) | Conversation: core / 500 / 2,000 / 10,000 | Look-alike: core / 500 / 2,000 / 10,000 |
+|---|---|---|
+| lookup (76) | 52 (+2) / 53 (+2) / 54 (+2) / 54 (+2) | 52 (+2) / 51 (+2) / 51 (+2) / 50 (+2) |
+| list (27) | 10 (+12) / 11 (+12) / 11 (+11) / 11 (+11) | 10 (+12) / 10 (+12) / 12 (+10) / 12 (+10) |
+| multi-hop (25) | 13 (0) / 14 (0) / 14 (0) / 13 (0) | 13 (0) / 9 (0) / 9 (0) / 7 (0) |
+| temporal (21) | 19 (-1) / 19 (-1) / 19 (-1) / 19 (-1) | 19 (-1) / 18 (-1) / 17 (-1) / 18 (-1) |
+| correction (19) | 11 (0) / 11 (0) / 12 (0) / 13 (0) | 11 (0) / 13 (0) / 9 (0) / 9 (0) |
+| negation (23) | 14 (0) / 14 (0) / 15 (0) / 14 (0) | 14 (0) / 14 (0) / 13 (0) / 13 (0) |
+| aggregation (13) | 9 (+1) / 9 (+1) / 9 (+1) / 9 (+1) | 9 (+1) / 9 (+1) / 9 (+1) / 9 (+1) |
+
+The +2 for lookups and the -1 for temporal questions are the router's mistakes (5 questions of those types
+go to the graph at every size); no type loses more than one question at any size.
+
+**Verdict against the gate: fails, for both kinds** (derived and hand cues alike).
+
+| Condition | Conversation | Look-alike |
+|---|---|---|
+| 1 advantage at 2,000 at least 8 points larger than at the core size | -0.5 points, fails | -1.0 points, fails |
+| 2 no type loses more than 1 question at any size | worst loss 1, holds | worst loss 1, holds |
+| 3 questions routed to the text ranking equal the baseline | 0 differ, holds | 0 differ, holds |
+
+**Does a crowded store create room for the graph, does the graph use it, or do both degrade
+together?**
+
+- **Ordinary conversation turns create no room.** The baseline does not degrade from 189 to 10,000
+  memories (128, 131, 134, 133 in the top 3; the extra text even sharpens the lexical channel). The
+  advantage is flat (+6.9 to +6.4). Real conversations about other things do not crowd a question about
+  a trip or a job.
+- **Look-alikes create room, in the questions the router does not send to the graph.** The baseline
+  loses 10 of 204 questions in the top 3 by 10,000 memories (5 points; 16 in the top 5, 8 points), half
+  of it in multi-hop questions (13 to 7 of 25), then corrections (11 to 9), two lookups, a negation and a
+  temporal question. The routed graph sends those to the text ranking, so it loses them too, and its
+  advantage shrinks by one point (+6.9 to +5.9) because lists are the only type it moves, and the
+  baseline's list score rose by two (10 to 12). Both degrade together.
+- **The walk itself does not degrade with size.** Its list is size invariant (information, not a
+  condition): for every question tagged list, multi-hop or aggregation the walk gives the same 21 (once 22), 13 and
+  10 questions in the top 3 at every size and kind, because its seeds are names and clones do not carry
+  the questions' names. A router that knew the tags would have an advantage over the baseline of 12, 16,
+  14 and 16 questions (5.9, 7.8, 6.9 and 7.8 points) at the four look-alike sizes: a rise of one point from
+  the core to 2,000, far short of the gate's 8, and no such router exists (the committed router sends 2 of
+  the 25 multi-hop questions to the graph).
+- **The sizes real users will have (hundreds to thousands) are not where the graph helps most.** The
+  advantage is highest at the core and at 500 memories (+6.9) and falls slightly at 2,000 and 10,000 (+6.4
+  and +5.9); there is no peak in the thousands.
+- **Latency.** The walk's median and 95th percentile (ms) after an ANALYZE on PostgreSQL: PostgreSQL 3 / 4 to 6
+  at every size and kind; DuckDB 10 to 11 / 14 to 15 on conversation padding at every size, 11 / 16 at the
+  core and 28 / 41 at 10,000 with the look-alikes' 74 gold graphs in the table. The text ranking's
+  `retrieve()` itself grows with the store (about 50 ms at the core, 260 to 290 ms at 10,000).
+
+So the hypothesis is not supported in the range tested: the typed graph's advantage does not grow with
+store size, with either kind of crowding, and the conclusion for #351 stays that typed relation edges are
+not a general recall improvement and help list questions only. The one thing the scale test shows is
+robustness: the graph channel's answers do not move as the vector list crowds, while the baseline's multi-hop
+answers fall by almost half under 10,000 renamed look-alikes. That is room a multi-hop router could use; the
+gate asked about the router as committed, and this PR does not start that work.
+
+The first run (commit `61019e41`) timed the walk on PostgreSQL before the graph tables had statistics; the
+graph stages were rerun with an ANALYZE (commit `dc1e734e`, which also adds the two information columns) and
+every baseline and routed number was identical. The 10,000 memory store of each kind, text and graph, was
+built once per run on one laptop; latencies vary with the machine's load.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
