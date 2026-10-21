@@ -33,6 +33,7 @@ from benchmarks.diagnostics.product_packing import gate_config
 from benchmarks.graph_oracle.gold import RELATIONS, Entity, Gold, _alias_patterns
 from benchmarks.graph_oracle.graph import DIRECT, Handles, StoreSource, _decode_edge
 from benchmarks.graph_oracle.run import percentiles
+from benchmarks.graph_oracle.sqlwalk import SqlWalk
 from benchmarks.graph_oracle.strategies import Params, generic_scores
 from prme import MemoryEngine
 from prme.models.edges import MemoryEdge
@@ -144,24 +145,30 @@ async def build_pack(engine, owner: str, turns: int, rng: random.Random) -> tupl
                            "owner_mentions": len(mentioned_by["owner"])}
 
 
-async def measure(engine, owner: str, gold: Gold, handles: Handles, rng: random.Random, mode: str) -> dict:
+async def measure(engine, owner: str, gold: Gold, handles: Handles, rng: random.Random, mode: str, backend: str = "duckdb") -> dict:
     params = Params(hops=2, mention=0.0) if mode == "claims_only" else Params(hops=2)
     names = [entity.names[0] for entity in gold.entities.values() if entity.id != "owner"]
     timings: dict[str, list[float]] = {"owner_is_a_seed": [], "owner_is_not_a_seed": []}
     reads: list[int] = []
     edges: list[int] = []
+    walk = SqlWalk(engine, backend, owner, handles, gold, params) if mode == "sql" else None
     for number in range(QUESTIONS):
         picks = [names[_zipf_pick(rng, len(names))] for _ in range(rng.randint(1, 3))]
         with_owner = number % 2 == 0
         text = "what links " + " and ".join(([("Ownerx")] if with_owner else []) + picks) + "?"
-        source = {"naive": lambda: StoreSource(engine, owner, handles),
-                  "owner_aware": lambda: OwnerAwareSource(engine, owner, handles, "owner"),
-                  "claims_only": lambda: ClaimsOnlySource(engine, owner, handles)}[mode]()
         began = time.perf_counter()
-        await generic_scores(text, gold, source, params)
+        if walk is not None:
+            result = await walk.scores(text)
+            calls, read = result.calls, result.edges_read
+        else:
+            source = {"naive": lambda: StoreSource(engine, owner, handles),
+                      "owner_aware": lambda: OwnerAwareSource(engine, owner, handles, "owner"),
+                      "claims_only": lambda: ClaimsOnlySource(engine, owner, handles)}[mode]()
+            await generic_scores(text, gold, source, params)
+            calls, read = source.calls, source.edges_read
         timings["owner_is_a_seed" if with_owner else "owner_is_not_a_seed"].append((time.perf_counter() - began) * 1000)
-        reads.append(source.calls)
-        edges.append(source.edges_read)
+        reads.append(calls)
+        edges.append(read)
     everything = timings["owner_is_a_seed"] + timings["owner_is_not_a_seed"]
     return {"all": percentiles(everything), "owner_is_a_seed": percentiles(timings["owner_is_a_seed"]),
             "owner_is_not_a_seed": percentiles(timings["owner_is_not_a_seed"]),
@@ -184,8 +191,13 @@ async def run(out: Path, *, backend: str, turns: list[int], database_url: str | 
                 began = time.perf_counter()
                 gold, handles, shape = await build_pack(engine, owner, count, rng)
                 built = time.perf_counter() - began
-                modes = {f"{mode}_reads": await measure(engine, owner, gold, handles, random.Random(seed), mode)
-                         for mode in ("naive", "owner_aware", "claims_only")}
+                if backend == "postgres":
+                    # A deployment's autovacuum has analyzed a table this size; a fresh synthetic one has not.
+                    async with engine._graph_store._pool.acquire() as connection:
+                        await connection.execute("ANALYZE edges")
+                        await connection.execute("ANALYZE nodes")
+                modes = {f"{mode}_reads": await measure(engine, owner, gold, handles, random.Random(seed), mode, backend)
+                         for mode in ("sql", "naive", "owner_aware", "claims_only")}  # the SQL walk first, before the others fill memory
         results.append({"turns": count, "built_seconds": round(built, 1), **shape, **modes})
     report = {"kind": KIND, "backend": backend, "budget_ms_p95_at_10000": BUDGET_MS, "questions": QUESTIONS,
               "results": results}
@@ -199,7 +211,7 @@ def markdown(reports: list[dict]) -> str:
              "|---|---:|---|---|---:|---:|---:|---:|"]
     for report in reports:
         for result in report["results"]:
-            for reads in ("naive_reads", "owner_aware_reads", "claims_only_reads"):
+            for reads in ("sql_reads", "naive_reads", "owner_aware_reads", "claims_only_reads"):
                 for label in ("owner_is_not_a_seed", "owner_is_a_seed", "all"):
                     row = result[reads]
                     lines.append(f"| {report['backend']} | {result['turns']} | {reads.removesuffix('_reads').replace('_', '-')} | "

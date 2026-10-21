@@ -2,6 +2,7 @@
 import copy
 from contextlib import asynccontextmanager
 import json
+import os
 
 import pytest
 
@@ -14,7 +15,7 @@ from benchmarks.graph_oracle import run as oracle_run
 from benchmarks.graph_oracle.fidelity import fidelity
 from benchmarks.graph_oracle.gold import GOLD_NAMES, RELATIONS, load_gold, mentions, relation_cues, target_cues
 from benchmarks.graph_oracle.graph import CLAIM, DIRECT, MemorySource, load_graph, write_graph
-from benchmarks.graph_oracle.strategies import Params, fuse, generic_scores, graph_first, graph_order, run_oracle
+from benchmarks.graph_oracle.strategies import Params, fuse, generic_scores, graph_first, graph_order, run_oracle, walk_plan
 from prme import MemoryEngine
 from tests.test_chat_probe import mock_embeddings  # noqa: F401
 
@@ -154,12 +155,20 @@ def test_the_settings_flag_parses_json_values_and_refuses_an_unknown_name():
 
 
 @asynccontextmanager
-async def _stored(tmp_path, name):
+async def _stored(tmp_path, name, database_url=None):
     """A pack with the corpus stored (mock embeddings), its gold graph written and read back."""
     gold = load_gold(name)
     pack = tmp_path / "pack"
     (pack / "lexical_index").mkdir(parents=True)
-    async with MemoryEngine.open(gate_config(pack)) as engine:
+    config = gate_config(pack)
+    if database_url:
+        from uuid import uuid4
+
+        from pydantic import SecretStr
+
+        config = config.model_copy(update={"database_url": SecretStr(database_url)})
+        gold.owner = f"{gold.owner}-{uuid4().hex[:8]}"  # a shared database keeps earlier runs, so each run is a new owner
+    async with MemoryEngine.open(config) as engine:
         node_ids = {}
         for memory in gold.memories:
             receipt = await engine.store_with_receipt(memory.text, user_id=gold.owner, role=memory.role,
@@ -386,3 +395,139 @@ async def test_a_blind_run_writes_its_report_and_a_latency_run_measures_a_small_
     assert row["owner_aware_reads"]["edges_read"]["mean"] < row["naive_reads"]["edges_read"]["mean"]
     # Claims alone are a fraction of what the frontier's edges hold, which is mostly mentions.
     assert row["claims_only_reads"]["edges_read"]["mean"] < row["owner_aware_reads"]["edges_read"]["mean"]
+
+
+# --- The question shape router ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("question, expected", [
+    ("Which cities will Maya visit in Peru?", "list"), ("What programming languages does Alex use?", "list"),
+    ("Who are the members of the team?", "list"), ("What are the steps in the checklist?", "list"),
+    ("Which of the cafes is open late?", "list"), ("How many books has Ana read?", "count"),
+    ("What is the number of rooms?", "count"), ("Which kind of tea does Sam like?", "subtype"),
+    ("Who is the manager of Jordan's partner?", "chain"), ("Dana's sister's mother lives where?", "chain"),
+    ("What is Ben's dog called?", "other"), ("What does Sam do for a living?", "other"), ("When is the launch?", "other"),
+    ("Does Alex like tea?", "other"), ("What time did Dana finish the race?", "other"),
+    ("Where does Dana's sister live?", "other"), ("What is the name of the dog?", "other"),
+])
+def test_the_router_reads_the_shape_of_a_question_from_its_words(question, expected):
+    from benchmarks.graph_oracle import router
+
+    assert router.shape(question) == expected
+    assert router.route(question) == ("graph" if expected != "other" else "text")
+
+
+def test_the_router_accuracy_counts_agreement_with_the_route_a_type_tag_implies():
+    from benchmarks.graph_oracle import router
+
+    asked = [{"question": "Which cities will Maya visit?", "type": "list"},
+             {"question": "How many books has Ana read?", "type": "aggregation"},
+             {"question": "What is Ben's dog called?", "type": "lookup"},
+             {"question": "Which cities does Ben like?", "type": "lookup"},
+             {"question": "When is the launch?", "type": "temporal"}]
+    result = router.accuracy(asked)
+    assert result["accuracy"] == 0.8 and result["lookups"] == 2 and result["lookups_routed_to_graph"] == 1
+    assert result["lookup_routed_share"] == 0.5 and result["by_type"]["temporal"]["routed_to_graph"] == 0
+    assert router.expected_route("multi-hop") == "graph" and router.expected_route("negation") == "text"
+
+
+# --- The routing gate -------------------------------------------------------------------------------
+
+
+def test_the_new_memory_set_has_a_gold_graph_that_covers_every_memory_and_its_blind_file_rebuilds():
+    from benchmarks.graph_oracle import blind
+
+    new = load_gold("draw2-v1")
+    assert len(new.memories) == 46 and new.questions == [] and {memory.id for memory in new.memories} <= {
+        memory_id for claim in new.claims for memory_id in claim.ev}
+    frozen = blind.load_blind(blind.BLIND2_FILE)
+    rebuilt = blind.freeze(json.loads(blind.CANDIDATES2_FILE.read_text()), json.loads(blind.REVIEW2_FILE.read_text()),
+                           corpora=blind.CORPORA_DRAW2, name="blind-v2", description=blind.DESCRIPTION_V2)
+    assert rebuilt == frozen and len(frozen["questions"]) == 65 and {q["corpus"] for q in frozen["questions"]} == {"draw2-v1"}
+    assert sum(frozen["review"]["dropped"].values()) == frozen["review"]["candidates"] - frozen["review"]["kept"]
+
+
+@pytest.mark.parametrize("params", [Params(), Params(cue_source="derived"), Params(cue_filter=False)],
+                         ids=["hand", "derived", "no-filter"])
+async def test_the_sql_walk_scores_every_question_as_the_python_walk_does(mock_embeddings, tmp_path, params):  # noqa: F811
+    import math
+
+    from benchmarks.graph_oracle.graph import StoreSource
+    from benchmarks.graph_oracle.sqlwalk import SqlWalk
+
+    async with _stored(tmp_path, "defects-v1") as (engine, gold, handles, data):
+        walk = SqlWalk(engine, "duckdb", gold.owner, handles, gold, params)
+        asked = [question.text for question in gold.questions] + [v for question in gold.questions for v in question.variants]
+        for text in asked:
+            python = await generic_scores(text, gold, StoreSource(engine, gold.owner, handles), params)
+            sql = await walk.scores(text)
+            positive = lambda result: {key: value for key, value in result.scores.items() if value > 0}  # noqa: E731
+            assert sql.seeds == python.seeds and sql.calls <= 1
+            assert set(positive(sql)) == set(positive(python)) and all(
+                math.isclose(value, positive(python)[key], rel_tol=1e-9) for key, value in positive(sql).items()), text
+
+
+async def test_the_sql_walk_caps_the_edges_it_reads_per_entity_and_leaves_the_owner_unexpanded(mock_embeddings, tmp_path):  # noqa: F811
+    from benchmarks.graph_oracle.sqlwalk import SqlWalk
+
+    async with _stored(tmp_path, "store-v1") as (engine, gold, handles, data):
+        capped = SqlWalk(engine, "duckdb", gold.owner, handles, gold, Params(), claim_cap=2, seed_cap=2, mention_cap=2)
+        full = SqlWalk(engine, "duckdb", gold.owner, handles, gold, Params())
+        text = "which cities will Alex and jordan visit in Japan?"
+        small, large = await capped.scores(text), await full.scores(text)
+        assert 0 < small.edges_read < large.edges_read and small.calls == 1
+        seeds, _, cued = walk_plan(text, gold, Params())
+        statement = full.sql(seeds, cued)
+        assert statement.count("row_number()") == 4 and "LIMIT 64" in statement and "edge_type = 'mentions'" in statement
+
+
+def test_the_gate_conditions_are_computed_from_the_new_draws_rows():
+    from benchmarks.graph_oracle import routed_run
+
+    def row(kind, baseline, routed, route="text"):
+        return {"type": kind, "ranks": {"baseline": baseline, "routed[derived]": routed}, "route": route}
+
+    rows = ([row("lookup", 2, 2)] * 5 + [row("temporal", 1, 1)] * 5 + [row("correction", 4, 4)] * 2
+            + [row("list", 6, 1, "graph")] * 7 + [row("multi-hop", 5, 2, "graph")] * 2 + [row("negation", 1, 1)] * 3)
+    good = {"accuracy": 0.93, "lookup_routed_share": 0.0}
+    result = routed_run.conditions(rows, good, 29.4)
+    assert [item["pass"] for item in result.values()] == [True] * 6
+    result = routed_run.conditions(rows, {"accuracy": 0.81, "lookup_routed_share": 0.07}, 80.0)
+    assert [item["pass"] for item in result.values()] == [True, True, True, True, False, False]
+    rows[0] = row("lookup", 2, 1, "graph")
+    assert not routed_run.conditions(rows, good, 29.4)["3 lookups, temporal and correction equal the baseline question by question"]["pass"]
+    assert not routed_run.conditions(rows[:5] + rows[5:12], good, None)["6 the SQL walk at 10,000 memories at most 50 ms p95 on PostgreSQL"]["pass"]
+
+
+async def test_a_routed_run_sends_only_the_routed_questions_to_the_graph(mock_embeddings, tmp_path):  # noqa: F811
+    from benchmarks.graph_oracle import routed_run
+
+    report = await routed_run.run(tmp_path / "routed", work=tmp_path / "work")
+    assert report["questions"] == 65 and set(report["routing"]) == {"spent_blind_set", "new_draw"}
+    assert report["routing"]["spent_blind_set"]["n"] == 86
+    for row in report["rows"]:
+        if row["route"] == "text":
+            assert row["ranks"]["routed[derived]"] == row["ranks"]["routed[hand]"] == row["ranks"]["baseline"]
+        else:
+            assert row["ranks"]["routed[derived]"] == row["ranks"]["graph[derived]"]
+    assert "## Verdict against GATE.md" in (tmp_path / "routed" / "report.md").read_text()
+    assert report["sql_walk_p95_ms_postgres_10000"] is None and not report["verdict"]["routed[derived]"]["passes"]
+
+
+@pytest.mark.skipif(not os.environ.get("PRME_TEST_DATABASE_URL"), reason="needs PRME_TEST_DATABASE_URL")
+async def test_the_sql_walk_on_postgresql_scores_every_question_as_the_python_walk_does(mock_embeddings, tmp_path):  # noqa: F811
+    import math
+
+    from benchmarks.graph_oracle.graph import StoreSource
+    from benchmarks.graph_oracle.sqlwalk import SqlWalk
+
+    for name in ("defects-v1", "chat-v1"):
+        async with _stored(tmp_path / name, name, os.environ["PRME_TEST_DATABASE_URL"]) as (engine, gold, handles, data):
+            for params in (Params(), Params(cue_source="derived")):
+                walk = SqlWalk(engine, "postgres", gold.owner, handles, gold, params)
+                for question in gold.questions:
+                    python = await generic_scores(question.text, gold, StoreSource(engine, gold.owner, handles), params)
+                    sql = await walk.scores(question.text)
+                    keep = lambda result: {key: value for key, value in result.scores.items() if value > 0}  # noqa: E731
+                    assert set(keep(sql)) == set(keep(python)) and all(
+                        math.isclose(value, keep(python)[key], rel_tol=1e-9) for key, value in keep(sql).items()), question.id

@@ -33,6 +33,11 @@ audit, so `pip install prme` still installs 0.15.0. Install the alpha with
   words derived from the vocabulary definitions, a decision rule fixed before the run
   (`benchmarks/graph_oracle/BLIND.md`) and the walk's latency on synthetic 2,000 and
   10,000 memory packs in DuckDB and PostgreSQL. The result is in `BENCHMARKS.md`.
+- Routing gate for the typed walk (`python -m benchmarks.graph_oracle routed`, tooling only; part of
+  dwamianm/prism#351): a rule based question shape router, a one statement SQL walk for PostgreSQL
+  and DuckDB with per entity caps, a new memory set with its gold graph, a new blind draw of 65
+  questions and a gate fixed before the run (`benchmarks/graph_oracle/GATE.md`). The gate failed on
+  two of six conditions; the result is in `BENCHMARKS.md`.
 - Add `enable_owner_window_extraction` (`PRME_ENABLE_OWNER_WINDOW_EXTRACTION`,
   off by default; dwamianm/prism#345 and #347): with `enable_windowed_extraction`,
   a turn with no `session_id` gets the owner's preceding memories in the same

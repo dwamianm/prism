@@ -3836,6 +3836,120 @@ new seed and new questions) before any retrieval port. Learning the relation cue
 the memories' own claims, instead of writing or deriving them, is the other open
 problem; the extraction step (Phase 3B) is where those claims would come from.
 
+#### Routing the graph by question type
+
+Part of #351; the gate is [`GATE.md`](benchmarks/graph_oracle/GATE.md), committed
+before the router, the new memory set, the new questions or any run. The blind
+validation above found the typed walk helps lists, multi-hop and aggregation
+questions and hurts lookups, temporal questions and corrections, so the owner chose
+to route it: use the graph only for questions that ask for a list, a count, things
+of a subtype or a chain of two relational nouns, and leave every other question to
+today's ranking unchanged.
+
+```sh
+uv run python -m benchmarks.graph_oracle routed --out /tmp/routed --latency /tmp/latency/latency-postgres.json
+```
+
+**The router** (`router.py`) reads only a question's own words: counting phrases,
+"which kind of", a plural noun right after which or what, "which of", "who are", and
+two relational nouns joined by "of" or a possessive. It was written before the new
+draw and measured once on the spent 86 question blind set (81.4 percent agreement
+with the route the type tags imply, 2 of 28 lookups sent to the graph; 0 of 12
+multi-hop questions routed, since most are not a chain of relational nouns). It was
+not changed afterwards.
+
+**The walk** (`sqlwalk.py`) is one SQL statement per question on PostgreSQL and a
+DuckDB equivalent: a three layer join over the typed claim edges plus the `mentions`
+edges of the entities it reaches, capped at 32 claims per entity (128 for a seed,
+which the question names; the owner has 58 claims in `store-v1`), 32 mentions per
+reached entity and 64 entities per layer, newest first, with the cue filter, the
+superseded and negative claim rules and the owner rule in the statement. Its scores
+equal the Python walk's on every question of the original corpora and the new draw, on
+both backends (tests). Median and 95th percentile milliseconds on synthetic packs
+built straight in the graph store (100 questions, half naming the owner):
+
+| Backend, memories | One statement | Every edge on the frontier (3 reads) |
+|---|---|---|
+| PostgreSQL, 2,000 | 11 / 20 (1,232 edges) | 27 / 54 (3,808 edges) |
+| PostgreSQL, 10,000 | 22 / 36 (3,048 edges) | 171 / 198 (21,306 edges) |
+| DuckDB, 2,000 | 15 / 18 | 43 / 71 |
+| DuckDB, 10,000 | 25 / 30 (two runs; one run on a busy machine gave 277 / 521) | 267 / 327 |
+
+The 50 ms budget at the 95th percentile at 10,000 memories on PostgreSQL holds
+(36 ms). The cap is what keeps a popular entity from putting thousands of `mentions`
+edges on a frontier: the unbounded read costs about 8 microseconds an edge.
+
+**The new draw.** `draw2-v1`: 46 memories of a new made-up user on a different story
+(a designer at a telehealth startup, her team, a promotion, a corrected launch date,
+a declined then accepted audit, a trip to Portugal with a dropped city), in the style
+of the store fixture. Its gold graph (53 entities, 103 claims) was written from the
+memories alone and committed before any question existed. A local model drafted 110
+candidate questions from the memories alone (10 requests); the reviewer dropped 19
+as vague or ambiguous, 5 as repeating another and 21 as the same fact and type as one
+kept, corrected 1 answer id list and relabeled 9 questions that one memory answers as
+lookups. The 65 frozen questions (sha256
+`57ef842ba1912085d095bd745ca98f06b35e72a3277d9d4807b3003b674741c3`): 20 lookup, 11
+negation, 10 temporal, 9 list, 8 aggregation, 4 correction, 3 multi-hop. The gold graph
+was not extended afterwards.
+
+One run, at `4124ee88`. Top 3 / top 5 / rank 1, MRR:
+
+| Type (n) | baseline | routed, derived cues | routed, hand cues | graph for every question, derived |
+|---|---|---|---|---|
+| all (65) | 55/56/39, 0.73 | 57/57/39, 0.74 | 57/57/36, 0.71 | 45/50/30, 0.60 |
+| lookup (20) | 17/17/14, 0.80 | 17/17/14, 0.80 | 17/17/14, 0.80 | 15/18/11, 0.68 |
+| list (9) | 6/6/4, 0.56 | 8/8/7, 0.82 | 8/8/6, 0.77 | 7/7/6, 0.74 |
+| multi-hop (3) | 2/2/0, 0.33 | 2/2/0, 0.33 | 2/2/0, 0.33 | 2/2/0, 0.37 |
+| temporal (10) | 10/10/6, 0.80 | 10/10/6, 0.80 | 10/10/6, 0.80 | 7/7/5, 0.63 |
+| correction (4) | 4/4/1, 0.54 | 4/4/1, 0.54 | 4/4/1, 0.54 | 3/4/2, 0.68 |
+| negation (11) | 9/9/7, 0.72 | 9/9/7, 0.72 | 9/9/7, 0.72 | 4/5/2, 0.32 |
+| aggregation (8) | 7/8/7, 0.90 | 7/7/4, 0.69 | 7/7/2, 0.54 | 7/7/4, 0.69 |
+
+The router's accuracy on the new draw is 90.8 percent with 0 of 20 lookups routed (14
+questions went to the graph: 7 of 9 lists, 7 of 8 aggregation, 0 of 3 multi-hop).
+
+**Verdict: fail, on two of six conditions** (derived and hand cues alike):
+
+| Condition | Value | Holds |
+|---|---|---|
+| 1 overall top 3 at least 5 points above the baseline | +3.1 points (57 against 55) | no |
+| 2 no type loses more than 1 question | 0 | yes |
+| 3 lookups, temporal and correction equal the baseline question by question | 0 differ | yes |
+| 4 list, multi-hop and aggregation together gain at least 6 | +2 | no |
+| 5 router accuracy at least 90 percent, at most 2 percent of lookups routed | 90.8 percent, 0 percent | yes |
+| 6 the SQL walk at most 50 ms p95 at 10,000 memories on PostgreSQL | 36 ms | yes |
+
+What the blind results say about the graph as a recall improvement:
+
+- **The routing works as a safety device and does little else.** Routing removes the
+  harm (the unrouted graph loses 2 lookups, 3 temporal, 1 correction and 5 negation
+  questions on this draw; routed loses none) and keeps the one place the graph wins: two list questions
+  move from rank 8 to rank 1 (the cities of the trip, the technologies of the product),
+  and nothing else changes rank by enough to matter.
+- **The ceiling is low.** The baseline already puts 55 of 65 questions in the top 3
+  (85 percent), and only 5 of the 20 list, multi-hop and aggregation questions
+  were missed, so condition 4's +6 could not be met on this draw by any router. The
+  same held on the first blind set (baseline 70 of 86). Questions about a small set
+  of memories are mostly answered by their words.
+- **Three measurements, one pattern.** The oracle report's +23 points (the questions the
+  gold was written for) became +2.3 points on the first blind set at best and +3.1
+  points on the new draw with routing. The gain is real for one shape, a list whose
+  answer memory names several entities but not the one asked about, and nothing else
+  in these three question sets. A hand written gold graph is the best case: extraction
+  has to produce it, and an extractor's misses and invented claims only subtract.
+- **Aggregation questions lose rank 1 when routed** (7 to 4) though not the top 3,
+  because the graph list reorders memories the text ranking already had on top.
+- **Latency is not the obstacle.** One statement with caps reads about 3,000 edges
+  and takes 22 ms at 10,000 memories on PostgreSQL.
+
+On this evidence typed relation edges are not a general recall improvement for the
+questions in these corpora. They are a targeted fix for list questions, worth about
+two questions in nine on this draw and three in eleven on the first blind set, at the
+price of a closed vocabulary, an extraction step that has not been measured, a router
+and a walk. A cheaper route to the same list questions (the memory that names the
+cities is found when "They" is resolved to the people at store time, #347) is worth
+comparing before any port.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of

@@ -1,0 +1,1717 @@
+{
+ "kind": "prme-graph-oracle-blind-candidates",
+ "schema_version": 1,
+ "model": "the fast tiers' extraction model through a local Ollama server (MODEL in benchmarks/graph_oracle/blind.py)",
+ "prompt_sha256": "f7e0ceff5050fcf0b47c7c214ba19216e43fd3b330342d14924e530cc07b962a",
+ "rounds": [
+  {
+   "round": 1,
+   "requests": 7,
+   "prompt_tokens": 9624,
+   "completion_tokens": 5082
+  },
+  {
+   "round": 2,
+   "requests": 3,
+   "prompt_tokens": 4143,
+   "completion_tokens": 2690
+  }
+ ],
+ "candidates": [
+  {
+   "id": "draw2-v1:lookup:1",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is Noor's partner's name?",
+   "answer": "Idris",
+   "answers": [
+    "n04"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:2",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is the name of Noor's cat?",
+   "answer": "Pepper",
+   "answers": [
+    "n05"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:3",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "Where does Noor's sister Lina live?",
+   "answer": "Lisbon",
+   "answers": [
+    "n11"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:4",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "Who is Noor's manager at Lumen Health?",
+   "answer": "Elena Voss",
+   "answers": [
+    "n24"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:5",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is the budget for the Patient Portal redesign?",
+   "answer": "140,000 USD",
+   "answers": [
+    "n14"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:6",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is the name of the new design system?",
+   "answer": "Atlas",
+   "answers": [
+    "n13"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:7",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is the budget for the Portugal trip, excluding flights?",
+   "answer": "6,200 EUR",
+   "answers": [
+    "n40"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:8",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What book is Noor currently reading?",
+   "answer": "Piranesi",
+   "answers": [
+    "n45"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:9",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is the name of the gym where Noor goes bouldering?",
+   "answer": "Granite Gym",
+   "answers": [
+    "n10"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:10",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is the name of the design engineer on the platform team?",
+   "answer": "Marcus Chen",
+   "answers": [
+    "n25"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:11",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is the name of the user researcher at Lumen Health?",
+   "answer": "Tilda Okoro",
+   "answers": [
+    "n25"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:lookup:12",
+   "corpus": "draw2-v1",
+   "type": "lookup",
+   "question": "What is the name of the telehealth startup where Noor works?",
+   "answer": "Lumen Health",
+   "answers": [
+    "n00"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:1",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What tools does Noor like for work?",
+   "answer": [
+    "Figma",
+    "Linear"
+   ],
+   "answers": [
+    "n07"
+   ],
+   "support": [
+    "n07"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:2",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "Which cities are on Noor and Idris's Portugal itinerary?",
+   "answer": [
+    "Lisbon",
+    "Porto",
+    "Sintra",
+    "Évora"
+   ],
+   "answers": [
+    "n37"
+   ],
+   "support": [
+    "n37"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:3",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What times does Pepper eat?",
+   "answer": [
+    "7 am",
+    "6 pm"
+   ],
+   "answers": [
+    "n05"
+   ],
+   "support": [
+    "n05"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:4",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What technologies does Lumen Health's product use?",
+   "answer": [
+    "React",
+    "Postgres",
+    "Google Cloud",
+    "Linear"
+   ],
+   "answers": [
+    "n12"
+   ],
+   "support": [
+    "n12"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:5",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "Who are the people on Noor's team that are named?",
+   "answer": [
+    "Marcus Chen",
+    "Tilda Okoro"
+   ],
+   "answers": [
+    "n25"
+   ],
+   "support": [
+    "n25"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:6",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are Noor's recurring weekly meetings and their times?",
+   "answer": [
+    "1:1 with Elena every Monday at 11:00 Central",
+    "design critique every Thursday at 2:00 pm Central",
+    "mentoring Marcus Chen on Fridays for 45 minutes"
+   ],
+   "answers": [
+    "n26",
+    "n23",
+    "n27"
+   ],
+   "support": [
+    "n26",
+    "n23",
+    "n27"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:7",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are the details of the Patient Portal redesign project?",
+   "answer": [
+    "budget of 140,000 USD",
+    "team of five",
+    "launch on 2026-11-20"
+   ],
+   "answers": [
+    "n14",
+    "n18"
+   ],
+   "support": [
+    "n14",
+    "n18"
+   ],
+   "stale": [
+    "n16"
+   ]
+  },
+  {
+   "id": "draw2-v1:list:8",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are Noor's preferences around coffee?",
+   "answer": [
+    "prefers dark roast",
+    "stops drinking it after 3 pm"
+   ],
+   "answers": [
+    "n06"
+   ],
+   "support": [
+    "n06"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:9",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are the details of Noor's trip to Portugal?",
+   "answer": [
+    "dates 2027-05-08 through 2027-05-22",
+    "budget 6,200 EUR not including flights",
+    "TAP flights from Minneapolis to Lisbon departing 2027-05-08"
+   ],
+   "answers": [
+    "n36",
+    "n40",
+    "n41"
+   ],
+   "support": [
+    "n36",
+    "n40",
+    "n41"
+   ],
+   "stale": [
+    "n35"
+   ]
+  },
+  {
+   "id": "draw2-v1:list:10",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are Noor's preferences for how work is presented?",
+   "answer": [
+    "visual first, wants a sketch or mock before long explanations",
+    "dislikes slide decks",
+    "prefers written design reviews over live walkthroughs"
+   ],
+   "answers": [
+    "n09",
+    "n29"
+   ],
+   "support": [
+    "n09",
+    "n29"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:11",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are the details of Noor's bouldering competition?",
+   "answer": [
+    "at Granite Gym",
+    "on 2026-11-14",
+    "taper plan with two light sessions the week before and a rest day on 2026-11-13"
+   ],
+   "answers": [
+    "n42",
+    "n44"
+   ],
+   "support": [
+    "n42",
+    "n44"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:12",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are the details of the accessibility audit Noor is leading?",
+   "answer": [
+    "Noor accepted on 2026-10-15",
+    "condition that Tilda joins the audit"
+   ],
+   "answers": [
+    "n34"
+   ],
+   "support": [
+    "n34"
+   ],
+   "stale": [
+    "n33"
+   ]
+  },
+  {
+   "id": "draw2-v1:multi-hop:1",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Noor's partner, and what food does that person need to avoid?",
+   "answer": "Idris, who is allergic to walnuts.",
+   "answers": [
+    "n04"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:2",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "Which city did Noor move from when relocating for the Lumen Health job, and where does she live now?",
+   "answer": "She moved from Austin to Minneapolis in January 2025.",
+   "answers": [
+    "n03"
+   ],
+   "support": [
+    "n01"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:3",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Noor's manager, and what is her title at Lumen Health?",
+   "answer": "Elena Voss, Head of Design.",
+   "answers": [
+    "n24"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:4",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "Who covers the usability sessions while Tilda is on leave, and what is that person's role?",
+   "answer": "Marcus Chen, a design engineer on the platform team.",
+   "answers": [
+    "n25"
+   ],
+   "support": [
+    "n28"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:5",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the new design system for the Patient Portal called, and which tool did Noor reject for it?",
+   "answer": "Atlas; Noor rejected Sketch.",
+   "answers": [
+    "n19"
+   ],
+   "support": [
+    "n13"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:6",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "When is the Patient Portal launch now scheduled, and why was it moved?",
+   "answer": "It moved to Friday 2026-11-20 because Sven found the flu-season freeze.",
+   "answers": [
+    "n18"
+   ],
+   "support": [
+    "n16"
+   ],
+   "stale": [
+    "n16"
+   ]
+  },
+  {
+   "id": "draw2-v1:multi-hop:7",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the current budget for the Patient Portal redesign, and how many people are on the team?",
+   "answer": "140,000 USD with a team of five.",
+   "answers": [
+    "n14"
+   ],
+   "support": [
+    "n13"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:8",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What did the Patient Portal prototype score on the System Usability Scale, and what is the target?",
+   "answer": "It scored 71, and the target is 85.",
+   "answers": [
+    "n15"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:9",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "Where does Noor go bouldering, and when is her competition there?",
+   "answer": "At Granite Gym, with a competition on 2026-11-14.",
+   "answers": [
+    "n42"
+   ],
+   "support": [
+    "n10"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:10",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "Who is Noor's sister, and where does she live?",
+   "answer": "Lina, who lives in Lisbon.",
+   "answers": [
+    "n11"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:11",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "When is the Portugal trip now planned, and which cities are on the itinerary?",
+   "answer": "2027-05-08 through 2027-05-22, visiting Lisbon, Porto, Sintra, and Évora.",
+   "answers": [
+    "n36"
+   ],
+   "support": [
+    "n37"
+   ],
+   "stale": [
+    "n35"
+   ]
+  },
+  {
+   "id": "draw2-v1:multi-hop:12",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the budget for the Portugal trip, and what flight did Noor book?",
+   "answer": "6,200 EUR not including flights; she booked TAP flights from Minneapolis to Lisbon departing 2027-05-08.",
+   "answers": [
+    "n41"
+   ],
+   "support": [
+    "n40"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:1",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When did Noor join Lumen Health?",
+   "answer": "February 2025",
+   "answers": [
+    "n01"
+   ],
+   "support": [
+    "n01"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:2",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When was Noor promoted to lead designer?",
+   "answer": "August 2026",
+   "answers": [
+    "n01"
+   ],
+   "support": [
+    "n01"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:3",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When did Noor move from Austin to Minneapolis?",
+   "answer": "January 2025",
+   "answers": [
+    "n03"
+   ],
+   "support": [
+    "n03"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:4",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "What is the current scheduled date for the Patient Portal launch?",
+   "answer": "Friday 2026-11-20",
+   "answers": [
+    "n18"
+   ],
+   "support": [
+    "n18"
+   ],
+   "stale": [
+    "n16"
+   ]
+  },
+  {
+   "id": "draw2-v1:temporal:5",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When does Noor present the Atlas roadmap at the company all-hands?",
+   "answer": "2026-10-29",
+   "answers": [
+    "n22"
+   ],
+   "support": [
+    "n22"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:6",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When did Noor accept leading the accessibility audit?",
+   "answer": "2026-10-15",
+   "answers": [
+    "n34"
+   ],
+   "support": [
+    "n34"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:7",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When is Noor's bouldering competition at Granite Gym?",
+   "answer": "2026-11-14",
+   "answers": [
+    "n42"
+   ],
+   "support": [
+    "n42"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:8",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When did Noor sprain a wrist?",
+   "answer": "2026-10-03",
+   "answers": [
+    "n43"
+   ],
+   "support": [
+    "n43"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:9",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "What are the current dates for the Portugal trip?",
+   "answer": "2027-05-08 through 2027-05-22",
+   "answers": [
+    "n36"
+   ],
+   "support": [
+    "n36"
+   ],
+   "stale": [
+    "n35"
+   ]
+  },
+  {
+   "id": "draw2-v1:temporal:10",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When does Noor's flight from Minneapolis to Lisbon depart?",
+   "answer": "2027-05-08",
+   "answers": [
+    "n41"
+   ],
+   "support": [
+    "n41"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:11",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "When is Tilda on leave?",
+   "answer": "2026-10-12 to 2026-10-26",
+   "answers": [
+    "n28"
+   ],
+   "support": [
+    "n28"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:temporal:12",
+   "corpus": "draw2-v1",
+   "type": "temporal",
+   "question": "Which came first: Noor joining Lumen Health or Noor moving to Minneapolis?",
+   "answer": "They happened at the same time, in January/February 2025 — Noor moved in January 2025 for the Lumen Health job and joined in February 2025, so the move came first.",
+   "answers": [
+    "n01",
+    "n03"
+   ],
+   "support": [
+    "n01",
+    "n03"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:correction:1",
+   "corpus": "draw2-v1",
+   "type": "correction",
+   "question": "When is the Patient Portal launch now scheduled?",
+   "answer": "Friday 2026-11-20",
+   "answers": [
+    "n18"
+   ],
+   "support": [
+    "n17"
+   ],
+   "stale": [
+    "n16"
+   ]
+  },
+  {
+   "id": "draw2-v1:correction:2",
+   "corpus": "draw2-v1",
+   "type": "correction",
+   "question": "How does Noor feel about leading the weekly stand-up?",
+   "answer": "It drains Noor; Noor prefers a 10 minute async update instead of a live meeting.",
+   "answers": [
+    "n31"
+   ],
+   "support": [],
+   "stale": [
+    "n30"
+   ]
+  },
+  {
+   "id": "draw2-v1:correction:3",
+   "corpus": "draw2-v1",
+   "type": "correction",
+   "question": "When is the Portugal trip happening?",
+   "answer": "2027-05-08 through 2027-05-22",
+   "answers": [
+    "n36"
+   ],
+   "support": [
+    "n35"
+   ],
+   "stale": [
+    "n35"
+   ]
+  },
+  {
+   "id": "draw2-v1:correction:4",
+   "corpus": "draw2-v1",
+   "type": "correction",
+   "question": "Did Noor end up leading the accessibility audit?",
+   "answer": "Yes, Noor accepted leading it on 2026-10-15, on the condition that Tilda joins.",
+   "answers": [
+    "n34"
+   ],
+   "support": [
+    "n32"
+   ],
+   "stale": [
+    "n33"
+   ]
+  },
+  {
+   "id": "draw2-v1:negation:1",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "Which design tool has Noor decided not to use for the Atlas design system?",
+   "answer": "Sketch",
+   "answers": [
+    "n19"
+   ],
+   "support": [
+    "n19",
+    "n07"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:2",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "Which city did Noor and Idris drop from their Portugal itinerary?",
+   "answer": "Faro",
+   "answers": [
+    "n37"
+   ],
+   "support": [
+    "n37"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:3",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What kind of car does Noor want to avoid renting in Portugal?",
+   "answer": "A rental car — Noor prefers trains instead",
+   "answers": [
+    "n38"
+   ],
+   "support": [
+    "n38"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:4",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What does Noor dislike for work?",
+   "answer": "Sketch",
+   "answers": [
+    "n07"
+   ],
+   "support": [
+    "n07"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:5",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What presentation format does Noor dislike?",
+   "answer": "Slide decks",
+   "answers": [
+    "n09"
+   ],
+   "support": [
+    "n09"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:6",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What kind of design review does Noor not prefer?",
+   "answer": "Live walkthroughs — Noor prefers written design reviews",
+   "answers": [
+    "n29"
+   ],
+   "support": [
+    "n29"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:7",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What meeting format does Noor no longer want to lead?",
+   "answer": "The live weekly stand-up — Noor prefers a 10 minute async update",
+   "answers": [
+    "n31"
+   ],
+   "support": [
+    "n31",
+    "n30"
+   ],
+   "stale": [
+    "n30"
+   ]
+  },
+  {
+   "id": "draw2-v1:negation:8",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What did Noor initially decline to lead?",
+   "answer": "The accessibility audit",
+   "answers": [
+    "n33"
+   ],
+   "support": [
+    "n33"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:9",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What does Noor avoid drinking after 3 pm?",
+   "answer": "Coffee",
+   "answers": [
+    "n06"
+   ],
+   "support": [
+    "n06"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:10",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What is Noor skipping for three weeks after spraining a wrist?",
+   "answer": "Hard bouldering problems",
+   "answers": [
+    "n43"
+   ],
+   "support": [
+    "n43"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:11",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "Which food must Noor make sure is avoided when eating out in Portugal?",
+   "answer": "Walnuts, because of Idris's allergy",
+   "answers": [
+    "n39"
+   ],
+   "support": [
+    "n39",
+    "n04"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:negation:12",
+   "corpus": "draw2-v1",
+   "type": "negation",
+   "question": "What does Noor not want to use for timelines?",
+   "answer": "Sprints — Noor wants timelines in weeks",
+   "answers": [
+    "n08"
+   ],
+   "support": [
+    "n08"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:1",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "How many people are named as Noor's colleagues or collaborators at Lumen Health?",
+   "answer": "Four: Elena Voss, Marcus Chen, Tilda Okoro, and Sven.",
+   "answers": [
+    "n24",
+    "n25",
+    "n18"
+   ],
+   "support": [
+    "n24",
+    "n25",
+    "n18"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:2",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "Which cities are on Noor and Idris's Portugal itinerary?",
+   "answer": "Lisbon, Porto, Sintra, and Évora.",
+   "answers": [
+    "n37"
+   ],
+   "support": [
+    "n37"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:3",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "How many recurring weekly meetings or sessions does Noor have scheduled?",
+   "answer": "Four: the Thursday design critique, the Monday 1:1 with Elena, the Friday mentoring session with Marcus, and the bouldering sessions (three evenings a week).",
+   "answers": [
+    "n23",
+    "n26",
+    "n27",
+    "n10"
+   ],
+   "support": [
+    "n23",
+    "n26",
+    "n27",
+    "n10"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:4",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "What tools does Noor use or endorse for work?",
+   "answer": "Figma, Linear, and Storybook.",
+   "answers": [
+    "n07",
+    "n20"
+   ],
+   "support": [
+    "n07",
+    "n20"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:5",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "Which cities has Noor lived in, according to her memories?",
+   "answer": "Austin and Minneapolis.",
+   "answers": [
+    "n02",
+    "n03"
+   ],
+   "support": [
+    "n02",
+    "n03"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:6",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "What are the key dates for the Patient Portal launch and Noor's Atlas roadmap presentation?",
+   "answer": "The Atlas roadmap presentation is 2026-10-29, and the Patient Portal launch is 2026-11-20.",
+   "answers": [
+    "n22",
+    "n18"
+   ],
+   "support": [
+    "n22",
+    "n18"
+   ],
+   "stale": [
+    "n16"
+   ]
+  },
+  {
+   "id": "draw2-v1:aggregation:7",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "How many people are on the Patient Portal redesign team, and what is its budget?",
+   "answer": "Five people, with a budget of 140,000 USD.",
+   "answers": [
+    "n14"
+   ],
+   "support": [
+    "n14"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:8",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "Which family members of Noor are mentioned, and where do they live?",
+   "answer": "Her partner Idris (a high school chemistry teacher) and her sister Lina, who lives in Lisbon.",
+   "answers": [
+    "n04",
+    "n11"
+   ],
+   "support": [
+    "n04",
+    "n11"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:9",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "What dates is Noor's Portugal trip, and what is its budget excluding flights?",
+   "answer": "2027-05-08 through 2027-05-22, with a budget of 6,200 EUR not including flights.",
+   "answers": [
+    "n36",
+    "n40"
+   ],
+   "support": [
+    "n36",
+    "n40"
+   ],
+   "stale": [
+    "n35"
+   ]
+  },
+  {
+   "id": "draw2-v1:aggregation:10",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "Which of Noor's scheduled events fall in November 2026?",
+   "answer": "The bouldering competition on 2026-11-14 and the Patient Portal launch on 2026-11-20.",
+   "answers": [
+    "n42",
+    "n18"
+   ],
+   "support": [
+    "n42",
+    "n18"
+   ],
+   "stale": [
+    "n16"
+   ]
+  },
+  {
+   "id": "draw2-v1:list:r2.1",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What tools does Noor like for work?",
+   "answer": [
+    "Figma",
+    "Linear"
+   ],
+   "answers": [
+    "n07"
+   ],
+   "support": [
+    "n07"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.2",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What cities are on Noor and Idris's Portugal itinerary?",
+   "answer": [
+    "Lisbon",
+    "Porto",
+    "Sintra",
+    "Évora"
+   ],
+   "answers": [
+    "n37"
+   ],
+   "support": [
+    "n37"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.3",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "Who are the people on Noor's team that are mentioned by name?",
+   "answer": [
+    "Marcus Chen",
+    "Tilda Okoro"
+   ],
+   "answers": [
+    "n25"
+   ],
+   "support": [
+    "n25"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.4",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What technologies does Lumen Health's product use?",
+   "answer": [
+    "React",
+    "Postgres",
+    "Google Cloud",
+    "Linear"
+   ],
+   "answers": [
+    "n12"
+   ],
+   "support": [
+    "n12"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.5",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are the names of Noor's family members mentioned?",
+   "answer": [
+    "Idris",
+    "Lina"
+   ],
+   "answers": [
+    "n04",
+    "n11"
+   ],
+   "support": [
+    "n04",
+    "n11"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.6",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What times does Pepper eat?",
+   "answer": [
+    "7 am",
+    "6 pm"
+   ],
+   "answers": [
+    "n05"
+   ],
+   "support": [
+    "n05"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.7",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are Noor's recurring weekly meetings and their times?",
+   "answer": [
+    "1:1 with Elena every Monday at 11:00 Central time",
+    "Design critique every Thursday at 2:00 pm Central time",
+    "Mentoring Marcus Chen weekly on Fridays for 45 minutes"
+   ],
+   "answers": [
+    "n26",
+    "n23",
+    "n27"
+   ],
+   "support": [
+    "n26",
+    "n23",
+    "n27"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.8",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What cities did Noor live in, and when?",
+   "answer": [
+    "Austin from 2021 to January 2025",
+    "Minneapolis from January 2025"
+   ],
+   "answers": [
+    "n02",
+    "n03"
+   ],
+   "support": [
+    "n02",
+    "n03"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.9",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are Noor's roles and titles at Lumen Health?",
+   "answer": [
+    "Senior designer (joined February 2025)",
+    "Lead product designer (promoted August 2026)"
+   ],
+   "answers": [
+    "n00",
+    "n01"
+   ],
+   "support": [
+    "n00",
+    "n01"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.10",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are the details of the Patient Portal redesign project?",
+   "answer": [
+    "Budget of 140,000 USD",
+    "Team of five",
+    "New design system named Atlas"
+   ],
+   "answers": [
+    "n13",
+    "n14"
+   ],
+   "support": [
+    "n13",
+    "n14"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.11",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are Noor's preferences for how work is presented?",
+   "answer": [
+    "Visual first, wants a sketch or mock before long explanations",
+    "Dislikes slide decks",
+    "Prefers written design reviews over live walkthroughs"
+   ],
+   "answers": [
+    "n09",
+    "n29"
+   ],
+   "support": [
+    "n09",
+    "n29"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.12",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are the details of Noor's bouldering competition?",
+   "answer": [
+    "At Granite Gym",
+    "On 2026-11-14",
+    "Taper plan: two light sessions the week before and a rest day on 2026-11-13"
+   ],
+   "answers": [
+    "n42",
+    "n44"
+   ],
+   "support": [
+    "n42",
+    "n44"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.13",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are the details of Noor's Portugal trip?",
+   "answer": [
+    "2027-05-08 through 2027-05-22",
+    "Budget of 6,200 EUR not including flights",
+    "TAP flights from Minneapolis to Lisbon departing 2027-05-08"
+   ],
+   "answers": [
+    "n36",
+    "n40",
+    "n41"
+   ],
+   "support": [
+    "n36",
+    "n40",
+    "n41"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:list:r2.14",
+   "corpus": "draw2-v1",
+   "type": "list",
+   "question": "What are Noor's coffee preferences?",
+   "answer": [
+    "Prefers dark roast",
+    "Stops drinking coffee after 3 pm"
+   ],
+   "answers": [
+    "n06"
+   ],
+   "support": [
+    "n06"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.1",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Noor's partner, and what food does that person need to avoid?",
+   "answer": "Idris, who is allergic to walnuts.",
+   "answers": [
+    "n04"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.2",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "Which city did Noor move from when relocating for the Lumen Health job?",
+   "answer": "Austin.",
+   "answers": [
+    "n03"
+   ],
+   "support": [
+    "n01"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.3",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Noor's manager, and what is her title?",
+   "answer": "Elena Voss, Head of Design at Lumen Health.",
+   "answers": [
+    "n24"
+   ],
+   "support": [
+    "n00"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.4",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "Who covers the usability sessions while Tilda is on leave?",
+   "answer": "Marcus Chen.",
+   "answers": [
+    "n28"
+   ],
+   "support": [
+    "n25"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.5",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the new launch date for the Patient Portal redesign, and why was it moved?",
+   "answer": "It moved to Friday 2026-11-20 because the original date collided with the flu-season freeze.",
+   "answers": [
+    "n18"
+   ],
+   "support": [
+    "n16",
+    "n17"
+   ],
+   "stale": [
+    "n16"
+   ]
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.6",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "Why did Noor reject Sketch for the Atlas design system?",
+   "answer": "Because Lumen Health's engineers only support Figma tokens.",
+   "answers": [
+    "n19"
+   ],
+   "support": [
+    "n13"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.7",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What tool did Noor agree to use for documenting Atlas components?",
+   "answer": "Storybook.",
+   "answers": [
+    "n20"
+   ],
+   "support": [
+    "n13"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.8",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "When is Noor presenting the Atlas roadmap, and at what event?",
+   "answer": "At the company all-hands on 2026-10-29.",
+   "answers": [
+    "n22"
+   ],
+   "support": [
+    "n13"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.9",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the budget for the Patient Portal redesign, and how many people are on the team?",
+   "answer": "140,000 USD with a team of five.",
+   "answers": [
+    "n14"
+   ],
+   "support": [
+    "n13"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.10",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the current usability test score for the Patient Portal prototype, and what is the target?",
+   "answer": "71 on the System Usability Scale, with a target of 85.",
+   "answers": [
+    "n15"
+   ],
+   "support": [
+    "n13"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.11",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "When is Noor's trip to Portugal, and who is she visiting there?",
+   "answer": "2027-05-08 through 2027-05-22, visiting her sister Lina.",
+   "answers": [
+    "n36"
+   ],
+   "support": [
+    "n35",
+    "n11"
+   ],
+   "stale": [
+    "n35"
+   ]
+  },
+  {
+   "id": "draw2-v1:multi-hop:r2.12",
+   "corpus": "draw2-v1",
+   "type": "multi-hop",
+   "question": "What is the date of Noor's bouldering competition, and where is it held?",
+   "answer": "2026-11-14 at Granite Gym.",
+   "answers": [
+    "n42"
+   ],
+   "support": [
+    "n10"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.1",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "How many people are on the Patient Portal redesign team, and what is its budget?",
+   "answer": "Five people, with a budget of 140,000 USD.",
+   "answers": [
+    "n14"
+   ],
+   "support": [
+    "n13"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.2",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "Which cities are on Noor and Idris's Portugal itinerary, and which one did they drop?",
+   "answer": "Lisbon, Porto, Sintra, and Évora; they dropped Faro.",
+   "answers": [
+    "n37"
+   ],
+   "support": [
+    "n35",
+    "n36"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.3",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "How many evenings a week does Noor go bouldering, and where?",
+   "answer": "Three evenings a week at Granite Gym.",
+   "answers": [
+    "n10"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.4",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "Which tools does Noor like for work, and which one does she dislike?",
+   "answer": "She likes Figma and Linear and dislikes Sketch.",
+   "answers": [
+    "n07"
+   ],
+   "support": [
+    "n19"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.5",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "What are the dates of Noor's Portugal trip, and what is the budget excluding flights?",
+   "answer": "2027-05-08 through 2027-05-22, with a budget of 6,200 EUR not including flights.",
+   "answers": [
+    "n36",
+    "n40"
+   ],
+   "support": [
+    "n35"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.6",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "Who are the design engineer and the user researcher Noor works with?",
+   "answer": "Marcus Chen is the design engineer and Tilda Okoro is the user researcher.",
+   "answers": [
+    "n25"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.7",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "What is the current Patient Portal launch date, and what was it before it moved?",
+   "answer": "It is now 2026-11-20; it was originally 2026-11-06.",
+   "answers": [
+    "n18"
+   ],
+   "support": [
+    "n16",
+    "n17"
+   ],
+   "stale": [
+    "n16"
+   ]
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.8",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "What is the Patient Portal prototype's current usability score and the target score?",
+   "answer": "71 on the System Usability Scale, with a target of 85.",
+   "answers": [
+    "n15"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.9",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "Which recurring meetings does Noor have on Mondays and Thursdays, and at what times?",
+   "answer": "A 1:1 with Elena every Monday at 11:00 Central, and a design critique every Thursday at 2:00 pm Central.",
+   "answers": [
+    "n26",
+    "n23"
+   ],
+   "support": [
+    "n24"
+   ],
+   "stale": []
+  },
+  {
+   "id": "draw2-v1:aggregation:r2.10",
+   "corpus": "draw2-v1",
+   "type": "aggregation",
+   "question": "What tech stack does Lumen Health use for its product, and where is it hosted?",
+   "answer": "React and Postgres, hosted on Google Cloud, with work tracked in Linear.",
+   "answers": [
+    "n12"
+   ],
+   "support": [],
+   "stale": []
+  }
+ ]
+}

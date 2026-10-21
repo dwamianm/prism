@@ -74,17 +74,23 @@ def _edge_factor(edge: Edge, params: Params, cued: frozenset | None = None) -> f
     return factor
 
 
-async def generic_scores(question: str, gold: Gold, source, params: Params) -> GraphResult:
-    """Score the memories of a graph for one question, with no gold path."""
+def walk_plan(question: str, gold: Gold, params: Params) -> tuple[list[str], set[str], frozenset | None]:
+    """What a walk needs from the question: its seed entities, the relations its words cue, and the cued relations a
+    cue filter restricts the walk to (None when nothing restricts it)."""
     seeds = mentions(gold, question)
     if params.first_person_seed and FIRST_PERSON & set(_words(question)) and gold.owner_entity not in seeds:
         seeds = [*seeds, gold.owner_entity]
+    cues = relation_cues(question, params.cue_source) if params.relation_cues or params.cue_filter else set()
+    return seeds, cues, frozenset(cues) if params.cue_filter and cues else None
+
+
+async def generic_scores(question: str, gold: Gold, source, params: Params) -> GraphResult:
+    """Score the memories of a graph for one question, with no gold path."""
+    seeds, cues, cued = walk_plan(question, gold, params)
     result = GraphResult(seeds=seeds)
     if not seeds:
         return result
     owner = gold.owner_entity
-    cues = relation_cues(question, params.cue_source) if params.relation_cues or params.cue_filter else set()
-    cued = frozenset(cues) if params.cue_filter and cues else None
     damped = params.hub in ("owner_seed", "owner_block")
     best = {seed: {seed: params.hub_factor if seed == owner and damped else 1.0} for seed in seeds}
     cost = 2 if params.shape == CLAIM else 1
