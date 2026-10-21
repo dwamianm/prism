@@ -119,6 +119,12 @@ class Gold:
     description: str = ""
     reference_time: datetime | None = None
     patterns: dict[str, list[tuple[re.Pattern, str]]] = field(default_factory=dict)
+    # A combined store has one owner entity for each fixture it holds; empty means the single owner_entity.
+    owner_entities: tuple[str, ...] = ()
+
+    @property
+    def owners(self) -> frozenset[str]:
+        return frozenset(self.owner_entities) or frozenset({self.owner_entity})
 
     def memory(self, memory_id: str) -> Memory:
         return next(memory for memory in self.memories if memory.id == memory_id)
@@ -190,9 +196,13 @@ def mentions(gold: Gold, text: str) -> list[str]:
     taken: list[tuple[int, int]] = []
     chosen: dict[str, int] = {}
     for start, end, entity_id in found:
-        if any(start < other_end and other_start < end for other_start, other_end in taken):
+        # An identical span is kept for every entity that has that name (two fixtures name an Alex); a different
+        # overlapping span is not.
+        if any(start < other_end and other_start < end and (start, end) != (other_start, other_end)
+               for other_start, other_end in taken):
             continue
-        taken.append((start, end))
+        if (start, end) not in taken:
+            taken.append((start, end))
         chosen[entity_id] = min(chosen.get(entity_id, start), start)
     return sorted(chosen, key=chosen.get)
 

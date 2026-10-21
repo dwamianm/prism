@@ -531,3 +531,132 @@ async def test_the_sql_walk_on_postgresql_scores_every_question_as_the_python_wa
                     keep = lambda result: {key: value for key, value in result.scores.items() if value > 0}  # noqa: E731
                     assert set(keep(sql)) == set(keep(python)) and all(
                         math.isclose(value, keep(python)[key], rel_tol=1e-9) for key, value in keep(sql).items()), question.id
+
+
+# --- The scale test -----------------------------------------------------------------------------------
+
+
+def test_the_combined_core_keeps_every_fixture_with_prefixed_ids_and_shared_names():
+    from benchmarks.graph_oracle import scale
+
+    golds, core = scale.load_core()
+    assert len(core.memories) == 75 + 14 + 54 + 46 and sorted(core.owners) == [
+        "chat-v1:dana", "defects-v1:alex", "draw2-v1:noor", "store-v1:alex"]
+    assert all(memory.id.split(":")[0] in golds for memory in core.memories)
+    assert len(core.claims) == sum(len(gold.claims) for gold in golds.values())
+    assert all(set(claim.ev) <= {memory.id for memory in core.memories} for claim in core.claims)
+    shared = scale.shared_names(golds)
+    assert shared["alex"] == ["defects-v1", "store-v1"] and "dana" in shared and "northwind" not in shared or "denver" in shared
+    # A question that names a shared name seeds every entity that has it.
+    assert {"defects-v1:alex", "store-v1:alex"} <= set(mentions(core, "Which cities will Alex visit?"))
+
+
+def test_look_alikes_are_deterministic_renamed_copies_that_never_repeat_a_core_text():
+    from benchmarks.graph_oracle import scale
+
+    golds, core = scale.load_core()
+    first, clones, dropped = scale.make_clones(core, 400)
+    again, _, _ = scale.make_clones(core, 400)
+    assert [(memory.text, clone) for memory, clone in first] == [(memory.text, clone) for memory, clone in again]
+    assert len(first) == 400 and len(clones) >= 3 and dropped > 0
+    core_texts = {memory.text for memory in core.memories}
+    assert not core_texts & {memory.text for memory, _ in first} and len({memory.text for memory, _ in first}) == 400
+    renamed = " ".join(memory.text for memory, _ in first[:150])
+    assert "Alex" not in renamed and "Tokyo" not in renamed and "Jordan" not in renamed
+    clone = clones[0]
+    stored = {memory.id for memory in clone.memories}
+    assert all(set(claim.ev) <= stored for claim in clone.claims) and any(claim.inferred for claim in clone.claims)
+    assert all(claim.ev for claim in clone.claims if not claim.inferred)
+
+
+async def test_the_embedding_cache_embeds_each_text_once_and_keeps_vectors_in_a_file(tmp_path):
+    from benchmarks.graph_oracle.scale import EmbeddingCache
+
+    class Model:
+        model_name, model_version, dimension = "fake", "1", 2
+
+        def __init__(self):
+            self.calls = []
+
+        async def embed(self, texts):
+            self.calls.append(list(texts))
+            return [[float(len(text)), 1.0] for text in texts]
+
+    model = Model()
+    cache = EmbeddingCache(None, tmp_path / "vectors.pkl").wrap(model)
+    assert await cache.embed(["a", "bb", "a"]) == [[1.0, 1.0], [2.0, 1.0], [1.0, 1.0]]
+    await cache.embed(["bb", "ccc"])
+    assert model.calls == [["a", "bb"], ["ccc"]] and cache.computed == 3 and cache.hits == 2
+    cache.save()
+    again = EmbeddingCache(None, tmp_path / "vectors.pkl").wrap(Model())
+    assert await again.embed(["a", "ccc"]) == [[1.0, 1.0], [3.0, 1.0]] and again.computed == 0
+
+
+def test_the_scale_conditions_are_computed_from_the_rows_at_each_size():
+    from benchmarks.graph_oracle import scale_run
+
+    def rows(baseline_hits, routed_hits, kind="list", route="graph", total=100):
+        return [{"id": f"{kind}{number}", "set": "x", "type": kind, "route": route,
+                 "ranks": {"baseline": 1 if number < baseline_hits else 9, "routed[derived]": 1 if number < routed_hits else 9,
+                           "routed[hand]": 1}} for number in range(total)]
+
+    def sizes(core, grown):
+        return {"core": rows(*core), "500": rows(*grown), "2000": rows(*grown)}
+
+    # The advantage is 10 points at the core size and 30 at 2,000: it grows by 20.
+    result = scale_run.conditions(sizes((60, 70), (50, 80)))
+    assert result["1 advantage at 2,000 at least 8 points larger than at the core size"] == {"value": 20.0, "pass": True}
+    assert result["2 no type loses more than 1 question at any size"]["pass"]
+    flat = scale_run.conditions(sizes((60, 70), (50, 62)))
+    assert not flat["1 advantage at 2,000 at least 8 points larger than at the core size"]["pass"]
+    losing = scale_run.conditions({"core": rows(60, 70), "500": rows(60, 58), "2000": rows(60, 70)})
+    assert losing["2 no type loses more than 1 question at any size"] == {"value": 2, "pass": False}
+    broken = sizes((60, 70), (50, 80))
+    broken["core"] = rows(60, 62, "lookup", "text")
+    assert not scale_run.conditions(broken)["3 routed-to-text lookups, temporal and corrections equal the baseline"]["pass"]
+
+
+async def test_the_sql_walk_matches_the_python_walk_in_the_combined_core(mock_embeddings, tmp_path):  # noqa: F811
+    import math
+
+    from benchmarks.graph_oracle import scale, scale_run
+    from benchmarks.graph_oracle.graph import StoreSource
+    from benchmarks.graph_oracle.sqlwalk import SqlWalk
+    from prme.models.nodes import MemoryNode
+    from prme.types import NodeType, Scope
+
+    golds, core = scale.load_core()
+    pack = tmp_path / "pack"
+    (pack / "lexical_index").mkdir(parents=True)
+    async with MemoryEngine.open(gate_config(pack)) as engine:
+        ids = {memory.id: await engine._graph_store.create_node(MemoryNode(
+            user_id="scale", node_type=NodeType.NOTE, content=memory.text, scope=Scope.PERSONAL, confidence=0.9))
+            for memory in core.memories}
+        handles = await write_graph(engine, core, "scale", ids)
+        asked = [item["text"] for item in scale_run.build_items(golds)][::6]
+        for params in (Params(), Params(cue_source="derived")):
+            walk = SqlWalk(engine, "duckdb", "scale", handles, core, params)
+            for text in asked:
+                python = await generic_scores(text, core, StoreSource(engine, "scale", handles), params)
+                sql = await walk.scores(text)
+                keep = lambda result: {key: value for key, value in result.scores.items() if value > 0}  # noqa: E731
+                assert sql.seeds == python.seeds and set(keep(sql)) == set(keep(python)) and all(
+                    math.isclose(value, keep(python)[key], rel_tol=1e-9) for key, value in keep(sql).items()), text
+
+
+async def test_a_scale_run_pads_both_kinds_and_reports_each_size(mock_embeddings, tmp_path, monkeypatch):  # noqa: F811
+    from benchmarks.graph_oracle import scale_run
+
+    monkeypatch.setattr(scale_run, "conversation_pad", lambda count: [f"An unrelated remark number {number} about the weather" for number in range(count)])
+    report = await scale_run.run(tmp_path / "scale", sizes=(200, 215), backends=("duckdb",), every=12)
+    assert report["questions"] == 17 and report["sizes"] == ["core", "200", "215"] and set(report["kinds"]) == {"conversation", "lookalike"}
+    for kind, result in report["kinds"].items():
+        assert [stage["memories"] for stage in result["stages"].values()] == [189, 200, 215]
+        assert result["stages"]["core"]["summary"]["all"]["baseline"]["n"] == 17
+        assert set(result["conditions"]) >= {"1 advantage at 2,000 at least 8 points larger than at the core size"}
+        assert all(row["ranks"]["routed[derived]"] == row["ranks"]["baseline"] for rows in result["rows"].values()
+                   for row in rows if row["route"] == "text")
+    assert report["kinds"]["lookalike"]["padding"]["clones"] >= 1 and "## lookalike" in (tmp_path / "scale" / "report.md").read_text()
+    # A second run reuses the text stores' lists.
+    again = await scale_run.run(tmp_path / "scale", sizes=(200, 215), backends=("duckdb",), every=12)
+    assert again["kinds"]["conversation"]["stages"]["215"]["summary"] == report["kinds"]["conversation"]["stages"]["215"]["summary"]

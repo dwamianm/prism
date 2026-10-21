@@ -90,9 +90,9 @@ async def generic_scores(question: str, gold: Gold, source, params: Params) -> G
     result = GraphResult(seeds=seeds)
     if not seeds:
         return result
-    owner = gold.owner_entity
+    owners = gold.owners
     damped = params.hub in ("owner_seed", "owner_block")
-    best = {seed: {seed: params.hub_factor if seed == owner and damped else 1.0} for seed in seeds}
+    best = {seed: {seed: params.hub_factor if seed in owners and damped else 1.0} for seed in seeds}
     cost = 2 if params.shape == CLAIM else 1
     steps = params.hops // cost
     claims_on: dict[str, dict[str, Edge]] = {}
@@ -114,7 +114,7 @@ async def generic_scores(question: str, gold: Gold, source, params: Params) -> G
         following: dict[str, set[str]] = {seed: set() for seed in seeds}
         for seed in seeds:
             for entity_id in frontier[seed]:
-                if params.hub == "owner_block" and entity_id == owner and entity_id != seed:
+                if params.hub == "owner_block" and entity_id in owners and entity_id != seed:
                     continue
                 damp = 1 / math.log2(2 + len(claims_on[entity_id])) if params.hub == "degree" else 1.0
                 for edge in claims_on[entity_id].values():
@@ -138,7 +138,7 @@ async def generic_scores(question: str, gold: Gold, source, params: Params) -> G
 
     def counts(entity_id: str | None) -> float:
         """An entity's score for scoring memories: the owner touches nearly everything, so it counts only on request."""
-        return 0.0 if entity_id is None or (entity_id == owner and not params.owner_mentions) else boosted.get(entity_id, 0.0)
+        return 0.0 if entity_id is None or (entity_id in owners and not params.owner_mentions) else boosted.get(entity_id, 0.0)
 
     scores: dict[str, float] = {}
     if params.mention:

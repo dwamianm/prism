@@ -81,7 +81,8 @@ class SqlWalk:
         ids = [self._handles.entity[entity_id] for entity_id in seeds]
         if not all(SAFE.match(node_id) for node_id in ids):
             raise ValueError("a node id is not a uuid")
-        hub = self._handles.entity[self._gold.owner_entity]
+        hubs = [self._handles.entity[entity_id] for entity_id in sorted(self._gold.owners) if entity_id in self._handles.entity]
+        hub_list = ", ".join(f"CAST({_quote(node_id)} AS UUID)" for node_id in hubs) or "CAST('00000000-0000-0000-0000-000000000000' AS UUID)"
         user = _quote(self._owner)
         params = self.params
         where = [f"e.user_id = {user}", f"e.edge_type IN ({CLAIM_TYPES})", f"{self._json('shape')} IN ('direct', 'both')"]
@@ -102,7 +103,7 @@ class SqlWalk:
         claim_where = " AND ".join(item.replace("metadata", "e.metadata") if "metadata" in item else item for item in where)
 
         def layer(name: str, frontier: str, cap: str, skip_hub: bool) -> str:
-            pivot_filter = f" AND p.id <> CAST({_quote(hub)} AS UUID)" if skip_hub else ""
+            pivot_filter = f" AND p.id NOT IN ({hub_list})" if skip_hub else ""
             return f"""{name} AS (
   SELECT id, source_id, target_id, edge_type, metadata, created_at, pv FROM (
     SELECT u.*, row_number() OVER (PARTITION BY u.pv ORDER BY u.created_at DESC) AS rn FROM (
@@ -119,8 +120,8 @@ class SqlWalk:
             return f"""{name} AS (
   SELECT other AS id FROM (
     SELECT CASE WHEN pv = source_id THEN target_id ELSE source_id END AS other, created_at FROM {claims}
-    WHERE edge_type IN ('relates_to', 'part_of') AND pv <> CAST({_quote(hub)} AS UUID)
-  ) x WHERE other NOT IN ({exclude}) AND other <> CAST({_quote(hub)} AS UUID) GROUP BY other ORDER BY max(created_at) DESC LIMIT {frontier_cap}
+    WHERE edge_type IN ('relates_to', 'part_of') AND pv NOT IN ({hub_list})
+  ) x WHERE other NOT IN ({exclude}) AND other NOT IN ({hub_list}) GROUP BY other ORDER BY max(created_at) DESC LIMIT {frontier_cap}
 )"""
 
         seed_values = ", ".join(f"({_quote(node_id)})" for node_id in ids)
@@ -130,7 +131,7 @@ class SqlWalk:
   SELECT other AS id FROM (
     SELECT CASE WHEN pv = source_id THEN target_id ELSE source_id END AS other, created_at FROM c0
     WHERE edge_type IN ('relates_to', 'part_of')
-  ) x WHERE other NOT IN (SELECT id FROM l0) AND other <> CAST({_quote(hub)} AS UUID) GROUP BY other ORDER BY max(created_at) DESC LIMIT {frontier_cap}
+  ) x WHERE other NOT IN (SELECT id FROM l0) AND other NOT IN ({hub_list}) GROUP BY other ORDER BY max(created_at) DESC LIMIT {frontier_cap}
 )"""
         mention_pivots = "SELECT id FROM l0 UNION SELECT id FROM l1 UNION SELECT id FROM l2"
         statement = f"""WITH
@@ -145,7 +146,7 @@ mentioned AS (
     SELECT e.source_id, e.target_id, row_number() OVER (PARTITION BY e.target_id ORDER BY e.created_at DESC) AS rn
     FROM ({mention_pivots}) p JOIN edges e ON e.target_id = p.id
     WHERE e.user_id = {user} AND e.edge_type = 'mentions' AND {self._json('shape').replace('metadata', 'e.metadata')} = 'both'
-      AND p.id <> CAST({_quote(hub)} AS UUID)
+      AND p.id NOT IN ({hub_list})
   ) m WHERE rn <= {mention_cap}
 ),
 claims AS (
