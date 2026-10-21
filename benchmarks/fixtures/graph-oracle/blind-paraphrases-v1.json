@@ -1,0 +1,441 @@
+{
+ "kind": "prme-graph-oracle-blind-paraphrases",
+ "schema_version": 1,
+ "model": "the fast tiers' extraction model through a local Ollama server (MODEL in benchmarks/graph_oracle/blind.py)",
+ "blind_sha256": "b84b6dc8381320a0059aadd0e969c282043e94f9efd84d99100332a078ff4b71",
+ "calls": 3,
+ "prompt_tokens": 2346,
+ "completion_tokens": 5545,
+ "paraphrases": {
+  "defects-v1:lookup:1": [
+   "Which cities does Alex intend to visit in Japan?",
+   "In Japan, which cities is Alex planning to visit?",
+   "What cities is Alex planning to visit while in Japan?"
+  ],
+  "defects-v1:lookup:2": [
+   "What book is Alex reading as he learns Rust?",
+   "While learning Rust, what book is Alex reading?",
+   "Which book is Alex reading while he studies Rust?"
+  ],
+  "defects-v1:lookup:3": [
+   "Who wants the runbook reviewed before Friday?",
+   "Who wants the runbook to be reviewed before Friday?",
+   "Who wants someone to review the runbook before Friday?"
+  ],
+  "defects-v1:list:1": [
+   "Which cities are Alex and Jordan planning to visit on their trip to Japan?",
+   "On their Japan trip, which cities do Alex and Jordan plan to visit?",
+   "What cities are Alex and Jordan planning to visit during their Japan trip?"
+  ],
+  "defects-v1:list:2": [
+   "What programming languages does Alex use?",
+   "Which programming languages does Alex use?",
+   "What languages does Alex use for programming?"
+  ],
+  "defects-v1:list:3": [
+   "What travel arrangements does Alex need to make for the Japan trip?",
+   "For the Japan trip, what travel arrangements does Alex need to make?",
+   "What travel plans does Alex need to arrange for the Japan trip?"
+  ],
+  "defects-v1:multi-hop:1": [
+   "What database technology did Alex's team decide to use for the shipment table instead of TimescaleDB?",
+   "Instead of TimescaleDB, what database technology did Alex's team decide to use for the shipment table?",
+   "For the shipment table, what database technology did Alex's team decide to use rather than TimescaleDB?"
+  ],
+  "defects-v1:multi-hop:3": [
+   "Alex is planning a trip to Japan with Jordan. What allergy does Jordan have that Alex needs to prepare for at restaurants?",
+   "Jordan is going to Japan with Alex. What allergy does Jordan have that Alex needs to prepare for at restaurants?",
+   "What allergy does Jordan have that Alex needs to prepare for at restaurants on their planned trip to Japan?"
+  ],
+  "defects-v1:temporal:1": [
+   "When are Alex and Jordan planning their trip to Japan?",
+   "When do Alex and Jordan plan to take their trip to Japan?",
+   "At what time are Alex and Jordan planning their trip to Japan?"
+  ],
+  "defects-v1:temporal:2": [
+   "By when does Dana want the runbook reviewed by Sam?",
+   "By what time does Dana want Sam to review the runbook?",
+   "When does Dana want the runbook reviewed by Sam?"
+  ],
+  "defects-v1:temporal:3": [
+   "When does Alex study Rust?",
+   "At what time does Alex study Rust?",
+   "When is Alex studying Rust?"
+  ],
+  "defects-v1:negation:1": [
+   "Which city did Alex and Jordan decide not to include in their Japan trip?",
+   "Which city did Alex and Jordan decide to leave out of their Japan trip?",
+   "What city did Alex and Jordan decide not to include in their trip to Japan?"
+  ],
+  "defects-v1:negation:2": [
+   "What mode of transport does Alex not want to use for getting around Japan?",
+   "For getting around Japan, what mode of transport does Alex not want to use?",
+   "What mode of transport does Alex not want to use to get around Japan?"
+  ],
+  "defects-v1:negation:3": [
+   "What approach did Alex decide against for the shipment table at work?",
+   "For the shipment table at work, what approach did Alex decide against?",
+   "What approach did Alex decide not to use for the shipment table at work?"
+  ],
+  "defects-v1:aggregation:1": [
+   "How many cities are Alex and Jordan planning to visit in Japan?",
+   "In Japan, how many cities are Alex and Jordan planning to visit?",
+   "How many cities do Alex and Jordan plan to visit in Japan?"
+  ],
+  "defects-v1:aggregation:2": [
+   "Which programming languages does Alex use at work?",
+   "At work, which programming languages does Alex use?",
+   "What programming languages does Alex use at work?"
+  ],
+  "store-v1:lookup:1": [
+   "What's the name of the border collie that belongs to Alex?",
+   "Alex has a border collie\u2014what is it called?",
+   "What name does Alex's border collie go by?"
+  ],
+  "store-v1:lookup:4": [
+   "How much is currently being spent on Datadog each month?",
+   "What does the monthly Datadog bill amount to at present?",
+   "What is the present monthly expenditure on Datadog?"
+  ],
+  "store-v1:list:1": [
+   "Which cities appear on the Japan itinerary for Alex and Jordan?",
+   "What cities are included in Alex and Jordan's Japan travel plan?",
+   "On Alex and Jordan's Japan itinerary, which cities are listed?"
+  ],
+  "store-v1:list:2": [
+   "Which tools and services make up Northwind's stack on AWS?",
+   "What tools and services does Northwind's AWS stack consist of?",
+   "Northwind's stack runs on AWS\u2014what tools and services does it include?"
+  ],
+  "store-v1:list:3": [
+   "Which languages does Alex favor for services and for internal tooling?",
+   "What languages does Alex prefer to use for services and internal tooling?",
+   "For services and internal tooling, which languages does Alex prefer?"
+  ],
+  "store-v1:list:5": [
+   "What steps are included in the cutover checklist that the assistant drafted?",
+   "Which steps make up the cutover checklist the assistant prepared?",
+   "The assistant drafted a cutover checklist\u2014what steps does it contain?"
+  ],
+  "store-v1:multi-hop:1": [
+   "What is the name of Alex's manager, and what title does that person hold?",
+   "Who manages Alex, and what is that manager's title?",
+   "What is Alex's manager called, and what is the manager's job title?"
+  ],
+  "store-v1:multi-hop:2": [
+   "Who is covering Alex's on-call week of 2026-10-26, and what role does that person have at Northwind?",
+   "Which person is covering Alex's on-call week of 2026-10-26, and what is that person's position at Northwind?",
+   "For Alex's on-call week of 2026-10-26, who is the cover, and what is that person's role at Northwind?"
+  ],
+  "store-v1:multi-hop:3": [
+   "Who found the replica lag risk that caused the production cutover to be pushed back a week?",
+   "What is the name of the person who discovered the replica lag risk that delayed the production cutover by a week?",
+   "The replica lag risk that moved the production cutover back a week was found by whom?"
+  ],
+  "store-v1:multi-hop:4": [
+   "What is the name of Alex's partner, and what dietary restriction does that person have that affects the Japan trip?",
+   "Who is Alex's partner, and which dietary restriction of theirs affects the Japan trip?",
+   "Alex's partner has a dietary restriction that affects the Japan trip\u2014what is the partner's name and what is the restriction?"
+  ],
+  "store-v1:multi-hop:5": [
+   "Which database did Alex reject for the shipment_events migration, and why was it ruled out?",
+   "What database was rejected by Alex for the shipment_events migration, and for what reason was it ruled out?",
+   "For the shipment_events migration, which database did Alex turn down, and why was it excluded?"
+  ],
+  "store-v1:temporal:1": [
+   "When did Alex relocate to Denver?",
+   "At what time did Alex move to Denver?",
+   "What date did Alex move to Denver?"
+  ],
+  "store-v1:temporal:2": [
+   "Did Alex join Northwind before leaving Meridian Freight, or after?",
+   "Was Alex's start at Northwind before or after Alex left Meridian Freight?",
+   "Relative to leaving Meridian Freight, did Alex join Northwind earlier or later?"
+  ],
+  "store-v1:temporal:3": [
+   "After the date change, when is the production cutover now scheduled?",
+   "What is the new scheduled date for the production cutover following the change?",
+   "When is the production cutover scheduled now that the date has changed?"
+  ],
+  "store-v1:temporal:4": [
+   "When did Alex agree to lead the observability rewrite?",
+   "On what date did Alex accept leading the observability rewrite?",
+   "At what point did Alex take on leading the observability rewrite?"
+  ],
+  "store-v1:temporal:5": [
+   "After the change, what are the dates of the Japan trip?",
+   "What dates does the Japan trip now have following the change?",
+   "Following the change, when does the Japan trip take place?"
+  ],
+  "store-v1:correction:1": [
+   "When is the production cutover scheduled for the shipment_events migration?",
+   "What is the date of the production cutover for the shipment_events migration?",
+   "For the shipment_events migration, when does the production cutover occur?"
+  ],
+  "store-v1:correction:4": [
+   "What is Alex's opinion of pair programming?",
+   "How does Alex feel regarding pair programming?",
+   "What are Alex's feelings about pair programming?"
+  ],
+  "store-v1:negation:1": [
+   "When Alex asks for code, does Alex want Java examples?",
+   "Does Alex want Java code examples included when requesting code?",
+   "Is Alex interested in Java code examples when asking for code?"
+  ],
+  "store-v1:negation:3": [
+   "Which city was removed from the Japan itinerary by Alex?",
+   "What city did Alex take out of the Japan itinerary?",
+   "Alex dropped a city from the Japan itinerary\u2014which one was it?"
+  ],
+  "store-v1:negation:4": [
+   "Does Alex want an ORM used for new services?",
+   "Is Alex in favor of using an ORM for new services?",
+   "For new services, does Alex want to use an ORM?"
+  ],
+  "store-v1:negation:5": [
+   "Does Alex want to be on call during the week of the production cutover?",
+   "Is Alex willing to be on call during the production cutover week?",
+   "During the production cutover week, does Alex want to be on call?"
+  ],
+  "store-v1:aggregation:5": [
+   "Which programming languages does Alex prefer for services and internal tooling, and which does Alex dislike?",
+   "What programming languages does Alex favor for services and internal tooling, and what languages does Alex not like?",
+   "For services and internal tooling, which programming languages does Alex prefer, and which does Alex dislike?"
+  ],
+  "store-v1:lookup:r2.1": [
+   "Which company is Alex Rivera employed by?",
+   "What company does Alex Rivera work at?",
+   "Alex Rivera works for which company?"
+  ],
+  "store-v1:lookup:r2.5": [
+   "How long did the staging dry run of the migration last?",
+   "What was the duration of the migration's staging dry run?",
+   "The staging dry run of the migration took how long?"
+  ],
+  "store-v1:lookup:r2.8": [
+   "What is the Japan trip budget, not counting flights?",
+   "Excluding flights, what is the budget for the Japan trip?",
+   "How much is budgeted for the Japan trip, excluding flights?"
+  ],
+  "store-v1:lookup:r2.9": [
+   "Which race in Fruita did Alex sign up for?",
+   "What Fruita race did Alex register for?",
+   "Alex signed up for which race in Fruita?"
+  ],
+  "store-v1:lookup:r2.10": [
+   "What book is Alex reading at the moment?",
+   "Which book is Alex currently reading?",
+   "At present, what book is Alex reading?"
+  ],
+  "store-v1:correction:r2.3": [
+   "What are the dates for Alex and Jordan's Japan trip?",
+   "When does Alex and Jordan's Japan trip take place?",
+   "For Alex and Jordan's Japan trip, what are the dates?"
+  ],
+  "store-v1:multi-hop:r2.1": [
+   "What is the name of the manager Alex meets with every Tuesday at 10:00 Mountain time?",
+   "Who is the manager that Alex meets every Tuesday at 10:00 Mountain time?",
+   "Alex meets a manager every Tuesday at 10:00 Mountain time\u2014what is that manager's name?"
+  ],
+  "store-v1:multi-hop:r2.2": [
+   "Which engineer took over Alex's on-call week of 2026-10-26 so the cutover wouldn't fall during Alex's shift?",
+   "Who took over Alex's on-call week of 2026-10-26 to keep the cutover from falling during Alex's shift?",
+   "To avoid the cutover falling during Alex's shift, which engineer took over Alex's on-call week of 2026-10-26?"
+  ],
+  "store-v1:multi-hop:r2.4": [
+   "What is the name of Alex's partner, who needs a Japanese allergy card because of a shellfish allergy?",
+   "Who is Alex's partner, the person who needs a Japanese allergy card due to a shellfish allergy?",
+   "Alex's partner needs a Japanese allergy card because of a shellfish allergy\u2014what is that person's name?"
+  ],
+  "store-v1:multi-hop:r2.6": [
+   "Which observability backend did Alex choose for the rewrite that Alex agreed to lead on 2026-10-14?",
+   "What observability backend was selected by Alex for the rewrite Alex agreed to lead on 2026-10-14?",
+   "For the rewrite that Alex agreed to lead on 2026-10-14, which observability backend did Alex pick?"
+  ],
+  "store-v1:aggregation:r2.1": [
+   "How many distinct cities is Alex planning to visit on the Japan trip?",
+   "What is the number of distinct cities Alex plans to visit on the Japan trip?",
+   "On the Japan trip, how many different cities does Alex plan to visit?"
+  ],
+  "store-v1:aggregation:r2.3": [
+   "Which editors does Alex currently use, and for what?",
+   "What editors is Alex using at present, and for what purposes?",
+   "For what does Alex currently use which editors?"
+  ],
+  "chat-v1:lookup:1": [
+   "What is the name of the dog that belongs to Dana?",
+   "Dana's dog goes by what name?",
+   "What name does Dana's dog have?"
+  ],
+  "chat-v1:lookup:2": [
+   "At what time did Dana complete the Cherry Creek Half Marathon?",
+   "What was Dana's finishing time for the Cherry Creek Half Marathon?",
+   "When did Dana cross the finish line in the Cherry Creek Half Marathon?"
+  ],
+  "chat-v1:lookup:3": [
+   "What is the name of the new baby of Dana's sister?",
+   "Dana's sister's new baby is called what?",
+   "What name has Dana's sister given her new baby?"
+  ],
+  "chat-v1:lookup:4": [
+   "When will Dana begin her new position as analytics manager at Brightpath?",
+   "At what point does Dana start her new job as analytics manager at Brightpath?",
+   "What is the start date for Dana's new analytics manager role at Brightpath?"
+  ],
+  "chat-v1:list:1": [
+   "Which people make up Dana's household in Denver?",
+   "Who lives with Dana in her Denver household?",
+   "What are the names of the members of Dana's household in Denver?"
+  ],
+  "chat-v1:list:4": [
+   "Which races and finishing times are listed for Dana and Melanie?",
+   "What races and times are given for Dana and Melanie?",
+   "For Dana and Melanie, what races and finishing times are mentioned?"
+  ],
+  "chat-v1:list:5": [
+   "Which programming languages or tools are referenced in Dana's work context?",
+   "What programming tools or languages appear in the context of Dana's work?",
+   "In Dana's work context, what programming languages or tools come up?"
+  ],
+  "chat-v1:multi-hop:1": [
+   "Who persuaded Dana to sign up for the Cherry Creek Half Marathon?",
+   "What is the name of the person who got Dana to register for the Cherry Creek Half Marathon?",
+   "Who was it that convinced Dana to enter the Cherry Creek Half Marathon?"
+  ],
+  "chat-v1:multi-hop:2": [
+   "Who was Dana's manager at Northwind that requested weekly dashboards?",
+   "What is the name of the Northwind manager who asked Dana for weekly dashboards?",
+   "At Northwind, which manager asked Dana for weekly dashboards?"
+  ],
+  "chat-v1:multi-hop:4": [
+   "Who is Dana's partner that works night shifts as a nurse at Denver Health?",
+   "What is the name of Dana's partner, the nurse at Denver Health who works night shifts?",
+   "Dana's partner, who works night shifts as a nurse at Denver Health, is named what?"
+  ],
+  "chat-v1:multi-hop:5": [
+   "What is the name of Dana's golden retriever that ate one of Sam's running shoes?",
+   "Which of Dana's golden retrievers ate one of Sam's running shoes?",
+   "Dana's golden retriever that ate one of Sam's running shoes is called what?"
+  ],
+  "chat-v1:temporal:1": [
+   "When did I begin my new job at Brightpath?",
+   "What was the start date of my new job at Brightpath?",
+   "At what time did I start my new position at Brightpath?"
+  ],
+  "chat-v1:temporal:3": [
+   "When does the Cherry Creek Half Marathon that I signed up for take place?",
+   "What is the date of the Cherry Creek Half Marathon I registered for?",
+   "When is the Cherry Creek Half Marathon I entered?"
+  ],
+  "chat-v1:temporal:5": [
+   "When did my sister Rachel give birth to her baby Ivy?",
+   "What was the date when my sister Rachel had her baby Ivy?",
+   "At what time did Rachel, my sister, have her baby Ivy?"
+  ],
+  "chat-v1:correction:1": [
+   "What is my current diet \u2014 do I still follow a vegetarian diet?",
+   "Am I still vegetarian, or has my current diet changed?",
+   "What diet am I on now \u2014 am I still a vegetarian?"
+  ],
+  "chat-v1:correction:2": [
+   "Where am I working now?",
+   "What is my current workplace?",
+   "At which place do I work now?"
+  ],
+  "chat-v1:correction:4": [
+   "What is the longest run I have completed?",
+   "Which run is the longest one I've done?",
+   "What is my longest run so far?"
+  ],
+  "chat-v1:negation:1": [
+   "What type of coffee does Dana drink these days?",
+   "Which coffee does Dana currently drink?",
+   "What kind of coffee is Dana drinking now?"
+  ],
+  "chat-v1:negation:2": [
+   "Does Dana consume meat?",
+   "Is meat part of Dana's diet?",
+   "Does Dana eat any meat?"
+  ],
+  "chat-v1:negation:3": [
+   "Is Dana still employed at Northwind?",
+   "Does Dana still work for Northwind?",
+   "Is Dana still working for Northwind?"
+  ],
+  "chat-v1:negation:4": [
+   "Is Sam going to come on the Portland trip?",
+   "Will Sam be joining the Portland trip?",
+   "Is Sam coming along on the trip to Portland?"
+  ],
+  "chat-v1:negation:5": [
+   "Does Dana still want to use Tableau for her dashboards?",
+   "Is Dana interested in continuing to use Tableau for her dashboards?",
+   "Does Dana wish to keep using Tableau for her dashboards?"
+  ],
+  "chat-v1:aggregation:1": [
+   "How many half marathons has Melanie completed, and what was her finishing time at the Cherry Creek Half?",
+   "What is the number of half marathons Melanie has run, and what time did she finish the Cherry Creek Half in?",
+   "Melanie has run how many half marathons, and what was her Cherry Creek Half finishing time?"
+  ],
+  "chat-v1:aggregation:2": [
+   "Which jobs has Dana held or been offered in these conversations, and at which companies?",
+   "What positions has Dana had or been offered across these conversations, and at what companies?",
+   "Across these conversations, which jobs has Dana held or been offered, and at which companies?"
+  ],
+  "chat-v1:lookup:r2.5": [
+   "What is Sam's occupation?",
+   "What does Sam do for work?",
+   "What kind of work does Sam do for a living?"
+  ],
+  "chat-v1:lookup:r2.7": [
+   "What food allergy does Sam have?",
+   "Which food is Sam allergic to?",
+   "What food allergy is Sam affected by?"
+  ],
+  "chat-v1:lookup:r2.10": [
+   "What is Dana's current diet called now that she eats fish again?",
+   "Now that Dana eats fish again, what is her current diet called?",
+   "What name is given to Dana's current diet since she has resumed eating fish?"
+  ],
+  "chat-v1:correction:r2.5": [
+   "Did I actually run the Cherry Creek Half, and what was my time?",
+   "Did I really complete the Cherry Creek Half, and what was my finishing time?",
+   "Did I in fact run the Cherry Creek Half, and what time did I get?"
+  ],
+  "chat-v1:correction:r2.6": [
+   "What is Biscuit's age?",
+   "How old is Biscuit?",
+   "What age is Biscuit?"
+  ],
+  "chat-v1:correction:r2.7": [
+   "Is Sam still working night shifts at Denver Health?",
+   "Does Sam still work night shifts at Denver Health?",
+   "Is Sam still employed on night shifts at Denver Health?"
+  ],
+  "chat-v1:correction:r2.8": [
+   "What is the status of my job at Northwind?",
+   "What is the current state of my job at Northwind?",
+   "What's the situation with my job at Northwind?"
+  ],
+  "chat-v1:multi-hop:r2.2": [
+   "What tool does Northwind, Dana's former employer, use as its standard for dashboards?",
+   "Which tool is the dashboard standard at Dana's former employer, Northwind?",
+   "What dashboard tool does Dana's former employer Northwind use as its standard?"
+  ],
+  "chat-v1:multi-hop:r2.3": [
+   "What is the name of Dana's dog, a 3-year-old golden retriever?",
+   "Dana's 3-year-old golden retriever is called what?",
+   "What name does Dana's dog, who is a 3-year-old golden retriever, have?"
+  ],
+  "chat-v1:multi-hop:r2.4": [
+   "What is the name of Dana's sister's baby, whom Dana plans to meet on her July trip to Portland?",
+   "Dana's sister's baby, whom Dana plans to meet on her July trip to Portland, is named what?",
+   "What name does Dana's sister's baby have, the one Dana plans to meet on her July trip to Portland?"
+  ],
+  "chat-v1:multi-hop:r2.6": [
+   "What is the name of Melanie's fianc\u00e9, whom she got engaged to around the time of the half marathon?",
+   "Melanie's fianc\u00e9, to whom she got engaged around the time of the half marathon, is called what?",
+   "What name does Melanie's fianc\u00e9 have, the one she got engaged to around the time of the half marathon?"
+  ]
+ }
+}

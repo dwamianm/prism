@@ -74,18 +74,28 @@ _SCAN_PAGE = 1000
 _FAILED_REQUESTS_IN_A_ROW = 3
 _CLAIM_KINDS = frozenset({"fact", "relationship"})
 
+# Bump this by one, in the pull request, when a change alters the records an unchanged source derives, or the
+# model output a source gets, in a way no setting below shows: the grounding checks, the planning, linking,
+# supersedence and claim text rules, the extraction schema. Do not bump it for a release, a version bump, a
+# change to retrieval, packing or the API, or any change that leaves the derived records as they were. A bump
+# makes every stored memory stale once, and reingest() then offers to re-derive all of them with a model
+# request each, so a bump nobody needed costs every user money. tests/test_derivation_version.py derives a
+# recorded extraction and fails when the records change without it, and says what to do.
+DERIVATION_VERSION = 1
+
 
 def _digest(value: dict) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 def extraction_settings(pipeline: IngestionPipeline) -> dict:
-    """What decides the model's output for a source: the engine, the model, the prompt and the checks.
+    """What decides the model's output for a source: the derivation version, the model, the prompt and the checks.
 
     The prompt is the digest of the request the provider would send for one
     sample turn, so a change to its text or its layout changes the settings.
+    The package version is not one of them: a release that leaves what is
+    derived as it was leaves every source current (``DERIVATION_VERSION``).
     """
-    from prme import __version__
     from prme.ingestion.extraction import BatchTurn, _extraction_prompt_for_role, batch_request_sha256
     from prme.ingestion.pipeline import _GROUNDING_POLICY
 
@@ -93,7 +103,7 @@ def extraction_settings(pipeline: IngestionPipeline) -> dict:
     sample = BatchTurn(index=1, role="user", content="Sample turn.", speaker="Sample",
                        time=datetime(2000, 1, 1, tzinfo=timezone.utc))
     settings = {
-        "engine": __version__,
+        "derivation_version": DERIVATION_VERSION,
         "provider": provider.provider_name,
         "model": provider.model_name,
         "grounding_policy": _GROUNDING_POLICY,

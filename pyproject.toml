@@ -1,6 +1,6 @@
 [project]
 name = "prme"
-version = "0.16.0a5"
+version = "0.16.0a6"
 description = "Portable Relational Memory Engine - local-first memory substrate for LLM-powered systems"
 readme = "README.md"
 authors = [
@@ -59,7 +59,6 @@ local-privacy = [
 privacy = [
     "presidio-analyzer==2.2.364; python_version < '3.15'",
     "spacy==3.8.11; python_version < '3.15'",
-    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl ; python_version < '3.15'",
 ]
 postgres = [
     "asyncpg>=0.29.0",
@@ -90,6 +89,9 @@ evaluation = [
 
 [dependency-groups]
 dev = [
+    # The sanitizer's spaCy model is a direct URL, which PyPI refuses in published metadata, so it is a
+    # development dependency and users install it themselves (docs/SANITIZATION.md).
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl ; python_version < '3.15'",
     "pytest",
     "pytest-asyncio",
     "ruff",

@@ -2184,8 +2184,10 @@ class MemoryEngine:
 
         A second run over the same data does nothing for the sources already
         re-derived under the same settings, so a stopped run continues where it
-        stopped. The settings are the engine version, the extraction model and
-        prompt, and the options that decide what is derived. Memories whose own
+        stopped. The settings are the derivation version (a number a developer
+        bumps when what is derived changes, not the package version), the
+        extraction model and prompt, and the options that decide what is
+        derived. Memories whose own
         extraction has not finished are left for ``process_extractions()``.
         A call can stop early: three requests in a row that fail end it, and the
         sources it did not reach stay not current.

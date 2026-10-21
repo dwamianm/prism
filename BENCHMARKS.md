@@ -3509,6 +3509,447 @@ from two turns was the same fact. The labels, the reasons, the sensitivity of
 the top band to one label and the commands are in
 `benchmarks/results/research/2026-10-15/PARAPHRASED-DUPLICATE-CLAIMS.md`.
 
+### Graph oracle: what a well shaped graph answers (store packs, no model)
+
+Part of #351. The graph today holds `has_fact` and `mentions` edges, and `store()`
+writes neither entity nor edge, so a question about a list ("which cities will
+Alex visit in Japan?") finds the answer only by its words. This probe works
+backwards. It writes the graph a good extractor would hand us by hand (a gold
+graph, [`DESIGN.md`](benchmarks/graph_oracle/DESIGN.md) says what shape and
+why), writes it into the real graph store over memories stored with `store()`
+and real local embeddings (no extraction), and asks the questions of three
+strategies. That separates two questions that were mixed: whether a well shaped
+graph plus a good traversal answers the questions, and whether extraction can
+produce that graph. Nothing here changes a default or the engine: the graph
+uses the existing edge types, with the relation label in edge metadata.
+
+```sh
+uv run python -m benchmarks.graph_oracle run --out /tmp/oracle
+uv run python -m benchmarks.graph_oracle run --out /tmp/oracle --set hops=3 --set cue_filter=false
+uv run python -m benchmarks.graph_oracle compare /tmp/before/report.json /tmp/after/report.json
+uv run python -m benchmarks.graph_oracle fidelity --gold store-v1 --graph extracted.json
+```
+
+A run takes about 20 seconds on a laptop, is deterministic (two runs give the
+same report) and calls no model. Gold graphs are in
+`benchmarks/fixtures/graph-oracle/`: `defects-v1` (14 turns, 21 entities, 33
+claims), `store-v1` (the 75 memory store fixture, 72 entities, 127 claims) and
+`chat-v1` (54 turns, 22 entities, 40 claims). Each question has a query spec
+(seeds, relation path, target) and the memories that answer it. They cover all 7
+defect probes, all 17 store questions and all 18 chat probes, plus 7 added two
+and three hop questions, and two spellings of the cities question for each of
+the two corpora that ask it (53 items in all). `corrections-v1` is not annotated
+yet. The memories the gold graph says nothing about are still stored, so every
+question has distractors.
+
+The strategies, each ranking the stored memories:
+
+- `baseline`: `retrieve()` as it is, before any gold graph exists.
+- `oracle`: the gold query spec followed exactly from the gold seeds, selected
+  memories first. The upper bound of the shape: if it does not rank the answers
+  first, the shape cannot answer the question.
+- `generic`: no gold path. Seeds come from the question text by entity name,
+  the walk follows claims up to `hops` with hop decay and a weight per
+  relation, and a memory scores by the reached entities it names and the
+  reached claims it evidences. The owner entity touches nearly every memory,
+  so the walk never passes through it unless it is a seed (hub damping).
+  Question words that name an entity subtype ("cities", "dog") boost reached
+  entities of that subtype, and question words that point at a relation
+  ("manager", "allergic", "visit") restrict the walk to that relation and
+  containment. Memories it reaches come first, then the text list.
+- `fused@w`: reciprocal rank fusion of the `retrieve()` list and the generic
+  graph list, the graph list weighted `w`. `fused-gated` uses 4 when the
+  question names a subtype and 0.5 otherwise; that rule was chosen after the
+  first table, so treat it as exploratory.
+
+The answer of a question is the first stored memory that states it, as the gold
+file lists them (a memory that restates a fact counts, one that only mentions a
+name does not). Measured on 2026-10-20 at `50d22d4e`, on a laptop:
+
+| Strategy | Rank 1 | Top 3 | Top 5 | MRR | Stale above answer |
+|---|---:|---:|---:|---:|---:|
+| baseline | 21 | 39 | 41 | 0.564 | 6/8 |
+| oracle | 53 | 53 | 53 | 1.000 | 0/8 |
+| generic | 33 | 51 | 51 | 0.757 | 1/8 |
+| fused@0.5 | 26 | 45 | 49 | 0.671 | 3/8 |
+| fused@1 | 28 | 46 | 50 | 0.710 | 3/8 |
+| fused@2 | 32 | 48 | 51 | 0.760 | 2/8 |
+| fused@4 | 34 | 50 | 50 | 0.780 | 1/8 |
+| fused-gated | 30 | 48 | 51 | 0.725 | 3/8 |
+
+Top 3 of 53 items, and MRR in brackets, by question kind:
+
+| Strategy | Lookup (28) | List (7) | Correction (8) | Two hop (8) | Three hop (2) |
+|---|---|---|---|---|---|
+| baseline | 26 (0.761) | 4 (0.225) | 4 (0.340) | 4 (0.476) | 1 (0.250) |
+| oracle | 28 (1.000) | 7 (1.000) | 8 (1.000) | 8 (1.000) | 2 (1.000) |
+| generic | 27 (0.771) | 7 (0.929) | 8 (0.625) | 8 (0.750) | 1 (0.528) |
+| fused@1 | 28 (0.881) | 4 (0.355) | 7 (0.635) | 6 (0.542) | 1 (0.528) |
+| fused@2 | 27 (0.878) | 4 (0.588) | 8 (0.667) | 8 (0.646) | 1 (0.528) |
+| fused@4 | 27 (0.874) | 6 (0.619) | 8 (0.729) | 8 (0.708) | 1 (0.528) |
+
+The cities question (rank of the memory "They chose Tokyo, Kyoto, Kanazawa, and
+Osaka." among the stored memories):
+
+| Corpus and spelling | baseline | oracle | generic | fused@1 | fused@2 | fused@4 |
+|---|---:|---:|---:|---:|---:|---:|
+| store, "which cities will Alex and jordan visit in Japan?" | 26 | 1 | 1 | 7 | 5 | 3 |
+| store, "which cities will alex visit in japan?" | 51 | 1 | 1 | 7 | 6 | 6 |
+| store, "which cities will Alex visit?" | 52 | 1 | 1 | 5 | 4 | 3 |
+| defects, the same three spellings | 3 | 1 | 1 | 2 | 1 | 1 |
+
+Twenty-eight further store questions (`store-heldout-v1`, single fact lookups,
+never used to choose a setting; the answer is any memory holding the answer
+terms) check that a graph helps where it should and does no harm where it
+cannot:
+
+| Strategy | Rank 1 | Top 3 | Top 5 | MRR |
+|---|---:|---:|---:|---:|
+| baseline | 16 | 22 | 25 | 0.690 |
+| generic | 13 | 19 | 22 | 0.586 |
+| fused@0.5 | 17 | 22 | 25 | 0.713 |
+| fused@1 | 17 | 22 | 25 | 0.698 |
+| fused@2 | 15 | 20 | 23 | 0.641 |
+| fused@4 | 16 | 19 | 22 | 0.642 |
+
+What the numbers say:
+
+- **The shape is sufficient.** Following the gold spec ranks the answer first for
+  all 53 items (baseline: 21 first, 39 in the top 3), including the three
+  spellings of the cities question, every correction (the old date, role,
+  preference or diet sits behind the superseded claim) and the two and three hop
+  questions. The first oracle run ranked 48 of 53 first; the five misses were
+  errors in the gold files (a polarity left out of a spec, claims whose
+  evidence listed memories that do not state them, one missing `partner_of`
+  claim), repaired once. A sixth, a memory listed as evidence for who is on call
+  that only asks for a swap, showed only when the test suite ran the corpora
+  with a different embedding order, and was repaired too. None needed a
+  different shape.
+- **A graph list ahead of the text list is the right tool for lists,
+  corrections and multi hop questions, and the wrong one for single fact
+  lookups.** The generic walk puts the cities memory first for all six
+  spellings (baseline 3 to 52). On the held-out lookups it is 3 questions
+  behind the baseline in the top 3, because a lookup is already answered by its
+  words. Fused at weight 1 keeps the lookups (28 of 28 gold lookups in the top
+  3, held-out top 3 equal to the baseline, MRR 0.698 against 0.690) and lifts
+  corrections (4 to 7), two hop questions (4 to 6) and the list MRR (0.225 to
+  0.355). Weight 2 adds two hop 8 of 8 and costs 2 held-out top 3 places.
+  Fusion with the text list keeps the cities memory from rank 1 (5 to 7 of 75
+  at weight 1, 3 to 6 at weight 4) because the text list, which ranks it 26th to
+  52nd, still contributes.
+- **What mattered, by ablation of the generic walk over the 53 items (top 3
+  with the graph list first):** relation cues that restrict the walk (51 against
+  35 when they only boost, 29 with no cues: the query compiler that picks the
+  relation is the largest lever); hub damping of the owner (51 against 47 with
+  none, 44 when the owner's own score also counts; a walk that passes through
+  the owner reaches the whole graph in two hops); intent edges (49 without
+  containment, 42 with containment alone); relations `works_at` and `uses` (dropping
+  one costs 3 and 4 top 3 places), `friend_of`, `owns`, `prefers`, `involved_in`
+  and `partner_of` (2 each; the others cost 0 or 1). A hop limit of 2 is enough (1 hop: 49;
+  3 and 4 hops: the same 51); a decay of 0.4 and 0.6 are equal in the top 3.
+- **Containment is what makes the country level chain work.** With the claims
+  "Alex visits Tokyo" hidden and only "Alex visits Japan" kept, the cities
+  memory is still reached through `located_in` (51 of 53, the same as with the
+  claims); with those inferred containment edges removed too it drops to 45.
+  Claims between memories and entities that the text states ("We chose Tokyo,
+  ...") are therefore not required for list questions if containment is there,
+  and a per city claim is not enough without a connected graph for the
+  questions that name only the country.
+- **Claim nodes cost two hops per step and give no better answers here.** With
+  claim nodes the same walk needs a hop limit of 4 (50 against 51 top 3 at
+  hops 4, 48 at hops 2). A claim node is worth its cost only for what direct
+  edges cannot hold: a correction between two claims is a `supersedes` edge
+  between claim nodes, but an edge between two edges has no representation in
+  the store, so the direct shape keeps `supersedes` as edge metadata.
+- **Stale values.** The old value ranks above the answer for 6 of 8 correction
+  questions at baseline, 1 of 8 for the generic walk and 0 of 8 for the oracle.
+
+Cost, on packs of 14, 75 and 54 memories (DuckDB, a laptop). `retrieve()` took 27
+ms at the median. The generic walk read the store 3 times for two hops (one read
+per hop and one for the last frontier) and 181 edges at the median (512 at the
+95th percentile), which took 3.6 ms at the median and 12 ms at the 95th
+percentile. The oracle, in memory, took 0.03 ms. The store backed walk and the
+in memory copy of the graph rank every question identically. The 10,000 turn
+latency budget of #351 is not measured here.
+
+Limits. One person wrote the gold graphs while reading the questions, the
+oracle follows specs written in the same sitting, and the relation cue words
+are a hand written lexicon, so the oracle is an upper bound of the shape, and
+the generic walk's numbers on the 53 items are optimistic; the 28 held-out
+questions are the check, and they show no gain for lookups, only parity at
+weight 1 or below. The gold graphs hold every claim the memories state, so a
+real extractor, which will miss some and invent some, will land below these
+numbers by an amount `fidelity` measures. The probe uses `store()` packs (no
+chat turns through `ingest()`), DuckDB only, and one fixed fusion rule (RRF at
+k 60).
+
+#### What extraction has to produce
+
+The target is the gold file format: for each memory the entities it names (a
+kind, a subtype, and every name the text uses, "Alex" as well as "Alex
+Rivera"), the claims it states with a relation from the vocabulary (16 relations and
+`has` for a literal), polarity, status, a role and a time, the evidence memory ids, a
+`supersedes` link when it changes an earlier claim, and a `located_in` claim
+for each pair of well known places that sit together in a chat. A claim needs
+its subject and object resolved to entities, "We" and "They" included (the
+gold claims for "We chose Tokyo, Kyoto, Kanazawa, and Osaka." name Alex and
+Jordan, marked `via: we`). `fidelity` scores any graph in that format against
+a gold graph: entity recall and precision (by name), relation recall and
+precision (subject, relation, object, or subject and attribute for a literal),
+polarity and status accuracy on the matched claims, and the share of inferred
+containment found. A first extraction target is entity recall and relation
+recall of 0.8 with relation precision of 0.9 and polarity accuracy of 0.95.
+Those thresholds are a proposal; this probe did not validate them.
+
+#### Blind validation of the typed walk
+
+Part of #351; protocol and decision rule in
+[`BLIND.md`](benchmarks/graph_oracle/BLIND.md), written and committed before any
+strategy ran on these questions. The oracle table above is an upper bound: one
+person wrote the gold graphs and the cue words with the questions in view. This
+run asks whether the walk helps on questions nobody wrote the graph for, and on
+the same questions reworded.
+
+```sh
+uv run python -m benchmarks.graph_oracle blind --out /tmp/blind
+uv run python -m benchmarks.graph_oracle latency --out /tmp/latency --backend duckdb --turns 2000 10000
+uv run --extra postgres python -m benchmarks.graph_oracle latency --out /tmp/latency --backend postgres \
+  --database-url <url> --turns 2000 10000
+```
+
+**The questions.** `blind-v1.json` (sha256 `b84b6dc8381320a0059aadd0e969c282043e94f9efd84d99100332a078ff4b71`):
+86 questions over the three memory sets, in seven types, written by the fast
+tiers' extraction model through a local Ollama server from the memories alone
+(29 requests in two rounds; the model never saw a gold graph, a query spec or the
+cue words). A reviewer who read only the memories and the candidates dropped 61 of
+147 candidates (25 not answerable or ambiguous, 26 repeating an existing or earlier
+question, 10 asking the same fact and type as one already kept), corrected 4 answer
+id lists and relabeled 12 questions that one memory answers as lookups. Three
+paraphrases of each question came from 3 more requests (258; 28 were unchanged from
+the original apart from punctuation and are left out, 230 scored). The reviewer
+spot checked 22 questions' paraphrases and found the meaning kept in all but one
+borderline case. Two limits to read the table with: 79 of the 86 blind answers sit in
+memories that an original or held-out question already asks about, because a model
+asked about a small memory set picks the same salient facts the gold author did, so
+the blind set tests wording and question shapes more than unseen facts (7 questions
+are about memories no earlier question touches); and the first round's lookups mostly
+repeated existing questions, which is why a second round was drawn.
+
+**Gold coverage.** Checking each blind question against the gold graph, from the
+memory text, found 2 facts missing (the book Alex is reading while learning Rust, and
+Alex's request to swap the on-call week), added in a separate commit before the run,
+and 1 modeling gap that is not an edit: a plan that came true leaves its date in a
+superseded claim ("when is the half marathon I signed up for?"). Two blind questions
+(of 7 in the first person) name no entity, so the walk has no seed; seeding the owner
+from I, me and my is the exploratory `[derived+I]` column and changes the top 3 by one
+question. The two added claims moved the original items' `generic` row from 33 to 31
+first places (top 3 unchanged at 51, MRR 0.757 to 0.74).
+
+**Cue words.** `generic[hand]` is the hand written lexicon of the oracle report.
+`generic[derived]` takes each relation's cue words from the words of its name and
+definition in `DESIGN.md`, less stop words, the schema's own words, capitalized example
+names and digits, with verb forms (`derive_cues`; nothing about a question informs it).
+
+Measured once, with the first report's settings, at `6480a248` on 2026-10-20.
+Each cell is questions in the top 3 / top 5 / ranked first, then MRR.
+
+Blind set, by type (the rule's strategy is `generic[derived]`):
+
+| Type (n) | baseline | generic[hand] | generic[derived] | fused@1[derived] | fused@2[derived] |
+|---|---|---|---|---|---|
+| all (86) | 70/76/43, 0.66 | 72/76/46, 0.69 | 64/71/42, 0.64 | 72/76/49, 0.71 | 69/77/49, 0.71 |
+| lookup (28) | 24/26/17, 0.74 | 22/24/13, 0.62 | 20/23/12, 0.59 | 22/24/17, 0.71 | 22/24/13, 0.64 |
+| list (11) | 7/8/3, 0.47 | 10/11/7, 0.78 | 9/10/7, 0.74 | 8/8/5, 0.61 | 8/10/6, 0.67 |
+| multi-hop (12) | 9/10/6, 0.64 | 12/12/8, 0.79 | 10/10/8, 0.76 | 11/11/7, 0.74 | 9/11/8, 0.76 |
+| temporal (11) | 11/11/8, 0.85 | 10/10/6, 0.73 | 9/10/4, 0.61 | 11/11/9, 0.91 | 11/11/8, 0.86 |
+| correction (7) | 5/5/3, 0.59 | 4/5/2, 0.50 | 3/5/2, 0.44 | 6/6/3, 0.61 | 6/6/4, 0.71 |
+| negation (12) | 10/12/5, 0.64 | 10/10/7, 0.72 | 10/10/6, 0.67 | 11/12/7, 0.77 | 11/12/8, 0.81 |
+| aggregation (5) | 4/4/1, 0.41 | 4/4/3, 0.73 | 3/3/3, 0.65 | 3/4/1, 0.43 | 2/3/2, 0.51 |
+
+The 53 original items, all questions and paraphrases (`report.md` has every column and type):
+
+| Set (n) | baseline | generic[hand] | generic[derived] | fused@1[derived] | fused@2[derived] |
+|---|---|---|---|---|---|
+| original (53) | 39/41/21, 0.56 | 51/51/31, 0.74 | 46/47/28, 0.67 | 43/46/27, 0.68 | 44/47/28, 0.69 |
+| blind (86) | 70/76/43, 0.66 | 72/76/46, 0.69 | 64/71/42, 0.64 | 72/76/49, 0.71 | 69/77/49, 0.71 |
+| paraphrases (230) | 189/204/115, 0.66 | 192/204/124, 0.69 | 173/193/118, 0.65 | 193/203/141, 0.74 | 190/202/136, 0.72 |
+
+**Verdict: STOP, by the rule as written.** For `generic[derived]` on the blind set:
+(1) top 3 is 7.0 points below the baseline, not 8 above; (2) it loses 4 questions in
+lookup and 2 each in temporal and correction, where 1 is allowed; (3) it loses 4 lookups
+where it must tie; (4) its paraphrase top 3 rate is 0.8 points above its own blind rate,
+which holds. The same four conditions for `fused@1[derived]`: +2.3 points, loses 2
+questions in lookup, loses 2 lookups, paraphrases +0.2 (holds); for `fused@2[derived]`:
+-1.2 points, loses 2, loses 2 lookups, paraphrases +2.4 (holds); for `generic[hand]`: +2.3
+points, loses 2, loses 2 lookups, paraphrases -0.2 (holds). No row passes.
+
+What the evidence says:
+
+- **The lift is mostly in the oracle's questions, not in new ones.** With the hand cues
+  the walk puts 51 of 53 original items in the top 3 against 39 for the baseline (+23
+  points); on the blind set it puts 72 of 86 against 70 (+2.3 points). The oracle
+  table's number was optimistic by about 20 points, as the report's limits said.
+- **The graph helps the shapes it is built for and hurts the ones text already
+  answers.** On the blind set the graph ahead of the text list gains on list (7 to 10
+  with the hand cues), multi-hop (9 to 12) and aggregation (rank 1: 1 to 3), and loses
+  on lookup (24 to 22), temporal (11 to 10) and correction (5 to 4). Fusing with the text
+  list recovers the losses but also the gains: `fused@1[hand]` is 73 in the top 3 and
+  ties or beats the baseline on every type but lookup (23 against 24).
+- **Mechanically derived cue words cost 8 top 3 places on the blind set and 5 on the
+  original items, against the hand written ones.** The definitions hold few of the
+  words people ask with (dog, trip, race, book); the hand lexicon holds them because
+  its author had them in view. This is the part of the walk that has to be learned, not
+  written, for the lift to generalize.
+- **Wording is not the weak point.** Paraphrases score the same as the original wording
+  for every strategy (within 2.4 points), so the gap above is about question shapes and
+  cue coverage, not about names or rewording.
+
+Latency of the typed walk, on synthetic packs built straight in the graph store (memory
+nodes, entities with a zipf popularity, `mentions` and typed claim edges, an owner
+named by 30% of the memories), 100 questions that name one to three entities, half of
+them the owner. The budget proposed in `BLIND.md`: at most 50 ms at the 95th percentile
+at 10,000 memories on either backend. Milliseconds, median / 95th percentile:
+
+| Backend, memories | Every edge on the frontier | Without the owner's mentions | Claim edges only |
+|---|---|---|---|
+| DuckDB, 2,000 | 43 / 71 (3,808 edges, 3 reads) | 37 / 66 (2,936, 6 reads) | 33 / 55 (818, 9 reads) |
+| DuckDB, 10,000 | 267 / 327 (21,306 edges) | 224 / 285 (17,026) | 155 / 235 (4,382) |
+| PostgreSQL, 2,000 | 25 / 48 | 21 / 46 | 13 / 31 |
+| PostgreSQL, 10,000 | 175 / 198 | 148 / 176 | 55 / 76 |
+
+**No mode meets the budget at 10,000 memories** (best: PostgreSQL, claim edges only,
+76 ms at the 95th percentile; DuckDB 235 ms). The cost follows the edges read, about
+8 to 12 microseconds each with their decoding, and the popular entities of a zipf pack
+put thousands of `mentions` edges on a frontier; a real pack may be lighter, but the
+owner and a partner are as popular as the top entity here. A product walk would need to
+run as one SQL statement that returns scored entities and memory ids, and to cap the
+edges read for each entity.
+
+**One bounded alternative.** The graph list earns its place only on the shapes where it
+won (list, multi-hop, aggregation, and negation with fusion), and loses where the text
+ranking already answers. Apply the fused list (weight 1, hand written cues for now) only
+to a question that names a subtype or asks for several things ("which cities", "how
+many", "who are"), and leave single fact lookups, temporal questions and corrections to
+the text ranking. This blind set is now spent: choosing the gate from its table would
+tune on it, so the gate has to be fixed in writing and tested on a new blind draw (a
+new seed and new questions) before any retrieval port. Learning the relation cues from
+the memories' own claims, instead of writing or deriving them, is the other open
+problem; the extraction step (Phase 3B) is where those claims would come from.
+
+#### Routing the graph by question type
+
+Part of #351; the gate is [`GATE.md`](benchmarks/graph_oracle/GATE.md), committed
+before the router, the new memory set, the new questions or any run. The blind
+validation above found the typed walk helps lists, multi-hop and aggregation
+questions and hurts lookups, temporal questions and corrections, so the owner chose
+to route it: use the graph only for questions that ask for a list, a count, things
+of a subtype or a chain of two relational nouns, and leave every other question to
+today's ranking unchanged.
+
+```sh
+uv run python -m benchmarks.graph_oracle routed --out /tmp/routed --latency /tmp/latency/latency-postgres.json
+```
+
+**The router** (`router.py`) reads only a question's own words: counting phrases,
+"which kind of", a plural noun right after which or what, "which of", "who are", and
+two relational nouns joined by "of" or a possessive. It was written before the new
+draw and measured once on the spent 86 question blind set (81.4 percent agreement
+with the route the type tags imply, 2 of 28 lookups sent to the graph; 0 of 12
+multi-hop questions routed, since most are not a chain of relational nouns). It was
+not changed afterwards.
+
+**The walk** (`sqlwalk.py`) is one SQL statement per question on PostgreSQL and a
+DuckDB equivalent: a three layer join over the typed claim edges plus the `mentions`
+edges of the entities it reaches, capped at 32 claims per entity (128 for a seed,
+which the question names; the owner has 58 claims in `store-v1`), 32 mentions per
+reached entity and 64 entities per layer, newest first, with the cue filter, the
+superseded and negative claim rules and the owner rule in the statement. Its scores
+equal the Python walk's on every question of the original corpora and the new draw, on
+both backends (tests). Median and 95th percentile milliseconds on synthetic packs
+built straight in the graph store (100 questions, half naming the owner):
+
+| Backend, memories | One statement | Every edge on the frontier (3 reads) |
+|---|---|---|
+| PostgreSQL, 2,000 | 11 / 20 (1,232 edges) | 27 / 54 (3,808 edges) |
+| PostgreSQL, 10,000 | 22 / 36 (3,048 edges) | 171 / 198 (21,306 edges) |
+| DuckDB, 2,000 | 15 / 18 | 43 / 71 |
+| DuckDB, 10,000 | 25 / 30 (two runs; one run on a busy machine gave 277 / 521) | 267 / 327 |
+
+The 50 ms budget at the 95th percentile at 10,000 memories on PostgreSQL holds
+(36 ms). The cap is what keeps a popular entity from putting thousands of `mentions`
+edges on a frontier: the unbounded read costs about 8 microseconds an edge.
+
+**The new draw.** `draw2-v1`: 46 memories of a new made-up user on a different story
+(a designer at a telehealth startup, her team, a promotion, a corrected launch date,
+a declined then accepted audit, a trip to Portugal with a dropped city), in the style
+of the store fixture. Its gold graph (53 entities, 103 claims) was written from the
+memories alone and committed before any question existed. A local model drafted 110
+candidate questions from the memories alone (10 requests); the reviewer dropped 19
+as vague or ambiguous, 5 as repeating another and 21 as the same fact and type as one
+kept, corrected 1 answer id list and relabeled 9 questions that one memory answers as
+lookups. The 65 frozen questions (sha256
+`57ef842ba1912085d095bd745ca98f06b35e72a3277d9d4807b3003b674741c3`): 20 lookup, 11
+negation, 10 temporal, 9 list, 8 aggregation, 4 correction, 3 multi-hop. The gold graph
+was not extended afterwards.
+
+One run, at `4124ee88`. Top 3 / top 5 / rank 1, MRR:
+
+| Type (n) | baseline | routed, derived cues | routed, hand cues | graph for every question, derived |
+|---|---|---|---|---|
+| all (65) | 55/56/39, 0.73 | 57/57/39, 0.74 | 57/57/36, 0.71 | 45/50/30, 0.60 |
+| lookup (20) | 17/17/14, 0.80 | 17/17/14, 0.80 | 17/17/14, 0.80 | 15/18/11, 0.68 |
+| list (9) | 6/6/4, 0.56 | 8/8/7, 0.82 | 8/8/6, 0.77 | 7/7/6, 0.74 |
+| multi-hop (3) | 2/2/0, 0.33 | 2/2/0, 0.33 | 2/2/0, 0.33 | 2/2/0, 0.37 |
+| temporal (10) | 10/10/6, 0.80 | 10/10/6, 0.80 | 10/10/6, 0.80 | 7/7/5, 0.63 |
+| correction (4) | 4/4/1, 0.54 | 4/4/1, 0.54 | 4/4/1, 0.54 | 3/4/2, 0.68 |
+| negation (11) | 9/9/7, 0.72 | 9/9/7, 0.72 | 9/9/7, 0.72 | 4/5/2, 0.32 |
+| aggregation (8) | 7/8/7, 0.90 | 7/7/4, 0.69 | 7/7/2, 0.54 | 7/7/4, 0.69 |
+
+The router's accuracy on the new draw is 90.8 percent with 0 of 20 lookups routed (14
+questions went to the graph: 7 of 9 lists, 7 of 8 aggregation, 0 of 3 multi-hop).
+
+**Verdict: fail, on two of six conditions** (derived and hand cues alike):
+
+| Condition | Value | Holds |
+|---|---|---|
+| 1 overall top 3 at least 5 points above the baseline | +3.1 points (57 against 55) | no |
+| 2 no type loses more than 1 question | 0 | yes |
+| 3 lookups, temporal and correction equal the baseline question by question | 0 differ | yes |
+| 4 list, multi-hop and aggregation together gain at least 6 | +2 | no |
+| 5 router accuracy at least 90 percent, at most 2 percent of lookups routed | 90.8 percent, 0 percent | yes |
+| 6 the SQL walk at most 50 ms p95 at 10,000 memories on PostgreSQL | 36 ms | yes |
+
+What the blind results say about the graph as a recall improvement:
+
+- **The routing works as a safety device and does little else.** Routing removes the
+  harm (the unrouted graph loses 2 lookups, 3 temporal, 1 correction and 5 negation
+  questions on this draw; routed loses none) and keeps the one place the graph wins: two list questions
+  move from rank 8 to rank 1 (the cities of the trip, the technologies of the product),
+  and nothing else changes rank by enough to matter.
+- **The ceiling is low.** The baseline already puts 55 of 65 questions in the top 3
+  (85 percent), and only 5 of the 20 list, multi-hop and aggregation questions
+  were missed, so condition 4's +6 could not be met on this draw by any router. The
+  same held on the first blind set (baseline 70 of 86). Questions about a small set
+  of memories are mostly answered by their words.
+- **Three measurements, one pattern.** The oracle report's +23 points (the questions the
+  gold was written for) became +2.3 points on the first blind set at best and +3.1
+  points on the new draw with routing. The gain is real for one shape, a list whose
+  answer memory names several entities but not the one asked about, and nothing else
+  in these three question sets. A hand written gold graph is the best case: extraction
+  has to produce it, and an extractor's misses and invented claims only subtract.
+- **Aggregation questions lose rank 1 when routed** (7 to 4) though not the top 3,
+  because the graph list reorders memories the text ranking already had on top.
+- **Latency is not the obstacle.** One statement with caps reads about 3,000 edges
+  and takes 22 ms at 10,000 memories on PostgreSQL.
+
+On this evidence typed relation edges are not a general recall improvement for the
+questions in these corpora. They are a targeted fix for list questions, worth about
+two questions in nine on this draw and three in eleven on the first blind set, at the
+price of a closed vocabulary, an extraction step that has not been measured, a router
+and a walk. A cheaper route to the same list questions (the memory that names the
+cities is found when "They" is resolved to the people at store time, #347) is worth
+comparing before any port.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
