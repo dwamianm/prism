@@ -314,9 +314,104 @@ async def test_EM02_exported_context_and_wrapped_key_refusals(tmp_path, layout, 
             await engine.close()
 
 
+async def _assert_eligible_restored_work(artifact, config, path, layout, runtime, custody, processing,
+                                        owner, ids, originals, exported_work, native):
+    """Publish the untouched job from the same artifact before its expiry arm."""
+    from prme.privacy.keys import StoredProcessingAuthorizer
+    from tests.privacy_fakes import FakeEmbedding, FakeExtractor
+    from tests.privacy_journal_support import processing_keys
+
+    original = originals[ids[1]]
+    observed = {}
+
+    class ObservedExtractor(FakeExtractor):
+        async def extract(self, source, snapshot, *, guard):
+            observed["source"], observed["snapshot"] = source, snapshot
+            observed["claim"] = await work.status(ids[1], user_id=owner)
+            observed["work_order"] = await work.work_order(user_id=owner, event_id=ids[1])
+            return await super().extract(source, snapshot, guard=guard)
+
+    positive = replace(runtime, embedder=FakeEmbedding(), extractor=ObservedExtractor())
+    positive.extractor.result = {
+        "entities": [{"name": "Mara", "entity_type": "person"}],
+        "facts": [{"subject": "Mara", "predicate": "likes", "object": "tea", "polarity": "positive",
+                   "evidence_quote": "Mara likes tea. RESTORED_PENDING_1."}],
+        "relationships": [], "summary": None,
+    }
+    original_bytes = artifact.read_bytes()
+    async with fresh_config(config, path, layout, restore=True) as target:
+        await restore_protected_export(artifact, target, privacy_runtime=positive, embedding_provider=positive.embedder)
+        async with MemoryEngine.open(target, privacy_runtime=positive, embedding_provider=positive.embedder) as restored:
+            work = restored._event_store.extraction_work
+            positive.protector.authority.processing = StoredProcessingAuthorizer(restored._privacy.repository, work)
+            assert await restored._privacy.repository.get(ids[1], user_id=owner) == original
+            waiting = await work.status(ids[1], user_id=owner)
+            assert waiting.status == "pending" and waiting.generation == exported_work[ids[1]].generation + 1
+            assert waiting.attempts == exported_work[ids[1]].attempts and waiting.lease_expires_at is None
+            assert await work.work_order(user_id=owner, event_id=ids[1]) == exported_work[ids[1]].work_order
+
+            # The consumed reservation is not made reusable by restoring it.
+            first = originals[ids[0]]
+            cancelled_claim = await work.claim(user_id=owner, event_id=ids[0], lease_seconds=86400)
+            assert cancelled_claim.lease_expires_at == first.snapshot.processing_deadline
+            async with restored._privacy.guard(first.snapshot, "admission", processing=True, records=(first,)):
+                assert await restored._privacy.processing.terminate(cancelled_claim, state="cancelled")
+            cancelled = await work.status(ids[0], user_id=owner)
+            assert cancelled.status == "failed" and cancelled.last_error == "privacy_cancelled"
+            assert (await restored._privacy.repository.get(ids[0], user_id=owner)).processing_state == "cancelled"
+            assert not await work.retry(ids[0], user_id=owner)
+
+            with processing_keys(positive, custody, processing):
+                result = await asyncio.wait_for(restored.process_extractions(user_id=owner, limit=1), 20)
+            assert result.processed == 1 and result.pending == 0 and result.failed == 1  # Explicitly cancelled first job.
+            assert len(positive.extractor.sends) == 1
+            sent = json.loads(positive.extractor.sends[0])
+            assert sent["content"] == "Mara likes tea. RESTORED_PENDING_1."
+            assert "RESTORED_PENDING_0" not in positive.extractor.sends[0]
+            claim = observed["claim"]
+            assert claim.status == "running" and claim.generation == waiting.generation + 1
+            assert claim.attempts == waiting.attempts + 1
+            assert observed["work_order"] == exported_work[ids[1]].work_order
+            assert claim.lease_expires_at == original.snapshot.processing_deadline
+            source = observed["source"]
+            assert (source.source_id, source.representation_id) == (original.source_id, original.representation_id)
+            assert observed["snapshot"] == original.snapshot and source.source_snapshot == original.snapshot
+            assert source.continuation is not None and source.continuation.input_bytes > 0
+            finished = await restored._privacy.repository.get(ids[1], user_id=owner)
+            assert finished.snapshot == original.snapshot and finished.reference() == original.reference()
+            assert finished.evidence == original.evidence and finished.processing is None
+            assert finished.processing_state == "complete" and finished.processing_attempt == 0
+            completed = await work.status(ids[1], user_id=owner)
+            assert completed.status == "complete" and completed.generation == claim.generation
+            assert completed.attempts == claim.attempts
+            assert await work.work_order(user_id=owner, event_id=ids[1]) == exported_work[ids[1]].work_order
+            plan = await restored._event_store.get_derivation_plan(ids[1], user_id=owner)
+            receipt = await restored._event_store.get_derivation_receipt(ids[1], user_id=owner)
+            assert receipt.event_id == original.event_id and receipt.plan_id == plan.id
+            assert receipt.plan_checksum == plan.checksum and receipt.generation == claim.generation
+            assert set(receipt.node_ids) == {node.id for node in plan.nodes}
+            assert all(node.evidence_refs == [original.event_id] for node in plan.nodes)
+            assert await restored._event_store.get_derivation_receipt(ids[0], user_id=owner) is None
+            fact = next(node for node in plan.nodes if node.content == "Mara likes tea.")
+            private_reads = native.reads
+            response = await asyncio.wait_for(restored.retrieve("Mara likes tea.", user_id=owner,
+                scope=original.snapshot.policy.scope, reference_time=positive.clock(), include_cross_scope=False), 20)
+            assert fact.id in {item.node.id for item in response.results}
+            assert fact.id in {item.node.id for section in response.bundle.sections.values() for item in section}
+            assert "Mara likes tea." in response.bundle.render()
+            assert "RESTORED_PENDING_" not in response.model_dump_json()
+            assert native.reads == private_reads
+            sends = len(positive.extractor.sends), len(positive.embedder.sends)
+            assert (await restored.process_extractions(user_id=owner, limit=1)).processed == 0
+            assert sends == (len(positive.extractor.sends), len(positive.embedder.sends))
+            assert await restored._event_store.get_derivation_receipt(ids[1], user_id=owner) == receipt
+    assert artifact.read_bytes() == original_bytes
+    return observed["source"].continuation
+
+
 @pytest.mark.parametrize("layout", LAYOUTS)
 async def test_restored_pending_work_keeps_deadline_budget_and_claim_fences(tmp_path, layout, analyzer, native):
-    """Pre-publication recovery only; no held public reader or model execution."""
+    """Original denial/expiry arm plus eligible work from the same export."""
     from prme.privacy.admission import AdmissionCoordinator
     from prme.privacy.capabilities import ProcessingAccess
     from prme.privacy.journals import load_checkpoint
@@ -351,6 +446,9 @@ async def test_restored_pending_work_keeps_deadline_budget_and_claim_fences(tmp_
         config = engine._config
         await engine.close()
         engine = None
+        published_continuation = await _assert_eligible_restored_work(
+            artifact, config, tmp_path / "restored-eligible-work", layout, runtime, custody, processing,
+            owner, ids, originals, exported_work, native)
         native_reads = native.reads
         async with fresh_config(config, tmp_path / "restored-work", layout, restore=True) as target:
             await restore_protected_export(artifact, target, privacy_runtime=runtime, embedding_provider=runtime.embedder)
@@ -423,6 +521,7 @@ async def test_restored_pending_work_keeps_deadline_budget_and_claim_fences(tmp_
             assert artifact.read_bytes() == original_bytes
             await restored.close()
             restored = None
+        assert published_continuation == continuation
     finally:
         if restored is not None:
             await restored.close()

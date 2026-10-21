@@ -1142,3 +1142,144 @@ composition, shared scenario closure, final full/package/simulation/CI and root
 review/delivery. The narrow #323 third-repair/original22+3 hold remains; the
 previous blanket ban on unchanged public API use is superseded. This checkpoint
 contains tests and evidence only, with runtime frozen at a1bce140.
+
+
+## Eligible restored-work positive, original AC2/AC5 (iteration 5)
+
+Base ebd7f8fd320242e0929eff84be8e744b65150334 is clean and pushed; runtime
+remains the reviewed a1bce140 source. Original AC2 requires resumable work with
+unchanged identities/lifetimes; AC5 requires current-ledger restoration before
+serving. The existing two-source pending-work fixture proves only consumed
+allowance/stale-claim/expiry denial. This missing positive belongs to the
+original restore/publication requirement, not a new cohort. Own only
+test_privacy_restore.py and this plan/results pair; no runtime or helper-module
+change is planned.
+
+Keep the original negative arm unchanged. Restore its exact exported artifact
+to a separate empty target before the expiry arm, preserving the same clock
+without rewinding it. The first source is `Mara likes tea. RESTORED_PENDING_0.`
+with a consumed reservation; the second is `Mara likes tea. RESTORED_PENDING_1.`
+with untouched pending work. Explicitly cancel the first imported current claim,
+then call public process_extractions(user_id=owner, limit=1) so the actual worker
+claims and publishes the second. Only the external model boundaries use new
+instances of the existing synthetic extractor/embedder, preserving the original
+arm's no-send assertions. The response is one person entity Mara and the
+positive Mara/likes/tea fact, grounded in the exact second source quote above.
+No new message, marker, query cohort or live provider is introduced.
+
+Assert actual claim generation/attempt/order/deadline, unchanged source/
+representation/snapshot identity and authenticated saved sanitizer continuation
+at the provider boundary, real plan/receipt/completed work and removed processing
+slot, public `Mara likes tea.` packed memory with no RESTORED_PENDING marker,
+unchanged original artifact and no repeat publication/provider send on another
+bounded worker call. Compare the observed original continuation with the
+existing negative arm's authenticated source read, without consuming a new
+allowance to inspect it. This uses actual sanitizer/crypto/native storage/ledger
+and publication guards.
+
+Finite selection: only
+`tests/test_privacy_restore.py::test_restored_pending_work_keeps_deadline_budget_and_claim_fences[directory]`
+first; on success only the same `[pack]` and `[postgres]` parameters once. The
+assigned privacy_engine_326/restore loopback databases remain the only SQL
+resources. Scope static checks to the changed test and evidence; prove all226
+frozen runtime hashes unchanged and that the negative arm's existing statements
+remain intact. Prior evidence/counters persist. A known held classifier/native
+failure stops immediately; no runtime repair, held25 rerun or third unsuccessful
+correction is authorized. Same-policy parity is proposal-only after this
+checkpoint; all remaining original gates stay mandatory.
+
+The finite selection passed on its first executions: directory 1 passed in
+4.01 seconds (5.499 seconds wrapper), then pack/PostgreSQL 2 passed in 5.66
+seconds (6.636 seconds wrapper). No fixture correction or runtime repair was
+needed. Before execution, source inspection mapped the existing API accurately:
+work_order is read through work.work_order(event_id=...), and explicit processing
+cancellation is represented by failed work plus privacy_cancelled, while the
+privacy admission carries processing_state=cancelled. The public worker result
+therefore reports one processed, zero pending and one previously cancelled
+failed job. This is not a newly failed extraction.
+
+All three layouts prove actual eligible publication, original authenticated
+sanitizer continuation/deadline/identity, unchanged work ordering, a checksum-
+bound derivation receipt, public packed admitted memory, and no repeat send or
+publication. The original negative arm still proves stale/consumed allowance and
+expiry denial without any provider send. The helper uses separate external
+model doubles; the actual protection, backend, ledger and worker code is frozen.
+Exact pre-run source manifests and logs are retained in PV-07-results.json.
+This closes the missing eligible restored-work component, not the six original
+ACs or any whole shared case. Prior failed evidence and repair counts remain.
+
+### Proposed original standard migration parity control (not executed)
+
+The original issue requires saved standard-mode retrieval before and after
+migration at a fixed clock before expiry. The approved Retrieval/artifact
+section captures unchanged sanitized admitted input before migration and
+compares after migration/reopen. Actual legacy-to-protected conversion must be
+inside that comparison. A protected export/restore-only comparison after
+conversion proves layout portability, not this complete migration requirement;
+the initial proposal of that boundary is withdrawn as a completion strategy.
+
+Propose a direct matched-input control from the existing full mixed family,
+keeping migration-v1.json itself and every prior fixture/test/failure unchanged.
+Retain eight nodes (two direct memories, one fact, one entity, two profile
+versions and two consolidation versions), three retained source records and
+complete source/previous-node provenance. Use exactly FIXTURE["admitted"] as
+the three baseline source contents before persistence/capture. Specifically,
+the prior family concatenates source_only/prohibited tails onto events.content;
+this control's events.content uses the corresponding declared admitted text
+alone. The fact's content, metadata.supporting_passage and saved extraction
+result.evidence_quote use that same already-admitted oranges statement. Existing
+generated/profile/summary content and dependency shape stay unchanged. These
+are declared matched-control inputs, not a claim that the detector removed
+those tails, not a change to the frozen original fixture, and not a replacement
+for its failed cross-policy comparison. The existing explicit visual/history
+dispositions remain; no protected copy of an excluded original is introduced.
+
+Capture the three original queries (tea, oranges, mornings) against this legacy
+source at FIXTURE["clock"], then call actual migrate_privacy_pack with the
+standard target policy (capture=full, evidence_use=runtime), the existing
+explicit history/visual dispositions and allow_reembedding. Reopen the target,
+use the real exact selected-runtime grant for the same three retained sources
+and a finite native custody lease, and repeat the same queries/options/clock.
+Freeze evidence_projection_top_k=3 on both sides before capture; every other
+retrieval option remains the same. The target's source identities/bytes,
+admitted nodes/qualifiers/provenance, policy and deadlines are recorded before
+comparison. No policy, query or packing adjustment after a failure is allowed.
+
+Save both full raw responses and require ordered selected IDs, ordered packed
+IDs, byte-identical usable rendered context, unchanged admitted/source content
+and semantic qualifiers. Save exact availability differences as well; do not
+strip guidance or call unavailable evidence equivalent. Request IDs/latency are
+saved observations, not content-parity fields. Preserve any BM25 tie or source
+maintenance difference as failure; do not substitute stored-row assertions.
+
+Literal same-saved-policy limitation remains: legacy v1 has no PrivacyPolicy,
+whereas the standard target persists one. Current preflight_format rejects
+opening existing legacy events with a privacy runtime (privacy_migration_required),
+and _read_snapshot rejects protected v2. Thus this direct control can test the
+original standard-mode conversion with matched input/options/clock, but cannot
+by itself prove literal persisted-policy equality. The separate same-policy
+storage-only requirement remains mandatory; layout-only evidence cannot silently
+replace either requirement. This is a concrete current API/format limitation,
+not a held #323 failure or a claim of missing user authorization.
+
+Carry comparison history forward: the initial strict legacy-to-sealed context
+comparison failed; correction1 failed its public-versus-closed-source lifecycle
+comparison; correction2 passed the admitted-usability contract against actual
+closed-source lifecycle. There were two correction attempts, one unsuccessful
+correction cycle, and two failed executions retained. None established standard
+parity. New setup/layout/phase does not reset those counts. No automatic further
+comparison correction is authorized; preserve any failure and stop for scope
+review, and require USER approval before a third correction of the same held
+strategy.
+
+The proposed initial selection is the original directory, single-file and
+PostgreSQL family: three case/layout executions and eighteen public retrieval
+calls (three queries times two sides times three layouts). Directory first;
+remaining two only if it passes. Proposed future selector is
+`test_EM07_standard_matched_input_migration_parity[layout]` in the existing
+migration test module, using its existing mixed-family setup. No parity code or
+run exists yet. Runtime remains frozen and known held classifier/native behavior
+stops immediately. Root records this exact next selector/ownership before its
+execution phase. No #327 24-query baseline is captured. The original same-policy
+storage gate, #327 parity/sealed sets, real hosted283 composition, shared-case
+closure and final full/package/simulation/CI/review/delivery remain incomplete.
