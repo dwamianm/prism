@@ -2250,6 +2250,68 @@
       "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T030637391659-ac1-session-static-source.json",
       "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
       "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
+    },
+    {
+      "name": "protected-projection-coverage-directory",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_privacy_source_routing.py::test_AC06_incomplete_protected_projection_preserves_admitted_group",
+        "-q",
+        "-x"
+      ],
+      "started_at": "2026-10-21T03:41:24.962404+00:00",
+      "elapsed_seconds": 4.586,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T034124962404-protected-projection-coverage-directory.log",
+      "log_sha256": "37cb23fbf2c07bbe26e2a595bdf52fed651fad263676040165a991df9c3a6fec",
+      "head": "29e7fa7339aaf6a122eaeb12f87b7644f589067b",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T034124962404-protected-projection-coverage-directory-source.json",
+      "source_manifest_sha256": "48c6501368866ff4368f88692187878022810e7e993f4b469c027f7d7d237dca",
+      "tracked_diff_sha256": "0143e3732c7c5f8f1eaab1b56698c270a76da947fef5fbce8c65a98e8d02fa69"
+    },
+    {
+      "name": "protected-projection-existing",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_evidence_context.py::test_projects_derived_siblings_to_their_complete_direct_source",
+        "tests/test_evidence_context.py::test_projection_leaves_group_unchanged_without_an_eligible_source",
+        "tests/test_evidence_context.py::test_projection_respects_the_ingestion_cutoff_before_replacing_a_group",
+        "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[duckdb]",
+        "tests/test_privacy_source_routing.py::test_AC06_selected_deadline_and_effect_denials_stop_response[duckdb]",
+        "-q",
+        "-x"
+      ],
+      "started_at": "2026-10-21T03:41:39.800795+00:00",
+      "elapsed_seconds": 6.16,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T034139800795-protected-projection-existing.log",
+      "log_sha256": "4bd5980e33551266d5d31a1e0b67beb7033a74a79b63ebb23d46ed5ccadce793",
+      "head": "29e7fa7339aaf6a122eaeb12f87b7644f589067b",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T034139800795-protected-projection-existing-source.json",
+      "source_manifest_sha256": "48c6501368866ff4368f88692187878022810e7e993f4b469c027f7d7d237dca",
+      "tracked_diff_sha256": "0143e3732c7c5f8f1eaab1b56698c270a76da947fef5fbce8c65a98e8d02fa69"
+    },
+    {
+      "name": "protected-projection-static",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "src/prme/retrieval/evidence_context.py",
+        "tests/test_privacy_source_routing.py"
+      ],
+      "started_at": "2026-10-21T03:42:12.524802+00:00",
+      "elapsed_seconds": 0.099,
+      "exit_code": 0,
+      "log": ".github-ticket-loop/privacy-326/logs/20261021T034212524802-protected-projection-static.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "head": "29e7fa7339aaf6a122eaeb12f87b7644f589067b",
+      "source_manifest": ".github-ticket-loop/privacy-326/logs/20261021T034212524802-protected-projection-static-source.json",
+      "source_manifest_sha256": "48c6501368866ff4368f88692187878022810e7e993f4b469c027f7d7d237dca",
+      "tracked_diff_sha256": "0143e3732c7c5f8f1eaab1b56698c270a76da947fef5fbce8c65a98e8d02fa69"
     }
   ],
   "repair_cycles": {
@@ -2385,6 +2447,20 @@
       "prior_ER08_failed_executions": 2,
       "counts_reset": false,
       "state": "Original AC1 named-session dry-run reporting gap resolved; no admission or identifier changes."
+    },
+    "protected_projection_complete_dependencies": {
+      "executions": 6,
+      "passed": 6,
+      "failed": 0,
+      "corrections_attempted": 0,
+      "unsuccessful_fix_validation_cycles": 0,
+      "historical_comparison_failed_executions": 3,
+      "prior_public_comparison_corrections": 2,
+      "prior_unsuccessful_comparison_cycles": 1,
+      "configured_standard_corrections": 0,
+      "held_323_unsuccessful_corrections": 2,
+      "counts_reset": false,
+      "state": "Conservative complete-dependency projection component passed. Original configured comparison remains failed and was neither edited nor rerun; full parity remains unproven."
     }
   },
   "held_dependencies": [
@@ -2916,8 +2992,8 @@
   },
   "remaining_original_work": [
     "Configured standard matched-input migration comparison (projection_top_k=3) failed directory after six public calls; pack/PostgreSQL unrun. Source lifecycle changes before close remain a limitation. Literal same-policy storage and #327 frozen24 parity/sealed24 gates remain mandatory.",
-    "ER08 engine archive/framework-clear, explicit migration, retained native backup/operator export and unmanaged-copy status components passed all three layouts; hosted283 verified managed backup expiry/completion remains pending.",
-    "Actual #283 hosted recovery capability composition with bound same-lineage PostgreSQL restore, remaining original EM01-EM08/shared harness closure, held #323 classifier/native strategies, and required final full suite/package/simulation/CI/review/PR/normal delivery remain mandatory."
+    "ER08 engine archive/framework-clear, explicit migration, retained native backup/operator export and truthful unmanaged-copy status components passed all three layouts. Remaining original engine erasure/shared integration requirements retain their own evidence; unmanaged copies are not erased.",
+    "Remaining original engine EM01-EM08/shared harness closure, held #323 classifier/native strategies, and required final full suite/package/simulation/authorized local CI/review/PR/normal delivery remain mandatory. Hosted HTTP/MCP recovery composition, managed backup expiry, UI and cloud deployment are separate handoffs, not engine completion prerequisites."
   ],
   "remaining_key_rotation_recovery_inventory": {
     "source_revision": "42f87e07dcbf91d92ba3dee58d167454bd1ad13e",
@@ -2964,10 +3040,12 @@
     },
     "EM08": {
       "reuse": "Verified default/active export, CLI migration/restore, directory-to-single-file and three-layout current-ledger negatives/native-copy positives.",
-      "pending": "Bound PostgreSQL engine variant now passed under actual lock-backed caller capability; actual hosted composition, public surviving-memory/publication and final shared gate remain pending.",
-      "public_iteration4": "Three-layout logical/native plus directory-to-pack public survivor and bound PostgreSQL namespace public retrieval now passed. Actual hosted capability composition and successful publication remain pending."
+      "pending": "Engine lock-backed bound PostgreSQL restore, public surviving-memory retrieval and eligible restored-work publication components have passed. Final original engine shared gate remains pending; actual hosted recovery composition is a separate hosted handoff.",
+      "public_iteration4": "Three-layout logical/native plus directory-to-pack public survivor and bound PostgreSQL namespace public retrieval now passed. Actual hosted capability composition and successful publication remain pending.",
+      "later_engine_evidence": "Iteration5 three-layout positive process_extractions completed real publication with original identity/deadline/budget and public usability. Earlier public_iteration4 text records that earlier checkpoint, not a current publication gap.",
+      "hosted_boundary": "Actual concrete hosted capability/native/HTTP/MCP recovery and managed backup expiry remain hosted obligations, not engine completion prerequisites."
     },
-    "next_check_limit": "No additional independent check selected. Reuse verified rotation/export/context/effect/restored-work/bound-PG components; held #323, actual #283 composition and final root-coordinated full validation remain."
+    "next_check_limit": "No additional check selected in this iteration. Reuse verified rotation/export/context/effect/restored-work/bound-PG and public evidence; retain configured comparison failure, fixed-policy/#327 gates, held #323 and final root-coordinated engine validation. Hosted integration stays separate."
   },
   "current_remaining_inventory": {
     "original_acceptance": "All six original ACs remain partial; zero whole frozen case passes. Additional findings are not new criteria.",
@@ -2995,14 +3073,6 @@
       },
       {
         "criteria": [
-          "AC4",
-          "AC6"
-        ],
-        "remaining": "ER08 engine archive/framework-clear, explicit migration, retained native backup/operator export and unmanaged-copy status components passed all three layouts; hosted283 verified managed backup expiry/completion remains pending.",
-        "dependency": "Engine component is complete within this finite selection. Managed backup expiry belongs to hosted283; engine not_managed is not an equivalent completion state."
-      },
-      {
-        "criteria": [
           "AC1",
           "AC2",
           "AC3",
@@ -3010,8 +3080,8 @@
           "AC5",
           "AC6"
         ],
-        "remaining": "Planned frozen scenario harness consolidation remains pending actual shared/public/hosted adapter dependencies. Existing exact component evidence is retained; no new whole-case runner may relabel these partial results as passes.",
-        "dependency": "Known held #323 strategy, actual #283 bound recovery composition and final #327 shared gate; selected single-boundary public usability components now passed."
+        "remaining": "Planned frozen engine scenario harness consolidation remains pending actual engine shared/public integration evidence. Existing exact component evidence is retained; no new whole-case runner may relabel partial results as passes.",
+        "dependency": "Known held #323 strategy and final #327 shared gate; selected single-boundary public usability and eligible restored-work publication components passed. Hosted HTTP/MCP/native managed-copy integration is a separate hosted obligation."
       }
     ],
     "design_held": [],
@@ -3020,7 +3090,7 @@
       "Original #327 frozen24 parity and separate24 sealed behavior set remain unchanged",
       "Root reviews, PR and normal delivery; no PR/CI created by this worker"
     ],
-    "next_action": "Commit/push the four-file AC1 reporting checkpoint after affected static checks. No extra improvement round, parity/held repair, full-suite or issue closure; original integration and final delivery gates remain open.",
+    "next_action": "Commit/push the four-file conservative projection checkpoint after affected static checks, then stop this finite iteration. Original failed comparison, fixed-policy parity and final engine integration/delivery remain open; no additional repair, rerun, full suite or PR is authorized by this checkpoint.",
     "completed_independent_gap": {
       "criteria": [
         "AC2",
@@ -3039,18 +3109,27 @@
       "public_portability": "This iteration:14 passed/2 failed retained over16 executions; no runtime change from a1bce140. Actual public read_source, key-loss retrieve, native/logical restore retrieve, bound namespace retrieve and mixed legacy-to-sealed usability verified in the original selected layouts.",
       "eligible_restored_work": "Iteration5: three original layout parameters passed on first executions; actual process_extractions claims the untouched second job, publishes a real plan/receipt, and returns public packed memory. Consumed first job explicitly cancelled; original no-send/expiry arm unchanged.",
       "ER08": "Iteration7: three engine layout passes plus four direct migration regressions; two initial/correction failures preserved. Explicit known framework-history disposition and archived retention.",
-      "AC1_session_reporting": "Iteration8: directory, pack and PostgreSQL passed first executions; dry-run names unsupported legacy sessions without values, rewrites or protected label. Historical ER08 failure and named-session migration limitation remain preserved."
+      "AC1_session_reporting": "Iteration8: directory, pack and PostgreSQL passed first executions; dry-run names unsupported legacy sessions without values, rewrites or protected label. Historical ER08 failure and named-session migration limitation remain preserved.",
+      "protected_projection_coverage": "Iteration10: one actual-directory multi-source case plus five existing selectors passed on first executions. Capped/missing/filtered sources preserve eligible admitted memory; full authorized coverage still projects. No parity completion claim."
     },
-    "integration_pending": [
+    "separate_hosted_handoffs": [
       {
         "criteria": [
           "AC5"
         ],
         "handoff": "Hosted #283 AC3/AC6 and engine ER07/EM08",
         "remaining": "Compose committed real hosted PostgresRecoveryLease with the typed bound target adapter in the actual hosted native/HTTP/MCP restore fixture. Engine lock-backed variant passed; hosted composition not claimed.",
-        "limit": "Missing/empty current canonical target and exact receipt retry only; no automatic occupied-schema replacement requirement."
+        "limit": "Missing/empty current canonical target and exact receipt retry only; no automatic occupied-schema replacement requirement.",
+        "engine_completion_prerequisite": false
+      },
+      {
+        "handoff": "Hosted #283 managed backup expiry/completion",
+        "remaining": "Verify managed backups and external hosted copy lifecycle through the hosted integration contract. Engine ER08 not_managed status is truthful but is not equivalent to managed backup completion.",
+        "engine_completion_prerequisite": false
       }
-    ]
+    ],
+    "engine_integration_pending": "Current independent ledger, namespace lineage, effect guards, restore/recovery and erasure contracts remain original engine obligations. Reuse their actual bounded evidence above; complete the original shared/final engine gates without treating hosted UI/cloud or managed backup completion as engine prerequisites.",
+    "boundary_reconciliation": "Iteration10 applies the root original dependency-boundary audit to active inventory only. Earlier checkpoint observations, frozen scenarios and all failed evidence remain historical records, not changed outcomes."
   },
   "public_assertions_iteration4": {
     "runtime_commit": "a1bce140aeccf8999dcf42594592390b2438845c",
@@ -4026,5 +4105,45 @@
       "source_manifest_sha256": "0da44ea4492352319d9381bfcc8dcdb8735353a273d9351616d6c0ad5e80b8bf",
       "tracked_diff_sha256": "7df200a99be32e683f4db1d273662373e01d5abf52bded06c39f40587f747735"
     }
+  },
+  "protected_projection_coverage_iteration10": {
+    "base": "29e7fa7339aaf6a122eaeb12f87b7644f589067b",
+    "original_requirement": "Original #326 adoption without losing usable memory and saved standard retrieval validation. Preserve admitted exact-dependency groups when the authorized eligible event-source subset cannot cover their dependencies.",
+    "runtime_scope": "retrieval/evidence_context.py::project_evidence_context only: on existing protected_reads facade, compare capped eligible source IDs with the anchor exact dependency set before any member replacement. Full coverage and ordinary direct-source behavior remain.",
+    "new_selector": "tests/test_privacy_source_routing.py::test_AC06_incomplete_protected_projection_preserves_admitted_group",
+    "existing_selectors": [
+      "tests/test_evidence_context.py::test_projects_derived_siblings_to_their_complete_direct_source",
+      "tests/test_evidence_context.py::test_projection_leaves_group_unchanged_without_an_eligible_source",
+      "tests/test_evidence_context.py::test_projection_respects_the_ingestion_cutoff_before_replacing_a_group",
+      "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[duckdb]",
+      "tests/test_privacy_source_routing.py::test_AC06_selected_deadline_and_effect_denials_stop_response[duckdb]"
+    ],
+    "selector_name_correction": "Released [directory] variant names map to existing [duckdb] pytest IDs for the same physical directory backend; recorded before execution, not a product correction.",
+    "fixture": "One actual directory standard runtime engine; two real admitted source events; ordinary public reinforcement establishes the common two-event dependency set. Original admission records remain exact.",
+    "observations": {
+      "capped": "Two eligible selected sources, cap one: retain both original admitted nodes in selected and packed results, including tea and oranges statements.",
+      "missing": "Only one source selected under the finite grant, cap two: retain both admitted nodes with unchanged content and evidence references.",
+      "filtered": "Both sources selected but one excluded by event_time_to: retain the eligible original tea node; do not resurrect the excluded orange node.",
+      "complete": "Both authorized eligible sources, cap two: project the two event-ID sanitized source representations with both statements packed."
+    },
+    "result": "6 passed, 0 failed, 0 corrections. New case 3.10s pytest/4.586s wrapper; five existing cases 5.20s/6.160s. Changed-file Ruff passed.",
+    "evidence_names": [
+      "protected-projection-coverage-directory",
+      "protected-projection-existing",
+      "protected-projection-static"
+    ],
+    "public_capture": {
+      "source": "/var/folders/rt/zrv3nwmx4yl1ktj08bmwzwf80000gn/T/pytest-of-dwamianm/pytest-932/test_AC06_incomplete_protected0/protected-projection-coverage.json",
+      "copy": ".github-ticket-loop/privacy-326/protected-projection-coverage/directory.json",
+      "sha256": "250ffe6fbb5f251293cc39b9f37d813cffb3e263bf8e9b13c586eacf7e712844",
+      "copied_at": "2026-10-21T03:43:45.044925+00:00"
+    },
+    "source_sha256": {
+      "src/prme/retrieval/evidence_context.py": "abfe1c09636ce9991b4e3d710a24120f0914680601490706ec9188fc11f7426f",
+      "tests/test_privacy_source_routing.py": "0b91bf06a63ab676fd2913b727b7986b2762d6c7136f5ea3ab60fa27aa5d04e9"
+    },
+    "review": "Root reviewed the exact runtime/test diff, found no source finding and authorized reuse of that review before final documentation/commit.",
+    "limit": "This repairs the demonstrated incomplete protected source-substitution loss only. No changed failed comparison/assertions, full migration parity, held classifier correction, whole-case pass or issue completion is claimed.",
+    "dependency_boundary_correction": "Root original-dependency-boundary-audit.json distinguishes engine current-ledger/fence/restore and local integration contracts from separate hosted HTTP/MCP composition, managed backup expiry, UI and cloud deployment. Historical failures/evidence remain unchanged; engine not_managed never proves hosted backup completion."
   }
 }

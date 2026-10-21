@@ -1534,3 +1534,80 @@ zero corrections. All six ACs remain partial pending their other original
 integration and final-validation requirements; configured standard comparison,
 same-policy/#327, held dependencies and hosted managed-copy completion are not
 relabelled by this checkpoint.
+
+## Iteration 10: preserve incomplete protected projection groups
+
+The original #326 requirement is adoption without losing usable memory, including
+saved standard retrieval validation. The preserved source diagnosis identifies
+a concrete loss: capped event-source substitution removes the whole admitted
+two-source group while retaining only one source. This checkpoint is complete
+when protected projection leaves that group intact whenever authorized eligible
+sources after filtering and the existing cap do not cover its exact dependencies.
+Full-coverage source projection and ordinary direct-source projection must keep
+their current behavior. This is not completion of full migration parity.
+
+Only `retrieval/evidence_context.py::project_evidence_context` changes at runtime.
+Use the existing graph facade's `protected_reads` contract, not content metadata,
+text matching, known IDs or a source-lookup rewrite. Compare the capped eligible
+source IDs to the anchor's exact dependency set before retiring any group member.
+Leave all authority/lease/expiry checks, caps/defaults, graph/event identities,
+ReadContext/classifier functions and stored records unchanged. Owned tests and
+records are `tests/test_privacy_source_routing.py`, this plan and PV-07-results.
+
+New exact selector:
+`tests/test_privacy_source_routing.py::test_AC06_incomplete_protected_projection_preserves_admitted_group`.
+It uses one actual directory standard engine, two real stores and normal public
+reinforcement to form a two-event dependency group without rewriting immutable
+input. Original admission records must remain unchanged. The same fixture checks
+capped coverage, a missing selected source, one temporally filtered source, and
+full authorized coverage through real public retrieval/native custody. Incomplete
+coverage must retain the eligible original admitted nodes and their content;
+full coverage must still return the authorized event-ID source representations.
+Stop on a held classifier/reinforcement failure or stall; this setup does not
+authorize repairs to those functions.
+
+Run the new directory selector first, then these five existing selectors once:
+
+- `tests/test_evidence_context.py::test_projects_derived_siblings_to_their_complete_direct_source`
+- `tests/test_evidence_context.py::test_projection_leaves_group_unchanged_without_an_eligible_source`
+- `tests/test_evidence_context.py::test_projection_respects_the_ingestion_cutoff_before_replacing_a_group`
+- `tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[duckdb]`
+- `tests/test_privacy_source_routing.py::test_AC06_selected_deadline_and_effect_denials_stop_response[duckdb]`
+
+Six initial pytest executions, not another layout/cohort. The released scope
+wrote `[directory]` for the two existing variants; their actual pytest ID is
+`[duckdb]` in `backend_layout`, selecting that same directory backend. This
+selector-name correction is recorded before execution and is not a product
+repair. Only one affected correction is authorized for this newly released
+coverage behavior; after another failure stop. Preserve all existing comparison
+and held counters and every new run. Follow with affected Ruff/JSON/diff checks.
+The failed standard comparison and its assertions/bytes are not edited or rerun.
+
+Root's original-dependency-boundary audit also corrects earlier active inventory:
+engine completion requires its real current-ledger, restore, erasure and local
+integration/final-delivery evidence. Hosted HTTP/MCP composition, managed backup
+expiry, UI and cloud deployment are separate hosted obligations, not engine-only
+completion gates. Engine `not_managed` copy status does not satisfy those hosted
+guarantees. Historical failed/partial evidence and all original engine gates stay.
+
+Iteration 10 results: the new actual-directory case passed on its first execution
+(1 passed, 3.10s pytest / 4.586s wrapper), followed by the five named existing
+selectors (5 passed, 5.20s / 6.160s). Changed-file Ruff passed. All six selectors
+used the same runtime/test bytes; no correction or held behavior was encountered.
+The four raw public responses are preserved in ignored
+`protected-projection-coverage/directory.json` with SHA256
+`250ffe6fbb5f251293cc39b9f37d813cffb3e263bf8e9b13c586eacf7e712844`.
+Logs and pre-run source/diff manifests are named in PV-07-results. Root reviewed
+the runtime/test diff without a source finding. Only final JSON/diff checks and
+normal commit/push remain for this finite checkpoint.
+
+The active results inventory now distinguishes engine obligations from separate
+hosted handoffs according to the original epic boundary. It preserves all frozen
+cases and historical outcomes. Engine current-ledger/fence/restore and erasure
+integration, the failed configured migration comparison, fixed-policy/#327 gates
+and final complete-revision checks/review/delivery remain open. Hosted HTTP/MCP
+composition and managed backup expiry are still unproven hosted work; they do
+not become additional engine-only completion criteria. This coverage correction
+neither reruns nor passes the original failed migration comparison. Its three
+historical failed executions, two earlier comparison corrections and one earlier
+unsuccessful comparison cycle remain recorded, as do the two held #323 cycles.

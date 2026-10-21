@@ -169,6 +169,15 @@ async def project_evidence_context(
     )
     for members, eligible in source_groups:
         anchor = members[0]
+        selected_sources = eligible[: config.evidence_projection_max_sources]
+        if getattr(graph_store, "protected_reads", False):
+            # Protected event sources must cover the admitted group's complete
+            # dependencies. A capped, absent or filtered source cannot stand in
+            # for every member without losing the uncovered admitted memory.
+            if {str(source.id) for source in selected_sources} != {
+                str(identifier) for identifier in anchor.node.evidence_refs
+            }:
+                continue
         # The source replaces the claims it stands in for, which leave the
         # results, so it takes their place with their whole score, a seed count
         # graph term included (ScoringWeights.rrf_graph_seed_count): unlike
@@ -194,7 +203,7 @@ async def project_evidence_context(
         # The source stands in for every member it replaces, so it keeps the
         # largest of their relevances; min_score gates it under rank fusion.
         group_relevance = max(rank_fusion_relevance(member) for member in members)
-        for source in eligible[: config.evidence_projection_max_sources]:
+        for source in selected_sources:
             replacements.append(
                 RetrievalCandidate(
                     node=source,
