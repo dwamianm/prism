@@ -486,7 +486,7 @@ async def test_a_change_of_settings_makes_every_source_stale_again_without_dupli
         await store_all(engine, user)
         first = await engine.reingest(user)
         active = sorted(node.content for node in await claims(engine, user))
-        # The engine version, the model, the prompt and each option that decides what is derived count.
+        # The derivation version, the model, the prompt and each option that decides what is derived count.
         engine._pipeline._link_mentions = not engine._pipeline._link_mentions
         stale = await engine.reingest(user, dry_run=True)
         # An option that only decides what is derived plans again from the model output the first run saved.
@@ -501,6 +501,63 @@ async def test_a_change_of_settings_makes_every_source_stale_again_without_dupli
         assert sorted(node.content for node in await claims(engine, user)) == active
         assert len(await claims(engine, user, LifecycleState.SUPERSEDED)) == 4
         assert (await engine.reingest(user)).processed == 0
+
+
+async def test_a_source_re_derived_under_one_derivation_version_is_stale_under_the_next(config, user, monkeypatch):
+    from prme.ingestion import reingest as module
+
+    async with MemoryEngine.open(settings(config)) as engine:
+        model = install(engine, Scripted(FOUND))
+        await store_all(engine, user)
+        first = await engine.reingest(user)
+        assert (first.processed, first.remaining) == (4, 0)
+        same = await engine.reingest(user, dry_run=True)
+        assert (same.current, same.selected, same.model_calls) == (4, 0, 0) and same.fingerprint == first.fingerprint
+
+        # A developer who changed what is derived bumps the number, and every source reads as stale once.
+        monkeypatch.setattr(module, "DERIVATION_VERSION", module.DERIVATION_VERSION + 1)
+        stale = await engine.reingest(user, dry_run=True)
+        assert (stale.current, stale.selected, stale.remaining) == (0, 4, 4) and stale.fingerprint != first.fingerprint
+        # The model output saved under the old number is not reused: the output may differ under the new one.
+        assert stale.model_calls == 3
+        redone = await engine.reingest(user)
+        assert (redone.processed, redone.remaining, redone.model_calls) == (4, 0, 3) and len(model.calls) == 6
+        assert sorted(node.content for node in await claims(engine, user)) == sorted(TEXTS)
+        again = await engine.reingest(user, dry_run=True)
+        assert (again.current, again.selected) == (4, 0) and again.fingerprint == stale.fingerprint
+
+
+async def test_the_package_version_alone_does_not_change_the_settings_fingerprint(config, user, monkeypatch):
+    import prme
+    from prme.ingestion.reingest import derivation_settings, extraction_settings
+
+    async with MemoryEngine.open(settings(config)) as engine:
+        model = install(engine, Scripted(FOUND))
+        await store_all(engine, user)
+        first = await engine.reingest(user)
+        asked = len(model.calls)
+        before = (extraction_settings(engine._pipeline), derivation_settings(engine._pipeline))
+
+        # A release changes the package version and nothing that is derived: every source stays current.
+        monkeypatch.setattr(prme, "__version__", "99.0.0a1")
+        after = await engine.reingest(user, dry_run=True)
+        assert (after.current, after.selected, after.model_calls) == (4, 0, 0) and after.fingerprint == first.fingerprint
+        assert (extraction_settings(engine._pipeline), derivation_settings(engine._pipeline)) == before
+        assert (await engine.reingest(user)).processed == 0 and len(model.calls) == asked
+
+
+async def test_the_settings_hold_what_they_held_before_the_window_options_and_add_only_theirs(config, user):
+    from prme.ingestion.reingest import DERIVATION_VERSION, extraction_settings
+
+    base = {"derivation_version", "provider", "model", "grounding_policy", "request", "batch_target_tokens",
+            "extraction_corrections", "claim_fixes", "speaker_grounding"}
+    async with MemoryEngine.open(settings(config)) as engine:
+        found = extraction_settings(engine._pipeline)
+        assert set(found) == base and found["derivation_version"] == DERIVATION_VERSION
+    async with MemoryEngine.open(settings(config, extraction_batch_target_tokens=0,
+                                          enable_windowed_extraction=True)) as engine:
+        assert set(extraction_settings(engine._pipeline)) == base | {"window_turns", "window_owner_wide",
+                                                                     "resolve_fact_text"}
 
 
 async def test_memories_whose_own_extraction_is_unfinished_are_left_alone(config, user):

@@ -171,8 +171,10 @@ sources are touched.
   readable with `get_node(..., include_superseded=True)`. Entities are kept and
   reused, because every memory that names an entity shares it.
 - **Idempotent and resumable.** Each source is saved with a marker that names the
-  settings it was derived under: the engine version, the extraction model and
-  prompt, and the options that decide what is derived. A second run skips the
+  settings it was derived under: the derivation version (`DERIVATION_VERSION`, a
+  number bumped when what is derived changes; a new package version alone leaves
+  sources current), the extraction model and prompt, and the options that decide
+  what is derived. A second run skips the
   sources that have it and creates nothing. The model's output is saved before
   anything is published, so a run that stops after a request does not ask the
   model again, and the next call continues with the sources that are not current.
