@@ -386,3 +386,37 @@ async def test_a_blind_run_writes_its_report_and_a_latency_run_measures_a_small_
     assert row["owner_aware_reads"]["edges_read"]["mean"] < row["naive_reads"]["edges_read"]["mean"]
     # Claims alone are a fraction of what the frontier's edges hold, which is mostly mentions.
     assert row["claims_only_reads"]["edges_read"]["mean"] < row["owner_aware_reads"]["edges_read"]["mean"]
+
+
+# --- The question shape router ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("question, expected", [
+    ("Which cities will Maya visit in Peru?", "list"), ("What programming languages does Alex use?", "list"),
+    ("Who are the members of the team?", "list"), ("What are the steps in the checklist?", "list"),
+    ("Which of the cafes is open late?", "list"), ("How many books has Ana read?", "count"),
+    ("What is the number of rooms?", "count"), ("Which kind of tea does Sam like?", "subtype"),
+    ("Who is the manager of Jordan's partner?", "chain"), ("Dana's sister's mother lives where?", "chain"),
+    ("What is Ben's dog called?", "other"), ("What does Sam do for a living?", "other"), ("When is the launch?", "other"),
+    ("Does Alex like tea?", "other"), ("What time did Dana finish the race?", "other"),
+    ("Where does Dana's sister live?", "other"), ("What is the name of the dog?", "other"),
+])
+def test_the_router_reads_the_shape_of_a_question_from_its_words(question, expected):
+    from benchmarks.graph_oracle import router
+
+    assert router.shape(question) == expected
+    assert router.route(question) == ("graph" if expected != "other" else "text")
+
+
+def test_the_router_accuracy_counts_agreement_with_the_route_a_type_tag_implies():
+    from benchmarks.graph_oracle import router
+
+    asked = [{"question": "Which cities will Maya visit?", "type": "list"},
+             {"question": "How many books has Ana read?", "type": "aggregation"},
+             {"question": "What is Ben's dog called?", "type": "lookup"},
+             {"question": "Which cities does Ben like?", "type": "lookup"},
+             {"question": "When is the launch?", "type": "temporal"}]
+    result = router.accuracy(asked)
+    assert result["accuracy"] == 0.8 and result["lookups"] == 2 and result["lookups_routed_to_graph"] == 1
+    assert result["lookup_routed_share"] == 0.5 and result["by_type"]["temporal"]["routed_to_graph"] == 0
+    assert router.expected_route("multi-hop") == "graph" and router.expected_route("negation") == "text"
