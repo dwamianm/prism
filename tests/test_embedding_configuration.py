@@ -110,3 +110,59 @@ def test_unset_fastembed_threads_leave_configuration_dumps_unchanged():
     threaded = {**defaults, "embedding": {**defaults["embedding"], "threads": 1}}
     with pytest.raises(ValueError, match="embedding"):
         _check_defaults_build(Path("threaded"), {"provenance": {"engine_config": threaded}})
+
+
+def test_embedding_prefixes_are_off_by_default_and_leave_the_provider_and_dumps_alone():
+    from prme.storage.embedding import PrefixedFastEmbedProvider
+
+    config = EmbeddingConfig()
+    provider = create_embedding_provider(config)._provider
+
+    assert config.query_prefix is None and config.document_prefix is None
+    assert "query_prefix" not in config.model_dump() and "document_prefix" not in config.model_dump()
+    assert type(provider) is FastEmbedProvider and not isinstance(provider, PrefixedFastEmbedProvider)
+    assert "prefix" not in provider.model_version
+
+
+def test_embedding_prefixes_reach_the_provider_and_name_the_recipe_in_the_model_version():
+    from prme.storage.embedding import PrefixedFastEmbedProvider, has_query_encoder
+
+    nomic = EmbeddingConfig(
+        model_name="nomic-ai/nomic-embed-text-v1.5",
+        query_prefix="search_query: ", document_prefix="search_document: ",
+    )
+    wrapped = create_embedding_provider(nomic)
+    bge = create_embedding_provider(EmbeddingConfig(query_prefix="Represent this sentence: "))._provider
+    plain = FastEmbedProvider()
+
+    assert isinstance(wrapped._provider, PrefixedFastEmbedProvider) and has_query_encoder(wrapped)
+    assert nomic.dimension == 768 and wrapped.dimension == 768
+    assert wrapped.model_version.startswith(plain.model_version + "+prefix-")
+    # Each recipe has its own version, so vectors made under one are refused under another.
+    assert len({wrapped.model_version, bge.model_version, plain.model_version}) == 3
+    assert PrefixedFastEmbedProvider(query_prefix="q").model_version != PrefixedFastEmbedProvider(document_prefix="q").model_version
+
+
+@pytest.mark.asyncio
+async def test_prefixed_provider_prefixes_stored_text_and_questions_separately(monkeypatch):
+    from prme.storage.embedding import PrefixedFastEmbedProvider
+
+    seen: list[list[str]] = []
+
+    def record(self, texts):
+        seen.append(list(texts))
+        return [[0.0] * self.dimension for _ in texts]
+
+    monkeypatch.setattr(FastEmbedProvider, "_embed_sync", record)
+    provider = PrefixedFastEmbedProvider(query_prefix="Q: ", document_prefix="D: ")
+
+    await provider.embed(["one", "two"])
+    await provider.embed_query("one")
+    await PrefixedFastEmbedProvider(query_prefix="Q: ").embed(["one"])
+
+    assert seen == [["D: one", "D: two"], ["Q: one"], ["one"]]
+
+
+def test_embedding_prefixes_apply_to_fastembed_only():
+    with pytest.raises(ValueError, match="fastembed provider only"):
+        create_embedding_provider(EmbeddingConfig(provider="openai", query_prefix="Q: "))
