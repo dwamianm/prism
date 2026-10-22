@@ -19,9 +19,11 @@ the other's rows after the index scan.) Exact search, the default, never uses th
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
+import time
 from datetime import datetime, timezone
 
 import asyncpg
@@ -35,10 +37,24 @@ logger = logging.getLogger(__name__)
 
 # pgvector indexes vectors of up to 2,000 dimensions. A larger model still stores and searches exactly.
 MAX_INDEXED_DIMENSIONS = 2000
-_ADVISORY_LOCK = "SELECT pg_advisory_lock(hashtext('prme.multi_model_embeddings:' || coalesce(current_schema(), '')))"
+_ADVISORY_LOCK = "SELECT pg_try_advisory_lock(hashtext('prme.multi_model_embeddings:' || coalesce(current_schema(), '')))"
 _ADVISORY_UNLOCK = "SELECT pg_advisory_unlock(hashtext('prme.multi_model_embeddings:' || coalesce(current_schema(), '')))"
 _ADOPTION_BATCH = 1000
 _STATE_PLACEHOLDERS = ", ".join(f"'{state}'" for state in ACTIVE_STATES)
+
+
+async def acquire_setup_lock(conn: asyncpg.Connection, *, timeout: float = 900.0) -> None:
+    """Take the store's setup lock, waiting without holding a statement open.
+
+    A blocking ``pg_advisory_lock`` is a statement in a transaction, and a ``CREATE INDEX CONCURRENTLY`` in the
+    process that holds the lock waits for every such transaction to end, so the two deadlock. Polling the
+    try-lock leaves nothing open between tries.
+    """
+    deadline = time.monotonic() + timeout
+    while not await conn.fetchval(_ADVISORY_LOCK):
+        if time.monotonic() > deadline:
+            raise TimeoutError("Another process has held this store's embedding setup lock for too long")
+        await asyncio.sleep(0.05)
 
 
 def sql_literal(value: str) -> str:
@@ -153,27 +169,37 @@ async def ensure_model_index(pool: asyncpg.Pool, vector_sql: VectorSQL, identity
         return
     name = index_name(identity)
     async with pool.acquire() as conn:
-        state = await conn.fetchrow(
-            "SELECT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid "
-            "JOIN pg_namespace s ON s.oid = c.relnamespace WHERE c.relname = $1 AND s.nspname = current_schema()",
-            name,
-        )
-        if state is not None and state["indisvalid"]:
-            return
-        if state is not None:
-            await conn.execute(f'DROP INDEX CONCURRENTLY IF EXISTS "{name}"')
-        populated = await conn.fetchval(
-            "SELECT EXISTS (SELECT 1 FROM node_embeddings WHERE model_name = $1 AND model_version = $2)",
-            identity.name, identity.version,
-        )
-        # An index over rows already stored is built without blocking writers. An empty one is instant.
-        concurrently = "CONCURRENTLY " if populated else ""
-        await conn.execute(
-            f'CREATE INDEX {concurrently}IF NOT EXISTS "{name}" ON node_embeddings USING hnsw '
-            f"((embedding::{vector_sql.type}({identity.dimension})) {vector_sql.cosine_ops}) "
-            f"WITH (m = 16, ef_construction = 64) "
-            f"WHERE model_name = {sql_literal(identity.name)} AND model_version = {sql_literal(identity.version)}"
-        )
+        # Two engines that open one store together must not create indexes on the table at once: a plain
+        # CREATE INDEX and a CONCURRENTLY one deadlock. The adoption's lock serializes them.
+        await acquire_setup_lock(conn)
+        try:
+            await _create_model_index(conn, vector_sql, identity, name)
+        finally:
+            await conn.execute(_ADVISORY_UNLOCK)
+
+
+async def _create_model_index(conn: asyncpg.Connection, vector_sql: VectorSQL, identity: ModelIdentity, name: str) -> None:
+    state = await conn.fetchrow(
+        "SELECT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid "
+        "JOIN pg_namespace s ON s.oid = c.relnamespace WHERE c.relname = $1 AND s.nspname = current_schema()",
+        name,
+    )
+    if state is not None and state["indisvalid"]:
+        return
+    if state is not None:
+        await conn.execute(f'DROP INDEX CONCURRENTLY IF EXISTS "{name}"')
+    populated = await conn.fetchval(
+        "SELECT EXISTS (SELECT 1 FROM node_embeddings WHERE model_name = $1 AND model_version = $2)",
+        identity.name, identity.version,
+    )
+    # An index over rows already stored is built without blocking writers. An empty one is instant.
+    concurrently = "CONCURRENTLY " if populated else ""
+    await conn.execute(
+        f'CREATE INDEX {concurrently}IF NOT EXISTS "{name}" ON node_embeddings USING hnsw '
+        f"((embedding::{vector_sql.type}({identity.dimension})) {vector_sql.cosine_ops}) "
+        f"WITH (m = 16, ef_construction = 64) "
+        f"WHERE model_name = {sql_literal(identity.name)} AND model_version = {sql_literal(identity.version)}"
+    )
 
 
 async def drop_model_index(pool: asyncpg.Pool, identity: ModelIdentity) -> None:
@@ -189,7 +215,7 @@ async def initialize_multi_model_storage(pool: asyncpg.Pool, vector_sql: VectorS
     which is left as it was.
     """
     async with pool.acquire() as conn:
-        await conn.execute(_ADVISORY_LOCK)
+        await acquire_setup_lock(conn)
         try:
             await ensure_model_tables(conn, vector_sql)
             return await adopt_legacy_embeddings(conn, vector_sql)

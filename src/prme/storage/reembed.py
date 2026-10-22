@@ -76,9 +76,15 @@ class Reembedder:
             raise ReembedDisabledError("This engine was opened without multi-model embedding storage")
         return index
 
-    def provider_for(self, model: str | None, threads: int | None = None) -> EmbeddingProvider:
-        """The provider of ``model``: the active one, a configured additional one, or a local fastembed model."""
+    def provider_for(self, model: str | EmbeddingProvider | None, threads: int | None = None) -> EmbeddingProvider:
+        """The provider of ``model``: a provider the caller passes, the active one, a configured additional one,
+        or a local fastembed model of that name."""
         index = self._index()
+        if model is not None and not isinstance(model, str):
+            from prme.storage.embedding import validate_embedding_provider
+
+            validate_embedding_provider(model)
+            return model
         if model is None or model == index.identity.name:
             return index._provider
         for extra in index.indexes[1:]:
@@ -88,7 +94,7 @@ class Reembedder:
         return fastembed_provider_for(model, threads=threads if threads is not None else config.threads)
 
     async def run(
-        self, model: str | None = None, *, limit: int | None = None, cursor: str | None = None,
+        self, model: str | EmbeddingProvider | None = None, *, limit: int | None = None, cursor: str | None = None,
         dry_run: bool = False, user_id: str | None = None, batch_size: int = 64, pause_ms: int = 0,
         threads: int | None = None,
     ) -> ReembedResult:

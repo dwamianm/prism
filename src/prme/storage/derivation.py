@@ -96,8 +96,9 @@ def apply_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> None:
         rows = conn.execute(
             "SELECT vm.embedding_model, vm.embedding_version, vm.embedding_dim, vp.vector_data "
             "FROM vector_metadata vm JOIN vector_payloads vp USING (vector_key) "
-            "WHERE vm.node_id = ? AND vm.user_id = ?",
-            [str(embedding.node_id), plan.user_id],
+            "WHERE vm.node_id = ? AND vm.user_id = ? AND vm.embedding_model = ? AND vm.embedding_version = ?",
+            # The plan's own model: with enable_multi_model_embeddings a node also has other models' rows.
+            [str(embedding.node_id), plan.user_id, embedding.model, embedding.version],
         ).fetchall()
         expected = (embedding.model, embedding.version, embedding.dimension,
                     np.asarray(embedding.values, dtype="<f4").tobytes())

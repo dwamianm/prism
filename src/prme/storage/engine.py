@@ -3490,7 +3490,7 @@ class MemoryEngine:
     @privacy_disclosure
     async def reembed(
         self,
-        model: str | None = None,
+        model: "str | EmbeddingProvider | None" = None,
         *,
         limit: int | None = None,
         cursor: str | None = None,
@@ -3513,7 +3513,8 @@ class MemoryEngine:
         nothing is behind when the job ends.
 
         Args:
-            model: The model to fill: a registered fastembed model name. ``None`` takes the active model.
+            model: The model to fill: a registered fastembed model name, or a provider object for a custom
+                model. ``None`` takes the active model.
             limit: The most memories this call takes; ``None`` takes all that are missing. The result says how
                 many remain.
             cursor: The ``cursor`` of an earlier result, to continue after the last memory it took.
