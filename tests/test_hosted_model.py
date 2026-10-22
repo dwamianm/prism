@@ -60,6 +60,23 @@ class TestTheFlag:
             hosted_model.LABEL, str(cycle.HOSTED_BASELINE), cycle.HOSTED_CACHE_DIR)
 
 
+class TestThePronounRepairSetting:
+    """The benchmark caches hold a request for each setting they were measured with, so a build names it."""
+
+    def test_a_harness_build_keeps_the_repair_off_unless_a_run_names_it(self, tmp_path):
+        assert extracted_packs.gate_config(tmp_path).enable_pronoun_repair is False
+        assert extracted_packs.build_config(tmp_path, {}, model="local-model").enable_pronoun_repair is False
+        named = extracted_packs.build_config(tmp_path, {"enable_pronoun_repair": True}, model="local-model")
+        assert named.enable_pronoun_repair is True
+
+    def test_the_hosted_baseline_keeps_it_on_unless_a_run_names_it(self, monkeypatch, tmp_path):
+        monkeypatch.setenv(hosted_model.FLAG, "1")
+        monkeypatch.setenv(hosted_model.MODEL_ENV, MODEL_ID)
+        monkeypatch.setattr(hosted_model, "install_meter", lambda: None)
+        assert extracted_packs.build_config(tmp_path, {}).enable_pronoun_repair is True
+        assert extracted_packs.build_config(tmp_path, {"enable_pronoun_repair": False}).enable_pronoun_repair is False
+
+
 class _Sdk:
     """The AWS SDK's runtime client, as far as the meter touches it."""
 

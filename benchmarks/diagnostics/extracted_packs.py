@@ -172,7 +172,9 @@ def build_config(pack: Path, overrides: dict | None = None, *, model: str = DEFA
     With ``PRME_BENCH_HOSTED=1`` (``hosted_model``) it extracts through the hosted model instead.
     """
     if hosted_model.enabled():
-        return hosted_model.build_config(gate_config(pack, overrides), TIMEOUT_SECONDS)
+        # The hosted baseline's cache holds the repair requests it was measured with, so it keeps the option on.
+        return hosted_model.build_config(gate_config(pack, {"enable_pronoun_repair": True, **(overrides or {})}),
+                                         TIMEOUT_SECONDS)
     check_endpoint(endpoint)
     config = gate_config(pack, overrides)
     with patch.dict(os.environ, {}, clear=True):
