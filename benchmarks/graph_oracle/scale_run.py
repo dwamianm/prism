@@ -92,8 +92,15 @@ def pad_memories(kind: str, core: Gold, count: int) -> Pads:
 # --- The text store: baseline lists ---------------------------------------------------------------
 
 
-async def baseline_lists(core: Gold, pads: Pads, items: list[dict], sizes: tuple[int, ...], cache: EmbeddingCache) -> dict:
-    """Store the core, then each padding step, and take ``retrieve()``'s ranked memory ids for every question at every size."""
+async def baseline_lists(core: Gold, pads: Pads, items: list[dict], sizes: tuple[int, ...], cache: EmbeddingCache,
+                         passes: list | None = None) -> dict:
+    """Store the core, then each padding step, and take ``retrieve()``'s ranked memory ids for every question at every size.
+
+    The embedding model is the gate's configuration's (the embedding experiment, dwamianm/prism#366, sets it through
+    ``PRME_BENCH_EMBEDDING``). ``passes`` is a list of ``(name, activate)``: every question is asked once per pass, after
+    ``activate()`` has set how the cache embeds a question, so one store serves several question recipes. A stage then has
+    its first pass's ``lists`` and ``retrieve_ms`` as before, and every pass's under ``passes``.
+    """
     from prme.storage import engine as engine_module
 
     original = engine_module.create_embedding_provider
@@ -112,16 +119,21 @@ async def baseline_lists(core: Gold, pads: Pads, items: list[dict], sizes: tuple
 
             async def measure(label: str, stored: int, store_seconds: float) -> None:
                 await _drain_sources(engine, OWNER)
-                lists, timings = {}, []
-                for item in items:
-                    began = time.perf_counter()
-                    response = await engine.retrieve(item["text"], user_id=OWNER, reference_time=item["ref"])
-                    timings.append((time.perf_counter() - began) * 1000)
-                    lists[item["id"]] = [reverse[str(candidate.node.id)] for candidate in response.results
-                                         if str(candidate.node.id) in reverse]
+                by_pass = {}
+                for name, activate in passes or [("", lambda: None)]:
+                    activate()
+                    lists, timings = {}, []
+                    for item in items:
+                        began = time.perf_counter()
+                        response = await engine.retrieve(item["text"], user_id=OWNER, reference_time=item["ref"])
+                        timings.append((time.perf_counter() - began) * 1000)
+                        lists[item["id"]] = [reverse[str(candidate.node.id)] for candidate in response.results
+                                             if str(candidate.node.id) in reverse]
+                    by_pass[name] = {"lists": lists, "retrieve_ms": percentiles(timings)}
+                first = next(iter(by_pass.values()))
                 stages[label] = {"memories": stored, "store_seconds": round(store_seconds, 1),
-                                 "embedding_seconds_so_far": round(cache.seconds, 1), "retrieve_ms": percentiles(timings),
-                                 "lists": lists}
+                                 "embedding_seconds_so_far": round(cache.seconds, 1), "retrieve_ms": first["retrieve_ms"],
+                                 "lists": first["lists"], **({"passes": by_pass} if passes else {})}
 
             began = time.perf_counter()
             for memory in core.memories:
