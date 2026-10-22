@@ -11,7 +11,10 @@ from prme import MemoryClient, MemoryEngine, ReembedBusyError, ReembedDisabledEr
 from prme.api.app import create_app
 from prme.config import APIConfig, MCPConfig
 from prme.mcp.server import create_http_app
-from tests.multi_model_support import large, memory_text, small, store as store  # noqa: F401
+from tests.multi_model_support import large, memory_text, small
+from tests import multi_model_support
+
+store = multi_model_support.store
 
 USER = "iface-user"
 

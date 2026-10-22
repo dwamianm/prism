@@ -11,7 +11,10 @@ import pytest
 
 from prme import MemoryEngine
 from prme.storage.multi_model import ModelIdentity
-from tests.multi_model_support import BagProvider, cosine, memory_text, store as store  # noqa: F401
+from tests.multi_model_support import BagProvider, cosine, memory_text
+from tests import multi_model_support
+
+store = multi_model_support.store
 
 pytestmark = pytest.mark.skipif(not os.environ.get("PRME_TEST_DATABASE_URL"), reason="PRME_TEST_DATABASE_URL not set")
 
@@ -160,7 +163,8 @@ async def test_each_model_has_its_own_partial_hnsw_index_and_approximate_search_
     async with MemoryEngine.open(config, embedding_provider=first, additional_embedding_providers=[second]) as engine:
         await fill(engine, 30)
         definitions = {row["indexname"]: row["indexdef"] for row in await query(
-            pg.url, "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'node_embeddings'")}
+            pg.url, "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'node_embeddings' "
+            "AND schemaname = current_schema()")}
         hnsw = [d for d in definitions.values() if "hnsw" in d]
         assert len(hnsw) == 2
         assert any("vector(384)" in d and "test/small-384" in d for d in hnsw)
@@ -187,7 +191,7 @@ async def test_an_index_left_invalid_by_a_failed_build_is_rebuilt(pg):
     async with MemoryEngine.open(pg.multi(), embedding_provider=first) as engine:
         await fill(engine, 5)
     name = (await query(pg.url, "SELECT indexname FROM pg_indexes WHERE tablename = 'node_embeddings' "
-                                "AND indexdef LIKE '%hnsw%'"))[0]["indexname"]
+                                "AND schemaname = current_schema() AND indexdef LIKE '%hnsw%'"))[0]["indexname"]
     await query(pg.url, "UPDATE pg_index SET indisvalid = false WHERE indexrelid = $1::regclass", name)
     async with MemoryEngine.open(pg.multi(), embedding_provider=first):
         pass
@@ -200,7 +204,8 @@ async def test_dropping_a_model_drops_its_index(pg):
     async with MemoryEngine.open(pg.multi(), embedding_provider=first, additional_embedding_providers=[second]) as engine:
         await fill(engine, 5)
         assert await engine.drop_embeddings("test/base-768") == 5
-    indexes = await query(pg.url, "SELECT indexdef FROM pg_indexes WHERE tablename = 'node_embeddings' AND indexdef LIKE '%hnsw%'")
+    indexes = await query(pg.url, "SELECT indexdef FROM pg_indexes WHERE tablename = 'node_embeddings' "
+                           "AND schemaname = current_schema() AND indexdef LIKE '%hnsw%'")
     assert len(indexes) == 1 and "test/small-384" in indexes[0]["indexdef"]
 
 
@@ -209,3 +214,12 @@ async def test_rebuild_is_refused_on_postgresql_with_a_way_forward(pg):
         with pytest.raises(RuntimeError, match="reembed"):
             await engine.rebuild_indexes()
     assert ModelIdentity("a", "b", 1).slug()
+
+
+async def test_the_option_off_on_a_model_keyed_store_warns(pg, caplog):
+    async with MemoryEngine.open(pg.multi(), embedding_provider=small384()) as engine:
+        await fill(engine, 3)
+    with caplog.at_level("WARNING"):
+        async with MemoryEngine.open(pg.config(), embedding_provider=small384()):
+            pass
+    assert "enable_multi_model_embeddings is off" in caplog.text

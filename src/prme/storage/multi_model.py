@@ -31,12 +31,11 @@ from prme.storage.embedding import (
     FastEmbedProvider,
     fastembed_model_dimension,
 )
+from prme.types import ACTIVE_LIFECYCLE_STATES
 
 logger = logging.getLogger(__name__)
 
 # Lifecycle states whose nodes carry vectors, as in rebuild_indexes() and in vector search.
-from prme.types import ACTIVE_LIFECYCLE_STATES  # noqa: E402
-
 ACTIVE_STATES = tuple(state.value for state in ACTIVE_LIFECYCLE_STATES)
 
 

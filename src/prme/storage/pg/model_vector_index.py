@@ -31,7 +31,7 @@ import asyncpg
 from prme.storage.embedding import EmbeddingProvider, encode_texts
 from prme.storage.multi_model import ACTIVE_STATES, ModelIdentity, StoredModel
 from prme.storage.pg.vector_index import PgVectorIndex
-from prme.storage.pg.vector_sql import VectorSQL, resolve_vector_sql
+from prme.storage.pg.vector_sql import VectorSQL
 
 logger = logging.getLogger(__name__)
 
@@ -194,12 +194,25 @@ async def _create_model_index(conn: asyncpg.Connection, vector_sql: VectorSQL, i
     )
     # An index over rows already stored is built without blocking writers. An empty one is instant.
     concurrently = "CONCURRENTLY " if populated else ""
-    await conn.execute(
+    create = (
         f'CREATE INDEX {concurrently}IF NOT EXISTS "{name}" ON node_embeddings USING hnsw '
         f"((embedding::{vector_sql.type}({identity.dimension})) {vector_sql.cosine_ops}) "
         f"WITH (m = 16, ef_construction = 64) "
         f"WHERE model_name = {sql_literal(identity.name)} AND model_version = {sql_literal(identity.version)}"
     )
+    try:
+        await conn.execute(create)
+    except asyncpg.exceptions.DiskFullError:
+        # A parallel index build takes shared memory the size of maintenance_work_mem, which a container whose
+        # /dev/shm is small (a default Docker container's is 64 MB) cannot give. The build is the same one worker
+        # at a time, only slower.
+        logger.warning("multi_model.serial_hnsw_build", extra={"model": identity.name})
+        await conn.execute(f'DROP INDEX CONCURRENTLY IF EXISTS "{name}"')
+        await conn.execute("SET max_parallel_maintenance_workers = 0")
+        try:
+            await conn.execute(create)
+        finally:
+            await conn.execute("RESET max_parallel_maintenance_workers")
 
 
 async def drop_model_index(pool: asyncpg.Pool, identity: ModelIdentity) -> None:
@@ -353,7 +366,6 @@ class PgModelVectorIndex(PgVectorIndex):
             raise ValueError("Query embedding has invalid dimensions")
         conditions = [
             "n.user_id = $1",
-            self._model_clause("ne"),
             f"n.lifecycle_state IN ({_STATE_PLACEHOLDERS})",
         ]
         params: list = [user_id]
@@ -377,11 +389,15 @@ class PgModelVectorIndex(PgVectorIndex):
         vector_str = vector_text(vector)
         if self._exact_search:
             # The materialization boundary keeps the limit from becoming an index scan before eligibility is
-            # known, as in PgVectorIndex. Undefined distances (zero-norm vectors) are not results.
+            # known, as in PgVectorIndex. Undefined distances (zero-norm vectors) are not results. The eligible
+            # memories are found first and each one's vector is fetched by primary key (OFFSET 0 keeps the
+            # planner from turning the lateral lookup into a hash join, which would hold every vector of the model
+            # in shared memory: pgvector rows are wide, and a container's /dev/shm is small).
             query = (
                 "WITH eligible AS MATERIALIZED ("
-                f"SELECT n.id::text AS node_id, (ne.embedding {sql.cosine} ${idx}::{sql.type}) AS distance "
-                f"FROM node_embeddings ne JOIN nodes n ON n.id = ne.node_id WHERE {where}) "
+                f"SELECT n.id::text AS node_id, (v.embedding {sql.cosine} ${idx}::{sql.type}) AS distance "
+                "FROM nodes n CROSS JOIN LATERAL (SELECT ne.embedding FROM node_embeddings ne "
+                f"WHERE ne.node_id = n.id AND {self._model_clause('ne')} OFFSET 0) v WHERE {where}) "
                 "SELECT * FROM eligible WHERE distance < 'Infinity'::float8 "
                 f"ORDER BY distance, node_id::uuid LIMIT ${idx + 1}"
             )
@@ -389,8 +405,8 @@ class PgModelVectorIndex(PgVectorIndex):
             cast = f"{sql.type}({identity.dimension})"
             query = (
                 f"SELECT n.id::text AS node_id, (ne.embedding::{cast} {sql.cosine} ${idx}::{cast}) AS distance "
-                f"FROM node_embeddings ne JOIN nodes n ON n.id = ne.node_id WHERE {where} "
-                f"ORDER BY ne.embedding::{cast} {sql.cosine} ${idx}::{cast} LIMIT ${idx + 1}"
+                f"FROM node_embeddings ne JOIN nodes n ON n.id = ne.node_id WHERE {self._model_clause('ne')} "
+                f"AND {where} ORDER BY ne.embedding::{cast} {sql.cosine} ${idx}::{cast} LIMIT ${idx + 1}"
             )
         params.extend([vector_str, k])
         async with self._pool.acquire() as conn:

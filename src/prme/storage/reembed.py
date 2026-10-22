@@ -140,6 +140,22 @@ class Reembedder:
                           processed=0, failed=0)
 
         target = await index.attach(provider)
+        # The vectors are durable as they are stored; a DuckDB index file is only a snapshot of them, and writing it
+        # in full every few dozen vectors is quadratic over a long job. It is written once at the end instead.
+        interval = getattr(target, "_save_interval", None)
+        if interval is not None:
+            target._save_interval = max(interval, 1 << 30)
+        try:
+            return await self._sweeps(
+                index, target, provider, identity, reader, active, result, limit, after, user_id, batch_size, pause_ms,
+            )
+        finally:
+            if interval is not None:
+                target._save_interval = interval
+
+    async def _sweeps(
+        self, index, target, provider, identity, reader, active, result, limit, after, user_id, batch_size, pause_ms,
+    ) -> ReembedResult:
         selected = processed = failed = batches = 0
         failed_ids: set[str] = set()
         in_a_row = 0

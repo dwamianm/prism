@@ -16,8 +16,11 @@ from prme.storage.embedding import EmbeddingVersionMismatchError
 from prme.storage.multi_model import EmbeddingModelMismatchError, ModelIdentity, MultiModelVectorIndex
 from prme.storage.reembed import ReembedBusyError, ReembedDisabledError
 from tests.multi_model_support import (
-    BagProvider, TOPICS, cosine, large, memory_text, rows_under, small, store as store,  # noqa: F401
+    BagProvider, TOPICS, cosine, large, memory_text, rows_under, small,
 )
+from tests import multi_model_support
+
+store = multi_model_support.store
 
 USER = "mme-user"
 

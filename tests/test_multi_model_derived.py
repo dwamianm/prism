@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
-
 from prme import MemoryEngine
-from tests.multi_model_support import large, small, store as store  # noqa: F401
+from tests.multi_model_support import large, small
+from tests import multi_model_support
 from tests.test_reingest import FOUND, Scripted, install, store_all
+
+store = multi_model_support.store
 
 USER = "derived-user"
 

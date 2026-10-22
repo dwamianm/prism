@@ -1012,7 +1012,12 @@ class VectorIndex:
                 return await run_to_completion(self._do_put_vectors, rows)
 
     def _do_put_vectors(self, rows: list[tuple[str, str, str, list[float]]]) -> int:
-        written = 0
+        """Store a batch in one transaction: the metadata and payload rows, then the native index.
+
+        The caller holds both locks. Rows already stored under this model, and nodes that are no longer active
+        or belong to another owner, are skipped.
+        """
+        fresh: list[tuple[str, str, str, np.ndarray]] = []
         for node_id, user_id, content, values in rows:
             vector = np.array(values, dtype=np.float32)
             if vector.shape != (self._provider.dimension,) or not np.isfinite(vector).all():
@@ -1026,9 +1031,32 @@ class VectorIndex:
                 + ", ".join("?" for _ in ACTIVE_STATES) + ")", [node_id, user_id, *ACTIVE_STATES],
             ).fetchone()
             if present is None and active is not None:
-                self._do_index(node_id, content, user_id, vector)
-                written += 1
-        return written
+                fresh.append((node_id, user_id, content, vector))
+        if not fresh:
+            return 0
+        keys = [self._conn.execute("SELECT nextval('vector_key_seq')").fetchone()[0] for _ in fresh]
+        name, version = self._model_identity_params()
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            self._conn.executemany(
+                "INSERT INTO vector_metadata (vector_key, node_id, user_id, embedding_model, embedding_version, "
+                "embedding_dim) VALUES (?, ?, ?, ?, ?, ?)",
+                [[key, node_id, user_id, name, version, self._provider.dimension]
+                 for key, (node_id, user_id, _content, _vector) in zip(keys, fresh)],
+            )
+            self._conn.executemany(
+                "INSERT INTO vector_payloads VALUES (?, ?)",
+                [[key, vector.astype("<f4", copy=False).tobytes()] for key, (_n, _u, _c, vector) in zip(keys, fresh)],
+            )
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+        for key, (_node_id, _user_id, _content, vector) in zip(keys, fresh):
+            self._index.add(key, vector)
+        self._snapshot_dirty = True
+        self._count_unsaved_changes(len(fresh))
+        return len(fresh)
 
     async def delete_other_models(self, node_id: str, keep: list[ModelIdentity]) -> int:
         """Remove a node's vector rows of every model that is not in ``keep``, including models not open here.

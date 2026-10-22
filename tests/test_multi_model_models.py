@@ -11,7 +11,10 @@ import pytest
 from prme import MemoryEngine
 from prme.config import PRMEConfig
 from prme.storage.embedding import FastEmbedProvider
-from tests.multi_model_support import cosine, memory_text, store as store  # noqa: F401
+from tests.multi_model_support import cosine, memory_text
+from tests import multi_model_support
+
+store = multi_model_support.store
 
 SMALL = "BAAI/bge-small-en-v1.5"
 BASE = "BAAI/bge-base-en-v1.5"

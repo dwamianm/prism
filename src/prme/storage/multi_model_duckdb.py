@@ -57,7 +57,11 @@ def index_path_for(conn: duckdb.DuckDBPyConnection, vector_path: str, identity: 
     conn.execute(_REGISTRY_DDL)
     directory = os.path.dirname(os.path.abspath(vector_path))
     legacy = os.path.basename(vector_path)
-    if conn.execute("SELECT count(*) FROM embedding_models").fetchone()[0] == 0:
+    holds_vectors = conn.execute(
+        "SELECT count(*) FROM information_schema.tables WHERE table_schema = current_schema() "
+        "AND table_name = 'vector_metadata'"
+    ).fetchone()[0]
+    if holds_vectors and conn.execute("SELECT count(*) FROM embedding_models").fetchone()[0] == 0:
         for position, (name, version, dimension) in enumerate(conn.execute(
             "SELECT embedding_model, embedding_version, embedding_dim FROM vector_metadata "
             "GROUP BY 1, 2, 3 ORDER BY count(*) DESC, 1, 2, 3"
@@ -101,6 +105,31 @@ def forget_model(conn: duckdb.DuckDBPyConnection, vector_path: str, identity: Mo
             os.unlink(path)
         except FileNotFoundError:
             pass
+
+
+def refuse_multi_model_pack(conn: duckdb.DuckDBPyConnection) -> None:
+    """Refuse to open, without the option, a pack that holds several models' vectors.
+
+    A pack that never used the option is not looked at again: only ``embedding_models``, which the option creates,
+    makes the pack a candidate. Opened as a one-model pack, it would restore the other model's payloads into an
+    index of another dimension and fail with an error that does not say why.
+    """
+    created = conn.execute(
+        "SELECT count(*) FROM information_schema.tables WHERE table_schema = current_schema() "
+        "AND table_name IN ('embedding_models', 'vector_metadata')"
+    ).fetchone()[0]
+    if created < 2:
+        return
+    models = conn.execute(
+        "SELECT embedding_model, embedding_version, count(*) FROM vector_metadata GROUP BY 1, 2 ORDER BY 3 DESC, 1, 2"
+    ).fetchall()
+    if len(models) > 1:
+        held = "; ".join(f"{name} ({version}, {count} vectors)" for name, version, count in models)
+        raise ValueError(
+            f"This pack holds vectors of several embedding models: {held}. Open it with "
+            "enable_multi_model_embeddings (PRME_ENABLE_MULTI_MODEL_EMBEDDINGS=true), or remove all but one model "
+            "with prme embeddings drop first."
+        )
 
 
 def open_multi_model_index(

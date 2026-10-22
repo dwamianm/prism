@@ -6,7 +6,10 @@ import pytest
 
 from prme import MemoryEngine
 from prme.storage.multi_model import ModelIdentity
-from tests.multi_model_support import BagProvider, cosine, large, memory_text, small, store as store  # noqa: F401
+from tests.multi_model_support import BagProvider, cosine, large, memory_text, small
+from tests import multi_model_support
+
+store = multi_model_support.store
 
 USER = "duck-mme-user"
 
@@ -139,3 +142,16 @@ async def test_approximate_search_works_per_model(duck):
         assert len(hits) == 3
     async with MemoryEngine.open(duck.multi(vector_exact_search=False), embedding_provider=second) as engine:
         assert len(await engine._vector_index.search("jazz hiking weekend", USER, k=3)) == 3
+
+
+async def test_a_pack_of_several_models_does_not_open_without_the_option(duck):
+    first, second = small(), large()
+    async with MemoryEngine.open(duck.multi(), embedding_provider=first, additional_embedding_providers=[second]) as engine:
+        await fill(engine, 4)
+    with pytest.raises(ValueError, match="several embedding models.*enable_multi_model_embeddings"):
+        await MemoryEngine.create(duck.config(), embedding_provider=first)
+    # Dropping the other model leaves a pack the original index class opens as it always did.
+    async with MemoryEngine.open(duck.multi(), embedding_provider=first) as engine:
+        await engine.drop_embeddings("test/large")
+    async with MemoryEngine.open(duck.config(), embedding_provider=small()) as engine:
+        assert len(await engine._vector_index.search("jazz weekend", USER, k=10)) == 4

@@ -675,6 +675,10 @@ class MemoryEngine:
                     additional_providers_for(config, additional_embedding_providers),
                 )
             else:
+                if not single_file:
+                    from prme.storage.multi_model_duckdb import refuse_multi_model_pack
+
+                    refuse_multi_model_pack(conn)
                 vector_index = VectorIndex(
                     conn,
                     None if single_file else config.vector_path,
@@ -868,6 +872,12 @@ class MemoryEngine:
                     additional_providers_for(config, additional_embedding_providers),
                 )
             else:
+                if await pool.fetchval("SELECT to_regclass('node_embeddings') IS NOT NULL"):
+                    logger.warning(
+                        "This store keeps vectors by model (node_embeddings), but enable_multi_model_embeddings is "
+                        "off, so vector search reads nodes.embedding, which holds only what the column held when the "
+                        "option was first turned on. Turn the option back on to search every memory."
+                    )
                 vector_index = PgVectorIndex(pool, embedding_provider, exact_search=config.vector_exact_search, vector_sql=vector_sql)
             startup.push_async_callback(vector_index.close)
             lexical_index = PgLexicalIndex(pool, term_weights=config.lexical_term_weights)
