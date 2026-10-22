@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `enable_pronoun_repair` (`PRME_ENABLE_PRONOUN_REPAIR`, off by default; part of dwamianm/prism#345 and
   #347): a source whose first extraction left a claim on a pronoun subject or object (they, he, she, it and the
-  like; we only when the turn names no speaker) is asked a second time, shown the owner's preceding memories (up to
+  like; never a first person pronoun) is asked a second time, shown the owner's preceding memories (up to
   `extraction_window_turns`) and only that claim's own sentences. The claim is repaired only when the answer names
   someone written in the sentence, the message, the speaker or a memory shown: its text becomes its own sentence
   with the names written in, the quote stays its evidence, `metadata.resolved_from_context` lists the memories that

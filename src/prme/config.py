@@ -782,8 +782,8 @@ class PRMEConfig(_ProjectSettings):
         default=False,
         description=(
             "[HYPOTHESIS] When True, a source whose first extraction left a "
-            "claim on a pronoun subject or object (they, he, she, it; we only "
-            "when no speaker is named) is asked a second time, with the "
+            "claim on a third person pronoun subject or object (they, he, she, "
+            "it) is asked a second time, with the "
             "owner's preceding memories (up to extraction_window_turns, in the "
             "order stored, in the same scope; the turns before it in its "
             "session when it has one) and only the claim's own sentences. The "

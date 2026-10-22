@@ -950,15 +950,12 @@ class IngestionPipeline:
         if self._pronoun_repair_turns is None or not result.facts:
             return result
         from prme.ingestion.pronoun_repair import WindowTurn, apply_repairs, flagged_claims
-        from prme.models.owner_reference import OWNER_REFERENCE_KEY
         from prme.privacy.records import PRIVACY_KEY
 
         if PRIVACY_KEY in (event.metadata or {}):
             return result
         speaker = metadata_speaker(event.metadata)
-        named = speaker is not None or (event.metadata or {}).get(OWNER_REFERENCE_KEY) is True
-        claims = flagged_claims(result, event.content, named_speaker=named,
-                                grounding_speaker=speaker if self._speaker_grounding else None)
+        claims = flagged_claims(result, event.content, grounding_speaker=speaker if self._speaker_grounding else None)
         if not claims:
             return result
         if check is not None:

@@ -46,7 +46,7 @@ WINDOW = [WindowTurn("w1", None, PLAN)]
 
 class TestFlaggedClaims:
     def test_a_claim_on_a_third_person_pronoun_is_flagged_with_its_own_sentence(self):
-        flagged = flagged_claims(result_of(CHOSE, DROPPED), CITIES, named_speaker=False)
+        flagged = flagged_claims(result_of(CHOSE, DROPPED), CITIES)
         assert [(item.index, item.fact_index, item.fields, item.sentence) for item in flagged] == [
             (1, 0, ("subject",), "They chose Tokyo, Kyoto, Kanazawa, and Osaka."),
             (2, 1, ("subject",), "They dropped Hiroshima to save time."),
@@ -54,34 +54,35 @@ class TestFlaggedClaims:
 
     def test_a_named_subject_is_not_flagged(self):
         named = fact("Priya", "manages", "the observability rewrite", OTHER)
-        assert flagged_claims(result_of(named), OTHER, named_speaker=False) == []
+        assert flagged_claims(result_of(named), OTHER) == []
 
     def test_a_first_person_singular_claim_is_never_flagged(self):
         mine = fact("I", "chose", "Tokyo", "I chose Tokyo.")
-        assert flagged_claims(result_of(mine), "I chose Tokyo.", named_speaker=False) == []
+        assert flagged_claims(result_of(mine), "I chose Tokyo.") == []
 
-    def test_we_is_flagged_only_when_no_speaker_is_named(self):
-        ours = fact("We", "chose", "Tokyo", "We chose Tokyo.")
-        assert len(flagged_claims(result_of(ours), "We chose Tokyo.", named_speaker=False)) == 1
-        assert flagged_claims(result_of(ours), "We chose Tokyo.", named_speaker=True) == []
+    def test_a_first_person_plural_claim_is_never_flagged(self):
+        # The group "we" means is not stated by the memory: "We use Tableau at Northwind" is not "Dana and Priya".
+        for pronoun in ("We", "us", "our"):
+            ours = fact(pronoun, "chose", "Tokyo", f"{pronoun} chose Tokyo.")
+            assert flagged_claims(result_of(ours), f"{pronoun} chose Tokyo.") == []
 
     def test_an_object_pronoun_is_flagged_as_the_object(self):
         told = fact("Priya", "told", "them", "Priya told them.", object_type="person")
-        (flagged,) = flagged_claims(result_of(told), "Priya told them.", named_speaker=False)
+        (flagged,) = flagged_claims(result_of(told), "Priya told them.")
         assert flagged.fields == ("object",)
 
     def test_a_pronoun_typed_as_a_thing_is_not_flagged(self):
         stack = fact("It", "is", "Rust", "It is Rust.", subject_type="technology")
-        assert flagged_claims(result_of(stack), "It is Rust.", named_speaker=False) == []
+        assert flagged_claims(result_of(stack), "It is Rust.") == []
 
     def test_a_claim_with_resolved_text_or_no_shared_sentence_is_left_alone(self):
         done = CHOSE.model_copy(update={"resolved_text": "Alex chose Tokyo."})
-        assert flagged_claims(result_of(done), CITIES, named_speaker=False) == []
+        assert flagged_claims(result_of(done), CITIES) == []
         unshared = fact("They", "chose", "Osaka", "They left.")
-        assert flagged_claims(result_of(unshared), "They left.", named_speaker=False) == []
+        assert flagged_claims(result_of(unshared), "They left.") == []
         # Two sentences that together mention both are the claim's own sentences.
         spread = fact("They", "chose", "Osaka", "They left. Osaka was chosen.")
-        (flagged,) = flagged_claims(result_of(spread), "They left. Osaka was chosen.", named_speaker=False)
+        (flagged,) = flagged_claims(result_of(spread), "They left. Osaka was chosen.")
         assert flagged.sentence == "They left. Osaka was chosen."
 
 

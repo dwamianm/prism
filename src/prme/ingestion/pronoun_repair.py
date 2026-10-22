@@ -8,9 +8,8 @@ or resolving the text of every claim (``enable_fact_text_resolution``) changed
 claims that were fine, so this asks only about the sources whose first
 extraction left a claim on a pronoun, and changes only that claim.
 
-After a source's first extraction, a claim whose subject or object is a pronoun
-(they, them, their, he, she, it and the like, and we, us and our when no speaker
-is named) is flagged. One more request shows the model the owner's preceding
+After a source's first extraction, a claim whose subject or object is a third
+person pronoun (they, them, their, he, she, it and the like) is flagged. One more request shows the model the owner's preceding
 memories and, for each flagged claim, only the claim's own sentences. The model
 returns the names the pronoun means, or nothing. Ingestion then accepts a name
 only when it is a proper name written in the claim's sentence, in the source
@@ -31,7 +30,7 @@ message, writes.
 An accepted repair gives the claim its own sentence as its text with the names
 written in (``grounding_method`` ``pronoun_repair_v1``). A field that resolves
 to one name is rebound to it, so the claim attaches to that person's entity; a
-field that resolves to several (they, we) stays on the pronoun, its text names
+field that resolves to several (they) stays on the pronoun, its text names
 every member and each is listed as an entity, so the mention links that
 ``enable_mention_links`` makes reach each of them. The repair runs before the
 extraction is saved, so reingest, which replaces what was derived from a source
@@ -58,13 +57,14 @@ logger = structlog.get_logger(__name__)
 
 REPAIR_METHOD = "pronoun_repair_v1"
 
-# A pronoun for someone other than the speaker.
+# A pronoun for someone other than the speaker. A first person pronoun is never repaired: I is bound by the speaker
+# rules and the owner name carry, and we, us and our include the speaker and an unstated group, which the owner group
+# links (enable_owner_group_links) connect to the people a session names with the owner. Naming that group here
+# asserted a membership no memory states: "We use Tableau at Northwind" became "Dana and Priya use Tableau".
 _THIRD_PERSON = frozenset(
     "they them their theirs themselves he him his himself she her hers herself it its itself".split()
 )
-# A pronoun for a group the speaker belongs to. A turn with a named speaker has its own rules for them.
-_FIRST_PERSON_PLURAL = frozenset("we us our ours ourselves".split())
-_POSSESSIVE = frozenset("his their theirs hers its our ours".split())
+_POSSESSIVE = frozenset("his their theirs hers its".split())
 
 REPAIR_SYSTEM_PROMPT = """You resolve pronouns in claims read from one stored memory.
 
@@ -73,10 +73,12 @@ Each numbered claim was read from the memory alone, and the pronoun in its subje
 
 For each field to resolve, give the names of the person, people or thing the pronoun means. Use only names that are
 written in the earlier memories, in the claim's own sentence, or in the speaker line. Write every name exactly as it is
-written there, a full name when one is written. For a group pronoun such as they or we, give every member in the order
-they are named; for we, include the speaker when the speaker is named. When the memories do not say who the pronoun
-means, or you would have to guess, give no names for that field. Never invent a name. Never answer with a pronoun, a
-role or a description such as "the team" instead of a name. Resolve only the fields listed.
+written there, a full name when one is written. For they, give every member of the group in the order they are named,
+and only when a memory or the sentence names that group together, for example "Alex and Jordan are planning a trip" or
+"my partner Jordan and I"; people who are merely mentioned near each other are not a group. When two or more people or
+things could be meant, when the memories do not say who the pronoun means, or when you would have to guess, give no
+names for that field. Never invent a name. Never answer with a pronoun, a role or a description such as "the team"
+instead of a name. Resolve only the fields listed.
 """
 
 
@@ -174,13 +176,11 @@ class WindowTurn:
 
 
 def flagged_claims(
-    result: ExtractionResult, passage_source: str, *, named_speaker: bool, grounding_speaker: str | None = None,
+    result: ExtractionResult, passage_source: str, *, grounding_speaker: str | None = None,
 ) -> list[PronounClaim]:
     """The claims of a first extraction that sit on a pronoun and have a sentence of their own to repair.
 
-    A first person "I" is never flagged: the speaker rules bind it to the
-    speaker or the owner. We, us and our are flagged only when the turn names
-    no speaker, because with one the speaker rules cover the group. A claim
+    A first person pronoun is never flagged (see ``_THIRD_PERSON``). A claim
     that already has resolved text, or whose subject and object share no
     sentence, is left alone.
     """
@@ -194,7 +194,7 @@ def flagged_claims(
             word = value.strip().casefold()
             if not unresolved_personal_reference(value, kind):
                 continue
-            if word in _THIRD_PERSON or (word in _FIRST_PERSON_PLURAL and not named_speaker):
+            if word in _THIRD_PERSON:
                 fields.append(field)
         if not fields:
             continue
