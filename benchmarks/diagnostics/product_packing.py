@@ -687,6 +687,9 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
     # Scoring and packing values passed in code take their classes' historical
     # defaults; --set changes only the settings it names, like the environment.
     values = with_product_retrieval_defaults(overrides)
+    # The pronoun repair (enable_pronoun_repair) asks the model once more, a request no cache of the DeepSeek baselines
+    # holds, so a harness build keeps it off unless a run names it (--set) or the hosted baseline turns it on.
+    values = {"enable_pronoun_repair": False, **values}
     with patch.dict(os.environ, {}, clear=True):
         # Nested settings read .env by themselves, so build each one without it.
         settings = {name: field.annotation(_env_file=None) for name, field in PRMEConfig.model_fields.items()

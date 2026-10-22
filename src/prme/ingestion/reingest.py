@@ -27,6 +27,11 @@ engine derives:
   extraction is not batched (#91): each source is its own request, shown the
   turns before it, and the settings that name those options give the run its own
   fingerprint, so sources derived without them are derived again.
+- With ``enable_pronoun_repair`` on, a source whose first extraction left a claim on a pronoun is asked once
+  more, shown the owner's preceding memories, and the saved output is the repaired one, so the pronoun version
+  is replaced like any other. The repair request and its window are in the fingerprint, and its requests count
+  in ``model_calls``; a dry run counts the first requests only, because which sources need a second one depends
+  on the model's first answer.
 """
 
 from __future__ import annotations
@@ -122,6 +127,13 @@ def extraction_settings(pipeline: IngestionPipeline) -> dict:
         settings["window_turns"] = pipeline._extraction_window_turns
         settings["window_owner_wide"] = pipeline._extraction_window_owner_wide
         settings["resolve_fact_text"] = pipeline._resolve_fact_text
+    if pipeline._pronoun_repair_turns is not None:
+        # A source with a claim on a pronoun is asked once more (enable_pronoun_repair), so the repair request and
+        # the memories it shows decide the output too. The settings of an engine with it off are those it had before.
+        from prme.ingestion.pronoun_repair import repair_request_sha256
+
+        settings["pronoun_repair"] = {"window_turns": pipeline._pronoun_repair_turns,
+                                      "request": repair_request_sha256()}
     return settings
 
 

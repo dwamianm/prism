@@ -1,0 +1,1 @@
+{"claims": [{"claim": 1, "subject": [{"name": "Alex", "entity_type": "person"}, {"name": "Jordan", "entity_type": "person"}], "object": []}, {"claim": 2, "subject": [{"name": "Alex", "entity_type": "person"}, {"name": "Jordan", "entity_type": "person"}], "object": []}]}

@@ -1350,6 +1350,182 @@ for that claim's own sentence instead of the whole passage. The other memories
 keep the extraction they have, so the measures above should not move for them,
 and the cost is one more request for each memory that names no one.
 
+### Pronoun repair: a second request for the claims that kept a pronoun (dwamianm/prism#345, #347)
+
+The bounded alternative the window section ends with: ask a second time only about the sources whose first
+extraction left a claim on a pronoun, and change only that claim. `enable_pronoun_repair` (needs no other option; on by
+default in the alpha channel since 2026-10-22, see "Decision" below) flags a claim whose subject or object is a third person pronoun (they, them, their, he, she, it and
+the like; never I, we, us or our), and for a source with such a claim sends one more request. It shows the owner's
+preceding memories (the extraction window's code and privacy checks, up to `extraction_window_turns`) and only the
+claim's own sentences, and the model returns names. Code accepts a name only when it is a proper name written in the
+claim's sentence, the message, the speaker line or a memory the request showed, and then gives that claim its own
+sentence as text with the names written in. The quote stays its evidence, `metadata.resolved_from_context` records
+the memories that wrote the names, one name rebinds the field to that entity, several stay on the pronoun and are
+listed as entities so the mention links reach them, and no other claim of the message changes. A resolved name is
+never required to occur in the quote: that is the one place the claim differs from the grounding rule, and the name's
+own rule replaces it.
+
+**Model.** Every earlier section here measured `deepseek-v4.1-flash:cloud` through Ollama. This one used a small
+hosted model, the kind the hosted service extracts with, through the same extraction client, because the owner wanted
+to know whether the production model behaves like the DeepSeek baseline. Nothing else in this repository calls it, and
+the rule that builds, probes and answer runs use the local Ollama server is unchanged. The numbers below are not
+comparable with the DeepSeek sections except where a column says so. The runs went through the opt in described in
+"Fast cycle on the production model" below, and its committed cache replays them: `PRME_BENCH_HOSTED=1` and the model id
+give the on numbers below (the hosted baseline keeps the option on), and `--set enable_pronoun_repair=false` the off
+numbers, with no request sent. The DeepSeek cache in `benchmarks/fixtures/fast-cycle/extraction-cache` is not changed.
+
+**Design of the run.** Off is one live run of the fast cycle's `store`, `ingest`, `store-extract` and `reingest`
+stages. Every measure below reads a replay of that run's extraction cache, so off is deterministic (a second live
+sample of the `ingest` stage reproduced all 103 comparable measures except two token counts that moved by 100 and 6).
+On replays the same first extractions and asks the model only the repair requests, so any difference is the repair's.
+The repair requests were then replayed too, and the on replay was judged against the off replay at tolerance 0.
+
+Pass rule, written in the pull request before the on numbers were read:
+
+1. Defect probes: 7 of 7 answers in the top 3.
+2. `chat-v1`: answers in the top 3 and top 5 not below off.
+3. No chat probe measure worse in its good direction than off.
+4. Claims repeating another's text on `chat-v1` not higher than off.
+5. Fast cycle: no gated measure worse than off; list any moved measure and why. The corrections probe measures and
+   the Japan dates, dog and flights questions are read explicitly.
+6. The cities claim in the top 5 for the first spelling, in `reingest` and `store-extract`.
+7. Extra tokens per memory at most 1.5 times off.
+
+**The production model against the DeepSeek baseline** (off; the DeepSeek column is the committed
+`baseline-main.json`, a replay of its cache on this tree):
+
+| Measure | Hosted model | DeepSeek |
+|---|---:|---:|
+| Defect probes, answers in the top 3 (of 7) | 6 | 7 |
+| `chat-v1`, answers in the top 3 (of 18) | 12 | 14 |
+| `chat-v1`, answers in the top 5 | 13 | 15 |
+| `chat-v1`, claims repeating another claim's text | 0 | 0 |
+| `chat-v1`, user claims on the named owner | 30 | 36 |
+| `chat-v1`, pronoun entities | 5 | 15 |
+| `chat-v1`, key links linked | 14 | 14 |
+| `corrections-v1`, answers in the top 3 (of 4) | 2 | 3 |
+| `store-extract`, answers ranked first (of 17) | 8 | 12 |
+| `store-extract`, answers in the top 3 | 14 | 14 |
+| `store-extract`, mean reciprocal rank | 0.621 | 0.776 |
+| `store-extract`, Japan cities question rank | 23 | 30 |
+
+The production model has the same defect: it also reads "They chose Tokyo, Kyoto, Kanazawa, and Osaka." as a decision
+of the pronoun entity "They", so the cities claim ranks 23rd and 24th where DeepSeek's ranked 30th. It makes fewer
+pronoun entities (5 against 15 on `chat-v1`) and a little less of the rest of the ranking. The defect probes are 6 of 7
+on it, not 7: the `shipments` probe ranks 7th in two independent live samples, and it has no pronoun in it.
+
+**The cities claim**, rank of the claim that holds the four cities among all results (the raw note in
+parentheses), for three spellings of the question:
+
+| Case | "...Alex and jordan visit in Japan?" | "...alex visit in japan?" | "...Alex visit?" |
+|---|---:|---:|---:|
+| Off, `store-extract` | 23 (56) | 73 (108) | 98 (112) |
+| Off, `reingest` | 24 (56) | 73 (108) | 98 (112) |
+| On, `store-extract` | 1 (55) | 3 (109) | 13 (113) |
+| On, `reingest` | 1 (55) | 5 (109) | 13 (113) |
+
+The repaired claims read "Alex and Jordan chose Tokyo, Kyoto, Kanazawa, and Osaka." and "Alex and Jordan dropped
+Hiroshima to save time." (the model took the names from the preceding memory "Alex and Jordan plan a trip to Japan
+in April 2027 for the cherry blossom season.", and the same names came back in all four live requests). The window and fact text options of
+the section above reached 6th and 9th for the first spelling at the price of 22 fast-cycle measures and the whole
+message problem; this reaches 1st and changes nothing else in these stages.
+
+**Off against on, final variant** (first try beside it, see below):
+
+| Measure | Off | On, first try | On, final |
+|---|---:|---:|---:|
+| Defect probes, answers in the top 3 (of 7) | 6 | 5 | 6 |
+| Defect probes, answers in the top 5 | 6 | 6 | 6 |
+| `chat-v1`, answers in the top 3 (of 18) | 12 | 11 | 12 |
+| `chat-v1`, answers in the top 5 | 13 | 13 | 13 |
+| `chat-v1`, claims repeating another claim's text | 0 | 0 | 0 |
+| `chat-v1`, user claims on the named owner | 30 | 30 | 30 |
+| `chat-v1`, key links linked | 14 | 14 | 14 |
+| `corrections-v1`, answers in the top 3 (of 4) | 2 | 2 | 2 |
+| `corrections-v1`, old value shown first / old claims not retired / new values active | 2 / 3 / 2 | 2 / 3 / 2 | 2 / 3 / 2 |
+| `store-extract`, answers ranked first (of 17) | 8 | 9 | 9 |
+| `store-extract`, answers in the top 3 | 14 | 15 | 15 |
+| `store-extract`, mean reciprocal rank | 0.621 | 0.677 | 0.677 |
+| `reingest`, answers ranked first | 8 | 9 | 9 |
+| `reingest`, answers in the top 3 | 11 | 12 | 12 |
+| `reingest`, mean reciprocal rank | 0.606 | 0.662 | 0.662 |
+| Japan dates question rank, `store-extract` / `reingest` | 3 / 4 | 3 / 4 | 3 / 4 |
+| Dog question rank, `store-extract` / `reingest` | 28 / 28 | 28 / 28 | 28 / 28 |
+| Flights question rank, `store-extract` / `reingest` | 2 / 2 | 2 / 2 | 2 / 2 |
+| Stale value above the answer, `store-extract` / `reingest` | 4 / 4 | 4 / 4 | 4 / 4 |
+
+Every other rank in the two store stages and every other `ingest` measure is unchanged. The corrections, Japan
+dates, dog and flights questions that fell with the window options did not move.
+
+**First try, and what changed.** The first variant also flagged we, us and our when the turn named no speaker. It
+repaired "We chose Tokyo, Kyoto, Kanazawa, and Osaka." (defect probes) to "Alex Rivera and Jordan chose ..." and "We use
+Tableau at Northwind." (`chat-v1`) to "Dana and Priya use Tableau at Northwind.". The first is right. The second is a
+guess: the memory means Dana's team, and the names are written in the window but no memory states that group. Both
+names are real, so the name check could not tell. The extra claims also took ranks in questions about the owner:
+the travel probe fell from 3rd to 4th (defect probes 6 to 5 of 7), and `chat-v1` lost one answer in the top 3 (12 to
+11; the coffee question from 2nd to 5th). So the first try failed rules 1, 2 and 3. The owner group links
+(`enable_owner_group_links`) already connect a we claim to the people a session names with the owner, so I took
+first person plural out of the flagged set, and told the request to name a group only when a memory or the sentence
+names it together and to answer nothing when more than one person could be meant. That is the final variant. It is
+the second and last repair cycle.
+
+In the final variant the model is asked in two `chat-v1` sources and answers "the offer from Brightpath" (a
+description, rejected by the proper name rule) and "Brightpath team" (not written as such, rejected by the written
+name rule), so those claims keep their first extraction. A repaired field is accepted only when every name passes.
+
+**Cost.** The repair request is about 1,500 input and 50 to 150 output tokens, against about 6,600 for a first
+extraction, and only a source with a flagged claim makes it.
+
+| Stage | Sources | Requests off | Requests on | Sources asked | Sources repaired | Tokens off | Repair tokens | On / off |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `ingest` (three chats) | 84 | 84 | 86 | 2 (2.4%) | 0 | 550,864 | 2,974 | 1.005 |
+| `store-extract` | 75 | 75 | 76 | 1 (1.3%) | 1 | 499,734 | 1,650 | 1.003 |
+| `reingest` | 75 | 75 | 76 | 1 (1.3%) | 1 | 499,286 | 1,650 | 1.003 |
+
+That is 35 extra tokens per turn on `ingest` and 22 per memory on the store stages. The first variant asked 6 of 84
+turns (2 of 14 and 4 of 54, none in `corrections-v1`) and used 11,764 tokens in 8 requests over the four stages. The
+fast cycle's own `extraction_tokens` for the `ingest` stage understates the on run: a turn that mixes a replayed first
+extraction with a live repair counts only the live tokens, so the cost above is the request meter's.
+
+**Rule.**
+
+1. FAIL. 6 of 7 with the option off and 6 of 7 on (5 of 7 on the first try). The `shipments` probe ranks 7th in both
+   off samples and does not move. A pronoun repair has no reason to move it, so this clause cannot pass on this model.
+2. Pass in the final variant (12 and 13, as off); failed on the first try.
+3. Pass in the final variant: no chat probe measure of `defects-v1`, `chat-v1` or `corrections-v1` differs from off.
+4. Pass (0 and 0).
+5. A replay at tolerance 0 flags one gated measure: context tokens per question, up by 4 (3,194.7 to 3,198.7, 0.13%)
+   in both store stages, and it is within the measure's live tolerance (191). Every question's context grows by
+   exactly 4 because the contexts hold both repaired claims and "Alex and Jordan" is four tokens longer than "They".
+   Extraction requests and tokens rise by the repair requests, which is the feature's cost, and the rest of the moved
+   measures are better (the cities rank, answers ranked first and in the top 3, mean reciprocal rank, graph candidates).
+6. Pass: 1st in both stages.
+7. Pass: 1.005 and 1.003.
+
+So the option does not pass the rule as written: rule 1 fails on the model's off baseline and is not something the
+repair can change, and rule 5 moves one gated measure by a few tokens for a stated reason. Nothing else fails. The
+pass rule above is unchanged, and the option was turned on anyway (next paragraph). What the measurements show is that a memory that names no one can be repaired from the owner's earlier
+memories without touching any other memory (1 of 75 sources here, 1.3%), that the repair needs the proper name rule
+to stay narrow (a description or a half-written name is refused), and that a group pronoun should only be resolved when
+a memory states the group.
+
+**Decision.** `enable_pronoun_repair` was turned on by default in the alpha channel by the maintainer's decision on
+2026-10-22. The alpha pass rule's defect probe condition (7 of 7) was not met, because the extraction model used in
+production scores 6 of 7 with the option off. No mid tier or full benchmark was run on it. One memory in the fixtures is
+repaired (the cities claim, 23rd to 1st). `PRME_ENABLE_PRONOUN_REPAIR=false` restores the first extraction exactly. The
+benchmark harness names the setting itself (`gate_config` sets it to false unless a run passes `--set`, and the hosted
+baseline sets it to true), so the DeepSeek baselines and their caches, which hold no repair request, replay unchanged
+and cache-only: the committed DeepSeek fast cycle baseline still passes with all 168 measures unchanged, and its chat
+probe, defect probe and corrections probe builds are among them. Turning the option on makes `reingest()` read sources
+derived without it as stale, and a source with a claim on a third person pronoun makes one more model request.
+
+**Not measured.** The offline evidence gate (the repair changes no retrieval) and the mid tier, which would show how
+often the repair applies and whether it names anyone wrongly over all of LoCoMo and 12 LongMemEval-S questions. The mid
+tier on the production model is about eight times the tokens of everything above ("Fast cycle on the production model"),
+so it needs its own decision. PostgreSQL ran in CI only. The fixtures hold one memory that names no one (the cities one), so this
+shows the repair works and costs little where it applies, not how often a real store needs it, and a `reingest()` with
+the option on asks the first request again for every source, because the request is in the settings.
+
 ### Chat probe: a short chat through `ingest()`
 
 The benchmark packs take most of an hour per conversation to build, and their
@@ -2536,6 +2712,73 @@ server or prompt change.
 - Ranks can differ between machines, CPU architectures or `fastembed`
   versions when two scores nearly tie, so compare reports made on the same
   machine, or refresh the baseline there.
+
+### Fast cycle on the production model (the hosted baseline)
+
+Every number in the fast cycle sections above comes from `deepseek-v4.1-flash:cloud`, and the committed
+`baseline-main.json` is a replay of its cache. The hosted service extracts with a different, small hosted model, and
+this model does worse than DeepSeek on these fixtures, so work meant for the hosted service needs a baseline from the
+model it will run on. `benchmarks/fixtures/fast-cycle/baseline-hosted.json` is that baseline: the `store`, `ingest`,
+`store-extract` and `reingest` stages with every option at its default (including the pronoun repair, on since
+2026-10-22; `--set enable_pronoun_repair=false` replays the options-off numbers of the table below, and the baseline
+file is the replay with it on), a replay of its own extraction cache
+(`benchmarks/fixtures/fast-cycle/hosted-extraction-cache`: 159 batched responses, the three repair requests of the
+pronoun repair run above, and the recorded tokens, about 165 KB). The two baselines are not interchangeable. A change
+judged against the DeepSeek baseline says nothing about the production model, and the other way round.
+
+**What it says, plainly.** With the options off, the production model scores 12 of 18 on `chat-v1` (answers in the top 3,
+DeepSeek 14) and 6 of 7 on the defect probes (DeepSeek 7), below DeepSeek on both. The baseline file has the pronoun
+repair on, and it changes none of the `ingest` stage's probe numbers (only the two store stages move; see the pronoun
+repair section above), so these numbers are the same with it on:
+
+| Measure, options off | Production model | DeepSeek |
+|---|---:|---:|
+| Defect probes, answers in the top 3 (of 7) | 6 | 7 |
+| `chat-v1`, answers in the top 3 (of 18) / top 5 | 12 / 13 | 14 / 15 |
+| `chat-v1`, user claims on the named owner | 30 | 36 |
+| `chat-v1`, pronoun entities | 5 | 15 |
+| `corrections-v1`, answers in the top 3 (of 4) | 2 | 3 |
+| `store-extract`, answers ranked first (of 17) / in the top 3 | 8 / 14 | 12 / 14 |
+| `store-extract`, mean reciprocal rank | 0.621 | 0.776 |
+| `store-extract`, Japan cities question rank | 23 | 30 |
+
+It makes fewer pronoun entities and fewer claims that repeat another's text, and it ranks fewer answers first. The
+`shipments` defect probe ranks 7th on it, in two independent live samples. A cold run of the three stages is 234
+requests and 1,549,884 tokens (84 turns, 75 memories, and the `reingest` stage's 75 requests, which a replay shares with
+`store-extract`).
+
+**How to run it.** It needs the AWS SDK and, for any run that is not a replay, AWS credentials with access to the model.
+A run that reaches the model spends money, so it is an explicit opt in that CI never sets and no test uses:
+
+```sh
+# A replay of the committed cache: no request is sent, no credentials are needed, nothing is spent. The cache is keyed
+# by the model's id, so the id must be the one the hosted service uses (it is in the hosted service's configuration,
+# not in this repository).
+PRME_BENCH_HOSTED=1 PRME_BENCH_HOSTED_MODEL_ID=<the hosted service's model id> PRME_BENCH_CACHE_ONLY=1 \
+  uv run --with boto3 python -m benchmarks.fast_cycle run --label my-change --out /tmp/cycle-hosted \
+  --stages store,ingest,store-extract,reingest
+# A change to the extraction request misses the cache and calls the model for the requests it lacks. Drop
+# PRME_BENCH_CACHE_ONLY for that, and read the next paragraph first.
+```
+
+`PRME_BENCH_HOSTED=1` makes the fast cycle (and any other build that goes through `extracted_packs`) extract through the
+hosted model, and makes `--model`, `--baseline` and `--cache-dir` default to the hosted ones (`hosted`, the hosted
+baseline and its cache) and keeps the pronoun repair on, which every other harness build keeps off (`gate_config` names the
+setting, so the DeepSeek baselines and their caches replay unchanged whatever the product default is). Without the flag
+nothing in `benchmarks/diagnostics/hosted_model.py` changes what a build does.
+Every request is counted: one that could pass `PRME_BENCH_HOSTED_MAX_REQUESTS` (default 400) or
+`PRME_BENCH_HOSTED_MAX_TOKENS` (default 2,500,000, input and output together) is refused before it is sent, and
+`PRME_BENCH_HOSTED_LEDGER` writes a line of tokens for each request. A cold run of the cycle's three stages is inside
+both defaults. Judge a run against the hosted baseline with a replay of the cache whenever the extraction request is
+unchanged, as for the DeepSeek baseline: the same responses give the same measures at tolerance 0. A request that is
+new is a live sample, and live samples differ a little: two samples of the same requests in the `store-extract` and
+`reingest` stages differed by four entities and one rank of the cities claim, while two samples of the `ingest` stage
+differed by two token counts only.
+
+**The mid tier on the production model** was not run. The DeepSeek cold build was 8.76 million prompt and 3.69 million
+completion tokens (1,187 requests; LoCoMo 2.07 and 1.30 million of them), which is eight times the tokens of the whole
+cold fast cycle above, and most of those tokens are output. Its estimated cost was about ten times everything measured
+for the pronoun repair, so the repair's effect on LoCoMo and LongMemEval-S is still unmeasured.
 
 ### Store with extraction: does `store(..., extract=True)` help retrieval? (#260)
 

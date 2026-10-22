@@ -71,6 +71,10 @@ class RequestMeter:
         # With the window or fact text resolution on, the pipeline asks for one turn per request.
         self._cached_turn = provider.extract
         provider.extract = self._extract
+        # With enable_pronoun_repair on, a source with a claim on a pronoun is asked once more.
+        if callable(getattr(provider, "repair_pronouns", None)):
+            self._cached_repair = provider.repair_pronouns
+            provider.repair_pronouns = self._repair_pronouns
 
     async def _extract_batch(self, turns, **extra):
         key = self._cache._batch_key(self._provider, turns, extra.get("memories", ()))
@@ -90,6 +94,15 @@ class RequestMeter:
             entry = self._recorded.get(key)
             self.known = self.known and entry is not None
             self.tokens += entry["prompt_tokens"] + entry["completion_tokens"] if entry else 0
+
+    async def _repair_pronouns(self, window, claims, *, speaker=None):
+        key = self._cache._repair_key(self._provider, window, claims, speaker)
+        misses, before = self._cache.misses, self._usage.snapshot()
+        self.requests += 1
+        try:
+            return await self._cached_repair(window, claims, speaker=speaker)
+        finally:
+            self._count(key, misses, before)
 
     async def _extract(self, content, *, role="user", context=(), resolve=None, speaker=None):
         window = tuple(line for line in context if line and line.strip())

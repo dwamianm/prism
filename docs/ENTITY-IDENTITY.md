@@ -138,6 +138,36 @@ same response, apart from those event-local personal references. A missing or
 ambiguous reference discards its claim while preserving grounded, closed
 siblings; it never creates or selects an identity to repair model output.
 
+`enable_pronoun_repair` (on by default since 2026-10-22 in the alpha channel; dwamianm/prism#345 and #347) names the
+person behind a third person pronoun that a first extraction left as a claim's subject or object, for a memory that
+names no one ("They chose Tokyo, Kyoto, Kanazawa, and Osaka."). It asks one more question, only for a source with such
+a claim: the owner's preceding memories (up to `extraction_window_turns`, in the order stored, in the same scope, or the
+turns before it in its session) and only that claim's own sentences go to the model, which returns names or nothing.
+It is not coreference resolution. A first person pronoun is never repaired: `I` is bound by the speaker rules, and
+`we`, `us` and `our` include the speaker and a group no memory states, which the owner group links connect to the
+people a session names with the owner. The first variant also repaired `we`, and turned "We use Tableau at Northwind."
+into "Dana and Priya use Tableau at Northwind.", a membership nothing stated.
+
+Grounding requires a claim's subject and object to occur in its quote, and a repaired name does not occur there. The
+quote stays the claim's evidence, verbatim, and its check is unchanged. The name has its own rule: it must be a proper
+name (a capital letter, not a pronoun) written in the claim's sentence, the message, the speaker line, or a memory the
+request showed, and when a pronoun resolves to several names every one must pass or the field is left as it was. A
+claim is repaired only in its own fields; no other claim of the message changes, and a failed or refused answer leaves
+the first extraction. A repaired claim's text is its own sentence with the pronoun replaced by the names
+(`grounding_method` `pronoun_repair_v1`). A field that resolves to one name is rebound to that person's entity, so the
+claim attaches to them. A field that resolves to several (they) stays on the pronoun entity, its text names every
+member, and each name is listed as an entity so the mention links reach each one.
+
+A repaired claim records what it used in `metadata.resolved_from_context`:
+`{"event_ids": [...], "fields": {"subject": {"pronoun": "They", "names": ["Alex", "Jordan"]}}}`. `event_ids` are the
+memories of the request's window whose text wrote any of the names (empty when the names were in the claim's own
+message), and `fields` has an entry for each repaired field, `subject` or `object`. `metadata.resolution` holds the
+sentence it replaced, each replacement and where each name was found, and `metadata.evidence_quote` is the original
+quote. The repair runs before the extraction is saved, so `reingest()` replaces the pronoun version like any other
+derived claim. With the option off (`PRME_ENABLE_PRONOUN_REPAIR=false`) no request is made and a saved extraction has no
+new field. It was turned on by the maintainer's decision, without the alpha pass rule's defect probe condition met and
+without a mid tier or full benchmark run on it (`BENCHMARKS.md`, "Pronoun repair").
+
 Fresh extractions and plans record `speech_act_v14`. V14 preserves v13
 unnamed singular-form matching and earlier qualifier, quantity, speech-act and
 source-effective validity rules, and adds explicit owner references and bounded

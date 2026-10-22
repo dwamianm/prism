@@ -37,6 +37,7 @@ from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import claim_sentences, validate_grounding
 from prme.ingestion.group_links import SESSION_TURNS, is_group_reference
 from prme.ingestion.owner_name import carried_owner_entity, carried_owner_name, owner_name_marker
+from prme.ingestion.pronoun_repair import is_repair, resolved_from_context, with_names
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 from prme.ingestion.temporal import validate_source_time
 from prme.ingestion.supersedence import SupersedenceDetector, correctable_claim
@@ -300,6 +301,7 @@ class IngestionPipeline:
         claim_fixes: bool = False,
         owner_name_carry: bool = False,
         link_owner_groups: bool = False,
+        pronoun_repair_turns: int | None = None,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -311,6 +313,11 @@ class IngestionPipeline:
                                  "or fact text resolution")
             if not isinstance(extraction_provider, BatchExtractionProvider):
                 raise ValueError("Batched extraction needs a provider with extract_batch()")
+        if pronoun_repair_turns is not None:
+            from prme.ingestion.extraction import PronounRepairProvider
+
+            if not isinstance(extraction_provider, PronounRepairProvider):
+                raise ValueError("Pronoun repair needs a provider with repair_pronouns()")
         self._privacy = None
         self._event_store = event_store
         self._graph_store = graph_store
@@ -356,6 +363,9 @@ class IngestionPipeline:
         # A claim a user turn states about we is also linked to the owner's entity
         # (enable_owner_group_links).
         self._link_owner_groups = link_owner_groups
+        # Ask a second time who a pronoun means for the claims a first extraction left on one, shown up to this
+        # many of the owner's preceding memories (enable_pronoun_repair). None, the default, never asks.
+        self._pronoun_repair_turns = None if pronoun_repair_turns is None else max(0, pronoun_repair_turns)
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -900,6 +910,15 @@ class IngestionPipeline:
             return []
         if not event.session_id and not self._extraction_window_owner_wide:
             return []
+        return await self._preceding_turns(event, self._extraction_window_turns)
+
+    async def _preceding_turns(self, event: Event, limit: int) -> list[Event]:
+        """Up to ``limit`` turns stored before this one, oldest first: its session's, or the owner's in its scope.
+
+        Empty for a protected event. Shared by the extraction window and the
+        pronoun repair, so both show the provider the same memories under the
+        same privacy checks.
+        """
         from prme.privacy.records import PRIVACY_KEY
 
         if PRIVACY_KEY in (event.metadata or {}):
@@ -909,7 +928,7 @@ class IngestionPipeline:
             event.user_id,
             session_id=event.session_id,
             scopes=None if event.session_id else [event.scope],
-            limit=self._extraction_window_turns,
+            limit=limit,
             before=event,
         )
         window = [item for item in reversed(earlier) if item.content]
@@ -918,7 +937,50 @@ class IngestionPipeline:
             await self._privacy.require_legacy_inputs(window)
         return window
 
-    async def _extract_turn(self, event: Event) -> ExtractionRecord:
+    async def _repair_pronouns(
+        self, result: ExtractionResult, event: Event, *, run: BatchRun | None = None, check=None,
+    ) -> ExtractionResult:
+        """Ask once more who a pronoun means, for the claims the first extraction left on one (enable_pronoun_repair).
+
+        Only the flagged claims change (:mod:`prme.ingestion.pronoun_repair`
+        says how); a source with none sends no request, and a request that
+        fails leaves the first extraction as it was. The request counts in
+        ``run`` when a re-derivation passes one.
+        """
+        if self._pronoun_repair_turns is None or not result.facts:
+            return result
+        if not callable(getattr(self._extraction_provider, "repair_pronouns", None)):
+            # A provider swapped in after the engine opened cannot be asked; the first extraction stands.
+            return result
+        from prme.ingestion.pronoun_repair import WindowTurn, apply_repairs, flagged_claims
+        from prme.privacy.records import PRIVACY_KEY
+
+        if PRIVACY_KEY in (event.metadata or {}):
+            return result
+        speaker = metadata_speaker(event.metadata)
+        claims = flagged_claims(result, event.content, grounding_speaker=speaker if self._speaker_grounding else None)
+        if not claims:
+            return result
+        if check is not None:
+            await check()
+        window = await self._preceding_turns(event, self._pronoun_repair_turns) if self._pronoun_repair_turns else []
+        lines = [speaker_labeled(item.content, metadata_speaker(item.metadata)) for item in window]
+        if run is not None:
+            run.requests += 1
+        try:
+            async with self._extraction_semaphore:
+                raw = await self._extraction_provider.repair_pronouns(lines, claims, speaker=speaker)
+        except ExtractionError as exc:
+            logger.warning("pronoun_repair_failed", event_id=str(event.id), reason=exc.reason_code)
+            return result
+        if check is not None:
+            await check()
+        return apply_repairs(
+            result, claims, raw, source_text=event.content, source_event_id=str(event.id), speaker=speaker,
+            window=[WindowTurn(str(item.id), metadata_speaker(item.metadata), item.content) for item in window],
+        )
+
+    async def _extract_turn(self, event: Event, *, run: BatchRun | None = None, check=None) -> ExtractionRecord:
         """Ask for one turn's own extraction, with its window and resolved text when on, and check the output."""
         window = await self._extraction_window(event)
         # A turn's speaker labels it, so the extractor can tell who said
@@ -947,6 +1009,7 @@ class IngestionPipeline:
             )
         result = validate_grounding(result, event.content, speaker=speaker)
         result = self._check_resolved_text(result, event, window)
+        result = await self._repair_pronouns(result, event, run=run, check=check)
         # This request showed no earlier memories, so no fact names one.
         result = _correction_targets(result)
         return ExtractionRecord(
@@ -973,7 +1036,7 @@ class IngestionPipeline:
 
         await check()
         run.requests += 1
-        record = await self._extract_turn(event)
+        record = await self._extract_turn(event, run=run, check=check)
         await check()
         await self._write_queue.submit(lambda: run.save(None, [record]), label=f"extraction.record:{event.id}")
 
@@ -1183,6 +1246,7 @@ class IngestionPipeline:
             speaker = turn.speaker if self._speaker_grounding else None
             result = validate_grounding(results[turn.index], event.content, speaker=speaker)
             result = self._check_resolved_text(result, event, [])
+            result = await self._repair_pronouns(result, event, run=run, check=check)
             result = _correction_targets(result, memories)
             records.append(ExtractionRecord(
                 event_id=event.id, user_id=event.user_id, scope=event.scope,
@@ -1593,6 +1657,8 @@ class IngestionPipeline:
             # they supplied a name, not support, and promotion counts
             # evidence_refs as support.
             resolution = fact.resolution if fact.resolved_text else None
+            # A repair (enable_pronoun_repair) is a resolution of the claim's own sentence alone.
+            repaired = is_repair(resolution)
             # Without an accepted resolution, the claim's own sentences can be
             # its text; the paragraph stays its evidence.
             sentences = (
@@ -1617,7 +1683,8 @@ class IngestionPipeline:
                 "polarity": fact.polarity,
                 "evidence_quote": fact_content,
                 "grounding_method": (
-                    "resolved_text_v1" if resolution is not None
+                    "pronoun_repair_v1" if repaired
+                    else "resolved_text_v1" if resolution is not None
                     else "claim_sentences_v1" if sentences is not None else "source_passage_v1"
                 ),
                 "temporal_intent": fact.temporal_intent,
@@ -1655,8 +1722,17 @@ class IngestionPipeline:
             if resolution is not None:
                 fact_metadata["resolution"] = resolution
                 fact_content = fact.resolved_text
+                if repaired:
+                    fact_metadata["resolved_from_context"] = resolved_from_context(resolution)
             elif sentences is not None:
                 fact_content = sentences
+            if repaired and sentence_text and distinct_text:
+                if fact_content in claim_texts:
+                    # Two claims of one sentence were repaired to the same text: the later one states itself.
+                    fact_content = _claim_statement(with_names(fact, resolution), None if speaker_carried else speaker)
+                    fact_metadata["grounding_method"] = "claim_statement_v1"
+                else:
+                    claim_texts.add(fact_content)
             if sentence_text and distinct_text and resolution is None:
                 if fact_content in claim_texts:
                     # Another claim of this message already has this text.
