@@ -84,6 +84,7 @@ from urllib.parse import urlsplit, urlunsplit
 from benchmarks.diagnostics.product_packing import (
     _harness, _quiet_offline_cli, _source_key, _turn_key, gate_config, pack_identity, parse_overrides,
 )
+from benchmarks.diagnostics import hosted_model
 from benchmarks.integrations.ollama_answers import check_endpoint
 from prme import MemoryEngine, NodeType, PRMEConfig
 from prme.config import ExtractionConfig
@@ -149,7 +150,12 @@ def check_model(identity: dict, *, cloud: bool = False) -> None:
 
 
 def model_identity(model: str, endpoint: str = ENDPOINT, *, cloud: bool = False) -> dict:
-    """The Ollama server's identity for the model, including the server version."""
+    """The Ollama server's identity for the model, including the server version.
+
+    With ``PRME_BENCH_HOSTED=1`` (``hosted_model``) the model is the hosted one and the server is never asked.
+    """
+    if hosted_model.enabled():
+        return hosted_model.identity()
     from benchmarks.integrations.run_longmemeval_v2 import _ollama_reader_identity
 
     check_endpoint(endpoint)
@@ -161,7 +167,12 @@ def model_identity(model: str, endpoint: str = ENDPOINT, *, cloud: bool = False)
 
 def build_config(pack: Path, overrides: dict | None = None, *, model: str = DEFAULT_MODEL,
                  endpoint: str = ENDPOINT) -> PRMEConfig:
-    """The gate's isolated configuration over ``pack``, extracting through the Ollama server."""
+    """The gate's isolated configuration over ``pack``, extracting through the Ollama server.
+
+    With ``PRME_BENCH_HOSTED=1`` (``hosted_model``) it extracts through the hosted model instead.
+    """
+    if hosted_model.enabled():
+        return hosted_model.build_config(gate_config(pack, overrides), TIMEOUT_SECONDS)
     check_endpoint(endpoint)
     config = gate_config(pack, overrides)
     with patch.dict(os.environ, {}, clear=True):
@@ -261,8 +272,14 @@ class _Usage:
         provider._ensure_client().on("completion:response", self._record)
 
     def _record(self, response) -> None:
-        usage = getattr(response, "usage", None)
         self.calls += 1
+        if isinstance(response, dict):
+            # The hosted model's SDK answers with a plain dict and its own names for the counts.
+            usage = response.get("usage") or {}
+            self.prompt_tokens += usage.get("inputTokens") or 0
+            self.completion_tokens += usage.get("outputTokens") or 0
+            return
+        usage = getattr(response, "usage", None)
         self.prompt_tokens += getattr(usage, "prompt_tokens", None) or 0
         self.completion_tokens += getattr(usage, "completion_tokens", None) or 0
 

@@ -19,11 +19,15 @@ import subprocess
 import sys
 import time
 
+from benchmarks.diagnostics import hosted_model
 from benchmarks.diagnostics.product_packing import _quiet_offline_cli, benchmark_embedding, parse_overrides
 from benchmarks.fast_cycle import compare, contextual, ingest, reingest, store, store_extract
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_BASELINE = store.FIXTURES / "baseline-main.json"
+# With PRME_BENCH_HOSTED=1 (hosted_model) the baseline and the cache are the hosted model's, a replay of the same stages.
+HOSTED_BASELINE = store.FIXTURES / "baseline-hosted.json"
+HOSTED_CACHE_DIR = store.FIXTURES / "hosted-extraction-cache"
 STAGES = ("store", "ingest", *compare.STORE_STAGES[1:])
 # The other stages are opt-in: the store-extract ones and reingest make a model request per memory on a cold cache,
 # and store-contextual asks a model for a sentence per memory unless the committed cache holds it.
@@ -214,6 +218,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m benchmarks.fast_cycle",
         description="Store, ingest and retrieve on fixed fixtures in minutes, and say pass or fail.")
+    hosted = hosted_model.enabled()
     commands = parser.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run", help="Run the stages, write the report and judge it against the baseline")
     run.add_argument("--label", required=True, help="A name for this run, such as main or my-change")
@@ -232,17 +237,19 @@ def build_parser() -> argparse.ArgumentParser:
                      help="The store fixture of the store-contextual stage (default: the store stage's)")
     run.add_argument("--contextual-cache-dir", type=Path, default=contextual.CACHE_DIR,
                      help="The committed cache of the model's sentences")
-    run.add_argument("--model", default=ingest.DEFAULT_MODEL,
-                     help="The Ollama model that extracts in the ingest stage")
-    run.add_argument("--baseline", default=str(DEFAULT_BASELINE),
-                     help="A report to judge this run against, or none (default: the committed baseline)")
+    run.add_argument("--model", default=hosted_model.LABEL if hosted else ingest.DEFAULT_MODEL,
+                     help="The Ollama model that extracts in the ingest stage (a label only with PRME_BENCH_HOSTED=1)")
+    run.add_argument("--baseline", default=str(HOSTED_BASELINE if hosted else DEFAULT_BASELINE),
+                     help="A report to judge this run against, or none (default: the committed baseline, the hosted "
+                          "model's with PRME_BENCH_HOSTED=1)")
     run.add_argument("--accept", action="append", default=[], metavar="MEASURE",
                      help="A measure whose worsening this change means to cause; repeatable")
     run.add_argument("--no-cache", action="store_true",
                      help="Ignore the committed extraction cache: every ingest and store-extract request goes to the model")
     run.add_argument("--update-cache", action="store_true",
                      help="Copy the extraction responses this run added to the committed cache")
-    run.add_argument("--cache-dir", type=Path, default=ingest.CACHE_DIR, help="The committed extraction cache")
+    run.add_argument("--cache-dir", type=Path, default=HOSTED_CACHE_DIR if hosted else ingest.CACHE_DIR,
+                     help="The committed extraction cache (the hosted model's with PRME_BENCH_HOSTED=1)")
     run.add_argument("--store-fixture", type=Path, default=store.DEFAULT_FIXTURE,
                      help="The store stage's fixture (default: store-v1); a report of another fixture is not "
                           "comparable with the committed baseline, so pass --baseline none")

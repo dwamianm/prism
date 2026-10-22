@@ -1369,9 +1369,10 @@ own rule replaces it.
 hosted model, the kind the hosted service extracts with, through the same extraction client, because the owner wanted
 to know whether the production model behaves like the DeepSeek baseline. Nothing else in this repository calls it, and
 the rule that builds, probes and answer runs use the local Ollama server is unchanged. The numbers below are not
-comparable with the DeepSeek sections except where a column says so. The benchmark wrapper that reaches the hosted
-model is not in the repository; the cache in `benchmarks/fixtures/fast-cycle/extraction-cache` is the DeepSeek one and
-is not changed.
+comparable with the DeepSeek sections except where a column says so. The runs went through the opt in described in
+"Fast cycle on the production model" below, and its committed cache replays them: `PRME_BENCH_HOSTED=1`, the model id
+and `--set enable_pronoun_repair=true` give the on numbers below, and without the `--set` the off numbers, with no
+request sent. The DeepSeek cache in `benchmarks/fixtures/fast-cycle/extraction-cache` is not changed.
 
 **Design of the run.** Off is one live run of the fast cycle's `store`, `ingest`, `store-extract` and `reingest`
 stages. Every measure below reads a replay of that run's extraction cache, so off is deterministic (a second live
@@ -1508,8 +1509,10 @@ memories without touching any other memory (1 of 75 sources here, 1.3%), that th
 to stay narrow (a description or a half-written name is refused), and that a group pronoun should only be resolved when
 a memory states the group.
 
-**Not measured.** The offline evidence gate and the mid tier (the repair changes no retrieval and the fast tiers did
-not fail on it). PostgreSQL ran in CI only. The fixtures hold one memory that names no one (the cities one), so this
+**Not measured.** The offline evidence gate (the repair changes no retrieval) and the mid tier, which would show how
+often the repair applies and whether it names anyone wrongly over all of LoCoMo and 12 LongMemEval-S questions. The mid
+tier on the production model is about eight times the tokens of everything above ("Fast cycle on the production model"),
+so it needs its own decision. PostgreSQL ran in CI only. The fixtures hold one memory that names no one (the cities one), so this
 shows the repair works and costs little where it applies, not how often a real store needs it, and a `reingest()` with
 the option on asks the first request again for every source, because the request is in the settings.
 
@@ -2699,6 +2702,67 @@ server or prompt change.
 - Ranks can differ between machines, CPU architectures or `fastembed`
   versions when two scores nearly tie, so compare reports made on the same
   machine, or refresh the baseline there.
+
+### Fast cycle on the production model (the hosted baseline)
+
+Every number in the fast cycle sections above comes from `deepseek-v4.1-flash:cloud`, and the committed
+`baseline-main.json` is a replay of its cache. The hosted service extracts with a different, small hosted model, and
+this model does worse than DeepSeek on these fixtures, so work meant for the hosted service needs a baseline from the
+model it will run on. `benchmarks/fixtures/fast-cycle/baseline-hosted.json` is that baseline: the `store`, `ingest`,
+`store-extract` and `reingest` stages with every option at its default, a replay of its own extraction cache
+(`benchmarks/fixtures/fast-cycle/hosted-extraction-cache`: 159 batched responses, the three repair requests of the
+pronoun repair run below, and the recorded tokens, about 165 KB). The two baselines are not interchangeable. A change
+judged against the DeepSeek baseline says nothing about the production model, and the other way round.
+
+**What it says, plainly.** With the options off, the production model scores 12 of 18 on `chat-v1` (answers in the top 3,
+DeepSeek 14) and 6 of 7 on the defect probes (DeepSeek 7), below DeepSeek on both:
+
+| Measure, options off | Production model | DeepSeek |
+|---|---:|---:|
+| Defect probes, answers in the top 3 (of 7) | 6 | 7 |
+| `chat-v1`, answers in the top 3 (of 18) / top 5 | 12 / 13 | 14 / 15 |
+| `chat-v1`, user claims on the named owner | 30 | 36 |
+| `chat-v1`, pronoun entities | 5 | 15 |
+| `corrections-v1`, answers in the top 3 (of 4) | 2 | 3 |
+| `store-extract`, answers ranked first (of 17) / in the top 3 | 8 / 14 | 12 / 14 |
+| `store-extract`, mean reciprocal rank | 0.621 | 0.776 |
+| `store-extract`, Japan cities question rank | 23 | 30 |
+
+It makes fewer pronoun entities and fewer claims that repeat another's text, and it ranks fewer answers first. The
+`shipments` defect probe ranks 7th on it, in two independent live samples. A cold run of the three stages is 234
+requests and 1,549,884 tokens (84 turns, 75 memories, and the `reingest` stage's 75 requests, which a replay shares with
+`store-extract`).
+
+**How to run it.** It needs the AWS SDK and, for any run that is not a replay, AWS credentials with access to the model.
+A run that reaches the model spends money, so it is an explicit opt in that CI never sets and no test uses:
+
+```sh
+# A replay of the committed cache: no request is sent, no credentials are needed, nothing is spent. The cache is keyed
+# by the model's id, so the id must be the one the hosted service uses (it is in the hosted service's configuration,
+# not in this repository).
+PRME_BENCH_HOSTED=1 PRME_BENCH_HOSTED_MODEL_ID=<the hosted service's model id> PRME_BENCH_CACHE_ONLY=1 \
+  uv run --with boto3 python -m benchmarks.fast_cycle run --label my-change --out /tmp/cycle-hosted \
+  --stages store,ingest,store-extract,reingest
+# A change to the extraction request misses the cache and calls the model for the requests it lacks. Drop
+# PRME_BENCH_CACHE_ONLY for that, and read the next paragraph first.
+```
+
+`PRME_BENCH_HOSTED=1` makes the fast cycle (and any other build that goes through `extracted_packs`) extract through the
+hosted model, and makes `--model`, `--baseline` and `--cache-dir` default to the hosted ones (`hosted`, the hosted
+baseline and its cache). Without it nothing in `benchmarks/diagnostics/hosted_model.py` changes what a build does.
+Every request is counted: one that could pass `PRME_BENCH_HOSTED_MAX_REQUESTS` (default 400) or
+`PRME_BENCH_HOSTED_MAX_TOKENS` (default 2,500,000, input and output together) is refused before it is sent, and
+`PRME_BENCH_HOSTED_LEDGER` writes a line of tokens for each request. A cold run of the cycle's three stages is inside
+both defaults. Judge a run against the hosted baseline with a replay of the cache whenever the extraction request is
+unchanged, as for the DeepSeek baseline: the same responses give the same measures at tolerance 0. A request that is
+new is a live sample, and live samples differ a little: two samples of the same requests in the `store-extract` and
+`reingest` stages differed by four entities and one rank of the cities claim, while two samples of the `ingest` stage
+differed by two token counts only.
+
+**The mid tier on the production model** was not run. The DeepSeek cold build was 8.76 million prompt and 3.69 million
+completion tokens (1,187 requests; LoCoMo 2.07 and 1.30 million of them), which is eight times the tokens of the whole
+cold fast cycle above, and most of those tokens are output. Its estimated cost was about ten times everything measured
+for the pronoun repair, so the repair's effect on LoCoMo and LongMemEval-S is still unmeasured.
 
 ### Store with extraction: does `store(..., extract=True)` help retrieval? (#260)
 

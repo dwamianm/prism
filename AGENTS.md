@@ -408,7 +408,10 @@ the commands and their measured times. This is the same rule in short, and
   audit of the defaults that went on in alpha.
 - **Both channels:** new behavior ships behind an explicit option, off by
   default, until it passes its channel's gate. Never run a paid API; use local
-  Ollama DeepSeek only.
+  Ollama DeepSeek only. The one exception is the fast cycle's hosted baseline
+  (`PRME_BENCH_HOSTED=1`, BENCHMARKS.md "Fast cycle on the production model"): a
+  replay of its committed cache is free, a live run spends money, and it runs only
+  on the owner's decision and never in CI.
 
 ## Configuration Surface
 
