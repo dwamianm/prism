@@ -4624,6 +4624,30 @@ caches (the mid tiers report 0 live calls and 1,186 cache hits; the probes 0 ext
 `bge-large` ran with `PRME_BENCH_CACHE_ONLY=1`, a new guard that fails a build instead of making a call the cache cannot serve.
 The Ollama account's cloud models were not used.
 
+#### Switching models on an existing store: the re-embed job (dwamianm/prism#368)
+
+The experiment above found that a store could not move to another model, and that was the question for adopting any model,
+now or later. `enable_multi_model_embeddings` (off by default) keeps vectors by model and `MemoryEngine.reembed()`
+(`prme reembed`) builds a model's vectors for the memories a store already holds
+([switching embedding models](docs/EMBEDDING-MODELS.md)). What it costs to move 10,000 memories from `bge-small` to
+`bge-base`, on the machine of the experiment (18 cores, Apple silicon, other jobs sharing it), in one process, with the
+local models and no model service:
+
+| Backend | Threads | Job time, 10,000 memories | Per memory |
+|---|---|---|---|
+| DuckDB pack | one per core (default) | 117.3 s | 11.7 ms |
+| DuckDB pack | 1 | 99.5 s | 10.0 ms |
+| PostgreSQL | one per core (default) | 129.4 s | 12.9 ms |
+
+`python -m benchmarks.embedding_models job --backend duckdb --memories 10000 [--threads 1]` builds the store through
+`store()` under `bge-small` (a quarter of an hour for 10,000 memories, 937 s on DuckDB) and times one `reembed()` call
+that builds `bge-base` for all of them, 157 batches of 64, no failure, and `remaining` 0 at the end. The memories are
+synthetic sentences of about twenty words. Each text is embedded alone, as the engine always does for reproducibility, so
+more threads do not help (the embedding is about 6 ms of the 10 to 13 ms a memory takes, as in the table above, and the
+rest is storing the vector and its index entry). The job is the extra CPU of one model on every memory once; with
+`pause_ms` it leaves time to the rest of the process. Storage after the job is the sum of both models', as the
+experiment measured for each, until the old model is dropped. One run per row, on a shared machine.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of

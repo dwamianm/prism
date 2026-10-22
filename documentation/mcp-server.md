@@ -176,6 +176,22 @@ the owner's queue in that scope or calls `memory_process_extractions`. Call
 `memory_process_extractions` before ending a session to extract its last
 messages while it is open.
 
+### memory_reembed
+
+Build an embedding model's vectors for the caller's stored memories, so the store can switch models (see
+[switching embedding models](../docs/EMBEDDING-MODELS.md)). It runs a local model and calls no model service. The server
+must run with `PRME_ENABLE_MULTI_MODEL_EMBEDDINGS=true`.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model` | string | the active model | A registered fastembed model name |
+| `limit` | integer | optional | The most memories this call embeds |
+| `cursor` | string | optional | The `cursor` of an earlier result |
+| `dry_run` | boolean | `false` | Count the memories and the progress; do no work |
+
+Returns the result as JSON (`total`, `done`, `remaining`, `selected`, `processed`, `failed`, `cursor`, ...), or
+`{"error": ...}` when the option is off, the model is already being filled, or an argument is invalid.
+
 ### memory_reingest
 
 Re-derive the caller's stored memories after an engine change improved how they

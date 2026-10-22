@@ -19,6 +19,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `store(extract=True)` and `reingest()`, and counts in the re-derivation settings. With the option off every
   extraction is unchanged. The measurements are in `BENCHMARKS.md`. It is on by default in the alpha channel (see
   Changed).
+- A store can switch embedding models (dwamianm/prism#368, behind `enable_multi_model_embeddings`, off by default).
+  A stored vector means something only under the model that made it, and a store was tied to its model: DuckDB had a
+  rebuild but a write under another dimension failed, and PostgreSQL, with its fixed `vector(N)` column, had no way to
+  switch at all (`rebuild_indexes()` raised while the mismatch error told you to run `prme rebuild`). With the option on,
+  vectors are kept by node, model name and model version, one index per model: one USearch file per model on DuckDB
+  (the pack's `vectors.usearch` stays the first model's), and a `node_embeddings` table with one partial HNSW index per
+  model on PostgreSQL (the reasons are in `docs/EMBEDDING-MODELS.md`). `embedding.model_name` is the active model that
+  searches read, and the new `embedding.additional_models` (`PRME_EMBEDDING__ADDITIONAL_MODELS`) are also written on
+  every store, including what `ingest()`, `reingest()` and consolidation derive. `MemoryEngine.reembed()`
+  (`MemoryClient.reembed()`, `POST /v1/reembed`, the `memory_reembed` MCP tool and `prme reembed`, which also takes
+  `--postgres`) builds a model's vectors for the stored memories with the local model: in batches, with a cursor, a pause
+  between batches, `total`, `done`, `remaining` and `failed` as its progress, safe to stop and resume and to run while the
+  store is read and written, and it calls no model service. Setting `embedding.model_name` to a model whose index is
+  complete is the switch, and the old index stays until `drop_embeddings()` (`prme embeddings drop`);
+  `embedding_status()` and `prme embeddings status` list the models a store holds. A store whose vectors were all made by
+  another model than the configured one is not mixed: writes are refused before they store anything, with an error that
+  names the stored and the configured model and their dimensions, and retrieval metadata and receipts carry
+  `embedding_incomplete` with the counts of memories without a vector (beside the existing `embedding_mismatch`). An
+  existing store is adopted when the option is first turned on, with no re-embedding: a DuckDB pack gives its file to the
+  model most of its vectors came from, and a PostgreSQL store's `nodes.embedding` vectors are copied once into the new
+  table, in resumable batches under an advisory lock, with the column left as it was. With the option off, nothing is
+  constructed, vectors are stored as before and the configuration dump is unchanged. Single-file packs are not supported
+  with the option yet. `prme rebuild` stays DuckDB only, and its error on PostgreSQL now names `reembed`.
+  `benchmarks.embedding_models job` times the job. Not part of this change: choosing another default model.
 - Options for the task prefixes some local embedding models are trained with (dwamianm/prism#366):
   `embedding.query_prefix` (`PRME_EMBEDDING__QUERY_PREFIX`) is put before every search question the `fastembed`
   model embeds, and `embedding.document_prefix` (`PRME_EMBEDDING__DOCUMENT_PREFIX`) before every stored text. Both

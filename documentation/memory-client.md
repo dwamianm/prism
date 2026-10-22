@@ -213,6 +213,34 @@ event_ids = client.ingest_batch(
 )
 ```
 
+## reembed()
+
+Build an embedding model's vectors for the stored memories so the store can switch models (see
+[switching embedding models](../docs/EMBEDDING-MODELS.md)). It embeds with a local model, writes only vectors, and
+needs `enable_multi_model_embeddings` (off by default); without it the call raises `ReembedDisabledError`.
+`embedding_status()` lists the models a store holds and whether each is complete, and `drop_embeddings(model)` removes
+one that is not the active model.
+
+```python
+def reembed(
+    model: str | EmbeddingProvider | None = None,
+    *,
+    limit: int | None = None,
+    cursor: str | None = None,
+    dry_run: bool = False,
+    user_id: str | None = None,
+    batch_size: int = 64,
+    pause_ms: int = 0,
+    threads: int | None = None,
+) -> ReembedResult
+```
+
+```python
+client = MemoryClient(config=PRMEConfig(enable_multi_model_embeddings=True))
+preview = client.reembed("BAAI/bge-base-en-v1.5", dry_run=True)
+result = client.reembed("BAAI/bge-base-en-v1.5", pause_ms=50)    # result.remaining == 0 when it is complete
+```
+
 ## reingest()
 
 Re-derive one owner's stored memories after an engine change improved how they

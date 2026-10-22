@@ -115,7 +115,7 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
 
 _UNAVAILABLE_EFFECTS = frozenset({
     "organize", "consolidate_knowledge", "resume_profile", "process_profiles", "end_session",
-    "rebuild_indexes", "embed_texts", "propose_product_alignment", "find_product_alignment_candidates",
+    "rebuild_indexes", "embed_texts", "reembed", "embedding_status", "drop_embeddings", "propose_product_alignment", "find_product_alignment_candidates",
     "evaluate_full_retrieval", "create_ranking_profile", "record_relevance", "record_answer_citations",
     "promote", "evaluate_condition", "supersede", "contradict", "resolve_contradiction", "archive", "reinforce",
     "review_alias_proposal", "feedback",

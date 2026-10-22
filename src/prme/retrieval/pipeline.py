@@ -1194,6 +1194,9 @@ class RetrievalPipeline:
                 "selection_excluded": [item.model_dump(mode="json") for item in selection_excluded],
                 "backends_used": list(candidate_counts.keys()),
                 "embedding_mismatch": embedding_mismatch,
+                # Only when memories lack a vector under the active model, so other receipts keep their bytes.
+                **({"embedding_incomplete": candidate_diagnostics.embedding_incomplete}
+                   if candidate_diagnostics.embedding_incomplete is not None else {}),
                 "backend_failures": candidate_diagnostics.backend_failures,
                 # Only when the seed count walk did not run, so other entries keep their bytes.
                 **({"graph_seed_reach": candidate_diagnostics.graph_seed_reach}
@@ -1271,6 +1274,7 @@ class RetrievalPipeline:
             receipt_logging_ms=round((completed_at - logging_started) * 1000, 2),
             backends_used=list(candidate_counts.keys()),
             embedding_mismatch=embedding_mismatch,
+            embedding_incomplete=candidate_diagnostics.embedding_incomplete,
             backend_failures=candidate_diagnostics.backend_failures,
             graph_seed_reach=candidate_diagnostics.graph_seed_reach,
             min_score_skipped=min_score_skipped,

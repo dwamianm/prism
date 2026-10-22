@@ -96,8 +96,9 @@ def apply_duckdb(store: DuckPGQGraphStore, plan: DerivationPlan) -> None:
         rows = conn.execute(
             "SELECT vm.embedding_model, vm.embedding_version, vm.embedding_dim, vp.vector_data "
             "FROM vector_metadata vm JOIN vector_payloads vp USING (vector_key) "
-            "WHERE vm.node_id = ? AND vm.user_id = ?",
-            [str(embedding.node_id), plan.user_id],
+            "WHERE vm.node_id = ? AND vm.user_id = ? AND vm.embedding_model = ? AND vm.embedding_version = ?",
+            # The plan's own model: with enable_multi_model_embeddings a node also has other models' rows.
+            [str(embedding.node_id), plan.user_id, embedding.model, embedding.version],
         ).fetchall()
         expected = (embedding.model, embedding.version, embedding.dimension,
                     np.asarray(embedding.values, dtype="<f4").tobytes())
@@ -191,6 +192,14 @@ async def apply_postgres(store: PgGraphStore, conn, plan: DerivationPlan, vector
     # pgvector and generated text columns become visible in this same
     # transaction, using already-computed numerical values.
     for embedding in plan.embeddings:
+        if getattr(store, "_multi_model_embeddings", False):
+            from prme.storage.pg.model_vector_index import write_node_embedding
+
+            await write_node_embedding(
+                conn, vector_sql, node_id=embedding.node_id, model=embedding.model, version=embedding.version,
+                values=embedding.values,
+            )
+            continue
         await conn.execute(
             f"UPDATE nodes SET embedding = $1::{vector_sql.type}, embedding_model = $2, embedding_version = $3 WHERE id = $4",
             "[" + ",".join(str(value) for value in embedding.values) + "]",

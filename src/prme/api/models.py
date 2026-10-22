@@ -280,6 +280,18 @@ class ReingestRequest(BaseModel):
     dry_run: bool = Field(default=False, description="Count the memories and model requests a run would take, and do no work")
 
 
+class ReembedRequest(BaseModel):
+    """Build an embedding model's vectors for the caller's stored memories; local models only, no model service."""
+
+    user_id: str | None = None
+    model: str | None = Field(default=None, max_length=256, description="A registered fastembed model name; omitted takes the active model")
+    limit: int | None = Field(default=None, ge=0, le=1_000_000, description="The most memories to embed in this call; omitted takes all that are missing")
+    cursor: str | None = Field(default=None, max_length=1024, description="The cursor of an earlier result, to continue after it")
+    dry_run: bool = Field(default=False, description="Count the memories a run would take and the progress so far, and do no work")
+    batch_size: int = Field(default=64, ge=1, le=1024, description="Memories embedded and stored per step")
+    pause_ms: int = Field(default=0, ge=0, le=60_000, description="Milliseconds to sleep after each batch, to leave CPU to other requests")
+
+
 class MaterializationProcessRequest(BaseModel):
     """Process saved source/index work without invoking extraction."""
 
