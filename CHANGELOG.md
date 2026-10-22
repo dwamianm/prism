@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a8] - 2026-10-22
+
+This is an alpha. It passed CI and the cheap fast tiers and the offline gate, replayed from the recorded
+caches with no live model call, and it has not been through the full benchmark or the mid tier. The stable
+release stays at 0.15.0 until the full benchmark audit, so `pip install prme` still installs 0.15.0. Install
+the alpha with `pip install --pre prme` or `pip install prme==0.16.0a8`.
+
 ### Added
 
 - Add `enable_pronoun_repair` (`PRME_ENABLE_PRONOUN_REPAIR`, off by default; part of dwamianm/prism#345 and
@@ -42,7 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   table, in resumable batches under an advisory lock, with the column left as it was. With the option off, nothing is
   constructed, vectors are stored as before and the configuration dump is unchanged. Single-file packs are not supported
   with the option yet. `prme rebuild` stays DuckDB only, and its error on PostgreSQL now names `reembed`.
-  `benchmarks.embedding_models job` times the job. Not part of this change: choosing another default model.
+  `benchmarks.embedding_models job` times the job. A protected store (one under a privacy policy) refuses
+  `reembed()`, `embedding_status()` and `drop_embeddings()`, as it refuses `rebuild_indexes()` and
+  `embed_texts()`. Not part of this change: choosing another default model.
 - Options for the task prefixes some local embedding models are trained with (dwamianm/prism#366):
   `embedding.query_prefix` (`PRME_EMBEDDING__QUERY_PREFIX`) is put before every search question the `fastembed`
   model embeds, and `embedding.document_prefix` (`PRME_EMBEDDING__DOCUMENT_PREFIX`) before every stored text. Both
@@ -61,7 +70,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   release made, byte for byte. Two effects to know before upgrading: a source whose first extraction leaves a claim on
   a third person pronoun now makes one more model request, and because the repair request and its window are part of
   the re-derivation settings, `reingest()` reads every memory derived before the change as stale. The benchmark
-  harness names the setting itself, so the DeepSeek baselines and their caches replay unchanged and cache-only.
+  harness names the setting itself, so the benchmark baselines and their caches replay unchanged and cache-only.
+
+### Tooling
+
+These do not ship in the wheel and change no behavior.
+
+- The embedding model experiment (dwamianm/prism#366, `BENCHMARKS.md`, "Embedding models") and its job timer,
+  `python -m benchmarks.embedding_models`. Its report recommends no new default model.
+
+### Upgrade notes
+
+- One default changed since 0.16.0a7: `enable_pronoun_repair` is on, in the alpha channel, by the maintainer's
+  decision of 2026-10-22, and without meeting the alpha rule's defect probe condition (see Changed).
+  `PRME_ENABLE_PRONOUN_REPAIR=false` restores the extraction of every earlier release, byte for byte. A source
+  whose first extraction leaves a claim on a third person pronoun costs one more model request, and
+  `reingest()` reads every memory derived before this release as stale, because the repair request and its
+  window are part of the re-derivation settings; one `reingest()` makes them current again.
+- New and off by default, with no effect until you set them: `enable_multi_model_embeddings` and
+  `embedding.additional_models` (with `reembed()`, `POST /v1/reembed`, the `memory_reembed` tool, `prme reembed`
+  and `prme embeddings status` and `drop`), and the two prefix options `embedding.query_prefix` and
+  `embedding.document_prefix`. With the first on, a PostgreSQL store gets a `node_embeddings` table and copies its
+  existing vectors into it once, in resumable batches, leaving `nodes.embedding` as it was. `prme rebuild` still
+  works on DuckDB only, and its error on PostgreSQL now names `reembed`. Single-file packs are not supported with
+  the option yet.
+- No other default changed since 0.16.0a7. The defaults of 0.16.0a7 are as they were, including the exact pin of
+  `cryptography` to 50.0.2 and the `privacy` extra that does not install the sanitizer's model (see the notes of
+  0.16.0a6).
+- Known weaknesses are as in 0.16.0a7. In addition, the pronoun repair default rests on one repaired fixture
+  memory (the cities claim of the fast cycle, from 23rd to 1st) and no mid tier or full benchmark run.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine closes, and
+  `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself` fails inside a git worktree.
+  Neither affects the installed package.
 
 ## [0.16.0a7] - 2026-10-21
 
@@ -3077,7 +3118,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a7...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a8...HEAD
+[0.16.0a8]: https://github.com/dwamianm/prism/compare/v0.16.0a7...v0.16.0a8
 [0.16.0a7]: https://github.com/dwamianm/prism/compare/v0.16.0a6...v0.16.0a7
 [0.16.0a6]: https://github.com/dwamianm/prism/compare/v0.16.0a5...v0.16.0a6
 [0.16.0a5]: https://github.com/dwamianm/prism/compare/v0.16.0a4...v0.16.0a5

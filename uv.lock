@@ -2793,7 +2793,7 @@ wheels = [
 
 [[package]]
 name = "prme"
-version = "0.16.0a7"
+version = "0.16.0a8"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
