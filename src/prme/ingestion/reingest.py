@@ -487,6 +487,10 @@ class Reingester:
                                       scope=plan.scope, nodes=plan.references)
 
         queue = SimpleNamespace(submit=submit)
+        if getattr(pipeline._graph_store, "_conn", None) is None:
+            from prme.storage.multi_model import write_additional_models
+
+            await write_additional_models(pipeline._vector_index, plan.embeddings, user_id=plan.user_id)
         retired = [str(edge.target_id) for edge in plan.replacements] + [str(item.node_id) for item in marker.archived]
         for node_id in retired:
             await evict_from_indexes(queue, pipeline._lexical_index, pipeline._vector_index, node_id)

@@ -191,6 +191,14 @@ async def apply_postgres(store: PgGraphStore, conn, plan: DerivationPlan, vector
     # pgvector and generated text columns become visible in this same
     # transaction, using already-computed numerical values.
     for embedding in plan.embeddings:
+        if getattr(store, "_multi_model_embeddings", False):
+            from prme.storage.pg.model_vector_index import write_node_embedding
+
+            await write_node_embedding(
+                conn, vector_sql, node_id=embedding.node_id, model=embedding.model, version=embedding.version,
+                values=embedding.values,
+            )
+            continue
         await conn.execute(
             f"UPDATE nodes SET embedding = $1::{vector_sql.type}, embedding_model = $2, embedding_version = $3 WHERE id = $4",
             "[" + ",".join(str(value) for value in embedding.values) + "]",
