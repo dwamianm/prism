@@ -671,6 +671,11 @@ def benchmark_embedding() -> dict:
     return values
 
 
+# Called with each verified scratch copy and its configuration before the copy is opened, when set. The embedding
+# experiment sets it to re-embed a saved pack's vectors under another model (``benchmarks.embedding_models.reembed``).
+PREPARE_PACK = None
+
+
 def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
     """Current defaults over a pack copy, isolated from environment variables and .env files."""
     overrides = overrides or {}
@@ -1258,6 +1263,8 @@ async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict |
             _clone_pack(pack, copy)
             _verify_copy(copy, group[0].pack_sha256)
             config = gate_config(copy, overrides)
+            if PREPARE_PACK is not None:
+                await PREPARE_PACK(copy, config)
             async with MemoryEngine.open(config) as engine:
                 await _warm_up(engine, group[0].user_id)
                 turns_cache: dict = {}

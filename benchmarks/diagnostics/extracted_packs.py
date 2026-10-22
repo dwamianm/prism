@@ -270,6 +270,20 @@ class _Usage:
         return self.calls, self.prompt_tokens, self.completion_tokens
 
 
+class CacheOnlyViolation(BaseException):
+    """A BaseException, so that no handler between the call and the build's top turns it into a skipped turn."""
+
+
+class _NoLiveCalls:
+    """The context a live extraction call enters when the run may only replay the cache."""
+
+    async def __aenter__(self):
+        raise CacheOnlyViolation("A live extraction call is needed, and PRME_BENCH_CACHE_ONLY allows only cache replays")
+
+    async def __aexit__(self, *exc):
+        return False
+
+
 class ExtractionCache:
     """Model responses by model, role, prompt and text, shared by every pack of a build.
 
@@ -327,7 +341,13 @@ class ExtractionCache:
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
 
     def _live(self):
-        """The cap on live model calls, or a context that waits for nothing."""
+        """The cap on live model calls, or a context that waits for nothing.
+
+        With ``PRME_BENCH_CACHE_ONLY`` set, a call the cache cannot serve fails before any request is made, so a replay
+        can never reach a model (a run under another embedding model may ask a request the cache does not hold).
+        """
+        if os.environ.get("PRME_BENCH_CACHE_ONLY"):
+            return _NoLiveCalls()
         return self.in_flight if self.in_flight is not None else contextlib.nullcontext()
 
     @staticmethod
