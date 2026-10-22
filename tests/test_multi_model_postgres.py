@@ -6,13 +6,14 @@ import asyncio
 import json
 import os
 
-import asyncpg
 import pytest
 
-from prme import MemoryEngine
-from prme.storage.multi_model import ModelIdentity
-from tests.multi_model_support import BagProvider, cosine, memory_text
-from tests import multi_model_support
+asyncpg = pytest.importorskip("asyncpg")  # the DuckDB job does not install the postgres extra
+
+from prme import MemoryEngine  # noqa: E402
+from prme.storage.multi_model import ModelIdentity  # noqa: E402
+from tests.multi_model_support import BagProvider, cosine, memory_text  # noqa: E402
+from tests import multi_model_support  # noqa: E402
 
 store = multi_model_support.store
 
