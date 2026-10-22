@@ -261,6 +261,62 @@ prme organize ./memory.duckdb
 prme organize ./memory.duckdb --jobs promote,deduplicate --budget-ms 10000
 ```
 
+### prme rebuild
+
+Rebuild a DuckDB pack's vector and lexical indexes from its durable graph: it re-embeds every active memory with the
+configured model (every open model with `PRME_ENABLE_MULTI_MODEL_EMBEDDINGS=true`) and never changes the event log or
+the graph. It works on a local pack only. To move a PostgreSQL store to another embedding model, or a pack without
+re-embedding the whole of it at once, use `prme reembed`.
+
+```bash
+prme rebuild <db_path> [--batch-size N] [--format {table,json}]
+```
+
+### prme reembed
+
+Build an embedding model's vectors for the memories a store already holds, so the store can switch models. It uses
+the local `fastembed` models and calls no model service, writes only vectors, and turns
+`enable_multi_model_embeddings` on for its own run. A stopped run continues where it stopped. See
+[switching embedding models](../docs/EMBEDDING-MODELS.md).
+
+```bash
+prme reembed <db_path> [--model MODEL] [--user-id USER] [--limit N] [--cursor CURSOR] [--dry-run] \
+    [--batch-size N] [--pause-ms MS] [--threads N] [--format {table,json}]
+prme reembed --postgres [...]     # the PostgreSQL store PRME_DATABASE_URL names, instead of a local pack
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--model` | A registered fastembed model name, for example `BAAI/bge-base-en-v1.5` | The active model |
+| `--user-id` | Only this owner's memories | The whole store |
+| `--limit` | The most memories this run embeds | All that are missing |
+| `--cursor` | The `cursor` of an earlier run | Start at the first memory without a vector |
+| `--dry-run` | Count the memories and the progress; do no work | Off |
+| `--batch-size` | Memories embedded and stored per step | 64 |
+| `--pause-ms` | Milliseconds to sleep after each batch, to leave CPU to other work | 0 |
+| `--threads` | ONNX Runtime threads for the model | `PRME_EMBEDDING__THREADS` |
+
+```bash
+prme reembed ./memory.duckdb --model BAAI/bge-base-en-v1.5 --dry-run
+prme reembed ./memory.duckdb --model BAAI/bge-base-en-v1.5 --pause-ms 50
+```
+
+The result lists `total`, `done`, `remaining` and `failed`; the model's index is complete when `remaining` is 0, and the
+command exits 1 when a memory failed.
+
+### prme embeddings
+
+Show the embedding models a store holds, or drop one that is not the active model.
+
+```bash
+prme embeddings status <db_path> [--format {table,json}]
+prme embeddings drop <db_path> --model MODEL [--version VERSION]
+prme embeddings status --postgres
+```
+
+`status` lists each model with its vectors, its role (`active`, `additional` or `stored`) and whether it has a vector
+for every memory. `drop` removes the model's vectors and index.
+
 ### prme reingest
 
 Re-derive one owner's stored memories after an engine change improved how they

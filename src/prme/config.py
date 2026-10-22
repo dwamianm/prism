@@ -309,12 +309,49 @@ class EmbeddingConfig(_ProjectSettings):
         ),
     )
 
+    additional_models: list[str] = Field(
+        default_factory=list,
+        # Empty, it is left out of dumps, so a configuration recorded before the setting existed still compares equal.
+        exclude_if=lambda value: not value,
+        description=(
+            "Fastembed models, besides model_name, whose vectors every store writes as well (dual write), so a "
+            "new model's index can be built while the store keeps serving the active one. Searches read only "
+            "model_name's index. Needs enable_multi_model_embeddings. A model here is embedded as it is, without "
+            "query_prefix or document_prefix. Accepts a list or a comma-separated string "
+            "(PRME_EMBEDDING__ADDITIONAL_MODELS). Empty by default (dwamianm/prism#368)."
+        ),
+    )
+
     @field_validator("threads", mode="before")
     @classmethod
     def validate_threads(cls, value):
         if isinstance(value, bool):
             raise ValueError("threads must be a positive integer or None")
         return value
+
+    @field_validator("additional_models", mode="before")
+    @classmethod
+    def validate_additional_models(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            text = value.strip()
+            if text.startswith("["):
+                import json
+
+                value = json.loads(text)
+            else:
+                value = [part for part in text.split(",")]
+        if not isinstance(value, (list, tuple)):
+            raise ValueError("additional_models must be a list of model names")
+        names: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                raise ValueError("additional_models must be a list of model names")
+            name = item.strip()
+            if name and name not in names:
+                names.append(name)
+        return names
 
     @model_validator(mode="before")
     @classmethod
@@ -346,6 +383,19 @@ class EmbeddingConfig(_ProjectSettings):
             )
         data["dimension"] = dimension
         return data
+
+    @model_validator(mode="after")
+    def _validate_additional_models(self) -> "EmbeddingConfig":
+        if not self.additional_models:
+            return self
+        if self.model_name in self.additional_models:
+            raise ValueError("embedding.additional_models must not name the active model_name")
+        for name in self.additional_models:
+            # Resolves the dimension without loading weights; an unknown model fails here, not at the first write.
+            from prme.storage.embedding import fastembed_model_dimension
+
+            fastembed_model_dimension(name)
+        return self
 
     model_config = {
         "env_prefix": "PRME_EMBEDDING_",
@@ -720,6 +770,21 @@ class PRMEConfig(_ProjectSettings):
             "events and raw notes are never changed. It calls the extraction "
             "model once per batched request, so it is off by default and an "
             "engine that did not turn it on refuses the call."
+        ),
+    )
+    enable_multi_model_embeddings: bool = Field(
+        default=False,
+        # Off, it is left out of dumps, so the configuration of an engine that does not use it is what it was.
+        exclude_if=lambda value: not value,
+        description=(
+            "Whether vectors are stored by node, model name and model version, one index per model, instead of "
+            "in a single fixed column or file (dwamianm/prism#368). It lets a store switch embedding models: "
+            "embedding.additional_models are written too, reembed() fills a model's vectors for existing memories, "
+            "and setting embedding.model_name to a model whose index is complete makes it the active one. A store "
+            "whose stored model differs from the configured one refuses writes and reports embedding_incomplete "
+            "instead of mixing models. An existing store's vectors are adopted as its first model's index when "
+            "the option is first turned on, with no re-embedding. Off by default; off, storage and behavior are "
+            "what they were. Not available for single-file packs."
         ),
     )
     reinforce_similarity_threshold: float | None = Field(
@@ -1436,6 +1501,14 @@ class PRMEConfig(_ProjectSettings):
         if self.enable_extraction_corrections and self.extraction_batch_target_tokens <= 0:
             # Earlier claims are shown only with a batched request (#277).
             raise ValueError("enable_extraction_corrections needs extraction_batch_target_tokens above zero")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_multi_model_embeddings(self) -> PRMEConfig:
+        if self.embedding.additional_models and not self.enable_multi_model_embeddings:
+            raise ValueError("embedding.additional_models needs enable_multi_model_embeddings")
+        if self.enable_multi_model_embeddings and self.single_file_pack:
+            raise ValueError("enable_multi_model_embeddings is not available for single-file packs (pack_path)")
         return self
 
     @model_validator(mode="after")

@@ -1846,6 +1846,10 @@ class IngestionPipeline:
             await self._write_queue.submit(
                 lambda: self._graph_store.commit_derivation(plan, claim=claim), label=f"derivation.commit:{plan.id}",
             )
+            if getattr(self._graph_store, "_conn", None) is None:
+                from prme.storage.multi_model import write_additional_models
+
+                await write_additional_models(self._vector_index, plan.embeddings, user_id=plan.user_id)
         # The committed plan retired every node it replaced, such as the
         # earlier copies of a repeated claim. Evict them from the search
         # indexes as the engine's supersede() does, so the indexes hold the
