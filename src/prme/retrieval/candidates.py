@@ -37,6 +37,10 @@ class CandidateDiagnostics:
     """Per-call status, separate from candidate counts and provider messages."""
 
     embedding_mismatch: bool = False
+    # With enable_multi_model_embeddings: how many of the owner's memories have no vector under the active
+    # model, when some do not (``EmbeddingCoverage.as_metadata()``). None otherwise, so other responses keep
+    # their bytes.
+    embedding_incomplete: dict | None = None
     backend_failures: dict[str, str] = field(default_factory=dict)
     # Why the walk of ScoringWeights.rrf_graph_seed_count did not run, when it
     # did not: "neighborhood_limit" or "backend_error". The graph candidates
@@ -698,6 +702,7 @@ async def generate_candidates(
     if diagnostics is not None:
         diagnostics.backend_failures.clear()
         diagnostics.embedding_mismatch = False
+        diagnostics.embedding_incomplete = None
         for backend, result in zip(("GRAPH", "VECTOR", "LEXICAL", "PINNED"), results):
             if isinstance(result, BaseException):
                 diagnostics.backend_failures[backend] = "backend_error"
@@ -735,6 +740,18 @@ async def generate_candidates(
             "Embedding version mismatch detected; vector candidates empty. "
             "Falling back to lexical + graph + pinned only."
         )
+
+    coverage = getattr(vector_index, "embedding_coverage", None)
+    if diagnostics is not None and coverage is not None:
+        # A store that is partly or wholly without vectors under the active model says so, with the counts,
+        # instead of returning fewer vector candidates without a word.
+        try:
+            report = await coverage(user_id)
+        except Exception:
+            logger.warning("Embedding coverage could not be read", exc_info=True)
+            report = None
+        if report is not None:
+            diagnostics.embedding_incomplete = report.as_metadata()
 
     # Batch-resolve node_ids for vector and lexical candidates.
     node_ids_to_resolve: set[str] = set()
