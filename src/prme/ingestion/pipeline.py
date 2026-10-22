@@ -949,6 +949,9 @@ class IngestionPipeline:
         """
         if self._pronoun_repair_turns is None or not result.facts:
             return result
+        if not callable(getattr(self._extraction_provider, "repair_pronouns", None)):
+            # A provider swapped in after the engine opened cannot be asked; the first extraction stands.
+            return result
         from prme.ingestion.pronoun_repair import WindowTurn, apply_repairs, flagged_claims
         from prme.privacy.records import PRIVACY_KEY
 

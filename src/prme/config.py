@@ -779,7 +779,7 @@ class PRMEConfig(_ProjectSettings):
         ),
     )
     enable_pronoun_repair: bool = Field(
-        default=False,
+        default=True,
         description=(
             "[HYPOTHESIS] When True, a source whose first extraction left a "
             "claim on a third person pronoun subject or object (they, he, she, "
@@ -791,10 +791,14 @@ class PRMEConfig(_ProjectSettings):
             "the sentence, the message, the speaker or a memory shown; the "
             "claim's text becomes its own sentence with the names written in, "
             "the quote stays its evidence, and no other claim of the message "
-            "changes. Works in ingest(), store(extract=True) and reingest(), "
+            "changes. A first person pronoun is never repaired. Works in "
+            "ingest(), store(extract=True) and reingest(), "
             "with batched extraction on or off. Costs one more request for each "
-            "source with such a claim. Default False, which leaves every "
-            "extraction as the first request made it."
+            "source with such a claim. On by default since 2026-10-22 in the "
+            "alpha channel, by the maintainer's decision, without the alpha "
+            "pass rule's defect probe condition met and with no mid tier or "
+            "full benchmark run on it (BENCHMARKS.md, Pronoun repair). False "
+            "leaves every extraction as the first request made it."
         ),
     )
     enable_fact_text_resolution: bool = Field(

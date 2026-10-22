@@ -16,8 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   someone written in the sentence, the message, the speaker or a memory shown: its text becomes its own sentence
   with the names written in, the quote stays its evidence, `metadata.resolved_from_context` lists the memories that
   wrote the names, and no other claim of the message changes. It needs nothing else on, works in `ingest()`,
-  `store(extract=True)` and `reingest()`, and counts in the re-derivation settings. No default changes, and with the
-  option off every extraction is unchanged. The measurements are in `BENCHMARKS.md`.
+  `store(extract=True)` and `reingest()`, and counts in the re-derivation settings. With the option off every
+  extraction is unchanged. The measurements are in `BENCHMARKS.md`. It is on by default in the alpha channel (see
+  Changed).
 - Options for the task prefixes some local embedding models are trained with (dwamianm/prism#366):
   `embedding.query_prefix` (`PRME_EMBEDDING__QUERY_PREFIX`) is put before every search question the `fastembed`
   model embeds, and `embedding.document_prefix` (`PRME_EMBEDDING__DOCUMENT_PREFIX`) before every stored text. Both
@@ -25,6 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one is set, the stored vectors' model version names the recipe, so vectors made under one recipe are refused under
   another and a store needs its vectors rebuilt. This is the experiment's only change to the engine: it changes no
   default, and the experiment's report (`BENCHMARKS.md`, "Embedding models") recommends none.
+
+### Changed
+
+- `enable_pronoun_repair` is on by default in the alpha channel. It was turned on by the maintainer's decision on
+  2026-10-22. The alpha pass rule's defect probe condition (7 of 7 answers in the top 3) was not met, because the
+  extraction model used in production scores 6 of 7 with the option off, and the failing probe has no pronoun in it. No
+  mid tier or full benchmark was run on it, and one memory in the fixtures is repaired (the cities claim, from 23rd to
+  1st). `PRME_ENABLE_PRONOUN_REPAIR=false` (or `enable_pronoun_repair=False`) restores the extraction every earlier
+  release made, byte for byte. Two effects to know before upgrading: a source whose first extraction leaves a claim on
+  a third person pronoun now makes one more model request, and because the repair request and its window are part of
+  the re-derivation settings, `reingest()` reads every memory derived before the change as stale. The benchmark
+  harness names the setting itself, so the DeepSeek baselines and their caches replay unchanged and cache-only.
 
 ## [0.16.0a7] - 2026-10-21
 

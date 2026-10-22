@@ -463,3 +463,40 @@ async def test_a_provider_without_repair_pronouns_is_refused_when_the_option_is_
 
     with pytest.raises(ValueError, match="repair_pronouns"):
         IngestionPipeline(None, None, None, None, Plain(), None, pronoun_repair_turns=4)
+
+
+@pytest.fixture
+def product_defaults(monkeypatch):
+    from tests import conftest
+
+    conftest.product_defaults(monkeypatch)
+
+
+async def test_it_is_on_in_the_product_defaults_and_the_variable_set_to_false_restores_the_first_extraction(
+        product_defaults, config, user, monkeypatch):
+    from prme import PRMEConfig
+
+    assert config.enable_pronoun_repair is True
+    async with MemoryEngine.open(config) as engine:
+        assert engine._pipeline._pronoun_repair_turns == config.extraction_window_turns == 4
+    monkeypatch.setenv("PRME_ENABLE_PRONOUN_REPAIR", "false")
+    assert PRMEConfig().enable_pronoun_repair is False
+    async with MemoryEngine.open(config.model_copy(update={"enable_pronoun_repair": PRMEConfig().enable_pronoun_repair})
+                                 ) as engine:
+        assert engine._pipeline._pronoun_repair_turns is None
+
+
+async def test_a_provider_swapped_in_without_repair_pronouns_leaves_the_first_extraction(config, user):
+    async with MemoryEngine.open(settings(config, enable_pronoun_repair=True)) as engine:
+        model = install(engine, Model(REPAIRS))
+        provider = engine._pipeline._extraction_provider
+
+        class Plain:
+            provider_name, model_name = provider.provider_name, provider.model_name
+            extract_batch = staticmethod(model.extract_batch)
+
+        engine._pipeline._extraction_provider = Plain()
+        await store_all(engine, user)
+        result = await engine.reingest(user)
+        assert (result.processed, result.failed) == (3, 0) and model.asked == []
+        assert "They chose Tokyo, Kyoto, Kanazawa, and Osaka." in {node.content for node in await claims_of(engine, user)}
