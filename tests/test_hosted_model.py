@@ -173,8 +173,10 @@ def test_the_committed_hosted_baseline_is_a_replay_that_matches_the_fixtures():
     for stage in ("store-extract", "reingest"):
         entry = baseline["stages"][stage]
         assert entry["fixture_sha256"] == store.fixture_digest(), stage
+        # Every memory's batched request and, with the pronoun repair on as the baseline has it, the one repair request
+        # (the cities memory), all replayed.
         assert (entry["mode"], entry["model"], entry["live_calls"], entry["cache_hits"]) == (
-            "replay", hosted_model.LABEL, 0, entry["calls"]), stage
+            "replay", hosted_model.LABEL, 0, entry["calls"] + 1), stage
     assert baseline["stages"]["ingest"]["mode"] == "replay" and baseline["stages"]["ingest"]["model"] == hosted_model.LABEL
     for name, chat in baseline["stages"]["ingest"]["conversations"].items():
         path = ingest.CONVERSATION_DIR / f"{name}.json"
