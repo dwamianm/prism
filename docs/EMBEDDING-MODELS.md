@@ -158,4 +158,5 @@ A service that runs the engine for its users switches the model once, for the wh
   delete it.
 - A store served by a process with the option off while another has it on is not supported: the first writes only the
   old column.
-- Single-file packs are not supported with the option.
+- Single-file packs are not supported with the option, and a pack that holds several models' vectors cannot be turned
+  into one with `prme migrate` until the other models are dropped.

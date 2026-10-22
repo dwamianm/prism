@@ -675,10 +675,9 @@ class MemoryEngine:
                     additional_providers_for(config, additional_embedding_providers),
                 )
             else:
-                if not single_file:
-                    from prme.storage.multi_model_duckdb import refuse_multi_model_pack
+                from prme.storage.multi_model_duckdb import refuse_multi_model_pack
 
-                    refuse_multi_model_pack(conn)
+                refuse_multi_model_pack(conn)
                 vector_index = VectorIndex(
                     conn,
                     None if single_file else config.vector_path,
@@ -872,7 +871,9 @@ class MemoryEngine:
                     additional_providers_for(config, additional_embedding_providers),
                 )
             else:
-                if await pool.fetchval("SELECT to_regclass('node_embeddings') IS NOT NULL"):
+                async with pool.acquire() as probe:
+                    keeps_model_vectors = await probe.fetchval("SELECT to_regclass('node_embeddings') IS NOT NULL")
+                if keeps_model_vectors:
                     logger.warning(
                         "This store keeps vectors by model (node_embeddings), but enable_multi_model_embeddings is "
                         "off, so vector search reads nodes.embedding, which holds only what the column held when the "
