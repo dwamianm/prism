@@ -67,6 +67,8 @@ paths above, which is the default.
 | `PRME_EMBEDDING__DIMENSION` | `384` | Embedding dimension |
 | `PRME_EMBEDDING__API_KEY` | `None` | API key for OpenAI embeddings |
 | `PRME_EMBEDDING__THREADS` | `None` | ONNX Runtime threads for the `fastembed` model. `None` keeps ONNX Runtime's default of one thread per core the machine shows, which does not follow a container's CPU limit; set it to the CPUs the process may use. Other providers ignore it |
+| `PRME_EMBEDDING__QUERY_PREFIX` | `None` | Text put before every search question the `fastembed` model embeds, for a model trained with a query instruction (BGE and mxbai: `Represent this sentence for searching relevant passages: `; nomic: `search_query: `). `None` adds nothing. Changing it changes every question's vector and the version recorded with each stored vector, so an existing store needs its vectors rebuilt |
+| `PRME_EMBEDDING__DOCUMENT_PREFIX` | `None` | Text put before every stored text the `fastembed` model embeds (nomic: `search_document: `). `None` adds nothing. Changing it changes every stored vector, so an existing store needs its vectors rebuilt |
 
 The default `fastembed` provider runs locally with no API key needed. It downloads the model on first use (~130MB). `PRME_EMBEDDING__THREADS` changes how many threads compute each vector, not the model or the version recorded with each vector; see [resource control](../docs/LOCAL-RESOURCES.md) before changing it for a store whose vectors already exist.
 

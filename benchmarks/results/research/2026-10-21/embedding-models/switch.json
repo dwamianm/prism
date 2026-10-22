@@ -1,0 +1,167 @@
+[
+ {
+  "backend": "duckdb",
+  "stored_under": "bge-small",
+  "opened_under": "minilm",
+  "before": {
+   "answer_rank": 1,
+   "results": 5,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "open": "opened",
+  "retrieve": {
+   "answer_rank": 2,
+   "results": 5,
+   "embedding_mismatch": true,
+   "backend_failures": {
+    "VECTOR": "embedding_mismatch"
+   }
+  },
+  "store": "stored",
+  "rebuild": {
+   "nodes_indexed": 6,
+   "nodes_skipped": 0,
+   "total_active": 6
+  },
+  "retrieve_after_rebuild": {
+   "answer_rank": 1,
+   "results": 6,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "store_after_rebuild": "stored"
+ },
+ {
+  "backend": "duckdb",
+  "stored_under": "bge-small",
+  "opened_under": "bge-base",
+  "before": {
+   "answer_rank": 1,
+   "results": 5,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "open": "opened",
+  "retrieve": {
+   "answer_rank": 2,
+   "results": 5,
+   "embedding_mismatch": true,
+   "backend_failures": {
+    "VECTOR": "embedding_mismatch"
+   }
+  },
+  "store": "ValueError: 1 source records of switch failed to index",
+  "rebuild": {
+   "nodes_indexed": 6,
+   "nodes_skipped": 0,
+   "total_active": 6
+  },
+  "retrieve_after_rebuild": {
+   "answer_rank": 1,
+   "results": 6,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "store_after_rebuild": "stored"
+ },
+ {
+  "backend": "duckdb",
+  "stored_under": "bge-small",
+  "opened_under": "bge-small+q",
+  "before": {
+   "answer_rank": 1,
+   "results": 5,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "open": "opened",
+  "retrieve": {
+   "answer_rank": 2,
+   "results": 5,
+   "embedding_mismatch": true,
+   "backend_failures": {
+    "VECTOR": "embedding_mismatch"
+   }
+  },
+  "store": "stored",
+  "rebuild": {
+   "nodes_indexed": 6,
+   "nodes_skipped": 0,
+   "total_active": 6
+  },
+  "retrieve_after_rebuild": {
+   "answer_rank": 1,
+   "results": 6,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "store_after_rebuild": "stored"
+ },
+ {
+  "backend": "postgres",
+  "stored_under": "bge-small",
+  "opened_under": "minilm",
+  "before": {
+   "answer_rank": 1,
+   "results": 5,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "open": "opened",
+  "retrieve": {
+   "answer_rank": 3,
+   "results": 3,
+   "embedding_mismatch": true,
+   "backend_failures": {
+    "VECTOR": "embedding_mismatch"
+   }
+  },
+  "store": "stored",
+  "rebuild": "RuntimeError: rebuild_indexes is only supported on the DuckDB backend"
+ },
+ {
+  "backend": "postgres",
+  "stored_under": "bge-small",
+  "opened_under": "bge-base",
+  "before": {
+   "answer_rank": 1,
+   "results": 5,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "open": "opened",
+  "retrieve": {
+   "answer_rank": 3,
+   "results": 3,
+   "embedding_mismatch": false,
+   "backend_failures": {
+    "VECTOR": "backend_error"
+   }
+  },
+  "store": "ValueError: 1 source records of switch failed to index",
+  "rebuild": "RuntimeError: rebuild_indexes is only supported on the DuckDB backend"
+ },
+ {
+  "backend": "postgres",
+  "stored_under": "bge-small",
+  "opened_under": "bge-small+q",
+  "before": {
+   "answer_rank": 1,
+   "results": 5,
+   "embedding_mismatch": false,
+   "backend_failures": {}
+  },
+  "open": "opened",
+  "retrieve": {
+   "answer_rank": 3,
+   "results": 3,
+   "embedding_mismatch": true,
+   "backend_failures": {
+    "VECTOR": "embedding_mismatch"
+   }
+  },
+  "store": "stored",
+  "rebuild": "RuntimeError: rebuild_indexes is only supported on the DuckDB backend"
+ }
+]

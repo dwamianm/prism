@@ -4068,6 +4068,319 @@ graph stages were rerun with an ANALYZE (commit `dc1e734e`, which also adds the 
 every baseline and routed number was identical. The 10,000 memory store of each kind, text and graph, was
 built once per run on one laptop; latencies vary with the machine's load.
 
+### Embedding models: does a larger local model improve meaning search? (dwamianm/prism#366)
+
+The default embedding model, `BAAI/bge-small-en-v1.5` (384 dimensions), makes the vectors behind the vector
+channel of `retrieve()`. The hypothesis was that it is the weakest link and that a larger registered model raises the
+answer's rank across question types, including after the store is crowded. The gate and its pass rule were
+committed before any other model ran ([`GATE.md`](benchmarks/embedding_models/GATE.md)). Nothing here changes a
+default. This file records no earlier comparison of embedding models (its only other model is the cross-encoder
+reranker), so none was repeated. The `bge-small` columns below reproduce the graph oracle scale run's baseline
+exactly (128 questions in the top 3 at the core, 120 at 2,000 look-alikes, 118 at 10,000), which is the check that
+the harness is the same.
+
+```sh
+uv run python -m benchmarks.embedding_models latency --out latency.json           # per text, one thread, size, memory
+uv run python -m benchmarks.embedding_models pack --out pack.json                 # the store pack and the cities question
+uv run python -m benchmarks.embedding_models scale --model bge-base --out scale-bge-base   # 189, 2,000, 10,000 look-alikes; 2,000 turns
+uv run --extra postgres python -m benchmarks.embedding_models storage --scale-dir . --database-url <postgresql url> --out storage.json
+uv run --extra postgres python -m benchmarks.embedding_models operations --database-url <postgresql url> --out operations.json
+uv run --extra postgres python -m benchmarks.embedding_models switch --database-url <postgresql url> --out switch.json
+uv run python -m benchmarks.embedding_models report --results . --out tables.md
+# Any tier under another model: PRME_BENCH_EMBEDDING='{"model_name": "BAAI/bge-base-en-v1.5", "threads": 1}' uv run python -m benchmarks.fast_cycle run ...
+# The offline gate's saved packs hold bge-small vectors: embed their texts in shards, then gate with them.
+uv run python -m benchmarks.embedding_models reembed --recipe bge-base warm --shard 0/8 --cache-out shard-0.pkl   # one per shard
+uv run python -m benchmarks.embedding_models reembed --recipe bge-base --cache merged.pkl --cache shard-0.pkl gate --lme-captures <dir> --output gate.json
+```
+
+**Recipes.** The engine's provider adds no prefix to a text, but nomic needs `search_query: ` and `search_document: `
+and BGE and mxbai take an instruction before the question only. A new option, off by default, adds them
+(`embedding.query_prefix`, `embedding.document_prefix`; the model version names the recipe, so vectors made
+under one are refused under another). `+q` below is the instruction before the question; `nomic` has both
+prefixes (`nomic-bare` is its use without them). The scale harness applies the prefixes in its embedding cache so one
+padded store serves a model's two question recipes. Run through the engine's own option instead (`scale --mode engine`, core only), the ranks
+are the same for 204 of 204 questions with `bge-small+q` and 203 of 204 with `nomic` (one rank differs; the top 3 count is the same). The
+registered `bge-small` and `bge-base` files are 8-bit quantized and the others full precision; that is what a user gets,
+so that is what ran. Everything ran with `embedding.threads=1`.
+
+**The store pack and the cities question** (75 memories; the answer's rank among everything `retrieve()` returned; the
+three spellings are the fixture's and the two variants of the graph oracle; MRR over the 17 questions):
+
+| Recipe | Cities rank, three spellings | Cities MRR | Store pack top 3 | Rank 1 | MRR (17) |
+|---|---:|---:|---:|---:|---:|
+| bge-small | 26, 51, 52 | 0.026 | 14/17 | 6 | 0.559 |
+| bge-small+q | 26, 52, 52 | 0.026 | 14/17 | 7 | 0.598 |
+| minilm | 20, 52, 54 | 0.029 | 14/17 | 6 | 0.577 |
+| bge-base | 19, 50, 52 | 0.031 | 13/17 | 7 | 0.604 |
+| bge-base+q | 19, 51, 51 | 0.031 | 13/17 | 7 | 0.601 |
+| bge-large | 19, 50, 51 | 0.031 | 13/17 | 7 | 0.604 |
+| bge-large+q | 19, 51, 52 | 0.03 | 13/17 | 7 | 0.604 |
+| mxbai | 17, 51, 51 | 0.033 | 14/17 | 6 | 0.57 |
+| mxbai+q | 18, 51, 51 | 0.032 | 12/17 | 6 | 0.567 |
+| nomic | 18, 51, 51 | 0.032 | 14/17 | 9 | 0.668 |
+| nomic-bare | 18, 51, 52 | 0.031 | 14/17 | 7 | 0.609 |
+
+The cities example does not move. The question's cosine to the memory that answers it is 0.52 under `bge-small` against
+0.67 for the best "Japan trip" memory and 0.75 for the best other memory, as in the issue, and under every larger
+model the answer still sits below them (bge-large 0.55 against 0.76; nomic 0.65 against 0.83), so by cosine alone it
+ranks 7th to 10th of 75 where `bge-small` ranks it 14th. Through `retrieve()` it ranks 17th to 26th for the question
+as the fixture words it, and about 50th for the two shorter spellings, under every model. The memory ("They chose
+Tokyo, Kyoto, Kanazawa, and Osaka") names neither Alex nor Japan, so no embedding can match it to the question; a
+larger model narrows the gap without closing it. The nomic row shows what a missing prefix costs on the pack:
+MRR 0.668 with the prefixes against 0.609 without, and the first spelling's rank unchanged.
+
+**The scale harness** (the 204 frozen questions over the 189-memory core, padded with look-alikes to 2,000 and 10,000
+and with conversation turns to 2,000; baseline `retrieve()`, no graph; each cell is the answers in the top 3, the top 5
+and at rank 1, then MRR). Blind is the 151 questions of `blind-v1` and `blind-v2`:
+
+| Recipe | Core 189 | 2,000 look-alike | 10,000 look-alike | 2,000 conversation |
+|---|---:|---:|---:|---:|
+| bge-small | 107/117/68, 0.598 | 99/109/82, 0.624 | 100/106/85, 0.629 | 108/116/70, 0.603 |
+| bge-small+q | 109/116/70, 0.605 | 98/111/82, 0.622 | 102/105/83, 0.622 | 108/116/70, 0.604 |
+| minilm | 103/116/56, 0.545 | 94/101/68, 0.564 | 97/100/73, 0.575 | 103/114/63, 0.564 |
+| bge-base | 107/118/68, 0.603 | 106/113/80, 0.635 | 105/112/82, 0.631 | 113/120/72, 0.621 |
+| bge-base+q | 106/117/67, 0.594 | 105/108/82, 0.634 | 101/107/84, 0.627 | 107/117/67, 0.592 |
+| bge-large | 111/117/69, 0.611 | 102/113/83, 0.637 | 103/111/88, 0.652 | 112/119/70, 0.611 |
+| bge-large+q | 110/118/70, 0.613 | 100/111/83, 0.632 | 102/106/86, 0.642 | 110/117/69, 0.606 |
+| mxbai | 107/118/63, 0.580 | 98/109/79, 0.609 | 100/107/82, 0.620 | 108/118/65, 0.587 |
+| mxbai+q | 106/116/65, 0.585 | 99/109/79, 0.614 | 103/107/82, 0.622 | 104/117/65, 0.582 |
+| nomic | 104/115/60, 0.562 | 99/106/74, 0.597 | 100/109/79, 0.609 | 104/117/67, 0.587 |
+
+The same, over all 204 questions (the pooled number the earlier tables used):
+
+| Recipe | Core 189 | 2,000 look-alike | 10,000 look-alike | 2,000 conversation |
+|---|---:|---:|---:|---:|
+| bge-small | 128/144/80, 0.535 | 120/131/93, 0.542 | 118/128/99, 0.550 | 134/143/81, 0.537 |
+| bge-small+q | 131/144/82, 0.541 | 117/134/92, 0.538 | 120/125/96, 0.539 | 133/143/81, 0.538 |
+| minilm | 121/140/64, 0.478 | 110/120/79, 0.490 | 115/119/84, 0.499 | 124/140/74, 0.504 |
+| bge-base | 128/146/80, 0.542 | 125/136/95, 0.560 | 122/133/98, 0.556 | 138/148/86, 0.563 |
+| bge-base+q | 127/147/78, 0.533 | 123/130/96, 0.557 | 117/127/99, 0.548 | 131/144/80, 0.537 |
+| bge-large | 132/147/81, 0.548 | 121/135/96, 0.555 | 120/130/102, 0.562 | 136/147/85, 0.556 |
+| bge-large+q | 131/146/83, 0.551 | 119/133/97, 0.554 | 119/124/100, 0.555 | 135/145/84, 0.552 |
+| mxbai | 129/146/74, 0.523 | 114/130/92, 0.533 | 117/127/95, 0.536 | 132/146/78, 0.532 |
+| mxbai+q | 126/144/77, 0.526 | 115/129/92, 0.534 | 119/127/95, 0.537 | 127/144/78, 0.527 |
+| nomic | 124/139/70, 0.500 | 116/126/86, 0.522 | 118/128/92, 0.530 | 125/143/81, 0.530 |
+
+Blind questions gained and lost in the top 3 against `bge-small`, paired, with a two-sided sign test:
+
+| Recipe | Core 189 | 2,000 look-alike | 10,000 look-alike | 2,000 conversation |
+|---|---:|---:|---:|---:|
+| bge-small+q | +2 / -0, p 0.50 | +0 / -1, p 1.00 | +3 / -1, p 0.62 | +1 / -1, p 1.00 |
+| minilm | +2 / -6, p 0.29 | +3 / -8, p 0.23 | +3 / -6, p 0.51 | +2 / -7, p 0.18 |
+| bge-base | +4 / -4, p 1.00 | +7 / -0, p 0.02 | +6 / -1, p 0.12 | +6 / -1, p 0.12 |
+| bge-base+q | +3 / -4, p 1.00 | +8 / -2, p 0.11 | +5 / -4, p 1.00 | +4 / -5, p 1.00 |
+| bge-large | +5 / -1, p 0.22 | +5 / -2, p 0.45 | +5 / -2, p 0.45 | +5 / -1, p 0.22 |
+| bge-large+q | +4 / -1, p 0.38 | +4 / -3, p 1.00 | +5 / -3, p 0.73 | +4 / -2, p 0.69 |
+| mxbai | +5 / -5, p 1.00 | +3 / -4, p 1.00 | +6 / -6, p 1.00 | +4 / -4, p 1.00 |
+| mxbai+q | +3 / -4, p 1.00 | +4 / -4, p 1.00 | +7 / -4, p 0.55 | +3 / -7, p 0.34 |
+| nomic | +4 / -7, p 0.55 | +5 / -5, p 1.00 | +6 / -6, p 1.00 | +4 / -8, p 0.39 |
+
+In the table of question sets below, `bge-base`'s gain is all in
+`blind-v1` (+7 at 2,000 look-alikes, +5 at 10,000, +6 with conversation padding); `blind-v2` is at 55 or 56 of 65 for every
+model, and the original set, which holds the fixtures' own probes, loses one or two. The full set of cells follows,
+then the top 3 against `bge-small` by question type at 2,000 look-alikes over all 204 questions.
+
+| Recipe | 2,000 look-alike | 10,000 look-alike | 2,000 conversation |
+|---|---:|---:|---:|
+| bge-small | 21 / 43 / 56 | 18 / 44 / 56 | 26 / 51 / 57 |
+| bge-small+q | 19 / 42 / 56 | 18 / 46 / 56 | 25 / 52 / 56 |
+| minilm | 16 / 39 / 55 | 18 / 42 / 55 | 21 / 47 / 56 |
+| bge-base | 19 / 50 / 56 | 17 / 49 / 56 | 25 / 57 / 56 |
+| bge-base+q | 18 / 49 / 56 | 16 / 47 / 54 | 24 / 53 / 54 |
+| bge-large | 19 / 46 / 56 | 17 / 48 / 55 | 24 / 56 / 56 |
+| bge-large+q | 19 / 44 / 56 | 17 / 47 / 55 | 25 / 55 / 55 |
+| mxbai | 16 / 43 / 55 | 17 / 47 / 53 | 24 / 53 / 55 |
+| mxbai+q | 16 / 43 / 56 | 16 / 48 / 55 | 23 / 50 / 54 |
+| nomic | 17 / 43 / 56 | 18 / 46 / 54 | 21 / 51 / 53 |
+
+| Recipe | lookup (76) | list (27) | multi-hop (25) | temporal (21) | correction (19) | negation (23) | aggregation (13) | Worst |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| bge-small | +0 | +0 | +0 | +0 | +0 | +0 | +0 | +0 |
+| bge-small+q | -1 | -1 | +0 | +0 | -1 | +0 | +0 | -1 |
+| minilm | -3 | -2 | -1 | +1 | -4 | -1 | +0 | -4 |
+| bge-base | +1 | +0 | +0 | +3 | +1 | +0 | +0 | +0 |
+| bge-base+q | +3 | -2 | +0 | +2 | -1 | +1 | +0 | -2 |
+| bge-large | +0 | -1 | -1 | +1 | +1 | +1 | +0 | -1 |
+| bge-large+q | -1 | -2 | -1 | +1 | +1 | +1 | +0 | -2 |
+| mxbai | -3 | -1 | -1 | +1 | -3 | +1 | +0 | -3 |
+| mxbai+q | -3 | -2 | -1 | +2 | -2 | +1 | +0 | -3 |
+| nomic | +0 | -1 | -1 | +0 | -1 | -1 | +0 | -1 |
+
+**What it costs**, on one ONNX thread (the one-CPU case), one text per call as the engine embeds:
+
+| Model | Dim | p50 ms/text | p95 ms/text | p50 vs bge-small | p50 ms, conversation turn | Embed the 10,000 store | Download | Loaded model memory | Within 8x |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| bge-small | 384 | 2.83 | 4.65 | 1.0x | 3.1 | 0.7 min | 67 MB | 310 MB | yes |
+| minilm | 384 | 1.25 | 2.09 | 0.4x | 1.46 | 0.4 min | 91 MB | 265 MB | yes |
+| bge-base | 768 | 6.44 | 11.12 | 2.3x | 6.96 | 1.5 min | 218 MB | 940 MB | yes |
+| bge-large | 1024 | 17.91 | 32.56 | 6.3x | 19.38 | 4.1 min | 1338 MB | 2691 MB | yes |
+| mxbai | 1024 | 17.65 | 31.83 | 6.2x | 19.42 | 4.1 min | 1338 MB | 2678 MB | yes |
+| nomic | 768 | 8.2 | 14.93 | 2.9x | 10.41 | 2.1 min | 548 MB | 1199 MB | yes |
+
+The per-text figures are from a run with nothing else of mine running (400 short memory sentences, mean 90
+characters; a conversation turn of 133 characters costs 3.1, 1.5, 7.0, 19.4, 19.4 and 10.4 ms at p50 in that order).
+The 10,000 store figure is the scale run's own embedding time for the 10,000 look-alike memories and the 204 questions
+with two other models' runs going at once, so it is an upper bound. Every model is within 8 times `bge-small`, so the speed
+line of the rule excludes none. A saved LongMemEval-S turn is far longer (about 1,000 characters on average): `bge-base` took
+about 50 ms of CPU for one on one thread, which is what makes re-embedding a large store slow (below).
+
+PostgreSQL with pgvector 0.8.7, per 10,000 memories, the engine's `vector(N)` column and its HNSW index (cosine,
+`m=16`, `ef_construction=64`), one local connection:
+
+| Model | Dim | Bytes per vector | Vector column MB | HNSW index MB | Vector and index MB | HNSW build s | Vector UPDATE p50 / p95 ms | Exact search p50 / p95 ms |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| bge-small | 384 | 1544.0 | 18.97 | 20.49 | 39.46 | 1.2 | 0.48 / 0.85 | 5.45 / 6.43 |
+| minilm | 384 | 1544.0 | 18.97 | 20.49 | 39.46 | 1.3 | 0.47 / 0.69 | 5.4 / 5.9 |
+| bge-base | 768 | 3076.0 | 41.81 | 40.97 | 82.78 | 1.8 | 0.66 / 0.84 | 21.72 / 22.62 |
+| bge-large | 1024 | 4100.0 | 55.54 | 81.93 | 137.47 | 2.2 | 0.78 / 1.11 | 24.15 / 25.46 |
+| mxbai | 1024 | 4100.0 | 55.54 | 81.93 | 137.47 | 2.2 | 0.73 / 0.95 | 22.75 / 23.47 |
+| nomic | 768 | 3076.0 | 41.81 | 40.97 | 82.78 | 2.0 | 0.69 / 0.85 | 19.94 / 21.51 |
+
+The engine searches exactly by default (it materializes the user's rows, then sorts), so a question's cost grows with the
+vectors it scans: 5.5 ms at 384 dimensions and about 22 ms at 768 or 1,024, for 10,000 memories. One `store()` and one
+`retrieve()` on PostgreSQL with one thread (the 75-memory pack; p50 of 75 stores and 20 retrievals, with the embedding
+inside it):
+
+| Model | store() p50 / p95 ms | of which embedding p50 ms | retrieve() p50 / p95 ms | of which question embedding p50 ms |
+|---|---:|---:|---:|---:|
+| bge-small | 28.2 / 34.9 | 3.1 | 19.0 / 72.2 | 2.5 |
+| minilm | 26.0 / 29.2 | 1.6 | 17.4 / 27.3 | 1.4 |
+| bge-base | 35.4 / 39.2 | 6.9 | 21.8 / 43.2 | 5.8 |
+| bge-large | 47.6 / 59.8 | 17.9 | 32.1 / 44.9 | 15.4 |
+| mxbai | 47.9 / 55.8 | 17.9 | 33.2 / 60.5 | 15.6 |
+| nomic | 37.0 / 46.2 | 8.6 | 23.2 / 44.0 | 7.2 |
+
+**The cheap tiers** (cache replays, `embedding.threads=1`; each model against `bge-small`):
+
+| Tier | bge-small | bge-base | bge-large |
+|---|---|---|---|
+| Defect probes (top 3 of 7) | 7 | **6** (cities 2 to 4) | **6** (cities 2 to 4) |
+| chat-v1 (top 3, top 5 of 18) | 14, 15 | 14, 15 | 14, 15 |
+| Corrections probe, `ingest()` path: first context line shows the old value | 2 of 2 | 1 of 2 | 2 of 2 |
+| Fast cycle against the committed baseline | pass, 133 unchanged | **fail**, 2 gated measures worse, 23 moved | **fail**, 2 gated measures worse, 24 moved |
+
+The two gated measures the fast cycle fails for both models are the same: answers ranked in the top 3 on the defects chat
+(7 to 6, the cities probe) and on the store pack (14 to 13). On the store pack `flights` and `rust` fall from 3 to 4 while
+`japan-dates` and `gravel-race` rise to 3 and 2 and `observability` to 1; the cities question rises from 26 to 19. Those are
+rank measures of answers, not counts of nodes or entities, so they are not moves the embedding makes harmlessly.
+
+**The offline evidence gate and the mid tier** (against `bge-small`; no interval of a higher-is-better measure lies
+entirely below zero in any comparison below):
+
+| `bge-base` against `bge-small` | Before | After | Change (95% interval) |
+|---|---:|---:|---|
+| Offline gate, LoCoMo, all evidence packed (1,536) | 84.0% | 84.6% | +0.7 pp (-0.2 to +1.6) |
+| Offline gate, LoCoMo, evidence recall | 89.2% | 89.8% | +0.7 pp (+0.0 to +1.4) |
+| Offline gate, LongMemEval-S, all evidence packed (470) | 94.7% | 95.3% | +0.6 pp (-0.6 to +2.1) |
+| Mid tier, LoCoMo, all evidence packed | 83.6% | 83.6% | +0.0 pp (-1.0 to +1.0; 27 wins, 27 losses) |
+| Mid tier, LoCoMo, evidence in the top 25 | 70.3% | 72.3% | +2.0 pp (+1.0 to +3.0), clear of zero |
+| Mid tier, LongMemEval-S (12 questions) | 100% | 100% | no change |
+
+`bge-large` against `bge-small`, offline gate on LoCoMo only (its LongMemEval-S packs were not re-embedded; see below):
+
+| Offline gate, LoCoMo | Before | After | Change (95% interval) | Wins / losses |
+|---|---:|---:|---|---:|
+| All evidence packed (1,536) | 84.0% | 86.1% | +2.1 pp (+1.2 to +3.0) | 41 / 9 |
+| Evidence recall | 89.2% | 91.1% | +2.0 pp (+1.3 to +2.7) | 75 / 16 |
+| Projected accuracy | 77.6% | 79.0% | +1.4 pp (+0.8 to +2.0) | 41 / 9 |
+| All evidence packed, multi-hop (282) | 49.6% | 54.6% | +5.0 pp (+1.8 to +8.5) | 19 / 5 |
+| All evidence packed, open-domain (96) | 57.6% | 62.0% | +4.3 pp (+1.1 to +8.7) | 4 / 0 |
+| All evidence packed, single-hop (841) | 95.2% | 96.1% | +0.8 pp (+0.1 to +1.7) | 9 / 2 |
+| All evidence packed, temporal (321) | 92.2% | 94.4% | +2.2 pp (+0.3 to +4.0) | 9 / 2 |
+
+This is where a larger model helps most clearly, and it is not a measure the pass rule scores: the saved LoCoMo packs
+hold the turns as `store()` made them, 5,882 short memories in ten conversations, and `bge-large` packs all the evidence
+for 2.1 points more of its questions. The 204-question harness has `bge-large` ahead of `bge-small` by 3 to 5 blind
+questions at every size, which is inside its noise. The mid tier, which rebuilds the packs through `ingest()`, points
+the same way for `bge-large` and by less (below), and has `bge-base` level with `bge-small` on all evidence packed.
+
+`bge-large` against `bge-small`, mid tier (all of LoCoMo and 12 LongMemEval-S questions, packs built through `ingest()`):
+
+| Mid tier | Before | After | Change (95% interval, questions) | Wins / losses |
+|---|---:|---:|---|---:|
+| LoCoMo, all evidence packed | 83.6% | 84.4% | +0.8 pp (-0.1 to +1.8) | 34 / 21 |
+| LoCoMo, evidence recall | 89.2% | 90.0% | +0.8 pp (+0.1 to +1.6), clear of zero | 58 / 37 |
+| LoCoMo, evidence in the top 25 | 70.3% | 75.1% | +4.8 pp (+3.6 to +6.2), clear of zero | 147 / 34 |
+| LoCoMo, all evidence returned | 98.0% | 98.9% | +0.8 pp (+0.4 to +1.3), clear of zero | 13 / 0 |
+| LongMemEval-S (12 questions), every measure | 100% | 100% | no change | 0 / 0 |
+
+The offline gate re-embedded the 5,882 LoCoMo turns and the 189,514 distinct LongMemEval-S node texts (246,738
+nodes in 500 packs) of the saved packs under `bge-base`, vector index only: 195,000 texts took 62 minutes in eight
+processes, one thread each (about 150 ms a text under load, the texts being long), and the gate over the re-embedded
+packs 28 minutes. Under `bge-large` only the 5,882 LoCoMo turns were re-embedded (519 s of embedding, 20 minutes in all with the
+gate): the 189,514 LongMemEval-S texts would take about three times `bge-base`'s 62 minutes on eight processes and some 28 GB of memory
+next to the other jobs on the machine, so that part of the gate was not run for `bge-large`. The mid tier rebuilds its packs through `ingest()` with the saved extraction replays (0 live calls, 1,186
+cache hits), so the embeddings are recomputed in the build: 74 min 13 s under `bge-base` against 75 min 41 s under
+`bge-small`, on a machine the other jobs shared (load 2 to 18), so the two times differ by less than the noise and
+say only that the embedding is not what the build spends its time on. Under `bge-large` the run took 83 min 33 s (the
+LoCoMo build 39 min 55 s, the LongMemEval-S build 83 min 17 s), 10 percent more than `bge-small` on the same shared machine.
+
+**What a user needs to switch models on a store they have** (`switch.json`: five memories stored under `bge-small`, then the
+store opened under another recipe):
+
+| Store | Change | A question | A `store()` | Repair |
+|---|---|---|---|---|
+| DuckDB pack | same dimension (minilm, or a prefix) | `embedding_mismatch` true, the vector channel returns nothing, the answer fell from rank 1 to 2 | works, new vectors beside old ones | `prme rebuild` (`rebuild_indexes()`): all vectors and the word index made again, then rank 1 |
+| DuckDB pack | other dimension (bge-base) | the same flag | fails: "1 source records failed to index" | the same rebuild |
+| PostgreSQL | same dimension or a prefix | the flag, the vector channel empty, 3 results of 5 | works, mixing models in one table | none: `rebuild_indexes()` raises "only supported on the DuckDB backend" |
+| PostgreSQL | other dimension | no flag; the vector channel fails as a `backend_error` | fails ("different vector dimensions 384 and 768") | none |
+
+Reading a mismatch is a quiet degrade: the response carries `metadata.embedding_mismatch` and the failed channel, and the
+log a warning, but the question still returns lexical and graph results. What is missing for a user of the PostgreSQL
+backend (the hosted one) to switch: (1) a re-embed path (the error message says "run prme rebuild", which the backend
+refuses); (2) a change of the `nodes.embedding` column's dimension and a new HNSW index (the schema step adds the column only when
+absent, so an existing `vector(384)` stays); (3) the mismatch flag for a dimension change, which is reported as a backend error; (4) a
+check when the engine opens a store that names the stored and the configured model and refuses writes instead
+of mixing them; and (5) `reingest()` is not that path: it re-runs extraction (a model call per source) and its
+markers do not name the embedding, so after a model change it skips every source that is already current. On a DuckDB pack the
+repair exists: a rebuild of 514 nodes took 28 s, 27 of them embedding, at 50 ms a long text on one thread. A store of 10,000
+short memories re-embeds in about as long as the table above says (89 s under `bge-base`, 4 minutes under `bge-large`) plus
+the index writes.
+
+**Verdict against the pass rule.** No recipe passes, so there is no recommendation to change the default.
+
+| Line | bge-base | bge-large | Others |
+|---|---|---|---|
+| 1 Blind top 3 at 2,000 look-alikes at least +7 of 151 | met, exactly: +7 (4.6 points) | not met, +3 | not met: bge-base+q +6, bge-large+q +1, nomic 0, mxbai+q 0, mxbai -1, bge-small+q -1, minilm -5 |
+| 2 No type loses more than 1 at 2,000 look-alikes and 2,000 conversation | met (worst 0 and 0) | met (worst -1 and -1) | not met: bge-base+q -2, bge-large+q -2, mxbai -3, mxbai+q -3, nomic -3, minilm -4 and -6; met by bge-small+q |
+| 3 Defect probes 7 of 7, chat-v1 not below 14 and 15 | **not met**: 6 of 7 | **not met**: 6 of 7 | not run |
+| 4 Fast cycle exits 0 | **not met**: two answer top-3 counts worse | **not met**: the same two | not run |
+| 5 Offline gate and mid tier, no interval below zero | met | met on the LoCoMo offline gate and on the mid tier; the LongMemEval-S offline gate was not run | not run |
+| 6 Within 8 times `bge-small` per text | met, 2.3x | met, 6.3x | met |
+
+`bge-base` is the one recipe that clears the blind line, and it clears it by exactly one question over the line: seven
+more of 151 at 2,000 look-alikes (a sign test gives p 0.02), five more at 10,000 and with conversation
+padding (six gained and one lost at each; p 0.12), none at the core, where the store is uncrowded. Its gain is entirely in `blind-v1`; it loses one or two of
+the original 53 and gains nothing in `blind-v2`, and the cities probe of the defect chat, the example that motivated the
+experiment, gets worse (rank 2 to 4), which fails line 3 and the fast cycle. The gain is real in the sense of the
+sign test and not a basis to change a default: the cheap tiers say two answers that rank in the top 3 today would not.
+
+What each model costs a deployment with one CPU, for `bge-base`, the model closest to passing: a `store()` call spends 6.9 ms
+embedding instead of 3.1 ms and a `retrieve()` 5.8 ms on the question instead of 2.5; the model file in the image is
+218 MB instead of 67 MB and the loaded model holds 940 MB instead of 310 MB; pgvector holds 82.8 MB instead of 39.5 MB per
+10,000 memories, and the engine's default exact search takes 22 ms instead of 5.5 ms at 10,000 memories. `bge-large` costs
+more than twice that again (1.3 GB in the image, 2.7 GB loaded, 137.5 MB and 24 ms) for no gain on any line.
+
+**What would change this.** The gain concentrates where the store is crowded with near-duplicates of the questions' topics and
+is absent at the core. A mixed recipe cannot be tried without a store whose vectors can be rebuilt, which is the
+PostgreSQL gap above. A larger test than 151 blind questions would settle whether +7 is a property of `bge-base` or of
+`blind-v1`. The answer track (a reader and a judge) was not run: this measures where the answer ranks.
+
+**Limits.** One run per cell. The retrieval is deterministic given the vectors, but the 204 questions are the ones the
+earlier experiments used, so a recipe tuned on them would look better than it is; nothing here was tuned, but the sizes
+are small (a question is 0.5 points of the 204 and 0.7 of the 151). Timings are one machine's, shared with other jobs;
+the scale runs went three at a time. The `bge-small` and `bge-base` files are quantized and the others are not, so
+"base beats large" is a statement about the registered files and not about the models. The offline gate under `bge-base`
+replaces only the vector index of the saved packs, so its lexical channel is the saved one.
+
+**Where this differs from `GATE.md`.** `GATE.md` says the tiers run for the one or two recipes with the highest blind top 3; the
+owner's brief said models, and `bge-base+q` is `bge-base` again, so they ran for the best recipe of the two best models,
+`bge-base` and `bge-large`. The cheap tiers ran for both and the offline gate fully for `bge-base`; for `bge-large` the offline
+gate covers LoCoMo only (above). No model call of any kind was made: the fast cycle, the probes and the mid tier replayed the saved extraction
+caches (the mid tiers report 0 live calls and 1,186 cache hits; the probes 0 extraction calls), and the mid tier of
+`bge-large` ran with `PRME_BENCH_CACHE_ONLY=1`, a new guard that fails a build instead of making a call the cache cannot serve.
+The Ollama account's cloud models were not used.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of

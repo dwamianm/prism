@@ -1,0 +1,5 @@
+Baseline main against emb366-bge-small
+PASS: 0 measure(s) failed, 0 moved, 133 unchanged. Tolerance: exact (no model call in the ingest or store-extract stages, or none run).
+Partial: store-extract is in only one of the reports and was not compared.
+
+Not compared: 35 measure(s) of store-extract only in the baseline.

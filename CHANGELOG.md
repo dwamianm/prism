@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Options for the task prefixes some local embedding models are trained with (dwamianm/prism#366):
+  `embedding.query_prefix` (`PRME_EMBEDDING__QUERY_PREFIX`) is put before every search question the `fastembed`
+  model embeds, and `embedding.document_prefix` (`PRME_EMBEDDING__DOCUMENT_PREFIX`) before every stored text. Both
+  are off by default, and with neither set the provider, its version and the configuration dump are unchanged. When
+  one is set, the stored vectors' model version names the recipe, so vectors made under one recipe are refused under
+  another and a store needs its vectors rebuilt. This is the experiment's only change to the engine: it changes no
+  default, and the experiment's report (`BENCHMARKS.md`, "Embedding models") recommends none.
+
 ## [0.16.0a7] - 2026-10-21
 
 This is an alpha. It passed CI and the cheap fast tiers, and it has not been
