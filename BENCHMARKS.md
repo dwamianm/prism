@@ -1353,8 +1353,8 @@ and the cost is one more request for each memory that names no one.
 ### Pronoun repair: a second request for the claims that kept a pronoun (dwamianm/prism#345, #347)
 
 The bounded alternative the window section ends with: ask a second time only about the sources whose first
-extraction left a claim on a pronoun, and change only that claim. `enable_pronoun_repair` (off by default, needs no
-other option) flags a claim whose subject or object is a third person pronoun (they, them, their, he, she, it and
+extraction left a claim on a pronoun, and change only that claim. `enable_pronoun_repair` (needs no other option; on by
+default in the alpha channel since 2026-10-22, see "Decision" below) flags a claim whose subject or object is a third person pronoun (they, them, their, he, she, it and
 the like; never I, we, us or our), and for a source with such a claim sends one more request. It shows the owner's
 preceding memories (the extraction window's code and privacy checks, up to `extraction_window_turns`) and only the
 claim's own sentences, and the model returns names. Code accepts a name only when it is a proper name written in the
@@ -1370,9 +1370,9 @@ hosted model, the kind the hosted service extracts with, through the same extrac
 to know whether the production model behaves like the DeepSeek baseline. Nothing else in this repository calls it, and
 the rule that builds, probes and answer runs use the local Ollama server is unchanged. The numbers below are not
 comparable with the DeepSeek sections except where a column says so. The runs went through the opt in described in
-"Fast cycle on the production model" below, and its committed cache replays them: `PRME_BENCH_HOSTED=1`, the model id
-and `--set enable_pronoun_repair=true` give the on numbers below, and without the `--set` the off numbers, with no
-request sent. The DeepSeek cache in `benchmarks/fixtures/fast-cycle/extraction-cache` is not changed.
+"Fast cycle on the production model" below, and its committed cache replays them: `PRME_BENCH_HOSTED=1` and the model id
+give the on numbers below (the hosted baseline keeps the option on), and `--set enable_pronoun_repair=false` the off
+numbers, with no request sent. The DeepSeek cache in `benchmarks/fixtures/fast-cycle/extraction-cache` is not changed.
 
 **Design of the run.** Off is one live run of the fast cycle's `store`, `ingest`, `store-extract` and `reingest`
 stages. Every measure below reads a replay of that run's extraction cache, so off is deterministic (a second live
@@ -1503,11 +1503,21 @@ extraction with a live repair counts only the live tokens, so the cost above is 
 7. Pass: 1.005 and 1.003.
 
 So the option does not pass the rule as written: rule 1 fails on the model's off baseline and is not something the
-repair can change, and rule 5 moves one gated measure by a few tokens for a stated reason. Nothing else fails. No
-default flips. What the measurements show is that a memory that names no one can be repaired from the owner's earlier
+repair can change, and rule 5 moves one gated measure by a few tokens for a stated reason. Nothing else fails. The
+pass rule above is unchanged, and the option was turned on anyway (next paragraph). What the measurements show is that a memory that names no one can be repaired from the owner's earlier
 memories without touching any other memory (1 of 75 sources here, 1.3%), that the repair needs the proper name rule
 to stay narrow (a description or a half-written name is refused), and that a group pronoun should only be resolved when
 a memory states the group.
+
+**Decision.** `enable_pronoun_repair` was turned on by default in the alpha channel by the maintainer's decision on
+2026-10-22. The alpha pass rule's defect probe condition (7 of 7) was not met, because the extraction model used in
+production scores 6 of 7 with the option off. No mid tier or full benchmark was run on it. One memory in the fixtures is
+repaired (the cities claim, 23rd to 1st). `PRME_ENABLE_PRONOUN_REPAIR=false` restores the first extraction exactly. The
+benchmark harness names the setting itself (`gate_config` sets it to false unless a run passes `--set`, and the hosted
+baseline sets it to true), so the DeepSeek baselines and their caches, which hold no repair request, replay unchanged
+and cache-only: the committed DeepSeek fast cycle baseline still passes with all 168 measures unchanged, and its chat
+probe, defect probe and corrections probe builds are among them. Turning the option on makes `reingest()` read sources
+derived without it as stale, and a source with a claim on a third person pronoun makes one more model request.
 
 **Not measured.** The offline evidence gate (the repair changes no retrieval) and the mid tier, which would show how
 often the repair applies and whether it names anyone wrongly over all of LoCoMo and 12 LongMemEval-S questions. The mid
@@ -2709,13 +2719,17 @@ Every number in the fast cycle sections above comes from `deepseek-v4.1-flash:cl
 `baseline-main.json` is a replay of its cache. The hosted service extracts with a different, small hosted model, and
 this model does worse than DeepSeek on these fixtures, so work meant for the hosted service needs a baseline from the
 model it will run on. `benchmarks/fixtures/fast-cycle/baseline-hosted.json` is that baseline: the `store`, `ingest`,
-`store-extract` and `reingest` stages with every option at its default, a replay of its own extraction cache
+`store-extract` and `reingest` stages with every option at its default (including the pronoun repair, on since
+2026-10-22; `--set enable_pronoun_repair=false` replays the options-off numbers of the table below, and the baseline
+file is the replay with it on), a replay of its own extraction cache
 (`benchmarks/fixtures/fast-cycle/hosted-extraction-cache`: 159 batched responses, the three repair requests of the
-pronoun repair run below, and the recorded tokens, about 165 KB). The two baselines are not interchangeable. A change
+pronoun repair run above, and the recorded tokens, about 165 KB). The two baselines are not interchangeable. A change
 judged against the DeepSeek baseline says nothing about the production model, and the other way round.
 
 **What it says, plainly.** With the options off, the production model scores 12 of 18 on `chat-v1` (answers in the top 3,
-DeepSeek 14) and 6 of 7 on the defect probes (DeepSeek 7), below DeepSeek on both:
+DeepSeek 14) and 6 of 7 on the defect probes (DeepSeek 7), below DeepSeek on both. The baseline file has the pronoun
+repair on, and it changes none of the `ingest` stage's probe numbers (only the two store stages move; see the pronoun
+repair section above), so these numbers are the same with it on:
 
 | Measure, options off | Production model | DeepSeek |
 |---|---:|---:|
@@ -2749,7 +2763,9 @@ PRME_BENCH_HOSTED=1 PRME_BENCH_HOSTED_MODEL_ID=<the hosted service's model id> P
 
 `PRME_BENCH_HOSTED=1` makes the fast cycle (and any other build that goes through `extracted_packs`) extract through the
 hosted model, and makes `--model`, `--baseline` and `--cache-dir` default to the hosted ones (`hosted`, the hosted
-baseline and its cache). Without it nothing in `benchmarks/diagnostics/hosted_model.py` changes what a build does.
+baseline and its cache) and keeps the pronoun repair on, which every other harness build keeps off (`gate_config` names the
+setting, so the DeepSeek baselines and their caches replay unchanged whatever the product default is). Without the flag
+nothing in `benchmarks/diagnostics/hosted_model.py` changes what a build does.
 Every request is counted: one that could pass `PRME_BENCH_HOSTED_MAX_REQUESTS` (default 400) or
 `PRME_BENCH_HOSTED_MAX_TOKENS` (default 2,500,000, input and output together) is refused before it is sent, and
 `PRME_BENCH_HOSTED_LEDGER` writes a line of tokens for each request. A cold run of the cycle's three stages is inside
