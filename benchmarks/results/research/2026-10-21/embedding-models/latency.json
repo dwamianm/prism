@@ -1,0 +1,158 @@
+{
+ "bge-small": {
+  "model": "bge-small",
+  "name": "BAAI/bge-small-en-v1.5",
+  "dimension": 384,
+  "texts": 400,
+  "ms": {
+   "p50": 2.83,
+   "p95": 4.65,
+   "mean": 3.05,
+   "max": 5.6
+  },
+  "turns": {
+   "texts": 100,
+   "p50": 3.1,
+   "p95": 7.05,
+   "mean_chars": 133
+  },
+  "mean_chars_sentences": 90,
+  "load_seconds": 0.1,
+  "rss_mb_before": 147,
+  "rss_mb_loaded": 457,
+  "rss_mb_added": 310,
+  "peak_rss_mb": 458,
+  "download_mb": 67.2,
+  "load_average": 1.9
+ },
+ "minilm": {
+  "model": "minilm",
+  "name": "sentence-transformers/all-MiniLM-L6-v2",
+  "dimension": 384,
+  "texts": 400,
+  "ms": {
+   "p50": 1.25,
+   "p95": 2.09,
+   "mean": 1.33,
+   "max": 2.6
+  },
+  "turns": {
+   "texts": 100,
+   "p50": 1.46,
+   "p95": 3.34,
+   "mean_chars": 133
+  },
+  "mean_chars_sentences": 90,
+  "load_seconds": 5.3,
+  "rss_mb_before": 147,
+  "rss_mb_loaded": 412,
+  "rss_mb_added": 265,
+  "peak_rss_mb": 413,
+  "download_mb": 91.1,
+  "load_average": 2.2
+ },
+ "bge-base": {
+  "model": "bge-base",
+  "name": "BAAI/bge-base-en-v1.5",
+  "dimension": 768,
+  "texts": 400,
+  "ms": {
+   "p50": 6.44,
+   "p95": 11.12,
+   "mean": 6.85,
+   "max": 12.2
+  },
+  "turns": {
+   "texts": 100,
+   "p50": 6.96,
+   "p95": 17.05,
+   "mean_chars": 133
+  },
+  "mean_chars_sentences": 90,
+  "load_seconds": 7.1,
+  "rss_mb_before": 147,
+  "rss_mb_loaded": 1087,
+  "rss_mb_added": 940,
+  "peak_rss_mb": 1091,
+  "download_mb": 218.5,
+  "load_average": 1.9
+ },
+ "bge-large": {
+  "model": "bge-large",
+  "name": "BAAI/bge-large-en-v1.5",
+  "dimension": 1024,
+  "texts": 400,
+  "ms": {
+   "p50": 17.91,
+   "p95": 32.56,
+   "mean": 19.45,
+   "max": 53.9
+  },
+  "turns": {
+   "texts": 100,
+   "p50": 19.38,
+   "p95": 50.75,
+   "mean_chars": 133
+  },
+  "mean_chars_sentences": 90,
+  "load_seconds": 30.8,
+  "rss_mb_before": 147,
+  "rss_mb_loaded": 2838,
+  "rss_mb_added": 2691,
+  "peak_rss_mb": 2834,
+  "download_mb": 1337.6,
+  "load_average": 2.4
+ },
+ "mxbai": {
+  "model": "mxbai",
+  "name": "mixedbread-ai/mxbai-embed-large-v1",
+  "dimension": 1024,
+  "texts": 400,
+  "ms": {
+   "p50": 17.65,
+   "p95": 31.83,
+   "mean": 19.05,
+   "max": 34.4
+  },
+  "turns": {
+   "texts": 100,
+   "p50": 19.42,
+   "p95": 49.38,
+   "mean_chars": 133
+  },
+  "mean_chars_sentences": 90,
+  "load_seconds": 32.6,
+  "rss_mb_before": 147,
+  "rss_mb_loaded": 2825,
+  "rss_mb_added": 2678,
+  "peak_rss_mb": 2825,
+  "download_mb": 1337.6,
+  "load_average": 2.2
+ },
+ "nomic": {
+  "model": "nomic",
+  "name": "nomic-ai/nomic-embed-text-v1.5",
+  "dimension": 768,
+  "texts": 400,
+  "ms": {
+   "p50": 8.2,
+   "p95": 14.93,
+   "mean": 8.96,
+   "max": 19.9
+  },
+  "turns": {
+   "texts": 100,
+   "p50": 10.41,
+   "p95": 21.88,
+   "mean_chars": 133
+  },
+  "mean_chars_sentences": 90,
+  "load_seconds": 19.5,
+  "rss_mb_before": 147,
+  "rss_mb_loaded": 1346,
+  "rss_mb_added": 1199,
+  "peak_rss_mb": 1356,
+  "download_mb": 548.0,
+  "load_average": 2.8
+ }
+}

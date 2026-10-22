@@ -19,7 +19,7 @@ import subprocess
 import sys
 import time
 
-from benchmarks.diagnostics.product_packing import _quiet_offline_cli, parse_overrides
+from benchmarks.diagnostics.product_packing import _quiet_offline_cli, benchmark_embedding, parse_overrides
 from benchmarks.fast_cycle import compare, contextual, ingest, reingest, store, store_extract
 
 REPO = Path(__file__).resolve().parents[2]
@@ -45,8 +45,11 @@ def provenance(overrides: dict) -> dict:
     def git(*args: str) -> str:
         return subprocess.run(["git", *args], cwd=REPO, capture_output=True, text=True, check=False).stdout.strip()
 
-    return {"commit": git("rev-parse", "HEAD"), "src_tree": git("rev-parse", "HEAD:src"),
-            "src_modified": bool(git("status", "--porcelain", "--", "src")), "settings": overrides}
+    found = {"commit": git("rev-parse", "HEAD"), "src_tree": git("rev-parse", "HEAD:src"),
+             "src_modified": bool(git("status", "--porcelain", "--", "src")), "settings": overrides}
+    # Only a run under another embedding model (dwamianm/prism#366) names it, so other reports keep their bytes.
+    embedding = benchmark_embedding()
+    return {**found, "embedding": embedding} if embedding else found
 
 
 async def run_stages(out: Path, *, stages: tuple[str, ...], overrides: dict, model: str, use_cache: bool,

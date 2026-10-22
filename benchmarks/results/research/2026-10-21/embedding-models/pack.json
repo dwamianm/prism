@@ -1,0 +1,1124 @@
+{
+ "bge-small": {
+  "recipe": "bge-small",
+  "store_seconds": 17.6,
+  "retrieve_seconds": 0.8,
+  "store": {
+   "questions": 17,
+   "top1": 6,
+   "top3": 14,
+   "mrr": 0.559,
+   "ranks": {
+    "rust": 3,
+    "japan-cities": 26,
+    "cutover": 3,
+    "japan-dates": 4,
+    "pair-programming": 2,
+    "observability": 3,
+    "on-call": 1,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 19,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 2,
+    "timescale": 1,
+    "gravel-race": 3,
+    "flights": 3,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 6,
+    "answers_in_top3": 14,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5024525471812421,
+    "stale_above_answer": 4,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    26,
+    51,
+    52
+   ],
+   "mrr": 0.026,
+   "top3": [
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
+    ],
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first."
+    ],
+    [
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "preference: Alex uses Neovim as the main editor. Alex switched from VS Code in August 2026."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.523,
+     "answer_rank_by_cosine": 14,
+     "japan_trip_memories": [
+      0.478,
+      0.672,
+      0.567
+     ],
+     "best_other": 0.748
+    },
+    {
+     "answer": 0.571,
+     "answer_rank_by_cosine": 12,
+     "japan_trip_memories": [
+      0.486,
+      0.713,
+      0.584
+     ],
+     "best_other": 0.713
+    },
+    {
+     "answer": 0.501,
+     "answer_rank_by_cosine": 40,
+     "japan_trip_memories": [
+      0.387,
+      0.666,
+      0.474
+     ],
+     "best_other": 0.693
+    }
+   ]
+  }
+ },
+ "bge-small+q": {
+  "recipe": "bge-small+q",
+  "store_seconds": 16.8,
+  "retrieve_seconds": 0.6,
+  "store": {
+   "questions": 17,
+   "top1": 7,
+   "top3": 14,
+   "mrr": 0.598,
+   "ranks": {
+    "rust": 2,
+    "japan-cities": 26,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 2,
+    "observability": 3,
+    "on-call": 1,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 19,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 1,
+    "timescale": 1,
+    "gravel-race": 3,
+    "flights": 4,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 7,
+    "answers_in_top3": 14,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5375204204844095,
+    "stale_above_answer": 3,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    26,
+    52,
+    52
+   ],
+   "mrr": 0.026,
+   "top3": [
+    [
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
+    ],
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first."
+    ],
+    [
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "preference: Alex uses Neovim as the main editor. Alex switched from VS Code in August 2026."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.491,
+     "answer_rank_by_cosine": 15,
+     "japan_trip_memories": [
+      0.449,
+      0.64,
+      0.532
+     ],
+     "best_other": 0.717
+    },
+    {
+     "answer": 0.551,
+     "answer_rank_by_cosine": 14,
+     "japan_trip_memories": [
+      0.468,
+      0.694,
+      0.562
+     ],
+     "best_other": 0.694
+    },
+    {
+     "answer": 0.473,
+     "answer_rank_by_cosine": 44,
+     "japan_trip_memories": [
+      0.358,
+      0.635,
+      0.441
+     ],
+     "best_other": 0.686
+    }
+   ]
+  }
+ },
+ "minilm": {
+  "recipe": "minilm",
+  "store_seconds": 7.4,
+  "retrieve_seconds": 0.6,
+  "store": {
+   "questions": 17,
+   "top1": 6,
+   "top3": 14,
+   "mrr": 0.577,
+   "ranks": {
+    "rust": 2,
+    "japan-cities": 20,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 2,
+    "observability": 2,
+    "on-call": 1,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 19,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 1,
+    "timescale": 2,
+    "gravel-race": 3,
+    "flights": 5,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 6,
+    "answers_in_top3": 14,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5179147824577188,
+    "stale_above_answer": 3,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    20,
+    52,
+    54
+   ],
+   "mrr": 0.029,
+   "top3": [
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
+    ],
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first."
+    ],
+    [
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.39,
+     "answer_rank_by_cosine": 10,
+     "japan_trip_memories": [
+      0.352,
+      0.561,
+      0.459
+     ],
+     "best_other": 0.633
+    },
+    {
+     "answer": 0.415,
+     "answer_rank_by_cosine": 9,
+     "japan_trip_memories": [
+      0.4,
+      0.607,
+      0.503
+     ],
+     "best_other": 0.607
+    },
+    {
+     "answer": 0.202,
+     "answer_rank_by_cosine": 53,
+     "japan_trip_memories": [
+      0.196,
+      0.464,
+      0.224
+     ],
+     "best_other": 0.702
+    }
+   ]
+  }
+ },
+ "bge-base": {
+  "recipe": "bge-base",
+  "store_seconds": 9.2,
+  "retrieve_seconds": 0.7,
+  "store": {
+   "questions": 17,
+   "top1": 7,
+   "top3": 13,
+   "mrr": 0.604,
+   "ranks": {
+    "rust": 4,
+    "japan-cities": 19,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 2,
+    "observability": 1,
+    "on-call": 1,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 20,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 2,
+    "timescale": 1,
+    "gravel-race": 2,
+    "flights": 4,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 7,
+    "answers_in_top3": 13,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5425541586760424,
+    "stale_above_answer": 2,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    19,
+    50,
+    52
+   ],
+   "mrr": 0.031,
+   "top3": [
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish."
+    ],
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover."
+    ],
+    [
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.528,
+     "answer_rank_by_cosine": 9,
+     "japan_trip_memories": [
+      0.558,
+      0.656,
+      0.512
+     ],
+     "best_other": 0.735
+    },
+    {
+     "answer": 0.559,
+     "answer_rank_by_cosine": 6,
+     "japan_trip_memories": [
+      0.546,
+      0.704,
+      0.52
+     ],
+     "best_other": 0.704
+    },
+    {
+     "answer": 0.502,
+     "answer_rank_by_cosine": 29,
+     "japan_trip_memories": [
+      0.486,
+      0.623,
+      0.398
+     ],
+     "best_other": 0.636
+    }
+   ]
+  }
+ },
+ "bge-base+q": {
+  "recipe": "bge-base+q",
+  "store_seconds": 10.3,
+  "retrieve_seconds": 0.7,
+  "store": {
+   "questions": 17,
+   "top1": 7,
+   "top3": 13,
+   "mrr": 0.601,
+   "ranks": {
+    "rust": 5,
+    "japan-cities": 19,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 2,
+    "observability": 1,
+    "on-call": 2,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 20,
+    "japan-budget": 1,
+    "dashboard": 1,
+    "table-size": 2,
+    "timescale": 1,
+    "gravel-race": 2,
+    "flights": 4,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 7,
+    "answers_in_top3": 13,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5399217858888707,
+    "stale_above_answer": 3,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    19,
+    51,
+    51
+   ],
+   "mrr": 0.031,
+   "top3": [
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish."
+    ],
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover."
+    ],
+    [
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.46,
+     "answer_rank_by_cosine": 9,
+     "japan_trip_memories": [
+      0.501,
+      0.62,
+      0.456
+     ],
+     "best_other": 0.68
+    },
+    {
+     "answer": 0.502,
+     "answer_rank_by_cosine": 6,
+     "japan_trip_memories": [
+      0.487,
+      0.671,
+      0.475
+     ],
+     "best_other": 0.671
+    },
+    {
+     "answer": 0.432,
+     "answer_rank_by_cosine": 27,
+     "japan_trip_memories": [
+      0.418,
+      0.586,
+      0.344
+     ],
+     "best_other": 0.586
+    }
+   ]
+  }
+ },
+ "bge-large": {
+  "recipe": "bge-large",
+  "store_seconds": 15.2,
+  "retrieve_seconds": 0.9,
+  "store": {
+   "questions": 17,
+   "top1": 7,
+   "top3": 13,
+   "mrr": 0.604,
+   "ranks": {
+    "rust": 4,
+    "japan-cities": 19,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 1,
+    "observability": 1,
+    "on-call": 2,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 20,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 2,
+    "timescale": 1,
+    "gravel-race": 2,
+    "flights": 4,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 7,
+    "answers_in_top3": 13,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5425740046711205,
+    "stale_above_answer": 2,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    19,
+    50,
+    51
+   ],
+   "mrr": 0.031,
+   "top3": [
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish."
+    ],
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first."
+    ],
+    [
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.551,
+     "answer_rank_by_cosine": 7,
+     "japan_trip_memories": [
+      0.553,
+      0.629,
+      0.532
+     ],
+     "best_other": 0.761
+    },
+    {
+     "answer": 0.557,
+     "answer_rank_by_cosine": 8,
+     "japan_trip_memories": [
+      0.563,
+      0.675,
+      0.543
+     ],
+     "best_other": 0.692
+    },
+    {
+     "answer": 0.481,
+     "answer_rank_by_cosine": 29,
+     "japan_trip_memories": [
+      0.477,
+      0.591,
+      0.43
+     ],
+     "best_other": 0.716
+    }
+   ]
+  }
+ },
+ "bge-large+q": {
+  "recipe": "bge-large+q",
+  "store_seconds": 17.6,
+  "retrieve_seconds": 0.9,
+  "store": {
+   "questions": 17,
+   "top1": 7,
+   "top3": 13,
+   "mrr": 0.604,
+   "ranks": {
+    "rust": 4,
+    "japan-cities": 19,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 1,
+    "observability": 1,
+    "on-call": 2,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 20,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 2,
+    "timescale": 1,
+    "gravel-race": 2,
+    "flights": 4,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 7,
+    "answers_in_top3": 13,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5425335188411611,
+    "stale_above_answer": 2,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    19,
+    51,
+    52
+   ],
+   "mrr": 0.03,
+   "top3": [
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
+    ],
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first."
+    ],
+    [
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21.",
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.541,
+     "answer_rank_by_cosine": 9,
+     "japan_trip_memories": [
+      0.556,
+      0.619,
+      0.516
+     ],
+     "best_other": 0.748
+    },
+    {
+     "answer": 0.542,
+     "answer_rank_by_cosine": 10,
+     "japan_trip_memories": [
+      0.558,
+      0.66,
+      0.515
+     ],
+     "best_other": 0.677
+    },
+    {
+     "answer": 0.453,
+     "answer_rank_by_cosine": 36,
+     "japan_trip_memories": [
+      0.465,
+      0.575,
+      0.399
+     ],
+     "best_other": 0.689
+    }
+   ]
+  }
+ },
+ "mxbai": {
+  "recipe": "mxbai",
+  "store_seconds": 17.3,
+  "retrieve_seconds": 0.8,
+  "store": {
+   "questions": 17,
+   "top1": 6,
+   "top3": 14,
+   "mrr": 0.57,
+   "ranks": {
+    "rust": 3,
+    "japan-cities": 17,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 2,
+    "observability": 1,
+    "on-call": 2,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 20,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 2,
+    "timescale": 1,
+    "gravel-race": 3,
+    "flights": 4,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 6,
+    "answers_in_top3": 14,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5121775025799794,
+    "stale_above_answer": 3,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    17,
+    51,
+    51
+   ],
+   "mrr": 0.033,
+   "top3": [
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish."
+    ],
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover."
+    ],
+    [
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.548,
+     "answer_rank_by_cosine": 7,
+     "japan_trip_memories": [
+      0.535,
+      0.638,
+      0.533
+     ],
+     "best_other": 0.802
+    },
+    {
+     "answer": 0.562,
+     "answer_rank_by_cosine": 7,
+     "japan_trip_memories": [
+      0.557,
+      0.705,
+      0.562
+     ],
+     "best_other": 0.721
+    },
+    {
+     "answer": 0.458,
+     "answer_rank_by_cosine": 29,
+     "japan_trip_memories": [
+      0.434,
+      0.599,
+      0.416
+     ],
+     "best_other": 0.682
+    }
+   ]
+  }
+ },
+ "mxbai+q": {
+  "recipe": "mxbai+q",
+  "store_seconds": 17.6,
+  "retrieve_seconds": 0.9,
+  "store": {
+   "questions": 17,
+   "top1": 6,
+   "top3": 12,
+   "mrr": 0.567,
+   "ranks": {
+    "rust": 4,
+    "japan-cities": 18,
+    "cutover": 3,
+    "japan-dates": 4,
+    "pair-programming": 2,
+    "observability": 1,
+    "on-call": 2,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 20,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 2,
+    "timescale": 1,
+    "gravel-race": 2,
+    "flights": 5,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 6,
+    "answers_in_top3": 12,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5093739250085999,
+    "stale_above_answer": 4,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    18,
+    51,
+    51
+   ],
+   "mrr": 0.032,
+   "top3": [
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish."
+    ],
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first."
+    ],
+    [
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.56,
+     "answer_rank_by_cosine": 7,
+     "japan_trip_memories": [
+      0.557,
+      0.645,
+      0.547
+     ],
+     "best_other": 0.795
+    },
+    {
+     "answer": 0.575,
+     "answer_rank_by_cosine": 7,
+     "japan_trip_memories": [
+      0.574,
+      0.71,
+      0.566
+     ],
+     "best_other": 0.733
+    },
+    {
+     "answer": 0.459,
+     "answer_rank_by_cosine": 33,
+     "japan_trip_memories": [
+      0.45,
+      0.606,
+      0.425
+     ],
+     "best_other": 0.709
+    }
+   ]
+  }
+ },
+ "nomic": {
+  "recipe": "nomic",
+  "store_seconds": 16.3,
+  "retrieve_seconds": 0.7,
+  "store": {
+   "questions": 17,
+   "top1": 9,
+   "top3": 14,
+   "mrr": 0.668,
+   "ranks": {
+    "rust": 2,
+    "japan-cities": 18,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 2,
+    "observability": 1,
+    "on-call": 1,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 19,
+    "japan-budget": 1,
+    "dashboard": 1,
+    "table-size": 1,
+    "timescale": 1,
+    "gravel-race": 3,
+    "flights": 4,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 9,
+    "answers_in_top3": 14,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5998633063567071,
+    "stale_above_answer": 2,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    18,
+    51,
+    51
+   ],
+   "mrr": 0.032,
+   "top3": [
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish."
+    ],
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first."
+    ],
+    [
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.651,
+     "answer_rank_by_cosine": 8,
+     "japan_trip_memories": [
+      0.644,
+      0.724,
+      0.578
+     ],
+     "best_other": 0.832
+    },
+    {
+     "answer": 0.683,
+     "answer_rank_by_cosine": 6,
+     "japan_trip_memories": [
+      0.661,
+      0.758,
+      0.586
+     ],
+     "best_other": 0.79
+    },
+    {
+     "answer": 0.613,
+     "answer_rank_by_cosine": 31,
+     "japan_trip_memories": [
+      0.576,
+      0.691,
+      0.447
+     ],
+     "best_other": 0.776
+    }
+   ]
+  }
+ },
+ "nomic-bare": {
+  "recipe": "nomic-bare",
+  "store_seconds": 16.1,
+  "retrieve_seconds": 0.7,
+  "store": {
+   "questions": 17,
+   "top1": 7,
+   "top3": 14,
+   "mrr": 0.609,
+   "ranks": {
+    "rust": 2,
+    "japan-cities": 18,
+    "cutover": 3,
+    "japan-dates": 3,
+    "pair-programming": 2,
+    "observability": 1,
+    "on-call": 1,
+    "manager": 1,
+    "allergy": 1,
+    "dog": 19,
+    "japan-budget": 1,
+    "dashboard": 2,
+    "table-size": 1,
+    "timescale": 2,
+    "gravel-race": 3,
+    "flights": 4,
+    "sql-style": 1
+   },
+   "measures": {
+    "nodes_per_store_call": 1.0,
+    "edges_per_store_call": 0.0,
+    "context_tokens_mean": 1784.578947368421,
+    "key_entities_found": 0,
+    "questions_with_a_graph_candidate": 0,
+    "questions_with_a_word_candidate": 19,
+    "answers_in_top1": 7,
+    "answers_in_top3": 14,
+    "answers_in_context": 19,
+    "mean_reciprocal_rank": 0.5472118814142606,
+    "stale_above_answer": 2,
+    "stale_in_context": 5,
+    "repeated_records_in_contexts": 0
+   }
+  },
+  "cities": {
+   "ranks": [
+    18,
+    51,
+    52
+   ],
+   "mrr": 0.031,
+   "top3": [
+    [
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish."
+    ],
+    [
+     "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
+     "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first."
+    ],
+    [
+     "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+     "fact: Alex lives in Denver, Colorado. Alex moved there from Brooklyn in March 2026 because Northwind is remote first.",
+     "event: Alex will present the migration plan at the engineering all-hands on 2026-10-21."
+    ]
+   ],
+   "cosines": [
+    {
+     "answer": 0.607,
+     "answer_rank_by_cosine": 7,
+     "japan_trip_memories": [
+      0.576,
+      0.686,
+      0.569
+     ],
+     "best_other": 0.816
+    },
+    {
+     "answer": 0.611,
+     "answer_rank_by_cosine": 7,
+     "japan_trip_memories": [
+      0.568,
+      0.71,
+      0.566
+     ],
+     "best_other": 0.751
+    },
+    {
+     "answer": 0.502,
+     "answer_rank_by_cosine": 41,
+     "japan_trip_memories": [
+      0.465,
+      0.609,
+      0.42
+     ],
+     "best_other": 0.698
+    }
+   ]
+  }
+ }
+}

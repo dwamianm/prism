@@ -289,6 +289,26 @@ class EmbeddingConfig(_ProjectSettings):
         ),
     )
 
+    query_prefix: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Text put before every search question the fastembed model embeds, for a model "
+            "trained with a query instruction (BGE and mxbai: 'Represent this sentence for "
+            "searching relevant passages: '; nomic: 'search_query: '). None adds nothing. "
+            "Changing it changes every query vector, and the stored vectors' model version "
+            "names it, so a store needs a rebuild."
+        ),
+    )
+    document_prefix: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Text put before every stored text the fastembed model embeds (nomic: "
+            "'search_document: '). None adds nothing. Changing it changes every stored vector."
+        ),
+    )
+
     @field_validator("threads", mode="before")
     @classmethod
     def validate_threads(cls, value):

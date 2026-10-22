@@ -1,0 +1,152 @@
+{
+ "bge-small": {
+  "recipe": "bge-small",
+  "store_calls": 75,
+  "retrieve_calls": 19,
+  "store_ms": {
+   "p50": 28.2,
+   "p95": 34.9,
+   "mean": 29.4
+  },
+  "store_embedding_ms": {
+   "p50": 3.1,
+   "p95": 4.7,
+   "mean": 3.2
+  },
+  "retrieve_ms": {
+   "p50": 19.0,
+   "p95": 72.2,
+   "mean": 27.9
+  },
+  "retrieve_embedding_ms": {
+   "p50": 2.5,
+   "p95": 2.8,
+   "mean": 2.5
+  }
+ },
+ "minilm": {
+  "recipe": "minilm",
+  "store_calls": 75,
+  "retrieve_calls": 19,
+  "store_ms": {
+   "p50": 26.0,
+   "p95": 29.2,
+   "mean": 26.5
+  },
+  "store_embedding_ms": {
+   "p50": 1.6,
+   "p95": 2.3,
+   "mean": 1.6
+  },
+  "retrieve_ms": {
+   "p50": 17.4,
+   "p95": 27.3,
+   "mean": 19.6
+  },
+  "retrieve_embedding_ms": {
+   "p50": 1.4,
+   "p95": 2.0,
+   "mean": 1.4
+  }
+ },
+ "bge-base": {
+  "recipe": "bge-base",
+  "store_calls": 75,
+  "retrieve_calls": 19,
+  "store_ms": {
+   "p50": 35.4,
+   "p95": 39.2,
+   "mean": 35.2
+  },
+  "store_embedding_ms": {
+   "p50": 6.9,
+   "p95": 10.7,
+   "mean": 7.1
+  },
+  "retrieve_ms": {
+   "p50": 21.8,
+   "p95": 43.2,
+   "mean": 25.0
+  },
+  "retrieve_embedding_ms": {
+   "p50": 5.8,
+   "p95": 7.6,
+   "mean": 6.6
+  }
+ },
+ "bge-large": {
+  "recipe": "bge-large",
+  "store_calls": 75,
+  "retrieve_calls": 19,
+  "store_ms": {
+   "p50": 47.6,
+   "p95": 59.8,
+   "mean": 48.9
+  },
+  "store_embedding_ms": {
+   "p50": 17.9,
+   "p95": 25.6,
+   "mean": 18.9
+  },
+  "retrieve_ms": {
+   "p50": 32.1,
+   "p95": 44.9,
+   "mean": 35.7
+  },
+  "retrieve_embedding_ms": {
+   "p50": 15.4,
+   "p95": 19.6,
+   "mean": 15.8
+  }
+ },
+ "mxbai": {
+  "recipe": "mxbai",
+  "store_calls": 75,
+  "retrieve_calls": 19,
+  "store_ms": {
+   "p50": 47.9,
+   "p95": 55.8,
+   "mean": 48.8
+  },
+  "store_embedding_ms": {
+   "p50": 17.9,
+   "p95": 24.6,
+   "mean": 18.8
+  },
+  "retrieve_ms": {
+   "p50": 33.2,
+   "p95": 60.5,
+   "mean": 38.4
+  },
+  "retrieve_embedding_ms": {
+   "p50": 15.6,
+   "p95": 17.4,
+   "mean": 15.8
+  }
+ },
+ "nomic": {
+  "recipe": "nomic",
+  "store_calls": 75,
+  "retrieve_calls": 19,
+  "store_ms": {
+   "p50": 37.0,
+   "p95": 46.2,
+   "mean": 38.2
+  },
+  "store_embedding_ms": {
+   "p50": 8.6,
+   "p95": 14.7,
+   "mean": 9.6
+  },
+  "retrieve_ms": {
+   "p50": 23.2,
+   "p95": 44.0,
+   "mean": 26.4
+  },
+  "retrieve_embedding_ms": {
+   "p50": 7.2,
+   "p95": 8.7,
+   "mean": 7.7
+  }
+ }
+}

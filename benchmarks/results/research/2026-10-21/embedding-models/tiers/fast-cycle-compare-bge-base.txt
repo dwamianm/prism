@@ -1,0 +1,30 @@
+Baseline main against emb366-bge-base
+FAIL: 2 measure(s) failed, 23 moved, 110 unchanged. Tolerance: exact (no model call in the ingest or store-extract stages, or none run).
+Partial: store-extract is in only one of the reports and was not compared.
+
+Results:
+- FAIL: Answers ranked in the top 3 [defects-v1]: 7 to 6 (-1)
+- FAIL: Answers ranked in the top 3 [store]: 14 to 13 (-1)
+- worse (watched): Rank of the answer: running-partner [chat-v1]: 2 to 3 (+1)
+- worse (watched): Rank of the answer: title-now [chat-v1]: 10 to 13 (+3)
+- worse (watched): Rank of the answer: cities [defects-v1]: 2 to 4 (+2)
+- worse (watched): Rank of the answer: dog [store]: 19 to 20 (+1)
+- worse (watched): Rank of the answer: flights [store]: 3 to 4 (+1)
+- worse (watched): Rank of the answer: rust [store]: 3 to 4 (+1)
+- better: Rank of the answer: mel-news [chat-v1]: 3 to 1 (-2)
+- better: Rank of the answer: old-manager [chat-v1]: 3 to 2 (-1)
+- better: Rank of the answer: race-time [chat-v1]: 2 to 1 (-1)
+- better: Rank of the answer: sister-city [chat-v1]: 3 to 1 (-2)
+- better: Rank of the answer: jo-birthday [corrections-v1]: 2 to 1 (-1)
+- better: Rank of the answer: move-city [corrections-v1]: 3 to 2 (-1)
+- better: Corrections whose context shows the old value first [corrections-v1]: 1 to 0 (-1)
+- better: Rank of the answer: learning [defects-v1]: 3 to 2 (-1)
+- better: Rank of the answer: gravel-race [store]: 3 to 2 (-1)
+- better: Rank of the answer: japan-cities [store]: 26 to 19 (-7)
+- better: Rank of the answer: japan-dates [store]: 4 to 3 (-1)
+- better: Rank of the answer: observability [store]: 3 to 1 (-2)
+- better: Answers ranked first [store]: 6 to 7 (+1)
+- better: Mean reciprocal rank of the answer [store]: 0.559 to 0.604 (+0.0448)
+- better: Questions with a stale value ranked above the answer [store]: 4 to 2 (-2)
+
+Not compared: 35 measure(s) of store-extract only in the baseline.

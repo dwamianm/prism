@@ -60,7 +60,7 @@ from pydantic_settings import BaseSettings
 from benchmarks.compare_evidence import paired_statistics
 from benchmarks.evidence import reciprocal_rank_fusion
 from prme import MemoryEngine, NodeType, PRMEConfig
-from prme.config import OrganizerConfig, with_product_retrieval_defaults
+from prme.config import EmbeddingConfig, OrganizerConfig, with_product_retrieval_defaults
 from prme.retrieval.config import RANK_FUSION_ONLY_SETTINGS, WEIGHTED_ONLY_SETTINGS, PackingConfig
 from prme.retrieval.models import RetrievalCandidate
 from prme.retrieval.packing import pack_context, reader_text
@@ -653,9 +653,33 @@ def _check_override_keys(model: type[BaseModel], values: dict, prefix: str = "")
             _check_override_keys(nested, value, f"{prefix}{key}.")
 
 
+# The embedding experiment (dwamianm/prism#366) runs the tiers under another local embedding model. ``--set`` cannot
+# change the embedding, so the model rides in this variable instead: a JSON object of these ``EmbeddingConfig`` fields.
+# Unset, the gate is exactly what it was.
+EMBEDDING_ENV = "PRME_BENCH_EMBEDDING"
+EMBEDDING_FIELDS = frozenset({"model_name", "dimension", "query_prefix", "document_prefix", "threads"})
+
+
+def benchmark_embedding() -> dict:
+    """The embedding settings ``PRME_BENCH_EMBEDDING`` names, or an empty dict."""
+    raw = os.environ.get(EMBEDDING_ENV, "").strip()
+    if not raw:
+        return {}
+    values = json.loads(raw)
+    if not isinstance(values, dict) or set(values) - EMBEDDING_FIELDS:
+        raise ValueError(f"{EMBEDDING_ENV} takes a JSON object of {sorted(EMBEDDING_FIELDS)}")
+    return values
+
+
+# Called with each verified scratch copy and its configuration before the copy is opened, when set. The embedding
+# experiment sets it to re-embed a saved pack's vectors under another model (``benchmarks.embedding_models.reembed``).
+PREPARE_PACK = None
+
+
 def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
     """Current defaults over a pack copy, isolated from environment variables and .env files."""
     overrides = overrides or {}
+    embedding = benchmark_embedding()
     fixed = sorted(GATE_FIXED_SETTINGS.intersection(overrides))
     if fixed:
         raise ValueError(f"The evidence gate cannot override {', '.join(fixed)}")
@@ -668,6 +692,8 @@ def gate_config(pack: Path, overrides: dict | None = None) -> PRMEConfig:
         settings = {name: field.annotation(_env_file=None) for name, field in PRMEConfig.model_fields.items()
                     if isinstance(field.annotation, type) and issubclass(field.annotation, BaseSettings)}
         settings["organizer"] = OrganizerConfig(_env_file=None, opportunistic_enabled=False)
+        if embedding:
+            settings["embedding"] = EmbeddingConfig(_env_file=None, **embedding)
         config = PRMEConfig(_env_file=None, **values, **settings, db_path=str(pack / "memory.duckdb"),
                             vector_path=str(pack / "vectors.usearch"), lexical_path=str(pack / "lexical_index"))
     if config.enable_query_reformulation or config.temporal_relation.enabled:
@@ -1237,6 +1263,8 @@ async def replay_gate(cases: list[GateCase], *, scratch: Path, overrides: dict |
             _clone_pack(pack, copy)
             _verify_copy(copy, group[0].pack_sha256)
             config = gate_config(copy, overrides)
+            if PREPARE_PACK is not None:
+                await PREPARE_PACK(copy, config)
             async with MemoryEngine.open(config) as engine:
                 await _warm_up(engine, group[0].user_id)
                 turns_cache: dict = {}

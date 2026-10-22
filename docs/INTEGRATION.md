@@ -1289,6 +1289,8 @@ EmbeddingConfig(
     dimension=384,                       # PRME_EMBEDDING_DIMENSION; optional for registered models
     api_key=None,                        # PRME_EMBEDDING_API_KEY
     threads=None,                        # PRME_EMBEDDING_THREADS; fastembed only, None keeps ONNX Runtime's default
+    query_prefix=None,                   # PRME_EMBEDDING_QUERY_PREFIX; fastembed only, text before a question
+    document_prefix=None,                # PRME_EMBEDDING_DOCUMENT_PREFIX; fastembed only, text before a stored text
 )
 ```
 
