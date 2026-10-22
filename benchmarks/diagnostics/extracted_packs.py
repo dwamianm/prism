@@ -412,6 +412,8 @@ class ExtractionCache:
         provider.extract = cached
         if callable(getattr(provider, "extract_batch", None)):
             self._wrap_batches(provider)
+        if callable(getattr(provider, "repair_pronouns", None)):
+            self._wrap_repairs(provider)
 
     @staticmethod
     def _batch_key(provider, turns, memories=()) -> str:
@@ -422,6 +424,37 @@ class ExtractionCache:
         parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
                  "batch", batch_request_messages(turns, memories)]
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
+
+    @staticmethod
+    def _repair_key(provider, window, claims, speaker=None) -> str:
+        from prme.ingestion.pronoun_repair import repair_messages
+
+        parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
+                 "repair", repair_messages(list(window), list(claims), speaker)]
+        return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
+
+    def _wrap_repairs(self, provider) -> None:
+        """Replay a pronoun repair request (enable_pronoun_repair) by its model, window, claims and speaker.
+
+        The entry is the parsed response, before any check, which ingestion checks as it checks a live one, so
+        a rerun asks the model nothing. Only the repair is new in a run that turns the option on: the first
+        extractions of the same sources replay from the entries an off run made.
+        """
+        repair = provider.repair_pronouns
+
+        async def cached(window, claims, *, speaker=None):
+            key = self._repair_key(provider, window, claims, speaker)
+            path = self.folder / key[:2] / f"{key}.repair.json"
+            if path.exists():
+                self.hits += 1
+                return json.loads(path.read_bytes())
+            self.misses += 1
+            async with self._live():
+                raw = await repair(window, claims, speaker=speaker)
+            self._write(path, json.dumps(raw))
+            return raw
+
+        provider.repair_pronouns = cached
 
     def _wrap_batches(self, provider) -> None:
         from prme.ingestion.errors import ExtractionError

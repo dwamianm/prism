@@ -723,6 +723,7 @@ class MemoryEngine:
                 claim_fixes=config.enable_ingest_claim_fixes,
                 owner_name_carry=config.enable_owner_name_carry,
                 link_owner_groups=config.enable_owner_group_links,
+                pronoun_repair_turns=config.extraction_window_turns if config.enable_pronoun_repair else None,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -881,6 +882,7 @@ class MemoryEngine:
                 claim_fixes=config.enable_ingest_claim_fixes,
                 owner_name_carry=config.enable_owner_name_carry,
                 link_owner_groups=config.enable_owner_group_links,
+                pronoun_repair_turns=config.extraction_window_turns if config.enable_pronoun_repair else None,
             )
 
             startup.push_async_callback(pipeline.shutdown)

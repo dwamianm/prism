@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `enable_pronoun_repair` (`PRME_ENABLE_PRONOUN_REPAIR`, off by default; part of dwamianm/prism#345 and
+  #347): a source whose first extraction left a claim on a pronoun subject or object (they, he, she, it and the
+  like; we only when the turn names no speaker) is asked a second time, shown the owner's preceding memories (up to
+  `extraction_window_turns`) and only that claim's own sentences. The claim is repaired only when the answer names
+  someone written in the sentence, the message, the speaker or a memory shown: its text becomes its own sentence
+  with the names written in, the quote stays its evidence, `metadata.resolved_from_context` lists the memories that
+  wrote the names, and no other claim of the message changes. It needs nothing else on, works in `ingest()`,
+  `store(extract=True)` and `reingest()`, and counts in the re-derivation settings. No default changes, and with the
+  option off every extraction is unchanged. The measurements are in `BENCHMARKS.md`.
 - Options for the task prefixes some local embedding models are trained with (dwamianm/prism#366):
   `embedding.query_prefix` (`PRME_EMBEDDING__QUERY_PREFIX`) is put before every search question the `fastembed`
   model embeds, and `embedding.document_prefix` (`PRME_EMBEDDING__DOCUMENT_PREFIX`) before every stored text. Both

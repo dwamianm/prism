@@ -59,6 +59,7 @@ EXPECTED_HYPOTHESES = {
     "enable_windowed_extraction",
     "extraction_window_turns",
     "enable_owner_window_extraction",
+    "enable_pronoun_repair",
     "enable_fact_text_resolution",
     "enable_speaker_references",
     "enable_claim_sentence_text",
