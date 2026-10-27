@@ -4542,7 +4542,8 @@ class MemoryEngine:
                 lambda: self._graph_store.publish_profile(plan),
                 label=f"consolidate.publish:{plan.node.id}",
             )
-        if self._pool is not None:
+        # As for summaries: no unguarded additional-model write for a protected profile.
+        if self._pool is not None and plan.privacy_manifest is None:
             from prme.storage.multi_model import write_additional_models
 
             await write_additional_models(self._vector_index, [plan.embedding], user_id=plan.node.user_id)
