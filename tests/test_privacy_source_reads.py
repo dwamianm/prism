@@ -204,6 +204,7 @@ async def test_AC07_explicitly_allowed_sensitive_memory_remains_usable(tmp_path,
 
 async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, layout, analyzer, native, monkeypatch):
     from prme import MemoryEngine
+    from prme.privacy import PrivacyDenied
     import pytest
     engine, runtime, policy, *_ = await opened(tmp_path, layout, analyzer)
     owner = str(policy.owner_id)
@@ -216,9 +217,10 @@ async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, l
         raise RuntimeError("synthetic stage interruption")
     monkeypatch.setattr(engine._graph_store, "commit_derivation", interrupted)
     try:
-        with pytest.raises(RuntimeError, match="synthetic stage interruption"):
+        # PV-05 publication reports a fixed code, never the interrupted error text.
+        with pytest.raises(PrivacyDenied, match="privacy_processing_unavailable"):
             await store_pair(engine, owner)
-        assert plans and all(item.content == MEMORY for item in plans[0].embeddings)
+        assert len(plans) == 1 and all(item.content == MEMORY for item in plans[0].embeddings)
         repository = engine._privacy.repository
         tables = ["events", "privacy_admissions", "operations", "nodes", "edges", "event_materializations", "event_extractions"]
         tables += ["lexical_documents"] if layout == "postgres" else ["vector_metadata", "vector_payloads", "vector_staging"]
@@ -233,8 +235,9 @@ async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, l
         assert response.results and MEMORY in response.bundle.render()
         # Leave one second real accepted plan abandoned before publication.
         monkeypatch.setattr(engine._graph_store, "commit_derivation", interrupted)
-        with pytest.raises(RuntimeError, match="synthetic stage interruption"):
+        with pytest.raises(PrivacyDenied, match="privacy_processing_unavailable"):
             await store_pair(engine, owner)
+        assert len(plans) == 2
         monkeypatch.setattr(engine._graph_store, "commit_derivation", original)
         if layout != "postgres":
             save = engine._vector_index._save_snapshot
