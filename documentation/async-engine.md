@@ -137,6 +137,32 @@ scope classifications do not grant write access elsewhere; fact classifications
 are retained as `metadata.suggested_scope`. Entity matching also stays within
 the same user and scope.
 
+## Switching embedding models
+
+A store is tied to the model whose vectors it holds. With `enable_multi_model_embeddings` (off by default,
+`PRME_ENABLE_MULTI_MODEL_EMBEDDINGS=true`) it keeps vectors by node, model name and model version, one index per model,
+and `reembed()` builds another model's vectors for the memories already stored. The model runs locally, only vectors
+are written, and the store can be used while the job runs. An engine without the option raises
+`ReembedDisabledError`.
+
+```python
+config = PRMEConfig(enable_multi_model_embeddings=True,
+                    embedding={"additional_models": ["BAAI/bge-base-en-v1.5"]})  # written on every store too
+async with MemoryEngine.open(config) as engine:
+    result = await engine.reembed("BAAI/bge-base-en-v1.5", batch_size=64, pause_ms=50)
+    while result.cursor:                                   # a call with a limit stops early
+        result = await engine.reembed("BAAI/bge-base-en-v1.5", limit=1000, cursor=result.cursor)
+    print(result.total, result.done, result.remaining, result.failed)
+    print(await engine.embedding_status())                 # every model, its vectors and whether it is complete
+```
+
+When `remaining` is 0, set `embedding.model_name` to the new model and reopen: searches read its index, and the old
+model's vectors stay until `await engine.drop_embeddings("BAAI/bge-small-en-v1.5")`. A store whose vectors were all made
+by another model than the configured one refuses writes with an error that names both models, and its retrieval
+metadata carries `embedding_incomplete` with the counts. The design, the PostgreSQL and DuckDB storage, the adoption of
+an existing store, and what a hosted service must do are in [switching embedding
+models](../docs/EMBEDDING-MODELS.md). `prme reembed`, `POST /v1/reembed` and `memory_reembed` are the same job.
+
 ## Re-deriving stored memories
 
 A memory keeps the entities, claims and links the engine derived from it when
@@ -171,8 +197,10 @@ sources are touched.
   readable with `get_node(..., include_superseded=True)`. Entities are kept and
   reused, because every memory that names an entity shares it.
 - **Idempotent and resumable.** Each source is saved with a marker that names the
-  settings it was derived under: the engine version, the extraction model and
-  prompt, and the options that decide what is derived. A second run skips the
+  settings it was derived under: the derivation version (`DERIVATION_VERSION`, a
+  number bumped when what is derived changes; a new package version alone leaves
+  sources current), the extraction model and prompt, and the options that decide
+  what is derived. A second run skips the
   sources that have it and creates nothing. The model's output is saved before
   anything is published, so a run that stops after a request does not ask the
   model again, and the next call continues with the sources that are not current.

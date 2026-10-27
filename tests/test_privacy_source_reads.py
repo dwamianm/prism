@@ -323,10 +323,14 @@ async def test_AC01_AC03_ordinary_final_deadlines(tmp_path, layout, analyzer, na
             if name != "get_provenance":
                 assert len(live) == 2, name
             assert_no_source(live if isinstance(live, list) else live.model_dump_json())
-            # Record the actual public route's last B guard, avoiding a fixed
-            # implementation call count. B is still live at A's boundary.
+            # Broad reads include A and B: expire A during B's final guard.
+            # Exact provenance has only A as a contributor and must not consult
+            # unrelated B; expire A during its own final awaited authorization.
+            guarded_deadline = early if name == "get_provenance" else later
+            if name == "get_provenance":
+                assert all(deadline == early for deadline, _ in trace)
             position = max(i for i, (deadline, effect) in enumerate(trace, 1)
-                           if deadline == later and effect == "disclosure")
+                           if deadline == guarded_deadline and effect == "disclosure")
             for phase in ("entry", "exit"):
                 for moment in (early - timedelta(microseconds=1), early):
                     runtime.clock.now = initial
@@ -377,6 +381,16 @@ async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout,
         orphan = MemoryNode(user_id=owner, node_type=NodeType.NOTE, content=SOURCE,
                             metadata={PRIVACY_KEY: None})
         await engine._graph_store.create_node(orphan)
+        # Exact-object legacy classification must still reject the same
+        # marked identities when their admission row is missing or malformed.
+        import pytest
+        for call in (
+            lambda: engine.get_event(identifier, user_id=owner),
+            lambda: engine.get_event_nodes(identifier, user_id=owner),
+            lambda: engine.get_node(str(orphan.id), user_id=owner),
+        ):
+            with pytest.raises(PrivacyDenied):
+                await call()
         legacy_owner = str(uuid4())
         legacy_event = await engine.store(MEMORY, user_id=legacy_owner)
         legacy_id = str((await engine.get_event_nodes(legacy_event, user_id=legacy_owner))[0].id)

@@ -434,6 +434,31 @@ async def test_the_window_and_resolution_reach_the_provider_and_the_cache_key(tm
     assert (cache.misses, cache.hits) == (3, 1)
 
 
+async def test_a_pronoun_repair_request_is_replayed_by_its_window_claims_and_speaker(tmp_path):
+    from prme.ingestion.pronoun_repair import PronounClaim
+
+    class Repairing(_Provider):
+        def __init__(self):
+            super().__init__()
+            self.repairs = []
+
+        async def repair_pronouns(self, window, claims, *, speaker=None):
+            self.repairs.append((list(window), list(claims), speaker))
+            return {"claims": [{"claim": 1, "subject": [{"name": "Alex"}], "object": []}]}
+
+    provider = Repairing()
+    cache = ExtractionCache(tmp_path)
+    cache.wrap(provider)
+    claim = PronounClaim(1, "He", "plans", "Japan", ("subject",), "He plans Japan.", 0)
+    first = await provider.repair_pronouns(["Alex is Sam's friend."], [claim])
+    assert await provider.repair_pronouns(["Alex is Sam's friend."], [claim]) == first
+    # Another window, or a speaker, is another request.
+    await provider.repair_pronouns(["Alex works."], [claim])
+    await provider.repair_pronouns(["Alex is Sam's friend."], [claim], speaker="Sam")
+    assert len(provider.repairs) == 3 and (cache.misses, cache.hits) == (3, 1)
+    assert len(list(tmp_path.rglob("*.repair.json"))) == 3
+
+
 class ScriptedBatches:
     """A batched model (#254): one entry per turn, with each known sentence's claim."""
 

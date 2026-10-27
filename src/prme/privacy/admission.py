@@ -98,7 +98,7 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
             raise PrivacyDenied("privacy_boundary_mismatch")
         await coordinator.check_disclosure(records)
         if not records and not coordinator.selected():
-            await coordinator.repository.require_legacy_range(owner, None)
+            await coordinator.require_legacy_call(owner, arguments)
         if function.__name__ in _UNAVAILABLE_EFFECTS and (records or coordinator.selected()):
             # The legacy retrieval pipeline includes unguarded optional providers
             # and receipt source augmentation. PV-04/PV-05 integrate those paths.
@@ -118,7 +118,8 @@ def privacy_disclosure(function: Callable[Concatenate[Any, P], Awaitable[T]]) ->
 
 
 _UNAVAILABLE_EFFECTS = frozenset({
-    "rebuild_indexes", "embed_texts", "propose_product_alignment", "find_product_alignment_candidates",
+    "rebuild_indexes", "embed_texts", "reembed", "embedding_status", "drop_embeddings",
+    "propose_product_alignment", "find_product_alignment_candidates",
     "evaluate_full_retrieval", "create_ranking_profile",
     "feedback",
 })
@@ -799,11 +800,8 @@ class AdmissionCoordinator:
         rows = await self.repository.for_owner(user_id)
         return tuple(row for row in rows if scopes is None or row.snapshot.policy.scope in scopes)
 
-    async def records_for_call(self, owner, arguments) -> tuple[PrivacyRecord, ...]:
-        # Unscoped operator calls to unrelated legacy objects remain supported.
-        # Resolve only identity metadata, never a source payload. This resolution is
-        # not authorization: a protected object still requires explicit owner.
-        supplemental_evidence = arguments.get("evidence_id")
+    @staticmethod
+    def _call_identifiers(arguments):
         identifiers = [("events" if name == "event_id" else "nodes", value)
                        for name, value in arguments.items() if value is not None and name in {
                            "node_id", "old_node_id", "new_node_id", "node_a_id", "node_b_id",
@@ -811,6 +809,26 @@ class AdmissionCoordinator:
         # Oscillation snapshots copy every member of the actual bounded chain,
         # so the target's policy alone cannot authorize its sibling copies.
         identifiers.extend(("nodes", value) for value in arguments.get("chain_node_ids", ()))
+        return identifiers
+
+    async def require_legacy_call(self, owner, arguments) -> None:
+        """Keep exact legacy objects independent of protected siblings."""
+        identifiers = self._call_identifiers(arguments)
+        if identifiers:
+            records = await self.repository.records_for_objects(
+                identifiers, owner=owner, supplemental_evidence=arguments.get("evidence_id"),
+            )
+            if records == ():
+                return
+        # Broad or unresolved calls still require the marker-aware range check.
+        await self.repository.require_legacy_range(owner, None)
+
+    async def records_for_call(self, owner, arguments) -> tuple[PrivacyRecord, ...]:
+        # Unscoped operator calls to unrelated legacy objects remain supported.
+        # Resolve only identity metadata, never a source payload. This resolution is
+        # not authorization: a protected object still requires explicit owner.
+        supplemental_evidence = arguments.get("evidence_id")
+        identifiers = self._call_identifiers(arguments)
         if identifiers:
             records = await self.repository.records_for_objects(identifiers, owner=owner,
                                                                  supplemental_evidence=supplemental_evidence)

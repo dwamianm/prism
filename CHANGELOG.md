@@ -7,8 +7,225 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a8] - 2026-10-22
+
+This is an alpha. It passed CI and the cheap fast tiers and the offline gate, replayed from the recorded
+caches with no live model call, and it has not been through the full benchmark or the mid tier. The stable
+release stays at 0.15.0 until the full benchmark audit, so `pip install prme` still installs 0.15.0. Install
+the alpha with `pip install --pre prme` or `pip install prme==0.16.0a8`.
+
 ### Added
 
+- Add `enable_pronoun_repair` (`PRME_ENABLE_PRONOUN_REPAIR`, off by default; part of dwamianm/prism#345 and
+  #347): a source whose first extraction left a claim on a pronoun subject or object (they, he, she, it and the
+  like; never a first person pronoun) is asked a second time, shown the owner's preceding memories (up to
+  `extraction_window_turns`) and only that claim's own sentences. The claim is repaired only when the answer names
+  someone written in the sentence, the message, the speaker or a memory shown: its text becomes its own sentence
+  with the names written in, the quote stays its evidence, `metadata.resolved_from_context` lists the memories that
+  wrote the names, and no other claim of the message changes. It needs nothing else on, works in `ingest()`,
+  `store(extract=True)` and `reingest()`, and counts in the re-derivation settings. With the option off every
+  extraction is unchanged. The measurements are in `BENCHMARKS.md`. It is on by default in the alpha channel (see
+  Changed).
+- A store can switch embedding models (dwamianm/prism#368, behind `enable_multi_model_embeddings`, off by default).
+  A stored vector means something only under the model that made it, and a store was tied to its model: DuckDB had a
+  rebuild but a write under another dimension failed, and PostgreSQL, with its fixed `vector(N)` column, had no way to
+  switch at all (`rebuild_indexes()` raised while the mismatch error told you to run `prme rebuild`). With the option on,
+  vectors are kept by node, model name and model version, one index per model: one USearch file per model on DuckDB
+  (the pack's `vectors.usearch` stays the first model's), and a `node_embeddings` table with one partial HNSW index per
+  model on PostgreSQL (the reasons are in `docs/EMBEDDING-MODELS.md`). `embedding.model_name` is the active model that
+  searches read, and the new `embedding.additional_models` (`PRME_EMBEDDING__ADDITIONAL_MODELS`) are also written on
+  every store, including what `ingest()`, `reingest()` and consolidation derive. `MemoryEngine.reembed()`
+  (`MemoryClient.reembed()`, `POST /v1/reembed`, the `memory_reembed` MCP tool and `prme reembed`, which also takes
+  `--postgres`) builds a model's vectors for the stored memories with the local model: in batches, with a cursor, a pause
+  between batches, `total`, `done`, `remaining` and `failed` as its progress, safe to stop and resume and to run while the
+  store is read and written, and it calls no model service. Setting `embedding.model_name` to a model whose index is
+  complete is the switch, and the old index stays until `drop_embeddings()` (`prme embeddings drop`);
+  `embedding_status()` and `prme embeddings status` list the models a store holds. A store whose vectors were all made by
+  another model than the configured one is not mixed: writes are refused before they store anything, with an error that
+  names the stored and the configured model and their dimensions, and retrieval metadata and receipts carry
+  `embedding_incomplete` with the counts of memories without a vector (beside the existing `embedding_mismatch`). An
+  existing store is adopted when the option is first turned on, with no re-embedding: a DuckDB pack gives its file to the
+  model most of its vectors came from, and a PostgreSQL store's `nodes.embedding` vectors are copied once into the new
+  table, in resumable batches under an advisory lock, with the column left as it was. With the option off, nothing is
+  constructed, vectors are stored as before and the configuration dump is unchanged. Single-file packs are not supported
+  with the option yet. `prme rebuild` stays DuckDB only, and its error on PostgreSQL now names `reembed`.
+  `benchmarks.embedding_models job` times the job. A protected store (one under a privacy policy) refuses
+  `reembed()`, `embedding_status()` and `drop_embeddings()`, as it refuses `rebuild_indexes()` and
+  `embed_texts()`. Not part of this change: choosing another default model.
+- Options for the task prefixes some local embedding models are trained with (dwamianm/prism#366):
+  `embedding.query_prefix` (`PRME_EMBEDDING__QUERY_PREFIX`) is put before every search question the `fastembed`
+  model embeds, and `embedding.document_prefix` (`PRME_EMBEDDING__DOCUMENT_PREFIX`) before every stored text. Both
+  are off by default, and with neither set the provider, its version and the configuration dump are unchanged. When
+  one is set, the stored vectors' model version names the recipe, so vectors made under one recipe are refused under
+  another and a store needs its vectors rebuilt. This is the experiment's only change to the engine: it changes no
+  default, and the experiment's report (`BENCHMARKS.md`, "Embedding models") recommends none.
+
+### Changed
+
+- `enable_pronoun_repair` is on by default in the alpha channel. It was turned on by the maintainer's decision on
+  2026-10-22. The alpha pass rule's defect probe condition (7 of 7 answers in the top 3) was not met, because the
+  extraction model used in production scores 6 of 7 with the option off, and the failing probe has no pronoun in it. No
+  mid tier or full benchmark was run on it, and one memory in the fixtures is repaired (the cities claim, from 23rd to
+  1st). `PRME_ENABLE_PRONOUN_REPAIR=false` (or `enable_pronoun_repair=False`) restores the extraction every earlier
+  release made, byte for byte. Two effects to know before upgrading: a source whose first extraction leaves a claim on
+  a third person pronoun now makes one more model request, and because the repair request and its window are part of
+  the re-derivation settings, `reingest()` reads every memory derived before the change as stale. The benchmark
+  harness names the setting itself, so the benchmark baselines and their caches replay unchanged and cache-only.
+
+### Tooling
+
+These do not ship in the wheel and change no behavior.
+
+- The embedding model experiment (dwamianm/prism#366, `BENCHMARKS.md`, "Embedding models") and its job timer,
+  `python -m benchmarks.embedding_models`. Its report recommends no new default model.
+
+### Upgrade notes
+
+- One default changed since 0.16.0a7: `enable_pronoun_repair` is on, in the alpha channel, by the maintainer's
+  decision of 2026-10-22, and without meeting the alpha rule's defect probe condition (see Changed).
+  `PRME_ENABLE_PRONOUN_REPAIR=false` restores the extraction of every earlier release, byte for byte. A source
+  whose first extraction leaves a claim on a third person pronoun costs one more model request, and
+  `reingest()` reads every memory derived before this release as stale, because the repair request and its
+  window are part of the re-derivation settings; one `reingest()` makes them current again.
+- New and off by default, with no effect until you set them: `enable_multi_model_embeddings` and
+  `embedding.additional_models` (with `reembed()`, `POST /v1/reembed`, the `memory_reembed` tool, `prme reembed`
+  and `prme embeddings status` and `drop`), and the two prefix options `embedding.query_prefix` and
+  `embedding.document_prefix`. With the first on, a PostgreSQL store gets a `node_embeddings` table and copies its
+  existing vectors into it once, in resumable batches, leaving `nodes.embedding` as it was. `prme rebuild` still
+  works on DuckDB only, and its error on PostgreSQL now names `reembed`. Single-file packs are not supported with
+  the option yet.
+- No other default changed since 0.16.0a7. The defaults of 0.16.0a7 are as they were, including the exact pin of
+  `cryptography` to 50.0.2 and the `privacy` extra that does not install the sanitizer's model (see the notes of
+  0.16.0a6).
+- Known weaknesses are as in 0.16.0a7. In addition, the pronoun repair default rests on one repaired fixture
+  memory (the cities claim of the fast cycle, from 23rd to 1st) and no mid tier or full benchmark run.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine closes, and
+  `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself` fails inside a git worktree.
+  Neither affects the installed package.
+
+## [0.16.0a7] - 2026-10-21
+
+This is an alpha. It passed CI and the cheap fast tiers, and it has not been
+through the full benchmark. The stable release stays at 0.15.0 until the full
+benchmark audit, so `pip install prme` still installs 0.15.0. Install the alpha
+with `pip install --pre prme` or `pip install prme==0.16.0a7`.
+
+### Added
+
+- Separate admitted memory from sealed source evidence in reads (dwamianm/prism#359,
+  part of issue #323). This is protected-store work, opt in with the privacy
+  policies of 0.16.0a6. Ordinary sealed-mode reads return admitted statements and
+  permitted metadata across retrieval, graph, history, snapshots, the exact-state
+  and aggregate APIs, HTTP and MCP, the CLI, the explorer and the supported
+  framework adapters, and source-only text needs explicit selected-source access.
+  Responses keep conditions, negation, effective time and provenance, and report
+  unavailable source coverage. Exact event, node, provenance and source-inspection
+  reads now authorize their actual contributing records, so a protected record in
+  another scope or project no longer makes an unrelated exact read fail or
+  deadlock; broad and ambiguous reads keep the complete-range checks, and orphan
+  markers, ownership, selected-source grants and final deadlines still fail
+  closed. The pull request lists what it does not do: shared whole-case
+  acceptance is pending (issues #324 and #325), sanitization stays bounded,
+  permitted facts can remain sensitive, and source access does not establish that
+  a fact is true or allow an exact historical replay. It changes 26 source files,
+  among them the retrieval pipeline, candidate generation, session and evidence
+  context, the reranker and the temporal modules, and the pull request does not
+  say what it does to a store with no policy. So this release was checked on
+  such a store: the defect probes, chat probe, corrections probe, fast cycle and
+  offline evidence gate are unchanged from 0.16.0a6.
+
+### Changed
+
+- `reingest()` no longer reads the package version into its settings fingerprint
+  (part of dwamianm/prism#350). Every release changed the fingerprint, so after
+  an upgrade every stored memory read as stale and a dry run offered to
+  re-derive all of them, with a model request each, though the release had not
+  touched extraction. The fingerprint now carries `DERIVATION_VERSION`, an
+  integer in `src/prme/ingestion/reingest.py` that a developer bumps by one only
+  when a change alters what an unchanged source derives (the grounding checks,
+  planning, linking, supersedence or claim text rules, or the extraction schema).
+  The prompts, the model, the window options and the other options that decide
+  what is derived are in it as before, and with the window options off the
+  settings keep the keys they had. A release that changes none of those leaves
+  every source current. `tests/test_derivation_version.py` derives a recorded
+  extraction (a fixture under `tests/fixtures/extraction/`) with a stub
+  provider and no model, and fails when the nodes and edges differ from the saved
+  dump (`tests/fixtures/derivation/trip_derived.json`), with a message that says
+  to bump the number and refresh the dump. Migration: a source marked under an
+  earlier fingerprint reads as stale once, by design, because the new settings
+  differ from the old ones; after one more `reingest()` it is current under the
+  new fingerprint and stays so across releases. `CONTRIBUTING.md` and `CLAUDE.md`
+  say when to bump.
+
+### Fixed
+
+- Candidate generation waits for both nested pinned and task queries before it
+  propagates a failure (dwamianm/prism#359). Before, a caller could begin
+  database teardown while a sibling query was still running.
+
+### Tooling
+
+These do not ship in the wheel and change no behavior.
+
+- Routing gate for the typed walk (`python -m benchmarks.graph_oracle routed`, tooling only; part of
+  dwamianm/prism#351): a rule based question shape router, a one statement SQL walk for PostgreSQL
+  and DuckDB with per entity caps, a new memory set with its gold graph, a new blind draw of 65
+  questions and a gate fixed before the run (`benchmarks/graph_oracle/GATE.md`). The gate failed on
+  two of six conditions; the result is in `BENCHMARKS.md`.
+
+- Scale test for the typed walk (`python -m benchmarks.graph_oracle scale`, tooling only; part of
+  dwamianm/prism#351): the four fixtures combined for one owner and padded to 500, 2,000 and 10,000
+  memories with ordinary conversation turns or renamed look-alike copies, a gate fixed before the run
+  (`benchmarks/graph_oracle/SCALE.md`), an embedding cache and the walk's latency on DuckDB and PostgreSQL.
+  The graph's advantage did not grow with store size; the result is in `BENCHMARKS.md`.
+
+### Upgrade notes
+
+- One change since 0.16.0a6, and it is not a default: the settings fingerprint of
+  `reingest()` now carries `DERIVATION_VERSION` (1) instead of the package
+  version. A source that `reingest()` marked under 0.16.0a5 or 0.16.0a6 was marked
+  under the old fingerprint, so it reads as stale once, and a dry run offers to
+  re-derive it, with one model request per batch. After one more `reingest()` it
+  is current, and it stays current across later releases that leave what is
+  derived as it was. Stores that never ran `reingest()` are not affected, and
+  nothing is rewritten by the upgrade.
+- No default changed since 0.16.0a6, and no option was added. The sealed-store read
+  separation of #359 applies to stores that use a privacy policy. Every default of
+  0.16.0a6 is as it was, including the exact pin of `cryptography` to 50.0.2 (see
+  the notes of 0.16.0a6).
+- Known weaknesses are as in 0.16.0a6.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
+
+## [0.16.0a6] - 2026-10-20
+
+This is an alpha. It passed CI and the fast tiers, and it has not been through
+the full benchmark. The stable release stays at 0.15.0 until the full benchmark
+audit, so `pip install prme` still installs 0.15.0. Install the alpha with
+`pip install --pre prme` or `pip install prme==0.16.0a6`.
+
+### Added
+
+- Graph oracle (`python -m benchmarks.graph_oracle`, tooling only, no engine or
+  default change; part of dwamianm/prism#351): hand written gold graphs for the
+  `defects-v1`, `store-v1` and `chat-v1` corpora (`benchmarks/fixtures/graph-oracle/`),
+  a design for the ideal graph (`benchmarks/graph_oracle/DESIGN.md`) and a
+  deterministic probe that writes a gold graph into the graph store over
+  memories stored with `store()` and ranks every question by `retrieve()`, by
+  the gold query spec (the upper bound of the shape), by a generic typed walk
+  and by rank fusion of the walk with the text list, with ablations, a cost
+  table, a `compare` command and a `fidelity` command that scores an extracted
+  graph against a gold graph. It stores relation labels in edge metadata on the
+  existing edge types and adds no edge type. See `BENCHMARKS.md`.
+- Blind validation of the typed walk (`python -m benchmarks.graph_oracle blind`, `latency`;
+  tooling only; part of dwamianm/prism#351): 86 questions a local model wrote about the
+  three memory sets from the memories alone, three paraphrases of each, relation cue
+  words derived from the vocabulary definitions, a decision rule fixed before the run
+  (`benchmarks/graph_oracle/BLIND.md`) and the walk's latency on synthetic 2,000 and
+  10,000 memory packs in DuckDB and PostgreSQL. The result is in `BENCHMARKS.md`.
 - Add `enable_owner_window_extraction` (`PRME_ENABLE_OWNER_WINDOW_EXTRACTION`,
   off by default; dwamianm/prism#345 and #347): with `enable_windowed_extraction`,
   a turn with no `session_id` gets the owner's preceding memories in the same
@@ -33,7 +250,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MemoryEngine.get_events()` and both event stores accept `until`, an
   ingestion time: only events recorded at or before it are returned.
 - Add `scoring.rrf_graph_seed_count` (`PRME_SCORING__RRF_GRAPH_SEED_COUNT`), on
-  by default in the alpha channel (prism-monorepo issue 276): rank fusion's graph
+  by default in the alpha channel: rank fusion's graph
   list now tells records apart, so a "We" claim linked to the people a question
   names can rise. A record joins the list only when two or more of the
   question's seeds reach it within `graph_max_hops`, one of them by a direct
@@ -42,8 +259,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fewer total hops, and its weight is `rrf_graph_weight`, 0.5 when unset. A
   record that session, episode or evidence augmentation context pulls in
   inherits its trigger's score without that graph term; evidence projection,
-  which replaces a claim with its source, keeps it. With the group links of
-  prism-monorepo issue 275 it puts "We chose Tokyo, Kyoto, Kanazawa, and Osaka."
+  which replaces a claim with its source, keeps it. With the group links
+  (`enable_owner_group_links`) it puts "We chose Tokyo, Kyoto, Kanazawa, and Osaka."
   4th for "which cities will alex visit in japan?" on the `defects-v1` chat probe
   (6th without it). On the fast tiers the defect probes keep 7 of 7 answers in
   the top 3 and the chat probe 14 of 18 (15 of 18 in the top 5), the fast cycle
@@ -77,6 +294,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   full benchmark audit is pending. `BENCHMARKS.md` ("Graph seed count") has the
   measurements of all three versions.
 
+- Add explicit evidence capture, retention and admission policies (dwamianm/prism#342,
+  issue #320), opt in. `PRMEConfig.privacy_policy` (an immutable policy, default none)
+  or a `policy` on one request of `store()`, `ingest()`, `ingest_batch()`, fast
+  ingest, the HTTP routes and the MCP tools selects them; the Python, HTTP and MCP
+  paths share one validation and the same authority checks at the provider,
+  persistence and disclosure boundaries. An accepted record keeps its effective
+  policy and its original deadlines, a caller can tighten a default, and a retry
+  cannot weaken it. A no-evidence admission keeps the admitted memory without a
+  completed evidence payload, extraction of a protected admission runs in its own
+  finite processing slot, and an unsupported operation or an unavailable
+  capability is refused before any protected effect. Protected profiles turn
+  owner-group links off. Retrieval of a protected owner, owner-group linking and
+  `reingest()` stay unavailable for it until their dependencies land (issues
+  #321 to #326); the pull request says its component tests do not certify the
+  complete protected product (issue #327). With no policy set, existing defaults
+  and ordinary group matching are unchanged: the same records come out of
+  `store()`, `ingest()` and `retrieve()`. Opening a store now also creates an
+  empty table `privacy_admissions` (`CREATE TABLE IF NOT EXISTS`, DuckDB and
+  PostgreSQL), and a few legacy entry points (fast ingest, adapter control
+  events and `reingest()`) look the owner up in it, so that a legacy call
+  against an owner admitted under a policy is refused.
+- Add bounded local source sanitization to that opt-in path (dwamianm/prism#355,
+  part of issue #322). Source bodies and metadata are checked before they are
+  stored or sent to a provider, and generated extraction and the final memory and
+  index projections are checked again before they are published, with pinned
+  offline recognizers, scoped pseudonyms, strict structured values, cumulative
+  operation budgets and reports that hold no content. The optional extra `privacy`
+  installs `presidio-analyzer` and `spacy`; the model `en_core_web_sm` 3.8.0 is not part of
+  it, because PyPI does not accept a direct URL dependency. Install it from its release
+  (see `docs/SANITIZATION.md`); initialization checks its version and file digest and
+  refuses a missing or different model. Sanitization is heuristic
+  and does not certify that text holds no sensitive information, and the issue
+  stays open until it is verified with the real key custody, read, durable-work
+  and authority components. Nothing changes while no policy is set.
+
+- Add authenticated evidence encryption to that opt-in path (dwamianm/prism#356,
+  part of issue #321). Public-write and private-read are separate capabilities.
+  Each object gets a fresh data key and nonce, and its policy, identity, owner,
+  scope and purpose are authenticated with it. Key versions are exact, grants name
+  finite selected sources, audits hold no content, recovery is deliberate and
+  encrypted, and rewrapping resumes after a stop. `prme privacy-keys` provisions
+  and diagnoses local keys, and the optional extra `local-privacy` (`keyring`)
+  adds native local key custody. Opening a store creates one more empty table,
+  `privacy_rotation_jobs`. The pull request lists what this does not do: a
+  local same-process capability does not isolate secrets from malicious code in
+  that process or from a local administrator, rotation does not erase older backup
+  or recovery copies, a missing key never falls back to plaintext, native custody
+  was checked on macOS only, and the issue stays open until its integration
+  criteria are verified with the real authority, read, durable-work and migration
+  components (issues #323 to #326). Nothing changes while no policy is set.
+
 ### Changed
 
 - The window's guidance to the model now says to keep every subject, object and
@@ -89,7 +357,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an extraction that runs later no longer shows it turns stored after it.
 - `enable_owner_group_links` (`PRME_ENABLE_OWNER_GROUP_LINKS`) is on by default
   in the alpha channel, and a "We" claim is now linked to the people it speaks
-  for (prism-monorepo issue 275). A claim stated with "We" was attached only to
+  for. A claim stated with "We" was attached only to
   an entity named `We` that exists for one message, so the graph did not know
   who made the decision, and "We" claims from different messages never shared a
   subject. Each such claim of a `user` turn keeps its literal "We" and its group
@@ -114,6 +382,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and links of 0.16.0a3. The default rests on the fast tiers by the owner's
   directive of 2026-10-19; the full benchmark audit is pending.
   `BENCHMARKS.md` ("We claims linked to their members") has the measurements.
+
+- The runtime dependency `cryptography` is now pinned to exactly 50.0.2 for every
+  install (dwamianm/prism#356). It was `>=43.0`. The pin comes with the evidence
+  encryption above, but it applies whether or not a privacy policy is used: an
+  environment that needs another `cryptography` release cannot install this
+  release next to it. The optional extra `local-privacy` pins `keyring` to 25.7.0.
+
+### Fixed
+
+- A close no longer cancels an extraction batch whose output is saved but not yet
+  published to the graph (dwamianm/prism#332). The concurrent count of unfinished
+  work at close time treated saved output as finished, which could reduce the
+  remaining wait to zero and cancel the batch before its graph publication
+  completed. The close now reserves the existing batch allowance for pending or
+  running work, including saved output awaiting publication; the cap on the wait
+  is unchanged.
+
+### Upgrade notes
+
+- Two defaults changed since 0.16.0a5, both in the alpha channel and both with an
+  environment variable that turns them off: `enable_owner_group_links` is on
+  (`PRME_ENABLE_OWNER_GROUP_LINKS=false`) and `scoring.rrf_graph_seed_count` is on
+  (`PRME_SCORING__RRF_GRAPH_SEED_COUNT=false`). Neither rewrites a stored memory.
+  With the second on, a `PRME_SCORING__RRF_GRAPH_WEIGHT` you set for the
+  hop-count list of 0.16.0a4 now drives the seed count list; see its entry.
+- Everything else new is off by default: `enable_owner_window_extraction`, the
+  windowed extraction options it extends, and the privacy admission policies
+  (`privacy_policy`), with their sanitization and evidence encryption. `scoring.rrf_graph_weight` and the other options that were
+  off in 0.16.0a5 stay off. The defaults turned on in earlier alphas are still
+  on (`lexical_term_weights` for PostgreSQL, `enable_ingest_claim_fixes`,
+  `packing.folded_records_keep_rank`, `enable_mention_links`,
+  `packing.graph_seed_words`, `enable_owner_name_carry` and
+  `packing.session_context_skip_entities`).
+- A store gains two empty tables, `privacy_admissions` and `privacy_rotation_jobs`, the
+  first time this release opens it, and `reingest()` and a few other entry points read it (see the
+  privacy entry). Code from earlier releases does not use the table.
+- Install: `cryptography` is pinned to exactly 50.0.2 (see Changed). If another
+  package in your environment needs a different release, the resolver will refuse
+  this alpha; a later alpha may relax the pin.
+- Known weaknesses are as in 0.16.0a5. On the fast cycle three answers rank one
+  place lower with `scoring.rrf_graph_seed_count` on (travel 2 to 3, coffee 4 to
+  5, job-now 7 to 8), and the `reingest()` limits of 0.16.0a5 stand.
+- Known flaky tests: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted`
+  can stop the test process with a DuckDB segmentation fault while the engine
+  closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  fails inside a git worktree. Neither affects the installed package.
 
 ## [0.16.0a5] - 2026-10-19
 
@@ -2804,7 +3118,10 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a5...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a8...HEAD
+[0.16.0a8]: https://github.com/dwamianm/prism/compare/v0.16.0a7...v0.16.0a8
+[0.16.0a7]: https://github.com/dwamianm/prism/compare/v0.16.0a6...v0.16.0a7
+[0.16.0a6]: https://github.com/dwamianm/prism/compare/v0.16.0a5...v0.16.0a6
 [0.16.0a5]: https://github.com/dwamianm/prism/compare/v0.16.0a4...v0.16.0a5
 [0.16.0a4]: https://github.com/dwamianm/prism/compare/v0.16.0a3...v0.16.0a4
 [0.16.0a3]: https://github.com/dwamianm/prism/compare/v0.16.0a2...v0.16.0a3

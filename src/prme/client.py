@@ -71,6 +71,7 @@ from prme.models.processing import (
 from prme.models.profile import ProfileJobStatus, ProfileProcessingResult, ProfileCollectionResult
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.models.reembed import ReembedResult
 from prme.models.reingest import ReingestResult
 from prme.models.value_bindings import MemoryValueBinding
 from prme.types import ConditionEvaluationMethod, ConditionState, EpistemicType, LifecycleState, NodeType, RepresentationLevel, RetrievalMode, Scope, SourceType
@@ -910,6 +911,23 @@ class MemoryClient:
                  cursor: str | None = None, dry_run: bool = False) -> ReingestResult:
         """Re-derive one owner's stored memories under the present engine; see ``MemoryEngine.reingest``."""
         return self._run(self._engine.reingest(user_id, scope=scope, limit=limit, cursor=cursor, dry_run=dry_run))
+
+    def reembed(self, model: str | EmbeddingProvider | None = None, *, limit: int | None = None,
+                cursor: str | None = None, dry_run: bool = False, user_id: str | None = None,
+                batch_size: int = 64, pause_ms: int = 0, threads: int | None = None) -> ReembedResult:
+        """Build one embedding model's vectors for the stored memories; see ``MemoryEngine.reembed``."""
+        return self._run(self._engine.reembed(
+            model, limit=limit, cursor=cursor, dry_run=dry_run, user_id=user_id, batch_size=batch_size,
+            pause_ms=pause_ms, threads=threads,
+        ))
+
+    def embedding_status(self) -> dict[str, Any]:
+        """The embedding models the store holds and how complete each is; see ``MemoryEngine.embedding_status``."""
+        return self._run(self._engine.embedding_status())
+
+    def drop_embeddings(self, model: str, *, version: str | None = None) -> int:
+        """Remove a stored model's vectors; see ``MemoryEngine.drop_embeddings``."""
+        return self._run(self._engine.drop_embeddings(model, version=version))
 
     def process_extractions(self, *, user_id: str, limit: int = 100,
                             budget_ms: float = 5000) -> ExtractionProcessingResult:

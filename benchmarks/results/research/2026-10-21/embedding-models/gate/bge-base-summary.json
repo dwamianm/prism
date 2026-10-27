@@ -1,0 +1,10 @@
+{
+ "packs": 510,
+ "reembedded_packs": 510,
+ "nodes": 252620,
+ "distinct_texts_embedded": 0,
+ "embedding_seconds": 0.0,
+ "reembed_seconds": 755.6,
+ "recipe": "bge-base",
+ "total_seconds": 1686.1
+}

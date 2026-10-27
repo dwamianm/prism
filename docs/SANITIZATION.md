@@ -12,10 +12,20 @@ Install the pinned local recognizers in the application's environment:
 uv sync --extra privacy
 ```
 
-The extra pins `presidio-analyzer==2.2.364`, `spacy==3.8.11`, and
-`en_core_web_sm==3.8.0`, with dependency markers for Python 3.11–3.14. The local
+The extra pins `presidio-analyzer==2.2.364` and `spacy==3.8.11`, with dependency markers for
+Python 3.11 to 3.14. It does not install the model `en_core_web_sm==3.8.0`: PyPI does not accept a
+direct URL dependency in published metadata, and a plain `en-core-web-sm` requirement could resolve to
+another project's package. Install the model yourself from its release, in the same environment:
+
+```sh
+pip install 'prme[privacy]'
+pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+```
+
+In a checkout, `uv sync --extra privacy` installs the model too, because it is a development dependency
+there (the `dev` group is on by default). The local
 installation and recognition evidence uses Python 3.11.6. Initialization checks the exact
-versions and model file digest. Install artifacts before starting the service.
+versions and model file digest, so a missing or different model refuses it. Install artifacts before starting the service.
 Recognition uses a separate local process with network connections disabled;
 there is no default remote detector or runtime model download. Email suffix
 validation uses the bundled suffix snapshot with network URLs and disk caching

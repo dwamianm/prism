@@ -1,0 +1,2252 @@
+{
+ "kind": "prme-graph-oracle-blind-candidates",
+ "schema_version": 1,
+ "model": "the fast tiers' extraction model through a local Ollama server (MODEL in benchmarks/graph_oracle/blind.py)",
+ "prompt_sha256": "f7e0ceff5050fcf0b47c7c214ba19216e43fd3b330342d14924e530cc07b962a",
+ "rounds": [
+  {
+   "round": 1,
+   "requests": 21,
+   "prompt_tokens": 32666,
+   "completion_tokens": 7065
+  },
+  {
+   "round": 2,
+   "requests": 8,
+   "prompt_tokens": 16488,
+   "completion_tokens": 4368
+  }
+ ],
+ "candidates": [
+  {
+   "id": "defects-v1:lookup:1",
+   "corpus": "defects-v1",
+   "type": "lookup",
+   "question": "Which cities is Alex planning to visit in Japan?",
+   "answer": "Tokyo, Kyoto, Kanazawa, and Osaka",
+   "answers": [
+    "s1-trip#2"
+   ],
+   "support": [
+    "s1-trip#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:lookup:2",
+   "corpus": "defects-v1",
+   "type": "lookup",
+   "question": "What book is Alex reading while learning Rust?",
+   "answer": "Rust for Rustaceans",
+   "answers": [
+    "s2-learning#0"
+   ],
+   "support": [
+    "s2-learning#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:lookup:3",
+   "corpus": "defects-v1",
+   "type": "lookup",
+   "question": "Who wants the runbook reviewed before Friday?",
+   "answer": "Dana",
+   "answers": [
+    "s3-work#2"
+   ],
+   "support": [
+    "s3-work#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:list:1",
+   "corpus": "defects-v1",
+   "type": "list",
+   "question": "Which cities are Alex and Jordan planning to visit on their Japan trip?",
+   "answer": [
+    "Tokyo",
+    "Kyoto",
+    "Kanazawa",
+    "Osaka"
+   ],
+   "answers": [
+    "s1-trip#2"
+   ],
+   "support": [
+    "s1-trip#0",
+    "s1-trip#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:list:2",
+   "corpus": "defects-v1",
+   "type": "list",
+   "question": "What programming languages does Alex use?",
+   "answer": [
+    "Go",
+    "TypeScript",
+    "Rust"
+   ],
+   "answers": [
+    "s2-learning#0",
+    "s2-learning#2"
+   ],
+   "support": [
+    "s2-learning#0",
+    "s2-learning#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:list:3",
+   "corpus": "defects-v1",
+   "type": "list",
+   "question": "What travel arrangements does Alex need to make for the Japan trip?",
+   "answer": [
+    "A JR Pass",
+    "An allergy card for restaurants"
+   ],
+   "answers": [
+    "s1-trip#4"
+   ],
+   "support": [
+    "s1-trip#4"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:multi-hop:1",
+   "corpus": "defects-v1",
+   "type": "multi-hop",
+   "question": "What database technology did Alex's team decide to use for the shipment table instead of TimescaleDB?",
+   "answer": "Postgres partitioning",
+   "answers": [
+    "s3-work#0"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:multi-hop:2",
+   "corpus": "defects-v1",
+   "type": "multi-hop",
+   "question": "Who needs to review the runbook before Friday, according to Alex's manager?",
+   "answer": "Sam",
+   "answers": [
+    "s3-work#2"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:multi-hop:3",
+   "corpus": "defects-v1",
+   "type": "multi-hop",
+   "question": "Alex is planning a trip to Japan with Jordan. What allergy does Jordan have that Alex needs to prepare for at restaurants?",
+   "answer": "Shellfish allergy",
+   "answers": [
+    "s1-trip#4"
+   ],
+   "support": [
+    "s1-trip#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:temporal:1",
+   "corpus": "defects-v1",
+   "type": "temporal",
+   "question": "When are Alex and Jordan planning their trip to Japan?",
+   "answer": "Late March next year.",
+   "answers": [
+    "s1-trip#0"
+   ],
+   "support": [
+    "s1-trip#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:temporal:2",
+   "corpus": "defects-v1",
+   "type": "temporal",
+   "question": "By when does Dana want the runbook reviewed by Sam?",
+   "answer": "Before Friday.",
+   "answers": [
+    "s3-work#2"
+   ],
+   "support": [
+    "s3-work#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:temporal:3",
+   "corpus": "defects-v1",
+   "type": "temporal",
+   "question": "When does Alex study Rust?",
+   "answer": "On weekends.",
+   "answers": [
+    "s2-learning#0"
+   ],
+   "support": [
+    "s2-learning#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:correction:1",
+   "corpus": "defects-v1",
+   "type": "correction",
+   "question": "Which cities are we visiting on our Japan trip?",
+   "answer": "Tokyo, Kyoto, Kanazawa, and Osaka",
+   "answers": [
+    "s1-trip#2"
+   ],
+   "support": [
+    "s1-trip#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:correction:2",
+   "corpus": "defects-v1",
+   "type": "correction",
+   "question": "What did we decide to use for the shipment table instead of TimescaleDB?",
+   "answer": "Postgres partitioning",
+   "answers": [
+    "s3-work#0"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:correction:3",
+   "corpus": "defects-v1",
+   "type": "correction",
+   "question": "Who needs to review the runbook before Friday?",
+   "answer": "Sam",
+   "answers": [
+    "s3-work#2"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:negation:1",
+   "corpus": "defects-v1",
+   "type": "negation",
+   "question": "Which city did Alex and Jordan decide not to include in their Japan trip?",
+   "answer": "Hiroshima",
+   "answers": [
+    "s1-trip#2"
+   ],
+   "support": [
+    "s1-trip#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:negation:2",
+   "corpus": "defects-v1",
+   "type": "negation",
+   "question": "What mode of transport does Alex not want to use for getting around Japan?",
+   "answer": "Flights",
+   "answers": [
+    "s1-trip#4"
+   ],
+   "support": [
+    "s1-trip#4"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:negation:3",
+   "corpus": "defects-v1",
+   "type": "negation",
+   "question": "What approach did Alex decide against for the shipment table at work?",
+   "answer": "Self-hosting",
+   "answers": [
+    "s3-work#0"
+   ],
+   "support": [
+    "s3-work#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:aggregation:1",
+   "corpus": "defects-v1",
+   "type": "aggregation",
+   "question": "How many cities are Alex and Jordan planning to visit in Japan?",
+   "answer": "Four: Tokyo, Kyoto, Kanazawa, and Osaka.",
+   "answers": [
+    "s1-trip#2"
+   ],
+   "support": [
+    "s1-trip#0",
+    "s1-trip#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:aggregation:2",
+   "corpus": "defects-v1",
+   "type": "aggregation",
+   "question": "Which programming languages does Alex use at work?",
+   "answer": "Go for services and TypeScript for tooling.",
+   "answers": [
+    "s2-learning#2"
+   ],
+   "support": [
+    "s2-learning#1",
+    "s2-learning#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "defects-v1:aggregation:3",
+   "corpus": "defects-v1",
+   "type": "aggregation",
+   "question": "What travel arrangements does Alex need to make for the Japan trip?",
+   "answer": "A JR Pass (since Alex prefers trains to flights) and a shellfish allergy card for restaurants (since Jordan is allergic to shellfish).",
+   "answers": [
+    "s1-trip#4"
+   ],
+   "support": [
+    "s1-trip#0",
+    "s1-trip#4"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:1",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What is the name of Alex's border collie?",
+   "answer": "Juniper",
+   "answers": [
+    "m06"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:2",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What is the p99 latency of the shipment lookup endpoint?",
+   "answer": "480 ms",
+   "answers": [
+    "m16"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:3",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "Who is Alex's manager?",
+   "answer": "Dana Okafor, VP of Engineering",
+   "answers": [
+    "m36"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:4",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What is the current monthly Datadog spend?",
+   "answer": "About 6,200 USD per month",
+   "answers": [
+    "m59"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:5",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "When is the production cutover scheduled?",
+   "answer": "Saturday 2026-10-31 at 02:00 UTC",
+   "answers": [
+    "m28"
+   ],
+   "support": [],
+   "stale": [
+    "m26"
+   ]
+  },
+  {
+   "id": "store-v1:list:1",
+   "corpus": "store-v1",
+   "type": "list",
+   "question": "What cities are on Alex and Jordan's Japan itinerary?",
+   "answer": "Tokyo, Kyoto, Kanazawa, and Osaka",
+   "answers": [
+    "m63"
+   ],
+   "support": [
+    "m61",
+    "m62"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:list:2",
+   "corpus": "store-v1",
+   "type": "list",
+   "question": "What tools and services does Northwind's stack run on AWS?",
+   "answer": "ECS Fargate for services, RDS Postgres for data, SQS for event delivery, and Datadog for observability",
+   "answers": [
+    "m14"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:list:3",
+   "corpus": "store-v1",
+   "type": "list",
+   "question": "What languages does Alex prefer for services and for internal tooling?",
+   "answer": "Go for services and TypeScript for internal tooling",
+   "answers": [
+    "m50"
+   ],
+   "support": [
+    "m05"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:list:4",
+   "corpus": "store-v1",
+   "type": "list",
+   "question": "Who are the people on Alex's team mentioned by name, and what are their roles?",
+   "answer": "Priya Shah, a backend engineer on the platform team; Sam Lindqvist, the site reliability engineer; and Dana Okafor, VP of Engineering and Alex's manager",
+   "answers": [
+    "m36",
+    "m37"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:list:5",
+   "corpus": "store-v1",
+   "type": "list",
+   "question": "What are the steps in the cutover checklist the assistant drafted?",
+   "answer": "Freeze writes, run final sync, verify row counts, flip the view, and watch Datadog for 30 minutes",
+   "answers": [
+    "m33"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:1",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Alex's manager, and what is that person's title?",
+   "answer": "Dana Okafor, VP of Engineering",
+   "answers": [
+    "m36"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:2",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "Who is covering Alex's on-call week of 2026-10-26, and what is that person's role at Northwind?",
+   "answer": "Priya Shah, a backend engineer on the platform team",
+   "answers": [
+    "m37"
+   ],
+   "support": [
+    "m32"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:3",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "What is the name of the person who found the replica lag risk that pushed the production cutover back a week?",
+   "answer": "Sam Lindqvist",
+   "answers": [
+    "m37"
+   ],
+   "support": [
+    "m28"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:4",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Alex's partner, and what dietary restriction does that person have that affects the Japan trip?",
+   "answer": "Jordan, who is allergic to shellfish",
+   "answers": [
+    "m07"
+   ],
+   "support": [
+    "m66"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:5",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "Which database did Alex reject for the shipment_events migration, and why was it ruled out?",
+   "answer": "TimescaleDB, because RDS does not offer it and the team ruled out self-hosting Postgres",
+   "answers": [
+    "m20"
+   ],
+   "support": [
+    "m18",
+    "m19"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:temporal:1",
+   "corpus": "store-v1",
+   "type": "temporal",
+   "question": "When did Alex move to Denver?",
+   "answer": "March 2026",
+   "answers": [
+    "m03"
+   ],
+   "support": [
+    "m03"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:temporal:2",
+   "corpus": "store-v1",
+   "type": "temporal",
+   "question": "Did Alex join Northwind before or after leaving Meridian Freight?",
+   "answer": "After \u2014 Alex left Meridian in early 2024 and joined Northwind in March 2024.",
+   "answers": [
+    "m01",
+    "m02"
+   ],
+   "support": [
+    "m01",
+    "m02"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:temporal:3",
+   "corpus": "store-v1",
+   "type": "temporal",
+   "question": "When is the production cutover now scheduled, after the date change?",
+   "answer": "Saturday 2026-10-31 at 02:00 UTC",
+   "answers": [
+    "m28"
+   ],
+   "support": [
+    "m26",
+    "m27",
+    "m28"
+   ],
+   "stale": [
+    "m26"
+   ]
+  },
+  {
+   "id": "store-v1:temporal:4",
+   "corpus": "store-v1",
+   "type": "temporal",
+   "question": "When did Alex accept leading the observability rewrite?",
+   "answer": "2026-10-14",
+   "answers": [
+    "m47"
+   ],
+   "support": [
+    "m46",
+    "m47"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:temporal:5",
+   "corpus": "store-v1",
+   "type": "temporal",
+   "question": "What are the dates of the Japan trip after the change?",
+   "answer": "2027-03-28 through 2027-04-11",
+   "answers": [
+    "m62"
+   ],
+   "support": [
+    "m61",
+    "m62"
+   ],
+   "stale": [
+    "m61"
+   ]
+  },
+  {
+   "id": "store-v1:correction:1",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "When is the production cutover for the shipment_events migration?",
+   "answer": "Saturday 2026-10-31 at 02:00 UTC",
+   "answers": [
+    "m28"
+   ],
+   "support": [
+    "m26",
+    "m27"
+   ],
+   "stale": [
+    "m26"
+   ]
+  },
+  {
+   "id": "store-v1:correction:2",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "Who is on call the week of 2026-10-26?",
+   "answer": "Priya Shah",
+   "answers": [
+    "m32"
+   ],
+   "support": [
+    "m30",
+    "m31"
+   ],
+   "stale": [
+    "m30"
+   ]
+  },
+  {
+   "id": "store-v1:correction:3",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "When is the Japan trip?",
+   "answer": "2027-03-28 through 2027-04-11",
+   "answers": [
+    "m62"
+   ],
+   "support": [
+    "m61"
+   ],
+   "stale": [
+    "m61"
+   ]
+  },
+  {
+   "id": "store-v1:correction:4",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "How does Alex feel about pair programming?",
+   "answer": "It drains Alex; Alex prefers short 30 minute bursts rather than full sessions.",
+   "answers": [
+    "m43"
+   ],
+   "support": [
+    "m42"
+   ],
+   "stale": [
+    "m42"
+   ]
+  },
+  {
+   "id": "store-v1:correction:5",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "Is Alex leading the observability rewrite?",
+   "answer": "Yes, Alex accepted leading it on 2026-10-14, on the condition that a second engineer joins.",
+   "answers": [
+    "m47"
+   ],
+   "support": [
+    "m45",
+    "m46"
+   ],
+   "stale": [
+    "m46"
+   ]
+  },
+  {
+   "id": "store-v1:negation:1",
+   "corpus": "store-v1",
+   "type": "negation",
+   "question": "Does Alex want Java code examples when asking for code?",
+   "answer": "No, Alex dislikes Java examples and prefers Go and TypeScript.",
+   "answers": [
+    "m05"
+   ],
+   "support": [
+    "m05"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:negation:2",
+   "corpus": "store-v1",
+   "type": "negation",
+   "question": "Did Alex end up leading the observability rewrite without any conditions?",
+   "answer": "No, Alex initially declined it, then accepted only on the condition that a second engineer joins.",
+   "answers": [
+    "m46",
+    "m47"
+   ],
+   "support": [
+    "m46",
+    "m47"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:negation:3",
+   "corpus": "store-v1",
+   "type": "negation",
+   "question": "Which city did Alex drop from the Japan itinerary?",
+   "answer": "Hiroshima was dropped to save time.",
+   "answers": [
+    "m63"
+   ],
+   "support": [
+    "m63"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:negation:4",
+   "corpus": "store-v1",
+   "type": "negation",
+   "question": "Does Alex want to use an ORM for new services?",
+   "answer": "No, Alex chose sqlc instead of an ORM and dislikes ORMs after painful GORM migrations.",
+   "answers": [
+    "m51",
+    "m52"
+   ],
+   "support": [
+    "m51",
+    "m52"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:negation:5",
+   "corpus": "store-v1",
+   "type": "negation",
+   "question": "Does Alex want to be on call during the production cutover week?",
+   "answer": "No, Alex swapped the on-call week with Priya so the cutover isn't during Alex's shift.",
+   "answers": [
+    "m31",
+    "m32"
+   ],
+   "support": [
+    "m30",
+    "m31",
+    "m32"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:aggregation:1",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "How many people are named in Alex's work context (colleagues, manager, and mentee)?",
+   "answer": "Four: Dana Okafor, Priya Shah, Sam Lindqvist, and Jordan is not a colleague \u2014 so three colleagues plus Dana as manager. Counting distinct work people: Dana Okafor, Priya Shah, Sam Lindqvist.",
+   "answers": [
+    "m36",
+    "m37",
+    "m49"
+   ],
+   "support": [
+    "m36",
+    "m37",
+    "m49"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:aggregation:2",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "Which cities are on Alex and Jordan's Japan itinerary?",
+   "answer": "Tokyo, Kyoto, Kanazawa, and Osaka.",
+   "answers": [
+    "m63"
+   ],
+   "support": [
+    "m63"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:aggregation:3",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "How many scheduled or planned events does Alex have in the week of 2026-10-26 through 2026-11-02?",
+   "answer": "The production cutover on 2026-10-31, and Alex's on-call week starting 2026-11-02 (Priya covers 2026-10-26).",
+   "answers": [
+    "m28",
+    "m32"
+   ],
+   "support": [
+    "m28",
+    "m32"
+   ],
+   "stale": [
+    "m26",
+    "m30",
+    "m31"
+   ]
+  },
+  {
+   "id": "store-v1:aggregation:4",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "What is the total of Alex's stated monthly Datadog spend and Japan trip budget?",
+   "answer": "6,200 USD per month for Datadog plus 8,500 USD for the Japan trip (excluding flights).",
+   "answers": [
+    "m59",
+    "m67"
+   ],
+   "support": [
+    "m59",
+    "m67"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:aggregation:5",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "Which programming languages does Alex prefer for services and internal tooling, and which does Alex dislike?",
+   "answer": "Go for services and TypeScript for internal tooling; dislikes Java examples.",
+   "answers": [
+    "m50",
+    "m05"
+   ],
+   "support": [
+    "m50",
+    "m05"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:1",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What's the name of Dana's dog?",
+   "answer": "Biscuit",
+   "answers": [
+    "s1-intro#0"
+   ],
+   "support": [
+    "s1-intro#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:2",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What time did Dana finish the Cherry Creek Half Marathon?",
+   "answer": "1:58:30",
+   "answers": [
+    "s5-race#0"
+   ],
+   "support": [
+    "s5-race#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:3",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What's the name of Dana's sister's new baby?",
+   "answer": "Ivy",
+   "answers": [
+    "s3-family-and-jobs#0"
+   ],
+   "support": [
+    "s3-family-and-jobs#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:4",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "When does Dana start her new job as analytics manager at Brightpath?",
+   "answer": "May 4",
+   "answers": [
+    "s4-offer#0"
+   ],
+   "support": [
+    "s4-offer#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:5",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What is Sam allergic to?",
+   "answer": "Peanuts",
+   "answers": [
+    "s2-running#6"
+   ],
+   "support": [
+    "s2-running#6"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:list:1",
+   "corpus": "chat-v1",
+   "type": "list",
+   "question": "Who are the members of Dana's household in Denver?",
+   "answer": [
+    "Sam",
+    "Biscuit"
+   ],
+   "answers": [
+    "s1-intro#0"
+   ],
+   "support": [
+    "s1-intro#0",
+    "s1-intro#1"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:list:2",
+   "corpus": "chat-v1",
+   "type": "list",
+   "question": "What jobs or roles do the people in Dana's life hold?",
+   "answer": [
+    "Sam is a nurse at Denver Health",
+    "Priya is Dana's manager at Northwind",
+    "Melanie is Dana's running partner"
+   ],
+   "answers": [
+    "s1-intro#8",
+    "s1-intro#2",
+    "s2-running#0"
+   ],
+   "support": [
+    "s1-intro#8",
+    "s1-intro#2",
+    "s2-running#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:list:3",
+   "corpus": "chat-v1",
+   "type": "list",
+   "question": "What dietary restrictions or preferences has Dana mentioned?",
+   "answer": [
+    "Pescatarian (previously vegetarian)",
+    "No peanuts because Sam is allergic"
+   ],
+   "answers": [
+    "s5-race#6",
+    "s2-running#6"
+   ],
+   "support": [
+    "s5-race#6",
+    "s5-race#8",
+    "s2-running#6"
+   ],
+   "stale": [
+    "s1-intro#6"
+   ]
+  },
+  {
+   "id": "chat-v1:list:4",
+   "corpus": "chat-v1",
+   "type": "list",
+   "question": "What races and finishing times are mentioned for Dana and Melanie?",
+   "answer": [
+    "Dana finished the Cherry Creek Half in 1:58:30",
+    "Melanie finished in 1:41"
+   ],
+   "answers": [
+    "s5-race#0",
+    "s5-race#2"
+   ],
+   "support": [
+    "s5-race#0",
+    "s5-race#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:list:5",
+   "corpus": "chat-v1",
+   "type": "list",
+   "question": "What programming tools or languages come up in Dana's work context?",
+   "answer": [
+    "Tableau (standard at Northwind)",
+    "Python (preferred by Dana and used at Brightpath)"
+   ],
+   "answers": [
+    "s1-intro#4",
+    "s3-family-and-jobs#6"
+   ],
+   "support": [
+    "s1-intro#4",
+    "s3-family-and-jobs#6",
+    "s5-race#6"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:1",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of the person who convinced Dana to sign up for the Cherry Creek Half Marathon?",
+   "answer": "Melanie",
+   "answers": [
+    "s2-running#0"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:2",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Dana's manager at Northwind who asked for weekly dashboards?",
+   "answer": "Priya",
+   "answers": [
+    "s1-intro#2"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:3",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of the baby that Dana's sister Rachel had?",
+   "answer": "Ivy",
+   "answers": [
+    "s3-family-and-jobs#0"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:4",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Dana's partner who works night shifts as a nurse at Denver Health?",
+   "answer": "Sam",
+   "answers": [
+    "s1-intro#8"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:5",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Dana's golden retriever who ate one of Sam's running shoes?",
+   "answer": "Biscuit",
+   "answers": [
+    "s3-family-and-jobs#8"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:temporal:1",
+   "corpus": "chat-v1",
+   "type": "temporal",
+   "question": "When did I start my new job at Brightpath?",
+   "answer": "May 4",
+   "answers": [
+    "s4-offer#0"
+   ],
+   "support": [
+    "s4-offer#0",
+    "s4-offer#1"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:temporal:2",
+   "corpus": "chat-v1",
+   "type": "temporal",
+   "question": "Which came first, my first interview with Brightpath or the Cherry Creek Half Marathon?",
+   "answer": "The first interview with Brightpath came first.",
+   "answers": [
+    "s3-family-and-jobs#4",
+    "s5-race#0"
+   ],
+   "support": [
+    "s3-family-and-jobs#4",
+    "s4-offer#0",
+    "s5-race#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:temporal:3",
+   "corpus": "chat-v1",
+   "type": "temporal",
+   "question": "When is the Cherry Creek Half Marathon that I signed up for?",
+   "answer": "May 17",
+   "answers": [
+    "s2-running#0"
+   ],
+   "support": [
+    "s2-running#0",
+    "s2-running#1"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:temporal:4",
+   "corpus": "chat-v1",
+   "type": "temporal",
+   "question": "When did I give notice at Northwind?",
+   "answer": "The day before I told you about accepting the Brightpath offer, which was after I accepted it \u2014 so the day before that conversation.",
+   "answers": [
+    "s4-offer#2"
+   ],
+   "support": [
+    "s4-offer#0",
+    "s4-offer#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:temporal:5",
+   "corpus": "chat-v1",
+   "type": "temporal",
+   "question": "When did my sister Rachel have her baby Ivy?",
+   "answer": "Last Thursday (relative to when I told you the news).",
+   "answers": [
+    "s3-family-and-jobs#0"
+   ],
+   "support": [
+    "s3-family-and-jobs#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:correction:1",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "What's my current diet \u2014 am I still vegetarian?",
+   "answer": "Pescatarian; you've started eating fish again.",
+   "answers": [
+    "s5-race#6",
+    "s5-race#7"
+   ],
+   "support": [
+    "s5-race#8",
+    "s5-race#9"
+   ],
+   "stale": [
+    "s1-intro#6",
+    "s1-intro#7"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:2",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "Where do I work now?",
+   "answer": "Brightpath, as an analytics manager.",
+   "answers": [
+    "s4-offer#0",
+    "s4-offer#1"
+   ],
+   "support": [
+    "s5-race#4"
+   ],
+   "stale": [
+    "s1-intro#2",
+    "s1-intro#3"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:3",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "What tool do I use for my work dashboards?",
+   "answer": "Python \u2014 the Brightpath team uses Python for everything.",
+   "answers": [
+    "s3-family-and-jobs#6",
+    "s5-race#6"
+   ],
+   "support": [
+    "s3-family-and-jobs#7"
+   ],
+   "stale": [
+    "s1-intro#4",
+    "s1-intro#5"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:4",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "What's the longest run I've done?",
+   "answer": "10 miles, on a Saturday long run with Mel.",
+   "answers": [
+    "s4-offer#4"
+   ],
+   "support": [
+    "s4-offer#5"
+   ],
+   "stale": [
+    "s2-running#4"
+   ]
+  },
+  {
+   "id": "chat-v1:negation:1",
+   "corpus": "chat-v1",
+   "type": "negation",
+   "question": "What kind of coffee does Dana drink now?",
+   "answer": "None \u2014 she quit coffee last month and drinks green tea instead.",
+   "answers": [
+    "s2-running#4"
+   ],
+   "support": [
+    "s2-running#4",
+    "s2-running#5"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:negation:2",
+   "corpus": "chat-v1",
+   "type": "negation",
+   "question": "Does Dana eat meat?",
+   "answer": "No \u2014 she's pescatarian now, so she eats fish but not meat.",
+   "answers": [
+    "s5-race#6"
+   ],
+   "support": [
+    "s5-race#6",
+    "s5-race#7"
+   ],
+   "stale": [
+    "s1-intro#6"
+   ]
+  },
+  {
+   "id": "chat-v1:negation:3",
+   "corpus": "chat-v1",
+   "type": "negation",
+   "question": "Is Dana still working at Northwind?",
+   "answer": "No \u2014 she gave notice and left to start as analytics manager at Brightpath.",
+   "answers": [
+    "s4-offer#0",
+    "s4-offer#2"
+   ],
+   "support": [
+    "s4-offer#0",
+    "s4-offer#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:negation:4",
+   "corpus": "chat-v1",
+   "type": "negation",
+   "question": "Is Sam coming on the Portland trip?",
+   "answer": "No \u2014 Sam can't come because of work, so it'll just be Dana and Biscuit.",
+   "answers": [
+    "s6-trip#0"
+   ],
+   "support": [
+    "s6-trip#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:negation:5",
+   "corpus": "chat-v1",
+   "type": "negation",
+   "question": "Does Dana want to keep using Tableau for her dashboards?",
+   "answer": "No \u2014 she'd rather use Python; Tableau was just the standard at Northwind.",
+   "answers": [
+    "s1-intro#4"
+   ],
+   "support": [
+    "s1-intro#4",
+    "s1-intro#5"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:1",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "How many half marathons has Melanie run, and what was her finishing time at the Cherry Creek Half?",
+   "answer": "She has run about ten half marathons, and she finished the Cherry Creek Half in 1:41.",
+   "answers": [
+    "s2-running#2",
+    "s5-race#2"
+   ],
+   "support": [
+    "s2-running#2",
+    "s5-race#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:2",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "Which jobs has Dana held or been offered across these conversations, and at which companies?",
+   "answer": "She was a data analyst at Northwind and accepted an analytics manager role at Brightpath.",
+   "answers": [
+    "s1-intro#2",
+    "s3-family-and-jobs#4",
+    "s4-offer#0"
+   ],
+   "support": [
+    "s1-intro#2",
+    "s3-family-and-jobs#4",
+    "s4-offer#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:3",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "How many people in Dana's life are mentioned along with their jobs or roles, and who are they?",
+   "answer": "Two: Sam, a nurse at Denver Health, and Priya, her manager at Northwind.",
+   "answers": [
+    "s1-intro#2",
+    "s1-intro#8"
+   ],
+   "support": [
+    "s1-intro#2",
+    "s1-intro#8"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:4",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "What dietary changes has Dana mentioned over time, and what food restriction applies because of Sam?",
+   "answer": "She was vegetarian for about six years, then started eating fish again and is now pescatarian; peanuts are still off-limits because Sam is allergic.",
+   "answers": [
+    "s1-intro#6",
+    "s2-running#6",
+    "s5-race#6",
+    "s5-race#8"
+   ],
+   "support": [
+    "s1-intro#6",
+    "s2-running#6",
+    "s5-race#6",
+    "s5-race#8"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:5",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "Which family members and pets are part of Dana's household or close family, and where do the out-of-town ones live?",
+   "answer": "Her partner Sam and their golden retriever Biscuit live with her in Denver; her sister Rachel lives in Portland with her new baby Ivy.",
+   "answers": [
+    "s1-intro#0",
+    "s3-family-and-jobs#0",
+    "s3-family-and-jobs#2"
+   ],
+   "support": [
+    "s1-intro#0",
+    "s3-family-and-jobs#0",
+    "s3-family-and-jobs#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.1",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What company does Alex Rivera work for?",
+   "answer": "Northwind Logistics",
+   "answers": [
+    "m00"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.2",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What is the name of Alex's border collie?",
+   "answer": "Juniper",
+   "answers": [
+    "m06"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.3",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What is Alex's partner's job?",
+   "answer": "Nurse practitioner",
+   "answers": [
+    "m07"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.4",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What is the p99 latency of the shipment lookup endpoint?",
+   "answer": "480 ms",
+   "answers": [
+    "m16"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.5",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "How long did the staging dry run of the migration take?",
+   "answer": "6 hours 40 minutes",
+   "answers": [
+    "m24"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.6",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "Who is Alex's manager?",
+   "answer": "Dana Okafor, VP of Engineering",
+   "answers": [
+    "m36"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.7",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What is the current monthly Datadog spend?",
+   "answer": "About 6,200 USD per month",
+   "answers": [
+    "m59"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.8",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What is the budget for the Japan trip, excluding flights?",
+   "answer": "8,500 USD",
+   "answers": [
+    "m67"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.9",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What race did Alex sign up for in Fruita?",
+   "answer": "A 100 km gravel race on 2026-11-07",
+   "answers": [
+    "m70"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:lookup:r2.10",
+   "corpus": "store-v1",
+   "type": "lookup",
+   "question": "What book is Alex currently reading?",
+   "answer": "Children of Time",
+   "answers": [
+    "m73"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:correction:r2.1",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "When is the production cutover for the shipment_events migration?",
+   "answer": "Saturday 2026-10-31 at 02:00 UTC",
+   "answers": [
+    "m28"
+   ],
+   "support": [
+    "m26",
+    "m27"
+   ],
+   "stale": [
+    "m26"
+   ]
+  },
+  {
+   "id": "store-v1:correction:r2.2",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "Who is on call the week of 2026-10-26?",
+   "answer": "Priya Shah",
+   "answers": [
+    "m32"
+   ],
+   "support": [
+    "m30",
+    "m31"
+   ],
+   "stale": [
+    "m30"
+   ]
+  },
+  {
+   "id": "store-v1:correction:r2.3",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "What are the dates of Alex and Jordan's Japan trip?",
+   "answer": "2027-03-28 through 2027-04-11",
+   "answers": [
+    "m62"
+   ],
+   "support": [
+    "m61"
+   ],
+   "stale": [
+    "m61"
+   ]
+  },
+  {
+   "id": "store-v1:correction:r2.4",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "What is Alex's main editor now?",
+   "answer": "VS Code (for the Go debugger), with Neovim kept for quick edits and writing",
+   "answers": [
+    "m13"
+   ],
+   "support": [
+    "m12"
+   ],
+   "stale": [
+    "m12"
+   ]
+  },
+  {
+   "id": "store-v1:correction:r2.5",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "How does Alex feel about pair programming?",
+   "answer": "It drains Alex; prefers short 30 minute bursts rather than full sessions",
+   "answers": [
+    "m43"
+   ],
+   "support": [
+    "m42"
+   ],
+   "stale": [
+    "m42"
+   ]
+  },
+  {
+   "id": "store-v1:correction:r2.6",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "Is Alex leading the observability rewrite?",
+   "answer": "Yes, Alex accepted on 2026-10-14, on the condition that a second engineer joins",
+   "answers": [
+    "m47"
+   ],
+   "support": [
+    "m45",
+    "m46"
+   ],
+   "stale": [
+    "m46"
+   ]
+  },
+  {
+   "id": "store-v1:correction:r2.7",
+   "corpus": "store-v1",
+   "type": "correction",
+   "question": "What approach did Northwind settle on for migrating shipment_events?",
+   "answer": "Postgres 16 with native range partitioning by week, using pg_partman for partition management (TimescaleDB was rejected)",
+   "answers": [
+    "m17",
+    "m20",
+    "m22"
+   ],
+   "support": [
+    "m18",
+    "m19",
+    "m21"
+   ],
+   "stale": [
+    "m18"
+   ]
+  },
+  {
+   "id": "store-v1:multi-hop:r2.1",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "What is the name of the manager Alex meets with every Tuesday at 10:00 Mountain time?",
+   "answer": "Dana Okafor",
+   "answers": [
+    "m36"
+   ],
+   "support": [
+    "m38"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:r2.2",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "Which engineer took over Alex's on-call week of 2026-10-26 so the cutover wouldn't fall during Alex's shift?",
+   "answer": "Priya Shah",
+   "answers": [
+    "m32"
+   ],
+   "support": [
+    "m30",
+    "m31"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:r2.3",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "What is the name of the site reliability engineer who found the replication lag risk that pushed the cutover back a week?",
+   "answer": "Sam Lindqvist",
+   "answers": [
+    "m37"
+   ],
+   "support": [
+    "m27",
+    "m28"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:r2.4",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Alex's partner, who needs a Japanese allergy card because of a shellfish allergy?",
+   "answer": "Jordan",
+   "answers": [
+    "m07"
+   ],
+   "support": [
+    "m66"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:r2.5",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "What is the name of the border collie that needs walks at 6:30 am and 6 pm?",
+   "answer": "Juniper",
+   "answers": [
+    "m06"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:multi-hop:r2.6",
+   "corpus": "store-v1",
+   "type": "multi-hop",
+   "question": "Which observability backend did Alex choose for the rewrite that Alex agreed to lead on 2026-10-14?",
+   "answer": "Datadog",
+   "answers": [
+    "m58"
+   ],
+   "support": [
+    "m47"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:aggregation:r2.1",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "How many distinct cities is Alex planning to visit on the Japan trip?",
+   "answer": "Four: Tokyo, Kyoto, Kanazawa, and Osaka.",
+   "answers": [
+    "m63"
+   ],
+   "support": [
+    "m61",
+    "m62"
+   ],
+   "stale": []
+  },
+  {
+   "id": "store-v1:aggregation:r2.2",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "Across the migration work, how many separate incidents or schedule changes affected the production cutover date?",
+   "answer": "Two: the replica lag risk that pushed the cutover a week, and the on-call swap with Priya.",
+   "answers": [
+    "m27",
+    "m28",
+    "m31",
+    "m32"
+   ],
+   "support": [
+    "m26",
+    "m30"
+   ],
+   "stale": [
+    "m26"
+   ]
+  },
+  {
+   "id": "store-v1:aggregation:r2.3",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "Which editors does Alex currently use, and for what?",
+   "answer": "Neovim for quick edits and writing, and VS Code for the Go debugger.",
+   "answers": [
+    "m12",
+    "m13"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:aggregation:r2.4",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "How many of Alex's stated preferences involve avoiding something (dislikes or things to skip)?",
+   "answer": "Several: dislikes Java examples, avoids caffeine after 2 pm, dislikes long preambles, dislikes ORMs, avoids touristy restaurants, and wants to cut screen time after 9 pm.",
+   "answers": [
+    "m05",
+    "m08",
+    "m11",
+    "m52",
+    "m65",
+    "m74"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "store-v1:aggregation:r2.5",
+   "corpus": "store-v1",
+   "type": "aggregation",
+   "question": "What is the total number of hours Alex has committed to recurring weekly activities mentioned (mentoring and pair programming)?",
+   "answer": "One hour: a 30 minute mentoring session and 30 minute pair programming bursts.",
+   "answers": [
+    "m43",
+    "m49"
+   ],
+   "support": [
+    "m42"
+   ],
+   "stale": [
+    "m42"
+   ]
+  },
+  {
+   "id": "chat-v1:lookup:r2.1",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What's the name of Dana's dog?",
+   "answer": "Biscuit",
+   "answers": [
+    "s1-intro#0"
+   ],
+   "support": [
+    "s1-intro#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:r2.2",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "Where does Dana work now?",
+   "answer": "Brightpath",
+   "answers": [
+    "s4-offer#0"
+   ],
+   "support": [
+    "s4-offer#0"
+   ],
+   "stale": [
+    "s1-intro#2"
+   ]
+  },
+  {
+   "id": "chat-v1:lookup:r2.3",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What was Dana's finishing time in the Cherry Creek Half Marathon?",
+   "answer": "1:58:30",
+   "answers": [
+    "s5-race#0"
+   ],
+   "support": [
+    "s5-race#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:r2.4",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What is the name of Dana's sister's new baby?",
+   "answer": "Ivy",
+   "answers": [
+    "s3-family-and-jobs#0"
+   ],
+   "support": [
+    "s3-family-and-jobs#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:r2.5",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What does Sam do for a living?",
+   "answer": "Sam is a nurse at Denver Health",
+   "answers": [
+    "s1-intro#8"
+   ],
+   "support": [
+    "s1-intro#8"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:r2.6",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "When does Dana start her new job at Brightpath?",
+   "answer": "May 4",
+   "answers": [
+    "s4-offer#0"
+   ],
+   "support": [
+    "s4-offer#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:r2.7",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What food allergy does Sam have?",
+   "answer": "Peanuts",
+   "answers": [
+    "s2-running#6"
+   ],
+   "support": [
+    "s2-running#6"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:r2.8",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "Who is Dana's running partner?",
+   "answer": "Melanie",
+   "answers": [
+    "s2-running#0"
+   ],
+   "support": [
+    "s2-running#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:r2.9",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "Where does Dana's sister Rachel live?",
+   "answer": "Portland",
+   "answers": [
+    "s3-family-and-jobs#2"
+   ],
+   "support": [
+    "s3-family-and-jobs#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:lookup:r2.10",
+   "corpus": "chat-v1",
+   "type": "lookup",
+   "question": "What is Dana's current diet called now that she eats fish again?",
+   "answer": "Pescatarian",
+   "answers": [
+    "s5-race#6"
+   ],
+   "support": [
+    "s5-race#6"
+   ],
+   "stale": [
+    "s1-intro#6"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:r2.1",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "What's my current diet \u2014 am I still vegetarian?",
+   "answer": "Pescatarian; you've started eating fish again.",
+   "answers": [
+    "s5-race#6",
+    "s5-race#7"
+   ],
+   "support": [
+    "s1-intro#6",
+    "s5-race#8"
+   ],
+   "stale": [
+    "s1-intro#6",
+    "s1-intro#7"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:r2.2",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "Where do I work now?",
+   "answer": "Brightpath, as an analytics manager.",
+   "answers": [
+    "s4-offer#0",
+    "s5-race#4"
+   ],
+   "support": [
+    "s4-offer#2"
+   ],
+   "stale": [
+    "s1-intro#2",
+    "s1-intro#4"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:r2.3",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "What tool do I use for my work now \u2014 still Tableau?",
+   "answer": "No, Brightpath's team uses Python for everything.",
+   "answers": [
+    "s3-family-and-jobs#6",
+    "s5-race#6"
+   ],
+   "support": [
+    "s1-intro#4"
+   ],
+   "stale": [
+    "s1-intro#4",
+    "s1-intro#5"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:r2.4",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "How long is my longest run so far?",
+   "answer": "10 miles, done on a Saturday with Melanie.",
+   "answers": [
+    "s4-offer#4"
+   ],
+   "support": [
+    "s2-running#4"
+   ],
+   "stale": [
+    "s2-running#4"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:r2.5",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "Did I actually run the Cherry Creek Half, and what was my time?",
+   "answer": "Yes, you finished it in 1:58:30.",
+   "answers": [
+    "s5-race#0",
+    "s5-race#1"
+   ],
+   "support": [
+    "s2-running#0"
+   ],
+   "stale": [
+    "s2-running#0"
+   ]
+  },
+  {
+   "id": "chat-v1:correction:r2.6",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "What's Biscuit's age?",
+   "answer": "3 years old.",
+   "answers": [
+    "s6-trip#2"
+   ],
+   "support": [],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:correction:r2.7",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "Is Sam still working night shifts at Denver Health?",
+   "answer": "Yes, Sam is still a nurse working nights at Denver Health.",
+   "answers": [
+    "s4-offer#6"
+   ],
+   "support": [
+    "s1-intro#8"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:correction:r2.8",
+   "corpus": "chat-v1",
+   "type": "correction",
+   "question": "What's the status of my job at Northwind?",
+   "answer": "You gave notice and left; you're now at Brightpath.",
+   "answers": [
+    "s4-offer#2",
+    "s4-offer#0"
+   ],
+   "support": [
+    "s5-race#4"
+   ],
+   "stale": [
+    "s1-intro#2"
+   ]
+  },
+  {
+   "id": "chat-v1:multi-hop:r2.1",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Dana's partner, who works night shifts as a nurse?",
+   "answer": "Sam",
+   "answers": [
+    "s1-intro#8"
+   ],
+   "support": [
+    "s1-intro#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:r2.2",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What tool does Dana's former employer Northwind use as its standard for dashboards?",
+   "answer": "Tableau",
+   "answers": [
+    "s1-intro#4"
+   ],
+   "support": [
+    "s1-intro#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:r2.3",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Dana's dog, who is a 3-year-old golden retriever?",
+   "answer": "Biscuit",
+   "answers": [
+    "s6-trip#2"
+   ],
+   "support": [
+    "s1-intro#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:r2.4",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Dana's sister's baby, whom Dana plans to meet on her July trip to Portland?",
+   "answer": "Ivy",
+   "answers": [
+    "s3-family-and-jobs#0"
+   ],
+   "support": [
+    "s6-trip#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:r2.5",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What was Dana's finishing time in the Cherry Creek Half Marathon, the race her friend Melanie convinced her to sign up for?",
+   "answer": "1:58:30",
+   "answers": [
+    "s5-race#0"
+   ],
+   "support": [
+    "s2-running#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:multi-hop:r2.6",
+   "corpus": "chat-v1",
+   "type": "multi-hop",
+   "question": "What is the name of Melanie's fianc\u00e9, whom she got engaged to around the time of the half marathon?",
+   "answer": "Tom",
+   "answers": [
+    "s5-race#2"
+   ],
+   "support": [
+    "s2-running#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:r2.1",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "How many half marathons has Melanie run, and what was her finishing time at the Cherry Creek Half?",
+   "answer": "Melanie has run about ten half marathons, and she finished the Cherry Creek Half in 1:41.",
+   "answers": [
+    "s2-running#2",
+    "s5-race#2"
+   ],
+   "support": [
+    "s2-running#2",
+    "s5-race#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:r2.2",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "Which jobs has Dana held or been offered, and at which companies?",
+   "answer": "Dana was a data analyst at Northwind and accepted an analytics manager role at Brightpath.",
+   "answers": [
+    "s1-intro#2",
+    "s3-family-and-jobs#4",
+    "s4-offer#0"
+   ],
+   "support": [
+    "s1-intro#2",
+    "s3-family-and-jobs#4",
+    "s4-offer#0"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:r2.3",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "How many people in Dana's life are mentioned by name, and who are they?",
+   "answer": "Five people are named: Sam (partner), Priya (manager), Melanie (running partner), Rachel (sister), and Tom (Melanie's boyfriend).",
+   "answers": [
+    "s1-intro#0",
+    "s1-intro#2",
+    "s2-running#0",
+    "s3-family-and-jobs#0",
+    "s5-race#2"
+   ],
+   "support": [
+    "s1-intro#0",
+    "s1-intro#2",
+    "s2-running#0",
+    "s3-family-and-jobs#0",
+    "s5-race#2"
+   ],
+   "stale": []
+  },
+  {
+   "id": "chat-v1:aggregation:r2.4",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "What dietary restrictions apply to Dana and Sam, and how have they changed over time?",
+   "answer": "Dana was vegetarian for about six years but is now pescatarian (eats fish), and peanuts must always be avoided because Sam is allergic.",
+   "answers": [
+    "s1-intro#6",
+    "s2-running#6",
+    "s5-race#6",
+    "s5-race#8"
+   ],
+   "support": [
+    "s1-intro#6",
+    "s2-running#6",
+    "s5-race#6",
+    "s5-race#8"
+   ],
+   "stale": [
+    "s1-intro#6"
+   ]
+  },
+  {
+   "id": "chat-v1:aggregation:r2.5",
+   "corpus": "chat-v1",
+   "type": "aggregation",
+   "question": "What major life events has Dana mentioned across the conversations?",
+   "answer": "Dana signed up for and finished the Cherry Creek Half Marathon, got and accepted a job offer at Brightpath, and became an aunt when her sister Rachel had a baby named Ivy.",
+   "answers": [
+    "s2-running#0",
+    "s3-family-and-jobs#0",
+    "s4-offer#0",
+    "s5-race#0"
+   ],
+   "support": [
+    "s2-running#0",
+    "s3-family-and-jobs#0",
+    "s4-offer#0",
+    "s5-race#0"
+   ],
+   "stale": []
+  }
+ ]
+}

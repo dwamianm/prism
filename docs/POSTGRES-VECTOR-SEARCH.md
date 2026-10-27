@@ -43,6 +43,11 @@ older/custom receipt is unknown, not proof of exact search. Existing receipt
 canonical bytes and checksums are preserved. This field records the selected
 policy, not a captured database execution plan.
 
+With `enable_multi_model_embeddings` the vectors live in a `node_embeddings` table with
+one partial HNSW index per model instead of the `nodes.embedding` column; the exact and
+approximate modes above apply to each model's rows alike (see
+[switching embedding models](EMBEDDING-MODELS.md)).
+
 Exact owner/scope filtering does not implement PostgreSQL named projects or
 database RLS. A namespace design still needs separate tables/indexes or another
 mandatory partition boundary. [Local workspaces](WORKSPACES.md) already use

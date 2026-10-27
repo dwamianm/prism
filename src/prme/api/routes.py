@@ -65,6 +65,7 @@ from prme.api.models import (
     ErrorResponse,
     ExtractionProcessRequest,
     ReingestRequest,
+    ReembedRequest,
     FastIngestBatchRequest,
     FastIngestBatchResponse,
     HealthResponse,
@@ -102,7 +103,9 @@ from prme.models.processing import ProcessingStatus, ProcessingResult
 from prme.ingestion.errors import (
     ExtractionError, MaterializationError, ReingestBusyError, ReingestDisabledError, extraction_failure_code,
 )
+from prme.models.reembed import ReembedResult
 from prme.models.reingest import ReingestResult
+from prme.storage.reembed import ReembedBusyError, ReembedDisabledError
 
 logger = logging.getLogger(__name__)
 
@@ -427,6 +430,27 @@ async def reingest(request: Request, body: ReingestRequest):
             owner, scope=body.scope, limit=body.limit, cursor=body.cursor, dry_run=body.dry_run,
         )
     except (ReingestDisabledError, ReingestBusyError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/reembed", response_model=ReembedResult,
+             summary="Build an embedding model's vectors for the caller's stored memories")
+async def reembed(request: Request, body: ReembedRequest):
+    """Embed the caller's memories under a model that has no vector for them yet; a dry run only counts.
+
+    The model runs locally; no model service is called. The result's `remaining` is 0 when the model's index is
+    complete for the caller's memories. 409 when the engine has `enable_multi_model_embeddings` off or is already
+    filling this model.
+    """
+    owner = _user_id(request, body.user_id, required=True)
+    try:
+        return await _get_engine(request).reembed(
+            body.model, limit=body.limit, cursor=body.cursor, dry_run=body.dry_run, user_id=owner,
+            batch_size=body.batch_size, pause_ms=body.pause_ms,
+        )
+    except (ReembedDisabledError, ReembedBusyError) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

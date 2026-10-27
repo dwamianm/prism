@@ -23,6 +23,7 @@ from prme.storage.derivation_staging import DuckDBStageFence
 from prme.storage.profile_work import ProfileStageFence
 from prme.models.profile import ProfilePublication
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query, encode_texts
+from prme.storage.multi_model import ACTIVE_STATES, ModelIdentity, StoredModel
 
 from prme.privacy.diagnostics import ScopedLogger
 
@@ -62,10 +63,15 @@ class VectorIndex:
         conn_lock: asyncio.Lock | None = None,
         save_interval: int = 64,
         exact_search: bool = True,
+        model_scoped: bool = False,
     ) -> None:
         self._conn = conn
         self._index_path = index_path
         self._provider = embedding_provider
+        # With enable_multi_model_embeddings (dwamianm/prism#368) one pack holds the vectors of several models,
+        # and this index owns the rows of its provider's model only: every read and write of vector_metadata
+        # below carries the model filter. Off, the table holds one model and no query changes.
+        self._scoped = model_scoped
         self._write_lock = asyncio.Lock()
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
 
@@ -239,7 +245,10 @@ class VectorIndex:
             reader.execute(
                 "SELECT vm.vector_key, vm.embedding_dim, vp.vector_key IS NOT NULL "
                 "FROM vector_metadata vm LEFT JOIN vector_payloads vp "
-                "ON vm.vector_key = vp.vector_key ORDER BY vm.vector_key"
+                "ON vm.vector_key = vp.vector_key"
+                + (" WHERE vm.embedding_model = ? AND vm.embedding_version = ?" if self._scoped else "")
+                + " ORDER BY vm.vector_key",
+                list(self._model_params()),
             )
             while rows := reader.fetchmany(256):
                 max_key = max(max_key, rows[-1][0])
@@ -288,6 +297,10 @@ class VectorIndex:
         # corresponding nextval advance. Rebase once at startup, beyond both
         # durable keys and the sequence's recorded position. Otherwise the
         # first new vector after a process exit can collide with a saved key.
+        if self._scoped:
+            # The sequence serves every model, so the rebase clears the keys of all of them.
+            max_key = max(max_key, self._conn.execute(
+                "SELECT COALESCE(MAX(vector_key), 0) FROM vector_metadata").fetchone()[0])
         start, last = self._conn.execute(
             "SELECT start_value, last_value FROM duckdb_sequences() "
             "WHERE sequence_name = 'vector_key_seq' AND schema_name = current_schema() "
@@ -476,7 +489,7 @@ class VectorIndex:
             "vm.embedding_dim, vp.vector_data, vs.content FROM vector_metadata vm "
             "LEFT JOIN vector_payloads vp USING (vector_key) "
             "LEFT JOIN vector_staging vs ON vm.vector_key = vs.vector_key AND vm.node_id = vs.node_id "
-            "WHERE vm.node_id = ?", [node_id],
+            "WHERE vm.node_id = ?" + self._model_filter("vm."), [node_id, *self._model_params()],
         ).fetchall()
         if rows:
             expected = (user_id, embedding.model, embedding.version, embedding.dimension,
@@ -571,8 +584,8 @@ class VectorIndex:
                 rows = self._conn.execute(
                     'SELECT vm.user_id,vm.embedding_model,vm.embedding_version,vm.embedding_dim,vs.content,vp.vector_data '
                     'FROM vector_metadata vm LEFT JOIN vector_staging vs ON vs.vector_key=vm.vector_key AND vs.node_id=vm.node_id '
-                    'LEFT JOIN vector_payloads vp ON vp.vector_key=vm.vector_key WHERE vm.node_id=?',
-                    [str(plan.node.id)]).fetchall()
+                    'LEFT JOIN vector_payloads vp ON vp.vector_key=vm.vector_key WHERE vm.node_id=?'
+                    + self._model_filter('vm.'), [str(plan.node.id), *self._model_params()]).fetchall()
                 expected = (plan.node.user_id, plan.embedding.model, plan.embedding.version, plan.embedding.dimension,
                             plan.node.content, np.asarray(plan.embedding.values, dtype='<f4').tobytes())
                 if len(rows) > 1 or any(tuple(row) != expected for row in rows):
@@ -610,6 +623,9 @@ class VectorIndex:
         """
         suffix = " AND vector_key <> ?" if keep_key is not None else ""
         params = [node_id, keep_key] if keep_key is not None else [node_id]
+        # A model's index removes its own rows only; delete_other_models() clears the rest of an evicted node.
+        suffix += self._model_filter()
+        params += self._model_params()
         rows = self._conn.execute(
             "SELECT vector_key FROM vector_metadata WHERE node_id = ?" + suffix, params,
         ).fetchall()
@@ -629,7 +645,15 @@ class VectorIndex:
 
         self._conn.execute("BEGIN TRANSACTION")
         try:
-            self._conn.execute("DELETE FROM vector_staging WHERE node_id = ?" + suffix, params)
+            if self._scoped:
+                # vector_staging has no model columns, and a node has one staged vector at most.
+                self._conn.execute(
+                    "DELETE FROM vector_staging WHERE node_id = ? AND vector_key IN "
+                    "(SELECT vector_key FROM vector_metadata WHERE node_id = ?" + suffix + ")",
+                    [node_id, *params],
+                )
+            else:
+                self._conn.execute("DELETE FROM vector_staging WHERE node_id = ?" + suffix, params)
             self._conn.execute(
                 "DELETE FROM vector_payloads WHERE vector_key IN "
                 "(SELECT vector_key FROM vector_metadata WHERE node_id = ?" + suffix + ")", params,
@@ -854,9 +878,12 @@ class VectorIndex:
         self._snapshot_dirty = True
         self._conn.execute("BEGIN TRANSACTION")
         try:
-            self._conn.execute("DELETE FROM vector_staging")
-            self._conn.execute("DELETE FROM vector_payloads")
-            self._conn.execute("DELETE FROM vector_metadata")
+            if self._scoped:
+                self._delete_model_rows(self._conn, self._provider.model_name, self._provider.model_version)
+            else:
+                self._conn.execute("DELETE FROM vector_staging")
+                self._conn.execute("DELETE FROM vector_payloads")
+                self._conn.execute("DELETE FROM vector_metadata")
             if self._index_path is None:
                 # Drop the stored snapshot with the vectors it describes; the
                 # save below then records the empty index.
@@ -869,6 +896,226 @@ class VectorIndex:
         # rebuild never reuses a key that an in-flight reference might hold.
         self._save_snapshot()
         self._unsaved_inserts = 0
+
+    # --- One model among several (enable_multi_model_embeddings, dwamianm/prism#368) ---
+
+    def _model_filter(self, prefix: str = "") -> str:
+        """The SQL that limits a vector_metadata query to this index's model; empty when the pack holds one."""
+        if not self._scoped:
+            return ""
+        return f" AND {prefix}embedding_model = ? AND {prefix}embedding_version = ?"
+
+    def _model_params(self) -> tuple[str, ...]:
+        if not self._scoped:
+            return ()
+        return (self._provider.model_name, self._provider.model_version)
+
+    @staticmethod
+    def _delete_model_rows(conn: duckdb.DuckDBPyConnection, name: str, version: str) -> int:
+        """Delete every vector row of one model; the caller holds the locks and the transaction."""
+        keys = "SELECT vector_key FROM vector_metadata WHERE embedding_model = ? AND embedding_version = ?"
+        conn.execute(f"DELETE FROM vector_staging WHERE vector_key IN ({keys})", [name, version])
+        conn.execute(f"DELETE FROM vector_payloads WHERE vector_key IN ({keys})", [name, version])
+        return len(conn.execute(
+            "DELETE FROM vector_metadata WHERE embedding_model = ? AND embedding_version = ? RETURNING vector_key",
+            [name, version],
+        ).fetchall())
+
+    @property
+    def identity(self) -> ModelIdentity:
+        return ModelIdentity.of(self._provider)
+
+    async def _read(self, operation, *args):
+        async with self._conn_lock:
+            return await run_to_completion(operation, *args)
+
+    async def has_vectors(self) -> bool:
+        """Whether the pack holds at least one vector of this index's model."""
+        return await self._read(lambda: self._conn.execute(
+            "SELECT 1 FROM vector_metadata WHERE embedding_model = ? AND embedding_version = ? LIMIT 1",
+            [self._provider.model_name, self._provider.model_version],
+        ).fetchone() is not None)
+
+    async def stored_models(self) -> list[StoredModel]:
+        """Every model with vectors in the pack and how many it has, the largest first."""
+        rows = await self._read(lambda: self._conn.execute(
+            "SELECT embedding_model, embedding_version, embedding_dim, count(*) FROM vector_metadata "
+            "GROUP BY 1, 2, 3 ORDER BY count(*) DESC, 1, 2, 3",
+        ).fetchall())
+        return [StoredModel(ModelIdentity(name, version, int(dim)), int(count)) for name, version, dim, count in rows]
+
+    def _expected_nodes(self, user_id: str | None) -> tuple[str, list]:
+        """The nodes that should have a vector: active ones with text to embed, as ``rebuild_indexes()`` takes them."""
+        sql = (
+            "FROM nodes n WHERE COALESCE(n.lifecycle_state, 'tentative') IN ("
+            + ", ".join("?" for _ in ACTIVE_STATES) + ") AND regexp_matches(n.content, '\\S')"
+        )
+        params: list = list(ACTIVE_STATES)
+        if user_id is not None:
+            sql += " AND n.user_id = ?"
+            params.append(user_id)
+        return sql, params
+
+    _LACKS_VECTOR = (
+        " AND NOT EXISTS (SELECT 1 FROM vector_metadata vm WHERE vm.node_id = n.id "
+        "AND vm.embedding_model = ? AND vm.embedding_version = ?)"
+    )
+
+    async def coverage_counts(
+        self, user_id: str | None = None, identity: ModelIdentity | None = None,
+    ) -> tuple[int, int]:
+        """``(memories that should have a vector, memories that have none under a model)``; the model is this one's."""
+        base, params = self._expected_nodes(user_id)
+        held = self._model_identity_params(identity)
+
+        def count() -> tuple[int, int]:
+            expected = self._conn.execute("SELECT count(*) " + base, params).fetchone()[0]
+            missing = self._conn.execute(
+                "SELECT count(*) " + base + self._LACKS_VECTOR, [*params, *held],
+            ).fetchone()[0]
+            return int(expected), int(missing)
+
+        return await self._read(count)
+
+    def _model_identity_params(self, identity: ModelIdentity | None = None) -> tuple[str, str]:
+        if identity is not None:
+            return (identity.name, identity.version)
+        return (self._provider.model_name, self._provider.model_version)
+
+    async def missing_nodes(
+        self, *, after: str | None = None, upper: str | None = None, limit: int = 64, user_id: str | None = None,
+        identity: ModelIdentity | None = None,
+    ) -> list[tuple[str, str, str]]:
+        """Up to ``limit`` memories without a vector under a model (this one's by default), by id after ``after``.
+
+        Each row is the id, the text and the owner.
+        """
+        base, params = self._expected_nodes(user_id)
+        sql = "SELECT n.id, n.content, n.user_id " + base + self._LACKS_VECTOR
+        params = [*params, *self._model_identity_params(identity)]
+        if after is not None:
+            sql += " AND n.id > ?"
+            params.append(after)
+        if upper is not None:
+            sql += " AND n.id <= ?"
+            params.append(upper)
+        sql += " ORDER BY n.id LIMIT ?"
+        params.append(limit)
+        rows = await self._read(lambda: self._conn.execute(sql, params).fetchall())
+        return [(str(node_id), content, owner) for node_id, content, owner in rows]
+
+    async def put_vectors(self, rows: list[tuple[str, str, str, list[float]]]) -> int:
+        """Store vectors made elsewhere: ``(node_id, user_id, content, vector)``. Returns how many were new.
+
+        A node that already has a vector under this model, that is no longer active, or that another owner
+        holds is skipped, so a re-embed that raced a write or a retirement leaves the newer state alone.
+        """
+        async with self._write_lock:
+            async with self._conn_lock:
+                return await run_to_completion(self._do_put_vectors, rows)
+
+    def _do_put_vectors(self, rows: list[tuple[str, str, str, list[float]]]) -> int:
+        """Store a batch in one transaction: the metadata and payload rows, then the native index.
+
+        The caller holds both locks. Rows already stored under this model, and nodes that are no longer active
+        or belong to another owner, are skipped.
+        """
+        fresh: list[tuple[str, str, str, np.ndarray]] = []
+        for node_id, user_id, content, values in rows:
+            vector = np.array(values, dtype=np.float32)
+            if vector.shape != (self._provider.dimension,) or not np.isfinite(vector).all():
+                raise ValueError("Embedding provider returned invalid dimensions or non-finite values")
+            present = self._conn.execute(
+                "SELECT 1 FROM vector_metadata WHERE node_id = ? AND embedding_model = ? "
+                "AND embedding_version = ? LIMIT 1", [node_id, *self._model_identity_params()],
+            ).fetchone()
+            active = self._conn.execute(
+                "SELECT 1 FROM nodes WHERE id = ? AND user_id = ? AND COALESCE(lifecycle_state, 'tentative') IN ("
+                + ", ".join("?" for _ in ACTIVE_STATES) + ")", [node_id, user_id, *ACTIVE_STATES],
+            ).fetchone()
+            if present is None and active is not None:
+                fresh.append((node_id, user_id, content, vector))
+        if not fresh:
+            return 0
+        keys = [self._conn.execute("SELECT nextval('vector_key_seq')").fetchone()[0] for _ in fresh]
+        name, version = self._model_identity_params()
+        self._conn.execute("BEGIN TRANSACTION")
+        try:
+            self._conn.executemany(
+                "INSERT INTO vector_metadata (vector_key, node_id, user_id, embedding_model, embedding_version, "
+                "embedding_dim) VALUES (?, ?, ?, ?, ?, ?)",
+                [[key, node_id, user_id, name, version, self._provider.dimension]
+                 for key, (node_id, user_id, _content, _vector) in zip(keys, fresh)],
+            )
+            self._conn.executemany(
+                "INSERT INTO vector_payloads VALUES (?, ?)",
+                [[key, vector.astype("<f4", copy=False).tobytes()] for key, (_n, _u, _c, vector) in zip(keys, fresh)],
+            )
+            self._conn.execute("COMMIT")
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+        for key, (_node_id, _user_id, _content, vector) in zip(keys, fresh):
+            self._index.add(key, vector)
+        self._snapshot_dirty = True
+        self._count_unsaved_changes(len(fresh))
+        return len(fresh)
+
+    async def delete_other_models(self, node_id: str, keep: list[ModelIdentity]) -> int:
+        """Remove a node's vector rows of every model that is not in ``keep``, including models not open here.
+
+        Their native index files are not touched; a file's stale key is dropped when that model's index next opens,
+        as it is for any key whose row is gone.
+        """
+        def delete() -> int:
+            clause = "".join(" AND NOT (embedding_model = ? AND embedding_version = ?)" for _ in keep)
+            params: list = [node_id]
+            for identity in keep:
+                params += [identity.name, identity.version]
+            keys = [row[0] for row in self._conn.execute(
+                "SELECT vector_key FROM vector_metadata WHERE node_id = ?" + clause, params).fetchall()]
+            if not keys:
+                return 0
+            marks = ", ".join("?" for _ in keys)
+            self._conn.execute("BEGIN TRANSACTION")
+            try:
+                self._conn.execute(f"DELETE FROM vector_staging WHERE vector_key IN ({marks})", keys)
+                self._conn.execute(f"DELETE FROM vector_payloads WHERE vector_key IN ({marks})", keys)
+                self._conn.execute(f"DELETE FROM vector_metadata WHERE vector_key IN ({marks})", keys)
+                self._conn.execute("COMMIT")
+            except BaseException:
+                self._conn.execute("ROLLBACK")
+                raise
+            return len(keys)
+
+        async with self._write_lock:
+            async with self._conn_lock:
+                return await run_to_completion(delete)
+
+    async def drop_rows(self) -> int:
+        """Remove every vector row of this model and empty its native index; returns the rows removed."""
+        removed = (await self._read(lambda: self._conn.execute(
+            "SELECT count(*) FROM vector_metadata WHERE embedding_model = ? AND embedding_version = ?",
+            list(self._model_identity_params()),
+        ).fetchone()))[0]
+        await self.clear()
+        return int(removed)
+
+    async def drop_rows_of(self, identity: ModelIdentity) -> int:
+        """Remove the vector rows of a model that is not open here; its index file is removed by the caller."""
+        def delete() -> int:
+            self._conn.execute("BEGIN TRANSACTION")
+            try:
+                removed = self._delete_model_rows(self._conn, identity.name, identity.version)
+                self._conn.execute("COMMIT")
+            except BaseException:
+                self._conn.execute("ROLLBACK")
+                raise
+            return removed
+
+        async with self._write_lock:
+            async with self._conn_lock:
+                return await run_to_completion(delete)
 
     async def close(self) -> None:
         """Save index and clean up resources."""

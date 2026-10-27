@@ -307,6 +307,10 @@ async def publish_consolidation_plan(
             lambda: engine._graph_store.publish_consolidation(plan),
             label=f"consolidation.publish:{plan.node.id}",
         )
+    if engine._pool is not None:
+        from prme.storage.multi_model import write_additional_models
+
+        await write_additional_models(engine._vector_index, [plan.embedding], user_id=owner)
     for stale in (*plan.previous, *retired):
         await engine._evict_from_indexes(str(stale.id))
     published = await engine.get_node(node_id, **({"user_id": owner} if plan.privacy_manifest else {}))

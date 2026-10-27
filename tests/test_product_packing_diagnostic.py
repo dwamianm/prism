@@ -1592,3 +1592,19 @@ class TestBySpeaker:
         """Rows saved before this metric existed carry no speaker_roles key."""
         rows = [gate_row(f"q{n}", "single-hop", all_packed=True) for n in range(3)]
         assert summarize_gate(rows)["by_speaker"] is None
+
+
+def test_gate_config_takes_an_embedding_model_only_from_the_experiment_variable(tmp_path, monkeypatch):
+    monkeypatch.delenv("PRME_BENCH_EMBEDDING", raising=False)
+    assert gate_config(tmp_path).embedding.model_name == "BAAI/bge-small-en-v1.5"
+    monkeypatch.setenv("PRME_BENCH_EMBEDDING", json.dumps(
+        {"model_name": "nomic-ai/nomic-embed-text-v1.5", "threads": 1, "query_prefix": "search_query: "}))
+    config = gate_config(tmp_path)
+    assert (config.embedding.model_name, config.embedding.dimension, config.embedding.threads,
+            config.embedding.query_prefix) == ("nomic-ai/nomic-embed-text-v1.5", 768, 1, "search_query: ")
+    # --set still cannot change the embedding, and the variable takes only the embedding's own fields.
+    with pytest.raises(ValueError, match="cannot override"):
+        gate_config(tmp_path, parse_overrides(["embedding.model_name=other"]))
+    monkeypatch.setenv("PRME_BENCH_EMBEDDING", json.dumps({"provider": "openai"}))
+    with pytest.raises(ValueError, match="takes a JSON object"):
+        gate_config(tmp_path)

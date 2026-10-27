@@ -1,0 +1,560 @@
+{
+  "kind": "prme-mid-tier-comparison",
+  "schema_version": 1,
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "baseline": {
+    "label": "emb366-bge-small",
+    "commit": "349a9926d7e4132952c4b4f5cc82a89875bc9e09",
+    "src_tree": "cda53eae61820c9564056c9c50cdad8b46e7ab97",
+    "dirty": true,
+    "overrides": {},
+    "created_at": "2026-10-21T21:57:50.746969+00:00",
+    "cache": "warm",
+    "seconds": 4541.474136792007,
+    "calls": 0
+  },
+  "candidate": {
+    "label": "emb366-bge-base",
+    "commit": "349a9926d7e4132952c4b4f5cc82a89875bc9e09",
+    "src_tree": "cda53eae61820c9564056c9c50cdad8b46e7ab97",
+    "dirty": true,
+    "overrides": {},
+    "created_at": "2026-10-21T23:13:32.269680+00:00",
+    "cache": "warm",
+    "seconds": 4452.963644000003,
+    "calls": 0
+  },
+  "same_engine_source": true,
+  "warnings": [
+    "The baseline ran on a working tree with uncommitted changes.",
+    "The candidate ran on a working tree with uncommitted changes."
+  ],
+  "benchmarks": {
+    "locomo": {
+      "questions": 1540,
+      "annotated_questions": 1536,
+      "metrics": {
+        "all_evidence_packed": {
+          "queries": 1536,
+          "before": 0.8359375,
+          "after": 0.8359375,
+          "delta": 0.0,
+          "wins": 27,
+          "losses": 27,
+          "ties": 1482,
+          "interval_95_questions": [
+            -0.009765625,
+            0.009765625
+          ],
+          "interval_95_conversations": [
+            -0.006603081438004402,
+            0.006968641114982578
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "evidence_recall": {
+          "queries": 1536,
+          "before": 0.8916880103067941,
+          "after": 0.8958516031699263,
+          "delta": 0.004163592863132095,
+          "wins": 49,
+          "losses": 42,
+          "ties": 1445,
+          "interval_95_questions": [
+            -0.002642091307465969,
+            0.011149088541666666
+          ],
+          "interval_95_conversations": [
+            -0.0016082949308755762,
+            0.010514785681447526
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "evidence_in_top_25": {
+          "queries": 1536,
+          "before": 0.7027867042637929,
+          "after": 0.7227437756340076,
+          "delta": 0.01995707137021475,
+          "wins": 82,
+          "losses": 39,
+          "ties": 1415,
+          "interval_95_questions": [
+            0.009789514764239029,
+            0.030054417600373484
+          ],
+          "interval_95_conversations": [
+            0.010264419381437536,
+            0.029127660565413813
+          ],
+          "conversations": 10,
+          "excludes_zero": true
+        },
+        "all_evidence_returned": {
+          "queries": 1536,
+          "before": 0.98046875,
+          "after": 0.984375,
+          "delta": 0.00390625,
+          "wins": 11,
+          "losses": 5,
+          "ties": 1520,
+          "interval_95_questions": [
+            -0.0013020833333333333,
+            0.009114583333333334
+          ],
+          "interval_95_conversations": [
+            0.0,
+            0.008742434431741762
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "projected_accuracy": {
+          "queries": 1540,
+          "before": 0.773616384514052,
+          "after": 0.7739206670042668,
+          "delta": 0.00030428249021472744,
+          "wins": 27,
+          "losses": 27,
+          "ties": 1486,
+          "interval_95_questions": [
+            -0.005940850441449855,
+            0.006456264576239956
+          ],
+          "interval_95_conversations": [
+            -0.004040811800861621,
+            0.004971139547516475
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        }
+      },
+      "categories": {
+        "multi-hop": {
+          "queries": 282,
+          "before": 0.5177304964539007,
+          "after": 0.5035460992907801,
+          "delta": -0.014184397163120567,
+          "wins": 10,
+          "losses": 14,
+          "ties": 258,
+          "interval_95_questions": [
+            -0.04964539007092199,
+            0.01773049645390071
+          ],
+          "interval_95_conversations": [
+            -0.037162162162162164,
+            0.007407407407407408
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "open-domain": {
+          "queries": 92,
+          "before": 0.5543478260869565,
+          "after": 0.5543478260869565,
+          "delta": 0.0,
+          "wins": 4,
+          "losses": 4,
+          "ties": 84,
+          "interval_95_questions": [
+            -0.05434782608695652,
+            0.06521739130434782
+          ],
+          "interval_95_conversations": [
+            -0.038834951456310676,
+            0.041666666666666664
+          ],
+          "conversations": 9,
+          "excludes_zero": false
+        },
+        "single-hop": {
+          "queries": 841,
+          "before": 0.9453032104637337,
+          "after": 0.9512485136741974,
+          "delta": 0.005945303210463734,
+          "wins": 10,
+          "losses": 5,
+          "ties": 826,
+          "interval_95_questions": [
+            -0.0023781212841854932,
+            0.015457788347205707
+          ],
+          "interval_95_conversations": [
+            -0.002333722287047841,
+            0.016229712858926344
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        },
+        "temporal": {
+          "queries": 321,
+          "before": 0.9096573208722741,
+          "after": 0.9065420560747663,
+          "delta": -0.003115264797507788,
+          "wins": 3,
+          "losses": 4,
+          "ties": 314,
+          "interval_95_questions": [
+            -0.018691588785046728,
+            0.012461059190031152
+          ],
+          "interval_95_conversations": [
+            -0.014035087719298246,
+            0.006430868167202572
+          ],
+          "conversations": 10,
+          "excludes_zero": false
+        }
+      },
+      "gained_all_evidence": [
+        "conv-26-q0055",
+        "conv-26-q0139",
+        "conv-26-q0144",
+        "conv-30-q0081",
+        "conv-41-q0047",
+        "conv-42-q0011",
+        "conv-42-q0014",
+        "conv-42-q0134",
+        "conv-42-q0135",
+        "conv-43-q0059",
+        "conv-44-q0044",
+        "conv-47-q0008",
+        "conv-47-q0011",
+        "conv-47-q0012",
+        "conv-47-q0049",
+        "conv-47-q0078",
+        "conv-47-q0103",
+        "conv-48-q0048",
+        "conv-48-q0080",
+        "conv-49-q0018",
+        "conv-49-q0039",
+        "conv-49-q0082",
+        "conv-49-q0110",
+        "conv-49-q0130",
+        "conv-50-q0005",
+        "conv-50-q0027",
+        "conv-50-q0120"
+      ],
+      "lost_all_evidence": [
+        "conv-26-q0002",
+        "conv-26-q0043",
+        "conv-26-q0048",
+        "conv-26-q0066",
+        "conv-41-q0035",
+        "conv-41-q0072",
+        "conv-42-q0051",
+        "conv-42-q0068",
+        "conv-42-q0095",
+        "conv-43-q0019",
+        "conv-43-q0105",
+        "conv-44-q0012",
+        "conv-44-q0016",
+        "conv-44-q0018",
+        "conv-44-q0020",
+        "conv-47-q0026",
+        "conv-47-q0051",
+        "conv-47-q0054",
+        "conv-48-q0014",
+        "conv-48-q0141",
+        "conv-49-q0022",
+        "conv-49-q0026",
+        "conv-49-q0045",
+        "conv-50-q0041",
+        "conv-50-q0049",
+        "conv-50-q0057",
+        "conv-50-q0152"
+      ]
+    },
+    "longmemeval": {
+      "questions": 12,
+      "annotated_questions": 12,
+      "metrics": {
+        "all_evidence_packed": {
+          "queries": 12,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        },
+        "evidence_recall": {
+          "queries": 12,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        },
+        "evidence_in_top_25": {
+          "queries": 12,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        },
+        "all_evidence_returned": {
+          "queries": 12,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        },
+        "projected_accuracy": {
+          "queries": 12,
+          "before": 0.9553349875930521,
+          "after": 0.9553349875930521,
+          "delta": 0.0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 12,
+          "interval_95_questions": [
+            0.0,
+            0.0
+          ],
+          "excludes_zero": false
+        }
+      },
+      "categories": {
+        "knowledge-update": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "multi-session": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "single-session-assistant": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "single-session-preference": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "single-session-user": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        },
+        "temporal-reasoning": {
+          "queries": 2,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 2,
+          "interval_95_questions": null,
+          "excludes_zero": false
+        }
+      },
+      "gained_all_evidence": [],
+      "lost_all_evidence": []
+    }
+  },
+  "stages": {
+    "baseline": {
+      "build-locomo": {
+        "started_at": "2026-10-21T20:42:09.221878+00:00",
+        "seconds": 2171.7708863749867,
+        "load_average_1m": {
+          "start": 2.5029296875,
+          "end": 11.435546875
+        },
+        "packs": 10,
+        "processes": 3,
+        "turns": 5882,
+        "calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_hits": 275,
+        "model_seconds_summed": 15942.438588087272,
+        "builds": 1,
+        "claims": 4791
+      },
+      "build-longmemeval": {
+        "started_at": "2026-10-21T20:42:09.221965+00:00",
+        "seconds": 4530.96114137501,
+        "load_average_1m": {
+          "start": 2.5029296875,
+          "end": 4.76953125
+        },
+        "packs": 12,
+        "processes": 3,
+        "turns": 5895,
+        "calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_hits": 911,
+        "model_seconds_summed": 49403.534780895076,
+        "builds": 1,
+        "claims": 7641
+      },
+      "gate-locomo": {
+        "started_at": "2026-10-21T21:18:21.019751+00:00",
+        "seconds": 320.27161870899727,
+        "load_average_1m": {
+          "start": 11.435546875,
+          "end": 14.0263671875
+        },
+        "shards": 3,
+        "questions": 1540
+      },
+      "gate-longmemeval": {
+        "started_at": "2026-10-21T21:57:40.225007+00:00",
+        "seconds": 10.506207667000126,
+        "load_average_1m": {
+          "start": 4.76953125,
+          "end": 4.4169921875
+        },
+        "shards": 1,
+        "questions": 12
+      }
+    },
+    "candidate": {
+      "build-locomo": {
+        "started_at": "2026-10-21T21:59:19.270202+00:00",
+        "seconds": 2112.7367847079877,
+        "load_average_1m": {
+          "start": 1.99169921875,
+          "end": 11.00927734375
+        },
+        "packs": 10,
+        "processes": 3,
+        "turns": 5882,
+        "calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_hits": 275,
+        "model_seconds_summed": 15052.38003999804,
+        "builds": 1,
+        "claims": 4791
+      },
+      "build-longmemeval": {
+        "started_at": "2026-10-21T21:59:19.270254+00:00",
+        "seconds": 4441.009269834001,
+        "load_average_1m": {
+          "start": 1.99169921875,
+          "end": 2.7119140625
+        },
+        "packs": 12,
+        "processes": 3,
+        "turns": 5895,
+        "calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_hits": 911,
+        "model_seconds_summed": 48106.45776246002,
+        "builds": 1,
+        "claims": 7641
+      },
+      "gate-locomo": {
+        "started_at": "2026-10-21T22:34:32.016352+00:00",
+        "seconds": 319.7542433750059,
+        "load_average_1m": {
+          "start": 11.00927734375,
+          "end": 12.59619140625
+        },
+        "shards": 3,
+        "questions": 1540
+      },
+      "gate-longmemeval": {
+        "started_at": "2026-10-21T23:13:20.295537+00:00",
+        "seconds": 11.95001529098954,
+        "load_average_1m": {
+          "start": 2.7119140625,
+          "end": 2.755859375
+        },
+        "shards": 1,
+        "questions": 12
+      }
+    }
+  }
+}

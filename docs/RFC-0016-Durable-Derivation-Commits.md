@@ -575,8 +575,10 @@ fixed by the source and the settings:
   commit of it finds the first and changes nothing.
 
 Planning and the model request are the ones `ingest()` uses. The settings that
-name a marker are the engine version, the extraction model and prompt and the
-options that decide what is derived; the settings that name the saved output are
+name a marker are the derivation version (`DERIVATION_VERSION`, an integer a
+developer bumps when what an unchanged source derives changes, and not the package
+version), the extraction model and prompt and the options that decide what is
+derived; the settings that name the saved output are
 the first three alone, so an option that only changes derivation plans again
 without a model call. A claim of the source that the new derivation states again
 is superseded by the new claim, through the plan's replacements. One it no longer

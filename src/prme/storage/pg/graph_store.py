@@ -72,6 +72,9 @@ class PgGraphStore:
 
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
+        # With enable_multi_model_embeddings, a publication stores its prepared vectors in node_embeddings
+        # instead of nodes.embedding (dwamianm/prism#368).
+        self._multi_model_embeddings = False
 
     # --- Node Operations ---
 
