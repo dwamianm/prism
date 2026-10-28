@@ -506,8 +506,15 @@ async def inspect_source(coordinator, event_id: str, *, user_id: str, scope: Sco
     row = await coordinator.repository.get(event_id, user_id=user_id)
     if row is None or (scope is not None and row.snapshot.policy.scope != Scope(scope)):
         return SourceUnavailable()
-    context = await ReadContext.create(coordinator, user_id=user_id, scopes=[scope] if scope else None,
-                                       records=(row,))
+    scopes = [scope] if scope else None
+    try:
+        context = await ReadContext.create(coordinator, user_id=user_id, scopes=scopes, records=(row,))
+    except PrivacyDenied as exc:
+        if exc.code != "privacy_erased":
+            raise
+        # The exact-record disclosure check already denies an erased source.
+        # Inspection reports that state from the owner-bound context instead.
+        context = await ReadContext.create(coordinator, user_id=user_id, scopes=scopes)
     async with context.guard():
         available = context.availability(row)
         try:
