@@ -689,8 +689,13 @@ async def _generated_nodes(engine, generated, vectors, *, removed_nodes, allow_r
                             metadata["summary_publication_key"] = str(identifier)
                         else:
                             metadata["consolidation_format_version"] = 2
+                    # Earlier versions are lineage dependencies, not sources: as in
+                    # organizer publication, they enter the manifest but not the
+                    # summary's or profile's source_node_ids.
                     admitted, manifest = await admit_generated_node(_GeneratedMigration(coordinator, selected),
-                        original.model_copy(update={"metadata": metadata}), sources, kind=kind, lineage_id=identifier)
+                        original.model_copy(update={"metadata": metadata}),
+                        tuple(known[node.id] for node in plan.sources), kind=kind, lineage_id=identifier,
+                        previous=tuple(known[node.id] for node in plan.previous))
                     _node(admitted, manifest)
                     existing = vectors.get(identifier)
                     if existing is None:

@@ -241,7 +241,7 @@ async def mixed_legacy_family(engine, runtime, owner, *, source_contents=None):
             embedding=await embedding(node), generation=generation)
         await engine._profile_work.prepare(profile)
         await engine._publish_prepared_profile(profile)
-        generated.append((node, "profile", (*profile.sources, *profile.previous)))
+        generated.append((node, "profile", profile.sources))
         previous = (node,)
     sources = tuple(sorted((direct, fact), key=lambda node: str(node.id)))
     key = consolidation_key(owner, scope, [node.id for node in sources])
@@ -264,7 +264,7 @@ async def mixed_legacy_family(engine, runtime, owner, *, source_contents=None):
         if engine._pool is None:
             await _stage_consolidation(engine, summary)
         await engine._graph_store.publish_consolidation(summary)
-        generated.append((node, "summary", (*summary.sources, *summary.previous)))
+        generated.append((node, "summary", summary.sources))
         previous = (node,)
     # Historical snapshot-only content and a checksum-bearing receipt remain
     # intact at source; the target receives only their typed unavailable IDs.
@@ -610,8 +610,12 @@ async def test_EM07_standard_matched_input_migration_parity(tmp_path, layout, an
 
     template, runtime, policy, custody, evidence, _ = await journal_engine(
         tmp_path / "template", "directory", analyzer, evidence_use="runtime")
+    # Opportunistic maintenance runs during retrieve. On the legacy side it
+    # promoted tentative memories after the "before" capture, so migration
+    # copied a newer state than the one compared. Both sides keep it off.
     base = template._config.model_copy(update={
-        "packing": template._config.packing.model_copy(update={"evidence_projection_top_k": 3})})
+        "packing": template._config.packing.model_copy(update={"evidence_projection_top_k": 3}),
+        "organizer": template._config.organizer.model_copy(update={"opportunistic_enabled": False})})
     await template.close()
     runtime.clock.now = datetime.fromisoformat(FIXTURE["clock"])
     runtime = replace(runtime, retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
@@ -784,11 +788,13 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
         assert nodes[fact.id].content == FIXTURE["admitted"][1]
         assert nodes[fact.id].evidence_refs == fact.evidence_refs
         assert nodes[fact.id].event_time == fact.event_time and nodes[fact.id].valid_from == fact.valid_from
-        for original_node, kind, dependencies in generated:
+        for original_node, kind, sources in generated:
             migrated = nodes[original_node.id]
             reference = GeneratedNodeReference.model_validate(migrated.metadata[JOURNAL_KEY])
             assert reference.kind == kind and reference.lineage_id == original_node.id
-            assert reference.source_node_ids == tuple(node.id for node in dependencies)
+            # As in organizer publication, earlier versions are lineage
+            # dependencies in the manifest, not sources (journals.py checks this).
+            assert reference.source_node_ids == tuple(node.id for node in sources)
             for field in ("content", "evidence_refs", "epistemic_type", "source_type", "event_time", "valid_from", "valid_to", "created_at"):
                 assert getattr(migrated, field) == getattr(original_node, field)
         payload = bundle.model_dump_json()
