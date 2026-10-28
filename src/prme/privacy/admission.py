@@ -859,6 +859,14 @@ class AdmissionCoordinator:
     async def require_legacy_call(self, owner, arguments) -> None:
         """Keep exact legacy objects independent of protected siblings."""
         identifiers = self._call_identifiers(arguments)
+        if self.engine._event_store._protected:
+            # A protected-format store holds no legacy objects (#326). A row the
+            # call would read without a valid privacy record is damaged or
+            # orphaned, and missing enrollment never makes it legacy. Absent and
+            # other owners' identities stay alike: the call finds nothing.
+            if await self.repository.has_objects(owner, identifiers or None):
+                raise PrivacyDenied("privacy_provider_unavailable")
+            return
         if identifiers:
             records = await self.repository.records_for_objects(
                 identifiers, owner=owner, supplemental_evidence=arguments.get("evidence_id"),

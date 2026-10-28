@@ -134,6 +134,36 @@ class PrivacyRepository:
     async def for_owner(self, user_id: str) -> tuple[PrivacyRecord, ...]:
         return await self._read("user_id=?", (user_id,))
 
+    async def has_objects(self, user_id: str | None, identifiers=None) -> bool:
+        """Whether any node or event row exists for the owner and, if given, these identities.
+
+        A protected-format store uses this when a call resolves no privacy
+        record: rows it would read without a record are damaged or orphaned.
+        """
+        for table in ("nodes", "events"):
+            ids = None
+            if identifiers is not None:
+                ids = []
+                for kind, value in identifiers:
+                    try:
+                        if kind == table:
+                            ids.append(str(UUID(str(value))))
+                    except ValueError:
+                        continue
+                if not ids:
+                    continue
+            clauses, args = [], []
+            if user_id is not None:
+                clauses.append("user_id=?")
+                args.append(user_id)
+            if ids is not None:
+                clauses.append("id IN (" + ",".join("?" for _ in ids) + ")")
+                args.extend(ids)
+            where = " WHERE " + " AND ".join(clauses) if clauses else ""
+            if await self._query(f"SELECT 1 FROM {table}{where} LIMIT 1", tuple(args)):
+                return True
+        return False
+
     async def require_legacy_range(self, user_id: str | None, scope: str | None) -> None:
         if self.pool is not None:
             async with self.pool.acquire() as conn:
