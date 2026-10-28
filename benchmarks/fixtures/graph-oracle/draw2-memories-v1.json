@@ -1,0 +1,377 @@
+{
+ "kind": "prme-graph-oracle-memories",
+ "schema_version": 1,
+ "name": "draw2-v1",
+ "owner": "noor",
+ "description": "A new memory set for the routing gate: one made-up user, Noor Haddad, a lead designer at a telehealth startup, her team, a job change, a corrected launch date and a trip to Portugal, in the style of the store fixture. Authored before any question about it existed.",
+ "memories": [
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor Haddad is a lead product designer at Lumen Health, a telehealth startup with about 120 employees."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor joined Lumen Health in February 2025 as a senior designer and was promoted to lead designer in August 2026."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Before Lumen Health, Noor worked at Brightline Studio in Austin from 2021 to January 2025."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor lives in Minneapolis, Minnesota. Noor moved there from Austin in January 2025 for the Lumen Health job."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor's partner is Idris, a high school chemistry teacher. Idris is allergic to walnuts."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor has a gray cat named Pepper, adopted in 2025. Pepper eats at 7 am and 6 pm."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "preference",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor prefers dark roast coffee and stops drinking it after 3 pm."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "preference",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor likes Figma and Linear for work and dislikes Sketch."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "instruction",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Always give Noor timelines in weeks, not sprints."
+  },
+  {
+   "role": "assistant",
+   "speaker": null,
+   "node_type": "note",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Assistant noted Noor's working style: visual first, wants a sketch or mock before long explanations, dislikes slide decks."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "preference",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor goes bouldering at Granite Gym three evenings a week."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s1-profile",
+   "content": "Noor's sister Lina lives in Lisbon and works as a ceramicist."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "entity",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "Lumen Health builds its product on React and Postgres, hosts it on Google Cloud, and tracks work in Linear."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "decision",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "Lumen Health decided to redesign the Patient Portal and name the new design system Atlas."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "The Patient Portal redesign has a budget of 140,000 USD and a team of five."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "note",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "The usability test of the Patient Portal prototype scored 71 on the System Usability Scale, and the target is 85."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "The Patient Portal launch is scheduled for Friday 2026-11-06."
+  },
+  {
+   "role": "participant",
+   "speaker": "Sven Larsen",
+   "node_type": "note",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "I checked the clinic calendar and the launch collides with the flu-season freeze. I want it moved two weeks."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "Correction: the Patient Portal launch moved from 2026-11-06 to Friday 2026-11-20 after Sven found the flu-season freeze."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "decision",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "Noor rejected Sketch for the Atlas design system because Lumen Health's engineers only support Figma tokens."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "decision",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "Noor agreed to use Storybook for documenting Atlas components."
+  },
+  {
+   "role": "assistant",
+   "speaker": null,
+   "node_type": "note",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "Assistant compared Storybook with Zeroheight: Storybook stays in the codebase, while Zeroheight is easier for non-engineers to edit."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "Noor presents the Atlas roadmap at the company all-hands on 2026-10-29."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s2-work",
+   "content": "Noor's design critique is every Thursday at 2:00 pm Central time."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Noor's manager is Elena Voss, Head of Design at Lumen Health."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "entity",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Marcus Chen is a design engineer on the platform team. Tilda Okoro is the user researcher."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Noor has a 1:1 with Elena every Monday at 11:00 Central time."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Noor mentors Marcus Chen in a weekly 45 minute session on Fridays."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Tilda is on leave from 2026-10-12 to 2026-10-26, so Marcus covers the usability sessions."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "preference",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Noor prefers written design reviews over live walkthroughs."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "preference",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Noor likes leading the weekly stand-up and runs it most Tuesdays."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "preference",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Correction: leading the stand-up drains Noor. Noor prefers a 10 minute async update and not a live meeting."
+  },
+  {
+   "role": "participant",
+   "speaker": "Elena Voss",
+   "node_type": "note",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "I would like you to own the accessibility audit this quarter. It would be strong evidence for your promotion to principal."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "decision",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Noor first declined to lead the accessibility audit, citing the Atlas workload."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "decision",
+   "scope": "personal",
+   "session": "s3-team",
+   "content": "Noor accepted leading the accessibility audit on 2026-10-15, on the condition that Tilda joins the audit."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s4-trip",
+   "content": "Noor and Idris plan a trip to Portugal in June 2027 to visit Lina and celebrate her birthday."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s4-trip",
+   "content": "Correction: the Portugal trip moved earlier, to 2027-05-08 through 2027-05-22, because Lina's pottery fair is in mid May."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "decision",
+   "scope": "personal",
+   "session": "s4-trip",
+   "content": "They chose Lisbon, Porto, Sintra, and Évora. They dropped Faro to save time."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "preference",
+   "scope": "personal",
+   "session": "s4-trip",
+   "content": "Noor prefers trains to rental cars and wants a Navegante pass for Lisbon."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "note",
+   "scope": "personal",
+   "session": "s4-trip",
+   "content": "Because of Idris's walnut allergy, Noor needs a Portuguese allergy card for restaurants."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "fact",
+   "scope": "personal",
+   "session": "s4-trip",
+   "content": "The Portugal trip budget is 6,200 EUR, not including flights."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s4-trip",
+   "content": "Noor booked TAP flights from Minneapolis to Lisbon departing 2027-05-08."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s5-life",
+   "content": "Noor signed up for a bouldering competition at Granite Gym on 2026-11-14."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "event",
+   "scope": "personal",
+   "session": "s5-life",
+   "content": "Noor sprained a wrist on 2026-10-03 and is skipping hard problems for three weeks."
+  },
+  {
+   "role": "assistant",
+   "speaker": null,
+   "node_type": "note",
+   "scope": "personal",
+   "session": "s5-life",
+   "content": "Assistant suggested a taper plan for the competition: two light sessions the week before and a rest day on 2026-11-13."
+  },
+  {
+   "role": "user",
+   "speaker": null,
+   "node_type": "preference",
+   "scope": "personal",
+   "session": "s5-life",
+   "content": "Noor reads literary fiction. The current book is Piranesi."
+  }
+ ]
+}

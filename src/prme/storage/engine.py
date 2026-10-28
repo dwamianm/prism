@@ -143,6 +143,7 @@ if TYPE_CHECKING:
         PlannedQuantityAggregation,
         QuantityAggregationQuery,
     )
+    from prme.models.reembed import ReembedResult
     from prme.models.temporal import AssertionState, AssertionStateQuery
     from prme.storage.encryption import EncryptionProvider
 
@@ -382,6 +383,7 @@ class MemoryEngine:
         self._retrieval_pipeline = retrieval_pipeline
         self._config = config if config is not None else PRMEConfig()
         self._maintenance_runner: MaintenanceRunner | None = None
+        self._reembedder: Any = None
         self._materialization_queue = DurableMaterializationQueue(
             event_store, batch_size=self._config.materialization_queue_size,
         )
@@ -450,6 +452,7 @@ class MemoryEngine:
         cls, config: PRMEConfig | None = None, *,
         embedding_provider: EmbeddingProvider | None = None,
         privacy_runtime: PrivacyRuntime | None = None,
+        additional_embedding_providers: list[EmbeddingProvider] | None = None,
     ):
         """Async context manager for MemoryEngine lifecycle.
 
@@ -458,7 +461,10 @@ class MemoryEngine:
             async with MemoryEngine.open(config) as engine:
                 await engine.store(...)
         """
-        engine = await cls.create(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
+        engine = await cls.create(
+            config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime,
+            additional_embedding_providers=additional_embedding_providers,
+        )
         try:
             yield engine
         finally:
@@ -469,6 +475,7 @@ class MemoryEngine:
         cls, config: PRMEConfig | None = None, *,
         embedding_provider: EmbeddingProvider | None = None,
         privacy_runtime: PrivacyRuntime | None = None,
+        additional_embedding_providers: list[EmbeddingProvider] | None = None,
     ) -> "MemoryEngine":
         """Create and initialize a MemoryEngine with all backends.
 
@@ -482,6 +489,10 @@ class MemoryEngine:
             embedding_provider: Caller-owned provider. Its metadata overrides
                 embedding configuration; supply it again when reopening. The
                 engine does not close caller-owned provider resources.
+            additional_embedding_providers: With ``enable_multi_model_embeddings``,
+                caller-owned providers for the models that are written beside the
+                active one. Without them the models named in
+                ``embedding.additional_models`` are opened as local fastembed models.
 
         Returns:
             An initialized MemoryEngine ready for use.
@@ -503,9 +514,15 @@ class MemoryEngine:
         if config.backend == "postgres":
             if config.namespace_id is not None:
                 raise ValueError("namespace_id currently requires an isolated local pack")
-            engine = await cls._create_postgres(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
+            engine = await cls._create_postgres(
+                config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime,
+                additional_embedding_providers=additional_embedding_providers,
+            )
         else:
-            engine = await cls._create_duckdb(config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime)
+            engine = await cls._create_duckdb(
+                config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime,
+                additional_embedding_providers=additional_embedding_providers,
+            )
         engine._privacy.runtime = privacy_runtime
         from prme.storage.erasure_indexes import attach
         await attach(engine)
@@ -516,6 +533,7 @@ class MemoryEngine:
     async def _create_duckdb(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
         privacy_runtime: PrivacyRuntime | None = None,
+        additional_embedding_providers: list[EmbeddingProvider] | None = None,
     ) -> "MemoryEngine":
         """Create a MemoryEngine backed by DuckDB (file-based).
 
@@ -662,14 +680,26 @@ class MemoryEngine:
 
             # Create vector index. A single-file pack keeps its snapshot in
             # the vector_snapshot table instead of a file.
-            vector_index = VectorIndex(
-                conn,
-                None if single_file else config.vector_path,
-                embedding_provider,
-                conn_lock,
-                save_interval=config.vector_save_interval,
-                exact_search=config.vector_exact_search,
-            )
+            if config.enable_multi_model_embeddings:
+                from prme.storage.multi_model import additional_providers_for
+                from prme.storage.multi_model_duckdb import open_multi_model_index
+
+                vector_index = open_multi_model_index(
+                    conn, config, embedding_provider, conn_lock,
+                    additional_providers_for(config, additional_embedding_providers),
+                )
+            else:
+                from prme.storage.multi_model_duckdb import refuse_multi_model_pack
+
+                refuse_multi_model_pack(conn)
+                vector_index = VectorIndex(
+                    conn,
+                    None if single_file else config.vector_path,
+                    embedding_provider,
+                    conn_lock,
+                    save_interval=config.vector_save_interval,
+                    exact_search=config.vector_exact_search,
+                )
 
             startup.push_async_callback(vector_index.close)
 
@@ -740,6 +770,7 @@ class MemoryEngine:
                 claim_fixes=config.enable_ingest_claim_fixes,
                 owner_name_carry=config.enable_owner_name_carry,
                 link_owner_groups=config.enable_owner_group_links,
+                pronoun_repair_turns=config.extraction_window_turns if config.enable_pronoun_repair else None,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -818,6 +849,7 @@ class MemoryEngine:
     async def _create_postgres(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
         namespace_pool=None, privacy_runtime: PrivacyRuntime | None = None,
+        additional_embedding_providers: list[EmbeddingProvider] | None = None,
     ) -> "MemoryEngine":
         """Create a MemoryEngine backed by PostgreSQL."""
         from prme.storage.pg import (
@@ -849,7 +881,26 @@ class MemoryEngine:
             graph_store = PgGraphStore(pool)
             if embedding_provider is None:
                 embedding_provider = create_embedding_provider(config.embedding)
-            vector_index = PgVectorIndex(pool, embedding_provider, exact_search=config.vector_exact_search, vector_sql=vector_sql)
+            if config.enable_multi_model_embeddings:
+                # Vectors live in node_embeddings by model; a column the store already has is adopted once.
+                from prme.storage.multi_model import additional_providers_for
+                from prme.storage.pg.model_vector_index import open_multi_model_index
+
+                graph_store._multi_model_embeddings = True
+                vector_index = await open_multi_model_index(
+                    pool, config, vector_sql, embedding_provider,
+                    additional_providers_for(config, additional_embedding_providers),
+                )
+            else:
+                async with pool.acquire() as probe:
+                    keeps_model_vectors = await probe.fetchval("SELECT to_regclass('node_embeddings') IS NOT NULL")
+                if keeps_model_vectors:
+                    logger.warning(
+                        "This store keeps vectors by model (node_embeddings), but enable_multi_model_embeddings is "
+                        "off, so vector search reads nodes.embedding, which holds only what the column held when the "
+                        "option was first turned on. Turn the option back on to search every memory."
+                    )
+                vector_index = PgVectorIndex(pool, embedding_provider, exact_search=config.vector_exact_search, vector_sql=vector_sql)
             startup.push_async_callback(vector_index.close)
             lexical_index = PgLexicalIndex(pool, term_weights=config.lexical_term_weights)
             startup.push_async_callback(lexical_index.close)
@@ -900,6 +951,7 @@ class MemoryEngine:
                 claim_fixes=config.enable_ingest_claim_fixes,
                 owner_name_carry=config.enable_owner_name_carry,
                 link_owner_groups=config.enable_owner_group_links,
+                pronoun_repair_turns=config.extraction_window_turns if config.enable_pronoun_repair else None,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -1059,6 +1111,7 @@ class MemoryEngine:
         Returns:
             String UUID of the created event (source of truth ID).
         """
+        await self._require_embedding_writable()
         if self._privacy.selected(policy):
             arguments = {k: v for k, v in locals().items() if k not in {"self", "content", "policy"}}
             return await self._privacy.store(content, policy=policy, **arguments)
@@ -1755,6 +1808,7 @@ class MemoryEngine:
         Returns:
             String UUID of the persisted event.
         """
+        await self._require_embedding_writable()
         if self._privacy.selected(policy):
             message = {"content": content, "role": role, "speaker": speaker, "first_person_owner": first_person_owner, "metadata": metadata, "event_time": event_time}
             return (await self._privacy.ingest_many([message], user_id=user_id, scope=scope, session_id=session_id, wait_for_extraction=wait_for_extraction, policy=policy))[0]
@@ -1825,6 +1879,7 @@ class MemoryEngine:
         Returns:
             List of event ID strings, one per message.
         """
+        await self._require_embedding_writable()
         if self._privacy.selected(policy):
             return await self._privacy.ingest_many(messages, user_id=user_id, scope=scope, session_id=session_id, wait_for_extraction=wait_for_extraction, policy=policy)
         from prme.models.owner_reference import attach_owner_reference
@@ -1908,6 +1963,7 @@ class MemoryEngine:
         Returns:
             String UUID of the persisted event.
         """
+        await self._require_embedding_writable()
         if self._privacy.selected(policy):
             arguments = {k: v for k, v in locals().items() if k not in {"self", "content", "policy"}}
             return await self._privacy.store(content, policy=policy, deferred=True, **arguments)
@@ -1959,6 +2015,7 @@ class MemoryEngine:
         empty input is a no-op. The owner is supplied once to make accidental
         mixed-tenant batches impossible.
         """
+        await self._require_embedding_writable()
         from prme.storage.fast_ingest import parse_fast_ingest_request_id
         request_uuid = parse_fast_ingest_request_id(request_id)
         saved_private_request = (await self._privacy.repository.request(request_uuid, user_id=user_id)
@@ -2227,8 +2284,10 @@ class MemoryEngine:
 
         A second run over the same data does nothing for the sources already
         re-derived under the same settings, so a stopped run continues where it
-        stopped. The settings are the engine version, the extraction model and
-        prompt, and the options that decide what is derived. Memories whose own
+        stopped. The settings are the derivation version (a number a developer
+        bumps when what is derived changes, not the package version), the
+        extraction model and prompt, and the options that decide what is
+        derived. Memories whose own
         extraction has not finished are left for ``process_extractions()``.
         A call can stop early: three requests in a row that fail end it, and the
         sources it did not reach stay not current.
@@ -2253,6 +2312,7 @@ class MemoryEngine:
             ValueError: Without an ingestion pipeline, or for a bad ``limit``
                 or ``cursor``.
         """
+        await self._require_embedding_writable()
         if not self._config.enable_reingest:
             raise ReingestDisabledError(
                 "Re-deriving stored sources is off for this engine; set enable_reingest (PRME_ENABLE_REINGEST) to turn it on"
@@ -2884,7 +2944,7 @@ class MemoryEngine:
         graph = await self._ordinary_graph(kwargs.get("user_id"))
         return await graph.query_nodes(**kwargs)
 
-    async def _ordinary_graph(self, user_id: str | None, *, scopes=None):
+    async def _ordinary_graph(self, user_id: str | None, *, scopes=None, records=None):
         """Resolve the read facade without changing the engine's storage handles."""
         if user_id is None:
             if self._privacy.selected() or await self._privacy.repository._read("1=1", ()):
@@ -2893,7 +2953,7 @@ class MemoryEngine:
             return self._graph_store
         from prme.privacy.read_graph import AdmittedGraphView
         from prme.privacy.reads import ReadContext
-        context = await ReadContext.create(self._privacy, user_id=user_id, scopes=scopes)
+        context = await ReadContext.create(self._privacy, user_id=user_id, scopes=scopes, records=records)
         return AdmittedGraphView(self._graph_store, context) if context.protected else self._graph_store
 
     async def inspect_source(self, event_id: str, *, user_id: str, scope: Scope | None = None) -> SourceAvailability | SourceUnavailable:
@@ -3116,7 +3176,12 @@ class MemoryEngine:
         event = await self.get_event(event_id, user_id=user_id)
         if event is None:
             return []
-        graph = await self._ordinary_graph(user_id)
+        if isinstance(event, Event):
+            nodes = await self._graph_store.get_event_nodes(event_id, user_id=user_id)
+            await self._privacy.require_legacy_inputs(events=(event,), nodes=nodes)
+            return nodes
+        records = await self._privacy.records_for_call(user_id, {"event_id": event_id})
+        graph = await self._ordinary_graph(user_id, records=records)
         return await graph.get_event_nodes(event_id, user_id=user_id)
 
     @privacy_disclosure
@@ -3466,6 +3531,108 @@ class MemoryEngine:
         except Exception:
             logger.warning("evict.index_failed", extra={"node_id": node_id}, exc_info=True)
 
+    # --- Embedding models (dwamianm/prism#368) ---
+
+    async def _require_embedding_writable(self) -> None:
+        """Refuse a write, before it stores anything, when the store's vectors are all another model's.
+
+        With ``enable_multi_model_embeddings`` a store whose vectors were made by another model than the
+        configured one would otherwise take memories it cannot search under that model, or mix two models.
+        The error names both. Off, the vector index has no such check and nothing changes.
+        """
+        guard = getattr(self._vector_index, "require_writable", None)
+        if guard is not None:
+            await guard()
+
+    @privacy_disclosure
+    async def reembed(
+        self,
+        model: "str | EmbeddingProvider | None" = None,
+        *,
+        limit: int | None = None,
+        cursor: str | None = None,
+        dry_run: bool = False,
+        user_id: str | None = None,
+        batch_size: int = 64,
+        pause_ms: int = 0,
+        threads: int | None = None,
+    ) -> "ReembedResult":
+        """Build one embedding model's vectors for the memories the store already holds (local models only).
+
+        Takes the active memories without a vector under ``model``, in id order, a batch at a time, embeds their
+        text and stores each vector with the model's name, version and dimension. It writes only vectors: events,
+        the graph and other models' vectors never change, and the store can be read and written meanwhile. A
+        second run continues at the first memory still without a vector, so a stopped run needs no cursor.
+
+        When the result's ``remaining`` is 0 the model's index is complete. Setting ``embedding.model_name`` to it
+        and reopening the store then makes it the active model; the old model's vectors stay until
+        ``drop_embeddings()``. A model in ``embedding.additional_models`` also receives every new write, so
+        nothing is behind when the job ends.
+
+        Args:
+            model: The model to fill: a registered fastembed model name, or a provider object for a custom
+                model. ``None`` takes the active model.
+            limit: The most memories this call takes; ``None`` takes all that are missing. The result says how
+                many remain.
+            cursor: The ``cursor`` of an earlier result, to continue after the last memory it took.
+            dry_run: Count what a run would take and write nothing.
+            user_id: Only this owner's memories; ``None`` takes the whole store.
+            batch_size: Memories embedded and stored per step.
+            pause_ms: Milliseconds to sleep after each batch, to leave CPU to the rest of the process.
+            threads: ONNX Runtime threads for a model that is not the active one; ``None`` follows
+                ``embedding.threads``.
+
+        Raises:
+            ReembedDisabledError: When ``enable_multi_model_embeddings`` is off.
+            ReembedBusyError: When this engine is already filling the model.
+            ValueError: For a bad ``limit``, ``cursor``, ``batch_size`` or ``pause_ms``, or an unknown model.
+        """
+        from prme.storage.reembed import Reembedder
+
+        if self._reembedder is None:
+            self._reembedder = Reembedder(self)
+        return await self._reembedder.run(
+            model, limit=limit, cursor=cursor, dry_run=dry_run, user_id=user_id,
+            batch_size=batch_size, pause_ms=pause_ms, threads=threads,
+        )
+
+    @privacy_disclosure
+    async def embedding_status(self) -> dict[str, Any]:
+        """The embedding models the store holds: vectors per model, which is active, and which are complete."""
+        from prme.storage.reembed import ReembedDisabledError
+        from prme.storage.multi_model import MultiModelVectorIndex
+
+        if not isinstance(self._vector_index, MultiModelVectorIndex):
+            raise ReembedDisabledError("embedding_status() needs enable_multi_model_embeddings")
+        return await self._vector_index.status()
+
+    @privacy_disclosure
+    async def drop_embeddings(self, model: str, *, version: str | None = None) -> int:
+        """Remove a stored model's vectors and its index, and return how many vectors went.
+
+        The active model cannot be dropped. Without ``version``, every stored version of the model goes, except
+        the active one when the active model has the same name.
+        """
+        from prme.storage.multi_model import MultiModelVectorIndex
+        from prme.storage.reembed import ReembedDisabledError
+
+        index = self._vector_index
+        if not isinstance(index, MultiModelVectorIndex):
+            raise ReembedDisabledError("drop_embeddings() needs enable_multi_model_embeddings")
+        stored = [item.identity for item in await index.stored_models()]
+        chosen = [item for item in stored if item.name == model and (version is None or item.version == version)]
+        if version is not None and index.identity in chosen:
+            raise ValueError("The active embedding model cannot be dropped; switch embedding.model_name first")
+        chosen = [item for item in chosen if item != index.identity]
+        if not chosen:
+            if any(item == index.identity for item in stored if item.name == model):
+                raise ValueError("The active embedding model cannot be dropped; switch embedding.model_name first")
+            raise ValueError(f"The store holds no vectors of embedding model {model!r}")
+        removed = 0
+        for identity in chosen:
+            removed += await index.drop_model(identity)
+        return removed
+
     # --- Rebuild (issue #45) ---
 
     @privacy_disclosure
@@ -3514,8 +3681,12 @@ class MemoryEngine:
             from prme.storage.erasure_indexes import rebuild_protected
             return await rebuild_protected(self, user_id=user_id, batch_size=batch_size)
         if self._conn is None:
+            # PostgreSQL has no derived index files: its vector column and word search are written with each
+            # memory. What a rebuild is used for there, moving to another embedding model, is reembed().
             raise RuntimeError(
-                "rebuild_indexes is only supported on the DuckDB backend"
+                "rebuild_indexes is only supported on the DuckDB backend. On PostgreSQL, set "
+                "enable_multi_model_embeddings and run reembed (prme reembed) to build another embedding "
+                "model's vectors for the stored memories"
             )
 
         # Clear both derived indexes first (serialized through the write
@@ -4406,10 +4577,16 @@ class MemoryEngine:
         # the producer's non-reentrant authority across submit would deadlock.
         from prme.privacy.diagnostics import protected_diagnostics
         with protected_diagnostics(plan.privacy_manifest is not None):
-            return await self._write_queue.submit(
+            published = await self._write_queue.submit(
                 lambda: self._graph_store.publish_profile(plan),
                 label=f"consolidate.publish:{plan.node.id}",
             )
+        # As for summaries: no unguarded additional-model write for a protected profile.
+        if self._pool is not None and plan.privacy_manifest is None:
+            from prme.storage.multi_model import write_additional_models
+
+            await write_additional_models(self._vector_index, [plan.embedding], user_id=plan.node.user_id)
+        return published
 
     @privacy_disclosure
     async def profile_jobs(self, *, user_id: str, scope: Scope | None = None, status: str = 'pending', limit: int = 100) -> list[ProfileJobStatus]:

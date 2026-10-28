@@ -21,6 +21,7 @@ from pydantic import AwareDatetime, StrictBool, TypeAdapter
 from prme import __version__
 from prme.config import PRMEConfig
 from prme.ingestion.errors import MaterializationError, ReingestBusyError, ReingestDisabledError, extraction_failure_code
+from prme.storage.reembed import ReembedBusyError, ReembedDisabledError
 from prme.models.aggregation import AssertionQuery, QuantityAggregationQuery
 from prme.models.temporal import AssertionStateQuery
 from prme.models.relevance import AnswerCitationSubmission, RelevanceSubmission
@@ -1518,6 +1519,37 @@ async def memory_reingest(
         return _internal_error("memory_reingest", exc)
 
 
+async def memory_reembed(
+    model: str | None = None,
+    limit: int | None = None,
+    cursor: str | None = None,
+    dry_run: bool = False,
+    ctx: Context = None,
+) -> str:
+    """Build an embedding model's vectors for this caller's stored memories; runs locally, no model service.
+
+    Embeds the caller's memories that have no vector under the model yet, in id order, and stores each with the
+    model's name, version and dimension. The model is a registered fastembed model name; omitted, it is the
+    active model. limit caps the memories one call takes; the result's cursor continues after them, and
+    remaining is 0 when the model's index is complete. dry_run counts and does no work. The server must run
+    with enable_multi_model_embeddings on.
+    """
+    engine = _get_engine(ctx)
+    try:
+        result = await engine.reembed(
+            model, limit=limit, cursor=cursor, dry_run=dry_run, user_id=_get_user_id(engine, required=True),
+        )
+        return result.model_dump_json()
+    except PermissionError as exc:
+        return json.dumps({"error": str(exc)})
+    except (ReembedDisabledError, ReembedBusyError) as exc:
+        return json.dumps({"error": str(exc)})
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    except Exception as exc:
+        return _internal_error("memory_reembed", exc)
+
+
 async def memory_promote_node(
     node_id: str,
     request_id: str | None = None,
@@ -1843,7 +1875,7 @@ def create_mcp_server(config: PRMEConfig | None = None, *, lifespan=engine_lifes
                  memory_record_answer_citations, memory_get_answer_citations,
                  memory_list_answer_citations,
                  memory_extraction_status, memory_retry_extraction, memory_process_extractions,
-                 memory_reingest,
+                 memory_reingest, memory_reembed,
                  memory_promote_node, memory_archive_node, memory_evaluate_condition,
                  memory_get_provenance, memory_supersede, memory_mark_contradiction,
                  memory_resolve_contradiction):

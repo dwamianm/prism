@@ -37,7 +37,8 @@ records, for images and video only, what the same products offered when
 RFC-0018 was drafted.
 
 Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
-[custom embedding providers](CUSTOM-EMBEDDINGS.md), and
+[custom embedding providers](CUSTOM-EMBEDDINGS.md),
+[switching a store to another embedding model](EMBEDDING-MODELS.md), and
 [entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
 Python and CLI contracts separately from draft RFC requirements.
 

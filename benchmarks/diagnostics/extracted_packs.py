@@ -84,6 +84,7 @@ from urllib.parse import urlsplit, urlunsplit
 from benchmarks.diagnostics.product_packing import (
     _harness, _quiet_offline_cli, _source_key, _turn_key, gate_config, pack_identity, parse_overrides,
 )
+from benchmarks.diagnostics import hosted_model
 from benchmarks.integrations.ollama_answers import check_endpoint
 from prme import MemoryEngine, NodeType, PRMEConfig
 from prme.config import ExtractionConfig
@@ -149,7 +150,12 @@ def check_model(identity: dict, *, cloud: bool = False) -> None:
 
 
 def model_identity(model: str, endpoint: str = ENDPOINT, *, cloud: bool = False) -> dict:
-    """The Ollama server's identity for the model, including the server version."""
+    """The Ollama server's identity for the model, including the server version.
+
+    With ``PRME_BENCH_HOSTED=1`` (``hosted_model``) the model is the hosted one and the server is never asked.
+    """
+    if hosted_model.enabled():
+        return hosted_model.identity()
     from benchmarks.integrations.run_longmemeval_v2 import _ollama_reader_identity
 
     check_endpoint(endpoint)
@@ -161,7 +167,14 @@ def model_identity(model: str, endpoint: str = ENDPOINT, *, cloud: bool = False)
 
 def build_config(pack: Path, overrides: dict | None = None, *, model: str = DEFAULT_MODEL,
                  endpoint: str = ENDPOINT) -> PRMEConfig:
-    """The gate's isolated configuration over ``pack``, extracting through the Ollama server."""
+    """The gate's isolated configuration over ``pack``, extracting through the Ollama server.
+
+    With ``PRME_BENCH_HOSTED=1`` (``hosted_model``) it extracts through the hosted model instead.
+    """
+    if hosted_model.enabled():
+        # The hosted baseline's cache holds the repair requests it was measured with, so it keeps the option on.
+        return hosted_model.build_config(gate_config(pack, {"enable_pronoun_repair": True, **(overrides or {})}),
+                                         TIMEOUT_SECONDS)
     check_endpoint(endpoint)
     config = gate_config(pack, overrides)
     with patch.dict(os.environ, {}, clear=True):
@@ -261,13 +274,33 @@ class _Usage:
         provider._ensure_client().on("completion:response", self._record)
 
     def _record(self, response) -> None:
-        usage = getattr(response, "usage", None)
         self.calls += 1
+        if isinstance(response, dict):
+            # The hosted model's SDK answers with a plain dict and its own names for the counts.
+            usage = response.get("usage") or {}
+            self.prompt_tokens += usage.get("inputTokens") or 0
+            self.completion_tokens += usage.get("outputTokens") or 0
+            return
+        usage = getattr(response, "usage", None)
         self.prompt_tokens += getattr(usage, "prompt_tokens", None) or 0
         self.completion_tokens += getattr(usage, "completion_tokens", None) or 0
 
     def snapshot(self) -> tuple[int, int, int]:
         return self.calls, self.prompt_tokens, self.completion_tokens
+
+
+class CacheOnlyViolation(BaseException):
+    """A BaseException, so that no handler between the call and the build's top turns it into a skipped turn."""
+
+
+class _NoLiveCalls:
+    """The context a live extraction call enters when the run may only replay the cache."""
+
+    async def __aenter__(self):
+        raise CacheOnlyViolation("A live extraction call is needed, and PRME_BENCH_CACHE_ONLY allows only cache replays")
+
+    async def __aexit__(self, *exc):
+        return False
 
 
 class ExtractionCache:
@@ -327,7 +360,13 @@ class ExtractionCache:
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
 
     def _live(self):
-        """The cap on live model calls, or a context that waits for nothing."""
+        """The cap on live model calls, or a context that waits for nothing.
+
+        With ``PRME_BENCH_CACHE_ONLY`` set, a call the cache cannot serve fails before any request is made, so a replay
+        can never reach a model (a run under another embedding model may ask a request the cache does not hold).
+        """
+        if os.environ.get("PRME_BENCH_CACHE_ONLY"):
+            return _NoLiveCalls()
         return self.in_flight if self.in_flight is not None else contextlib.nullcontext()
 
     @staticmethod
@@ -392,6 +431,8 @@ class ExtractionCache:
         provider.extract = cached
         if callable(getattr(provider, "extract_batch", None)):
             self._wrap_batches(provider)
+        if callable(getattr(provider, "repair_pronouns", None)):
+            self._wrap_repairs(provider)
 
     @staticmethod
     def _batch_key(provider, turns, memories=()) -> str:
@@ -402,6 +443,37 @@ class ExtractionCache:
         parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
                  "batch", batch_request_messages(turns, memories)]
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
+
+    @staticmethod
+    def _repair_key(provider, window, claims, speaker=None) -> str:
+        from prme.ingestion.pronoun_repair import repair_messages
+
+        parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
+                 "repair", repair_messages(list(window), list(claims), speaker)]
+        return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
+
+    def _wrap_repairs(self, provider) -> None:
+        """Replay a pronoun repair request (enable_pronoun_repair) by its model, window, claims and speaker.
+
+        The entry is the parsed response, before any check, which ingestion checks as it checks a live one, so
+        a rerun asks the model nothing. Only the repair is new in a run that turns the option on: the first
+        extractions of the same sources replay from the entries an off run made.
+        """
+        repair = provider.repair_pronouns
+
+        async def cached(window, claims, *, speaker=None):
+            key = self._repair_key(provider, window, claims, speaker)
+            path = self.folder / key[:2] / f"{key}.repair.json"
+            if path.exists():
+                self.hits += 1
+                return json.loads(path.read_bytes())
+            self.misses += 1
+            async with self._live():
+                raw = await repair(window, claims, speaker=speaker)
+            self._write(path, json.dumps(raw))
+            return raw
+
+        provider.repair_pronouns = cached
 
     def _wrap_batches(self, provider) -> None:
         from prme.ingestion.errors import ExtractionError

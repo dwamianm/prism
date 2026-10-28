@@ -1,0 +1,199 @@
+{
+ "kind": "prme-graph-oracle-blind-review",
+ "schema_version": 1,
+ "answerable": {
+  "defects-v1": [
+   "lookup:1",
+   "lookup:2",
+   "lookup:3",
+   "list:1",
+   "list:2",
+   "list:3",
+   "multi-hop:1",
+   "multi-hop:2",
+   "multi-hop:3",
+   "temporal:1",
+   "temporal:2",
+   "temporal:3",
+   "negation:1",
+   "negation:2",
+   "negation:3",
+   "aggregation:1",
+   "aggregation:2",
+   "aggregation:3"
+  ],
+  "store-v1": [
+   "lookup:1",
+   "lookup:2",
+   "lookup:3",
+   "lookup:4",
+   "lookup:5",
+   "list:1",
+   "list:2",
+   "list:3",
+   "list:5",
+   "multi-hop:1",
+   "multi-hop:2",
+   "multi-hop:3",
+   "multi-hop:4",
+   "multi-hop:5",
+   "temporal:1",
+   "temporal:2",
+   "temporal:3",
+   "temporal:4",
+   "temporal:5",
+   "correction:1",
+   "correction:2",
+   "correction:3",
+   "correction:4",
+   "correction:5",
+   "negation:1",
+   "negation:3",
+   "negation:4",
+   "negation:5",
+   "aggregation:2",
+   "aggregation:5",
+   "lookup:r2.1",
+   "lookup:r2.2",
+   "lookup:r2.3",
+   "lookup:r2.4",
+   "lookup:r2.5",
+   "lookup:r2.6",
+   "lookup:r2.7",
+   "lookup:r2.8",
+   "lookup:r2.9",
+   "lookup:r2.10",
+   "correction:r2.1",
+   "correction:r2.2",
+   "correction:r2.3",
+   "correction:r2.5",
+   "correction:r2.6",
+   "multi-hop:r2.1",
+   "multi-hop:r2.2",
+   "multi-hop:r2.3",
+   "multi-hop:r2.4",
+   "multi-hop:r2.5",
+   "multi-hop:r2.6",
+   "aggregation:r2.1",
+   "aggregation:r2.3"
+  ],
+  "chat-v1": [
+   "lookup:1",
+   "lookup:2",
+   "lookup:3",
+   "lookup:4",
+   "lookup:5",
+   "list:1",
+   "list:4",
+   "list:5",
+   "multi-hop:1",
+   "multi-hop:2",
+   "multi-hop:3",
+   "multi-hop:4",
+   "multi-hop:5",
+   "temporal:1",
+   "temporal:3",
+   "temporal:5",
+   "correction:1",
+   "correction:2",
+   "correction:4",
+   "negation:1",
+   "negation:2",
+   "negation:3",
+   "negation:4",
+   "negation:5",
+   "aggregation:1",
+   "aggregation:2",
+   "lookup:r2.1",
+   "lookup:r2.2",
+   "lookup:r2.3",
+   "lookup:r2.4",
+   "lookup:r2.5",
+   "lookup:r2.6",
+   "lookup:r2.7",
+   "lookup:r2.8",
+   "lookup:r2.9",
+   "lookup:r2.10",
+   "correction:r2.1",
+   "correction:r2.2",
+   "correction:r2.4",
+   "correction:r2.5",
+   "correction:r2.6",
+   "correction:r2.7",
+   "correction:r2.8",
+   "multi-hop:r2.1",
+   "multi-hop:r2.2",
+   "multi-hop:r2.3",
+   "multi-hop:r2.4",
+   "multi-hop:r2.5",
+   "multi-hop:r2.6",
+   "aggregation:r2.1",
+   "aggregation:r2.2"
+  ]
+ },
+ "retag": {
+  "defects-v1:multi-hop:1": "lookup",
+  "defects-v1:multi-hop:2": "lookup",
+  "defects-v1:multi-hop:3": "lookup",
+  "defects-v1:aggregation:2": "lookup",
+  "store-v1:multi-hop:1": "lookup",
+  "store-v1:multi-hop:4": "lookup",
+  "store-v1:multi-hop:5": "lookup",
+  "store-v1:multi-hop:r2.5": "lookup",
+  "store-v1:aggregation:r2.3": "list",
+  "chat-v1:multi-hop:1": "lookup",
+  "chat-v1:multi-hop:r2.5": "lookup",
+  "chat-v1:correction:r2.5": "lookup",
+  "chat-v1:correction:r2.6": "lookup",
+  "chat-v1:correction:r2.7": "lookup"
+ },
+ "ids_corrected": {
+  "store-v1:multi-hop:3": {
+   "answers": [
+    "m28"
+   ],
+   "support": [
+    "m37"
+   ]
+  },
+  "store-v1:negation:5": {
+   "answers": [
+    "m31"
+   ],
+   "support": [
+    "m30",
+    "m32"
+   ]
+  },
+  "store-v1:multi-hop:r2.3": {
+   "answers": [
+    "m28"
+   ],
+   "support": [
+    "m37"
+   ]
+  },
+  "chat-v1:multi-hop:4": {
+   "answers": [
+    "s1-intro#8"
+   ],
+   "support": [
+    "s1-intro#0"
+   ]
+  },
+  "chat-v1:multi-hop:5": {
+   "answers": [
+    "s3-family-and-jobs#8"
+   ],
+   "support": [
+    "s1-intro#0"
+   ]
+  }
+ },
+ "notes": [
+  "answerable lists the candidates the reviewer judged answerable from the memory text with a unique answer; the others were dropped.",
+  "retag relabels a question that one memory answers (or that has no correction) as a lookup.",
+  "ids_corrected replaces the model's answer and support ids after the reviewer read the memories.",
+  "The reviewer read only the memories and the candidates. No gold graph, query spec or strategy output was consulted."
+ ]
+}

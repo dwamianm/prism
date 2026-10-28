@@ -5,7 +5,7 @@ Combines event sourcing, graph-based relational modeling, hybrid retrieval,
 and explicit or opportunistic memory reorganization.
 """
 
-__version__ = "0.16.0a5"
+__version__ = "0.16.0a8"
 
 from typing import TYPE_CHECKING
 
@@ -35,6 +35,8 @@ from prme.config_audit import (
     audit_hypotheses as audit_hypotheses,
 )
 from prme.ingestion.errors import ExtractionError, MaterializationError, ReingestBusyError, ReingestDisabledError
+from prme.storage.multi_model import EmbeddingModelMismatchError
+from prme.storage.reembed import ReembedBusyError, ReembedDisabledError
 from prme.models.aggregation import (
     AssertionAggregation,
     AssertionGroup,
@@ -113,6 +115,7 @@ from prme.models.learning import (
 )
 from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
+from prme.models.reembed import ReembedResult
 from prme.models.reingest import ReingestResult
 from prme.storage.engine import MemoryEngine
 from prme.storage.namespace_identity import NamespaceIdentityError
@@ -264,6 +267,7 @@ __all__ = [
     "ExtractionRecord",
     "ExtractionStatus",
     "ExtractionProcessingResult",
+    "ReembedResult",
     "ReingestResult",
     "FastIngestItem",
     "FastIngestConflict",
@@ -276,6 +280,9 @@ __all__ = [
     "FullRetrievalQueryResult",
     "FullRetrievalTrial",
     "MaterializationError",
+    "EmbeddingModelMismatchError",
+    "ReembedBusyError",
+    "ReembedDisabledError",
     "ReingestBusyError",
     "ReingestDisabledError",
     "MemoryClient",

@@ -121,6 +121,36 @@ Run the LLM extraction pipeline on content. `role` and `speaker` work as for
 }
 ```
 
+### POST /v1/reembed
+
+Build an embedding model's vectors for the caller's stored memories, so the store can switch models (see
+[switching embedding models](../docs/EMBEDDING-MODELS.md)). The model runs locally and no model service is called. The
+engine's `enable_multi_model_embeddings` setting turns it on (`PRME_ENABLE_MULTI_MODEL_EMBEDDINGS=true`, off by
+default); without it the route returns `409`, as it does while this engine is already filling the model.
+
+**Request:**
+
+```json
+{
+  "user_id": "alice",
+  "model": "BAAI/bge-base-en-v1.5",
+  "limit": 500,
+  "cursor": null,
+  "dry_run": false,
+  "batch_size": 64,
+  "pause_ms": 0
+}
+```
+
+Every field is optional. `user_id` is required without a bound identity and must match the authenticated owner.
+`model` is a registered fastembed model name; omitted, it is the active model. `limit` caps the memories one call
+embeds and `cursor` continues after an earlier result. With `dry_run` the route writes nothing and reports the
+progress.
+
+**Response (200):** `embedding_model`, `embedding_version`, `dimension`, `active`, `total`, `done`, `remaining`,
+`selected`, `processed`, `failed`, `batches`, `cursor` and `elapsed_seconds`. The model's index is complete for the
+caller's memories when `remaining` is 0.
+
 ### POST /v1/reingest
 
 Re-derive one owner's stored memories after an engine change improved how they

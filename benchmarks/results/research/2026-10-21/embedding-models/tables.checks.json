@@ -1,0 +1,72 @@
+{
+ "bge-small": {
+  "blind_gain_2000": 0,
+  "line1": false,
+  "worst_type_lookalike": 0,
+  "worst_type_conversation": 0,
+  "line2": true
+ },
+ "bge-small+q": {
+  "blind_gain_2000": -1,
+  "line1": false,
+  "worst_type_lookalike": -1,
+  "worst_type_conversation": -1,
+  "line2": true
+ },
+ "minilm": {
+  "blind_gain_2000": -5,
+  "line1": false,
+  "worst_type_lookalike": -4,
+  "worst_type_conversation": -6,
+  "line2": false
+ },
+ "bge-base": {
+  "blind_gain_2000": 7,
+  "line1": true,
+  "worst_type_lookalike": 0,
+  "worst_type_conversation": 0,
+  "line2": true
+ },
+ "bge-base+q": {
+  "blind_gain_2000": 6,
+  "line1": false,
+  "worst_type_lookalike": -2,
+  "worst_type_conversation": -2,
+  "line2": false
+ },
+ "bge-large": {
+  "blind_gain_2000": 3,
+  "line1": false,
+  "worst_type_lookalike": -1,
+  "worst_type_conversation": -1,
+  "line2": true
+ },
+ "bge-large+q": {
+  "blind_gain_2000": 1,
+  "line1": false,
+  "worst_type_lookalike": -2,
+  "worst_type_conversation": -1,
+  "line2": false
+ },
+ "mxbai": {
+  "blind_gain_2000": -1,
+  "line1": false,
+  "worst_type_lookalike": -3,
+  "worst_type_conversation": -1,
+  "line2": false
+ },
+ "mxbai+q": {
+  "blind_gain_2000": 0,
+  "line1": false,
+  "worst_type_lookalike": -3,
+  "worst_type_conversation": -3,
+  "line2": false
+ },
+ "nomic": {
+  "blind_gain_2000": 0,
+  "line1": false,
+  "worst_type_lookalike": -1,
+  "worst_type_conversation": -3,
+  "line2": false
+ }
+}

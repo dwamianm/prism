@@ -46,6 +46,7 @@ from prme.ingestion.grounding import (
 )
 from prme.ingestion.errors import ExtractionError, extraction_failure_code
 from prme.ingestion.entity_references import reference_errors_by_claim
+from prme.ingestion.pronoun_repair import PronounClaim
 
 if TYPE_CHECKING:
     import instructor
@@ -1540,6 +1541,28 @@ class BatchExtractionProvider(Protocol):
         ...
 
 
+@runtime_checkable
+class PronounRepairProvider(Protocol):
+    """A provider that can also resolve the pronouns a first extraction left (``enable_pronoun_repair``).
+
+    Kept apart from :class:`ExtractionProvider`, as :class:`BatchExtractionProvider`
+    is, so a provider written against that protocol still satisfies it.
+    """
+
+    async def repair_pronouns(
+        self, window: Sequence[str], claims: Sequence[PronounClaim], *, speaker: str | None = None,
+    ) -> dict[str, Any]:
+        """Return the parsed response to one repair request, before any check.
+
+        ``window`` is the owner's preceding memories, oldest first, and each
+        claim names the pronoun fields to resolve. The response has, per claim
+        number, the names each field means (``PronounRepairResponse``); the
+        caller accepts a name only where :func:`apply_repairs` finds it written.
+        Raise ExtractionError when the call fails or its output does not parse.
+        """
+        ...
+
+
 class InstructorExtractionProvider:
     """ExtractionProvider using instructor for any supported LLM.
 
@@ -1773,6 +1796,45 @@ class InstructorExtractionProvider:
                 provider=self._provider_string,
                 turns=len(turns),
                 content_length=sum(len(turn.content) for turn in turns),
+                error_type=type(exc).__name__,
+            )
+            reason = extraction_failure_code(exc)
+            raise ExtractionError(f"Extraction failed ({reason})", reason_code=reason) from exc
+
+    async def repair_pronouns(
+        self, window: Sequence[str], claims: Sequence[PronounClaim], *, speaker: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask who the pronouns of the flagged claims mean, given the owner's earlier memories.
+
+        Sends :func:`prme.ingestion.pronoun_repair.repair_messages` and returns
+        the parsed response, before any check. Raises ExtractionError on
+        provider failure, timeout or output that does not parse, with the same
+        sanitized reason codes as extract().
+        """
+        if not claims:
+            raise ValueError("A pronoun repair needs at least one claim")
+        from prme.ingestion.pronoun_repair import PronounRepairResponse, repair_messages
+
+        try:
+            client = self._ensure_client()
+            create_kwargs: dict = {
+                "response_model": PronounRepairResponse,
+                "messages": repair_messages(window, claims, speaker),
+                "max_retries": self._max_retries,
+                "temperature": self._temperature,
+            }
+            if self._reasoning_effort is not None:
+                create_kwargs["reasoning_effort"] = self._reasoning_effort
+            model_id = self._resolve_model_id()
+            if model_id:
+                create_kwargs["model"] = model_id
+            response = await asyncio.wait_for(client.create(**create_kwargs), timeout=self._timeout)
+            return response.model_dump(mode="json")
+        except Exception as exc:
+            logger.error(
+                "extraction_failed",
+                provider=self._provider_string,
+                claims=len(claims),
                 error_type=type(exc).__name__,
             )
             reason = extraction_failure_code(exc)

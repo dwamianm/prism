@@ -111,6 +111,16 @@ previous stable. `CLAUDE.md` ("Release channels and default changes") is the
 rule: the gates, the commands and their times, and who may turn a default on
 with which evidence. This section is the mechanics.
 
+A release does not mark stored memories stale: `reingest()` compares a settings
+fingerprint that carries `DERIVATION_VERSION` (`src/prme/ingestion/reingest.py`),
+not the package version. Bump that integer by one in the pull request of a change
+that alters what an unchanged source derives, such as the grounding checks, planning,
+linking, supersedence or claim text rules, or the extraction schema, and do not
+bump it with a release or for a change that leaves the derived records as they
+were. `tests/test_derivation_version.py` fails when the records derived from a
+recorded extraction change, and its message gives the refresh command for
+`tests/fixtures/derivation/trip_derived.json`.
+
 A release is a GitHub release whose tag is the version (for example `v0.15.0`)
 and whose assets include the wheel, the source archive and `SHA256SUMS`.
 Publishing the release runs `.github/workflows/publish.yml`, which checks both

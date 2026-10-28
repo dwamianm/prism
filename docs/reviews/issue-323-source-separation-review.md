@@ -129,3 +129,31 @@ against the same dependency base, 41 source files / 4,466 changed lines, with on
 this review transport document excluded. No original acceptance gate changed.
 
 Complete report: `review-323-ci-fixture-core.md`, SHA-256 `9ce8fdb793909961bf621e6a3921b06f1a20778c0fb747345d08f93bf5db0650`.
+
+## Exact-contributor and candidate-settlement repairs, 2026-10-21
+
+Affected review: COMPLETE, APPROVE. One independent affected review covers the
+three changed runtime paths and two test paths in repair commit `da8f8694`. No
+blocker was found. Prior reviews remain evidence for unchanged scopes.
+
+Exact object/source contexts use authoritative contributors; broad classification,
+orphan refusal and final contributor deadlines remain intact. The deadline probe
+now exercises A's actual final authorization for exact provenance while preserving
+the original A/B broad-read checks. Its initial three setup failures remain saved;
+the unchanged production correction has passing evidence for all 24 planned
+cases after that probe correction. Nine source-access compatibility cases pass.
+
+A separate deterministic reproduction confirmed that the nested pinned/task
+query gather could return a privacy error before its other query finished. The
+first correction settles both children and prioritizes privacy denial; its two
+focused regressions pass. This does not establish the original allocator-crash
+cause. Final complete validation remains required.
+
+Current main `1dcf6abb` merged normally. The reviewed engine AST is unchanged
+except docstrings; the other four reviewed files are byte-identical. The upstream
+reingest/version changes retain main's implementation and will be covered by the
+final suite. No derivation-version bump is needed for these read/lifetime changes.
+
+Affected report: `review-323-cycle3-affected.md`, SHA-256
+`6d74613b9cfef0ef3daf2ff2b8bbfb9855a256dc415a79c142c7d5c5340b557f`.
+Original #324/#325 integrated acceptance remains pending.

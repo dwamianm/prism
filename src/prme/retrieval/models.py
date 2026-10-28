@@ -719,6 +719,17 @@ class RetrievalMetadata(BaseModel):
         default=False,
         description="Flag if embedding model mismatch detected (per research)",
     )
+    embedding_incomplete: dict[str, Any] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "With enable_multi_model_embeddings, set when some of the owner's memories have no vector under the "
+            "active embedding model: the model, its version and dimension, nodes_total, nodes_without_vector, "
+            "and the models the store does hold (stored_models, with vector counts). Vector search then returns "
+            "only the memories that have one, or nothing when the store holds only another model's vectors, "
+            "which also sets embedding_mismatch. Omitted when complete"
+        ),
+    )
     backend_failures: dict[str, str] = Field(
         default_factory=dict,
         description="Failed primary candidate paths with sanitized reason codes; empty means no detected failure",

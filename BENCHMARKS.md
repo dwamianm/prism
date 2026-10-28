@@ -1350,6 +1350,182 @@ for that claim's own sentence instead of the whole passage. The other memories
 keep the extraction they have, so the measures above should not move for them,
 and the cost is one more request for each memory that names no one.
 
+### Pronoun repair: a second request for the claims that kept a pronoun (dwamianm/prism#345, #347)
+
+The bounded alternative the window section ends with: ask a second time only about the sources whose first
+extraction left a claim on a pronoun, and change only that claim. `enable_pronoun_repair` (needs no other option; on by
+default in the alpha channel since 2026-10-22, see "Decision" below) flags a claim whose subject or object is a third person pronoun (they, them, their, he, she, it and
+the like; never I, we, us or our), and for a source with such a claim sends one more request. It shows the owner's
+preceding memories (the extraction window's code and privacy checks, up to `extraction_window_turns`) and only the
+claim's own sentences, and the model returns names. Code accepts a name only when it is a proper name written in the
+claim's sentence, the message, the speaker line or a memory the request showed, and then gives that claim its own
+sentence as text with the names written in. The quote stays its evidence, `metadata.resolved_from_context` records
+the memories that wrote the names, one name rebinds the field to that entity, several stay on the pronoun and are
+listed as entities so the mention links reach them, and no other claim of the message changes. A resolved name is
+never required to occur in the quote: that is the one place the claim differs from the grounding rule, and the name's
+own rule replaces it.
+
+**Model.** Every earlier section here measured `deepseek-v4.1-flash:cloud` through Ollama. This one used a small
+hosted model, the kind the hosted service extracts with, through the same extraction client, because the owner wanted
+to know whether the production model behaves like the DeepSeek baseline. Nothing else in this repository calls it, and
+the rule that builds, probes and answer runs use the local Ollama server is unchanged. The numbers below are not
+comparable with the DeepSeek sections except where a column says so. The runs went through the opt in described in
+"Fast cycle on the production model" below, and its committed cache replays them: `PRME_BENCH_HOSTED=1` and the model id
+give the on numbers below (the hosted baseline keeps the option on), and `--set enable_pronoun_repair=false` the off
+numbers, with no request sent. The DeepSeek cache in `benchmarks/fixtures/fast-cycle/extraction-cache` is not changed.
+
+**Design of the run.** Off is one live run of the fast cycle's `store`, `ingest`, `store-extract` and `reingest`
+stages. Every measure below reads a replay of that run's extraction cache, so off is deterministic (a second live
+sample of the `ingest` stage reproduced all 103 comparable measures except two token counts that moved by 100 and 6).
+On replays the same first extractions and asks the model only the repair requests, so any difference is the repair's.
+The repair requests were then replayed too, and the on replay was judged against the off replay at tolerance 0.
+
+Pass rule, written in the pull request before the on numbers were read:
+
+1. Defect probes: 7 of 7 answers in the top 3.
+2. `chat-v1`: answers in the top 3 and top 5 not below off.
+3. No chat probe measure worse in its good direction than off.
+4. Claims repeating another's text on `chat-v1` not higher than off.
+5. Fast cycle: no gated measure worse than off; list any moved measure and why. The corrections probe measures and
+   the Japan dates, dog and flights questions are read explicitly.
+6. The cities claim in the top 5 for the first spelling, in `reingest` and `store-extract`.
+7. Extra tokens per memory at most 1.5 times off.
+
+**The production model against the DeepSeek baseline** (off; the DeepSeek column is the committed
+`baseline-main.json`, a replay of its cache on this tree):
+
+| Measure | Hosted model | DeepSeek |
+|---|---:|---:|
+| Defect probes, answers in the top 3 (of 7) | 6 | 7 |
+| `chat-v1`, answers in the top 3 (of 18) | 12 | 14 |
+| `chat-v1`, answers in the top 5 | 13 | 15 |
+| `chat-v1`, claims repeating another claim's text | 0 | 0 |
+| `chat-v1`, user claims on the named owner | 30 | 36 |
+| `chat-v1`, pronoun entities | 5 | 15 |
+| `chat-v1`, key links linked | 14 | 14 |
+| `corrections-v1`, answers in the top 3 (of 4) | 2 | 3 |
+| `store-extract`, answers ranked first (of 17) | 8 | 12 |
+| `store-extract`, answers in the top 3 | 14 | 14 |
+| `store-extract`, mean reciprocal rank | 0.621 | 0.776 |
+| `store-extract`, Japan cities question rank | 23 | 30 |
+
+The production model has the same defect: it also reads "They chose Tokyo, Kyoto, Kanazawa, and Osaka." as a decision
+of the pronoun entity "They", so the cities claim ranks 23rd and 24th where DeepSeek's ranked 30th. It makes fewer
+pronoun entities (5 against 15 on `chat-v1`) and a little less of the rest of the ranking. The defect probes are 6 of 7
+on it, not 7: the `shipments` probe ranks 7th in two independent live samples, and it has no pronoun in it.
+
+**The cities claim**, rank of the claim that holds the four cities among all results (the raw note in
+parentheses), for three spellings of the question:
+
+| Case | "...Alex and jordan visit in Japan?" | "...alex visit in japan?" | "...Alex visit?" |
+|---|---:|---:|---:|
+| Off, `store-extract` | 23 (56) | 73 (108) | 98 (112) |
+| Off, `reingest` | 24 (56) | 73 (108) | 98 (112) |
+| On, `store-extract` | 1 (55) | 3 (109) | 13 (113) |
+| On, `reingest` | 1 (55) | 5 (109) | 13 (113) |
+
+The repaired claims read "Alex and Jordan chose Tokyo, Kyoto, Kanazawa, and Osaka." and "Alex and Jordan dropped
+Hiroshima to save time." (the model took the names from the preceding memory "Alex and Jordan plan a trip to Japan
+in April 2027 for the cherry blossom season.", and the same names came back in all four live requests). The window and fact text options of
+the section above reached 6th and 9th for the first spelling at the price of 22 fast-cycle measures and the whole
+message problem; this reaches 1st and changes nothing else in these stages.
+
+**Off against on, final variant** (first try beside it, see below):
+
+| Measure | Off | On, first try | On, final |
+|---|---:|---:|---:|
+| Defect probes, answers in the top 3 (of 7) | 6 | 5 | 6 |
+| Defect probes, answers in the top 5 | 6 | 6 | 6 |
+| `chat-v1`, answers in the top 3 (of 18) | 12 | 11 | 12 |
+| `chat-v1`, answers in the top 5 | 13 | 13 | 13 |
+| `chat-v1`, claims repeating another claim's text | 0 | 0 | 0 |
+| `chat-v1`, user claims on the named owner | 30 | 30 | 30 |
+| `chat-v1`, key links linked | 14 | 14 | 14 |
+| `corrections-v1`, answers in the top 3 (of 4) | 2 | 2 | 2 |
+| `corrections-v1`, old value shown first / old claims not retired / new values active | 2 / 3 / 2 | 2 / 3 / 2 | 2 / 3 / 2 |
+| `store-extract`, answers ranked first (of 17) | 8 | 9 | 9 |
+| `store-extract`, answers in the top 3 | 14 | 15 | 15 |
+| `store-extract`, mean reciprocal rank | 0.621 | 0.677 | 0.677 |
+| `reingest`, answers ranked first | 8 | 9 | 9 |
+| `reingest`, answers in the top 3 | 11 | 12 | 12 |
+| `reingest`, mean reciprocal rank | 0.606 | 0.662 | 0.662 |
+| Japan dates question rank, `store-extract` / `reingest` | 3 / 4 | 3 / 4 | 3 / 4 |
+| Dog question rank, `store-extract` / `reingest` | 28 / 28 | 28 / 28 | 28 / 28 |
+| Flights question rank, `store-extract` / `reingest` | 2 / 2 | 2 / 2 | 2 / 2 |
+| Stale value above the answer, `store-extract` / `reingest` | 4 / 4 | 4 / 4 | 4 / 4 |
+
+Every other rank in the two store stages and every other `ingest` measure is unchanged. The corrections, Japan
+dates, dog and flights questions that fell with the window options did not move.
+
+**First try, and what changed.** The first variant also flagged we, us and our when the turn named no speaker. It
+repaired "We chose Tokyo, Kyoto, Kanazawa, and Osaka." (defect probes) to "Alex Rivera and Jordan chose ..." and "We use
+Tableau at Northwind." (`chat-v1`) to "Dana and Priya use Tableau at Northwind.". The first is right. The second is a
+guess: the memory means Dana's team, and the names are written in the window but no memory states that group. Both
+names are real, so the name check could not tell. The extra claims also took ranks in questions about the owner:
+the travel probe fell from 3rd to 4th (defect probes 6 to 5 of 7), and `chat-v1` lost one answer in the top 3 (12 to
+11; the coffee question from 2nd to 5th). So the first try failed rules 1, 2 and 3. The owner group links
+(`enable_owner_group_links`) already connect a we claim to the people a session names with the owner, so I took
+first person plural out of the flagged set, and told the request to name a group only when a memory or the sentence
+names it together and to answer nothing when more than one person could be meant. That is the final variant. It is
+the second and last repair cycle.
+
+In the final variant the model is asked in two `chat-v1` sources and answers "the offer from Brightpath" (a
+description, rejected by the proper name rule) and "Brightpath team" (not written as such, rejected by the written
+name rule), so those claims keep their first extraction. A repaired field is accepted only when every name passes.
+
+**Cost.** The repair request is about 1,500 input and 50 to 150 output tokens, against about 6,600 for a first
+extraction, and only a source with a flagged claim makes it.
+
+| Stage | Sources | Requests off | Requests on | Sources asked | Sources repaired | Tokens off | Repair tokens | On / off |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `ingest` (three chats) | 84 | 84 | 86 | 2 (2.4%) | 0 | 550,864 | 2,974 | 1.005 |
+| `store-extract` | 75 | 75 | 76 | 1 (1.3%) | 1 | 499,734 | 1,650 | 1.003 |
+| `reingest` | 75 | 75 | 76 | 1 (1.3%) | 1 | 499,286 | 1,650 | 1.003 |
+
+That is 35 extra tokens per turn on `ingest` and 22 per memory on the store stages. The first variant asked 6 of 84
+turns (2 of 14 and 4 of 54, none in `corrections-v1`) and used 11,764 tokens in 8 requests over the four stages. The
+fast cycle's own `extraction_tokens` for the `ingest` stage understates the on run: a turn that mixes a replayed first
+extraction with a live repair counts only the live tokens, so the cost above is the request meter's.
+
+**Rule.**
+
+1. FAIL. 6 of 7 with the option off and 6 of 7 on (5 of 7 on the first try). The `shipments` probe ranks 7th in both
+   off samples and does not move. A pronoun repair has no reason to move it, so this clause cannot pass on this model.
+2. Pass in the final variant (12 and 13, as off); failed on the first try.
+3. Pass in the final variant: no chat probe measure of `defects-v1`, `chat-v1` or `corrections-v1` differs from off.
+4. Pass (0 and 0).
+5. A replay at tolerance 0 flags one gated measure: context tokens per question, up by 4 (3,194.7 to 3,198.7, 0.13%)
+   in both store stages, and it is within the measure's live tolerance (191). Every question's context grows by
+   exactly 4 because the contexts hold both repaired claims and "Alex and Jordan" is four tokens longer than "They".
+   Extraction requests and tokens rise by the repair requests, which is the feature's cost, and the rest of the moved
+   measures are better (the cities rank, answers ranked first and in the top 3, mean reciprocal rank, graph candidates).
+6. Pass: 1st in both stages.
+7. Pass: 1.005 and 1.003.
+
+So the option does not pass the rule as written: rule 1 fails on the model's off baseline and is not something the
+repair can change, and rule 5 moves one gated measure by a few tokens for a stated reason. Nothing else fails. The
+pass rule above is unchanged, and the option was turned on anyway (next paragraph). What the measurements show is that a memory that names no one can be repaired from the owner's earlier
+memories without touching any other memory (1 of 75 sources here, 1.3%), that the repair needs the proper name rule
+to stay narrow (a description or a half-written name is refused), and that a group pronoun should only be resolved when
+a memory states the group.
+
+**Decision.** `enable_pronoun_repair` was turned on by default in the alpha channel by the maintainer's decision on
+2026-10-22. The alpha pass rule's defect probe condition (7 of 7) was not met, because the extraction model used in
+production scores 6 of 7 with the option off. No mid tier or full benchmark was run on it. One memory in the fixtures is
+repaired (the cities claim, 23rd to 1st). `PRME_ENABLE_PRONOUN_REPAIR=false` restores the first extraction exactly. The
+benchmark harness names the setting itself (`gate_config` sets it to false unless a run passes `--set`, and the hosted
+baseline sets it to true), so the DeepSeek baselines and their caches, which hold no repair request, replay unchanged
+and cache-only: the committed DeepSeek fast cycle baseline still passes with all 168 measures unchanged, and its chat
+probe, defect probe and corrections probe builds are among them. Turning the option on makes `reingest()` read sources
+derived without it as stale, and a source with a claim on a third person pronoun makes one more model request.
+
+**Not measured.** The offline evidence gate (the repair changes no retrieval) and the mid tier, which would show how
+often the repair applies and whether it names anyone wrongly over all of LoCoMo and 12 LongMemEval-S questions. The mid
+tier on the production model is about eight times the tokens of everything above ("Fast cycle on the production model"),
+so it needs its own decision. PostgreSQL ran in CI only. The fixtures hold one memory that names no one (the cities one), so this
+shows the repair works and costs little where it applies, not how often a real store needs it, and a `reingest()` with
+the option on asks the first request again for every source, because the request is in the settings.
+
 ### Chat probe: a short chat through `ingest()`
 
 The benchmark packs take most of an hour per conversation to build, and their
@@ -2537,6 +2713,73 @@ server or prompt change.
   versions when two scores nearly tie, so compare reports made on the same
   machine, or refresh the baseline there.
 
+### Fast cycle on the production model (the hosted baseline)
+
+Every number in the fast cycle sections above comes from `deepseek-v4.1-flash:cloud`, and the committed
+`baseline-main.json` is a replay of its cache. The hosted service extracts with a different, small hosted model, and
+this model does worse than DeepSeek on these fixtures, so work meant for the hosted service needs a baseline from the
+model it will run on. `benchmarks/fixtures/fast-cycle/baseline-hosted.json` is that baseline: the `store`, `ingest`,
+`store-extract` and `reingest` stages with every option at its default (including the pronoun repair, on since
+2026-10-22; `--set enable_pronoun_repair=false` replays the options-off numbers of the table below, and the baseline
+file is the replay with it on), a replay of its own extraction cache
+(`benchmarks/fixtures/fast-cycle/hosted-extraction-cache`: 159 batched responses, the three repair requests of the
+pronoun repair run above, and the recorded tokens, about 165 KB). The two baselines are not interchangeable. A change
+judged against the DeepSeek baseline says nothing about the production model, and the other way round.
+
+**What it says, plainly.** With the options off, the production model scores 12 of 18 on `chat-v1` (answers in the top 3,
+DeepSeek 14) and 6 of 7 on the defect probes (DeepSeek 7), below DeepSeek on both. The baseline file has the pronoun
+repair on, and it changes none of the `ingest` stage's probe numbers (only the two store stages move; see the pronoun
+repair section above), so these numbers are the same with it on:
+
+| Measure, options off | Production model | DeepSeek |
+|---|---:|---:|
+| Defect probes, answers in the top 3 (of 7) | 6 | 7 |
+| `chat-v1`, answers in the top 3 (of 18) / top 5 | 12 / 13 | 14 / 15 |
+| `chat-v1`, user claims on the named owner | 30 | 36 |
+| `chat-v1`, pronoun entities | 5 | 15 |
+| `corrections-v1`, answers in the top 3 (of 4) | 2 | 3 |
+| `store-extract`, answers ranked first (of 17) / in the top 3 | 8 / 14 | 12 / 14 |
+| `store-extract`, mean reciprocal rank | 0.621 | 0.776 |
+| `store-extract`, Japan cities question rank | 23 | 30 |
+
+It makes fewer pronoun entities and fewer claims that repeat another's text, and it ranks fewer answers first. The
+`shipments` defect probe ranks 7th on it, in two independent live samples. A cold run of the three stages is 234
+requests and 1,549,884 tokens (84 turns, 75 memories, and the `reingest` stage's 75 requests, which a replay shares with
+`store-extract`).
+
+**How to run it.** It needs the AWS SDK and, for any run that is not a replay, AWS credentials with access to the model.
+A run that reaches the model spends money, so it is an explicit opt in that CI never sets and no test uses:
+
+```sh
+# A replay of the committed cache: no request is sent, no credentials are needed, nothing is spent. The cache is keyed
+# by the model's id, so the id must be the one the hosted service uses (it is in the hosted service's configuration,
+# not in this repository).
+PRME_BENCH_HOSTED=1 PRME_BENCH_HOSTED_MODEL_ID=<the hosted service's model id> PRME_BENCH_CACHE_ONLY=1 \
+  uv run --with boto3 python -m benchmarks.fast_cycle run --label my-change --out /tmp/cycle-hosted \
+  --stages store,ingest,store-extract,reingest
+# A change to the extraction request misses the cache and calls the model for the requests it lacks. Drop
+# PRME_BENCH_CACHE_ONLY for that, and read the next paragraph first.
+```
+
+`PRME_BENCH_HOSTED=1` makes the fast cycle (and any other build that goes through `extracted_packs`) extract through the
+hosted model, and makes `--model`, `--baseline` and `--cache-dir` default to the hosted ones (`hosted`, the hosted
+baseline and its cache) and keeps the pronoun repair on, which every other harness build keeps off (`gate_config` names the
+setting, so the DeepSeek baselines and their caches replay unchanged whatever the product default is). Without the flag
+nothing in `benchmarks/diagnostics/hosted_model.py` changes what a build does.
+Every request is counted: one that could pass `PRME_BENCH_HOSTED_MAX_REQUESTS` (default 400) or
+`PRME_BENCH_HOSTED_MAX_TOKENS` (default 2,500,000, input and output together) is refused before it is sent, and
+`PRME_BENCH_HOSTED_LEDGER` writes a line of tokens for each request. A cold run of the cycle's three stages is inside
+both defaults. Judge a run against the hosted baseline with a replay of the cache whenever the extraction request is
+unchanged, as for the DeepSeek baseline: the same responses give the same measures at tolerance 0. A request that is
+new is a live sample, and live samples differ a little: two samples of the same requests in the `store-extract` and
+`reingest` stages differed by four entities and one rank of the cities claim, while two samples of the `ingest` stage
+differed by two token counts only.
+
+**The mid tier on the production model** was not run. The DeepSeek cold build was 8.76 million prompt and 3.69 million
+completion tokens (1,187 requests; LoCoMo 2.07 and 1.30 million of them), which is eight times the tokens of the whole
+cold fast cycle above, and most of those tokens are output. Its estimated cost was about ten times everything measured
+for the pronoun repair, so the repair's effect on LoCoMo and LongMemEval-S is still unmeasured.
+
 ### Store with extraction: does `store(..., extract=True)` help retrieval? (#260)
 
 `store(..., extract=True)` (behind `enable_store_extraction`, off by default)
@@ -3508,6 +3751,902 @@ exclude either threshold on their own (with every band's rate at its Wilson
 from two turns was the same fact. The labels, the reasons, the sensitivity of
 the top band to one label and the commands are in
 `benchmarks/results/research/2026-10-15/PARAPHRASED-DUPLICATE-CLAIMS.md`.
+
+### Graph oracle: what a well shaped graph answers (store packs, no model)
+
+Part of #351. The graph today holds `has_fact` and `mentions` edges, and `store()`
+writes neither entity nor edge, so a question about a list ("which cities will
+Alex visit in Japan?") finds the answer only by its words. This probe works
+backwards. It writes the graph a good extractor would hand us by hand (a gold
+graph, [`DESIGN.md`](benchmarks/graph_oracle/DESIGN.md) says what shape and
+why), writes it into the real graph store over memories stored with `store()`
+and real local embeddings (no extraction), and asks the questions of three
+strategies. That separates two questions that were mixed: whether a well shaped
+graph plus a good traversal answers the questions, and whether extraction can
+produce that graph. Nothing here changes a default or the engine: the graph
+uses the existing edge types, with the relation label in edge metadata.
+
+```sh
+uv run python -m benchmarks.graph_oracle run --out /tmp/oracle
+uv run python -m benchmarks.graph_oracle run --out /tmp/oracle --set hops=3 --set cue_filter=false
+uv run python -m benchmarks.graph_oracle compare /tmp/before/report.json /tmp/after/report.json
+uv run python -m benchmarks.graph_oracle fidelity --gold store-v1 --graph extracted.json
+```
+
+A run takes about 20 seconds on a laptop, is deterministic (two runs give the
+same report) and calls no model. Gold graphs are in
+`benchmarks/fixtures/graph-oracle/`: `defects-v1` (14 turns, 21 entities, 33
+claims), `store-v1` (the 75 memory store fixture, 72 entities, 127 claims) and
+`chat-v1` (54 turns, 22 entities, 40 claims). Each question has a query spec
+(seeds, relation path, target) and the memories that answer it. They cover all 7
+defect probes, all 17 store questions and all 18 chat probes, plus 7 added two
+and three hop questions, and two spellings of the cities question for each of
+the two corpora that ask it (53 items in all). `corrections-v1` is not annotated
+yet. The memories the gold graph says nothing about are still stored, so every
+question has distractors.
+
+The strategies, each ranking the stored memories:
+
+- `baseline`: `retrieve()` as it is, before any gold graph exists.
+- `oracle`: the gold query spec followed exactly from the gold seeds, selected
+  memories first. The upper bound of the shape: if it does not rank the answers
+  first, the shape cannot answer the question.
+- `generic`: no gold path. Seeds come from the question text by entity name,
+  the walk follows claims up to `hops` with hop decay and a weight per
+  relation, and a memory scores by the reached entities it names and the
+  reached claims it evidences. The owner entity touches nearly every memory,
+  so the walk never passes through it unless it is a seed (hub damping).
+  Question words that name an entity subtype ("cities", "dog") boost reached
+  entities of that subtype, and question words that point at a relation
+  ("manager", "allergic", "visit") restrict the walk to that relation and
+  containment. Memories it reaches come first, then the text list.
+- `fused@w`: reciprocal rank fusion of the `retrieve()` list and the generic
+  graph list, the graph list weighted `w`. `fused-gated` uses 4 when the
+  question names a subtype and 0.5 otherwise; that rule was chosen after the
+  first table, so treat it as exploratory.
+
+The answer of a question is the first stored memory that states it, as the gold
+file lists them (a memory that restates a fact counts, one that only mentions a
+name does not). Measured on 2026-10-20 at `50d22d4e`, on a laptop:
+
+| Strategy | Rank 1 | Top 3 | Top 5 | MRR | Stale above answer |
+|---|---:|---:|---:|---:|---:|
+| baseline | 21 | 39 | 41 | 0.564 | 6/8 |
+| oracle | 53 | 53 | 53 | 1.000 | 0/8 |
+| generic | 33 | 51 | 51 | 0.757 | 1/8 |
+| fused@0.5 | 26 | 45 | 49 | 0.671 | 3/8 |
+| fused@1 | 28 | 46 | 50 | 0.710 | 3/8 |
+| fused@2 | 32 | 48 | 51 | 0.760 | 2/8 |
+| fused@4 | 34 | 50 | 50 | 0.780 | 1/8 |
+| fused-gated | 30 | 48 | 51 | 0.725 | 3/8 |
+
+Top 3 of 53 items, and MRR in brackets, by question kind:
+
+| Strategy | Lookup (28) | List (7) | Correction (8) | Two hop (8) | Three hop (2) |
+|---|---|---|---|---|---|
+| baseline | 26 (0.761) | 4 (0.225) | 4 (0.340) | 4 (0.476) | 1 (0.250) |
+| oracle | 28 (1.000) | 7 (1.000) | 8 (1.000) | 8 (1.000) | 2 (1.000) |
+| generic | 27 (0.771) | 7 (0.929) | 8 (0.625) | 8 (0.750) | 1 (0.528) |
+| fused@1 | 28 (0.881) | 4 (0.355) | 7 (0.635) | 6 (0.542) | 1 (0.528) |
+| fused@2 | 27 (0.878) | 4 (0.588) | 8 (0.667) | 8 (0.646) | 1 (0.528) |
+| fused@4 | 27 (0.874) | 6 (0.619) | 8 (0.729) | 8 (0.708) | 1 (0.528) |
+
+The cities question (rank of the memory "They chose Tokyo, Kyoto, Kanazawa, and
+Osaka." among the stored memories):
+
+| Corpus and spelling | baseline | oracle | generic | fused@1 | fused@2 | fused@4 |
+|---|---:|---:|---:|---:|---:|---:|
+| store, "which cities will Alex and jordan visit in Japan?" | 26 | 1 | 1 | 7 | 5 | 3 |
+| store, "which cities will alex visit in japan?" | 51 | 1 | 1 | 7 | 6 | 6 |
+| store, "which cities will Alex visit?" | 52 | 1 | 1 | 5 | 4 | 3 |
+| defects, the same three spellings | 3 | 1 | 1 | 2 | 1 | 1 |
+
+Twenty-eight further store questions (`store-heldout-v1`, single fact lookups,
+never used to choose a setting; the answer is any memory holding the answer
+terms) check that a graph helps where it should and does no harm where it
+cannot:
+
+| Strategy | Rank 1 | Top 3 | Top 5 | MRR |
+|---|---:|---:|---:|---:|
+| baseline | 16 | 22 | 25 | 0.690 |
+| generic | 13 | 19 | 22 | 0.586 |
+| fused@0.5 | 17 | 22 | 25 | 0.713 |
+| fused@1 | 17 | 22 | 25 | 0.698 |
+| fused@2 | 15 | 20 | 23 | 0.641 |
+| fused@4 | 16 | 19 | 22 | 0.642 |
+
+What the numbers say:
+
+- **The shape is sufficient.** Following the gold spec ranks the answer first for
+  all 53 items (baseline: 21 first, 39 in the top 3), including the three
+  spellings of the cities question, every correction (the old date, role,
+  preference or diet sits behind the superseded claim) and the two and three hop
+  questions. The first oracle run ranked 48 of 53 first; the five misses were
+  errors in the gold files (a polarity left out of a spec, claims whose
+  evidence listed memories that do not state them, one missing `partner_of`
+  claim), repaired once. A sixth, a memory listed as evidence for who is on call
+  that only asks for a swap, showed only when the test suite ran the corpora
+  with a different embedding order, and was repaired too. None needed a
+  different shape.
+- **A graph list ahead of the text list is the right tool for lists,
+  corrections and multi hop questions, and the wrong one for single fact
+  lookups.** The generic walk puts the cities memory first for all six
+  spellings (baseline 3 to 52). On the held-out lookups it is 3 questions
+  behind the baseline in the top 3, because a lookup is already answered by its
+  words. Fused at weight 1 keeps the lookups (28 of 28 gold lookups in the top
+  3, held-out top 3 equal to the baseline, MRR 0.698 against 0.690) and lifts
+  corrections (4 to 7), two hop questions (4 to 6) and the list MRR (0.225 to
+  0.355). Weight 2 adds two hop 8 of 8 and costs 2 held-out top 3 places.
+  Fusion with the text list keeps the cities memory from rank 1 (5 to 7 of 75
+  at weight 1, 3 to 6 at weight 4) because the text list, which ranks it 26th to
+  52nd, still contributes.
+- **What mattered, by ablation of the generic walk over the 53 items (top 3
+  with the graph list first):** relation cues that restrict the walk (51 against
+  35 when they only boost, 29 with no cues: the query compiler that picks the
+  relation is the largest lever); hub damping of the owner (51 against 47 with
+  none, 44 when the owner's own score also counts; a walk that passes through
+  the owner reaches the whole graph in two hops); intent edges (49 without
+  containment, 42 with containment alone); relations `works_at` and `uses` (dropping
+  one costs 3 and 4 top 3 places), `friend_of`, `owns`, `prefers`, `involved_in`
+  and `partner_of` (2 each; the others cost 0 or 1). A hop limit of 2 is enough (1 hop: 49;
+  3 and 4 hops: the same 51); a decay of 0.4 and 0.6 are equal in the top 3.
+- **Containment is what makes the country level chain work.** With the claims
+  "Alex visits Tokyo" hidden and only "Alex visits Japan" kept, the cities
+  memory is still reached through `located_in` (51 of 53, the same as with the
+  claims); with those inferred containment edges removed too it drops to 45.
+  Claims between memories and entities that the text states ("We chose Tokyo,
+  ...") are therefore not required for list questions if containment is there,
+  and a per city claim is not enough without a connected graph for the
+  questions that name only the country.
+- **Claim nodes cost two hops per step and give no better answers here.** With
+  claim nodes the same walk needs a hop limit of 4 (50 against 51 top 3 at
+  hops 4, 48 at hops 2). A claim node is worth its cost only for what direct
+  edges cannot hold: a correction between two claims is a `supersedes` edge
+  between claim nodes, but an edge between two edges has no representation in
+  the store, so the direct shape keeps `supersedes` as edge metadata.
+- **Stale values.** The old value ranks above the answer for 6 of 8 correction
+  questions at baseline, 1 of 8 for the generic walk and 0 of 8 for the oracle.
+
+Cost, on packs of 14, 75 and 54 memories (DuckDB, a laptop). `retrieve()` took 27
+ms at the median. The generic walk read the store 3 times for two hops (one read
+per hop and one for the last frontier) and 181 edges at the median (512 at the
+95th percentile), which took 3.6 ms at the median and 12 ms at the 95th
+percentile. The oracle, in memory, took 0.03 ms. The store backed walk and the
+in memory copy of the graph rank every question identically. The 10,000 turn
+latency budget of #351 is not measured here.
+
+Limits. One person wrote the gold graphs while reading the questions, the
+oracle follows specs written in the same sitting, and the relation cue words
+are a hand written lexicon, so the oracle is an upper bound of the shape, and
+the generic walk's numbers on the 53 items are optimistic; the 28 held-out
+questions are the check, and they show no gain for lookups, only parity at
+weight 1 or below. The gold graphs hold every claim the memories state, so a
+real extractor, which will miss some and invent some, will land below these
+numbers by an amount `fidelity` measures. The probe uses `store()` packs (no
+chat turns through `ingest()`), DuckDB only, and one fixed fusion rule (RRF at
+k 60).
+
+#### What extraction has to produce
+
+The target is the gold file format: for each memory the entities it names (a
+kind, a subtype, and every name the text uses, "Alex" as well as "Alex
+Rivera"), the claims it states with a relation from the vocabulary (16 relations and
+`has` for a literal), polarity, status, a role and a time, the evidence memory ids, a
+`supersedes` link when it changes an earlier claim, and a `located_in` claim
+for each pair of well known places that sit together in a chat. A claim needs
+its subject and object resolved to entities, "We" and "They" included (the
+gold claims for "We chose Tokyo, Kyoto, Kanazawa, and Osaka." name Alex and
+Jordan, marked `via: we`). `fidelity` scores any graph in that format against
+a gold graph: entity recall and precision (by name), relation recall and
+precision (subject, relation, object, or subject and attribute for a literal),
+polarity and status accuracy on the matched claims, and the share of inferred
+containment found. A first extraction target is entity recall and relation
+recall of 0.8 with relation precision of 0.9 and polarity accuracy of 0.95.
+Those thresholds are a proposal; this probe did not validate them.
+
+#### Blind validation of the typed walk
+
+Part of #351; protocol and decision rule in
+[`BLIND.md`](benchmarks/graph_oracle/BLIND.md), written and committed before any
+strategy ran on these questions. The oracle table above is an upper bound: one
+person wrote the gold graphs and the cue words with the questions in view. This
+run asks whether the walk helps on questions nobody wrote the graph for, and on
+the same questions reworded.
+
+```sh
+uv run python -m benchmarks.graph_oracle blind --out /tmp/blind
+uv run python -m benchmarks.graph_oracle latency --out /tmp/latency --backend duckdb --turns 2000 10000
+uv run --extra postgres python -m benchmarks.graph_oracle latency --out /tmp/latency --backend postgres \
+  --database-url <url> --turns 2000 10000
+```
+
+**The questions.** `blind-v1.json` (sha256 `b84b6dc8381320a0059aadd0e969c282043e94f9efd84d99100332a078ff4b71`):
+86 questions over the three memory sets, in seven types, written by the fast
+tiers' extraction model through a local Ollama server from the memories alone
+(29 requests in two rounds; the model never saw a gold graph, a query spec or the
+cue words). A reviewer who read only the memories and the candidates dropped 61 of
+147 candidates (25 not answerable or ambiguous, 26 repeating an existing or earlier
+question, 10 asking the same fact and type as one already kept), corrected 4 answer
+id lists and relabeled 12 questions that one memory answers as lookups. Three
+paraphrases of each question came from 3 more requests (258; 28 were unchanged from
+the original apart from punctuation and are left out, 230 scored). The reviewer
+spot checked 22 questions' paraphrases and found the meaning kept in all but one
+borderline case. Two limits to read the table with: 79 of the 86 blind answers sit in
+memories that an original or held-out question already asks about, because a model
+asked about a small memory set picks the same salient facts the gold author did, so
+the blind set tests wording and question shapes more than unseen facts (7 questions
+are about memories no earlier question touches); and the first round's lookups mostly
+repeated existing questions, which is why a second round was drawn.
+
+**Gold coverage.** Checking each blind question against the gold graph, from the
+memory text, found 2 facts missing (the book Alex is reading while learning Rust, and
+Alex's request to swap the on-call week), added in a separate commit before the run,
+and 1 modeling gap that is not an edit: a plan that came true leaves its date in a
+superseded claim ("when is the half marathon I signed up for?"). Two blind questions
+(of 7 in the first person) name no entity, so the walk has no seed; seeding the owner
+from I, me and my is the exploratory `[derived+I]` column and changes the top 3 by one
+question. The two added claims moved the original items' `generic` row from 33 to 31
+first places (top 3 unchanged at 51, MRR 0.757 to 0.74).
+
+**Cue words.** `generic[hand]` is the hand written lexicon of the oracle report.
+`generic[derived]` takes each relation's cue words from the words of its name and
+definition in `DESIGN.md`, less stop words, the schema's own words, capitalized example
+names and digits, with verb forms (`derive_cues`; nothing about a question informs it).
+
+Measured once, with the first report's settings, at `6480a248` on 2026-10-20.
+Each cell is questions in the top 3 / top 5 / ranked first, then MRR.
+
+Blind set, by type (the rule's strategy is `generic[derived]`):
+
+| Type (n) | baseline | generic[hand] | generic[derived] | fused@1[derived] | fused@2[derived] |
+|---|---|---|---|---|---|
+| all (86) | 70/76/43, 0.66 | 72/76/46, 0.69 | 64/71/42, 0.64 | 72/76/49, 0.71 | 69/77/49, 0.71 |
+| lookup (28) | 24/26/17, 0.74 | 22/24/13, 0.62 | 20/23/12, 0.59 | 22/24/17, 0.71 | 22/24/13, 0.64 |
+| list (11) | 7/8/3, 0.47 | 10/11/7, 0.78 | 9/10/7, 0.74 | 8/8/5, 0.61 | 8/10/6, 0.67 |
+| multi-hop (12) | 9/10/6, 0.64 | 12/12/8, 0.79 | 10/10/8, 0.76 | 11/11/7, 0.74 | 9/11/8, 0.76 |
+| temporal (11) | 11/11/8, 0.85 | 10/10/6, 0.73 | 9/10/4, 0.61 | 11/11/9, 0.91 | 11/11/8, 0.86 |
+| correction (7) | 5/5/3, 0.59 | 4/5/2, 0.50 | 3/5/2, 0.44 | 6/6/3, 0.61 | 6/6/4, 0.71 |
+| negation (12) | 10/12/5, 0.64 | 10/10/7, 0.72 | 10/10/6, 0.67 | 11/12/7, 0.77 | 11/12/8, 0.81 |
+| aggregation (5) | 4/4/1, 0.41 | 4/4/3, 0.73 | 3/3/3, 0.65 | 3/4/1, 0.43 | 2/3/2, 0.51 |
+
+The 53 original items, all questions and paraphrases (`report.md` has every column and type):
+
+| Set (n) | baseline | generic[hand] | generic[derived] | fused@1[derived] | fused@2[derived] |
+|---|---|---|---|---|---|
+| original (53) | 39/41/21, 0.56 | 51/51/31, 0.74 | 46/47/28, 0.67 | 43/46/27, 0.68 | 44/47/28, 0.69 |
+| blind (86) | 70/76/43, 0.66 | 72/76/46, 0.69 | 64/71/42, 0.64 | 72/76/49, 0.71 | 69/77/49, 0.71 |
+| paraphrases (230) | 189/204/115, 0.66 | 192/204/124, 0.69 | 173/193/118, 0.65 | 193/203/141, 0.74 | 190/202/136, 0.72 |
+
+**Verdict: STOP, by the rule as written.** For `generic[derived]` on the blind set:
+(1) top 3 is 7.0 points below the baseline, not 8 above; (2) it loses 4 questions in
+lookup and 2 each in temporal and correction, where 1 is allowed; (3) it loses 4 lookups
+where it must tie; (4) its paraphrase top 3 rate is 0.8 points above its own blind rate,
+which holds. The same four conditions for `fused@1[derived]`: +2.3 points, loses 2
+questions in lookup, loses 2 lookups, paraphrases +0.2 (holds); for `fused@2[derived]`:
+-1.2 points, loses 2, loses 2 lookups, paraphrases +2.4 (holds); for `generic[hand]`: +2.3
+points, loses 2, loses 2 lookups, paraphrases -0.2 (holds). No row passes.
+
+What the evidence says:
+
+- **The lift is mostly in the oracle's questions, not in new ones.** With the hand cues
+  the walk puts 51 of 53 original items in the top 3 against 39 for the baseline (+23
+  points); on the blind set it puts 72 of 86 against 70 (+2.3 points). The oracle
+  table's number was optimistic by about 20 points, as the report's limits said.
+- **The graph helps the shapes it is built for and hurts the ones text already
+  answers.** On the blind set the graph ahead of the text list gains on list (7 to 10
+  with the hand cues), multi-hop (9 to 12) and aggregation (rank 1: 1 to 3), and loses
+  on lookup (24 to 22), temporal (11 to 10) and correction (5 to 4). Fusing with the text
+  list recovers the losses but also the gains: `fused@1[hand]` is 73 in the top 3 and
+  ties or beats the baseline on every type but lookup (23 against 24).
+- **Mechanically derived cue words cost 8 top 3 places on the blind set and 5 on the
+  original items, against the hand written ones.** The definitions hold few of the
+  words people ask with (dog, trip, race, book); the hand lexicon holds them because
+  its author had them in view. This is the part of the walk that has to be learned, not
+  written, for the lift to generalize.
+- **Wording is not the weak point.** Paraphrases score the same as the original wording
+  for every strategy (within 2.4 points), so the gap above is about question shapes and
+  cue coverage, not about names or rewording.
+
+Latency of the typed walk, on synthetic packs built straight in the graph store (memory
+nodes, entities with a zipf popularity, `mentions` and typed claim edges, an owner
+named by 30% of the memories), 100 questions that name one to three entities, half of
+them the owner. The budget proposed in `BLIND.md`: at most 50 ms at the 95th percentile
+at 10,000 memories on either backend. Milliseconds, median / 95th percentile:
+
+| Backend, memories | Every edge on the frontier | Without the owner's mentions | Claim edges only |
+|---|---|---|---|
+| DuckDB, 2,000 | 43 / 71 (3,808 edges, 3 reads) | 37 / 66 (2,936, 6 reads) | 33 / 55 (818, 9 reads) |
+| DuckDB, 10,000 | 267 / 327 (21,306 edges) | 224 / 285 (17,026) | 155 / 235 (4,382) |
+| PostgreSQL, 2,000 | 25 / 48 | 21 / 46 | 13 / 31 |
+| PostgreSQL, 10,000 | 175 / 198 | 148 / 176 | 55 / 76 |
+
+**No mode meets the budget at 10,000 memories** (best: PostgreSQL, claim edges only,
+76 ms at the 95th percentile; DuckDB 235 ms). The cost follows the edges read, about
+8 to 12 microseconds each with their decoding, and the popular entities of a zipf pack
+put thousands of `mentions` edges on a frontier; a real pack may be lighter, but the
+owner and a partner are as popular as the top entity here. A product walk would need to
+run as one SQL statement that returns scored entities and memory ids, and to cap the
+edges read for each entity.
+
+**One bounded alternative.** The graph list earns its place only on the shapes where it
+won (list, multi-hop, aggregation, and negation with fusion), and loses where the text
+ranking already answers. Apply the fused list (weight 1, hand written cues for now) only
+to a question that names a subtype or asks for several things ("which cities", "how
+many", "who are"), and leave single fact lookups, temporal questions and corrections to
+the text ranking. This blind set is now spent: choosing the gate from its table would
+tune on it, so the gate has to be fixed in writing and tested on a new blind draw (a
+new seed and new questions) before any retrieval port. Learning the relation cues from
+the memories' own claims, instead of writing or deriving them, is the other open
+problem; the extraction step (Phase 3B) is where those claims would come from.
+
+#### Routing the graph by question type
+
+Part of #351; the gate is [`GATE.md`](benchmarks/graph_oracle/GATE.md), committed
+before the router, the new memory set, the new questions or any run. The blind
+validation above found the typed walk helps lists, multi-hop and aggregation
+questions and hurts lookups, temporal questions and corrections, so the owner chose
+to route it: use the graph only for questions that ask for a list, a count, things
+of a subtype or a chain of two relational nouns, and leave every other question to
+today's ranking unchanged.
+
+```sh
+uv run python -m benchmarks.graph_oracle routed --out /tmp/routed --latency /tmp/latency/latency-postgres.json
+```
+
+**The router** (`router.py`) reads only a question's own words: counting phrases,
+"which kind of", a plural noun right after which or what, "which of", "who are", and
+two relational nouns joined by "of" or a possessive. It was written before the new
+draw and measured once on the spent 86 question blind set (81.4 percent agreement
+with the route the type tags imply, 2 of 28 lookups sent to the graph; 0 of 12
+multi-hop questions routed, since most are not a chain of relational nouns). It was
+not changed afterwards.
+
+**The walk** (`sqlwalk.py`) is one SQL statement per question on PostgreSQL and a
+DuckDB equivalent: a three layer join over the typed claim edges plus the `mentions`
+edges of the entities it reaches, capped at 32 claims per entity (128 for a seed,
+which the question names; the owner has 58 claims in `store-v1`), 32 mentions per
+reached entity and 64 entities per layer, newest first, with the cue filter, the
+superseded and negative claim rules and the owner rule in the statement. Its scores
+equal the Python walk's on every question of the original corpora and the new draw, on
+both backends (tests). Median and 95th percentile milliseconds on synthetic packs
+built straight in the graph store (100 questions, half naming the owner):
+
+| Backend, memories | One statement | Every edge on the frontier (3 reads) |
+|---|---|---|
+| PostgreSQL, 2,000 | 11 / 20 (1,232 edges) | 27 / 54 (3,808 edges) |
+| PostgreSQL, 10,000 | 22 / 36 (3,048 edges) | 171 / 198 (21,306 edges) |
+| DuckDB, 2,000 | 15 / 18 | 43 / 71 |
+| DuckDB, 10,000 | 25 / 30 (two runs; one run on a busy machine gave 277 / 521) | 267 / 327 |
+
+The 50 ms budget at the 95th percentile at 10,000 memories on PostgreSQL holds
+(36 ms). The cap is what keeps a popular entity from putting thousands of `mentions`
+edges on a frontier: the unbounded read costs about 8 microseconds an edge.
+
+**The new draw.** `draw2-v1`: 46 memories of a new made-up user on a different story
+(a designer at a telehealth startup, her team, a promotion, a corrected launch date,
+a declined then accepted audit, a trip to Portugal with a dropped city), in the style
+of the store fixture. Its gold graph (53 entities, 103 claims) was written from the
+memories alone and committed before any question existed. A local model drafted 110
+candidate questions from the memories alone (10 requests); the reviewer dropped 19
+as vague or ambiguous, 5 as repeating another and 21 as the same fact and type as one
+kept, corrected 1 answer id list and relabeled 9 questions that one memory answers as
+lookups. The 65 frozen questions (sha256
+`57ef842ba1912085d095bd745ca98f06b35e72a3277d9d4807b3003b674741c3`): 20 lookup, 11
+negation, 10 temporal, 9 list, 8 aggregation, 4 correction, 3 multi-hop. The gold graph
+was not extended afterwards.
+
+One run, at `4124ee88`. Top 3 / top 5 / rank 1, MRR:
+
+| Type (n) | baseline | routed, derived cues | routed, hand cues | graph for every question, derived |
+|---|---|---|---|---|
+| all (65) | 55/56/39, 0.73 | 57/57/39, 0.74 | 57/57/36, 0.71 | 45/50/30, 0.60 |
+| lookup (20) | 17/17/14, 0.80 | 17/17/14, 0.80 | 17/17/14, 0.80 | 15/18/11, 0.68 |
+| list (9) | 6/6/4, 0.56 | 8/8/7, 0.82 | 8/8/6, 0.77 | 7/7/6, 0.74 |
+| multi-hop (3) | 2/2/0, 0.33 | 2/2/0, 0.33 | 2/2/0, 0.33 | 2/2/0, 0.37 |
+| temporal (10) | 10/10/6, 0.80 | 10/10/6, 0.80 | 10/10/6, 0.80 | 7/7/5, 0.63 |
+| correction (4) | 4/4/1, 0.54 | 4/4/1, 0.54 | 4/4/1, 0.54 | 3/4/2, 0.68 |
+| negation (11) | 9/9/7, 0.72 | 9/9/7, 0.72 | 9/9/7, 0.72 | 4/5/2, 0.32 |
+| aggregation (8) | 7/8/7, 0.90 | 7/7/4, 0.69 | 7/7/2, 0.54 | 7/7/4, 0.69 |
+
+The router's accuracy on the new draw is 90.8 percent with 0 of 20 lookups routed (14
+questions went to the graph: 7 of 9 lists, 7 of 8 aggregation, 0 of 3 multi-hop).
+
+**Verdict: fail, on two of six conditions** (derived and hand cues alike):
+
+| Condition | Value | Holds |
+|---|---|---|
+| 1 overall top 3 at least 5 points above the baseline | +3.1 points (57 against 55) | no |
+| 2 no type loses more than 1 question | 0 | yes |
+| 3 lookups, temporal and correction equal the baseline question by question | 0 differ | yes |
+| 4 list, multi-hop and aggregation together gain at least 6 | +2 | no |
+| 5 router accuracy at least 90 percent, at most 2 percent of lookups routed | 90.8 percent, 0 percent | yes |
+| 6 the SQL walk at most 50 ms p95 at 10,000 memories on PostgreSQL | 36 ms | yes |
+
+What the blind results say about the graph as a recall improvement:
+
+- **The routing works as a safety device and does little else.** Routing removes the
+  harm (the unrouted graph loses 2 lookups, 3 temporal, 1 correction and 5 negation
+  questions on this draw; routed loses none) and keeps the one place the graph wins: two list questions
+  move from rank 8 to rank 1 (the cities of the trip, the technologies of the product),
+  and nothing else changes rank by enough to matter.
+- **The ceiling is low.** The baseline already puts 55 of 65 questions in the top 3
+  (85 percent), and only 5 of the 20 list, multi-hop and aggregation questions
+  were missed, so condition 4's +6 could not be met on this draw by any router. The
+  same held on the first blind set (baseline 70 of 86). Questions about a small set
+  of memories are mostly answered by their words.
+- **Three measurements, one pattern.** The oracle report's +23 points (the questions the
+  gold was written for) became +2.3 points on the first blind set at best and +3.1
+  points on the new draw with routing. The gain is real for one shape, a list whose
+  answer memory names several entities but not the one asked about, and nothing else
+  in these three question sets. A hand written gold graph is the best case: extraction
+  has to produce it, and an extractor's misses and invented claims only subtract.
+- **Aggregation questions lose rank 1 when routed** (7 to 4) though not the top 3,
+  because the graph list reorders memories the text ranking already had on top.
+- **Latency is not the obstacle.** One statement with caps reads about 3,000 edges
+  and takes 22 ms at 10,000 memories on PostgreSQL.
+
+On this evidence typed relation edges are not a general recall improvement for the
+questions in these corpora. They are a targeted fix for list questions, worth about
+two questions in nine on this draw and three in eleven on the first blind set, at the
+price of a closed vocabulary, an extraction step that has not been measured, a router
+and a walk. A cheaper route to the same list questions (the memory that names the
+cities is found when "They" is resolved to the people at store time, #347) is worth
+comparing before any port.
+
+#### Scale test: does the graph's advantage grow with store size?
+
+Part of #351; the gate is [`SCALE.md`](benchmarks/graph_oracle/SCALE.md), committed before any
+padded store was built. The hypothesis the owner asked to test: the graph's value shows when a
+store is large and the vector list is crowded, which fixtures of 46 to 75 memories cannot show.
+
+```sh
+uv run --extra postgres python -m benchmarks.graph_oracle scale --out /tmp/scale \
+  --embedding-cache /tmp/scale/vectors.pkl --database-url <postgresql url>
+```
+
+**The stores.** One owner. The core is the four fixtures combined (store-v1, defects-v1, chat-v1,
+draw2-v1: 189 memories, ids prefixed with the fixture, the four gold graphs kept). They share 25
+names (Alex and Jordan, Dana, Sam, Priya, Northwind, Denver, Japan, Tokyo, Postgres, among
+others), which stay separate entities with the same name, so a question naming one seeds all of
+them: extra natural distractors for both channels. Combining them costs the baseline a lot before
+any padding: 128 of the 204 questions in the top 3 (62.7 percent), against 164 (80.4 percent) when
+each fixture is its own store, because the fixtures repeat topics (two Japan trips, two
+Northwinds) and a question's answer id names one fixture's memory. The core is the reference for
+every delta below, so that offset does not enter the advantage.
+
+The core is padded in nested steps to 500, 2,000 and 10,000 memories with two kinds of distractor,
+reported separately:
+
+- **Conversation**: ordinary turns of real conversations, no graph edges: the 5,882 LoCoMo turns in a
+  fixed shuffled order, then, because LoCoMo has fewer turns than the 10,000 size needs, 3,929
+  LongMemEval user turns (the 500 and 2,000 pads are LoCoMo only).
+- **Look-alike**: renamed copies of the core (74 clones; every person, place, organization, project,
+  pet and book renamed from fixed pools, deterministic, no model), so sentence shapes and topics match
+  the questions' and names do not. 4,052 clone memories that substitution left identical to an earlier
+  text (memories with no name in them) were dropped. The clones have gold edges too (direct edges), which
+  the walk cannot reach because no question names a clone's entities: they only enlarge the edge table.
+
+Real local embeddings for everything: 19,081 distinct texts in 82 seconds on a laptop (4.3 ms each,
+`BAAI/bge-small-en-v1.5` through ONNX), kept in a cache so every store holds the same vectors. Storing
+the 9,811 padding memories took about 0.1 second each with indexing (17 minutes for conversation, 20 for look-alikes).
+The baseline is taken from a store with no graph in it; the walk (one SQL statement, caps as in #362)
+runs in separate graph stores on DuckDB and PostgreSQL. The router and the cues are as committed in
+#362; the 204 questions are the 53 original items, the 86 of `blind-v1` and the 65 of `blind-v2`,
+with their tags and answer ids. Nothing was tuned at any size.
+
+Pooled over the 204 questions: top 3 / top 5 / rank 1, MRR.
+
+| Distractors | Memories | Baseline | Routed graph | Advantage (points) | Baseline retrieve p50 / p95 ms |
+|---|---:|---|---|---:|---|
+| conversation | 189 | 128/144/80, 0.54 | 142/158/86, 0.58 | +6.9 | 51 / 77 |
+| | 500 | 131/146/85, 0.55 | 145/159/91, 0.59 | +6.9 | 135 / 190 |
+| | 2,000 | 134/143/81, 0.54 | 147/157/87, 0.58 | +6.4 | 223 / 404 |
+| | 10,000 | 133/141/86, 0.55 | 146/156/89, 0.59 | +6.4 | 261 / 644 |
+| look-alike | 189 | 128/144/80, 0.54 | 142/158/86, 0.58 | +6.9 | 56 / 105 |
+| | 500 | 124/140/85, 0.53 | 138/154/90, 0.58 | +6.9 | 132 / 205 |
+| | 2,000 | 120/131/93, 0.54 | 132/144/94, 0.58 | +5.9 | 236 / 432 |
+| | 10,000 | 118/128/99, 0.55 | 130/141/100, 0.58 | +5.9 | 287 / 710 |
+
+Top 3 of the baseline by type, and routed minus baseline in brackets (the cue words derived from the
+vocabulary; the hand written cues give the same pooled numbers):
+
+| Type (n) | Conversation: core / 500 / 2,000 / 10,000 | Look-alike: core / 500 / 2,000 / 10,000 |
+|---|---|---|
+| lookup (76) | 52 (+2) / 53 (+2) / 54 (+2) / 54 (+2) | 52 (+2) / 51 (+2) / 51 (+2) / 50 (+2) |
+| list (27) | 10 (+12) / 11 (+12) / 11 (+11) / 11 (+11) | 10 (+12) / 10 (+12) / 12 (+10) / 12 (+10) |
+| multi-hop (25) | 13 (0) / 14 (0) / 14 (0) / 13 (0) | 13 (0) / 9 (0) / 9 (0) / 7 (0) |
+| temporal (21) | 19 (-1) / 19 (-1) / 19 (-1) / 19 (-1) | 19 (-1) / 18 (-1) / 17 (-1) / 18 (-1) |
+| correction (19) | 11 (0) / 11 (0) / 12 (0) / 13 (0) | 11 (0) / 13 (0) / 9 (0) / 9 (0) |
+| negation (23) | 14 (0) / 14 (0) / 15 (0) / 14 (0) | 14 (0) / 14 (0) / 13 (0) / 13 (0) |
+| aggregation (13) | 9 (+1) / 9 (+1) / 9 (+1) / 9 (+1) | 9 (+1) / 9 (+1) / 9 (+1) / 9 (+1) |
+
+The +2 for lookups and the -1 for temporal questions are the router's mistakes (5 questions of those types
+go to the graph at every size); no type loses more than one question at any size.
+
+**Verdict against the gate: fails, for both kinds** (derived and hand cues alike).
+
+| Condition | Conversation | Look-alike |
+|---|---|---|
+| 1 advantage at 2,000 at least 8 points larger than at the core size | -0.5 points, fails | -1.0 points, fails |
+| 2 no type loses more than 1 question at any size | worst loss 1, holds | worst loss 1, holds |
+| 3 questions routed to the text ranking equal the baseline | 0 differ, holds | 0 differ, holds |
+
+**Does a crowded store create room for the graph, does the graph use it, or do both degrade
+together?**
+
+- **Ordinary conversation turns create no room.** The baseline does not degrade from 189 to 10,000
+  memories (128, 131, 134, 133 in the top 3; the extra text even sharpens the lexical channel). The
+  advantage is flat (+6.9 to +6.4). Real conversations about other things do not crowd a question about
+  a trip or a job.
+- **Look-alikes create room, in the questions the router does not send to the graph.** The baseline
+  loses 10 of 204 questions in the top 3 by 10,000 memories (5 points; 16 in the top 5, 8 points), half
+  of it in multi-hop questions (13 to 7 of 25), then corrections (11 to 9), two lookups, a negation and a
+  temporal question. The routed graph sends those to the text ranking, so it loses them too, and its
+  advantage shrinks by one point (+6.9 to +5.9) because lists are the only type it moves, and the
+  baseline's list score rose by two (10 to 12). Both degrade together.
+- **The walk itself does not degrade with size.** Its list is size invariant (information, not a
+  condition): for every question tagged list, multi-hop or aggregation the walk gives the same 21 (once 22), 13 and
+  10 questions in the top 3 at every size and kind, because its seeds are names and clones do not carry
+  the questions' names. A router that knew the tags would have an advantage over the baseline of 12, 16,
+  14 and 16 questions (5.9, 7.8, 6.9 and 7.8 points) at the four look-alike sizes: a rise of one point from
+  the core to 2,000, far short of the gate's 8, and no such router exists (the committed router sends 2 of
+  the 25 multi-hop questions to the graph).
+- **The sizes real users will have (hundreds to thousands) are not where the graph helps most.** The
+  advantage is highest at the core and at 500 memories (+6.9) and falls slightly at 2,000 and 10,000 (+6.4
+  and +5.9); there is no peak in the thousands.
+- **Latency.** The walk's median and 95th percentile (ms) after an ANALYZE on PostgreSQL: PostgreSQL 3 / 4 to 6
+  at every size and kind; DuckDB 10 to 11 / 14 to 15 on conversation padding at every size, 11 / 16 at the
+  core and 28 / 41 at 10,000 with the look-alikes' 74 gold graphs in the table. The text ranking's
+  `retrieve()` itself grows with the store (about 50 ms at the core, 260 to 290 ms at 10,000).
+
+So the hypothesis is not supported in the range tested: the typed graph's advantage does not grow with
+store size, with either kind of crowding, and the conclusion for #351 stays that typed relation edges are
+not a general recall improvement and help list questions only. The one thing the scale test shows is
+robustness: the graph channel's answers do not move as the vector list crowds, while the baseline's multi-hop
+answers fall by almost half under 10,000 renamed look-alikes. That is room a multi-hop router could use; the
+gate asked about the router as committed, and this PR does not start that work.
+
+The first run (commit `61019e41`) timed the walk on PostgreSQL before the graph tables had statistics; the
+graph stages were rerun with an ANALYZE (commit `dc1e734e`, which also adds the two information columns) and
+every baseline and routed number was identical. The 10,000 memory store of each kind, text and graph, was
+built once per run on one laptop; latencies vary with the machine's load.
+
+### Embedding models: does a larger local model improve meaning search? (dwamianm/prism#366)
+
+The default embedding model, `BAAI/bge-small-en-v1.5` (384 dimensions), makes the vectors behind the vector
+channel of `retrieve()`. The hypothesis was that it is the weakest link and that a larger registered model raises the
+answer's rank across question types, including after the store is crowded. The gate and its pass rule were
+committed before any other model ran ([`GATE.md`](benchmarks/embedding_models/GATE.md)). Nothing here changes a
+default. This file records no earlier comparison of embedding models (its only other model is the cross-encoder
+reranker), so none was repeated. The `bge-small` columns below reproduce the graph oracle scale run's baseline
+exactly (128 questions in the top 3 at the core, 120 at 2,000 look-alikes, 118 at 10,000), which is the check that
+the harness is the same.
+
+```sh
+uv run python -m benchmarks.embedding_models latency --out latency.json           # per text, one thread, size, memory
+uv run python -m benchmarks.embedding_models pack --out pack.json                 # the store pack and the cities question
+uv run python -m benchmarks.embedding_models scale --model bge-base --out scale-bge-base   # 189, 2,000, 10,000 look-alikes; 2,000 turns
+uv run --extra postgres python -m benchmarks.embedding_models storage --scale-dir . --database-url <postgresql url> --out storage.json
+uv run --extra postgres python -m benchmarks.embedding_models operations --database-url <postgresql url> --out operations.json
+uv run --extra postgres python -m benchmarks.embedding_models switch --database-url <postgresql url> --out switch.json
+uv run python -m benchmarks.embedding_models report --results . --out tables.md
+# Any tier under another model: PRME_BENCH_EMBEDDING='{"model_name": "BAAI/bge-base-en-v1.5", "threads": 1}' uv run python -m benchmarks.fast_cycle run ...
+# The offline gate's saved packs hold bge-small vectors: embed their texts in shards, then gate with them.
+uv run python -m benchmarks.embedding_models reembed --recipe bge-base warm --shard 0/8 --cache-out shard-0.pkl   # one per shard
+uv run python -m benchmarks.embedding_models reembed --recipe bge-base --cache merged.pkl --cache shard-0.pkl gate --lme-captures <dir> --output gate.json
+```
+
+**Recipes.** The engine's provider adds no prefix to a text, but nomic needs `search_query: ` and `search_document: `
+and BGE and mxbai take an instruction before the question only. A new option, off by default, adds them
+(`embedding.query_prefix`, `embedding.document_prefix`; the model version names the recipe, so vectors made
+under one are refused under another). `+q` below is the instruction before the question; `nomic` has both
+prefixes (`nomic-bare` is its use without them). The scale harness applies the prefixes in its embedding cache so one
+padded store serves a model's two question recipes. Run through the engine's own option instead (`scale --mode engine`, core only), the ranks
+are the same for 204 of 204 questions with `bge-small+q` and 203 of 204 with `nomic` (one rank differs; the top 3 count is the same). The
+registered `bge-small` and `bge-base` files are 8-bit quantized and the others full precision; that is what a user gets,
+so that is what ran. Everything ran with `embedding.threads=1`.
+
+**The store pack and the cities question** (75 memories; the answer's rank among everything `retrieve()` returned; the
+three spellings are the fixture's and the two variants of the graph oracle; MRR over the 17 questions):
+
+| Recipe | Cities rank, three spellings | Cities MRR | Store pack top 3 | Rank 1 | MRR (17) |
+|---|---:|---:|---:|---:|---:|
+| bge-small | 26, 51, 52 | 0.026 | 14/17 | 6 | 0.559 |
+| bge-small+q | 26, 52, 52 | 0.026 | 14/17 | 7 | 0.598 |
+| minilm | 20, 52, 54 | 0.029 | 14/17 | 6 | 0.577 |
+| bge-base | 19, 50, 52 | 0.031 | 13/17 | 7 | 0.604 |
+| bge-base+q | 19, 51, 51 | 0.031 | 13/17 | 7 | 0.601 |
+| bge-large | 19, 50, 51 | 0.031 | 13/17 | 7 | 0.604 |
+| bge-large+q | 19, 51, 52 | 0.03 | 13/17 | 7 | 0.604 |
+| mxbai | 17, 51, 51 | 0.033 | 14/17 | 6 | 0.57 |
+| mxbai+q | 18, 51, 51 | 0.032 | 12/17 | 6 | 0.567 |
+| nomic | 18, 51, 51 | 0.032 | 14/17 | 9 | 0.668 |
+| nomic-bare | 18, 51, 52 | 0.031 | 14/17 | 7 | 0.609 |
+
+The cities example does not move. The question's cosine to the memory that answers it is 0.52 under `bge-small` against
+0.67 for the best "Japan trip" memory and 0.75 for the best other memory, as in the issue, and under every larger
+model the answer still sits below them (bge-large 0.55 against 0.76; nomic 0.65 against 0.83), so by cosine alone it
+ranks 7th to 10th of 75 where `bge-small` ranks it 14th. Through `retrieve()` it ranks 17th to 26th for the question
+as the fixture words it, and about 50th for the two shorter spellings, under every model. The memory ("They chose
+Tokyo, Kyoto, Kanazawa, and Osaka") names neither Alex nor Japan, so no embedding can match it to the question; a
+larger model narrows the gap without closing it. The nomic row shows what a missing prefix costs on the pack:
+MRR 0.668 with the prefixes against 0.609 without, and the first spelling's rank unchanged.
+
+**The scale harness** (the 204 frozen questions over the 189-memory core, padded with look-alikes to 2,000 and 10,000
+and with conversation turns to 2,000; baseline `retrieve()`, no graph; each cell is the answers in the top 3, the top 5
+and at rank 1, then MRR). Blind is the 151 questions of `blind-v1` and `blind-v2`:
+
+| Recipe | Core 189 | 2,000 look-alike | 10,000 look-alike | 2,000 conversation |
+|---|---:|---:|---:|---:|
+| bge-small | 107/117/68, 0.598 | 99/109/82, 0.624 | 100/106/85, 0.629 | 108/116/70, 0.603 |
+| bge-small+q | 109/116/70, 0.605 | 98/111/82, 0.622 | 102/105/83, 0.622 | 108/116/70, 0.604 |
+| minilm | 103/116/56, 0.545 | 94/101/68, 0.564 | 97/100/73, 0.575 | 103/114/63, 0.564 |
+| bge-base | 107/118/68, 0.603 | 106/113/80, 0.635 | 105/112/82, 0.631 | 113/120/72, 0.621 |
+| bge-base+q | 106/117/67, 0.594 | 105/108/82, 0.634 | 101/107/84, 0.627 | 107/117/67, 0.592 |
+| bge-large | 111/117/69, 0.611 | 102/113/83, 0.637 | 103/111/88, 0.652 | 112/119/70, 0.611 |
+| bge-large+q | 110/118/70, 0.613 | 100/111/83, 0.632 | 102/106/86, 0.642 | 110/117/69, 0.606 |
+| mxbai | 107/118/63, 0.580 | 98/109/79, 0.609 | 100/107/82, 0.620 | 108/118/65, 0.587 |
+| mxbai+q | 106/116/65, 0.585 | 99/109/79, 0.614 | 103/107/82, 0.622 | 104/117/65, 0.582 |
+| nomic | 104/115/60, 0.562 | 99/106/74, 0.597 | 100/109/79, 0.609 | 104/117/67, 0.587 |
+
+The same, over all 204 questions (the pooled number the earlier tables used):
+
+| Recipe | Core 189 | 2,000 look-alike | 10,000 look-alike | 2,000 conversation |
+|---|---:|---:|---:|---:|
+| bge-small | 128/144/80, 0.535 | 120/131/93, 0.542 | 118/128/99, 0.550 | 134/143/81, 0.537 |
+| bge-small+q | 131/144/82, 0.541 | 117/134/92, 0.538 | 120/125/96, 0.539 | 133/143/81, 0.538 |
+| minilm | 121/140/64, 0.478 | 110/120/79, 0.490 | 115/119/84, 0.499 | 124/140/74, 0.504 |
+| bge-base | 128/146/80, 0.542 | 125/136/95, 0.560 | 122/133/98, 0.556 | 138/148/86, 0.563 |
+| bge-base+q | 127/147/78, 0.533 | 123/130/96, 0.557 | 117/127/99, 0.548 | 131/144/80, 0.537 |
+| bge-large | 132/147/81, 0.548 | 121/135/96, 0.555 | 120/130/102, 0.562 | 136/147/85, 0.556 |
+| bge-large+q | 131/146/83, 0.551 | 119/133/97, 0.554 | 119/124/100, 0.555 | 135/145/84, 0.552 |
+| mxbai | 129/146/74, 0.523 | 114/130/92, 0.533 | 117/127/95, 0.536 | 132/146/78, 0.532 |
+| mxbai+q | 126/144/77, 0.526 | 115/129/92, 0.534 | 119/127/95, 0.537 | 127/144/78, 0.527 |
+| nomic | 124/139/70, 0.500 | 116/126/86, 0.522 | 118/128/92, 0.530 | 125/143/81, 0.530 |
+
+Blind questions gained and lost in the top 3 against `bge-small`, paired, with a two-sided sign test:
+
+| Recipe | Core 189 | 2,000 look-alike | 10,000 look-alike | 2,000 conversation |
+|---|---:|---:|---:|---:|
+| bge-small+q | +2 / -0, p 0.50 | +0 / -1, p 1.00 | +3 / -1, p 0.62 | +1 / -1, p 1.00 |
+| minilm | +2 / -6, p 0.29 | +3 / -8, p 0.23 | +3 / -6, p 0.51 | +2 / -7, p 0.18 |
+| bge-base | +4 / -4, p 1.00 | +7 / -0, p 0.02 | +6 / -1, p 0.12 | +6 / -1, p 0.12 |
+| bge-base+q | +3 / -4, p 1.00 | +8 / -2, p 0.11 | +5 / -4, p 1.00 | +4 / -5, p 1.00 |
+| bge-large | +5 / -1, p 0.22 | +5 / -2, p 0.45 | +5 / -2, p 0.45 | +5 / -1, p 0.22 |
+| bge-large+q | +4 / -1, p 0.38 | +4 / -3, p 1.00 | +5 / -3, p 0.73 | +4 / -2, p 0.69 |
+| mxbai | +5 / -5, p 1.00 | +3 / -4, p 1.00 | +6 / -6, p 1.00 | +4 / -4, p 1.00 |
+| mxbai+q | +3 / -4, p 1.00 | +4 / -4, p 1.00 | +7 / -4, p 0.55 | +3 / -7, p 0.34 |
+| nomic | +4 / -7, p 0.55 | +5 / -5, p 1.00 | +6 / -6, p 1.00 | +4 / -8, p 0.39 |
+
+In the table of question sets below, `bge-base`'s gain is all in
+`blind-v1` (+7 at 2,000 look-alikes, +5 at 10,000, +6 with conversation padding); `blind-v2` is at 55 or 56 of 65 for every
+model, and the original set, which holds the fixtures' own probes, loses one or two. The full set of cells follows,
+then the top 3 against `bge-small` by question type at 2,000 look-alikes over all 204 questions.
+
+| Recipe | 2,000 look-alike | 10,000 look-alike | 2,000 conversation |
+|---|---:|---:|---:|
+| bge-small | 21 / 43 / 56 | 18 / 44 / 56 | 26 / 51 / 57 |
+| bge-small+q | 19 / 42 / 56 | 18 / 46 / 56 | 25 / 52 / 56 |
+| minilm | 16 / 39 / 55 | 18 / 42 / 55 | 21 / 47 / 56 |
+| bge-base | 19 / 50 / 56 | 17 / 49 / 56 | 25 / 57 / 56 |
+| bge-base+q | 18 / 49 / 56 | 16 / 47 / 54 | 24 / 53 / 54 |
+| bge-large | 19 / 46 / 56 | 17 / 48 / 55 | 24 / 56 / 56 |
+| bge-large+q | 19 / 44 / 56 | 17 / 47 / 55 | 25 / 55 / 55 |
+| mxbai | 16 / 43 / 55 | 17 / 47 / 53 | 24 / 53 / 55 |
+| mxbai+q | 16 / 43 / 56 | 16 / 48 / 55 | 23 / 50 / 54 |
+| nomic | 17 / 43 / 56 | 18 / 46 / 54 | 21 / 51 / 53 |
+
+| Recipe | lookup (76) | list (27) | multi-hop (25) | temporal (21) | correction (19) | negation (23) | aggregation (13) | Worst |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| bge-small | +0 | +0 | +0 | +0 | +0 | +0 | +0 | +0 |
+| bge-small+q | -1 | -1 | +0 | +0 | -1 | +0 | +0 | -1 |
+| minilm | -3 | -2 | -1 | +1 | -4 | -1 | +0 | -4 |
+| bge-base | +1 | +0 | +0 | +3 | +1 | +0 | +0 | +0 |
+| bge-base+q | +3 | -2 | +0 | +2 | -1 | +1 | +0 | -2 |
+| bge-large | +0 | -1 | -1 | +1 | +1 | +1 | +0 | -1 |
+| bge-large+q | -1 | -2 | -1 | +1 | +1 | +1 | +0 | -2 |
+| mxbai | -3 | -1 | -1 | +1 | -3 | +1 | +0 | -3 |
+| mxbai+q | -3 | -2 | -1 | +2 | -2 | +1 | +0 | -3 |
+| nomic | +0 | -1 | -1 | +0 | -1 | -1 | +0 | -1 |
+
+**What it costs**, on one ONNX thread (the one-CPU case), one text per call as the engine embeds:
+
+| Model | Dim | p50 ms/text | p95 ms/text | p50 vs bge-small | p50 ms, conversation turn | Embed the 10,000 store | Download | Loaded model memory | Within 8x |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| bge-small | 384 | 2.83 | 4.65 | 1.0x | 3.1 | 0.7 min | 67 MB | 310 MB | yes |
+| minilm | 384 | 1.25 | 2.09 | 0.4x | 1.46 | 0.4 min | 91 MB | 265 MB | yes |
+| bge-base | 768 | 6.44 | 11.12 | 2.3x | 6.96 | 1.5 min | 218 MB | 940 MB | yes |
+| bge-large | 1024 | 17.91 | 32.56 | 6.3x | 19.38 | 4.1 min | 1338 MB | 2691 MB | yes |
+| mxbai | 1024 | 17.65 | 31.83 | 6.2x | 19.42 | 4.1 min | 1338 MB | 2678 MB | yes |
+| nomic | 768 | 8.2 | 14.93 | 2.9x | 10.41 | 2.1 min | 548 MB | 1199 MB | yes |
+
+The per-text figures are from a run with nothing else of mine running (400 short memory sentences, mean 90
+characters; a conversation turn of 133 characters costs 3.1, 1.5, 7.0, 19.4, 19.4 and 10.4 ms at p50 in that order).
+The 10,000 store figure is the scale run's own embedding time for the 10,000 look-alike memories and the 204 questions
+with two other models' runs going at once, so it is an upper bound. Every model is within 8 times `bge-small`, so the speed
+line of the rule excludes none. A saved LongMemEval-S turn is far longer (about 1,000 characters on average): `bge-base` took
+about 50 ms of CPU for one on one thread, which is what makes re-embedding a large store slow (below).
+
+PostgreSQL with pgvector 0.8.7, per 10,000 memories, the engine's `vector(N)` column and its HNSW index (cosine,
+`m=16`, `ef_construction=64`), one local connection:
+
+| Model | Dim | Bytes per vector | Vector column MB | HNSW index MB | Vector and index MB | HNSW build s | Vector UPDATE p50 / p95 ms | Exact search p50 / p95 ms |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| bge-small | 384 | 1544.0 | 18.97 | 20.49 | 39.46 | 1.2 | 0.48 / 0.85 | 5.45 / 6.43 |
+| minilm | 384 | 1544.0 | 18.97 | 20.49 | 39.46 | 1.3 | 0.47 / 0.69 | 5.4 / 5.9 |
+| bge-base | 768 | 3076.0 | 41.81 | 40.97 | 82.78 | 1.8 | 0.66 / 0.84 | 21.72 / 22.62 |
+| bge-large | 1024 | 4100.0 | 55.54 | 81.93 | 137.47 | 2.2 | 0.78 / 1.11 | 24.15 / 25.46 |
+| mxbai | 1024 | 4100.0 | 55.54 | 81.93 | 137.47 | 2.2 | 0.73 / 0.95 | 22.75 / 23.47 |
+| nomic | 768 | 3076.0 | 41.81 | 40.97 | 82.78 | 2.0 | 0.69 / 0.85 | 19.94 / 21.51 |
+
+The engine searches exactly by default (it materializes the user's rows, then sorts), so a question's cost grows with the
+vectors it scans: 5.5 ms at 384 dimensions and about 22 ms at 768 or 1,024, for 10,000 memories. One `store()` and one
+`retrieve()` on PostgreSQL with one thread (the 75-memory pack; p50 of 75 stores and 20 retrievals, with the embedding
+inside it):
+
+| Model | store() p50 / p95 ms | of which embedding p50 ms | retrieve() p50 / p95 ms | of which question embedding p50 ms |
+|---|---:|---:|---:|---:|
+| bge-small | 28.2 / 34.9 | 3.1 | 19.0 / 72.2 | 2.5 |
+| minilm | 26.0 / 29.2 | 1.6 | 17.4 / 27.3 | 1.4 |
+| bge-base | 35.4 / 39.2 | 6.9 | 21.8 / 43.2 | 5.8 |
+| bge-large | 47.6 / 59.8 | 17.9 | 32.1 / 44.9 | 15.4 |
+| mxbai | 47.9 / 55.8 | 17.9 | 33.2 / 60.5 | 15.6 |
+| nomic | 37.0 / 46.2 | 8.6 | 23.2 / 44.0 | 7.2 |
+
+**The cheap tiers** (cache replays, `embedding.threads=1`; each model against `bge-small`):
+
+| Tier | bge-small | bge-base | bge-large |
+|---|---|---|---|
+| Defect probes (top 3 of 7) | 7 | **6** (cities 2 to 4) | **6** (cities 2 to 4) |
+| chat-v1 (top 3, top 5 of 18) | 14, 15 | 14, 15 | 14, 15 |
+| Corrections probe, `ingest()` path: first context line shows the old value | 2 of 2 | 1 of 2 | 2 of 2 |
+| Fast cycle against the committed baseline | pass, 133 unchanged | **fail**, 2 gated measures worse, 23 moved | **fail**, 2 gated measures worse, 24 moved |
+
+The two gated measures the fast cycle fails for both models are the same: answers ranked in the top 3 on the defects chat
+(7 to 6, the cities probe) and on the store pack (14 to 13). On the store pack `flights` and `rust` fall from 3 to 4 while
+`japan-dates` and `gravel-race` rise to 3 and 2 and `observability` to 1; the cities question rises from 26 to 19. Those are
+rank measures of answers, not counts of nodes or entities, so they are not moves the embedding makes harmlessly.
+
+**The offline evidence gate and the mid tier** (against `bge-small`; no interval of a higher-is-better measure lies
+entirely below zero in any comparison below):
+
+| `bge-base` against `bge-small` | Before | After | Change (95% interval) |
+|---|---:|---:|---|
+| Offline gate, LoCoMo, all evidence packed (1,536) | 84.0% | 84.6% | +0.7 pp (-0.2 to +1.6) |
+| Offline gate, LoCoMo, evidence recall | 89.2% | 89.8% | +0.7 pp (+0.0 to +1.4) |
+| Offline gate, LongMemEval-S, all evidence packed (470) | 94.7% | 95.3% | +0.6 pp (-0.6 to +2.1) |
+| Mid tier, LoCoMo, all evidence packed | 83.6% | 83.6% | +0.0 pp (-1.0 to +1.0; 27 wins, 27 losses) |
+| Mid tier, LoCoMo, evidence in the top 25 | 70.3% | 72.3% | +2.0 pp (+1.0 to +3.0), clear of zero |
+| Mid tier, LongMemEval-S (12 questions) | 100% | 100% | no change |
+
+`bge-large` against `bge-small`, offline gate on LoCoMo only (its LongMemEval-S packs were not re-embedded; see below):
+
+| Offline gate, LoCoMo | Before | After | Change (95% interval) | Wins / losses |
+|---|---:|---:|---|---:|
+| All evidence packed (1,536) | 84.0% | 86.1% | +2.1 pp (+1.2 to +3.0) | 41 / 9 |
+| Evidence recall | 89.2% | 91.1% | +2.0 pp (+1.3 to +2.7) | 75 / 16 |
+| Projected accuracy | 77.6% | 79.0% | +1.4 pp (+0.8 to +2.0) | 41 / 9 |
+| All evidence packed, multi-hop (282) | 49.6% | 54.6% | +5.0 pp (+1.8 to +8.5) | 19 / 5 |
+| All evidence packed, open-domain (96) | 57.6% | 62.0% | +4.3 pp (+1.1 to +8.7) | 4 / 0 |
+| All evidence packed, single-hop (841) | 95.2% | 96.1% | +0.8 pp (+0.1 to +1.7) | 9 / 2 |
+| All evidence packed, temporal (321) | 92.2% | 94.4% | +2.2 pp (+0.3 to +4.0) | 9 / 2 |
+
+This is where a larger model helps most clearly, and it is not a measure the pass rule scores: the saved LoCoMo packs
+hold the turns as `store()` made them, 5,882 short memories in ten conversations, and `bge-large` packs all the evidence
+for 2.1 points more of its questions. The 204-question harness has `bge-large` ahead of `bge-small` by 3 to 5 blind
+questions at every size, which is inside its noise. The mid tier, which rebuilds the packs through `ingest()`, points
+the same way for `bge-large` and by less (below), and has `bge-base` level with `bge-small` on all evidence packed.
+
+`bge-large` against `bge-small`, mid tier (all of LoCoMo and 12 LongMemEval-S questions, packs built through `ingest()`):
+
+| Mid tier | Before | After | Change (95% interval, questions) | Wins / losses |
+|---|---:|---:|---|---:|
+| LoCoMo, all evidence packed | 83.6% | 84.4% | +0.8 pp (-0.1 to +1.8) | 34 / 21 |
+| LoCoMo, evidence recall | 89.2% | 90.0% | +0.8 pp (+0.1 to +1.6), clear of zero | 58 / 37 |
+| LoCoMo, evidence in the top 25 | 70.3% | 75.1% | +4.8 pp (+3.6 to +6.2), clear of zero | 147 / 34 |
+| LoCoMo, all evidence returned | 98.0% | 98.9% | +0.8 pp (+0.4 to +1.3), clear of zero | 13 / 0 |
+| LongMemEval-S (12 questions), every measure | 100% | 100% | no change | 0 / 0 |
+
+The offline gate re-embedded the 5,882 LoCoMo turns and the 189,514 distinct LongMemEval-S node texts (246,738
+nodes in 500 packs) of the saved packs under `bge-base`, vector index only: 195,000 texts took 62 minutes in eight
+processes, one thread each (about 150 ms a text under load, the texts being long), and the gate over the re-embedded
+packs 28 minutes. Under `bge-large` only the 5,882 LoCoMo turns were re-embedded (519 s of embedding, 20 minutes in all with the
+gate): the 189,514 LongMemEval-S texts would take about three times `bge-base`'s 62 minutes on eight processes and some 28 GB of memory
+next to the other jobs on the machine, so that part of the gate was not run for `bge-large`. The mid tier rebuilds its packs through `ingest()` with the saved extraction replays (0 live calls, 1,186
+cache hits), so the embeddings are recomputed in the build: 74 min 13 s under `bge-base` against 75 min 41 s under
+`bge-small`, on a machine the other jobs shared (load 2 to 18), so the two times differ by less than the noise and
+say only that the embedding is not what the build spends its time on. Under `bge-large` the run took 83 min 33 s (the
+LoCoMo build 39 min 55 s, the LongMemEval-S build 83 min 17 s), 10 percent more than `bge-small` on the same shared machine.
+
+**What a user needs to switch models on a store they have** (`switch.json`: five memories stored under `bge-small`, then the
+store opened under another recipe):
+
+| Store | Change | A question | A `store()` | Repair |
+|---|---|---|---|---|
+| DuckDB pack | same dimension (minilm, or a prefix) | `embedding_mismatch` true, the vector channel returns nothing, the answer fell from rank 1 to 2 | works, new vectors beside old ones | `prme rebuild` (`rebuild_indexes()`): all vectors and the word index made again, then rank 1 |
+| DuckDB pack | other dimension (bge-base) | the same flag | fails: "1 source records failed to index" | the same rebuild |
+| PostgreSQL | same dimension or a prefix | the flag, the vector channel empty, 3 results of 5 | works, mixing models in one table | none: `rebuild_indexes()` raises "only supported on the DuckDB backend" |
+| PostgreSQL | other dimension | no flag; the vector channel fails as a `backend_error` | fails ("different vector dimensions 384 and 768") | none |
+
+Reading a mismatch is a quiet degrade: the response carries `metadata.embedding_mismatch` and the failed channel, and the
+log a warning, but the question still returns lexical and graph results. What is missing for a user of the PostgreSQL
+backend (the hosted one) to switch: (1) a re-embed path (the error message says "run prme rebuild", which the backend
+refuses); (2) a change of the `nodes.embedding` column's dimension and a new HNSW index (the schema step adds the column only when
+absent, so an existing `vector(384)` stays); (3) the mismatch flag for a dimension change, which is reported as a backend error; (4) a
+check when the engine opens a store that names the stored and the configured model and refuses writes instead
+of mixing them; and (5) `reingest()` is not that path: it re-runs extraction (a model call per source) and its
+markers do not name the embedding, so after a model change it skips every source that is already current. On a DuckDB pack the
+repair exists: a rebuild of 514 nodes took 28 s, 27 of them embedding, at 50 ms a long text on one thread. A store of 10,000
+short memories re-embeds in about as long as the table above says (89 s under `bge-base`, 4 minutes under `bge-large`) plus
+the index writes.
+
+**Verdict against the pass rule.** No recipe passes, so there is no recommendation to change the default.
+
+| Line | bge-base | bge-large | Others |
+|---|---|---|---|
+| 1 Blind top 3 at 2,000 look-alikes at least +7 of 151 | met, exactly: +7 (4.6 points) | not met, +3 | not met: bge-base+q +6, bge-large+q +1, nomic 0, mxbai+q 0, mxbai -1, bge-small+q -1, minilm -5 |
+| 2 No type loses more than 1 at 2,000 look-alikes and 2,000 conversation | met (worst 0 and 0) | met (worst -1 and -1) | not met: bge-base+q -2, bge-large+q -2, mxbai -3, mxbai+q -3, nomic -3, minilm -4 and -6; met by bge-small+q |
+| 3 Defect probes 7 of 7, chat-v1 not below 14 and 15 | **not met**: 6 of 7 | **not met**: 6 of 7 | not run |
+| 4 Fast cycle exits 0 | **not met**: two answer top-3 counts worse | **not met**: the same two | not run |
+| 5 Offline gate and mid tier, no interval below zero | met | met on the LoCoMo offline gate and on the mid tier; the LongMemEval-S offline gate was not run | not run |
+| 6 Within 8 times `bge-small` per text | met, 2.3x | met, 6.3x | met |
+
+`bge-base` is the one recipe that clears the blind line, and it clears it by exactly one question over the line: seven
+more of 151 at 2,000 look-alikes (a sign test gives p 0.02), five more at 10,000 and with conversation
+padding (six gained and one lost at each; p 0.12), none at the core, where the store is uncrowded. Its gain is entirely in `blind-v1`; it loses one or two of
+the original 53 and gains nothing in `blind-v2`, and the cities probe of the defect chat, the example that motivated the
+experiment, gets worse (rank 2 to 4), which fails line 3 and the fast cycle. The gain is real in the sense of the
+sign test and not a basis to change a default: the cheap tiers say two answers that rank in the top 3 today would not.
+
+What each model costs a deployment with one CPU, for `bge-base`, the model closest to passing: a `store()` call spends 6.9 ms
+embedding instead of 3.1 ms and a `retrieve()` 5.8 ms on the question instead of 2.5; the model file in the image is
+218 MB instead of 67 MB and the loaded model holds 940 MB instead of 310 MB; pgvector holds 82.8 MB instead of 39.5 MB per
+10,000 memories, and the engine's default exact search takes 22 ms instead of 5.5 ms at 10,000 memories. `bge-large` costs
+more than twice that again (1.3 GB in the image, 2.7 GB loaded, 137.5 MB and 24 ms) for no gain on any line.
+
+**What would change this.** The gain concentrates where the store is crowded with near-duplicates of the questions' topics and
+is absent at the core. A mixed recipe cannot be tried without a store whose vectors can be rebuilt, which is the
+PostgreSQL gap above. A larger test than 151 blind questions would settle whether +7 is a property of `bge-base` or of
+`blind-v1`. The answer track (a reader and a judge) was not run: this measures where the answer ranks.
+
+**Limits.** One run per cell. The retrieval is deterministic given the vectors, but the 204 questions are the ones the
+earlier experiments used, so a recipe tuned on them would look better than it is; nothing here was tuned, but the sizes
+are small (a question is 0.5 points of the 204 and 0.7 of the 151). Timings are one machine's, shared with other jobs;
+the scale runs went three at a time. The `bge-small` and `bge-base` files are quantized and the others are not, so
+"base beats large" is a statement about the registered files and not about the models. The offline gate under `bge-base`
+replaces only the vector index of the saved packs, so its lexical channel is the saved one.
+
+**Where this differs from `GATE.md`.** `GATE.md` says the tiers run for the one or two recipes with the highest blind top 3; the
+owner's brief said models, and `bge-base+q` is `bge-base` again, so they ran for the best recipe of the two best models,
+`bge-base` and `bge-large`. The cheap tiers ran for both and the offline gate fully for `bge-base`; for `bge-large` the offline
+gate covers LoCoMo only (above). No model call of any kind was made: the fast cycle, the probes and the mid tier replayed the saved extraction
+caches (the mid tiers report 0 live calls and 1,186 cache hits; the probes 0 extraction calls), and the mid tier of
+`bge-large` ran with `PRME_BENCH_CACHE_ONLY=1`, a new guard that fails a build instead of making a call the cache cannot serve.
+The Ollama account's cloud models were not used.
+
+#### Switching models on an existing store: the re-embed job (dwamianm/prism#368)
+
+The experiment above found that a store could not move to another model, and that was the question for adopting any model,
+now or later. `enable_multi_model_embeddings` (off by default) keeps vectors by model and `MemoryEngine.reembed()`
+(`prme reembed`) builds a model's vectors for the memories a store already holds
+([switching embedding models](docs/EMBEDDING-MODELS.md)). What it costs to move 10,000 memories from `bge-small` to
+`bge-base`, on the machine of the experiment (18 cores, Apple silicon, other jobs sharing it), in one process, with the
+local models and no model service:
+
+| Backend | Threads | Job time, 10,000 memories | Per memory |
+|---|---|---|---|
+| DuckDB pack | one per core (default) | 117.3 s | 11.7 ms |
+| DuckDB pack | 1 | 99.5 s | 10.0 ms |
+| PostgreSQL | one per core (default) | 129.4 s | 12.9 ms |
+
+`python -m benchmarks.embedding_models job --backend duckdb --memories 10000 [--threads 1]` builds the store through
+`store()` under `bge-small` (a quarter of an hour for 10,000 memories, 937 s on DuckDB) and times one `reembed()` call
+that builds `bge-base` for all of them, 157 batches of 64, no failure, and `remaining` 0 at the end. The memories are
+synthetic sentences of about twenty words. Each text is embedded alone, as the engine always does for reproducibility, so
+more threads do not help (the embedding is about 6 ms of the 10 to 13 ms a memory takes, as in the table above, and the
+rest is storing the vector and its index entry). The job is the extra CPU of one model on every memory once; with
+`pause_ms` it leaves time to the rest of the process. Storage after the job is the sum of both models', as the
+experiment measured for each, until the old model is dropped. One run per row, on a shared machine.
 
 ## Baselines for the GPT-5.4 comparison
 
