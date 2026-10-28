@@ -203,7 +203,9 @@ async def test_MCP_environment_configuration_is_resolved_per_lifespan(tmp_path, 
     from mcp.shared.memory import create_connected_server_and_client_session
     from prme.mcp.server import create_mcp_server
     r = make_runtime()
-    server = create_mcp_server(privacy_runtime=r, embedding_provider=r.embedder)
+    # The stores below hold plain memories, so the server has no privacy
+    # runtime: a protected store refuses every plain write (#326).
+    server = create_mcp_server(embedding_provider=r.embedder)
     owner = str(uuid4())
     for index in range(2):
         path = tmp_path / str(index)
