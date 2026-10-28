@@ -70,12 +70,18 @@ async def isolated_privacy_postgres(request, monkeypatch):
         monkeypatch.setenv("PRME_TEST_DATABASE_URL", urlunsplit(parts._replace(query=urlencode(query))))
         yield
     finally:
-        for extra in _SCHEMAS["extra"]:
-            await conn.execute(f'DROP SCHEMA IF EXISTS "{extra}" CASCADE')
-        _SCHEMAS.update(base=None, extra=[])
-        if created:
-            await conn.execute(f'DROP SCHEMA "{schema}" CASCADE')
+        extras, _SCHEMAS["extra"] = _SCHEMAS["extra"], []
+        _SCHEMAS["base"] = None
+        failure = None
+        # One failed drop must not leak the other schemas or the connection.
+        for name in (*extras, *([schema] if created else [])):
+            try:
+                await conn.execute(f'DROP SCHEMA IF EXISTS "{name}" CASCADE')
+            except Exception as exc:
+                failure = failure or exc
         await conn.close()
+        if failure is not None:
+            raise failure
 
 
 class FakeClock:
