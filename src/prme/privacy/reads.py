@@ -513,8 +513,10 @@ async def inspect_source(coordinator, event_id: str, *, user_id: str, scope: Sco
         if exc.code != "privacy_erased":
             raise
         # The exact-record disclosure check already denies an erased source.
-        # Inspection reports that state from the owner-bound context instead.
-        context = await ReadContext.create(coordinator, user_id=user_id, scopes=scopes)
+        # Inspection reports that state from the owner-bound context instead,
+        # in the source's own scope so a non-personal default still resolves.
+        context = await ReadContext.create(coordinator, user_id=user_id,
+                                           scopes=scopes or [row.snapshot.policy.scope])
     async with context.guard():
         available = context.availability(row)
         try:
