@@ -122,6 +122,13 @@ Such formatting does not load or disclose stored protected content.
 
 ## Authority and integration boundaries
 
+Protected engine opens also require an explicit independent current erasure
+ledger. [Managed erasure](PRIVACY-ERASURE.md) documents provisioning, startup
+fences, evidence/memory cleanup, native recovery, CLI ownership and the remaining
+restore/export and physical-copy limits. Both the ledger and the injected policy
+authority approve each protected effect; the ledger does not implement hosted
+policy revision or membership management.
+
 `PolicyAuthority.guard(snapshot, effect)` must serialize authoritative policy
 activation with the actual effect, including across processes in a deployment.
 Admission, transmission, publication and disclosure are separate effects. Each

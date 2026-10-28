@@ -171,6 +171,22 @@ terminal cleanup and publication. Neither purpose creates a reverse-value map.
 The public inventory exposes only references/states for PV-07 erasure.
 The ordinary store key is separate from all four purposes.
 
+For automatic managed erasure, fresh native key entries retain a monotonic set
+of opaque store lineages that used the version. Wrapping, rewrap, final envelope
+publication and native pseudonym/retry use record that identity under the
+existing registry lock. An absent legacy history or use without a current
+managed lease makes exclusive ownership unproven. Copying or rolling back the
+registry is not a way to establish ownership.
+
+`retire_managed(version, store_id=...)` requires usage by exactly that lineage
+and serializes the proof with native retirement. The erasure coordinator also
+requires zero local surviving references. Shared or uncertain keys remain
+usable and leave a visible pending provider stage. This is exclusive-use
+evidence, not complete reference counting across stores, and closing a store
+does not remove its history. Explicit operator `retire` remains separate;
+automatic erasure never falls back to it. Retrying managed retirement preserves
+the existing exact-version private-part deletion recovery.
+
 ## CLI and recovery
 
 ```sh
@@ -183,14 +199,18 @@ Provision `processing` separately when durable processing is required.
 Provision `pseudonym` with an explicit `--epoch`. Status never checks private
 native availability. All IDs are opaque UUIDs.
 
-`inspect` and `unlock` take an existing explicit `--store` path or
-`--database-env` naming a PostgreSQL URL environment variable, project/owner/scope,
-one or more `--event` IDs, `--authority-factory module:factory`, and `--audit`.
-The factory returns the application's current `PolicyAuthority`; there is no
-permissive CLI default. A local path never follows an ambient database URL.
-The built-in local current-ledger/policy authority is a separate #325 integration;
-this crypto module and its fixture authority do not complete that release gate.
-`--store-key-env` names the separate existing native DuckDB store key if needed.
+Protected `inspect` and `unlock` take `--engine-factory module:factory`,
+project/owner/scope, one or more `--event` IDs and `--audit`. The factory returns
+an open configured `MemoryEngine`, or an awaitable resolving to it. The command
+owns and closes the engine on completion, denial or cancellation; do not return
+an application-shared engine. Native key loading and each selected disclosure
+use that engine's actual current-ledger and policy approval for the exact
+record. There is no permissive CLI default. See [managed erasure](PRIVACY-ERASURE.md).
+
+Legacy-only raw diagnostics retain the explicit `--store` or `--database-env`
+target and `--authority-factory` interface. They refuse persisted protected
+state, which requires the engine factory. A local path never follows an ambient
+database URL. `--store-key-env` names the separate existing native DuckDB store key.
 Closed legacy Fernet directory artifacts must be opened through their existing
 supported workflow; this tool does not migrate them.
 
@@ -215,7 +235,7 @@ Back up and retain recovery artifacts deliberately outside ordinary pack/export.
 ## Resumable local rotation
 
 Provision the replacement version first; versions after the first are inactive.
-`rotate` takes source/target version IDs and the same target/authority/audit
+`rotate` takes source/target version IDs and the same engine-factory/audit
 arguments. `resume --job UUID` continues saved exact-version progress;
 `rotation-status --job UUID` reads only metadata. `--limit` bounds each invocation
 to 1–128 records. The CLI rotates evidence; processing rotation requires the

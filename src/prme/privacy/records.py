@@ -43,6 +43,7 @@ class PrivacyRecord(FrozenModel):
     kind: Literal["direct", "extraction"]
     evidence: ProtectedPayload | None = None
     processing: ProtectedPayload | None = None
+    evidence_disposition: Literal["erased", "expired"] | None = Field(default=None, exclude_if=lambda value: value is None)
     processing_state: Literal["not_required", "pending", "complete", "cancelled", "expired"] = "not_required"
     # A reserved attempt cannot replay its sanitizer allowance after a crash.
     # Only a current claim can replace the authenticated checkpoint and release it.
@@ -50,6 +51,7 @@ class PrivacyRecord(FrozenModel):
     retry: RetryCommitment | None = None
     request_index: int = 0
     sanitization: SanitizationReport | None = None
+    pseudonym_epoch: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
 
     def reference(self) -> dict:
         return {"schema_version": 1, "event_id": str(self.event_id), "source_id": str(self.source_id),

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import AsyncIterator, Callable, Mapping
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Callable, Iterator, Mapping
+from contextlib import asynccontextmanager, contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +30,33 @@ Purpose = Literal["evidence", "processing", "pseudonym", "retry_commitment"]
 WrapperKind = Literal["local-rsa-oaep-sha256-v1", "aws-kms-symmetric-v1"]
 ReadAction = Literal["read", "processing_key", "rewrap"]
 T = TypeVar("T")
+
+
+@dataclass
+class _ManagedKeyUsage:
+    store_id: UUID
+    task: asyncio.Task[Any] | None
+    active: bool = True
+
+
+_KEY_USAGE: ContextVar[_ManagedKeyUsage | None] = ContextVar("prme_managed_key_usage", default=None)
+
+
+@contextmanager
+def managed_key_usage(store_id: UUID) -> Iterator[None]:
+    """Internal task-owned scope of an already held current erasure lease."""
+    lease = _ManagedKeyUsage(store_id, asyncio.current_task())
+    token = _KEY_USAGE.set(lease)
+    try:
+        yield
+    finally:
+        lease.active = False
+        _KEY_USAGE.reset(token)
+
+
+def current_key_lineage() -> UUID | None:
+    lease = _KEY_USAGE.get()
+    return lease.store_id if lease is not None and lease.active and lease.task is asyncio.current_task() else None
 
 
 def utc_now() -> datetime:
@@ -364,10 +392,12 @@ class KeyRegistry:
     def __init__(self, descriptors: tuple[WrappingKeyDescriptor, ...], *,
                  active: tuple[WrappingKeyRef, ...], wrappers: Mapping[UUID, KeyWrapper],
                  refresh: Callable[[], tuple[tuple[WrappingKeyDescriptor, ...], tuple[WrappingKeyRef, ...]]] | None = None,
-                 publication_guard: Guard | None = None) -> None:
+                 publication_guard: Guard | None = None,
+                 record_usage: Callable[[tuple[WrappingKeyRef, ...], UUID | None], None] | None = None) -> None:
         self._refresh_source = refresh
         self.publication_guard = publication_guard
         self.publication_domain: str | None = None
+        self._record_usage = record_usage
         self._wrappers = dict(wrappers)
         self._load(descriptors, active)
 
@@ -414,6 +444,11 @@ class KeyRegistry:
     def inventory(self) -> tuple[WrappingKeyDescriptor, ...]:
         self._refresh()
         return tuple(self._descriptors.values())
+
+    async def record_usage_held(self, refs: tuple[WrappingKeyRef, ...]) -> None:
+        """Record real use while the caller holds the registry writer lock."""
+        if self._record_usage is not None and refs:
+            await run_to_completion(self._record_usage, refs, current_key_lineage())
 
     @asynccontextmanager
     async def writers_held(self) -> AsyncIterator[None]:

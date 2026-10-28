@@ -17,6 +17,19 @@ from prme.privacy.capabilities import AdmissionContent, SanitizedContent
 from prme.privacy import CryptoProtector, NativeKeyCustody, PolicySnapshot, SecretKeyHandle, public_registry
 from prme.privacy.capabilities import Guard, PayloadContext, ProtectedPayload, PayloadProtector
 from prme.privacy.keys import PseudonymKeyProvider
+from prme.privacy import ErasureRequest, ErasureStatus, LocalErasureLedger
+from prme.privacy.erasure import ErasureLedger, LedgerHead
+
+
+async def erasure_consumer(client: MemoryClient, request: ErasureRequest, owner: str,
+                           store_id: UUID, ledger: LocalErasureLedger) -> None:
+    assert_type(client.request_erasure(request, user_id=owner), ErasureStatus)
+    assert_type(client.get_erasure_status(request.request_id, user_id=owner), ErasureStatus | None)
+    assert_type(client.process_erasures(user_id=owner), tuple[ErasureStatus, ...])
+    assert_type(client.expire_privacy(user_id=owner), tuple[ErasureStatus, ...])
+    provider: ErasureLedger = ledger
+    async with provider.guard():
+        assert_type(await provider.current_head(store_id), LedgerHead)
 
 
 async def sanitizer_consumer(content: AdmissionContent, schema_id: UUID) -> None:

@@ -47,6 +47,7 @@ class ReadContext:
     selected_records: tuple[PrivacyRecord, ...] = ()
     source_nodes: dict[str, MemoryNode] = field(default_factory=dict)
     evidence_lease_active: bool = False
+    used_node_ids: set[UUID] = field(default_factory=set)
 
     @classmethod
     async def create(cls, coordinator, *, user_id: str, scopes=None, source_access=None, records=None):
@@ -131,12 +132,14 @@ class ReadContext:
             groups[None] = self.fallback_snapshot
         async with AsyncExitStack() as stack:
             for saved in groups.values():
-                await stack.enter_async_context(self.coordinator.guard(saved, effect))
+                await stack.enter_async_context(self.coordinator.guard(saved, effect, records=rows, node_ids=self.used_node_ids))
             self.check_selected()
+            await self.coordinator.erasure.assert_records_current(self.selected_records, purpose="evidence")
             for row in rows:
                 self.coordinator.check_deadlines(row.snapshot)
-            yield
+            yield self.check_lifetimes
             self.check_selected()
+            await self.coordinator.erasure.assert_records_current(self.selected_records, purpose="evidence")
             for row in rows:
                 self.coordinator.check_deadlines(row.snapshot)
             if self.fallback_snapshot is not None:
@@ -222,6 +225,16 @@ class ReadContext:
             # A configured protected read does not silently reinterpret an old
             # source note as newly admitted memory. Migration owns classification.
             return None if self.protected else node.model_copy(deep=True)
+        if len(await self.coordinator.erasure.current_records(rows)) != len(rows):
+            return None
+        try:
+            async with self.coordinator.erasure.guard(rows, node_ids=(node.id,)):
+                pass
+        except PrivacyDenied as exc:
+            if exc.code == "privacy_erased":
+                return None
+            raise
+        self.used_node_ids.add(node.id)
         self.protected = True
         self.records.update((row.event_id, row) for row in rows)
         await self.coordinator.check_disclosure(rows)
@@ -259,7 +272,9 @@ class ReadContext:
     def availability(self, record: PrivacyRecord) -> SourceAvailability:
         saved = record.snapshot
         now = self.coordinator.require_runtime().clock()
-        if saved.evidence_deadline is not None and now >= saved.evidence_deadline:
+        if record.evidence_disposition is not None:
+            state = record.evidence_disposition
+        elif saved.evidence_deadline is not None and now >= saved.evidence_deadline:
             state = "expired"
         elif saved.policy.capture == "none":
             state = "not_captured"
@@ -277,6 +292,9 @@ class ReadContext:
 
     async def event_view(self, event: Event):
         if not self.owns(event):
+            return None
+        enrolled = await self.coordinator.repository.get(str(event.id), user_id=self.user_id)
+        if enrolled is not None and not await self.coordinator.erasure.current_records((enrolled,)):
             return None
         record = await self.record_for_event(str(event.id))
         if record is None:
@@ -488,10 +506,26 @@ async def inspect_source(coordinator, event_id: str, *, user_id: str, scope: Sco
     row = await coordinator.repository.get(event_id, user_id=user_id)
     if row is None or (scope is not None and row.snapshot.policy.scope != Scope(scope)):
         return SourceUnavailable()
-    context = await ReadContext.create(coordinator, user_id=user_id, scopes=[scope] if scope else None,
-                                       records=(row,))
+    scopes = [scope] if scope else None
+    try:
+        context = await ReadContext.create(coordinator, user_id=user_id, scopes=scopes, records=(row,))
+    except PrivacyDenied as exc:
+        if exc.code != "privacy_erased":
+            raise
+        # The exact-record disclosure check already denies an erased source.
+        # Inspection reports that state from the owner-bound context instead,
+        # in the source's own scope so a non-personal default still resolves.
+        context = await ReadContext.create(coordinator, user_id=user_id,
+                                           scopes=scopes or [row.snapshot.policy.scope])
     async with context.guard():
-        return context.availability(row)
+        available = context.availability(row)
+        try:
+            await coordinator.erasure.assert_records_current((row,), purpose="evidence")
+        except PrivacyDenied as exc:
+            if exc.code != "privacy_erased":
+                raise
+            return available.model_copy(update={"state": "expired" if available.state == "expired" else "erased"})
+        return available
 
 
 async def read_source(coordinator, event_id: str, *, user_id: str, access: EvidenceAccess,
@@ -513,7 +547,7 @@ async def read_source(coordinator, event_id: str, *, user_id: str, access: Evide
         raise PrivacyDenied("privacy_capability_unavailable")
     try:
         async with opened(row.evidence, access, original_snapshot=row.snapshot,
-                          guard=lambda: coordinator.guard(row.snapshot, "disclosure")) as raw:
+                          guard=lambda: coordinator.guard(row.snapshot, "disclosure", records=(row,), purpose="evidence")) as raw:
             from prme.privacy.sanitizer import canonical, sanitized_checksum
             data = json.loads(raw)
             fields = {name: data[name] for name in (
@@ -656,6 +690,10 @@ async def _project_public_result(context, method, result, arguments, records):
         return project_collection(result)
     if method == "consolidate_knowledge" and type(result) is int and result >= 0:
         return result
+    if method == "rebuild_indexes" and isinstance(result, dict):
+        fields = {"nodes_indexed", "nodes_skipped", "total_active"}
+        if set(result) == fields and all(type(value) is int and value >= 0 for value in result.values()):
+            return result
     if method == "resume_profile" and (result is None or str(UUID(result)) == result):
         return result
     if method == "profile_jobs":

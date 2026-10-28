@@ -244,6 +244,8 @@ class LexicalIndex:
         new searchers; ``_do_search`` also reloads, so this keeps already
         committed data current without an extra reload per add.
         """
+        from prme.storage.erasure_indexes import refresh_lexical
+        refresh_lexical(self)
         if self._uncommitted == 0 or self._writer is None:
             return
         # Reset the batch counters and release the writer in a finally so a

@@ -279,6 +279,10 @@ class CryptoProtector:
     async def writer_guard(self, payloads: tuple[ProtectedPayload, ...]) -> AsyncIterator[None]:
         async with self.registry.writers_held():
             await self.validate_writers(payloads)
+            await self.registry.record_usage_held(tuple(
+                self.registry.writer(KeyBoundary.from_context(payload.context), payload.context.purpose).ref
+                for payload in payloads
+            ))
             yield
 
     async def ready(self, snapshot: PolicySnapshot, purposes: tuple[str, ...]) -> None:
@@ -299,7 +303,9 @@ class CryptoProtector:
             if not isinstance(plaintext, bytes) or len(plaintext) > MAX_PAYLOAD_BYTES:
                 raise ValueError()
             aad = validate_context(context, original_snapshot)
-            descriptor = self.registry.writer(KeyBoundary.from_context(context), context.purpose)
+            async with self.registry.writers_held():
+                descriptor = self.registry.writer(KeyBoundary.from_context(context), context.purpose)
+                await self.registry.record_usage_held((descriptor.ref,))
             key, nonce = AESGCM.generate_key(bit_length=256), os.urandom(12)
             ciphertext = AESGCM(key).encrypt(nonce, plaintext, aad.bytes())
             wrapping = WrapperContext(payload=aad, ref=descriptor.ref, revision=1)
@@ -399,6 +405,8 @@ class CryptoProtector:
                                   guard=guard, action="rewrap") as (envelope, key, permit):
             descriptor = self.registry.exact(target)
             permit.require(descriptor)
+            async with self.registry.writers_held():
+                await self.registry.record_usage_held((target,))
             wrapping = WrapperContext(payload=envelope.payload, ref=target, revision=envelope.wrapper.revision + 1)
             wrapped = await self.registry.wrapper(descriptor).wrap_key(key, descriptor, wrapping.bytes())
             candidate = envelope.model_copy(update={"wrapper": wrapping, "wrapped_key": encode64(wrapped)})

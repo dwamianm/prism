@@ -1,0 +1,462 @@
+{
+  "schema_version": 1,
+  "issue": 325,
+  "acceptanceComplete": false,
+  "implementationStatus": "corrected_checkpoint_pending_affected_review",
+  "sourcePlan": "PV-06-plan.md",
+  "originalAcceptanceCount": 6,
+  "frozenRows": [
+    "ER01",
+    "ER02",
+    "ER03",
+    "ER04",
+    "ER05",
+    "ER06",
+    "ER07",
+    "ER08",
+    "CL04",
+    "CL05",
+    "CL07"
+  ],
+  "backendRowLimit": 22,
+  "repairCycles": {
+    "completion_status_ack": {
+      "initialFailure": "/tmp/privacy325-er04-1.log",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true
+    },
+    "shared_lexical_connection_lifetime": {
+      "initialFailure": "/tmp/privacy325-er06-1.log",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true
+    },
+    "protected_rebuild_unavailable": {
+      "initialFailure": "/tmp/privacy325-er06-2.log",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true
+    },
+    "receipt_lock_order": {
+      "initialFailure": "/tmp/privacy325-er02-copies-1.log",
+      "failureKind": "incomplete deadlock; owned PID 49985 terminated, no successful result",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true,
+      "passingLog": "/tmp/privacy325-er02-copies-2.log",
+      "passingScope": "receipt flow completed; distinct copy-closure assertion failed and is retained below"
+    },
+    "receipt_copy_closure": {
+      "initialFailure": "/tmp/privacy325-er02-copies-2.log",
+      "failedRepair": "/tmp/privacy325-copy-recovery-1.log",
+      "fixValidationCycles": 2,
+      "unsuccessful": 1,
+      "resolved": true,
+      "passingLog": "/tmp/privacy325-receipt-second-and-alias.log",
+      "correction": "Follow RETRIEVAL_REQUEST logical request ID only, preserving independent surviving reinforcement target."
+    },
+    "native_retirement_private_removal": {
+      "initialFailure": "/tmp/privacy325-retirement-fault-1.log",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true,
+      "passingLog": "/tmp/privacy325-retirement-cli-control-2.log",
+      "correction": "Always retry the existing exact-version NativeKeyCustody.retire operation; public retired state alone does not prove private-part disposal."
+    },
+    "node_selector_duplicate_after_purge": {
+      "initialFailure": "/tmp/privacy325-node-retry-1.log",
+      "failureKind": "ER04 exact node-only retry denied after successful purge removed the selected node on all three layouts",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true,
+      "passingLog": "/tmp/privacy325-node-retry-2.log",
+      "correction": "Under current ledger and policy approval, compare the exact persisted owned request before resolving live targets; return saved status for an identical request and reject changed requests."
+    },
+    "node_selected_source_closure": {
+      "initialFailure": ".github-ticket-loop/privacy-325/evidence/privacy325-review-initial-witnesses.log",
+      "fixValidationCycles": 3,
+      "unsuccessful": 1,
+      "resolved": true,
+      "failedRepair": ".github-ticket-loop/privacy-325/evidence/privacy325-review-correction-1.log",
+      "remaining": null,
+      "passingLog": ".github-ticket-loop/privacy-325/evidence/privacy325-review-source-correction-2.log",
+      "compatibilityLog": ".github-ticket-loop/privacy-325/evidence/privacy325-review-extracted-source-1.log",
+      "correction": "Persist exact owned source closure before acknowledgement; inspection observes the fence; normalize the existing optional typed sanitization report when resolving an extracted node. First correction failed; second passed; the final extracted-node compatibility adjustment passed its first check."
+    },
+    "cross_store_native_key_survival": {
+      "initialFailure": ".github-ticket-loop/privacy-325/evidence/privacy325-review-initial-witnesses.log",
+      "fixValidationCycles": 1,
+      "unsuccessful": 0,
+      "resolved": true,
+      "passingLog": ".github-ticket-loop/privacy-325/evidence/privacy325-review-correction-1.log"
+    }
+  },
+  "checks": [
+    {
+      "name": "unchanged protected admission smoke",
+      "result": "passed",
+      "count": 1,
+      "log": "/tmp/privacy325-initial-smoke.log"
+    },
+    {
+      "name": "ledger fence/restart subcheck",
+      "result": "passed",
+      "count": 3,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-ledger-fence-2.log",
+      "limitations": [
+        "deterministic policy/model/sanitizer component inputs; no full ER row claimed"
+      ]
+    },
+    {
+      "name": "startup SQL fence after native-save integration",
+      "result": "passed",
+      "count": 3,
+      "log": "/tmp/privacy325-purge-startup-1.log"
+    },
+    {
+      "name": "ER01 expiry and ER02 purge/support plus fence subchecks",
+      "result": "passed",
+      "count": 9,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-purge-expiry-checkpoint-1.log",
+      "limitations": [
+        "ER02 mixed-summary and foreign-owner controls remain pending",
+        "ER03 concurrent child/native effects remain pending",
+        "key OS adapter and policy/model inputs remain named fixtures"
+      ]
+    },
+    {
+      "name": "ER03 real paused extraction/profile/diagnostic and task-owned ledger lifetime",
+      "result": "passed",
+      "count": 3,
+      "log": "/tmp/privacy325-er03-1.log"
+    },
+    {
+      "name": "ER04 independent intent and lost progress acknowledgements with restart",
+      "result": "passed",
+      "count": 3,
+      "log": "/tmp/privacy325-er04-2.log"
+    },
+    {
+      "name": "ER06 stale independent native handles, restored snapshots and rebuild",
+      "result": "passed",
+      "count": 3,
+      "log": "/tmp/privacy325-er06-3.log",
+      "limitations": [
+        "PostgreSQL validates real in-row vectors/generated lexical SQL; no unsupported DuckDB rebuild call",
+        "Protected DuckDB rebuild recovers saved numeric payloads and admitted graph text; it is not an embedding-model migration"
+      ]
+    },
+    {
+      "name": "ER02 complete mixed-summary, receipt, citation and exact survivor controls; CL05 PostgreSQL profile/summary/alias",
+      "result": "passed",
+      "count": 6,
+      "skipped": 0,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-receipt-second-and-alias.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure.py tests/test_privacy_erasure_copies.py -k 'ER02 or (CL05 and postgres and alias)' -q",
+      "limitations": [
+        "PolicyAuthority and external model responses are explicit deterministic inputs; native OS keyring get/set/delete is an adapter fixture. Actual sanitizer/crypto/native custody/HMAC/ledger/backend/native effects execute production code."
+      ]
+    },
+    {
+      "name": "CL07 actual interrupted native staging/swap/save, persistent failure and cancellation; ER03 node/chain and CLI exact-fence controls",
+      "result": "passed",
+      "count": 12,
+      "skipped": 0,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-native-cli-exact-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_native_faults.py tests/test_privacy_erasure_concurrency.py tests/test_privacy_erasure_cli.py tests/test_privacy_key_cli.py -q",
+      "limitations": [
+        "PolicyAuthority and external model responses are explicit deterministic inputs; native OS keyring get/set/delete is an adapter fixture. Actual sanitizer/crypto/native custody/HMAC/ledger/backend/native effects execute production code."
+      ]
+    },
+    {
+      "name": "ER02 reference-aware native/HMAC/pseudonym retirement under deletion failure; actual CLI rotation/current guard, MemoryClient and ER06 unaffected separate store",
+      "result": "passed",
+      "count": 12,
+      "skipped": 0,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-retirement-cli-control-2.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_retirement.py tests/test_privacy_erasure_cli.py tests/test_privacy_key_cli.py tests/test_privacy_erasure_recovery.py -k 'ER02 or ER03 or ER06 or cli or provision' -q",
+      "limitations": [
+        "PolicyAuthority and external model responses are explicit deterministic inputs; native OS keyring get/set/delete is an adapter fixture. Actual sanitizer/crypto/native custody/HMAC/ledger/backend/native effects execute production code."
+      ]
+    },
+    {
+      "name": "Final ER02/04/05/06 and CL04/05 copy composition, protected receipts, legacy receipt/snapshot bytes",
+      "result": "passed",
+      "count": 80,
+      "skipped": 1,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-final-copy-composition-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_recovery.py tests/test_privacy_erasure.py tests/test_privacy_erasure_copies.py tests/test_privacy_receipts.py tests/test_relevance_records.py tests/test_snapshot_json.py -q",
+      "limitations": [
+        "PolicyAuthority and external model responses are explicit deterministic inputs; native OS keyring get/set/delete is an adapter fixture. Actual sanitizer/crypto/native custody/HMAC/ledger/backend/native effects execute production code."
+      ],
+      "skipReason": "Existing PostgreSQL parameter of test_process_exit_after_feedback_commit_preserves_original_receipt is local-process-only. Actual PostgreSQL atomic insert/retry cases passed; no frozen ER/CL backend row skipped."
+    },
+    {
+      "name": "Strict public consumer types",
+      "result": "passed",
+      "log": "/tmp/privacy325-public-types-1.log",
+      "command": ".venv/bin/mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py"
+    },
+    {
+      "name": "Owned scoped Ruff",
+      "result": "passed",
+      "log": "/tmp/privacy325-owned-lint-2.log",
+      "command": ".venv/bin/ruff check src/prme/privacy/erasure.py src/prme/privacy/ledger.py src/prme/storage/erasure.py src/prme/storage/erasure_indexes.py src/prme/privacy/cli.py src/prme/privacy/journals.py src/prme/privacy/reads.py src/prme/storage/privacy_journals.py src/prme/storage/engine.py src/prme/client.py tests/test_privacy_erasure*.py tests/test_privacy_key_cli.py tests/typing/public_api.py"
+    },
+    {
+      "name": "CL07 unrelated real pending-stage survivor through compaction and protected rebuild",
+      "result": "passed",
+      "count": 3,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-staged-positive-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_native_faults.py -q",
+      "limitations": [
+        "Synthetic provider responses and OS adapter; actual extraction, staging, backend/native purge, cancellation and rebuild. PostgreSQL tests actual staged journal and SQL copies, not unsupported DuckDB rebuild."
+      ]
+    },
+    {
+      "name": "Final staged fixture scoped Ruff",
+      "result": "passed",
+      "log": "/tmp/privacy325-final-stage-lint.log",
+      "command": ".venv/bin/ruff check tests/test_privacy_erasure_native_faults.py"
+    },
+    {
+      "name": "ER04 completed node-only retry and changed-request rejection",
+      "result": "passed",
+      "count": 3,
+      "deselected": 6,
+      "layouts": [
+        "directory",
+        "pack",
+        "postgres"
+      ],
+      "log": "/tmp/privacy325-node-retry-2.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_recovery.py -k ER04 -q",
+      "sourceBase": "4aaf58b6bc58feedb45e507b9b1e311d67ed56c9",
+      "limitations": [
+        "Targeted rerun after the request retry correction; the preceding 80-pass composition command was not rerun for this narrow edit."
+      ]
+    },
+    {
+      "name": "Node-only retry scoped Ruff",
+      "result": "passed",
+      "log": "/tmp/privacy325-node-retry-lint.log",
+      "command": ".venv/bin/ruff check src/prme/storage/erasure.py tests/test_privacy_erasure_recovery.py"
+    },
+    {
+      "name": "Frozen review initial source-closure and shared-custody failure witnesses",
+      "result": "failed",
+      "failed": 6,
+      "deselected": 9,
+      "exitCode": 1,
+      "seconds": 11.33,
+      "sourceHead": "ee620296f2af8a81fa1df2b6f428a7344fea5b2f",
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-initial-witnesses.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_recovery.py tests/test_privacy_erasure_retirement.py -k 'ER04 or shared_custody_store' -q",
+      "observations": [
+        "All three ER04 layouts: source still sealed after node-only acknowledgement and current-ledger reopen.",
+        "All three ER02 layouts: actual survivor custody unlock failed after A retired the shared native key."
+      ],
+      "repairCycle": false
+    },
+    {
+      "name": "First source-closure and exclusive-use retirement correction",
+      "result": "failed",
+      "passed": 9,
+      "failed": 6,
+      "deselected": 6,
+      "exitCode": 1,
+      "seconds": 42.05,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-correction-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure.py tests/test_privacy_erasure_concurrency.py tests/test_privacy_erasure_recovery.py tests/test_privacy_erasure_retirement.py -k 'ER02 or ER03 or ER04' -q",
+      "observations": [
+        "ER02 independent admissions and all six native retirement cases passed.",
+        "ER03 paused node-source reveal denied, but immediate inspection still reported sealed on all three layouts.",
+        "ER04 durable source closure/reopen erased the source; post-purge read denied with privacy_denied rather than the newly asserted privacy_erased. The native context masked the assertion mismatch; this is a fixture expectation stricter than the original denial requirement, and the failure remains preserved."
+      ]
+    },
+    {
+      "name": "Second source closure correction: immediate status and durable node retry",
+      "result": "passed",
+      "passed": 6,
+      "deselected": 6,
+      "exitCode": 0,
+      "seconds": 19.25,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-source-correction-2.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_concurrency.py tests/test_privacy_erasure_recovery.py -k 'ER03 or ER04' -q",
+      "coverage": [
+        "Positive actual source reveal before erasure, paused reveal denial after node acknowledgement, immediate erased availability.",
+        "Independent ledger retains source closure before lost apply; reopen purges source copies; post-purge reveal denies without a required specific error code.",
+        "Same-owner survivor and completed node request idempotency/change rejection remain."
+      ],
+      "scopeAddition": "Only privacy/reads.py:inspect_source final availability observation, approved by root; no #323 ReadContext.create/project_public_result/classifier changes.",
+      "reusedPassingEvidence": "First correction log: 3 ER02 independent-admission cases and 6 native exclusive/shared custody cases; no provider or purge source changes since their pass."
+    },
+    {
+      "name": "Existing native key, cryptography, rotation and retry compatibility",
+      "result": "passed",
+      "passed": 93,
+      "exitCode": 0,
+      "seconds": 32.73,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-provider-regressions-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_keys.py tests/test_privacy_crypto.py tests/test_privacy_rotation.py tests/test_privacy_retry_commitments.py -q",
+      "limitations": [
+        "Provider source is unchanged after this run; later edits only normalize extracted-node source references and strengthen the existing ER03 selector."
+      ]
+    },
+    {
+      "name": "ER03 actual extracted-node source closure with existing sanitization provenance",
+      "result": "passed",
+      "passed": 3,
+      "exitCode": 0,
+      "seconds": 9.09,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-extracted-source-1.log",
+      "command": "PRME_TEST_DATABASE_URL=postgresql://prme_test:prme_test@127.0.0.1:55432/privacy_engine_325 .venv/bin/python -m pytest tests/test_privacy_erasure_concurrency.py -k ER03 -q",
+      "coverage": [
+        "The existing paused extraction/profile case selects a real extracted node with optional typed sanitization provenance, then verifies immediate source fence and denial on directory, pack and PostgreSQL."
+      ],
+      "reason": "Final source inspection found the new strict equality would reject existing extracted-node references carrying an optional sanitization report. Normalize and validate that existing field using the established reader pattern; no new scenario family."
+    },
+    {
+      "name": "Review correction scoped Ruff",
+      "result": "passed",
+      "exitCode": 0,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-lint-final.log",
+      "command": ".venv/bin/ruff check src/prme/privacy/erasure.py src/prme/privacy/keys.py src/prme/privacy/local_keys.py src/prme/privacy/crypto.py src/prme/privacy/admission.py src/prme/privacy/reads.py src/prme/storage/erasure.py tests/test_privacy_erasure.py tests/test_privacy_erasure_concurrency.py tests/test_privacy_erasure_recovery.py tests/test_privacy_erasure_retirement.py"
+    },
+    {
+      "name": "Final extracted-node correction scoped Ruff",
+      "result": "passed",
+      "exitCode": 0,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-lint-extracted-final.log",
+      "command": ".venv/bin/ruff check src/prme/storage/erasure.py tests/test_privacy_erasure_concurrency.py"
+    },
+    {
+      "name": "Review correction strict public consumer types",
+      "result": "passed",
+      "exitCode": 0,
+      "log": ".github-ticket-loop/privacy-325/evidence/privacy325-review-types-1.log",
+      "command": ".venv/bin/mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py",
+      "limitations": [
+        "The later private source-reference normalization does not change public types."
+      ]
+    }
+  ],
+  "pending": [
+    "ER07 actual #326 pre-erasure restore/import with independent current authority and stale-ledger refusal",
+    "ER08 actual #326 retained backup/operator export plus archive/chat-clear distinction and verified managed backup states",
+    "#327 full frozen protected product gate",
+    "Final #323 dependency composition after its separately owned known-failing classifier repair",
+    "Root-owned required reviews, final full checks/CI, PR and merge; no claim of acceptance completion",
+    "Affected review of source closure and exclusive-lineage native retirement. Shared, legacy and unbound key usage now visibly defers automatic destruction while survivors remain usable; complete cross-store reference authority and any resulting eventual retirement remain outside this bounded implementation."
+  ],
+  "setupFailures": [
+    {
+      "log": "/tmp/privacy325-ledger-fence-1.log",
+      "reason": "fixture function imported as fixture name; collection only",
+      "resolved": true
+    },
+    {
+      "log": "/tmp/privacy325-er02-support-1.log",
+      "reason": "new shared evidence fixture made event-node ordering non-unique; assertion now selects original node ID and still asserts exact admitted content",
+      "resolved": true,
+      "repairCycle": false
+    },
+    {
+      "log": "/tmp/privacy325-er06-1.log",
+      "reason": "Fixture used nonexistent lexical.delete and expected PG auxiliary lexical row although current graph uses generated content_tsv; source-derived shared connection-close failure separately retained above",
+      "resolved": true,
+      "repairCycle": false
+    },
+    {
+      "log": "/tmp/privacy325-er02-complete-1.log",
+      "reason": "Foreign policy cannot attenuate another owner default; explicit foreign-owner fixture supplies its separate policy with no configured owner default. Original survivor assertions retained.",
+      "resolved": true,
+      "repairCycle": false
+    },
+    {
+      "log": "/tmp/privacy325-er02-copies-2.log",
+      "reason": "Multiple independent PostgreSQL workflows inside one test reused a single fixture schema with a different project. Workflows now parameterized separately; original assertions retained. Distinct receipt-closure failure retained as a source repair above.",
+      "resolved": true,
+      "repairCycle": false
+    },
+    {
+      "log": "/tmp/privacy325-key-cli-1.log",
+      "reason": "Direct command test did not apply the actual CLI stderr logger configuration; JSON assertion encountered diagnostic stdout. Test now matches CLI main, original JSON assertions retained.",
+      "resolved": true,
+      "repairCycle": false
+    },
+    {
+      "log": "/tmp/privacy325-retirement-exact-1.log",
+      "reason": "New node-only fence fixture expected availability state available; existing inspect_source API reports sealed for retained ciphertext. Corrected expectation, original exact backend mutation assertions retained.",
+      "resolved": true,
+      "repairCycle": false
+    }
+  ],
+  "composition": {
+    "base": "b50a5276795ae257b83209424bdd88ceb02ece1e",
+    "beforeFinalCheckpoint": "ec2213bb",
+    "mergeParents": [
+      "98a5864a",
+      "b552c56f"
+    ],
+    "conflictResolution": "One supported-effect set: retain both implemented #324 lifecycle/organizer/alias and #325 rebuild; every remaining unsupported effect denied. Normal merge, no discarded parent.",
+    "runtimeDiffBase": "ec2213bb",
+    "runtimeDiffSha256": "9c30ba0dab2ac9a5dcee9c6f17231bc1bd55316c746f0a73dd0d66db1d69632e",
+    "priorCompositionRuntimeDiffSha256": "d57b2538e6f9a711ee8ffc328fa8e37f4e683a9e66875a2a9c0b386c555b98ef",
+    "priorSourceCheckpoint": "62b1d2fa",
+    "reviewBase": "418c7ed8e1c99b3bbbb7b90725bf88c8591e42aa",
+    "artifactOnlyMerge": "4aaf58b6bc58feedb45e507b9b1e311d67ed56c9",
+    "nodeRetryDiffBase": "4aaf58b6bc58feedb45e507b9b1e311d67ed56c9",
+    "nodeRetryRuntimeDiffSha256": "18cb8979fdd134008c0acb9e9933efce38c3c851d8cf2a74689cfe8a0f6c97bc",
+    "reviewCorrectionBase": "ee620296f2af8a81fa1df2b6f428a7344fea5b2f"
+  },
+  "validationFailures": [
+    {
+      "log": "/tmp/privacy325-copy-recovery-1.log",
+      "reason": "CL05 PostgreSQL alias organize did not run its final snapshot job under default budget. Original failure retained. Explicit 60000ms fixture input subsequently passed all original assertions; initial budget versus caught-job cause was not independently established. No production change made for this failure."
+    }
+  ],
+  "externalLimits": [
+    "No physical wipe, heap/swap/crash-dump erasure or malicious same-process isolation.",
+    "DuckDB pages/WAL/spill/free space and PostgreSQL WAL/base files/replicas are outside logical-copy certification.",
+    "Backups, exports, recovery artifacts, external provider/application copies are not managed by this implementation.",
+    "Same-user rollback of both independent local ledger and pack needs an external current authority for freshness proof.",
+    "No production data/key deletion or deployment performed."
+  ]
+}

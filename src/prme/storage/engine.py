@@ -28,6 +28,7 @@ from prme.models.privacy_reads import (
 from prme.privacy.capabilities import EvidenceAccess
 
 from prme.privacy.policy import PrivacyPolicy, PrivacyDenied
+from prme.privacy.erasure import ErasureRequest, ErasureStatus
 from prme.privacy.capabilities import PrivacyRuntime
 from prme.privacy.admission import privacy_disclosure
 
@@ -514,21 +515,24 @@ class MemoryEngine:
             if config.namespace_id is not None:
                 raise ValueError("namespace_id currently requires an isolated local pack")
             engine = await cls._create_postgres(
-                config, embedding_provider=embedding_provider,
+                config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime,
                 additional_embedding_providers=additional_embedding_providers,
             )
         else:
             engine = await cls._create_duckdb(
-                config, embedding_provider=embedding_provider,
+                config, embedding_provider=embedding_provider, privacy_runtime=privacy_runtime,
                 additional_embedding_providers=additional_embedding_providers,
             )
         engine._privacy.runtime = privacy_runtime
+        from prme.storage.erasure_indexes import attach
+        await attach(engine)
         await engine._privacy.processing.expire()
         return engine
 
     @classmethod
     async def _create_duckdb(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
+        privacy_runtime: PrivacyRuntime | None = None,
         additional_embedding_providers: list[EmbeddingProvider] | None = None,
     ) -> "MemoryEngine":
         """Create a MemoryEngine backed by DuckDB (file-based).
@@ -651,6 +655,9 @@ class MemoryEngine:
             # host timezone by default. A portable pack uses canonical UTC.
             conn.execute("SET TimeZone = 'UTC'")
 
+            # Current independent erasure state precedes registry/native recovery.
+            from prme.storage.erasure import prepare_store
+            await prepare_store(conn=conn, runtime=privacy_runtime, namespace_id=config.namespace_id)
             # Initialize schema (tables, indexes, DuckPGQ attempt)
             initialize_database(conn)
 
@@ -696,6 +703,9 @@ class MemoryEngine:
 
             startup.push_async_callback(vector_index.close)
 
+            if not single_file and privacy_runtime is not None:
+                from prme.storage.erasure_indexes import recover_lexical_swaps
+                recover_lexical_swaps(conn, config.lexical_path)
             # Create lexical index. A single-file pack holds it in memory,
             # shared by every engine in this process that opens the pack and
             # built from the graph by the first of them, before any read.
@@ -838,7 +848,8 @@ class MemoryEngine:
     @classmethod
     async def _create_postgres(
         cls, config: PRMEConfig, *, embedding_provider: EmbeddingProvider | None = None,
-        namespace_pool=None, additional_embedding_providers: list[EmbeddingProvider] | None = None,
+        namespace_pool=None, privacy_runtime: PrivacyRuntime | None = None,
+        additional_embedding_providers: list[EmbeddingProvider] | None = None,
     ) -> "MemoryEngine":
         """Create a MemoryEngine backed by PostgreSQL."""
         from prme.storage.pg import (
@@ -856,6 +867,8 @@ class MemoryEngine:
             # Create asyncpg pool and initialize schema
             pool = namespace_pool if namespace_pool is not None else await create_pool(config.database_url.get_secret_value())
             startup.push_async_callback(pool.close)
+            from prme.storage.erasure import prepare_store
+            await prepare_store(pool=pool, runtime=privacy_runtime, namespace_id=config.namespace_id)
             if namespace_pool is None:
                 vector_sql = await initialize_pg_database(pool, embedding_dim=config.embedding.dimension)
             else:
@@ -1720,6 +1733,29 @@ class MemoryEngine:
                     osc.oscillating_node_ids,
                     user_id=node.user_id,
                 )
+
+    async def request_erasure(self, request: ErasureRequest, *, user_id: str) -> ErasureStatus:
+        """Durably fence selected evidence or memory; purge is explicit maintenance."""
+        return await self._privacy.erasure.request(request, user_id=user_id)
+
+    async def expire_privacy(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000) -> tuple[ErasureStatus, ...]:
+        from prme.storage.erasure import prepare_store
+        repository = self._privacy.repository
+        await prepare_store(conn=repository.conn, pool=repository.pool, conn_lock=repository.lock,
+                            runtime=self._privacy.require_runtime(), namespace_id=self._config.namespace_id)
+        return await self.process_erasures(user_id=user_id, limit=limit, budget_ms=budget_ms)
+
+    async def process_erasures(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000) -> tuple[ErasureStatus, ...]:
+        from prme.storage.erasure import process_erasures
+        return await process_erasures(self._privacy.erasure, user_id=user_id, limit=limit, budget_ms=budget_ms)
+
+    async def get_erasure_status(self, request_id: UUID | str, *, user_id: str) -> ErasureStatus | None:
+        async with self._privacy.erasure.guard():
+            if self._privacy.default is None:
+                raise PrivacyDenied("privacy_configuration_invalid")
+            saved = self._privacy.effective(None, user_id=user_id, scope=self._privacy.default.scope)
+            async with self._privacy.require_runtime().authority.guard(saved, "disclosure"):
+                return await self._privacy.erasure.repository.status(request_id, user_id=user_id)
 
     async def inspect_privacy_policy(self, *, user_id: str, scope: Scope = Scope.PERSONAL, policy: PrivacyPolicy | None = None) -> dict:
         """Inspect effective policy and provider/retention limits without opening evidence."""
@@ -3600,7 +3636,7 @@ class MemoryEngine:
     # --- Rebuild (issue #45) ---
 
     @privacy_disclosure
-    async def rebuild_indexes(self, *, batch_size: int = 256) -> dict[str, int]:
+    async def rebuild_indexes(self, *, batch_size: int = 256, user_id: str | None = None) -> dict[str, int]:
         """Rebuild the vector and lexical indexes from the durable graph.
 
         Drops both derived search indexes and re-materializes them from the
@@ -3641,6 +3677,9 @@ class MemoryEngine:
             ``nodes_skipped`` (active rows with empty content, which cannot
             be embedded), and ``total_active`` (active rows seen).
         """
+        if self._privacy.selected() or await self._privacy.repository.for_owner(user_id):
+            from prme.storage.erasure_indexes import rebuild_protected
+            return await rebuild_protected(self, user_id=user_id, batch_size=batch_size)
         if self._conn is None:
             # PostgreSQL has no derived index files: its vector column and word search are written with each
             # memory. What a rebuild is used for there, moving to another embedding model, is reembed().
@@ -4529,7 +4568,7 @@ class MemoryEngine:
             if plan.privacy_manifest is not None:
                 from prme.privacy.journals import manifest_records, journal_scope
                 records = await manifest_records(self._privacy, plan.privacy_manifest, user_id=plan.node.user_id)
-                async with self._privacy.publication_guards(records):
+                async with self._privacy.publication_guards(records, node_ids=plan.privacy_manifest.admitted_node_ids):
                     with journal_scope(self._privacy, records):
                         await run_async_to_completion(stage())
             else:
@@ -4713,7 +4752,13 @@ class MemoryEngine:
 
         if self._conn is not None:
             try:
-                self._conn.close()
+                if self._privacy.runtime is not None:
+                    # A shared protected lexical handle may resolve this
+                    # connection while another engine closes its own owner.
+                    async with self._lexical_index._write_lock:
+                        self._conn.close()
+                else:
+                    self._conn.close()
             except Exception:
                 logger.warning("Error closing DuckDB connection", exc_info=True)
 

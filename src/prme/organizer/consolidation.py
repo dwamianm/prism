@@ -296,7 +296,7 @@ async def publish_consolidation_plan(
             from prme.privacy.journals import manifest_records, journal_scope
             from prme.storage._threading import run_async_to_completion
             records = await manifest_records(engine._privacy, plan.privacy_manifest, user_id=owner)
-            async with engine._privacy.publication_guards(records):
+            async with engine._privacy.publication_guards(records, node_ids=plan.privacy_manifest.admitted_node_ids):
                 with journal_scope(engine._privacy, records):
                     await run_async_to_completion(_stage_consolidation(engine, plan))
         else:

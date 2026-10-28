@@ -89,7 +89,7 @@ class _ConnectionPool:
 
 
 async def prepare_namespace(pool: asyncpg.Pool, identifier: UUID, *, embedding_dim: int,
-                            create: bool = False) -> NamespacePool:
+                            create: bool = False, privacy_runtime=None) -> NamespacePool:
     """Atomically create or reopen a bound namespace, refusing silent data loss.
 
     The caller first installs extensions outside private schemas. Serialized
@@ -119,6 +119,8 @@ async def prepare_namespace(pool: asyncpg.Pool, identifier: UUID, *, embedding_d
             present = await _relations(conn, schema)
             if not set(identity["relations"]).issubset(present):
                 raise NamespaceIdentityError("Initialized namespace relations are missing; restore before opening")
+            from prme.storage.erasure import prepare_store
+            await prepare_store(pool=_ConnectionPool(conn), runtime=privacy_runtime, namespace_id=identifier)
             vector_sql = await initialize_pg_database(_ConnectionPool(conn), embedding_dim=embedding_dim)
             await conn.execute(f"UPDATE {quoted}.prme_namespace_identity SET relations = $1", await _relations(conn, schema))
     return NamespacePool(pool, identifier, vector_sql)

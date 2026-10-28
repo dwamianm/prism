@@ -25,10 +25,19 @@ def test_reingest_sync_and_HTTP_reopened_refusal(tmp_path, monkeypatch, caplog, 
         client.store(SOURCE, user_id=str(p.owner_id), policy=p)
     embed = AsyncMock(side_effect=AssertionError("unexpected provider effect"))
     monkeypatch.setattr(r.embedder, "embed", embed)
-    with MemoryClient(config=config, embedding_provider=r.embedder) as client:
+    # A protected store refuses to open without its privacy runtime (#325), so
+    # neither surface reaches reingest, a provider or the source.
+    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+        with MemoryClient(config=config, embedding_provider=r.embedder) as client:
+            client.reingest(str(p.owner_id), dry_run=True, limit=0)
+    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+        with TestClient(create_app(config, embedding_provider=r.embedder)) as client:
+            client.post("/v1/reingest", json={"user_id": str(p.owner_id), "dry_run": True, "limit": 0})
+    # Reopened with the runtime but no configured policy, reingest itself refuses.
+    with MemoryClient(config=config, embedding_provider=r.embedder, privacy_runtime=r) as client:
         with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
             client.reingest(str(p.owner_id), dry_run=True, limit=0)
-    with TestClient(create_app(config, embedding_provider=r.embedder)) as client:
+    with TestClient(create_app(config, embedding_provider=r.embedder, privacy_runtime=r)) as client:
         result = client.post("/v1/reingest", json={"user_id": str(p.owner_id), "dry_run": True, "limit": 0})
         assert result.status_code == 422 and result.json()["detail"] == "privacy_provider_unavailable"
     embed.assert_not_awaited()
@@ -51,6 +60,15 @@ async def test_reingest_MCP_actual_dispatch_fixed_refusal(tmp_path, caplog, caps
     await engine.close()
     before = len(r.embedder.sends)
     server = create_mcp_server(config, embedding_provider=r.embedder)
+    # The server's lifespan opens the store, which refuses without the privacy
+    # runtime (#325), before any tool call reaches reingest or a provider.
+    with pytest.raises(BaseExceptionGroup) as refused:
+        async with create_connected_server_and_client_session(server._mcp_server, raise_exceptions=True) as client:
+            await client.initialize()
+            await client.call_tool("memory_reingest", {"dry_run": True, "limit": 0})
+    assert refused.group_contains(PrivacyDenied, match="privacy_ledger_unavailable")
+    # With the runtime, the tool call itself returns the fixed refusal.
+    server = create_mcp_server(config, embedding_provider=r.embedder, privacy_runtime=r)
     async with create_connected_server_and_client_session(server._mcp_server, raise_exceptions=True) as client:
         await client.initialize()
         response = await client.call_tool("memory_reingest", {"dry_run": True, "limit": 0})
@@ -101,14 +119,19 @@ def test_reingest_CLI_real_open_refuse_close_keeps_pending_protected_work(tmp_pa
     finally:
         structlog.configure(**logging_config)
     output = capsys.readouterr()
-    assert "privacy_provider_unavailable" in output.err
+    # The open refuses without the privacy runtime (#325), before reingest.
+    assert "privacy_ledger_unavailable" in output.err
     assert SOURCE not in output.out + output.err + caplog.text
     embed.assert_not_awaited()
     extract.assert_not_awaited()
 
     async def inspect():
-        engine = await MemoryEngine.create(config, embedding_provider=r.embedder)
+        engine = await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)
         try:
+            # The CLI cannot supply a runtime, so the refused reingest is
+            # repeated here with one; neither may change the pending work.
+            with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+                await engine.reingest(str(p.owner_id), dry_run=True)
             status = await engine._event_store.extraction_work.status(event_id, user_id=str(p.owner_id))
             assert status == before
             assert await engine._graph_store.query_nodes(user_id=str(p.owner_id)) == []

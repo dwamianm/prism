@@ -25,6 +25,7 @@ from prme.models.privacy_reads import (
 from prme.privacy.capabilities import EvidenceAccess
 
 from prme.privacy import PrivacyPolicy, PrivacyRuntime
+from prme.privacy.erasure import ErasureRequest, ErasureStatus
 
 
 import asyncio
@@ -493,6 +494,19 @@ class MemoryClient:
     def inspect_privacy_policy(self, *, user_id: str, scope: Scope = Scope.PERSONAL, policy: PrivacyPolicy | None = None) -> dict:
         """Inspect policy limits without opening retained source payloads."""
         return self._run(self._engine.inspect_privacy_policy(user_id=user_id, scope=scope, policy=policy))
+
+    def request_erasure(self, request: ErasureRequest, *, user_id: str) -> ErasureStatus:
+        """Persist a denial fence; explicit maintenance performs logical purge."""
+        return self._run(self._engine.request_erasure(request, user_id=user_id))
+
+    def get_erasure_status(self, request_id: UUID | str, *, user_id: str) -> ErasureStatus | None:
+        return self._run(self._engine.get_erasure_status(request_id, user_id=user_id))
+
+    def process_erasures(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000) -> tuple[ErasureStatus, ...]:
+        return self._run(self._engine.process_erasures(user_id=user_id, limit=limit, budget_ms=budget_ms))
+
+    def expire_privacy(self, *, user_id: str, limit: int = 16, budget_ms: int = 1000) -> tuple[ErasureStatus, ...]:
+        return self._run(self._engine.expire_privacy(user_id=user_id, limit=limit, budget_ms=budget_ms))
 
     def ingest(
         self,
