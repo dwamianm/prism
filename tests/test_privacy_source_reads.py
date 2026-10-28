@@ -392,13 +392,17 @@ async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout,
 
 async def test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy(tmp_path, layout, analyzer, native):
     """A record without a valid privacy marker in a protected-format store is
-    damaged or orphaned, never legacy (#326). Every read of it is refused.
+    damaged or orphaned, never legacy (#326). No read returns its content.
 
     This keeps the classifier checks of the former orphan-marker case on a
     store that still opens: an orphan node inserted below the engine, then
-    node-only and event-only malformed markers.
+    node-only and event-only malformed markers. A read may be refused or may
+    return admitted data, but never the orphan's source text. A second owner
+    with only an orphan row and no records is refused outright.
     """
     import json
+    import pytest
+    from uuid import uuid4
     from prme import MemoryEngine
     from prme.models import MemoryNode
     from prme.privacy import PrivacyDenied
@@ -415,6 +419,9 @@ async def test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy(
         orphan = MemoryNode(user_id=owner, node_type=NodeType.NOTE, content=SOURCE, metadata={PRIVACY_KEY: None})
         await engine._graph_store.create_node(orphan)
         reads = {
+            "get_event": lambda: engine.get_event(identifier, user_id=owner),
+            "get_events": lambda: engine.get_events(owner),
+            "get_event_nodes": lambda: engine.get_event_nodes(identifier, user_id=owner),
             "get_orphan": lambda: engine.get_node(str(orphan.id), user_id=owner),
             "get_nodes": lambda: engine.get_nodes([identifier, str(orphan.id)], user_id=owner),
             "query_nodes": lambda: engine.query_nodes(user_id=owner),
@@ -439,6 +446,14 @@ async def test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy(
                 except PrivacyDenied:
                     continue
                 assert SOURCE not in str(result), (stage, name)
-                assert name == "get_nodes" and result == [], (stage, name, result)
+        # An owner whose only rows have no privacy record reaches the
+        # protected-format check itself and is refused.
+        stranger = str(uuid4())
+        stray = MemoryNode(user_id=stranger, node_type=NodeType.NOTE, content=SOURCE, metadata={})
+        await engine._graph_store.create_node(stray)
+        for read in (lambda: engine.get_node(str(stray.id), user_id=stranger),
+                     lambda: engine.query_nodes(user_id=stranger)):
+            with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+                await read()
     finally:
         await engine.close()

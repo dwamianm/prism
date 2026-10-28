@@ -145,7 +145,7 @@
       "surface": "metadata",
       "layouts": ["duckdb_directory", "duckdb_single_file", "postgresql"],
       "current_fields": ["edges.metadata", "provenance_event_id", "relationship labels and identity metadata", "legacy group-member edges.metadata.named_in naming-event identity"],
-      "source_refs": [{"path": "src/prme/storage/schema.py", "line": 175, "anchor": "CREATE TABLE IF NOT EXISTS edges"}, {"path": "src/prme/models/edges.py", "line": 15, "anchor": "class MemoryEdge"}, {"path": "src/prme/ingestion/group_links.py", "line": 65, "anchor": "NAMED_IN_KEY ="}, {"path": "src/prme/storage/privacy.py", "line": 145, "anchor": "async def create_legacy_group_edge("}],
+      "source_refs": [{"path": "src/prme/storage/schema.py", "line": 175, "anchor": "CREATE TABLE IF NOT EXISTS edges"}, {"path": "src/prme/models/edges.py", "line": 15, "anchor": "class MemoryEdge"}, {"path": "src/prme/ingestion/group_links.py", "line": 65, "anchor": "NAMED_IN_KEY ="}, {"path": "src/prme/storage/privacy.py", "line": 179, "anchor": "async def create_legacy_group_edge("}],
       "current_access": ["operator", "worker"],
       "current_retention": "Current content has no privacy-erasure deadline; logical archival/supersedence does not erase payloads.",
       "required_treatment": "Sanitize content fields; retain only necessary opaque provenance; erase affected edge/alias copies with their sources.",
