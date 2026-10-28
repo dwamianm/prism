@@ -7,6 +7,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import json
 import logging
+import sys
 
 import httpx
 import pytest
@@ -43,6 +44,13 @@ async def test_CL08_component_diagnostics_and_actual_public_adapters(
     owner = str(policy.owner_id)
     error_type = type(SOURCE_ONLY, (RuntimeError,), {})
     caplog.set_level(logging.DEBUG)
+    # Earlier tests (test_cli.py, test_client.py) leave structlog filtered at
+    # CRITICAL and bound to their own captured stderr. Use the defaults and
+    # this test's stdout so capsys sees the legacy positive and any leak.
+    import structlog
+    saved_structlog = structlog.get_config()
+    structlog.reset_defaults()
+    structlog.configure(logger_factory=structlog.PrintLoggerFactory(file=sys.stdout))
     try:
         await engine.ingest(SOURCE, user_id=owner)
         with processing_keys(runtime, custody, processing):
@@ -168,4 +176,5 @@ async def test_CL08_component_diagnostics_and_actual_public_adapters(
             if artifact.is_file():
                 assert SOURCE_ONLY.encode() not in artifact.read_bytes(), artifact.name
     finally:
+        structlog.configure(**saved_structlog)
         await engine.close()
