@@ -17,6 +17,32 @@ from prme.privacy import MemoryRetention, PrivacyDenied, PrivacyPolicy, PrivacyR
 from prme.privacy.capabilities import ProtectedPayload, RetryCommitment, SanitizedContent
 
 
+# The running test's isolated schema and the extra per-store schemas made from it.
+_SCHEMAS: dict = {"base": None, "extra": []}
+
+
+async def fresh_postgres_store() -> None:
+    """Point PRME_TEST_DATABASE_URL at a new schema inside the test's own schema family.
+
+    A protected PostgreSQL store is bound to one project, so a test that opens
+    several independent stores needs one schema per store, as DuckDB gets one
+    directory per store. isolated_privacy_postgres drops these schemas too.
+    """
+    import asyncpg
+    url = os.environ["PRME_TEST_DATABASE_URL"]
+    parts = urlsplit(url)
+    query = [(key, value) for key, value in parse_qsl(parts.query) if key != "search_path"]
+    schema = _SCHEMAS["base"] + "_" + uuid4().hex[:8]
+    conn = await asyncpg.connect(url)
+    try:
+        await conn.execute(f'CREATE SCHEMA "{schema}"')
+    finally:
+        await conn.close()
+    _SCHEMAS["extra"].append(schema)
+    query.append(("search_path", schema))
+    os.environ["PRME_TEST_DATABASE_URL"] = urlunsplit(parts._replace(query=urlencode(query)))
+
+
 @pytest.fixture(autouse=True)
 async def isolated_privacy_postgres(request, monkeypatch):
     """Keep protected component records out of other tests' operator store."""
@@ -37,12 +63,16 @@ async def isolated_privacy_postgres(request, monkeypatch):
         await conn.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public")
         await conn.execute(f'CREATE SCHEMA "{schema}"')
         created = True
+        _SCHEMAS.update(base=schema, extra=[])
         parts = urlsplit(url)
         query = [(key, value) for key, value in parse_qsl(parts.query) if key != "search_path"]
         query.append(("search_path", schema))
         monkeypatch.setenv("PRME_TEST_DATABASE_URL", urlunsplit(parts._replace(query=urlencode(query))))
         yield
     finally:
+        for extra in _SCHEMAS["extra"]:
+            await conn.execute(f'DROP SCHEMA IF EXISTS "{extra}" CASCADE')
+        _SCHEMAS.update(base=None, extra=[])
         if created:
             await conn.execute(f'DROP SCHEMA "{schema}" CASCADE')
         await conn.close()
