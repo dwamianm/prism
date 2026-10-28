@@ -76,6 +76,11 @@ and identity metadata remain portable. Reusing a saved effective config whose
 provider is `custom` without supplying the object raises an explicit error.
 When changing encoding versions, rebuild indexes with the intended provider;
 changing dimensions can require backend/index migration and is not automatic.
+With `enable_multi_model_embeddings` a store keeps one index per model, so a new
+model or version can be built beside the old one and switched to without a
+rebuild of the whole store: pass the provider to `reembed(provider)` and, to write
+it with every new memory meanwhile, to `additional_embedding_providers=` of
+`MemoryEngine.create()`/`open()` (see [switching embedding models](EMBEDDING-MODELS.md)).
 CLI commands cannot recreate an arbitrary Python provider; use the Python APIs
 for model-dependent operations on these packs.
 

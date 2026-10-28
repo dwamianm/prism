@@ -94,6 +94,43 @@ async def test_AC06_incomplete_protected_projection_preserves_admitted_group(tmp
         await engine.close()
 
 
+@pytest.mark.parametrize("error", [PrivacyDenied("privacy_denied"), RuntimeError("backend unavailable")])
+async def test_AC06_candidate_failure_settles_both_child_queries(error):
+    """A failed retrieval must not leave a query alive when its caller closes."""
+    from prme.retrieval.candidates import _generate_pinned_candidates
+
+    started, raised, release, settled = (asyncio.Event() for _ in range(4))
+    children = []
+
+    class Graph:
+        async def query_nodes(self, **kwargs):
+            if kwargs.get("min_salience") == 1.0:
+                await started.wait()
+                raised.set()
+                raise error
+            children.append(asyncio.current_task())
+            started.set()
+            try:
+                await release.wait()
+                return []
+            finally:
+                settled.set()
+
+    request = asyncio.create_task(_generate_pinned_candidates(Graph(), "owner"))
+    try:
+        await asyncio.wait_for(raised.wait(), 2)
+        completed, _ = await asyncio.wait({request}, timeout=0.05)
+        assert not completed, "The caller returned while its sibling query was still running"
+        release.set()
+        with pytest.raises(type(error)) as failure:
+            await asyncio.wait_for(request, 2)
+        assert failure.value is error
+        assert settled.is_set()
+    finally:
+        release.set()
+        await asyncio.gather(request, *children, return_exceptions=True)
+
+
 async def test_AC06_two_selected_standard_sources_use_finite_lease(tmp_path, layout, analyzer, native, monkeypatch):
     engine, runtime, policy, custody, evidence, _ = await opened(
         tmp_path, layout, analyzer, policy_options={"evidence_use": "runtime"},

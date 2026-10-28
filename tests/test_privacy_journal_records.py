@@ -518,9 +518,13 @@ async def test_CL05_component_alias_review_and_merge_use_closed_copies(
             )
         ).applied
         assert SOURCE_ONLY.encode() not in await operation_bytes(engine)
+        # organize() stops after the job that exceeds its total budget (5 s by
+        # default). These protected jobs take about 2.2 s locally and more on CI
+        # runners, so a wall-clock budget must not decide which jobs run here.
         result = await engine.organize(
             user_id=owner,
             jobs=["promote", "alias_resolve", "deduplicate", "snapshot_generation"],
+            budget_ms=60_000,
         )
         assert result.jobs_run == [
             "promote",

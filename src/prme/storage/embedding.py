@@ -311,6 +311,51 @@ class FastEmbedProvider:
         return await asyncio.to_thread(self._embed_sync, texts)
 
 
+class PrefixedFastEmbedProvider(FastEmbedProvider):
+    """FastEmbed with the task prefixes some models are trained to expect (dwamianm/prism#366).
+
+    A model such as ``nomic-ai/nomic-embed-text-v1.5`` embeds ``"search_document: " + text`` for a
+    stored memory and ``"search_query: " + text`` for a question, and the BGE and mxbai models take
+    an instruction before the question only. ``FastEmbedProvider`` adds nothing, so a model that
+    needs a prefix is used correctly only through this class (``embedding.query_prefix`` and
+    ``embedding.document_prefix``, both off by default).
+
+    The prefixes change every vector this provider makes, so ``model_version`` names them: vectors
+    stored under one recipe are refused under another, as under a different model.
+    """
+
+    def __init__(
+        self,
+        model_name: str = "BAAI/bge-small-en-v1.5",
+        *,
+        query_prefix: str | None = None,
+        document_prefix: str | None = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(model_name, **kwargs)
+        for label, prefix in (("query_prefix", query_prefix), ("document_prefix", document_prefix)):
+            if prefix is not None and not isinstance(prefix, str):
+                raise ValueError(f"FastEmbed {label} must be a string or None")
+        self._query_prefix = query_prefix or ""
+        self._document_prefix = document_prefix or ""
+
+    @property
+    def model_version(self) -> str:
+        """The fastembed version and a digest of both prefixes."""
+        recipe = hashlib.sha256(
+            f"{self._query_prefix}\x00{self._document_prefix}".encode()
+        ).hexdigest()[:12]
+        return f"{super().model_version}+prefix-{recipe}"
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed stored text with the document prefix."""
+        return await super().embed([self._document_prefix + text for text in texts])
+
+    async def embed_query(self, text: str) -> list[float]:
+        """Embed a question with the query prefix, in the document vector space."""
+        return (await FastEmbedProvider.embed(self, [self._query_prefix + text]))[0]
+
+
 class OpenAIEmbeddingProvider:
     """EmbeddingProvider using OpenAI's embedding API.
 
@@ -513,7 +558,17 @@ def create_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
         ValueError: If the configured provider is not recognized.
     """
     provider: EmbeddingProvider
-    if config.provider == "fastembed":
+    if config.provider != "fastembed" and (config.query_prefix or config.document_prefix):
+        raise ValueError("embedding.query_prefix and embedding.document_prefix apply to the fastembed provider only")
+    if config.provider == "fastembed" and (config.query_prefix or config.document_prefix):
+        provider = PrefixedFastEmbedProvider(
+            model_name=config.model_name,
+            dimension=config.dimension,
+            threads=config.threads,
+            query_prefix=config.query_prefix,
+            document_prefix=config.document_prefix,
+        )
+    elif config.provider == "fastembed":
         provider = FastEmbedProvider(
             model_name=config.model_name,
             dimension=config.dimension,

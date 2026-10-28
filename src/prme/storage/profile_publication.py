@@ -244,13 +244,20 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
         )
         _validate(plan, current, [str(row["id"]) for row in rows])
         await store._create_node_on_connection(conn, node)
-        await conn.execute(
-            f"UPDATE nodes SET embedding = $1::{vector_sql.type}, embedding_model = $2, embedding_version = $3 WHERE id = $4",
-            "[" + ",".join(str(v) for v in embedding.values) + "]",
-            embedding.model,
-            embedding.version,
-            str(node.id),
-        )
+        if getattr(store, "_multi_model_embeddings", False):
+            from prme.storage.pg.model_vector_index import write_node_embedding
+
+            await write_node_embedding(
+                conn, vector_sql, node_id=node.id, model=embedding.model, version=embedding.version, values=embedding.values,
+            )
+        else:
+            await conn.execute(
+                f"UPDATE nodes SET embedding = $1::{vector_sql.type}, embedding_model = $2, embedding_version = $3 WHERE id = $4",
+                "[" + ",".join(str(v) for v in embedding.values) + "]",
+                embedding.model,
+                embedding.version,
+                str(node.id),
+            )
         for old in plan.previous:
             await conn.execute(
                 "UPDATE nodes SET lifecycle_state = 'archived', updated_at = $1 WHERE id = $2",

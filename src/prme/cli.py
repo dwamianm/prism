@@ -27,6 +27,8 @@ Commands:
     prme discard-profile <db_path> <id> -- Abandon one owned preparation
     prme collect-profile-staging <db_path> -- Reclaim abandoned profile indexes
     prme rebuild <db_path>   -- Rebuild indexes from the durable graph
+    prme reembed <db_path>   -- Build another embedding model's vectors for the stored memories
+    prme embeddings status|drop <db_path> -- See which embedding models a store holds, or drop one
     prme stats <db_path>     -- Show memory statistics
     prme export <db_path>    -- Export memory pack as JSON
 """
@@ -55,14 +57,16 @@ from prme.types import EdgeType, LifecycleState, NodeType, Scope
 # ---------------------------------------------------------------------------
 
 
-def _single_file_config(path: str) -> PRMEConfig:
+def _single_file_config(path: str, **overrides: Any) -> PRMEConfig:
     """Configure an engine for the single-file pack at absolute *path*."""
     # As for a directory pack below, the positional path is the command's
     # target: an ambient database_url must not redirect it to PostgreSQL.
-    return PRMEConfig(database_url=None, pack_path=path)
+    return PRMEConfig(database_url=None, pack_path=path, **overrides)
 
 
-async def _create_engine(db_path: str, *, vision_overrides: dict[str, Any] | None = None) -> Any:
+async def _create_engine(
+    db_path: str, *, vision_overrides: dict[str, Any] | None = None, config_overrides: dict[str, Any] | None = None,
+) -> Any:
     """Create a MemoryEngine from a database path.
 
     Resolves the db_path to an absolute path. A path ending in ``.prme``
@@ -76,6 +80,9 @@ async def _create_engine(db_path: str, *, vision_overrides: dict[str, Any] | Non
             configured ones, on top of ``PRME_VISION_*`` and
             ``PRME_VISION__*`` from the environment (``prme observe`` turns
             vision on for its own run).
+        config_overrides: Optional PRMEConfig fields that replace the
+            configured ones (``prme reembed`` turns multi-model embeddings on
+            for its own run).
 
     Returns:
         An initialized MemoryEngine.
@@ -92,7 +99,7 @@ async def _create_engine(db_path: str, *, vision_overrides: dict[str, Any] | Non
         sys.exit(1)
 
     if is_pack_file(abs_path):
-        config = _single_file_config(abs_path)
+        config = _single_file_config(abs_path, **(config_overrides or {}))
     else:
         db_dir = os.path.dirname(abs_path)
         config = PRMEConfig(
@@ -104,6 +111,7 @@ async def _create_engine(db_path: str, *, vision_overrides: dict[str, Any] | Non
             db_path=abs_path,
             vector_path=os.path.join(db_dir, "vectors.usearch"),
             lexical_path=os.path.join(db_dir, "lexical_index"),
+            **(config_overrides or {}),
         )
     if vision_overrides:
         config = config.model_copy(update={"vision": config.vision.model_copy(update=vision_overrides)})
@@ -714,6 +722,79 @@ async def cmd_rebuild(args: argparse.Namespace) -> None:
             print(f"  Nodes indexed:  {summary['nodes_indexed']}")
             print(f"  Nodes skipped:  {summary['nodes_skipped']}")
             print(f"  Active nodes:   {summary['total_active']}")
+    finally:
+        await engine.close()
+
+
+async def _create_embedding_engine(args: argparse.Namespace) -> Any:
+    """Open a store for ``prme reembed`` and ``prme embeddings``, with multi-model storage on for this run.
+
+    The command is the opt-in, as ``prme observe`` is for vision: it turns ``enable_multi_model_embeddings`` on
+    for its own run. A local pack is named by ``db_path``. ``--postgres`` opens the PostgreSQL store that
+    ``PRME_DATABASE_URL`` names instead, which the other commands never do.
+    """
+    from prme.storage.engine import MemoryEngine
+
+    if args.postgres:
+        if args.db_path:
+            raise SystemExit("Error: give a pack path or --postgres, not both")
+        config = PRMEConfig()
+        if config.backend != "postgres":
+            raise SystemExit("Error: --postgres needs PRME_DATABASE_URL")
+        return await MemoryEngine.create(config.model_copy(update={"enable_multi_model_embeddings": True}))
+    if not args.db_path:
+        raise SystemExit("Error: give a pack path, or --postgres to use PRME_DATABASE_URL")
+    return await _create_engine(args.db_path, config_overrides={"enable_multi_model_embeddings": True})
+
+
+async def cmd_reembed(args: argparse.Namespace) -> None:
+    """Build an embedding model's vectors for the stored memories; local models only, no model service.
+
+    A stopped run continues where it stopped. The model's index is complete when ``remaining`` is 0; set
+    ``embedding.model_name`` (``PRME_EMBEDDING__MODEL_NAME``) to it to make it the active model.
+    """
+    engine = await _create_embedding_engine(args)
+    try:
+        result = await engine.reembed(
+            args.model, limit=args.limit, cursor=args.cursor, dry_run=args.dry_run, user_id=args.user_id,
+            batch_size=args.batch_size, pause_ms=args.pause_ms, threads=args.threads,
+        )
+        values = result.model_dump(mode="json")
+        if args.format == "json":
+            print(json.dumps(values, indent=2))
+        else:
+            for name, value in values.items():
+                if value is not None:
+                    print(f"{name}: {value}")
+        if result.failed:
+            raise SystemExit(1)
+    finally:
+        await engine.close()
+
+
+async def cmd_embeddings(args: argparse.Namespace) -> None:
+    """Show the embedding models a store holds, or drop one that is not the active model."""
+    engine = await _create_embedding_engine(args)
+    try:
+        if args.action == "drop":
+            removed = await engine.drop_embeddings(args.model, version=args.version)
+            if args.format == "json":
+                print(json.dumps({"model": args.model, "vectors_removed": removed}))
+            else:
+                print(f"Dropped {removed} vectors of {args.model}")
+            return
+        status = await engine.embedding_status()
+        if args.format == "json":
+            print(json.dumps(status, indent=2))
+            return
+        print(f"Active model: {status['active']}")
+        print(_format_table(
+            ["Model", "Version", "Dim", "Vectors", "Role", "Memories", "Complete"],
+            [[item["model"], item["version"], str(item["dimension"]), str(item["vectors"]), item["role"],
+              "" if item["memories"] is None else str(item["memories"]),
+              "" if item["complete"] is None else ("yes" if item["complete"] else "no")]
+             for item in status["models"]],
+        ))
     finally:
         await engine.close()
 
@@ -1450,6 +1531,39 @@ def build_parser() -> argparse.ArgumentParser:
     p_reingest.add_argument("--cursor", help="The cursor of an earlier run, to continue after it")
     p_reingest.add_argument("--dry-run", action="store_true", help="Count the memories and model requests; do no work")
     p_reingest.set_defaults(func=cmd_reingest)
+
+    def add_store_target(sub: argparse.ArgumentParser) -> None:
+        sub.add_argument("db_path", nargs="?", help=db_path_help)
+        sub.add_argument("--postgres", action="store_true",
+                         help="Open the PostgreSQL store PRME_DATABASE_URL names, instead of a local pack")
+        sub.add_argument("--format", choices=["table", "json"], default="table", help="Output format (default: table)")
+
+    p_reembed = subparsers.add_parser(
+        "reembed",
+        help="Build an embedding model's vectors for the stored memories (local model, resumable)",
+    )
+    add_store_target(p_reembed)
+    p_reembed.add_argument("--model", help="A registered fastembed model name (default: the active model)")
+    p_reembed.add_argument("--user-id", help="Only this owner's memories (default: the whole store)")
+    p_reembed.add_argument("--limit", type=int, help="The most memories to embed in this run")
+    p_reembed.add_argument("--cursor", help="The cursor of an earlier run, to continue after it")
+    p_reembed.add_argument("--dry-run", action="store_true", help="Count the memories and the progress; do no work")
+    p_reembed.add_argument("--batch-size", type=int, default=64, help="Memories embedded per step (default: 64)")
+    p_reembed.add_argument("--pause-ms", type=int, default=0,
+                           help="Milliseconds to sleep after each batch, to leave CPU to other work (default: 0)")
+    p_reembed.add_argument("--threads", type=int, help="ONNX Runtime threads for the model (default: embedding.threads)")
+    p_reembed.set_defaults(func=cmd_reembed)
+
+    p_embeddings = subparsers.add_parser("embeddings", help="Show or drop the embedding models a store holds")
+    embeddings_actions = p_embeddings.add_subparsers(dest="action", required=True)
+    p_embeddings_status = embeddings_actions.add_parser("status", help="Each model's vectors and whether it is complete")
+    add_store_target(p_embeddings_status)
+    p_embeddings_status.set_defaults(func=cmd_embeddings)
+    p_embeddings_drop = embeddings_actions.add_parser("drop", help="Remove a stored model's vectors and index")
+    add_store_target(p_embeddings_drop)
+    p_embeddings_drop.add_argument("--model", required=True, help="The model name to drop")
+    p_embeddings_drop.add_argument("--version", help="Only this version of the model (default: every version but the active one)")
+    p_embeddings_drop.set_defaults(func=cmd_embeddings)
 
     p_info = subparsers.add_parser("info", help="Show memory pack info")
     add_common(p_info)

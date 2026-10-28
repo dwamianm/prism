@@ -17,7 +17,7 @@ from prme.privacy.recognizers import CustomRule, MAX_INPUT_BYTES, Span
 from prme.privacy.sanitizer import LocalSanitizer, canonical
 from prme.privacy.strict_schema import ClosedSchema, ValueValidator
 from prme.types import Scope
-from tests.privacy_fakes import config_for, open_engine
+from tests.privacy_fakes import config_for, fresh_postgres_store, open_engine
 from tests.privacy_fakes import isolated_privacy_postgres as isolated_privacy_postgres
 from tests.privacy_sanitizer_support import Rules, Schemas, ScopedTestKeys, admit, setup
 from tests.privacy_sanitizer_support import local_analyzer_fixture as local_analyzer_fixture
@@ -42,6 +42,9 @@ async def opened(tmp_path, layout, analyzer, *, policy_options=None, sanitizer_o
                                  "condition": "unless it is cold", "epistemic_type": "conditional"}],
         "relationships": [], "summary": None,
     }
+    if layout == "postgres":
+        # Each call opens an independent store, bound to its own runtime project.
+        await fresh_postgres_store()
     engine, _, _ = await open_engine(tmp_path, layout=layout, runtime=runtime, policy=policy)
     return engine, runtime, policy, saved
 
@@ -177,6 +180,8 @@ async def test_SN04_boundary_isolation(tmp_path, layout, analyzer):
     for index, selected in enumerate(policies):
         keys.provision(selected, epoch)
         chosen_runtime = replace(runtime, project_id=selected.project_id)
+        if layout == "postgres":
+            await fresh_postgres_store()
         engine = await MemoryEngine.create(config_for(tmp_path / str(index), layout=layout, policy=selected),
                                            embedding_provider=runtime.embedder, privacy_runtime=chosen_runtime)
         try:

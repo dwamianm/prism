@@ -51,6 +51,9 @@ STRUCTURE_OPTIONS = (
     "PRME_PACKING__FOLDED_RECORDS_KEEP_RANK",
     "PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES",
 )
+# The pronoun repair (2026-10-22) is one more request for a source with a claim on a pronoun, and a test's stand-in
+# extractor never answers it, so a test starts with it off and turns it on to test it.
+REPAIR_OPTIONS = ("PRME_ENABLE_PRONOUN_REPAIR",)
 # Scoring defaults the alpha channel turned on. They are kept off by taking them out of the product's default
 # settings, not by an environment variable: a PRME_SCORING__ variable would make PRMEConfig fill rank fusion's
 # defaults into weighted scoring that a test passes in code as a dict, which leaves out the weighted fusion.
@@ -61,7 +64,7 @@ def product_defaults(monkeypatch):
     """Undo ``structure_options_off`` for a test that checks the defaults."""
     from prme.retrieval.config import DEFAULT_SCORING_SETTINGS
 
-    for name in STRUCTURE_OPTIONS:
+    for name in (*STRUCTURE_OPTIONS, *REPAIR_OPTIONS):
         monkeypatch.delenv(name)
     for name, value in ALPHA_SCORING.items():
         monkeypatch.setitem(DEFAULT_SCORING_SETTINGS, name, value)
@@ -78,14 +81,14 @@ def structure_options_off(monkeypatch):
     ``enable_owner_group_links`` (prism-monorepo issue 275) and ``scoring.rrf_graph_seed_count``
     (prism-monorepo issue 276) after them. Most tests count
     claims, edges and ranks that those options change, and the off path stays supported, so a test starts with all
-    eight off, as the batching variable above starts every test at one call per turn, and turns
-    on what it tests. The tests of the options themselves compare each on against off, and a test
+    eight off, and the pronoun repair too, as the batching variable above starts every test at one call per
+    turn, and turns on what it tests. The tests of the options themselves compare each on against off, and a test
     that checks the defaults calls ``product_defaults`` first (``tests/test_default_structure_options.py``
     runs the issue's repro with the defaults).
     """
     from prme.retrieval.config import DEFAULT_SCORING_SETTINGS
 
-    for name in STRUCTURE_OPTIONS:
+    for name in (*STRUCTURE_OPTIONS, *REPAIR_OPTIONS):
         monkeypatch.setenv(name, "false")
     for name in ALPHA_SCORING:
         monkeypatch.delitem(DEFAULT_SCORING_SETTINGS, name)

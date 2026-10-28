@@ -282,7 +282,7 @@ class ErasureCoordinator:
 
     @asynccontextmanager
     async def guard(self, records=(), *, purpose="memory", snapshots=(), node_ids=()):
-        runtime = self.admission.require_runtime()
+        runtime = self.admission.require_capabilities()
         ledger = runtime.erasure_ledger
         if ledger is None:
             raise PrivacyDenied("privacy_ledger_unavailable")
@@ -350,11 +350,11 @@ class ErasureCoordinator:
         async with self.guard():
             intents = await self.repository.intents()
             return tuple(row for row in records if not any(affected(intent, row) for intent in intents)
-                         and (row.snapshot.memory_deadline is None or self.admission.require_runtime().clock() < row.snapshot.memory_deadline))
+                         and (row.snapshot.memory_deadline is None or self.admission.require_capabilities().clock() < row.snapshot.memory_deadline))
 
     async def request(self, request: ErasureRequest, *, user_id: str):
         request = ErasureRequest.model_validate(request)
-        runtime = self.admission.require_runtime()
+        runtime = self.admission.require_capabilities()
         if str(UUID(user_id)) != user_id:
             raise PrivacyDenied("privacy_boundary_mismatch")
         saved = self.admission.effective(None, user_id=user_id, scope=request.scope)
@@ -700,7 +700,7 @@ async def _purge_sql(repository, intent):
 
 
 async def _retire_keys(coordinator, intent):
-    runtime = coordinator.admission.require_runtime()
+    runtime = coordinator.admission.require_capabilities()
     repository = coordinator.repository
     async with repository.session() as session:
         selected = {identity for _, identity in await _targets(session, intent.request.request_id, "key")}
@@ -757,7 +757,7 @@ async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):
     expires = time.monotonic() + budget_ms / 1000
     results = []
     async with coordinator.guard():
-        runtime = coordinator.admission.require_runtime()
+        runtime = coordinator.admission.require_capabilities()
         async with coordinator.repository.session() as session:
             # Completed requests must not consume the bounded pending-work
             # window forever. Keep the JSON status portable across backends.

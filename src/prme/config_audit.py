@@ -185,7 +185,8 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_windowed_extraction is true",
         bool,
     ),
-    # The window size does nothing while the flag is off.
+    # The window size does nothing while the flag is off. It also sets how many memories enable_pronoun_repair
+    # shows, which this gate does not report.
     "extraction_window_turns": (
         "enable_windowed_extraction",
         "enable_windowed_extraction is true",
@@ -195,6 +196,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
     "enable_owner_window_extraction": (
         "enable_windowed_extraction",
         "enable_windowed_extraction is true",
+        bool,
+    ),
+    "enable_pronoun_repair": (
+        "enable_pronoun_repair",
+        "enable_pronoun_repair is true",
         bool,
     ),
     "enable_fact_text_resolution": (

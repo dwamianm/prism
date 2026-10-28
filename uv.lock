@@ -2793,7 +2793,7 @@ wheels = [
 
 [[package]]
 name = "prme"
-version = "0.16.0a5"
+version = "0.16.0a8"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -2843,7 +2843,6 @@ postgres = [
     { name = "pgvector" },
 ]
 privacy = [
-    { name = "en-core-web-sm", marker = "python_full_version < '3.15'" },
     { name = "presidio-analyzer", marker = "python_full_version < '3.15'" },
     { name = "spacy", marker = "python_full_version < '3.15'" },
 ]
@@ -2856,6 +2855,7 @@ verification = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "en-core-web-sm", marker = "python_full_version < '3.15'" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -2870,7 +2870,6 @@ requires-dist = [
     { name = "cryptography", specifier = "==50.0.2" },
     { name = "dateparser", specifier = ">=1.2" },
     { name = "duckdb", specifier = ">=1.4.0" },
-    { name = "en-core-web-sm", marker = "python_full_version < '3.15' and extra == 'privacy'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115" },
     { name = "fastembed", specifier = ">=0.7.4" },
     { name = "filelock", specifier = ">=3.16" },
@@ -2904,6 +2903,7 @@ provides-extras = ["local-privacy", "privacy", "postgres", "api", "mcp", "rerank
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "en-core-web-sm", marker = "python_full_version < '3.15'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },

@@ -204,6 +204,7 @@ async def test_AC07_explicitly_allowed_sensitive_memory_remains_usable(tmp_path,
 
 async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, layout, analyzer, native, monkeypatch):
     from prme import MemoryEngine
+    from prme.privacy import PrivacyDenied
     import pytest
     engine, runtime, policy, *_ = await opened(tmp_path, layout, analyzer)
     owner = str(policy.owner_id)
@@ -216,9 +217,10 @@ async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, l
         raise RuntimeError("synthetic stage interruption")
     monkeypatch.setattr(engine._graph_store, "commit_derivation", interrupted)
     try:
-        with pytest.raises(RuntimeError, match="synthetic stage interruption"):
+        # PV-05 publication reports a fixed code, never the interrupted error text.
+        with pytest.raises(PrivacyDenied, match="privacy_processing_unavailable"):
             await store_pair(engine, owner)
-        assert plans and all(item.content == MEMORY for item in plans[0].embeddings)
+        assert len(plans) == 1 and all(item.content == MEMORY for item in plans[0].embeddings)
         repository = engine._privacy.repository
         tables = ["events", "privacy_admissions", "operations", "nodes", "edges", "event_materializations", "event_extractions"]
         tables += ["lexical_documents"] if layout == "postgres" else ["vector_metadata", "vector_payloads", "vector_staging"]
@@ -233,8 +235,9 @@ async def test_CL07_staging_retry_reopen_contains_only_admitted_text(tmp_path, l
         assert response.results and MEMORY in response.bundle.render()
         # Leave one second real accepted plan abandoned before publication.
         monkeypatch.setattr(engine._graph_store, "commit_derivation", interrupted)
-        with pytest.raises(RuntimeError, match="synthetic stage interruption"):
+        with pytest.raises(PrivacyDenied, match="privacy_processing_unavailable"):
             await store_pair(engine, owner)
+        assert len(plans) == 2
         monkeypatch.setattr(engine._graph_store, "commit_derivation", original)
         if layout != "postgres":
             save = engine._vector_index._save_snapshot
@@ -323,10 +326,14 @@ async def test_AC01_AC03_ordinary_final_deadlines(tmp_path, layout, analyzer, na
             if name != "get_provenance":
                 assert len(live) == 2, name
             assert_no_source(live if isinstance(live, list) else live.model_dump_json())
-            # Record the actual public route's last B guard, avoiding a fixed
-            # implementation call count. B is still live at A's boundary.
+            # Broad reads include A and B: expire A during B's final guard.
+            # Exact provenance has only A as a contributor and must not consult
+            # unrelated B; expire A during its own final awaited authorization.
+            guarded_deadline = early if name == "get_provenance" else later
+            if name == "get_provenance":
+                assert all(deadline == early for deadline, _ in trace)
             position = max(i for i, (deadline, effect) in enumerate(trace, 1)
-                           if deadline == later and effect == "disclosure")
+                           if deadline == guarded_deadline and effect == "disclosure")
             for phase in ("entry", "exit"):
                 for moment in (early - timedelta(microseconds=1), early):
                     runtime.clock.now = initial
@@ -370,13 +377,29 @@ async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout,
     await engine._privacy.repository._query("DELETE FROM privacy_admissions WHERE user_id=?", (owner,))
     config = engine._config.model_copy(update={"privacy_policy": None})
     await engine.close()
-    engine = await MemoryEngine.create(config, embedding_provider=runtime.embedder)
+    # A bound protected store refuses to open without its privacy runtime
+    # (#325). The classification checks below run on the runtime-backed open
+    # with no configured policy, where missing enrollment still matters.
+    import pytest
+    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+        await MemoryEngine.create(config, embedding_provider=runtime.embedder)
+    engine = await MemoryEngine.create(config, embedding_provider=runtime.embedder, privacy_runtime=runtime)
     try:
         # A source-bearing historical node with a malformed marker is also
         # protected by the existing metadata classifier, without a valid record.
         orphan = MemoryNode(user_id=owner, node_type=NodeType.NOTE, content=SOURCE,
                             metadata={PRIVACY_KEY: None})
         await engine._graph_store.create_node(orphan)
+        # Exact-object legacy classification must still reject the same
+        # marked identities when their admission row is missing or malformed.
+        import pytest
+        for call in (
+            lambda: engine.get_event(identifier, user_id=owner),
+            lambda: engine.get_event_nodes(identifier, user_id=owner),
+            lambda: engine.get_node(str(orphan.id), user_id=owner),
+        ):
+            with pytest.raises(PrivacyDenied):
+                await call()
         legacy_owner = str(uuid4())
         legacy_event = await engine.store(MEMORY, user_id=legacy_owner)
         legacy_id = str((await engine.get_event_nodes(legacy_event, user_id=legacy_owner))[0].id)

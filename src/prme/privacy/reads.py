@@ -50,11 +50,19 @@ class ReadContext:
     used_node_ids: set[UUID] = field(default_factory=set)
 
     @classmethod
-    async def create(cls, coordinator, *, user_id: str, scopes=None, source_access=None):
+    async def create(cls, coordinator, *, user_id: str, scopes=None, source_access=None, records=None):
+        """Use resolved exact-object contributors, or classify the full range.
+
+        Supplied records come from the authoritative identity resolver. Projection
+        adds any further contributing records before the final disclosure fence.
+        """
         scopes = tuple(Scope(value) for value in scopes) if scopes else None
-        rows = await coordinator.owner_records(user_id, scopes)
+        rows = await coordinator.owner_records(user_id, scopes) if records is None else tuple(records)
+        if any(str(row.snapshot.policy.owner_id) != user_id
+               or (scopes is not None and row.snapshot.policy.scope not in scopes) for row in rows):
+            raise PrivacyDenied("privacy_boundary_mismatch")
         protected = bool(rows or coordinator.selected())
-        if not protected:
+        if not protected and records is None:
             for scope in scopes or (None,):
                 await coordinator.repository.require_legacy_range(user_id, scope.value if scope else None)
         if protected:
@@ -498,7 +506,17 @@ async def inspect_source(coordinator, event_id: str, *, user_id: str, scope: Sco
     row = await coordinator.repository.get(event_id, user_id=user_id)
     if row is None or (scope is not None and row.snapshot.policy.scope != Scope(scope)):
         return SourceUnavailable()
-    context = await ReadContext.create(coordinator, user_id=user_id, scopes=[scope] if scope else None)
+    scopes = [scope] if scope else None
+    try:
+        context = await ReadContext.create(coordinator, user_id=user_id, scopes=scopes, records=(row,))
+    except PrivacyDenied as exc:
+        if exc.code != "privacy_erased":
+            raise
+        # The exact-record disclosure check already denies an erased source.
+        # Inspection reports that state from the owner-bound context instead,
+        # in the source's own scope so a non-personal default still resolves.
+        context = await ReadContext.create(coordinator, user_id=user_id,
+                                           scopes=scopes or [row.snapshot.policy.scope])
     async with context.guard():
         available = context.availability(row)
         try:
@@ -568,11 +586,16 @@ async def project_public_result(coordinator, method: str, result, arguments: dic
     """Final closed projections for the ordinary public response siblings."""
     owner = arguments.get("user_id") or arguments.get("kwargs", {}).get("user_id")
     if not records and not coordinator.selected():
-        await coordinator.repository.require_legacy_range(owner, None)
+        await coordinator.require_legacy_call(owner, arguments)
+        if method == "get_event_nodes":
+            await coordinator.require_legacy_inputs(nodes=result)
         return result
     if not owner:
         raise PrivacyDenied("privacy_boundary_mismatch")
-    context = await ReadContext.create(coordinator, user_id=owner)
+    context = await ReadContext.create(
+        coordinator, user_id=owner,
+        records=records if coordinator._call_identifiers(arguments) else None,
+    )
     context.records.update((record.event_id, record) for record in records)
     projected = await _project_public_result(context, method, result, arguments, records)
     return await context.disclose(projected)

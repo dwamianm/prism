@@ -81,7 +81,10 @@ memory when the pack opens. `prme migrate` copies a directory pack into a new
 `.prme` file, and [single-file packs](docs/INTEGRATION.md#single-file-packs)
 covers encryption, compaction and how retrieval compares across the layouts.
 
-Search indexes can be regenerated from the durable graph with `prme rebuild`.
+Search indexes can be regenerated from the durable graph with `prme rebuild`. A store can move to another embedding
+model without losing its memories: `enable_multi_model_embeddings` (off by default) keeps vectors by model, and
+`prme reembed` builds the new model's vectors in the background before you switch (see
+[switching embedding models](docs/EMBEDDING-MODELS.md)).
 Event time, ingestion time, and validity time remain distinct. The `knowledge_at`
 filter applies an ingestion cutoff to current graph/index state; exact historical
 state replay is not currently available.
