@@ -377,7 +377,13 @@ async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout,
     await engine._privacy.repository._query("DELETE FROM privacy_admissions WHERE user_id=?", (owner,))
     config = engine._config.model_copy(update={"privacy_policy": None})
     await engine.close()
-    engine = await MemoryEngine.create(config, embedding_provider=runtime.embedder)
+    # A bound protected store refuses to open without its privacy runtime
+    # (#325). The classification checks below run on the runtime-backed open
+    # with no configured policy, where missing enrollment still matters.
+    import pytest
+    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+        await MemoryEngine.create(config, embedding_provider=runtime.embedder)
+    engine = await MemoryEngine.create(config, embedding_provider=runtime.embedder, privacy_runtime=runtime)
     try:
         # A source-bearing historical node with a malformed marker is also
         # protected by the existing metadata classifier, without a valid record.
