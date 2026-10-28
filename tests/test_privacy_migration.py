@@ -184,7 +184,7 @@ async def mixed_legacy_family(engine, runtime, owner, *, source_contents=None):
     from prme.models.consolidation import ConsolidationPublication, consolidation_key, consolidation_request_hash
     from prme.storage.derivation_staging import DuckDBStageFence
     from prme.organizer.consolidation import _stage_consolidation
-    from prme.storage.pg.graph_store import PgGraphStore, _NODE_COLUMNS
+    from prme.storage.graph_rows import NODE_COLUMNS as _NODE_COLUMNS, record_to_node
     from prme.types import NodeType, EpistemicType, SourceType, EdgeType, Scope
     stamp = datetime.fromisoformat(FIXTURE["clock"])
     scope = Scope.PERSONAL
@@ -201,7 +201,7 @@ async def mixed_legacy_family(engine, runtime, owner, *, source_contents=None):
     event_id = await engine.store(source_contents[0],
         retrieval_content=FIXTURE["admitted"][0], user_id=owner, event_time=stamp)
     async with engine._privacy.erasure.repository.session() as session:
-        direct = PgGraphStore._record_to_node((await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))[0])
+        direct = record_to_node((await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))[0])
     event = Event(role="user", content=source_contents[1],
         user_id=owner, scope=scope, timestamp=stamp, created_at=stamp, event_time=stamp)
     await engine._event_store.append(event)
@@ -302,7 +302,7 @@ async def mixed_legacy_family(engine, runtime, owner, *, source_contents=None):
     survivor_event = await engine.store(source_contents[2],
         retrieval_content=FIXTURE["admitted"][2], user_id=owner, event_time=stamp)
     async with engine._privacy.erasure.repository.session() as session:
-        survivor = next(node for node in map(PgGraphStore._record_to_node, await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))
+        survivor = next(node for node in map(record_to_node, await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))
             if UUID(survivor_event) in node.evidence_refs)
     return direct, fact, entity, generated, visual, survivor
 
@@ -727,7 +727,7 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
     from prme.storage.privacy_export import validate_export
     from prme.privacy.portability import ProtectedExport
     from prme.privacy.journals import JOURNAL_KEY, GeneratedNodeReference
-    from prme.storage.pg.graph_store import PgGraphStore, _NODE_COLUMNS
+    from prme.storage.graph_rows import NODE_COLUMNS as _NODE_COLUMNS, record_to_node
     template, runtime, policy, custody, *_ = await journal_engine(tmp_path / "template", "directory", analyzer)
     base = template._config
     await template.close()
@@ -826,7 +826,7 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
                         current["context"].splitlines(True), fromfile="legacy", tofile="sealed")),
                 }
             (tmp_path / "public-retrieval-differences.json").write_text(json.dumps(observations, indent=2) + "\n")
-            closed_source_nodes = {str(node.id): node for node in map(PgGraphStore._record_to_node, before.tables["nodes"])}
+            closed_source_nodes = {str(node.id): node for node in map(record_to_node, before.tables["nodes"])}
             for query, required in zip(FIXTURE["queries"], (direct, fact, survivor), strict=True):
                 prior, current = before_retrieval[query], after_retrieval[query]
                 assert set(current["result_ids"]) == set(prior["result_ids"])
@@ -864,7 +864,7 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
         assert result.state == "complete"
         async with MemoryEngine.open(target, privacy_runtime=runtime, embedding_provider=runtime.embedder) as restored:
             async with restored._privacy.erasure.repository.session() as session:
-                surviving = {node.id: node for node in map(PgGraphStore._record_to_node, await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))}
+                surviving = {node.id: node for node in map(record_to_node, await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))}
             assert generated[0][0].id not in surviving and current_profile not in surviving
             assert not {fact.id, entity.id, direct.id, generated[-1][0].id}.intersection(surviving)
             assert set(surviving) == {survivor.id} and surviving[survivor.id].content == FIXTURE["admitted"][2]

@@ -330,7 +330,7 @@ def validate_export(bundle: ProtectedExport) -> ProtectedExport:
 
 
 async def _capture(engine, mode, *, _migration_id=None):
-    from prme.storage.pg.graph_store import PgGraphStore, _NODE_COLUMNS, _EDGE_COLUMNS
+    from prme.storage.graph_rows import EDGE_COLUMNS, NODE_COLUMNS, record_to_edge, record_to_node
     from prme.storage.extraction_work import ExtractionWorkRepository
     source = engine._privacy.repository
     repository = ExtractionWorkRepository(conn=source.conn, pool=source.pool, conn_lock=source.lock)
@@ -347,8 +347,8 @@ async def _capture(engine, mode, *, _migration_id=None):
             descriptor = descriptor.model_copy(update={"state": "complete"})
         checkpoint = (await engine._privacy.erasure.repository.state(session))[1]
         records = tuple(PrivacyRecord.model_validate_json(row["body"]) for row in await rows("SELECT body FROM privacy_admissions ORDER BY event_id"))
-        nodes = tuple(PgGraphStore._record_to_node(row) for row in await rows(f"SELECT {_NODE_COLUMNS} FROM nodes ORDER BY id"))
-        edges = tuple(PgGraphStore._record_to_edge(row) for row in await rows(f"SELECT {_EDGE_COLUMNS} FROM edges ORDER BY id"))
+        nodes = tuple(record_to_node(row) for row in await rows(f"SELECT {NODE_COLUMNS} FROM nodes ORDER BY id"))
+        edges = tuple(record_to_edge(row) for row in await rows(f"SELECT {EDGE_COLUMNS} FROM edges ORDER BY id"))
         events, operations, work, embeddings = (), (), [], []
         alias_relationships_omitted = False
         if mode == "protected":
@@ -494,7 +494,7 @@ def read_protected_export(path) -> ProtectedExport:
 async def _load_export(repository, bundle, *, _cursor=None):
     """Insert only the closed snapshot columns, before any recovery consumer."""
     from enum import Enum
-    from prme.storage.pg.graph_store import _NODE_COLUMNS, _EDGE_COLUMNS
+    from prme.storage.graph_rows import EDGE_COLUMNS as _EDGE_COLUMNS, NODE_COLUMNS as _NODE_COLUMNS
     from prme.storage.privacy import _values
     records = {record.event_id: record for record in bundle.admissions}
     async with repository.session(transaction=True) as session:

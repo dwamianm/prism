@@ -372,7 +372,7 @@ def _decode_legacy_objects(source, *, remove_event_ids, remove_node_ids, unavail
     from prme.models.direct_store import DirectStoreRecord
     from prme.models.extraction import ExtractionRecord
     from prme.storage.derivation_registry import decode_plan
-    from prme.storage.pg.graph_store import PgGraphStore
+    from prme.storage.graph_rows import record_to_node
     if source.tables.get("privacy_admissions"):
         raise PrivacyPortabilityError("privacy_legacy_unclassified")
     if source.tables.get("operations") and not unavailable_history:
@@ -428,7 +428,7 @@ def _decode_legacy_objects(source, *, remove_event_ids, remove_node_ids, unavail
             if plan.schema_version != 1 or plan.privacy_manifest is not None:
                 raise PrivacyPortabilityError("privacy_legacy_unclassified")
             generated[plan.node.id] = (kind, plan)
-    nodes = {node.id: node for node in map(PgGraphStore._record_to_node, source.tables["nodes"])}
+    nodes = {node.id: node for node in map(record_to_node, source.tables["nodes"])}
     if not set(remove_node_ids) <= nodes.keys():
         raise PrivacyPortabilityError("privacy_legacy_unclassified")
     by_event = {identifier: [] for identifier in events}
@@ -643,7 +643,7 @@ async def _generated_nodes(engine, generated, vectors, *, removed_nodes, allow_r
     from prme.models.derivation import PreparedEmbedding
     from prme.privacy.journals import admit_generated_node
     from prme.privacy.portability import ProtectedExport, ProtectedExportManifest, ProtectedStoreFormat
-    from prme.storage.pg.graph_store import PgGraphStore, _NODE_COLUMNS
+    from prme.storage.graph_rows import NODE_COLUMNS as _NODE_COLUMNS, record_to_node
     from prme.storage.privacy_export import _load_export, _node
     coordinator = engine._privacy
     runtime = coordinator.require_runtime()
@@ -653,7 +653,7 @@ async def _generated_nodes(engine, generated, vectors, *, removed_nodes, allow_r
         # Read the actual committed batches on every resume; never regenerate
         # an already persisted generated node or its stored numerical vector.
         async with coordinator.erasure.repository.session() as session:
-            known = {node.id: node for node in map(PgGraphStore._record_to_node,
+            known = {node.id: node for node in map(record_to_node,
                 await session.fetch(f"SELECT {_NODE_COLUMNS} FROM nodes"))}
         records = {record.event_id: record for record in await coordinator.erasure.current_records(
             await coordinator.repository._read("1=1", ()))}
@@ -942,13 +942,13 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
         await _generated_nodes(engine, generated, vectors,
             removed_nodes=all_source_nodes - existing_nodes - generated.keys(),
             allow_reembedding=allow_reembedding, fault=_fault)
-        from prme.storage.pg.graph_store import PgGraphStore, _EDGE_COLUMNS
+        from prme.storage.graph_rows import EDGE_COLUMNS as _EDGE_COLUMNS, record_to_edge
         from prme.ingestion.admitted_statements import project_admitted_edge
         remaining_nodes = {UUID(str(row[0])) for row in conn.execute("SELECT id FROM nodes").fetchall()}
         remaining_events = {UUID(str(row[0])) for row in conn.execute("SELECT event_id FROM privacy_admissions").fetchall()}
         edges = []
         for row in source.tables["edges"]:
-            edge = PgGraphStore._record_to_edge(row)
+            edge = record_to_edge(row)
             if edge.source_id not in remaining_nodes or edge.target_id not in remaining_nodes or (edge.provenance_event_id is not None and edge.provenance_event_id not in remaining_events):
                 continue  # Explicit removal or the real current erasure fence.
             edges.append(project_admitted_edge(edge))
