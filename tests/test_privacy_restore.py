@@ -31,7 +31,7 @@ from tests.privacy_journal_support import (
     LAYOUTS, journal_engine, isolated_privacy_postgres, local_analyzer_fixture,  # noqa: F401
 )
 from tests.privacy_journal_support import native as native_fixture  # noqa: F401
-from tests.privacy_portability_support import fresh_config
+from tests.privacy_portability_support import fresh_config, restore_database_url
 
 
 def _local_target(config, path, *, single=False):
@@ -55,10 +55,14 @@ def _hashes(path):
             for file in files if file.is_file()}
 
 
-def _pg_environment(url, database):
+def _database(url):
+    return urlsplit(url).path.lstrip("/")
+
+
+def _pg_environment(url):
     parts = urlsplit(url)
-    assert parts.hostname == "127.0.0.1" and parts.port == 55432
-    assert parts.path == "/" + database
+    assert parts.hostname in {"127.0.0.1", "localhost", "::1"} and _database(url)
+    database = _database(url)
     # Native tools receive credentials only through their environment, never
     # command arguments or captured output. Ignore ambient connection options.
     env = {key: value for key, value in os.environ.items() if not key.startswith("PG")}
@@ -75,8 +79,8 @@ async def _pg_tool(command, env):
 @asynccontextmanager
 async def _postgres_target(config):
     import asyncpg
-    url = os.environ["PRME_TEST_RESTORE_DATABASE_URL"]
-    _pg_environment(url, "privacy_engine_326_restore")
+    url = await restore_database_url()
+    _pg_environment(url)
     admin = await asyncpg.connect(url)
     schema = "pv326_restore_" + uuid4().hex
     try:
@@ -118,9 +122,9 @@ async def _native_snapshot(config, tmp_path, layout):
     source_url = config.database_url.get_secret_value()
     schema = dict(parse_qsl(urlsplit(source_url).query))["search_path"]
     assert re.fullmatch(r"privacy_component_[0-9a-f]{32}", schema)
-    restore_url = os.environ["PRME_TEST_RESTORE_DATABASE_URL"]
-    source_env = _pg_environment(source_url, "privacy_engine_326")
-    restore_env = _pg_environment(restore_url, "privacy_engine_326_restore")
+    restore_url = await restore_database_url()
+    source_env = _pg_environment(source_url)
+    restore_env = _pg_environment(restore_url)
     admin = await asyncpg.connect(restore_url)
     try:
         assert not await admin.fetchval("SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=$1)", schema)
@@ -130,7 +134,7 @@ async def _native_snapshot(config, tmp_path, layout):
         os.close(fd)
         await _pg_tool(["pg_dump", "--no-owner", "--no-acl", "--format=custom", "--schema", schema, "--file", str(backup)], source_env)
         before = _hashes(backup)
-        await _pg_tool(["pg_restore", "--exit-on-error", "--no-owner", "--no-acl", "--dbname", "privacy_engine_326_restore", str(backup)], restore_env)
+        await _pg_tool(["pg_restore", "--exit-on-error", "--no-owner", "--no-acl", "--dbname", _database(restore_url), str(backup)], restore_env)
         target = type(config).model_validate({**config.model_dump(), "database_url": _schema_url(restore_url, schema)})
         print(f"Native schema archive: {schema}, {backup.stat().st_size} bytes, sha256={next(iter(before.values()))}")
         yield target, backup, before
@@ -355,7 +359,7 @@ async def test_ER08_archive_clear_retained_copies(tmp_path, layout, analyzer, na
             schema = dict(parse_qsl(urlsplit(url).query))["search_path"]
             assert re.fullmatch(r"pv326_[0-9a-f]{32}", schema)
             await _pg_tool(["pg_dump", "--no-owner", "--no-acl", "--inserts", "--schema", schema,
-                "--file", str(backup)], _pg_environment(url, "privacy_engine_326_restore"))
+                "--file", str(backup)], _pg_environment(url))
             native_rows = backup.read_bytes()
             assert all(identifier.encode() in native_rows for identifier in expected)
             assert all(content.encode() in native_rows for content in expected.values())
@@ -804,9 +808,9 @@ async def test_bound_postgres_restore_current_catalog_and_recovery_lease(tmp_pat
     template, runtime, policy, custody, evidence, _ = await journal_engine(tmp_path / "template", "directory", analyzer)
     base = template._config
     await template.close()
-    primary_url, quarantine_url = os.environ["PRME_TEST_DATABASE_URL"], os.environ["PRME_TEST_RESTORE_DATABASE_URL"]
-    primary_env = _pg_environment(primary_url, "privacy_engine_326")
-    quarantine_env = _pg_environment(quarantine_url, "privacy_engine_326_restore")
+    primary_url, quarantine_url = os.environ["PRME_TEST_DATABASE_URL"], await restore_database_url()
+    primary_env = _pg_environment(primary_url)
+    quarantine_env = _pg_environment(quarantine_url)
     primary = await asyncpg.connect(primary_url)
     quarantine = await asyncpg.connect(quarantine_url)
     control_pool = await asyncpg.create_pool(primary_url, min_size=1, max_size=3)
@@ -856,7 +860,7 @@ async def test_bound_postgres_restore_current_catalog_and_recovery_lease(tmp_pat
             # A quarantine fixture registry binds the saved UUID. No public
             # authorization/control table is copied from the archive.
             await quarantine.execute("INSERT INTO prme_workspace.namespaces(workspace,name,id,initialized) VALUES($1,'A',$2,true)", workspace_name, namespace_id)
-        await _pg_tool(["pg_restore", "--exit-on-error", "--no-owner", "--no-acl", "--dbname", "privacy_engine_326_restore", str(archive)], quarantine_env)
+        await _pg_tool(["pg_restore", "--exit-on-error", "--no-owner", "--no-acl", "--dbname", _database(quarantine_url), str(archive)], quarantine_env)
         artifact = tmp_path / "quarantined-namespace.json"
         async with opened(quarantine_config, initialize=False) as workspace:
             async with workspace.namespace("A", create=False) as memory:

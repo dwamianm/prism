@@ -5,6 +5,37 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from uuid import uuid4
 
 
+_LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+
+
+async def restore_database_url() -> str:
+    """The second test database that restore targets use.
+
+    PRME_TEST_RESTORE_DATABASE_URL when it is set. Otherwise the test
+    database's name plus ``_restore`` on the same loopback server, created on
+    first use, because CI provides one database. Both must be loopback.
+    """
+    import asyncpg
+    configured = os.environ.get("PRME_TEST_RESTORE_DATABASE_URL")
+    if configured:
+        assert urlsplit(configured).hostname in _LOOPBACK
+        return configured
+    parts = urlsplit(os.environ["PRME_TEST_DATABASE_URL"])
+    assert parts.hostname in _LOOPBACK
+    plain = parts._replace(query=urlencode([(k, v) for k, v in parse_qsl(parts.query) if k != "search_path"]))
+    name = plain.path.lstrip("/") + "_restore"
+    admin = await asyncpg.connect(urlunsplit(plain))
+    try:
+        if not await admin.fetchval("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname=$1)", name):
+            try:
+                await admin.execute(f'CREATE DATABASE "{name}"')
+            except asyncpg.DuplicateDatabaseError:
+                pass
+    finally:
+        await admin.close()
+    return urlunsplit(plain._replace(path="/" + name))
+
+
 class HeldLocalLedger:
     """Test adapter: actual independent SQLite ledger, same-task nested lease.
 
@@ -142,10 +173,9 @@ async def fresh_config(base, path, layout, *, restore=False):
             "lexical_path": str(path / "lexical_index"), "encryption_enabled": False, "encryption_key": None})
         return
     import asyncpg
-    url = os.environ["PRME_TEST_RESTORE_DATABASE_URL" if restore else "PRME_TEST_DATABASE_URL"]
+    url = await restore_database_url() if restore else os.environ["PRME_TEST_DATABASE_URL"]
     parts = urlsplit(url)
-    assert parts.hostname in {"127.0.0.1", "localhost"} and parts.port == 55432
-    assert parts.path in {"/privacy_engine_326", "/privacy_engine_326_restore"}
+    assert parts.hostname in _LOOPBACK and parts.path.strip("/")
     admin = await asyncpg.connect(url)
     schema = "pv326_" + uuid4().hex
     try:
