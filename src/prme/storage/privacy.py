@@ -364,7 +364,7 @@ def consume_duck(conn, event_id: str) -> None:
     if row is not None:
         record = PrivacyRecord.model_validate_json(row[0])
         if record.processing is not None:
-            record = record.model_copy(update={"processing": None, "processing_state": "complete"})
+            record = record.model_copy(update={"processing": None, "processing_state": "complete", "processing_attempt": 0})
             conn.execute("UPDATE privacy_admissions SET body=? WHERE event_id=?", [record.model_dump_json(), event_id])
 
 
@@ -373,5 +373,5 @@ async def consume_pg(conn, event_id: str) -> None:
     if row is not None:
         record = PrivacyRecord.model_validate_json(row[0])
         if record.processing is not None:
-            record = record.model_copy(update={"processing": None, "processing_state": "complete"})
+            record = record.model_copy(update={"processing": None, "processing_state": "complete", "processing_attempt": 0})
             await conn.execute("UPDATE privacy_admissions SET body=$1 WHERE event_id=$2", record.model_dump_json(), event_id)

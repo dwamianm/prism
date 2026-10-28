@@ -13,12 +13,20 @@ from uuid import UUID, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from prme.privacy.journals import compatible_admitted_pair
 from prme.models.derivation import canonical_hash, node_checksum
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.organizer.merge_policy import alias_pair_allowed
 from prme.storage import _snapshot_json
 from prme.storage._threading import run_to_completion
+from prme.privacy.journals import (
+    JournalManifest,
+    scoped_manifest,
+    project_manifest_node,
+    protected_mutation,
+    journal_deadline,
+)
 from prme.types import EdgeType, LifecycleState, NodeType
 
 if TYPE_CHECKING:
@@ -28,9 +36,7 @@ if TYPE_CHECKING:
 
 AliasType = Literal["abbreviation", "case_variation", "semantic"]
 _ACTIVE = (LifecycleState.TENTATIVE, LifecycleState.STABLE)
-_POLICY: Literal["unverified_alias_proposals_v1"] = (
-    "unverified_alias_proposals_v1"
-)
+_POLICY: Literal["unverified_alias_proposals_v1"] = "unverified_alias_proposals_v1"
 _EVIDENCE_POLICY: Literal["unverified_alias_proposals_v2"] = (
     "unverified_alias_proposals_v2"
 )
@@ -108,10 +114,9 @@ class AliasProposalEvidence(BaseModel):
             ) from exc
         if len(set(node_ids)) != 2:
             raise ValueError("Alias proposal evidence requires two distinct nodes")
-        if (
-            canonical_hash(products[0]) != assessment.get("left_sha256")
-            or canonical_hash(products[1]) != assessment.get("right_sha256")
-        ):
+        if canonical_hash(products[0]) != assessment.get(
+            "left_sha256"
+        ) or canonical_hash(products[1]) != assessment.get("right_sha256"):
             raise ValueError("Alias proposal product hashes do not match")
         expected_request = canonical_hash(
             {
@@ -145,8 +150,7 @@ class AliasProposalEvidence(BaseModel):
 
 def _evidence_node_ids(evidence: AliasProposalEvidence) -> list[str]:
     return sorted(
-        str(UUID(binding["node_id"]))
-        for binding in evidence.payload["node_bindings"]
+        str(UUID(binding["node_id"])) for binding in evidence.payload["node_bindings"]
     )
 
 
@@ -179,7 +183,58 @@ class AliasProposalRecordV2(BaseModel):
     edge: MemoryEdge
 
 
-AliasProposalJournalRecord = AliasProposalRecord | AliasProposalRecordV2
+class ProtectedAliasAssessment(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+    kind: Literal["admitted_alias_assessment"] = "admitted_alias_assessment"
+    score: float = Field(ge=0, le=2)
+    confidence: float = Field(ge=0, le=1)
+    same_name_probability: float = Field(ge=0, le=1)
+    same_manufacturer_probability: float = Field(ge=0, le=1)
+    compatible_price_probability: float = Field(ge=0, le=1)
+
+
+def _protected_assessment(evidence):
+    if evidence is None:
+        return None
+    values = evidence.payload["assessment"]
+    return ProtectedAliasAssessment.model_validate(
+        {
+            key: values[key]
+            for key in (
+                "score",
+                "confidence",
+                "same_name_probability",
+                "same_manufacturer_probability",
+                "compatible_price_probability",
+            )
+        }
+    )
+
+
+class ProtectedAliasProposalRecord(AliasProposalRecord):
+    version: Literal[3] = 3
+    policy: Literal["protected_alias_proposal_v1"] = "protected_alias_proposal_v1"
+    manifest: JournalManifest
+    assessment: ProtectedAliasAssessment | None = None
+    diagnostics: Literal["not_retained"] = "not_retained"
+
+    @model_validator(mode="after")
+    def closed_nodes(self):
+        if self.manifest.journal_id != self.operation_id or set(
+            self.manifest.admitted_node_ids
+        ) != {self.left_before.id, self.right_before.id}:
+            raise ValueError("Protected alias dependency identity mismatch")
+        for node in (self.left_before, self.right_before):
+            if node_checksum(
+                project_manifest_node(node, self.manifest)
+            ) != node_checksum(node):
+                raise ValueError("Protected alias node is not admitted")
+        return self
+
+
+AliasProposalJournalRecord = (
+    AliasProposalRecord | AliasProposalRecordV2 | ProtectedAliasProposalRecord
+)
 
 
 @dataclass(frozen=True)
@@ -202,9 +257,7 @@ def _request(
     alias_type: str,
     score: float,
     evidence: AliasProposalEvidence | dict[str, Any] | None = None,
-) -> tuple[
-    list[str], UUID, str, AliasType, float, AliasProposalEvidence | None
-]:
+) -> tuple[list[str], UUID, str, AliasType, float, AliasProposalEvidence | None]:
     if not isinstance(user_id, str) or not user_id.strip():
         raise ValueError("Alias proposal requires an owner")
     if alias_type not in {"abbreviation", "case_variation", "semantic"}:
@@ -218,9 +271,7 @@ def _request(
     ids = sorted((str(UUID(a)), str(UUID(b))))
     if ids[0] == ids[1]:
         raise ValueError("Alias proposal requires two distinct nodes")
-    operation_id = uuid5(
-        UUID(ids[0]), f"prme:unverified-alias-proposal:v1:{ids[1]}"
-    )
+    operation_id = uuid5(UUID(ids[0]), f"prme:unverified-alias-proposal:v1:{ids[1]}")
     frozen_evidence = (
         None
         if evidence is None
@@ -270,6 +321,8 @@ def read_record(payload: str | dict[str, Any]) -> AliasProposalJournalRecord:
             )
         elif version == 2:
             record = AliasProposalRecordV2.model_validate(decoded)
+        elif version == 3:
+            record = ProtectedAliasProposalRecord.model_validate(decoded)
         else:
             raise ValueError("Unsupported alias proposal journal version")
     except (AttributeError, KeyError, TypeError) as exc:
@@ -286,6 +339,12 @@ def read_record(payload: str | dict[str, Any]) -> AliasProposalJournalRecord:
         "identity_verified": False,
         "alias_operation_id": str(record.operation_id),
     }
+    if isinstance(record, ProtectedAliasProposalRecord):
+        expected_metadata = {
+            "relation": "alias",
+            "identity_verified": False,
+            "proposal_operation_id": str(record.operation_id),
+        }
     if isinstance(record, AliasProposalRecordV2):
         expected_metadata["proposal_evidence"] = _evidence_metadata(record.evidence)
     if (
@@ -350,6 +409,10 @@ def _replayed(
         raise AliasProposalConflict(
             "Alias proposal identity is already used with different inputs"
         )
+    if isinstance(record, ProtectedAliasProposalRecord):
+        if _protected_assessment(evidence) != record.assessment:
+            raise AliasProposalConflict("Protected alias assessment changed")
+        return AliasProposalResult(str(record.operation_id), str(record.edge.id), False)
     if evidence is not None:
         if not isinstance(record, AliasProposalRecordV2):
             raise AliasProposalConflict(
@@ -407,7 +470,7 @@ def _prepare(
         or right.user_id != user_id
         or left.lifecycle_state not in _ACTIVE
         or right.lifecycle_state not in _ACTIVE
-        or not alias_pair_allowed(left, right)
+        or not compatible_admitted_pair(alias_pair_allowed, left, right)
     ):
         return None
     if evidence is not None and (
@@ -454,6 +517,26 @@ def _prepare(
         metadata=metadata,
         created_at=now,
     )
+    manifest = scoped_manifest((left, right), operation_id)
+    if manifest is not None:
+        return ProtectedAliasProposalRecord(
+            operation_id=operation_id,
+            alias_type=alias_type,
+            score=score,
+            manifest=manifest,
+            left_before=project_manifest_node(left, manifest),
+            right_before=project_manifest_node(right, manifest),
+            assessment=_protected_assessment(evidence),
+            edge=edge.model_copy(
+                update={
+                    "metadata": {
+                        "relation": "alias",
+                        "identity_verified": False,
+                        "proposal_operation_id": str(operation_id),
+                    }
+                }
+            ),
+        )
     if evidence is None:
         return AliasProposalRecord(
             operation_id=operation_id,
@@ -476,8 +559,10 @@ def _prepare(
 
 def _checkpoint(stage: str) -> None:
     """Native transaction fault-injection boundary; no external work."""
+    journal_deadline()
 
 
+@protected_mutation
 async def propose_duckdb(
     store: "DuckPGQGraphStore",
     a: str,
@@ -522,9 +607,7 @@ def _propose_duckdb(
         present_nodes = {
             node_id: node for node_id, node in nodes.items() if node is not None
         }
-        edges = store._get_edges_sync(
-            None, None, ids, EdgeType.RELATES_TO, None, None
-        )
+        edges = store._get_edges_sync(None, None, ids, EdgeType.RELATES_TO, None, None)
         prepared = _prepare(
             present_nodes,
             edges,
@@ -560,15 +643,14 @@ def _propose_duckdb(
             str(prepared.operation_id),
             str(prepared.edge.id),
             True,
-            prepared.evidence
-            if isinstance(prepared, AliasProposalRecordV2)
-            else None,
+            prepared.evidence if isinstance(prepared, AliasProposalRecordV2) else None,
         )
     except BaseException:
         conn.execute("ROLLBACK")
         raise
 
 
+@protected_mutation
 async def propose_postgres(
     store: "PgGraphStore",
     a: str,
@@ -651,7 +733,5 @@ async def propose_postgres(
             str(prepared.operation_id),
             str(prepared.edge.id),
             True,
-            prepared.evidence
-            if isinstance(prepared, AliasProposalRecordV2)
-            else None,
+            prepared.evidence if isinstance(prepared, AliasProposalRecordV2) else None,
         )

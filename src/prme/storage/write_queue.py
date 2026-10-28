@@ -19,7 +19,10 @@ import structlog
 
 from prme.ingestion.errors import extraction_failure_code
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = structlog.get_logger(__name__)
+logger = ScopedLogger(logger)
 
 
 @dataclass
@@ -35,6 +38,7 @@ class WriteJob:
     coro_factory: Callable[[], Coroutine[Any, Any, Any]]
     future: asyncio.Future[Any]
     label: str = field(default="")
+    diagnostics_protected: bool = False
 
 
 class WriteQueue:
@@ -50,9 +54,7 @@ class WriteQueue:
     """
 
     def __init__(self, maxsize: int = 1000) -> None:
-        self._queue: asyncio.Queue[WriteJob | None] = asyncio.Queue(
-            maxsize=maxsize
-        )
+        self._queue: asyncio.Queue[WriteJob | None] = asyncio.Queue(maxsize=maxsize)
         self._consumer_task: asyncio.Task[None] | None = None
         self._running = False
 
@@ -102,10 +104,17 @@ class WriteQueue:
             Exception: Any exception raised by the coroutine is propagated
                 to the caller via the Future.
         """
+        from prme.privacy.diagnostics import diagnostics_protected
+
         loop = asyncio.get_running_loop()
         future: asyncio.Future[Any] = loop.create_future()
         await self._queue.put(
-            WriteJob(coro_factory=coro_factory, future=future, label=label)
+            WriteJob(
+                coro_factory=coro_factory,
+                future=future,
+                label=label,
+                diagnostics_protected=diagnostics_protected(),
+            )
         )
         return await future
 
@@ -116,20 +125,23 @@ class WriteQueue:
             if job is None:
                 self._queue.task_done()
                 break
-            try:
-                result = await job.coro_factory()
-                if not job.future.done():
-                    job.future.set_result(result)
-            except Exception as exc:
-                logger.error(
-                    "write_queue.job_failed",
-                    label=job.label,
-                    error_type=extraction_failure_code(exc),
-                )
-                if not job.future.done():
-                    job.future.set_exception(exc)
-            finally:
-                self._queue.task_done()
+            from prme.privacy.diagnostics import protected_diagnostics
+
+            with protected_diagnostics(job.diagnostics_protected):
+                try:
+                    result = await job.coro_factory()
+                    if not job.future.done():
+                        job.future.set_result(result)
+                except Exception as exc:
+                    logger.error(
+                        "write_queue.job_failed",
+                        label=job.label,
+                        error_type=extraction_failure_code(exc),
+                    )
+                    if not job.future.done():
+                        job.future.set_exception(exc)
+                finally:
+                    self._queue.task_done()
 
     @property
     def pending(self) -> int:
@@ -233,9 +245,7 @@ class WriteTracker:
                     label=f"rollback.edge:{edge_id}",
                 )
             except Exception:
-                logger.warning(
-                    "rollback.edge_failed", edge_id=edge_id, exc_info=True
-                )
+                logger.warning("rollback.edge_failed", edge_id=edge_id, exc_info=True)
 
         for node_id in reversed(self._created_node_ids):
             try:
@@ -244,9 +254,7 @@ class WriteTracker:
                     label=f"rollback.node:{node_id}",
                 )
             except Exception:
-                logger.warning(
-                    "rollback.node_failed", node_id=node_id, exc_info=True
-                )
+                logger.warning("rollback.node_failed", node_id=node_id, exc_info=True)
 
             # Evict the node's search-index entries so they are not orphaned.
             if vector_index is not None:

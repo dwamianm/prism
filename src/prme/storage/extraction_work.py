@@ -46,6 +46,8 @@ def duck_claim_row(conn, event_id: str):
 def validate_duck_claim(conn, event_id, user_id, claim, *, plan_id=None):
     row = duck_claim_row(conn, event_id)
     now = datetime.now(timezone.utc)
+    from prme.storage.privacy_journals import validate_duck_processing
+    validate_duck_processing(conn, event_id, row, claim, now)
     validate_claim(row, event_id, user_id, claim, now, plan_id=plan_id)
     if row is not None:
         # A read alone cannot fence another DuckDB connection's MVCC update.
@@ -61,6 +63,8 @@ async def validate_pg_claim(conn, event_id, user_id, claim, *, plan_id=None):
         "WHERE event_id = $1 FOR UPDATE", event_id,
     )
     now = await conn.fetchval("SELECT clock_timestamp()")
+    from prme.storage.privacy_journals import validate_pg_processing
+    await validate_pg_processing(conn, event_id, row, claim, now)
     validate_claim(row, event_id, user_id, claim, now, plan_id=plan_id)
     return row
 
@@ -160,6 +164,8 @@ class ExtractionWorkRepository:
         uses them to process exactly the jobs that were queued when a flush
         began.
         """
+        from prme.storage.privacy_journals import ProcessingJournal
+        await ProcessingJournal(self).expire(user_id=user_id)
         try:
             return await self._claim(user_id=user_id, event_id=event_id, lease_seconds=lease_seconds,
                                      ignore_schedule=ignore_schedule, scope=scope, through_order=through_order)
@@ -203,6 +209,12 @@ class ExtractionWorkRepository:
                 return None
             row = rows[0]
             expires = now + timedelta(seconds=lease_seconds)
+            from prme.storage.privacy_journals import processing_deadline, processing_record
+            record = await processing_record(session, str(row["event_id"]), user_id)
+            if record is not None:
+                if record.processing_state != "pending":
+                    return None
+                expires = min(expires, processing_deadline(record))
             await session.execute(
                 "UPDATE event_extractions SET status = 'running', generation = generation + 1, "
                 "attempts = attempts + 1, lease_expires_at = $2, updated_at = $3 WHERE event_id = $1",
@@ -217,11 +229,21 @@ class ExtractionWorkRepository:
         async with self.session(transaction=True) as session:
             await session.lock_work(str(claim.event_id))
             now = await session.now()
+            from prme.storage.privacy_journals import finish_processing, processing_deadline, processing_record
+            record = await processing_record(session, str(claim.event_id), claim.user_id)
+            expires = now + timedelta(seconds=lease_seconds)
+            if record is not None:
+                if record.processing_state != "pending":
+                    return False
+                if processing_deadline(record) <= now:
+                    await finish_processing(session, record, "expired", now)
+                    return False
+                expires = min(expires, processing_deadline(record))
             rows = await session.fetch(
                 "UPDATE event_extractions SET lease_expires_at = $4, updated_at = $3 WHERE event_id = $1 "
                 "AND generation = $2 AND status = 'running' AND lease_expires_at > $3 "
                 "AND EXISTS (SELECT 1 FROM events e WHERE e.id = event_id AND e.user_id = $5) RETURNING event_id",
-                str(claim.event_id), claim.generation, now, now + timedelta(seconds=lease_seconds), claim.user_id,
+                str(claim.event_id), claim.generation, now, expires, claim.user_id,
             )
             return bool(rows)
 
@@ -269,6 +291,17 @@ class ExtractionWorkRepository:
             if not rows:
                 return False
             row = rows[0]
+            from prme.storage.privacy_journals import processing_record, processing_deadline, finish_processing
+            protected = await processing_record(session, event_id, user_id)
+            if protected is not None:
+                if protected.processing_state != "pending" or protected.processing is None:
+                    return False
+                if processing_deadline(protected) <= now:
+                    await finish_processing(session, protected, "expired", now)
+                    return False
+                if protected.processing_attempt:
+                    # Replanning cannot replenish an interrupted allowance.
+                    return False
             if (row["status"] == "complete" or row["plan_id"] is None
                     or (row["status"] == "running" and row["lease_expires_at"] > now)):
                 return False
@@ -294,6 +327,15 @@ class ExtractionWorkRepository:
             raise ValueError("Retry requires user_id")
         async with self.session(transaction=True) as session:
             now = await session.now()
+            from prme.storage.privacy_journals import processing_deadline, processing_record, finish_processing
+            await session.lock_work(str(UUID(event_id)))
+            record = await processing_record(session, str(UUID(event_id)), user_id)
+            if record is not None:
+                if record.processing_state != "pending":
+                    return False
+                if processing_deadline(record) <= now:
+                    await finish_processing(session, record, "expired", now)
+                    return False
             rows = await session.fetch(
                 "UPDATE event_extractions SET status = 'pending', next_attempt_at = $2, updated_at = $2 "
                 "WHERE event_id = $1 AND status IN ('pending', 'failed') "

@@ -19,7 +19,10 @@ from prme.storage.profile_work import (
     unpack,
 )
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 DDL = (
     "CREATE TABLE IF NOT EXISTS profile_registered_plans "
     "(operation_id VARCHAR PRIMARY KEY, node_id VARCHAR NOT NULL)"

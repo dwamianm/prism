@@ -25,7 +25,10 @@ from prme.models.profile import ProfilePublication
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query, encode_texts
 from prme.storage.multi_model import ACTIVE_STATES, ModelIdentity, StoredModel
 
+from prme.privacy.diagnostics import ScopedLogger
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 
 class VectorIndex:

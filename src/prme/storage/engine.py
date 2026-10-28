@@ -20,6 +20,7 @@ error handling, and lifecycle transitions are managed here.
 
 from __future__ import annotations
 
+from prme.models.privacy_receipts import ProtectedCitationRecord, ProtectedRetrievalReceipt
 from prme.models.privacy_reads import (
     ProtectedEventView, ProtectedExtractionView, ProtectedProvenanceView,
     ProtectedReceiptView, SanitizedEvidenceView, SourceAvailability, SourceUnavailable,
@@ -159,7 +160,10 @@ if TYPE_CHECKING:
 from prme.organizer.maintenance import MaintenanceRunner
 from prme.storage.durable_queue import DurableMaterializationQueue
 
+from prme.privacy.diagnostics import ScopedLogger, closing_diagnostics
+
 logger = logging.getLogger(__name__)
+logger = ScopedLogger(logger)
 
 # The nodes the derived search indexes hold, in rebuild order: every active
 # node of every owner, by id. Callers skip rows without indexable content.
@@ -404,6 +408,8 @@ class MemoryEngine:
 
         from prme.privacy.admission import AdmissionCoordinator
         self._privacy = AdmissionCoordinator(self)
+        self._graph_store._privacy = self._privacy
+        self._profile_work._privacy = self._privacy
         if self._pipeline is not None:
             self._pipeline._privacy = self._privacy
 
@@ -517,6 +523,7 @@ class MemoryEngine:
                 additional_embedding_providers=additional_embedding_providers,
             )
         engine._privacy.runtime = privacy_runtime
+        await engine._privacy.processing.expire()
         return engine
 
     @classmethod
@@ -2147,7 +2154,8 @@ class MemoryEngine:
             try:
                 await self._materialize_event(event, pending_lexical=documents)
             except Exception as exc:
-                failures[str(event.id)] = extraction_failure_code(exc)
+                from prme.privacy.diagnostics import event_failure_code
+                failures[str(event.id)] = event_failure_code(event, exc)
         if documents:
             replacements = tuple((str(n.id), n.content, n.user_id, n.node_type.value, n.scope.value)
                                  for n in documents.values())
@@ -3822,7 +3830,7 @@ class MemoryEngine:
         )
 
     @privacy_disclosure
-    async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | ProtectedReceiptView | None:
+    async def get_retrieval_receipt(self, request_id: str, *, user_id: str) -> RetrievalReceipt | ProtectedReceiptView | ProtectedRetrievalReceipt | None:
         """Read the immutable returned-candidate snapshot through its owner."""
         return await self._relevance.get_receipt(request_id, user_id=user_id)
 
@@ -3834,7 +3842,8 @@ class MemoryEngine:
         Recording does not change weights or facts. Legacy feedback_apply does
         not consume these records; evaluated scoped learning is separate.
         """
-        return await self._relevance.record(submission, user_id=user_id)
+        guard = await self._privacy.receipt_write_guard(user_id, submission.request_id)
+        return await self._relevance.record(submission, user_id=user_id, **({"guard": guard} if guard is not None else {}))
 
     @privacy_disclosure
     async def get_relevance(self, feedback_id: str, *, user_id: str) -> RelevanceRecord | None:
@@ -3849,25 +3858,26 @@ class MemoryEngine:
     @privacy_disclosure
     async def record_answer_citations(
         self, submission: AnswerCitationSubmission, *, user_id: str,
-    ) -> AnswerCitationRecord:
+    ) -> AnswerCitationRecord | ProtectedCitationRecord:
         """Record which packed memories supported one answer.
 
         The record binds to a saved retrieval context. It does not change
         memory state or ranking, and model-reported citations are not treated
         as independently verified causal credit.
         """
-        return await self._citations.record(submission, user_id=user_id)
+        guard = await self._privacy.receipt_write_guard(user_id, submission.request_id)
+        return await self._citations.record(submission, user_id=user_id, **({"guard": guard} if guard is not None else {}))
 
     @privacy_disclosure
     async def get_answer_citations(
         self, citation_id: str, *, user_id: str,
-    ) -> AnswerCitationRecord | None:
+    ) -> AnswerCitationRecord | ProtectedCitationRecord | None:
         return await self._citations.get(citation_id, user_id=user_id)
 
     @privacy_disclosure
     async def list_answer_citations(
         self, *, user_id: str, limit: int = 100, after_id: str | None = None,
-    ) -> list[AnswerCitationRecord]:
+    ) -> list[AnswerCitationRecord | ProtectedCitationRecord]:
         """Page answer citation sets by citation UUID."""
         return await self._citations.list(
             user_id=user_id, limit=limit, after_id=after_id,
@@ -4316,14 +4326,27 @@ class MemoryEngine:
         if scope is None:
             # Profiles have one namespace. Never pool evidence from different
             # scopes, even when the explicit owner and entity name match.
+            namespaces = tuple(Scope)
+            protected_records = await self._privacy.owner_records(user_id)
+            if protected_records:
+                namespaces = tuple(sorted(
+                    {record.snapshot.policy.scope for record in protected_records},
+                    key=lambda value: value.value,
+                ))
+            elif self._privacy.selected():
+                namespaces = (self._privacy.default.scope,)
             total = 0
-            for namespace in Scope:
+            for namespace in namespaces:
                 total += await self.consolidate_knowledge(
                     user_id=user_id, scope=namespace, entity_names=entity_names,
                     max_profile_tokens=max_profile_tokens,
                 )
             return total
         scope = Scope(scope)
+        from prme.privacy.reads import ReadContext
+        from prme.privacy.read_graph import AdmittedGraphView
+        context = await ReadContext.create(self._privacy, user_id=user_id, scopes=(scope,))
+        graph = AdmittedGraphView(self._graph_store, context) if context.protected else self._graph_store
 
         # Scan by immutable ID instead of interpreting a newest-N window as
         # complete history. Otherwise older qualifying evidence can disappear
@@ -4332,7 +4355,7 @@ class MemoryEngine:
         existing_profiles: dict[str, list[MemoryNode]] = {}
         after_id: str | None = None
         while True:
-            page = await self._graph_store.scan_nodes(
+            page = await graph.scan_nodes(
                 user_id=user_id, scope=scope,
                 lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
                 after_id=after_id, limit=500,
@@ -4340,6 +4363,9 @@ class MemoryEngine:
             if not page:
                 break
             for node in page:
+                if context.protected:
+                    node = node.model_copy(update={"metadata": {key: value for key, value in (node.metadata or {}).items()
+                                                              if key != "source_availability"}})
                 meta = node.metadata or {}
                 if meta.get("entity_profile"):
                     # Generated profiles cannot qualify as fresh evidence.
@@ -4393,7 +4419,17 @@ class MemoryEngine:
 
         profiles_created = 0
         for entity_name in entity_names:
-            generation = await self._graph_store.profile_generation(profile_key(user_id, scope, entity_name))
+            if context.protected:
+                from uuid import uuid5
+                from prme.privacy.policy import PrivacyDenied
+                entities = [node for node in all_nodes if node.node_type == NodeType.ENTITY and node.content == entity_name]
+                if len(entities) != 1:
+                    raise PrivacyDenied("privacy_unsupported_input")
+                lineage = uuid5(entities[0].id, "prme:protected-profile:v1")
+                key = str(lineage)
+            else:
+                key = profile_key(user_id, scope, entity_name)
+            generation = await self._graph_store.profile_generation(key)
             # Find all nodes mentioning this entity
             related = []
             for node in all_nodes:
@@ -4440,16 +4476,27 @@ class MemoryEngine:
                 decay_profile=DecayProfile.FAST,
             )
             from prme.models.profile import profile_request_hash
-            provider = self._vector_index._provider
             previous = tuple(existing_profiles.get(entity_name, []))
+            manifest = None
+            if context.protected:
+                from prme.privacy.journals import admit_generated_node, encode_generated
+                profile_node, manifest = await admit_generated_node(
+                    context, profile_node, selected_sources, kind="profile", lineage_id=lineage, previous=previous,
+                )
+                profile_text = profile_node.content
+                provider = self._privacy.require_runtime().embedder
+            else:
+                provider = self._vector_index._provider
             request_hash = profile_request_hash(profile_node, selected_sources, previous, generation,
                                                 (provider.model_name, provider.model_version, provider.dimension))
-            plan = await self._profile_work.reusable(profile_key(user_id, scope, entity_name), request_hash, user_id=user_id)
+            plan = await self._profile_work.reusable(key, request_hash, user_id=user_id)
             if plan is None:
-                vectors = await encode_texts(provider, [profile_text])
+                vectors = (await encode_generated(context, [profile_text]) if context.protected
+                           else await encode_texts(provider, [profile_text]))
                 if len(vectors) != 1:
                     raise ValueError("Profile embedding provider must return exactly one vector")
                 plan = ProfilePublication(
+                    schema_version=2 if manifest is not None else 1, privacy_manifest=manifest,
                     node=profile_node, sources=tuple(selected_sources), previous=previous, generation=generation,
                     embedding=PreparedEmbedding(
                         node_id=profile_node.id, content=profile_text,
@@ -4467,6 +4514,7 @@ class MemoryEngine:
 
     async def _publish_prepared_profile(self, plan: ProfilePublication) -> str:
         from prme.storage.profile_work import ProfileStageFence
+        from prme.storage._threading import run_async_to_completion
         state = await self._profile_work.status(str(plan.node.id), user_id=plan.node.user_id)
         if state is None:
             raise ValueError('Profile publication requires durable preparation')
@@ -4475,12 +4523,27 @@ class MemoryEngine:
             raise StaleProfileError('Profile preparation was replaced by a newer request')
         if state['status'] != 'complete' and self._pool is None:
             fence = ProfileStageFence(self._conn, self._event_store._conn_lock, plan)
-            await self._vector_index.stage(plan.embedding, user_id=plan.node.user_id, fence=fence)
-            await self._lexical_index.stage_profile(plan, fence=fence)
-        published = await self._write_queue.submit(
-            lambda: self._graph_store.publish_profile(plan), label=f'consolidate.publish:{plan.node.id}',
-        )
-        if self._pool is not None:
+            async def stage():
+                await self._vector_index.stage(plan.embedding, user_id=plan.node.user_id, fence=fence)
+                await self._lexical_index.stage_profile(plan, fence=fence)
+            if plan.privacy_manifest is not None:
+                from prme.privacy.journals import manifest_records, journal_scope
+                records = await manifest_records(self._privacy, plan.privacy_manifest, user_id=plan.node.user_id)
+                async with self._privacy.publication_guards(records):
+                    with journal_scope(self._privacy, records):
+                        await run_async_to_completion(stage())
+            else:
+                await stage()
+        # The queue consumer acquires its own backend publication guard. Holding
+        # the producer's non-reentrant authority across submit would deadlock.
+        from prme.privacy.diagnostics import protected_diagnostics
+        with protected_diagnostics(plan.privacy_manifest is not None):
+            published = await self._write_queue.submit(
+                lambda: self._graph_store.publish_profile(plan),
+                label=f"consolidate.publish:{plan.node.id}",
+            )
+        # As for summaries: no unguarded additional-model write for a protected profile.
+        if self._pool is not None and plan.privacy_manifest is None:
             from prme.storage.multi_model import write_additional_models
 
             await write_additional_models(self._vector_index, [plan.embedding], user_id=plan.node.user_id)
@@ -4507,12 +4570,14 @@ class MemoryEngine:
             return None
         return await self._publish_prepared_profile(plan)
 
+    @privacy_disclosure
     async def collect_profile_staging(self, *, user_id: str, scope: Scope | None = None,
                                       limit: int = 100, budget_ms: float = 5000) -> ProfileCollectionResult:
         """Reclaim abandoned preparation indexes, preserving graph and journal."""
         from prme.storage.profile_collection import collect
         return await collect(self, user_id=user_id, scope=scope, limit=limit, budget_ms=budget_ms)
 
+    @privacy_disclosure
     async def discard_profile(self, profile_id: str, *, user_id: str) -> bool:
         """Abandon owned unpublished work; preserve its journal and source nodes.
 
@@ -4536,6 +4601,7 @@ class MemoryEngine:
         if not math.isfinite(budget_ms) or budget_ms < 0:
             raise ValueError('budget_ms must be finite and nonnegative')
         scope = Scope(scope) if scope is not None else None
+        protected = bool(self._privacy.selected() or await self._privacy.owner_records(user_id, (scope,) if scope else None))
         jobs = await self.profile_jobs(user_id=user_id, scope=scope, limit=limit)
         started, processed, errors = time.monotonic(), 0, {}
         for job in jobs:
@@ -4551,7 +4617,7 @@ class MemoryEngine:
                 if state is not None and state['status'] == 'complete':
                     processed += 1
                     continue
-                reason = extraction_failure_code(exc)
+                reason = "privacy_profile_failed" if protected else extraction_failure_code(exc)
                 await self._profile_work.failed(profile_id, user_id=user_id, reason=reason)
                 errors[profile_id] = reason
         return {'processed': processed, 'failed': len(errors), 'pending': await self._profile_work.count(user_id=user_id, scope=scope),
@@ -4583,6 +4649,7 @@ class MemoryEngine:
 
     # --- Resource Management ---
 
+    @closing_diagnostics
     async def close(self) -> None:
         """Close and save all backends.
 

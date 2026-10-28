@@ -8,6 +8,8 @@ import math
 import time
 
 from prme.ingestion.errors import extraction_failure_code
+from prme.privacy.journals import protected_mutation, journal_deadline
+from prme.privacy.diagnostics import diagnostics_protected
 from prme.models.profile import ProfilePublication, ProfileCollectionResult
 from prme.types import Scope
 from typing import TYPE_CHECKING
@@ -76,6 +78,7 @@ class ProfileCollectionFence:
             validate_collect_duck(conn, self.plan)
             yield
             validate_collect_duck(conn, self.plan)
+            journal_deadline()
             conn.execute("COMMIT")
         except BaseException:
             try:
@@ -127,6 +130,7 @@ async def acknowledge(store, plan):
             row = await conn.fetchrow(pg_sql(RECEIPT), collection_operation_id(plan))
             if not validate_collection_receipt(plan, row):
                 await conn.execute(pg_sql(APPEND), *args)
+            journal_deadline()
         return
 
     def commit():
@@ -141,6 +145,7 @@ async def acknowledge(store, plan):
             row = conn.execute(RECEIPT, [collection_operation_id(plan)]).fetchone()
             if not validate_collection_receipt(plan, row):
                 conn.execute(APPEND, args)
+            journal_deadline()
             conn.execute("COMMIT")
         except BaseException:
             try:
@@ -175,6 +180,7 @@ async def execute(store, sql, args=()):
         return await run_to_completion(lambda: store.conn.execute(sql, args).fetchall())
 
 
+@protected_mutation
 async def collect(
     engine: MemoryEngine,
     *,
@@ -259,7 +265,12 @@ async def collect(
             if confirmed:
                 result["collected"] += 1
                 continue
-            reason = extraction_failure_code(exc)
+            reason = (
+                "privacy_work_failed"
+                if diagnostics_protected()
+                or (plan is not None and plan.privacy_manifest is not None)
+                else extraction_failure_code(exc)
+            )
             await execute(
                 store,
                 "UPDATE profile_work SET last_attempt_at=current_timestamp,attempts=attempts+1,last_error=? "

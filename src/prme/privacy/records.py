@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from prme.privacy.capabilities import ProtectedPayload, RetryCommitment
 from prme.privacy.policy import FrozenModel, PolicySnapshot
@@ -44,6 +44,9 @@ class PrivacyRecord(FrozenModel):
     evidence: ProtectedPayload | None = None
     processing: ProtectedPayload | None = None
     processing_state: Literal["not_required", "pending", "complete", "cancelled", "expired"] = "not_required"
+    # A reserved attempt cannot replay its sanitizer allowance after a crash.
+    # Only a current claim can replace the authenticated checkpoint and release it.
+    processing_attempt: int = Field(default=0, ge=0, strict=True)
     retry: RetryCommitment | None = None
     request_index: int = 0
     sanitization: SanitizationReport | None = None

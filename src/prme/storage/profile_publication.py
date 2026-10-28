@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from prme.models.derivation import node_checksum
 from prme.models.profile import ProfilePublication, StaleProfileError
 from prme.storage._threading import run_to_completion
+from prme.privacy.journals import protected_mutation, journal_deadline, project_manifest_node
 
 if TYPE_CHECKING:
     from prme.storage.duckpgq_graph import DuckPGQGraphStore
@@ -51,6 +52,8 @@ def _validate(plan: ProfilePublication, current, prior_ids) -> None:
         raise StaleProfileError("Current profiles changed; rebuild explicitly")
     for expected in plan.sources + plan.previous:
         actual = current.get(str(expected.id))
+        if actual is not None and plan.privacy_manifest is not None:
+            actual = project_manifest_node(actual, plan.privacy_manifest)
         if actual is None or node_checksum(actual) != node_checksum(expected):
             raise StaleProfileError("Profile dependency changed; rebuild explicitly")
 
@@ -79,6 +82,7 @@ async def generation_postgres(store: PgGraphStore, key: str) -> int:
         )
 
 
+@protected_mutation
 async def commit_duckdb(store: DuckPGQGraphStore, plan: ProfilePublication) -> str:
     snapshot = ProfilePublication.model_validate_json(plan.model_dump_json())
     async with store._conn_lock:
@@ -181,7 +185,9 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: ProfilePublication) -> str:
             if managed:
                 conn.execute("UPDATE profile_work SET status='complete', fence_epoch=fence_epoch+1, attempts=attempts+1, last_error=NULL, "
                              "last_attempt_at=current_timestamp WHERE plan_id=?", [str(node.id)])
+        journal_deadline()
         conn.execute("COMMIT")
+        journal_deadline()
         return str(node.id)
     except BaseException:
         try:
@@ -193,6 +199,7 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: ProfilePublication) -> str:
         raise
 
 
+@protected_mutation
 async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
     from prme.storage.pg.graph_store import _NODE_COLUMNS
 
@@ -214,6 +221,7 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
             plan.operation_id,
         )
         if _replayed(plan, value):
+            journal_deadline()
             return str(node.id)
         from prme.storage.profile_work import validate_pg_work, reserve_pg
         managed = await validate_pg_work(conn, plan)
@@ -274,4 +282,5 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
         if managed:
             await conn.execute("UPDATE profile_work SET status='complete', fence_epoch=fence_epoch+1, attempts=attempts+1, last_error=NULL, "
                                "last_attempt_at=current_timestamp WHERE plan_id=$1", str(node.id))
+        journal_deadline()
         return str(node.id)

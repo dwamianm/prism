@@ -7,6 +7,8 @@ PostgreSQL-native recursive CTEs and parameterized queries ($1, $2, ...).
 
 from __future__ import annotations
 
+from prme.privacy.journals import protected_mutation, journal_deadline
+
 import json
 import logging
 import uuid as _uuid
@@ -761,6 +763,7 @@ class PgGraphStore:
 
         await supersede_many_postgres(self, replacements, actor_id=actor_id)
 
+    @protected_mutation
     async def contradict(
         self,
         node_a_id: str,
@@ -909,7 +912,9 @@ class PgGraphStore:
                 payload,
                 actor_id,
             )
+            journal_deadline()
 
+    @protected_mutation
     async def resolve_contradiction(
         self,
         winner_id: str,
@@ -1063,6 +1068,7 @@ class PgGraphStore:
                 }),
                 resolver_actor_id,
             )
+            journal_deadline()
 
     async def deprecate(
         self, node_id: str, *, request_id: str | UUID | None = None,

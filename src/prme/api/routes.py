@@ -22,6 +22,7 @@ from prme.storage.lifecycle import LifecycleConflict
 from prme.storage.citations import CitationConflict
 from prme.storage.ranking_profiles import StaleRankingProfileError
 from prme.storage.fast_ingest import FastIngestConflict
+from prme.models.privacy_receipts import ProtectedCitationRecord, ProtectedRetrievalReceipt
 from prme.models.speaker import SpeakerError
 from prme.storage.alias_review import (
     AliasProposalInboxItem,
@@ -1201,7 +1202,7 @@ async def stats(request: Request, user_id: str | None = None) -> StatsResponse:
     )
 
 
-@router.get("/retrievals/{request_id}", response_model=RetrievalReceipt | ProtectedReceiptView,
+@router.get("/retrievals/{request_id}", response_model=RetrievalReceipt | ProtectedReceiptView | ProtectedRetrievalReceipt,
             responses={404: {"model": ErrorResponse}})
 async def get_retrieval_receipt(request: Request, request_id: UUID, user_id: str | None = None):
     engine = _get_engine(request)
@@ -1397,7 +1398,7 @@ async def activate_ranking_profile(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.post("/answer-citations", response_model=AnswerCitationRecord,
+@router.post("/answer-citations", response_model=AnswerCitationRecord | ProtectedCitationRecord,
              responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse},
                         409: {"model": ErrorResponse}})
 async def record_answer_citations(request: Request, body: AnswerCitationRequest):
@@ -1415,7 +1416,7 @@ async def record_answer_citations(request: Request, body: AnswerCitationRequest)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.get("/answer-citations", response_model=list[AnswerCitationRecord])
+@router.get("/answer-citations", response_model=list[AnswerCitationRecord | ProtectedCitationRecord])
 async def list_answer_citations(
     request: Request, user_id: str | None = None,
     limit: int = Query(default=100, ge=1, le=1000), after_id: UUID | None = None,
@@ -1426,7 +1427,7 @@ async def list_answer_citations(
     )
 
 
-@router.get("/answer-citations/{citation_id}", response_model=AnswerCitationRecord,
+@router.get("/answer-citations/{citation_id}", response_model=AnswerCitationRecord | ProtectedCitationRecord,
             responses={404: {"model": ErrorResponse}})
 async def get_answer_citations(
     request: Request, citation_id: UUID, user_id: str | None = None,

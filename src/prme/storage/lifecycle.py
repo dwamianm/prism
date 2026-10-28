@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict
 
+from prme.privacy.journals import protected_mutation, snapshot_payload, validate_snapshot, journal_deadline
 from prme.models.nodes import MemoryNode
 from prme.storage._threading import run_to_completion
 from prme.storage import _snapshot_json
@@ -52,6 +53,9 @@ def _validate(node, node_id, action):
 
 
 def _payload(record):
+    protected = snapshot_payload(record, "lifecycle")
+    if protected is not None:
+        return protected
     raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps(
         {"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()}
@@ -63,6 +67,7 @@ def read_record(payload):
     if hashlib.sha256(value["record"].encode()).hexdigest() != value["sha256"]:
         raise ValueError("Lifecycle journal checksum mismatch")
     record = LifecycleRecord.model_validate(_snapshot_json.loads(value["record"]))
+    validate_snapshot(value, record, "lifecycle")
     if (
         record.before.id != record.after.id
         or record.before.user_id != record.after.user_id
@@ -83,6 +88,7 @@ def read_record(payload):
 
 def _checkpoint(stage):
     """Native transaction fault-injection boundary; no external work."""
+    journal_deadline()
 
 
 def _request(node_id, action, request_id, actor_id):
@@ -119,6 +125,7 @@ def _replay(row, *, node_id, action, operation_id, actor_id):
     return True
 
 
+@protected_mutation
 async def transition_duckdb(
     store, node_id, action, *, request_id=None, actor_id="system",
 ):
@@ -175,6 +182,7 @@ def _transition_duckdb(store, request):
         raise
 
 
+@protected_mutation
 async def transition_postgres(
     store, node_id, action, *, request_id=None, actor_id="system",
 ):

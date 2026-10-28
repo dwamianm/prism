@@ -238,7 +238,10 @@ class ReadContext:
                 raise PrivacyDenied("privacy_invalid_result") from None
         if any(row.snapshot.policy.scope != node.scope for row in rows):
             raise PrivacyDenied("privacy_boundary_mismatch")
-        if origin.kind == "direct":
+        from prme.privacy.journals import JOURNAL_KEY, project_generated_node
+        if JOURNAL_KEY in (node.metadata or {}):
+            result = project_generated_node(node)
+        elif origin.kind == "direct":
             result = project_direct_node(node)
         else:
             if (node.node_type != NodeType.ENTITY
@@ -463,10 +466,6 @@ async def prepare_retrieval(engine, query, *, user_id, scopes, source_access=Non
     pipeline._vector_index = ProtectedVectorSearch(engine._vector_index, context)
     pipeline._lexical_index = ProtectedLexicalSearch(engine._lexical_index, context)
     pipeline._privacy_context = context
-    # A protected persisted receipt is a separately versioned PV-05 codec. Until
-    # that integration is present, return receipt_persisted=False truthfully.
-    pipeline._conn = None
-    pipeline._pool = None
     await context.prepare_selected_sources(scopes)
     if pipeline._reranker is not None:
         adapter = getattr(pipeline._reranker, "privacy_adapter", None)
@@ -582,6 +581,10 @@ async def _project_public_result(context, method, result, arguments, records):
         )
     if method == "get_node":
         return await context.project_node(result)
+    if method == "evaluate_condition":
+        return await context.project_node(result)
+    if method in {"promote", "archive", "supersede", "reinforce"} and result is None:
+        return None
     if method in {"query_nodes", "scan_nodes", "get_event_nodes"}:
         values = [await context.project_node(node) for node in result]
         return [value for value in values if value is not None]
@@ -611,10 +614,56 @@ async def _project_public_result(context, method, result, arguments, records):
     if method == "get_retrieval_receipt":
         if result is None:
             return None
+        from prme.models.privacy_receipts import ProtectedRetrievalReceipt
+        if isinstance(result, ProtectedRetrievalReceipt):
+            return result
         return ProtectedReceiptView(
             receipt_id=result.request_id, user_id=owner, created_at=result.reference_time,
             source_availability=tuple(context.availability(row) for row in records),
         )
+    if method in {"record_relevance", "get_relevance", "list_relevance"}:
+        from prme.models.relevance import RelevanceRecord
+        values = result if isinstance(result, list) else [result]
+        if all(value is None or isinstance(value, RelevanceRecord) for value in values):
+            return result
+    if method in {"record_answer_citations", "get_answer_citations", "list_answer_citations"}:
+        from prme.models.privacy_receipts import ProtectedCitationRecord
+        values = result if isinstance(result, list) else [result]
+        if all(value is None or isinstance(value, ProtectedCitationRecord) for value in values):
+            return result
+    if method in {"contradict", "resolve_contradiction"}:
+        return tuple([await context.project_node(node) for node in result])
+    if method == "review_alias_proposal":
+        from prme.storage.alias_review import AliasProposalReviewResult
+
+        if isinstance(result, AliasProposalReviewResult):
+            return result
+    if method == "list_alias_proposals":
+        from prme.storage.alias_proposal import ProtectedAliasProposalRecord
+
+        if all(
+            isinstance(item.proposal, ProtectedAliasProposalRecord) for item in result
+        ):
+            return result
+    if method in {"organize", "end_session"}:
+        from prme.privacy.diagnostics import project_organize
+
+        return project_organize(result)
+    if method == "discard_profile" and type(result) is bool:
+        return result
+    if method == "collect_profile_staging":
+        from prme.privacy.diagnostics import project_collection
+        return project_collection(result)
+    if method == "consolidate_knowledge" and type(result) is int and result >= 0:
+        return result
+    if method == "resume_profile" and (result is None or str(UUID(result)) == result):
+        return result
+    if method == "profile_jobs":
+        from prme.privacy.diagnostics import project_jobs
+        return project_jobs(result, identity="plan_id")
+    if method == "process_profiles":
+        from prme.privacy.diagnostics import project_processing
+        return project_processing(result)
     if method in {
         "retrieve", "aggregate_assertions", "aggregate_quantities", "aggregate_quantities_from_text",
         "get_assertion_state", "count_nodes", "processing_status", "extraction_status", "snapshot",

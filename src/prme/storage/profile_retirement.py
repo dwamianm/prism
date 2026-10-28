@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from uuid import uuid5
 
+from prme.privacy.journals import protected_mutation, journal_deadline
 from prme.models.profile import StaleProfileError
 from prme.storage._threading import run_to_completion
 from prme.storage.profile_work import validate_duck_work, validate_pg_work
@@ -31,6 +32,7 @@ def discarded_state(plan, row):
     return "abandoned", "DiscardedPreparation"
 
 
+@protected_mutation
 async def discard(store, profile_id, *, user_id):
     plan = await store.get(profile_id, user_id=user_id)
     if plan is None:
@@ -64,9 +66,11 @@ def _discard_duck(conn, plan):
             [str(plan.node.id), plan.node.user_id],
         ).fetchone()
         if state is None or state[0] == "complete":
+            journal_deadline()
             conn.execute("COMMIT")
             return False
         if state[0] == "abandoned":
+            journal_deadline()
             conn.execute("COMMIT")
             return True
         validate_duck_work(conn, plan, required=True)
@@ -84,6 +88,7 @@ def _discard_duck(conn, plan):
                 plan.node.scope.value,
             ],
         )
+        journal_deadline()
         conn.execute("COMMIT")
         return True
     except BaseException:
@@ -108,6 +113,7 @@ async def _discard_pg(store, plan):
         if state is None or state == "complete":
             return False
         if state == "abandoned":
+            journal_deadline()
             return True
         if not await validate_pg_work(conn, plan):
             raise ValueError("Profile discard requires durable preparation")
@@ -123,4 +129,5 @@ async def _discard_pg(store, plan):
             plan.node.user_id,
             plan.node.scope.value,
         )
+        journal_deadline()
         return True

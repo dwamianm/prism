@@ -1,0 +1,490 @@
+{
+  "stage": "owned-foundation-frozen-for-review",
+  "issue": "#324",
+  "acceptanceComplete": false,
+  "ownedCases": [
+    {
+      "id": "AP06",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "AC06",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL03",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL04",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL05",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL06",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL07",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "CL08",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    },
+    {
+      "id": "ER05",
+      "duckdb": "pending_full_case; directory and single-file component subchecks only",
+      "postgres": "pending_full_case; component subchecks only"
+    }
+  ],
+  "verified": [
+    {
+      "log": "processing-baseline.log",
+      "exit": 0,
+      "result": "8 passed",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_ciphertext_storage.py::test_EM03_real_processing_consumed_only_by_actual_claim tests/test_privacy_ephemeral.py -q --tb=short",
+      "seconds": 13.75
+    },
+    {
+      "log": "processing-components-1.log",
+      "exit": 1,
+      "result": "6 passed, 6 failed; new extractor fixture quote/polarity invalid",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py -q --tb=short",
+      "seconds": 21.72
+    },
+    {
+      "log": "processing-diagnosis.log",
+      "exit": 1,
+      "result": "1 failed; confirms privacy_evidence_ambiguous; no production change",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py::test_CL03_component_saved_plan_recovers_without_private_keys[directory] -q --tb=short",
+      "seconds": 2.26
+    },
+    {
+      "log": "processing-components-2.log",
+      "exit": 0,
+      "result": "12 passed; corrected complete source quote and explicit positive polarity",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py -q --tb=short",
+      "seconds": 17.12
+    },
+    {
+      "log": "processing-batch-retry.log",
+      "exit": 1,
+      "result": "16 passed, 3 failed; new test called nonexistent ingest_many API",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py tests/test_privacy_retry_commitments.py -q --tb=short",
+      "seconds": 20.63
+    },
+    {
+      "log": "processing-batch-2.log",
+      "exit": 0,
+      "result": "3 passed, 12 deselected; use actual ingest_batch",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py -k multiple_input -q --tb=short",
+      "seconds": 6.76
+    },
+    {
+      "log": "receipts-1.log",
+      "exit": 1,
+      "result": "49 passed, 1 failed, 1 skipped; legacy crash hook rejected guard=None keyword",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_receipts.py tests/test_answer_citations.py tests/test_relevance_records.py -q --tb=short",
+      "seconds": 13.87
+    },
+    {
+      "log": "receipt-legacy-crash-repair.log",
+      "exit": 0,
+      "result": "1 passed, 1 skipped; preserve legacy call signature",
+      "command": "uv run --no-sync python -m pytest tests/test_relevance_records.py::test_process_exit_after_feedback_commit_preserves_original_receipt -q --tb=short",
+      "seconds": 2.1
+    },
+    {
+      "log": "lifecycle-1.log",
+      "exit": 0,
+      "result": "69 passed, 2 skipped",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py tests/test_atomic_lifecycle.py tests/test_atomic_ttl_expiration.py tests/test_reinforcement_atomic.py -q --tb=short",
+      "seconds": 18.31
+    },
+    {
+      "log": "checkpoint-components.log",
+      "exit": 0,
+      "result": "107 passed, 1 skipped",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_supersedence_journal.py tests/test_condition_evaluation.py tests/test_atomic_oscillation_penalty.py tests/test_atomic_organizer_merges.py -q --tb=short",
+      "seconds": 47.95
+    },
+    {
+      "log": "dependency-composition.log",
+      "exit": 0,
+      "result": "21 passed; final323 disclosure/Q04/marker helpers plus persisted receipt",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_receipts.py tests/test_privacy_source_reads.py -q --tb=short",
+      "seconds": 44.97
+    },
+    {
+      "log": "profile-components-1.log",
+      "exit": 1,
+      "result": "3 failed; test used enqueue-only ingress without the real worker; preceding same-source capture had wrong log path (capture-note retained)",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k CL05 -q --tb=short",
+      "seconds": 4.22
+    },
+    {
+      "log": "profile-components-2.log",
+      "exit": 143,
+      "result": "terminated owned stalled check; producer authority was held across queue consumer authority; source diagnosis retained",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k CL05 -q --tb=short",
+      "seconds": 40.12
+    },
+    {
+      "log": "profile-components-3.log",
+      "exit": 1,
+      "result": "2 passed, 1 failed; queue repair succeeded; PostgreSQL replay-branch indentation returned before publication",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k CL05 -q --tb=short",
+      "seconds": 6.27
+    },
+    {
+      "log": "profile-components-4.log",
+      "exit": 0,
+      "result": "1 passed, 8 deselected; PostgreSQL replay indentation repaired",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k \"CL05 and postgres\" -q --tb=short",
+      "seconds": 3.41
+    },
+    {
+      "log": "profile-compatibility.log",
+      "exit": 1,
+      "result": "150 passed, 6 failed, 23 skipped; damaged-plan failure handler re-decoded the invalid plan",
+      "command": "uv run --no-sync python -m pytest tests/test_profile_work.py tests/test_profile_registry.py tests/test_profile_publication.py tests/test_profile_excerpts.py tests/test_profile_collection.py tests/test_profile_retirement.py tests/test_knowledge_profile_scopes.py -q --tb=short",
+      "seconds": 55.41
+    },
+    {
+      "log": "profile-damaged-repair.log",
+      "exit": 0,
+      "result": "6 passed; original damaged-work failure semantics preserved using metadata-only protected classification",
+      "command": "uv run --no-sync python -m pytest tests/test_profile_work.py::test_damaged_owned_work_is_a_failure_not_a_success -q --tb=short",
+      "seconds": 2.42
+    },
+    {
+      "log": "summary-components-1.log",
+      "exit": 0,
+      "result": "3 passed, 9 deselected; real daily/weekly/monthly/consolidation, prepare interruption, keyless resume and retirement",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k summary_generations -q --tb=short",
+      "seconds": 7.44
+    },
+    {
+      "log": "summary-compatibility.log",
+      "exit": 0,
+      "result": "65 passed, 8 skipped",
+      "command": "uv run --no-sync python -m pytest tests/test_consolidation_publication.py tests/test_consolidation_retirement_atomic.py tests/test_consolidation_retirement_records.py tests/test_consolidation_safety.py tests/test_summarization.py -q --tb=short",
+      "seconds": 23.7
+    },
+    {
+      "log": "alias-organizer-components-1.log",
+      "exit": 0,
+      "result": "3 passed, 12 deselected; actual aliases, acceptance/rejection, merge and organizer positive",
+      "test_scope": "test_privacy_journal_records.py CL05 alias/organizer component selection",
+      "seconds": 9.77
+    },
+    {
+      "log": "alias-organizer-compatibility.log",
+      "exit": 0,
+      "result": "228 passed; unchanged legacy aliases/merges/organizer/contradiction behavior",
+      "test_scope": "tests/test_atomic_alias_proposals.py tests/test_alias_proposal_review.py tests/test_typesafe_integration.py tests/test_atomic_organizer_merges.py tests/test_organizer_tenancy.py tests/test_organizer_scope_boundaries.py tests/test_organizer.py tests/test_atomic_contradictions.py",
+      "seconds": 61.73,
+      "command": "uv run --no-sync python -m pytest tests/test_atomic_alias_proposals.py tests/test_alias_proposal_review.py tests/test_typesafe_integration.py tests/test_atomic_organizer_merges.py tests/test_organizer_tenancy.py tests/test_organizer_scope_boundaries.py tests/test_organizer.py tests/test_atomic_contradictions.py -q --tb=short"
+    },
+    {
+      "log": "diagnostics-recovery-components-1.log",
+      "exit": 1,
+      "result": "6 failed, 3 passed, 12 deselected; new diagnostic fixture used nonexistent fault hook (3); production scope=None visited unrelated protected scope (2); PostgreSQL discard returned before transaction mutation (1)",
+      "test_scope": "new diagnostics/recovery and existing protected profile components",
+      "seconds": 21.53
+    },
+    {
+      "log": "diagnostics-recovery-components-2.log",
+      "exit": 1,
+      "result": "3 failed, 3 passed; both production repairs passed on all layouts; new MCP test incorrectly supplied list instead of CSV jobs string",
+      "test_scope": "diagnostics and profile cleanup/recovery components",
+      "seconds": 15.9
+    },
+    {
+      "log": "diagnostics-scope-components-3.log",
+      "exit": 1,
+      "result": "3 failed, 3 passed, 3 deselected; MCP correction passed; new diagnostic assertion inspected caplog only although structlog legacy positive was captured in stdout; inherited-task authority checks all passed",
+      "test_scope": "diagnostics and inherited JournalScope components",
+      "seconds": 13.73
+    },
+    {
+      "log": "diagnostics-components-4.log",
+      "exit": 0,
+      "result": "3 passed; real provider/schema/SQL/native-close failures, HTTP/MCP, concurrent legacy logging, managed SQL dump and owned artifact scans",
+      "test_scope": "tests/test_privacy_journal_scenarios.py",
+      "seconds": 10.64,
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_scenarios.py -q --tb=short"
+    },
+    {
+      "log": "lifecycle-siblings-components.log",
+      "exit": 1,
+      "result": "3 failed, 12 deselected; oscillation snapshot correctly refused missing chain source dependencies because resolver included only target",
+      "test_scope": "test_privacy_journal_records.py -k actual_lifecycle",
+      "seconds": 7.83,
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k actual_lifecycle -q --tb=short"
+    },
+    {
+      "log": "lifecycle-siblings-components-repair.log",
+      "exit": 1,
+      "result": "3 failed, 12 deselected; chain-source repair reached actual successful publication and idempotent retry; new fixture incorrectly expected 4 total records instead of 4 snapshots plus 2 fixed contradiction transitions",
+      "test_scope": "test_privacy_journal_records.py -k actual_lifecycle",
+      "seconds": 8.07,
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k actual_lifecycle -q --tb=short"
+    },
+    {
+      "log": "lifecycle-siblings-components-count-repair.log",
+      "exit": 0,
+      "result": "3 passed, 12 deselected; all four snapshots decoded and both fixed contradiction transition shapes validated",
+      "test_scope": "test_privacy_journal_records.py -k actual_lifecycle",
+      "seconds": 6.84,
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_journal_records.py -k actual_lifecycle -q --tb=short"
+    },
+    {
+      "log": "final-scoped-ruff-1.log",
+      "exit": 1,
+      "result": "Two F401 findings on imported autouse fixtures in the two new test modules; corrected with explicit fixture noqa, not removal",
+      "test_scope": "all changed and new Python files"
+    },
+    {
+      "log": "final-components.log",
+      "command": "uv run --no-sync python -m pytest tests/test_privacy_processing_work.py tests/test_privacy_retry_commitments.py tests/test_privacy_receipts.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py -q --tb=short",
+      "exit": 0,
+      "seconds": 74.92,
+      "result": "49 passed; all six new privacy modules, real directory/single-file/PostgreSQL component behavior",
+      "tested_head": "3016d80dc25447a506c2c24e6db6f435ffa17d6c"
+    },
+    {
+      "log": "final-compatibility.log",
+      "command": "uv run --no-sync python -m pytest tests/test_profile_collection.py tests/test_profile_retirement.py tests/test_knowledge_profile_scopes.py tests/test_encryption.py tests/test_single_file_pack_encryption.py -q --tb=short",
+      "exit": 0,
+      "seconds": 52.32,
+      "result": "154 passed, 11 skipped; affected legacy profile cleanup/scope/encrypted close behavior; skips are not backend passes",
+      "tested_head": "3016d80dc25447a506c2c24e6db6f435ffa17d6c"
+    },
+    {
+      "log": "final-scoped-ruff.log",
+      "command": "uv run --no-sync ruff check src/prme/api/routes.py src/prme/client.py src/prme/ingestion/entity_merge.py src/prme/ingestion/pipeline.py src/prme/models/consolidation.py src/prme/models/privacy_receipts.py src/prme/models/profile.py src/prme/organizer/alias_resolution.py src/prme/organizer/consolidation.py src/prme/organizer/deduplication.py src/prme/organizer/jobs.py src/prme/organizer/maintenance.py src/prme/organizer/summarization.py src/prme/privacy/admission.py src/prme/privacy/diagnostics.py src/prme/privacy/journals.py src/prme/privacy/reads.py src/prme/privacy/records.py src/prme/privacy/retry_commitments.py src/prme/retrieval/pipeline.py src/prme/retrieval/reformulation.py src/prme/storage/alias_proposal.py src/prme/storage/alias_review.py src/prme/storage/citations.py src/prme/storage/condition_evaluation.py src/prme/storage/consolidation_publication.py src/prme/storage/consolidation_retirement.py src/prme/storage/duckpgq_graph.py src/prme/storage/durable_queue.py src/prme/storage/engine.py src/prme/storage/extraction_work.py src/prme/storage/lexical_index.py src/prme/storage/lifecycle.py src/prme/storage/organizer_merge.py src/prme/storage/oscillation_penalty.py src/prme/storage/pg/graph_store.py src/prme/storage/privacy.py src/prme/storage/privacy_journals.py src/prme/storage/profile_collection.py src/prme/storage/profile_publication.py src/prme/storage/profile_registry.py src/prme/storage/profile_retirement.py src/prme/storage/profile_work.py src/prme/storage/reinforcement.py src/prme/storage/relevance.py src/prme/storage/retention.py src/prme/storage/supersedence.py src/prme/storage/vector_index.py src/prme/storage/write_queue.py tests/privacy_journal_support.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_privacy_retry_commitments.py tests/test_privacy_source_reads.py",
+      "exit": 1,
+      "seconds": 0.06,
+      "result": "F401 [*] `tests.privacy_journal_support.isolated_privacy_postgres` imported but unused\n  --> tests/test_privacy_processing_work.py:16:5\n   |\n14 |     operation_bytes,\n15 |     processing_keys,\n16 |     isolated_privacy_postgres,\n   |     ^^^^^^^^^^^^^^^^^^^^^^^^^\n17 |     local_analyzer_fixture,  # noqa: F401\n18 | )\n   |\nhelp: Remove unused import: `tests.privacy_journal_support.isolated_privacy_postgres`\n\nF401 [*] `tests.privacy_journal_support.isolated_privacy_postgres` imported but unused\n  --> tests/test_privacy_receipts.py:21:5\n   |\n19 |     journal_engine,\n20 |     operation_bytes,\n21 |     isolated_privacy_postgres,\n   |     ^^^^^^^^^^^^^^^^^^^^^^^^^\n22 |     local_analyzer_fixture,  # noqa: F401\n23 | )\n   |\nhelp: Remove unused import: `tests.privacy_journal_support.isolated_privacy_postgres`\n\nFound 2 errors.\n[*] 2 fixable with the `--fix` option."
+    },
+    {
+      "log": "final-new-format.log",
+      "command": "uv run --no-sync ruff format --check src/prme/models/privacy_receipts.py src/prme/privacy/diagnostics.py src/prme/privacy/journals.py src/prme/privacy/retry_commitments.py src/prme/storage/privacy_journals.py tests/privacy_journal_support.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_privacy_retry_commitments.py",
+      "exit": 0,
+      "seconds": 0.02,
+      "result": "12 files already formatted"
+    },
+    {
+      "log": "final-types.log",
+      "command": "uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py",
+      "exit": 1,
+      "seconds": 18.32,
+      "result": "tests/typing/public_api.py:93: error: Expression is of type \"RetrievalReceipt | ProtectedReceiptView | ProtectedRetrievalReceipt | None\", not \"RetrievalReceipt | ProtectedReceiptView | None\"  [assert-type]\ntests/typing/public_api.py:195: error: Expression is of type \"AnswerCitationRecord | ProtectedCitationRecord\", not \"AnswerCitationRecord\"  [assert-type]\ntests/typing/public_api.py:196: error: Expression is of type \"AnswerCitationRecord | ProtectedCitationRecord | None\", not \"AnswerCitationRecord | None\"  [assert-type]\ntests/typing/public_api.py:197: error: Expression is of type \"list[AnswerCitationRecord | ProtectedCitationRecord]\", not \"list[AnswerCitationRecord]\"  [assert-type]\nFound 4 errors in 1 file (checked 1 source file)"
+    },
+    {
+      "log": "final-contract.log",
+      "command": "uv run --no-sync python docs/plans/2026-10-evidence-privacy/validate-contract.py",
+      "exit": 0,
+      "seconds": 0.06,
+      "result": "PASS: 45 copy classes, 182 exact source anchors, 17 architecture surfaces\nPASS: 10 categories, 14 versioned recognizers, en-only closed action matrix\nPASS: original 40 (8 x 5) plus 12 named sanitation cases; 104 planned backend-case executions\nPASS: E1-E9 and every copy mapped; 9 published issues and 26 unchanged dependency edges; 18 local links\nNOT RUN: privacy behavior, detector metrics, 104 backend executions, 24-query parity and 24 sealed cases. These belong to implementation/PV-11."
+    },
+    {
+      "log": "final-scoped-ruff-repair.log",
+      "command": "uv run --no-sync ruff check src/prme/api/routes.py src/prme/client.py src/prme/ingestion/entity_merge.py src/prme/ingestion/pipeline.py src/prme/models/consolidation.py src/prme/models/privacy_receipts.py src/prme/models/profile.py src/prme/organizer/alias_resolution.py src/prme/organizer/consolidation.py src/prme/organizer/deduplication.py src/prme/organizer/jobs.py src/prme/organizer/maintenance.py src/prme/organizer/summarization.py src/prme/privacy/admission.py src/prme/privacy/diagnostics.py src/prme/privacy/journals.py src/prme/privacy/reads.py src/prme/privacy/records.py src/prme/privacy/retry_commitments.py src/prme/retrieval/pipeline.py src/prme/retrieval/reformulation.py src/prme/storage/alias_proposal.py src/prme/storage/alias_review.py src/prme/storage/citations.py src/prme/storage/condition_evaluation.py src/prme/storage/consolidation_publication.py src/prme/storage/consolidation_retirement.py src/prme/storage/duckpgq_graph.py src/prme/storage/durable_queue.py src/prme/storage/engine.py src/prme/storage/extraction_work.py src/prme/storage/lexical_index.py src/prme/storage/lifecycle.py src/prme/storage/organizer_merge.py src/prme/storage/oscillation_penalty.py src/prme/storage/pg/graph_store.py src/prme/storage/privacy.py src/prme/storage/privacy_journals.py src/prme/storage/profile_collection.py src/prme/storage/profile_publication.py src/prme/storage/profile_registry.py src/prme/storage/profile_retirement.py src/prme/storage/profile_work.py src/prme/storage/reinforcement.py src/prme/storage/relevance.py src/prme/storage/retention.py src/prme/storage/supersedence.py src/prme/storage/vector_index.py src/prme/storage/write_queue.py tests/privacy_journal_support.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_privacy_retry_commitments.py tests/test_privacy_source_reads.py tests/typing/public_api.py",
+      "exit": 0,
+      "seconds": 0.03,
+      "result": "All checks passed!"
+    },
+    {
+      "log": "final-format-repair.log",
+      "command": "uv run --no-sync ruff format --check src/prme/models/privacy_receipts.py src/prme/models/profile.py src/prme/privacy/diagnostics.py src/prme/privacy/journals.py src/prme/privacy/retry_commitments.py src/prme/storage/privacy_journals.py src/prme/storage/profile_collection.py src/prme/storage/reinforcement.py tests/privacy_journal_support.py tests/test_privacy_journal_records.py tests/test_privacy_journal_recovery.py tests/test_privacy_journal_scenarios.py tests/test_privacy_processing_work.py tests/test_privacy_receipts.py tests/test_privacy_retry_commitments.py",
+      "exit": 0,
+      "seconds": 0.02,
+      "result": "15 files already formatted"
+    },
+    {
+      "log": "final-types-repair.log",
+      "command": "uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py",
+      "exit": 0,
+      "seconds": 2.49,
+      "result": "Success: no issues found in 1 source file"
+    },
+    {
+      "log": "final-contract-after-format.log",
+      "command": "uv run --no-sync python docs/plans/2026-10-evidence-privacy/validate-contract.py",
+      "exit": 0,
+      "seconds": 0.04,
+      "result": "PASS: 45 copy classes, 182 exact source anchors, 17 architecture surfaces\nPASS: 10 categories, 14 versioned recognizers, en-only closed action matrix\nPASS: original 40 (8 x 5) plus 12 named sanitation cases; 104 planned backend-case executions\nPASS: E1-E9 and every copy mapped; 9 published issues and 26 unchanged dependency edges; 18 local links\nNOT RUN: privacy behavior, detector metrics, 104 backend executions, 24-query parity and 24 sealed cases. These belong to implementation/PV-11."
+    }
+  ],
+  "repairCycles": {
+    "new_extractor_fixture": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "new_batch_API_name": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "legacy_feedback_crash_hook": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_worker_fixture": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_queue_authority": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_postgres_replay_indentation": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_damaged_work_handler": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "diagnostics_test_fault_hook": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_scope_none": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "profile_discard_postgres_guard_indentation": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "diagnostics_mcp_argument": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "diagnostics_log_capture": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "oscillation_chain_sources": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "lifecycle_fixture_record_count": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "autouse_fixture_lint_annotation": {
+      "unsuccessful": 1,
+      "successful": 1,
+      "note": "Conservative shared-behavior count: first two-module correction passed checkpoint scope, but final all-owned-file check exposed the same omitted annotation in two earlier modules. Second correction passed the complete scoped Ruff command; no third attempt."
+    },
+    "protected_receipt_citation_consumer_types": {
+      "unsuccessful": 0,
+      "successful": 1
+    },
+    "current_only_format_regressions": {
+      "unsuccessful": 0,
+      "successful": 1,
+      "note": "Only three files that formatted at dependency base were corrected; AST equality verified. Existing baseline formatting was preserved."
+    }
+  },
+  "evidenceBoundary": {
+    "actual": [
+      "LocalAnalyzer",
+      "LocalSanitizer",
+      "CryptoProtector",
+      "NativeKeyCustody encoding/HMAC",
+      "backend claims/transactions/persistence/staging/publication/processing cleanup"
+    ],
+    "fixtures": [
+      "external models",
+      "clock/faults",
+      "inherited native OS get/set/delete adapter",
+      "current-policy authority"
+    ]
+  },
+  "pending": [
+    "root independent affected-source reviews and required final full suite/wheel/CI/delivery",
+    "reconcile any concrete corrected PV-04 dependency checkpoint from root before final delivery",
+    "325 authoritative erasure/current-policy integration and original full erase/replay gates",
+    "326 protected export/restoration and complete original adapter/artifact gates",
+    "327 combined end-to-end gate; all nine full scenarios and six original acceptance criteria remain pending"
+  ],
+  "remaining": [
+    "root independent affected-source reviews and required final full suite/wheel/CI/delivery",
+    "reconcile any concrete corrected PV-04 dependency checkpoint from root before final delivery",
+    "325 authoritative erasure/current-policy integration and original full erase/replay gates",
+    "326 protected export/restoration and complete original adapter/artifact gates",
+    "327 combined end-to-end gate; all nine full scenarios and six original acceptance criteria remain pending"
+  ],
+  "sourceObservations": [
+    {
+      "case": "CL08",
+      "log": "profile-components-3.log",
+      "finding": "protected extraction entity_merge.py emits name=Mara; root approved one logger-wrapper extra path; pending correction and concurrent-legacy positive",
+      "resolution": "Operation-scoped wrapper implemented; diagnostics-components-4.log proves protected suppression and concurrent legacy logging on all three layouts."
+    },
+    {
+      "case": "ER05",
+      "finding": "Source-derived inherited ContextVar concern, not an observed pre-fix runtime failure: child tasks could reuse a parent JournalScope fast path.",
+      "resolution": "Scope is active and tied to creating asyncio task; native deadline checks remain usable under joined parent lease. New actual child transaction check passed all three layouts in diagnostics-scope-components-3.log."
+    },
+    {
+      "case": "CL07",
+      "finding": "PostgreSQL guard indentation recurred in distinct profile replay/discard paths.",
+      "resolution": "Reassessed only the changed profile publication/work/discard/collection transaction guards and return branches, including AST unreachable-after-return check. Existing three-layout staging/discard/recovery cases passed after one repair for each behavior; no new cohort."
+    }
+  ],
+  "dependencyCommits": [
+    "01cd5a4d36584df2faded941c128682f452f094d",
+    "eb4576463e5f00f1e8849c539ec627c9ed4bf484",
+    "c4531a0e7ad8c3a558eadbe3ed18278ea1f346c9",
+    "c42af43926ca95a42f8b05facc8606b2df61023c"
+  ],
+  "componentCoverage": {
+    "AP06": "Actual encrypted claimed input, continuation, retry, completion/cancel cleanup and strict no-durable behavior; fixture current-policy authority only.",
+    "AC06": "Saved admitted plans publish with private processing/evidence keys locked; inherited PV-04 source availability and provider routing evidence remains.",
+    "CL03": "Actual private extraction checkpoints and admitted plans; no new provider calls after complete plan; terminal work cannot recover from missing mutable rows.",
+    "CL04": "Real promote/archive/reinforce/TTL/supersede/condition/oscillation and contradiction mutations; all three layouts. Full erase-to-unavailable portion still PV-06.",
+    "CL05": "Real admitted entity profiles; daily/weekly/monthly/consolidation summaries; duplicate/alias proposal and accepted/rejected review. External assessment is a fixture; actual journals and effects are real.",
+    "CL06": "Actual persisted minimized receipts, numeric replay, labels/citations and explicit unavailable query-dependent learning; legacy receipt regression evidence retained.",
+    "CL07": "Real native/SQL profile staging/discard/collection, live control and immutable missing-work reconstruction; full erasure of covered derivatives remains PV-06.",
+    "CL08": "Real protected success/failure diagnostic output, concurrent legacy positive, HTTP/MCP, managed SQL logical dump and owned local artifacts; other adapters inherit unchanged evidence. Protected export remains PV-07; PostgreSQL physical files not visible.",
+    "ER05": "Actual completion/cancel/expiry, missing mutable rows, abandoned profile reconstruction and active creating-task JournalScope authority; erased-input replay/current independent ledger remains PV-06."
+  },
+  "visibilityLimits": [
+    "OS get/set/delete and current-policy authority use inherited fixtures; actual crypto/claims/persistence/publication/cleanup are real.",
+    "PV-03 native adapter and PV-13 pinned detector evidence is inherited unchanged, not re-run or replaced.",
+    "Logical dump is a test-owned scan, not a protected export API. PostgreSQL server WAL/temp/base files and unmanaged backups are not visible.",
+    "No physical wipe, heap zeroization, anonymity, same-process isolation or already-delivered copy revocation claim."
+  ],
+  "composition": {
+    "owned_checkpoint": "a4fecf810b7a009b4428b49d51b61c9577d43ed0",
+    "merge": "3016d80dc25447a506c2c24e6db6f435ffa17d6c",
+    "tree": "5ad806290ba338b6b6dcb0526bfc6fcd29da9eff",
+    "conflicts": false,
+    "post_check_delta": "fixture noqa, exact public consumer type expectations, docs/evidence and three AST-identical production formatting changes only"
+  },
+  "formatting": {
+    "existing_files": 46,
+    "dependency_format_failures": 40,
+    "remaining_inherited_format_failures": 37,
+    "new_format_regressions": []
+  },
+  "currentFailedRuntimeChecks": [],
+  "evidenceEquivalence": "The 49 component checks ran at c42 composition 3016d80d. Later production changes are formatting only with AST equality; fixture noqa and static consumer type assertions do not alter runtime behavior. The affected 154-pass compatibility run used that equivalent production source. Root runs final full validation on the frozen commit."
+}

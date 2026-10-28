@@ -10,6 +10,7 @@ from uuid import UUID, uuid5
 
 from pydantic import BaseModel, ConfigDict
 
+from prme.privacy.journals import protected_mutation, snapshot_payload, validate_snapshot, journal_deadline
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage import _snapshot_json
@@ -47,6 +48,9 @@ def _request(old_id, new_id, evidence_id, actor_id):
 
 
 def _payload(record: SupersedenceRecord) -> str:
+    protected = snapshot_payload(record, "supersedence")
+    if protected is not None:
+        return protected
     raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps({"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()})
 
@@ -58,6 +62,7 @@ def read_record(value) -> SupersedenceRecord:
     if hashlib.sha256(raw.encode()).hexdigest() != value["sha256"]:
         raise ValueError("Supersedence journal checksum mismatch")
     record = SupersedenceRecord.model_validate(_snapshot_json.loads(raw))
+    validate_snapshot(value, record, "supersedence")
     before, replacement, after, edge = (
         record.before,
         record.replacement,
@@ -148,6 +153,7 @@ def _validate_replay(record, *, old_id, new_id, evidence, actor, current, edge):
 
 def _checkpoint(stage):
     """Native transaction fault-injection boundary; no external work."""
+    journal_deadline()
 
 
 def _supersede_many_duckdb(store, requests):
@@ -200,6 +206,7 @@ def _supersede_many_duckdb(store, requests):
         raise
 
 
+@protected_mutation
 async def supersede_many_postgres(store, replacements, *, actor_id="system"):
     from prme.storage.pg.graph_store import _NODE_COLUMNS
 

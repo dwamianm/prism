@@ -10,6 +10,12 @@ from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import BaseModel, ConfigDict
 
+from prme.privacy.journals import (
+    protected_mutation,
+    snapshot_payload,
+    validate_snapshot,
+    journal_deadline,
+)
 from prme.models.nodes import MemoryNode
 from prme.storage._threading import run_to_completion
 from prme.storage import _snapshot_json
@@ -102,6 +108,9 @@ def _values(node, evidence):
 
 
 def _payload(record):
+    protected = snapshot_payload(record, "reinforcement")
+    if protected is not None:
+        return protected
     raw = _snapshot_json.dumps(record.model_dump(mode="python"))
     return json.dumps(
         {"record": raw, "sha256": hashlib.sha256(raw.encode()).hexdigest()}
@@ -114,6 +123,7 @@ def read_record(payload):
     if hashlib.sha256(value["record"].encode()).hexdigest() != value["sha256"]:
         raise ValueError("Reinforcement journal checksum mismatch")
     record = ReinforcementRecord.model_validate(_snapshot_json.loads(value["record"]))
+    validate_snapshot(value, record, "reinforcement")
     if (
         record.before.id != record.after.id
         or record.before.user_id != record.after.user_id
@@ -131,8 +141,10 @@ def read_record(payload):
 
 def _checkpoint(stage):
     """Transaction fault-injection point, with no external work."""
+    journal_deadline()
 
 
+@protected_mutation
 async def reinforce_duckdb(store, node_id, *, user_id, evidence_id, request_id=None):
     request_id = _request_id(request_id)
     async with store._conn_lock:
@@ -200,6 +212,7 @@ def _reinforce_duckdb(store, node_id, user_id, evidence_id, request_id):
         raise
 
 
+@protected_mutation
 async def reinforce_postgres(store, node_id, *, user_id, evidence_id, request_id=None):
     from prme.storage.pg.graph_store import _NODE_COLUMNS
 
