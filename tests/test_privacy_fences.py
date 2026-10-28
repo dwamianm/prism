@@ -241,10 +241,10 @@ async def test_reingest_protection_precedes_source_filtering(tmp_path, monkeypat
     if reopened:
         await engine.close()
         r.clock.now = saved.snapshot.processing_deadline + timedelta(seconds=1)
-        # A protected store refuses to open without its privacy runtime (#325),
+        # A protected store refuses to open without its privacy runtime (#325, #326),
         # before any provider call. The reopened refusals below run with it.
         sends = list(r.embedder.sends)
-        with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+        with pytest.raises(PrivacyDenied, match="privacy_capability_unavailable"):
             await MemoryEngine.create(config, embedding_provider=r.embedder)
         assert r.embedder.sends == sends
         engine = await MemoryEngine.create(config, embedding_provider=r.embedder, privacy_runtime=r)

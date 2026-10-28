@@ -174,7 +174,9 @@ async def test_ER04_intent_and_each_stage_survive_interruption_and_failure(tmp_p
         assert await engine.request_erasure(request, user_id=owner) == complete
         erased = await engine._privacy.repository.get(event, user_id=owner)
         assert erased.evidence is None and erased.processing is None and erased.retry is None
-        assert await engine._privacy.repository._query("SELECT content,content_hash FROM events WHERE id=?", (event,)) == [("", "")]
+        # The protected event format (#326) has no content_hash column; the
+        # erased source row keeps no content.
+        assert await engine._privacy.repository._query("SELECT content FROM events WHERE id=?", (event,)) == [("",)]
         # A completed node-only selection no longer has a node row to resolve.
         # Its exact persisted request must still be safely retryable.
         selected = (await engine.get_event_nodes(positive, user_id=owner))[0]

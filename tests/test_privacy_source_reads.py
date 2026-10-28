@@ -378,10 +378,10 @@ async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout,
     config = engine._config.model_copy(update={"privacy_policy": None})
     await engine.close()
     # A bound protected store refuses to open without its privacy runtime
-    # (#325). The classification checks below run on the runtime-backed open
+    # (#325, #326). The classification checks below run on the runtime-backed open
     # with no configured policy, where missing enrollment still matters.
     import pytest
-    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+    with pytest.raises(PrivacyDenied, match="privacy_capability_unavailable"):
         await MemoryEngine.create(config, embedding_provider=runtime.embedder)
     engine = await MemoryEngine.create(config, embedding_provider=runtime.embedder, privacy_runtime=runtime)
     try:

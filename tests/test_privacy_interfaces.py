@@ -25,12 +25,12 @@ def test_reingest_sync_and_HTTP_reopened_refusal(tmp_path, monkeypatch, caplog, 
         client.store(SOURCE, user_id=str(p.owner_id), policy=p)
     embed = AsyncMock(side_effect=AssertionError("unexpected provider effect"))
     monkeypatch.setattr(r.embedder, "embed", embed)
-    # A protected store refuses to open without its privacy runtime (#325), so
+    # A protected store refuses to open without its privacy runtime (#325, #326), so
     # neither surface reaches reingest, a provider or the source.
-    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+    with pytest.raises(PrivacyDenied, match="privacy_capability_unavailable"):
         with MemoryClient(config=config, embedding_provider=r.embedder) as client:
             client.reingest(str(p.owner_id), dry_run=True, limit=0)
-    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
+    with pytest.raises(PrivacyDenied, match="privacy_capability_unavailable"):
         with TestClient(create_app(config, embedding_provider=r.embedder)) as client:
             client.post("/v1/reingest", json={"user_id": str(p.owner_id), "dry_run": True, "limit": 0})
     # Reopened with the runtime but no configured policy, reingest itself refuses.
@@ -66,7 +66,7 @@ async def test_reingest_MCP_actual_dispatch_fixed_refusal(tmp_path, caplog, caps
         async with create_connected_server_and_client_session(server._mcp_server, raise_exceptions=True) as client:
             await client.initialize()
             await client.call_tool("memory_reingest", {"dry_run": True, "limit": 0})
-    assert refused.group_contains(PrivacyDenied, match="privacy_ledger_unavailable")
+    assert refused.group_contains(PrivacyDenied, match="privacy_capability_unavailable")
     # With the runtime, the tool call itself returns the fixed refusal.
     server = create_mcp_server(config, embedding_provider=r.embedder, privacy_runtime=r)
     async with create_connected_server_and_client_session(server._mcp_server, raise_exceptions=True) as client:
@@ -120,7 +120,7 @@ def test_reingest_CLI_real_open_refuse_close_keeps_pending_protected_work(tmp_pa
         structlog.configure(**logging_config)
     output = capsys.readouterr()
     # The open refuses without the privacy runtime (#325), before reingest.
-    assert "privacy_ledger_unavailable" in output.err
+    assert "privacy_capability_unavailable" in output.err
     assert SOURCE not in output.out + output.err + caplog.text
     embed.assert_not_awaited()
     extract.assert_not_awaited()
