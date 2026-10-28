@@ -271,6 +271,15 @@ class AdmissionCoordinator:
 
     def require_runtime(self) -> PrivacyRuntime:
         validate_protected_config(self.engine._config)
+        return self.require_capabilities()
+
+    def require_capabilities(self) -> PrivacyRuntime:
+        """The runtime without the protected-admission config check.
+
+        Erasure fences, purge and current-record checks only deny or remove
+        content, so a config that blocks protected admission (owner group
+        links) must not block them or the store's open.
+        """
         if self.runtime is None or any(getattr(self.runtime, name, None) is None
                                        for name in ("authority", "sanitizer", "protector", "embedder", "erasure_ledger")):
             raise PrivacyDenied("privacy_capability_unavailable")
