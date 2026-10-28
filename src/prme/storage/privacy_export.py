@@ -443,11 +443,35 @@ async def export_protected_pack(engine, destination, *, mode="protected") -> Pro
         if any(record.event_id not in live_ids and (record.evidence or record.processing or record.retry)
                for record in records):
             raise PrivacyDenied("privacy_erased")
+        await refuse_unpurged_unavailable(coordinator, records, bundle.nodes)
         await coordinator.check_disclosure(live)
         async with coordinator.publication_guards(live, node_ids=tuple(node.id for node in bundle.nodes)):
             # This is the actual external effect, not an earlier checkpoint.
             _publish_bytes(Path(destination), bundle.model_dump_json().encode())
     return bundle.manifest
+
+
+async def refuse_unpurged_unavailable(coordinator, records, nodes) -> None:
+    """Refuse a copy while erased or expired memory is still in the store (AC5).
+
+    An accepted erasure blocks access before its purge, and an expired memory is
+    unavailable before maintenance removes it. A copy taken in between would
+    carry that memory past the block, so process erasures and maintenance first.
+    """
+    from prme.privacy.records import PRIVACY_KEY
+    from prme.privacy.erasure import ErasureStatus
+    for (status,) in await coordinator.repository._query("SELECT status FROM privacy_erasure_jobs", ()):
+        current = ErasureStatus.model_validate_json(status)
+        # An evidence-only erasure keeps admitted memory by design; only a
+        # pending memory erasure still has memory that must not be copied.
+        if current.mode == "memory" and current.state in {"requested", "blocked_from_access"}:
+            raise PrivacyDenied("privacy_erased")
+    now = coordinator.require_capabilities().clock()
+    expired = {str(record.event_id) for record in records
+               if record.snapshot.memory_deadline is not None and now >= record.snapshot.memory_deadline}
+    if expired and any(str(((node.metadata or {}).get(PRIVACY_KEY) or {}).get("event_id")) in expired
+                       for node in nodes):
+        raise PrivacyDenied("privacy_expired")
 
 
 def _read_export(raw) -> ProtectedExport:
@@ -545,6 +569,11 @@ async def _restore_database(conn, pool, config, runtime, bundle):
     from prme.storage.erasure import DDL, ErasureRepository, prepare_store
     from prme.storage.privacy_format import install_duck_format, install_pg_format
     repository = ErasureRepository(conn=conn, pool=pool)
+    # The artifact's checkpoint is not bound to its content, so it never sets
+    # erasure fencing. Replay this store's whole ledger from registration:
+    # apply and purge are idempotent, and pending intents return with it.
+    async with runtime.erasure_ledger.guard():
+        start = await runtime.erasure_ledger.registration_head(bundle.manifest.ledger_checkpoint.store_id)
     async with repository.session(transaction=True) as session:
         # Never merge a snapshot into an occupied database/schema.
         tables = await session.fetch("SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema() AND table_type='BASE TABLE'")
@@ -552,7 +581,7 @@ async def _restore_database(conn, pool, config, runtime, bundle):
             raise PrivacyPortabilityError("privacy_destination_occupied")
         for sql in DDL:
             await session.execute(sql)
-        await session.execute("INSERT INTO privacy_store_state VALUES(1,$1,$2)", str(runtime.project_id), bundle.manifest.ledger_checkpoint.model_dump_json())
+        await session.execute("INSERT INTO privacy_store_state VALUES(1,$1,$2)", str(runtime.project_id), start.model_dump_json())
         await session.execute("INSERT INTO privacy_erasure_epoch VALUES(1,0)")
     # These initializers see zero content. Their reconstructed registries remain
     # empty until the independent ledger has purged the loaded snapshot below.

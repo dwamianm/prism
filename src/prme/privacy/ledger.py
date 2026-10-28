@@ -120,6 +120,25 @@ class LocalErasureLedger:
                 return self._head(conn, store_id)
         return await run_to_completion(read)
 
+    async def registration_head(self, store_id: UUID) -> LedgerHead:
+        """The store's head at registration, before any intent.
+
+        Restore replays from here, so no artifact-declared checkpoint can skip
+        an earlier erasure. The first entry links to the registration token.
+        """
+        self._held()
+        def read():
+            with self._connect() as conn:
+                head = self._head(conn, store_id)
+                row = conn.execute("SELECT body FROM entries WHERE store_id=? AND sequence=1", (str(store_id),)).fetchone()
+                if row is None:
+                    if head.sequence != 0:
+                        raise PrivacyDenied("privacy_ledger_stale")
+                    return head
+                first = LedgerEntry.model_validate_json(row[0])
+                return head.model_copy(update={"sequence": 0, "token": first.previous_token})
+        return await run_to_completion(read)
+
     async def entries_since(self, checkpoint: LedgerHead) -> tuple[LedgerEntry, ...]:
         self._held()
         def read():

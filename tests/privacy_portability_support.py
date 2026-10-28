@@ -81,6 +81,10 @@ class HeldLocalLedger:
         self._require_lease()
         return await self.source.current_head(*args)
 
+    async def registration_head(self, *args):
+        self._require_lease()
+        return await self.source.registration_head(*args)
+
     async def entries_since(self, *args):
         self._require_lease()
         return await self.source.entries_since(*args)

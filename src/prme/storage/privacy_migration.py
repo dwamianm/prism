@@ -969,6 +969,9 @@ async def migrate_privacy_pack(source_config, target_config, *, privacy_runtime,
         artifact = path / "protected-export.json"
         if artifact.exists():
             artifact.unlink()  # Exactly this job-owned, previously staged output.
+        # An intent accepted during migration may still be pending here. The
+        # restore below replays this store's whole ledger before it serves, so
+        # the pending erasure applies to the target; it is not refused here.
         records = await coordinator.erasure.current_records(await coordinator.repository._read("1=1", ()))
         async with coordinator.publication_guards(records, node_ids=tuple(node.id for node in bundle.nodes)):
             _publish_bytes(artifact, bundle.model_dump_json().encode())

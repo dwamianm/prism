@@ -153,6 +153,10 @@ class PrivacyRepository:
                 if not ids:
                     continue
             clauses, args = [], []
+            if table == "events":
+                # A memory erasure keeps its event row as a content-free
+                # tombstone (storage/erasure.py). That row is not damaged.
+                clauses.append("(metadata IS NULL OR CAST(metadata AS VARCHAR) NOT LIKE '%\"erasure\"%')")
             if user_id is not None:
                 clauses.append("user_id=?")
                 args.append(user_id)
