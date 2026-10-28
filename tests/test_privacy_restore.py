@@ -798,6 +798,8 @@ async def test_restored_pending_work_keeps_deadline_budget_and_claim_fences(tmp_
 
 async def test_bound_postgres_restore_current_catalog_and_recovery_lease(tmp_path, analyzer, native, monkeypatch):
     """One real PG variant; hosted capability composition/public reads stay separate."""
+    if not os.getenv("PRME_TEST_DATABASE_URL"):
+        pytest.skip("dedicated PostgreSQL required; not a restore success")
     import asyncpg
     from prme import MemoryWorkspace
     from prme.privacy.portability import PostgresRestoreTarget
