@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-29
+
+The first stable release of the 0.16 line. It holds everything in 0.16.0a1 to 0.16.0a9 (their sections below give the details) and the changes listed here. `pip install prme` now installs 0.16.0.
+
+This release did not run the full benchmark. Earlier notes said a stable release waits for it; the maintainer decided on 2026-10-29 to release 0.16.0 without it. 0.16.0 passed CI, including a new job with the newest allowed dependencies, the cheap fast tiers and the offline evidence gate, replayed from the recorded caches with no live model call.
+
+### Added
+
+- The PV-11 privacy gate is complete apart from one open case (dwamianm/prism#327; tests and docs only, they do not ship in the wheel). The gate maps the 52 frozen privacy scenarios on DuckDB and PostgreSQL and every adapter subcheck per scenario, and adds two quality sets: 24 fixed retrieval queries whose selected records and packed text must survive storage encryption and restore byte for byte, and 24 frozen sealed-profile scenarios. Detector measures for the 69-row synthetic fixture are recorded. Final result: 99 of 104 executions passed, 3 are backend independent, and EM07 (standard migration parity) is an expected failure on both backends. See `docs/plans/2026-10-evidence-privacy/PV-11-report.md`.
+- A CI job runs the whole suite with the newest allowed dependencies on DuckDB and PostgreSQL (dwamianm/prism#377).
+
+### Fixed
+
+- DuckDB 2: a store reopened after a crash now folds its replayed write-ahead log into the file when the engine closes, so a single-file pack stays one file. DuckDB 2.0 left the log beside the file (dwamianm/prism#377).
+- A protected store no longer drops the keyword document of an entity stored directly with `store()` when its indexes are rebuilt, when it is restored, or when a protected single-file pack opens (dwamianm/prism#327).
+
+### Upgrade notes from 0.15.0
+
+- Install: `cryptography` is pinned to exactly 50.0.2. The `privacy` extra does not install the sanitizer's English model; install it from its release (see `docs/SANITIZATION.md`). DuckDB 2 is supported, and the newest openai, anthropic and instructor releases pass the suite.
+- These defaults changed during the alpha line. Each has an environment variable that restores the 0.15.0 behavior, and none rewrites a stored memory:
+
+  | Default turned on | Since | Turn it off with |
+  | --- | --- | --- |
+  | `lexical_term_weights` (PostgreSQL only) | 0.16.0a2 | `PRME_LEXICAL_TERM_WEIGHTS=false` |
+  | `enable_ingest_claim_fixes` | 0.16.0a3 | `PRME_ENABLE_INGEST_CLAIM_FIXES=false` |
+  | `packing.folded_records_keep_rank` | 0.16.0a3 | `PRME_PACKING__FOLDED_RECORDS_KEEP_RANK=false` |
+  | `enable_mention_links` | 0.16.0a3 | `PRME_ENABLE_MENTION_LINKS=false` |
+  | `packing.graph_seed_words` | 0.16.0a3 | `PRME_PACKING__GRAPH_SEED_WORDS=false` |
+  | `enable_owner_name_carry` | 0.16.0a3 | `PRME_ENABLE_OWNER_NAME_CARRY=false` |
+  | `packing.session_context_skip_entities` | 0.16.0a4 | `PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES=false` |
+  | `enable_owner_group_links` | 0.16.0a6 | `PRME_ENABLE_OWNER_GROUP_LINKS=false` |
+  | `scoring.rrf_graph_seed_count` | 0.16.0a6 | `PRME_SCORING__RRF_GRAPH_SEED_COUNT=false` |
+  | `enable_pronoun_repair` | 0.16.0a8 | `PRME_ENABLE_PRONOUN_REPAIR=false` |
+
+- New and off by default: `store(extract=True)` and `enable_store_extraction`, `enable_extraction_corrections`, `enable_superseded_source_suppression`, `scoring.rrf_graph_weight`, `enable_reingest` (for `reingest()`), `enable_owner_window_extraction`, multi-model embeddings (`enable_multi_model_embeddings`, `reembed()`), the embedding prefixes, and privacy admission policies (`privacy_policy`).
+- A store that uses a privacy runtime holds only protected records, refuses every plain write, refuses to open without its runtime, and waits for pending memory erasures and expired memory before export (see 0.16.0a9). A custom `ErasureLedger` adapter must add `registration_head(store_id)`.
+- A store gains the privacy tables the first time this release opens it. Releases before 0.16.0a6 do not use them.
+- Retrieval receipts written with the new defaults name the new packing fields; releases before 0.16.0a3 ignore them.
+- `reingest()` reads memories derived before 0.16.0a8 as stale once, because the pronoun repair is part of the re-derivation settings.
+- Known open item: EM07, standard migration parity for protected stores, in dwamianm/prism#327 and #326.
+- Known flaky test: `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted` can stop the test process with a native DuckDB abort while the engine closes, and `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself` fails inside a git worktree. Neither affects the installed package.
+
 ## [0.16.0a9] - 2026-10-29
 
 This is an alpha. It passed CI and the cheap fast tiers and the offline gate, replayed from the recorded
@@ -3202,7 +3244,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a9...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0
 [0.16.0a9]: https://github.com/dwamianm/prism/compare/v0.16.0a8...v0.16.0a9
 [0.16.0a8]: https://github.com/dwamianm/prism/compare/v0.16.0a7...v0.16.0a8
 [0.16.0a7]: https://github.com/dwamianm/prism/compare/v0.16.0a6...v0.16.0a7
