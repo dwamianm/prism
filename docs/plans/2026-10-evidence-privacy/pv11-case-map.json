@@ -40,5 +40,487 @@
     "EM01": "Fixed AES-256-GCM CAVP vectors, a whole-envelope vector and independent-library decryption run on the crypto module alone; no storage backend is opened.",
     "EM06": "Local public writer, grant, lease, expiry and audit ordering are custody and capability logic in the privacy runtime; the tests open no storage backend. Stored-evidence diagnostic reads on PostgreSQL are covered by AC02 (test_EM03_real_ciphertext_storage_and_private_diagnostic).",
     "AC05": "Envelope tamper, key loss and audit-time denial are crypto, custody and audit logic; the mapped tests open no storage backend. The PostgreSQL stored-evidence read path is covered by AC02."
+  },
+  "adapter_subchecks_rule": "Each listed adapter of a case needs mapped tests that ran and all passed, on at least one backend; the gate names the backends. async_python is the async engine API that the case's own mapped tests drive. kind 'refusal' marks an adapter that does not support the protected operation and refuses it before side effects with a fixed code; the gate reports it as proven by refusal, not as a positive pass. The LangChain and LlamaIndex chat-history adapters refuse every protected write (privacy_unsupported_input); their retrieval adapters are positive in AC08. The ordinary CLI cannot supply a privacy runtime, so its reads refuse to open a protected store.",
+  "adapter_subchecks": {
+    "AP01": {
+      "sync_python": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_sync_python_retains_sanitized_memory_with_policy"
+        ]
+      },
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_AP02_HTTP_real_lifespan_and_content_free_errors"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_AP02_MCP_public_tool_dispatch"
+        ]
+      },
+      "fast_batch": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_batch_supported_import_is_public_fast_batch"
+        ]
+      },
+      "supported_import": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_batch_supported_import_is_public_fast_batch"
+        ]
+      },
+      "langchain": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "llamaindex": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      }
+    },
+    "AP02": {
+      "sync_python": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AP02_sync_python_rejects_before_side_effects"
+        ]
+      },
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_AP02_HTTP_real_lifespan_and_content_free_errors"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_AP02_MCP_public_tool_dispatch"
+        ]
+      },
+      "fast_batch": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_admission.py::test_AP02_whole_batch_preflight_before_write_or_provider",
+          "tests/test_privacy_adapter_subchecks.py::test_AP02_sync_python_rejects_before_side_effects"
+        ]
+      },
+      "supported_import": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_admission.py::test_AP02_whole_batch_preflight_before_write_or_provider"
+        ]
+      },
+      "langchain": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "llamaindex": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      }
+    },
+    "AP03": {
+      "sync_python": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AP03_sync_python_and_fast_batch_keep_concurrent_project_policies"
+        ]
+      },
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AP03_HTTP_keeps_concurrent_project_policies"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AP03_AP06_MCP_project_policies_and_async_refusal"
+        ]
+      },
+      "fast_batch": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AP03_sync_python_and_fast_batch_keep_concurrent_project_policies"
+        ]
+      },
+      "supported_import": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AP03_sync_python_and_fast_batch_keep_concurrent_project_policies"
+        ]
+      },
+      "langchain": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "llamaindex": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      }
+    },
+    "AP06": {
+      "sync_python": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_sync_python_retains_sanitized_memory_with_policy"
+        ]
+      },
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_interfaces.py::test_AP01_AP02_HTTP_real_lifespan_and_content_free_errors"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AP03_AP06_MCP_project_policies_and_async_refusal"
+        ]
+      },
+      "fast_batch": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AP06_fast_batch_refuses_before_enqueue_without_durable_input"
+        ]
+      },
+      "supported_import": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_processing_work.py::test_AP06_component_multiple_input_allowances_and_claims"
+        ]
+      },
+      "langchain": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "llamaindex": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      }
+    },
+    "AC01": {
+      "sync_python": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AC01_sync_python_ordinary_reads_return_admitted_memory"
+        ]
+      },
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch"
+        ]
+      },
+      "explorer": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch"
+        ]
+      },
+      "cli": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AC01_CL08_CLI_reads_refuse_without_runtime_and_hide_markers"
+        ]
+      }
+    },
+    "AC02": {
+      "cli": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_key_cli.py::test_selected_cli_inspection_and_unlock"
+        ]
+      }
+    },
+    "AC04": {
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch"
+        ]
+      }
+    },
+    "AC08": {
+      "langchain": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_source_interfaces.py::test_AC08_framework_retrieval_and_explicit_raw_history_denial"
+        ]
+      },
+      "llamaindex": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_source_interfaces.py::test_AC08_framework_retrieval_and_explicit_raw_history_denial"
+        ]
+      }
+    },
+    "CL01": {
+      "sync_python": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_MCP_real_dispatch"
+        ]
+      },
+      "fast_batch": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_scenarios.py::test_CL01_metadata_keys_and_display_fields"
+        ]
+      },
+      "supported_import": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_scenarios.py::test_CL01_metadata_keys_and_display_fields"
+        ]
+      },
+      "langchain": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "llamaindex": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      }
+    },
+    "CL08": {
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_journal_scenarios.py::test_CL08_component_diagnostics_and_actual_public_adapters"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_journal_scenarios.py::test_CL08_component_diagnostics_and_actual_public_adapters"
+        ]
+      },
+      "explorer": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_CL08_explorer_and_framework_errors_hide_markers"
+        ]
+      },
+      "cli": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_AC01_CL08_CLI_reads_refuse_without_runtime_and_hide_markers"
+        ]
+      },
+      "langchain": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_CL08_explorer_and_framework_errors_hide_markers"
+        ]
+      },
+      "llamaindex": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_adapter_subchecks.py::test_CL08_explorer_and_framework_errors_hide_markers"
+        ]
+      }
+    },
+    "ER08": {
+      "cli": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies"
+        ]
+      },
+      "langchain": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies"
+        ]
+      },
+      "llamaindex": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies"
+        ]
+      }
+    },
+    "EM05": {
+      "cli": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure",
+          "tests/test_privacy_key_cli.py::test_recovery_cli_uses_inherited_fd_and_exclusive_artifact"
+        ]
+      }
+    },
+    "EM08": {
+      "cli": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure",
+          "tests/test_privacy_portability_cli.py::test_AC1_AC6_EM08_cli_dry_run_migrate_status_restore_explicit_selection"
+        ]
+      },
+      "supported_import": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_portability_cli.py::test_AC1_AC6_EM08_cli_dry_run_migrate_status_restore_explicit_selection"
+        ]
+      }
+    },
+    "SN01": {
+      "sync_python": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_MCP_real_dispatch"
+        ]
+      },
+      "fast_batch": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_scenarios.py::test_SN11_prewrite_effects_and_query_gate"
+        ]
+      },
+      "supported_import": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_scenarios.py::test_SN11_prewrite_effects_and_query_gate"
+        ]
+      },
+      "langchain": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "llamaindex": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      }
+    },
+    "SN11": {
+      "sync_python": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "http": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "mcp": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_MCP_real_dispatch"
+        ]
+      },
+      "fast_batch": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_scenarios.py::test_SN11_prewrite_effects_and_query_gate"
+        ]
+      },
+      "supported_import": {
+        "kind": "positive",
+        "tests": [
+          "tests/test_privacy_sanitizer_scenarios.py::test_SN11_prewrite_effects_and_query_gate"
+        ]
+      },
+      "langchain": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      },
+      "llamaindex": {
+        "kind": "refusal",
+        "tests": [
+          "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries"
+        ]
+      }
+    }
+  },
+  "quality_sets": {
+    "storage_parity": {
+      "tests": [
+        "tests/test_privacy_quality_sets.py::test_PV11_storage_parity_24_fixed_queries"
+      ],
+      "note": "24 fixed existing queries (store-v1's 17, then store-heldout-v1's first 7) over the fast-cycle corpus, on a DuckDB directory to an encrypted single-file pack and a PostgreSQL schema to another PostgreSQL namespace, under one runtime grant. The plain-store baseline and the sanitization differences are written beside the test, not asserted."
+    },
+    "sealed_behavior": {
+      "tests": [
+        "tests/test_privacy_quality_sets.py::test_PV11_sealed_behavior_24_frozen_scenarios"
+      ],
+      "note": "tests/fixtures/privacy/sealed-behavior-v1.json. The standard-profile answers and their differences are written beside the test, not asserted."
+    },
+    "detector_measures": {
+      "tests": [
+        "tests/test_privacy_detector_measures.py::test_PV11_detector_measures"
+      ],
+      "note": "Report only, written to PV-11-detector-measures.json; it asserts only the mandatory credential blocking."
+    }
   }
 }
