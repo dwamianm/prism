@@ -277,10 +277,12 @@ def _release_database(key: str, conn: Any) -> None:
     its last connection closes. DuckDB 2.0 leaves the replayed log beside the
     file, so a single-file pack opened after a crash stops being one file and
     a copy of the file alone misses the replayed writes. The last engine that
-    holds the file checkpoints it before closing; an engine that still shares
-    the database with another one does not, because a checkpoint waits for the
-    other's open transaction. A failed checkpoint leaves the log to replay on
-    the next open, as before.
+    holds the file checkpoints it before closing. An engine that still shares
+    the database with another one does not: on DuckDB 1.4 a checkpoint refuses
+    while another connection has a write transaction open, and waits while it
+    holds an unread result. The checkpoint runs after the count is released,
+    so a slow one never holds up another engine's open or close. A failed
+    checkpoint leaves the log to replay on the next open, as before.
     """
     with _DATABASE_HOLDERS_LOCK:
         remaining = _DATABASE_HOLDERS.get(key, 1) - 1
@@ -288,10 +290,12 @@ def _release_database(key: str, conn: Any) -> None:
             _DATABASE_HOLDERS[key] = remaining
             return
         _DATABASE_HOLDERS.pop(key, None)
-        try:
-            conn.execute(f"CHECKPOINT {_PACK_DATABASE}" if isinstance(conn, _PackConnection) else "CHECKPOINT")
-        except Exception:
-            logger.debug("checkpoint_before_close_skipped", exc_info=True)
+    if conn is None:
+        return
+    try:
+        conn.execute(f"CHECKPOINT {_PACK_DATABASE}" if isinstance(conn, _PackConnection) else "CHECKPOINT")
+    except Exception:
+        logger.debug("checkpoint_before_close_skipped", exc_info=True)
 
 
 def _connect_single_file_pack(
