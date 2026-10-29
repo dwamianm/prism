@@ -1,0 +1,287 @@
+{
+  "schema_version": 1,
+  "name": "sealed-behavior-v1",
+  "owner": "PV-11 (#327)",
+  "description": "24 frozen sealed-profile scenarios: six simple facts, six conditions or corrections (the frozen source-separation qualifiers Q01 to Q06), six multi-source cases and six source-only or quotation requests. Each stored memory is admitted; each source_only value is stored only in the sealed source passage. A case passes when every required admitted text is in the packed context, no source-only value appears anywhere in the response, and a source-only or quotation request reports that the source is unavailable. Default retrieval excludes a conditional fact whose condition is unresolved, in every store (prme.retrieval.filtering), so the three conditional cases are asked in explicit mode; the test also records their default-mode exclusion.",
+  "cases": [
+    {
+      "id": "S01",
+      "group": "simple_facts",
+      "query": "Where does Mara keep her bicycle?",
+      "memories": [
+        "Mara keeps her bicycle in the garage."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_S01",
+      "required": [
+        "Mara keeps her bicycle in the garage."
+      ]
+    },
+    {
+      "id": "S02",
+      "group": "simple_facts",
+      "query": "What is Theo's favorite tea?",
+      "memories": [
+        "Theo's favorite tea is genmaicha."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_S02",
+      "required": [
+        "Theo's favorite tea is genmaicha."
+      ]
+    },
+    {
+      "id": "S03",
+      "group": "simple_facts",
+      "query": "When does the book club meet?",
+      "memories": [
+        "The book club meets on Thursdays."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_S03",
+      "required": [
+        "The book club meets on Thursdays."
+      ]
+    },
+    {
+      "id": "S04",
+      "group": "simple_facts",
+      "query": "What is Ines allergic to?",
+      "memories": [
+        "Ines is allergic to peanuts."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_S04",
+      "required": [
+        "Ines is allergic to peanuts."
+      ]
+    },
+    {
+      "id": "S05",
+      "group": "simple_facts",
+      "query": "Where is the spare key?",
+      "memories": [
+        "The spare key is under the blue flowerpot."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_S05",
+      "required": [
+        "The spare key is under the blue flowerpot."
+      ]
+    },
+    {
+      "id": "S06",
+      "group": "simple_facts",
+      "query": "What car does Omar drive?",
+      "memories": [
+        "Omar drives a green hatchback."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_S06",
+      "required": [
+        "Omar drives a green hatchback."
+      ]
+    },
+    {
+      "id": "C01",
+      "group": "conditions_or_corrections",
+      "query": "Does Alex prefer tea?",
+      "qualifier": "Q01",
+      "source": "tests/fixtures/privacy/source-separation-v1.json",
+      "retrieval_mode": "explicit"
+    },
+    {
+      "id": "C02",
+      "group": "conditions_or_corrections",
+      "query": "Does Alex use tea?",
+      "qualifier": "Q02",
+      "source": "tests/fixtures/privacy/source-separation-v1.json",
+      "retrieval_mode": "explicit"
+    },
+    {
+      "id": "C03",
+      "group": "conditions_or_corrections",
+      "query": "Do I use TeaDB?",
+      "qualifier": "Q03",
+      "source": "tests/fixtures/privacy/source-separation-v1.json"
+    },
+    {
+      "id": "C04",
+      "group": "conditions_or_corrections",
+      "query": "Since when does Alex use TeaDB?",
+      "qualifier": "Q04",
+      "source": "tests/fixtures/privacy/source-separation-v1.json"
+    },
+    {
+      "id": "C05",
+      "group": "conditions_or_corrections",
+      "query": "Did Alex install TeaDB?",
+      "qualifier": "Q05",
+      "source": "tests/fixtures/privacy/source-separation-v1.json"
+    },
+    {
+      "id": "C06",
+      "group": "conditions_or_corrections",
+      "query": "Would Alex work with Jordan?",
+      "qualifier": "Q06",
+      "source": "tests/fixtures/privacy/source-separation-v1.json",
+      "retrieval_mode": "explicit"
+    },
+    {
+      "id": "M01",
+      "group": "multi_source",
+      "query": "Where does Lena live and work?",
+      "memories": [
+        "Lena moved to Porto in May.",
+        "Lena works at a bakery in Porto."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_M01",
+      "required": [
+        "Lena moved to Porto in May.",
+        "Lena works at a bakery in Porto."
+      ]
+    },
+    {
+      "id": "M02",
+      "group": "multi_source",
+      "query": "Where and when is the team offsite?",
+      "memories": [
+        "The team offsite is in Lisbon.",
+        "The team offsite starts on June 3."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_M02",
+      "required": [
+        "The team offsite is in Lisbon.",
+        "The team offsite starts on June 3."
+      ]
+    },
+    {
+      "id": "M03",
+      "group": "multi_source",
+      "query": "When does Ravi practice the cello he plays?",
+      "memories": [
+        "Ravi plays the cello.",
+        "Ravi practices the cello every evening."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_M03",
+      "required": [
+        "Ravi plays the cello.",
+        "Ravi practices the cello every evening."
+      ]
+    },
+    {
+      "id": "M04",
+      "group": "multi_source",
+      "query": "How many apple trees are in the garden and when were they planted?",
+      "memories": [
+        "The garden has three apple trees.",
+        "The apple trees in the garden were planted in 2019."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_M04",
+      "required": [
+        "The garden has three apple trees.",
+        "The apple trees in the garden were planted in 2019."
+      ]
+    },
+    {
+      "id": "M05",
+      "group": "multi_source",
+      "query": "When does Nadia's flight land?",
+      "memories": [
+        "Nadia's flight lands at 6 pm.",
+        "Nadia's flight is on Friday."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_M05",
+      "required": [
+        "Nadia's flight lands at 6 pm.",
+        "Nadia's flight is on Friday."
+      ]
+    },
+    {
+      "id": "M06",
+      "group": "multi_source",
+      "query": "Where do we get toner for the office printer?",
+      "memories": [
+        "The office printer needs toner.",
+        "Printer toner comes from the supply room."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_M06",
+      "required": [
+        "The office printer needs toner.",
+        "Printer toner comes from the supply room."
+      ]
+    },
+    {
+      "id": "O01",
+      "group": "source_only_or_quotation",
+      "query": "What exactly did Priya's deploy note say?",
+      "memories": [
+        "Priya left a note about the deploy."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_O01 is the exact quoted text",
+      "required": [
+        "Priya left a note about the deploy."
+      ],
+      "expect_source_unavailable": true
+    },
+    {
+      "id": "O02",
+      "group": "source_only_or_quotation",
+      "query": "Quote the Wi-Fi hint Sam wrote down.",
+      "memories": [
+        "Sam wrote down the Wi-Fi network hint."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_O02 is the exact quoted text",
+      "required": [
+        "Sam wrote down the Wi-Fi network hint."
+      ],
+      "expect_source_unavailable": true
+    },
+    {
+      "id": "O03",
+      "group": "source_only_or_quotation",
+      "query": "What were Dana's exact words about the budget meeting?",
+      "memories": [
+        "Dana sent a message about the budget meeting."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_O03 is the exact quoted text",
+      "required": [
+        "Dana sent a message about the budget meeting."
+      ],
+      "expect_source_unavailable": true
+    },
+    {
+      "id": "O04",
+      "group": "source_only_or_quotation",
+      "query": "What did the landlord say word for word about the lease?",
+      "memories": [
+        "The landlord left a voicemail about the lease."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_O04 is the exact quoted text",
+      "required": [
+        "The landlord left a voicemail about the lease."
+      ],
+      "expect_source_unavailable": true
+    },
+    {
+      "id": "O05",
+      "group": "source_only_or_quotation",
+      "query": "Read me Jordan's postcard from Kyoto.",
+      "memories": [
+        "Jordan's postcard from Kyoto arrived."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_O05 is the exact quoted text",
+      "required": [
+        "Jordan's postcard from Kyoto arrived."
+      ],
+      "expect_source_unavailable": true
+    },
+    {
+      "id": "O06",
+      "group": "source_only_or_quotation",
+      "query": "What is the exact wording of Grandma's soup recipe?",
+      "memories": [
+        "Grandma shared her soup recipe."
+      ],
+      "source_only": "SOURCE_ONLY_SEALED_O06 is the exact quoted text",
+      "required": [
+        "Grandma shared her soup recipe."
+      ],
+      "expect_source_unavailable": true
+    }
+  ]
+}

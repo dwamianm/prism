@@ -1,0 +1,2114 @@
+{
+  "schema_version": 1,
+  "fixture": "sanitizer-v1.json",
+  "detector_versions": [
+    "presidio-analyzer:2.2.364",
+    "spacy:3.8.11",
+    "en_core_web_sm:3.8.0"
+  ],
+  "scope": "Local synthetic rows through LocalSanitizer.admit with English declared. Not a general precision, recall or anonymity claim.",
+  "limits": [
+    "English only; the caller declares the language and no detection runs.",
+    "Recognizers are the pinned local Presidio and spaCy en_core_web_sm models plus the bounded rule registry.",
+    "Contextual sensitivity (a value that is private only in context) is not detected.",
+    "Unsupported formats in the fixture are recorded as such; a miss there is expected, not a pass."
+  ],
+  "balanced": {
+    "summary": {
+      "categories": {
+        "credential": {
+          "policy_action": "block",
+          "supported_positive": 13,
+          "removed_or_refused": 13,
+          "benign": 3,
+          "benign_changed": 0,
+          "unsupported": 4,
+          "unsupported_removed_or_refused": 0
+        },
+        "email": {
+          "policy_action": "redact",
+          "supported_positive": 5,
+          "removed_or_refused": 5,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 2,
+          "unsupported_removed_or_refused": 0
+        },
+        "phone": {
+          "policy_action": "redact",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "person": {
+          "policy_action": "allow",
+          "supported_positive": 2,
+          "removed_or_refused": 0,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "location": {
+          "policy_action": "allow",
+          "supported_positive": 2,
+          "removed_or_refused": 0,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "us_ssn": {
+          "policy_action": "redact",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "payment_card": {
+          "policy_action": "redact",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "ip_address": {
+          "policy_action": "allow",
+          "supported_positive": 2,
+          "removed_or_refused": 0,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "custom_identifier": {
+          "policy_action": "redact",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "sensitive_topic": {
+          "policy_action": "block",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        }
+      },
+      "refused_rows": 15,
+      "benign_rows_changed": 0,
+      "key_provider_calls": 0,
+      "input_bytes": 2084,
+      "retained_bytes_of_admitted_rows": 1573,
+      "input_bytes_of_admitted_rows": 1594,
+      "latency_ms": {
+        "median": 5.8,
+        "p95": 5.931,
+        "max": 15.896
+      }
+    },
+    "rows": [
+      {
+        "id": "credential-01",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 33,
+        "retained_bytes": 0,
+        "latency_ms": 0.226
+      },
+      {
+        "id": "credential-02",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 0,
+        "latency_ms": 0.054
+      },
+      {
+        "id": "credential-03",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 28,
+        "retained_bytes": 0,
+        "latency_ms": 0.056
+      },
+      {
+        "id": "credential-04",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 32,
+        "retained_bytes": 0,
+        "latency_ms": 0.036
+      },
+      {
+        "id": "credential-05",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 37,
+        "retained_bytes": 0,
+        "latency_ms": 0.037
+      },
+      {
+        "id": "credential-06",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 38,
+        "retained_bytes": 0,
+        "latency_ms": 0.038
+      },
+      {
+        "id": "credential-07",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 0,
+        "latency_ms": 0.045
+      },
+      {
+        "id": "credential-08",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 0,
+        "latency_ms": 0.038
+      },
+      {
+        "id": "credential-09",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 30,
+        "retained_bytes": 0,
+        "latency_ms": 0.038
+      },
+      {
+        "id": "credential-10",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 35,
+        "retained_bytes": 0,
+        "latency_ms": 0.032
+      },
+      {
+        "id": "credential-11",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 37,
+        "retained_bytes": 0,
+        "latency_ms": 0.03
+      },
+      {
+        "id": "credential-12",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 0,
+        "latency_ms": 0.041
+      },
+      {
+        "id": "credential-13",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 40,
+        "retained_bytes": 0,
+        "latency_ms": 0.032
+      },
+      {
+        "id": "credential-14",
+        "category": "credential",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 34,
+        "retained_bytes": 34,
+        "latency_ms": 5.816
+      },
+      {
+        "id": "credential-15",
+        "category": "credential",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 40,
+        "retained_bytes": 40,
+        "latency_ms": 5.858
+      },
+      {
+        "id": "credential-16",
+        "category": "credential",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 38,
+        "retained_bytes": 38,
+        "latency_ms": 5.729
+      },
+      {
+        "id": "credential-17",
+        "category": "credential",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 24,
+        "retained_bytes": 24,
+        "latency_ms": 5.938
+      },
+      {
+        "id": "credential-18",
+        "category": "credential",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 26,
+        "retained_bytes": 26,
+        "latency_ms": 5.902
+      },
+      {
+        "id": "credential-19",
+        "category": "credential",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 25,
+        "retained_bytes": 25,
+        "latency_ms": 5.861
+      },
+      {
+        "id": "credential-20",
+        "category": "credential",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 27,
+        "latency_ms": 6.061
+      },
+      {
+        "id": "email-01",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 34,
+        "retained_bytes": 24,
+        "latency_ms": 15.896
+      },
+      {
+        "id": "email-02",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 29,
+        "retained_bytes": 15,
+        "latency_ms": 5.513
+      },
+      {
+        "id": "email-03",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 29,
+        "retained_bytes": 15,
+        "latency_ms": 5.572
+      },
+      {
+        "id": "email-04",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 29,
+        "retained_bytes": 15,
+        "latency_ms": 5.376
+      },
+      {
+        "id": "email-05",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 29,
+        "retained_bytes": 15,
+        "latency_ms": 5.711
+      },
+      {
+        "id": "email-06",
+        "category": "email",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 33,
+        "retained_bytes": 33,
+        "latency_ms": 5.832
+      },
+      {
+        "id": "email-07",
+        "category": "email",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 30,
+        "retained_bytes": 30,
+        "latency_ms": 5.886
+      },
+      {
+        "id": "email-08",
+        "category": "email",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 25,
+        "retained_bytes": 25,
+        "latency_ms": 5.89
+      },
+      {
+        "id": "email-09",
+        "category": "email",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 24,
+        "retained_bytes": 24,
+        "latency_ms": 5.867
+      },
+      {
+        "id": "phone-01",
+        "category": "phone",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "phone:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 26,
+        "retained_bytes": 26,
+        "latency_ms": 5.926
+      },
+      {
+        "id": "phone-02",
+        "category": "phone",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "phone:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 26,
+        "latency_ms": 5.496
+      },
+      {
+        "id": "phone-03",
+        "category": "phone",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 19,
+        "retained_bytes": 19,
+        "latency_ms": 11.528
+      },
+      {
+        "id": "phone-04",
+        "category": "phone",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 16,
+        "retained_bytes": 16,
+        "latency_ms": 5.423
+      },
+      {
+        "id": "phone-05",
+        "category": "phone",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 60,
+        "retained_bytes": 60,
+        "latency_ms": 5.572
+      },
+      {
+        "id": "person-01",
+        "category": "person",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "person:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 23,
+        "latency_ms": 5.877
+      },
+      {
+        "id": "person-02",
+        "category": "person",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "person:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 27,
+        "latency_ms": 5.735
+      },
+      {
+        "id": "person-03",
+        "category": "person",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 24,
+        "retained_bytes": 24,
+        "latency_ms": 5.871
+      },
+      {
+        "id": "person-04",
+        "category": "person",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 23,
+        "latency_ms": 5.863
+      },
+      {
+        "id": "person-05",
+        "category": "person",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {
+          "person:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 23,
+        "latency_ms": 5.851
+      },
+      {
+        "id": "location-01",
+        "category": "location",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "location:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 25,
+        "retained_bytes": 25,
+        "latency_ms": 5.845
+      },
+      {
+        "id": "location-02",
+        "category": "location",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "location:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 27,
+        "latency_ms": 5.931
+      },
+      {
+        "id": "location-03",
+        "category": "location",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 22,
+        "retained_bytes": 22,
+        "latency_ms": 5.817
+      },
+      {
+        "id": "location-04",
+        "category": "location",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 21,
+        "retained_bytes": 21,
+        "latency_ms": 5.8
+      },
+      {
+        "id": "location-05",
+        "category": "location",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 41,
+        "retained_bytes": 41,
+        "latency_ms": 5.855
+      },
+      {
+        "id": "us_ssn-01",
+        "category": "us_ssn",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "us_ssn:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 32,
+        "latency_ms": 5.794
+      },
+      {
+        "id": "us_ssn-02",
+        "category": "us_ssn",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "us_ssn:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 32,
+        "latency_ms": 5.547
+      },
+      {
+        "id": "us_ssn-03",
+        "category": "us_ssn",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 35,
+        "retained_bytes": 35,
+        "latency_ms": 5.908
+      },
+      {
+        "id": "us_ssn-04",
+        "category": "us_ssn",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 20,
+        "retained_bytes": 20,
+        "latency_ms": 5.864
+      },
+      {
+        "id": "us_ssn-05",
+        "category": "us_ssn",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 48,
+        "retained_bytes": 48,
+        "latency_ms": 5.855
+      },
+      {
+        "id": "payment_card-01",
+        "category": "payment_card",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "payment_card:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 37,
+        "retained_bytes": 40,
+        "latency_ms": 5.435
+      },
+      {
+        "id": "payment_card-02",
+        "category": "payment_card",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "payment_card:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 37,
+        "retained_bytes": 40,
+        "latency_ms": 5.919
+      },
+      {
+        "id": "payment_card-03",
+        "category": "payment_card",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 28,
+        "retained_bytes": 28,
+        "latency_ms": 5.822
+      },
+      {
+        "id": "payment_card-04",
+        "category": "payment_card",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 25,
+        "retained_bytes": 25,
+        "latency_ms": 5.9
+      },
+      {
+        "id": "payment_card-05",
+        "category": "payment_card",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 31,
+        "latency_ms": 5.618
+      },
+      {
+        "id": "ip_address-01",
+        "category": "ip_address",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "ip_address:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 30,
+        "retained_bytes": 30,
+        "latency_ms": 5.5
+      },
+      {
+        "id": "ip_address-02",
+        "category": "ip_address",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "ip_address:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 31,
+        "latency_ms": 5.817
+      },
+      {
+        "id": "ip_address-03",
+        "category": "ip_address",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 21,
+        "retained_bytes": 21,
+        "latency_ms": 5.251
+      },
+      {
+        "id": "ip_address-04",
+        "category": "ip_address",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 35,
+        "retained_bytes": 35,
+        "latency_ms": 5.515
+      },
+      {
+        "id": "ip_address-05",
+        "category": "ip_address",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 52,
+        "retained_bytes": 52,
+        "latency_ms": 5.842
+      },
+      {
+        "id": "custom_identifier-01",
+        "category": "custom_identifier",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "custom_identifier:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 38,
+        "latency_ms": 5.838
+      },
+      {
+        "id": "custom_identifier-02",
+        "category": "custom_identifier",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "custom_identifier:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 38,
+        "latency_ms": 5.311
+      },
+      {
+        "id": "custom_identifier-03",
+        "category": "custom_identifier",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 32,
+        "retained_bytes": 32,
+        "latency_ms": 5.781
+      },
+      {
+        "id": "custom_identifier-04",
+        "category": "custom_identifier",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 23,
+        "latency_ms": 5.855
+      },
+      {
+        "id": "custom_identifier-05",
+        "category": "custom_identifier",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 32,
+        "retained_bytes": 32,
+        "latency_ms": 5.842
+      },
+      {
+        "id": "sensitive_topic-01",
+        "category": "sensitive_topic",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 33,
+        "retained_bytes": 0,
+        "latency_ms": 5.801
+      },
+      {
+        "id": "sensitive_topic-02",
+        "category": "sensitive_topic",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 0,
+        "latency_ms": 5.223
+      },
+      {
+        "id": "sensitive_topic-03",
+        "category": "sensitive_topic",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 26,
+        "retained_bytes": 26,
+        "latency_ms": 5.851
+      },
+      {
+        "id": "sensitive_topic-04",
+        "category": "sensitive_topic",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 33,
+        "retained_bytes": 33,
+        "latency_ms": 5.647
+      },
+      {
+        "id": "sensitive_topic-05",
+        "category": "sensitive_topic",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 38,
+        "retained_bytes": 38,
+        "latency_ms": 5.505
+      }
+    ]
+  },
+  "pseudonymize_contacts": {
+    "summary": {
+      "categories": {
+        "credential": {
+          "policy_action": "block",
+          "supported_positive": 13,
+          "removed_or_refused": 13,
+          "benign": 3,
+          "benign_changed": 0,
+          "unsupported": 4,
+          "unsupported_removed_or_refused": 0
+        },
+        "email": {
+          "policy_action": "pseudonymize",
+          "supported_positive": 5,
+          "removed_or_refused": 5,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 2,
+          "unsupported_removed_or_refused": 0
+        },
+        "phone": {
+          "policy_action": "pseudonymize",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "person": {
+          "policy_action": "pseudonymize",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "location": {
+          "policy_action": "allow",
+          "supported_positive": 2,
+          "removed_or_refused": 0,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "us_ssn": {
+          "policy_action": "redact",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "payment_card": {
+          "policy_action": "redact",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "ip_address": {
+          "policy_action": "allow",
+          "supported_positive": 2,
+          "removed_or_refused": 0,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "custom_identifier": {
+          "policy_action": "redact",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        },
+        "sensitive_topic": {
+          "policy_action": "block",
+          "supported_positive": 2,
+          "removed_or_refused": 2,
+          "benign": 2,
+          "benign_changed": 0,
+          "unsupported": 1,
+          "unsupported_removed_or_refused": 0
+        }
+      },
+      "refused_rows": 15,
+      "benign_rows_changed": 0,
+      "key_provider_calls": 10,
+      "input_bytes": 2084,
+      "retained_bytes_of_admitted_rows": 2500,
+      "input_bytes_of_admitted_rows": 1594,
+      "latency_ms": {
+        "median": 5.855,
+        "p95": 5.941,
+        "max": 6.193
+      }
+    },
+    "rows": [
+      {
+        "id": "credential-01",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 33,
+        "retained_bytes": 0,
+        "latency_ms": 0.079
+      },
+      {
+        "id": "credential-02",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 0,
+        "latency_ms": 0.043
+      },
+      {
+        "id": "credential-03",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 28,
+        "retained_bytes": 0,
+        "latency_ms": 0.041
+      },
+      {
+        "id": "credential-04",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 32,
+        "retained_bytes": 0,
+        "latency_ms": 0.034
+      },
+      {
+        "id": "credential-05",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 37,
+        "retained_bytes": 0,
+        "latency_ms": 0.031
+      },
+      {
+        "id": "credential-06",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 38,
+        "retained_bytes": 0,
+        "latency_ms": 0.03
+      },
+      {
+        "id": "credential-07",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 0,
+        "latency_ms": 0.035
+      },
+      {
+        "id": "credential-08",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 0,
+        "latency_ms": 0.03
+      },
+      {
+        "id": "credential-09",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 30,
+        "retained_bytes": 0,
+        "latency_ms": 0.039
+      },
+      {
+        "id": "credential-10",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 35,
+        "retained_bytes": 0,
+        "latency_ms": 0.036
+      },
+      {
+        "id": "credential-11",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 37,
+        "retained_bytes": 0,
+        "latency_ms": 0.031
+      },
+      {
+        "id": "credential-12",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 0,
+        "latency_ms": 0.03
+      },
+      {
+        "id": "credential-13",
+        "category": "credential",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 40,
+        "retained_bytes": 0,
+        "latency_ms": 0.036
+      },
+      {
+        "id": "credential-14",
+        "category": "credential",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 34,
+        "retained_bytes": 34,
+        "latency_ms": 5.946
+      },
+      {
+        "id": "credential-15",
+        "category": "credential",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 40,
+        "retained_bytes": 40,
+        "latency_ms": 5.869
+      },
+      {
+        "id": "credential-16",
+        "category": "credential",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 38,
+        "retained_bytes": 38,
+        "latency_ms": 5.863
+      },
+      {
+        "id": "credential-17",
+        "category": "credential",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 24,
+        "retained_bytes": 24,
+        "latency_ms": 5.859
+      },
+      {
+        "id": "credential-18",
+        "category": "credential",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 26,
+        "retained_bytes": 26,
+        "latency_ms": 5.824
+      },
+      {
+        "id": "credential-19",
+        "category": "credential",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 25,
+        "retained_bytes": 25,
+        "latency_ms": 5.83
+      },
+      {
+        "id": "credential-20",
+        "category": "credential",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 27,
+        "latency_ms": 5.898
+      },
+      {
+        "id": "email-01",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 34,
+        "retained_bytes": 115,
+        "latency_ms": 6.193
+      },
+      {
+        "id": "email-02",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 29,
+        "retained_bytes": 106,
+        "latency_ms": 5.945
+      },
+      {
+        "id": "email-03",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 29,
+        "retained_bytes": 106,
+        "latency_ms": 5.933
+      },
+      {
+        "id": "email-04",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 29,
+        "retained_bytes": 106,
+        "latency_ms": 5.918
+      },
+      {
+        "id": "email-05",
+        "category": "email",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "email:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 29,
+        "retained_bytes": 106,
+        "latency_ms": 5.385
+      },
+      {
+        "id": "email-06",
+        "category": "email",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 33,
+        "retained_bytes": 33,
+        "latency_ms": 5.854
+      },
+      {
+        "id": "email-07",
+        "category": "email",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 30,
+        "retained_bytes": 30,
+        "latency_ms": 5.256
+      },
+      {
+        "id": "email-08",
+        "category": "email",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 25,
+        "retained_bytes": 25,
+        "latency_ms": 5.853
+      },
+      {
+        "id": "email-09",
+        "category": "email",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 24,
+        "retained_bytes": 24,
+        "latency_ms": 5.864
+      },
+      {
+        "id": "phone-01",
+        "category": "phone",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "phone:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 26,
+        "retained_bytes": 117,
+        "latency_ms": 5.943
+      },
+      {
+        "id": "phone-02",
+        "category": "phone",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "phone:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 27,
+        "retained_bytes": 117,
+        "latency_ms": 5.937
+      },
+      {
+        "id": "phone-03",
+        "category": "phone",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 19,
+        "retained_bytes": 19,
+        "latency_ms": 5.855
+      },
+      {
+        "id": "phone-04",
+        "category": "phone",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 16,
+        "retained_bytes": 16,
+        "latency_ms": 5.832
+      },
+      {
+        "id": "phone-05",
+        "category": "phone",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 60,
+        "retained_bytes": 60,
+        "latency_ms": 5.883
+      },
+      {
+        "id": "person-01",
+        "category": "person",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "person:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 23,
+        "retained_bytes": 120,
+        "latency_ms": 5.937
+      },
+      {
+        "id": "person-02",
+        "category": "person",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "person:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 27,
+        "retained_bytes": 123,
+        "latency_ms": 5.921
+      },
+      {
+        "id": "person-03",
+        "category": "person",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 24,
+        "retained_bytes": 24,
+        "latency_ms": 5.858
+      },
+      {
+        "id": "person-04",
+        "category": "person",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 23,
+        "latency_ms": 5.856
+      },
+      {
+        "id": "person-05",
+        "category": "person",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {
+          "person:pseudonymize": 1
+        },
+        "key_provider_calls": 1,
+        "input_bytes": 23,
+        "retained_bytes": 120,
+        "latency_ms": 5.893
+      },
+      {
+        "id": "location-01",
+        "category": "location",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "location:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 25,
+        "retained_bytes": 25,
+        "latency_ms": 5.882
+      },
+      {
+        "id": "location-02",
+        "category": "location",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "location:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 27,
+        "latency_ms": 5.873
+      },
+      {
+        "id": "location-03",
+        "category": "location",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 22,
+        "retained_bytes": 22,
+        "latency_ms": 5.836
+      },
+      {
+        "id": "location-04",
+        "category": "location",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 21,
+        "retained_bytes": 21,
+        "latency_ms": 5.857
+      },
+      {
+        "id": "location-05",
+        "category": "location",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 41,
+        "retained_bytes": 41,
+        "latency_ms": 5.865
+      },
+      {
+        "id": "us_ssn-01",
+        "category": "us_ssn",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "us_ssn:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 32,
+        "latency_ms": 5.882
+      },
+      {
+        "id": "us_ssn-02",
+        "category": "us_ssn",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "us_ssn:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 27,
+        "retained_bytes": 32,
+        "latency_ms": 5.687
+      },
+      {
+        "id": "us_ssn-03",
+        "category": "us_ssn",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 35,
+        "retained_bytes": 35,
+        "latency_ms": 5.723
+      },
+      {
+        "id": "us_ssn-04",
+        "category": "us_ssn",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 20,
+        "retained_bytes": 20,
+        "latency_ms": 5.871
+      },
+      {
+        "id": "us_ssn-05",
+        "category": "us_ssn",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 48,
+        "retained_bytes": 48,
+        "latency_ms": 5.851
+      },
+      {
+        "id": "payment_card-01",
+        "category": "payment_card",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "payment_card:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 37,
+        "retained_bytes": 40,
+        "latency_ms": 5.853
+      },
+      {
+        "id": "payment_card-02",
+        "category": "payment_card",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "payment_card:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 37,
+        "retained_bytes": 40,
+        "latency_ms": 5.845
+      },
+      {
+        "id": "payment_card-03",
+        "category": "payment_card",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 28,
+        "retained_bytes": 28,
+        "latency_ms": 5.265
+      },
+      {
+        "id": "payment_card-04",
+        "category": "payment_card",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 25,
+        "retained_bytes": 25,
+        "latency_ms": 5.86
+      },
+      {
+        "id": "payment_card-05",
+        "category": "payment_card",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 31,
+        "latency_ms": 5.872
+      },
+      {
+        "id": "ip_address-01",
+        "category": "ip_address",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "ip_address:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 30,
+        "retained_bytes": 30,
+        "latency_ms": 5.866
+      },
+      {
+        "id": "ip_address-02",
+        "category": "ip_address",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": false,
+        "benign_changed": false,
+        "action_counts": {
+          "ip_address:allow": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 31,
+        "latency_ms": 5.652
+      },
+      {
+        "id": "ip_address-03",
+        "category": "ip_address",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 21,
+        "retained_bytes": 21,
+        "latency_ms": 5.343
+      },
+      {
+        "id": "ip_address-04",
+        "category": "ip_address",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 35,
+        "retained_bytes": 35,
+        "latency_ms": 5.871
+      },
+      {
+        "id": "ip_address-05",
+        "category": "ip_address",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 52,
+        "retained_bytes": 52,
+        "latency_ms": 5.941
+      },
+      {
+        "id": "custom_identifier-01",
+        "category": "custom_identifier",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "custom_identifier:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 38,
+        "latency_ms": 5.907
+      },
+      {
+        "id": "custom_identifier-02",
+        "category": "custom_identifier",
+        "label": "supported_positive",
+        "outcome": "admitted",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {
+          "custom_identifier:redact": 1
+        },
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 38,
+        "latency_ms": 5.65
+      },
+      {
+        "id": "custom_identifier-03",
+        "category": "custom_identifier",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 32,
+        "retained_bytes": 32,
+        "latency_ms": 5.832
+      },
+      {
+        "id": "custom_identifier-04",
+        "category": "custom_identifier",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 23,
+        "retained_bytes": 23,
+        "latency_ms": 5.859
+      },
+      {
+        "id": "custom_identifier-05",
+        "category": "custom_identifier",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 32,
+        "retained_bytes": 32,
+        "latency_ms": 5.866
+      },
+      {
+        "id": "sensitive_topic-01",
+        "category": "sensitive_topic",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 33,
+        "retained_bytes": 0,
+        "latency_ms": 5.832
+      },
+      {
+        "id": "sensitive_topic-02",
+        "category": "sensitive_topic",
+        "label": "supported_positive",
+        "outcome": "refused:privacy_denied",
+        "expected_values_removed": true,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 31,
+        "retained_bytes": 0,
+        "latency_ms": 5.829
+      },
+      {
+        "id": "sensitive_topic-03",
+        "category": "sensitive_topic",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 26,
+        "retained_bytes": 26,
+        "latency_ms": 5.878
+      },
+      {
+        "id": "sensitive_topic-04",
+        "category": "sensitive_topic",
+        "label": "benign",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 33,
+        "retained_bytes": 33,
+        "latency_ms": 5.862
+      },
+      {
+        "id": "sensitive_topic-05",
+        "category": "sensitive_topic",
+        "label": "unsupported",
+        "outcome": "admitted",
+        "expected_values_removed": null,
+        "benign_changed": false,
+        "action_counts": {},
+        "key_provider_calls": 0,
+        "input_bytes": 38,
+        "retained_bytes": 38,
+        "latency_ms": 5.826
+      }
+    ]
+  },
+  "environment": {
+    "python": "3.11.6",
+    "machine": "arm64",
+    "system": "Darwin",
+    "note": "Latency is wall time on the measuring machine during the final gate run and is not portable."
+  }
+}
