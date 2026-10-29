@@ -361,8 +361,47 @@ async def test_AC01_AC03_ordinary_final_deadlines(tmp_path, layout, analyzer, na
 
 
 async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout, analyzer, native):
-    """Existing classification case: missing enrollment cannot imply legacy."""
+    """Existing classification case: missing enrollment cannot imply legacy.
+
+    Under #326 a protected store whose admission rows are missing does not
+    open at all, with or without the runtime, so no read can treat its
+    marked records as legacy. The per-call classifier checks this test used
+    to make on such a store have no open store to run against.
+    """
+    import pytest
+    from prme import MemoryEngine
+    from prme.privacy import PrivacyDenied
+    from prme.privacy.portability import PrivacyPortabilityError
+
+    engine, runtime, policy, *_ = await opened(tmp_path, layout, analyzer)
+    owner = str(policy.owner_id)
+    await store_pair(engine, owner)
+    # Simulate the reported interrupted enrollment in this disposable fixture.
+    await engine._privacy.repository._query("DELETE FROM privacy_admissions WHERE user_id=?", (owner,))
+    config = engine._config.model_copy(update={"privacy_policy": None})
+    await engine.close()
+    sends = list(runtime.embedder.sends)
+    with pytest.raises(PrivacyDenied, match="privacy_capability_unavailable"):
+        await MemoryEngine.create(config, embedding_provider=runtime.embedder)
+    with pytest.raises(PrivacyPortabilityError, match="privacy_format_unsupported"):
+        await MemoryEngine.create(config, embedding_provider=runtime.embedder, privacy_runtime=runtime)
+    assert runtime.embedder.sends == sends
+    for path in tmp_path.rglob("*"):
+        if path.is_file():
+            assert SOURCE.encode() not in path.read_bytes()
+
+async def test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy(tmp_path, layout, analyzer, native):
+    """A record without a valid privacy marker in a protected-format store is
+    damaged or orphaned, never legacy (#326). No read returns its content.
+
+    This keeps the classifier checks of the former orphan-marker case on a
+    store that still opens: an orphan node inserted below the engine, then
+    node-only and event-only malformed markers. A read may be refused or may
+    return admitted data, but never the orphan's source text. A second owner
+    with only an orphan row and no records is refused outright.
+    """
     import json
+    import pytest
     from uuid import uuid4
     from prme import MemoryEngine
     from prme.models import MemoryNode
@@ -373,44 +412,20 @@ async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout,
     engine, runtime, policy, *_ = await opened(tmp_path, layout, analyzer)
     owner = str(policy.owner_id)
     identifier = await store_pair(engine, owner)
-    # Simulate the reported interrupted enrollment in this disposable fixture.
-    await engine._privacy.repository._query("DELETE FROM privacy_admissions WHERE user_id=?", (owner,))
     config = engine._config.model_copy(update={"privacy_policy": None})
     await engine.close()
-    # A bound protected store refuses to open without its privacy runtime
-    # (#325). The classification checks below run on the runtime-backed open
-    # with no configured policy, where missing enrollment still matters.
-    import pytest
-    with pytest.raises(PrivacyDenied, match="privacy_ledger_unavailable"):
-        await MemoryEngine.create(config, embedding_provider=runtime.embedder)
     engine = await MemoryEngine.create(config, embedding_provider=runtime.embedder, privacy_runtime=runtime)
     try:
-        # A source-bearing historical node with a malformed marker is also
-        # protected by the existing metadata classifier, without a valid record.
-        orphan = MemoryNode(user_id=owner, node_type=NodeType.NOTE, content=SOURCE,
-                            metadata={PRIVACY_KEY: None})
+        orphan = MemoryNode(user_id=owner, node_type=NodeType.NOTE, content=SOURCE, metadata={PRIVACY_KEY: None})
         await engine._graph_store.create_node(orphan)
-        # Exact-object legacy classification must still reject the same
-        # marked identities when their admission row is missing or malformed.
-        import pytest
-        for call in (
-            lambda: engine.get_event(identifier, user_id=owner),
-            lambda: engine.get_event_nodes(identifier, user_id=owner),
-            lambda: engine.get_node(str(orphan.id), user_id=owner),
-        ):
-            with pytest.raises(PrivacyDenied):
-                await call()
-        legacy_owner = str(uuid4())
-        legacy_event = await engine.store(MEMORY, user_id=legacy_owner)
-        legacy_id = str((await engine.get_event_nodes(legacy_event, user_id=legacy_owner))[0].id)
-        assert (await engine.get_nodes([legacy_id], user_id=legacy_owner))[0].content == MEMORY
-        assert (await engine.get_events(legacy_owner))[0].content == MEMORY
-        await engine.require_legacy_history(user_id=legacy_owner)
-        calls = {
+        reads = {
+            "get_event": lambda: engine.get_event(identifier, user_id=owner),
             "get_events": lambda: engine.get_events(owner),
+            "get_event_nodes": lambda: engine.get_event_nodes(identifier, user_id=owner),
+            "get_orphan": lambda: engine.get_node(str(orphan.id), user_id=owner),
+            "get_nodes": lambda: engine.get_nodes([identifier, str(orphan.id)], user_id=owner),
             "query_nodes": lambda: engine.query_nodes(user_id=owner),
             "scan_nodes": lambda: engine.scan_nodes(user_id=owner),
-            "get_nodes": lambda: engine.get_nodes([identifier, str(orphan.id)], user_id=owner),
             "count_nodes": lambda: engine.count_nodes(user_id=owner),
             "query_nodes_unscoped": lambda: engine.query_nodes(),
             "count_nodes_unscoped": lambda: engine.count_nodes(),
@@ -418,28 +433,27 @@ async def test_AC01_AC03_orphan_markers_never_select_raw_reads(tmp_path, layout,
             "history_unscoped": lambda: engine.require_legacy_history(user_id=None),
             "search": lambda: engine.search(SOURCE, user_id=owner),
         }
-        bypassed = []
-        for name, call in calls.items():
-            try:
-                await call()
-            except PrivacyDenied:
-                pass
-            else:
-                bypassed.append(name)
-        assert not bypassed, bypassed
-        # Reuse the same fixture to isolate a node-only and then event-only
-        # malformed marker; both use the existing database classifier.
         repo = engine._privacy.repository
-        for marked_table, cleared_table in (("nodes", "events"), ("events", "nodes")):
-            await repo._query(f"UPDATE {cleared_table} SET metadata=? WHERE user_id=?", ("{}", owner))
-            await repo._query(f"UPDATE {marked_table} SET metadata=? WHERE user_id=?",
-                              (json.dumps({PRIVACY_KEY: "malformed"}), owner))
-            for name, call in calls.items():
+        for stage in ("orphan", "nodes", "events"):
+            if stage != "orphan":
+                cleared = "events" if stage == "nodes" else "nodes"
+                await repo._query(f"UPDATE {cleared} SET metadata=? WHERE user_id=?", ("{}", owner))
+                await repo._query(f"UPDATE {stage} SET metadata=? WHERE user_id=?",
+                                  (json.dumps({PRIVACY_KEY: "malformed"}), owner))
+            for name, read in reads.items():
                 try:
-                    await call()
+                    result = await read()
                 except PrivacyDenied:
-                    pass
-                else:
-                    raise AssertionError((marked_table, name))
+                    continue
+                assert SOURCE not in str(result), (stage, name)
+        # An owner whose only rows have no privacy record reaches the
+        # protected-format check itself and is refused.
+        stranger = str(uuid4())
+        stray = MemoryNode(user_id=stranger, node_type=NodeType.NOTE, content=SOURCE, metadata={})
+        await engine._graph_store.create_node(stray)
+        for read in (lambda: engine.get_node(str(stray.id), user_id=stranger),
+                     lambda: engine.query_nodes(user_id=stranger)):
+            with pytest.raises(PrivacyDenied, match="privacy_provider_unavailable"):
+                await read()
     finally:
         await engine.close()

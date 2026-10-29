@@ -19,9 +19,9 @@ async def test_failed_startup_releases_database_and_queue(config, user, monkeypa
     initialize = module.initialize_database
     start_queue = WriteQueue.start
 
-    def initialize_and_capture(conn):
+    def initialize_and_capture(conn, **kwargs):
         connections.append(conn)
-        return initialize(conn)
+        return initialize(conn, **kwargs)
 
     async def capture_queue(queue):
         queues.append(queue)

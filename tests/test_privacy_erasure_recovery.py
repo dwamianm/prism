@@ -27,6 +27,84 @@ async def reopen(engine, runtime):
     return await MemoryEngine.create(config, embedding_provider=runtime.embedder, privacy_runtime=runtime), runtime
 
 
+@pytest.mark.parametrize("layout", ["directory", "postgres"])
+async def test_ER04_scope_bound_maintenance_does_not_scan_foreign_jobs(tmp_path, layout, analyzer, native):
+    """The existing three-source family under separately authorized defaults."""
+    from prme.privacy.keys import KeyBoundary
+    from prme.types import Scope
+    from tests.privacy_fakes import policy_for
+
+    engine, runtime, policy, custody, *_ = await journal_engine(tmp_path, layout, analyzer)
+    runtime = replace(runtime, key_custody=custody)
+    engine._privacy.runtime = runtime
+    owner, project_engine = str(policy.owner_id), None
+    try:
+        personal = await engine.store("Mara likes tea.", user_id=owner)
+        later = await engine.store("Mara prefers oranges.", user_id=owner)
+        personal_request = ErasureRequest(request_id=UUID(int=1), scope=Scope.PERSONAL,
+                                         mode="evidence", event_ids=(UUID(personal),))
+        await engine.request_erasure(personal_request, user_id=owner)
+        [personal_status] = await engine.process_erasures(user_id=owner, limit=1, budget_ms=60000)
+        assert personal_status.request_id == personal_request.request_id and personal_status.state == "live_purged"
+        personal_config = engine._config
+        await engine.close()
+        project_policy = policy_for(runtime, owner=policy.owner_id, scope=Scope.PROJECT,
+                                    capture="full", evidence_lifetime_seconds=3600)
+        boundary = KeyBoundary(project_id=runtime.project_id, owner_id=policy.owner_id, scope=Scope.PROJECT.value)
+        await custody.provision_wrapping(boundary, "evidence")
+        await custody.provision_wrapping(boundary, "processing")
+        runtime.protector.registry = public_registry(custody.path)
+        project_engine = await MemoryEngine.create(personal_config.model_copy(update={"privacy_policy": project_policy}),
+                                                  privacy_runtime=runtime, embedding_provider=runtime.embedder)
+        project = await project_engine.store("A project color is blue.", user_id=owner, scope=Scope.PROJECT)
+        project_request = ErasureRequest(request_id=UUID(int=2), scope=Scope.PROJECT,
+                                        mode="evidence", event_ids=(UUID(project),))
+        await project_engine.request_erasure(project_request, user_id=owner)
+        # Before the correction, this completes the project job and then raises
+        # on the already-completed personal job selected by the owner-wide query.
+        [project_status] = await project_engine.process_erasures(user_id=owner, budget_ms=60000)
+        assert project_status.request_id == project_request.request_id and project_status.state == "live_purged"
+        assert await project_engine.get_erasure_status(personal_request.request_id, user_id=owner) == personal_status
+        assert (await project_engine._privacy.repository.get(later, user_id=owner)).evidence is not None
+        assert (await project_engine._privacy.repository.get(project, user_id=owner)).evidence is None
+
+        foreign_request = ErasureRequest(request_id=UUID(int=0), scope=Scope.PROJECT,
+                                        mode="evidence", event_ids=(UUID(project),))
+        await project_engine.request_erasure(foreign_request, user_id=owner)
+        foreign_before = await project_engine.get_erasure_status(foreign_request.request_id, user_id=owner)
+        await project_engine.close()
+        project_engine = None
+        engine = await MemoryEngine.create(personal_config, privacy_runtime=runtime, embedding_provider=runtime.embedder)
+        later_request = ErasureRequest(request_id=UUID(int=3), scope=Scope.PERSONAL,
+                                      mode="evidence", event_ids=(UUID(later),))
+        await engine.request_erasure(later_request, user_id=owner)
+        [completed] = await engine.process_erasures(user_id=owner, limit=1, budget_ms=60000)
+        assert completed.request_id == later_request.request_id and completed.state == "live_purged"
+        assert await engine.get_erasure_status(foreign_request.request_id, user_id=owner) == foreign_before
+        assert (await engine._privacy.repository.get(later, user_id=owner)).evidence is None
+        assert all(record.snapshot.policy.scope == Scope.PERSONAL for record in (
+            await engine._privacy.repository.get(personal, user_id=owner),
+            await engine._privacy.repository.get(later, user_id=owner),
+        ))
+        assert (await engine._privacy.repository.get(project, user_id=owner)).snapshot.policy.scope == Scope.PROJECT
+        with pytest.raises(PrivacyDenied, match="^privacy_boundary_mismatch$"):
+            await engine.process_erasures(user_id=str(uuid4()), limit=1)
+        repository = engine._privacy.repository
+        await repository._query("UPDATE privacy_erasure_jobs SET scope=? WHERE request_id=?",
+                                (Scope.PERSONAL.value, str(foreign_request.request_id)))
+        try:
+            with pytest.raises(PrivacyDenied, match="^privacy_boundary_mismatch$"):
+                await engine.process_erasures(user_id=owner, limit=1)
+            assert await engine.get_erasure_status(foreign_request.request_id, user_id=owner) == foreign_before
+        finally:
+            await repository._query("UPDATE privacy_erasure_jobs SET scope=? WHERE request_id=?",
+                                    (Scope.PROJECT.value, str(foreign_request.request_id)))
+    finally:
+        if project_engine is not None:
+            await project_engine.close()
+        await engine.close()
+
+
 @pytest.mark.parametrize("layout", LAYOUTS)
 async def test_ER04_intent_and_each_stage_survive_interruption_and_failure(tmp_path, layout, analyzer, native, monkeypatch):
     engine, runtime, policy, custody, evidence, _ = await journal_engine(tmp_path, layout, analyzer)
@@ -96,7 +174,9 @@ async def test_ER04_intent_and_each_stage_survive_interruption_and_failure(tmp_p
         assert await engine.request_erasure(request, user_id=owner) == complete
         erased = await engine._privacy.repository.get(event, user_id=owner)
         assert erased.evidence is None and erased.processing is None and erased.retry is None
-        assert await engine._privacy.repository._query("SELECT content,content_hash FROM events WHERE id=?", (event,)) == [("", "")]
+        # The protected event format (#326) has no content_hash column; the
+        # erased source row keeps no content.
+        assert await engine._privacy.repository._query("SELECT content FROM events WHERE id=?", (event,)) == [("",)]
         # A completed node-only selection no longer has a node row to resolve.
         # Its exact persisted request must still be safely retryable.
         selected = (await engine.get_event_nodes(positive, user_id=owner))[0]

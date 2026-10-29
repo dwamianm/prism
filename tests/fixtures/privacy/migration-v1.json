@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "case": "EM07",
+  "clock": "2026-10-01T12:00:00+00:00",
+  "source_only": "SOURCE_ONLY_MIGRATION_326",
+  "prohibited": "migration-private@example.test",
+  "admitted": ["Mara likes tea.", "Mara likes oranges.", "Mara prefers mornings."],
+  "queries": ["tea", "oranges", "mornings"],
+  "history_disposition": "unavailable_in_destination_originals_retained",
+  "parity": "saved_standard_mode_before_after_required_pending_323"
+}

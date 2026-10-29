@@ -44,10 +44,34 @@ class PgEventStore:
     All queries enforce user_id scoping to prevent cross-user data leakage.
     """
 
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    def __init__(self, pool: asyncpg.Pool, *, protected: bool | None = None) -> None:
         self._pool = pool
+        self._protected = protected
         self.extraction_work = ExtractionWorkRepository(pool=pool)
         self.reingest = ReingestRepository(self.extraction_work)
+
+    def _source_hash_sql(self, prefix=""):
+        from prme.storage.privacy_format import event_hash_sql
+        return event_hash_sql(self._protected, prefix)
+
+    def _columns(self, prefix=""):
+        return ", ".join(self._source_hash_sql(prefix) if name.strip() == "content_hash"
+                         else prefix + name.strip() for name in _EVENT_COLUMNS.split(","))
+
+    def _insert_values(self, event):
+        values = self._event_values(event)
+        if self._protected:
+            from prme.storage.privacy_format import validate_stub
+            validate_stub(event)
+            return values[:4] + values[5:]
+        return values
+
+    @property
+    def insert_sql(self):
+        columns = [name.strip() for name in _EVENT_COLUMNS.split(",")
+                   if not (self._protected and name.strip() == "content_hash")]
+        placeholders = [(f"${index}::jsonb" if name == "metadata" else f"${index}") for index, name in enumerate(columns, 1)]
+        return "INSERT INTO events (" + ",".join(columns) + ") VALUES (" + ",".join(placeholders) + ")"
 
     async def get_derivation_receipt(self, event_id: str, *, user_id: str) -> DerivationReceipt | None:
         """Read verified completion through the immutable source owner's scope."""
@@ -69,11 +93,14 @@ class PgEventStore:
             return await self._get_derivation_plan(conn, event_id, user_id, revision)
 
     async def _get_derivation_plan(self, conn, event_id: str, user_id: str, revision: int | None = None) -> DerivationPlan | None:
+        if self._protected is None:
+            self._protected = bool(await conn.fetchval(
+                "SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='privacy_format'"))
         if revision is None:
             work = await conn.fetchrow("SELECT plan_revision FROM event_extractions WHERE event_id = $1", event_id)
             revision = work["plan_revision"] if work else 1
         row = await conn.fetchrow(
-            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            f"SELECT o.payload, e.scope, {self._source_hash_sql('e.')} FROM operations o JOIN events e "
             "ON o.target_id = e.id::text WHERE o.id = $1 AND e.id = $2 "
             "AND e.user_id = $3 AND o.op_type = 'DERIVATION_PREPARED'",
             derivation_operation_id(event_id, revision=revision), event_id, user_id,
@@ -93,7 +120,7 @@ class PgEventStore:
         plan = DerivationPlan.model_validate_json(plan.model_dump_json())
         async with self._pool.acquire() as conn, conn.transaction():
             source = await conn.fetchrow(
-                "SELECT user_id, scope, content_hash FROM events WHERE id = $1 FOR UPDATE", str(plan.event_id),
+                f"SELECT user_id, scope, {self._source_hash_sql()} FROM events WHERE id = $1 FOR UPDATE", str(plan.event_id),
             )
             if source is None:
                 raise ValueError("A derivation requires a persisted source event")
@@ -129,7 +156,7 @@ class PgEventStore:
 
     async def _get_extraction(self, conn, event_id: str, user_id: str) -> ExtractionRecord | None:
         row = await conn.fetchrow(
-            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            f"SELECT o.payload, e.scope, {self._source_hash_sql('e.')} FROM operations o JOIN events e "
             "ON o.target_id = e.id::text WHERE o.id = $1 AND e.id = $2 "
             "AND e.user_id = $3 AND o.op_type = 'EXTRACTION_VALIDATED'",
             extraction_operation_id(event_id), event_id, user_id,
@@ -149,7 +176,7 @@ class PgEventStore:
         record = ExtractionRecord.model_validate_json(record.model_dump_json())
         async with self._pool.acquire() as conn, conn.transaction():
             source = await conn.fetchrow(
-                "SELECT user_id, scope, content_hash FROM events WHERE id = $1 FOR UPDATE", str(record.event_id),
+                f"SELECT user_id, scope, {self._source_hash_sql()} FROM events WHERE id = $1 FOR UPDATE", str(record.event_id),
             )
             if source is None:
                 raise ValueError("Extraction requires a matching persisted source event")
@@ -206,7 +233,7 @@ class PgEventStore:
             # Source rows first, then the work row, in record_extraction's order.
             for record in records:
                 source = await conn.fetchrow(
-                    "SELECT user_id, scope, content_hash FROM events WHERE id = $1 FOR UPDATE", str(record.event_id),
+                    f"SELECT user_id, scope, {self._source_hash_sql()} FROM events WHERE id = $1 FOR UPDATE", str(record.event_id),
                 )
                 if source is None:
                     raise ValueError("Extraction requires a matching persisted source event")
@@ -254,30 +281,9 @@ class PgEventStore:
             ).model_dump_json())
             record.verify_source(event)
             defer_materialization = True
-        metadata_json = (
-            json.dumps(event.metadata) if event.metadata is not None else None
-        )
         async with self._pool.acquire() as conn:
             async with conn.transaction():
-                await conn.execute(
-                    """
-                    INSERT INTO events (
-                        id, timestamp, role, content, content_hash,
-                        user_id, session_id, scope, metadata, created_at, event_time
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11)
-                    """,
-                    str(event.id),
-                    event.timestamp,
-                    event.role,
-                    event.content,
-                    event.content_hash,
-                    event.user_id,
-                    event.session_id,
-                    event.scope.value,
-                    metadata_json,
-                    event.created_at,
-                    event.event_time,
-                )
+                await conn.execute(self.insert_sql, *self._insert_values(event))
                 if defer_materialization:
                     await conn.execute(
                         "INSERT INTO event_materializations (event_id) VALUES ($1)",
@@ -316,7 +322,7 @@ class PgEventStore:
             raise ValueError("Fast-ingest retry identity requires durable materialization")
         if not snapshots:
             return FastIngestAdmission(event_ids=())
-        rows = [self._event_values(event) for event in snapshots]
+        rows = [self._insert_values(event) for event in snapshots]
         async with self._pool.acquire() as conn:
             async with conn.transaction():
                 if record is not None:
@@ -362,12 +368,7 @@ class PgEventStore:
                         )
                         return replayed
                 await conn.executemany(
-                    """
-                    INSERT INTO events (
-                        id, timestamp, role, content, content_hash,
-                        user_id, session_id, scope, metadata, created_at, event_time
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11)
-                    """,
+                    self.insert_sql,
                     rows,
                 )
                 if defer_materialization:
@@ -434,7 +435,7 @@ class PgEventStore:
     async def pending_materializations(
         self, *, user_id: str | None = None, limit: int = 500,
     ) -> list[Event]:
-        columns = ", ".join(f"e.{c.strip()}" for c in _EVENT_COLUMNS.split(","))
+        columns = self._columns("e.")
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 f"SELECT {columns} FROM events e JOIN event_materializations m "
@@ -481,7 +482,7 @@ class PgEventStore:
         """Retrieve an event by its ID."""
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
-                f"SELECT {_EVENT_COLUMNS} FROM events WHERE id = $1",
+                f"SELECT {self._columns()} FROM events WHERE id = $1",
                 event_id,
             )
         if row is None:
@@ -533,7 +534,7 @@ class PgEventStore:
 
         where = " AND ".join(conditions)
         query = (
-            f"SELECT {_EVENT_COLUMNS} FROM events "
+            f"SELECT {self._columns()} FROM events "
             f"WHERE {where} "
             f"ORDER BY timestamp DESC, id DESC "
             f"LIMIT ${idx} OFFSET ${idx + 1}"
@@ -552,6 +553,9 @@ class PgEventStore:
         scopes: list[Scope] | None = None,
     ) -> list[Event]:
         """Find events with the same content hash for dedup detection."""
+        if self._protected:
+            from prme.privacy.policy import PrivacyDenied
+            raise PrivacyDenied("privacy_unsupported_input")
         conditions: list[str] = ["content_hash = $1", "user_id = $2"]
         params: list = [content_hash, user_id]
         idx = 3
@@ -563,7 +567,7 @@ class PgEventStore:
 
         where = " AND ".join(conditions)
         query = (
-            f"SELECT {_EVENT_COLUMNS} FROM events "
+            f"SELECT {self._columns()} FROM events "
             f"WHERE {where} "
             f"ORDER BY timestamp DESC, id DESC"
         )

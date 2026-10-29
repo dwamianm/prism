@@ -56,13 +56,40 @@ class EventStore:
         self,
         conn: duckdb.DuckDBPyConnection,
         conn_lock: asyncio.Lock | None = None,
+        *, protected: bool | None = None,
     ) -> None:
         self._conn = conn
+        self._protected = protected if protected is not None else bool(conn.execute(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='privacy_format'"
+        ).fetchone())
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
         self.extraction_work = ExtractionWorkRepository(conn=conn, conn_lock=self._conn_lock)
         self.reingest = ReingestRepository(self.extraction_work)
 
     # --- Public async API ---
+
+    def _source_hash_sql(self, prefix=""):
+        from prme.storage.privacy_format import event_hash_sql
+        return event_hash_sql(self._protected, prefix)
+
+    def _columns(self, prefix=""):
+        return ", ".join(self._source_hash_sql(prefix) if name.strip() == "content_hash"
+                         else prefix + name.strip() for name in _EVENT_COLUMNS.split(","))
+
+    def _insert_values(self, event):
+        values = self._event_values(event)
+        if self._protected:
+            from prme.storage.privacy_format import validate_stub
+            validate_stub(event)
+            return values[:4] + values[5:]
+        return values
+
+    @property
+    def insert_sql(self):
+        columns = [name.strip() for name in _EVENT_COLUMNS.split(",")
+                   if not (self._protected and name.strip() == "content_hash")]
+        placeholders = ["?" for index, name in enumerate(columns, 1)]
+        return "INSERT INTO events (" + ",".join(columns) + ") VALUES (" + ",".join(placeholders) + ")"
 
     async def get_derivation_receipt(self, event_id: str, *, user_id: str) -> DerivationReceipt | None:
         """Read verified completion through the immutable source owner's scope."""
@@ -92,7 +119,7 @@ class EventStore:
             work = self._conn.execute("SELECT plan_revision FROM event_extractions WHERE event_id = ?", [event_id]).fetchone()
             revision = work[0] if work else 1
         row = self._conn.execute(
-            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            f"SELECT o.payload, e.scope, {self._source_hash_sql('e.')} FROM operations o JOIN events e "
             "ON o.target_id = e.id::VARCHAR WHERE o.id = ? AND e.id = ? "
             "AND e.user_id = ? AND o.op_type = 'DERIVATION_PREPARED'",
             [derivation_operation_id(event_id, revision=revision), event_id, user_id],
@@ -118,7 +145,7 @@ class EventStore:
         try:
             managed = validate_duck_claim(self._conn, str(plan.event_id), plan.user_id, claim)
             source = self._conn.execute(
-                "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(plan.event_id)],
+                f"SELECT user_id, scope, {self._source_hash_sql()} FROM events WHERE id = ?", [str(plan.event_id)],
             ).fetchone()
             if source is None:
                 raise ValueError("A derivation requires a persisted source event")
@@ -154,7 +181,7 @@ class EventStore:
 
     def _get_extraction_sync(self, event_id: str, user_id: str) -> ExtractionRecord | None:
         row = self._conn.execute(
-            "SELECT o.payload, e.scope, e.content_hash FROM operations o JOIN events e "
+            f"SELECT o.payload, e.scope, {self._source_hash_sql('e.')} FROM operations o JOIN events e "
             "ON o.target_id = e.id::VARCHAR WHERE o.id = ? AND e.id = ? "
             "AND e.user_id = ? AND o.op_type = 'EXTRACTION_VALIDATED'",
             [extraction_operation_id(event_id), event_id, user_id],
@@ -180,7 +207,7 @@ class EventStore:
         try:
             validate_duck_claim(self._conn, str(record.event_id), record.user_id, claim)
             source = self._conn.execute(
-                "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(record.event_id)],
+                f"SELECT user_id, scope, {self._source_hash_sql()} FROM events WHERE id = ?", [str(record.event_id)],
             ).fetchone()
             if source is None:
                 raise ValueError("Extraction requires a matching persisted source event")
@@ -251,7 +278,7 @@ class EventStore:
                 raise ValueError("A batched extraction saves one record for each of its turns not asked again")
             for record in records:
                 source = self._conn.execute(
-                    "SELECT user_id, scope, content_hash FROM events WHERE id = ?", [str(record.event_id)],
+                    f"SELECT user_id, scope, {self._source_hash_sql()} FROM events WHERE id = ?", [str(record.event_id)],
                 ).fetchone()
                 if source is None:
                     raise ValueError("Extraction requires a matching persisted source event")
@@ -375,14 +402,8 @@ class EventStore:
                     ],
                 )
             self._conn.executemany(
-                """
-                INSERT INTO events (
-                    id, timestamp, role, content, content_hash,
-                    user_id, session_id, scope, metadata, created_at,
-                    event_time
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                [self._event_values(event) for event in events],
+                self.insert_sql,
+                [self._insert_values(event) for event in events],
             )
             if defer_materialization:
                 self._conn.executemany(
@@ -458,7 +479,7 @@ class EventStore:
     ) -> list[Event]:
         """Read a bounded batch of durable work, oldest/retried-last first."""
         def read() -> list[Event]:
-            columns = ", ".join(f"e.{c.strip()}" for c in _EVENT_COLUMNS.split(","))
+            columns = self._columns("e.")
             scoped = " AND e.user_id = ?" if user_id is not None else ""
             params = [user_id, limit] if user_id is not None else [limit]
             rows = self._conn.execute(
@@ -583,14 +604,8 @@ class EventStore:
     def _append_sync(self, event: Event) -> None:
         """Insert an event into the events table (sync)."""
         self._conn.execute(
-            """
-            INSERT INTO events (
-                id, timestamp, role, content, content_hash,
-                user_id, session_id, scope, metadata, created_at,
-                event_time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            self._event_values(event),
+            self.insert_sql,
+            self._insert_values(event),
         )
 
     @staticmethod
@@ -615,7 +630,7 @@ class EventStore:
     def _get_sync(self, event_id: str) -> Event | None:
         """Retrieve a single event by ID (sync)."""
         result = self._conn.execute(
-            f"SELECT {_EVENT_COLUMNS} FROM events WHERE id = ?",
+            f"SELECT {self._columns()} FROM events WHERE id = ?",
             [event_id],
         ).fetchone()
         if result is None:
@@ -659,7 +674,7 @@ class EventStore:
 
         where_clause = " AND ".join(conditions)
         query = (
-            f"SELECT {_EVENT_COLUMNS} FROM events "
+            f"SELECT {self._columns()} FROM events "
             f"WHERE {where_clause} "
             f"ORDER BY timestamp DESC, id DESC "
             f"LIMIT ? OFFSET ?"
@@ -676,6 +691,9 @@ class EventStore:
         scopes: list[Scope] | None,
     ) -> list[Event]:
         """Find events by content hash (sync)."""
+        if self._protected:
+            from prme.privacy.policy import PrivacyDenied
+            raise PrivacyDenied("privacy_unsupported_input")
         conditions: list[str] = ["content_hash = ?", "user_id = ?"]
         params: list = [content_hash, user_id]
 
@@ -686,7 +704,7 @@ class EventStore:
 
         where_clause = " AND ".join(conditions)
         query = (
-            f"SELECT {_EVENT_COLUMNS} FROM events "
+            f"SELECT {self._columns()} FROM events "
             f"WHERE {where_clause} "
             f"ORDER BY timestamp DESC, id DESC"
         )

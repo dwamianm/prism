@@ -143,11 +143,31 @@ async def _resolve_intent_sources(session, intent):
             if "sanitization" in metadata[PRIVACY_KEY]:
                 SanitizationReport.model_validate(metadata[PRIVACY_KEY]["sanitization"])
             dependencies = {origin, *(UUID(str(value)) for value in refs or ())}
+            node_dependencies = set()
             if JOURNAL_KEY in metadata:
-                pending.update(GeneratedNodeReference.model_validate(metadata[JOURNAL_KEY]).source_node_ids)
+                generated = GeneratedNodeReference.model_validate(metadata[JOURNAL_KEY])
+                node_dependencies = set(generated.source_node_ids)
+                if (not node_dependencies or identifier in node_dependencies
+                        or len(node_dependencies) != len(generated.source_node_ids)
+                        or origin in node_dependencies):
+                    raise ValueError()
         except (KeyError, ValueError, TypeError):
             raise PrivacyDenied("privacy_migration_required") from None
-        for event_id in dependencies:
+        # Summaries cite selected memory identities as well as event identities.
+        # Only a validated generated reference may classify a citation as memory;
+        # every declared dependency must be a real node in this exact boundary.
+        # A UUID naming both a node and an admission is ambiguous, not permission
+        # to choose whichever interpretation would let the request proceed.
+        for node_id in node_dependencies:
+            owned = await session.fetch("SELECT id FROM nodes WHERE id=$1 AND user_id=$2 AND scope=$3",
+                                        str(node_id), str(intent.owner_id), intent.request.scope.value)
+            admission = await session.fetch("SELECT event_id FROM privacy_admissions WHERE event_id=$1", str(node_id))
+            if len(owned) != 1 or admission:
+                raise PrivacyDenied("privacy_migration_required")
+        pending.update(node_dependencies)
+        for event_id in dependencies - node_dependencies:
+            if await session.fetch("SELECT id FROM nodes WHERE id=$1", str(event_id)):
+                raise PrivacyDenied("privacy_migration_required")
             rows = await session.fetch("SELECT body FROM privacy_admissions WHERE event_id=$1 AND user_id=$2 AND scope=$3",
                                        str(event_id), str(intent.owner_id), intent.request.scope.value)
             if len(rows) != 1:
@@ -162,7 +182,7 @@ async def _resolve_intent_sources(session, intent):
     return intent.model_copy(update={"source_event_ids": tuple(sorted(sources, key=str))})
 
 
-async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None, conn_lock=None):
+async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None, conn_lock=None, initialize=True):
     """No-content lineage/current-ledger check BEFORE registry/native recovery.
 
     Existing protected admissions without a binding require an explicit versioned
@@ -184,6 +204,8 @@ async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None
             raise PrivacyDenied("privacy_ledger_unavailable")
         if not bound and protected:
             raise PrivacyDenied("privacy_migration_required")
+        if not initialize and not bound:
+            raise PrivacyDenied("privacy_ledger_unavailable")
     async with ledger.guard():
         if not bound:
             head = await ledger.register_store(namespace_id or uuid4(), runtime.project_id)
@@ -192,9 +214,10 @@ async def prepare_store(*, conn=None, pool=None, runtime=None, namespace_id=None
                     await session.execute(statement)
                 await session.execute("INSERT INTO privacy_store_state VALUES(1,$1,$2)", str(runtime.project_id), head.model_dump_json())
                 await session.execute("INSERT INTO privacy_erasure_epoch VALUES(1,0)")
-        async with repository.session(transaction=True) as session:
-            for statement in DDL:
-                await session.execute(statement)
+        if initialize:
+            async with repository.session(transaction=True) as session:
+                for statement in DDL:
+                    await session.execute(statement)
         project, checkpoint = await repository.state()
         if project != runtime.project_id or (namespace_id is not None and checkpoint.store_id != namespace_id):
             raise PrivacyDenied("privacy_boundary_mismatch")
@@ -626,8 +649,13 @@ async def _purge_sql_step(repository, intent):
             if request.mode == "memory":
                 # Keep an opaque enrollment reservation. A predictable digest of
                 # erased content is not a valid integrity/replay record.
-                await session.execute("UPDATE events SET content='',content_hash=$1,metadata=$2 WHERE id=$3 AND user_id=$4",
-                    "", json.dumps({"_prme_privacy_v1": record.reference(), "erasure": "memory"}), str(event_id), str(intent.owner_id))
+                metadata = json.dumps({"_prme_privacy_v1": record.reference(), "erasure": "memory"})
+                if "privacy_format" in tables:
+                    await session.execute("UPDATE events SET content='',metadata=$1 WHERE id=$2 AND user_id=$3",
+                        metadata, str(event_id), str(intent.owner_id))
+                else:
+                    await session.execute("UPDATE events SET content='',content_hash=$1,metadata=$2 WHERE id=$3 AND user_id=$4",
+                        "", metadata, str(event_id), str(intent.owner_id))
                 await session.execute("UPDATE event_materializations SET status='failed',last_error='privacy_erased' WHERE event_id=$1", str(event_id))
         if request.mode != "memory":
             return progress["done"]
@@ -718,10 +746,14 @@ async def _retire_keys(coordinator, intent):
 
 
 async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):
-    """Explicit resumable local maintenance; no offline scheduler is promised."""
+    """Maintain the configured owner/scope; no offline scheduler is promised."""
     import time
     if type(limit) is not int or not 1 <= limit <= 128 or type(budget_ms) is not int or not 1 <= budget_ms <= 60000:
         raise PrivacyDenied("privacy_configuration_invalid")
+    default = coordinator.admission.default
+    if default is None:
+        raise PrivacyDenied("privacy_configuration_invalid")
+    selected = coordinator.admission.effective(None, user_id=user_id, scope=default.scope).policy
     expires = time.monotonic() + budget_ms / 1000
     results = []
     async with coordinator.guard():
@@ -729,10 +761,15 @@ async def process_erasures(coordinator, *, user_id, limit=16, budget_ms=1000):
         async with coordinator.repository.session() as session:
             # Completed requests must not consume the bounded pending-work
             # window forever. Keep the JSON status portable across backends.
-            rows = await session.fetch("SELECT intent,status FROM privacy_erasure_jobs WHERE owner_id=$1 ORDER BY CASE WHEN status LIKE '%\"logical_live_copies\":\"purged\"%' THEN 1 ELSE 0 END,request_id LIMIT $2", user_id, limit)
+            # Foreign-scope jobs, completed or pending, cannot grant a different
+            # immutable policy boundary or consume this worker's bounded window.
+            rows = await session.fetch("SELECT intent,status FROM privacy_erasure_jobs WHERE owner_id=$1 AND scope=$2 ORDER BY CASE WHEN status LIKE '%\"logical_live_copies\":\"purged\"%' THEN 1 ELSE 0 END,request_id LIMIT $3", user_id, selected.scope.value, limit)
         for row in rows:
             intent = ErasureIntent.model_validate_json(row["intent"])
             status = ErasureStatus.model_validate_json(row["status"])
+            if (intent.owner_id, intent.request.scope, intent.project_id) != (
+                    selected.owner_id, selected.scope, selected.project_id):
+                raise PrivacyDenied("privacy_boundary_mismatch")
             saved = coordinator.admission.effective(None, user_id=user_id, scope=intent.request.scope)
             async with runtime.authority.guard(saved, "publication"):
                 while status.logical_live_copies != "purged" and time.monotonic() < expires:
@@ -799,7 +836,8 @@ async def _verify_purge(coordinator, intent):
                 if intent.request.mode == "memory":
                     if record.pseudonym_epoch is not None:
                         raise PrivacyDenied("privacy_invalid_result")
-                    rows = await session.fetch("SELECT content,content_hash FROM events WHERE id=$1", str(identifier))
+                    checksum = "NULL AS content_hash" if "privacy_format" in tables else "content_hash"
+                    rows = await session.fetch(f"SELECT content,{checksum} FROM events WHERE id=$1", str(identifier))
                     if len(rows) != 1 or rows[0]["content"] or rows[0]["content_hash"]:
                         raise PrivacyDenied("privacy_invalid_result")
             if intent.request.mode != "memory":

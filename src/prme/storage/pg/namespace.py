@@ -13,7 +13,7 @@ from uuid import UUID
 import asyncpg
 
 from prme.storage.namespace_identity import NamespaceIdentityError
-from prme.storage.pg.schema import initialize_pg_database
+from prme.storage.pg.schema import initialize_pg_database, validate_pg_runtime
 from prme.storage.pg.vector_sql import VectorSQL, quote_identifier, resolve_vector_sql
 
 
@@ -89,7 +89,7 @@ class _ConnectionPool:
 
 
 async def prepare_namespace(pool: asyncpg.Pool, identifier: UUID, *, embedding_dim: int,
-                            create: bool = False, privacy_runtime=None) -> NamespacePool:
+                            create: bool = False, privacy_runtime=None, initialize=True) -> NamespacePool:
     """Atomically create or reopen a bound namespace, refusing silent data loss.
 
     The caller first installs extensions outside private schemas. Serialized
@@ -97,6 +97,8 @@ async def prepare_namespace(pool: asyncpg.Pool, identifier: UUID, *, embedding_d
     previously initialized table that has disappeared.
     """
     schema = namespace_schema(identifier)
+    if create and not initialize:
+        raise NamespaceIdentityError("Runtime open requires an initialized namespace")
     quoted = quote_identifier(schema)
     async with pool.acquire() as conn:
         await conn.execute("DISCARD TEMP")
@@ -119,10 +121,15 @@ async def prepare_namespace(pool: asyncpg.Pool, identifier: UUID, *, embedding_d
             present = await _relations(conn, schema)
             if not set(identity["relations"]).issubset(present):
                 raise NamespaceIdentityError("Initialized namespace relations are missing; restore before opening")
+            from prme.storage.privacy_format import preflight_format
+            protected_format = await preflight_format(pool=_ConnectionPool(conn), runtime=privacy_runtime, namespace_id=identifier)
+            if not initialize:
+                vector_sql = await validate_pg_runtime(_ConnectionPool(conn), embedding_dim=embedding_dim, protected=protected_format)
             from prme.storage.erasure import prepare_store
-            await prepare_store(pool=_ConnectionPool(conn), runtime=privacy_runtime, namespace_id=identifier)
-            vector_sql = await initialize_pg_database(_ConnectionPool(conn), embedding_dim=embedding_dim)
-            await conn.execute(f"UPDATE {quoted}.prme_namespace_identity SET relations = $1", await _relations(conn, schema))
+            await prepare_store(pool=_ConnectionPool(conn), runtime=privacy_runtime, namespace_id=identifier, initialize=initialize)
+            if initialize:
+                vector_sql = await initialize_pg_database(_ConnectionPool(conn), embedding_dim=embedding_dim, protected=protected_format)
+                await conn.execute(f"UPDATE {quoted}.prme_namespace_identity SET relations = $1", await _relations(conn, schema))
     return NamespacePool(pool, identifier, vector_sql)
 
 

@@ -160,6 +160,53 @@ at-rest encryption, roles and backups through PostgreSQL deployment controls.
 Neither schema routing nor a workspace/project name grants database access.
 Privileged SQL and trusted application code can still access multiple schemas.
 
+An application login can reopen a previously bootstrapped namespace without
+schema ownership:
+
+```python
+async with MemoryWorkspace.open_postgres(
+    config, name="hosted", embedding_provider=provider,
+    privacy_runtime_factory=runtime_for_namespace, initialize=False,
+) as workspace:
+    async with workspace.namespace("project", create=False) as memory:
+        ...
+```
+
+The default `initialize=True` remains the privileged bootstrap/upgrade path.
+It records the supported schema fingerprint and embedding dimension in
+`prme_runtime_schema`. Runtime opening requires that descriptor, the initialized
+catalog UUID and the actual columns, indexes and native vector dimension to
+match. It neither recreates missing state nor reconstructs missing publication
+registries or heads. `postgres_schema_bootstrap_required` and
+`postgres_recovery_required` require the privileged bootstrap/recovery path.
+Protected-format errors retain their specific privacy error codes.
+
+Grant runtime `SELECT` only on `prme_workspace` catalog tables,
+`prme_namespace_identity`, `prme_runtime_schema` and `privacy_format`; do not
+grant ownership or schema creation. Grant data permissions according to the
+application's actual operations. These options do not grant worker-claim,
+policy, or erasure authority. Protected opening still requires the independently
+current ledger and expiry checks before serving. If applying pending recovery
+requires DML denied to the login, opening fails closed until an authorized
+recovery worker settles it. `MemoryEngine.open/create(..., initialize=False)`
+provides the same check for an existing unbound PostgreSQL store; it is not a
+local pack option. Standalone protected restore still needs explicit lineage
+and current authority; a copied descriptor is not proof of ledger freshness.
+
+Bound protected recovery uses `restore_protected_export` with an explicit
+`PostgresRestoreTarget` and `PostgresRecoveryCapability`; see
+[protected migration](PRIVACY-MIGRATION.md). The target names the current
+initialized catalog UUID, an operation UUID and the protected artifact hash.
+The caller drains ordinary namespace leases and holds live ledger/policy
+authority through the restore transaction in the same task. The engine acquires
+that capability before runtime preflight, retains the current catalog mapping,
+and applies current erasure/expiry state before registry recovery. A missing or
+empty canonical schema is required. Occupied targets refuse except an exact
+committed operation receipt, whose retry rechecks current authority without
+reloading old memory. The operator API does not replace an occupied schema or
+restore authentication/control tables. Actual hosted capability composition
+and public surviving-memory validation remain separate integration gates.
+
 ## Current boundary
 
 This API implements named local and PostgreSQL physical partitions. It does not

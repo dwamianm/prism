@@ -920,6 +920,8 @@ async def cmd_export(args: argparse.Namespace) -> None:
             })
 
         export_data = {
+            "content_classification": "legacy_plaintext",
+            "protected": False,
             "exported_at": datetime.now(timezone.utc).isoformat(),
             "db_path": os.path.abspath(args.db_path),
             "node_count": len(nodes),
@@ -1811,7 +1813,11 @@ def main() -> None:
         print("\nInterrupted.", file=sys.stderr)
         sys.exit(130)
     except Exception as exc:
+        from prme.privacy.cli import failure_guidance
+        guidance = failure_guidance(exc)
         print(f"Error: {exc}", file=sys.stderr)
+        if guidance is not None:
+            print(guidance, file=sys.stderr)
         sys.exit(1)
 
 

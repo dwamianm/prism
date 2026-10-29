@@ -21,6 +21,79 @@ async def selection(engine, runtime, owner, ids, *, kind="runtime"):
     )
 
 
+async def test_AC06_incomplete_protected_projection_preserves_admitted_group(tmp_path, analyzer, native):
+    import json
+
+    engine, runtime, policy, custody, evidence, _ = await opened(
+        tmp_path, "directory", analyzer, policy_options={"evidence_use": "runtime"},
+    )
+    owner = str(policy.owner_id)
+    texts = ("Mara likes tea.", "Mara likes oranges.")
+    now = runtime.clock()
+    captured = {}
+    try:
+        ids = [await engine.store(text, user_id=owner, event_time=now - timedelta(minutes=2 - index))
+               for index, text in enumerate(texts)]
+        records = [await engine._privacy.repository.get(identifier, user_id=owner) for identifier in ids]
+        original_nodes = []
+        for identifier in ids:
+            nodes = await engine._graph_store.get_event_nodes(identifier, user_id=owner)
+            assert len(nodes) == 1
+            original_nodes.append(nodes[0])
+        assert {str(node.id) for node in original_nodes}.isdisjoint(ids)
+        # Normal versioned reinforcement establishes the dependency set without
+        # rewriting a source event, admission, plan or journal payload.
+        for node, other_event in zip(original_nodes, reversed(ids), strict=True):
+            await asyncio.wait_for(engine.reinforce(str(node.id), evidence_id=other_event, user_id=owner), 15)
+        assert [await engine._privacy.repository.get(identifier, user_id=owner) for identifier in ids] == records
+        admitted = {str(node.id): await engine._graph_store.get_node(str(node.id)) for node in original_nodes}
+        assert all({str(identifier) for identifier in node.evidence_refs} == set(ids) for node in admitted.values())
+
+        async def retrieve(label, selected, cap, **options):
+            pipeline = engine._retrieval_pipeline
+            pipeline._packing_config = pipeline._packing_config.model_copy(update={
+                "evidence_projection_top_k": 3, "evidence_projection_max_sources": cap,
+            })
+            access = await selection(engine, runtime, owner, selected)
+            response = await asyncio.wait_for(engine.retrieve(
+                "tea", user_id=owner, scope=policy.scope, include_cross_scope=False,
+                reference_time=now, source_access=access, **options,
+            ), 15)
+            captured[label] = response.model_dump(mode="json")
+            (tmp_path / "protected-projection-coverage.json").write_text(json.dumps(captured, indent=2) + "\n")
+            return response
+
+        def assert_retained(response, expected):
+            returned = {str(item.node.id): item.node for item in response.results}
+            assert set(returned) == set(expected)
+            packed = {str(item.node.id) for section in response.bundle.sections.values() for item in section}
+            assert set(expected) <= packed
+            for identifier in expected:
+                assert returned[identifier].content == admitted[identifier].content
+                assert returned[identifier].evidence_refs == admitted[identifier].evidence_refs
+                assert admitted[identifier].content in response.bundle.render()
+
+        with custody.unlocked((evidence.ref,), expires_at=now + timedelta(minutes=2)) as private:
+            runtime.protector.registry = public_registry(custody.path, private_wrapper=private)
+            try:
+                capped = await retrieve("capped", ids, 1)
+                assert_retained(capped, admitted)
+                missing = await retrieve("missing", ids[:1], 2)
+                assert_retained(missing, admitted)
+                filtered = await retrieve("filtered", ids, 2, event_time_to=now - timedelta(seconds=90))
+                assert_retained(filtered, (str(original_nodes[0].id),))
+                complete = await retrieve("complete", ids, 2)
+                assert {str(item.node.id) for item in complete.results} == set(ids)
+                assert all(item.node.metadata["source_representation"] == "sanitized" for item in complete.results)
+                assert {str(item.node.id) for section in complete.bundle.sections.values() for item in section} == set(ids)
+                assert all(text in complete.bundle.render() for text in texts)
+            finally:
+                runtime.protector.registry = public_registry(custody.path)
+        assert [await engine._privacy.repository.get(identifier, user_id=owner) for identifier in ids] == records
+    finally:
+        await engine.close()
+
+
 @pytest.mark.parametrize("error", [PrivacyDenied("privacy_denied"), RuntimeError("backend unavailable")])
 async def test_AC06_candidate_failure_settles_both_child_queries(error):
     """A failed retrieval must not leave a query alive when its caller closes."""

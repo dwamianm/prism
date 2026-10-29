@@ -298,10 +298,7 @@ class EncryptionProvider:
                     f"Encrypted file {path} is too short to contain salt"
                 )
 
-            salt = raw[:_SALT_LENGTH]
-            ciphertext = raw[_SALT_LENGTH:]
-            fernet, _ = self._get_fernet_and_salt(existing_salt=salt)
-            plaintext = fernet.decrypt(ciphertext)
+            plaintext = self.decrypt_bytes(raw)
 
             # Restore original path (strip .enc suffix)
             dec_path = path.with_suffix("")
@@ -322,6 +319,18 @@ class EncryptionProvider:
             raise
         except Exception as exc:
             raise EncryptionError(f"Failed to decrypt {path}: {exc}") from exc
+
+    def decrypt_bytes(self, raw: bytes) -> bytes:
+        """Authenticate the existing directory format without filesystem effects.
+
+        This is the same salt/KDF/Fernet codec as ``decrypt_file``. Callers
+        handling untrusted content must translate failures to fixed public codes.
+        It does not erase transient Python or library allocations.
+        """
+        if len(raw) < _SALT_LENGTH:
+            raise EncryptionError("Encrypted value is too short to contain salt")
+        fernet, _ = self._get_fernet_and_salt(existing_salt=raw[:_SALT_LENGTH])
+        return fernet.decrypt(raw[_SALT_LENGTH:])
 
     def encrypt_directory(self, dir_path: Path) -> list[Path]:
         """Encrypt all non-encrypted files in a directory (non-recursive).

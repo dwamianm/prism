@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 _duckpgq_available: bool = False
 
 
-def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
+def create_schema(conn: duckdb.DuckDBPyConnection, *, protected: bool = False) -> None:
     """Create all PRME tables and indexes in DuckDB.
 
     Safe to call multiple times -- uses CREATE TABLE IF NOT EXISTS
@@ -29,7 +29,7 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
         conn: Active DuckDB connection.
     """
     # --- Events table ---
-    conn.execute("""
+    event_ddl = """
         CREATE TABLE IF NOT EXISTS events (
             id UUID PRIMARY KEY,
             timestamp TIMESTAMPTZ NOT NULL,
@@ -43,7 +43,10 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             created_at TIMESTAMPTZ DEFAULT current_timestamp,
             event_time TIMESTAMPTZ
         )
-    """)
+    """
+    if protected:
+        event_ddl = event_ddl.replace("            content_hash VARCHAR NOT NULL,\n", "")
+    conn.execute(event_ddl)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_events_user ON events (user_id)"
     )
@@ -54,9 +57,8 @@ def create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events (timestamp)"
     )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_events_hash ON events (content_hash)"
-    )
+    if not protected:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_events_hash ON events (content_hash)")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_events_scope ON events (scope)"
     )
@@ -544,7 +546,7 @@ def create_property_graph(conn: duckdb.DuckDBPyConnection) -> bool:
     return True
 
 
-def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
+def initialize_database(conn: duckdb.DuckDBPyConnection, *, protected: bool = False) -> bool:
     """Initialize the full PRME database schema.
 
     Creates tables, indexes, and migrations for the supported recursive-SQL
@@ -558,7 +560,7 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
         False, preserving the legacy return contract for SQL graph mode.
         Installation/schema failures raise exceptions.
     """
-    create_schema(conn)
+    create_schema(conn, protected=protected)
     _migrate_events_scope(conn)
     _verify_nodes_scope(conn)
     _migrate_nodes_epistemic_type(conn)
@@ -574,4 +576,7 @@ def initialize_database(conn: duckdb.DuckDBPyConnection) -> bool:
     initialize_consolidations(conn)
     from prme.storage.privacy import initialize_duck as initialize_privacy
     initialize_privacy(conn)
+    if protected:
+        from prme.storage.privacy_format import install_duck_format
+        install_duck_format(conn)
     return False
