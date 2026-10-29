@@ -374,14 +374,25 @@ async def test_SN10_deadline_and_aggregate_bounds(tmp_path, layout, analyzer, mo
         await engine.close()
 
 
-async def test_SN11_prewrite_effects_and_query_gate(tmp_path, layout, analyzer):
+async def test_SN11_prewrite_effects_and_query_gate(tmp_path, layout, analyzer, caplog, capsys):
     engine, runtime, policy, _ = await opened(tmp_path, layout, analyzer)
     owner = str(policy.owner_id)
+    marker = "password=synthetic-value"
+    email = next(row for row in FIXTURES if row["id"] == "email-01")
+    span = email["expected_spans"][0]
+    address = email["text"][span["start"]:span["end"]]
     try:
+        # A fast batch and the supported raw-record import both refuse the
+        # whole batch when a later item fails, before any earlier item writes.
         with pytest.raises(PrivacyDenied):
             await engine.ingest_fast_many([{"content": "The cup is on the table."},
-                                          {"content": "password=synthetic-value"}], user_id=owner)
+                                          {"content": marker}], user_id=owner)
         await no_writes(engine, runtime, owner)
+        for messages in ([{"content": "The cup is on the table.", "role": "user"}, {"content": marker, "role": "user"}],
+                         [{"content": "The cup is on the table.", "role": "user", "speaker": marker}]):
+            with pytest.raises(PrivacyDenied):
+                await engine.ingest_batch(messages, user_id=owner)
+            await no_writes(engine, runtime, owner)
         identifiers = await engine.ingest_fast_many([{"content": "The cup is on the table."},
                                                     {"content": "There are 42 boxes."}], user_id=owner)
         assert len(identifiers) == 2
@@ -389,18 +400,41 @@ async def test_SN11_prewrite_effects_and_query_gate(tmp_path, layout, analyzer):
         assert result.processed == 2
         for identifier in identifiers:
             assert await engine.get_event_nodes(identifier, user_id=owner)
-        # The actual #323 query pipeline must prove positive sanitized query
-        # transmission and content-free graph fallback before this case passes.
-        pytest.xfail("original SN11 query/display-name/read-graph integration awaits #323; adapter subchecks are separate")
+        # A display name is content: a removed contact is replaced before it
+        # is stored, and only the sanitized text is embedded.
+        identifier = await engine.store("The cup is on the table.", speaker=address, user_id=owner)
+        node = (await engine.get_event_nodes(identifier, user_id=owner))[0]
+        assert node.metadata[SPEAKER_METADATA_KEY] == "[EMAIL_REMOVED]"
+
+        # Query gate: a credential query is refused before any provider send,
+        # and a removed contact is replaced before transmission and receipts.
+        sends = len(runtime.embedder.sends)
+        with pytest.raises(PrivacyDenied):
+            await engine.retrieve(f"tea {marker}", user_id=owner)
+        assert len(runtime.embedder.sends) == sends
+        response = await engine.retrieve(f"tea for {address}", user_id=owner, min_score=0)
+        sent = json.dumps(runtime.embedder.sends[sends:])
+        assert "[EMAIL_REMOVED]" in sent and address not in sent
+        assert response.metadata.receipt_persisted
+        receipt = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=owner)
+        assert address not in receipt.model_dump_json()
+        await scan_copies(engine, runtime, owner, (marker, address), tmp_path, caplog, capsys)
     finally:
         await engine.close()
 
 
-async def test_SN12_generated_reintroduction_and_publication_gate(tmp_path, layout, analyzer):
+async def test_SN12_generated_reintroduction_and_publication_gate(tmp_path, layout, analyzer, monkeypatch,
+                                                                 caplog, capsys):
+    from prme.types import NodeType
+    from prme.organizer import profiles, summarization
+    from prme.organizer.summarization import SummarizationLevel
+    from tests.privacy_journal_support import operation_bytes
+
     engine, runtime, policy, _ = await opened(tmp_path, layout, analyzer)
     owner = str(policy.owner_id)
+    marker = "password=synthetic-value"
     try:
-        runtime.extractor.result["summary"] = "password=synthetic-value"
+        runtime.extractor.result["summary"] = marker
         with pytest.raises(PrivacyDenied):
             await engine.ingest(SOURCE, user_id=owner, wait_for_extraction=True)
         assert not runtime.embedder.sends and await engine._event_store.get_by_user(owner) == []
@@ -417,8 +451,79 @@ async def test_SN12_generated_reintroduction_and_publication_gate(tmp_path, layo
             await engine.ingest(SOURCE, user_id=owner, wait_for_extraction=True)
         assert not runtime.embedder.sends and await engine._event_store.get_by_user(owner) == []
         runtime.sanitizer._classifier = None
+        # A placeholder this source never issued is refused at the plan
+        # boundary, before any write or vector.
+        # A protected profile needs exactly one admitted entity node.
+        clean = {**runtime.extractor.result, "entities": [{"name": "John Smith", "entity_type": "person"}]}
+        fact = clean["facts"][0]
+        unissued = f"[PRME_PSEUDONYM_V1:email:{uuid4()}:{'A' * 43}]"
+        runtime.extractor.result = {**clean, "facts": [{**fact, "object": unissued}]}
+        with pytest.raises(PrivacyDenied, match="privacy_boundary_mismatch"):
+            await engine.ingest(SOURCE, user_id=owner, wait_for_extraction=True)
+        assert not runtime.embedder.sends and await engine._event_store.get_by_user(owner) == []
+        # A field outside the extraction schema is withheld: the fact publishes
+        # without it, and its value reaches no inventoried copy (scanned below).
+        extra = "SN12_UNDECLARED_FIELD_VALUE"
+        runtime.extractor.result = {**clean, "facts": [{**fact, "private_note": extra}]}
         identifier = await engine.ingest(SOURCE, user_id=owner, wait_for_extraction=True)
-        assert await engine.get_event_nodes(identifier, user_id=owner)
-        pytest.xfail("original SN12 positive guarded profile/summary publication remains pending")
+        nodes = await engine.get_event_nodes(identifier, user_id=owner)
+        assert nodes and all(extra not in node.model_dump_json() for node in nodes)
+        runtime.extractor.result = clean
+        record = await engine._privacy.repository.get(identifier, user_id=owner)
+        assert record.sanitization.action_counts and marker not in record.model_dump_json()
+
+        # Organizer output: generated summary and profile text that carries a
+        # removed value is withheld before its plan, vector or node exists.
+        build_summary, build_profile = summarization._build_summary_content, profiles.build_profile
+
+        def leaking_profile(*args, **kwargs):
+            built = build_profile(*args, **kwargs)
+            return None if built is None else (f"{built[0]}\n{marker}", *built[1:])
+
+        monkeypatch.setattr(summarization, "_build_summary_content",
+                            lambda *args: f"{build_summary(*args)}\n{marker}")
+        monkeypatch.setattr(profiles, "build_profile", leaking_profile)
+        sends = len(runtime.embedder.sends)
+        with pytest.raises(PrivacyDenied) as denied:
+            await summarization._materialize_summary_node(engine, SummarizationLevel.DAILY, "2026-10-20",
+                                                          nodes, owner)
+        assert denied.value.code == "privacy_denied"
+        with pytest.raises(PrivacyDenied) as denied:
+            await engine.consolidate_knowledge(user_id=owner, scope=Scope.PERSONAL, entity_names=["John Smith"])
+        assert denied.value.code == "privacy_denied"
+        assert len(runtime.embedder.sends) == sends and await engine.profile_jobs(user_id=owner) == []
+        assert await engine._graph_store.query_nodes(user_id=owner, node_type=NodeType.SUMMARY) == []
+        assert marker.encode() not in await operation_bytes(engine)
+
+        # The same paths publish through the guard once the generated text is clean.
+        monkeypatch.setattr(summarization, "_build_summary_content", build_summary)
+        monkeypatch.setattr(profiles, "build_profile", build_profile)
+        daily, created = await summarization._materialize_summary_node(
+            engine, SummarizationLevel.DAILY, "2026-10-20", nodes, owner)
+        assert created and "John Smith" in daily.content
+        assert await engine.consolidate_knowledge(user_id=owner, scope=Scope.PERSONAL,
+                                                  entity_names=["John Smith"]) == 1
+        published = await engine._graph_store.query_nodes(user_id=owner, node_type=NodeType.SUMMARY)
+        assert {str(daily.id)} < {str(node.id) for node in published}
+        assert any(node.metadata.get("entity_profile") for node in published)
+        await scan_copies(engine, runtime, owner, (marker, unissued, extra), tmp_path, caplog, capsys)
+    finally:
+        await engine.close()
+
+    # Under a closed schema, generated output with an undeclared field is
+    # refused against the admitted source; the declared shape is admitted.
+    reference = uuid4()
+    schema = ClosedSchema(reference, (("enabled", ValueValidator("boolean")),))
+    engine, runtime, policy, saved = await opened(tmp_path / "strict", layout, analyzer, sanitizer_options={
+        "schema_provider": Schemas(schema)}, policy_options={
+        "strict_schema_ref": reference, "strict_schema_version": "prme-strict-schema-v1"})
+    try:
+        source = await admit(runtime.sanitizer, saved, canonical({"enabled": True}))
+        with pytest.raises(PrivacyDenied):
+            await admit(runtime.sanitizer, saved, "", mode="generated_output", source=source,
+                        raw_fields=canonical({"enabled": True, "notes": "kept"}))
+        admitted = await admit(runtime.sanitizer, saved, "", mode="generated_output", source=source,
+                               raw_fields=canonical({"enabled": True}))
+        assert json.loads(admitted.fields_json) == {"enabled": True}
     finally:
         await engine.close()
