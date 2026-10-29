@@ -602,10 +602,12 @@ async def test_EM07_fixed_policy_directory_to_encrypted_pack_parity(
 
 
 @pytest.mark.xfail(strict=True, reason=(
-    "Known gap moved to #327 by the owner on 2026-10-28. Without a source grant, retrieval differs "
-    "only where the legacy side folds a consolidated excerpt into the fact it repeats and the protected "
-    "side does not; with the runtime grant, standard mode substitutes sanitized source passages by "
-    "design. The assertions are unchanged; #327 owns the 24-query parity gate."))
+    "Known gap, open in #327 after the owner's approved extra repair try on 2026-10-29 failed. "
+    "Evidence projection differs: the legacy side replaces a consolidated excerpt with its first "
+    "member (evidence_projection_max_sources=1), and the protected side resolves only event "
+    "passages and refuses a replacement that does not cover every dependency. The protected "
+    "context also opens with a privacy notice, and with the runtime grant a note is projected to "
+    "its sanitized source passage. The assertions are unchanged; see PV-11-report.md."))
 @pytest.mark.parametrize("layout", ["directory", "pack", "postgres"])
 async def test_EM07_standard_matched_input_migration_parity(tmp_path, layout, analyzer, native):
     """Direct conversion control; legacy has no literal saved privacy policy."""

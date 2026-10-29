@@ -291,6 +291,40 @@ async def test_EM06_public_writer_grants_audit_and_metadata():
         pickle.dumps(reader.registry.wrapper(reader.registry.inventory()[0]))
 
 
+@pytest.mark.parametrize("stage", ["authorized", "finished"])
+async def test_AC05_failed_audit_append_fails_closed(stage):
+    """A permitted diagnostic read whose audit append fails returns no plaintext."""
+    protector, saved, context, descriptor, audit, _, fence = setup_crypto()
+    payload = await protector.seal(SOURCE, context, original_snapshot=saved)
+    access = await grant(protector, saved, context)
+    write = audit.write
+
+    async def failing(event):
+        if event.outcome == stage:
+            raise RuntimeError("SYNTHETIC_SECRET_PROVIDER_EXCEPTION")
+        await write(event)
+
+    audit.write = failing
+    wrapper = protector.registry.wrapper(descriptor)
+    unwrap, private_calls = wrapper.unwrap_key, []
+
+    async def counted_unwrap(*args):
+        private_calls.append("unwrap")
+        return await unwrap(*args)
+
+    wrapper.unwrap_key = counted_unwrap
+    opened = []
+    with pytest.raises(PrivacyDenied) as error:
+        opened.append(await protector.open(payload, access, original_snapshot=saved, guard=fence.guard))
+    assert opened == [] and error.value.code == "privacy_capability_unavailable"
+    assert "SYNTHETIC_SECRET" not in str(error.value) and error.value.__cause__ is None
+    assert not any(event.outcome == "finished" for event in audit.events)
+    # An authorization that was never recorded never reaches the private key.
+    assert private_calls == ([] if stage == "authorized" else ["unwrap"])
+    audit.write = write
+    assert await protector.open(payload, access, original_snapshot=saved, guard=fence.guard) == SOURCE
+
+
 async def test_EM06_standard_explicit_runtime_and_expiry_selected_ids():
     clock = [NOW]
     protector, saved, context, descriptor, _, _, fence = setup_crypto(use="runtime", clock=lambda: clock[0])
