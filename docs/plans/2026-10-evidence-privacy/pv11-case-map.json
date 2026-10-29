@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "purpose": "PV-11 (#327) explicit test mapping for frozen scenarios whose tests do not carry the scenario ID. Every other case maps to tests whose names contain its ID. A mapping records candidate coverage only; the gate report states which expected outcomes each mapped test proves and which remain gaps.",
+  "overrides": {
+    "AC02": {
+      "tests": [
+        "tests/test_privacy_ciphertext_storage.py::test_EM03_real_ciphertext_storage_and_private_diagnostic",
+        "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure",
+        "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease"
+      ],
+      "note": "Shared with #321 (PV-04 plan: AC02 shared #321). Two selected records, labeled sanitized evidence and content-free audit."
+    },
+    "AC05": {
+      "tests": [
+        "tests/test_privacy_crypto.py::test_EM02_tamper_never_releases_plaintext",
+        "tests/test_privacy_keys.py::test_native_multipart_readback_key_loss_recovery",
+        "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect",
+        "tests/test_privacy_crypto.py::test_EM06_expiry_during_completion_audit_denies_return"
+      ],
+      "note": "Shared with #321. Covers a corrupt envelope, key loss and audit-time denial; an explicit failed audit append is a candidate gap."
+    },
+    "CL01": {
+      "tests": [
+        "tests/test_privacy_sanitizer.py::test_nested_admission_and_sanitized_checksum",
+        "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries",
+        "tests/test_privacy_sanitizer_scenarios.py::test_SN01_recognized_credential"
+      ],
+      "note": "Body and nested metadata values. Metadata keys and speaker or display fields are candidate gaps."
+    },
+    "ER07": {
+      "tests": [
+        "tests/test_privacy_restore.py::test_same_lineage_restore_applies_current_ledger_before_recovery",
+        "tests/test_privacy_restore_continuity.py::test_restore_ignores_a_checkpoint_copied_from_a_newer_export"
+      ],
+      "note": "Current ledger applied before serving, including a forged artifact checkpoint. A restore with only the snapshot ledger is a candidate gap."
+    }
+  }
+}
