@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0a9] - 2026-10-29
+
+This is an alpha. It passed CI and the cheap fast tiers and the offline gate, replayed from the recorded
+caches with no live model call, and it has not been through the full benchmark or the mid tier. The stable
+release stays at 0.15.0 until the full benchmark audit, so `pip install prme` still installs 0.15.0. Install
+the alpha with `pip install --pre prme` or `pip install prme==0.16.0a9`.
+
+Everything new here is protected-store work for the evidence privacy epic (dwamianm/prism#318). It applies
+only to a store that uses a privacy runtime. A store without one behaves as in 0.16.0a8.
+
+### Added
+
+- Protected journals, receipts and asynchronous work (dwamianm/prism#324, PR #372). Accepted asynchronous
+  sanitized input is sealed under a processing-only purpose with a finite deadline, and a worker reads it only
+  with a current claim; completion, cancellation and expiry remove it. Executable derivation plans hold only
+  admitted memory, and restart publication does not open the evidence archive. Protected retrieval writes a
+  minimized, versioned receipt (`get_retrieval_receipt()`, `GET /v1/retrievals/{request_id}`), and lifecycle,
+  TTL, supersedence, profile, summary, alias and organizer journals follow the same copy rules.
+- Erasure and expiry (dwamianm/prism#325, PR #373). An independent erasure ledger (`LocalErasureLedger`)
+  records each request before the store's denial fence, so a crash between the two is applied on the next open.
+  `request_erasure()`, `get_erasure_status()`, `process_erasures()` and `expire_privacy()` (also on
+  `MemoryClient`, and `prme privacy erase`, `status`, `purge` and `expire`) cover source, memory and owner
+  scopes with dependency traversal, and a node-selected erasure also fences its covered source copies.
+  Evidence reads are denied at the exact deadline before any purge runs. Status separates denial, live purge,
+  backup expiry and external copies.
+- Migration, export and restore of protected packs (dwamianm/prism#326, PR #374). `prme privacy dry-run` and
+  `migrate` (`migrate_privacy_pack()`, `migration_status()`) convert a legacy pack into a separate protected
+  destination, resumable and fenced by erasure, and leave the original intact. `export_protected()`
+  (`prme privacy export`) writes a closed export with encrypted evidence and no recovery secrets, or an
+  `active_memory_only` export that states what it omits. `restore_protected_export()` (`prme privacy restore`)
+  restores into an empty destination, including a bound PostgreSQL namespace, and replays the store's whole
+  erasure ledger before anything serves. `MemoryWorkspace.open_postgres(initialize=False)` reopens an existing
+  PostgreSQL workspace with no schema or catalog writes.
+
+### Changed
+
+- A store that uses a privacy runtime now has an explicit protected format. It holds only protected records:
+  every plain write is refused with `privacy_invalid_result`, for any owner. Plain memories belong in a
+  separate store. An existing plain store opened with a privacy runtime raises `privacy_migration_required`
+  until it is migrated.
+- A protected store refuses to open without its privacy runtime (`privacy_capability_unavailable`, with
+  guidance in the CLI). Earlier alphas opened it and refused only the protected operations.
+- In a protected store, a read that reaches a node or event row with no privacy record is refused
+  (`privacy_provider_unavailable`). Such a row is damaged or orphaned and is never read as legacy.
+- Export refuses while a memory erasure is requested or blocked but not yet processed (`privacy_erased`), and
+  while expired memory is not yet purged (`privacy_expired`). Run `process_erasures()` and `expire_privacy()`
+  first. An evidence-only erasure does not block export.
+- The `ErasureLedger` protocol has a new required method, `registration_head(store_id)`. A custom ledger
+  adapter must add it.
+
+### Fixed
+
+- Restore no longer trusts the ledger checkpoint written in an export. An old export carrying a newer
+  checkpoint restored erased memory as live; restore now replays from the store's registration head.
+- Export no longer copies memory whose erasure was accepted but not processed, past the access block.
+- Protected summaries and profiles no longer get extra multi-model vectors written outside the publication
+  guard.
+- Export, restore and migration no longer need the `postgres` extra on a DuckDB-only install. The row decoding
+  they share moved to the driver-free `prme.storage.graph_rows`.
+
+### Tooling
+
+These do not ship in the wheel and change no behavior.
+
+- The PV-11 scenario gate (`docs/plans/2026-10-evidence-privacy/pv11-gate.py`) maps the 52 frozen privacy
+  scenarios to test results per backend, with its baseline and first report (dwamianm/prism#327, PR #375).
+
+### Upgrade notes
+
+- No default changed since 0.16.0a8 for a store without a privacy runtime.
+- For protected stores, three behaviors changed (see Changed): plain writes are refused, the store refuses to
+  open without its runtime, and export waits for pending memory erasures and expired memory to be purged. A
+  protected store written by an earlier alpha without the protected format raises `privacy_migration_required`
+  on open with a runtime; migrate it with `prme privacy migrate`.
+- Known open items for the privacy work, tracked in dwamianm/prism#327 and listed in
+  `docs/plans/2026-10-evidence-privacy/PV-11-report.md`: standard-mode migration parity (a consolidated excerpt
+  is not folded into the fact it repeats on the protected side), the sanitizer cases SN11 and SN12, the 24
+  storage parity queries and 24 sealed scenarios, and adapter subchecks per scenario.
+- Known flaky tests: `tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions`
+  and `tests/test_ingested_corrections.py::test_mcp_owner_declaration_is_strict_and_persisted` can stop the
+  test process with a native DuckDB abort while the engine closes, and
+  `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself` fails inside a git
+  worktree. None affects the installed package.
+
 ## [0.16.0a8] - 2026-10-22
 
 This is an alpha. It passed CI and the cheap fast tiers and the offline gate, replayed from the recorded
@@ -3118,7 +3202,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a8...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0a9...HEAD
+[0.16.0a9]: https://github.com/dwamianm/prism/compare/v0.16.0a8...v0.16.0a9
 [0.16.0a8]: https://github.com/dwamianm/prism/compare/v0.16.0a7...v0.16.0a8
 [0.16.0a7]: https://github.com/dwamianm/prism/compare/v0.16.0a6...v0.16.0a7
 [0.16.0a6]: https://github.com/dwamianm/prism/compare/v0.16.0a5...v0.16.0a6
