@@ -62,16 +62,18 @@ def has_lexical_document(node_type: str, *, derived: bool) -> bool:
 
 # Whether the node a ``derivation_artifact_owners`` row reserves was derived.
 # A protected store publishes a node stored directly with store() through a
-# journaled plan too, so it also owns an artifact row; that plan's event has a
-# direct-store request, and the node keeps the lexical document store() gave
-# it. ``artifact`` is the owner row and ``node_id`` the SQL for its node's ID.
+# journaled plan too, so it also owns an artifact row. That node is the node of
+# its event's direct-store request, and it keeps the lexical document store()
+# gave it. Matching the node, not the event, keeps the entities that
+# store(extract=True) extracts from the same event derived. DuckDB only, like
+# every caller. ``node_id`` is the SQL for the node's ID.
 def derived_artifact_sql(node_id: str) -> str:
     return (
         "EXISTS (SELECT 1 FROM derivation_artifact_owners artifact "
         f"WHERE artifact.node_id = {node_id} AND NOT EXISTS ("
-        "SELECT 1 FROM derivation_registered_plans registered JOIN operations request "
-        "ON request.target_id = registered.event_id AND request.op_type = 'DIRECT_STORE_REQUESTED' "
-        "WHERE registered.operation_id = artifact.operation_id))"
+        "SELECT 1 FROM operations request WHERE request.op_type = 'DIRECT_STORE_REQUESTED' "
+        "AND json_extract_string(json_extract_string(request.payload, '$.record'), '$.node.id') "
+        "= artifact.node_id))"
     )
 
 

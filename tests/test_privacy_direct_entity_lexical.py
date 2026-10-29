@@ -3,7 +3,8 @@
 A protected store publishes a node stored directly with store() through a
 journaled plan, so that node owns a derivation artifact row like an extracted
 one. Rebuilds, restores and single-file pack opens must still give a directly
-stored entity its lexical document, and an extracted entity none.
+stored entity its lexical document, and an extracted entity none, also when
+store(extract=True) extracts it from a direct store's own event.
 """
 
 import pytest
@@ -11,6 +12,9 @@ import pytest
 from prme import MemoryEngine
 from prme.types import NodeType
 from tests.privacy_fakes import config_for, make_runtime, policy_for
+from tests.test_batched_extraction import drain
+from tests.test_single_file_pack import USER, pack_config
+from tests.test_store_extraction import SENTENCE, script
 
 NAME = "Caroline"
 
@@ -45,3 +49,30 @@ async def test_a_protected_directly_stored_entity_keeps_its_lexical_document(tmp
     # A single-file pack loads its lexical index from the graph on every open.
     async with MemoryEngine.open(config, embedding_provider=runtime.embedder, privacy_runtime=runtime) as engine:
         assert await lexical_ids(engine, owner) == written
+
+
+async def test_a_plain_store_extract_entity_stays_without_a_lexical_document(tmp_path):
+    # store(extract=True) writes a direct-store request for the event that it
+    # then extracts from; the extracted entities stay derived.
+    pack = tmp_path / "memories.prme"
+
+    def scripted(engine):
+        script(engine)
+
+        async def no_batch(*args, **kwargs):
+            raise AssertionError("no provider call")
+
+        engine._pipeline._extraction_provider.extract_batch = no_batch
+
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        scripted(engine)
+        await engine.store(SENTENCE, user_id=USER, extract=True)
+        await drain(engine._pipeline)
+        entities = {str(node.id) for node in await engine.query_nodes(user_id=USER, node_type=NodeType.ENTITY)}
+        assert entities
+        hits = {hit["node_id"] for hit in await engine._lexical_index.search("Alex Jordan Japan", USER, limit=50)}
+        assert hits and not hits & entities
+        await engine.rebuild_indexes()
+        assert {hit["node_id"] for hit in await engine._lexical_index.search("Alex Jordan Japan", USER, limit=50)} == hits
+    async with MemoryEngine.open(pack_config(pack)) as engine:
+        assert {hit["node_id"] for hit in await engine._lexical_index.search("Alex Jordan Japan", USER, limit=50)} == hits
