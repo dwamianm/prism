@@ -97,7 +97,11 @@ async def test_EM07_direct_migration_resume_exact_identity_current_erasure(tmp_p
                 event_ids.append(await source.store(memory + " " + FIXTURE["source_only"] + " " + FIXTURE["prohibited"],
                     retrieval_content=memory, user_id=owner))
             if layout == "closed_fernet":
-                source._conn.execute("DELETE FROM vector_payloads")
+                # A separate cursor: the engine's own connection may still be
+                # serving the engine's background work, which DuckDB 1.4
+                # waited for (or aborted on) and DuckDB 2.0 refuses.
+                with source._conn.cursor() as cursor:
+                    cursor.execute("DELETE FROM vector_payloads")
         finally:
             await source.close()
         before = await _read_snapshot(original)
@@ -757,7 +761,11 @@ async def test_EM07_mixed_saved_family_identity_closure_interruptions(tmp_path, 
             direct, fact, entity, generated, visual, survivor = await mixed_legacy_family(source, runtime, owner)
             before_retrieval = await public_retrieval(source, "before")
             if layout == "closed_fernet":
-                source._conn.execute("DELETE FROM vector_payloads")
+                # A separate cursor: the engine's own connection may still be
+                # serving the engine's background work, which DuckDB 1.4
+                # waited for (or aborted on) and DuckDB 2.0 refuses.
+                with source._conn.cursor() as cursor:
+                    cursor.execute("DELETE FROM vector_payloads")
         before = await _read_snapshot(original)
         source_files = hashes(tmp_path / "legacy") if local_layout == "directory" else None
         remove_events = () if visual is None else (visual.id,)

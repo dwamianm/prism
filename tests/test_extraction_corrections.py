@@ -115,9 +115,13 @@ class TestTheRequest:
         messages = json.dumps(batch_request_messages(self.TURNS))
         assert hashlib.sha256(messages.encode()).hexdigest() == \
             "44affe0ca785b677e830d2d49ef9e87bd47d73f9066baad6384cb9a5ef7e8464"
-        schema = json.dumps(_BatchExtractionResult.model_json_schema(), sort_keys=True)
+        # The schema digest leaves out pydantic's rendering of the one Decimal
+        # field, which differs between pydantic 2.12 and 2.14. The raw digest
+        # under the locked pydantic 2.12.5 was 57d60830...e93f.
+        from tests.test_batched_extraction import _version_independent_schema
+        schema = json.dumps(_version_independent_schema(_BatchExtractionResult.model_json_schema()), sort_keys=True)
         assert hashlib.sha256(schema.encode()).hexdigest() == \
-            "57d608302d82a5ee19be235f0021934152592adbf52fc3a65b3f669232e1e93f"
+            "1012016c5ba4a376e59f9e7e9ad5867c3f3520d1ecfe761e8eeba320154a28d6"
         assert "replaces_memory" not in schema
 
     def test_memories_add_guidance_a_reference_message_and_the_field(self):

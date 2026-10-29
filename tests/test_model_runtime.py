@@ -133,8 +133,11 @@ def test_anthropic_client_is_built_for_its_endpoint(project_env):
     assert str(client.client.base_url) == "https://gateway.invalid/anthropic/"
     assert client.client.api_key == "configured-key"
     assert "base_url" not in client.kwargs
-    assert client.kwargs["model"] == "example"
-    assert client.mode == instructor.Mode.ANTHROPIC_TOOLS
+    # instructor 1.17 no longer binds the model into the client and names the
+    # mode TOOLS. Every caller passes the model to create() (extraction,
+    # query reformulation and answerability), so either version works.
+    assert client.kwargs.get("model", "example") == "example"
+    assert client.mode in {instructor.Mode.ANTHROPIC_TOOLS, instructor.Mode.TOOLS}
 
 
 def test_extraction_treats_a_blank_key_as_the_providers_own(project_env, monkeypatch):
