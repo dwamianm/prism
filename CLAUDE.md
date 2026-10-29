@@ -80,7 +80,7 @@ default-change rule as the stable-channel rule.
 | Version | `0.16.0a3`, `0.16.0b1` (PEP 440) | `0.16.0` |
 | GitHub release | a prerelease (`--prerelease`) | the latest release |
 | PyPI | a prerelease: `pip install prme` keeps the last stable, `pip install --pre prme` or `prme==0.16.0a3` installs it | what `pip install prme` installs |
-| Gated by | the fast tiers (below) | the latest scheduled full benchmark run, and for an `ingest()` default the answer track |
+| Gated by | the fast tiers (below) | the latest scheduled full benchmark run, and for an `ingest()` default the answer track (one recorded exception: the owner released `0.16.0` on 2026-10-29 without it) |
 | A default flips | on the fast-tier evidence, in the pull request that flips it | only under the default-change rule (epic #77 rules below) |
 
 Both channels: new behavior ships behind an explicit configuration option, off by default, until it passes its
