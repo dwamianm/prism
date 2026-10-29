@@ -146,11 +146,12 @@ async def test_AP04_complete_minimal_capture_keeps_attribution_time_and_negation
         await engine.close()
 
 
+@pytest.mark.parametrize("layout", ["directory", "postgres"])
 @pytest.mark.parametrize("text,bound", [(SOURCE, 16), ("[ambiguous] " + SOURCE, 4096)])
-async def test_AP05_unsafe_minimal_never_truncates_or_upgrades(tmp_path, text, bound):
+async def test_AP05_unsafe_minimal_never_truncates_or_upgrades(tmp_path, layout, text, bound):
     r = make_runtime()
     p = policy_for(r, capture="minimal", evidence_use="diagnostics_only", evidence_lifetime_seconds=3600, minimal_max_bytes=bound)
-    engine, _, _ = await open_engine(tmp_path, runtime=r, policy=p)
+    engine, _, _ = await open_engine(tmp_path, layout=layout, runtime=r, policy=p)
     try:
         with pytest.raises(PrivacyDenied):
             await engine.store(text, user_id=str(p.owner_id))
@@ -185,9 +186,10 @@ async def test_AP06_no_evidence_async_work_removed_on_actual_commit(tmp_path, la
         await engine.close()
 
 
-async def test_AP07_visual_refusal_before_decoder_blob_or_provider(tmp_path, monkeypatch):
+@pytest.mark.parametrize("layout", ["directory", "postgres"])
+async def test_AP07_visual_refusal_before_decoder_blob_or_provider(tmp_path, layout, monkeypatch):
     from prme.vision.observe import observe_source
-    engine, r, p = await open_engine(tmp_path)
+    engine, r, p = await open_engine(tmp_path, layout=layout)
     monkeypatch.setattr(engine, "vision_provider", lambda: pytest.fail("vision provider initialized"))
     try:
         for call in (engine.observe, lambda source, **kw: observe_source(engine, source, **kw)):

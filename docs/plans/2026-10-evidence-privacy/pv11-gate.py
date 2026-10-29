@@ -7,7 +7,8 @@ RESULTS.xml is a pytest JUnit report of tests/test_privacy_*.py run with
 PRME_TEST_DATABASE_URL set. A case maps to the tests whose names contain its
 ID, plus the explicit entries in pv11-case-map.json. A backend execution passes
 only when it has at least one mapped test on that backend and every mapped test
-there passed. A missing backend is reported as a gap, never as a pass.
+there passed. A missing backend is reported as a gap, never as a pass, except a
+case listed as backend_independent with a reason, reported under that status.
 """
 
 import json
@@ -43,7 +44,8 @@ def backend(node):
 def main():
     outcomes = results(sys.argv[1])
     manifest = json.loads((HERE / "privacy-scenarios.json").read_text())
-    overrides = json.loads((HERE / "pv11-case-map.json").read_text())["overrides"]
+    mapping = json.loads((HERE / "pv11-case-map.json").read_text())
+    overrides, independent = mapping["overrides"], mapping.get("backend_independent", {})
     rows = []
     for case in manifest["cases"]:
         identifier = case["id"]
@@ -55,7 +57,9 @@ def main():
         for name in ("duckdb", "postgresql"):
             mapped = [node for node in nodes if backend(node) == name]
             ran = [node for node in mapped if outcomes[node] != "skipped"]
-            if not ran:
+            if not ran and name == "postgresql" and identifier in independent:
+                status = "backend_independent"
+            elif not ran:
                 status = "gap"
             elif all(outcomes[node] == "passed" for node in ran):
                 status = "passed"
@@ -64,6 +68,8 @@ def main():
             else:
                 status = "expected_failure"
             executions[name] = {"status": status, "tests": {node: outcomes[node] for node in mapped}}
+            if status == "backend_independent":
+                executions[name]["reason"] = independent[identifier]
         rows.append({"id": identifier, "cohort": case["cohort"], "group": case["group"], "title": case["title"],
                      "mapping": "explicit" if identifier in overrides else "name",
                      "adapter_subchecks": case.get("adapter_subchecks", []), "executions": executions})

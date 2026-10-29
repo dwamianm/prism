@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "purpose": "PV-11 (#327) explicit test mapping for frozen scenarios whose tests do not carry the scenario ID. Every other case maps to tests whose names contain its ID. A mapping records candidate coverage only; the gate report states which expected outcomes each mapped test proves and which remain gaps.",
+  "purpose": "PV-11 (#327) explicit test mapping for frozen scenarios whose tests do not carry the scenario ID. Every other case maps to tests whose names contain its ID. A mapping records candidate coverage only; the gate report states which expected outcomes each mapped test proves and which remain gaps. backend_independent lists cases whose mapped tests open no storage backend; the gate reports them as backend_independent on PostgreSQL with the stated reason, never as a PostgreSQL pass.",
   "overrides": {
     "AC02": {
       "tests": [
@@ -34,5 +34,10 @@
       ],
       "note": "Current ledger applied before serving, including a forged artifact checkpoint. A restore with only the snapshot ledger is a candidate gap."
     }
+  },
+  "backend_independent": {
+    "EM01": "Fixed AES-256-GCM CAVP vectors, a whole-envelope vector and independent-library decryption run on the crypto module alone; no storage backend is opened.",
+    "EM06": "Local public writer, grant, lease, expiry and audit ordering are custody and capability logic in the privacy runtime; the tests open no storage backend. Stored-evidence diagnostic reads on PostgreSQL are covered by AC02 (test_EM03_real_ciphertext_storage_and_private_diagnostic).",
+    "AC05": "Envelope tamper, key loss and audit-time denial are crypto, custody and audit logic; the mapped tests open no storage backend. The PostgreSQL stored-evidence read path is covered by AC02."
   }
 }
