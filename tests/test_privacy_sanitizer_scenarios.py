@@ -140,6 +140,46 @@ async def test_SN02_contact_actions_and_profiles(tmp_path, layout, analyzer, cap
             await engine.close()
 
 
+async def test_CL01_metadata_keys_and_display_fields(tmp_path, layout, analyzer, caplog, capsys):
+    import hashlib
+
+    engine, runtime, policy, _ = await opened(tmp_path, layout, analyzer)
+    owner = str(policy.owner_id)
+    email = next(row for row in FIXTURES if row["id"] == "email-01")
+    span = email["expected_spans"][0]
+    address = email["text"][span["start"]:span["end"]]
+    try:
+        # A credential in a metadata key or a display field is refused like
+        # body text, on the single and the fast batch path.
+        for metadata, speaker in (({"password=synthetic-value": "x"}, None),
+                                  ({"contact": {"password=synthetic-value": "x"}}, None),
+                                  (None, "password=synthetic-value")):
+            with pytest.raises(PrivacyDenied):
+                await engine.store("The cup is on the table.", user_id=owner, metadata=metadata, speaker=speaker)
+            with pytest.raises(PrivacyDenied):
+                await engine.ingest_fast_many([{"content": "The cup is on the table.", "metadata": metadata,
+                                                "speaker": speaker}], user_id=owner)
+        await no_writes(engine, runtime, owner)
+        # A removed contact in a metadata key, a nested key and a display field
+        # is replaced before storage; the original never becomes durable.
+        identifier = await engine.store("The cup is on the table.", user_id=owner, speaker=address,
+                                        metadata={address: "primary", "contact": {address: "work"}})
+        batch = await engine.ingest_fast_many([{"content": "There are 42 boxes.", "speaker": address,
+                                                 "metadata": {address: "primary"}}], user_id=owner)
+        assert (await engine.process_pending(user_id=owner)).processed == 1
+        events = await engine._event_store.get_by_user(owner)
+        nodes = [node for item in (identifier, *batch) for node in await engine.get_event_nodes(item, user_id=owner)]
+        assert len(events) == 2 and len(nodes) == 2
+        assert all(node.metadata[SPEAKER_METADATA_KEY] == "[EMAIL_REMOVED]" for node in nodes)
+        assert all(address not in value.model_dump_json() for value in (*events, *nodes))
+        record = await engine._privacy.repository.get(identifier, user_id=owner)
+        assert record.sanitization.action_counts
+        await scan_copies(engine, runtime, owner, (address, hashlib.sha256(address.encode()).hexdigest()),
+                          tmp_path, caplog, capsys)
+    finally:
+        await engine.close()
+
+
 async def test_SN03_placeholder_continuity(tmp_path, layout, analyzer):
     keys, epoch = ScopedTestKeys(), uuid4()
     engine, runtime, policy, saved = await opened(tmp_path, layout, analyzer, sanitizer_options={
