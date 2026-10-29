@@ -358,8 +358,9 @@ async def test_owner_group_config_cannot_publish_a_revoked_dependency(tmp_path):
         await engine.close()
 
 
-async def test_AP08_stale_before_publication_has_no_durable_admission(tmp_path):
-    engine, r, p = await open_engine(tmp_path)
+@pytest.mark.parametrize("layout", ["directory", "postgres"])
+async def test_AP08_stale_before_publication_has_no_durable_admission(tmp_path, layout):
+    engine, r, p = await open_engine(tmp_path, layout=layout)
 
     async def activate():
         r.authority.revisions[p.policy_id] = 2
@@ -474,8 +475,9 @@ async def test_mixed_store_global_feedback_remains_denied(tmp_path):
         await engine.close()
 
 
-async def test_AP08_stale_before_send_and_restart_preserve_saved_policy(tmp_path, monkeypatch):
-    engine, r, p = await open_engine(tmp_path)
+@pytest.mark.parametrize("layout", ["directory", "postgres"])
+async def test_AP08_stale_before_send_and_restart_preserve_saved_policy(tmp_path, layout, monkeypatch):
+    engine, r, p = await open_engine(tmp_path, layout=layout)
     owner = str(p.owner_id)
     monkeypatch.setattr(engine._pipeline, "queue_extraction", lambda *args: None)
     event_id = await engine.ingest(SOURCE, user_id=owner)
@@ -496,8 +498,9 @@ async def test_AP08_stale_before_send_and_restart_preserve_saved_policy(tmp_path
         await reopened.close()
 
 
-async def test_AP08_disclosure_rechecks_after_await(tmp_path, monkeypatch):
-    engine, r, p = await open_engine(tmp_path)
+@pytest.mark.parametrize("layout", ["directory", "postgres"])
+async def test_AP08_disclosure_rechecks_after_await(tmp_path, layout, monkeypatch):
+    engine, r, p = await open_engine(tmp_path, layout=layout)
     owner = str(p.owner_id)
     event_id = await engine.store(SOURCE, user_id=owner)
     nodes = await engine.get_event_nodes(event_id, user_id=owner)

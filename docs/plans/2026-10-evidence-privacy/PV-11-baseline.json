@@ -1,0 +1,1629 @@
+{
+  "schema_version": 1,
+  "manifest": "privacy-scenarios.json",
+  "results": "pv11-baseline.xml",
+  "backend_case_executions": 104,
+  "summary": {
+    "passed": 91,
+    "gap": 7,
+    "expected_failure": 6
+  },
+  "cases": [
+    {
+      "id": "AP01",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Profile and explicit lifetime inspection",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "sync_python",
+        "async_python",
+        "http",
+        "mcp",
+        "fast_batch",
+        "langchain",
+        "llamaindex",
+        "supported_import"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[directory-full-runtime]": "passed",
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[directory-minimal-diagnostics_only]": "passed",
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[directory-none-diagnostics_only]": "passed",
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[pack-full-runtime]": "passed",
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[pack-minimal-diagnostics_only]": "passed",
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[pack-none-diagnostics_only]": "passed",
+            "tests/test_privacy_interfaces.py::test_AP01_AP02_HTTP_real_lifespan_and_content_free_errors": "passed",
+            "tests/test_privacy_interfaces.py::test_AP01_AP02_MCP_public_tool_dispatch": "passed",
+            "tests/test_privacy_interfaces.py::test_AP01_batch_supported_import_is_public_fast_batch": "passed",
+            "tests/test_privacy_interfaces.py::test_AP01_sync_python_retains_sanitized_memory_with_policy": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[postgres-full-runtime]": "passed",
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[postgres-minimal-diagnostics_only]": "passed",
+            "tests/test_privacy_admission.py::test_AP01_valid_profiles_retain_memory_and_immutable_policy[postgres-none-diagnostics_only]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AP02",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Invalid policy before side effects",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "sync_python",
+        "async_python",
+        "http",
+        "mcp",
+        "fast_batch",
+        "langchain",
+        "llamaindex",
+        "supported_import"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP02_whole_batch_preflight_before_write_or_provider[directory]": "passed",
+            "tests/test_privacy_admission.py::test_AP02_whole_batch_preflight_before_write_or_provider[pack]": "passed",
+            "tests/test_privacy_interfaces.py::test_AP01_AP02_HTTP_real_lifespan_and_content_free_errors": "passed",
+            "tests/test_privacy_interfaces.py::test_AP01_AP02_MCP_public_tool_dispatch": "passed",
+            "tests/test_privacy_policy.py::test_AP02_invalid_closed_config[changes0]": "passed",
+            "tests/test_privacy_policy.py::test_AP02_invalid_closed_config[changes1]": "passed",
+            "tests/test_privacy_policy.py::test_AP02_invalid_closed_config[changes2]": "passed",
+            "tests/test_privacy_policy.py::test_AP02_invalid_closed_config[changes3]": "passed",
+            "tests/test_privacy_policy.py::test_AP02_invalid_closed_config[changes4]": "passed",
+            "tests/test_privacy_policy.py::test_AP02_invalid_closed_config[changes5]": "passed",
+            "tests/test_privacy_policy.py::test_AP02_invalid_closed_config[changes6]": "passed",
+            "tests/test_privacy_policy.py::test_AP02_invalid_closed_config[changes7]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP02_whole_batch_preflight_before_write_or_provider[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AP03",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Restrictive composition and concurrent projects",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "sync_python",
+        "async_python",
+        "http",
+        "mcp",
+        "fast_batch",
+        "langchain",
+        "llamaindex",
+        "supported_import"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_interfaces.py::test_AP03_namespace_factory_binds_actual_project_id": "passed",
+            "tests/test_privacy_policy.py::test_AP03_composition_and_deadlines_are_restrictive": "passed",
+            "tests/test_privacy_policy.py::test_AP03_conflicting_transforms_reject_and_scopes_do_not_bleed": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "gap",
+          "tests": {}
+        }
+      }
+    },
+    {
+      "id": "AP04",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Minimal evidence preserves qualifiers",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP04_complete_minimal_capture_keeps_attribution_time_and_negation[directory]": "passed",
+            "tests/test_privacy_admission.py::test_AP04_complete_minimal_capture_keeps_attribution_time_and_negation[pack]": "passed",
+            "tests/test_privacy_source_reads.py::test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP04_complete_minimal_capture_keeps_attribution_time_and_negation[postgres]": "passed",
+            "tests/test_privacy_source_reads.py::test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AP05",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Unsafe minimal excerpt refuses truncation",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP05_unsafe_minimal_never_truncates_or_upgrades[Alex does not like tea unless it is cold.-16]": "passed",
+            "tests/test_privacy_admission.py::test_AP05_unsafe_minimal_never_truncates_or_upgrades[[ambiguous] Alex does not like tea unless it is cold.-4096]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "gap",
+          "tests": {}
+        }
+      }
+    },
+    {
+      "id": "AP06",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "No evidence differs from no durable processing",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "sync_python",
+        "async_python",
+        "http",
+        "mcp",
+        "fast_batch",
+        "langchain",
+        "llamaindex",
+        "supported_import"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP06_no_evidence_async_work_removed_on_actual_commit[directory]": "passed",
+            "tests/test_privacy_admission.py::test_AP06_no_evidence_async_work_removed_on_actual_commit[pack]": "passed",
+            "tests/test_privacy_ephemeral.py::test_AP06_async_refusal_precedes_input_admission[ingest-kwargs0]": "passed",
+            "tests/test_privacy_ephemeral.py::test_AP06_async_refusal_precedes_input_admission[ingest_fast-kwargs1]": "passed",
+            "tests/test_privacy_ephemeral.py::test_AP06_async_refusal_precedes_input_admission[store-kwargs2]": "passed",
+            "tests/test_privacy_ephemeral.py::test_AP06_sync_success_and_provider_failure_require_resubmission": "passed",
+            "tests/test_privacy_ephemeral.py::test_AP06_while_provider_is_paused_no_source_or_job_exists": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_actual_retry_and_terminal_cleanup[directory]": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_actual_retry_and_terminal_cleanup[pack]": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_cancellation_retires_actual_claim[directory]": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_cancellation_retires_actual_claim[pack]": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_multiple_input_allowances_and_claims[directory]": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_multiple_input_allowances_and_claims[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP06_no_evidence_async_work_removed_on_actual_commit[postgres]": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_actual_retry_and_terminal_cleanup[postgres]": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_cancellation_retires_actual_claim[postgres]": "passed",
+            "tests/test_privacy_processing_work.py::test_AP06_component_multiple_input_allowances_and_claims[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AP07",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Protected visual admission is unsupported",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_admission.py::test_AP07_visual_refusal_before_decoder_blob_or_provider": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "gap",
+          "tests": {}
+        }
+      }
+    },
+    {
+      "id": "AP08",
+      "cohort": "original_40",
+      "group": "admission_policy",
+      "title": "Old policy retry and activation fence",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_fences.py::test_AP08_disclosure_rechecks_after_await": "passed",
+            "tests/test_privacy_fences.py::test_AP08_stale_before_publication_has_no_durable_admission": "passed",
+            "tests/test_privacy_fences.py::test_AP08_stale_before_send_and_restart_preserve_saved_policy": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "gap",
+          "tests": {}
+        }
+      }
+    },
+    {
+      "id": "AC01",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Every ordinary sealed read path",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "sync_python",
+        "async_python",
+        "http",
+        "mcp",
+        "explorer",
+        "cli"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch[duckdb]": "passed",
+            "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_ordinary_final_deadlines[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_ordinary_final_deadlines[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_orphan_markers_never_select_raw_reads[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_orphan_markers_never_select_raw_reads[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_ordinary_reads_return_admitted_memory_without_evidence_open[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_ordinary_reads_return_admitted_memory_without_evidence_open[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch[postgres]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_ordinary_final_deadlines[postgres]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_orphan_markers_never_select_raw_reads[postgres]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy[postgres]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_ordinary_reads_return_admitted_memory_without_evidence_open[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AC02",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Selected authorized diagnostic read",
+      "mapping": "explicit",
+      "adapter_subchecks": [
+        "async_python",
+        "cli"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_ciphertext_storage_and_private_diagnostic[directory]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_ciphertext_storage_and_private_diagnostic[pack]": "passed",
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[directory]": "passed",
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[pack]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[duckdb]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_ciphertext_storage_and_private_diagnostic[postgres]": "passed",
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[postgres]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AC03",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Missing expired or overbroad capability",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_ordinary_final_deadlines[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_ordinary_final_deadlines[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_orphan_markers_never_select_raw_reads[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_orphan_markers_never_select_raw_reads[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_ordinary_final_deadlines[postgres]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_orphan_markers_never_select_raw_reads[postgres]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC01_AC03_unmarked_records_in_a_protected_store_are_never_legacy[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AC04",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Cross-owner project and scope substitution",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python",
+        "http",
+        "mcp"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch[duckdb]": "passed",
+            "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC04_AC06_real_graph_seed_walk_excludes_unadmitted_neighbors[duckdb]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC04_AC06_real_graph_seed_walk_excludes_unadmitted_neighbors[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_interfaces.py::test_AC01_AC04_http_and_mcp_dispatch[postgres]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC04_AC06_real_graph_seed_walk_excludes_unadmitted_neighbors[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AC05",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Audit or key unavailable",
+      "mapping": "explicit",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_crypto.py::test_EM02_tamper_never_releases_plaintext[ciphertext]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_tamper_never_releases_plaintext[nonce]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_tamper_never_releases_plaintext[wrapped_key]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[evidence-final_lease]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[evidence-permit]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[evidence-plaintext]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[grant-final_lease]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[grant-permit]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[grant-plaintext]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[memory-final_lease]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[memory-permit]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[memory-plaintext]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_completion_audit_denies_return[final_lease_return]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_completion_audit_denies_return[plaintext_return]": "passed",
+            "tests/test_privacy_keys.py::test_native_multipart_readback_key_loss_recovery": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "gap",
+          "tests": {}
+        }
+      }
+    },
+    {
+      "id": "AC06",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "No source fallback through retrieval components",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_routing.py::test_AC04_AC06_real_graph_seed_walk_excludes_unadmitted_neighbors[duckdb]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC04_AC06_real_graph_seed_walk_excludes_unadmitted_neighbors[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_asymmetric_queries_and_source_limit_even_without_results[duckdb]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_asymmetric_queries_and_source_limit_even_without_results[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_candidate_failure_settles_both_child_queries[error0]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_candidate_failure_settles_both_child_queries[error1]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_incomplete_protected_projection_preserves_admitted_group": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_query_provider_dispatch_admits_input_output_and_refuses_retry[duckdb]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_query_provider_dispatch_admits_input_output_and_refuses_retry[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_selected_deadline_and_effect_denials_stop_response[duckdb]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_selected_deadline_and_effect_denials_stop_response[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_temporal_provider_and_gate_use_per_send_guards[duckdb]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_temporal_provider_and_gate_use_per_send_guards[duckdb_single_file]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[duckdb]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_routing.py::test_AC04_AC06_real_graph_seed_walk_excludes_unadmitted_neighbors[postgres]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_asymmetric_queries_and_source_limit_even_without_results[postgres]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_query_provider_dispatch_admits_input_output_and_refuses_retry[postgres]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_selected_deadline_and_effect_denials_stop_response[postgres]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_temporal_provider_and_gate_use_per_send_guards[postgres]": "passed",
+            "tests/test_privacy_source_routing.py::test_AC06_two_selected_standard_sources_use_finite_lease[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AC07",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Permitted admitted facts remain sensitive",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_reads.py::test_AC07_explicitly_allowed_sensitive_memory_remains_usable[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AC07_explicitly_allowed_sensitive_memory_remains_usable[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_reads.py::test_AC07_explicitly_allowed_sensitive_memory_remains_usable[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "AC08",
+      "cohort": "original_40",
+      "group": "access",
+      "title": "Framework raw history cannot change profile",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "langchain",
+        "llamaindex"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_interfaces.py::test_AC08_framework_retrieval_and_explicit_raw_history_denial[duckdb]": "passed",
+            "tests/test_privacy_source_interfaces.py::test_AC08_framework_retrieval_and_explicit_raw_history_denial[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_interfaces.py::test_AC08_framework_retrieval_and_explicit_raw_history_denial[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "CL01",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Event and metadata copy scan",
+      "mapping": "explicit",
+      "adapter_subchecks": [
+        "sync_python",
+        "async_python",
+        "http",
+        "mcp",
+        "fast_batch",
+        "langchain",
+        "llamaindex",
+        "supported_import"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer.py::test_nested_admission_and_sanitized_checksum": "passed",
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries[duckdb]": "passed",
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN01_recognized_credential[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries[postgres]": "passed",
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN01_recognized_credential[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "CL02",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Claim metadata and value binding copies",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_reads.py::test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_source_reads.py::test_AP04_CL02_grounded_qualifiers_quantities_and_snapshots[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "CL03",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Extraction and prepared plan copies",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_processing_work.py::test_CL03_component_saved_plan_recovers_without_private_keys[directory]": "passed",
+            "tests/test_privacy_processing_work.py::test_CL03_component_saved_plan_recovers_without_private_keys[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_processing_work.py::test_CL03_component_saved_plan_recovers_without_private_keys[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "CL04",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Lifecycle snapshot copies",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_copies.py::test_CL04_actual_snapshot_families_are_erased[directory]": "passed",
+            "tests/test_privacy_erasure_copies.py::test_CL04_actual_snapshot_families_are_erased[pack]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL04_component_actual_lifecycle_snapshots[directory]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL04_component_actual_lifecycle_snapshots[pack]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL04_component_ttl_tombstone_contains_identity_only[directory]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL04_component_ttl_tombstone_contains_identity_only[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_copies.py::test_CL04_actual_snapshot_families_are_erased[postgres]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL04_component_actual_lifecycle_snapshots[postgres]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL04_component_ttl_tombstone_contains_identity_only[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "CL05",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Organizer profiles summaries and alias copies",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[alias_review_and_merge_use_closed_copies-directory]": "passed",
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[alias_review_and_merge_use_closed_copies-pack]": "passed",
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[profile_admitted_entity_and_keyless_recovery-directory]": "passed",
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[profile_admitted_entity_and_keyless_recovery-pack]": "passed",
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[summary_generations_and_retirement-directory]": "passed",
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[summary_generations_and_retirement-pack]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_alias_review_and_merge_use_closed_copies[directory]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_alias_review_and_merge_use_closed_copies[pack]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_profile_admitted_entity_and_keyless_recovery[directory]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_profile_admitted_entity_and_keyless_recovery[pack]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_summary_generations_and_retirement[directory]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_summary_generations_and_retirement[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[alias_review_and_merge_use_closed_copies-postgres]": "passed",
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[profile_admitted_entity_and_keyless_recovery-postgres]": "passed",
+            "tests/test_privacy_erasure_copies.py::test_CL05_actual_profile_summary_alias_generations_are_erased[summary_generations_and_retirement-postgres]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_alias_review_and_merge_use_closed_copies[postgres]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_profile_admitted_entity_and_keyless_recovery[postgres]": "passed",
+            "tests/test_privacy_journal_records.py::test_CL05_component_summary_generations_and_retirement[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "CL06",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Queries receipts and historical commitments",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_receipts.py::test_CL06_component_minimized_receipt_labels_and_citations[directory]": "passed",
+            "tests/test_privacy_receipts.py::test_CL06_component_minimized_receipt_labels_and_citations[pack]": "passed",
+            "tests/test_privacy_retry_commitments.py::test_CL06_component_scoped_original_policy_equality": "passed",
+            "tests/test_privacy_retry_commitments.py::test_CL06_component_unavailable_never_reprovisions[expired]": "passed",
+            "tests/test_privacy_retry_commitments.py::test_CL06_component_unavailable_never_reprovisions[missing]": "passed",
+            "tests/test_privacy_retry_commitments.py::test_CL06_component_unavailable_never_reprovisions[retired]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_receipts.py::test_CL06_component_minimized_receipt_labels_and_citations[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "CL07",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Indexes snapshots and abandoned stages",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_native_faults.py::test_CL07_ER04_abandoned_stages_persistent_failure_and_cancelled_native_cleanup[directory]": "passed",
+            "tests/test_privacy_erasure_native_faults.py::test_CL07_ER04_abandoned_stages_persistent_failure_and_cancelled_native_cleanup[pack]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_CL07_ER05_component_profile_discard_reconstruct_and_expire[directory]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_CL07_ER05_component_profile_discard_reconstruct_and_expire[pack]": "passed",
+            "tests/test_privacy_source_reads.py::test_CL07_staging_retry_reopen_contains_only_admitted_text[duckdb]": "passed",
+            "tests/test_privacy_source_reads.py::test_CL07_staging_retry_reopen_contains_only_admitted_text[duckdb_single_file]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_native_faults.py::test_CL07_ER04_abandoned_stages_persistent_failure_and_cancelled_native_cleanup[postgres]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_CL07_ER05_component_profile_discard_reconstruct_and_expire[postgres]": "passed",
+            "tests/test_privacy_source_reads.py::test_CL07_staging_retry_reopen_contains_only_admitted_text[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "CL08",
+      "cohort": "original_40",
+      "group": "copied_content_leakage",
+      "title": "Errors logs preview export and browser sinks",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "http",
+        "mcp",
+        "explorer",
+        "cli",
+        "langchain",
+        "llamaindex"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_journal_scenarios.py::test_CL08_component_diagnostics_and_actual_public_adapters[directory]": "passed",
+            "tests/test_privacy_journal_scenarios.py::test_CL08_component_diagnostics_and_actual_public_adapters[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_journal_scenarios.py::test_CL08_component_diagnostics_and_actual_public_adapters[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "ER01",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Exact expiry before maintenance",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_expiry.py::test_ER01_exact_expiry_precedes_purge_and_startup_recovery[directory]": "passed",
+            "tests/test_privacy_expiry.py::test_ER01_exact_expiry_precedes_purge_and_startup_recovery[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_expiry.py::test_ER01_exact_expiry_precedes_purge_and_startup_recovery[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "ER02",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Source-only versus dependency-aware memory erasure",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure.py::test_ER02_evidence_and_memory_purge_preserve_unrelated_owned_memory[directory]": "passed",
+            "tests/test_privacy_erasure.py::test_ER02_evidence_and_memory_purge_preserve_unrelated_owned_memory[pack]": "passed",
+            "tests/test_privacy_erasure_retirement.py::test_ER02_shared_custody_store_survives_pending_retirement[directory]": "passed",
+            "tests/test_privacy_erasure_retirement.py::test_ER02_shared_custody_store_survives_pending_retirement[pack]": "passed",
+            "tests/test_privacy_erasure_retirement.py::test_ER02_shared_pseudonym_retry_and_wrapping_keys_retire_only_after_last_reference[directory]": "passed",
+            "tests/test_privacy_erasure_retirement.py::test_ER02_shared_pseudonym_retry_and_wrapping_keys_retire_only_after_last_reference[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure.py::test_ER02_evidence_and_memory_purge_preserve_unrelated_owned_memory[postgres]": "passed",
+            "tests/test_privacy_erasure_retirement.py::test_ER02_shared_custody_store_survives_pending_retirement[postgres]": "passed",
+            "tests/test_privacy_erasure_retirement.py::test_ER02_shared_pseudonym_retry_and_wrapping_keys_retire_only_after_last_reference[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "ER03",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Transactional fence and in-flight disclosure",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_cli.py::test_ER03_ER04_cli_current_subject_denial_and_managed_status[directory]": "passed",
+            "tests/test_privacy_erasure_cli.py::test_ER03_ER04_cli_current_subject_denial_and_managed_status[pack]": "passed",
+            "tests/test_privacy_erasure_concurrency.py::test_ER03_stale_extraction_profile_and_diagnostic_cannot_finish_after_fence[directory]": "passed",
+            "tests/test_privacy_erasure_concurrency.py::test_ER03_stale_extraction_profile_and_diagnostic_cannot_finish_after_fence[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_cli.py::test_ER03_ER04_cli_current_subject_denial_and_managed_status[postgres]": "passed",
+            "tests/test_privacy_erasure_concurrency.py::test_ER03_stale_extraction_profile_and_diagnostic_cannot_finish_after_fence[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "ER04",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Idempotent interrupted purge",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_cli.py::test_ER03_ER04_cli_current_subject_denial_and_managed_status[directory]": "passed",
+            "tests/test_privacy_erasure_cli.py::test_ER03_ER04_cli_current_subject_denial_and_managed_status[pack]": "passed",
+            "tests/test_privacy_erasure_native_faults.py::test_CL07_ER04_abandoned_stages_persistent_failure_and_cancelled_native_cleanup[directory]": "passed",
+            "tests/test_privacy_erasure_native_faults.py::test_CL07_ER04_abandoned_stages_persistent_failure_and_cancelled_native_cleanup[pack]": "passed",
+            "tests/test_privacy_erasure_recovery.py::test_ER04_intent_and_each_stage_survive_interruption_and_failure[directory]": "passed",
+            "tests/test_privacy_erasure_recovery.py::test_ER04_intent_and_each_stage_survive_interruption_and_failure[pack]": "passed",
+            "tests/test_privacy_erasure_recovery.py::test_ER04_scope_bound_maintenance_does_not_scan_foreign_jobs[directory]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_cli.py::test_ER03_ER04_cli_current_subject_denial_and_managed_status[postgres]": "passed",
+            "tests/test_privacy_erasure_native_faults.py::test_CL07_ER04_abandoned_stages_persistent_failure_and_cancelled_native_cleanup[postgres]": "passed",
+            "tests/test_privacy_erasure_recovery.py::test_ER04_intent_and_each_stage_survive_interruption_and_failure[postgres]": "passed",
+            "tests/test_privacy_erasure_recovery.py::test_ER04_scope_bound_maintenance_does_not_scan_foreign_jobs[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "ER05",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Restart journals cannot resurrect source",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_recovery.py::test_ER05_missing_work_recovery_cannot_restore_erased_preparations[directory]": "passed",
+            "tests/test_privacy_erasure_recovery.py::test_ER05_missing_work_recovery_cannot_restore_erased_preparations[pack]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_CL07_ER05_component_profile_discard_reconstruct_and_expire[directory]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_CL07_ER05_component_profile_discard_reconstruct_and_expire[pack]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_ER05_component_inherited_scope_is_not_authority[directory]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_ER05_component_inherited_scope_is_not_authority[pack]": "passed",
+            "tests/test_privacy_processing_work.py::test_ER05_component_expiry_removes_slot_without_mutable_work[directory]": "passed",
+            "tests/test_privacy_processing_work.py::test_ER05_component_expiry_removes_slot_without_mutable_work[pack]": "passed",
+            "tests/test_privacy_processing_work.py::test_ER05_component_missing_mutable_rows_never_authorize_plan[directory]": "passed",
+            "tests/test_privacy_processing_work.py::test_ER05_component_missing_mutable_rows_never_authorize_plan[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_recovery.py::test_ER05_missing_work_recovery_cannot_restore_erased_preparations[postgres]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_CL07_ER05_component_profile_discard_reconstruct_and_expire[postgres]": "passed",
+            "tests/test_privacy_journal_recovery.py::test_ER05_component_inherited_scope_is_not_authority[postgres]": "passed",
+            "tests/test_privacy_processing_work.py::test_ER05_component_expiry_removes_slot_without_mutable_work[postgres]": "passed",
+            "tests/test_privacy_processing_work.py::test_ER05_component_missing_mutable_rows_never_authorize_plan[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "ER06",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Rebuild cannot resurrect index content",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_recovery.py::test_ER06_stale_native_saves_close_restore_and_rebuild_keep_survivor[directory]": "passed",
+            "tests/test_privacy_erasure_recovery.py::test_ER06_stale_native_saves_close_restore_and_rebuild_keep_survivor[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_erasure_recovery.py::test_ER06_stale_native_saves_close_restore_and_rebuild_keep_survivor[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "ER07",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Pre-erasure restore requires current ledger",
+      "mapping": "explicit",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_restore.py::test_same_lineage_restore_applies_current_ledger_before_recovery[directory]": "passed",
+            "tests/test_privacy_restore.py::test_same_lineage_restore_applies_current_ledger_before_recovery[pack]": "passed",
+            "tests/test_privacy_restore_continuity.py::test_restore_ignores_a_checkpoint_copied_from_a_newer_export": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_restore.py::test_same_lineage_restore_applies_current_ledger_before_recovery[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "ER08",
+      "cohort": "original_40",
+      "group": "erasure_recovery",
+      "title": "Truthful purge backup and external status",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python",
+        "cli",
+        "langchain",
+        "llamaindex"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[directory]": "passed",
+            "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_restore.py::test_ER08_archive_clear_retained_copies[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "EM01",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Authenticated-encryption known vectors and context",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_crypto.py::test_EM01_fixed_AES256_GCM_CAVP_vectors": "passed",
+            "tests/test_privacy_crypto.py::test_EM01_fixed_whole_envelope_compatible_vector": "passed",
+            "tests/test_privacy_crypto.py::test_EM01_real_random_keys_nonces_and_independent_library_decrypt": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "gap",
+          "tests": {}
+        }
+      }
+    },
+    {
+      "id": "EM02",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Swapped record purpose scope or wrapping key",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[event_id-value3]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[object_generation-2]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[owner_id-value1]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[payload_kind-sanitized_input]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[policy_id-value8]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[policy_revision-2]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[project_id-value0]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[purpose-processing]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[representation_id-value5]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[scope-project]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[slot_id-value6]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_context_substitution[source_id-value4]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_inner_AAD_label_wrapper_revision_swaps_and_wrong_private_key": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_noncanonical_unknown_wrapper_and_selector_refusal": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_original_composed_snapshot_is_bound[evidence_deadline]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_original_composed_snapshot_is_bound[memory_deadline]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_original_composed_snapshot_is_bound[policy]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_original_composed_snapshot_is_bound[processing_deadline]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_original_composed_snapshot_is_bound[references]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_private_permit_is_bound_to_exact_slot_wrapper_and_bytes": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_tamper_never_releases_plaintext[ciphertext]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_tamper_never_releases_plaintext[nonce]": "passed",
+            "tests/test_privacy_crypto.py::test_EM02_tamper_never_releases_plaintext[wrapped_key]": "passed",
+            "tests/test_privacy_restore.py::test_EM02_exported_context_and_wrapped_key_refusals[directory]": "passed",
+            "tests/test_privacy_restore.py::test_EM02_exported_context_and_wrapped_key_refusals[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_restore.py::test_EM02_exported_context_and_wrapped_key_refusals[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "EM03",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Provisioning and failed write have no plaintext fallback",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_after_commit_preserves_exact_retry_ciphertext[directory]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_after_commit_preserves_exact_retry_ciphertext[pack]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[after_wrap-directory]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[after_wrap-pack]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[atomic_write-directory]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[atomic_write-pack]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[before_aes-directory]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[before_aes-pack]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_missing_public_keys_refuse_before_protected_creation": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_ciphertext_storage_and_private_diagnostic[directory]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_ciphertext_storage_and_private_diagnostic[pack]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_processing_consumed_only_by_actual_claim[directory]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_processing_consumed_only_by_actual_claim[pack]": "passed",
+            "tests/test_privacy_export.py::test_EM03_export_effect_failure_and_current_ledger[directory]": "passed",
+            "tests/test_privacy_export.py::test_EM03_export_effect_failure_and_current_ledger[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_after_commit_preserves_exact_retry_ciphertext[postgres]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[after_wrap-postgres]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[atomic_write-postgres]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_failure_boundaries_do_not_persist_plaintext[before_aes-postgres]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_owned_postgres_physical_marker_scan[postgres]": "skipped",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_ciphertext_storage_and_private_diagnostic[postgres]": "passed",
+            "tests/test_privacy_ciphertext_storage.py::test_EM03_real_processing_consumed_only_by_actual_claim[postgres]": "passed",
+            "tests/test_privacy_export.py::test_EM03_export_effect_failure_and_current_ledger[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "EM04",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Versioned resumable rotation",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_portability_cli.py::test_EM04_cli_rotation_real_erasure_export_reopen[directory]": "passed",
+            "tests/test_privacy_portability_cli.py::test_EM04_cli_rotation_real_erasure_export_reopen[pack]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_cancelled_CAS_keeps_authority_until_native_settles[directory]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_cancelled_CAS_keeps_authority_until_native_settles[pack]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_interrupted_rewrap_exact_versions_and_fence[directory]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_interrupted_rewrap_exact_versions_and_fence[pack]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_interruption_before_CAS_and_lost_checkpoint[directory]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_interruption_before_CAS_and_lost_checkpoint[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_portability_cli.py::test_EM04_cli_rotation_real_erasure_export_reopen[postgres]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_cancelled_CAS_keeps_authority_until_native_settles[postgres]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_interrupted_rewrap_exact_versions_and_fence[postgres]": "passed",
+            "tests/test_privacy_rotation.py::test_EM04_interruption_before_CAS_and_lost_checkpoint[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "EM05",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Permanent key loss and explicit recovery export",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python",
+        "cli"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[directory]": "passed",
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "EM06",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Local public writer and same-process disclosure",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_crypto.py::test_EM06_actual_response_scope_orders_revocation": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[evidence-final_lease]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[evidence-permit]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[evidence-plaintext]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[grant-final_lease]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[grant-permit]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[grant-plaintext]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[memory-final_lease]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[memory-permit]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_audit_denies_before_effect[memory-plaintext]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_completion_audit_denies_return[final_lease_return]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_completion_audit_denies_return[plaintext_return]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_processing_validation_denies_before_permit[lease]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_processing_validation_denies_before_permit[memory]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_processing_validation_denies_before_permit[processing]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[plaintext-evidence-evidence-unwrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[plaintext-evidence-grant-unwrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[plaintext-evidence-memory-unwrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[plaintext-processing-lease-unwrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[processing_key-processing-memory-unwrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[processing_key-processing-processing-unwrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[rewrap-evidence-evidence-wrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[rewrap-evidence-grant-wrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[rewrap-evidence-memory-wrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[rewrap-processing-lease-wrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[rewrap-processing-memory-wrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_during_provider_denies_before_effect[rewrap-processing-processing-wrap]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_inside_processing_lease_denies_before_callback[lease]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_inside_processing_lease_denies_before_callback[memory]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_expiry_inside_processing_lease_denies_before_callback[processing]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_final_lease_gap_denies_before_downstream_effect[after_entry_fence]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_final_lease_gap_denies_before_downstream_effect[expiry]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_final_lease_gap_denies_before_downstream_effect[fence]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_final_lease_gap_denies_before_downstream_effect[revoke]": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_multiple_selected_final_lease_and_nonreentrant_open_evidence": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_processing_only_key_response_and_expired_handle": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_public_writer_grants_audit_and_metadata": "passed",
+            "tests/test_privacy_crypto.py::test_EM06_standard_explicit_runtime_and_expiry_selected_ids": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "gap",
+          "tests": {}
+        }
+      }
+    },
+    {
+      "id": "EM07",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Legacy migration retains identity and explicit incompleteness",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "expected_failure",
+          "tests": {
+            "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[closed_fernet]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[directory]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[pack]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_fixed_policy_directory_to_encrypted_pack_parity": "passed",
+            "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[closed_fernet]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[directory]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[pack]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_mixed_summary_erasure_closure[directory]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_mixed_summary_erasure_closure[pack]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_standard_matched_input_migration_parity[directory]": "xfailed",
+            "tests/test_privacy_migration.py::test_EM07_standard_matched_input_migration_parity[pack]": "xfailed"
+          }
+        },
+        "postgresql": {
+          "status": "expected_failure",
+          "tests": {
+            "tests/test_privacy_migration.py::test_EM07_direct_migration_resume_exact_identity_current_erasure[postgres]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_mixed_saved_family_identity_closure_interruptions[postgres]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_mixed_summary_erasure_closure[postgres]": "passed",
+            "tests/test_privacy_migration.py::test_EM07_standard_matched_input_migration_parity[postgres]": "xfailed"
+          }
+        }
+      }
+    },
+    {
+      "id": "EM08",
+      "cohort": "original_40",
+      "group": "encryption_migration",
+      "title": "Protected export and remaining source copies",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python",
+        "cli",
+        "supported_import"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_portability_cli.py::test_AC1_AC6_EM08_cli_dry_run_migrate_status_restore_explicit_selection[directory]": "passed",
+            "tests/test_privacy_portability_cli.py::test_AC1_AC6_EM08_cli_dry_run_migrate_status_restore_explicit_selection[pack]": "passed",
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[directory]": "passed",
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[pack]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_portability_cli.py::test_AC1_AC6_EM08_cli_dry_run_migrate_status_restore_explicit_selection[postgres]": "passed",
+            "tests/test_privacy_portability_cli.py::test_AC6_EM05_EM08_cli_selected_diagnostics_keys_export_and_erasure[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN01",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "recognized credential",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "sync_python",
+        "async_python",
+        "http",
+        "mcp",
+        "fast_batch",
+        "langchain",
+        "llamaindex",
+        "supported_import"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_MCP_real_dispatch[duckdb]": "passed",
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries[duckdb]": "passed",
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN01_recognized_credential[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_MCP_real_dispatch[postgres]": "passed",
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries[postgres]": "passed",
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN01_recognized_credential[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN02",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "contact identifier",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN02_contact_actions_and_profiles[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN02_contact_actions_and_profiles[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN03",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "placeholder continuity",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN03_placeholder_continuity[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN03_placeholder_continuity[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN04",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "cross-owner/project isolation",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN04_boundary_isolation[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN04_boundary_isolation[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN05",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "configured sensitive topic",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN05_custom_rules[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN05_custom_rules[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN06",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "condition/negation preservation",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN06_conditions_negation_and_strict_values[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN06_conditions_negation_and_strict_values[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN07",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "unsupported language",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN07_language_declaration[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN07_language_declaration[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN08",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "supported obfuscation",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN08_obfuscation_offsets[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN08_obfuscation_offsets[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN09",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "detector failure",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN09_detector_failures[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN09_detector_failures[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN10",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "timeout",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN10_deadline_and_aggregate_bounds[duckdb]": "passed"
+          }
+        },
+        "postgresql": {
+          "status": "passed",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN10_deadline_and_aggregate_bounds[postgres]": "passed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN11",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "pre-write side effects",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "sync_python",
+        "async_python",
+        "http",
+        "mcp",
+        "fast_batch",
+        "langchain",
+        "llamaindex",
+        "supported_import"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "expected_failure",
+          "tests": {
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_MCP_real_dispatch[duckdb]": "passed",
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries[duckdb]": "passed",
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN11_prewrite_effects_and_query_gate[duckdb]": "xfailed"
+          }
+        },
+        "postgresql": {
+          "status": "expected_failure",
+          "tests": {
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_MCP_real_dispatch[postgres]": "passed",
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN01_SN11_sync_HTTP_and_history_boundaries[postgres]": "passed",
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN11_prewrite_effects_and_query_gate[postgres]": "xfailed"
+          }
+        }
+      }
+    },
+    {
+      "id": "SN12",
+      "cohort": "sanitization_addition",
+      "group": "sanitization",
+      "title": "generated output reintroduction",
+      "mapping": "name",
+      "adapter_subchecks": [
+        "async_python"
+      ],
+      "executions": {
+        "duckdb": {
+          "status": "expected_failure",
+          "tests": {
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN12_actual_provider_guard_no_sdk_retry_or_raw_logging": "passed",
+            "tests/test_privacy_sanitizer_interfaces.py::test_SN12_native_provider_accepted_and_denied_at_real_plan_boundary": "passed",
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN12_generated_reintroduction_and_publication_gate[duckdb]": "xfailed"
+          }
+        },
+        "postgresql": {
+          "status": "expected_failure",
+          "tests": {
+            "tests/test_privacy_sanitizer_scenarios.py::test_SN12_generated_reintroduction_and_publication_gate[postgres]": "xfailed"
+          }
+        }
+      }
+    }
+  ]
+}

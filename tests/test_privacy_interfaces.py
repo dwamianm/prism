@@ -8,6 +8,7 @@ import pytest
 from prme import MemoryClient
 from prme.privacy import PrivacyDenied
 from tests.privacy_fakes import config_for, make_runtime, open_engine, policy_for
+from tests.privacy_fakes import isolated_privacy_postgres as isolated_privacy_postgres
 
 SOURCE = "Alex does not like tea unless it is cold."
 
@@ -299,12 +300,20 @@ async def test_AP01_batch_supported_import_is_public_fast_batch(tmp_path):
         await engine.close()
 
 
-async def test_AP03_namespace_factory_binds_actual_project_id(tmp_path):
+@pytest.mark.parametrize("layout", ["directory", "postgres"])
+async def test_AP03_namespace_factory_binds_actual_project_id(tmp_path, layout):
     from prme import MemoryWorkspace
     from dataclasses import replace
+    from uuid import uuid4
     r = make_runtime()
-    async with MemoryWorkspace.open(tmp_path, config=config_for(tmp_path / "unused"), embedding_provider=r.embedder,
-                                    privacy_runtime_factory=lambda identity: replace(r, project_id=identity)) as workspace:
+    factory = lambda identity: replace(r, project_id=identity)  # noqa: E731
+    if layout == "postgres":
+        opened = MemoryWorkspace.open_postgres(config_for(tmp_path / "unused", layout=layout), name=f"ap03-{uuid4().hex}",
+                                               embedding_provider=r.embedder, privacy_runtime_factory=factory)
+    else:
+        opened = MemoryWorkspace.open(tmp_path, config=config_for(tmp_path / "unused"), embedding_provider=r.embedder,
+                                      privacy_runtime_factory=factory)
+    async with opened as workspace:
         async with workspace.namespace("one") as memory:
             p = policy_for(replace(r, project_id=memory.namespace.id))
             event_id = await memory.store(SOURCE, user_id=str(p.owner_id), policy=p)
