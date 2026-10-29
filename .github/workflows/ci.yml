@@ -80,6 +80,48 @@ jobs:
         if: always()
         run: docker compose down
 
+  # uv.lock pins what the other jobs test, so a fresh `pip install prme`,
+  # which resolves the newest allowed versions, was untested (#377). This job
+  # resolves the newest allowed dependencies and runs the whole suite on
+  # DuckDB and PostgreSQL. The lock file stays unchanged, so the recorded
+  # benchmark caches still replay against the locked versions.
+  test-newest-dependencies:
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.13"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          version: latest-known
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install the newest allowed dependencies
+        run: uv sync --python 3.13 --upgrade --dev --extra postgres --extra api --extra mcp --extra privacy --extra langchain --extra llamaindex
+
+      - name: Show the resolved versions
+        run: uv pip list --python .venv/bin/python | grep -i -E '^(duckdb|openai|anthropic|instructor|pydantic|fastapi|mcp|asyncpg) '
+
+      - name: Install ffmpeg (video tests of RFC-0018 observe())
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Start PostgreSQL
+        run: docker compose up -d --wait
+
+      - name: Run tests (DuckDB and PostgreSQL)
+        env:
+          PRME_TEST_DATABASE_URL: postgresql://prme_test:prme_test@127.0.0.1:5432/prme_test
+        run: uv run --no-sync python -m pytest tests/ -q
+
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker compose down
+
   lint:
     runs-on: ubuntu-latest
     env:

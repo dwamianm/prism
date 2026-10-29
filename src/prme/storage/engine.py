@@ -40,6 +40,7 @@ import hashlib
 import json
 import logging
 import os
+import threading
 import warnings
 from collections.abc import AsyncIterator, Collection, Sequence
 from contextlib import asynccontextmanager
@@ -255,6 +256,46 @@ class _PackConnection:
 
     def __exit__(self, *exc_info: object) -> None:
         self._connection.close()
+
+
+# Engines of this process that hold each DuckDB database file, by real path.
+_DATABASE_HOLDERS: dict[str, int] = {}
+_DATABASE_HOLDERS_LOCK = threading.Lock()
+
+
+def _hold_database(path: str) -> str:
+    key = os.path.realpath(path)
+    with _DATABASE_HOLDERS_LOCK:
+        _DATABASE_HOLDERS[key] = _DATABASE_HOLDERS.get(key, 0) + 1
+    return key
+
+
+def _release_database(key: str, conn: Any) -> None:
+    """Drop one hold and, for the last holder, fold the WAL into the file.
+
+    DuckDB 1.4 checkpoints a database that replayed its write-ahead log when
+    its last connection closes. DuckDB 2.0 leaves the replayed log beside the
+    file, so a single-file pack opened after a crash stops being one file and
+    a copy of the file alone misses the replayed writes. The last engine that
+    holds the file checkpoints it before closing. An engine that still shares
+    the database with another one does not: on DuckDB 1.4 a checkpoint refuses
+    while another connection has a write transaction open, and waits while it
+    holds an unread result. The checkpoint runs after the count is released,
+    so a slow one never holds up another engine's open or close. A failed
+    checkpoint leaves the log to replay on the next open, as before.
+    """
+    with _DATABASE_HOLDERS_LOCK:
+        remaining = _DATABASE_HOLDERS.get(key, 1) - 1
+        if remaining > 0:
+            _DATABASE_HOLDERS[key] = remaining
+            return
+        _DATABASE_HOLDERS.pop(key, None)
+    if conn is None:
+        return
+    try:
+        conn.execute(f"CHECKPOINT {_PACK_DATABASE}" if isinstance(conn, _PackConnection) else "CHECKPOINT")
+    except Exception:
+        logger.debug("checkpoint_before_close_skipped", exc_info=True)
 
 
 def _connect_single_file_pack(
@@ -652,6 +693,8 @@ class MemoryEngine:
                 conn = (duckdb.connect(db_path) if config.duckdb_threads is None
                         else duckdb.connect(db_path, config={"threads": config.duckdb_threads}))
             startup.callback(conn.close)
+            database_key = _hold_database(db_path)
+            startup.callback(_release_database, database_key, None)
             if config.namespace_id is not None:
                 from prme.storage.namespace_identity import bind_namespace
                 bind_namespace(conn, config.namespace_id, fresh=fresh_namespace_pack)
@@ -844,6 +887,7 @@ class MemoryEngine:
                 config=config,
             )
             engine._encryption_provider = encryption_provider
+            engine._database_key = database_key
             engine._maintenance_runner = MaintenanceRunner(engine, config.organizer)
             engine._register_atexit_encrypt()
             startup.callback(atexit.unregister, engine._atexit_encrypt)
@@ -4779,12 +4823,17 @@ class MemoryEngine:
 
         if self._conn is not None:
             try:
+                key = getattr(self, "_database_key", None)
                 if self._privacy.runtime is not None:
                     # A shared protected lexical handle may resolve this
                     # connection while another engine closes its own owner.
                     async with self._lexical_index._write_lock:
+                        if key is not None:
+                            _release_database(key, self._conn)
                         self._conn.close()
                 else:
+                    if key is not None:
+                        _release_database(key, self._conn)
                     self._conn.close()
             except Exception:
                 logger.warning("Error closing DuckDB connection", exc_info=True)
