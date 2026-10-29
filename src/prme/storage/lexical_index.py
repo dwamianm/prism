@@ -53,17 +53,33 @@ def has_lexical_document(node_type: str, *, derived: bool) -> bool:
 
     ``derived`` means a journaled derivation, such as ``ingest()``
     extraction, created the node and reserved its identity in
-    ``derivation_artifact_owners``.
+    ``derivation_artifact_owners``. A protected store's direct ``store()``
+    plan reserves its node too, but that node is not derived
+    (``derived_artifact_sql``).
     """
     return not (derived and node_type in _DERIVED_TYPES_WITHOUT_LEXICAL_DOCUMENT)
+
+
+# Whether the node a ``derivation_artifact_owners`` row reserves was derived.
+# A protected store publishes a node stored directly with store() through a
+# journaled plan too, so it also owns an artifact row; that plan's event has a
+# direct-store request, and the node keeps the lexical document store() gave
+# it. ``artifact`` is the owner row and ``node_id`` the SQL for its node's ID.
+def derived_artifact_sql(node_id: str) -> str:
+    return (
+        "EXISTS (SELECT 1 FROM derivation_artifact_owners artifact "
+        f"WHERE artifact.node_id = {node_id} AND NOT EXISTS ("
+        "SELECT 1 FROM derivation_registered_plans registered JOIN operations request "
+        "ON request.target_id = registered.event_id AND request.op_type = 'DIRECT_STORE_REQUESTED' "
+        "WHERE registered.operation_id = artifact.operation_id))"
+    )
 
 
 # has_lexical_document() as a SQL condition on a row of the ``nodes`` table.
 LEXICAL_DOCUMENT_SQL = (
     "NOT (nodes.node_type IN ("
     + ", ".join(f"'{node_type}'" for node_type in sorted(_DERIVED_TYPES_WITHOUT_LEXICAL_DOCUMENT))
-    + ") AND EXISTS (SELECT 1 FROM derivation_artifact_owners artifact "
-    "WHERE artifact.node_id = CAST(nodes.id AS VARCHAR)))"
+    + ") AND " + derived_artifact_sql("CAST(nodes.id AS VARCHAR)") + ")"
 )
 
 

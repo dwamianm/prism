@@ -296,7 +296,7 @@ async def rebuild_protected(engine, *, user_id, batch_size):
     """
     from prme.privacy.reads import ReadContext
     from prme.storage.erasure import _discover, _purge_sql
-    from prme.storage.lexical_index import has_lexical_document
+    from prme.storage.lexical_index import derived_artifact_sql, has_lexical_document
     from usearch.index import Index
     if engine._conn is None:
         raise RuntimeError("rebuild_indexes is only supported on the DuckDB backend")
@@ -326,7 +326,8 @@ async def rebuild_protected(engine, *, user_id, batch_size):
                 async with engine._privacy.publication_guards(records, node_ids=(node.id,)):
                     async with repository.session() as session:
                         vectors = await session.fetch("SELECT 1 FROM vector_metadata m JOIN vector_payloads p USING(vector_key) WHERE m.node_id=$1", cursor)
-                        derived = await session.fetch("SELECT 1 FROM derivation_artifact_owners WHERE node_id=$1", cursor)
+                        derived = (await session.fetch(
+                            f"SELECT {derived_artifact_sql('$1')} AS derived", cursor))[0]["derived"]
                     if not vectors:
                         raise PrivacyDenied("privacy_unavailable")
                     if has_lexical_document(node.node_type.value, derived=bool(derived)):
