@@ -66,7 +66,9 @@ def has_lexical_document(node_type: str, *, derived: bool) -> bool:
 # its event's direct-store request, and it keeps the lexical document store()
 # gave it. Matching the node, not the event, keeps the entities that
 # store(extract=True) extracts from the same event derived. DuckDB only, like
-# every caller. ``node_id`` is the SQL for the node's ID.
+# every caller; the protected rebuild applies the same rule one node at a time
+# with primary-key lookups (erasure_indexes._derived_node). ``node_id`` is the
+# SQL for the node's ID.
 def derived_artifact_sql(node_id: str) -> str:
     return (
         "EXISTS (SELECT 1 FROM derivation_artifact_owners artifact "

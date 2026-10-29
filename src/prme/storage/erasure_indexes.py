@@ -288,6 +288,34 @@ async def _compact_managed_groups(engine, request_id, artifact_id):
             await session.execute("UPDATE privacy_erasure_artifacts SET state='complete' WHERE request_id=$1", str(request_id))
 
 
+async def _derived_node(session, node) -> bool:
+    """derived_artifact_sql for one node, with primary-key lookups only.
+
+    Only an entity's lexical document depends on it. A protected direct
+    store's request has the deterministic ID of its plan's event, so one row
+    is read and its node compared, instead of scanning every request.
+    """
+    from prme.models.direct_store import DirectStoreRecord, direct_store_operation_id
+    from prme.types import NodeType
+    if node.node_type != NodeType.ENTITY:
+        return False
+    owners = await session.fetch(
+        "SELECT registered.event_id FROM derivation_artifact_owners artifact "
+        "LEFT JOIN derivation_registered_plans registered ON registered.operation_id = artifact.operation_id "
+        "WHERE artifact.node_id=$1", str(node.id))
+    if not owners:
+        return False
+    event_id = owners[0]["event_id"]
+    if event_id is None:
+        return True
+    requests = await session.fetch(
+        "SELECT payload FROM operations WHERE id=$1 AND op_type='DIRECT_STORE_REQUESTED'",
+        direct_store_operation_id(event_id))
+    if not requests:
+        return True
+    return DirectStoreRecord.from_operation_payload(requests[0]["payload"]).node.id != node.id
+
+
 async def rebuild_protected(engine, *, user_id, batch_size):
     """Recover saved vectors and admitted graph text, preserving other work.
 
@@ -296,7 +324,7 @@ async def rebuild_protected(engine, *, user_id, batch_size):
     """
     from prme.privacy.reads import ReadContext
     from prme.storage.erasure import _discover, _purge_sql
-    from prme.storage.lexical_index import derived_artifact_sql, has_lexical_document
+    from prme.storage.lexical_index import has_lexical_document
     from usearch.index import Index
     if engine._conn is None:
         raise RuntimeError("rebuild_indexes is only supported on the DuckDB backend")
@@ -326,8 +354,7 @@ async def rebuild_protected(engine, *, user_id, batch_size):
                 async with engine._privacy.publication_guards(records, node_ids=(node.id,)):
                     async with repository.session() as session:
                         vectors = await session.fetch("SELECT 1 FROM vector_metadata m JOIN vector_payloads p USING(vector_key) WHERE m.node_id=$1", cursor)
-                        derived = (await session.fetch(
-                            f"SELECT {derived_artifact_sql('$1')} AS derived", cursor))[0]["derived"]
+                        derived = await _derived_node(session, node)
                     if not vectors:
                         raise PrivacyDenied("privacy_unavailable")
                     if has_lexical_document(node.node_type.value, derived=bool(derived)):
