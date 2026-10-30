@@ -3,9 +3,11 @@
 **Status:** active handoff, 2026-09-23; see "Current state (2026-10-16)" for
 the latest work.
 
-**Production baseline:** released v0.15.0 (tag `v0.15.0`, 2026-10-16), with the
-`ingest()` and reader context defaults of 2026-10-06 and batched extraction
-by default (see the [changelog](../CHANGELOG.md)).
+**Production baseline:** released v0.16.1 (tag `v0.16.1`, 2026-10-29), the
+fix release of v0.16.0, the first stable release of the 0.16 line. It carries
+the ten defaults the alpha line turned on, without the full benchmark audit,
+by the owner's decision (see the [changelog](../CHANGELOG.md)). The last
+audited stable release is v0.15.0 (2026-10-16).
 
 **Research record:** [research agenda](../docs/RESEARCH-AGENDA.md)
 

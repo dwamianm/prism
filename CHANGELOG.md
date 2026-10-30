@@ -13,7 +13,7 @@ A fix release for 0.16.0. Its checks are those of 0.16.0, plus CI and the regres
 
 ### Fixed
 
-- Closing an engine no longer fails when its store cannot be read, for example when a hosted project deletion dropped its PostgreSQL namespace schema while a workspace still held the engine. 0.16.0 started a privacy classification read on close, and its `NamespaceIdentityError` made `close()` and `MemoryWorkspace` cleanup raise. An unreadable store is now treated as protected for cleanup diagnostics, so no exception text is reported, and the close goes on.
+- Closing an engine no longer fails when its store cannot be read, for example when a hosted project deletion dropped its PostgreSQL namespace schema while a workspace still held the engine. Since 0.16.0a9, close starts with a privacy classification read, and its `NamespaceIdentityError` escaped from `close()`: the engine was left unclosed, `MemoryWorkspace` cleanup raised, and an eviction that hit it made every later `namespace()` call on that workspace fail. An unreadable store is now treated as protected for cleanup diagnostics, so no exception text is reported, and the close goes on.
 
 ### Upgrade notes
 
