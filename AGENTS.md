@@ -405,10 +405,11 @@ the commands and their measured times. This is the same rule in short, and
   the previous stable and, for an `ingest()` default, the DeepSeek answer track
   run on demand. The DeepSeek default-change rule in `CLAUDE.md` is the
   stable-channel rule: it governs a default flipped in a stable release and the
-  audit of the defaults that went on in alpha. One recorded exception: on
+  audit of the defaults that went on in alpha. Recorded exceptions: on
   2026-10-29 the owner released `0.16.0` without the full benchmark run (the
-  Mac mini schedule was off because its model account had no credits). The
-  alpha defaults listed under Configuration shipped in it unaudited.
+  Mac mini schedule was off because its model account had no credits), and the
+  fix release `0.16.1` followed the same day, also without it. The alpha
+  defaults listed under Configuration shipped in them unaudited.
 - **Both channels:** new behavior ships behind an explicit option, off by
   default, until it passes its channel's gate. Never run a paid API; use local
   Ollama DeepSeek only. The one exception is the fast cycle's hosted baseline
