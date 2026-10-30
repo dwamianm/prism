@@ -114,6 +114,23 @@ async def test_schema_loss_after_initialization_never_becomes_empty_memory(pg_wo
         await admin.close()
 
 
+async def test_closing_an_engine_whose_schema_was_dropped_still_closes(pg_workspace):
+    # A hosted project deletion drops a namespace schema while the workspace
+    # still holds that namespace's engine. Closing must not fail on the
+    # close-time privacy classification read (a regression in 0.16.0).
+    _, _, open_workspace = pg_workspace
+    admin = await asyncpg.connect(os.environ['PRME_TEST_DATABASE_URL'])
+    try:
+        async with open_workspace(max_open=2) as workspace:
+            async with workspace.namespace('dropped') as memory:
+                identifier = memory.namespace.id
+                await memory.store('stored before the project is deleted', user_id='owner')
+            await admin.execute(f'DROP SCHEMA {quote_identifier(namespace_schema(identifier))} CASCADE')
+        assert await admin.fetchval('SELECT oid FROM pg_namespace WHERE nspname=$1', namespace_schema(identifier)) is None
+    finally:
+        await admin.close()
+
+
 async def test_catalog_publication_rolls_back_with_initialization(pg_workspace, monkeypatch):
     _, _, open_workspace = pg_workspace
     from prme.storage.pg import namespace as module

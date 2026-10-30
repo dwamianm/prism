@@ -89,6 +89,12 @@ def closing_diagnostics(function):
                 await engine._privacy.repository.require_legacy_range(None, None)
             except PrivacyDenied:
                 protected = True
+            except Exception:
+                # The store cannot be read, for example because a hosted
+                # project deletion dropped its namespace schema. Treat cleanup
+                # diagnostics as protected, so an unread store never reports
+                # exception text, and still close it.
+                protected = True
         with protected_diagnostics(protected):
             try:
                 return await function(engine, *args, **kwargs)

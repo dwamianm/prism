@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-10-29
+
+A fix release for 0.16.0. Its checks are those of 0.16.0, plus CI and the regression test below; the full benchmark did not run.
+
+### Fixed
+
+- Closing an engine no longer fails when its store cannot be read, for example when a hosted project deletion dropped its PostgreSQL namespace schema while a workspace still held the engine. 0.16.0 started a privacy classification read on close, and its `NamespaceIdentityError` made `close()` and `MemoryWorkspace` cleanup raise. An unreadable store is now treated as protected for cleanup diagnostics, so no exception text is reported, and the close goes on.
+
+### Upgrade notes
+
+- No default changed since 0.16.0.
+
 ## [0.16.0] - 2026-10-29
 
 The first stable release of the 0.16 line. It holds everything in 0.16.0a1 to 0.16.0a9 (their sections below give the details) and the changes listed here. `pip install prme` now installs 0.16.0.
@@ -3244,7 +3256,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/dwamianm/prism/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0
 [0.16.0a9]: https://github.com/dwamianm/prism/compare/v0.16.0a8...v0.16.0a9
 [0.16.0a8]: https://github.com/dwamianm/prism/compare/v0.16.0a7...v0.16.0a8
