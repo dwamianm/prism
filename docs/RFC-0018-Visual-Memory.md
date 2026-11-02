@@ -158,6 +158,28 @@ source kind (a video frame, a photo). The source file and frame time are not
 written into the text; they live in metadata and `event_time`, because
 version 1's "Video frame at 00:03 of ..." prefix was extracted as a fact.
 
+Version 3 (dwamianm/prism#388) is version 2 with three sentences added to
+part 2, between the chart sentence and the no-text sentence: when people,
+hands, raised fingers or repeated objects are clearly visible, state each
+count as a numeral, one sentence per count, naming what was counted (raised
+fingers on each hand and in total); count raised fingers one at a time, since
+a folded thumb or finger is not raised; and give a best count marked
+uncertain when unsure. Version 2 never asked for counts: a frame with both
+hands raised and all fingers spread was described as "hands raised, palms
+facing forward", and `qwen3.5:9b` sometimes counted one finger too many.
+Version 3 is the default for new observations since 2026-11-02, by the
+owner's decision of that day to turn new features on by default, which
+overrides the epic #77 rule that new behavior starts off; vision itself stays
+off until `vision.enabled` is set. The evidence is a small local evaluation
+(`benchmarks/results/research/2026-11-02/DESCRIPTION-COUNTS.md`), not a
+benchmark of real recordings. Version 2 stays selectable
+(`vision.describe_prompt_version=2`, `PRME_VISION__DESCRIBE_PROMPT_VERSION=2`)
+and its text is unchanged byte for byte. As "Determinism and rebuild" below requires,
+observing a frame under version 3 that version 2 already described adds a
+new observation and leaves the version 2 event, its memories and its
+thumbnail as they were; the already-observed check matches on the prompt
+version, so each version finds only its own observations.
+
 ## Evidence thumbnails and raw media
 
 The pack keeps one thumbnail per observation, 320 pixels wide, JPEG, about
@@ -256,7 +278,7 @@ class VisionConfig(_ProjectSettings):          # PRMEConfig.vision; PRME_VISION_
     model: str = "qwen3.5:9b"
     base_url: str | None = None
     timeout: float = 180.0
-    describe_prompt_version: Literal[2] = 2
+    describe_prompt_version: Literal[2, 3] = 3  # [HYPOTHESIS] 3 states counts; 2 restores the earlier prompt
     extract: bool = True  # [HYPOTHESIS] ingest() with extraction, or store() when False
     extraction_retry_delays: list[float] = [5.0, 15.0, 60.0]
     fps: float = 1.0

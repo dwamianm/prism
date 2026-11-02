@@ -14,6 +14,7 @@ duplicates.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import random
 
@@ -21,7 +22,15 @@ import numpy as np
 import pytest
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
-from prme.vision.describe import DESCRIBE_PROMPT_VERSION, describe_prompt, normalize_quote, quoted_text
+from prme.config import VisionConfig
+from prme.vision.describe import (
+    COUNT_INSTRUCTION,
+    DESCRIBE_PROMPT_VERSION,
+    DESCRIBE_PROMPTS,
+    describe_prompt,
+    normalize_quote,
+    quoted_text,
+)
 from prme.vision.keyframes import (
     KeyframeDecision,
     frame_change,
@@ -147,18 +156,46 @@ class TestThumbnail:
         assert image.size == (213, 320)
 
 
+# SHA-256 of the version 2 prompts as 0.16.1 sent them, by source kind.
+VERSION_2_SHA256 = {
+    "photo": "8be3176e0638f699f1c051bf3126ce9519b61bbf13567aa9b7f8a60b2eaf51a6",
+    "video_frame": "af5f5bcfe6e34a5250dcc73d6530d4abf416665f280d15b10250f7ff05d71310",
+}
+
+
 class TestDescriptionPrompt:
     def test_prompt_names_the_source_kind(self):
-        assert "video frame" in describe_prompt("video_frame")
-        assert "photo" in describe_prompt("photo")
-        assert "Quote visible text exactly" in describe_prompt("photo")
+        for version in DESCRIBE_PROMPTS:
+            assert "video frame" in describe_prompt("video_frame", version)
+            assert "photo" in describe_prompt("photo", version)
+            assert "Quote visible text exactly" in describe_prompt("photo", version)
 
-    def test_only_version_two_exists(self):
-        assert DESCRIBE_PROMPT_VERSION == 2
-        with pytest.raises(ValueError):
-            describe_prompt("photo", version=1)
+    def test_versions_two_and_three_exist_and_three_is_the_default(self):
+        assert DESCRIBE_PROMPT_VERSION == 3 == VisionConfig().describe_prompt_version
+        assert sorted(DESCRIBE_PROMPTS) == [2, 3]
+        assert describe_prompt("photo") == describe_prompt("photo", 3)
+        for version in (1, 4):
+            with pytest.raises(ValueError, match="not implemented"):
+                describe_prompt("photo", version=version)
         with pytest.raises(ValueError):
             describe_prompt("screen_frame")
+
+    def test_version_two_is_unchanged_byte_for_byte(self):
+        for kind, digest in VERSION_2_SHA256.items():
+            prompt = describe_prompt(kind, 2)
+            assert hashlib.sha256(prompt.encode()).hexdigest() == digest
+            assert "numeral" not in prompt and "count" not in prompt
+
+    def test_version_three_is_version_two_with_the_count_instruction(self):
+        for kind in VERSION_2_SHA256:
+            two, three = describe_prompt(kind, 2), describe_prompt(kind, 3)
+            # The instruction goes between the chart sentence and the no-text sentence; nothing else changes.
+            anchor = " If the image has no text"
+            assert three == two.replace(anchor, COUNT_INSTRUCTION + anchor, 1)
+        three = describe_prompt("photo", 3)
+        for words in ("people, hands, raised fingers or repeated objects are clearly visible",
+                      "as a numeral", "say that the count is uncertain", "Count raised fingers one at a time"):
+            assert words in three
 
 
 class TestQuotedText:

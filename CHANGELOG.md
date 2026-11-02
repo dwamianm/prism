@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `packing.observation_timeline` (`PRME_PACKING__OBSERVATION_TIMELINE`), on by default (dwamianm/prism#386). In the reader context, photo and video frame observations show their time to the second, are listed oldest first in each section, and the newest is marked `[newest]`, so frames a few seconds apart keep their order. Contexts without observations are unchanged. The owner turned it on by default on 2026-11-02 without the fast-tier evidence, in `PRMEConfig` and in a `PackingConfig` built in code; no probe or benchmark was run. The LoCoMo and LongMemEval-S benchmark packs hold no observations, so their contexts are unchanged. `PRME_PACKING__OBSERVATION_TIMELINE=false` restores the earlier reader lines exactly. Configuration dumps and receipts leave the setting out when it is on; a receipt records `false` only when an observation was packed with it off. See `docs/PACKING.md` ("Observation timeline").
+- `benchmarks/vision/counts.py`, a count evaluation of the description prompt versions over a synthetic labeled set, with labeled frames of your own from a file outside the repository, and `--prompt-version` for the vision harness `benchmarks/vision/spike.py`.
+
+### Changed
+
+- Visual memory: description prompt version 3 is the default for new observations (`vision.describe_prompt_version=3`, dwamianm/prism#388). It is version 2 with one addition: when people, hands, raised fingers or repeated objects are clearly visible, the vision model states each count as a numeral, counts raised fingers one at a time, and says when a count is uncertain. Version 2 never asked for counts, so a frame with both hands raised and all fingers spread was described as "hands raised, palms facing forward". Turned on by the owner's decision of 2026-11-02 to turn new features on by default, not on a release gate. On a local evaluation of 12 labeled frames (6 synthetic, 6 owner camera thumbnails that are not committed), frames with every count right went from 8 to 12 on `qwen3.5:9b`, 7 to 9 on `gemma4:26b` and 7 to 11 on `qwen3.5:35b-a3b`, at the same or lower seconds per frame; `gemma4:26b` also stated three counts wrongly under version 3, against one under version 2. The spike corpus's whiteboard and receipt questions scored 7 of 7 under both versions on `qwen3.5:9b`. No benchmark of real recordings was run (`benchmarks/results/research/2026-11-02/DESCRIPTION-COUNTS.md`).
+
+### Fixed
+
+- `PRME_VISION__DESCRIBE_PROMPT_VERSION` (and `PRME_VISION_DESCRIBE_PROMPT_VERSION`) is read from the environment. It was rejected before, because the setting accepted only the integer and an environment variable is text.
+
+### Upgrade notes
+
+- Visual memory stays off until `vision.enabled` is set; a pack that never observes is unchanged.
+- Stored observations are never rewritten. Observing a source again under version 3 describes each of its frames again and stores the descriptions as new observations beside the version 2 ones, at the cost of one vision call per kept keyframe. Set `PRME_VISION__DESCRIBE_PROMPT_VERSION=2` (or `vision.describe_prompt_version=2`) to keep the version 2 prompt exactly and keep skipping frames already observed under it.
 
 ## [0.16.1] - 2026-10-29
 

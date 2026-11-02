@@ -299,6 +299,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "vision.enabled is true",
         bool,
     ),
+    "vision.describe_prompt_version": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
 }
 
 

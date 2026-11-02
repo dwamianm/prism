@@ -1538,7 +1538,7 @@ VisionConfig(
     model="qwen3.5:9b",                  # PRME_VISION_MODEL
     base_url=None,                       # PRME_VISION_BASE_URL; OLLAMA_HOST or the local server
     timeout=180.0,                       # PRME_VISION_TIMEOUT, seconds per description
-    describe_prompt_version=2,           # recorded on every observation; only 2 exists
+    describe_prompt_version=3,           # PRME_VISION_DESCRIBE_PROMPT_VERSION; 3 states counts, 2 restores the earlier prompt [HYPOTHESIS]
     extract=True,                        # ingest() with extraction, or store() when False [HYPOTHESIS]
     extraction_retry_delays=[5.0, 15.0, 60.0],  # waits before each extraction retry
     fps=1.0,                             # frames sampled per second of video
