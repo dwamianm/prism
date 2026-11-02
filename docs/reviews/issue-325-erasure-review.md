@@ -92,7 +92,7 @@ Remaining gates are unchanged:
 ## Preserved validation and repair accounting
 
 Exact commands, logs and source timing are in
-[`PV-06-results.json`](../plans/2026-10-evidence-privacy/PV-06-results.json).
+[`PV-06-results.json`](../../memory_bank/plans/2026-10-evidence-privacy/PV-06-results.json).
 The unchanged-runtime witnesses had 6 failures. The first correction command
 had 9 passes and 6 failures; its independent-admission and native-custody passes
 are reused explicitly while the failed source/stricter-code assertions remain

@@ -368,8 +368,8 @@ Tests:
 
 Documentation/evidence:
 - docs/PRIVACY-POLICIES.md (new)
-- docs/plans/2026-10-evidence-privacy/PV-02-plan.md (new)
-- docs/plans/2026-10-evidence-privacy/content-copy-inventory.json (new copies/refs only)
+- memory_bank/plans/2026-10-evidence-privacy/PV-02-plan.md (new)
+- memory_bank/plans/2026-10-evidence-privacy/content-copy-inventory.json (new copies/refs only)
 - docs/reviews/issue-320-privacy-policy-review.md (review evidence summary)
 - documentation/configuration.md
 

@@ -3,7 +3,7 @@
 PV-04 separates usable memory from its retained source. This document describes
 the implementation checkpoint. The protected release remains gated by the
 integration and validation work recorded in
-[the PV-04 plan](plans/2026-10-evidence-privacy/PV-04-plan.md).
+[the PV-04 plan](../memory_bank/plans/2026-10-evidence-privacy/PV-04-plan.md).
 
 Privacy is explicit. An installation without a selected policy retains its
 existing behavior. A protected installation supplies the sanitizer, current

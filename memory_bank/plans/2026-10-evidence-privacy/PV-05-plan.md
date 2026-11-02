@@ -113,7 +113,7 @@ On the final revision, with root's isolated locked environment and live dedicate
 3. `uv run --no-sync ruff check src/ tests/`, scoped `ruff format --check` on touched files, and `uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py`.
 4. `uv build`; installed-wheel/version/py.typed smoke in a separate temporary environment, never overwriting another worker's editable install.
 5. Existing required `python -m scripts.run_simulations` under current defaults and under the CI previous-default environment (`PRME_SCORING__FUSION=weighted`, `PRME_PACKING__CONTEXT_FORMAT=auditable`, `PRME_PACKING__MULTIPATH_ORDERING=balanced`). These are bounded project checks, not permission for model calls or a long benchmark/default-change trial. Reuse root's exact current revision evidence when applicable.
-6. Framework integration modules if not already executed with extras, and `python docs/plans/2026-10-evidence-privacy/validate-contract.py` for structural references only. Structural validation is not runtime privacy evidence.
+6. Framework integration modules if not already executed with extras, and `python memory_bank/plans/2026-10-evidence-privacy/validate-contract.py` for structural references only. Structural validation is not runtime privacy evidence.
 7. Root schedules required independent review of the exact stable final snapshot and delivery. Preserve real failures and classify them against ACs/regressions/security; no extra quality round after agreed checks pass.
 
 

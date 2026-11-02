@@ -164,4 +164,4 @@ encoding and fake providers. They exercise real policy composition, evidence
 selection, authority decisions, public adapters and DuckDB/PostgreSQL storage.
 Their passing results prove this component contract, not detector accuracy,
 encryption or end-to-end protected-product behavior. See the
-[unchanged acceptance plan](plans/2026-10-evidence-privacy/PV-02-plan.md).
+[unchanged acceptance plan](../memory_bank/plans/2026-10-evidence-privacy/PV-02-plan.md).

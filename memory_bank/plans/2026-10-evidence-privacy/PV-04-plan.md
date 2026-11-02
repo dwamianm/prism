@@ -298,9 +298,9 @@ Tests and artifacts:
 - `tests/typing/public_api.py`
 - `web/tests/test_explorer.py`
 - `docs/SEALED-MEMORY.md`
-- `docs/plans/2026-10-evidence-privacy/PV-04-plan.md`
-- `docs/plans/2026-10-evidence-privacy/PV-04-results.json`
-- `docs/plans/2026-10-evidence-privacy/content-copy-inventory.json`
+- `memory_bank/plans/2026-10-evidence-privacy/PV-04-plan.md`
+- `memory_bank/plans/2026-10-evidence-privacy/PV-04-results.json`
+- `memory_bank/plans/2026-10-evidence-privacy/content-copy-inventory.json`
 - `docs/reviews/issue-323-source-separation-review.md` (root-scheduled review evidence).
 
 ## AC-to-validation mapping
@@ -371,7 +371,7 @@ uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict 
 uv build
 uv run --no-sync python -m scripts.run_simulations
 PRME_SCORING__FUSION=weighted PRME_PACKING__CONTEXT_FORMAT=auditable PRME_PACKING__MULTIPATH_ORDERING=balanced uv run --no-sync python -m scripts.run_simulations
-uv run --no-sync python docs/plans/2026-10-evidence-privacy/validate-contract.py
+uv run --no-sync python memory_bank/plans/2026-10-evidence-privacy/validate-contract.py
 ```
 
 Full pytest uses only root's task-specific `PRME_TEST_DATABASE_URL`; preserve the

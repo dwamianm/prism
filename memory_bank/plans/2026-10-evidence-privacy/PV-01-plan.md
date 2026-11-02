@@ -58,19 +58,19 @@ observed copies or the approved threat model.
 
 - `docs/RFC-0019-Evidence-Privacy.md`: profiles, availability, crypto/provider,
   erasure/history and hosted handoff contract.
-- `docs/plans/2026-10-evidence-privacy/content-copy-inventory.json`: source-backed
+- `memory_bank/plans/2026-10-evidence-privacy/content-copy-inventory.json`: source-backed
   fields, responses, principals, retention and erasure ownership.
-- `docs/plans/2026-10-evidence-privacy/sanitizer-contract.json`: closed category,
+- `memory_bank/plans/2026-10-evidence-privacy/sanitizer-contract.json`: closed category,
   action, language and versioned recognizer registry.
-- `docs/plans/2026-10-evidence-privacy/privacy-scenarios.json`: 40 plus 12 slots,
+- `memory_bank/plans/2026-10-evidence-privacy/privacy-scenarios.json`: 40 plus 12 slots,
   E1-E9 coverage, issue ownership and dependencies.
-- `docs/plans/2026-10-evidence-privacy/validate-contract.py`: bounded structural,
+- `memory_bank/plans/2026-10-evidence-privacy/validate-contract.py`: bounded structural,
   source-anchor, dependency, coverage and local-link validation.
-- `docs/plans/2026-10-evidence-privacy/PV-01-plan.md`: this plan.
+- `memory_bank/plans/2026-10-evidence-privacy/PV-01-plan.md`: this plan.
 - `docs/RFC-0002-Event-Store.md` and
   `docs/RFC-0014-Portability-Sync-and-Federation.md`: explicit proposed amendment.
-- `docs/INDEX.md`, `docs/plans/2026-10-evidence-privacy/README.md` and
-  `docs/plans/2026-10-evidence-privacy/architecture.md`: discovery links and
+- `docs/INDEX.md`, `memory_bank/plans/2026-10-evidence-privacy/README.md` and
+  `memory_bank/plans/2026-10-evidence-privacy/architecture.md`: discovery links and
   distinguish frozen choices from implementation.
 - `memory_bank/reviews/issue-319-privacy-contract-review.md`: source traceability,
   check evidence, review resolution and known limits.
@@ -79,7 +79,7 @@ observed copies or the approved threat model.
 
 1. One source-to-inventory traceability review against the pinned base, including
    DuckDB directory/single-file, PostgreSQL, public/adaptor reads and external copies.
-2. Run `python3 docs/plans/2026-10-evidence-privacy/validate-contract.py` for exact
+2. Run `python3 memory_bank/plans/2026-10-evidence-privacy/validate-contract.py` for exact
    8-by-5 plus 12 counts, requirement mapping, source anchors, registry closure,
    dependencies and local Markdown links. Record real exit status and full output.
 3. Run `git diff --check`; inspect the final diff for scope, accidental sensitive

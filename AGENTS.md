@@ -246,6 +246,8 @@ unreplayed.
 
 ## RFCs
 
+Plans (epic plans, per-issue plans, their results and validation scripts) live in `memory_bank/plans/<yyyy-mm-topic>/`, not in `docs/`. They moved from `docs/plans/` on 2026-11-02; records of past runs (CHANGELOG entries, results JSON, review notes) still name the old path.
+
 Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0018). See `docs/INDEX.md` for the full listing. Key RFCs include:
 
 - **RFC-0000** — Suite overview
