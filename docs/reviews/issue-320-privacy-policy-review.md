@@ -15,7 +15,7 @@ test layout; they are not relabeled as final evidence for this merge.
 This document is the sole review-hash exclusion. Earlier failures remain below.
 
 The original six acceptance criteria and unchanged AP01 through AP08 definitions
-are in [the approved plan](../plans/2026-10-evidence-privacy/PV-02-plan.md).
+are in [the approved plan](../../memory_bank/plans/2026-10-evidence-privacy/PV-02-plan.md).
 This review covers the opt-in admission component. It does not certify the
 separately owned sanitizer, cryptography, sealed projections, journal cleanup,
 erasure, migration or protected-product release gate.
