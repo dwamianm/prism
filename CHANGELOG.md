@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `packing.observation_timeline` (`PRME_PACKING__OBSERVATION_TIMELINE`), off by default (dwamianm/prism#386). In the reader context, photo and video frame observations show their time to the second, are listed oldest first in each section, and the newest is marked `[newest]`, so frames a few seconds apart keep their order. Contexts without observations, and every context with the option off, are unchanged. See `docs/PACKING.md` ("Observation timeline").
+- `packing.observation_timeline` (`PRME_PACKING__OBSERVATION_TIMELINE`), on by default (dwamianm/prism#386). In the reader context, photo and video frame observations show their time to the second, are listed oldest first in each section, and the newest is marked `[newest]`, so frames a few seconds apart keep their order. Contexts without observations are unchanged. The owner turned it on by default on 2026-11-02 without the fast-tier evidence, in `PRMEConfig` and in a `PackingConfig` built in code; no probe or benchmark was run. The LoCoMo and LongMemEval-S benchmark packs hold no observations, so their contexts are unchanged. `PRME_PACKING__OBSERVATION_TIMELINE=false` restores the earlier reader lines exactly. Configuration dumps and receipts leave the setting out when it is on; a receipt records `false` only when an observation was packed with it off. See `docs/PACKING.md` ("Observation timeline").
 
 ## [0.16.1] - 2026-10-29
 

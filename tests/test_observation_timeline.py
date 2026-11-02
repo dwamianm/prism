@@ -5,7 +5,9 @@ and appeared in relevance order, so a reader could not tell which was newest.
 With the option on, an observation shows its time to the second, the
 observations of each section are listed oldest first in the places they hold,
 the newest is marked ``[newest]`` and the header says so. Everything else, and
-everything with the option off, renders as before.
+everything with the option off, renders as before. The option is on by default,
+in PRMEConfig and in a PackingConfig built in code, since 2026-11-02 by the
+owner's decision.
 """
 
 from __future__ import annotations
@@ -80,39 +82,65 @@ def receipt_for(bundle: MemoryBundle, packing: PackingConfig, values: list) -> R
     )
 
 
-def test_off_by_default_and_not_written_to_configurations():
-    assert PackingConfig().observation_timeline is False
-    assert PRMEConfig().packing.observation_timeline is False
+# The reader lines of fingers() before the option existed, in relevance order to the minute.
+EARLIER = "\n".join([
+    HEADER,
+    "[stable_facts]",
+    '- [2026-11-02 20:14] "A photo of a hand holding up four fingers."',
+    '- [2026-11-02 20:14] "A photo of a hand holding up three fingers."',
+    '- [2026-11-02 20:14] "A photo of a hand holding up five fingers."',
+])
+
+
+def test_on_by_default_in_code_and_in_the_product_and_left_out_of_dumps(monkeypatch):
+    monkeypatch.delenv("PRME_PACKING__OBSERVATION_TIMELINE", raising=False)
+    assert PackingConfig().observation_timeline is True
+    assert PRMEConfig().packing.observation_timeline is True
+    # On is the default, so configuration dumps keep the bytes they had before it existed.
     assert "observation_timeline" not in PackingConfig().model_dump()
     assert "observation_timeline" not in PRMEConfig().packing.model_dump_json()
-    assert "observation_timeline" in PackingConfig(observation_timeline=True).model_dump()
+    assert PackingConfig(observation_timeline=False).model_dump()["observation_timeline"] is False
+    # The product default packs the timeline with no setting named.
+    bundle = pack_context(fingers(), PRMEConfig().packing)
+    assert record_lines(bundle)[-1] == '- [2026-11-02 20:14:21] [newest] "A photo of a hand holding up five fingers."'
 
 
-def test_the_environment_turns_it_on(monkeypatch):
-    monkeypatch.setenv("PRME_PACKING__OBSERVATION_TIMELINE", "true")
+def test_the_environment_turns_it_off_and_restores_the_earlier_lines(monkeypatch):
+    monkeypatch.setenv("PRME_PACKING__OBSERVATION_TIMELINE", "false")
     packing = PRMEConfig().packing
-    assert packing.observation_timeline is True
+    assert packing.observation_timeline is False
     # The other product defaults stay.
     assert packing.context_format == "reader" and packing.fold_repeated_text is True
+    bundle = pack_context(fingers(), packing)
+    assert bundle.render() == EARLIER
+    assert "observation_timeline" not in bundle.model_dump_json()
 
 
 def test_off_observations_render_as_before():
     values = fingers()
-    bundle = pack_context(values, reader())
-    assert bundle.render() == "\n".join([
-        HEADER,
-        "[stable_facts]",
-        '- [2026-11-02 20:14] "A photo of a hand holding up four fingers."',
-        '- [2026-11-02 20:14] "A photo of a hand holding up three fingers."',
-        '- [2026-11-02 20:14] "A photo of a hand holding up five fingers."',
-    ])
-    # Explicitly off is the same packing, bundle and receipt, byte for byte.
     off = reader(observation_timeline=False)
-    explicit = pack_context(values, off)
-    assert explicit.model_dump_json() == bundle.model_dump_json()
+    bundle = pack_context(values, off)
+    assert bundle.render() == EARLIER
+    assert bundle.observation_timeline is False
     assert "observation_timeline" not in bundle.model_dump_json()
-    assert (receipt_for(explicit, off, values).model_dump_json()
-            == receipt_for(bundle, reader(), values).model_dump_json())
+    # A receipt of a context with an observation says the timeline was off,
+    # because a receipt without the field now means on.
+    on = reader()
+    off_receipt = receipt_for(bundle, off, values).model_dump(mode="json")
+    on_receipt = receipt_for(pack_context(values, on), on, values).model_dump(mode="json")
+    assert "observation_timeline" not in on_receipt["packing"]
+    assert off_receipt["packing"] == {**on_receipt["packing"], "observation_timeline": False}
+
+
+def test_contexts_without_observations_keep_their_bundle_and_receipt_bytes_either_way():
+    values = turns()
+    on, off = reader(), reader(observation_timeline=False)
+    on_bundle, off_bundle = pack_context(values, on), pack_context(values, off)
+    assert on_bundle.model_dump_json() == off_bundle.model_dump_json()
+    assert "observation_timeline" not in on_bundle.model_dump_json()
+    on_receipt = receipt_for(on_bundle, on, values).model_dump_json()
+    assert on_receipt == receipt_for(off_bundle, off, values).model_dump_json()
+    assert "observation_timeline" not in on_receipt
 
 
 def test_on_observations_seconds_apart_keep_their_order_and_mark_the_newest():
@@ -196,7 +224,7 @@ def test_citations_time_and_marker_share_one_line():
 
 def test_an_observation_shows_its_time_even_when_its_text_begins_with_the_date():
     item = observation(1, "2026-11-02: a photo of the whiteboard.", 0)
-    assert record_lines(pack_context([item], reader())) == ['- "2026-11-02: a photo of the whiteboard."']
+    assert record_lines(pack_context([item], reader(observation_timeline=False))) == ['- "2026-11-02: a photo of the whiteboard."']
     assert record_lines(pack_context([item], reader(observation_timeline=True))) == [
         '- [2026-11-02 20:14:18] [newest] "2026-11-02: a photo of the whiteboard."'
     ]
@@ -216,8 +244,8 @@ def test_an_observation_at_midnight_shows_its_seconds_and_one_without_a_time_is_
 @pytest.mark.parametrize("context_format", ["auditable", "compact"])
 def test_other_formats_ignore_it_and_their_receipts_omit_it(context_format):
     values = fingers()
-    off = reader(context_format=context_format, min_fidelity="reference")
-    on = off.model_copy(update={"observation_timeline": True})
+    on = reader(context_format=context_format, min_fidelity="reference")
+    off = on.model_copy(update={"observation_timeline": False})
     assert pack_context(values, on).model_dump_json() == pack_context(values, off).model_dump_json()
     receipt = receipt_for(pack_context(values, on), on, values)
     assert receipt.model_dump_json() == receipt_for(pack_context(values, off), off, values).model_dump_json()
@@ -229,15 +257,20 @@ def test_reader_receipts_record_it_and_replay():
     packing = reader(observation_timeline=True, context_citations=True)
     bundle = pack_context(values, packing)
     receipt = receipt_for(bundle, packing, values)
-    off_packing = reader(context_citations=True)
+    off_packing = reader(context_citations=True, observation_timeline=False)
     off = receipt_for(pack_context(values, off_packing), off_packing, values)
 
-    assert receipt.model_dump()["packing"]["observation_timeline"] is True
+    # On is the default and is left out; off is recorded, since it changed the context.
+    assert "observation_timeline" not in receipt.model_dump()["packing"]
+    assert receipt.packing.observation_timeline is True
+    assert off.model_dump()["packing"]["observation_timeline"] is False
     assert receipt.schema_version == off.schema_version
     assert receipt.context_sha256 == hashlib.sha256(bundle.render().encode()).hexdigest()
-    restored = RetrievalReceipt.model_validate_json(receipt.model_dump_json())
-    assert restored.model_dump_json() == receipt.model_dump_json()
-    assert restored.checksum == receipt.checksum
+    for item in (receipt, off):
+        restored = RetrievalReceipt.model_validate_json(item.model_dump_json())
+        assert restored.model_dump_json() == item.model_dump_json()
+        assert restored.checksum == item.checksum
+        assert restored.packing.observation_timeline is item.packing.observation_timeline
 
 
 def test_ablation_keeps_the_timeline_and_marks_the_newest_remaining_observation():
@@ -268,7 +301,7 @@ def test_an_observation_does_not_fold_into_a_claim_that_hides_its_seconds():
     claim = candidate(2, "A photo of a red mug on the desk.", score=.9, event_time=SEEN,
                       evidence_refs=[source])
     folding = {"fold_repeated_text": True}
-    assert record_lines(pack_context([claim, note], reader(**folding))) == [
+    assert record_lines(pack_context([claim, note], reader(observation_timeline=False, **folding))) == [
         '- [2026-11-02 20:14] "A photo of a red mug on the desk."'
     ]
     on = pack_context([claim, note], reader(observation_timeline=True, **folding))

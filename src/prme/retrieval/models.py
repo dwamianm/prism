@@ -527,14 +527,15 @@ class MemoryBundle(BaseModel):
             "citations) mapped to full memory node IDs"
         ),
     )
-    # Omitted when off, so bundles packed without it keep their bytes.
+    # Omitted when false, so bundles without an observation, or packed with the
+    # option off, keep their bytes.
     observation_timeline: bool = Field(
         default=False,
         exclude_if=lambda value: not value,
         description=(
-            "Whether the reader context was packed with "
-            "PackingConfig.observation_timeline, which orders and marks photo "
-            "and video frame observations; context ablation renders with it"
+            "Whether PackingConfig.observation_timeline ordered and marked "
+            "photo and video frame observations in this reader context; "
+            "false when none was packed. Context ablation renders with it"
         ),
     )
 

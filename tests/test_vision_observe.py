@@ -285,13 +285,11 @@ async def test_photo_becomes_one_tool_event_with_provenance_and_a_thumbnail(tmp_
         assert "$12,500" in response.bundle.render()
 
 
-async def test_photos_seconds_apart_read_as_a_timeline_with_the_option(tmp_path, vision):
-    """packing.observation_timeline (issue #386): the bundle's own context gives their order."""
+async def test_photos_seconds_apart_read_as_a_timeline_by_default(tmp_path, vision):
+    """packing.observation_timeline (issue #386, on by default): the bundle's own context gives their order."""
     from prme.retrieval.packing import reader_text
 
-    config = directory_config(tmp_path / "pack")
-    config = config.model_copy(update={"packing": config.packing.model_copy(update={"observation_timeline": True})})
-    async with MemoryEngine.open(config) as engine:
+    async with MemoryEngine.open(directory_config(tmp_path / "pack")) as engine:
         for seconds, color in ((0, RED), (2, GREEN), (5, BLUE)):
             path = tmp_path / f"frame-{seconds}.jpg"
             slide(color).save(path, quality=90)

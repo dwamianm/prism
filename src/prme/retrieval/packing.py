@@ -819,7 +819,8 @@ def pack_context(
         }
         if context_refs is not None
         else {},
-        observation_timeline=timeline,
+        # Recorded only when it shaped the context, so other bundles keep their bytes.
+        observation_timeline=timeline and reader_shows_observations(sections),
     )
 
 
