@@ -3,7 +3,7 @@
 Tracking epic: [dwamianm/prism#318](https://github.com/dwamianm/prism/issues/318).
 
 Proposed 2026-10-19. This is a target design, not current functionality.
-[RFC-0019](../../RFC-0019-Evidence-Privacy.md) now freezes the v1 contract,
+[RFC-0019](../../../docs/RFC-0019-Evidence-Privacy.md) now freezes the v1 contract,
 including the [copy inventory](content-copy-inventory.json),
 [sanitizer registry](sanitizer-contract.json) and [scenario manifest](privacy-scenarios.json).
 The RFC takes precedence over the early sketches below where it selects a

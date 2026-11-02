@@ -3,7 +3,7 @@
 Status: COMPLETE
 
 Scope is the six original criteria in
-[PV-01-plan.md](../../docs/plans/2026-10-evidence-privacy/PV-01-plan.md).
+[PV-01-plan.md](../plans/2026-10-evidence-privacy/PV-01-plan.md).
 Source baseline is `72360483`; no runtime source, dependencies or stored data change.
 The contract freezes future behavior, not a passing security implementation.
 

@@ -174,7 +174,7 @@ New tests/support (six) and one fixture:
 - `tests/test_privacy_erasure_scenarios.py`: frozen ER01-ER08 + shared CL04/05/07, calling the real earlier fixture workflows.
 - `tests/fixtures/privacy/erasure-v1.json`: distinct synthetic source-only/admitted/foreign/surviving markers and fixed expected copy identities. Extend `tests/typing/public_api.py` and existing shared privacy scenario hooks only where integration requires it.
 
-Docs/results: `docs/EVIDENCE-ERASURE.md`, `docs/RFC-0019-Evidence-Privacy.md` implementation clarification, `docs/RFC-0007-Decay-and-Forgetting.md` clear privacy-versus-archival cross-reference, `docs/WORKSPACES.md`, `docs/plans/2026-10-evidence-privacy/{PV-06-plan.md,PV-06-results.json,content-copy-inventory.json}`, and root-required `docs/reviews/issue-325-erasure-review.md`. Keep frozen scenario/setup/expected values intact. Pack migration/export implementation files remain #326's ownership.
+Docs/results: `docs/EVIDENCE-ERASURE.md`, `docs/RFC-0019-Evidence-Privacy.md` implementation clarification, `docs/RFC-0007-Decay-and-Forgetting.md` clear privacy-versus-archival cross-reference, `docs/WORKSPACES.md`, `memory_bank/plans/2026-10-evidence-privacy/{PV-06-plan.md,PV-06-results.json,content-copy-inventory.json}`, and root-required `docs/reviews/issue-325-erasure-review.md`. Keep frozen scenario/setup/expected values intact. Pack migration/export implementation files remain #326's ownership.
 
 ## Finite validation and actual harness calls
 
@@ -206,7 +206,7 @@ Once on the final revision in root-allocated isolated environments and a live di
 3. `uv run --no-sync ruff check src/ tests/`, format check on touched files, and `uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py`.
 4. `uv build` and installed-wheel/version/py.typed smoke in a separate temporary environment.
 5. Required `python -m scripts.run_simulations` under current defaults and CI previous defaults (`PRME_SCORING__FUSION=weighted`, `PRME_PACKING__CONTEXT_FORMAT=auditable`, `PRME_PACKING__MULTIPATH_ORDERING=balanced`); no paid/live models. Reuse verified exact-revision evidence when applicable.
-6. Framework integration checks if not already covered with extras, and `python docs/plans/2026-10-evidence-privacy/validate-contract.py` for structural coverage only. Then root's required review/delivery, without another quality round.
+6. Framework integration checks if not already covered with extras, and `python memory_bank/plans/2026-10-evidence-privacy/validate-contract.py` for structural coverage only. Then root's required review/delivery, without another quality round.
 
 ## Readiness and remaining gates
 

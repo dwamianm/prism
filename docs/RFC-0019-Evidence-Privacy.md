@@ -15,12 +15,12 @@ sanitize, seal or erase content. Current code was inventoried at `72360483`.
 Existing defaults and record bytes do not change with this RFC. A store must not
 advertise protected status until the implementation and migration gates pass.
 
-Normative artifacts are the [copy inventory](plans/2026-10-evidence-privacy/content-copy-inventory.json),
-[sanitizer registry](plans/2026-10-evidence-privacy/sanitizer-contract.json) and
-[scenario manifest](plans/2026-10-evidence-privacy/privacy-scenarios.json).
+Normative artifacts are the [copy inventory](../memory_bank/plans/2026-10-evidence-privacy/content-copy-inventory.json),
+[sanitizer registry](../memory_bank/plans/2026-10-evidence-privacy/sanitizer-contract.json) and
+[scenario manifest](../memory_bank/plans/2026-10-evidence-privacy/privacy-scenarios.json).
 Each has its own schema/contract version. An incompatible change requires a new
 version and explicit migration; editing a preset does not reinterpret old data.
-The [original requirements E1-E9](plans/2026-10-evidence-privacy/README.md#acceptance-contract)
+The [original requirements E1-E9](../memory_bank/plans/2026-10-evidence-privacy/README.md#acceptance-contract)
 remain the release criteria. Provider calls and benchmarks are not part of PV-01.
 
 ## 2. Data classes and protection claims
@@ -100,7 +100,7 @@ new restriction. No engine-global mutable policy implements per-project settings
 ## 4. Frozen sanitizer boundary
 
 `prme-sanitizer-v1` uses the closed registry and category/action/language matrix in
-[sanitizer-contract.json](plans/2026-10-evidence-privacy/sanitizer-contract.json).
+[sanitizer-contract.json](../memory_bank/plans/2026-10-evidence-privacy/sanitizer-contract.json).
 The selected local analyzer is `presidio-analyzer==2.2.364`, with
 `spacy==3.8.11` and `en_core_web_sm==3.8.0`. Only English (`en`) is supported.
 The registry explicitly enables its listed recognizers; no library default,

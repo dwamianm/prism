@@ -9,7 +9,7 @@ This implementation is still undergoing PV-07 integration. Direct-intent and mix
 derivation/profile/summary migration, closed exports and restore controls have
 component evidence. The complete shared scenarios and fixed-clock public
 retrieval comparison remain pending; see
-[PV-07 results](plans/2026-10-evidence-privacy/PV-07-results.json).
+[PV-07 results](../memory_bank/plans/2026-10-evidence-privacy/PV-07-results.json).
 
 ## Explicit local commands
 

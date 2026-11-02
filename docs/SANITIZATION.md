@@ -51,7 +51,7 @@ values. The frozen registry has explicit recognizers for email, US/GB phone,
 person, location, US SSN, payment card and IP address, plus bounded credential
 forms and configured exact literals. Names and locations use a small English
 model and are heuristic. The four supported lowercase email obfuscations are
-listed in the [sanitizer contract](plans/2026-10-evidence-privacy/sanitizer-contract.json).
+listed in the [sanitizer contract](../memory_bank/plans/2026-10-evidence-privacy/sanitizer-contract.json).
 Homoglyphs, arbitrary encodings, other languages and unlisted secret formats
 remain outside the declared detection scope. A clean scan does not prove the
 absence of secrets.
@@ -149,6 +149,6 @@ they do not mark complete frozen SN product cases as passed. Native custody,
 the local current-ledger authority in #325 (hosted authority in #280), and
 remaining routes require integration evidence. SN11 query and SN12
 profile/summary success gates remain open. See the
-[implementation plan](plans/2026-10-evidence-privacy/PV-13-plan.md) and
-[results](plans/2026-10-evidence-privacy/PV-13-results.json). Native custody,
+[implementation plan](../memory_bank/plans/2026-10-evidence-privacy/PV-13-plan.md) and
+[results](../memory_bank/plans/2026-10-evidence-privacy/PV-13-results.json). Native custody,
 combined product behavior and lifecycle erasure need their own evidence.

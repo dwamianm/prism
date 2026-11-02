@@ -104,8 +104,8 @@ New tests/fixtures:
 
 Documentation/evidence:
 - `docs/PRIVACY-KEYS.md` (new)
-- `docs/plans/2026-10-evidence-privacy/PV-03-plan.md` (new)
-- `docs/plans/2026-10-evidence-privacy/content-copy-inventory.json`
+- `memory_bank/plans/2026-10-evidence-privacy/PV-03-plan.md` (new)
+- `memory_bank/plans/2026-10-evidence-privacy/content-copy-inventory.json`
 - `docs/RFC-0019-Evidence-Privacy.md` (agreed context clarification)
 - `documentation/configuration.md`
 - `memory_bank/reviews/issue-321-evidence-encryption-review.md` (new review/evidence summary)
@@ -150,7 +150,7 @@ Run the six new test modules above, then the affected existing tests: `tests/tes
 - `uv build`, then installed-wheel import/version/`py.typed` smoke in a separate temporary environment; do not replace another worktree's editable install.
 - `python -m scripts.run_simulations` with current defaults, then with `PRME_SCORING__FUSION=weighted`, `PRME_PACKING__CONTEXT_FORMAT=auditable`, `PRME_PACKING__MULTIPATH_ORDERING=balanced`, as CI requires. These are existing bounded simulations, not an optional benchmark/default gate.
 - Framework integration selection if the final full suite did not execute it with the required extras: `tests/test_integration_chat_history.py`, `tests/test_integrations_langchain.py`, `tests/test_integrations_llamaindex.py`.
-- `python docs/plans/2026-10-evidence-privacy/validate-contract.py` for inventory/RFC references; structural pass is not runtime crypto evidence.
+- `python memory_bank/plans/2026-10-evidence-privacy/validate-contract.py` for inventory/RFC references; structural pass is not runtime crypto evidence.
 - Root schedules required independent security/correctness review of the exact final snapshot. Share verified commands, exit statuses and logs; no duplicate broad runs absent a concrete concern.
 
 Record command, actual exit status, elapsed time, case/layout/provider versions and log path. Preserve failed evidence. No tests or reviews ran in this preparation turn.

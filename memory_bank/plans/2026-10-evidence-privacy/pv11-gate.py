@@ -1,7 +1,7 @@
 """PV-11 (#327) scenario gate: map the 52 frozen scenarios to test results per backend.
 
 Usage:
-    python docs/plans/2026-10-evidence-privacy/pv11-gate.py RESULTS.xml [OUTPUT.json]
+    python memory_bank/plans/2026-10-evidence-privacy/pv11-gate.py RESULTS.xml [OUTPUT.json]
 
 RESULTS.xml is a pytest JUnit report of tests/test_privacy_*.py run with
 PRME_TEST_DATABASE_URL set. A case maps to the tests whose names contain its

@@ -8,7 +8,7 @@ the published GitHub issues are linked below. Policies and numerical defaults re
 
 - [Engine issue specifications](issues.md)
 - [Engine architecture](architecture.md)
-- [Frozen PV-01 contract](../../RFC-0019-Evidence-Privacy.md),
+- [Frozen PV-01 contract](../../../docs/RFC-0019-Evidence-Privacy.md),
   [content-copy inventory](content-copy-inventory.json),
   [sanitizer registry](sanitizer-contract.json) and
   [40 plus 12 scenario manifest](privacy-scenarios.json). These specify future
@@ -196,7 +196,7 @@ registry thresholds and bounds are explicit v1 contract choices, not measured
 accuracy, latency or security guarantees.
 
 Run the bounded contract check with
-`python3 docs/plans/2026-10-evidence-privacy/validate-contract.py` from the repository
+`python3 memory_bank/plans/2026-10-evidence-privacy/validate-contract.py` from the repository
 root. It checks source anchors, inventory structure, registry closure, original
 counts, E1-E9 coverage, dependency consistency and local document links. It does
 not execute the future 104 backend-case gate or certify privacy behavior.
