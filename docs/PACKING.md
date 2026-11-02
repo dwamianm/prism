@@ -441,6 +441,55 @@ Receipts record the option in the packing settings and nothing else changes in
 their schema: a folded claim's score replays from the statement's provenance.
 The fold does not change `store()` memories, which have no statements.
 
+## Observation timeline
+
+`observe()` stores each kept photo or video frame as a record with
+`metadata.modality` set to `photo` or `video_frame` and the capture time as its
+event time. Frames a few seconds apart all show the same minute in the reader
+context, and the context lists records by relevance, so a reader cannot tell
+which frame is the newest. In a camera demo, an answer model called "four
+fingers" at 20:14:18 the most recent although "five fingers" at 20:14:21 came
+after it (dwamianm/prism#386). The opt-in `observation_timeline` setting
+(`PRME_PACKING__OBSERVATION_TIMELINE=true`) renders such records as a timeline:
+
+```python
+config = config.model_copy(update={
+    "packing": config.packing.model_copy(update={"observation_timeline": True})
+})
+```
+
+```text
+- [2026-11-02 20:14:13] "A photo of a hand holding up three fingers."
+- [2026-11-02 20:14:18] "A photo of a hand holding up four fingers."
+- [2026-11-02 20:14:21] [newest] "A photo of a hand holding up five fingers."
+```
+
+- An observation with an event time shows that time to the second, even when
+  its text begins with the date.
+- The observations in each section are listed oldest first, in the places
+  they hold, so every other record keeps its place. Observations with the same
+  time keep their order. `response.bundle.sections` lists the records in the
+  order the context shows them.
+- The observations with the latest time in the whole context are marked
+  `[newest]`, after the time. The marked line is counted against the budget.
+- When a packed record is an observation, the header adds one sentence that
+  describes the times, the order and the marker.
+- With `fold_repeated_text`, an observation folds only into another
+  observation, so its time and place stay in the context; a claim whose text
+  the observation shows still folds into it.
+- Context ablation renders the counterfactual with the timeline, so the newest
+  remaining observation is the one marked, and keeps the baseline's header.
+
+A context without observations, such as conversation turns, is unchanged, and
+so is every context with the option off. Only the reader format changes; the
+auditable and compact formats already carry full timestamps, ignore the
+setting, and their receipts omit it. Reader receipts record it in the packing
+settings, with no change to their schema version. Claims that `ingest()`
+extracts from an observation carry no `modality`, so they keep minute times and
+their own places. The setting is off by default and is not tagged as a
+hypothesis: it changes how observations read, not which records are packed,
+except that the marker and the header sentence take a few tokens.
+
 ## Default retrieval settings
 
 `PRMEConfig()` retrieves with these settings, which changed after v0.12.0

@@ -796,6 +796,29 @@ class PackingConfig(BaseModel):
             "keeps False. [HYPOTHESIS]"
         ),
     )
+    # Omitted when off, so configurations and receipts that do not use it keep
+    # their bytes.
+    observation_timeline: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "Show photo and video frame observations as a timeline in the "
+            "reader context (dwamianm/prism#386). Camera frames a few seconds "
+            "apart otherwise show the same minute and appear in relevance "
+            "order, so a reader cannot tell which one is newest. When True, "
+            "a record whose metadata.modality is 'photo' or 'video_frame' "
+            "(what prme.vision.observe stores) and that has an event time "
+            "shows that time to the second, even when its text begins with "
+            "the date; the observations in each section are listed oldest "
+            "first, in the places they hold, so other records keep theirs; "
+            "the observations with the latest event time in the context are "
+            "tagged [newest]; and the header says so. A context without "
+            "observations is unchanged. Applies only to "
+            "context_format='reader': the auditable and compact formats "
+            "already show full timestamps, ignore it, and their receipts "
+            "omit it. Off by default."
+        ),
+    )
     episode_context_top_k: int = Field(
         default=0,
         ge=0,

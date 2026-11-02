@@ -680,6 +680,9 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         receipt_packing = receipt_packing.model_copy(update={"session_context_packing": None})
     if packing.fold_repeated_text and not folded:
         receipt_packing = receipt_packing.model_copy(update={"fold_repeated_text": False})
+    if packing.observation_timeline and packing.context_format != "reader":
+        # Only reader lines change, so other formats keep their receipt bytes.
+        receipt_packing = receipt_packing.model_copy(update={"observation_timeline": False})
     has_rank_assignment = any(
         operation.kind == "neural_rank_assignment"
         for item in provenance.values() for operation in item.adjustments

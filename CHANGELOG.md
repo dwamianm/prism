@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `packing.observation_timeline` (`PRME_PACKING__OBSERVATION_TIMELINE`), off by default (dwamianm/prism#386). In the reader context, photo and video frame observations show their time to the second, are listed oldest first in each section, and the newest is marked `[newest]`, so frames a few seconds apart keep their order. Contexts without observations, and every context with the option off, are unchanged. See `docs/PACKING.md` ("Observation timeline").
+
 ## [0.16.1] - 2026-10-29
 
 A fix release for 0.16.0. Its checks are those of 0.16.0, plus CI and the regression test below; the full benchmark did not run.

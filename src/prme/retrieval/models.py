@@ -527,6 +527,16 @@ class MemoryBundle(BaseModel):
             "citations) mapped to full memory node IDs"
         ),
     )
+    # Omitted when off, so bundles packed without it keep their bytes.
+    observation_timeline: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "Whether the reader context was packed with "
+            "PackingConfig.observation_timeline, which orders and marks photo "
+            "and video frame observations; context ablation renders with it"
+        ),
+    )
 
     def render(self) -> str:
         """Return the already-budgeted context; do not reconstruct full nodes."""
