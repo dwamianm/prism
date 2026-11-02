@@ -82,6 +82,15 @@ class QueryAnalysis(BaseModel):
         default=False,
         description="Whether the query requires aggregation (count/total/list-all)",
     )
+    is_current_state: bool = Field(
+        default=False,
+        description=(
+            "Whether retrieve() treats the query as a question about the current "
+            "state of the newest observations (packing.current_state_observations). "
+            "Set only when that option is on and the store has observations; such "
+            "a query is not an aggregation"
+        ),
+    )
 
 
 class ScoreTrace(BaseModel):
@@ -142,6 +151,7 @@ class ScoreAdjustment(BaseModel):
         "claim_statement_fold",
         "current_update",
         "neural_rank_assignment",
+        "current_observation",
     ]
     coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
@@ -163,6 +173,8 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("Evidence-context coefficient must be in (0, 1]")
         if self.kind == "claim_statement_fold" and self.coefficient != 1:
             raise ValueError("A claim statement fold records lineage and leaves the score as it is")
+        if self.kind == "current_observation" and not 0 < self.coefficient <= 1:
+            raise ValueError("A current-state observation coefficient must be in (0, 1]")
         return self
 
 

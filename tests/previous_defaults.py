@@ -8,7 +8,9 @@ or the receipt versions those settings write pin these settings explicitly
 instead of relying on the defaults. Balanced ordering is named too, so the set
 stays complete whatever the ordering default is. Folding each source text
 once (packing.fold_repeated_text) became a default later, so the previous
-defaults leave it off, and ``without_folding`` turns off only that.
+defaults leave it off, and ``without_folding`` turns off only that. So do the
+current-state observations (packing.current_state_observations, issue #387),
+which a receipt records only for a retrieval they changed.
 """
 
 from prme.retrieval.config import PackingConfig, ScoringWeights
@@ -18,6 +20,7 @@ PREVIOUS_PACKING_DEFAULTS = {
     "multipath_ordering": "balanced",
     "session_context_rank_fusion_score_decay": None,
     "fold_repeated_text": False,
+    "current_state_observations": False,
 }
 
 

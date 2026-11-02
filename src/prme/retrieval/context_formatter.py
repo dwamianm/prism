@@ -445,6 +445,9 @@ def _detect_context_type(
 
     0. **temporal** — explicit interval/order reasoning, even when phrased as
        ``how many``.
+    0b. **knowledge_update**: a question that retrieval answered with the
+       newest observations (``query_analysis.is_current_state``), even when
+       phrased as ``how many``.
     1. **aggregation** — remaining count/total/list-all queries. Needs all
        entries visible with dedup guidance.
     2. **knowledge_update** — current-state queries that are NOT aggregation.
@@ -459,6 +462,12 @@ def _detect_context_type(
     # but need episode timestamps, not count aggregation formatting.
     if _TEMPORAL_REASONING_RE.search(q):
         return "temporal"
+
+    # A question about now that retrieve() answered with the newest
+    # observations ("How many fingers is he holding up?") counts what is
+    # visible, not records (packing.current_state_observations, issue #387).
+    if query_analysis and query_analysis.is_current_state:
+        return "knowledge_update"
 
     # Aggregation: count/total/list-all queries need a broad candidate display.
     if query_analysis and query_analysis.is_aggregation:

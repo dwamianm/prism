@@ -32,6 +32,7 @@ EXPECTED_HYPOTHESES = {
     "packing.fold_repeated_text",
     "packing.folded_records_keep_rank",
     "packing.graph_seed_words",
+    "packing.current_state_observations",
     "packing.cross_scope_top_n",
     "packing.episode_context_top_k",
     "packing.episode_context_local_k",
@@ -95,8 +96,9 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert report.hypothesis_count == len(EXPECTED_HYPOTHESES)
     # Speaker references, claim sentence text and folding became defaults together, so they apply,
     # and batched extraction became a default later (#254), then the group links (prism-monorepo #275), then the
-    # seed count graph list with its weight (prism-monorepo #276), then the pronoun repair (2026-10-22).
-    assert report.effective_count == 30
+    # seed count graph list with its weight (prism-monorepo #276), then the pronoun repair (2026-10-22), then the
+    # current-state observations (dwamianm/prism#387, 2026-11-02).
+    assert report.effective_count == 31
     assert report.customized_count == 0
     for name in ("enable_speaker_references", "enable_claim_sentence_text", "packing.fold_repeated_text"):
         setting = settings[name]
@@ -133,6 +135,11 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
                  "scoring.rrf_graph_seed_count", "enable_pronoun_repair"):
         setting = settings[name]
         assert (setting.effective, setting.value, setting.default, setting.customized) == (True, True, True, False), name
+    # The newest observations for current-state questions, on by the owner's decision of 2026-11-02 (issue #387).
+    observations = settings["packing.current_state_observations"]
+    assert (observations.effective, observations.value, observations.default, observations.customized) == (
+        True, True, True, False)
+    assert observations.environment_variable == "PRME_PACKING__CURRENT_STATE_OBSERVATIONS"
     # The seed count list brings its weight, so the graph weight applies by default too.
     graph_weight = settings["scoring.rrf_graph_weight"]
     assert (graph_weight.effective, graph_weight.value, graph_weight.default, graph_weight.customized) == (
@@ -193,11 +200,13 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values(monkeypatch):
     report, settings = _by_path(config)
 
     # A PackingConfig built in code has no rank fusion session decay, does not fold, and keeps the three structure
-    # options off (graph seed words, folded records keep rank, session context skips entities), which the audit
-    # reports as customized. The default scoring's seed count list and its weight apply (prism-monorepo #276), and so
-    # does the pronoun repair (2026-10-22).
+    # options off (graph seed words, folded records keep rank, session context skips entities) and the current-state
+    # observations off (issue #387), which the audit reports as customized. The default scoring's seed count list and
+    # its weight apply (prism-monorepo #276), and so does the pronoun repair (2026-10-22).
     assert report.effective_count == 37
-    assert report.customized_count == 9
+    assert report.customized_count == 10
+    observations = settings["packing.current_state_observations"]
+    assert (observations.effective, observations.customized) == (False, True)
     assert settings["packing.session_context_skip_entities"].customized is True
     assert settings["packing.graph_seed_words"].customized is True
     assert settings["packing.folded_records_keep_rank"].effective is False

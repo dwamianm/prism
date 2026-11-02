@@ -41,6 +41,11 @@ from prme.retrieval.candidates import (
     merge_normalized_bm25_hits,
 )
 from prme.retrieval.claim_statements import fold_claim_statements
+from prme.retrieval.current_state import (
+    CURRENT_STATE_PATH,
+    add_current_state_observations,
+    latest_session_observations,
+)
 from prme.retrieval.config import (
     DEFAULT_PACKING_CONFIG,
     DEFAULT_RERANKER_PRIOR_WEIGHT,
@@ -77,6 +82,7 @@ from prme.retrieval.query_analysis import (
     QUERY_INTENT_ORDERS,
     QueryIntentOrder,
     analyze_query,
+    is_current_state_question,
 )
 from prme.retrieval.replaced_sources import suppress_replaced_sources
 from prme.retrieval.scoring import score_and_rank
@@ -454,6 +460,41 @@ class RetrievalPipeline:
         # Only caller-supplied bounds impose a hard validity filter.
         effective_time_from = time_from
         effective_time_to = time_to
+
+        # --- Stage 1b: Current-state observations (issue #387) ---
+        # A question about now in a store with photo or video frame
+        # observations gets the newest observations of the most recent
+        # observation session (Stage 5.5f) and is not an aggregation. Without
+        # observations nothing changes.
+        current_state_observations: list[RetrievalCandidate] = []
+        if (
+            effective_packing_config.current_state_observations
+            and is_current_state_question(query)
+        ):
+            try:
+                current_state_observations = await self._latest_observations(
+                    user_id=user_id,
+                    scopes=normalized_scope,
+                    knowledge_at=knowledge_at,
+                    event_time_from=event_time_from,
+                    event_time_to=event_time_to,
+                    time_from=effective_time_from,
+                    time_to=effective_time_to,
+                    exclude_node_types=exclude_node_types,
+                    source_types=source_types,
+                    retrieval_mode=analysis.retrieval_mode,
+                )
+            except PrivacyDenied:
+                raise
+            except Exception:
+                logger.warning(
+                    "Current-state observation lookup failed; continuing without it",
+                    exc_info=not bool(getattr(self, "_privacy_context", None)),
+                )
+            if current_state_observations:
+                analysis = analysis.model_copy(
+                    update={"is_current_state": True, "is_aggregation": False}
+                )
 
         # --- Aggregation boost: widen candidate pool for count/total queries ---
         candidate_config = effective_packing_config
@@ -912,6 +953,19 @@ class RetrievalPipeline:
             if folded_ranking:
                 ranking_policy = "score_id"
 
+        # --- Stage 5.5f: Current-state observations (issue #387) ---
+        # The newest observations of the most recent session follow the top
+        # result, newest first, and packing reserves them.
+        if current_state_observations:
+            scored, observation_ranking = add_current_state_observations(
+                scored, current_state_observations,
+            )
+            if observation_ranking:
+                ranking_policy = "score_id"
+            added = sum(1 for candidate in scored if candidate.paths == [CURRENT_STATE_PATH])
+            if added:
+                candidate_counts["CURRENT_STATE"] = added
+
         # Enforce consumer filters after episode/projection/augmentation stages too.
         scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types)
         excluded.extend(type_excluded)
@@ -1178,9 +1232,17 @@ class RetrievalPipeline:
                         **({"merge_policy": self._query_reformulation_merge_policy}
                            if self._query_reformulation_merge_policy != "new_only" else {})},
                 })
+                # The option is recorded when it acted on the request; otherwise
+                # the retrieval is the one it would be with the option off, and
+                # so is the receipt (issue #387).
+                receipt_packing = (
+                    effective_packing_config
+                    if current_state_observations or not effective_packing_config.current_state_observations
+                    else effective_packing_config.model_copy(update={"current_state_observations": False})
+                )
                 receipt = make_receipt(request_id=analysis.request_id, user_id=user_id, query=query,
                                        reference_time=scoring_now, scopes=normalized_scope,
-                                       scoring=effective_weights, packing=effective_packing_config,
+                                       scoring=effective_weights, packing=receipt_packing,
                                        candidates=scored, bundle=bundle, min_score=min_score, result_limit=limit,
                                        retrieval_mode=retrieval_mode, time_from=effective_time_from,
                                        time_to=effective_time_to, ranking_policy=ranking_policy, execution=execution,
@@ -1321,6 +1383,42 @@ class RetrievalPipeline:
             score_traces=traces,
             filter_metadata=filter_meta,
             cross_scope_hints=cross_scope_hints,
+        )
+
+    async def _latest_observations(
+        self,
+        *,
+        user_id: str,
+        scopes: list[Scope] | None,
+        knowledge_at: datetime | None,
+        event_time_from: datetime | None,
+        event_time_to: datetime | None,
+        time_from: datetime | None,
+        time_to: datetime | None,
+        exclude_node_types: Collection[NodeType] | None,
+        source_types: Collection[SourceType] | None,
+        retrieval_mode: RetrievalMode,
+    ) -> list[RetrievalCandidate]:
+        """The newest observations of the most recent observation session that this request may see."""
+
+        def eligible(candidates: list[RetrievalCandidate]) -> list[RetrievalCandidate]:
+            # The filters every other candidate passes (issue #60).
+            candidates = _apply_bitemporal_filters(
+                candidates, knowledge_at, event_time_from, event_time_to, time_from, time_to,
+            )
+            candidates, _ = filter_candidate_types(candidates, exclude_node_types, source_types)
+            candidates, _ = filter_epistemic(
+                candidates, retrieval_mode,
+                unverified_threshold=self._unverified_confidence_threshold,
+            )
+            return candidates
+
+        return await latest_session_observations(
+            self._graph_store,
+            user_id=user_id,
+            scopes=scopes,
+            created_before=knowledge_at,
+            eligible=eligible,
         )
 
     async def _suppress_replaced_sources(

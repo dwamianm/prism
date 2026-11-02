@@ -356,6 +356,84 @@ comparisons for
 and [`adjacent`](../benchmarks/results/research/2026-09-25/session-context-packing-adjacent-gate-comparison.md)
 list every category.
 
+## Current-state observations
+
+Retrieval ranks a record by how well its text matches the question. A camera
+session describes one scene many times in different words, so a question about
+now finds older frames that use its words and misses the newest frames. Asked
+"How many fingers is the man holding up?" over the owner's camera session of
+2026-11-02, `retrieve()` returned older frames that said "four fingers" and
+none of the four newest (five fingers, all fingers spread, a fist, hands down),
+and read the question as a count over records (dwamianm/prism#387).
+Session expansion does not help: it adds the turns around a retrieved result,
+not the newest turns of the session.
+
+`packing.current_state_observations` (default `true` in `PRMEConfig` since
+2026-11-02; `PRME_PACKING__CURRENT_STATE_OBSERVATIONS=false` turns it off; a
+hypothesis) handles such questions in three steps:
+
+1. **The question.** Query analysis reads a question as a current-state
+   question when it has a word that asks about now (`now`, `currently`, `right
+   now`, `at the moment`, `at present`, `latest`, `newest`, `most recent`,
+   `last` unless a time window or a name follows, as in `last week`, `last
+   three days` or `last name`) or a present progressive with a pronoun, a
+   determiner phrase or no subject (`is he holding`, `what's the man holding`,
+   `how many people are sitting`), and none of the words that ask about
+   history, order or a count over time (`when`, `before`, `after`, `ago`,
+   `since`, `until`, `first`, `earliest`, `previous`, `past`, `remind`,
+   `remember`, `how long`, `how often`, `how many times`, `total`, `so far`,
+   `list all`). Ordinary conversation asks about now too ("What book am I
+   currently reading?"): 51 of the 2,486 questions in the LoCoMo and
+   LongMemEval-S dataset files match. The next step is what keeps those
+   unchanged.
+2. **The observations.** For a current-state question, `retrieve()` reads the
+   owner's 200 newest records in the requested scopes and looks for photo and
+   video frame observations among them (`metadata.modality` `photo` or
+   `video_frame`, which only `observe()` writes), after the request's time
+   window, knowledge cutoff, type and epistemic filters. The one with the
+   latest event time names the most recent observation session (its
+   `session_id` and scope), and the 3 newest observations of that session are
+   added. Without an observation in that window nothing else happens, and the
+   question retrieves exactly as it does with the option off. A store whose
+   newest observation is older than its 200 newest records is treated as having
+   none.
+3. **Their place.** The added observations follow the top result, newest first:
+   each takes the top result's score times one less a millionth per place,
+   through a `current_observation` score adjustment that names the top result,
+   so receipts replay it. A frame that already ranks higher keeps its score.
+   Each carries the `CURRENT_STATE` path, and packing reserves such records
+   before the multi-path tier, as it does episode and evidence context. They
+   count toward `limit` like any result, so `limit=6` keeps the top result,
+   the three frames and the next two results. The question is not an
+   aggregation question (no widened candidate pool, keyword scan or
+   aggregation coverage notice, and `metadata.aggregation_coverage` is None),
+   and its context type is current state (`format_for_llm` and
+   `context_guidance_mode="all"` use it when given the analysis).
+
+Three frames, because the newest frame is the current state but may not show
+the thing asked about: in the owner's session the newest frame showed the
+hands down, the one before it a fist and the one before that all fingers
+spread. On a copy of that session's pack, the 6 results for the fingers
+question changed from older frames only to the top result, those three frames,
+then two older frames, and the aggregation notice left the context. With the
+[observation timeline](#observation-timeline), also on by default, the reader
+context shows the added frames to the second, lists the observations of their
+section oldest first and marks the newest `[newest]`, so the frames read in
+order.
+
+A receipt records the setting only for a retrieval it changed. Any other
+retrieval is the one the option off would make, so its receipt keeps the bytes
+it would have without the setting, as receipts drop `session_context_packing`
+when session expansion is off; no receipt schema version changes. Nothing
+stored is rewritten. The setting is on by the owner's decision of 2026-11-02,
+without fast-tier evidence: no probe, fast tier, mid tier or benchmark was run
+on it. The benchmarks do not exercise it: the 577 benchmark packs saved on the
+development machine (544,239 records) hold no observations, and the
+benchmark and fast-tier harnesses build their packs with `store()` and
+`ingest()` from fixtures that never set `metadata.modality` (only the vision
+spike harness calls `observe()`). A `PackingConfig` built in code keeps
+`false`.
+
 ## Folding repeated text
 
 `ingest()` keeps a turn's own record beside the claims extracted from it, and
@@ -529,6 +607,7 @@ product defaults) still match.
 | `packing.fold_repeated_text` (`PRME_PACKING__FOLD_REPEATED_TEXT`), since 2026-10-06 | `true` | `false` |
 | `packing.session_context_skip_entities` (`PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES`), alpha channel since 0.16.0a4 (2026-10-19) | `true` in `PRMEConfig` | `false` |
 | `packing.observation_timeline` (`PRME_PACKING__OBSERVATION_TIMELINE`), since 2026-11-02 by the owner's decision, without the fast-tier evidence | `true`, also in a `PackingConfig` built in code | did not exist (observations read in relevance order, to the minute) |
+| `packing.current_state_observations` (`PRME_PACKING__CURRENT_STATE_OBSERVATIONS`), since 2026-11-02 by the owner's decision, without fast-tier evidence | `true` in `PRMEConfig` | did not exist (`false`) |
 
 The settings changed in two steps on 2026-09-25, and each step passed the
 project's default-change test twice on the DeepSeek answer track. The first

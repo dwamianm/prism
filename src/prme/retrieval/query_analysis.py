@@ -68,6 +68,82 @@ _TEMPORAL_QUANTITY_RE = re.compile(
     re.IGNORECASE,
 )
 
+# --- Current-state questions (packing.current_state_observations, issue #387) ---
+
+# Words after "last" that make it a time window or a name ("last week", "last
+# three days", "last name"), not the newest state.
+_LAST_NOT_STATE = (
+    r"(?:(?:\d+|a|one|two|three|four|five|six|seven|eight|nine|ten|few|couple"
+    r"|several)\s+(?:of\s+)?)?"
+    r"(?:seconds?|minutes?|hours?|days?|nights?|weeks?|weekends?|months?|years?"
+    r"|decades?|times?|tonight|monday|tuesday|wednesday|thursday|friday|saturday"
+    r"|sunday|january|february|march|april|may|june|july|august|september"
+    r"|october|november|december|spring|summer|fall|autumn|winter|session"
+    r"|seasons?|visit|trip|names?)\b"
+)
+
+# Nouns ending in -ing that follow a subject without being a present
+# progressive ("what is the morning meeting about").
+_ING_NOUNS = (
+    r"(?:thing|things|something|anything|nothing|everything|morning|mornings"
+    r"|evening|evenings|during|ceiling|ceilings|wedding|weddings|string|strings"
+    r"|spring|springs|king|kings|ring|rings|wing|wings|sibling|siblings|clothing"
+    r"|pudding|darling|meeting|meetings|building|buildings|ending|endings"
+    r"|beginning|lightning|offspring)\b"
+)
+
+# Words that ask about now: an explicit present, the newest or last state, or
+# a present progressive with a pronoun, a determiner phrase or no subject
+# ("is he holding", "what's the man holding", "how many people are sitting").
+_CURRENT_STATE_CUE_RE = re.compile(
+    r"\b(?:now|right\s+now|currently|current|at\s+the\s+moment|at\s+present"
+    r"|presently|latest|newest|most\s+recent(?:ly)?)\b"
+    r"|\blast\b(?!\s+" + _LAST_NOT_STATE + r")"
+    r"|(?:\b(?:is|are|am|isn't|aren't)|['’](?:re|m)"
+    # "'s" only after a question word or pronoun, so a possessive such as
+    # "Caroline's painting" is not read as "is painting".
+    r"|\b(?:what|who|where|how|which|that|it|he|she|there|here)['’]s)\s+"
+    r"(?:(?:i|you|he|she|it|we|they|someone|somebody|anyone|anybody"
+    r"|(?:the|this|that|these|those|a|an)\s+(?:\w+\s+)?\w+)\s+)?"
+    r"(?!" + _ING_NOUNS + r")\w{2,}ing\b",
+    re.IGNORECASE,
+)
+
+# History, order and count-over-time words: such a question needs earlier
+# records, not the newest state.
+_NOT_CURRENT_STATE_RE = re.compile(
+    r"\b(?:when|before|after|ago|since|until|first|earlier|earliest|previous"
+    r"|previously|formerly|originally|used\s+to|yesterday|past|remind|recall"
+    r"|remember|order\s+of|in\s+what\s+order|how\s+long|how\s+often"
+    r"|how\s+many\s+times|every\s+time|all\s+the\s+times|each\s+time|total"
+    r"|in\s+total|altogether|so\s+far|list\s+all|all\s+of\s+the|count)\b",
+    re.IGNORECASE,
+)
+
+
+def is_current_state_question(query: str) -> bool:
+    """Whether *query* asks about the current state (issue #387).
+
+    True for a question with a word that asks about now ("now", "currently",
+    "right now", "at the moment", "latest", "newest", "most recent", "last"
+    outside a time window or "last name") or a present progressive ("How many
+    fingers is the man holding up?", "What is she doing?"), and none of the
+    words that ask about history, order or a count over time ("when",
+    "before", "ago", "first", "previous", "remind", "how long", "how often",
+    "how many times", "total", "so far"). Elapsed-time questions ("how many
+    days ago") are never current-state questions.
+
+    Ordinary conversation asks about now too ("What am I reading these
+    days?"), so this alone changes nothing: ``packing.current_state_observations``
+    acts on it only when the store has photo or video frame observations.
+    """
+    return bool(
+        _CURRENT_STATE_CUE_RE.search(query)
+        and not _NOT_CURRENT_STATE_RE.search(query)
+        and not _TEMPORAL_QUANTITY_RE.search(query)
+    )
+
+
 # Heuristic for proper nouns: 1+ consecutive capitalized words not at
 # sentence start. We anchor on "not after sentence-start" by checking
 # that the match is not preceded by nothing or a sentence-ending punctuation.

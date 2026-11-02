@@ -438,6 +438,162 @@ async def test_keep_thumbnails_off_stores_no_blob(tmp_path, photo, vision):
     assert "blobs" not in tables(tmp_path / "pack" / "memory.duckdb")
 
 
+# --- current-state questions (packing.current_state_observations, issue #387) ---
+
+# A camera session like the owner's of 2026-11-02: older frames that use the
+# question's words, then the newest frames, which describe the same scene in
+# other words.
+CAMERA_FRAMES = [
+    ("camera:morning", "The man is holding up two fingers."),
+    ("camera:morning", "The man is holding up three fingers."),
+    ("camera:morning", "The man is holding up two fingers with his left hand."),
+    ("camera:evening", "The man is holding up four fingers."),
+    ("camera:evening", "The man is holding up five fingers."),
+    ("camera:evening", "A raised hand with a clenched fist."),
+    ("camera:evening", "His hands rest in his lap, the headphones on."),
+]
+FINGERS = "How many fingers is the man holding up?"
+ASKED_AT = START + timedelta(hours=2)
+
+
+class CameraVision:
+    """Describes the frames of CAMERA_FRAMES in order."""
+
+    model_name = "fake/vision-1"
+
+    def __init__(self) -> None:
+        self.descriptions = [text for _, text in CAMERA_FRAMES]
+
+    async def describe(self, image: bytes, *, prompt: str) -> str:
+        return self.descriptions.pop(0)
+
+
+def with_current_state(config: PRMEConfig, value: bool) -> PRMEConfig:
+    return config.model_copy(update={"packing": config.packing.model_copy(update={"current_state_observations": value})})
+
+
+async def observe_camera(engine: MemoryEngine, tmp_path: Path) -> None:
+    for index, (session, _) in enumerate(CAMERA_FRAMES):
+        path = tmp_path / f"frame-{index}.jpg"
+        slide((RED, GREEN, BLUE)[index % 3], f"frame {index}").save(path, quality=90)
+        when = START + timedelta(minutes=index) if session == "camera:morning" else START + timedelta(hours=1,
+                                                                                                  seconds=index * 3)
+        await engine.observe(path, user_id=USER, captured_at=when, session_id=session)
+
+
+def receipt_bytes(receipt) -> dict:
+    """A receipt without its request ID, which every retrieval draws anew."""
+    data = receipt.model_dump(mode="json")
+    data.pop("request_id")
+    return data
+
+
+async def ask(pack: Path, value: bool | None, question: str, **options):
+    """Retrieve from *pack* with the option set to *value* (None: as configured); return the response and receipt."""
+    config = directory_config(pack) if value is None else with_current_state(directory_config(pack), value)
+    async with MemoryEngine.open(config) as engine:
+        response = await engine.retrieve(question, user_id=USER, reference_time=ASKED_AT, **options)
+        receipt = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=USER)
+    return response, receipt
+
+
+async def test_a_question_about_now_reaches_the_newest_frames(tmp_path, monkeypatch):
+    monkeypatch.setattr("prme.vision.provider.create_vision_provider", lambda config: CameraVision())
+    newest, fist = CAMERA_FRAMES[-1][1], CAMERA_FRAMES[-2][1]
+    async with MemoryEngine.open(directory_config(tmp_path / "pack")) as engine:
+        await observe_camera(engine, tmp_path)
+    off, off_receipt = await ask(tmp_path / "pack", False, FINGERS, limit=4, token_budget=2000)
+    on, receipt = await ask(tmp_path / "pack", None, FINGERS, limit=4, token_budget=2000)
+    # The environment variable restores the retrieval with the option off, receipt included.
+    monkeypatch.setenv("PRME_PACKING__CURRENT_STATE_OBSERVATIONS", "false")
+    restored, restored_receipt = await ask(tmp_path / "pack", None, FINGERS, limit=4, token_budget=2000)
+    assert [(item.node.id, item.composite_score) for item in restored.results] == [
+        (item.node.id, item.composite_score) for item in off.results]
+    assert restored.bundle.rendered_context == off.bundle.rendered_context
+    assert receipt_bytes(restored_receipt) == receipt_bytes(off_receipt)
+    assert "current_state_observations" not in receipt_bytes(off_receipt)["packing"]
+    # Off, text match ranks the frames that say "fingers"; the newest two are not among the results.
+    assert newest not in off.bundle.rendered_context and fist not in off.bundle.rendered_context
+    assert "Aggregation coverage" in off.bundle.rendered_context
+    # On, the newest three frames of the evening session follow the top result, newest first.
+    assert [result.node.content for result in on.results[1:4]] == [newest, fist, CAMERA_FRAMES[-3][1]]
+    assert all("CURRENT_STATE" in result.paths for result in on.results[1:4])
+    assert newest in on.bundle.rendered_context and fist in on.bundle.rendered_context
+    # The question counts what is visible now, not records.
+    assert "Aggregation coverage" not in on.bundle.rendered_context
+    assert on.metadata.aggregation_coverage is None and off.metadata.aggregation_coverage is not None
+    # The receipt records the option and replays the scores and the order.
+    assert receipt.packing.current_state_observations is True
+    assert receipt.replay_ranking() == tuple(result.node.id for result in on.results)
+    assert any(adjustment.kind == "current_observation"
+               for provenance in receipt.score_provenance.values() for adjustment in provenance.adjustments)
+    data = receipt.model_dump(mode="json")
+    data["packing"].pop("current_state_observations")
+    with pytest.raises(ValueError, match="current_state_observations"):
+        type(receipt).model_validate(data)
+
+
+async def test_the_newest_frames_read_as_a_timeline_with_both_defaults(tmp_path, monkeypatch):
+    """The two observation defaults together (issues #386 and #387): the frames added for now read in time order."""
+    from prme.retrieval.packing import reader_text
+
+    monkeypatch.setattr("prme.vision.provider.create_vision_provider", lambda config: CameraVision())
+    config = directory_config(tmp_path / "pack")
+    assert config.packing.current_state_observations and config.packing.observation_timeline
+    async with MemoryEngine.open(config) as engine:
+        await observe_camera(engine, tmp_path)
+    response, _ = await ask(tmp_path / "pack", None, FINGERS, limit=4, token_budget=2000)
+    # The top result, then the three newest frames that current-state observations added, newest first.
+    assert [result.node.content for result in response.results] == [
+        CAMERA_FRAMES[3][1], CAMERA_FRAMES[6][1], CAMERA_FRAMES[5][1], CAMERA_FRAMES[4][1]]
+    # The timeline shows them to the second, oldest first, and marks the newest.
+    context = response.bundle.rendered_context
+    assert [line for line in context.splitlines() if line.startswith("- ")] == [
+        f"- [2026-10-14 11:00:09] {reader_text(CAMERA_FRAMES[3][1])}",
+        f"- [2026-10-14 11:00:12] {reader_text(CAMERA_FRAMES[4][1])}",
+        f"- [2026-10-14 11:00:15] {reader_text(CAMERA_FRAMES[5][1])}",
+        f"- [2026-10-14 11:00:18] [newest] {reader_text(CAMERA_FRAMES[6][1])}",
+    ]
+    assert "Aggregation coverage" not in context
+
+
+async def test_other_questions_and_stores_without_frames_retrieve_as_with_the_option_off(tmp_path, monkeypatch):
+    """With the option on (the PRMEConfig default), only a question about now over observations changes."""
+    monkeypatch.setattr("prme.vision.provider.create_vision_provider", lambda config: CameraVision())
+
+    async def both(pack: Path, question: str, **options):
+        outcome = {}
+        for value in (False, True):
+            response, receipt = await ask(pack, value, question, **options)
+            outcome[value] = (
+                [(result.node.id, result.composite_score, result.paths) for result in response.results],
+                response.bundle.rendered_context,
+                response.metadata.candidates_generated,
+                receipt_bytes(receipt),
+            )
+        return outcome
+
+    assert directory_config(tmp_path / "chat").packing.current_state_observations is True
+    async with MemoryEngine.open(directory_config(tmp_path / "chat")) as engine:
+        for text in ("I hold up four fingers when I count to four.", "I play the guitar now.",
+                     "My sister is holding a party on Friday."):
+            await engine.store(text, user_id=USER, session_id="chat")
+    # Questions about now in a store without observations, and a count question.
+    for question in (FINGERS, "What am I playing now?", "How many fingers did I hold up?"):
+        outcome = await both(tmp_path / "chat", question, limit=3)
+        assert outcome[False] == outcome[True], question
+    assert "Aggregation coverage" in outcome[True][1]
+    assert "current_state_observations" not in outcome[True][3]["packing"]
+
+    async with MemoryEngine.open(directory_config(tmp_path / "camera")) as engine:
+        await observe_camera(engine, tmp_path)
+    # Questions that are not about now, over the same frames.
+    for question in ("How many times did the man hold up two fingers?", "What was the first thing he held up?",
+                     "Describe the morning session."):
+        outcome = await both(tmp_path / "camera", question, limit=4)
+        assert outcome[False] == outcome[True], question
+
+
 # --- video -------------------------------------------------------------------
 
 
