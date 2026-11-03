@@ -11,6 +11,7 @@ from prme.models import Event, MemoryNode, ProcessingResult
 from prme.models.privacy_receipts import ProtectedCitationRecord, ProtectedRetrievalReceipt
 from prme.integrations.typesafe import JevProductProposal, ProductEntity
 from prme.organizer.models import OrganizeResult
+from prme import MemoryEngine
 from prme import PrivacyPolicy, PrivacyRuntime, PRMEConfig
 from prme.privacy import ClosedSchema, CustomRule, LocalSanitizer, ValueValidator
 from prme.privacy.capabilities import AdmissionContent, SanitizedContent
@@ -282,3 +283,17 @@ def selected_source_consumer(client: MemoryClient, grant: EvidenceAccess) -> Non
     assert_type(client.inspect_source("event-id", user_id="owner"), SourceAvailability | SourceUnavailable)
     assert_type(client.read_source("event-id", user_id="owner", access=grant), SanitizedEvidenceView)
     assert_type(client.retrieve("question", user_id="owner", source_access=grant), RetrievalResponse)
+
+
+async def observe_session_consumer(engine: MemoryEngine, frame: bytes) -> None:
+    from prme.vision import FrameResult
+    from prme.vision.observe import ObservationRecord
+    result = await engine.observe_frame(frame, user_id="alice", session_id="camera:desk",
+                                        captured_at=datetime(2026, 11, 2, 10, tzinfo=timezone.utc), wait=False)
+    assert_type(result, FrameResult)
+    assert_type(result.decision, str)
+    assert_type(result.kept, bool)
+    assert_type(result.index, int | None)
+    assert_type(await result.observed(), ObservationRecord | None)
+    assert_type(result.to_dict(), dict[str, Any])
+    assert_type(await engine.end_observe_session("camera:desk", user_id="alice"), list[ObservationRecord])

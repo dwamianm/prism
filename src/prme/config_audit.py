@@ -290,6 +290,21 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         bool,
     ),
     # Visual memory (RFC-0018) does nothing until vision.enabled is set.
+    "vision.calibrate_keyframes": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.min_change_threshold": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.noise_multiplier": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
     "vision.extract": (
         "vision.enabled",
         "vision.enabled is true",
@@ -306,6 +321,26 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         bool,
     ),
     "vision.describe_prompt_version": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.stream_settle_seconds": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.stream_settle_timeout_seconds": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.stream_moving_gap_seconds": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.stream_heartbeat_seconds": (
         "vision.enabled",
         "vision.enabled is true",
         bool,

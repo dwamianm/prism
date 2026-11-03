@@ -98,3 +98,28 @@ def quoted_text(description: str) -> frozenset[str]:
         normalized for normalized in (normalize_quote(match) for match in QUOTE_RE.findall(description))
         if normalized
     )
+
+
+NUMBER_WORDS = {
+    "zero": 0, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+    "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+    "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90, "hundred": 100, "thousand": 1000, "dozen": 12,
+}
+"""Number words a description may state a count in. "One" is left out: it is as often a pronoun."""
+_COUNT_RE = re.compile(r"\b(\d+(?:[.,]\d+)*|" + "|".join(NUMBER_WORDS) + r")\b", re.IGNORECASE)
+
+
+def stated_counts(description: str) -> frozenset[str]:
+    """Return the set of numbers a description states outside quotes, number words as digits.
+
+    The prompt quotes visible text but not what the model counts, so "two
+    fingers" and "three fingers" are the same quoted set and, with the pack's
+    default embedding, 0.95 to 0.99 similar: without this, the repeat filter
+    dropped a held count as a repeat of the previous one (dwamianm/prism#390).
+    """
+    unquoted = QUOTE_RE.sub(" ", description)
+    return frozenset(
+        str(NUMBER_WORDS[token.casefold()]) if token.casefold() in NUMBER_WORDS else token.replace(",", "")
+        for token in _COUNT_RE.findall(unquoted)
+    )

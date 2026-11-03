@@ -97,7 +97,7 @@ the indexes changes shape. The contract is in the fields:
 | `role` | `tool`. The camera and the vision model are instruments; `infer_source_type` maps the role to `TOOL_OUTPUT`, so an observed fact is never recorded as something the owner stated. |
 | `event_time` | The capture clock: the video's start plus the frame offset, or the photo's capture time. Retrieval's recency and time windows read it unchanged. |
 | `session_id` | `video:<file>` for frames of one recording, `photo:<file>` for a photo, a capture session id for a live source. |
-| `metadata.modality` | `video_frame`, `photo`, later `screen_frame` and `camera_frame`. |
+| `metadata.modality` | `video_frame`, `photo`, later `screen_frame` and `camera_frame`. A frame of a live session (`observe_frame()`) is stored as a `photo` for now, so packing and retrieval treat it as they treat a photo. |
 | `metadata.source_file`, `metadata.frame_time_s` | Where the frame came from and when inside the source. |
 | `metadata.frame_sha256` | Content hash of the keyframe image. The thumbnail and any external raw frame are addressed by it. |
 | `metadata.thumbnail` | Pack-relative path of the evidence thumbnail (`frames/<sha256>.jpg`). |
@@ -117,8 +117,9 @@ order, each cheaper than the next stage it protects:
    blurred slightly, aligned to the last kept frame by phase correlation to
    remove camera shake, contrast-normalized, and compared block by block. A
    frame is kept when the largest block difference reaches a threshold (0.55 in
-   the spike). On the spike corpus a slide whose text changed on the same
-   layout scored about 0.7, any other scene change above 2.3, shake and
+   the spike; calibrated per video since 2026-11-02, see "Calibration for a
+   fixed camera" below). On the spike corpus a slide whose text changed on the
+   same layout scored about 0.7, any other scene change above 2.3, shake and
    exposure noise at most 0.37, and consecutive seconds of a slow aerial pan
    about 0.5.
 2. **Heartbeat.** A frame is kept every `max_gap` seconds (30 in the spike)
@@ -130,6 +131,13 @@ order, each cheaper than the next stage it protects:
    dropped as a repeat. Any difference in quoted text keeps the frame, so a
    whiteboard with one changed value is never dropped. Word overlap was tried
    first and failed: the same whiteboard described twice overlapped only 0.61.
+   Since 2026-11-02 the numbers a description states outside quotes gate the
+   same way (dwamianm/prism#390): the prompt quotes visible text but not what
+   the model counts, and with the pack's default embedding descriptions that
+   differ only in "two fingers" and "three fingers" scored 0.95 to 0.99, so a
+   held count was dropped as a repeat; prompt version 3's numerals ("3 raised
+   fingers") scored 0.98. Number words and numerals both read as digits, so
+   the same counts written either way still compare equal.
 
 The pixel filter is the weak point. A handheld camera on text can produce
 noise close to a real text change, and a slow pan over scenery produces a
@@ -144,7 +152,55 @@ which costs vision calls that the repeat filter then absorbs. A middle
 stage, cheap OCR or an image-embedding similarity check between the pixel
 filter and the vision model, is the first improvement to try. All thresholds
 are configuration, named in `VisionConfig` below, and every kept and dropped
-frame is logged with its score.
+frame is logged with its score and the threshold it was compared with.
+
+### Calibration for a fixed camera
+
+The fixed 0.55 missed small changes on a fixed camera (dwamianm/prism#389).
+The score is the strongest change in any one block, so it measures how strong
+a local change is, not how large: on the camera demo's synthetic hand, one
+more raised finger scored 0.34 to 0.48, and no finger count was kept, while
+the 0.55 was set for hand-held noise up to 0.37. Since 2026-11-02
+`vision.calibrate_keyframes` (on by default) changes two things:
+
+- **The threshold follows the noise floor.** A frame that scores under the
+  threshold is a still frame, and its score is noise. The threshold is
+  `noise_multiplier` (5) times the median of the video's last 20 still-frame
+  scores, never under `min_change_threshold` (0.30) and never over
+  `change_threshold`. It starts at `change_threshold`, and one still frame is
+  enough to lower it, so a pose held for two samples is kept. A fixed camera,
+  whose still frames score about 0.02, gets 0.30; a source whose still frames
+  score over 0.11 (the Tahoe pan, a very dim camera) keeps `change_threshold`.
+  The state is a `KeyframePolicy` per video, which a stream session can keep
+  per session.
+- **The alignment is checked by the difference it leaves.** Phase
+  correlation alone sometimes locks onto no shift on a noisy, low-texture
+  frame, and a whole-pixel shift leaves half a pixel of residual; on a fixed
+  synthetic camera those scored up to 0.49 for a few pixels of shake. The
+  score now tries the phase-correlation shift and every whole-pixel shift
+  within 3 signature pixels, refines the best by half a pixel, and uses the
+  one that leaves the smallest difference. Real changes score what they did;
+  shake on the synthetic desk scored at most 0.07 and the hand-held spike
+  recording's still frames at most 0.18. It costs a few milliseconds a frame.
+
+On synthetic fixed-camera scenes every finger count was kept at 1 and 2
+frames a second and nothing was kept for noise, 12% exposure steps or shake;
+on the spike corpus `meeting.mp4` kept 10 keyframes instead of 13 (every
+scene start, without four noise keeps) and the Tahoe pan 45 instead of 48
+(`benchmarks/results/research/2026-11-02/KEYFRAME-CALIBRATION.md`). Two other
+options were measured and rejected: adding the number of changed blocks to
+the score (hand-held text noise changed up to 124 of 481 blocks, one more
+finger 3 to 6), and fixed source profiles (a fixed 0.30 sent the Tahoe pan
+to 77 keyframes and kept 35 false frames in two minutes of synthetic low
+light). The calibration is on by default by the owner's decision of that day
+to turn new features on by default, which overrides the epic #77 rule that
+new behavior starts off; vision itself stays off until `vision.enabled` is
+set. Real webcam recordings were not measured;
+`benchmarks/vision/keyframe_calibration.py still` reports keeps per minute
+and the false-keep rate on recordings of a still scene under both settings.
+`vision.calibrate_keyframes=false` (`PRME_VISION__CALIBRATE_KEYFRAMES=false`)
+restores the 0.16.1 selection exactly: the 0.16.1 score against the fixed
+`change_threshold`, which reproduces the recorded spike run's keyframes.
 
 ## Description prompt
 
@@ -251,6 +307,9 @@ The capture layer filters before anything is admitted:
 client.observe(source, *, user_id, captured_at=None, source_name=None,
                session_id=None, metadata=None, scope=Scope.PERSONAL) -> list[str]
 client.get_blob(key) -> bytes | None
+await engine.observe_frame(frame, *, user_id, session_id, captured_at=None, metadata=None,
+                           scope=Scope.PERSONAL, wait=True) -> FrameResult
+await engine.end_observe_session(session_id, *, user_id, scope=Scope.PERSONAL) -> list[ObservationRecord]
 ```
 
 `observe()` accepts an image or a video, as a path or as bytes
@@ -291,17 +350,78 @@ class VisionConfig(_ProjectSettings):          # PRMEConfig.vision; PRME_VISION_
     extraction_retry_delays: list[float] = [5.0, 15.0, 60.0]
     fps: float = 1.0
     frame_width: int = 1280
-    change_threshold: float = 0.55  # [HYPOTHESIS]
+    change_threshold: float = 0.55  # [HYPOTHESIS] the most a calibrated threshold can be
+    calibrate_keyframes: bool = True  # [HYPOTHESIS] False restores the 0.16.1 selection
+    min_change_threshold: float = 0.30  # [HYPOTHESIS]
+    noise_multiplier: float = 5.0  # [HYPOTHESIS]
     max_gap_seconds: float = 30.0
     repeat_similarity: float = 0.93  # [HYPOTHESIS]
     thumbnail_width: int = 320
     keep_thumbnails: bool = True
+    stream_settle_seconds: float = 0.5  # [HYPOTHESIS] live sessions (observe_frame())
+    stream_settle_timeout_seconds: float = 6.0  # [HYPOTHESIS]
+    stream_moving_gap_seconds: float = 10.0  # [HYPOTHESIS]
+    stream_heartbeat_seconds: float = 60.0  # [HYPOTHESIS]
+    stream_max_pending: int = 10
+    stream_max_sessions: int = 16
+    stream_idle_seconds: float = 300.0
 ```
+
+### Live sessions
+
+`observe()` takes one photo or one video file, and its keyframe policy and
+repeat filter keep their state only inside one call, so separate camera frames
+were never compared with each other. The camera demo worked around it with its
+own watch gate (dwamianm/prism#390). `observe_frame()` moves that gate into the
+engine. The caller sends every sampled frame, two a second for the demo, with a
+session id; the engine keeps, per owner, scope and session, a `KeyframePolicy`
+(the last kept frame, the calibrated noise floor and the heartbeat clock), the
+previous frame's signature and the settle state, and the last admitted
+description for the repeat filter. A frame is kept when it changed from the
+last kept frame by the threshold and then:
+
+- the picture held still for `stream_settle_seconds` (two frames in a row
+  within the threshold of each other): `first` or `changed`, however recent
+  the last keep. A hand on its way is not kept mid-motion, but every pose held
+  for a moment is; or
+- it kept changing for `stream_settle_timeout_seconds` without holding still:
+  `moving`, at most once every `stream_moving_gap_seconds` (`cooldown` until
+  then), so a person who never stops moving cannot flood the memory.
+
+An unchanged picture is `unchanged`, and is kept every
+`stream_heartbeat_seconds` as a `heartbeat`; a changed one still moving is
+`settling`. A frame the session would keep while `stream_max_pending` of its
+kept frames wait to be described is `busy` and changes nothing. A kept frame is
+described, filtered against the session's last admitted description and
+admitted as a photo observation with its thumbnail and `metadata.kept_reason`;
+kept frames are described one at a time, in keep order, behind the engine's
+observe lock, while the next frame is decided at once. `wait=False` returns
+right after the decision and describes in the background;
+`end_observe_session()` waits for those frames, and `close()` cancels them. The
+engine keeps at most `stream_max_sessions` sessions and forgets one with no
+frame for `stream_idle_seconds`.
+
+The values are the demo's gate. Its history shows how easy it is to get wrong:
+a 10 second minimum gap kept frames exactly 10.0 seconds apart and lost every
+finger count in between, and a 1 second hold-still rule was too long for the
+owner. The demo's synthetic scenes are ported in `tests/test_vision_stream.py`:
+at 2 frames a second, one more finger every two seconds is kept once per count,
+an object put down or a person sitting down once, and sensor noise, 12%
+exposure steps and shake of 1 to 6 pixels never, over 5 seeds. One difference
+from the demo: under the calibrated score, which aligns each frame by the shift
+that leaves the smallest difference, the demo's walking person (14 pixels a
+sample) scored 0.51 to 0.53 between some samples and counted as pausing, so it
+is kept more often than the gap; with `calibrate_keyframes` off it is kept
+exactly as in the demo, at 6 and 16 seconds. The heartbeat of a minute is not
+from the demo, which had none; it is unmeasured on real cameras.
 
 Everything is off by default. A pack that never used `observe()` is
 byte-for-byte what it is today, and `observe()` raises `VisionDisabledError`
 until `vision.enabled` is set. This follows the epic #77 rule that new
-behavior goes behind an explicit option first. Vision models run locally by
+behavior goes behind an explicit option first. The live session settings are
+on by default by the owner's decision of 2026-11-02 to turn new features on by
+default, which overrides that rule; `observe_frame()` is a new entry point, so
+they act only for a caller of it. Vision models run locally by
 default; Ollama is the only provider in this release, and with `extract` on
 the description text goes to the configured extraction provider, as any
 `ingest()` text does. `observe()` needs a local DuckDB pack in this release:
@@ -329,11 +449,15 @@ are not lost. Calls on one engine run one at a time.
    baseline of its own, and with it the `extract` default decision.
 2. **Live screen.** An external capture process (event-driven: app switch,
    click, typing pause, like Screenpipe's) feeds `observe()` through the HTTP
-   API, with the application and password-field filters above. If it is used
+   API, with the application and password-field filters above. The engine side
+   of a stream, `observe_frame()` with its session state, was added on
+   2026-11-02 (dwamianm/prism#390, "Live sessions" above); the capture
+   process, the filters and the HTTP route are still open. If it is used
    on coding sessions, it touches the shelved coding-memory decision in
    `CLAUDE.md`; that decision stands until a new study says otherwise.
 3. **Camera and wearables.** A phone or glasses client streams keyframes to
-   the HTTP API. This is the Memories.ai comparison and needs the
+   the HTTP API. The camera demo can send its frames to `observe_frame()`
+   today; a `camera_frame` modality with its own prompt hint is still open. This is the Memories.ai comparison and needs the
    image-embedding stage and the organizer summarization job below.
 
 Later, independent of phase: a second vector index with an image-text model

@@ -138,8 +138,10 @@ class VisionConfig(_ProjectSettings):
     ``observe()`` and ``prme observe`` turn a photo or a saved video into
     keyframes, ask a local vision model for a facts-first description of each,
     and admit every description as an ordinary event with the capture clock as
-    its ``event_time``. Everything here is off by default: a pack that never
-    observes is byte for byte what it is without this configuration.
+    its ``event_time``; ``observe_frame()`` does the same for a live camera or
+    screen, one frame at a time, with the ``stream_*`` settings. Everything
+    here is off by default: a pack that never observes is byte for byte what
+    it is without this configuration.
     """
 
     enabled: bool = Field(
@@ -216,12 +218,110 @@ class VisionConfig(_ProjectSettings):
             "[HYPOTHESIS] Keyframe pixel-change score at or above which a frame "
             "starts a new keyframe. On the spike corpus a same-layout slide whose "
             "text changed scored about 0.7, any other scene change above 2.3, "
-            "camera shake and exposure noise at most 0.37"
+            "camera shake and exposure noise at most 0.37. With "
+            "calibrate_keyframes, the highest threshold a video can be calibrated to"
+        ),
+    )
+    calibrate_keyframes: bool = Field(
+        default=True,
+        description=(
+            "[HYPOTHESIS] Calibrate the keyframe change threshold for each video "
+            "from its noise floor (noise_multiplier times the median score of its "
+            "still frames, between min_change_threshold and change_threshold), and "
+            "score frames with an alignment checked by the difference it leaves, so "
+            "a fixed camera keeps small changes such as one more raised finger while "
+            "a hand-held recording or a pan keeps change_threshold "
+            "(dwamianm/prism#389). Default since 2026-11-02 by the owner's decision, "
+            "on synthetic scenes and the spike corpus, without real webcam "
+            "recordings; false restores the 0.16.1 keyframe selection exactly"
+        ),
+    )
+    min_change_threshold: float = Field(
+        default=0.30, ge=0.0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] Lowest calibrated change threshold. On a fixed synthetic "
+            "camera one more raised finger scored 0.34 to 0.48, and noise, shake and "
+            "a 12% exposure step at most 0.07 (a 25% step 0.26 to 0.30)"
+        ),
+    )
+    noise_multiplier: float = Field(
+        default=5.0, gt=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] The calibrated change threshold is this many times the "
+            "median score of a video's last 20 still frames. Where it lifts the "
+            "threshold over min_change_threshold, no measured still frame scored "
+            "more than 2.22 times that median"
         ),
     )
     max_gap_seconds: float = Field(
         default=30.0, gt=0, allow_inf_nan=False,
         description="A keyframe is kept at least this often regardless of change (heartbeat)",
+    )
+    # A live observe session (observe_frame(), dwamianm/prism#390). The
+    # values are the camera demo's watch gate, where the owner tested them on
+    # 2026-11-02; on by the owner's decision of that day to turn new features
+    # on by default. A session only exists once a caller sends it frames.
+    stream_settle_seconds: float = Field(
+        default=0.5, ge=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] A live frame that changed from the session's last kept "
+            "frame is kept once the picture has held still this long (two frames "
+            "in a row within the change threshold of each other), so a hand on its "
+            "way is not kept mid-motion but every pose held for a moment is. The "
+            "camera demo first used 1 second, which the owner found too long to "
+            "hold each pose"
+        ),
+    )
+    stream_settle_timeout_seconds: float = Field(
+        default=6.0, gt=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] A live picture that has kept changing this long without "
+            "holding still (a person who never stops moving) is kept anyway, at "
+            "most once every stream_moving_gap_seconds"
+        ),
+    )
+    stream_moving_gap_seconds: float = Field(
+        default=10.0, ge=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] The least time between two keeps of a live picture that "
+            "never holds still, so constant motion cannot flood the memory. A "
+            "change that holds still is kept at once, however recent the last "
+            "keep: the camera demo's first version kept at most one frame every "
+            "10 seconds and lost every finger count in between"
+        ),
+    )
+    stream_heartbeat_seconds: float = Field(
+        default=60.0, gt=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] A live session keeps a frame of an unchanged picture at "
+            "least this often, so a change too small for the pixel filter is "
+            "caught within one heartbeat; the description repeat filter drops it "
+            "when nothing changed. Video files use max_gap_seconds. Unmeasured on "
+            "real cameras: a minute is one vision call a minute on a still scene"
+        ),
+    )
+    stream_max_pending: int = Field(
+        default=10, ge=1,
+        description=(
+            "Kept live frames one session may have waiting to be described; a "
+            "frame the session would keep beyond this is answered 'busy' and kept "
+            "on a later frame instead"
+        ),
+    )
+    stream_max_sessions: int = Field(
+        default=16, ge=1,
+        description=(
+            "Live observe sessions an engine keeps state for; a new session "
+            "replaces the least recently used one with no frame waiting to be "
+            "described"
+        ),
+    )
+    stream_idle_seconds: float = Field(
+        default=300.0, gt=0, allow_inf_nan=False,
+        description=(
+            "A live observe session that receives no frame for this long is "
+            "forgotten; its next frame starts it again as a first frame"
+        ),
     )
     repeat_similarity: float = Field(
         default=0.93, ge=0.0, le=1.0, allow_inf_nan=False,

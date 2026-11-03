@@ -507,6 +507,64 @@ in this release; the PostgreSQL backend is not supported.
 
 ---
 
+#### `engine.observe_frame()`
+
+```python
+async def observe_frame(
+    self,
+    frame: bytes | str | os.PathLike[str],
+    *,
+    user_id: str,
+    session_id: str,
+    captured_at: datetime | None = None,
+    metadata: dict | None = None,
+    scope: Scope = Scope.PERSONAL,
+    wait: bool = True,
+) -> prme.vision.FrameResult
+
+async def end_observe_session(self, session_id: str, *, user_id: str,
+                              scope: Scope = Scope.PERSONAL) -> list[ObservationRecord]
+```
+
+A live observe session for a camera or a screen
+([RFC-0018](RFC-0018-Visual-Memory.md), phases 2 and 3; dwamianm/prism#390).
+Send every sampled frame (one image, as bytes or a path) with the same
+`session_id`, for example twice a second; the engine keeps the keyframe state
+of each session (owner, scope and session id) between frames and decides which
+frames to keep. A frame is kept when it changed from the session's last kept
+frame by the keyframe threshold (calibrated per session, as for video) and the
+picture has then held still for `vision.stream_settle_seconds` (0.5): decision
+`"first"` or `"changed"`. A picture that keeps changing without holding still
+is kept after `vision.stream_settle_timeout_seconds` (6), at most once every
+`vision.stream_moving_gap_seconds` (10): `"moving"`, and `"cooldown"` until
+then. An unchanged picture is kept every `vision.stream_heartbeat_seconds` (60):
+`"heartbeat"`, else `"unchanged"`; a changed one still moving is `"settling"`.
+A frame the session would keep while `vision.stream_max_pending` (10) of its
+kept frames wait to be described is `"busy"` and changes nothing.
+
+`FrameResult` carries `decision`, `kept`, `index` (the frame's number in the
+session), `since_kept` (the change score from the last kept frame),
+`since_previous` (from the frame before), `threshold`, `wait_s` (for a
+cooldown), `pending` and, for a kept frame, `observation`: an
+`ObservationRecord` whose status is `"pending"` until the frame is described,
+then `"admitted"` with its `event_id`, `"repeat"` when the description repeats
+the session's last kept frame's, `"already_observed"`, or `"failed"` with the
+error. `to_dict()` is JSON-serializable. A kept frame becomes an observation as
+a photo does in `observe()`: role `tool`, `captured_at` (else the current time)
+as `event_time`, `session_id` as the session, a thumbnail, `modality` `photo`,
+`frame_index` set to the frame's number in the session and `kept_reason` set to
+the decision. With `wait=True` the call returns once a kept frame is admitted or
+dropped; with `wait=False` it returns as soon as the frame is decided, kept
+frames are described in the background in the order they were kept, and
+`await result.observed()` or `end_observe_session()` waits for them. `close()`
+cancels kept frames not yet described. The engine keeps at most
+`vision.stream_max_sessions` (16) sessions and forgets one that received no
+frame for `vision.stream_idle_seconds` (300). Needs `vision.enabled` and a
+local DuckDB pack; the HTTP API does not expose `observe()` or `observe_frame()`
+in this release.
+
+---
+
 #### Consumer node and source filters
 
 `retrieve()` on the async engine and synchronous client accepts
@@ -1543,11 +1601,21 @@ VisionConfig(
     extraction_retry_delays=[5.0, 15.0, 60.0],  # waits before each extraction retry
     fps=1.0,                             # frames sampled per second of video
     frame_width=1280,                    # decoded frame width
-    change_threshold=0.55,               # keyframe pixel-change score [HYPOTHESIS]
+    change_threshold=0.55,               # keyframe pixel-change score [HYPOTHESIS]; the most a calibrated one can be
+    calibrate_keyframes=True,            # threshold from each video's noise floor; False restores 0.16.1 [HYPOTHESIS]
+    min_change_threshold=0.30,           # lowest calibrated threshold [HYPOTHESIS]
+    noise_multiplier=5.0,                # calibrated threshold = this x median still-frame score [HYPOTHESIS]
     max_gap_seconds=30.0,                # heartbeat keyframe at least this often
     repeat_similarity=0.93,              # description repeat filter [HYPOTHESIS]
     thumbnail_width=320,
     keep_thumbnails=True,                # blobs table rows keyed frames/<sha256>.jpg
+    stream_settle_seconds=0.5,           # observe_frame(): keep a change once it held still this long [HYPOTHESIS]
+    stream_settle_timeout_seconds=6.0,   # keep a picture that never holds still after this long [HYPOTHESIS]
+    stream_moving_gap_seconds=10.0,      # at most one such keep this often [HYPOTHESIS]
+    stream_heartbeat_seconds=60.0,       # keep an unchanged live picture this often [HYPOTHESIS]
+    stream_max_pending=10,               # kept frames one session may have waiting to be described
+    stream_max_sessions=16,              # live sessions an engine keeps state for
+    stream_idle_seconds=300.0,           # a session without frames this long is forgotten
 )
 ```
 

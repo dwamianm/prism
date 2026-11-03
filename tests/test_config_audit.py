@@ -52,10 +52,17 @@ EXPECTED_HYPOTHESES = {
     "organizer.consolidation_similarity_threshold",
     "organizer.consolidation_preserve_recent_days",
     "organizer.consolidation_min_confidence_preserve",
+    "vision.calibrate_keyframes",
+    "vision.min_change_threshold",
+    "vision.noise_multiplier",
     "vision.extract",
     "vision.change_threshold",
     "vision.repeat_similarity",
     "vision.describe_prompt_version",
+    "vision.stream_settle_seconds",
+    "vision.stream_settle_timeout_seconds",
+    "vision.stream_moving_gap_seconds",
+    "vision.stream_heartbeat_seconds",
     "lexical_term_weights",
     "enable_qa_pairing",
     "enable_windowed_extraction",
@@ -156,6 +163,11 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     assert settings["organizer.promotion_evidence_count"].environment_variable == (
         "PRME_ORGANIZER__PROMOTION_EVIDENCE_COUNT"
     )
+    # Keyframe calibration is on by default (dwamianm/prism#389) and dormant with vision off.
+    for name, default in (("vision.calibrate_keyframes", True), ("vision.min_change_threshold", 0.30),
+                          ("vision.noise_multiplier", 5.0)):
+        assert (settings[name].effective, settings[name].default) == (False, default), name
+    assert settings["vision.calibrate_keyframes"].environment_variable == "PRME_VISION__CALIBRATE_KEYFRAMES"
     # Under the weighted formula the rank fusion settings are dormant, and dropping them is a customization.
     _, weighted = _by_path(PRMEConfig(scoring=ScoringWeights()))
     for name in ("scoring.rrf_k", "scoring.rrf_recency_boost"):

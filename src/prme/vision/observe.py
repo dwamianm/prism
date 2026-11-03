@@ -35,7 +35,7 @@ from prme.ingestion.errors import ExtractionError
 from prme.storage._threading import run_to_completion
 from prme.types import Scope
 from prme.vision import frames as frames_module
-from prme.vision.describe import DESCRIBE_PROMPT_VERSION, describe_prompt, quoted_text
+from prme.vision.describe import DESCRIBE_PROMPT_VERSION, describe_prompt
 from prme.vision.errors import ObservationError, VisionDisabledError, VisionError
 from prme.vision.keyframes import KeyframeDecision, select_keyframes, thumbnail_bytes
 from prme.vision.repeat import DescriptionKey, is_repeat
@@ -200,8 +200,8 @@ async def _observe(
         )
         decisions = await run_to_completion(
             select_keyframes, frame_paths, fps=config.fps, threshold=config.change_threshold,
-            max_gap=config.max_gap_seconds,
-        )
+            max_gap=config.max_gap_seconds, calibrate=config.calibrate_keyframes,
+            min_threshold=config.min_change_threshold, noise_multiplier=config.noise_multiplier)
     else:
         frame_paths = [resolved.path]
         decisions = [KeyframeDecision(index=0, time_s=0.0, change=None, kept=True, reason="first")]
@@ -209,8 +209,8 @@ async def _observe(
     report.keyframe_log = decisions
     report.keyframes = sum(1 for decision in decisions if decision.kept)
     for decision in decisions:
-        logger.debug("keyframe %s t=%.1fs change=%s kept=%s reason=%s", resolved.name, decision.time_s,
-                     decision.change, decision.kept, decision.reason)
+        logger.debug("keyframe %s t=%.1fs change=%s threshold=%s kept=%s reason=%s", resolved.name,
+                     decision.time_s, decision.change, decision.threshold, decision.kept, decision.reason)
     prompt = describe_prompt(resolved.kind, config.describe_prompt_version)
     session = session_id or session_for(resolved.kind, resolved.name)
     previous: DescriptionKey | None = None
@@ -326,7 +326,7 @@ async def _description_key(engine: MemoryEngine, description: str, report: Obser
             f"The pack could not embed a description of {report.source}: {exc}; "
             f"{report.admitted} keyframes were admitted before it", report=report,
         ) from exc
-    return DescriptionKey.build(quoted_text(description), vector)
+    return DescriptionKey.of(description, vector)
 
 
 async def _admit(

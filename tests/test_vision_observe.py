@@ -814,7 +814,8 @@ def test_cli_observe_turns_vision_on_for_its_run(tmp_path, photo, vision, capsys
     reports = json.loads(capsys.readouterr().out)
     assert len(reports) == 1
     assert reports[0]["admitted"] == 1 and reports[0]["extract"] is False
-    assert reports[0]["keyframe_log"] == [{"index": 0, "time_s": 0.0, "change": None, "kept": True, "reason": "first"}]
+    assert reports[0]["keyframe_log"] == [{"index": 0, "time_s": 0.0, "change": None, "kept": True, "reason": "first",
+                                           "threshold": None}]
     assert reports[0]["observations"][0]["status"] == "admitted"
     assert vision.calls == 1
 

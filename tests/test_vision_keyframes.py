@@ -114,7 +114,8 @@ class TestSelectKeyframes:
         assert [d.index for d in decisions] == list(range(45))
         kept = [d for d in decisions if d.kept]
         assert kept[0].reason == "first" and kept[0].change is None
-        assert kept[1] == KeyframeDecision(index=5, time_s=5.0, change=kept[1].change, kept=True, reason="change")
+        assert kept[1] == KeyframeDecision(index=5, time_s=5.0, change=kept[1].change, kept=True, reason="change",
+                                           threshold=kept[1].threshold)
         assert kept[1].change >= 0.55
         assert [d.reason for d in kept[2:]] == ["heartbeat"]
         assert kept[2].index == 35  # 30 seconds after the last kept frame
@@ -139,7 +140,8 @@ class TestSelectKeyframes:
 
     def test_decision_is_json_friendly(self):
         decision = select_keyframes([LAUNCH], fps=1.0, threshold=0.55, max_gap=30.0)[0]
-        assert decision.to_dict() == {"index": 0, "time_s": 0.0, "change": None, "kept": True, "reason": "first"}
+        assert decision.to_dict() == {"index": 0, "time_s": 0.0, "change": None, "kept": True, "reason": "first",
+                                      "threshold": 0.55}
 
 
 class TestThumbnail:
