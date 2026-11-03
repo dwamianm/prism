@@ -441,6 +441,76 @@ Receipts record the option in the packing settings and nothing else changes in
 their schema: a folded claim's score replays from the statement's provenance.
 The fold does not change `store()` memories, which have no statements.
 
+## Observation timeline
+
+`observe()` stores each kept photo or video frame as a record with
+`metadata.modality` set to `photo` or `video_frame` and the capture time as its
+event time. Frames a few seconds apart all show the same minute in the reader
+context, and the context lists records by relevance, so a reader cannot tell
+which frame is the newest. In a camera demo, an answer model called "four
+fingers" at 20:14:18 the most recent although "five fingers" at 20:14:21 came
+after it (dwamianm/prism#386). The `observation_timeline` setting renders such
+records as a timeline. It is on by default since 2026-11-02, in `PRMEConfig` and
+in a `PackingConfig` built in code, by the owner's decision; to turn it off
+(`PRME_PACKING__OBSERVATION_TIMELINE=false`) and keep the other defaults:
+
+```python
+config = config.model_copy(update={
+    "packing": config.packing.model_copy(update={"observation_timeline": False})
+})
+```
+
+```text
+- [2026-11-02 20:14:13] "A photo of a hand holding up three fingers."
+- [2026-11-02 20:14:18] "A photo of a hand holding up four fingers."
+- [2026-11-02 20:14:21] [newest] "A photo of a hand holding up five fingers."
+```
+
+- An observation with an event time shows that time to the second, even when
+  its text begins with the date.
+- The observations in each section are listed oldest first, in the places
+  they hold, so every other record keeps its place. Observations with the same
+  time keep their order. `response.bundle.sections` lists the records in the
+  order the context shows them.
+- The observations with the latest time in the whole context are marked
+  `[newest]`, after the time. The marked line is counted against the budget.
+- When a packed record is an observation, the header adds one sentence that
+  describes the times, the order and the marker.
+- With `fold_repeated_text`, an observation folds only into another
+  observation, so its time and place stay in the context; a claim whose text
+  the observation shows still folds into it.
+- Context ablation renders the counterfactual with the timeline, so the newest
+  remaining observation is the one marked, and keeps the baseline's header.
+
+A context without observations, such as conversation turns, is unchanged, and
+`false` restores the earlier reader lines exactly. Only the reader format
+changes; the auditable and compact formats already carry full timestamps and
+ignore the setting. Claims that `ingest()` extracts from an observation carry no
+`modality`, so they keep minute times and their own places. The setting is not
+tagged as a hypothesis: it changes how observations read, not which records are
+packed, except that the marker and the header sentence take a few tokens.
+
+- Configuration dumps leave the setting out when it is on, the default, so they
+  keep their bytes; `false` appears as `"observation_timeline": false`.
+- A bundle records `observation_timeline: true` only when the timeline ordered
+  an observation in its context, so other bundles keep their bytes.
+- A receipt records `"observation_timeline": false` only when the setting was
+  off and the reader context held an observation, the one case where it changes
+  the context. Every other receipt leaves it out, so a receipt of a context
+  without observations keeps its bytes whatever the setting. A receipt without
+  the field reads as on; one written before the option existed for a context
+  that held an observation therefore reads as on although its context was not a
+  timeline, and its `context_sha256` is the record of what was shown. The
+  schema version does not change.
+
+The owner turned the setting on by default on 2026-11-02 without the fast-tier
+evidence the alpha channel requires, and no probe or benchmark was run on it.
+The LoCoMo and LongMemEval-S benchmark packs hold no observations: a scan of
+the 10 LoCoMo gate packs and the 500 LongMemEval-S master packs found no record
+with a `modality`. Their contexts are therefore unchanged, and the packing
+line-count digests (`tests/test_packing_line_counts.py`, which pack with the
+product defaults) still match.
+
 ## Default retrieval settings
 
 `PRMEConfig()` retrieves with these settings, which changed after v0.12.0
@@ -458,6 +528,7 @@ The fold does not change `store()` memories, which have no statements.
 | `packing.session_context_rank_fusion_score_decay` (`PRME_PACKING__SESSION_CONTEXT_RANK_FUSION_SCORE_DECAY`) | `0.6` | None (0.85, the weighted decay) |
 | `packing.fold_repeated_text` (`PRME_PACKING__FOLD_REPEATED_TEXT`), since 2026-10-06 | `true` | `false` |
 | `packing.session_context_skip_entities` (`PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES`), alpha channel since 0.16.0a4 (2026-10-19) | `true` in `PRMEConfig` | `false` |
+| `packing.observation_timeline` (`PRME_PACKING__OBSERVATION_TIMELINE`), since 2026-11-02 by the owner's decision, without the fast-tier evidence | `true`, also in a `PackingConfig` built in code | did not exist (observations read in relevance order, to the minute) |
 
 The settings changed in two steps on 2026-09-25, and each step passed the
 project's default-change test twice on the DeepSeek answer track. The first

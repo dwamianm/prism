@@ -9,7 +9,7 @@ from uuid import UUID
 from prme.models.credit import CreditTier, ContextAblation, ContextPresenceCredit
 from prme.models.relevance import AnswerCitationRecord
 from prme.retrieval.models import MemoryBundle
-from prme.retrieval.packing import _render_sections, reader_shows_speaker
+from prme.retrieval.packing import _render_sections, reader_shows_observations, reader_shows_speaker
 from prme.retrieval.tokenization import count_tokens
 
 
@@ -57,6 +57,8 @@ def ablate_context(
     sections = {section: candidates for section, candidates in sections.items() if candidates}
     # Re-render in the bundle's own format, references and header, so the
     # counterfactual differs from the baseline only by the removed entries.
+    # With the observation timeline, the newest remaining observation is the
+    # one marked [newest].
     context_refs = {
         node_id: reference for reference, node_id in snapshot.context_references.items()
     }
@@ -67,6 +69,8 @@ def ablate_context(
         context_format=snapshot.context_format,
         context_refs=context_refs or None,
         speaker_header=reader_shows_speaker(snapshot.sections),
+        observation_timeline=snapshot.observation_timeline,
+        observation_header=reader_shows_observations(snapshot.sections),
     )
     if snapshot.tokenizer is None:
         raise ValueError("Context ablation requires the bundle tokenizer")
@@ -94,6 +98,7 @@ def ablate_context(
             for reference, node_id in snapshot.context_references.items()
             if node_id not in remove_set
         },
+        observation_timeline=snapshot.observation_timeline,
     )
     return ContextAblation(
         removed_node_ids=removed,

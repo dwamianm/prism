@@ -680,6 +680,14 @@ def make_receipt(*, request_id: UUID, user_id: str, query: str,
         receipt_packing = receipt_packing.model_copy(update={"session_context_packing": None})
     if packing.fold_repeated_text and not folded:
         receipt_packing = receipt_packing.model_copy(update={"fold_repeated_text": False})
+    if not packing.observation_timeline:
+        from prme.retrieval.packing import reader_shows_observations
+
+        # The observation timeline changes a context only when a reader context
+        # holds an observation. Otherwise the receipt records the default (on,
+        # which dumps omit), so it keeps its bytes whatever the setting.
+        if not (packing.context_format == "reader" and reader_shows_observations(bundle.sections)):
+            receipt_packing = receipt_packing.model_copy(update={"observation_timeline": True})
     has_rank_assignment = any(
         operation.kind == "neural_rank_assignment"
         for item in provenance.values() for operation in item.adjustments

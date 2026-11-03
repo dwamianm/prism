@@ -121,6 +121,8 @@ DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
     # Alpha channel, 0.16.0a4: entities neither start a session expansion nor
     # inherit a score (the fast tiers and the mid tier passed it alone).
     "session_context_skip_entities": True,
+    # packing.observation_timeline is on in its field default (2026-11-02, by
+    # the owner's decision), so it needs no entry here.
 }
 
 
@@ -513,7 +515,9 @@ class PackingConfig(BaseModel):
     defaults over them (``DEFAULT_PACKING_SETTINGS``: the reader format,
     balanced ordering, a 0.6 rank fusion session decay and each source text
     packed once); to change one setting and keep those, copy it with
-    ``config.packing.model_copy(update=...)``.
+    ``config.packing.model_copy(update=...)``. ``observation_timeline`` is
+    the exception: its field default is on (2026-11-02), and it is omitted
+    from dumps when on.
     """
 
     model_config = ConfigDict(allow_inf_nan=False)
@@ -794,6 +798,34 @@ class PackingConfig(BaseModel):
             "by default (DEFAULT_PACKING_SETTINGS) since 2026-10-19, in the "
             "alpha channel, on the fast gate; a PackingConfig built in code "
             "keeps False. [HYPOTHESIS]"
+        ),
+    )
+    # On by default in the field itself, so a PackingConfig built in code is on
+    # too (the owner's decision of 2026-11-02), and omitted when on, so
+    # configurations and receipts keep the bytes they had before it existed. A
+    # receipt records False only when an observation was packed in the reader
+    # format, the one case where the setting changes the context (make_receipt).
+    observation_timeline: bool = Field(
+        default=True,
+        exclude_if=lambda value: value,
+        description=(
+            "Show photo and video frame observations as a timeline in the "
+            "reader context (dwamianm/prism#386). Camera frames a few seconds "
+            "apart otherwise show the same minute and appear in relevance "
+            "order, so a reader cannot tell which one is newest. When True, "
+            "a record whose metadata.modality is 'photo' or 'video_frame' "
+            "(what prme.vision.observe stores) and that has an event time "
+            "shows that time to the second, even when its text begins with "
+            "the date; the observations in each section are listed oldest "
+            "first, in the places they hold, so other records keep theirs; "
+            "the observations with the latest event time in the context are "
+            "tagged [newest]; and the header says so. A context without "
+            "observations is unchanged. Applies only to "
+            "context_format='reader': the auditable and compact formats "
+            "already show full timestamps and ignore it. On by default, in "
+            "PRMEConfig and in a PackingConfig built in code, since "
+            "2026-11-02 by the owner's decision, without the fast-tier "
+            "evidence; False restores the earlier reader lines exactly."
         ),
     )
     episode_context_top_k: int = Field(

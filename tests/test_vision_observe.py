@@ -285,6 +285,25 @@ async def test_photo_becomes_one_tool_event_with_provenance_and_a_thumbnail(tmp_
         assert "$12,500" in response.bundle.render()
 
 
+async def test_photos_seconds_apart_read_as_a_timeline_by_default(tmp_path, vision):
+    """packing.observation_timeline (issue #386, on by default): the bundle's own context gives their order."""
+    from prme.retrieval.packing import reader_text
+
+    async with MemoryEngine.open(directory_config(tmp_path / "pack")) as engine:
+        for seconds, color in ((0, RED), (2, GREEN), (5, BLUE)):
+            path = tmp_path / f"frame-{seconds}.jpg"
+            slide(color).save(path, quality=90)
+            await engine.observe(path, user_id=USER, captured_at=START + timedelta(seconds=seconds))
+        response = await engine.retrieve("what is on the screen", user_id=USER, token_budget=2000)
+    context = response.bundle.rendered_context
+    assert [line for line in context.splitlines() if line.startswith("- ")] == [
+        f"- [2026-10-14 10:00:00] {reader_text(DESCRIPTIONS[RED])}",
+        f"- [2026-10-14 10:00:02] {reader_text(DESCRIPTIONS[GREEN])}",
+        f"- [2026-10-14 10:00:05] [newest] {reader_text(DESCRIPTIONS[BLUE])}",
+    ]
+    assert "listed oldest first in each section; the newest is marked [newest]." in context
+
+
 async def test_photo_bytes_use_the_given_name_and_no_path(tmp_path, photo, vision):
     async with MemoryEngine.open(directory_config(tmp_path / "pack")) as engine:
         ids = await engine.observe(photo.read_bytes(), user_id=USER, captured_at=START, source_name="scan.jpg",
