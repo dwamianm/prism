@@ -135,7 +135,9 @@ order, each cheaper than the next stage it protects:
    same way (dwamianm/prism#390): the prompt quotes visible text but not what
    the model counts, and with the pack's default embedding descriptions that
    differ only in "two fingers" and "three fingers" scored 0.95 to 0.99, so a
-   held count was dropped as a repeat.
+   held count was dropped as a repeat; prompt version 3's numerals ("3 raised
+   fingers") scored 0.98. Number words and numerals both read as digits, so
+   the same counts written either way still compare equal.
 
 The pixel filter is the weak point. A handheld camera on text can produce
 noise close to a real text change, and a slow pan over scenery produces a

@@ -255,6 +255,17 @@ class TestStatedCounts:
         same = DescriptionKey.of("A hand is held up, two fingers raised.", [1.0, 0.0])
         assert is_repeat(previous, same, threshold=0.93) == (True, 1.0)
 
+    def test_prompt_version_3_counts_in_words_and_numerals_compare_as_digits(self):
+        # Version 3 (dwamianm/prism#388) states counts; qwen3.5:9b wrote them in words, gemma4:26b in numerals.
+        words = "Each hand shows five fingers fully extended, ten fingers total when counting both hands together."
+        numerals = "Each hand shows 5 raised fingers, 10 raised fingers in total."
+        assert stated_counts(words) == stated_counts(numerals) == frozenset({"5", "10"})
+        nine = "The left hand shows 5 raised fingers and the right hand 4, 9 raised fingers in total."
+        assert is_repeat(DescriptionKey.of(words, [1.0, 0.0]), DescriptionKey.of(nine, [1.0, 0.0]),
+                         threshold=0.0) == (False, None)
+        assert is_repeat(DescriptionKey.of(words, [1.0, 0.0]), DescriptionKey.of(numerals, [1.0, 0.0]),
+                         threshold=0.93)[0]
+
 
 # --- through the engine ----------------------------------------------------------------
 
@@ -275,8 +286,9 @@ class CountingVision:
 
     model_name = "fake/counting-1"
 
-    def __init__(self, *, quoted: bool = False) -> None:
+    def __init__(self, *, quoted: bool = False, numerals: bool = False) -> None:
         self.quoted = quoted
+        self.numerals = numerals  # prompt version 3 asks for each count as a numeral
         self.counts: list[int] = []
         self.gate: asyncio.Event | None = None
         self.fail: str | None = None
@@ -288,6 +300,9 @@ class CountingVision:
             raise VisionError(self.fail)
         count = fingers_in(image)
         self.counts.append(count)
+        if self.numerals:
+            return (f"This is a photo of a desk with a laptop, a red ball and a white note, and a hand held up in "
+                    f"front of it. The hand shows {count} raised fingers.")
         stated = f'"{count} fingers"' if self.quoted else f"{NUMBERS[count]} fingers"
         return (f"This is a photo of a desk with a laptop, a red ball and a white note. A hand is held up in front "
                 f"of the desk with {stated} raised.")
@@ -368,7 +383,9 @@ async def test_noise_exposure_and_shake_keep_only_the_first_frame(tmp_path, coun
     assert counting.counts == [0]
 
 
-async def test_counts_that_differ_only_in_the_number_are_both_kept(tmp_path, counting, words):
+@pytest.mark.parametrize("numerals", [False, True], ids=["words", "numerals"])
+async def test_counts_that_differ_only_in_the_number_are_both_kept(tmp_path, counting, words, numerals):
+    counting.numerals = numerals
     rng = np.random.default_rng(2)
     two, three = held(desk(fingers=2), 2.0, rng), held(desk(fingers=3), 2.0, rng)
     embedding = WordEmbedding()
