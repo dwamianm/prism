@@ -325,6 +325,26 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "vision.enabled is true",
         bool,
     ),
+    "vision.stream_settle_seconds": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.stream_settle_timeout_seconds": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.stream_moving_gap_seconds": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
+    "vision.stream_heartbeat_seconds": (
+        "vision.enabled",
+        "vision.enabled is true",
+        bool,
+    ),
 }
 
 

@@ -158,6 +158,8 @@ if TYPE_CHECKING:
     from prme.retrieval.config import ScoringWeights
     from prme.retrieval.models import RetrievalResponse
     from prme.retrieval.pipeline import RetrievalPipeline
+    from prme.vision.observe import ObservationRecord
+    from prme.vision.stream import FrameResult, ObserveSessions
 
 from prme.organizer.maintenance import MaintenanceRunner
 from prme.storage.durable_queue import DurableMaterializationQueue
@@ -462,6 +464,8 @@ class MemoryEngine:
         # already-observed check and the admission of a frame are not raced.
         self._vision_provider_instance: Any = None
         self._observe_lock = asyncio.Lock()
+        # Live observe sessions (observe_frame()), made on the first frame.
+        self._observe_sessions: ObserveSessions | None = None
 
         # Session turn tracking for automatic Q-A pairing.
         # Maps (user_id, session_id, scope) ->
@@ -2461,6 +2465,84 @@ class MemoryEngine:
                 report=report,
             )
         return report.event_ids
+
+    async def observe_frame(
+        self,
+        frame: "bytes | str | os.PathLike[str]",
+        *,
+        user_id: str,
+        session_id: str,
+        captured_at: datetime | None = None,
+        metadata: dict | None = None,
+        scope: Scope = Scope.PERSONAL,
+        wait: bool = True,
+        policy: PrivacyPolicy | None = None,
+    ) -> FrameResult:
+        """Offer one frame of a live camera or screen to an observe session; return what the session did.
+
+        Send every sampled frame (the camera demo sends two a second) with
+        the same *session_id*: the session keeps the keyframe state between
+        frames and keeps a frame only when it changed from the last kept
+        frame and has held still for ``vision.stream_settle_seconds``, when
+        a picture that never holds still has kept changing for
+        ``vision.stream_settle_timeout_seconds`` (at most once every
+        ``vision.stream_moving_gap_seconds``), or as a heartbeat of an
+        unchanged picture every ``vision.stream_heartbeat_seconds``. The
+        result's ``decision`` says which: ``"first"``, ``"changed"``,
+        ``"moving"`` or ``"heartbeat"`` for a kept frame, ``"settling"``,
+        ``"unchanged"``, ``"cooldown"`` or ``"busy"`` for one that is not,
+        with the change scores and the threshold behind it
+        (:mod:`prme.vision.stream`).
+
+        A kept frame becomes an observation as a photo does in
+        :meth:`observe`: described by the vision model, dropped when its
+        description repeats the session's last kept frame's, otherwise
+        admitted with a thumbnail, role ``tool``, *captured_at* (else the
+        current time) as ``event_time``, *session_id* as the session and
+        ``metadata.kept_reason`` set to the decision. *frame* is one image
+        (JPEG, PNG, WebP, GIF, BMP or TIFF) as bytes or a path. Sessions are
+        kept per *user_id*, *scope* and *session_id*; *captured_at* is the
+        session's clock and should not go backwards.
+
+        With *wait* (the default) the call returns once a kept frame is
+        admitted or dropped, and ``result.observation`` is final. With
+        ``wait=False`` it returns as soon as the frame is decided, a kept
+        frame is described in the background in the order frames were kept,
+        and ``await result.observed()`` or :meth:`end_observe_session`
+        waits for it. A kept frame whose description or admission failed
+        has ``observation.status == "failed"`` and the error; the session
+        goes on. :meth:`close` cancels kept frames not yet described.
+
+        Requires ``vision.enabled`` and a local DuckDB pack, as
+        :meth:`observe` does; raises
+        :class:`prme.vision.UnsupportedSourceError` for a frame that is not
+        an image.
+        """
+        if self._privacy.selected(policy):
+            raise PrivacyDenied("privacy_unsupported_input")
+        if self._closed:
+            raise RuntimeError("The engine is closed")
+        if self._observe_sessions is None:
+            from prme.vision.stream import ObserveSessions
+
+            self._observe_sessions = ObserveSessions(self)
+        return await self._observe_sessions.observe_frame(
+            frame, user_id=user_id, session_id=session_id, captured_at=captured_at, metadata=metadata,
+            scope=scope, wait=wait,
+        )
+
+    async def end_observe_session(
+        self, session_id: str, *, user_id: str, scope: Scope = Scope.PERSONAL,
+    ) -> list[ObservationRecord]:
+        """Wait for a live session's kept frames to be observed, then forget the session.
+
+        Returns the observation records of the kept frames it waited for, in
+        the order they were kept; an unknown session returns an empty list.
+        The session's next frame starts it again as a first frame.
+        """
+        if self._observe_sessions is None:
+            return []
+        return await self._observe_sessions.end((user_id, scope.value, session_id))
 
     def vision_provider(self) -> Any:
         """The configured vision provider, built on first use from ``config.vision``."""
@@ -4782,6 +4864,14 @@ class MemoryEngine:
         if self._closed:
             return
         self._closed = True
+
+        # Kept live frames not yet described are cancelled (observe_frame()).
+        observe_sessions = getattr(self, "_observe_sessions", None)
+        if observe_sessions is not None:
+            try:
+                await observe_sessions.close()
+            except Exception:
+                logger.warning("Error closing live observe sessions", exc_info=True)
 
         # Let any scheduled maintenance pass finish before the write queue
         # and connections it uses go away (issue #62).

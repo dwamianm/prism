@@ -35,7 +35,7 @@ from prme.ingestion.errors import ExtractionError
 from prme.storage._threading import run_to_completion
 from prme.types import Scope
 from prme.vision import frames as frames_module
-from prme.vision.describe import DESCRIBE_PROMPT_VERSION, describe_prompt, quoted_text
+from prme.vision.describe import DESCRIBE_PROMPT_VERSION, describe_prompt
 from prme.vision.errors import ObservationError, VisionDisabledError, VisionError
 from prme.vision.keyframes import KeyframeDecision, select_keyframes, thumbnail_bytes
 from prme.vision.repeat import DescriptionKey, is_repeat
@@ -326,7 +326,7 @@ async def _description_key(engine: MemoryEngine, description: str, report: Obser
             f"The pack could not embed a description of {report.source}: {exc}; "
             f"{report.admitted} keyframes were admitted before it", report=report,
         ) from exc
-    return DescriptionKey.build(quoted_text(description), vector)
+    return DescriptionKey.of(description, vector)
 
 
 async def _admit(

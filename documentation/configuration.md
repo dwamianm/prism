@@ -90,8 +90,9 @@ The extraction provider is used by `ingest()` and `ingest_batch()`, and by `retr
 ## Visual memory (RFC-0018)
 
 Off by default. `observe()` and `prme observe` describe photos and videos with a
-local vision model and store the descriptions as events; nothing here changes a
-pack that never observes.
+local vision model and store the descriptions as events, and `observe_frame()`
+does the same for a live camera or screen, one frame at a time; nothing here
+changes a pack that never observes.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -110,13 +111,23 @@ pack that never observes.
 | `PRME_VISION__MIN_CHANGE_THRESHOLD` | `0.30` | Lowest calibrated change threshold. One more raised finger on a fixed synthetic camera scored 0.34 to 0.48; noise, shake and a 12% exposure step at most 0.07. Provisional |
 | `PRME_VISION__NOISE_MULTIPLIER` | `5.0` | The calibrated threshold is this many times the median still-frame score. Provisional |
 | `PRME_VISION__MAX_GAP_SECONDS` | `30.0` | A keyframe at least this often (heartbeat) |
-| `PRME_VISION__REPEAT_SIMILARITY` | `0.93` | Description cosine similarity, with the same quoted text, that drops a repeat |
+| `PRME_VISION__REPEAT_SIMILARITY` | `0.93` | Description cosine similarity, with the same quoted text and the same counts stated outside quotes, that drops a repeat. A different count ("two fingers", "three fingers") always keeps the frame (dwamianm/prism#390) |
 | `PRME_VISION__THUMBNAIL_WIDTH` | `320` | Thumbnail width in pixels |
 | `PRME_VISION__KEEP_THUMBNAILS` | `true` | Keep a thumbnail per observation in the pack's `blobs` table |
+| `PRME_VISION__STREAM_SETTLE_SECONDS` | `0.5` | `observe_frame()`: a live frame that changed from the session's last kept frame is kept once the picture has held still this long (dwamianm/prism#390). The camera demo's 1 second was too long for the owner to hold each pose. Provisional |
+| `PRME_VISION__STREAM_SETTLE_TIMEOUT_SECONDS` | `6.0` | A live picture that keeps changing this long without holding still is kept anyway (decision `moving`). Provisional |
+| `PRME_VISION__STREAM_MOVING_GAP_SECONDS` | `10.0` | The least time between two `moving` keeps; a change that holds still is kept at once regardless. Provisional |
+| `PRME_VISION__STREAM_HEARTBEAT_SECONDS` | `60.0` | A live session keeps an unchanged picture this often (decision `heartbeat`); the repeat filter drops it when its description repeats. Unmeasured on real cameras. Provisional |
+| `PRME_VISION__STREAM_MAX_PENDING` | `10` | Kept live frames one session may have waiting to be described; past this a frame is answered `busy` |
+| `PRME_VISION__STREAM_MAX_SESSIONS` | `16` | Live sessions an engine keeps state for; a new one replaces the least recently used session with nothing waiting |
+| `PRME_VISION__STREAM_IDLE_SECONDS` | `300.0` | A live session with no frame for this long is forgotten; its next frame starts it again |
 
 Video needs `ffmpeg` on the path; images do not. A HEIC, HEIF or AVIF photo
-needs the `pillow-heif` package. `observe()` needs a local DuckDB pack; the
-PostgreSQL backend is not supported in this release.
+needs the `pillow-heif` package. `observe()` and `observe_frame()` need a local
+DuckDB pack; the PostgreSQL backend is not supported in this release. The live
+session settings are on by the owner's decision of 2026-11-02 to turn new
+features on by default; they act only for a caller of `observe_frame()`, so
+`observe()` and a pack that never uses live sessions are unchanged.
 
 ## Extracted claims (`ingest()`)
 

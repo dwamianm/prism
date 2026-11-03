@@ -138,8 +138,10 @@ class VisionConfig(_ProjectSettings):
     ``observe()`` and ``prme observe`` turn a photo or a saved video into
     keyframes, ask a local vision model for a facts-first description of each,
     and admit every description as an ordinary event with the capture clock as
-    its ``event_time``. Everything here is off by default: a pack that never
-    observes is byte for byte what it is without this configuration.
+    its ``event_time``; ``observe_frame()`` does the same for a live camera or
+    screen, one frame at a time, with the ``stream_*`` settings. Everything
+    here is off by default: a pack that never observes is byte for byte what
+    it is without this configuration.
     """
 
     enabled: bool = Field(
@@ -254,6 +256,72 @@ class VisionConfig(_ProjectSettings):
     max_gap_seconds: float = Field(
         default=30.0, gt=0, allow_inf_nan=False,
         description="A keyframe is kept at least this often regardless of change (heartbeat)",
+    )
+    # A live observe session (observe_frame(), dwamianm/prism#390). The
+    # values are the camera demo's watch gate, where the owner tested them on
+    # 2026-11-02; on by the owner's decision of that day to turn new features
+    # on by default. A session only exists once a caller sends it frames.
+    stream_settle_seconds: float = Field(
+        default=0.5, ge=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] A live frame that changed from the session's last kept "
+            "frame is kept once the picture has held still this long (two frames "
+            "in a row within the change threshold of each other), so a hand on its "
+            "way is not kept mid-motion but every pose held for a moment is. The "
+            "camera demo first used 1 second, which the owner found too long to "
+            "hold each pose"
+        ),
+    )
+    stream_settle_timeout_seconds: float = Field(
+        default=6.0, gt=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] A live picture that has kept changing this long without "
+            "holding still (a person who never stops moving) is kept anyway, at "
+            "most once every stream_moving_gap_seconds"
+        ),
+    )
+    stream_moving_gap_seconds: float = Field(
+        default=10.0, ge=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] The least time between two keeps of a live picture that "
+            "never holds still, so constant motion cannot flood the memory. A "
+            "change that holds still is kept at once, however recent the last "
+            "keep: the camera demo's first version kept at most one frame every "
+            "10 seconds and lost every finger count in between"
+        ),
+    )
+    stream_heartbeat_seconds: float = Field(
+        default=60.0, gt=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] A live session keeps a frame of an unchanged picture at "
+            "least this often, so a change too small for the pixel filter is "
+            "caught within one heartbeat; the description repeat filter drops it "
+            "when nothing changed. Video files use max_gap_seconds. Unmeasured on "
+            "real cameras: a minute is one vision call a minute on a still scene"
+        ),
+    )
+    stream_max_pending: int = Field(
+        default=10, ge=1,
+        description=(
+            "Kept live frames one session may have waiting to be described; a "
+            "frame the session would keep beyond this is answered 'busy' and kept "
+            "on a later frame instead"
+        ),
+    )
+    stream_max_sessions: int = Field(
+        default=16, ge=1,
+        description=(
+            "Live observe sessions an engine keeps state for; a new session "
+            "replaces the least recently used one with no frame waiting to be "
+            "described"
+        ),
+    )
+    stream_idle_seconds: float = Field(
+        default=300.0, gt=0, allow_inf_nan=False,
+        description=(
+            "A live observe session that receives no frame for this long is "
+            "forgotten; its next frame starts it again as a first frame"
+        ),
     )
     repeat_similarity: float = Field(
         default=0.93, ge=0.0, le=1.0, allow_inf_nan=False,

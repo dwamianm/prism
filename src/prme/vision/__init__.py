@@ -16,6 +16,10 @@ Phase 1 covers saved photos and video files through
   kept frame's.
 - :mod:`prme.vision.observe` runs them in order and admits each description
   as an event.
+- :mod:`prme.vision.stream` is a live observe session
+  (:meth:`prme.storage.engine.MemoryEngine.observe_frame`): frames of a
+  camera or screen one at a time, with the keyframe, settle and repeat
+  state kept per session (dwamianm/prism#390).
 
 Everything is off until ``vision.enabled`` is set (RFC-0018, "Public surface").
 """
@@ -29,9 +33,11 @@ from prme.vision.errors import (
 )
 from prme.vision.observe import ObservationRecord, ObservationReport, observe_source
 from prme.vision.provider import OllamaVisionProvider, VisionProvider, create_vision_provider
+from prme.vision.stream import FrameResult
 
 __all__ = [
     "FrameDecodeError",
+    "FrameResult",
     "ObservationError",
     "ObservationRecord",
     "ObservationReport",

@@ -19,8 +19,9 @@ one more raised finger (0.34 or more), while a hand-held recording or a pan,
 whose still frames score far more, keeps the configured threshold. With
 calibration off, selection is the 0.16.1 policy exactly: :func:`frame_change`
 against a fixed ``threshold``. :class:`KeyframePolicy` holds the state of one
-video, or of one camera session, so a caller that receives frames one at a
-time can keep one per session.
+video, or of one camera session: a live observe session
+(:mod:`prme.vision.stream`) keeps one per session and scores each frame
+without keeping it until the picture has held still.
 
 The third filter, dropping a frame whose description repeats the previous
 kept frame's, needs the vision model's output and lives in
@@ -230,9 +231,12 @@ class KeyframePolicy:
 
     It holds the last kept frame's signature and time and, when calibrated,
     the session's :class:`NoiseFloor`. :func:`select_keyframes` uses one per
-    video; a caller that receives camera frames one at a time can keep one
-    per session. With ``calibrate`` off the decision is the 0.16.1 policy
-    exactly: :func:`frame_change` against the fixed *threshold*.
+    video through :meth:`decide`; a live observe session
+    (:class:`prme.vision.stream.StreamPolicy`) keeps one per session and uses
+    :meth:`change`, :meth:`still` and :meth:`keep`, so it can wait for the
+    picture to hold still before it keeps a frame. With ``calibrate`` off
+    the decision is the 0.16.1 policy exactly: :func:`frame_change` against
+    the fixed *threshold*.
     """
 
     def __init__(self, *, threshold: float, max_gap: float, calibrate: bool = True,
@@ -249,24 +253,45 @@ class KeyframePolicy:
         """The threshold the next frame is compared with."""
         return self._threshold if self.noise is None else self.noise.threshold
 
+    @property
+    def last_kept_time(self) -> float | None:
+        """When the last kept frame was sampled, or None before the first."""
+        return None if self._last_signature is None else self._last_time
+
+    def compare(self, reference: np.ndarray, candidate: np.ndarray) -> float:
+        """This policy's change score: :func:`aligned_frame_change` when calibrated, else :func:`frame_change`."""
+        score = frame_change if self.noise is None else aligned_frame_change
+        return round(score(reference, candidate), 3)
+
+    def change(self, signature: np.ndarray) -> float | None:
+        """How much *signature* changed from the last kept frame, or None before the first; nothing is kept."""
+        return None if self._last_signature is None else self.compare(self._last_signature, signature)
+
+    def still(self, change: float) -> None:
+        """Record the score of a frame that stayed under the threshold (the noise floor, when calibrated)."""
+        if self.noise is not None:
+            self.noise.add(change)
+
+    def keep(self, signature: np.ndarray, *, time_s: float) -> None:
+        """Make *signature*, sampled at *time_s* seconds, the last kept frame."""
+        self._last_signature, self._last_time = signature, time_s
+
     def decide(self, signature: np.ndarray, *, index: int, time_s: float) -> KeyframeDecision:
         """Keep or drop the frame with *signature*, sampled at *time_s* seconds."""
         threshold = self.threshold
-        if self._last_signature is None:
-            change, reason = None, "first"
+        change = self.change(signature)
+        if change is None:
+            reason: str | None = "first"
+        elif change >= threshold:
+            reason = "change"
+        elif time_s - self._last_time >= self.max_gap:
+            reason = "heartbeat"
         else:
-            score = frame_change if self.noise is None else aligned_frame_change
-            change = round(score(self._last_signature, signature), 3)
-            if change >= threshold:
-                reason = "change"
-            elif time_s - self._last_time >= self.max_gap:
-                reason = "heartbeat"
-            else:
-                reason = None
-            if self.noise is not None and change < threshold:
-                self.noise.add(change)
+            reason = None
+        if change is not None and change < threshold:
+            self.still(change)
         if reason is not None:
-            self._last_signature, self._last_time = signature, time_s
+            self.keep(signature, time_s=time_s)
         return KeyframeDecision(index=index, time_s=time_s, change=change, kept=reason is not None, reason=reason,
                                 threshold=threshold)
 
