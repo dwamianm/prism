@@ -42,7 +42,7 @@ import ollama
 
 from benchmarks.vision import corpus as corpus_module
 from prme.config import VisionConfig
-from prme.vision.describe import DESCRIBE_PROMPT_VERSION
+from prme.vision.describe import DESCRIBE_PROMPTS
 from prme.vision.frames import decode_video_frames
 from prme.vision.keyframes import select_keyframes
 from prme.vision.observe import ObservationReport, observe_source
@@ -64,12 +64,14 @@ class CachingVisionProvider:
 
     Cache entries are keyed by the frame's SHA-256, the model and the prompt
     version, as the spike's were, so the ``v2`` entries written by the spike
-    runs are reused as long as the prompt text is unchanged.
+    runs are reused as long as the prompt text is unchanged, and each version
+    (``--prompt-version``) has its own entries.
     """
 
-    def __init__(self, model: str, *, host: str) -> None:
+    def __init__(self, model: str, *, host: str, prompt_version: int) -> None:
         self._inner = OllamaVisionProvider(model, base_url=host)
-        self._folder = CACHE / model.replace(":", "_") / f"v{DESCRIBE_PROMPT_VERSION}"
+        self._prompt_version = prompt_version
+        self._folder = CACHE / model.replace(":", "_") / f"v{prompt_version}"
         self._folder.mkdir(parents=True, exist_ok=True)
         self.records: list[dict] = []
 
@@ -87,7 +89,7 @@ class CachingVisionProvider:
         started = time.perf_counter()
         text = await self._inner.describe(image, prompt=prompt)
         record = {"text": text, "seconds": round(time.perf_counter() - started, 2), "model": self.model_name,
-                  "prompt_version": DESCRIBE_PROMPT_VERSION}
+                  "prompt_version": self._prompt_version}
         cached.write_text(json.dumps(record, indent=2) + "\n")
         self.records.append({**record, "cached": False})
         return text
@@ -96,7 +98,8 @@ class CachingVisionProvider:
 def vision_config(args: argparse.Namespace) -> VisionConfig:
     return VisionConfig(enabled=True, model=args.vision_model, base_url=OLLAMA_HOST,
                         extract=args.mode == "ingest", fps=args.fps, change_threshold=args.change_threshold,
-                        max_gap_seconds=args.max_gap, repeat_similarity=args.repeat_similarity)
+                        max_gap_seconds=args.max_gap, repeat_similarity=args.repeat_similarity,
+                        describe_prompt_version=args.prompt_version)
 
 
 def engine_config(pack: Path, extract_model: str, vision: VisionConfig):
@@ -146,7 +149,7 @@ async def build_pack(run: Path, entries: list[tuple[str, Path, datetime]], args:
     if pack.exists():
         shutil.rmtree(pack)
     (pack / "lexical_index").mkdir(parents=True)
-    provider = CachingVisionProvider(args.vision_model, host=OLLAMA_HOST)
+    provider = CachingVisionProvider(args.vision_model, host=OLLAMA_HOST, prompt_version=args.prompt_version)
     reports: list[ObservationReport] = []
     async with MemoryEngine.open(engine_config(pack, args.extract_model, vision_config(args))) as engine:
         # The harness owns the provider so descriptions are cached across runs.
@@ -365,6 +368,8 @@ def main(argv: list[str] | None = None) -> None:
                                   "drops a frame as a repeat of the previous kept frame")
         command.add_argument("--mode", choices=("ingest", "store"), default="ingest")
         command.add_argument("--vision-model", default=defaults.model)
+        command.add_argument("--prompt-version", type=int, choices=sorted(DESCRIBE_PROMPTS),
+                             default=defaults.describe_prompt_version, help="description prompt version")
         command.add_argument("--extract-model", default="prme-qwen3.5:35b-a3b-8k")
         command.add_argument("--reader-model", default="qwen3.5:9b")
         command.add_argument("--judge-model", default="qwen3.5:9b")

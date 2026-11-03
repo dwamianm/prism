@@ -1,0 +1,2537 @@
+{
+  "run": "counts-388",
+  "finished_at": "2026-11-02T17:19:53-06:00",
+  "ollama_version": "0.40.13",
+  "calls": 90,
+  "results": [
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "all": {
+        "frames": 12,
+        "frames_correct": 7,
+        "targets": 14,
+        "targets_correct": 9,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 5,
+        "uncertain_marked": 0,
+        "seconds_mean": 4.48,
+        "seconds_median": 4.14,
+        "probe_needles_found": 19,
+        "probe_needles": 19
+      },
+      "gesture": {
+        "frames": 6,
+        "frames_correct": 1,
+        "targets": 7,
+        "targets_correct": 2,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 5,
+        "uncertain_marked": 0,
+        "seconds_mean": 5.46,
+        "seconds_median": 5.16,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      },
+      "probe": {
+        "frames": 0,
+        "frames_correct": 0,
+        "targets": 0,
+        "targets_correct": 0,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 3.99,
+        "seconds_median": 4.1,
+        "probe_needles_found": 19,
+        "probe_needles": 19
+      },
+      "synthetic": {
+        "frames": 6,
+        "frames_correct": 6,
+        "targets": 7,
+        "targets_correct": 7,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 3.73,
+        "seconds_median": 3.74,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      }
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "all": {
+        "frames": 12,
+        "frames_correct": 12,
+        "targets": 14,
+        "targets_correct": 14,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 1,
+        "seconds_mean": 4.03,
+        "seconds_median": 3.95,
+        "probe_needles_found": 18,
+        "probe_needles": 19
+      },
+      "gesture": {
+        "frames": 6,
+        "frames_correct": 6,
+        "targets": 7,
+        "targets_correct": 7,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 1,
+        "seconds_mean": 4.39,
+        "seconds_median": 4.08,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      },
+      "probe": {
+        "frames": 0,
+        "frames_correct": 0,
+        "targets": 0,
+        "targets_correct": 0,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 4.01,
+        "seconds_median": 4.11,
+        "probe_needles_found": 18,
+        "probe_needles": 19
+      },
+      "synthetic": {
+        "frames": 6,
+        "frames_correct": 6,
+        "targets": 7,
+        "targets_correct": 7,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 3.67,
+        "seconds_median": 3.37,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      }
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "all": {
+        "frames": 12,
+        "frames_correct": 6,
+        "targets": 14,
+        "targets_correct": 8,
+        "targets_wrong": 1,
+        "targets_mixed": 1,
+        "targets_missing": 4,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.09,
+        "seconds_median": 2.13,
+        "probe_needles_found": 18,
+        "probe_needles": 19
+      },
+      "gesture": {
+        "frames": 6,
+        "frames_correct": 1,
+        "targets": 7,
+        "targets_correct": 2,
+        "targets_wrong": 1,
+        "targets_mixed": 0,
+        "targets_missing": 4,
+        "uncertain_marked": 0,
+        "seconds_mean": 1.87,
+        "seconds_median": 1.83,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      },
+      "probe": {
+        "frames": 0,
+        "frames_correct": 0,
+        "targets": 0,
+        "targets_correct": 0,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.24,
+        "seconds_median": 2.17,
+        "probe_needles_found": 18,
+        "probe_needles": 19
+      },
+      "synthetic": {
+        "frames": 6,
+        "frames_correct": 5,
+        "targets": 7,
+        "targets_correct": 6,
+        "targets_wrong": 0,
+        "targets_mixed": 1,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.23,
+        "seconds_median": 2.15,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      }
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "all": {
+        "frames": 12,
+        "frames_correct": 7,
+        "targets": 14,
+        "targets_correct": 9,
+        "targets_wrong": 2,
+        "targets_mixed": 2,
+        "targets_missing": 1,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.03,
+        "seconds_median": 2.12,
+        "probe_needles_found": 19,
+        "probe_needles": 19
+      },
+      "gesture": {
+        "frames": 6,
+        "frames_correct": 3,
+        "targets": 7,
+        "targets_correct": 4,
+        "targets_wrong": 2,
+        "targets_mixed": 1,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 1.77,
+        "seconds_median": 1.74,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      },
+      "probe": {
+        "frames": 0,
+        "frames_correct": 0,
+        "targets": 0,
+        "targets_correct": 0,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.27,
+        "seconds_median": 2.27,
+        "probe_needles_found": 19,
+        "probe_needles": 19
+      },
+      "synthetic": {
+        "frames": 6,
+        "frames_correct": 4,
+        "targets": 7,
+        "targets_correct": 5,
+        "targets_wrong": 0,
+        "targets_mixed": 1,
+        "targets_missing": 1,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.18,
+        "seconds_median": 2.19,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      }
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "all": {
+        "frames": 12,
+        "frames_correct": 6,
+        "targets": 14,
+        "targets_correct": 8,
+        "targets_wrong": 1,
+        "targets_mixed": 1,
+        "targets_missing": 4,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.32,
+        "seconds_median": 2.33,
+        "probe_needles_found": 18,
+        "probe_needles": 19
+      },
+      "gesture": {
+        "frames": 6,
+        "frames_correct": 2,
+        "targets": 7,
+        "targets_correct": 3,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 4,
+        "uncertain_marked": 0,
+        "seconds_mean": 1.94,
+        "seconds_median": 1.94,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      },
+      "probe": {
+        "frames": 0,
+        "frames_correct": 0,
+        "targets": 0,
+        "targets_correct": 0,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.77,
+        "seconds_median": 2.76,
+        "probe_needles_found": 18,
+        "probe_needles": 19
+      },
+      "synthetic": {
+        "frames": 6,
+        "frames_correct": 4,
+        "targets": 7,
+        "targets_correct": 5,
+        "targets_wrong": 1,
+        "targets_mixed": 1,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.48,
+        "seconds_median": 2.54,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      }
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "all": {
+        "frames": 12,
+        "frames_correct": 9,
+        "targets": 14,
+        "targets_correct": 11,
+        "targets_wrong": 1,
+        "targets_mixed": 1,
+        "targets_missing": 1,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.25,
+        "seconds_median": 2.3,
+        "probe_needles_found": 18,
+        "probe_needles": 19
+      },
+      "gesture": {
+        "frames": 6,
+        "frames_correct": 6,
+        "targets": 7,
+        "targets_correct": 7,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 1.69,
+        "seconds_median": 1.61,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      },
+      "probe": {
+        "frames": 0,
+        "frames_correct": 0,
+        "targets": 0,
+        "targets_correct": 0,
+        "targets_wrong": 0,
+        "targets_mixed": 0,
+        "targets_missing": 0,
+        "uncertain_marked": 0,
+        "seconds_mean": 3.03,
+        "seconds_median": 2.89,
+        "probe_needles_found": 18,
+        "probe_needles": 19
+      },
+      "synthetic": {
+        "frames": 6,
+        "frames_correct": 3,
+        "targets": 7,
+        "targets_correct": 4,
+        "targets_wrong": 1,
+        "targets_mixed": 1,
+        "targets_missing": 1,
+        "uncertain_marked": 0,
+        "seconds_mean": 2.43,
+        "seconds_median": 2.35,
+        "probe_needles_found": 0,
+        "probe_needles": 0
+      }
+    }
+  ],
+  "frames": [
+    {
+      "id": "balls-3",
+      "targets": [
+        {
+          "what": "red balls",
+          "noun": "balls?|circles?|spheres?|dots?|discs?|disks?|orbs?",
+          "count": 3
+        }
+      ],
+      "group": "synthetic"
+    },
+    {
+      "id": "blocks-5",
+      "targets": [
+        {
+          "what": "blue blocks",
+          "noun": "blocks?|squares?|cubes?|boxes?|tiles?|rectangles?",
+          "count": 5
+        }
+      ],
+      "group": "synthetic"
+    },
+    {
+      "id": "stars-7",
+      "targets": [
+        {
+          "what": "yellow stars",
+          "noun": "stars?",
+          "count": 7
+        }
+      ],
+      "group": "synthetic"
+    },
+    {
+      "id": "triangles-4-circles-2",
+      "targets": [
+        {
+          "what": "green triangles",
+          "noun": "triangles?|pyramids?|cones?",
+          "count": 4
+        },
+        {
+          "what": "orange circles",
+          "noun": "balls?|circles?|spheres?|dots?|discs?|disks?|orbs?|oranges?",
+          "count": 2
+        }
+      ],
+      "group": "synthetic"
+    },
+    {
+      "id": "coins-9",
+      "targets": [
+        {
+          "what": "gold coins",
+          "noun": "coins?|balls?|circles?|spheres?|dots?|discs?|disks?|orbs?|tokens?",
+          "count": 9
+        }
+      ],
+      "group": "synthetic"
+    },
+    {
+      "id": "people-3",
+      "targets": [
+        {
+          "what": "people",
+          "noun": "people|persons?|figures?|individuals|men|humans?|characters?|stick figures?",
+          "count": 3
+        }
+      ],
+      "group": "synthetic"
+    },
+    {
+      "id": "whiteboard-before",
+      "needles": [
+        [
+          "falcon"
+        ],
+        [
+          "3 nov",
+          "nov 3",
+          "november 3",
+          "3 november"
+        ],
+        [
+          "12,500",
+          "12500"
+        ],
+        [
+          "northwind"
+        ],
+        [
+          "priya"
+        ]
+      ],
+      "group": "probe"
+    },
+    {
+      "id": "whiteboard-after",
+      "needles": [
+        [
+          "falcon"
+        ],
+        [
+          "10 nov",
+          "nov 10",
+          "november 10",
+          "10 november"
+        ],
+        [
+          "3 nov",
+          "nov 3",
+          "november 3",
+          "3 november"
+        ],
+        [
+          "crossed",
+          "struck",
+          "strike"
+        ],
+        [
+          "14,000",
+          "14000"
+        ],
+        [
+          "northwind"
+        ],
+        [
+          "priya"
+        ]
+      ],
+      "group": "probe"
+    },
+    {
+      "id": "receipt",
+      "needles": [
+        [
+          "blue bottle"
+        ],
+        [
+          "oakland"
+        ],
+        [
+          "12 oct 2026",
+          "oct 12, 2026",
+          "october 12, 2026",
+          "12 october 2026"
+        ],
+        [
+          "08:41",
+          "8:41"
+        ],
+        [
+          "oat latte"
+        ],
+        [
+          "11.50"
+        ],
+        [
+          "4421"
+        ]
+      ],
+      "group": "probe"
+    },
+    {
+      "id": "gesture-1-index",
+      "group": "gesture",
+      "targets": [
+        {
+          "what": "raised fingers",
+          "noun": "fingers?",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "gesture-2-peace",
+      "group": "gesture",
+      "targets": [
+        {
+          "what": "raised fingers",
+          "noun": "fingers?",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "gesture-3",
+      "group": "gesture",
+      "targets": [
+        {
+          "what": "raised fingers",
+          "noun": "fingers?",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "gesture-4",
+      "group": "gesture",
+      "targets": [
+        {
+          "what": "raised fingers",
+          "noun": "fingers?",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "gesture-5",
+      "group": "gesture",
+      "targets": [
+        {
+          "what": "raised fingers",
+          "noun": "fingers?",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "gesture-10-two-hands",
+      "group": "gesture",
+      "targets": [
+        {
+          "what": "raised fingers",
+          "noun": "fingers?",
+          "count": 10,
+          "per_hand": 5
+        },
+        {
+          "what": "raised hands",
+          "noun": "hands?",
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "per_frame": [
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "balls-3",
+      "group": "synthetic",
+      "wall_seconds": 9.66,
+      "load_seconds": 5.37,
+      "seconds": 4.28,
+      "prompt_tokens": 1103,
+      "output_tokens": 113,
+      "targets": [
+        {
+          "what": "red balls",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "blocks-5",
+      "group": "synthetic",
+      "wall_seconds": 3.32,
+      "load_seconds": 0.0,
+      "seconds": 3.32,
+      "prompt_tokens": 1103,
+      "output_tokens": 75,
+      "targets": [
+        {
+          "what": "blue blocks",
+          "count": 5,
+          "stated": [
+            5
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "stars-7",
+      "group": "synthetic",
+      "wall_seconds": 3.18,
+      "load_seconds": 0.0,
+      "seconds": 3.18,
+      "prompt_tokens": 1103,
+      "output_tokens": 70,
+      "targets": [
+        {
+          "what": "yellow stars",
+          "count": 7,
+          "stated": [
+            7,
+            7
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "triangles-4-circles-2",
+      "group": "synthetic",
+      "wall_seconds": 3.88,
+      "load_seconds": 0.0,
+      "seconds": 3.87,
+      "prompt_tokens": 1103,
+      "output_tokens": 96,
+      "targets": [
+        {
+          "what": "green triangles",
+          "count": 4,
+          "stated": [
+            4
+          ],
+          "status": "correct"
+        },
+        {
+          "what": "orange circles",
+          "count": 2,
+          "stated": [
+            2,
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "coins-9",
+      "group": "synthetic",
+      "wall_seconds": 3.62,
+      "load_seconds": 0.0,
+      "seconds": 3.61,
+      "prompt_tokens": 1103,
+      "output_tokens": 88,
+      "targets": [
+        {
+          "what": "gold coins",
+          "count": 9,
+          "stated": [
+            9
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "people-3",
+      "group": "synthetic",
+      "wall_seconds": 4.14,
+      "load_seconds": 0.0,
+      "seconds": 4.14,
+      "prompt_tokens": 1103,
+      "output_tokens": 108,
+      "targets": [
+        {
+          "what": "people",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "whiteboard-before",
+      "group": "probe",
+      "wall_seconds": 4.13,
+      "load_seconds": 0.0,
+      "seconds": 4.13,
+      "prompt_tokens": 1103,
+      "output_tokens": 107,
+      "probe": {
+        "found": 5,
+        "needles": 5,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "whiteboard-after",
+      "group": "probe",
+      "wall_seconds": 4.11,
+      "load_seconds": 0.0,
+      "seconds": 4.1,
+      "prompt_tokens": 1103,
+      "output_tokens": 106,
+      "probe": {
+        "found": 7,
+        "needles": 7,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "receipt",
+      "group": "probe",
+      "wall_seconds": 3.74,
+      "load_seconds": 0.0,
+      "seconds": 3.74,
+      "prompt_tokens": 755,
+      "output_tokens": 109,
+      "probe": {
+        "found": 7,
+        "needles": 7,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "gesture-1-index",
+      "group": "gesture",
+      "wall_seconds": 4.79,
+      "load_seconds": 0.0,
+      "seconds": 4.79,
+      "prompt_tokens": 283,
+      "output_tokens": 181,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 1,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "gesture-2-peace",
+      "group": "gesture",
+      "wall_seconds": 7.57,
+      "load_seconds": 0.0,
+      "seconds": 7.57,
+      "prompt_tokens": 283,
+      "output_tokens": 294,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 2,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "gesture-3",
+      "group": "gesture",
+      "wall_seconds": 4.52,
+      "load_seconds": 0.0,
+      "seconds": 4.52,
+      "prompt_tokens": 283,
+      "output_tokens": 174,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 3,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "gesture-4",
+      "group": "gesture",
+      "wall_seconds": 6.04,
+      "load_seconds": 0.0,
+      "seconds": 6.04,
+      "prompt_tokens": 283,
+      "output_tokens": 238,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 4,
+          "stated": [
+            4
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "gesture-5",
+      "group": "gesture",
+      "wall_seconds": 4.32,
+      "load_seconds": 0.0,
+      "seconds": 4.32,
+      "prompt_tokens": 283,
+      "output_tokens": 162,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 5,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 2,
+      "frame": "gesture-10-two-hands",
+      "group": "gesture",
+      "wall_seconds": 5.53,
+      "load_seconds": 0.0,
+      "seconds": 5.53,
+      "prompt_tokens": 283,
+      "output_tokens": 215,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 10,
+          "stated": [],
+          "status": "missing"
+        },
+        {
+          "what": "raised hands",
+          "count": 2,
+          "stated": [
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "balls-3",
+      "group": "synthetic",
+      "wall_seconds": 4.38,
+      "load_seconds": 0.0,
+      "seconds": 4.38,
+      "prompt_tokens": 1199,
+      "output_tokens": 112,
+      "targets": [
+        {
+          "what": "red balls",
+          "count": 3,
+          "stated": [
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "blocks-5",
+      "group": "synthetic",
+      "wall_seconds": 3.32,
+      "load_seconds": 0.0,
+      "seconds": 3.32,
+      "prompt_tokens": 1199,
+      "output_tokens": 72,
+      "targets": [
+        {
+          "what": "blue blocks",
+          "count": 5,
+          "stated": [
+            5,
+            5
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "stars-7",
+      "group": "synthetic",
+      "wall_seconds": 3.38,
+      "load_seconds": 0.0,
+      "seconds": 3.38,
+      "prompt_tokens": 1199,
+      "output_tokens": 74,
+      "targets": [
+        {
+          "what": "yellow stars",
+          "count": 7,
+          "stated": [
+            7,
+            7
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "triangles-4-circles-2",
+      "group": "synthetic",
+      "wall_seconds": 3.32,
+      "load_seconds": 0.0,
+      "seconds": 3.32,
+      "prompt_tokens": 1199,
+      "output_tokens": 72,
+      "targets": [
+        {
+          "what": "green triangles",
+          "count": 4,
+          "stated": [
+            4
+          ],
+          "status": "correct"
+        },
+        {
+          "what": "orange circles",
+          "count": 2,
+          "stated": [
+            2,
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "coins-9",
+      "group": "synthetic",
+      "wall_seconds": 3.37,
+      "load_seconds": 0.0,
+      "seconds": 3.36,
+      "prompt_tokens": 1199,
+      "output_tokens": 72,
+      "targets": [
+        {
+          "what": "gold coins",
+          "count": 9,
+          "stated": [
+            9
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "people-3",
+      "group": "synthetic",
+      "wall_seconds": 4.3,
+      "load_seconds": 0.0,
+      "seconds": 4.29,
+      "prompt_tokens": 1199,
+      "output_tokens": 104,
+      "targets": [
+        {
+          "what": "people",
+          "count": 3,
+          "stated": [
+            3,
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "whiteboard-before",
+      "group": "probe",
+      "wall_seconds": 4.12,
+      "load_seconds": 0.0,
+      "seconds": 4.11,
+      "prompt_tokens": 1199,
+      "output_tokens": 103,
+      "probe": {
+        "found": 5,
+        "needles": 5,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "whiteboard-after",
+      "group": "probe",
+      "wall_seconds": 4.32,
+      "load_seconds": 0.0,
+      "seconds": 4.32,
+      "prompt_tokens": 1199,
+      "output_tokens": 112,
+      "probe": {
+        "found": 6,
+        "needles": 7,
+        "missing": [
+          "falcon"
+        ]
+      }
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "receipt",
+      "group": "probe",
+      "wall_seconds": 3.61,
+      "load_seconds": 0.0,
+      "seconds": 3.6,
+      "prompt_tokens": 851,
+      "output_tokens": 105,
+      "probe": {
+        "found": 7,
+        "needles": 7,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "gesture-1-index",
+      "group": "gesture",
+      "wall_seconds": 4.22,
+      "load_seconds": 0.0,
+      "seconds": 4.22,
+      "prompt_tokens": 379,
+      "output_tokens": 155,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 1,
+          "stated": [
+            1,
+            1
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "gesture-2-peace",
+      "group": "gesture",
+      "wall_seconds": 3.96,
+      "load_seconds": 0.0,
+      "seconds": 3.95,
+      "prompt_tokens": 379,
+      "output_tokens": 144,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 2,
+          "stated": [
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "gesture-3",
+      "group": "gesture",
+      "wall_seconds": 5.36,
+      "load_seconds": 0.0,
+      "seconds": 5.36,
+      "prompt_tokens": 379,
+      "output_tokens": 205,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "gesture-4",
+      "group": "gesture",
+      "wall_seconds": 3.77,
+      "load_seconds": 0.0,
+      "seconds": 3.77,
+      "prompt_tokens": 379,
+      "output_tokens": 139,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 4,
+          "stated": [
+            4,
+            4
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "gesture-5",
+      "group": "gesture",
+      "wall_seconds": 3.62,
+      "load_seconds": 0.0,
+      "seconds": 3.62,
+      "prompt_tokens": 379,
+      "output_tokens": 133,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 5,
+          "stated": [
+            5,
+            5
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:9b",
+      "version": 3,
+      "frame": "gesture-10-two-hands",
+      "group": "gesture",
+      "wall_seconds": 5.44,
+      "load_seconds": 0.0,
+      "seconds": 5.44,
+      "prompt_tokens": 379,
+      "output_tokens": 204,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 10,
+          "stated": [
+            5,
+            10
+          ],
+          "status": "correct"
+        },
+        {
+          "what": "raised hands",
+          "count": 2,
+          "stated": [
+            2,
+            2,
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "balls-3",
+      "group": "synthetic",
+      "wall_seconds": 10.61,
+      "load_seconds": 7.97,
+      "seconds": 2.63,
+      "prompt_tokens": 631,
+      "output_tokens": 75,
+      "targets": [
+        {
+          "what": "red balls",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "blocks-5",
+      "group": "synthetic",
+      "wall_seconds": 2.18,
+      "load_seconds": 0.01,
+      "seconds": 2.17,
+      "prompt_tokens": 631,
+      "output_tokens": 90,
+      "targets": [
+        {
+          "what": "blue blocks",
+          "count": 5,
+          "stated": [
+            5,
+            5,
+            2,
+            3
+          ],
+          "status": "mixed"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "stars-7",
+      "group": "synthetic",
+      "wall_seconds": 2.15,
+      "load_seconds": 0.0,
+      "seconds": 2.14,
+      "prompt_tokens": 631,
+      "output_tokens": 90,
+      "targets": [
+        {
+          "what": "yellow stars",
+          "count": 7,
+          "stated": [
+            7,
+            7
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "triangles-4-circles-2",
+      "group": "synthetic",
+      "wall_seconds": 2.14,
+      "load_seconds": 0.0,
+      "seconds": 2.14,
+      "prompt_tokens": 631,
+      "output_tokens": 77,
+      "targets": [
+        {
+          "what": "green triangles",
+          "count": 4,
+          "stated": [
+            4,
+            4
+          ],
+          "status": "correct"
+        },
+        {
+          "what": "orange circles",
+          "count": 2,
+          "stated": [
+            2,
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "coins-9",
+      "group": "synthetic",
+      "wall_seconds": 2.16,
+      "load_seconds": 0.0,
+      "seconds": 2.16,
+      "prompt_tokens": 631,
+      "output_tokens": 76,
+      "targets": [
+        {
+          "what": "gold coins",
+          "count": 9,
+          "stated": [
+            9
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "people-3",
+      "group": "synthetic",
+      "wall_seconds": 2.13,
+      "load_seconds": 0.0,
+      "seconds": 2.13,
+      "prompt_tokens": 631,
+      "output_tokens": 94,
+      "targets": [
+        {
+          "what": "people",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "whiteboard-before",
+      "group": "probe",
+      "wall_seconds": 2.14,
+      "load_seconds": 0.0,
+      "seconds": 2.13,
+      "prompt_tokens": 631,
+      "output_tokens": 95,
+      "probe": {
+        "found": 5,
+        "needles": 5,
+        "missing": []
+      }
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "whiteboard-after",
+      "group": "probe",
+      "wall_seconds": 2.41,
+      "load_seconds": 0.0,
+      "seconds": 2.41,
+      "prompt_tokens": 631,
+      "output_tokens": 108,
+      "probe": {
+        "found": 6,
+        "needles": 7,
+        "missing": [
+          "crossed"
+        ]
+      }
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "receipt",
+      "group": "probe",
+      "wall_seconds": 2.18,
+      "load_seconds": 0.0,
+      "seconds": 2.17,
+      "prompt_tokens": 473,
+      "output_tokens": 137,
+      "probe": {
+        "found": 7,
+        "needles": 7,
+        "missing": []
+      }
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "gesture-1-index",
+      "group": "gesture",
+      "wall_seconds": 1.73,
+      "load_seconds": 0.0,
+      "seconds": 1.72,
+      "prompt_tokens": 310,
+      "output_tokens": 108,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 1,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "gesture-2-peace",
+      "group": "gesture",
+      "wall_seconds": 1.94,
+      "load_seconds": 0.0,
+      "seconds": 1.93,
+      "prompt_tokens": 310,
+      "output_tokens": 124,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 2,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "gesture-3",
+      "group": "gesture",
+      "wall_seconds": 1.84,
+      "load_seconds": 0.0,
+      "seconds": 1.84,
+      "prompt_tokens": 310,
+      "output_tokens": 115,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 3,
+          "stated": [
+            4,
+            4
+          ],
+          "status": "wrong"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "gesture-4",
+      "group": "gesture",
+      "wall_seconds": 2.14,
+      "load_seconds": 0.0,
+      "seconds": 2.13,
+      "prompt_tokens": 310,
+      "output_tokens": 129,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 4,
+          "stated": [
+            4
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "gesture-5",
+      "group": "gesture",
+      "wall_seconds": 1.83,
+      "load_seconds": 0.0,
+      "seconds": 1.83,
+      "prompt_tokens": 310,
+      "output_tokens": 113,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 5,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 2,
+      "frame": "gesture-10-two-hands",
+      "group": "gesture",
+      "wall_seconds": 1.76,
+      "load_seconds": 0.0,
+      "seconds": 1.76,
+      "prompt_tokens": 310,
+      "output_tokens": 111,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 10,
+          "stated": [],
+          "status": "missing"
+        },
+        {
+          "what": "raised hands",
+          "count": 2,
+          "stated": [
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "balls-3",
+      "group": "synthetic",
+      "wall_seconds": 2.25,
+      "load_seconds": 0.0,
+      "seconds": 2.24,
+      "prompt_tokens": 727,
+      "output_tokens": 63,
+      "targets": [
+        {
+          "what": "red balls",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "blocks-5",
+      "group": "synthetic",
+      "wall_seconds": 2.13,
+      "load_seconds": 0.0,
+      "seconds": 2.12,
+      "prompt_tokens": 727,
+      "output_tokens": 75,
+      "targets": [
+        {
+          "what": "blue blocks",
+          "count": 5,
+          "stated": [
+            5,
+            5,
+            3,
+            2
+          ],
+          "status": "mixed"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "stars-7",
+      "group": "synthetic",
+      "wall_seconds": 2.18,
+      "load_seconds": 0.0,
+      "seconds": 2.17,
+      "prompt_tokens": 727,
+      "output_tokens": 74,
+      "targets": [
+        {
+          "what": "yellow stars",
+          "count": 7,
+          "stated": [
+            7,
+            7
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "triangles-4-circles-2",
+      "group": "synthetic",
+      "wall_seconds": 2.03,
+      "load_seconds": 0.0,
+      "seconds": 2.03,
+      "prompt_tokens": 727,
+      "output_tokens": 68,
+      "targets": [
+        {
+          "what": "green triangles",
+          "count": 4,
+          "stated": [
+            4,
+            4
+          ],
+          "status": "correct"
+        },
+        {
+          "what": "orange circles",
+          "count": 2,
+          "stated": [
+            2,
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "coins-9",
+      "group": "synthetic",
+      "wall_seconds": 2.21,
+      "load_seconds": 0.0,
+      "seconds": 2.21,
+      "prompt_tokens": 727,
+      "output_tokens": 73,
+      "targets": [
+        {
+          "what": "gold coins",
+          "count": 9,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "people-3",
+      "group": "synthetic",
+      "wall_seconds": 2.32,
+      "load_seconds": 0.0,
+      "seconds": 2.31,
+      "prompt_tokens": 727,
+      "output_tokens": 97,
+      "targets": [
+        {
+          "what": "people",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "whiteboard-before",
+      "group": "probe",
+      "wall_seconds": 2.4,
+      "load_seconds": 0.0,
+      "seconds": 2.39,
+      "prompt_tokens": 727,
+      "output_tokens": 97,
+      "probe": {
+        "found": 5,
+        "needles": 5,
+        "missing": []
+      }
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "whiteboard-after",
+      "group": "probe",
+      "wall_seconds": 2.27,
+      "load_seconds": 0.0,
+      "seconds": 2.27,
+      "prompt_tokens": 727,
+      "output_tokens": 94,
+      "probe": {
+        "found": 7,
+        "needles": 7,
+        "missing": []
+      }
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "receipt",
+      "group": "probe",
+      "wall_seconds": 2.16,
+      "load_seconds": 0.0,
+      "seconds": 2.15,
+      "prompt_tokens": 569,
+      "output_tokens": 130,
+      "probe": {
+        "found": 7,
+        "needles": 7,
+        "missing": []
+      }
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "gesture-1-index",
+      "group": "gesture",
+      "wall_seconds": 1.75,
+      "load_seconds": 0.0,
+      "seconds": 1.75,
+      "prompt_tokens": 406,
+      "output_tokens": 87,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 1,
+          "stated": [
+            1,
+            1
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "gesture-2-peace",
+      "group": "gesture",
+      "wall_seconds": 1.57,
+      "load_seconds": 0.0,
+      "seconds": 1.57,
+      "prompt_tokens": 406,
+      "output_tokens": 98,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 2,
+          "stated": [
+            2,
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "gesture-3",
+      "group": "gesture",
+      "wall_seconds": 2.06,
+      "load_seconds": 0.0,
+      "seconds": 2.06,
+      "prompt_tokens": 406,
+      "output_tokens": 118,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 3,
+          "stated": [
+            4,
+            4
+          ],
+          "status": "wrong"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "gesture-4",
+      "group": "gesture",
+      "wall_seconds": 1.73,
+      "load_seconds": 0.0,
+      "seconds": 1.73,
+      "prompt_tokens": 406,
+      "output_tokens": 90,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 4,
+          "stated": [
+            4,
+            4,
+            4
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "gesture-5",
+      "group": "gesture",
+      "wall_seconds": 1.81,
+      "load_seconds": 0.0,
+      "seconds": 1.81,
+      "prompt_tokens": 406,
+      "output_tokens": 104,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 5,
+          "stated": [
+            4,
+            4
+          ],
+          "status": "wrong"
+        }
+      ]
+    },
+    {
+      "model": "gemma4:26b",
+      "version": 3,
+      "frame": "gesture-10-two-hands",
+      "group": "gesture",
+      "wall_seconds": 1.69,
+      "load_seconds": 0.0,
+      "seconds": 1.69,
+      "prompt_tokens": 406,
+      "output_tokens": 116,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 10,
+          "stated": [
+            5,
+            5,
+            10
+          ],
+          "status": "mixed"
+        },
+        {
+          "what": "raised hands",
+          "count": 2,
+          "stated": [
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "balls-3",
+      "group": "synthetic",
+      "wall_seconds": 7.75,
+      "load_seconds": 5.55,
+      "seconds": 2.2,
+      "prompt_tokens": 1103,
+      "output_tokens": 59,
+      "targets": [
+        {
+          "what": "red balls",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "blocks-5",
+      "group": "synthetic",
+      "wall_seconds": 2.62,
+      "load_seconds": 0.0,
+      "seconds": 2.62,
+      "prompt_tokens": 1103,
+      "output_tokens": 103,
+      "targets": [
+        {
+          "what": "blue blocks",
+          "count": 5,
+          "stated": [
+            5,
+            3,
+            2
+          ],
+          "status": "mixed"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "stars-7",
+      "group": "synthetic",
+      "wall_seconds": 2.45,
+      "load_seconds": 0.0,
+      "seconds": 2.45,
+      "prompt_tokens": 1103,
+      "output_tokens": 88,
+      "targets": [
+        {
+          "what": "yellow stars",
+          "count": 7,
+          "stated": [
+            7,
+            7
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "triangles-4-circles-2",
+      "group": "synthetic",
+      "wall_seconds": 2.68,
+      "load_seconds": 0.0,
+      "seconds": 2.67,
+      "prompt_tokens": 1103,
+      "output_tokens": 106,
+      "targets": [
+        {
+          "what": "green triangles",
+          "count": 4,
+          "stated": [
+            4
+          ],
+          "status": "correct"
+        },
+        {
+          "what": "orange circles",
+          "count": 2,
+          "stated": [
+            2,
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "coins-9",
+      "group": "synthetic",
+      "wall_seconds": 2.18,
+      "load_seconds": 0.0,
+      "seconds": 2.18,
+      "prompt_tokens": 1103,
+      "output_tokens": 68,
+      "targets": [
+        {
+          "what": "gold coins",
+          "count": 9,
+          "stated": [
+            10
+          ],
+          "status": "wrong"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "people-3",
+      "group": "synthetic",
+      "wall_seconds": 2.77,
+      "load_seconds": 0.0,
+      "seconds": 2.76,
+      "prompt_tokens": 1103,
+      "output_tokens": 111,
+      "targets": [
+        {
+          "what": "people",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "whiteboard-before",
+      "group": "probe",
+      "wall_seconds": 2.38,
+      "load_seconds": 0.0,
+      "seconds": 2.38,
+      "prompt_tokens": 1103,
+      "output_tokens": 83,
+      "probe": {
+        "found": 5,
+        "needles": 5,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "whiteboard-after",
+      "group": "probe",
+      "wall_seconds": 2.77,
+      "load_seconds": 0.0,
+      "seconds": 2.76,
+      "prompt_tokens": 1103,
+      "output_tokens": 110,
+      "probe": {
+        "found": 6,
+        "needles": 7,
+        "missing": [
+          "crossed"
+        ]
+      }
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "receipt",
+      "group": "probe",
+      "wall_seconds": 3.18,
+      "load_seconds": 0.0,
+      "seconds": 3.18,
+      "prompt_tokens": 755,
+      "output_tokens": 181,
+      "probe": {
+        "found": 7,
+        "needles": 7,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "gesture-1-index",
+      "group": "gesture",
+      "wall_seconds": 2.33,
+      "load_seconds": 0.0,
+      "seconds": 2.33,
+      "prompt_tokens": 283,
+      "output_tokens": 147,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 1,
+          "stated": [
+            1
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "gesture-2-peace",
+      "group": "gesture",
+      "wall_seconds": 2.02,
+      "load_seconds": 0.0,
+      "seconds": 2.02,
+      "prompt_tokens": 283,
+      "output_tokens": 132,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 2,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "gesture-3",
+      "group": "gesture",
+      "wall_seconds": 1.72,
+      "load_seconds": 0.0,
+      "seconds": 1.71,
+      "prompt_tokens": 283,
+      "output_tokens": 98,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 3,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "gesture-4",
+      "group": "gesture",
+      "wall_seconds": 1.69,
+      "load_seconds": 0.0,
+      "seconds": 1.69,
+      "prompt_tokens": 283,
+      "output_tokens": 103,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 4,
+          "stated": [],
+          "status": "missing"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "gesture-5",
+      "group": "gesture",
+      "wall_seconds": 1.92,
+      "load_seconds": 0.0,
+      "seconds": 1.92,
+      "prompt_tokens": 283,
+      "output_tokens": 115,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 5,
+          "stated": [
+            5
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 2,
+      "frame": "gesture-10-two-hands",
+      "group": "gesture",
+      "wall_seconds": 1.95,
+      "load_seconds": 0.0,
+      "seconds": 1.95,
+      "prompt_tokens": 283,
+      "output_tokens": 126,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 10,
+          "stated": [],
+          "status": "missing"
+        },
+        {
+          "what": "raised hands",
+          "count": 2,
+          "stated": [
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "balls-3",
+      "group": "synthetic",
+      "wall_seconds": 2.3,
+      "load_seconds": 0.0,
+      "seconds": 2.3,
+      "prompt_tokens": 1199,
+      "output_tokens": 69,
+      "targets": [
+        {
+          "what": "red balls",
+          "count": 3,
+          "stated": [
+            3,
+            3,
+            1
+          ],
+          "status": "mixed"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "blocks-5",
+      "group": "synthetic",
+      "wall_seconds": 2.39,
+      "load_seconds": 0.0,
+      "seconds": 2.39,
+      "prompt_tokens": 1199,
+      "output_tokens": 76,
+      "targets": [
+        {
+          "what": "blue blocks",
+          "count": 5,
+          "stated": [
+            5
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "stars-7",
+      "group": "synthetic",
+      "wall_seconds": 2.3,
+      "load_seconds": 0.0,
+      "seconds": 2.3,
+      "prompt_tokens": 1199,
+      "output_tokens": 73,
+      "targets": [
+        {
+          "what": "yellow stars",
+          "count": 7,
+          "stated": [
+            7,
+            7
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "triangles-4-circles-2",
+      "group": "synthetic",
+      "wall_seconds": 2.56,
+      "load_seconds": 0.0,
+      "seconds": 2.55,
+      "prompt_tokens": 1199,
+      "output_tokens": 86,
+      "targets": [
+        {
+          "what": "green triangles",
+          "count": 4,
+          "stated": [],
+          "status": "missing"
+        },
+        {
+          "what": "orange circles",
+          "count": 2,
+          "stated": [
+            2,
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "coins-9",
+      "group": "synthetic",
+      "wall_seconds": 2.33,
+      "load_seconds": 0.0,
+      "seconds": 2.32,
+      "prompt_tokens": 1199,
+      "output_tokens": 70,
+      "targets": [
+        {
+          "what": "gold coins",
+          "count": 9,
+          "stated": [
+            10
+          ],
+          "status": "wrong"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "people-3",
+      "group": "synthetic",
+      "wall_seconds": 2.73,
+      "load_seconds": 0.0,
+      "seconds": 2.73,
+      "prompt_tokens": 1199,
+      "output_tokens": 103,
+      "targets": [
+        {
+          "what": "people",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "whiteboard-before",
+      "group": "probe",
+      "wall_seconds": 2.9,
+      "load_seconds": 0.0,
+      "seconds": 2.89,
+      "prompt_tokens": 1199,
+      "output_tokens": 116,
+      "probe": {
+        "found": 5,
+        "needles": 5,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "whiteboard-after",
+      "group": "probe",
+      "wall_seconds": 2.88,
+      "load_seconds": 0.0,
+      "seconds": 2.88,
+      "prompt_tokens": 1199,
+      "output_tokens": 115,
+      "probe": {
+        "found": 6,
+        "needles": 7,
+        "missing": [
+          "crossed"
+        ]
+      }
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "receipt",
+      "group": "probe",
+      "wall_seconds": 3.32,
+      "load_seconds": 0.0,
+      "seconds": 3.31,
+      "prompt_tokens": 851,
+      "output_tokens": 189,
+      "probe": {
+        "found": 7,
+        "needles": 7,
+        "missing": []
+      }
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "gesture-1-index",
+      "group": "gesture",
+      "wall_seconds": 2.19,
+      "load_seconds": 0.0,
+      "seconds": 2.19,
+      "prompt_tokens": 379,
+      "output_tokens": 128,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 1,
+          "stated": [
+            1,
+            1
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "gesture-2-peace",
+      "group": "gesture",
+      "wall_seconds": 1.57,
+      "load_seconds": 0.0,
+      "seconds": 1.56,
+      "prompt_tokens": 379,
+      "output_tokens": 92,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 2,
+          "stated": [
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "gesture-3",
+      "group": "gesture",
+      "wall_seconds": 1.67,
+      "load_seconds": 0.0,
+      "seconds": 1.67,
+      "prompt_tokens": 379,
+      "output_tokens": 101,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 3,
+          "stated": [
+            3,
+            3
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "gesture-4",
+      "group": "gesture",
+      "wall_seconds": 1.84,
+      "load_seconds": 0.0,
+      "seconds": 1.84,
+      "prompt_tokens": 379,
+      "output_tokens": 112,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 4,
+          "stated": [
+            4,
+            4
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "gesture-5",
+      "group": "gesture",
+      "wall_seconds": 1.53,
+      "load_seconds": 0.0,
+      "seconds": 1.53,
+      "prompt_tokens": 379,
+      "output_tokens": 89,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 5,
+          "stated": [
+            5
+          ],
+          "status": "correct"
+        }
+      ]
+    },
+    {
+      "model": "qwen3.5:35b-a3b",
+      "version": 3,
+      "frame": "gesture-10-two-hands",
+      "group": "gesture",
+      "wall_seconds": 1.34,
+      "load_seconds": 0.0,
+      "seconds": 1.34,
+      "prompt_tokens": 379,
+      "output_tokens": 73,
+      "targets": [
+        {
+          "what": "raised fingers",
+          "count": 10,
+          "stated": [
+            10,
+            5
+          ],
+          "status": "correct"
+        },
+        {
+          "what": "raised hands",
+          "count": 2,
+          "stated": [
+            2
+          ],
+          "status": "correct"
+        }
+      ]
+    }
+  ]
+}

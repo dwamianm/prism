@@ -166,13 +166,19 @@ class VisionConfig(_ProjectSettings):
         default=180.0, gt=0, allow_inf_nan=False,
         description="Seconds per description call",
     )
-    describe_prompt_version: Literal[2] = Field(
-        default=2,
+    describe_prompt_version: Literal[2, 3] = Field(
+        default=3,
         description=(
-            "Version of the description prompt, recorded on every observation. "
-            "Version 2 (facts-first: a scene line, then one standalone sentence per "
-            "fact with visible text quoted verbatim) is the only one implemented; "
-            "the narrated version 1 of the spike produced no whiteboard facts."
+            "[HYPOTHESIS] Version of the description prompt, recorded on every "
+            "observation. Version 2 is facts-first: a scene line, then one "
+            "standalone sentence per fact with visible text quoted verbatim. "
+            "Version 3 adds counts: when people, hands, raised fingers or repeated "
+            "objects are clearly visible, each count as a numeral, and a count it "
+            "is not sure of marked uncertain (dwamianm/prism#388). Default since "
+            "2026-11-02 by the owner's decision, on a small local evaluation; 2 "
+            "restores the earlier prompt exactly. A new version describes frames "
+            "again as new observations and never rewrites stored ones; the "
+            "narrated version 1 of the spike produced no whiteboard facts."
         ),
     )
     extract: bool = Field(
@@ -243,6 +249,15 @@ class VisionConfig(_ProjectSettings):
     def validate_retry_delays(cls, value: list[float]) -> list[float]:
         if any(delay < 0 for delay in value):
             raise ValueError("extraction_retry_delays must not be negative")
+        return value
+
+    @field_validator("describe_prompt_version", mode="before")
+    @classmethod
+    def read_prompt_version_text(cls, value: Any) -> Any:
+        # An environment variable is text, and a Literal of ints does not
+        # convert "2" to 2 on its own.
+        if isinstance(value, str) and value.strip().isdigit():
+            return int(value.strip())
         return value
 
     model_config = {

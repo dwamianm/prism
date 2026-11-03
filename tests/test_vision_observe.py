@@ -7,8 +7,9 @@ one event of role ``tool`` with the capture clock as ``event_time``, the
 RFC-0018 metadata and a thumbnail in the pack's ``blobs`` table; a video
 becomes one event per scene, with heartbeat repeats dropped by the
 description filter and frame offsets added to the clock; a frame already
-observed by the same model and prompt is skipped; a failed extraction is
-retried before the next frame; thumbnails live inside a single-file pack and
+observed by the same model and prompt is skipped, and a new prompt version
+adds an observation without rewriting the earlier one; a failed extraction
+is retried before the next frame; thumbnails live inside a single-file pack and
 survive ``prme migrate`` and ``prme rebuild``; and ``prme observe`` turns
 vision on for its own run. Video tests need ``ffmpeg`` and are skipped
 without it.
@@ -40,6 +41,7 @@ from prme.storage.blobs import blob_count, has_blobs_table, thumbnail_key
 from prme.storage.pack_tools import migrate_directory_pack, open_pack_read_only
 from prme.types import Scope, SourceType
 from prme.vision import ObservationError, UnsupportedSourceError, VisionDisabledError, VisionError, observe_source
+from prme.vision.describe import COUNT_INSTRUCTION, describe_prompt
 from prme.vision.observe import ADMITTED, ALREADY_OBSERVED, REPEAT
 from tests.test_concurrency import MockExtractionProvider
 from tests.test_durable_ingestion import MockEmbeddingProvider
@@ -127,7 +129,8 @@ def isolated(monkeypatch):
     monkeypatch.setattr("prme.ingestion.extraction.create_extraction_provider", lambda _: MockExtractionProvider())
     monkeypatch.setenv("PRME_ORGANIZER_OPPORTUNISTIC_ENABLED", "false")
     for name in ("PRME_DATABASE_URL", "PRME_PACK_PATH", "PRME_ENCRYPTION_ENABLED", "PRME_ENCRYPTION_KEY",
-                 "PRME_VISION__ENABLED", "PRME_VISION_ENABLED", "PRME_VISION_EXTRACT", "PRME_VISION__EXTRACT"):
+                 "PRME_VISION__ENABLED", "PRME_VISION_ENABLED", "PRME_VISION_EXTRACT", "PRME_VISION__EXTRACT",
+                 "PRME_VISION_DESCRIBE_PROMPT_VERSION", "PRME_VISION__DESCRIBE_PROMPT_VERSION"):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -194,14 +197,15 @@ def test_vision_is_off_by_default_and_loads_from_the_environment(monkeypatch):
     config = PRMEConfig()
     assert config.vision.enabled is False
     assert config.vision.provider == "ollama" and config.vision.extract is True
-    assert config.vision.describe_prompt_version == 2 and config.vision.keep_thumbnails is True
+    assert config.vision.describe_prompt_version == 3 and config.vision.keep_thumbnails is True
     monkeypatch.setenv("PRME_VISION__ENABLED", "true")
     monkeypatch.setenv("PRME_VISION_MODEL", "other:1")
     monkeypatch.setenv("PRME_VISION__EXTRACT", "false")
     loaded = PRMEConfig()
     assert (loaded.vision.enabled, loaded.vision.model, loaded.vision.extract) == (True, "other:1", False)
-    with pytest.raises(ValueError):
-        VisionConfig(describe_prompt_version=1)
+    for version in (1, 4):
+        with pytest.raises(ValueError):
+            VisionConfig(describe_prompt_version=version)
     with pytest.raises(ValueError):
         VisionConfig(extraction_retry_delays=[-1.0])
 
@@ -272,9 +276,10 @@ async def test_photo_becomes_one_tool_event_with_provenance_and_a_thumbnail(tmp_
             "frame_sha256": frame_sha,
             "thumbnail": thumbnail_key(frame_sha),
             "vision_model": "fake/vision-1",
-            "describe_prompt_version": 2,
+            "describe_prompt_version": 3,
             "capture_clock": "given",
         }
+        assert vision.prompts == [describe_prompt("photo", 3)]
         thumbnail = await engine.get_blob(event.metadata["thumbnail"])
         image = Image.open(io.BytesIO(thumbnail))
         assert image.format == "JPEG" and image.size == (320, 180)
@@ -346,6 +351,67 @@ async def test_capture_clock_falls_back_to_exif_then_file_time(tmp_path, vision)
         assert plain_event.metadata["capture_clock"] == "file"
         modified = datetime.fromtimestamp(plain.stat().st_mtime, tz=timezone.utc)
         assert abs(plain_event.event_time - modified) < timedelta(seconds=2)
+
+
+@pytest.mark.parametrize("prefix", ["PRME_VISION__", "PRME_VISION_"])
+async def test_prompt_version_two_is_restored_by_the_environment(tmp_path, photo, vision, monkeypatch, prefix):
+    monkeypatch.setenv(f"{prefix}ENABLED", "true")
+    monkeypatch.setenv(f"{prefix}EXTRACT", "false")
+    monkeypatch.setenv(f"{prefix}DESCRIBE_PROMPT_VERSION", "2")
+    config = config_from_directory(str(tmp_path / "pack"))
+    assert config.vision.describe_prompt_version == 2
+    async with MemoryEngine.open(config) as engine:
+        report = await observe_source(engine, photo, user_id=USER, captured_at=START)
+        event = await engine.get_event(report.event_ids[0], user_id=USER)
+    # The prompt sent is version 2's exactly, and the observation and the report say so.
+    assert vision.prompts == [describe_prompt("photo", 2)]
+    assert COUNT_INSTRUCTION not in vision.prompts[0]
+    assert report.describe_prompt_version == 2 and report.summary()["describe_prompt_version"] == 2
+    assert event.metadata["describe_prompt_version"] == 2
+
+
+async def test_a_new_prompt_version_adds_observations_and_leaves_older_ones_unchanged(tmp_path, photo, vision):
+    """RFC-0018: a frame observed under version 2 is described again under version 3 as a new event."""
+    describe = vision.describe
+
+    async def counting(image: bytes, *, prompt: str) -> str:
+        text = await describe(image, prompt=prompt)
+        return text + " The slide has 3 bullet points." if COUNT_INSTRUCTION in prompt else text
+
+    vision.describe = counting
+    async with MemoryEngine.open(directory_config(tmp_path / "pack", describe_prompt_version=2)) as engine:
+        (old_id,) = await engine.observe(photo, user_id=USER, captured_at=START)
+        old = await engine.get_event(old_id, user_id=USER)
+        old_nodes = await engine.get_event_nodes(old_id, user_id=USER)
+    assert old.metadata["describe_prompt_version"] == 2 and old.content == DESCRIPTIONS[RED]
+    async with MemoryEngine.open(directory_config(tmp_path / "pack")) as engine:
+        report = await observe_source(engine, photo, user_id=USER, captured_at=START)
+        assert (report.describe_prompt_version, report.admitted, report.already_observed) == (3, 1, 0)
+        new = await engine.get_event(report.event_ids[0], user_id=USER)
+        assert new.id != old.id
+        assert new.metadata["describe_prompt_version"] == 3
+        assert new.content == DESCRIPTIONS[RED] + " The slide has 3 bullet points."
+        # The version 2 observation and its memory are as they were.
+        kept = await engine.get_event(old_id, user_id=USER)
+        assert (kept.content, kept.metadata, kept.event_time, kept.session_id) == (
+            old.content, old.metadata, old.event_time, old.session_id)
+        kept_nodes = await engine.get_event_nodes(old_id, user_id=USER)
+        assert [(n.id, n.content) for n in kept_nodes] == [(n.id, n.content) for n in old_nodes]
+        assert len(await engine.get_events(USER)) == 2
+        # Both observations show the same thumbnail, stored once.
+        assert new.metadata["thumbnail"] == old.metadata["thumbnail"]
+        again = await observe_source(engine, photo, user_id=USER, captured_at=START)
+        assert again.already_observed == 1 and again.observations[0].event_id == str(new.id)
+    async with MemoryEngine.open(directory_config(tmp_path / "pack", describe_prompt_version=2)) as engine:
+        again = await observe_source(engine, photo, user_id=USER, captured_at=START)
+        assert again.already_observed == 1 and again.observations[0].event_id == str(old_id)
+        assert len(await engine.get_events(USER)) == 2
+    assert vision.prompts == [describe_prompt("photo", 2), describe_prompt("photo", 3)]
+    conn = duckdb.connect(str(tmp_path / "pack" / "memory.duckdb"), read_only=True)
+    try:
+        assert blob_count(conn) == 1
+    finally:
+        conn.close()
 
 
 async def test_a_frame_is_observed_once_per_owner_model_and_prompt(tmp_path, photo, vision):

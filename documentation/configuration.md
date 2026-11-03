@@ -100,6 +100,7 @@ pack that never observes.
 | `PRME_VISION__MODEL` | `qwen3.5:9b` | Vision model, recorded on every observation |
 | `PRME_VISION__BASE_URL` | `None` | Endpoint; defaults to `OLLAMA_HOST` or the local server |
 | `PRME_VISION__TIMEOUT` | `180.0` | Seconds per description call |
+| `PRME_VISION__DESCRIBE_PROMPT_VERSION` | `3` | Description prompt version, recorded on every observation. Version 3 is version 2 plus counts: when people, hands, raised fingers or repeated objects are clearly visible, the description states each count as a numeral and says when a count is uncertain (dwamianm/prism#388). Default since 2026-11-02 by the owner's decision, on a small local evaluation and without a benchmark of real recordings (`benchmarks/results/research/2026-11-02/DESCRIPTION-COUNTS.md`). `2` restores the version 2 prompt exactly. A new version never rewrites stored observations: a frame observed under one version is described again, as a new observation, under the other. Provisional |
 | `PRME_VISION__EXTRACT` | `true` | Admit descriptions with `ingest()` and extraction by the configured extraction provider (which may be a hosted API); `false` uses `store()` |
 | `PRME_VISION__EXTRACTION_RETRY_DELAYS` | `[5.0, 15.0, 60.0]` | Waits before each retry of a failed extraction |
 | `PRME_VISION__FPS` | `1.0` | Frames sampled per second of video |
