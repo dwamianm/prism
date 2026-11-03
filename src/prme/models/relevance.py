@@ -510,6 +510,16 @@ class RetrievalReceipt(BaseModel):
                 for adjustment in provenance.adjustments
             ):
                 raise ValueError("Neural rank assignment requires a version 13 receipt")
+            # A receipt records packing.current_state_observations only when it
+            # placed observations (issue #387); its scores need the setting.
+            if not self.packing.current_state_observations and any(
+                adjustment.kind == "current_observation"
+                for provenance in self.score_provenance.values()
+                for adjustment in provenance.adjustments
+            ):
+                raise ValueError(
+                    "Current-state observation scores require packing.current_state_observations"
+                )
         return self
 
     def replay_ranking(self) -> tuple[UUID, ...]:

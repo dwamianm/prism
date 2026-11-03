@@ -417,7 +417,8 @@ def pack_context(
 
     0. System instructions.
     1. Pinned memories and active tasks.
-    2. Bounded episode and evidence context, when enabled.
+    2. Bounded episode, evidence and current-state observation context, when
+       enabled.
     3. Multi-path objects by configured density, score or balanced ordering.
     4. Remaining objects by composite score descending.
 
@@ -624,8 +625,10 @@ def pack_context(
         if (
             "EPISODE_CONTEXT" in candidate.paths
             or "EVIDENCE_CONTEXT" in candidate.paths
+            or "CURRENT_STATE" in candidate.paths
         ):
-            # Episode routing and evidence projection are already bounded.
+            # Episode routing and evidence projection are already bounded, and
+            # so are the newest observations of a current-state question.
             # Reserve their source evidence before the broad multi-path pool,
             # while preserving instructions and user pins.
             return 2

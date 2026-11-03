@@ -123,6 +123,10 @@ DEFAULT_PACKING_SETTINGS: dict[str, Any] = {
     "session_context_skip_entities": True,
     # packing.observation_timeline is on in its field default (2026-11-02, by
     # the owner's decision), so it needs no entry here.
+    # On by the owner's decision of 2026-11-02, without fast-tier evidence
+    # (dwamianm/prism#387). It changes only stores with photo or video frame
+    # observations; a PackingConfig built in code keeps it off.
+    "current_state_observations": True,
 }
 
 
@@ -922,6 +926,41 @@ class PackingConfig(BaseModel):
     aggregation_k_max: int = Field(
         default=2000,
         description="Hard cap on candidate k values after aggregation multiplier",
+    )
+    # Omitted when off, so configurations and receipts that do not use it keep
+    # their bytes.
+    current_state_observations: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "Give a question about the current state the newest observations "
+            "(dwamianm/prism#387). Retrieval ranks by text match, so a camera "
+            "question such as 'How many fingers is the man holding up?' finds "
+            "older frames that use its words and misses the newest frames, "
+            "which describe the same scene in other words. When True, a "
+            "question that asks about now (now, currently, right now, at the "
+            "moment, latest, newest, most recent, last outside 'last week' and "
+            "the like, or a present progressive such as 'is he holding') and "
+            "none of the history or count words (when, before, after, ago, "
+            "since, first, how long, how often, how many times, total, so far) "
+            "is a current-state question. For such a question, retrieve() "
+            "finds the observation (metadata.modality 'photo' or "
+            "'video_frame', what prme.vision.observe stores) with the latest "
+            "event time among the owner's 200 newest records in the requested "
+            "scopes, and adds the 3 newest observations of its session and "
+            "scope to the results: each takes the score of the top result "
+            "less a millionth per place, newest first, through a replayable "
+            "current_observation adjustment, and packing reserves them before "
+            "the multi-path tier. The question is then not an aggregation "
+            "question (no widened candidate pool, keyword scan or coverage "
+            "notice) and its context type is current state. Every other "
+            "question, and every question in a store without observations, "
+            "retrieves exactly as with the option off, and its receipt omits "
+            "the option. PRMEConfig sets it by default "
+            "(DEFAULT_PACKING_SETTINGS) since 2026-11-02, by the owner's "
+            "decision, without fast-tier evidence; a PackingConfig built in "
+            "code keeps False. [HYPOTHESIS]"
+        ),
     )
 
     @model_validator(mode="before")

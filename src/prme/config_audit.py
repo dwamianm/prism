@@ -115,6 +115,12 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "packing.folded_records_keep_rank is true",
         bool,
     ),
+    # It acts on current-state questions in stores with observations only.
+    "packing.current_state_observations": (
+        "packing.current_state_observations",
+        "packing.current_state_observations is true (current-state questions in stores with observations)",
+        bool,
+    ),
     "packing.cross_scope_top_n": (
         "packing.cross_scope_top_n",
         "packing.cross_scope_top_n > 0",

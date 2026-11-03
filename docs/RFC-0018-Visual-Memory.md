@@ -220,6 +220,14 @@ Store-time supersedence and claim merge apply with the same configuration
 switches as for text. A crossed-out value is described as crossed out and
 still quoted, so the earlier value stays answerable.
 
+Text match alone does not find the current state of a camera scene: the
+newest frames describe it in other words than the question. With
+`packing.current_state_observations` (on in `PRMEConfig` since 2026-11-02,
+dwamianm/prism#387), a question about now ("How many fingers is the man
+holding up?") gets the 3 newest observations of the most recent observation
+session right after its top result, and is not read as a count over records.
+`docs/PACKING.md` ("Current-state observations") has the rule.
+
 ## Privacy and consent
 
 Continuous capture sees passwords, faces and other people's conversations.

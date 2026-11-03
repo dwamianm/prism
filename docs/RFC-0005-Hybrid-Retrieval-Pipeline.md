@@ -366,6 +366,30 @@ option also makes the reader context's fold of repeated text (RFC-0006) keep
 the place of the earliest record it folds. No model is called. When the
 ranking changed, the receipt's ranking policy is `score_id`.
 
+### 4.9 Current-state observations
+
+**Implementation status (2026-11-02):** with `packing.current_state_observations`
+(on in `PRMEConfig` by default since 2026-11-02, by the owner's decision,
+without fast-tier evidence; dwamianm/prism#387), Stage 1 recognizes a question
+about now (`is_current_state_question`: a word such as `now`, `currently`,
+`latest` or `last` outside a time window, or a present progressive such as "is
+he holding", and no history or count word such as `when`, `before`, `ago`,
+`first`, `how many times` or `total`). For such a question, Stage 1b reads the
+owner's 200 newest records in the requested scopes, after the request's time,
+type and epistemic filters, and takes the photo or video frame observation
+(RFC-0018) with the latest event time; the 3 newest observations of its
+session and scope are kept. When there are any, the question is not an
+aggregation question, and its context type is current state. Stage 5.5f,
+after claim statement folding and before consumer filters and selection, puts
+them right after the top result, newest first: each takes the top result's
+score (less a seed count graph term) times one less a millionth per place,
+with the top result's provenance and a `current_observation` adjustment that
+names it, and the `CURRENT_STATE` path, which packing reserves before the
+multi-path tier (RFC-0006). A store without such an observation, and every
+other question, retrieves exactly as with the option off, and the receipt then
+omits the option. No model is called. When the ranking changed, the receipt's
+ranking policy is `score_id`.
+
 ---
 
 ## 5. Stage 3: Candidate Merging
