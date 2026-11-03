@@ -117,8 +117,9 @@ order, each cheaper than the next stage it protects:
    blurred slightly, aligned to the last kept frame by phase correlation to
    remove camera shake, contrast-normalized, and compared block by block. A
    frame is kept when the largest block difference reaches a threshold (0.55 in
-   the spike). On the spike corpus a slide whose text changed on the same
-   layout scored about 0.7, any other scene change above 2.3, shake and
+   the spike; calibrated per video since 2026-11-02, see "Calibration for a
+   fixed camera" below). On the spike corpus a slide whose text changed on the
+   same layout scored about 0.7, any other scene change above 2.3, shake and
    exposure noise at most 0.37, and consecutive seconds of a slow aerial pan
    about 0.5.
 2. **Heartbeat.** A frame is kept every `max_gap` seconds (30 in the spike)
@@ -144,7 +145,55 @@ which costs vision calls that the repeat filter then absorbs. A middle
 stage, cheap OCR or an image-embedding similarity check between the pixel
 filter and the vision model, is the first improvement to try. All thresholds
 are configuration, named in `VisionConfig` below, and every kept and dropped
-frame is logged with its score.
+frame is logged with its score and the threshold it was compared with.
+
+### Calibration for a fixed camera
+
+The fixed 0.55 missed small changes on a fixed camera (dwamianm/prism#389).
+The score is the strongest change in any one block, so it measures how strong
+a local change is, not how large: on the camera demo's synthetic hand, one
+more raised finger scored 0.34 to 0.48, and no finger count was kept, while
+the 0.55 was set for hand-held noise up to 0.37. Since 2026-11-02
+`vision.calibrate_keyframes` (on by default) changes two things:
+
+- **The threshold follows the noise floor.** A frame that scores under the
+  threshold is a still frame, and its score is noise. The threshold is
+  `noise_multiplier` (5) times the median of the video's last 20 still-frame
+  scores, never under `min_change_threshold` (0.30) and never over
+  `change_threshold`. It starts at `change_threshold`, and one still frame is
+  enough to lower it, so a pose held for two samples is kept. A fixed camera,
+  whose still frames score about 0.02, gets 0.30; a source whose still frames
+  score over 0.11 (the Tahoe pan, a very dim camera) keeps `change_threshold`.
+  The state is a `KeyframePolicy` per video, which a stream session can keep
+  per session.
+- **The alignment is checked by the difference it leaves.** Phase
+  correlation alone sometimes locks onto no shift on a noisy, low-texture
+  frame, and a whole-pixel shift leaves half a pixel of residual; on a fixed
+  synthetic camera those scored up to 0.49 for a few pixels of shake. The
+  score now tries the phase-correlation shift and every whole-pixel shift
+  within 3 signature pixels, refines the best by half a pixel, and uses the
+  one that leaves the smallest difference. Real changes score what they did;
+  shake on the synthetic desk scored at most 0.07 and the hand-held spike
+  recording's still frames at most 0.18. It costs a few milliseconds a frame.
+
+On synthetic fixed-camera scenes every finger count was kept at 1 and 2
+frames a second and nothing was kept for noise, 12% exposure steps or shake;
+on the spike corpus `meeting.mp4` kept 10 keyframes instead of 13 (every
+scene start, without four noise keeps) and the Tahoe pan 45 instead of 48
+(`benchmarks/results/research/2026-11-02/KEYFRAME-CALIBRATION.md`). Two other
+options were measured and rejected: adding the number of changed blocks to
+the score (hand-held text noise changed up to 124 of 481 blocks, one more
+finger 3 to 6), and fixed source profiles (a fixed 0.30 sent the Tahoe pan
+to 77 keyframes and kept 35 false frames in two minutes of synthetic low
+light). The calibration is on by default by the owner's decision of that day
+to turn new features on by default, which overrides the epic #77 rule that
+new behavior starts off; vision itself stays off until `vision.enabled` is
+set. Real webcam recordings were not measured;
+`benchmarks/vision/keyframe_calibration.py still` reports keeps per minute
+and the false-keep rate on recordings of a still scene under both settings.
+`vision.calibrate_keyframes=false` (`PRME_VISION__CALIBRATE_KEYFRAMES=false`)
+restores the 0.16.1 selection exactly: the 0.16.1 score against the fixed
+`change_threshold`, which reproduces the recorded spike run's keyframes.
 
 ## Description prompt
 
@@ -291,7 +340,10 @@ class VisionConfig(_ProjectSettings):          # PRMEConfig.vision; PRME_VISION_
     extraction_retry_delays: list[float] = [5.0, 15.0, 60.0]
     fps: float = 1.0
     frame_width: int = 1280
-    change_threshold: float = 0.55  # [HYPOTHESIS]
+    change_threshold: float = 0.55  # [HYPOTHESIS] the most a calibrated threshold can be
+    calibrate_keyframes: bool = True  # [HYPOTHESIS] False restores the 0.16.1 selection
+    min_change_threshold: float = 0.30  # [HYPOTHESIS]
+    noise_multiplier: float = 5.0  # [HYPOTHESIS]
     max_gap_seconds: float = 30.0
     repeat_similarity: float = 0.93  # [HYPOTHESIS]
     thumbnail_width: int = 320

@@ -1543,7 +1543,10 @@ VisionConfig(
     extraction_retry_delays=[5.0, 15.0, 60.0],  # waits before each extraction retry
     fps=1.0,                             # frames sampled per second of video
     frame_width=1280,                    # decoded frame width
-    change_threshold=0.55,               # keyframe pixel-change score [HYPOTHESIS]
+    change_threshold=0.55,               # keyframe pixel-change score [HYPOTHESIS]; the most a calibrated one can be
+    calibrate_keyframes=True,            # threshold from each video's noise floor; False restores 0.16.1 [HYPOTHESIS]
+    min_change_threshold=0.30,           # lowest calibrated threshold [HYPOTHESIS]
+    noise_multiplier=5.0,                # calibrated threshold = this x median still-frame score [HYPOTHESIS]
     max_gap_seconds=30.0,                # heartbeat keyframe at least this often
     repeat_similarity=0.93,              # description repeat filter [HYPOTHESIS]
     thumbnail_width=320,

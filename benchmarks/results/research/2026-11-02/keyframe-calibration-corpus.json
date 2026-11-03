@@ -1,0 +1,1019 @@
+{
+ "measurement": "corpus",
+ "fps": 1.0,
+ "config": {
+  "fps": 1.0,
+  "frame_width": 1280,
+  "change_threshold": 0.55,
+  "calibrate_keyframes": true,
+  "min_change_threshold": 0.3,
+  "noise_multiplier": 5.0,
+  "max_gap_seconds": 30.0
+ },
+ "run_dir": "/Users/dwamianm/Sites/prism/benchmarks/vision/runs/phase1-store",
+ "videos": {
+  "meeting": {
+   "path": "/Users/dwamianm/Sites/prism/benchmarks/vision/runs/phase1-store/corpus/meeting.mp4",
+   "frames": 220,
+   "recorded_kept": [
+    0,
+    15,
+    45,
+    46,
+    55,
+    75,
+    92,
+    102,
+    107,
+    115,
+    145,
+    175,
+    200
+   ],
+   "settings": {
+    "0.16.1 (calibrate_keyframes=false)": {
+     "keeps": 13,
+     "kept": [
+      [
+       0,
+       "first"
+      ],
+      [
+       15,
+       "change"
+      ],
+      [
+       45,
+       "heartbeat"
+      ],
+      [
+       46,
+       "change"
+      ],
+      [
+       55,
+       "change"
+      ],
+      [
+       75,
+       "change"
+      ],
+      [
+       92,
+       "change"
+      ],
+      [
+       102,
+       "change"
+      ],
+      [
+       107,
+       "change"
+      ],
+      [
+       115,
+       "change"
+      ],
+      [
+       145,
+       "change"
+      ],
+      [
+       175,
+       "change"
+      ],
+      [
+       200,
+       "change"
+      ]
+     ],
+     "threshold_min": 0.55,
+     "threshold_max": 0.55
+    },
+    "calibrated (default)": {
+     "keeps": 10,
+     "kept": [
+      [
+       0,
+       "first"
+      ],
+      [
+       15,
+       "change"
+      ],
+      [
+       45,
+       "heartbeat"
+      ],
+      [
+       55,
+       "change"
+      ],
+      [
+       75,
+       "change"
+      ],
+      [
+       105,
+       "heartbeat"
+      ],
+      [
+       115,
+       "change"
+      ],
+      [
+       145,
+       "change"
+      ],
+      [
+       175,
+       "change"
+      ],
+      [
+       200,
+       "change"
+      ]
+     ],
+     "threshold_min": 0.3,
+     "threshold_max": 0.55
+    }
+   }
+  },
+  "tahoe": {
+   "path": "/System/Library/Desktop Pictures/.wallpapers/Tahoe Day/Tahoe Day.mov",
+   "frames": 120,
+   "recorded_kept": [
+    0,
+    3,
+    6,
+    9,
+    12,
+    15,
+    18,
+    21,
+    24,
+    27,
+    30,
+    33,
+    36,
+    39,
+    42,
+    45,
+    47,
+    50,
+    53,
+    55,
+    57,
+    60,
+    62,
+    64,
+    66,
+    69,
+    71,
+    73,
+    75,
+    78,
+    80,
+    82,
+    84,
+    87,
+    89,
+    91,
+    93,
+    95,
+    98,
+    100,
+    102,
+    104,
+    107,
+    109,
+    111,
+    113,
+    115,
+    118
+   ],
+   "settings": {
+    "0.16.1 (calibrate_keyframes=false)": {
+     "keeps": 48,
+     "kept": [
+      [
+       0,
+       "first"
+      ],
+      [
+       3,
+       "change"
+      ],
+      [
+       6,
+       "change"
+      ],
+      [
+       9,
+       "change"
+      ],
+      [
+       12,
+       "change"
+      ],
+      [
+       15,
+       "change"
+      ],
+      [
+       18,
+       "change"
+      ],
+      [
+       21,
+       "change"
+      ],
+      [
+       24,
+       "change"
+      ],
+      [
+       27,
+       "change"
+      ],
+      [
+       30,
+       "change"
+      ],
+      [
+       33,
+       "change"
+      ],
+      [
+       36,
+       "change"
+      ],
+      [
+       39,
+       "change"
+      ],
+      [
+       42,
+       "change"
+      ],
+      [
+       45,
+       "change"
+      ],
+      [
+       47,
+       "change"
+      ],
+      [
+       50,
+       "change"
+      ],
+      [
+       53,
+       "change"
+      ],
+      [
+       55,
+       "change"
+      ],
+      [
+       57,
+       "change"
+      ],
+      [
+       60,
+       "change"
+      ],
+      [
+       62,
+       "change"
+      ],
+      [
+       64,
+       "change"
+      ],
+      [
+       66,
+       "change"
+      ],
+      [
+       69,
+       "change"
+      ],
+      [
+       71,
+       "change"
+      ],
+      [
+       73,
+       "change"
+      ],
+      [
+       75,
+       "change"
+      ],
+      [
+       78,
+       "change"
+      ],
+      [
+       80,
+       "change"
+      ],
+      [
+       82,
+       "change"
+      ],
+      [
+       84,
+       "change"
+      ],
+      [
+       87,
+       "change"
+      ],
+      [
+       89,
+       "change"
+      ],
+      [
+       91,
+       "change"
+      ],
+      [
+       93,
+       "change"
+      ],
+      [
+       95,
+       "change"
+      ],
+      [
+       98,
+       "change"
+      ],
+      [
+       100,
+       "change"
+      ],
+      [
+       102,
+       "change"
+      ],
+      [
+       104,
+       "change"
+      ],
+      [
+       107,
+       "change"
+      ],
+      [
+       109,
+       "change"
+      ],
+      [
+       111,
+       "change"
+      ],
+      [
+       113,
+       "change"
+      ],
+      [
+       115,
+       "change"
+      ],
+      [
+       118,
+       "change"
+      ]
+     ],
+     "threshold_min": 0.55,
+     "threshold_max": 0.55
+    },
+    "calibrated (default)": {
+     "keeps": 45,
+     "kept": [
+      [
+       0,
+       "first"
+      ],
+      [
+       3,
+       "change"
+      ],
+      [
+       7,
+       "change"
+      ],
+      [
+       11,
+       "change"
+      ],
+      [
+       14,
+       "change"
+      ],
+      [
+       17,
+       "change"
+      ],
+      [
+       21,
+       "change"
+      ],
+      [
+       24,
+       "change"
+      ],
+      [
+       27,
+       "change"
+      ],
+      [
+       30,
+       "change"
+      ],
+      [
+       33,
+       "change"
+      ],
+      [
+       36,
+       "change"
+      ],
+      [
+       39,
+       "change"
+      ],
+      [
+       43,
+       "change"
+      ],
+      [
+       46,
+       "change"
+      ],
+      [
+       49,
+       "change"
+      ],
+      [
+       51,
+       "change"
+      ],
+      [
+       54,
+       "change"
+      ],
+      [
+       56,
+       "change"
+      ],
+      [
+       59,
+       "change"
+      ],
+      [
+       62,
+       "change"
+      ],
+      [
+       64,
+       "change"
+      ],
+      [
+       66,
+       "change"
+      ],
+      [
+       69,
+       "change"
+      ],
+      [
+       71,
+       "change"
+      ],
+      [
+       73,
+       "change"
+      ],
+      [
+       76,
+       "change"
+      ],
+      [
+       79,
+       "change"
+      ],
+      [
+       82,
+       "change"
+      ],
+      [
+       84,
+       "change"
+      ],
+      [
+       87,
+       "change"
+      ],
+      [
+       89,
+       "change"
+      ],
+      [
+       91,
+       "change"
+      ],
+      [
+       93,
+       "change"
+      ],
+      [
+       95,
+       "change"
+      ],
+      [
+       98,
+       "change"
+      ],
+      [
+       100,
+       "change"
+      ],
+      [
+       102,
+       "change"
+      ],
+      [
+       104,
+       "change"
+      ],
+      [
+       107,
+       "change"
+      ],
+      [
+       109,
+       "change"
+      ],
+      [
+       111,
+       "change"
+      ],
+      [
+       113,
+       "change"
+      ],
+      [
+       115,
+       "change"
+      ],
+      [
+       119,
+       "change"
+      ]
+     ],
+     "threshold_min": 0.55,
+     "threshold_max": 0.55
+    }
+   }
+  }
+ },
+ "meeting_scene_starts": [
+  0,
+  15,
+  55,
+  75,
+  115,
+  145,
+  175,
+  200
+ ],
+ "meeting_scene_starts_kept": {
+  "0.16.1 (calibrate_keyframes=false)": [
+   0,
+   15,
+   55,
+   75,
+   115,
+   145,
+   175,
+   200
+  ],
+  "calibrated (default)": [
+   0,
+   15,
+   55,
+   75,
+   115,
+   145,
+   175,
+   200
+  ]
+ },
+ "questions": [
+  {
+   "id": "m01",
+   "video": "meeting",
+   "frames": [
+    [
+     0,
+     15
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    0
+   ],
+   "calibrated (default)": [
+    0
+   ]
+  },
+  {
+   "id": "m02",
+   "video": "meeting",
+   "frames": [
+    [
+     75,
+     115
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    75,
+    92,
+    102,
+    107
+   ],
+   "calibrated (default)": [
+    75,
+    105
+   ]
+  },
+  {
+   "id": "m03",
+   "video": "meeting",
+   "frames": [
+    [
+     15,
+     55
+    ],
+    [
+     75,
+     115
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    15,
+    45,
+    46,
+    75,
+    92,
+    102,
+    107
+   ],
+   "calibrated (default)": [
+    15,
+    45,
+    75,
+    105
+   ]
+  },
+  {
+   "id": "m04",
+   "video": "meeting",
+   "frames": [
+    [
+     75,
+     115
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    75,
+    92,
+    102,
+    107
+   ],
+   "calibrated (default)": [
+    75,
+    105
+   ]
+  },
+  {
+   "id": "m05",
+   "video": "meeting",
+   "frames": [
+    [
+     15,
+     55
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    15,
+    45,
+    46
+   ],
+   "calibrated (default)": [
+    15,
+    45
+   ]
+  },
+  {
+   "id": "m06",
+   "video": "meeting",
+   "frames": [
+    [
+     15,
+     55
+    ],
+    [
+     75,
+     115
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    15,
+    45,
+    46,
+    75,
+    92,
+    102,
+    107
+   ],
+   "calibrated (default)": [
+    15,
+    45,
+    75,
+    105
+   ]
+  },
+  {
+   "id": "m07",
+   "video": "meeting",
+   "frames": [
+    [
+     115,
+     145
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    115
+   ],
+   "calibrated (default)": [
+    115
+   ]
+  },
+  {
+   "id": "m08",
+   "video": "meeting",
+   "frames": [
+    [
+     115,
+     145
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    115
+   ],
+   "calibrated (default)": [
+    115
+   ]
+  },
+  {
+   "id": "m09",
+   "video": "meeting",
+   "frames": [
+    [
+     145,
+     175
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    145
+   ],
+   "calibrated (default)": [
+    145
+   ]
+  },
+  {
+   "id": "m10",
+   "video": "meeting",
+   "frames": [
+    [
+     145,
+     175
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    145
+   ],
+   "calibrated (default)": [
+    145
+   ]
+  },
+  {
+   "id": "m11",
+   "video": "meeting",
+   "frames": [
+    [
+     175,
+     200
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    175
+   ],
+   "calibrated (default)": [
+    175
+   ]
+  },
+  {
+   "id": "m12",
+   "video": "meeting",
+   "frames": [
+    [
+     175,
+     200
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    175
+   ],
+   "calibrated (default)": [
+    175
+   ]
+  },
+  {
+   "id": "m13",
+   "video": "meeting",
+   "frames": [
+    [
+     200,
+     220
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    200
+   ],
+   "calibrated (default)": [
+    200
+   ]
+  },
+  {
+   "id": "m14",
+   "video": "meeting",
+   "frames": [
+    [
+     200,
+     220
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    200
+   ],
+   "calibrated (default)": [
+    200
+   ]
+  },
+  {
+   "id": "m15",
+   "video": "meeting",
+   "frames": [
+    [
+     115,
+     145
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    115
+   ],
+   "calibrated (default)": [
+    115
+   ]
+  },
+  {
+   "id": "m16",
+   "video": "meeting",
+   "frames": [
+    [
+     115,
+     145
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    115
+   ],
+   "calibrated (default)": [
+    115
+   ]
+  },
+  {
+   "id": "t01",
+   "video": "tahoe",
+   "frames": [
+    [
+     0,
+     120
+    ]
+   ],
+   "0.16.1 (calibrate_keyframes=false)": [
+    0,
+    3,
+    6,
+    9,
+    12,
+    15,
+    18,
+    21,
+    24,
+    27,
+    30,
+    33,
+    36,
+    39,
+    42,
+    45,
+    47,
+    50,
+    53,
+    55,
+    57,
+    60,
+    62,
+    64,
+    66,
+    69,
+    71,
+    73,
+    75,
+    78,
+    80,
+    82,
+    84,
+    87,
+    89,
+    91,
+    93,
+    95,
+    98,
+    100,
+    102,
+    104,
+    107,
+    109,
+    111,
+    113,
+    115,
+    118
+   ],
+   "calibrated (default)": [
+    0,
+    3,
+    7,
+    11,
+    14,
+    17,
+    21,
+    24,
+    27,
+    30,
+    33,
+    36,
+    39,
+    43,
+    46,
+    49,
+    51,
+    54,
+    56,
+    59,
+    62,
+    64,
+    66,
+    69,
+    71,
+    73,
+    76,
+    79,
+    82,
+    84,
+    87,
+    89,
+    91,
+    93,
+    95,
+    98,
+    100,
+    102,
+    104,
+    107,
+    109,
+    111,
+    113,
+    115,
+    119
+   ]
+  }
+ ]
+}

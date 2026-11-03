@@ -105,7 +105,10 @@ pack that never observes.
 | `PRME_VISION__EXTRACTION_RETRY_DELAYS` | `[5.0, 15.0, 60.0]` | Waits before each retry of a failed extraction |
 | `PRME_VISION__FPS` | `1.0` | Frames sampled per second of video |
 | `PRME_VISION__FRAME_WIDTH` | `1280` | Decoded frame width in pixels |
-| `PRME_VISION__CHANGE_THRESHOLD` | `0.55` | Pixel-change score that starts a keyframe |
+| `PRME_VISION__CHANGE_THRESHOLD` | `0.55` | Pixel-change score that starts a keyframe; with calibration, the highest threshold a video can be calibrated to |
+| `PRME_VISION__CALIBRATE_KEYFRAMES` | `true` | Calibrate the change threshold for each video from its noise floor, `PRME_VISION__NOISE_MULTIPLIER` times the median score of its last 20 still frames, between `PRME_VISION__MIN_CHANGE_THRESHOLD` and `PRME_VISION__CHANGE_THRESHOLD`, and score frames with an alignment checked by the difference it leaves (dwamianm/prism#389). A fixed camera then keeps small changes, such as one more raised finger, while a hand-held recording or a pan keeps the change threshold. Default since 2026-11-02 by the owner's decision, on synthetic fixed-camera scenes and the spike corpus, without real webcam recordings (`benchmarks/results/research/2026-11-02/KEYFRAME-CALIBRATION.md`). `false` restores the 0.16.1 keyframe selection exactly. Provisional |
+| `PRME_VISION__MIN_CHANGE_THRESHOLD` | `0.30` | Lowest calibrated change threshold. One more raised finger on a fixed synthetic camera scored 0.34 to 0.48; noise, shake and a 12% exposure step at most 0.07. Provisional |
+| `PRME_VISION__NOISE_MULTIPLIER` | `5.0` | The calibrated threshold is this many times the median still-frame score. Provisional |
 | `PRME_VISION__MAX_GAP_SECONDS` | `30.0` | A keyframe at least this often (heartbeat) |
 | `PRME_VISION__REPEAT_SIMILARITY` | `0.93` | Description cosine similarity, with the same quoted text, that drops a repeat |
 | `PRME_VISION__THUMBNAIL_WIDTH` | `320` | Thumbnail width in pixels |

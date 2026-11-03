@@ -216,7 +216,39 @@ class VisionConfig(_ProjectSettings):
             "[HYPOTHESIS] Keyframe pixel-change score at or above which a frame "
             "starts a new keyframe. On the spike corpus a same-layout slide whose "
             "text changed scored about 0.7, any other scene change above 2.3, "
-            "camera shake and exposure noise at most 0.37"
+            "camera shake and exposure noise at most 0.37. With "
+            "calibrate_keyframes, the highest threshold a video can be calibrated to"
+        ),
+    )
+    calibrate_keyframes: bool = Field(
+        default=True,
+        description=(
+            "[HYPOTHESIS] Calibrate the keyframe change threshold for each video "
+            "from its noise floor (noise_multiplier times the median score of its "
+            "still frames, between min_change_threshold and change_threshold), and "
+            "score frames with an alignment checked by the difference it leaves, so "
+            "a fixed camera keeps small changes such as one more raised finger while "
+            "a hand-held recording or a pan keeps change_threshold "
+            "(dwamianm/prism#389). Default since 2026-11-02 by the owner's decision, "
+            "on synthetic scenes and the spike corpus, without real webcam "
+            "recordings; false restores the 0.16.1 keyframe selection exactly"
+        ),
+    )
+    min_change_threshold: float = Field(
+        default=0.30, ge=0.0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] Lowest calibrated change threshold. On a fixed synthetic "
+            "camera one more raised finger scored 0.34 to 0.48, and noise, shake and "
+            "a 12% exposure step at most 0.07 (a 25% step 0.26 to 0.30)"
+        ),
+    )
+    noise_multiplier: float = Field(
+        default=5.0, gt=0, allow_inf_nan=False,
+        description=(
+            "[HYPOTHESIS] The calibrated change threshold is this many times the "
+            "median score of a video's last 20 still frames. Where it lifts the "
+            "threshold over min_change_threshold, no measured still frame scored "
+            "more than 2.22 times that median"
         ),
     )
     max_gap_seconds: float = Field(

@@ -7,7 +7,8 @@ Phase 1 covers saved photos and video files through
 - :mod:`prme.vision.frames` resolves a source, decodes video frames with
   ffmpeg and works out the capture clock.
 - :mod:`prme.vision.keyframes` keeps the frames that changed (pixel change
-  plus a heartbeat) and makes thumbnails.
+  against a threshold calibrated for each video, plus a heartbeat) and makes
+  thumbnails.
 - :mod:`prme.vision.describe` holds the versioned description prompt and
   reads the values a description quotes.
 - :mod:`prme.vision.provider` describes a frame with a vision model.

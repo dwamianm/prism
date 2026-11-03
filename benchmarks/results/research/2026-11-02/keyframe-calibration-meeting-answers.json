@@ -1,0 +1,456 @@
+{
+ "what": "meeting.mp4 through observe() with store() admission under both keyframe settings; local qwen3.5:9b only",
+ "model_calls": {
+  "describe": 14,
+  "reader": 23,
+  "judge": 23,
+  "total": 60,
+  "limit": 60
+ },
+ "note": "The recorded describe cache did not match the frames decoded on 2026-11-02, so both packs were described fresh. Every question's rendered context differed between the settings, so the reader and judge ran for each until the 60 call limit; m12 (calibrated) and m13 to m16 (both) were not judged. Retrieval hits were then recomputed from the cached descriptions with no model call.",
+ "settings": {
+  "0.16.1": {
+   "keyframes": [
+    [
+     0,
+     "first"
+    ],
+    [
+     15,
+     "change"
+    ],
+    [
+     45,
+     "heartbeat"
+    ],
+    [
+     46,
+     "change"
+    ],
+    [
+     55,
+     "change"
+    ],
+    [
+     75,
+     "change"
+    ],
+    [
+     92,
+     "change"
+    ],
+    [
+     102,
+     "change"
+    ],
+    [
+     107,
+     "change"
+    ],
+    [
+     115,
+     "change"
+    ],
+    [
+     145,
+     "change"
+    ],
+    [
+     175,
+     "change"
+    ],
+    [
+     200,
+     "change"
+    ]
+   ],
+   "observations": [
+    [
+     0.0,
+     "admitted"
+    ],
+    [
+     15.0,
+     "admitted"
+    ],
+    [
+     45.0,
+     "repeat"
+    ],
+    [
+     46.0,
+     "admitted"
+    ],
+    [
+     55.0,
+     "admitted"
+    ],
+    [
+     75.0,
+     "admitted"
+    ],
+    [
+     92.0,
+     "admitted"
+    ],
+    [
+     102.0,
+     "admitted"
+    ],
+    [
+     107.0,
+     "repeat"
+    ],
+    [
+     115.0,
+     "admitted"
+    ],
+    [
+     145.0,
+     "admitted"
+    ],
+    [
+     175.0,
+     "admitted"
+    ],
+    [
+     200.0,
+     "admitted"
+    ]
+   ],
+   "described": 13,
+   "repeats_dropped": 2,
+   "admitted": 11,
+   "hits": {
+    "m01": true,
+    "m02": true,
+    "m03": true,
+    "m04": true,
+    "m05": true,
+    "m06": true,
+    "m07": true,
+    "m08": true,
+    "m09": true,
+    "m10": true,
+    "m11": true,
+    "m12": true,
+    "m13": true,
+    "m14": true,
+    "m15": true,
+    "m16": true
+   },
+   "whiteboard_needles": {
+    "15.0": {
+     "10 nov": false,
+     "14,000": false,
+     "3 nov": true,
+     "12,500": true
+    },
+    "45.0": {
+     "10 nov": false,
+     "14,000": false,
+     "3 nov": true,
+     "12,500": true
+    },
+    "46.0": {
+     "10 nov": false,
+     "14,000": false,
+     "3 nov": true,
+     "12,500": true
+    },
+    "55.0": {
+     "10 nov": false,
+     "14,000": false,
+     "3 nov": false,
+     "12,500": false
+    },
+    "75.0": {
+     "10 nov": true,
+     "14,000": true,
+     "3 nov": false,
+     "12,500": false
+    },
+    "92.0": {
+     "10 nov": true,
+     "14,000": true,
+     "3 nov": false,
+     "12,500": false
+    },
+    "102.0": {
+     "10 nov": true,
+     "14,000": true,
+     "3 nov": false,
+     "12,500": false
+    },
+    "107.0": {
+     "10 nov": true,
+     "14,000": true,
+     "3 nov": false,
+     "12,500": false
+    }
+   }
+  },
+  "calibrated": {
+   "keyframes": [
+    [
+     0,
+     "first"
+    ],
+    [
+     15,
+     "change"
+    ],
+    [
+     45,
+     "heartbeat"
+    ],
+    [
+     55,
+     "change"
+    ],
+    [
+     75,
+     "change"
+    ],
+    [
+     105,
+     "heartbeat"
+    ],
+    [
+     115,
+     "change"
+    ],
+    [
+     145,
+     "change"
+    ],
+    [
+     175,
+     "change"
+    ],
+    [
+     200,
+     "change"
+    ]
+   ],
+   "observations": [
+    [
+     0.0,
+     "admitted"
+    ],
+    [
+     15.0,
+     "admitted"
+    ],
+    [
+     45.0,
+     "repeat"
+    ],
+    [
+     55.0,
+     "admitted"
+    ],
+    [
+     75.0,
+     "admitted"
+    ],
+    [
+     105.0,
+     "repeat"
+    ],
+    [
+     115.0,
+     "admitted"
+    ],
+    [
+     145.0,
+     "admitted"
+    ],
+    [
+     175.0,
+     "admitted"
+    ],
+    [
+     200.0,
+     "admitted"
+    ]
+   ],
+   "described": 10,
+   "repeats_dropped": 2,
+   "admitted": 8,
+   "hits": {
+    "m01": true,
+    "m02": true,
+    "m03": true,
+    "m04": true,
+    "m05": true,
+    "m06": true,
+    "m07": true,
+    "m08": true,
+    "m09": true,
+    "m10": true,
+    "m11": true,
+    "m12": true,
+    "m13": true,
+    "m14": true,
+    "m15": true,
+    "m16": true
+   },
+   "whiteboard_needles": {
+    "15.0": {
+     "10 nov": false,
+     "14,000": false,
+     "3 nov": true,
+     "12,500": true
+    },
+    "45.0": {
+     "10 nov": false,
+     "14,000": false,
+     "3 nov": true,
+     "12,500": true
+    },
+    "55.0": {
+     "10 nov": false,
+     "14,000": false,
+     "3 nov": false,
+     "12,500": false
+    },
+    "75.0": {
+     "10 nov": true,
+     "14,000": true,
+     "3 nov": false,
+     "12,500": false
+    },
+    "105.0": {
+     "10 nov": true,
+     "14,000": true,
+     "3 nov": false,
+     "12,500": false
+    }
+   }
+  }
+ },
+ "answers": {
+  "m01": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "Priya Raman facilitated the Falcon weekly sync."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "Priya Raman facilitated the Falcon weekly sync."
+   }
+  },
+  "m02": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "The Falcon launch date is now 10 Nov."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "The Falcon launch date is now 10 November."
+   }
+  },
+  "m03": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "The Falcon launch date was originally set for 3-November before being changed to 10 November."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "The Falcon launch date was originally scheduled for November 3rd before being changed to November 10"
+   }
+  },
+  "m04": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "The current budget for the Falcon launch is $14,000."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "The Falcon budget is now $14,000."
+   }
+  },
+  "m05": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "The Falcon budget was $12,500 before it changed to $14,000."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "The Falcon budget was $12,500 before it changed to $14,000."
+   }
+  },
+  "m06": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "Northwind Sensors supplies the Falcon sensors."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "Northwind Sensors supplies the Falcon sensors."
+   }
+  },
+  "m07": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "Dmitri needs to order 40 sensors."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "Dmitri needs to order 40 sensors."
+   }
+  },
+  "m08": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "Mei books the Oakland venue."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "Mei books the Oakland venue for the Falcon launch."
+   }
+  },
+  "m09": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "Q3 had the most sensor failures with 15."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "Q3 had the most sensor failures with 15."
+   }
+  },
+  "m10": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "There were 7 sensor failures in Q2."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "There were 7 sensor failures in Q2."
+   }
+  },
+  "m11": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "The \"Battery supplier delay\" risk is rated High."
+   },
+   "calibrated": {
+    "correct": true,
+    "answer": "The \"Battery supplier delay\" risk is rated High."
+   }
+  },
+  "m12": {
+   "0.16.1": {
+    "correct": true,
+    "answer": "The firmware bug number listed in the risk register is 1182."
+   },
+   "calibrated": null
+  },
+  "m13": null,
+  "m14": null,
+  "m15": null,
+  "m16": null
+ }
+}
