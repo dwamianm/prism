@@ -36,6 +36,7 @@ from prme.ingestion.errors import ExtractionError, MaterializationError, extract
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
 from prme.ingestion.grounding import claim_sentences, validate_grounding
 from prme.ingestion.group_links import SESSION_TURNS, is_group_reference
+from prme.ingestion.named_text import NAMED_TEXT_KEY, has_first_person, named_claim_text
 from prme.ingestion.owner_name import carried_owner_entity, carried_owner_name, owner_name_marker
 from prme.ingestion.pronoun_repair import is_repair, resolved_from_context, with_names
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
@@ -305,6 +306,7 @@ class IngestionPipeline:
         owner_name_carry: bool = False,
         link_owner_groups: bool = False,
         pronoun_repair_turns: int | None = None,
+        named_claim_text: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -369,6 +371,9 @@ class IngestionPipeline:
         # Ask a second time who a pronoun means for the claims a first extraction left on one, shown up to this
         # many of the owner's preceding memories (enable_pronoun_repair). None, the default, never asks.
         self._pronoun_repair_turns = None if pronoun_repair_turns is None else max(0, pronoun_repair_turns)
+        # A claim from a turn whose I, me and my bind to a name is stored with the name written into its text
+        # (enable_named_claim_text).
+        self._named_claim_text = named_claim_text
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -1436,10 +1441,12 @@ class IngestionPipeline:
         if (privacy is None and self._owner_name_carry and self._bind_speaker_references and current_policy
                 and not owner_reference and event.role.casefold() in OWNER_ROLES):
             owner_name_basis = "speaker" if speaker is not None else "self_introduction" if introduced else None
-            if owner_name_basis is None and any(
+            if owner_name_basis is None and (any(
                 _speaker_reference(entity.name, entity.entity_type)
                 for entity in _entities_with_unresolved_references(result)
-            ):
+            ) or (self._named_claim_text and has_first_person(event.content))):
+                # A turn whose claims keep no I still says "my" in its sentences, which the named text writes
+                # as the owner's name, so the name is looked up for it too (enable_named_claim_text).
                 carried = await carried_owner_name(graph, user_id=event.user_id, scope=event.scope)
         # A we claim of the owner's turn can repeat one of an earlier turn of the session; the owner's
         # group links find it (enable_owner_group_links). Only a turn whose claims speak for a group looks.
@@ -1477,6 +1484,7 @@ class IngestionPipeline:
             grounding_speaker=(metadata_speaker(event.metadata)
                                if self._speaker_grounding and current_policy else None),
             group_owner=group_owner, group_session=group_session,
+            name_claims=self._named_claim_text and current_policy,
         )
         if before_prepare is not None:
             await before_prepare(graph)
@@ -1494,6 +1502,7 @@ class IngestionPipeline:
         speaker_introduced: bool = False, distinct_text: bool = False,
         speaker_carried: bool = False, owner_name_basis: str | None = None,
         group_owner: str | None = None, group_session: set[str] | None = None,
+        name_claims: bool = False,
     ) -> None:
         """Apply one set of materialization rules to durable or planning adapters.
 
@@ -1513,7 +1522,11 @@ class IngestionPipeline:
         sentences are already another claim's text from this message gets a
         statement of its own (enable_ingest_claim_fixes).
         With ``grounding_speaker`` (enable_speaker_grounding) the speaker's own
-        I, me or my mentions them there as in grounding. Only current-policy
+        I, me or my mentions them there as in grounding. With ``name_claims``
+        (enable_named_claim_text) and a ``speaker``, each claim's text is
+        stored with the speaker's name written in for its I, me and my, or
+        labeled with the name when the sentence cannot be rewritten safely
+        (:mod:`prme.ingestion.named_text`). Only current-policy
         plans use these, so a saved extraction replanned under an older
         materialization policy keeps that policy's behavior.
         """
@@ -1741,19 +1754,28 @@ class IngestionPipeline:
                     fact_metadata["resolved_from_context"] = resolved_from_context(resolution)
             elif sentences is not None:
                 fact_content = sentences
+            if name_claims and speaker is not None:
+                # The speaker's name written into the text, or labeling the sentence when it cannot be
+                # rewritten safely (enable_named_claim_text). The evidence quote stays verbatim.
+                named = named_claim_text(fact_content, speaker)
+                if named != fact_content:
+                    fact_metadata[NAMED_TEXT_KEY] = {"name": speaker, "original": fact_content}
+                    fact_content = named
+            # A carried name stays out of a statement unless the named text writes it into every claim: every
+            # later statement would otherwise name the owner, and a question that names them would match all of
+            # them while the sentences beside them do not.
+            statement_speaker = speaker if name_claims or not speaker_carried else None
             if repaired and sentence_text and distinct_text:
                 if fact_content in claim_texts:
                     # Two claims of one sentence were repaired to the same text: the later one states itself.
-                    fact_content = _claim_statement(with_names(fact, resolution), None if speaker_carried else speaker)
+                    fact_content = _claim_statement(with_names(fact, resolution), statement_speaker)
                     fact_metadata["grounding_method"] = "claim_statement_v1"
                 else:
                     claim_texts.add(fact_content)
             if sentence_text and distinct_text and resolution is None:
                 if fact_content in claim_texts:
                     # Another claim of this message already has this text.
-                    # A carried name stays out of the text: every later claim would then name the
-                    # owner, and a question that names them would match all of them.
-                    fact_content = _claim_statement(fact, None if speaker_carried else speaker)
+                    fact_content = _claim_statement(fact, statement_speaker)
                     fact_metadata["grounding_method"] = "claim_statement_v1"
                 else:
                     claim_texts.add(fact_content)

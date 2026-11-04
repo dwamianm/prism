@@ -391,14 +391,17 @@ the commands and their measured times. This is the same rule in short, and
 
 - **Alpha and beta** (`0.16.0a3`, `0.16.0b1`; GitHub prereleases, published to
   PyPI as prereleases, so `pip install prme` keeps the last stable) are gated by
-  the fast tiers: the defect probes (22 s), the chat probe (83 s) and the
-  corrections probe (about 30 s), the fast cycle `benchmarks.fast_cycle` (158 to
+  the fast tiers: the defect probes (22 s), the chat probe (83 s), the member
+  probe (`member-v1` with the speaker named, 35 s) and the corrections
+  probe (about 30 s), the fast cycle `benchmarks.fast_cycle` (158 to
   211 s cold, 25 to 28 s warm) and the offline evidence gate (about 10 minutes
   per side). The mid tier `benchmarks.mid_tier` (24 to 34 minutes cold, 11
   minutes warm) is available for larger changes. A default may flip on that
   evidence, in the pull request that flips it, when the defect probes rank the
   answer in the top 3 for 7 of 7 questions, the chat probe's top 3 and top 5
-  counts and every measure are no worse than with the options off, the fast
+  counts and every measure are no worse than with the options off, the member
+  probe's top 3 and top 5 counts and its user claims on the named owner are no
+  worse than with the options off, the fast
   cycle has no worse gated measure and the offline gate has no interval
   entirely below zero. The pull request cites the numbers and the owner's
   directive of 2026-10-19.

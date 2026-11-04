@@ -1636,7 +1636,7 @@ DeepSeek default-change rule in `CLAUDE.md` is the stable-channel rule. The full
 answer track is the audit at the stable release: record a new defaults baseline
 on it and pair the previous behavior, and later variants, with that baseline.
 
-The gate has three steps. Run each with the option off (the current defaults)
+The gate has four steps. Run each with the option off (the current defaults)
 and on. The commands show the on side; the off side is the same command with
 another label and no `--set`. `<key>=<value>` is the change's option. Times
 were measured on 2026-10-19 on a laptop, with `deepseek-v4.1-flash:cloud`
@@ -1666,7 +1666,23 @@ unchanged replays the shared extraction cache in seconds.
    uv run python -m benchmarks.diagnostics.chat_probe compare off on
    ```
 
-3. **Offline evidence gate**, 10 minutes 10 seconds per side, local only. On
+3. **Member probe**, 35 seconds and 30 model calls per build, on the 30-turn `member-v1` chat
+   (dwamianm/prism#397). A hosted chat application knows its user's name and
+   the user never says it; `benchmarks/conversations/member-v1.json` has that
+   shape (a benefits assistant, a member who never introduces herself,
+   questions with a fact inside, 12 probes asked by name and in the first
+   person). Both sides name the member as the speaker of her turns
+   (`--speaker`), as such an application should, with speaker grounding on,
+   because a model shown the name writes some claims with it instead of I
+   ("Named claim text" below).
+
+   ```sh
+   uv run python -m benchmarks.diagnostics.chat_probe      --conversation benchmarks/conversations/member-v1.json      build --label off --speaker --set enable_speaker_grounding=true      --model deepseek-v4.1-flash:cloud --cloud
+   uv run python -m benchmarks.diagnostics.chat_probe      --conversation benchmarks/conversations/member-v1.json      build --label on --speaker --set enable_speaker_grounding=true      --set <key>=<value> --model deepseek-v4.1-flash:cloud --cloud
+   uv run python -m benchmarks.diagnostics.chat_probe      --conversation benchmarks/conversations/member-v1.json compare off on
+   ```
+
+4. **Offline evidence gate**, 10 minutes 10 seconds per side, local only. On
    this machine the gate needs the two inputs described under "Inputs" and
    "Regenerated LongMemEval-S controls": a link from
    `../prism-locomo-baseline-2026-09-22` to the main checkout (the LoCoMo
@@ -1701,6 +1717,11 @@ default changes") adds the fast cycle and says what to do when the rule fails.
   the named owner, the key entities found, the key links linked, and the
   probes with the answer in context and ranked in the top 3 and top 5. The
   counts of extraction calls, claims and entities are not judged.
+- Member probe: with `--speaker` on both sides, the answers ranked in the top
+  3 and in the top 5 and the user claims attached to the named owner are not
+  below the off side. The off-side baseline is below. A change that moves
+  claims from the owner to another subject on purpose says so, and its
+  owner-claims count is not judged.
 - Offline gate: no retrieval loss. In `gate-compare`'s first table every
   "All evidence packed" row, "Evidence recall" and "All evidence among the
   candidates" show no loss, and no question lost all its evidence among the
@@ -1758,6 +1779,37 @@ The probes need a fresh extraction for each model and prompt, and extraction
 at temperature 0 is close to repeatable but not guaranteed to be, so a single
 baseline build is not a measure of run-to-run noise. Compare builds only when
 both used the same model and Ollama server version (`build.json` records both).
+
+Member probe baseline (dwamianm/prism#397), the off side of step 3: `member-v1`
+with `--speaker --set enable_speaker_grounding=true` on the current defaults,
+`deepseek-v4.1-flash:cloud` (`e04da138`) through Ollama 0.40.14. The first
+column is the 2026-11-04 sample behind "Named claim text" below (its
+`speaker-grounded` build, a replay of the `speaker` build's extraction); the
+other two are separate live extractions of the same day on `main` at
+`1cf42f95` with that section's branch rebased on it (the option off, so no
+ingest or retrieval change), each about 35 seconds and 30 model calls.
+
+| Measure | 2026-11-04 sample | Sample 2 | Sample 3 |
+|---|---:|---:|---:|
+| Active claims | 32 | 36 | 38 |
+| User claims attached to the named owner | 7 | 11 | 10 |
+| User claims attached to a first-person pronoun | 1 | 1 | 1 |
+| Pronoun entities | 3 | 3 | 3 |
+| Key entities found / split / missing | 6/0/0 | 6/0/0 | 6/0/0 |
+| Key links linked / via pronoun / not linked / missing | 4/0/0/0 | 4/0/0/0 | 4/0/0/0 |
+| Probes with the answer in context | 12/12 | 12/12 | 12/12 |
+| Probes with the answer ranked in the top 3 | 10/12 | 8/12 | 9/12 |
+| Probes with the answer ranked in the top 5 | 11/12 | 10/12 | 11/12 |
+| Repeated records in contexts | 84/648 | 60/612 | 48/636 |
+
+The three samples differ by up to two answers in the top 3 and four claims on
+the named owner, from extraction alone: "What are the names of Maya's
+dependents?" ranks 14, 6 and 3, and "What life event did Maya mention?" 4, 7
+and 6. So judge the member probe's off and on sides on the same extraction
+where the change leaves the extraction request unchanged (the on build then
+replays the off build's cache), and otherwise rebuild a side that is one or two
+answers or a few owner claims worse once before judging, as the rule in
+`CLAUDE.md` says for any live build.
 
 ### Why the claim fixes lost rank
 
@@ -1924,6 +1976,109 @@ an earlier message already named is not marked and that owner keeps their own `I
 memory built before the option was on). An owner who returns to an earlier name
 (A, then B, then A) keeps B. A name is carried within one scope. The offline
 evidence gate was not run: the option changes neither retrieval nor `store()`.
+
+### Named claim text (`enable_named_claim_text`, dwamianm/prism#397, 2026-11-04)
+
+A hosted project's memory explorer listed one member's memories on 2026-11-03 as
+"My husband is Theo and my child is Nico.", "The speaker has child Nico." and a
+first-person sentence about her health (names changed here) beside five "I" entities (one per
+user turn), because the application never named the user and the user never
+introduced herself. The owner asked whether memories should instead carry the
+entity in their text ("Maya's husband is Theo") and to prove it before
+changing the engine. `enable_named_claim_text` writes the name a turn's I binds
+to into each claim's text, by a bounded English rule with no model call
+(`docs/ENTITY-IDENTITY.md`); `benchmarks/conversations/member-v1.json` is a
+30-turn chat probe conversation with that project's shape (a benefits assistant,
+a member who never says her name, questions with a fact inside, 12 probes asked
+by name and in the first person). Measured on the fast gate on 2026-11-04 with
+`deepseek-v4.1-flash:cloud` through the local Ollama server, every "on" build a
+replay of the "off" build's extraction cache (0 model calls), "off" the current
+defaults (the harness keeps the pronoun repair off), and "speaker" the owner
+named as the speaker of their turns (`--speaker`, a live extraction of its own,
+so its claims are one model sample and not the "off" build's).
+
+| Measure | defects-v1 off | on | chat-v1 off | on | off, speaker | on, speaker | member-v1 no speaker | on | speaker | on, speaker |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| User claims attached to the named owner | 12 | 12 | 35 | 35 | 32 | 32 | 0 | 0 | 7 | 7 |
+| User claims attached to "I" or "We" | 5 | 5 | 3 | 3 | 3 | 3 | 5 | 5 | 1 | 1 |
+| Pronoun entities | 2 | 2 | 14 | 14 | 14 | 14 | 9 | 9 | 3 | 3 |
+| Key links linked / via pronoun / not linked | 9/0/5 | 9/0/5 | 14/0/0 | 14/0/0 | 14/0/0 | 14/0/0 | 0/4/0 | 0/4/0 | 2/0/2 | 2/0/2 |
+| Answers ranked in the top 3 | 7/7 | 7/7 | 14/18 | 10/18 | 10/18 | 10/18 | 10/12 | 10/12 | 9/12 | 6/12 |
+| Answers ranked in the top 5 | 7/7 | 7/7 | 15/18 | 13/18 | 12/18 | 13/18 | 11/12 | 11/12 | 9/12 | 8/12 |
+| Answers in the context | 7/7 | 7/7 | 17/18 | 17/18 | 17/18 | 17/18 | 12/12 | 12/12 | 12/12 | 12/12 |
+| Repeated records in the contexts | 0/105 | 0/105 | 18/1620 | 18/1620 | 18/1656 | 18/1656 | 60/612 | 60/612 | 84/636 | 60/624 |
+
+- **The option fails the chat probe rule** (no measure worse than off): the
+  answers in the top 3 fall from 14 to 10 of 18 and in the top 5 from 15 to 13,
+  and on `member-v1` with the speaker named from 9 to 6 and 9 to 8 of 12. The
+  defect probes stay at 7 of 7, the links and the owner's claims do not move
+  (the text is not what a claim is attached to), and the reader contexts show
+  no more repeated records, because a named claim still folds into the turn
+  that shows its sentence.
+- **Why the ranks move.** The text is what retrieval ranks. With the name in
+  every owner claim, a question that names the owner matches all of them
+  ("What is Dana's job title now?" ranks "Dana's sister Rachel had her baby"
+  and "Dana's friend Melanie talked Dana into it" above the answer), and a
+  question the owner asks in the first person no longer matches the words of
+  the claim that answers it: on the project's own turns (22 user turns, not
+  committed), "Do you remember the names of my dependents?" went from rank 1 to
+  12 and "What did I tell you about my health?" from 1 to 10, while the
+  questions that name her improved ("Is <name> expecting a baby?" 16 to 1,
+  "What life event did <name> mention?" 11 to 3). A chat application retrieves
+  with the user's own first-person question, so the second kind of question is
+  the one it asks.
+- **A first version was worse.** It gave a sentence whose I it could not
+  rewrite safely ("I live in Denver with my partner Sam") its statement with
+  the name instead ("Dana lives in Denver."). That turned long sentence claims
+  into short statements that repeat a question's name and verb, the kind the
+  claim statement fold exists for (above): `chat-v1` answers in the top 3 fell
+  to 8 of 18 and the top 5 to 9, "When did Dana start the new job?" from rank 2
+  to 34 behind "Dana started using this assistant." and "Dana started eating
+  fish.", and the contexts grew (105 to 182 records on `defects-v1`). The
+  committed version keeps such a sentence whole under the name ("Dana: I live
+  in Denver with my partner Sam"), which restores the fold and most of the
+  ranks.
+- **What does fix the project's explorer is the speaker.** Naming the user as
+  the `speaker` of their turns (`--speaker`), with no new option, attached
+  their claims to one person entity (`member-v1`: 0 to 7 user claims on the
+  named owner, 9 to 3 pronoun entities; the project's turns: 1 to 7, five "I"
+  entities to none, the four links of its key linked instead of reached only
+  through an "I"). On the project's turns (names changed), its statement for
+  a duplicate sentence then names her ("<name> has child <child>.") instead
+  of saying "The speaker has child <child>." under the existing claim fixes. The hosted docs now tell an application to pass it
+  (prism-monorepo, Nenavi Cloud quick start, "Name the user in a chat").
+- **With the speaker named, speaker grounding matters.** The model that sees
+  "Maya Okafor: OK. My husband is Theo and my child is Nico." wrote "Theo,
+  is_husband_of, Maya Okafor", and grounding discarded the claim because the
+  name is not in the quote (`enable_speaker_grounding` is off by default, on
+  the LoCoMo evidence above), so the `member-v1` speaker build stored no claim
+  for that turn and its husband and child links read not linked. A replay of
+  the same extraction with `enable_speaker_grounding=true`: the links 2 to 4
+  of 4 linked, "Who is Maya's husband?" rank 2 to 1, "What is the name of
+  Maya's child?" 7 to 1, "Do you remember the names of my dependents?" 16 to
+  3, answers in the top 3 from 9 to 10 of 12 and in the top 5 from 9 to 11.
+  The project's own turns did not change (that sample wrote "I"), and
+  `chat-v1` with the speaker did not change either (10 of 18 both ways). A
+  hosted project whose application names the user should turn it on; that is
+  a hosted configuration decision with the LoCoMo cost recorded above, not
+  made here.
+- **Limits.** One extraction sample per build; the rank measure looks for the
+  probe's terms, so a correct named statement that lacks them does not count
+  ("Dana quit coffee." ranks first for "Does Dana drink coffee?" with the
+  option on, while the probe wants "green tea"); the project's turns are user
+  turns only, as its application stored them. After these builds the rule
+  was narrowed (dwamianm/prism#397 review): a comma before I no longer counts
+  as a coordinated subject ("Yes, I have" now reads "Yes, Maya has"), and
+  after "and" the name is written only before a verb that reads the same
+  for a coordinated subject and a clause ("Jordan and I have" is labeled
+  instead), so the "on" columns above were measured with the earlier rule.
+  The option stays off. Two
+  bounded alternatives were not tried: indexing the claim's original words
+  while storing the named text (the rank would be the "off" rank by
+  construction, at the cost of an index text separate from the content in the
+  ingestion write path, `rebuild_indexes` and the single-file pack open), and
+  writing the name into the first person of a retrieval query when the caller
+  names the user, so a first-person question matches a named claim.
 
 ### Structure options on by default (0.16.0a3, 2026-10-19)
 

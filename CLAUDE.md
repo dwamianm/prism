@@ -121,6 +121,7 @@ gate", "Mid tier").
 |---|---|---|
 | Defect probes | the 14-turn chat `defects-v1`, 7 probes: does the answer rank in the top 3, and is the owner named | 22 s, 14 model calls per build |
 | Chat probe | the 54-turn chat `chat-v1`, 18 probes, and the structure of what `ingest()` stored | 83 s, 54 calls per build |
+| Member probe | the 30-turn chat `member-v1`, 12 probes: a member who never says her name, named as the speaker of her turns (`--speaker`), with speaker grounding on | 35 s, 30 calls per build |
 | Corrections probe | what a correction stores and returns (`corrections-v1`) | about 30 s |
 | Fast cycle | 75 memories and 17 questions through `store()`, then three scripted chats through `ingest()` | 158 to 211 s cold, 25 to 28 s warm (saved extraction cache) |
 | Offline evidence gate | `retrieve()` over the saved LoCoMo and LongMemEval-S packs, no answer model | about 10 minutes per side (10 min 10 s) |
@@ -134,6 +135,14 @@ uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/con
 uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json \
   build --label on --model deepseek-v4.1-flash:cloud --cloud --set <key>=<value>
 uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json compare off on
+
+# Member probe: the same three commands on member-v1, both sides with the speaker named and speaker grounding on.
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/member-v1.json \
+  build --label off --model deepseek-v4.1-flash:cloud --cloud --speaker --set enable_speaker_grounding=true
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/member-v1.json \
+  build --label on --model deepseek-v4.1-flash:cloud --cloud --speaker --set enable_speaker_grounding=true \
+  --set <key>=<value>
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/member-v1.json compare off on
 
 # Corrections probe (about 30 s): run once with and once without --set.
 uv run python -m benchmarks.diagnostics.corrections_probe run --model deepseek-v4.1-flash:cloud --cloud \
@@ -164,6 +173,15 @@ The change passes when every criterion below that applies holds. This is the rul
 - **Chat probe.** On `chat-v1`, the answers ranked in the top 3 and in the top 5 are not below the options-off counts,
   and no measure is worse in its good direction (the directions are listed under "Fast gate for ingest changes" in
   `BENCHMARKS.md`; the counts of extraction calls, claims and entities are not judged).
+- **Member probe.** On `member-v1` with `--speaker`, the answers ranked in the top 3 and in the top 5 and the user
+  claims attached to the named owner are not below the options-off counts. It is the shape of a hosted chat
+  application's traffic, where the application knows the user's name and the user never says it; the off-side
+  baseline is in `BENCHMARKS.md` ("Fast gate for ingest changes"). Its off side is the one tier run with a `--set`
+  (`enable_speaker_grounding=true`, with `--speaker`), on both sides. Three live off-side samples with no change
+  differed by up to two answers in the top 3 and four claims on the named owner, so when the change alters the
+  extraction request, rebuild a side that is worse once, as for any live build, and judge on the rebuilt side; when it
+  does not, the on build replays the off build's extraction and repeats exactly. A change that moves claims from the
+  owner to another subject on purpose names that in the pull request, and its owner-claims count is not judged.
 - **Fast cycle.** `run` exits 0: no gated measure is worse than the committed baseline beyond its tolerance. When the
   change moves measures on purpose, say which, and refresh `benchmarks/fixtures/fast-cycle/baseline-main.json` in the
   same pull request (`--accept <measure>` names a worsening the change means to cause).
@@ -181,7 +199,7 @@ The change passes when every criterion below that applies holds. This is the rul
 
 If a measure is slightly worse on a live build, rebuild that side once before judging: a live build is one sample,
 while a build that replays the extraction cache repeats exactly. If the rule fails with several options on together,
-run each option alone (both probes) and flip only the options that pass alone and still pass together, as the pull
+run each option alone (the defect, chat and member probes) and flip only the options that pass alone and still pass together, as the pull
 request for 0.16.0a1 did when none passed; the others stay off, with their numbers in the pull request.
 
 A default may flip in the alpha channel on that evidence. The pull request that flips it:

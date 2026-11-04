@@ -139,7 +139,7 @@ def extraction_settings(pipeline: IngestionPipeline) -> dict:
 
 def derivation_settings(pipeline: IngestionPipeline) -> dict:
     """The extraction settings and the options that decide what is derived from the output."""
-    return {
+    settings = {
         **extraction_settings(pipeline),
         "merge_repeated_claims": pipeline._merge_repeated_claims,
         "bind_speaker_references": pipeline._bind_speaker_references,
@@ -148,6 +148,12 @@ def derivation_settings(pipeline: IngestionPipeline) -> dict:
         "owner_name_carry": pipeline._owner_name_carry,
         "link_owner_groups": pipeline._link_owner_groups,
     }
+    if pipeline._named_claim_text:
+        # The name written into each claim's text (enable_named_claim_text) decides the derived records, so a
+        # source derived without it is stale once it is on. The settings of an engine with it off are those it
+        # had before the option, so nothing stored reads as stale for an engine that leaves it off.
+        settings["named_claim_text"] = True
+    return settings
 
 
 def _position(ref: SourceRef) -> tuple:

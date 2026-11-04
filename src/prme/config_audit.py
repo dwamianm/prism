@@ -259,6 +259,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_owner_group_links is true",
         bool,
     ),
+    "enable_named_claim_text": (
+        "enable_named_claim_text",
+        "enable_named_claim_text is true",
+        bool,
+    ),
     "enable_superseded_source_suppression": (
         "enable_superseded_source_suppression",
         "enable_superseded_source_suppression is true",
