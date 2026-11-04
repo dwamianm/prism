@@ -43,7 +43,7 @@ requests, such as a paired answer run before a default changes.
 | Phase | Issue | Merged on `main` | Issue state |
 |---|---|---|---|
 | 0, measurement gate | [#78](https://github.com/dwamianm/prism/issues/78) offline evidence gate | #105 | Closed |
-| 1, reader-facing context | [#79](https://github.com/dwamianm/prism/issues/79) reader context format | #109; the default since #177 | Open |
+| 1, reader-facing context | [#79](https://github.com/dwamianm/prism/issues/79) reader context format | #109; the default since #177; acceptance criteria checked in `benchmarks/results/research/2026-11-04/READER-FORMAT-CLOSEOUT.md` | Closed |
 | 1 | [#80](https://github.com/dwamianm/prism/issues/80) text-free fallbacks in the context | #116: a text-bearing `min_fidelity` floor keeps them out (opt-in) | Open |
 | 1 | [#81](https://github.com/dwamianm/prism/issues/81) packing order for plain lines | #176 compared balanced and score order on the gate; balanced is the default again since #187 | Open |
 | 2, ranking | [#82](https://github.com/dwamianm/prism/issues/82) reciprocal rank fusion | #112, with a semantic `min_score` (#110, #150), a rank fusion session decay (#111) and a current-state recency boost with an event-time tie-break (#168); the default since #177 | Open |
