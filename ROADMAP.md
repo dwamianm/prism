@@ -46,7 +46,7 @@ requests, such as a paired answer run before a default changes.
 | 1, reader-facing context | [#79](https://github.com/dwamianm/prism/issues/79) reader context format | #109; the default since #177; acceptance criteria checked in `benchmarks/results/research/2026-11-04/READER-FORMAT-CLOSEOUT.md` | Closed |
 | 1 | [#80](https://github.com/dwamianm/prism/issues/80) text-free fallbacks in the context | #116: a text-bearing `min_fidelity` floor keeps them out (opt-in) | Open |
 | 1 | [#81](https://github.com/dwamianm/prism/issues/81) packing order for plain lines | #176 compared balanced and score order on the gate; balanced is the default again since #187 | Open |
-| 2, ranking | [#82](https://github.com/dwamianm/prism/issues/82) reciprocal rank fusion | #112, with a semantic `min_score` (#110, #150), a rank fusion session decay (#111) and a current-state recency boost with an event-time tie-break (#168); the default since #177 | Open |
+| 2, ranking | [#82](https://github.com/dwamianm/prism/issues/82) reciprocal rank fusion | #112, with a semantic `min_score` (#110, #150), a rank fusion session decay (#111) and a current-state recency boost with an event-time tie-break (#168); the default since #177 | Closed |
 | 2 | [#83](https://github.com/dwamianm/prism/issues/83) event-time recency | #186 (opt-in, weighted formula only; it lost LoCoMo evidence on the gate) | Closed |
 | 2 | [#84](https://github.com/dwamianm/prism/issues/84) conversation participants | #190: `speaker` names and the `participant` role; #217 reports each LoCoMo speaker separately on the gate | Open |
 | 2 | [#85](https://github.com/dwamianm/prism/issues/85) temporal intent for questions that name a person | #194: `query_intent_order="temporal_first"` (opt-in) | Open |
