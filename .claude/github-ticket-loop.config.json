@@ -1,7 +1,6 @@
 {
   "baseBranch": "main",
   "includeLabels": [
-    "audit-2026-09",
     "organized-memory"
   ],
   "excludeLabels": [
