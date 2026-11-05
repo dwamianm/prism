@@ -128,8 +128,9 @@ async def generate_entity_snapshot(
     """
     # Fetch the entity node
     graph = await engine._ordinary_graph(user_id) if hasattr(engine, "_ordinary_graph") else engine._graph_store
+    owner = {} if user_id is None else {"user_id": user_id}
     entity_node = await graph.get_node(
-        entity_node_id, include_superseded=False
+        entity_node_id, include_superseded=False, **owner
     )
     if entity_node is None or (user_id is not None and entity_node.user_id != user_id):
         raise ValueError(f"Entity node {entity_node_id!r} not found")
@@ -139,14 +140,15 @@ async def generate_entity_snapshot(
         )
 
     # Get 1-hop neighborhood
+    # With a user the traversal keeps to that user's nodes, so an edge that
+    # crosses users never pulls another user's node in (#438).
     neighbors = await graph.get_neighborhood(
         entity_node_id,
         max_hops=1,
         valid_at=at_time,
+        **owner,
     )
     if user_id is not None:
-        # The graph traversal itself has no owner filter, so an edge that
-        # crosses users would otherwise pull another user's node in.
         neighbors = [node for node in neighbors if node.user_id == user_id]
 
     # Group neighbors by type, filtering to active lifecycle states

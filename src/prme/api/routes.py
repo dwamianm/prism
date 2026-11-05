@@ -1069,14 +1069,15 @@ async def get_neighborhood(
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
-    # The plain graph store's traversal has no owner filter, so an edge that
-    # crosses users would otherwise return another user's node (#433). This
-    # is MemoryEngine.get_neighborhood without its active-only start check,
-    # so a superseded starting node keeps the neighborhood it had.
+    # The walk is the reader's: it never steps onto another user's node, so
+    # an edge that crosses users neither returns that node nor reaches the
+    # reader's nodes through it (#433, #438). This is
+    # MemoryEngine.get_neighborhood without its active-only start check, so
+    # a superseded starting node keeps the neighborhood it had.
     reader = owner if owner is not None else node.user_id
     graph = await engine._ordinary_graph(reader)
     neighbors = [
-        n for n in await graph.get_neighborhood(node_key, max_hops=max_hops)
+        n for n in await graph.get_neighborhood(node_key, max_hops=max_hops, user_id=reader)
         if n.user_id == reader
     ]
     return NodeListResponse(
@@ -1099,9 +1100,10 @@ async def get_chain(
     """Get the supersedence chain from a node.
 
     Only nodes the reader owns are returned: the request's user, or the
-    starting node's owner when the request names none. The chain stops at
-    a node another user owns. A protected store is read through the
-    reader's admitted view.
+    starting node's owner when the request names none. A fork follows the
+    reader's branch, and no node in the chain names another user's node
+    in ``superseded_by``. A protected store is read through the reader's
+    admitted view.
     """
     node_key = str(node_id)
     engine = _get_engine(request)
@@ -1112,9 +1114,9 @@ async def get_chain(
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
-    # The plain graph store follows SUPERSEDES links without an owner
-    # filter, so a link that crosses users would otherwise return another
-    # user's node (#437). Same reader rule as the neighborhood route.
+    # The chain is the reader's own, as for the neighborhood route, so a
+    # SUPERSEDES link that crosses users never returns or names another
+    # user's node (#437, #443, #444).
     reader = owner if owner is not None else node.user_id
     chain = await engine.get_supersedence_chain(
         node_key, user_id=reader, direction=direction,
