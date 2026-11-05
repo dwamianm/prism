@@ -7,7 +7,7 @@ validation.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -55,3 +55,6 @@ class MaintenanceResult:
     feedback_applied: int = 0
     duration_ms: float = 0.0
     skipped_reason: str | None = None
+    # Profiles rebuilt with enable_owner_profile_context (issue #398): the
+    # person, the scope and whether a profile was published.
+    profiles_rebuilt: list[dict[str, Any]] = field(default_factory=list)

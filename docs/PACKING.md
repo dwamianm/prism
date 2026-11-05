@@ -434,6 +434,94 @@ benchmark and fast-tier harnesses build their packs with `store()` and
 spike harness calls `observe()`). A `PackingConfig` built in code keeps
 `false`.
 
+## The owner's profile for a first-person question
+
+"Do you remember the names of my dependents?" names no entity, so the graph
+seed channel has no seed, and the word "dependents" occurs in no claim. The
+owner's knowledge profile (`consolidate_knowledge()`, a summary record with
+`metadata.entity_profile`) holds the people and facts the engine connected to
+them, and the model that answers can match "dependents" to the husband and
+the child it lists. `enable_owner_profile_context` (default `false`;
+`PRME_ENABLE_OWNER_PROFILE_CONTEXT=true` turns it on; a hypothesis;
+dwamianm/prism#398) puts that profile in the context:
+
+1. **The question.** A question with I, me, my, mine or myself as a word is a
+   first-person question. Any other question is left alone.
+2. **The owner.** The owner is the caller's `speaker` on `retrieve()` (also
+   `speaker` on `POST /v1/retrieve`, on the MCP retrieve tool and on
+   `MemoryClient.retrieve()`), matched to the profile's person without regard
+   to case. Without a speaker, the owner of a scope is the person entity a
+   `user` turn marked with the owner's name (`enable_owner_name_carry`), only
+   when user turns gave the owner exactly one name in that scope (several
+   names means several people write under one account, and the newest need
+   not be the one asking), and only a profile of that name in that scope
+   counts. Only the scopes that hold one of the owner's 100 newest profiles
+   are read, so a store without a profile reads no entities.
+3. **The profile.** The owner's newest active profile that the request's time
+   window, knowledge cutoff, type and epistemic filters admit follows the top
+   result: it takes the top result's score times one less half a millionth,
+   through an `owner_profile` score adjustment that names the top result, so
+   receipts replay it, and it carries the `OWNER_PROFILE` path, which packing
+   reserves before the multi-path tier, as it does current-state observations.
+   The step is half the observations' step, so with both the profile comes
+   first. A profile that ranks higher keeps its score, and a profile that is
+   the top result is left as it is. It counts toward `limit` like any result.
+
+A receipt records the feature (`execution.features.owner_profile_context`,
+version 1) only for a retrieval that placed the profile, and a receipt with an
+`owner_profile` adjustment and without the feature does not validate. A
+question that is not in the first person, an unnamed owner and an owner
+without a profile retrieve exactly as with the option off, and their receipts
+keep the bytes they have with it off; no receipt schema version changes.
+Releases before this one cannot read a receipt with the new adjustment, as
+with `current_observation`.
+
+The option also keeps profiles fresh. Its rebuilds call
+`consolidate_knowledge(include_speaker_turns=True)`, which takes, besides the
+records that mention the person's name, the records stored with that person
+as their `speaker`, since an owner says "my husband", not their own name; an
+explicit `consolidate_knowledge()` call without the keyword is unchanged.
+
+- `end_session()` builds the profile of each scope's named owner when there
+  is none and two records mention them or were said by them, and rebuilds it
+  when such a record is newer than it and not among its sources. A build
+  starts only within a 1-second budget of its own, a failure is logged and
+  counted in `errors`, and the result lists the builds under the
+  `owner_profile_refresh` job. An owner under a privacy policy is skipped and
+  gets no such job.
+- The organizer's opportunistic pass, run for the requesting owner, rebuilds
+  each of the owner's 100 newest profiles that such a newer record makes
+  stale, newest first, one rebuild per person and scope, starting a rebuild
+  only within the pass's time budget, and lists them in `profiles_rebuilt`.
+- A profile that already left sources out of its token budget is not rebuilt:
+  `build_profile` keeps the oldest sources first, so the text would not
+  change. The same rule is why the option stays off (below).
+
+Rebuilding replaces the profile record (the old one is archived); the records
+it is built from are never changed. Profiles are matched by name and speaker
+with no model call, and publishing a profile embeds its text once. A rebuild
+uses the default 500-token budget.
+
+On the fast gate (2026-11-05, `deepseek-v4.1-flash:cloud` through Ollama
+0.40.14, every build replaying the extraction cache), the option on left the
+defect probes at 7 of 7 in the top 3 and top 5, the chat probe at 14 and 15 of
+18, and the member probe at 10 and 11 of 12, all as with it off, with the
+profile in the context of both of the member probe's first-person questions;
+the fast cycle passed with its one profile record per chat accepted, and the
+offline evidence gate did not change (no saved `store()` pack holds a profile
+or an owner name). Without the speaker's own turns the owner's profile held
+three records and pushed the first-person dependents answer from third to
+fourth, so the member probe fell to 9 of 12 in the top 3.
+
+It stays off although those tiers passed. A profile keeps its oldest sources
+within 500 tokens, and each source carries about 70 tokens of identifiers and
+times, so an owner's profile is a snapshot of their first few records: after
+54 turns of `chat-v1` it held the first turn and two small facts. A
+first-person question about now ("Where do I work now?") would get that
+snapshot reserved right after the top result. The fast gate's questions do
+not show this, and the full benchmark builds no profiles. Turning it on waits
+for profiles that keep current records.
+
 ## Folding repeated text
 
 `ingest()` keeps a turn's own record beside the claims extracted from it, and

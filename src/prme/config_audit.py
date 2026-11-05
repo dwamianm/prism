@@ -269,6 +269,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_superseded_source_suppression is true",
         bool,
     ),
+    "enable_owner_profile_context": (
+        "enable_owner_profile_context",
+        "enable_owner_profile_context is true",
+        bool,
+    ),
     "novelty_high_threshold": (
         "enable_surprise_gating",
         "enable_surprise_gating is true",

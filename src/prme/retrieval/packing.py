@@ -629,9 +629,11 @@ def pack_context(
             "EPISODE_CONTEXT" in candidate.paths
             or "EVIDENCE_CONTEXT" in candidate.paths
             or "CURRENT_STATE" in candidate.paths
+            or "OWNER_PROFILE" in candidate.paths
         ):
             # Episode routing and evidence projection are already bounded, and
-            # so are the newest observations of a current-state question.
+            # so are the newest observations of a current-state question and
+            # the owner's profile for a first-person question.
             # Reserve their source evidence before the broad multi-path pool,
             # while preserving instructions and user pins.
             return 2

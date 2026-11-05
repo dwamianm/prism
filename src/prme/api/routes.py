@@ -486,6 +486,7 @@ async def retrieve(request: Request, body: RetrieveRequest) -> RetrieveResponse:
         "token_budget",
         "ranking_multipliers",
         "min_fidelity",
+        "speaker",
     ):
         value = getattr(body, name)
         if value is not None:

@@ -166,7 +166,8 @@ def project_organize(value):
     from prme.organizer.models import OrganizeResult, JobResult
     from prme.organizer.jobs import ALL_JOBS
 
-    allowed = {*ALL_JOBS, "materialization_drain"}
+    # end_session() reports its owner profile refresh as a job too (issue #398).
+    allowed = {*ALL_JOBS, "materialization_drain", "owner_profile_refresh"}
     if (
         not isinstance(value, OrganizeResult)
         or not set(value.jobs_run + value.jobs_skipped + list(value.per_job)) <= allowed

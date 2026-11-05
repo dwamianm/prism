@@ -358,6 +358,7 @@ async def memory_retrieve(
     min_fidelity: Optional[RepresentationLevel] = None,
     mode: Optional[RetrievalMode] = None,
     include_context: StrictBool = False,
+    speaker: Optional[str] = None,
 ) -> str:
     """Search memories using hybrid retrieval.
 
@@ -399,6 +400,9 @@ async def memory_retrieve(
         knowledge_at: Optional timezone-aware ISO datetime used as an ingestion
             cutoff over current indexes. Returned historical_coverage states
             why this is not an exact prior-state replay.
+        speaker: Optional name of the user asking, as given to memory_store.
+            With enable_owner_profile_context, a first-person question gets
+            this person's knowledge profile right after the top result.
     """
     engine = _get_engine(ctx)
     try:
@@ -445,6 +449,10 @@ async def memory_retrieve(
             kwargs["min_fidelity"] = RepresentationLevel(min_fidelity)
         if mode is not None:
             kwargs["retrieval_mode"] = RetrievalMode(mode)
+        if speaker is not None:
+            from prme.models.speaker import normalize_speaker
+
+            kwargs["speaker"] = normalize_speaker(speaker)
         from prme.retrieval.filtering import normalize_type_filters
 
         excluded_types, allowed_sources = normalize_type_filters(exclude_node_types, source_types)

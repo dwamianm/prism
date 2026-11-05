@@ -81,6 +81,7 @@ EXPECTED_HYPOTHESES = {
     "enable_owner_group_links",
     "enable_named_claim_text",
     "enable_superseded_source_suppression",
+    "enable_owner_profile_context",
     "novelty_high_threshold",
     "novelty_low_threshold",
     "novelty_salience_boost",

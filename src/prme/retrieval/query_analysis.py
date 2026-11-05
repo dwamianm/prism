@@ -144,6 +144,26 @@ def is_current_state_question(query: str) -> bool:
     )
 
 
+# --- First-person questions (enable_owner_profile_context, issue #398) ---
+
+# I, me, my, mine or myself as a word, with or without a contraction ("I'm",
+# "I've"). An apostrophe is not a word character, so "I'm" matches at "I".
+_FIRST_PERSON_RE = re.compile(r"\b(?:i|me|my|mine|myself)\b", re.IGNORECASE)
+
+
+def is_first_person_question(query: str) -> bool:
+    """Whether *query* speaks in the first person (issue #398).
+
+    True when I, me, my, mine or myself occurs as a word ("Do you remember the
+    names of my dependents?", "What did I tell you about my health?"). The
+    question is then the owner's own, so its answer can be anything the engine
+    knows about them even when its words match no memory. This alone changes
+    nothing: ``enable_owner_profile_context`` acts on it only when the owner is
+    named and has a profile.
+    """
+    return bool(_FIRST_PERSON_RE.search(query))
+
+
 # Heuristic for proper nouns: 1+ consecutive capitalized words not at
 # sentence start. We anchor on "not after sentence-start" by checking
 # that the match is not preceded by nothing or a sentence-ending punctuation.

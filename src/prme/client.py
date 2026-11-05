@@ -463,6 +463,7 @@ class MemoryClient:
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
         source_access: EvidenceAccess | None = None,
+        speaker: str | None = None,
     ) -> RetrievalResponse:
         """Retrieve memories with engine-equivalent temporal and ranking controls.
 
@@ -488,6 +489,7 @@ class MemoryClient:
                 exclude_node_types=exclude_node_types, source_types=source_types,
                 weights=weights, ranking_multipliers=ranking_multipliers, min_fidelity=min_fidelity,
                 retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope, source_access=source_access,
+                speaker=speaker,
             )
         )
 
