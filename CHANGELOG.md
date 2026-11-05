@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0a1] - 2026-11-05
+
+This is an alpha. It passed CI on `main`, and each change in it that turned a default on carries its
+fast-tier evidence or its recorded exception in `CLAUDE.md` ("Release channels and default changes"); this
+version bump changes no code. It has not been through the full benchmark or the mid tier. The stable release
+stays at 0.16.1 until the full benchmark audit, so `pip install prme` still installs 0.16.1. Install the alpha
+with `pip install --pre prme` or `pip install prme==0.17.0a1`.
+
+What is new since 0.16.1: `ingest()` can write the speaker's name into a claim's text behind
+`enable_named_claim_text` (off), and the fast gate has the member probe (dwamianm/prism#397); a profile build
+runs its name matching and tokenizing off the caller's event loop, so one slow build cannot stall other
+requests on a shared server (dwamianm/prism#405); visual memory gains a live observe session for camera and
+screen frames, per-video keyframe calibration, description prompt version 3, the observation timeline and
+current-state observations (dwamianm/prism#386 to #390); and CI runs its test suite on every core
+(dwamianm/prism#412). Upgrade notes: no stored memory goes stale, because `DERIVATION_VERSION` is unchanged,
+so `reingest()` finds every memory current; the defaults turned on since 0.16.1 each have an environment
+variable that restores the earlier behavior, listed in `documentation/configuration.md`.
+
 ### Added
 
 - `enable_named_claim_text` (`PRME_ENABLE_NAMED_CLAIM_TEXT`), off by default. `ingest()` stores a claim from a turn whose I, me and my bind to a name (the caller's `speaker`, a self-introduction, or the name an earlier user turn gave with `enable_owner_name_carry`) with that name written into its text: "My husband is Theo and my child is Nico." is stored as "Maya's husband is Theo and Maya's child is Nico.", and the statement a duplicate sentence gets says "Maya has child Nico." instead of "The speaker has child Nico." The rewrite is a bounded English rule with no model call (`prme.ingestion.named_text`): my, mine and me become the name, and I does when what follows it has a known third-person form (am, have, do, a modal, a past tense) or the name is one of a coordinated subject; a sentence whose I cannot be rewritten safely is kept whole under the name ("Maya: I live in Denver with my partner Sam."). The evidence quote stays verbatim, `metadata.named_text` records the name and the sentence the claim was written from, a named claim still folds into the turn that shows its sentence in the reader context, and the extraction request is unchanged, so a recorded extraction replays unchanged. The option is part of the re-derivation settings only while it is on. It stays off: on the fast gate it left the defect probes at 7 of 7 and lowered the chat probe's answers in the top 3 from 14 to 10 of 18 (a first version that gave an unrewritable sentence its statement instead fell to 8), because a question that names the owner now matches every owner claim and a question the owner asks in the first person no longer matches the words of its answer. A hosted project whose users never introduce themselves saw every user turn make its own I entity and a statement say "The speaker" (a hosted project's memory explorer, 2026-11-03); with the application naming the user as the `speaker` of their turns, the claims attach to one person entity (that project's 22 turns: 7 user claims on the named owner instead of 1, no I entity instead of 5, the 4 links of its key linked instead of reached only through an I), and with this option their text names that person too. `benchmarks/conversations/member-v1.json` is a chat probe conversation with that shape; on it, a turn whose claims the model wrote with the speaker's name instead of I lost them to grounding until `enable_speaker_grounding` was on (the member's husband and child; answers in the top 3 from 9 to 10 of 12 and in the top 5 from 9 to 11). See `docs/ENTITY-IDENTITY.md` and `BENCHMARKS.md` ("Named claim text").
@@ -3286,7 +3304,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a1...HEAD
+[0.17.0a1]: https://github.com/dwamianm/prism/compare/v0.16.1...v0.17.0a1
 [0.16.1]: https://github.com/dwamianm/prism/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0
 [0.16.0a9]: https://github.com/dwamianm/prism/compare/v0.16.0a8...v0.16.0a9
