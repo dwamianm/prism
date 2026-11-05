@@ -42,6 +42,9 @@ from prme.types import (
     has_memory_text,
 )
 
+# prme.ingestion.named_text.NAMED_TEXT_KEY, spelled here so retrieval does not import the ingestion package.
+_NAMED_TEXT_KEY = "named_text"
+
 
 # Ordered from highest fidelity to lowest for representation selection.
 _REPRESENTATION_ORDER: list[RepresentationLevel] = [
@@ -897,8 +900,22 @@ def _folds_into(
     time order.
     """
     text = (inner.rendered_text or "").strip()
-    if not text or text not in (outer.rendered_text or ""):
+    if not text:
         return False
+    if text not in (outer.rendered_text or ""):
+        # A claim whose text names its speaker (enable_named_claim_text) folds into the record that shows the
+        # sentence it was written from, as the sentence itself does; the source text stays the reader's line.
+        # The key is not reserved, so a caller's own metadata can hold any value under it: only ingestion's shape, a
+        # name that the text shows and the original text, counts.
+        named = (inner.node.metadata or {}).get(_NAMED_TEXT_KEY)
+        name = named.get("name") if isinstance(named, dict) else None
+        original = named.get("original") if isinstance(named, dict) else None
+        if (
+            not isinstance(name, str) or not name.strip() or name not in text
+            or not isinstance(original, str) or not original.strip()
+            or original.strip() not in (outer.rendered_text or "")
+        ):
+            return False
     a, b = inner.node, outer.node
     if _reader_tags(a) != _reader_tags(b):
         return False

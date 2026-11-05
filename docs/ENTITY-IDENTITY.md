@@ -67,6 +67,57 @@ earlier name (A, then B, then A again) keeps B, because A's entity is not marked
 behavior. The owner's entity lives in one scope, so a name given in one scope is
 not carried to another.
 
+The binding above decides which entity a claim is attached to; it leaves the
+claim's text as the user wrote it ("My husband is Theo and my child is
+Nico."), and the statement a duplicate sentence gets says "The speaker has
+child Nico." That text is what retrieval indexes, what the reader context
+shows for a claim (only a record stored with a `speaker` carries the label the
+reader format prints, and an extracted claim does not) and what an application
+reads from `results`, so a claim named no one there. With
+`enable_named_claim_text` (default `false`), a claim from a turn whose I, me
+and my bind to a name is stored with the name written into its text: "Maya's
+husband is Theo and Maya's child is Nico.", "Maya has child Nico.",
+"Maya was just diagnosed with breast cancer?" The name is the one the
+binding found: the caller's `speaker`, the turn's own introduction, or the name
+an earlier user turn gave; a name no turn gave is never invented, and a turn
+whose claims keep no `I` but whose sentence says "my" ("My sister Rachel lives
+in Portland.") takes the carried name for that "my" too. The rewrite is a
+bounded English rule with no model call (`prme.ingestion.named_text`): `my`
+and `mine` become the possessive of the name and `me` the name; `I` becomes
+the name when what follows it has a known third-person form (`I am` to `is`,
+`I have` to `has`, `I don't` to `doesn't`, a modal, a past tense) or when the
+name is one of a coordinated subject and the verb reads the same after it
+("Jordan and I are", "Jordan and I went"); and a sentence whose `I` cannot be
+rewritten safely (a present tense verb the table does not know, `I'd`,
+`myself`, an inverted question "Do I need", "Jordan and I have", where the
+`I` may start a clause of its own) is kept whole under
+the name, as the reader context labels a turn ("Maya: I live in Denver with
+my partner Sam."). A second verb whose subject the sentence leaves out is not
+conjugated ("Maya left Northwind and now work at Brightpath"). The literal
+pronoun stays the claim's subject or object, `speaker_reference` and the links
+are as above, the evidence quote stays verbatim, and `metadata.named_text`
+records the name and the sentence the claim was written from (for a
+statement, the source sentence, not the statement before the name); in the
+reader context a named claim, a statement included, folds into the turn that
+shows that sentence
+(`packing.fold_repeated_text`), so the context costs no more lines. The
+extraction request is unchanged, so a recorded extraction replays unchanged;
+the option is part of the re-derivation settings only while it is on, so
+memories derived without it stay current while it is off, turning it on reads
+them as stale for `reingest()`, and memories derived while it was on read as
+stale once it is turned off.
+
+The option is off by default because the text is also what retrieval ranks.
+On the fast gate (2026-11-04, `BENCHMARKS.md`, "Named claim text") the named
+text left the defect probes at 7 of 7 and lowered the chat probe's answers in
+the top 3 from 14 to 10 of 18: a question that names the owner now matches
+every owner claim, and a question the owner asks in the first person ("Do you
+remember the names of my dependents?") no longer matches the words of the
+claim that answers it. A chat application retrieves with the user's own
+first-person question, so the owner's name belongs on the entity the claim is
+attached to and on the turn's `speaker` label, and the rewritten text is for a
+project that reads claims outside the reader context and accepts that trade.
+
 With `enable_owner_group_links` (default `true` since 2026-10-19 in the alpha channel; `false` restores
 0.16.0a3; it needs `enable_owner_name_carry`), a claim that a `user` turn states about `we`, `us` or `our`
 is linked to the people it speaks for, while its subject stays the `we` entity local to its message and its

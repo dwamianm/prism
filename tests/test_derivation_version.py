@@ -63,6 +63,7 @@ def pinned_config(tmp_path, monkeypatch) -> PRMEConfig:
         enable_claim_merge=True, enable_speaker_references=True, enable_claim_sentence_text=True,
         enable_speaker_grounding=False, enable_ingest_claim_fixes=True, enable_mention_links=True,
         enable_owner_name_carry=True, enable_owner_group_links=True, enable_extraction_corrections=False,
+        enable_named_claim_text=False,
     )
 
 

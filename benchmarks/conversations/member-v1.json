@@ -1,0 +1,93 @@
+{
+  "kind": "prme-chat-probe",
+  "schema_version": 1,
+  "name": "member-v1",
+  "description": "A scripted chat between a health plan member and a benefits assistant over three short sessions, written to reproduce what a hosted project saw in its memory explorer on 2026-11-03: the member never says her name (the application knows it, so it can pass it as the speaker of her turns, or not), her turns are mostly questions with a fact inside (\"My husband is Theo and my child is Nico\", \"I was just diagnosed with breast cancer, how does this plan cover it?\"), and the assistant echoes what it was told. Without a speaker every user turn makes its own I entity and a duplicate sentence's statement says \"The speaker\"; the probes ask what the member and the application would ask, by name and in the first person.",
+  "owner": "member-v1-maya",
+  "user_name": "Maya Okafor",
+  "reference_time": "2026-11-04T12:00:00+00:00",
+  "sessions": [
+    {
+      "id": "s1-dependents",
+      "start": "2026-11-02T19:30:00+00:00",
+      "turns": [
+        {"role": "user", "text": "Hi Kai. Do you remember me?"},
+        {"role": "assistant", "text": "Hello! I keep notes on what you tell me, so remind me of anything I should know."},
+        {"role": "user", "text": "Do you have information on my dependents?"},
+        {"role": "assistant", "text": "Not yet. Who is on your plan with you?"},
+        {"role": "user", "text": "OK. My husband is Theo and my child is Nico."},
+        {"role": "assistant", "text": "Got it: Theo is your husband and Nico is your child. I will remember both of them."},
+        {"role": "user", "text": "Do you remember the names of my dependents?"},
+        {"role": "assistant", "text": "Yes. Your dependents are Theo and Nico."},
+        {"role": "user", "text": "I am planning a trip for us in December to Jamaica. Do we need vaccines?"},
+        {"role": "assistant", "text": "For Jamaica, routine vaccines are enough for most travelers, and hepatitis A is recommended. Travel vaccines at an in-network pharmacy are covered as preventive care."},
+        {"role": "user", "text": "What is the first question I asked you today?"},
+        {"role": "assistant", "text": "You first asked whether I remember you, and then whether I have information on your dependents."}
+      ]
+    },
+    {
+      "id": "s2-benefits",
+      "start": "2026-11-03T11:50:00+00:00",
+      "turns": [
+        {"role": "user", "text": "How much is my deductible?"},
+        {"role": "assistant", "text": "Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care."},
+        {"role": "user", "text": "I am pregnant, how does my plan cover this? How do I enroll my newborn?"},
+        {"role": "assistant", "text": "Congratulations. Prenatal visits are covered in full in network, and delivery counts toward your deductible. You can add a newborn within 30 days of the birth as a qualifying life event."},
+        {"role": "user", "text": "I am getting married. What plan will be best for our new family?"},
+        {"role": "assistant", "text": "Marriage is also a qualifying life event, so you can change plans within 30 days. With a spouse and a child on the plan, the family plan with the $3,000 deductible usually costs less over a year than two individual plans."},
+        {"role": "user", "text": "I was just diagnosed with breast cancer? How does this plan cover it?"},
+        {"role": "assistant", "text": "I am sorry to hear that. Oncology visits, chemotherapy and radiation are covered in network after the deductible, with the out-of-pocket maximum of $6,000 as the limit for the year. Prior authorization is needed for some infusions."},
+        {"role": "user", "text": "Open enrollment is coming up. What plan will be best for us?"},
+        {"role": "assistant", "text": "With your treatment ahead, the plan with the lowest out-of-pocket maximum will likely cost the least. I can compare the two family plans when you have the enrollment guide."},
+        {"role": "user", "text": "My coworker Dana asked whether dental is included for her son. Is it?"},
+        {"role": "assistant", "text": "Dental is a separate plan. A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."}
+      ]
+    },
+    {
+      "id": "s3-return",
+      "start": "2026-11-03T13:55:00+00:00",
+      "turns": [
+        {"role": "user", "text": "Do you remember the names of my dependents?"},
+        {"role": "assistant", "text": "Yes. Your dependents are Theo, your husband, and Nico, your child."},
+        {"role": "user", "text": "Dental"},
+        {"role": "assistant", "text": "Dental coverage is a separate plan with its own premium. Preventive cleanings are covered twice a year."},
+        {"role": "user", "text": "How much is my deductible?"},
+        {"role": "assistant", "text": "Your individual deductible is $1,500 and the family deductible is $3,000."}
+      ]
+    }
+  ],
+  "key": {
+    "entities": [
+      {"id": "maya", "names": ["Maya", "Maya Okafor"], "owner": true},
+      {"id": "theo", "names": ["Theo"]},
+      {"id": "nico", "names": ["Nico"]},
+      {"id": "jamaica", "names": ["Jamaica"]},
+      {"id": "breast-cancer", "names": ["breast cancer"]},
+      {"id": "dana", "names": ["Dana"]}
+    ],
+    "links": [
+      {"id": "husband", "between": ["maya", "theo"], "label": "Maya's husband is Theo"},
+      {"id": "child", "between": ["maya", "nico"], "label": "Maya's child is Nico"},
+      {"id": "trip", "between": ["maya", "jamaica"], "label": "Maya is planning a trip to Jamaica"},
+      {"id": "diagnosis", "between": ["maya", "breast-cancer"], "label": "Maya was diagnosed with breast cancer"}
+    ],
+    "repeats": [
+      {"id": "dependents", "label": "Maya's dependents are Theo and Nico", "terms": ["theo", "nico"], "user_mentions": 1},
+      {"id": "deductible", "label": "The individual deductible is $1,500", "terms": ["1,500"], "user_mentions": 0}
+    ],
+    "probes": [
+      {"id": "husband", "question": "Who is Maya's husband?", "all_of": ["Theo"]},
+      {"id": "child", "question": "What is the name of Maya's child?", "all_of": ["Nico"]},
+      {"id": "dependents", "question": "What are the names of Maya's dependents?", "all_of": ["Theo", "Nico"]},
+      {"id": "dependents-first-person", "question": "Do you remember the names of my dependents?", "all_of": ["Theo", "Nico"]},
+      {"id": "diagnosis", "question": "What was Maya diagnosed with?", "all_of": ["breast cancer"]},
+      {"id": "diagnosis-first-person", "question": "What did I tell you about my health?", "any_of": ["breast cancer", "pregnant"]},
+      {"id": "trip", "question": "Where is Maya planning a trip?", "all_of": ["Jamaica"]},
+      {"id": "trip-when", "question": "When is Maya's trip to Jamaica?", "all_of": ["December"]},
+      {"id": "pregnant", "question": "Is Maya expecting a baby?", "any_of": ["pregnant", "newborn"]},
+      {"id": "marriage", "question": "What life event did Maya mention?", "any_of": ["married", "marriage"]},
+      {"id": "deductible", "question": "What is my deductible?", "all_of": ["1,500"]},
+      {"id": "coworker", "question": "What did Maya's coworker Dana ask about?", "all_of": ["dental"]}
+    ]
+  }
+}

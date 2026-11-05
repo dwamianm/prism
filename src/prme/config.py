@@ -1242,6 +1242,37 @@ class PRMEConfig(_ProjectSettings):
             "runs are pending."
         ),
     )
+    enable_named_claim_text: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, ingest() stores a claim from a turn whose "
+            "I, me and my bind to a name (the caller's speaker, a self-"
+            "introduction, or the name an earlier user turn gave with "
+            "enable_owner_name_carry) with that name written into its text: "
+            "\"My husband is Theo\" becomes \"Maya's husband is Theo\" "
+            "and the statement for a duplicate sentence says \"Maya has "
+            "child Nico.\" instead of \"The speaker has child Nico.\" The "
+            "rewrite is a bounded English rule with no model call: my, mine "
+            "and me become the name, and I does when what follows it has a "
+            "known third-person form (am, have, do, a modal, a past tense) or "
+            "the name is one of a coordinated subject; a sentence whose I "
+            "cannot be rewritten safely is kept whole under the name "
+            "(\"Maya: I live in Denver with my partner Sam.\"). The "
+            "evidence quote stays verbatim and metadata.named_text records "
+            "the name and the sentence the claim was written from. A claim's "
+            "text is what "
+            "retrieval indexes, what the reader context shows for it and what "
+            "an application reads from results, so without this a claim says "
+            "my or the speaker and names no one there. Off by default: on the "
+            "fast gate (2026-11-04) the named text lowered the chat probe's "
+            "answers in the top 3 from 14 to 10 of 18, because a claim that "
+            "names the owner no longer matches the first person of a question "
+            "the owner asks (\"the names of my dependents\") while every "
+            "owner claim matches a question that names them (BENCHMARKS.md, "
+            "\"Named claim text\"). Needs enable_speaker_references for the "
+            "binding. False keeps the user's own words as the text."
+        ),
+    )
     enable_superseded_source_suppression: bool = Field(
         default=False,
         description=(
