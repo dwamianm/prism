@@ -520,6 +520,14 @@ class RetrievalReceipt(BaseModel):
                 raise ValueError(
                     "Current-state observation scores require packing.current_state_observations"
                 )
+            # A receipt records enable_owner_profile_context only when it placed
+            # the owner's profile (issue #398); its score needs the feature.
+            if any(
+                adjustment.kind == "owner_profile"
+                for provenance in self.score_provenance.values()
+                for adjustment in provenance.adjustments
+            ) and (self.execution is None or "owner_profile_context" not in self.execution.features):
+                raise ValueError("Owner profile scores require the owner_profile_context feature")
         return self
 
     def replay_ranking(self) -> tuple[UUID, ...]:

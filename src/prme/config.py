@@ -1298,6 +1298,43 @@ class PRMEConfig(_ProjectSettings):
             "records once when it has any. Default False."
         ),
     )
+    enable_owner_profile_context: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, a first-person question from a named "
+            "user gets the user's knowledge profile in the context "
+            "(dwamianm/prism#398). \"Do you remember the names of my "
+            "dependents?\" names no entity and its words match no claim, "
+            "while the owner's profile (consolidate_knowledge()) lists the "
+            "people and facts the engine connected to them. A question with "
+            "I, me, my, mine or myself as a word is a first-person question. "
+            "The owner is the caller's retrieve(speaker=...) or, without one, "
+            "the person a user turn named (the owner_name marker that "
+            "enable_owner_name_carry writes) in the profile's scope, when "
+            "user turns gave the owner only one name there. Their "
+            "newest active profile that the request's filters admit is placed "
+            "right after the top result: it takes the top result's score times "
+            "one less half a millionth through a replayable owner_profile "
+            "adjustment, packing reserves it before the multi-path tier, and "
+            "the receipt "
+            "records the owner_profile_context feature. A question that is "
+            "not in the first person, an unnamed owner and an owner without a "
+            "profile retrieve exactly as with the option off, and their "
+            "receipts omit it. It also keeps the owner's profile fresh: "
+            "end_session() builds or rebuilds, within a 1-second budget, the "
+            "profile of the person each scope's owner_name marker names when "
+            "a newer record mentions them, and the organizer's opportunistic pass rebuilds, within "
+            "its time budget, each existing profile that a newer record "
+            "mentions, one rebuild per person per pass. These rebuilds also "
+            "take the turns stored with that person as their speaker, since "
+            "an owner says \"my husband\", not their own name. Profiles are "
+            "built by name and speaker matching with no model call; each "
+            "rebuild embeds one text, and the profile it replaces is "
+            "archived. Default False: the fast tiers passed with it on, but a "
+            "full profile keeps its oldest sources, so the owner's profile "
+            "can be a snapshot of their first records."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(

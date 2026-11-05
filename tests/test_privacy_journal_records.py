@@ -536,5 +536,9 @@ async def test_CL05_component_alias_review_and_merge_use_closed_copies(
             not value.details for value in result.per_job.values()
         )
         assert (await engine.end_session(user_id=owner)).jobs_run == ["promote"]
+        # The owner profile refresh (dwamianm/prism#398) skips a protected
+        # owner, so end_session() still reports promotion alone.
+        engine._config = engine._config.model_copy(update={"enable_owner_profile_context": True})
+        assert (await engine.end_session(user_id=owner)).jobs_run == ["promote"]
     finally:
         await engine.close()

@@ -10,6 +10,7 @@ import threading
 from typing import ParamSpec, TypeVar
 
 from prme.models import MemoryNode
+from prme.retrieval.owner_profile import PROFILE_HEADER
 from prme.retrieval.tokenization import count_tokens
 
 P = ParamSpec("P")
@@ -91,7 +92,7 @@ def build_profile(
     name: str, sources: list[MemoryNode], *, token_budget: int, tokenizer: str,
 ) -> tuple[str, list[MemoryNode], int] | None:
     """Select complete source records; distinct episodes never deduplicate by text."""
-    text = f"[Knowledge Profile: {name}]\nSource mentions; entity association is inferred."
+    text = PROFILE_HEADER.format(name=name) + "\nSource mentions; entity association is inferred."
     selected = []
     # Stable identity breaks ties without relying on backend row order.
     ordered = sorted(sources, key=lambda node: (_date(node.event_time or node.created_at), str(node.id)))

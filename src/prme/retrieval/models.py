@@ -152,6 +152,7 @@ class ScoreAdjustment(BaseModel):
         "current_update",
         "neural_rank_assignment",
         "current_observation",
+        "owner_profile",
     ]
     coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
@@ -175,6 +176,8 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("A claim statement fold records lineage and leaves the score as it is")
         if self.kind == "current_observation" and not 0 < self.coefficient <= 1:
             raise ValueError("A current-state observation coefficient must be in (0, 1]")
+        if self.kind == "owner_profile" and not 0 < self.coefficient <= 1:
+            raise ValueError("An owner profile coefficient must be in (0, 1]")
         return self
 
 

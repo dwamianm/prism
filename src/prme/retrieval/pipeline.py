@@ -25,7 +25,7 @@ import json
 import logging
 import time
 import uuid
-from collections.abc import Collection, Sequence
+from collections.abc import Callable, Collection, Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Protocol
@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol
 import duckdb
 
 from prme.models.learning import RankingMultipliers
+from prme.models.speaker import normalize_speaker
 from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
 from prme.retrieval.candidates import (
@@ -76,6 +77,11 @@ from prme.retrieval.models import (
     RetrievalMetadata,
     RetrievalResponse,
 )
+from prme.retrieval.owner_profile import (
+    OWNER_PROFILE_PATH,
+    add_owner_profile,
+    find_owner_profile,
+)
 from prme.retrieval.packing import pack_context, requires_memory_text
 from prme.retrieval.query_analysis import (
     DEFAULT_TEMPORAL_LANGUAGES,
@@ -83,6 +89,7 @@ from prme.retrieval.query_analysis import (
     QueryIntentOrder,
     analyze_query,
     is_current_state_question,
+    is_first_person_question,
 )
 from prme.retrieval.replaced_sources import suppress_replaced_sources
 from prme.retrieval.scoring import score_and_rank
@@ -222,6 +229,7 @@ class RetrievalPipeline:
         query_intent_order: QueryIntentOrder = "entity_first",
         reranker_prior_weight: float = DEFAULT_RERANKER_PRIOR_WEIGHT,
         superseded_source_suppression: bool = False,
+        owner_profile_context: bool = False,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -256,6 +264,7 @@ class RetrievalPipeline:
             raise ValueError(f"Unknown query intent order: {query_intent_order!r}")
         self._query_intent_order = query_intent_order
         self._superseded_source_suppression = superseded_source_suppression
+        self._owner_profile_context = owner_profile_context
         self._temporal_languages = temporal_languages
         self._temporal_relation_config = (
             temporal_relation_config or TemporalRelationConfig()
@@ -345,6 +354,7 @@ class RetrievalPipeline:
         min_fidelity: RepresentationLevel | None = None,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
+        speaker: str | None = None,
     ) -> RetrievalResponse:
         """Execute the full hybrid retrieval pipeline.
 
@@ -405,10 +415,17 @@ class RetrievalPipeline:
                 to surface highly relevant results from other scopes.
                 Results appear as separate cross_scope_hints list, never
                 merged into primary results. Defaults to True.
+            speaker: Optional name of the user asking. With
+                ``enable_owner_profile_context``, a first-person question
+                from a named user gets the profile of the person with this
+                name right after the top result (issue #398). Without it,
+                the owner's name comes from the entity a user turn marked
+                with it. Otherwise unused.
 
         Returns:
             RetrievalResponse with bundle, results, metadata, and score traces.
         """
+        speaker = normalize_speaker(speaker)
         validate_selection(min_score, limit, max_per_source, max_per_evidence)
         exclude_node_types, source_types = normalize_type_filters(exclude_node_types, source_types)
         if ranking_multipliers is not None:
@@ -494,6 +511,34 @@ class RetrievalPipeline:
             if current_state_observations:
                 analysis = analysis.model_copy(
                     update={"is_current_state": True, "is_aggregation": False}
+                )
+
+        # --- Stage 1c: The owner's profile (issue #398) ---
+        # A first-person question from a named owner gets the owner's profile
+        # right after the top result (Stage 5.5g). Without a profile nothing
+        # changes.
+        owner_profile: RetrievalCandidate | None = None
+        if self._owner_profile_context and is_first_person_question(query):
+            try:
+                owner_profile = await self._owner_profile(
+                    user_id=user_id,
+                    scopes=normalized_scope,
+                    speaker=speaker,
+                    knowledge_at=knowledge_at,
+                    event_time_from=event_time_from,
+                    event_time_to=event_time_to,
+                    time_from=effective_time_from,
+                    time_to=effective_time_to,
+                    exclude_node_types=exclude_node_types,
+                    source_types=source_types,
+                    retrieval_mode=analysis.retrieval_mode,
+                )
+            except PrivacyDenied:
+                raise
+            except Exception:
+                logger.warning(
+                    "Owner profile lookup failed; continuing without it",
+                    exc_info=not bool(getattr(self, "_privacy_context", None)),
                 )
 
         # --- Aggregation boost: widen candidate pool for count/total queries ---
@@ -966,6 +1011,19 @@ class RetrievalPipeline:
             if added:
                 candidate_counts["CURRENT_STATE"] = added
 
+        # --- Stage 5.5g: The owner's profile (issue #398) ---
+        # It follows the top result, and packing reserves it. The receipt
+        # records the feature only when the profile was placed, so any other
+        # retrieval keeps the bytes it has with the option off.
+        if owner_profile is not None:
+            scored, profile_placed, profile_ranking = add_owner_profile(scored, owner_profile)
+            if profile_ranking:
+                ranking_policy = "score_id"
+            if profile_placed:
+                execution_features["owner_profile_context"] = {"version": 1}
+                if any(candidate.paths == [OWNER_PROFILE_PATH] for candidate in scored):
+                    candidate_counts["OWNER_PROFILE"] = 1
+
         # Enforce consumer filters after episode/projection/augmentation stages too.
         scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types)
         excluded.extend(type_excluded)
@@ -1385,6 +1443,33 @@ class RetrievalPipeline:
             cross_scope_hints=cross_scope_hints,
         )
 
+    def _request_filter(
+        self,
+        *,
+        knowledge_at: datetime | None,
+        event_time_from: datetime | None,
+        event_time_to: datetime | None,
+        time_from: datetime | None,
+        time_to: datetime | None,
+        exclude_node_types: Collection[NodeType] | None,
+        source_types: Collection[SourceType] | None,
+        retrieval_mode: RetrievalMode,
+    ) -> Callable[[list[RetrievalCandidate]], list[RetrievalCandidate]]:
+        """The filters every other candidate passes (issue #60), for records a stage adds itself."""
+
+        def eligible(candidates: list[RetrievalCandidate]) -> list[RetrievalCandidate]:
+            candidates = _apply_bitemporal_filters(
+                candidates, knowledge_at, event_time_from, event_time_to, time_from, time_to,
+            )
+            candidates, _ = filter_candidate_types(candidates, exclude_node_types, source_types)
+            candidates, _ = filter_epistemic(
+                candidates, retrieval_mode,
+                unverified_threshold=self._unverified_confidence_threshold,
+            )
+            return candidates
+
+        return eligible
+
     async def _latest_observations(
         self,
         *,
@@ -1401,22 +1486,48 @@ class RetrievalPipeline:
     ) -> list[RetrievalCandidate]:
         """The newest observations of the most recent observation session that this request may see."""
 
-        def eligible(candidates: list[RetrievalCandidate]) -> list[RetrievalCandidate]:
-            # The filters every other candidate passes (issue #60).
-            candidates = _apply_bitemporal_filters(
-                candidates, knowledge_at, event_time_from, event_time_to, time_from, time_to,
-            )
-            candidates, _ = filter_candidate_types(candidates, exclude_node_types, source_types)
-            candidates, _ = filter_epistemic(
-                candidates, retrieval_mode,
-                unverified_threshold=self._unverified_confidence_threshold,
-            )
-            return candidates
+        eligible = self._request_filter(
+            knowledge_at=knowledge_at, event_time_from=event_time_from, event_time_to=event_time_to,
+            time_from=time_from, time_to=time_to, exclude_node_types=exclude_node_types,
+            source_types=source_types, retrieval_mode=retrieval_mode,
+        )
 
         return await latest_session_observations(
             self._graph_store,
             user_id=user_id,
             scopes=scopes,
+            created_before=knowledge_at,
+            eligible=eligible,
+        )
+
+    async def _owner_profile(
+        self,
+        *,
+        user_id: str,
+        scopes: list[Scope] | None,
+        speaker: str | None,
+        knowledge_at: datetime | None,
+        event_time_from: datetime | None,
+        event_time_to: datetime | None,
+        time_from: datetime | None,
+        time_to: datetime | None,
+        exclude_node_types: Collection[NodeType] | None,
+        source_types: Collection[SourceType] | None,
+        retrieval_mode: RetrievalMode,
+    ) -> RetrievalCandidate | None:
+        """The owner's newest profile that this request may see, or None."""
+
+        eligible = self._request_filter(
+            knowledge_at=knowledge_at, event_time_from=event_time_from, event_time_to=event_time_to,
+            time_from=time_from, time_to=time_to, exclude_node_types=exclude_node_types,
+            source_types=source_types, retrieval_mode=retrieval_mode,
+        )
+
+        return await find_owner_profile(
+            self._graph_store,
+            user_id=user_id,
+            scopes=scopes,
+            speaker=speaker,
             created_before=knowledge_at,
             eligible=eligible,
         )

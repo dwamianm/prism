@@ -44,6 +44,34 @@ def owner_name_marker(event_id: str, basis: Literal["speaker", "self_introductio
     return {"event_id": event_id, "basis": basis}
 
 
+async def marked_owner_entities(
+    graph_store: GraphStore, *, user_id: str, scope: Scope,
+) -> list[MemoryNode] | None:
+    """Every entity of the owner's in this scope that a user turn marked with the owner's name.
+
+    Reads the owner's entities page by page, as entity matching does. Best
+    effort: a failure is logged and returns None.
+    """
+    marked: list[MemoryNode] = []
+    after_id: str | None = None
+    try:
+        while True:
+            page = await graph_store.scan_nodes(
+                node_type=NodeType.ENTITY, user_id=user_id, scope=scope, after_id=after_id, limit=_PAGE,
+            )
+            marked.extend(
+                node for node in page
+                if (node.metadata or {}).get(OWNER_NAME_KEY) and node.content.strip()
+            )
+            if len(page) < _PAGE:
+                break
+            after_id = str(page[-1].id)
+    except Exception as exc:
+        logger.warning("owner_name.lookup_failed", error_type=type(exc).__name__)
+        return None
+    return marked
+
+
 async def carried_owner_entity(
     graph_store: GraphStore, *, user_id: str, scope: Scope, name: str | None = None,
 ) -> MemoryNode | None:
@@ -56,24 +84,11 @@ async def carried_owner_entity(
     """
     wanted = name.strip().casefold() if name else None
     newest: MemoryNode | None = None
-    after_id: str | None = None
-    try:
-        while True:
-            page = await graph_store.scan_nodes(
-                node_type=NodeType.ENTITY, user_id=user_id, scope=scope, after_id=after_id, limit=_PAGE,
-            )
-            for node in page:
-                marker = (node.metadata or {}).get(OWNER_NAME_KEY)
-                if marker and node.content.strip() and (
-                    wanted is None or node.content.strip().casefold() == wanted
-                ) and (newest is None or (node.created_at, str(node.id)) > (newest.created_at, str(newest.id))):
-                    newest = node
-            if len(page) < _PAGE:
-                break
-            after_id = str(page[-1].id)
-    except Exception as exc:
-        logger.warning("owner_name.lookup_failed", error_type=type(exc).__name__)
-        return None
+    for node in await marked_owner_entities(graph_store, user_id=user_id, scope=scope) or ():
+        if (wanted is None or node.content.strip().casefold() == wanted) and (
+            newest is None or (node.created_at, str(node.id)) > (newest.created_at, str(newest.id))
+        ):
+            newest = node
     return newest
 
 

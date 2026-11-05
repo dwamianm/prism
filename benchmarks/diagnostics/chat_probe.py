@@ -30,6 +30,10 @@ Choices, and why:
   only with ``--cloud``. ``--set`` changes settings, ``--speaker`` names the
   owner on their own turns, and ``--organize`` runs the organizer once after
   the last turn.
+- After the last turn the build calls ``end_session()``, as an application
+  does when a chat ends, so a setting that acts then is measured too. With
+  the current defaults it only promotes tentative records old enough, which
+  a fresh pack has none of.
 - Builds of one conversation share an extraction cache, so a rebuild with
   the same settings repeats the same extraction without a model call. A code
   change after extraction is then measured on identical model output.
@@ -488,6 +492,10 @@ async def build(label: str, *, conversation_path: Path = DEFAULT_CONVERSATION, r
         if set(statuses.values()) != {"complete"}:
             raise RuntimeError(f"Extraction did not complete: {dict(Counter(statuses.values()))}")
         await _drain_sources(engine, owner)
+        # The chat is over, as an application would say, so a setting that acts
+        # at the end of a session (enable_owner_profile_context) is measured too.
+        ended = await engine.end_session(user_id=owner)
+        record["end_session_result"] = ended.model_dump(mode="json", exclude={"duration_ms", "budget_remaining_ms"})
         if organize:
             result = await engine.organize(user_id=owner, budget_ms=600_000)
             record["organize_result"] = result.model_dump(mode="json")

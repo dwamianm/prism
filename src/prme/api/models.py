@@ -373,6 +373,16 @@ class RetrieveRequest(BaseModel):
         description=("Minimum context representation level. structured, prose or full "
                      "leaves out records that would fit only as a text-free key_value or "
                      "reference fallback, or whose text is blank"))
+    speaker: str | None = Field(
+        default=None,
+        description=(
+            "Optional name of the user asking, as given to ingest. With "
+            "enable_owner_profile_context, a first-person question gets this "
+            "person's knowledge profile right after the top result; otherwise unused"
+        ),
+    )
+
+    _validate_speaker = field_validator("speaker")(normalize_speaker)
 
 
 class RetrieveResultItem(BaseModel):

@@ -169,6 +169,10 @@ from prme.privacy.diagnostics import ScopedLogger, closing_diagnostics
 logger = logging.getLogger(__name__)
 logger = ScopedLogger(logger)
 
+# end_session()'s budget for the owner's profile refresh (issue #398), as long
+# as promotion's.
+OWNER_PROFILE_REFRESH_BUDGET_S = 1.0
+
 # The nodes the derived search indexes hold, in rebuild order: every active
 # node of every owner, by id. Callers skip rows without indexable content.
 # Each node gets a vector; the last column says whether it also gets a
@@ -857,6 +861,7 @@ class MemoryEngine:
                 temporal_languages=config.temporal_languages,
                 query_intent_order=config.query_intent_order,
                 superseded_source_suppression=config.enable_superseded_source_suppression,
+                owner_profile_context=config.enable_owner_profile_context,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -1048,6 +1053,7 @@ class MemoryEngine:
                 temporal_languages=config.temporal_languages,
                 query_intent_order=config.query_intent_order,
                 superseded_source_suppression=config.enable_superseded_source_suppression,
+                owner_profile_context=config.enable_owner_profile_context,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -2687,6 +2693,7 @@ class MemoryEngine:
         include_cross_scope: bool = True,
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         source_access: EvidenceAccess | None = None,
+        speaker: str | None = None,
     ) -> RetrievalResponse:
         """Retrieve memories via the hybrid retrieval pipeline.
 
@@ -2745,6 +2752,12 @@ class MemoryEngine:
                 or whose text is blank, out of the context.
             include_cross_scope: Whether to include cross-scope hints.
                 Defaults to True. Set to False to disable.
+            speaker: Optional name of the user asking, as given to
+                ``ingest()``. With ``enable_owner_profile_context``, a
+                first-person question gets the profile of the person with
+                this name (``consolidate_knowledge()``) right after the top
+                result; without a speaker, the owner is the person a user
+                turn named (issue #398). Otherwise unused.
 
         Returns:
             RetrievalResponse with packed MemoryBundle, scored results,
@@ -2840,6 +2853,7 @@ class MemoryEngine:
                 min_fidelity=min_fidelity,
                 include_cross_scope=include_cross_scope,
                 retrieval_mode=retrieval_mode,
+                speaker=speaker,
             )
 
             # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather
@@ -4475,6 +4489,7 @@ class MemoryEngine:
         scope: Scope | None = None,
         entity_names: list[str] | None = None,
         max_profile_tokens: int = 500,
+        include_speaker_turns: bool = False,
     ) -> int:
         """Build entity knowledge profiles from stored nodes.
 
@@ -4493,6 +4508,10 @@ class MemoryEngine:
                 If None, auto-detects names from content (proper nouns).
             max_profile_tokens: Maximum complete profile tokens, including source
                 metadata, using the configured packing tokenizer.
+            include_speaker_turns: Also take the records stored with the
+                person as their ``speaker``, since an owner says "my
+                husband", not their own name. The profile refresh of
+                ``enable_owner_profile_context`` sets it (issue #398).
 
         Returns:
             Number of entity profiles published. Each replacement is atomic;
@@ -4507,6 +4526,7 @@ class MemoryEngine:
         """
         import re
         from prme.organizer.profiles import build_profile, mentions_entity, run_profile_work
+        from prme.models.speaker import metadata_speaker
 
         if type(max_profile_tokens) is not int or max_profile_tokens < 0:
             raise ValueError("max_profile_tokens must be a nonnegative integer")
@@ -4536,6 +4556,7 @@ class MemoryEngine:
                 total += await self.consolidate_knowledge(
                     user_id=user_id, scope=namespace, entity_names=entity_names,
                     max_profile_tokens=max_profile_tokens,
+                    include_speaker_turns=include_speaker_turns,
                 )
             return total
         scope = Scope(scope)
@@ -4544,10 +4565,19 @@ class MemoryEngine:
         context = await ReadContext.create(self._privacy, user_id=user_id, scopes=(scope,))
         graph = AdmittedGraphView(self._graph_store, context) if context.protected else self._graph_store
 
+        # A person's own turns are sources of their profile on request: an
+        # owner says "my husband is Theo", not their name (issue #398).
+        own_turns = include_speaker_turns
+
         # Name matching and token counting are CPU work that the caller's event
         # loop must not wait on: they run on the profile worker threads.
         def mentioning(nodes: list[MemoryNode], names: list[str]) -> list[MemoryNode]:
-            return [node for node in nodes if any(mentions_entity(node.content, name) for name in names)]
+            speakers = {name.casefold() for name in names} if own_turns else set()
+            return [
+                node for node in nodes
+                if any(mentions_entity(node.content, name) for name in names)
+                or (speakers and (metadata_speaker(node.metadata) or "").casefold() in speakers)
+            ]
 
         # Scan by immutable ID instead of interpreting a newest-N window as
         # complete history. Otherwise older qualifying evidence can disappear
@@ -4840,6 +4870,12 @@ class MemoryEngine:
         """Convenience: lightweight organize at end of conversation.
 
         Runs promotion with a 1-second budget. It does not change ranking weights.
+        With ``enable_owner_profile_context`` it then builds or rebuilds the
+        owner's knowledge profile in each scope where a user turn named the
+        owner, when there is none or a newer record mentions them, starting a
+        build only within a 1-second budget, and reports it as the
+        ``owner_profile_refresh`` job (issue #398). An owner under a privacy
+        policy is skipped and gets no such job.
 
         Args:
             user_id: User whose session is ending.
@@ -4848,11 +4884,45 @@ class MemoryEngine:
         Returns:
             OrganizeResult from the lightweight organize pass.
         """
-        return await self.organize(
+        result = await self.organize(
             user_id=user_id,
             jobs=["promote"],
             budget_ms=1000,
         )
+        if self._config.enable_owner_profile_context:
+            import time
+
+            from prme.organizer.models import JobResult
+            from prme.organizer.owner_profiles import refresh_owner_profiles
+
+            # Its own budget, as long as promotion's: a build starts only
+            # before it ends. A failure leaves the profile as it was.
+            started = time.monotonic()
+            try:
+                rebuilt = await refresh_owner_profiles(
+                    self, user_id=user_id, deadline=started + OWNER_PROFILE_REFRESH_BUDGET_S,
+                )
+            except Exception:
+                logger.warning("Owner profile refresh failed; the profile stays as it was", exc_info=True)
+                rebuilt = []
+                failed = True
+            else:
+                failed = False
+            if rebuilt is None:
+                # The owner's memories are under a privacy policy: nothing ran.
+                return result
+            duration_ms = (time.monotonic() - started) * 1000.0
+            result.jobs_run.append("owner_profile_refresh")
+            result.per_job["owner_profile_refresh"] = JobResult(
+                job="owner_profile_refresh",
+                nodes_processed=len(rebuilt),
+                nodes_modified=sum(1 for entry in rebuilt if entry["published"]),
+                errors=int(failed),
+                duration_ms=round(duration_ms, 2),
+                details={"rebuilt": rebuilt},
+            )
+            result.duration_ms = round(result.duration_ms + duration_ms, 2)
+        return result
 
     # --- Resource Management ---
 

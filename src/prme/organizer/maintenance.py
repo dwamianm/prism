@@ -180,6 +180,24 @@ class MaintenanceRunner:
         except Exception:
             logger.warning("Threshold archival failed during maintenance", exc_info=True)
 
+        # --- Profile freshness (enable_owner_profile_context, issue #398) ---
+        # A request-triggered pass rebuilds the requesting owner's profiles
+        # that newer records mention, one rebuild per person, within the
+        # pass's budget.
+        if (
+            user_id is not None
+            and getattr(self._engine._config, "enable_owner_profile_context", False)
+            and time.monotonic() < deadline
+        ):
+            try:
+                from prme.organizer.owner_profiles import refresh_stale_profiles
+
+                result.profiles_rebuilt = await refresh_stale_profiles(
+                    self._engine, user_id=user_id, deadline=deadline,
+                )
+            except Exception:
+                logger.warning("Profile refresh failed during maintenance", exc_info=True)
+
         # --- Feedback apply (placeholder) ---
         result.feedback_applied = 0
 
