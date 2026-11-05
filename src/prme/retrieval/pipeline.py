@@ -895,14 +895,38 @@ class RetrievalPipeline:
                 node_ids=contested_ids, edge_type=EdgeType.CONTRADICTS
             )
             scored_by_id = {str(c.node.id): c for c in scored}
+            # A CONTRADICTS edge that crosses users (an old unscoped merge or
+            # a direct graph write) must not put another user's node id on
+            # this user's result (#437). Look the counterparts up in one
+            # batch and keep only those the user owns, as the assertion
+            # state read does: one another user owns, or one the store no
+            # longer returns (erased), is skipped.
+            owned_ids = set(contested_ids)
+            if contradicts_edges:
+                counterpart_ids = sorted({
+                    str(identifier)
+                    for e in contradicts_edges
+                    for identifier in (e.source_id, e.target_id)
+                } - owned_ids)
+                if counterpart_ids:
+                    owned_ids.update(
+                        str(n.id) for n in await self._graph_store.get_nodes(
+                            counterpart_ids, include_superseded=True,
+                        )
+                        if n.user_id == user_id
+                    )
             for cid in contested_ids:
                 # Preserve direction priority: outgoing edges first, then
                 # incoming, matching the previous per-node query order.
                 edges_out = [
-                    e for e in contradicts_edges if str(e.source_id) == cid
+                    e for e in contradicts_edges
+                    if str(e.source_id) == cid
+                    and str(e.target_id) in owned_ids
                 ]
                 edges_in = [
-                    e for e in contradicts_edges if str(e.target_id) == cid
+                    e for e in contradicts_edges
+                    if str(e.target_id) == cid
+                    and str(e.source_id) in owned_ids
                 ]
                 all_edges = edges_out + edges_in
                 if all_edges:

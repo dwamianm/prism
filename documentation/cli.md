@@ -166,8 +166,10 @@ prme node ./memory.duckdb 550e8400-e29b-41d4-a716-446655440000
 Show the supersedence chain for a node — its history of being replaced or replacing other nodes.
 
 ```bash
-prme chain <db_path> <node_id>
+prme chain <db_path> <node_id> [--user-id USER]
 ```
+
+With `--user-id`, only that user's nodes are shown, and each direction of the chain ends before the first node another user owns. Without it, the chain is the unscoped operator read of the whole store; a store with protected privacy reads requires `--user-id`.
 
 ```bash
 prme chain ./memory.duckdb 550e8400-e29b-41d4-a716-446655440000

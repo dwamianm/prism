@@ -435,6 +435,37 @@ async def test_cmd_chain_json(populated_engine, config, capsys):
 
 
 @pytest.mark.asyncio
+async def test_cmd_chain_with_user_id_stops_before_another_users_node(populated_engine, config, capsys):
+    """chain --user-id never prints a node another user owns (#437)."""
+    from prme.models import MemoryEdge, MemoryNode
+    from prme.types import EdgeType
+
+    graph = populated_engine._graph_store
+    old = MemoryNode(content="Office is in Austin", user_id="test-user", node_type=NodeType.FACT)
+    foreign = MemoryNode(content="FOREIGN-CHAIN-NODE", user_id="other-user", node_type=NodeType.FACT)
+    newer = MemoryNode(content="Office is in Boston", user_id="test-user", node_type=NodeType.FACT)
+    for node in (old, foreign, newer):
+        await graph.create_node(node)
+    for source, target in ((foreign, old), (newer, foreign)):
+        await graph.create_edge(MemoryEdge(
+            source_id=source.id, target_id=target.id,
+            edge_type=EdgeType.SUPERSEDES, user_id="test-user",
+        ))
+
+    args = _make_args(db_path=config.db_path, format="json", node_id=str(old.id), user_id="test-user")
+    await cmd_chain(args)
+    data = json.loads(capsys.readouterr().out)
+    assert data["forward_chain"] == []
+    assert data["backward_chain"] == []
+
+    args = _make_args(db_path=config.db_path, format="json", node_id=str(newer.id), user_id="test-user")
+    await cmd_chain(args)
+    output = capsys.readouterr().out
+    assert json.loads(output)["backward_chain"] == []
+    assert "FOREIGN-CHAIN-NODE" not in output
+
+
+@pytest.mark.asyncio
 async def test_cmd_search(populated_engine, config, capsys):
     """search command returns results."""
     args = _make_args(
