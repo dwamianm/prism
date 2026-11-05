@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0a2] - 2026-11-05
+
+This is an alpha. It passed CI on `main`, and each change in it carries its fast-tier evidence in its
+pull request; this version bump changes no code. It has not been through the full benchmark or the mid
+tier. The stable release stays at 0.16.1 until the full benchmark audit, so `pip install prme` still
+installs 0.16.1. Install the alpha with `pip install --pre prme` or `pip install prme==0.17.0a2`.
+
+What is new since 0.17.0a1: relation routing (`enable_relation_routing`, off; dwamianm/prism#399) walks a
+question that asks for a kind of relation, such as dependents, where someone lives or an allergy, from the
+entities it names over the graph's claims of that relation, so the answer no longer depends on the
+question repeating a memory's words; the owner's profile is reserved in the context for a first-person
+question (`enable_owner_profile_context`, off; dwamianm/prism#398); and a scoped organizer run builds each
+entity snapshot from that user's nodes only (dwamianm/prism#406). Upgrade notes: no stored memory goes
+stale, because `DERIVATION_VERSION` is unchanged, so `reingest()` finds every memory current; both new
+options are off and change nothing until turned on.
+
 ### Added
 
 - `enable_relation_routing` (`PRME_ENABLE_RELATION_ROUTING`), off by default (dwamianm/prism#399). A question that asks for a kind of relation (dependents, where someone lives, an allergy) is answered from the graph by that relation, so the answer no longer depends on the question repeating a memory's words. `prme.retrieval.relations` holds the graph oracle's relation vocabulary with a cue lexicon derived from its definitions, a predicate normalizer that maps a claim's open predicate (`has_husband`, `is_child_of`, `resides_in`) to a relation by its words and a small synonym table, built-in concepts (dependents, family, spouse, children, home, job, allergies) with a per-call extension, the new `retrieve(concepts=...)`, and a router. A routed question is walked from the entities it names, and for a first-person question the owner's entity, over the claims of those relations in one SQL statement on DuckDB and PostgreSQL (`prme.retrieval.relation_walk`, with the graph oracle's caps and its superseded and negative claim rules); what the walk reaches forms a rank fusion list weighted by the new `scoring.rrf_route_weight` (2.0 when unset), and the receipt records the weight, each candidate's route rank and the `relation_routing` feature (the route, the seeds, the claims and the candidates). A question no word routes, a question about when, a walk that reaches nothing, weighted fusion and a privacy-protected read retrieve exactly as with the option off, receipts included. On the fast gate the option on raised the answers in the top 3 and top 5 on `chat-v1` (14 to 15 and 15 to 16 of 18) and `member-v1` (10 to 11 and 11 to 12 of 12; "What are the names of Maya's dependents?" from 14th to 2nd and "Do you remember the names of my dependents?" from 3rd to 1st) and kept `defects-v1` at 7 of 7. It stays off: on the graph oracle's spent blind set run through the product it put 68 of 86 questions in the top 3 against 73 without it, losing negation and yes or no questions, and the normalizer maps 42 of the 139 claims of the three probe builds (`docs/RELATIONS.md`). `python -m benchmarks.diagnostics.relation_coverage` reports a pack's normalizer coverage, and the blind run gained two information-only columns, `product` and `product[routed]`.
@@ -3318,7 +3334,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a1...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a2...HEAD
+[0.17.0a2]: https://github.com/dwamianm/prism/compare/v0.17.0a1...v0.17.0a2
 [0.17.0a1]: https://github.com/dwamianm/prism/compare/v0.16.1...v0.17.0a1
 [0.16.1]: https://github.com/dwamianm/prism/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/dwamianm/prism/compare/v0.15.0...v0.16.0
