@@ -271,7 +271,8 @@ async def _generate_graph_candidates(
     for graph_proximity scoring.
 
     Scope and temporal filters are forwarded to query_nodes() for seed
-    discovery and used for post-filter on neighborhood results.
+    discovery and used for post-filter on neighborhood results, and a
+    neighbor another user owns is never kept.
 
     Returns list of dicts: {node: MemoryNode, graph_proximity: float}. With
     ``seed_reach`` (``ScoringWeights.rrf_graph_seed_count``) each dict also
@@ -311,6 +312,11 @@ async def _generate_graph_candidates(
         for neighbor, depth in neighbors:
             nid = str(neighbor.id)
             if nid == seed_id:
+                continue
+            # The plain graph store's traversal has no owner filter, so an
+            # edge that crosses users would otherwise pull another user's
+            # node into this user's candidates (#433).
+            if neighbor.user_id != user_id:
                 continue
             proximity = _HOP_PROXIMITY.get(depth, 0.4)
 

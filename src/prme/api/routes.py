@@ -1054,21 +1054,31 @@ async def get_neighborhood(
     node_id: UUID,
     max_hops: int = 2,
 ) -> NodeListResponse:
-    """Get nodes within N hops of a starting node."""
+    """Get nodes within N hops of a starting node.
+
+    Only nodes the reader owns are returned: the request's user, or the
+    starting node's owner when the request names none. A protected store
+    is read through the reader's admitted view.
+    """
     node_key = str(node_id)
     engine = _get_engine(request)
+    owner = _user_id(request)
 
     # Verify node exists
-    node = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
+    node = await engine.get_node(node_key, include_superseded=True, user_id=owner)
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
-    neighbors = await engine._graph_store.get_neighborhood(
-        node_key, max_hops=max_hops
-    )
-    owner = _user_id(request)
-    if owner is not None:
-        neighbors = [n for n in neighbors if n.user_id == owner]
+    # The plain graph store's traversal has no owner filter, so an edge that
+    # crosses users would otherwise return another user's node (#433). This
+    # is MemoryEngine.get_neighborhood without its active-only start check,
+    # so a superseded starting node keeps the neighborhood it had.
+    reader = owner if owner is not None else node.user_id
+    graph = await engine._ordinary_graph(reader)
+    neighbors = [
+        n for n in await graph.get_neighborhood(node_key, max_hops=max_hops)
+        if n.user_id == reader
+    ]
     return NodeListResponse(
         nodes=[_node_to_response(n) for n in neighbors],
         count=len(neighbors),

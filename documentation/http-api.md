@@ -346,7 +346,7 @@ Reinforce a node (boost confidence and salience).
 
 ### GET /v1/nodes/{node_id}/neighborhood
 
-Get nodes within N hops of a starting node.
+Get nodes within N hops of a starting node. Only the reader's nodes are returned: the request's user, or the starting node's owner when the request has no user. On a store with protected privacy reads, the neighborhood is read through that user's admitted view, so a superseded starting node returns no neighbors there.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
