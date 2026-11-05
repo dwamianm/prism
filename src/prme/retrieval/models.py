@@ -203,7 +203,10 @@ class RankFusion(BaseModel):
     ``ScoringWeights.rrf_graph_weight`` is set. With
     ``ScoringWeights.rrf_graph_seed_count`` it is the candidate's place by how
     many of the question's seeds reach it, then by their total hop count. The
-    score replays from the saved rank either way.
+    score replays from the saved rank either way. ``route_rank`` is the
+    candidate's place in the route list of a routed question
+    (``enable_relation_routing``), present only for a candidate the relation
+    walk reached and only with ``ScoringWeights.rrf_route_weight``.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -222,13 +225,14 @@ class RankFusion(BaseModel):
         default=None, ge=0, lt=1, allow_inf_nan=False, exclude_if=lambda value: value is None,
     )
     graph_rank: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
+    route_rank: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
 
-    def score(self, k: int, graph_weight: float | None = None) -> float:
+    def score(self, k: int, graph_weight: float | None = None, route_weight: float | None = None) -> float:
         """The fused score, scaled so first place on both channels is 1.0.
 
-        A candidate on the graph list adds its weighted reciprocal rank to the
-        sum before the scale, so first place on all three lists scores more
-        than 1.0.
+        A candidate on the graph list or the route list adds its weighted
+        reciprocal rank to the sum before the scale, so first place on every
+        list scores more than 1.0.
         """
         fused = sum(1 / (k + rank) for rank in (self.semantic_rank, self.lexical_rank)
                     if rank is not None)
@@ -236,6 +240,10 @@ class RankFusion(BaseModel):
             if graph_weight is None:
                 raise ValueError("A graph rank needs rrf_graph_weight")
             fused += graph_weight / (k + self.graph_rank)
+        if self.route_rank is not None:
+            if route_weight is None:
+                raise ValueError("A route rank needs rrf_route_weight")
+            fused += route_weight / (k + self.route_rank)
         value = (fused * (k + 1) / 2
                  * self.epistemic_factor * self.node_type_factor * self.temporal_factor)
         if self.recency_boost_factor is not None:
@@ -288,6 +296,8 @@ class ScoreProvenance(BaseModel):
                 raise ValueError("A rank fusion tie-break is recorded exactly when rrf_tie_break is set")
             if self.rank_fusion.graph_rank is not None and self.weights.rrf_graph_weight is None:
                 raise ValueError("A rank fusion graph rank requires rrf_graph_weight")
+            if self.rank_fusion.route_rank is not None and self.weights.rrf_route_weight is None:
+                raise ValueError("A rank fusion route rank requires rrf_route_weight")
         values = list(self.trace.model_dump().values())
         # Numeric settings only: node-type boosts follow, and fusion is a label.
         values.extend(
@@ -306,7 +316,8 @@ class ScoreProvenance(BaseModel):
         if self.rank_fusion is not None:
             if self.weights.rrf_k is None:
                 raise ValueError("Rank fusion replay requires rrf_k")
-            return self.rank_fusion.score(self.weights.rrf_k, self.weights.rrf_graph_weight)
+            return self.rank_fusion.score(self.weights.rrf_k, self.weights.rrf_graph_weight,
+                                          self.weights.rrf_route_weight)
         t, w = self.trace, self.weights
         additive = (w.w_semantic * t.semantic_similarity
                     + w.w_lexical * t.lexical_relevance
@@ -400,6 +411,11 @@ class RetrievalCandidate(BaseModel):
     # passing through the owner's entity, the total of their hop counts and
     # the fewest. None when the graph search did not measure it.
     graph_seed_reach: tuple[int, int, int] | None = Field(default=None, exclude=True)
+    # Working state for enable_relation_routing, never serialized: the
+    # candidate's route score from the relation walk (its step, then how many
+    # of the entities the walk reached its text names). None when the walk did
+    # not reach it.
+    route_score: tuple[int, int] | None = Field(default=None, exclude=True)
     # Set only with PackingConfig.session_context_packing and omitted
     # otherwise, so results and bundles keep their bytes. Serialized so that a
     # saved candidate list packs the same way again.
@@ -464,20 +480,28 @@ def inherited_score(candidate: RetrievalCandidate) -> tuple[float, ScoreProvenan
     """The score and score provenance a context record inherits from ``candidate``.
 
     Session, episode and evidence augmentation context take the candidate's
-    score less a seed count graph term (``ScoringWeights.rrf_graph_seed_count``):
-    the term rewards the candidate's own links to the question's names, which
-    the records it pulls in do not share, and a record linked to them earns its
-    own. The provenance drops the graph rank so it replays that score. Without
+    score less a seed count graph term (``ScoringWeights.rrf_graph_seed_count``)
+    and less a route term (``enable_relation_routing``): each rewards the
+    candidate's own links to the question's names or relations, which the
+    records it pulls in do not share, and a record linked to them earns its
+    own. The provenance drops those ranks so it replays that score. Without
     such a term both are the candidate's own.
     """
     provenance = candidate.score_provenance
     rank_fusion = provenance.rank_fusion if provenance is not None else None
-    if (provenance is None or rank_fusion is None or rank_fusion.graph_rank is None
-            or not provenance.weights.rrf_graph_seed_count):
+    if provenance is None or rank_fusion is None:
+        return candidate.composite_score, provenance
+    dropped: dict[str, None] = {}
+    if rank_fusion.graph_rank is not None and provenance.weights.rrf_graph_seed_count:
+        dropped["graph_rank"] = None
+    if rank_fusion.route_rank is not None:
+        dropped["route_rank"] = None
+    if not dropped:
         return candidate.composite_score, provenance
     assert provenance.weights.rrf_k is not None
-    rank_fusion = rank_fusion.model_copy(update={"graph_rank": None})
-    base = rank_fusion.score(provenance.weights.rrf_k, provenance.weights.rrf_graph_weight)
+    rank_fusion = rank_fusion.model_copy(update=dropped)
+    base = rank_fusion.score(provenance.weights.rrf_k, provenance.weights.rrf_graph_weight,
+                             provenance.weights.rrf_route_weight)
     provenance = provenance.model_copy(update={
         "rank_fusion": rank_fusion,
         "trace": provenance.trace.model_copy(update={"composite_score": base}),

@@ -36,7 +36,7 @@ import threading
 import warnings
 import weakref
 from datetime import datetime
-from collections.abc import Collection, Coroutine, Iterator, Sequence
+from collections.abc import Collection, Coroutine, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 from uuid import UUID
 
@@ -464,6 +464,7 @@ class MemoryClient:
         include_cross_scope: bool = True,
         source_access: EvidenceAccess | None = None,
         speaker: str | None = None,
+        concepts: Mapping[str, Sequence[str]] | None = None,
     ) -> RetrievalResponse:
         """Retrieve memories with engine-equivalent temporal and ranking controls.
 
@@ -489,7 +490,7 @@ class MemoryClient:
                 exclude_node_types=exclude_node_types, source_types=source_types,
                 weights=weights, ranking_multipliers=ranking_multipliers, min_fidelity=min_fidelity,
                 retrieval_mode=retrieval_mode, include_cross_scope=include_cross_scope, source_access=source_access,
-                speaker=speaker,
+                speaker=speaker, concepts=concepts,
             )
         )
 

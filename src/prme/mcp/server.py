@@ -359,6 +359,7 @@ async def memory_retrieve(
     mode: Optional[RetrievalMode] = None,
     include_context: StrictBool = False,
     speaker: Optional[str] = None,
+    concepts: Optional[dict[str, list[str]]] = None,
 ) -> str:
     """Search memories using hybrid retrieval.
 
@@ -403,6 +404,10 @@ async def memory_retrieve(
         speaker: Optional name of the user asking, as given to memory_store.
             With enable_owner_profile_context, a first-person question gets
             this person's knowledge profile right after the top result.
+        concepts: With enable_relation_routing, concept words for this request,
+            each mapped to the relations it stands for, such as
+            {"dependents": ["partner_of", "kin_of:child"]}; they extend the
+            built-in concepts.
     """
     engine = _get_engine(ctx)
     try:
@@ -453,6 +458,11 @@ async def memory_retrieve(
             from prme.models.speaker import normalize_speaker
 
             kwargs["speaker"] = normalize_speaker(speaker)
+        if concepts is not None:
+            from prme.retrieval.relations import normalize_concepts
+
+            normalize_concepts(concepts)
+            kwargs["concepts"] = concepts
         from prme.retrieval.filtering import normalize_type_filters
 
         excluded_types, allowed_sources = normalize_type_filters(exclude_node_types, source_types)

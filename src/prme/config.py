@@ -1335,6 +1335,32 @@ class PRMEConfig(_ProjectSettings):
             "can be a snapshot of their first records."
         ),
     )
+    enable_relation_routing: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, a question that asks for a kind of "
+            "relation is answered from the graph by that relation "
+            "(dwamianm/prism#399). Stored claims carry the extractor's open "
+            "predicate (has_husband, is_child_of), so a read-time normalizer "
+            "maps each to the relation vocabulary of docs/RELATIONS.md "
+            "(partner_of, kin_of with role child), and a router reads the "
+            "question: a people word (husband, sister), a concept word "
+            "(dependents, family, spouse, children, home, job, allergies, "
+            "and retrieve(concepts=...)) or a cue word derived from the "
+            "relation definitions names the relations it asks for. A routed "
+            "question is walked from the entities it names and, when it is "
+            "in the first person, the owner's entity, over the claims of "
+            "those relations in one SQL statement; the claims it keeps, and "
+            "memories a claim is derived from by a DERIVED_FROM link, form a "
+            "rank fusion list weighted by "
+            "scoring.rrf_route_weight (RRF_ROUTE_WEIGHT, 2.0, when unset), "
+            "and the receipt records the route and the walk's candidates. A "
+            "question no word routes, a walk that reaches nothing, weighted "
+            "scoring and a privacy-protected read retrieve exactly as with "
+            "the option off, receipts included. No model call. Default "
+            "False until the fast gate passes."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(

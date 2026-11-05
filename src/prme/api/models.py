@@ -382,7 +382,25 @@ class RetrieveRequest(BaseModel):
         ),
     )
 
+    concepts: dict[str, list[str]] | None = Field(
+        default=None,
+        description=(
+            "With enable_relation_routing, concept words for this request, each "
+            "mapped to the relations it stands for, such as "
+            "{\"dependents\": [\"partner_of\", \"kin_of:child\"]} (docs/RELATIONS.md); "
+            "they extend the built-in concepts. Validated whether or not routing is on"
+        ),
+    )
+
     _validate_speaker = field_validator("speaker")(normalize_speaker)
+
+    @field_validator("concepts")
+    @classmethod
+    def _validate_concepts(cls, value: dict[str, list[str]] | None) -> dict[str, list[str]] | None:
+        from prme.retrieval.relations import normalize_concepts
+
+        normalize_concepts(value)
+        return value
 
 
 class RetrieveResultItem(BaseModel):

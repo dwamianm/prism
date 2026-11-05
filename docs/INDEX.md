@@ -38,8 +38,10 @@ RFC-0018 was drafted.
 
 Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
 [custom embedding providers](CUSTOM-EMBEDDINGS.md),
-[switching a store to another embedding model](EMBEDDING-MODELS.md), and
-[entity identity and conservative merges](ENTITY-IDENTITY.md). These describe implemented
+[switching a store to another embedding model](EMBEDDING-MODELS.md),
+[entity identity and conservative merges](ENTITY-IDENTITY.md), and
+[relation routing](RELATIONS.md), the opt-in walk that answers a question asking for a
+kind of relation from the claims of that relation. These describe implemented
 Python and CLI contracts separately from draft RFC requirements.
 
 [Framework integrations](FRAMEWORK-INTEGRATIONS.md) documents the LangChain and
