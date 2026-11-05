@@ -4506,7 +4506,7 @@ class MemoryEngine:
                 acknowledgement can still mean the replacement was committed.
         """
         import re
-        from prme.organizer.profiles import build_profile, mentions_entity
+        from prme.organizer.profiles import build_profile, mentions_entity, run_profile_work
 
         if type(max_profile_tokens) is not int or max_profile_tokens < 0:
             raise ValueError("max_profile_tokens must be a nonnegative integer")
@@ -4531,6 +4531,8 @@ class MemoryEngine:
                 namespaces = (self._privacy.default.scope,)
             total = 0
             for namespace in namespaces:
+                # Let other requests on this loop run between scopes.
+                await asyncio.sleep(0)
                 total += await self.consolidate_knowledge(
                     user_id=user_id, scope=namespace, entity_names=entity_names,
                     max_profile_tokens=max_profile_tokens,
@@ -4541,6 +4543,11 @@ class MemoryEngine:
         from prme.privacy.read_graph import AdmittedGraphView
         context = await ReadContext.create(self._privacy, user_id=user_id, scopes=(scope,))
         graph = AdmittedGraphView(self._graph_store, context) if context.protected else self._graph_store
+
+        # Name matching and token counting are CPU work that the caller's event
+        # loop must not wait on: they run on the profile worker threads.
+        def mentioning(nodes: list[MemoryNode], names: list[str]) -> list[MemoryNode]:
+            return [node for node in nodes if any(mentions_entity(node.content, name) for name in names)]
 
         # Scan by immutable ID instead of interpreting a newest-N window as
         # complete history. Otherwise older qualifying evidence can disappear
@@ -4556,6 +4563,7 @@ class MemoryEngine:
             )
             if not page:
                 break
+            sources: list[MemoryNode] = []
             for node in page:
                 if context.protected:
                     node = node.model_copy(update={"metadata": {key: value for key, value in (node.metadata or {}).items()
@@ -4567,10 +4575,13 @@ class MemoryEngine:
                     if node.node_type == NodeType.SUMMARY and name:
                         if entity_names is None or name in entity_names:
                             existing_profiles.setdefault(name, []).append(node)
-                elif entity_names is None or any(mentions_entity(node.content, name) for name in entity_names):
-                    # Explicit names need retain only relevant source nodes,
-                    # rather than every unrelated node in a large namespace.
-                    all_nodes.append(node)
+                else:
+                    sources.append(node)
+            # Explicit names need retain only relevant source nodes,
+            # rather than every unrelated node in a large namespace.
+            if entity_names is not None and sources:
+                sources = await run_profile_work(mentioning, sources, entity_names)
+            all_nodes.extend(sources)
             after_id = str(page[-1].id)
 
         async def retire_profile(name: str) -> None:
@@ -4582,8 +4593,7 @@ class MemoryEngine:
                     # Already terminal; still remove a stale index entry.
                     await self._evict_from_indexes(stale_id)
 
-        # Auto-detect entity names if not provided
-        if entity_names is None:
+        def detect_names() -> list[str]:
             name_counts: dict[str, int] = {}
             name_re = re.compile(r'\b([A-Z][a-z]{2,})\b')
             skip = {"The", "This", "That", "What", "When", "Where", "How",
@@ -4601,10 +4611,14 @@ class MemoryEngine:
                     if name not in skip and len(name) > 2:
                         name_counts[name] = name_counts.get(name, 0) + 1
             # Keep names that appear 3+ times (likely real entities)
-            entity_names = [
+            return [
                 name for name, count in name_counts.items()
                 if count >= 3
             ]
+
+        # Auto-detect entity names if not provided
+        if entity_names is None:
+            entity_names = await run_profile_work(detect_names)
             # Reconsider existing views even if their sources no longer qualify.
             entity_names = list(dict.fromkeys([*entity_names, *existing_profiles]))
 
@@ -4613,6 +4627,8 @@ class MemoryEngine:
 
         profiles_created = 0
         for entity_name in entity_names:
+            # Let other requests on this loop run between entity names.
+            await asyncio.sleep(0)
             if context.protected:
                 from uuid import uuid5
                 from prme.privacy.policy import PrivacyDenied
@@ -4625,18 +4641,15 @@ class MemoryEngine:
                 key = profile_key(user_id, scope, entity_name)
             generation = await self._graph_store.profile_generation(key)
             # Find all nodes mentioning this entity
-            related = []
-            for node in all_nodes:
-                if mentions_entity(node.content, entity_name):
-                    related.append(node)
+            related = await run_profile_work(mentioning, all_nodes, [entity_name])
 
             if len(related) < 2:
                 # An old profile cannot supply its own missing evidence.
                 await retire_profile(entity_name)
                 continue
 
-            excerpt = build_profile(
-                entity_name, related, token_budget=max_profile_tokens,
+            excerpt = await run_profile_work(
+                build_profile, entity_name, related, token_budget=max_profile_tokens,
                 tokenizer=self._config.packing.tokenizer,
             )
             if excerpt is None:
