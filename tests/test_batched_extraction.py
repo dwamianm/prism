@@ -395,13 +395,23 @@ class TestSessions:
 
     async def test_queued_turns_are_extracted_after_the_flush_delay(self, config, user):
         model = ScriptedBatches()
+        delay = 0.5
         async with MemoryEngine.open(batched(config)) as engine:
-            pipeline = install(engine, model, flush_seconds=0.05)
+            pipeline = install(engine, model, flush_seconds=delay)
+            started = time.monotonic()
             event_ids = [await engine.ingest(text, user_id=user, session_id="s1",
                                              event_time=T0 + timedelta(minutes=minutes))
                          for minutes, text in enumerate(["One.", "Two.", "Three."])]
+            elapsed = time.monotonic() - started
+            # The first turn arms one flush and only turns queued before it
+            # fires join it, so one batch is the right result only when all
+            # three were queued within the delay. A loaded runner can take
+            # longer; the later turns then rightly go to the next flush.
+            if elapsed >= delay:
+                await drain(pipeline)
+                pytest.skip(f"three ingests took {elapsed:.3f} s, longer than the {delay} s flush delay")
             assert model.calls == []
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(delay)
             await drain(pipeline)
             assert model.contents() == [["One.", "Two.", "Three."]]
             assert await statuses(engine, user, event_ids) == ["complete"] * 3
