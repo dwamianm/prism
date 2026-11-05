@@ -22,6 +22,7 @@ import pytest
 import pytest_asyncio
 
 from prme.config import OrganizerConfig, PRMEConfig
+from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.organizer.alias_resolution import (
     AliasCandidate,
@@ -35,7 +36,7 @@ from prme.organizer.deduplication import (
 )
 from prme.organizer.jobs import run_job
 from prme.storage.engine import MemoryEngine
-from prme.types import LifecycleState, NodeType
+from prme.types import EdgeType, LifecycleState, NodeType
 
 ACTIVE = (LifecycleState.TENTATIVE, LifecycleState.STABLE)
 
@@ -282,3 +283,109 @@ async def test_organizer_raw_sql_holds_shared_connection_lock(engine, monkeypatc
         user_id="alice", jobs=["tombstone_sweep", "index_compaction"], budget_ms=5000,
     )
     assert observed == [True, True]
+
+
+# ---------------------------------------------------------------------------
+# snapshot_generation reads only the scoped user's neighborhood (#406)
+# ---------------------------------------------------------------------------
+
+
+async def _shared_name_graph(engine: MemoryEngine) -> dict[str, MemoryNode]:
+    """Two users with an entity of the same name, plus edges that cross users.
+
+    Ingestion keeps entities per user, but the graph store does not check
+    owners on an edge, so a crossing edge is how another user's node can sit
+    one hop from an entity.
+    """
+    graph = engine._graph_store
+    nodes = {
+        "alice_acme": MemoryNode(content="Acme", user_id="alice", node_type=NodeType.ENTITY),
+        "bob_acme": MemoryNode(content="Acme", user_id="bob", node_type=NodeType.ENTITY),
+        "alice_fact": MemoryNode(content="Acme ships widgets", user_id="alice", node_type=NodeType.FACT),
+        "bob_fact": MemoryNode(content="Acme is hiring", user_id="bob", node_type=NodeType.FACT),
+        "bob_task": MemoryNode(content="Call Acme on Monday", user_id="bob", node_type=NodeType.TASK),
+        "alice_decision": MemoryNode(content="Renew the Acme contract", user_id="alice",
+                                     node_type=NodeType.DECISION),
+    }
+    for node in nodes.values():
+        await graph.create_node(node)
+    for source, target, owner in (
+        ("alice_acme", "alice_fact", "alice"),
+        ("bob_acme", "bob_fact", "bob"),
+        # Crossing edges: one owned by the other user, one owned by alice.
+        ("alice_acme", "bob_fact", "bob"),
+        ("alice_acme", "bob_task", "alice"),
+        # An edge bob owns between two of alice's nodes.
+        ("alice_acme", "alice_decision", "bob"),
+    ):
+        await graph.create_edge(MemoryEdge(
+            source_id=nodes[source].id, target_id=nodes[target].id,
+            edge_type=EdgeType.RELATES_TO, user_id=owner,
+        ))
+    return nodes
+
+
+def _capture_snapshots(monkeypatch) -> list:
+    import prme.retrieval.snapshots as snapshots
+
+    original = snapshots.generate_entity_snapshot
+    captured = []
+
+    async def recording(*args, **kwargs):
+        snapshot = await original(*args, **kwargs)
+        captured.append(snapshot)
+        return snapshot
+
+    monkeypatch.setattr(snapshots, "generate_entity_snapshot", recording)
+    return captured
+
+
+async def test_scoped_snapshot_job_leaves_out_other_users_neighbors(engine, monkeypatch):
+    nodes = await _shared_name_graph(engine)
+    captured = _capture_snapshots(monkeypatch)
+
+    result = await engine.organize(
+        user_id="alice", jobs=["snapshot_generation"], budget_ms=5000,
+    )
+
+    job = result.per_job["snapshot_generation"]
+    assert (job.nodes_processed, job.nodes_modified, job.errors) == (1, 1, 0)
+    assert len(captured) == 1
+    snapshot = captured[0]
+    assert snapshot.entity_node.id == nodes["alice_acme"].id
+    assert [n.id for n in snapshot.facts] == [nodes["alice_fact"].id]
+    assert snapshot.tasks == []
+    assert "Acme is hiring" not in snapshot.summary_text
+    assert "Call Acme" not in snapshot.summary_text
+    bob_ids = {nodes[k].id for k in ("bob_acme", "bob_fact", "bob_task")}
+    assert snapshot.relationships
+    for edge in snapshot.relationships:
+        assert edge.user_id == "alice"
+        assert {edge.source_id, edge.target_id}.isdisjoint(bob_ids)
+
+
+async def test_unscoped_snapshot_job_reads_the_whole_graph_as_before(engine, monkeypatch):
+    nodes = await _shared_name_graph(engine)
+    captured = _capture_snapshots(monkeypatch)
+
+    result = await engine.organize(jobs=["snapshot_generation"], budget_ms=5000)
+
+    job = result.per_job["snapshot_generation"]
+    assert (job.nodes_processed, job.nodes_modified, job.errors) == (2, 2, 0)
+    by_entity = {snap.entity_node.id: snap for snap in captured}
+    assert set(by_entity) == {nodes["alice_acme"].id, nodes["bob_acme"].id}
+    # An unscoped run has no owner to confine to, so the crossing edges count.
+    alice = by_entity[nodes["alice_acme"].id]
+    assert {n.id for n in alice.facts} == {nodes["alice_fact"].id, nodes["bob_fact"].id}
+    assert [n.id for n in alice.tasks] == [nodes["bob_task"].id]
+    assert len(alice.relationships) == 4
+
+
+async def test_scoped_snapshot_refuses_another_users_entity(engine):
+    nodes = await _shared_name_graph(engine)
+
+    with pytest.raises(ValueError, match="not found"):
+        await engine.snapshot(str(nodes["alice_acme"].id), user_id="bob")
+
+    snapshot = await engine.snapshot(str(nodes["bob_acme"].id), user_id="bob")
+    assert [n.id for n in snapshot.facts] == [nodes["bob_fact"].id]

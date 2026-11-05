@@ -115,19 +115,23 @@ async def generate_entity_snapshot(
         entity_node_id: String UUID of the entity node.
         at_time: Optional temporal filter -- only include neighbors and
             edges valid at this time. None means current time (no filter).
+        user_id: Optional owner scope. When given, the entity must belong to
+            this user, and only this user's neighbors and edges between this
+            user's nodes are included. None reads the whole graph.
 
     Returns:
         EntitySnapshot with grouped neighbors and summary text.
 
     Raises:
-        ValueError: If the entity node does not exist or is not an ENTITY type.
+        ValueError: If the entity node does not exist, is not an ENTITY type,
+            or belongs to another user than ``user_id``.
     """
     # Fetch the entity node
     graph = await engine._ordinary_graph(user_id) if hasattr(engine, "_ordinary_graph") else engine._graph_store
     entity_node = await graph.get_node(
         entity_node_id, include_superseded=False
     )
-    if entity_node is None:
+    if entity_node is None or (user_id is not None and entity_node.user_id != user_id):
         raise ValueError(f"Entity node {entity_node_id!r} not found")
     if entity_node.node_type != NodeType.ENTITY:
         raise ValueError(
@@ -140,6 +144,10 @@ async def generate_entity_snapshot(
         max_hops=1,
         valid_at=at_time,
     )
+    if user_id is not None:
+        # The graph traversal itself has no owner filter, so an edge that
+        # crosses users would otherwise pull another user's node in.
+        neighbors = [node for node in neighbors if node.user_id == user_id]
 
     # Group neighbors by type, filtering to active lifecycle states
     active_states = {LifecycleState.TENTATIVE, LifecycleState.STABLE}
@@ -159,9 +167,27 @@ async def generate_entity_snapshot(
         valid_at=at_time,
     )
     all_edges = edges_out + edges_in
+    protected = getattr(graph, "protected_reads", False)
+    if user_id is not None and not protected:
+        # A protected view admits only edges between the owner's nodes; the
+        # plain graph store does not check either endpoint's owner.
+        endpoint_ids = sorted(
+            {str(edge.source_id) for edge in all_edges}
+            | {str(edge.target_id) for edge in all_edges}
+        )
+        owned = {
+            str(node.id)
+            for node in await graph.get_nodes(endpoint_ids, include_superseded=True)
+            if node.user_id == user_id
+        }
+        all_edges = [
+            edge for edge in all_edges
+            if edge.user_id == user_id
+            and str(edge.source_id) in owned
+            and str(edge.target_id) in owned
+        ]
 
     # Build summary
-    protected = getattr(graph, "protected_reads", False)
     summary_text = _build_summary_text(entity_node, grouped, protected=protected)
     limitation = None
     if protected:

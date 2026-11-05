@@ -552,14 +552,17 @@ async def _job_snapshot_generation(
     modified = 0
     errors = 0
 
+    # The snapshots are thrown away, so keep half of the remaining budget
+    # for the jobs after this one, as deduplicate and alias_resolve do.
+    snapshot_budget_ms = budget_ms / 2
     for entity in entities:
         elapsed_ms = (time.monotonic() - start) * 1000.0
-        if elapsed_ms >= budget_ms:
+        if elapsed_ms >= snapshot_budget_ms:
             break
 
         processed += 1
         try:
-            await generate_entity_snapshot(engine, str(entity.id))
+            await generate_entity_snapshot(engine, str(entity.id), user_id=user_id)
             modified += 1
         except (ValueError, Exception):
             errors += 1
