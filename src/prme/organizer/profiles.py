@@ -1,14 +1,84 @@
 """Whole-source entity mention excerpts with explicit provenance and token limits."""
+import asyncio
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from functools import lru_cache, partial
+import os
 import re
+import threading
+from typing import ParamSpec, TypeVar
 
 from prme.models import MemoryNode
 from prme.retrieval.tokenization import count_tokens
 
+P = ParamSpec("P")
+T = TypeVar("T")
+
+# Profile builds in one process share these worker threads. Concurrent slow
+# builds then wait their turn here instead of filling the event loop's default
+# executor, which storage and retrieval calls also use, and a cancelled build
+# drops its queued steps rather than adding running ones.
+_PROFILE_WORKERS = 2
+_executor: ThreadPoolExecutor | None = None
+_executor_lock = threading.Lock()
+
+
+def _profile_executor() -> ThreadPoolExecutor:
+    global _executor
+    with _executor_lock:
+        if _executor is None:
+            _executor = ThreadPoolExecutor(_PROFILE_WORKERS, thread_name_prefix="prme-profile")
+        return _executor
+
+
+def _reset_after_fork() -> None:
+    # A forked child inherits the pool without its threads, and the lock in
+    # whatever state another thread left it; give the child its own of each.
+    global _executor, _executor_lock
+    _executor, _executor_lock = None, threading.Lock()
+
+
+os.register_at_fork(after_in_child=_reset_after_fork)
+
+
+async def run_profile_work(function: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
+    """Run CPU-bound profile work off the caller's event loop.
+
+    Token counting releases the GIL; ``mentions_entity`` bounds each regex call.
+    """
+    return await asyncio.get_running_loop().run_in_executor(
+        _profile_executor(), partial(function, *args, **kwargs))
+
+
+# Characters one regex call may compare, about 2 ms. The regex engine holds the
+# GIL for a whole call, so a long name matched against long text written to
+# match it slowly would stall every other thread, an event loop included.
+_MATCH_WORK = 1 << 22
+
+
+@lru_cache(maxsize=256)
+def _mention_pattern(name: str) -> re.Pattern[str]:
+    return re.compile(r"(?<!\w)" + re.escape(name) + r"(?!\w)", re.IGNORECASE)
+
 
 def mentions_entity(text: str, name: str) -> bool:
-    """Match a complete literal name, including possessives and Unicode boundaries."""
-    return bool(re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", text, re.IGNORECASE))
+    """Match a complete literal name, including possessives and Unicode boundaries.
+
+    Long text is searched in windows so that one regex call compares about
+    ``_MATCH_WORK`` characters at most, or ``len(name)`` for a longer name. A
+    case-insensitive match of a literal name is exactly ``len(name)`` characters
+    long, the lookbehind reads the text before ``pos``, and each window reaches
+    one character past its last start for the lookahead, so the result is the
+    same as one search of the whole text.
+    """
+    pattern = _mention_pattern(name)
+    step = max(1, _MATCH_WORK // max(1, len(name)))
+    for start in range(0, max(len(text) - len(name), 0) + 1, step):
+        found = pattern.search(text, start, min(len(text), start + step + len(name)))
+        if found is not None and found.start() < start + step:
+            return True
+    return False
 
 
 def _date(value: datetime | None) -> str:
