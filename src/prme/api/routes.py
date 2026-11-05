@@ -1096,21 +1096,29 @@ async def get_chain(
     node_id: UUID,
     direction: str = "forward",
 ) -> NodeListResponse:
-    """Get the supersedence chain from a node."""
+    """Get the supersedence chain from a node.
+
+    Only nodes the reader owns are returned: the request's user, or the
+    starting node's owner when the request names none. The chain stops at
+    a node another user owns. A protected store is read through the
+    reader's admitted view.
+    """
     node_key = str(node_id)
     engine = _get_engine(request)
+    owner = _user_id(request)
 
     # Verify node exists
-    node = await engine.get_node(node_key, include_superseded=True, user_id=_user_id(request))
+    node = await engine.get_node(node_key, include_superseded=True, user_id=owner)
     if node is None:
         raise HTTPException(status_code=404, detail=f"Node {node_key!r} not found")
 
-    chain = await engine._graph_store.get_supersedence_chain(
-        node_key, direction=direction
+    # The plain graph store follows SUPERSEDES links without an owner
+    # filter, so a link that crosses users would otherwise return another
+    # user's node (#437). Same reader rule as the neighborhood route.
+    reader = owner if owner is not None else node.user_id
+    chain = await engine.get_supersedence_chain(
+        node_key, user_id=reader, direction=direction,
     )
-    owner = _user_id(request)
-    if owner is not None:
-        chain = [n for n in chain if n.user_id == owner]
     return NodeListResponse(
         nodes=[_node_to_response(n) for n in chain],
         count=len(chain),

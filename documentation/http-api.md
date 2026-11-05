@@ -363,7 +363,7 @@ Get nodes within N hops of a starting node. Only the reader's nodes are returned
 
 ### GET /v1/nodes/{node_id}/chain
 
-Get the supersedence chain for a node.
+Get the supersedence chain for a node. Only the reader's nodes are returned: the request's user, or the starting node's owner when the request has no user. The chain ends before the first node another user owns. On a store with protected privacy reads, the chain is read through that user's admitted view.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|

@@ -3167,8 +3167,28 @@ class MemoryEngine:
 
     async def get_supersedence_chain(self, node_id: str, *, user_id: str | None = None,
                                     direction: str = "forward") -> list[MemoryNode]:
+        """Follow SUPERSEDES links from a node, in chain order.
+
+        With ``user_id``, the starting node must be the user's, and the
+        chain ends before the first node another user owns, as the admitted
+        view of a protected store does, so a link that crosses users never
+        returns or walks through another user's node (#437). Without it, the
+        chain is the unscoped operator read.
+        """
         graph = await self._ordinary_graph(user_id)
-        return await graph.get_supersedence_chain(node_id, direction=direction)
+        if user_id is not None and await self.get_node(
+            node_id, include_superseded=True, user_id=user_id,
+        ) is None:
+            return []
+        chain = await graph.get_supersedence_chain(node_id, direction=direction)
+        if user_id is None:
+            return chain
+        owned = []
+        for node in chain:
+            if node.user_id != user_id:
+                break
+            owned.append(node)
+        return owned
 
     @privacy_disclosure
     async def count_nodes(self, **kwargs) -> int:

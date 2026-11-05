@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `GET /v1/nodes/{id}/chain`, `MemoryEngine.get_supersedence_chain()` with a `user_id`, `prme chain --user-id` and retrieval's contradiction annotation no longer return a node another user owns, or put its id in a result's `contradicts_id` (dwamianm/prism#437). The plain graph store follows SUPERSEDES and CONTRADICTS links without an owner filter, so a link that crosses users (left by an unscoped deduplicate or alias merge in an older store, or written directly to the graph) could put another user's node in a chain response, or another user's node id on a retrieval result. The chain route now reads through the engine's owner-scoped chain read for the request's user, or the starting node's owner when the request has no user; on a store with protected privacy reads it uses that user's admitted view, which the route skipped before. With a user, the engine read returns nothing for a starting node the user does not own, and a chain ends before the first node another user owns, as the admitted view already does, so it never walks through that node. The contradiction annotation keeps only a counterpart the user owns, as the assertion state read does, and uses the next edge, if any; a counterpart another user owns, or one the store no longer has, is skipped. `MemoryEngine.get_supersedence_chain()` and `prme chain` without a user stay the unscoped operator read. A node's own `superseded_by` field is unchanged and can still name another user's node in such a store. Retrieval on a single-user store, and wherever every contradiction link joins two existing nodes of the same user, is unchanged.
+
 ## [0.17.0a2] - 2026-11-05
 
 This is an alpha. It passed CI on `main`, and each change in it carries its fast-tier evidence in its
